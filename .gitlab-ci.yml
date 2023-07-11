@@ -1,0 +1,94 @@
+# This file is a template, and might need editing before it works on your project.
+# Official language image. Look for the different tagged releases at:
+# https://hub.docker.com/r/library/python/tags/
+image: $CI_DOCKER_REGISTRY/python:3.9
+#commands to run in the Docker container before starting each job.
+variables:
+  DOCKER_TLS_CERTDIR: ""
+
+# different stages in the pipeline
+stages:
+  - Formatter
+  - Unittests
+  - Deploy
+
+formatter:
+  stage: Formatter
+  needs: []
+  script:
+    - pip install black
+    - black --check --diff --color --line-length=100 ./
+pylint:
+  stage: Formatter
+  needs: []
+  before_script:
+    - pip install pylint pylint-exit anybadge
+  script:
+    - mkdir ./pylint
+    - pylint ./bec_widgets --output-format=text . | tee ./pylint/pylint.log || pylint-exit $?
+    - PYLINT_SCORE=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' ./pylint/pylint.log)
+    - anybadge --label=Pylint --file=pylint/pylint.svg --value=$PYLINT_SCORE 2=red 4=orange 8=yellow 10=green
+    - echo "Pylint score is $PYLINT_SCORE"
+  artifacts:
+    paths:
+      - ./pylint/
+    expire_in: 1 week
+
+tests:
+  stage: Unittests
+  needs: ["formatter"]
+  script:
+    - pip install .[dev]
+    - coverage run --source=./bec_widgets -m pytest -v --junitxml=report.xml --random-order ./tests/tests
+    - coverage report
+    - coverage xml
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+  artifacts:
+    reports:
+      junit: report.xml
+      cobertura: coverage.xml
+
+
+# semver:
+#   stage: Deploy
+#   needs: ["tests"]
+#   script:
+#     - git config --global user.name "ci_update_bot"
+#     - git config --global user.email "ci_update_bot@bec.ch"
+#     - git checkout "$CI_COMMIT_REF_NAME"
+#     - git reset --hard origin/"$CI_COMMIT_REF_NAME"
+
+#     # delete all local tags
+#     - git tag -l | xargs git tag -d
+#     - git fetch --tags
+#     - git tag
+
+#     # build
+#     - pip install python-semantic-release wheel
+#     - export GL_TOKEN=$CI_UPDATES
+#     - export REPOSITORY_USERNAME=__token__
+#     - export REPOSITORY_PASSWORD=$CI_PYPI_TOKEN
+#     - >
+#       semantic-release publish -v DEBUG 
+#       -D version_variable=./semantic_release/__init__.py:__version__ 
+#       -D hvcs=gitlab 
+#       -D build_command="./ci/build_python_services.sh" 
+      
+#   allow_failure: false
+#   rules:
+#     - if: '$CI_COMMIT_REF_NAME == "master"'
+
+# pages:
+#   stage: Deploy
+#   needs: ["tests"]
+#   script:
+#     - git clone --branch $OPHYD_DEVICES_BRANCH https://oauth2:$CI_OPHYD_DEVICES_KEY@gitlab.psi.ch/bec/ophyd_devices.git
+#     - export OPHYD_DEVICES_PATH=$PWD/ophyd_devices    
+#     - pip install -r ./docs/source/requirements.txt
+#     - apt-get install -y gcc
+#     - *install-bec-services    
+#     - cd ./docs/source; make html
+#     - curl -X POST -d "branches=$CI_COMMIT_REF_NAME" -d "token=$RTD_TOKEN" https://readthedocs.org/api/v2/webhook/beamline-experiment-control/221870/
+#   rules:
+#     - if: '$CI_COMMIT_REF_NAME == "master"'
+#     - if: '$CI_COMMIT_REF_NAME == "production"'
