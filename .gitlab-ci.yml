@@ -53,34 +53,33 @@ tests:
       cobertura: coverage.xml
 
 
-# semver:
-#   stage: Deploy
-#   needs: ["tests"]
-#   script:
-#     - git config --global user.name "ci_update_bot"
-#     - git config --global user.email "ci_update_bot@bec.ch"
-#     - git checkout "$CI_COMMIT_REF_NAME"
-#     - git reset --hard origin/"$CI_COMMIT_REF_NAME"
+semver:
+  stage: Deploy
+  needs: ["tests"]
+  script:
+    - git config --global user.name "ci_update_bot"
+    - git config --global user.email "ci_update_bot@bec.ch"
+    - git checkout "$CI_COMMIT_REF_NAME"
+    - git reset --hard origin/"$CI_COMMIT_REF_NAME"
 
-#     # delete all local tags
-#     - git tag -l | xargs git tag -d
-#     - git fetch --tags
-#     - git tag
+    # delete all local tags
+    - git tag -l | xargs git tag -d
+    - git fetch --tags
+    - git tag
 
-#     # build
-#     - pip install python-semantic-release wheel
-#     - export GL_TOKEN=$CI_UPDATES
-#     - export REPOSITORY_USERNAME=__token__
-#     - export REPOSITORY_PASSWORD=$CI_PYPI_TOKEN
-#     - >
-#       semantic-release publish -v DEBUG 
-#       -D version_variable=./semantic_release/__init__.py:__version__ 
-#       -D hvcs=gitlab 
-#       -D build_command="./ci/build_python_services.sh" 
+    # build
+    - pip install python-semantic-release wheel
+    - export GL_TOKEN=$CI_UPDATES
+    - export REPOSITORY_USERNAME=__token__
+    - export REPOSITORY_PASSWORD=$CI_PYPI_TOKEN
+    - >
+      semantic-release publish -v DEBUG 
+      -D version_variable=./setup.py:__version__  
+      -D hvcs=gitlab 
       
-#   allow_failure: false
-#   rules:
-#     - if: '$CI_COMMIT_REF_NAME == "master"'
+  allow_failure: false
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "master"'
 
 # pages:
 #   stage: Deploy
