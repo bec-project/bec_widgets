@@ -25,7 +25,7 @@ pylint:
     - pip install pylint pylint-exit anybadge
     - pip install -e .[dev]
     - mkdir ./pylint
-    - pylint ./bec_widgets --output-format=text . | tee ./pylint/pylint.log || pylint-exit $?
+    - pylint ./bec_widgets --output-format=text --output=./pylint/pylint.log | tee ./pylint/pylint.log || pylint-exit $?
     - PYLINT_SCORE=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' ./pylint/pylint.log)
     - anybadge --label=Pylint --file=pylint/pylint.svg --value=$PYLINT_SCORE 2=red 4=orange 8=yellow 10=green
     - echo "Pylint score is $PYLINT_SCORE"
