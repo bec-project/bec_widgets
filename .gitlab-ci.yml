@@ -36,12 +36,14 @@ pylint:
 
 tests:
   stage: Unittests
-  # needs: ["formatter"]
+  needs: []
+  variables:
+      QT_QPA_PLATFORM: "offscreen"
   script:
     - apt-get update
-    - apt-get install -y libgl1-mesa-glx x11-utils libxkbcommon-x11-0 xvfb
+    - apt-get install -y libgl1-mesa-glx x11-utils libxkbcommon-x11-0 
     - pip install .[dev]
-    - xvfb-run coverage run --source=./bec_widgets -m pytest -v --junitxml=report.xml --random-order --full-trace ./tests
+    - coverage run --source=./bec_widgets -m pytest -v --junitxml=report.xml --random-order --full-trace ./tests
     - coverage report
     - coverage xml
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
