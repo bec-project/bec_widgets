@@ -41,7 +41,7 @@ tests:
     - apt-get update
     - apt-get install -y libgl1-mesa-glx
     - pip install .[dev]
-    - coverage run --source=./bec_widgets -m pytest -v --junitxml=report.xml --random-order ./tests/tests
+    - coverage run --source=./bec_widgets -m pytest -v --junitxml=report.xml --random-order ./tests
     - coverage report
     - coverage xml
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
