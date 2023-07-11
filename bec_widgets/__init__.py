@@ -1,0 +1,1 @@
+import bec_widgets.config_plotter as config_plotter
