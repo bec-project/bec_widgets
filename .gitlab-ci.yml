@@ -39,9 +39,9 @@ tests:
   # needs: ["formatter"]
   script:
     - apt-get update
-    - apt-get install -y libgl1-mesa-glx
+    - apt-get install -y libgl1-mesa-glx x11-utils libxkbcommon-x11-0 xvfb
     - pip install .[dev]
-    - coverage run --source=./bec_widgets -m pytest -v --junitxml=report.xml --random-order --full-trace ./tests
+    - xvfb-run coverage run --source=./bec_widgets -m pytest -v --junitxml=report.xml --random-order --full-trace ./tests
     - coverage report
     - coverage xml
   coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
