@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.2.1 (2023-07-13)
+
+### Fix
+
+* Fixed setup config (wrong name) ([`947db1e`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/947db1e0f32b067e67f94a7c8321da5194b1547b))
+* Fixed bec_lib dependency ([`86f4def`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/86f4deffd899111e8997010487ec54c6c62c43ab))
+
 ## v0.2.0 (2023-07-13)
 
 ### Feature
