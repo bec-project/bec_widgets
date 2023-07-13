@@ -8,7 +8,7 @@ def test_scan_plot(qtbot):
     plot = scan_plot.BECScanPlot()
     qtbot.addWidget(plot)
     plot.show()
-    qtbot.waitForWindowShown(plot)
+    qtbot.waitExposed(plot)
 
     plot.x_channel = "x"
     plot.y_channel_list = ["y1", "y2"]
@@ -30,7 +30,7 @@ def test_scan_plot_clears_data(qtbot):
     plot = scan_plot.BECScanPlot()
     qtbot.addWidget(plot)
     plot.show()
-    qtbot.waitForWindowShown(plot)
+    qtbot.waitExposed(plot)
 
     plot.x_channel = "x"
     plot.y_channel_list = ["y1", "y2"]
@@ -53,7 +53,7 @@ def test_scan_plot_redraws_dap(qtbot):
     plot = scan_plot.BECScanPlot()
     qtbot.addWidget(plot)
     plot.show()
-    qtbot.waitForWindowShown(plot)
+    qtbot.waitExposed(plot)
 
     plot.y_channel_list = ["dap.y1", "dap.y2"]
 
