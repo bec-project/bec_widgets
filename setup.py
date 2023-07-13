@@ -8,6 +8,6 @@ if __name__ == "__main__":
             "pyqt5",
             "pyqtgraph",
         ],
-        extras_require={"dev": ["pytest", "pytest-random-order", "coverage", "pytest-qt"]},
+        extras_require={"dev": ["pytest", "pytest-random-order", "coverage", "pytest-qt", "black"]},
         version=__version__,
     )
