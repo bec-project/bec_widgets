@@ -1,0 +1,2 @@
+black --line-length=100 $(git diff --cached --name-only --diff-filter=ACM -- '***.py')
+git add $(git diff --cached --name-only --diff-filter=ACM -- '***.py')
