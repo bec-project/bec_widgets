@@ -13,7 +13,7 @@ include:
 # different stages in the pipeline
 stages:
   - Formatter
-  - Test
+  - test
   - Deploy
 
 formatter:
@@ -39,7 +39,7 @@ pylint:
     expire_in: 1 week
 
 tests:
-  stage: Test
+  stage: test
   needs: []
   variables:
       QT_QPA_PLATFORM: "offscreen"
