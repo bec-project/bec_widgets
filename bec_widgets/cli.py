@@ -2,12 +2,12 @@ import argparse
 import os
 from threading import RLock
 
+from bec_lib.core import BECMessage, MessageEndpoints, RedisConnector
 from PyQt5 import uic
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QApplication, QMainWindow
-from scan_plot import BECScanPlot
 
-from bec_lib.core import BECMessage, MessageEndpoints, RedisConnector
+from .scan_plot import BECScanPlot
 
 
 class BEC_UI(QMainWindow):

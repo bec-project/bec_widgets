@@ -37,6 +37,8 @@ class ConfigPlotter(pg.GraphicsWidget):
     def _init_ui(self):
         pg.setConfigOption("background", "w")
         pg.setConfigOption("foreground", "k")
+
+        # pylint: disable=no-member
         self.pen = mkPen(color=(56, 76, 107), width=4, style=QtCore.Qt.SolidLine)
 
         self.view = pg.GraphicsView()
