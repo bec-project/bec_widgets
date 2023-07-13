@@ -1,9 +1,8 @@
 import itertools
 
 import pyqtgraph as pg
-from PyQt5.QtCore import pyqtProperty, pyqtSlot
-
 from bec_lib.core.logger import bec_logger
+from PyQt5.QtCore import pyqtProperty, pyqtSlot
 
 logger = bec_logger.logger
 
@@ -104,3 +103,19 @@ class BECScanPlot(pg.PlotWidget):
     @x_channel.setter
     def x_channel(self, new_val):
         self._x_channel = new_val
+
+
+if __name__ == "__main__":
+    import sys
+
+    from PyQt5.QtWidgets import QApplication
+
+    app = QApplication(sys.argv)
+
+    plot = BECScanPlot()
+    plot.y_channel_list = ["a", "b", "c"]
+
+    plot.initialize()
+    plot.show()
+
+    sys.exit(app.exec_())
