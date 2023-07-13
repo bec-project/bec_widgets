@@ -6,10 +6,14 @@ image: $CI_DOCKER_REGISTRY/python:3.9
 variables:
   DOCKER_TLS_CERTDIR: ""
 
+include:
+  - template: Security/Secret-Detection.gitlab-ci.yml
+
+
 # different stages in the pipeline
 stages:
   - Formatter
-  - Unittests
+  - Test
   - Deploy
 
 formatter:
@@ -35,7 +39,7 @@ pylint:
     expire_in: 1 week
 
 tests:
-  stage: Unittests
+  stage: Test
   needs: []
   variables:
       QT_QPA_PLATFORM: "offscreen"
