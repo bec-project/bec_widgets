@@ -72,7 +72,7 @@ semver:
     - git tag
 
     # build
-    - pip install python-semantic-release wheel
+    - pip install python-semantic-release==7.* wheel
     - export GL_TOKEN=$CI_UPDATES
     - export REPOSITORY_USERNAME=__token__
     - export REPOSITORY_PASSWORD=$CI_PYPI_TOKEN
