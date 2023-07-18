@@ -12,7 +12,15 @@ import os
 class BasicPlot(QtWidgets.QWidget):
     update_signal = pyqtSignal()
 
-    def __init__(self, name="", y_value_list=["gauss_bpm"]):
+    def __init__(self, name="", y_value_list=["gauss_bpm"]) -> None:
+        """
+        Basic plot widget for displaying scan data.
+
+        Args:
+            name (str, optional): Name of the plot. Defaults to "".
+            y_value_list (list, optional): List of signals to be plotted. Defaults to ["gauss_bpm"].
+        """
+
         super(BasicPlot, self).__init__()
         # Set style for pyqtgraph plots
         pg.setConfigOption("background", "w")
@@ -41,7 +49,7 @@ class BasicPlot(QtWidgets.QWidget):
             "symbolSize": 10,
         }
         color_list = ["#384c6b", "#e28a2b", "#5E3023", "#e41a1c", "#984e83", "#4daf4a"]
-        color_list = BasicPlot.golden_angle_color(colormap="viridis", num=len(self.y_value_list))
+        color_list = BasicPlot.golden_angle_color(colormap="CET-R2", num=len(self.y_value_list))
 
         # setup plots
         self.plot = self.plot_window.getPlotItem()
@@ -63,8 +71,6 @@ class BasicPlot(QtWidgets.QWidget):
             self.pens.append(pen)
             self.brushs.append(brush)
 
-        # self.plot.plot(**plotstyles)
-        # self.plot_data = self.plot.plot([], [], **plotstyles, pen=self.pen, title=name)
         self.crosshair_v = pg.InfiniteLine(angle=90, movable=False)
         self.plot.addItem(self.crosshair_v, ignoreBounds=True)
 
@@ -78,10 +84,20 @@ class BasicPlot(QtWidgets.QWidget):
         self.proxy_update = pg.SignalProxy(self.update_signal, rateLimit=25, slot=self.update)
 
     def add_text_items(self):
+        """Add text items to the plot"""
+
         self.mouse_box_data.setText("Mouse cursor")
+        # TODO Via StyleSheet, one may set the color of the full QLabel
         # self.mouse_box_data.setStyleSheet(f"QLabel {{color : rgba{self.pens[0].color().getRgb()}}}")
 
-    def mouse_moved(self, event):
+    def mouse_moved(self, event: tuple) -> None:
+        """
+        Update the mouse box with the current mouse position and the corresponding data.
+
+        Args:
+            event (tuple):  Mouse event containing the position of the mouse cursor.
+                            The position is stored in first entry as horizontal, vertical pixel.
+        """
         pos = event[0]
         if self.plot.sceneBoundingRect().contains(pos):
             mousePoint = self.plot.vb.mapSceneToView(pos)
@@ -105,22 +121,31 @@ class BasicPlot(QtWidgets.QWidget):
                                 # f"<p'FONT COLOR=red';>",  # rgba{self.pens[ii].color().getRgb()
                                 f"{y_value}",
                                 "\n",
-                                f"X_data:   {x_data:>string_cap}",
+                                f"X_data:   {x_data:>{string_cap}}",
                                 "\n",
-                                f"Y_data: {y_data:>string_cap}",
+                                f"Y_data: {y_data:>{string_cap}}",
                             ]
                         )
-                        # f"Mouse cursor\n"
-                        # \n"
-                        # f"Y_data: {closest_point[1]:.{self.precision}f}\n"
                     )
 
-    def closest_x_y_value(self, input_value, list_x, list_y):
+    def closest_x_y_value(self, input_value, list_x, list_y) -> tuple:
+        """
+        Find the closest x and y value to the input value.
+
+        Args:
+            input_value (float): Input value
+            list_x (list): List of x values
+            list_y (list): List of y values
+
+        Returns:
+            tuple: Closest x and y value
+        """
         arr = np.asarray(list_x)
         i = (np.abs(arr - input_value)).argmin()
         return list_x[i], list_y[i]
 
     def update(self):
+        """Update the plot with the new data."""
         if len(self.plotter_data_x) <= 1:
             return
         self.plot.setLabel("bottom", self.label_bottom)
@@ -163,6 +188,7 @@ class BasicPlot(QtWidgets.QWidget):
         self.update_signal.emit()
 
     def _reset_plot_data(self):
+        """Reset the plot data."""
         self.plotter_data_x = []
         self.plotter_data_y = []
         for ii in range(len(self.y_value_list)):
@@ -171,8 +197,12 @@ class BasicPlot(QtWidgets.QWidget):
         self.mouse_box_data.setText("Mouse cursor")  # Crashes the Thread
 
     @staticmethod
-    def golden_ratio(num: int):
-        # get the first num golden angles
+    def golden_ratio(num: int) -> list:
+        """Calculate the golden ratio for a given number of angles.
+
+        Args:
+            num (int): Number of angles
+        """
         phi = 2 * np.pi * ((1 + np.sqrt(5)) / 2)
         angles = []
         for ii in range(num):
@@ -183,7 +213,21 @@ class BasicPlot(QtWidgets.QWidget):
         return angles
 
     @staticmethod
-    def golden_angle_color(colormap: str, num: int):
+    def golden_angle_color(colormap: str, num: int) -> list:
+        """
+        Extract num colors for from the specified colormap following golden angle distribution.
+
+        Args:
+            colormap (str): Name of the colormap
+            num (int): Number of requested colors
+
+        Returns:
+            list: List of colors with length <num>
+
+        Raises:
+            ValueError: If the number of requested colors is greater than the number of colors in the colormap.
+        """
+
         cmap = pg.colormap.get(colormap)
         cmap_colors = cmap.color
         if num > len(cmap_colors):
@@ -196,11 +240,6 @@ class BasicPlot(QtWidgets.QWidget):
             mkColor(tuple((cmap_colors[int(ii)] * 255).astype(int))) for ii in color_selection[:num]
         ]
         return colors
-
-    @staticmethod
-    def rgb_to_hex(rgb: np.ndarray) -> str:
-        rgb = rgb.reshape(3)
-        return "#{:02X}{:02X}{:02X}".format(*rgb)
 
 
 if __name__ == "__main__":
