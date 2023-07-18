@@ -1,4 +1,5 @@
 from typing import Any
+import warnings
 
 import numpy as np
 import pyqtgraph as pg
@@ -6,6 +7,7 @@ from pyqtgraph import mkPen, mkBrush, mkColor
 
 from pyqtgraph.Qt import QtCore, QtWidgets, uic
 from pyqtgraph.Qt.QtCore import pyqtSignal
+from bec_lib import BECClient
 import os
 
 
@@ -54,17 +56,8 @@ class BasicPlot(QtWidgets.QWidget):
         # setup plots
         self.plot = self.plot_window.getPlotItem()
         for ii in range(len(self.y_value_list)):
-            if ii < len(color_list):
-                pen = mkPen(color=color_list[ii], width=2, style=QtCore.Qt.DashLine)
-                brush = mkBrush(color=color_list[ii])
-            else:
-                color = list(np.random.choice(range(255), size=3))
-                pen = mkPen(
-                    color=color,
-                    width=2,
-                    style=QtCore.Qt.DashLine,
-                )
-                brush = mkBrush(color=color)
+            pen = mkPen(color=color_list[ii], width=2, style=QtCore.Qt.DashLine)
+            brush = mkBrush(color=color_list[ii])
             curve = pg.PlotDataItem(**plotstyles, symbolBrush=brush, pen=pen, skipFiniteCheck=True)
             self.plot.addItem(curve)
             self.curves.append(curve)
@@ -99,34 +92,37 @@ class BasicPlot(QtWidgets.QWidget):
                             The position is stored in first entry as horizontal, vertical pixel.
         """
         pos = event[0]
-        if self.plot.sceneBoundingRect().contains(pos):
-            mousePoint = self.plot.vb.mapSceneToView(pos)
-            self.crosshair_v.setPos(mousePoint.x())
-            if self.plotter_data_x:
-                self.mouse_box_data.setText("Mouse cursor")
-                for ii, y_value in enumerate(self.y_value_list):
-                    closest_point = self.closest_x_y_value(
-                        mousePoint.x(), self.plotter_data_x, self.plotter_data_y[ii]
-                    )
-                    # TODO fix text wobble in plot, see plot when it crosses 0
-                    x_data = f"{closest_point[0]:.{self.precision}f}"
-                    y_data = f"{closest_point[1]:.{self.precision}f}"
-                    string_cap = 10
-                    self.mouse_box_data.setText(
-                        "".join(
-                            [
-                                self.mouse_box_data.text(),
-                                "\n",
-                                # TODO fix different fonts for mouse cursor!
-                                # f"<p'FONT COLOR=red';>",  # rgba{self.pens[ii].color().getRgb()
-                                f"{y_value}",
-                                "\n",
-                                f"X_data:   {x_data:>{string_cap}}",
-                                "\n",
-                                f"Y_data: {y_data:>{string_cap}}",
-                            ]
-                        )
-                    )
+        if not self.plot.sceneBoundingRect().contains(pos):
+            return
+        mousePoint = self.plot.vb.mapSceneToView(pos)
+        self.crosshair_v.setPos(mousePoint.x())
+        if not self.plotter_data_x:
+            return
+        self.mouse_box_data.setText("Mouse cursor")
+
+        for ii, y_value in enumerate(self.y_value_list):
+            closest_point = self.closest_x_y_value(
+                mousePoint.x(), self.plotter_data_x, self.plotter_data_y[ii]
+            )
+            # TODO fix text wobble in plot, see plot when it crosses 0
+            x_data = f"{closest_point[0]:.{self.precision}f}"
+            y_data = f"{closest_point[1]:.{self.precision}f}"
+            string_cap = 10
+            self.mouse_box_data.setText(
+                "".join(
+                    [
+                        self.mouse_box_data.text(),
+                        "\n",
+                        # TODO fix different fonts for mouse cursor!
+                        # f"<p'FONT COLOR=red';>",  # rgba{self.pens[ii].color().getRgb()
+                        f"{y_value}",
+                        "\n",
+                        f"X_data:   {x_data:>{string_cap}}",
+                        "\n",
+                        f"Y_data: {y_data:>{string_cap}}",
+                    ]
+                )
+            )
 
     def closest_x_y_value(self, input_value, list_x, list_y) -> tuple:
         """
@@ -170,6 +166,18 @@ class BasicPlot(QtWidgets.QWidget):
 
         self.scan_motors = scan_motors = metadata.get("scan_report_devices")
         client = BECClient()
+        remove_y_value_index = [
+            index
+            for index, y_value in enumerate(self.y_value_list)
+            if y_value not in client.device_manager.devices.keys()
+        ]
+        if remove_y_value_index:
+            for ii in sorted(remove_y_value_index, reverse=True):
+                # TODO Use bec warning message??? to be discussed with Klaus
+                warnings.warn(
+                    f"Warning: no matching signal for {self.y_value_list[ii]} found in list of devices. Removing from plot."
+                )
+                self.y_value_list.pop(ii)
         self.precision = client.device_manager.devices[scan_motors[0]]._info["describe"][
             scan_motors[0]
         ]["precision"]
@@ -244,7 +252,6 @@ class BasicPlot(QtWidgets.QWidget):
 
 if __name__ == "__main__":
     import argparse
-    from bec_lib import BECClient
     from bec_widgets import ctrl_c
 
     parser = argparse.ArgumentParser()
@@ -252,7 +259,7 @@ if __name__ == "__main__":
         "--signals",
         help="specify recorded signals",
         nargs="+",
-        default=["gauss_bpm", "bpm4i", "bpm5i", "bpm6i"],
+        default=["gauss_bpm", "bpm4i", "bpm5i", "bpm6i", "xert"],
     )
     value = parser.parse_args()
     print(f"Plotting signals for: {', '.join(value.signals)}")
