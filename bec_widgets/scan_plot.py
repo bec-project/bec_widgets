@@ -11,9 +11,12 @@ pg.setConfigOptions(background="w", foreground="k", antialias=True)
 COLORS = ["#fd7f6f", "#7eb0d5", "#b2e061", "#bd7ebe", "#ffb55a"]
 
 
-class BECScanPlot(pg.PlotWidget):
+class BECScanPlot(pg.GraphicsView):
     def __init__(self, parent=None, background="default"):
         super().__init__(parent, background)
+
+        self.view = pg.PlotItem()
+        self.setCentralItem(self.view)
 
         self._x_channel = ""
         self._y_channel_list = []
@@ -22,8 +25,7 @@ class BECScanPlot(pg.PlotWidget):
         self.dap_curves = {}
 
     def initialize(self):
-        plot_item = self.getPlotItem()
-        plot_item.addLegend()
+        self.view.addLegend()
         colors = itertools.cycle(COLORS)
 
         for y_chan in self.y_channel_list:
@@ -33,13 +35,13 @@ class BECScanPlot(pg.PlotWidget):
             else:
                 curves = self.scan_curves
 
-            curves[y_chan] = plot_item.plot(
+            curves[y_chan] = self.view.plot(
                 x=[], y=[], pen=pg.mkPen(color=next(colors), width=2), name=y_chan
             )
 
-        plot_item.setLabel("bottom", self._x_channel)
+        self.view.setLabel("bottom", self._x_channel)
         if len(self.scan_curves) == 1:
-            plot_item.setLabel("left", next(iter(self.scan_curves)))
+            self.view.setLabel("left", next(iter(self.scan_curves)))
 
     @pyqtSlot("PyQt_PyObject")
     def clearData(self, _msg):
