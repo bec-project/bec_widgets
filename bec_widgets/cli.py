@@ -11,9 +11,9 @@ from .scan_plot import BECScanPlot
 
 
 class BEC_UI(QMainWindow):
-    new_scan_data = pyqtSignal(dict)
+    new_scan_data = pyqtSignal("PyQt_PyObject")
     new_dap_data = pyqtSignal(dict)  # signal per proc instance?
-    new_scan = pyqtSignal()
+    new_scan = pyqtSignal("PyQt_PyObject")
 
     def __init__(self, uipath):
         super().__init__()
@@ -47,13 +47,13 @@ class BEC_UI(QMainWindow):
         scan_lock = RLock()
 
         def _scan_cb(msg):
-            msg = BECMessage.ScanMessage.loads(msg.value)
+            msg = BECMessage.ScanMessage.loads(msg.value)[0]
             with scan_lock:
-                scan_id = msg[0].content["scanID"]
+                scan_id = msg.content["scanID"]
                 if self._scan_id != scan_id:
                     self._scan_id = scan_id
-                    self.new_scan.emit()
-            self.new_scan_data.emit(msg[0].content["data"])
+                    self.new_scan.emit(msg)
+            self.new_scan_data.emit(msg)
 
         bec_connector = RedisConnector("localhost:6379")
 

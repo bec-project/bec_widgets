@@ -41,15 +41,17 @@ class BECScanPlot(pg.PlotWidget):
         if len(self.scan_curves) == 1:
             plot_item.setLabel("left", next(iter(self.scan_curves)))
 
-    @pyqtSlot()
-    def clearData(self):
+    @pyqtSlot("PyQt_PyObject")
+    def clearData(self, _msg):
         for plot_curve in {**self.scan_curves, **self.dap_curves}.values():
             plot_curve.setData(x=[], y=[])
 
-    @pyqtSlot(dict)
-    def redraw_scan(self, data):
+    @pyqtSlot("PyQt_PyObject")
+    def redraw_scan(self, msg):
         if not self.x_channel:
             return
+
+        data = msg.content["data"]
 
         if self.x_channel not in data:
             logger.warning(f"Unknown channel `{self.x_channel}` for X data in {self.objectName()}")
