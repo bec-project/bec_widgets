@@ -1,14 +1,13 @@
-from typing import Any
+import os
 import warnings
+from typing import Any
 
 import numpy as np
 import pyqtgraph as pg
-from pyqtgraph import mkPen, mkBrush, mkColor
-
+from bec_lib import BECClient
+from pyqtgraph import mkBrush, mkColor, mkPen
 from pyqtgraph.Qt import QtCore, QtWidgets, uic
 from pyqtgraph.Qt.QtCore import pyqtSignal
-from bec_lib import BECClient
-import os
 
 
 class BasicPlot(QtWidgets.QWidget):
@@ -169,7 +168,7 @@ class BasicPlot(QtWidgets.QWidget):
         remove_y_value_index = [
             index
             for index, y_value in enumerate(self.y_value_list)
-            if y_value not in client.device_manager.devices.keys()
+            if y_value not in client.device_manager.devices
         ]
         if remove_y_value_index:
             for ii in sorted(remove_y_value_index, reverse=True):
@@ -252,6 +251,7 @@ class BasicPlot(QtWidgets.QWidget):
 
 if __name__ == "__main__":
     import argparse
+
     from bec_widgets import ctrl_c
 
     parser = argparse.ArgumentParser()

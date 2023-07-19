@@ -1,7 +1,9 @@
-from pytestqt import qtbot
 from unittest import mock
-from bec_widgets import line_plot
+
 import numpy as np
+from pytestqt import qtbot
+
+from bec_widgets import line_plot
 
 
 def test_line_plot_emits_no_signal(qtbot):
@@ -63,12 +65,14 @@ def test_line_plot_raise_warning_wrong_signal_request(qtbot):
     metadata = {"scanID": "test", "scan_number": 1, "scan_report_devices": ["x"]}
     with mock.patch("bec_widgets.line_plot.BECClient") as mock_client:
         # TODO fix mock_client
-        mock_client.device_manager.devices.keys.return_value = ["y1"]
+        mock_dict = {"y1": [1, 2]}
+        mock_client().device_manager.devices.__contains__.side_effect = mock_dict.__contains__
+
         # = {"y1": [1, 2]}
         with mock.patch.object(plot, "update_signal") as mock_update_signal:
             mock_update_signal.emit()
             plot(data=data, metadata=metadata)
-            assert all(plot.y_value_list == ["y1"])
+            assert plot.y_value_list == ["y1"]
 
 
 def test_line_plot_update(qtbot):
