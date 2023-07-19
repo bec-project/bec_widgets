@@ -6,6 +6,7 @@ from bec_lib.core import BECMessage, MessageEndpoints, RedisConnector
 from PyQt5 import uic
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QApplication, QMainWindow
+from scan2d_plot import BECScanPlot2D
 
 from .scan_plot import BECScanPlot
 
@@ -40,6 +41,15 @@ class BEC_UI(QMainWindow):
 
             self.new_scan_data.connect(sp.redraw_scan)  # TODO: merge
             self.new_dap_data.connect(sp.redraw_dap)
+            self.new_scan.connect(sp.clearData)
+
+        for sp in ui.findChildren(BECScanPlot2D):
+            for chan in (sp.x_channel, sp.y_channel, sp.z_channel):
+                self._scan_channels.add(chan)
+
+            sp.initialize()
+
+            self.new_scan_data.connect(sp.redraw_scan)
             self.new_scan.connect(sp.clearData)
 
         # Scan setup
