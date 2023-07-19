@@ -1,12 +1,11 @@
 from PyQt5.QtDesigner import QPyDesignerCustomWidgetPlugin
 from PyQt5.QtGui import QIcon
-
-from .scan_plot import BECScanPlot
+from scan_plot import BECScanPlot
 
 
 class BECScanPlotPlugin(QPyDesignerCustomWidgetPlugin):
     def __init__(self, parent=None):
-        super(BECScanPlotPlugin, self).__init__(parent)
+        super().__init__(parent)
 
         self._initialized = False
 

@@ -7,8 +7,7 @@ from PyQt5 import uic
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from scan2d_plot import BECScanPlot2D
-
-from .scan_plot import BECScanPlot
+from scan_plot import BECScanPlot
 
 
 class BEC_UI(QMainWindow):
