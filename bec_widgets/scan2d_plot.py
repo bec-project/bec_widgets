@@ -3,6 +3,8 @@ import pyqtgraph as pg
 from bec_lib.core.logger import bec_logger
 from PyQt5.QtCore import pyqtProperty, pyqtSlot
 
+from bec_widgets.bec_dispatcher import bec_dispatcher
+
 logger = bec_logger.logger
 
 
@@ -12,6 +14,7 @@ pg.setConfigOptions(background="w", foreground="k", antialias=True)
 class BECScanPlot2D(pg.GraphicsView):
     def __init__(self, parent=None, background="default"):
         super().__init__(parent, background)
+        bec_dispatcher.connect(self)
 
         self._x_channel = ""
         self._y_channel = ""
@@ -30,12 +33,8 @@ class BECScanPlot2D(pg.GraphicsView):
         self.imageItem = pg.ImageItem()
         self.plot_item.addItem(self.imageItem)
 
-    def initialize(self):
-        self.plot_item.setLabel("bottom", self.x_channel)
-        self.plot_item.setLabel("left", self.y_channel)
-
     @pyqtSlot("PyQt_PyObject")
-    def clearData(self, msg):
+    def on_new_scan(self, msg):
         # TODO: Do we reset in case of a scan type change?
         self.imageItem.clear()
 
@@ -79,7 +78,7 @@ class BECScanPlot2D(pg.GraphicsView):
         self.plot_item.setLabel("left", motors[self._y_ind])
 
     @pyqtSlot("PyQt_PyObject")
-    def redraw_scan(self, msg):
+    def on_scan_segment(self, msg):
         if not self.z_channel or msg.metadata["scan_name"] != "grid_scan":
             return
 
@@ -106,6 +105,7 @@ class BECScanPlot2D(pg.GraphicsView):
     @x_channel.setter
     def x_channel(self, new_val):
         self._x_channel = new_val
+        self.plot_item.setLabel("bottom", new_val)
 
     @pyqtProperty(str)
     def y_channel(self):
@@ -114,6 +114,7 @@ class BECScanPlot2D(pg.GraphicsView):
     @y_channel.setter
     def y_channel(self, new_val):
         self._y_channel = new_val
+        self.plot_item.setLabel("left", new_val)
 
     @pyqtProperty(str)
     def z_channel(self):

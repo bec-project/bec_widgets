@@ -4,6 +4,8 @@ import pyqtgraph as pg
 from bec_lib.core.logger import bec_logger
 from PyQt5.QtCore import pyqtProperty, pyqtSlot
 
+from bec_widgets.bec_dispatcher import bec_dispatcher
+
 logger = bec_logger.logger
 
 
@@ -14,6 +16,7 @@ COLORS = ["#fd7f6f", "#7eb0d5", "#b2e061", "#bd7ebe", "#ffb55a"]
 class BECScanPlot(pg.GraphicsView):
     def __init__(self, parent=None, background="default"):
         super().__init__(parent, background)
+        bec_dispatcher.connect(self)
 
         self.view = pg.PlotItem()
         self.setCentralItem(self.view)
@@ -24,32 +27,13 @@ class BECScanPlot(pg.GraphicsView):
         self.scan_curves = {}
         self.dap_curves = {}
 
-    def initialize(self):
-        self.view.addLegend()
-        colors = itertools.cycle(COLORS)
-
-        for y_chan in self.y_channel_list:
-            if y_chan.startswith("dap."):
-                y_chan = y_chan.partition("dap.")[-1]
-                curves = self.dap_curves
-            else:
-                curves = self.scan_curves
-
-            curves[y_chan] = self.view.plot(
-                x=[], y=[], pen=pg.mkPen(color=next(colors), width=2), name=y_chan
-            )
-
-        self.view.setLabel("bottom", self._x_channel)
-        if len(self.scan_curves) == 1:
-            self.view.setLabel("left", next(iter(self.scan_curves)))
-
     @pyqtSlot("PyQt_PyObject")
-    def clearData(self, _msg):
+    def on_new_scan(self, _msg):
         for plot_curve in {**self.scan_curves, **self.dap_curves}.values():
             plot_curve.setData(x=[], y=[])
 
     @pyqtSlot("PyQt_PyObject")
-    def redraw_scan(self, msg):
+    def on_scan_segment(self, msg):
         if not self.x_channel:
             return
 
@@ -100,6 +84,28 @@ class BECScanPlot(pg.GraphicsView):
     def y_channel_list(self, new_list):
         self._y_channel_list = new_list
 
+        # Prepare plot for a potentially different list of y channels
+        self.view.clear()
+
+        self.view.addLegend()
+        colors = itertools.cycle(COLORS)
+
+        for y_chan in new_list:
+            # TODO: ideally, we dont want to care about dap/not dap here
+            if y_chan.startswith("dap."):
+                y_chan = y_chan.partition("dap.")[-1]
+                curves = self.dap_curves
+                bec_dispatcher.connect_dap(self.redraw_dap, y_chan)
+            else:
+                curves = self.scan_curves
+
+            curves[y_chan] = self.view.plot(
+                x=[], y=[], pen=pg.mkPen(color=next(colors), width=2), name=y_chan
+            )
+
+        if len(new_list) == 1:
+            self.view.setLabel("left", new_list[0])
+
     @pyqtProperty(str)
     def x_channel(self):
         return self._x_channel
@@ -107,6 +113,7 @@ class BECScanPlot(pg.GraphicsView):
     @x_channel.setter
     def x_channel(self, new_val):
         self._x_channel = new_val
+        self.view.setLabel("bottom", new_val)
 
 
 if __name__ == "__main__":
