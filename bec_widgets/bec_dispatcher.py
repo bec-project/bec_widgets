@@ -1,19 +1,21 @@
 from collections import defaultdict
 from threading import RLock
 
-from bec_lib.core import BECMessage, MessageEndpoints, RedisConnector
+from bec_lib import BECClient
+from bec_lib.core import BECMessage, MessageEndpoints
 from PyQt5.QtCore import QObject, pyqtSignal
-
-bec_connector = RedisConnector("localhost:6379")
 
 
 class _BECDispatcher(QObject):
-    scan_segment = pyqtSignal("PyQt_PyObject")
+    new_scan = pyqtSignal(dict, dict)
+    scan_segment = pyqtSignal(dict, dict)
     new_dap_data = pyqtSignal(dict)
-    new_scan = pyqtSignal("PyQt_PyObject")
 
     def __init__(self):
         super().__init__()
+        self.client = BECClient()
+        self.client.start()
+
         # TODO: dap might not be a good fit to predefined slots, fix this inconsistency
         self._slot_signal_map = {
             "on_scan_segment": self.scan_segment,
@@ -25,22 +27,16 @@ class _BECDispatcher(QObject):
         scan_lock = RLock()
         self._dap_threads = []
 
-        def _scan_cb(msg):
-            msg = BECMessage.ScanMessage.loads(msg.value)[0]
+        def _scan_segment_cb(scan_segment, metadata):
             with scan_lock:
                 # TODO: use ScanStatusMessage instead?
-                scan_id = msg.content["scanID"]
+                scan_id = metadata["scanID"]
                 if self._scan_id != scan_id:
                     self._scan_id = scan_id
-                    self.new_scan.emit(msg)
-            self.scan_segment.emit(msg)
+                    self.new_scan.emit(scan_segment, metadata)
+            self.scan_segment.emit(scan_segment, metadata)
 
-        scan_readback = MessageEndpoints.scan_segment()
-        self._scan_thread = bec_connector.consumer(
-            topics=scan_readback,
-            cb=_scan_cb,
-        )
-        self._scan_thread.start()
+        self.client.callbacks.register("scan_segment", _scan_segment_cb, sync=False)
 
     def connect(self, widget):
         for slot_name, signal in self._slot_signal_map.items():
@@ -56,7 +52,7 @@ class _BECDispatcher(QObject):
                 self.new_dap_data.emit(msg.content["data"])
 
             dap_ep = MessageEndpoints.processed_data(dap_name)
-            dap_thread = bec_connector.consumer(topics=dap_ep, cb=_dap_cb)
+            dap_thread = self.client.connector.consumer(topics=dap_ep, cb=_dap_cb)
             dap_thread.start()
             self._dap_threads.append(dap_thread)
 

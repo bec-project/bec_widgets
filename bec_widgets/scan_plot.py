@@ -27,17 +27,17 @@ class BECScanPlot(pg.GraphicsView):
         self.scan_curves = {}
         self.dap_curves = {}
 
-    @pyqtSlot("PyQt_PyObject")
-    def on_new_scan(self, _msg):
+    @pyqtSlot(dict, dict)
+    def on_new_scan(self, _scan_segment, _metadata):
         for plot_curve in {**self.scan_curves, **self.dap_curves}.values():
             plot_curve.setData(x=[], y=[])
 
-    @pyqtSlot("PyQt_PyObject")
-    def on_scan_segment(self, msg):
+    @pyqtSlot(dict, dict)
+    def on_scan_segment(self, scan_segment, _metadata):
         if not self.x_channel:
             return
 
-        data = msg.content["data"]
+        data = scan_segment["data"]
 
         if self.x_channel not in data:
             logger.warning(f"Unknown channel `{self.x_channel}` for X data in {self.objectName()}")

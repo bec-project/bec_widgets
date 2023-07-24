@@ -33,18 +33,18 @@ class BECScanPlot2D(pg.GraphicsView):
         self.imageItem = pg.ImageItem()
         self.plot_item.addItem(self.imageItem)
 
-    @pyqtSlot("PyQt_PyObject")
-    def on_new_scan(self, msg):
+    @pyqtSlot(dict, dict)
+    def on_new_scan(self, _scan_segment, metadata):
         # TODO: Do we reset in case of a scan type change?
         self.imageItem.clear()
 
         # TODO: better to check the number of coordinates in metadata["positions"]?
-        if msg.metadata["scan_name"] != "grid_scan":
+        if metadata["scan_name"] != "grid_scan":
             return
 
-        positions = [sorted(set(pos)) for pos in zip(*msg.metadata["positions"])]
+        positions = [sorted(set(pos)) for pos in zip(*metadata["positions"])]
 
-        motors = msg.metadata["scan_motors"]
+        motors = metadata["scan_motors"]
         if self.x_channel and self.y_channel:
             self._x_ind = motors.index(self.x_channel) if self.x_channel in motors else None
             self._y_ind = motors.index(self.y_channel) if self.y_channel in motors else None
@@ -77,21 +77,20 @@ class BECScanPlot2D(pg.GraphicsView):
         self.plot_item.setLabel("bottom", motors[self._x_ind])
         self.plot_item.setLabel("left", motors[self._y_ind])
 
-    @pyqtSlot("PyQt_PyObject")
-    def on_scan_segment(self, msg):
-        if not self.z_channel or msg.metadata["scan_name"] != "grid_scan":
+    @pyqtSlot(dict, dict)
+    def on_scan_segment(self, scan_segment, metadata):
+        if not self.z_channel or metadata["scan_name"] != "grid_scan":
             return
 
         if self._x_ind is None or self._y_ind is None:
             return
 
-        point_id = msg.content["point_id"]
-        point_coord = msg.metadata["positions"][point_id]
+        point_coord = metadata["positions"][scan_segment["point_id"]]
 
         x_coord_ind = self._xpos.index(point_coord[self._x_ind])
         y_coord_ind = self._ypos.index(point_coord[self._y_ind])
 
-        data = msg.content["data"]
+        data = scan_segment["data"]
         z_new = data[self.z_channel][self.z_channel]["value"]
 
         image = self.imageItem.image
