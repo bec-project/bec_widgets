@@ -122,3 +122,19 @@ class BECScanPlot2D(pg.GraphicsView):
     @z_channel.setter
     def z_channel(self, new_val):
         self._z_channel = new_val
+
+
+if __name__ == "__main__":
+    import sys
+
+    from PyQt5.QtWidgets import QApplication
+
+    app = QApplication(sys.argv)
+
+    plot = BECScanPlot2D()
+    # If x_channel and y_channel are both omitted, they will be inferred from each running grid scan
+    plot.z_channel = "bpm3y"
+
+    plot.show()
+
+    sys.exit(app.exec_())

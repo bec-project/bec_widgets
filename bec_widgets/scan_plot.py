@@ -124,9 +124,9 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     plot = BECScanPlot()
-    plot.y_channel_list = ["a", "b", "c"]
+    plot.x_channel = "samx"
+    plot.y_channel_list = ["bpm3y", "bpm6y"]
 
-    plot.initialize()
     plot.show()
 
     sys.exit(app.exec_())
