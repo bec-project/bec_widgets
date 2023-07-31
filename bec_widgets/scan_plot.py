@@ -82,6 +82,12 @@ class BECScanPlot(pg.GraphicsView):
 
     @y_channel_list.setter
     def y_channel_list(self, new_list):
+        # TODO: do we want to care about dap/not dap here?
+        chan_removed = [chan for chan in self._y_channel_list if chan not in new_list]
+        if chan_removed and chan_removed[0].startswith("dap."):
+            chan_removed = chan_removed[0].partition("dap.")[-1]
+            bec_dispatcher.disconnect_dap_slot(self.redraw_dap, chan_removed)
+
         self._y_channel_list = new_list
 
         # Prepare plot for a potentially different list of y channels
@@ -91,11 +97,10 @@ class BECScanPlot(pg.GraphicsView):
         colors = itertools.cycle(COLORS)
 
         for y_chan in new_list:
-            # TODO: ideally, we dont want to care about dap/not dap here
             if y_chan.startswith("dap."):
                 y_chan = y_chan.partition("dap.")[-1]
                 curves = self.dap_curves
-                bec_dispatcher.connect_dap(self.redraw_dap, y_chan)
+                bec_dispatcher.connect_dap_slot(self.redraw_dap, y_chan)
             else:
                 curves = self.scan_curves
 
