@@ -1,12 +1,12 @@
 from PyQt5.QtDesigner import QPyDesignerCustomWidgetPlugin
 from PyQt5.QtGui import QIcon
 
-from .scan_plot import BECScanPlot
+from bec_widgets.scan2d_plot import BECScanPlot2D
 
 
-class BECScanPlotPlugin(QPyDesignerCustomWidgetPlugin):
+class BECScanPlot2DPlugin(QPyDesignerCustomWidgetPlugin):
     def __init__(self, parent=None):
-        super(BECScanPlotPlugin, self).__init__(parent)
+        super().__init__(parent)
 
         self._initialized = False
 
@@ -20,10 +20,10 @@ class BECScanPlotPlugin(QPyDesignerCustomWidgetPlugin):
         return self._initialized
 
     def createWidget(self, parent):
-        return BECScanPlot(parent)
+        return BECScanPlot2D(parent)
 
     def name(self):
-        return "BECScanPlot"
+        return "BECScanPlot2D"
 
     def group(self):
         return "BEC widgets"
@@ -32,25 +32,25 @@ class BECScanPlotPlugin(QPyDesignerCustomWidgetPlugin):
         return QIcon()
 
     def toolTip(self):
-        return "BEC plot for scans"
+        return "BEC plot for 2D scans"
 
     def whatsThis(self):
-        return "BEC plot for scans"
+        return "BEC plot for 2D scans"
 
     def isContainer(self):
         return False
 
     def domXml(self):
         return (
-            '<widget class="BECScanPlot" name="BECScanPlot">\n'
+            '<widget class="BECScanPlot2D" name="BECScanPlot2D">\n'
             ' <property name="toolTip" >\n'
-            "  <string>BEC plot for scans</string>\n"
+            "  <string>BEC plot for 2D scans</string>\n"
             " </property>\n"
             ' <property name="whatsThis" >\n'
-            "  <string>BEC plot for scans in Python using PyQt.</string>\n"
+            "  <string>BEC plot for 2D scans in Python using PyQt.</string>\n"
             " </property>\n"
             "</widget>\n"
         )
 
     def includeFile(self):
-        return "scan_plot"
+        return "scan2d_plot"
