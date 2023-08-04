@@ -52,8 +52,17 @@ class BasicPlot(QtWidgets.QWidget):
         color_list = ["#384c6b", "#e28a2b", "#5E3023", "#e41a1c", "#984e83", "#4daf4a"]
         color_list = BasicPlot.golden_angle_color(colormap="CET-R2", num=len(self.y_value_list))
 
-        # setup plots
-        self.plot = self.plot_window.getPlotItem()
+        # setup plots - GraphicsLayoutWidget
+        # LabelItem
+        self.label = pg.LabelItem(justify="center")
+        self.glw.addItem(self.label)
+        self.label.setText("test label")
+
+        # PlotItem
+        self.glw.nextRow()
+        self.plot = pg.PlotItem()
+        self.glw.addItem(self.plot)
+
         for ii in range(len(self.y_value_list)):
             pen = mkPen(color=color_list[ii], width=2, style=QtCore.Qt.DashLine)
             brush = mkBrush(color=color_list[ii])
@@ -64,7 +73,9 @@ class BasicPlot(QtWidgets.QWidget):
             self.brushs.append(brush)
 
         self.crosshair_v = pg.InfiniteLine(angle=90, movable=False)
+        self.crosshair_h = pg.InfiniteLine(angle=0, movable=False)
         self.plot.addItem(self.crosshair_v, ignoreBounds=True)
+        self.plot.addItem(self.crosshair_h, ignoreBounds=True)
 
         # Add textItems
         self.add_text_items()
@@ -95,6 +106,7 @@ class BasicPlot(QtWidgets.QWidget):
             return
         mousePoint = self.plot.vb.mapSceneToView(pos)
         self.crosshair_v.setPos(mousePoint.x())
+        self.crosshair_h.setPos(mousePoint.y())
         if not self.plotter_data_x:
             return
         self.mouse_box_data.setText("Mouse cursor")

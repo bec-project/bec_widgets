@@ -22,7 +22,7 @@ border-color: rgb(166, 166, 166);</string>
   </property>
   <layout class="QHBoxLayout" name="layout_2">
    <item>
-    <widget class="PlotWidget" name="plot_window" native="true"/>
+    <widget class="GraphicsLayoutWidget" name="glw"/>
    </item>
    <item>
     <spacer name="Spacer">
@@ -57,10 +57,9 @@ border-color: rgb(166, 166, 166);</string>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>PlotWidget</class>
-   <extends>QWidget</extends>
-   <header>pyqtgraph</header>
-   <container>1</container>
+   <class>GraphicsLayoutWidget</class>
+   <extends>QGraphicsView</extends>
+   <header>pyqtgraph.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
