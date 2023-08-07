@@ -12,6 +12,7 @@ from pyqtgraph.Qt.QtCore import pyqtSignal
 
 class BasicPlot(QtWidgets.QWidget):
     update_signal = pyqtSignal()
+    roi_signal = pyqtSignal(tuple)
 
     def __init__(self, name="", y_value_list=["gauss_bpm"]) -> None:
         """
@@ -58,10 +59,18 @@ class BasicPlot(QtWidgets.QWidget):
         self.glw.addItem(self.label)
         self.label.setText("test label")
 
-        # PlotItem
+        # PlotItem - main window
         self.glw.nextRow()
         self.plot = pg.PlotItem()
         self.glw.addItem(self.plot)
+
+        # PlotItem - ROI window
+        self.glw.nextRow()
+        self.plot_roi = pg.PlotItem()
+        self.glw.addItem(self.plot_roi)
+
+        # ROI selector - so far from [-1,1] #TODO update to scale with xrange
+        self.roi_selector = pg.LinearRegionItem([-1, 1])
 
         for ii in range(len(self.y_value_list)):
             pen = mkPen(color=color_list[ii], width=2, style=QtCore.Qt.DashLine)
@@ -85,6 +94,37 @@ class BasicPlot(QtWidgets.QWidget):
             self.plot.scene().sigMouseMoved, rateLimit=60, slot=self.mouse_moved
         )
         self.proxy_update = pg.SignalProxy(self.update_signal, rateLimit=25, slot=self.update)
+        self.roi_selector.sigRegionChangeFinished.connect(self.get_roi_region)
+
+    def get_roi_region(self):
+        """For testing purpose now, get roi region and print it to self.label as tuple"""
+        region = self.roi_selector.getRegion()
+        self.label.setText(f"x = {region[0]:.4f}, y ={region[1]:.4f}")
+        self.roi_signal.emit(region)
+
+        print(f"data_x = {self.plotter_data_x}")
+        print(f"type of data_x = {type(self.plotter_data_x)}")
+
+        print(f"data_y = {self.plotter_data_y[0]}")
+        print(f"type of data_y = {type(self.plotter_data_y)}")
+        # print(f'shape of y = {np.shape(self.plotter_data_y)}')
+
+        # # Find the indices that correspond to the selected region in the x array
+        # start_index = (abs(self.plotter_data_x - region[0])).argmin()
+        # end_index = (abs(self.plotter_data_x - region[1])).argmin()
+        #
+        # # Extract the corresponding x and y values
+        # selected_x = self.plotter_data_x[start_index:end_index]
+        # selected_y = self.plotter_data_y[start_index:end_index]
+        #
+        # # Plot the selected x and y values in plotItem2
+        # self.plot_roi.plot(selected_x, selected_y)
+
+        # plot selection into plot_roi
+
+        # self.plot_roi.plot()
+        # for ii in range(len(self.y_value_list)):
+        #     self.curves[ii].setData(self.plotter_data_x, self.plotter_data_y[ii])
 
     def add_text_items(self):
         """Add text items to the plot"""
@@ -119,21 +159,34 @@ class BasicPlot(QtWidgets.QWidget):
             x_data = f"{closest_point[0]:.{self.precision}f}"
             y_data = f"{closest_point[1]:.{self.precision}f}"
             string_cap = 10
-            self.mouse_box_data.setText(
-                "".join(
-                    [
-                        self.mouse_box_data.text(),
-                        "\n",
-                        # TODO fix different fonts for mouse cursor!
-                        # f"<p'FONT COLOR=red';>",  # rgba{self.pens[ii].color().getRgb()
-                        f"{y_value}",
-                        "\n",
-                        f"X_data:   {x_data:>{string_cap}}",
-                        "\n",
-                        f"Y_data: {y_data:>{string_cap}}",
-                    ]
-                )
-            )
+
+            # self.mouse_box_data.setText(
+            #     "".join(
+            #         [
+            #             self.mouse_box_data.text(),
+            #             "\n",
+            #             # TODO fix different fonts for mouse cursor!
+            #             # f"<p'FONT COLOR=red';>",  # rgba{self.pens[ii].color().getRgb()
+            #             f"{y_value}",
+            #             "\n",
+            #             f"X_data:   {x_data:>{string_cap}}",
+            #             "\n",
+            #             f"Y_data: {y_data:>{string_cap}}",
+            #         ]
+            #     )
+            # )
+            # self.label.setText(
+            #     "".join(
+            #         [
+            #             # TODO fix different fonts for mouse cursor!
+            #             # f"<p'FONT COLOR=red';>",  # rgba{self.pens[ii].color().getRgb()
+            #             f"{y_value}",
+            #             "\n",
+            #             f"X_data:   {x_data:>{string_cap}}",
+            #             "\n",
+            #             f"Y_data: {y_data:>{string_cap}}",
+            #         ]
+            #     ))
 
     def closest_x_y_value(self, input_value, list_x, list_y) -> tuple:
         """
@@ -153,6 +206,10 @@ class BasicPlot(QtWidgets.QWidget):
 
     def update(self):
         """Update the plot with the new data."""
+        # check if roi selector is in the plot
+        if self.roi_selector not in self.plot.items:
+            self.plot.addItem(self.roi_selector)
+
         if len(self.plotter_data_x) <= 1:
             return
         self.plot.setLabel("bottom", self.label_bottom)
