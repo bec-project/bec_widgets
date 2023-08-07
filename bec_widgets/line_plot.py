@@ -3,6 +3,7 @@ import warnings
 from typing import Any
 
 import numpy as np
+import pyqtgraph
 import pyqtgraph as pg
 from PyQt5.QtWidgets import QTableWidgetItem
 
@@ -65,6 +66,7 @@ class BasicPlot(QtWidgets.QWidget):
         self.glw.nextRow()
         self.plot = pg.PlotItem()
         self.glw.addItem(self.plot)
+        self.plot.addLegend()
 
         # PlotItem - ROI window - disabled for now #TODO add 2D plot for ROI and 1D plot for mouse click
         # self.glw.nextRow()
@@ -74,10 +76,12 @@ class BasicPlot(QtWidgets.QWidget):
         # ROI selector - so far from [-1,1] #TODO update to scale with xrange
         self.roi_selector = pg.LinearRegionItem([-1, 1])
 
-        for ii in range(len(self.y_value_list)):
+        for ii, y_value in enumerate(self.y_value_list):
             pen = mkPen(color=color_list[ii], width=2, style=QtCore.Qt.DashLine)
             brush = mkBrush(color=color_list[ii])
-            curve = pg.PlotDataItem(**plotstyles, symbolBrush=brush, pen=pen, skipFiniteCheck=True)
+            curve = pg.PlotDataItem(
+                **plotstyles, symbolBrush=brush, pen=pen, skipFiniteCheck=True, name=y_value
+            )
             self.plot.addItem(curve)
             self.curves.append(curve)
             self.pens.append(pen)
@@ -103,9 +107,6 @@ class BasicPlot(QtWidgets.QWidget):
         """
         Debug button just for quick testing
         """
-        self.mouse_table.setRowCount(1)
-        self.mouse_table.setItem(0, 0, QTableWidgetItem(str("set")))
-        print(f"y_value_list: {self.y_value_list}")
 
     def get_roi_region(self):
         """For testing purpose now, get roi region and print it to self.label as tuple"""
@@ -210,7 +211,9 @@ class BasicPlot(QtWidgets.QWidget):
                 warnings.warn(
                     f"Warning: no matching signal for {self.y_value_list[ii]} found in list of devices. Removing from plot."
                 )
+                self.remove_curve_by_name(self.plot, self.y_value_list[ii])
                 self.y_value_list.pop(ii)
+
         self.precision = client.device_manager.devices[scan_motors[0]]._info["describe"][
             scan_motors[0]
         ]["precision"]
@@ -235,7 +238,19 @@ class BasicPlot(QtWidgets.QWidget):
         for ii in range(len(self.y_value_list)):
             self.curves[ii].setData([], [])
             self.plotter_data_y.append([])
-        # self.mouse_box_data.setText("Mouse cursor")  # Crashes the Thread
+
+    @staticmethod
+    def remove_curve_by_name(plot: pyqtgraph.PlotItem, name: str) -> None:
+        """Removes a curve from the given plot by the specified name.
+
+        Args:
+            plot (pyqtgraph.PlotItem): The plot from which to remove the curve.
+            name (str): The name of the curve to remove.
+        """
+        for item in plot.items:
+            if isinstance(item, pg.PlotDataItem) and getattr(item, "opts", {}).get("name") == name:
+                plot.removeItem(item)
+                return
 
     @staticmethod
     def golden_ratio(num: int) -> list:
