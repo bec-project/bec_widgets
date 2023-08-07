@@ -4,6 +4,8 @@ from typing import Any
 
 import numpy as np
 import pyqtgraph as pg
+from PyQt5.QtWidgets import QTableWidgetItem
+
 from bec_lib import BECClient
 from pyqtgraph import mkBrush, mkColor, mkPen
 from pyqtgraph.Qt import QtCore, QtWidgets, uic
@@ -64,10 +66,10 @@ class BasicPlot(QtWidgets.QWidget):
         self.plot = pg.PlotItem()
         self.glw.addItem(self.plot)
 
-        # PlotItem - ROI window
-        self.glw.nextRow()
-        self.plot_roi = pg.PlotItem()
-        self.glw.addItem(self.plot_roi)
+        # PlotItem - ROI window - disabled for now #TODO add 2D plot for ROI and 1D plot for mouse click
+        # self.glw.nextRow()
+        # self.plot_roi = pg.PlotItem()
+        # self.glw.addItem(self.plot_roi)
 
         # ROI selector - so far from [-1,1] #TODO update to scale with xrange
         self.roi_selector = pg.LinearRegionItem([-1, 1])
@@ -95,6 +97,15 @@ class BasicPlot(QtWidgets.QWidget):
         )
         self.proxy_update = pg.SignalProxy(self.update_signal, rateLimit=25, slot=self.update)
         self.roi_selector.sigRegionChangeFinished.connect(self.get_roi_region)
+        self.pushButton_debug.clicked.connect(self.debug)
+
+    def debug(self):
+        """
+        Debug button just for quick testing
+        """
+        self.mouse_table.setRowCount(1)
+        self.mouse_table.setItem(0, 0, QTableWidgetItem(str("set")))
+        print(f"y_value_list: {self.y_value_list}")
 
     def get_roi_region(self):
         """For testing purpose now, get roi region and print it to self.label as tuple"""
@@ -102,40 +113,16 @@ class BasicPlot(QtWidgets.QWidget):
         self.label.setText(f"x = {region[0]:.4f}, y ={region[1]:.4f}")
         self.roi_signal.emit(region)
 
-        print(f"data_x = {self.plotter_data_x}")
-        print(f"type of data_x = {type(self.plotter_data_x)}")
-
-        print(f"data_y = {self.plotter_data_y[0]}")
-        print(f"type of data_y = {type(self.plotter_data_y)}")
-        # print(f'shape of y = {np.shape(self.plotter_data_y)}')
-
-        # # Find the indices that correspond to the selected region in the x array
-        # start_index = (abs(self.plotter_data_x - region[0])).argmin()
-        # end_index = (abs(self.plotter_data_x - region[1])).argmin()
-        #
-        # # Extract the corresponding x and y values
-        # selected_x = self.plotter_data_x[start_index:end_index]
-        # selected_y = self.plotter_data_y[start_index:end_index]
-        #
-        # # Plot the selected x and y values in plotItem2
-        # self.plot_roi.plot(selected_x, selected_y)
-
-        # plot selection into plot_roi
-
-        # self.plot_roi.plot()
-        # for ii in range(len(self.y_value_list)):
-        #     self.curves[ii].setData(self.plotter_data_x, self.plotter_data_y[ii])
-
-    def add_text_items(self):
+    def add_text_items(self):  # TODO probably can be removed
         """Add text items to the plot"""
 
-        self.mouse_box_data.setText("Mouse cursor")
+        # self.mouse_box_data.setText("Mouse cursor")
         # TODO Via StyleSheet, one may set the color of the full QLabel
         # self.mouse_box_data.setStyleSheet(f"QLabel {{color : rgba{self.pens[0].color().getRgb()}}}")
 
     def mouse_moved(self, event: tuple) -> None:
         """
-        Update the mouse box with the current mouse position and the corresponding data.
+        Update the mouse table with the current mouse position and the corresponding data.
 
         Args:
             event (tuple):  Mouse event containing the position of the mouse cursor.
@@ -149,7 +136,9 @@ class BasicPlot(QtWidgets.QWidget):
         self.crosshair_h.setPos(mousePoint.y())
         if not self.plotter_data_x:
             return
-        self.mouse_box_data.setText("Mouse cursor")
+
+        # Init number of rows in table according to n of devices
+        self.mouse_table.setRowCount(len(self.y_value_list))
 
         for ii, y_value in enumerate(self.y_value_list):
             closest_point = self.closest_x_y_value(
@@ -158,35 +147,11 @@ class BasicPlot(QtWidgets.QWidget):
             # TODO fix text wobble in plot, see plot when it crosses 0
             x_data = f"{closest_point[0]:.{self.precision}f}"
             y_data = f"{closest_point[1]:.{self.precision}f}"
-            string_cap = 10
 
-            # self.mouse_box_data.setText(
-            #     "".join(
-            #         [
-            #             self.mouse_box_data.text(),
-            #             "\n",
-            #             # TODO fix different fonts for mouse cursor!
-            #             # f"<p'FONT COLOR=red';>",  # rgba{self.pens[ii].color().getRgb()
-            #             f"{y_value}",
-            #             "\n",
-            #             f"X_data:   {x_data:>{string_cap}}",
-            #             "\n",
-            #             f"Y_data: {y_data:>{string_cap}}",
-            #         ]
-            #     )
-            # )
-            # self.label.setText(
-            #     "".join(
-            #         [
-            #             # TODO fix different fonts for mouse cursor!
-            #             # f"<p'FONT COLOR=red';>",  # rgba{self.pens[ii].color().getRgb()
-            #             f"{y_value}",
-            #             "\n",
-            #             f"X_data:   {x_data:>{string_cap}}",
-            #             "\n",
-            #             f"Y_data: {y_data:>{string_cap}}",
-            #         ]
-            #     ))
+            # Write coordinate to QTable
+            self.mouse_table.setItem(ii, 0, QTableWidgetItem(str(y_value)))
+            self.mouse_table.setItem(ii, 1, QTableWidgetItem(str(x_data)))
+            self.mouse_table.setItem(ii, 2, QTableWidgetItem(str(y_data)))
 
     def closest_x_y_value(self, input_value, list_x, list_y) -> tuple:
         """
@@ -270,7 +235,7 @@ class BasicPlot(QtWidgets.QWidget):
         for ii in range(len(self.y_value_list)):
             self.curves[ii].setData([], [])
             self.plotter_data_y.append([])
-        self.mouse_box_data.setText("Mouse cursor")  # Crashes the Thread
+        # self.mouse_box_data.setText("Mouse cursor")  # Crashes the Thread
 
     @staticmethod
     def golden_ratio(num: int) -> list:

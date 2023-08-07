@@ -1,44 +1,54 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>layout</class>
- <widget class="QWidget" name="layout">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>681</width>
-    <height>596</height>
+    <width>713</width>
+    <height>294</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Form</string>
+   <string>Line Plot</string>
   </property>
-  <property name="autoFillBackground">
-   <bool>false</bool>
-  </property>
-  <property name="styleSheet">
-   <string notr="true">background-color: rgb(255, 255, 255);
-border-color: rgb(166, 166, 166);</string>
-  </property>
-  <layout class="QHBoxLayout" name="layout_2" stretch="3,1,0">
+  <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
-    <widget class="GraphicsLayoutWidget" name="glw"/>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QPushButton" name="pushButton_debug">
+       <property name="text">
+        <string>Debug</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="GraphicsLayoutWidget" name="glw"/>
+     </item>
+    </layout>
    </item>
    <item>
-    <widget class="QLabel" name="mouse_box_data">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
+    <widget class="QTableWidget" name="mouse_table">
+     <property name="textElideMode">
+      <enum>Qt::ElideMiddle</enum>
      </property>
-     <property name="text">
-      <string>TextLabel</string>
-     </property>
+     <column>
+      <property name="text">
+       <string>Device</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>X</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Y</string>
+      </property>
+     </column>
     </widget>
-   </item>
-   <item>
-    <widget class="QTableWidget" name="tableWidget"/>
    </item>
   </layout>
  </widget>
