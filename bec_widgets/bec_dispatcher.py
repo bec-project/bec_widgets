@@ -1,8 +1,10 @@
+import argparse
+import os
 from dataclasses import dataclass
 from threading import RLock
 
 from bec_lib import BECClient
-from bec_lib.core import BECMessage, MessageEndpoints
+from bec_lib.core import BECMessage, MessageEndpoints, ServiceConfig
 from bec_lib.core.redis_connector import RedisConsumerThreaded
 from PyQt5.QtCore import QObject, pyqtSignal
 
@@ -23,9 +25,16 @@ class _BECDispatcher(QObject):
     new_projection_id = pyqtSignal(dict)
     new_projection_data = pyqtSignal(dict)
 
-    def __init__(self):
+    def __init__(self, bec_config=None):
         super().__init__()
         self.client = BECClient()
+
+        # TODO: this is a workaround for now to provide service config within qtdesigner, but is
+        # it possible to provide config via a cli arg?
+        if bec_config is None and os.path.isfile("bec_config.yaml"):
+            bec_config = "bec_config.yaml"
+
+        self.client.initialize(config=ServiceConfig(config_path=bec_config))
         self.client.start()
 
         self._slot_signal_map = {
@@ -150,4 +159,9 @@ class _BECDispatcher(QObject):
             del self._daps[data_ep]
 
 
-bec_dispatcher = _BECDispatcher()
+parser = argparse.ArgumentParser()
+parser.add_argument("--bec-config", default=None)
+parser.add_argument("args", nargs=argparse.REMAINDER)
+args = parser.parse_args()
+
+bec_dispatcher = _BECDispatcher(args.bec_config)
