@@ -143,7 +143,9 @@ def test_line_plot_mouse_moved(qtbot):
             f"Y_data: {y_data:>{string_cap}}",
         ]
     )
-    with mock.patch.object(plot, "plot") as mock_plot:
+    with mock.patch.object(
+        plot, "plot"
+    ) as mock_plot:  # TODO change test to simulate QTable instead of QLabel
         mock_plot.sceneBoundingRect.contains.return_value = True
         mock_plot.vb.mapSceneToView((20, 10)).x.return_value = 2.8
         plot.mouse_moved((20, 10))

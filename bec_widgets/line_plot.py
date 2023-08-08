@@ -5,7 +5,8 @@ from typing import Any
 import numpy as np
 import pyqtgraph
 import pyqtgraph as pg
-from PyQt5.QtWidgets import QTableWidgetItem
+from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtWidgets import QTableWidgetItem, QCheckBox
 
 from bec_lib import BECClient
 from pyqtgraph import mkBrush, mkColor, mkPen
@@ -33,6 +34,9 @@ class BasicPlot(QtWidgets.QWidget):
         current_path = os.path.dirname(__file__)
         uic.loadUi(os.path.join(current_path, "line_plot.ui"), self)
 
+        # Set splitter distribution of widgets
+        self.splitter.setSizes([5, 2])
+
         self._idle_time = 100
         self.title = ""
         self.label_bottom = ""
@@ -40,6 +44,7 @@ class BasicPlot(QtWidgets.QWidget):
 
         self.scan_motors = []
         self.y_value_list = y_value_list
+        self.previous_y_value_list = None
         self.plotter_data_x = []
         self.plotter_data_y = []
         self.curves = []
@@ -138,9 +143,6 @@ class BasicPlot(QtWidgets.QWidget):
         if not self.plotter_data_x:
             return
 
-        # Init number of rows in table according to n of devices
-        self.mouse_table.setRowCount(len(self.y_value_list))
-
         for ii, y_value in enumerate(self.y_value_list):
             closest_point = self.closest_x_y_value(
                 mousePoint.x(), self.plotter_data_x, self.plotter_data_y[ii]
@@ -150,9 +152,11 @@ class BasicPlot(QtWidgets.QWidget):
             y_data = f"{closest_point[1]:.{self.precision}f}"
 
             # Write coordinate to QTable
-            self.mouse_table.setItem(ii, 0, QTableWidgetItem(str(y_value)))
-            self.mouse_table.setItem(ii, 1, QTableWidgetItem(str(x_data)))
-            self.mouse_table.setItem(ii, 2, QTableWidgetItem(str(y_data)))
+            self.mouse_table.setItem(ii, 1, QTableWidgetItem(str(y_value)))
+            self.mouse_table.setItem(ii, 2, QTableWidgetItem(str(x_data)))
+            self.mouse_table.setItem(ii, 3, QTableWidgetItem(str(y_data)))
+
+            self.mouse_table.resizeColumnsToContents()
 
     def closest_x_y_value(self, input_value, list_x, list_y) -> tuple:
         """
@@ -176,6 +180,11 @@ class BasicPlot(QtWidgets.QWidget):
         if self.roi_selector not in self.plot.items:
             self.plot.addItem(self.roi_selector)
 
+        # check if QTable was initialised and if list of devices was changed
+        if self.y_value_list != self.previous_y_value_list:
+            self.setup_cursor_table()
+            self.previous_y_value_list = self.y_value_list.copy() if self.y_value_list else None
+
         if len(self.plotter_data_x) <= 1:
             return
         self.plot.setLabel("bottom", self.label_bottom)
@@ -183,7 +192,8 @@ class BasicPlot(QtWidgets.QWidget):
         for ii in range(len(self.y_value_list)):
             self.curves[ii].setData(self.plotter_data_x, self.plotter_data_y[ii])
 
-    def __call__(self, data: dict, metadata: dict, **kwds: Any) -> None:
+    @pyqtSlot(dict, dict)
+    def on_scan_segment(self, data: dict, metadata: dict) -> None:
         """Update function that is called during the scan callback. To avoid
         too many renderings, the GUI is only processing events every <_idle_time> ms.
 
@@ -199,7 +209,7 @@ class BasicPlot(QtWidgets.QWidget):
         self.title = f"Scan {metadata['scan_number']}"
 
         self.scan_motors = scan_motors = metadata.get("scan_report_devices")
-        client = BECClient()
+        # client = BECClient()
         remove_y_value_index = [
             index
             for index, y_value in enumerate(self.y_value_list)
@@ -219,6 +229,7 @@ class BasicPlot(QtWidgets.QWidget):
         ]["precision"]
         # TODO after update of bec_lib, this will be new way to access data
         # self.precision = client.device_manager.devices[scan_motors[0]].precision
+
         x = data["data"][scan_motors[0]][scan_motors[0]]["value"]
         self.plotter_data_x.append(x)
         for ii, y_value in enumerate(self.y_value_list):
@@ -226,6 +237,9 @@ class BasicPlot(QtWidgets.QWidget):
             self.plotter_data_y[ii].append(y)
         self.label_bottom = scan_motors[0]
         self.label_left = f"{', '.join(self.y_value_list)}"
+
+        # print(f'metadata scan N{metadata["scan_number"]}') #TODO put as label on top of plot
+        # print(f'Data point = {data["point_id"]}') #TODO can be used for progress bar
 
         if len(self.plotter_data_x) <= 1:
             return
@@ -239,18 +253,40 @@ class BasicPlot(QtWidgets.QWidget):
             self.curves[ii].setData([], [])
             self.plotter_data_y.append([])
 
+    def setup_cursor_table(self):
+        """QTable formatting according to N of devices displayed in plot."""
+
+        # Init number of rows in table according to n of devices
+        self.mouse_table.setRowCount(len(self.y_value_list))
+
+        for ii, y_value in enumerate(self.y_value_list):
+            checkbox = QCheckBox()
+            checkbox.setChecked(True)
+            # TODO just for testing, will be replaced by removing/adding curve
+            checkbox.stateChanged.connect(lambda: print("status Changed"))
+            # checkbox.stateChanged.connect(lambda: self.remove_curve_by_name(plot=self.plot, checkbox=checkbox, name=y_value))
+            self.mouse_table.setCellWidget(ii, 0, checkbox)
+            self.mouse_table.setItem(ii, 1, QTableWidgetItem(str(y_value)))
+
+            self.mouse_table.resizeColumnsToContents()
+
     @staticmethod
     def remove_curve_by_name(plot: pyqtgraph.PlotItem, name: str) -> None:
+        # def remove_curve_by_name(plot: pyqtgraph.PlotItem, checkbox: QtWidgets.QCheckBox, name: str) -> None:
         """Removes a curve from the given plot by the specified name.
 
         Args:
             plot (pyqtgraph.PlotItem): The plot from which to remove the curve.
             name (str): The name of the curve to remove.
         """
+        # if checkbox.isChecked():
         for item in plot.items:
             if isinstance(item, pg.PlotDataItem) and getattr(item, "opts", {}).get("name") == name:
                 plot.removeItem(item)
                 return
+
+        # else:
+        #     return
 
     @staticmethod
     def golden_ratio(num: int) -> list:
@@ -300,6 +336,7 @@ class BasicPlot(QtWidgets.QWidget):
 
 if __name__ == "__main__":
     import argparse
+    from bec_widgets.bec_dispatcher import bec_dispatcher
 
     from bec_widgets import ctrl_c
 
@@ -312,11 +349,12 @@ if __name__ == "__main__":
     )
     value = parser.parse_args()
     print(f"Plotting signals for: {', '.join(value.signals)}")
-    client = BECClient()
-    client.start()
+    client = bec_dispatcher.client
+    # client.start()
     app = QtWidgets.QApplication([])
     ctrl_c.setup(app)
     plot = BasicPlot(y_value_list=value.signals)
+    bec_dispatcher.connect(plot)
     plot.show()
-    client.callbacks.register("scan_segment", plot, sync=False)
+    # client.callbacks.register("scan_segment", plot, sync=False)
     app.exec_()

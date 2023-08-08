@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>713</width>
-    <height>294</height>
+    <width>737</width>
+    <height>303</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,39 +15,52 @@
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <item>
-      <widget class="QPushButton" name="pushButton_debug">
-       <property name="text">
-        <string>Debug</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="GraphicsLayoutWidget" name="glw"/>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <widget class="QTableWidget" name="mouse_table">
-     <property name="textElideMode">
-      <enum>Qt::ElideMiddle</enum>
+    <widget class="QSplitter" name="splitter">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
      </property>
-     <column>
-      <property name="text">
-       <string>Device</string>
+     <property name="opaqueResize">
+      <bool>false</bool>
+     </property>
+     <widget class="QWidget" name="verticalLayoutWidget">
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <item>
+        <widget class="QPushButton" name="pushButton_debug">
+         <property name="text">
+          <string>Debug</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="GraphicsLayoutWidget" name="glw"/>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QTableWidget" name="mouse_table">
+      <property name="textElideMode">
+       <enum>Qt::ElideMiddle</enum>
       </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>X</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>Y</string>
-      </property>
-     </column>
+      <column>
+       <property name="text">
+        <string>Display</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Device</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>X</string>
+       </property>
+      </column>
+      <column>
+       <property name="text">
+        <string>Y</string>
+       </property>
+      </column>
+     </widget>
     </widget>
    </item>
   </layout>
