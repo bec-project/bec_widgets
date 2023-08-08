@@ -1,8 +1,7 @@
 import os
 import warnings
-import time
 from typing import Any
-import threading
+
 import numpy as np
 import pyqtgraph
 import pyqtgraph as pg
@@ -13,8 +12,6 @@ from bec_lib import BECClient
 from pyqtgraph import mkBrush, mkColor, mkPen
 from pyqtgraph.Qt import QtCore, QtWidgets, uic
 from pyqtgraph.Qt.QtCore import pyqtSignal
-
-from bec_lib.core import BECMessage
 
 
 class BasicPlot(QtWidgets.QWidget):
@@ -111,12 +108,6 @@ class BasicPlot(QtWidgets.QWidget):
         self.roi_selector.sigRegionChangeFinished.connect(self.get_roi_region)
         self.pushButton_debug.clicked.connect(self.debug)
 
-        self._current_proj = None
-        self._current_metadata_ep = "px_stream/projection_{}/metadata"
-
-        self.data_retriever = threading.Thread(target=self.on_projection, daemon=True)
-        self.data_retriever.start()
-
     def debug(self):
         """
         Debug button just for quick testing
@@ -186,21 +177,20 @@ class BasicPlot(QtWidgets.QWidget):
     def update(self):
         """Update the plot with the new data."""
         # check if roi selector is in the plot
-        # if self.roi_selector not in self.plot.items:
-        #     self.plot.addItem(self.roi_selector)
+        if self.roi_selector not in self.plot.items:
+            self.plot.addItem(self.roi_selector)
 
         # check if QTable was initialised and if list of devices was changed
         if self.y_value_list != self.previous_y_value_list:
             self.setup_cursor_table()
             self.previous_y_value_list = self.y_value_list.copy() if self.y_value_list else None
 
-        self.curves[0].setData(self.plotter_data_x[0], self.plotter_data_y[0])
-        # if len(self.plotter_data_x[0]) <= 1:
-        #     return
-        # self.plot.setLabel("bottom", self.label_bottom)
-        # self.plot.setLabel("left", self.label_left)
-        # for ii in range(len(self.y_value_list)):
-        #     self.curves[0].setData(self.plotter_data_x[0], self.plotter_data_y[0])
+        if len(self.plotter_data_x) <= 1:
+            return
+        self.plot.setLabel("bottom", self.label_bottom)
+        self.plot.setLabel("left", self.label_left)
+        for ii in range(len(self.y_value_list)):
+            self.curves[ii].setData(self.plotter_data_x, self.plotter_data_y[ii])
 
     @pyqtSlot(dict, dict)
     def on_scan_segment(self, data: dict, metadata: dict) -> None:
@@ -343,53 +333,6 @@ class BasicPlot(QtWidgets.QWidget):
         ]
         return colors
 
-    def on_projection(self):
-        while True:
-            if self._current_proj is None:
-                time.sleep(0.1)
-                continue
-            endpoint_key = f"px_stream/projection_{self._current_proj}/data"
-            # from_pnt =
-            # to_pnt =
-            msgs = client.producer.lrange(topic=endpoint_key, start=0, end=2)
-            data = [BECMessage.DeviceMessage.loads(msg) for msg in msgs]
-            if not data:
-                continue
-
-            self.plotter_data_y = [
-                np.sum(data[-1].content["signals"]["data"][75, ...], axis=-2).squeeze()
-            ]
-            self.update_signal.emit()
-            time.sleep(0.3)
-
-    @pyqtSlot(dict)
-    def new_proj_metadata(self, data):
-        self.current_q = data["q"]
-        self._current_norm = data["norm_sum"]
-        self._current_metadata = data["metadata"]
-
-        self.plotter_data_x = [np.arange(0, 3206, 1)]  # [self.current_q]
-        # while True:
-        #     endpoint_key = self._current_proj
-        #
-        #     self.plotter_data_x = list(range(data["data"].shape[-1]))
-        #     self.plotter_data_y[0] = np.sum(data["data"][-1,75,...], axis=-2).squeeze()
-        #     self.update_signal.emit()
-        #     time.sleep()
-
-    @pyqtSlot(dict)
-    def new_proj(self, data):
-        if self._current_proj is not None:
-            bec_dispatcher.disconnect_proj_data(
-                self.new_proj_metadata, self._current_metadata_ep.format(self._current_proj)
-            )
-
-        self.plotter_data_x = [np.arange(0, 3206, 1)]
-        self._current_proj = data["proj_nr"]
-        bec_dispatcher.connect_proj_data(
-            self.new_proj_metadata, self._current_metadata_ep.format(self._current_proj)
-        )
-
 
 if __name__ == "__main__":
     import argparse
@@ -402,9 +345,8 @@ if __name__ == "__main__":
         "--signals",
         help="specify recorded signals",
         nargs="+",
-        default=["gauss_bpm"],
+        default=["gauss_bpm", "bpm4i", "bpm5i", "bpm6i", "xert"],
     )
-    # default = ["gauss_bpm", "bpm4i", "bpm5i", "bpm6i", "xert"],
     value = parser.parse_args()
     print(f"Plotting signals for: {', '.join(value.signals)}")
     client = bec_dispatcher.client
@@ -412,8 +354,7 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication([])
     ctrl_c.setup(app)
     plot = BasicPlot(y_value_list=value.signals)
-    # bec_dispatcher.connect(plot)
-    bec_dispatcher.connect_proj_id(plot.new_proj)
+    bec_dispatcher.connect(plot)
     plot.show()
     # client.callbacks.register("scan_segment", plot, sync=False)
     app.exec_()

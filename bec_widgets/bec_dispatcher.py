@@ -20,6 +20,9 @@ class _BECDispatcher(QObject):
     scan_segment = pyqtSignal(dict, dict)
     new_dap_data = pyqtSignal(dict)
 
+    new_projection_id = pyqtSignal(dict)
+    new_projection_data = pyqtSignal(dict)
+
     def __init__(self):
         super().__init__()
         self.client = BECClient()
@@ -33,6 +36,8 @@ class _BECDispatcher(QObject):
 
         self._scan_id = None
         scan_lock = RLock()
+
+        # self.new_projection_id.connect(self.new_projection_data)
 
         def _scan_segment_cb(scan_segment, metadata):
             with scan_lock:
@@ -88,6 +93,61 @@ class _BECDispatcher(QObject):
             # shutdown consumer if there are no more connected slots
             self._daps[dap_name].consumer.shutdown()
             del self._daps[dap_name]
+
+    # def connect_proj_data(self, slot):
+    #     keys = self.client.producer.keys("px_stream/projection_*")
+    #     keys = keys or []
+    #
+    #     def _dap_cb(msg):
+    #         msg = BECMessage.DeviceMessage.loads(msg.value)
+    #         self.new_projection_data.emit(msg.content["data"])
+    #
+    #     proj_numbers = set(key.decode().split("px_stream/projection_")[1].split("/")[0] for key in keys)
+    #     last_proj_id = sorted(proj_numbers)[-1]
+    #     dap_ep = MessageEndpoints.processed_data(f"px_stream/projection_{last_proj_id}/")
+    #
+    #     consumer = self.client.connector.consumer(topics=dap_ep, cb=_dap_cb)
+    #     consumer.start()
+    #
+    #     self.new_projection_data.connect(slot)
+
+    def connect_proj_id(self, slot):
+        def _dap_cb(msg):
+            msg = BECMessage.DeviceMessage.loads(msg.value)
+            self.new_projection_id.emit(msg.content["signals"])
+
+        dap_ep = "px_stream/proj_nr"
+        consumer = self.client.connector.consumer(topics=dap_ep, cb=_dap_cb)
+        consumer.start()
+
+        self.new_projection_id.connect(slot)
+
+    def connect_proj_data(self, slot: object, data_ep: str) -> object:
+        def _dap_cb(msg):
+            msg = BECMessage.DeviceMessage.loads(msg.value)
+            self.new_projection_data.emit(msg.content["signals"])
+
+        consumer = self.client.connector.consumer(topics=data_ep, cb=_dap_cb)
+        consumer.start()
+        self._daps[data_ep] = _BECDap(consumer)
+        self._daps[data_ep].slots.add(slot)
+
+        self.new_projection_data.connect(slot)
+
+    def disconnect_proj_data(self, slot, data_ep):
+        if data_ep not in self._daps:
+            return
+
+        if slot not in self._daps[data_ep].slots:
+            return
+
+        self.new_projection_data.disconnect(slot)
+        self._daps[data_ep].slots.remove(slot)
+
+        if not self._daps[data_ep].slots:
+            # shutdown consumer if there are no more connected slots
+            self._daps[data_ep].consumer.shutdown()
+            del self._daps[data_ep]
 
 
 bec_dispatcher = _BECDispatcher()
