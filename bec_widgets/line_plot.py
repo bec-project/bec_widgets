@@ -73,6 +73,7 @@ class BasicPlot(QtWidgets.QWidget):
         # PlotItem - main window
         self.glw.nextRow()
         self.plot = pg.PlotItem()
+        self.plot.setLogMode(True, True)
         self.glw.addItem(self.plot)
         self.plot.addLegend()
 
@@ -125,7 +126,7 @@ class BasicPlot(QtWidgets.QWidget):
     def get_roi_region(self):
         """For testing purpose now, get roi region and print it to self.label as tuple"""
         region = self.roi_selector.getRegion()
-        self.label.setText(f"x = {region[0]:.4f}, y ={region[1]:.4f}")
+        self.label.setText(f"x = {(10**region[0]):.4f}, y ={(10**region[1]):.4f}")
         self.roi_signal.emit(region)
 
     def add_text_items(self):  # TODO probably can be removed
@@ -152,20 +153,26 @@ class BasicPlot(QtWidgets.QWidget):
         if not self.plotter_data_x:
             return
 
-        for ii, y_value in enumerate(self.y_value_list):
-            closest_point = self.closest_x_y_value(
-                mousePoint.x(), self.plotter_data_x, self.plotter_data_y[ii]
-            )
-            # TODO fix text wobble in plot, see plot when it crosses 0
-            x_data = f"{closest_point[0]:.{self.precision}f}"
-            y_data = f"{closest_point[1]:.{self.precision}f}"
+        # for ii, y_value in enumerate(self.y_value_list):
+        #     closest_point = self.closest_x_y_value(
+        #         mousePoint.x(), self.plotter_data_x, self.plotter_data_y[ii]
+        #     )
+        closest_point = self.closest_x_y_value(
+            mousePoint.x(), self.plotter_data_x[0], self.plotter_data_y[0]
+        )
+        self.precision = 3
+        ii = 0
+        y_value = self.y_value_list[ii]
+        # TODO fix text wobble in plot, see plot when it crosses 0
+        x_data = f"{10**closest_point[0]:.{self.precision}f}"
+        y_data = f"{10**closest_point[1]:.{self.precision}f}"
 
-            # Write coordinate to QTable
-            self.mouse_table.setItem(ii, 1, QTableWidgetItem(str(y_value)))
-            self.mouse_table.setItem(ii, 2, QTableWidgetItem(str(x_data)))
-            self.mouse_table.setItem(ii, 3, QTableWidgetItem(str(y_data)))
+        # Write coordinate to QTable
+        self.mouse_table.setItem(ii, 1, QTableWidgetItem(str(y_value)))
+        self.mouse_table.setItem(ii, 2, QTableWidgetItem(str(x_data)))
+        self.mouse_table.setItem(ii, 3, QTableWidgetItem(str(y_data)))
 
-            self.mouse_table.resizeColumnsToContents()
+        self.mouse_table.resizeColumnsToContents()
 
     def closest_x_y_value(self, input_value, list_x, list_y) -> tuple:
         """
@@ -186,8 +193,8 @@ class BasicPlot(QtWidgets.QWidget):
     def update(self):
         """Update the plot with the new data."""
         # check if roi selector is in the plot
-        # if self.roi_selector not in self.plot.items:
-        #     self.plot.addItem(self.roi_selector)
+        if self.roi_selector not in self.plot.items:
+            self.plot.addItem(self.roi_selector)
 
         # check if QTable was initialised and if list of devices was changed
         if self.y_value_list != self.previous_y_value_list:
@@ -348,47 +355,41 @@ class BasicPlot(QtWidgets.QWidget):
             if self._current_proj is None:
                 time.sleep(0.1)
                 continue
-            endpoint_key = f"px_stream/projection_{self._current_proj}/data"
+            endpoint = f"px_stream/projection_{self._current_proj}/data"
             # from_pnt =
             # to_pnt =
-            msgs = client.producer.lrange(topic=endpoint_key, start=0, end=2)
+            msgs = client.producer.lrange(topic=endpoint, start=-2, end=-1)
             data = [BECMessage.DeviceMessage.loads(msg) for msg in msgs]
             if not data:
                 continue
 
             self.plotter_data_y = [
-                np.sum(data[-1].content["signals"]["data"][75, ...], axis=-2).squeeze()
+                np.sum(
+                    np.sum(data[-1].content["signals"]["data"] * self._current_norm, axis=1)
+                    / np.sum(self._current_norm, axis=0),
+                    axis=0,
+                ).squeeze()
             ]
+
             self.update_signal.emit()
-            time.sleep(0.3)
+            # time.sleep(0.1)
 
     @pyqtSlot(dict)
-    def new_proj_metadata(self, data):
-        self.current_q = data["q"]
-        self._current_norm = data["norm_sum"]
-        self._current_metadata = data["metadata"]
-
-        self.plotter_data_x = [np.arange(0, 3206, 1)]  # [self.current_q]
-        # while True:
-        #     endpoint_key = self._current_proj
-        #
-        #     self.plotter_data_x = list(range(data["data"].shape[-1]))
-        #     self.plotter_data_y[0] = np.sum(data["data"][-1,75,...], axis=-2).squeeze()
-        #     self.update_signal.emit()
-        #     time.sleep()
+    def on_dap_update(self, data):
+        time.sleep(0.1)
 
     @pyqtSlot(dict)
     def new_proj(self, data):
-        if self._current_proj is not None:
-            bec_dispatcher.disconnect_proj_data(
-                self.new_proj_metadata, self._current_metadata_ep.format(self._current_proj)
-            )
+        proj_nr = data["proj_nr"]
+        endpoint = f"px_stream/projection_{proj_nr}/metadata"
+        msg_raw = client.producer.get(topic=endpoint)
+        msg = BECMessage.DeviceMessage.loads(msg_raw)
+        self._current_q = msg.content["signals"]["q"]
+        self._current_norm = msg.content["signals"]["norm_sum"]
+        self._current_metadata = msg.content["signals"]["metadata"]
 
-        self.plotter_data_x = [np.arange(0, 3206, 1)]
-        self._current_proj = data["proj_nr"]
-        bec_dispatcher.connect_proj_data(
-            self.new_proj_metadata, self._current_metadata_ep.format(self._current_proj)
-        )
+        self.plotter_data_x = [self._current_q]
+        self._current_proj = proj_nr
 
 
 if __name__ == "__main__":
@@ -414,6 +415,7 @@ if __name__ == "__main__":
     plot = BasicPlot(y_value_list=value.signals)
     # bec_dispatcher.connect(plot)
     bec_dispatcher.connect_proj_id(plot.new_proj)
+    bec_dispatcher.connect_dap_slot(plot.on_dap_update, "px_dap_worker")
     plot.show()
     # client.callbacks.register("scan_segment", plot, sync=False)
     app.exec_()
