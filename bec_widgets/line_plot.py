@@ -382,7 +382,7 @@ class BasicPlot(QtWidgets.QWidget):
                 time.sleep(0.1)
                 continue
             endpoint = f"px_stream/projection_{self._current_proj}/data"
-            msgs = client.producer.lrange(topic=endpoint, start=-1, end=-1)
+            msgs = client.producer.lrange(topic=endpoint, start=0, end=0)
             data = [BECMessage.DeviceMessage.loads(msg) for msg in msgs]
             if not data:
                 continue
@@ -399,7 +399,8 @@ class BasicPlot(QtWidgets.QWidget):
 
     @pyqtSlot(dict, dict)
     def on_dap_update(self, data: dict, metadata: dict):
-        time.sleep(0.1)
+        self.img.setImage(data["z"].T)
+        # time.sleep(0,1)
 
     @pyqtSlot(dict)
     def new_proj(self, data):
