@@ -61,8 +61,8 @@ class BECScanPlot(pg.GraphicsView):
 
             plot_curve.setData(x=[*x, x_new], y=[*y, y_new])
 
-    @pyqtSlot(dict)
-    def redraw_dap(self, data):
+    @pyqtSlot(dict, dict)
+    def redraw_dap(self, data, _metadata):
         for chan, plot_curve in self.dap_curves.items():
             if not chan:
                 continue
