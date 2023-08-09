@@ -38,7 +38,7 @@ class BasicPlot(QtWidgets.QWidget):
         uic.loadUi(os.path.join(current_path, "line_plot.ui"), self)
 
         # Set splitter distribution of widgets
-        self.splitter.setSizes([5, 2])
+        self.splitter.setSizes([3, 1])
 
         self._idle_time = 100
         self.title = ""
@@ -68,7 +68,7 @@ class BasicPlot(QtWidgets.QWidget):
         # LabelItem
         self.label = pg.LabelItem(justify="center")
         self.glw.addItem(self.label)
-        self.label.setText("test label")
+        self.label.setText("ROI region")
 
         # PlotItem - main window
         self.glw.nextRow()
@@ -77,10 +77,12 @@ class BasicPlot(QtWidgets.QWidget):
         self.glw.addItem(self.plot)
         self.plot.addLegend()
 
-        # PlotItem - ROI window - disabled for now #TODO add 2D plot for ROI and 1D plot for mouse click
-        # self.glw.nextRow()
-        # self.plot_roi = pg.PlotItem()
-        # self.glw.addItem(self.plot_roi)
+        # ImageItem - 2D view #TODO add 2D plot for ROI and 1D plot for mouse click
+        self.glw.nextRow()
+        self.plot_roi = pg.PlotItem()
+        self.img = pg.ImageItem()
+        self.glw.addItem(self.plot_roi)
+        self.plot_roi.addItem(self.img)
 
         # ROI selector - so far from [-1,1] #TODO update to scale with xrange
         self.roi_selector = pg.LinearRegionItem([-1, 1])
@@ -96,10 +98,21 @@ class BasicPlot(QtWidgets.QWidget):
             self.pens.append(pen)
             self.brushs.append(brush)
 
+        self.add_crosshair(self.plot)
+        self.add_crosshair(self.plot_roi)
+
         self.crosshair_v = pg.InfiniteLine(angle=90, movable=False)
         self.crosshair_h = pg.InfiniteLine(angle=0, movable=False)
-        self.plot.addItem(self.crosshair_v, ignoreBounds=True)
-        self.plot.addItem(self.crosshair_h, ignoreBounds=True)
+        #
+        # for plot in (self.plot_roi, self.plot):
+        #     plot.addItem(self.crosshair_v, ignoreBounds=True)
+        #     plot.addItem(self.crosshair_h, ignoreBounds=True)
+
+        # self.plot.addItem(self.crosshair_v, ignoreBounds=True)
+        # self.plot.addItem(self.crosshair_h, ignoreBounds=True)
+
+        # self.plot_roi.addItem(self.crosshair_v, ignoreBounds=True)
+        # self.plot_roi.addItem(self.crosshair_h, ignoreBounds=True)
 
         # Add textItems
         self.add_text_items()
@@ -110,7 +123,10 @@ class BasicPlot(QtWidgets.QWidget):
         )
         self.proxy_update = pg.SignalProxy(self.update_signal, rateLimit=25, slot=self.update)
         self.roi_selector.sigRegionChangeFinished.connect(self.get_roi_region)
-        self.pushButton_debug.clicked.connect(self.debug)
+
+        # Debug functions
+        self.pushButton_debug.clicked.connect(self.generate_2D_data_update)
+        self.generate_2D_data()
 
         self._current_proj = None
         self._current_metadata_ep = "px_stream/projection_{}/metadata"
@@ -122,6 +138,21 @@ class BasicPlot(QtWidgets.QWidget):
         """
         Debug button just for quick testing
         """
+
+    def generate_2D_data(self):
+        data = np.random.normal(size=(1, 100))
+        self.img.setImage(data)
+
+    def generate_2D_data_update(self):
+        data = np.random.normal(size=(200, 300))
+        self.img.setImage(data, levels=(0.2, 0.5))
+
+    def add_crosshair(self, plot):
+        crosshair_v = pg.InfiniteLine(angle=90, movable=False)
+        crosshair_h = pg.InfiniteLine(angle=0, movable=False)
+
+        plot.addItem(crosshair_v)
+        plot.addItem(crosshair_h)
 
     def get_roi_region(self):
         """For testing purpose now, get roi region and print it to self.label as tuple"""
@@ -153,17 +184,12 @@ class BasicPlot(QtWidgets.QWidget):
         if not self.plotter_data_x:
             return
 
-        # for ii, y_value in enumerate(self.y_value_list):
-        #     closest_point = self.closest_x_y_value(
-        #         mousePoint.x(), self.plotter_data_x, self.plotter_data_y[ii]
-        #     )
         closest_point = self.closest_x_y_value(
             mousePoint.x(), self.plotter_data_x[0], self.plotter_data_y[0]
         )
         self.precision = 3
         ii = 0
         y_value = self.y_value_list[ii]
-        # TODO fix text wobble in plot, see plot when it crosses 0
         x_data = f"{10**closest_point[0]:.{self.precision}f}"
         y_data = f"{10**closest_point[1]:.{self.precision}f}"
 
@@ -356,9 +382,7 @@ class BasicPlot(QtWidgets.QWidget):
                 time.sleep(0.1)
                 continue
             endpoint = f"px_stream/projection_{self._current_proj}/data"
-            # from_pnt =
-            # to_pnt =
-            msgs = client.producer.lrange(topic=endpoint, start=-2, end=-1)
+            msgs = client.producer.lrange(topic=endpoint, start=-1, end=-1)
             data = [BECMessage.DeviceMessage.loads(msg) for msg in msgs]
             if not data:
                 continue
@@ -372,10 +396,9 @@ class BasicPlot(QtWidgets.QWidget):
             ]
 
             self.update_signal.emit()
-            # time.sleep(0.1)
 
-    @pyqtSlot(dict)
-    def on_dap_update(self, data):
+    @pyqtSlot(dict, dict)
+    def on_dap_update(self, data: dict, metadata: dict):
         time.sleep(0.1)
 
     @pyqtSlot(dict)

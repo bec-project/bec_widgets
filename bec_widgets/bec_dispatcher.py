@@ -18,7 +18,7 @@ class _BECDap:
 class _BECDispatcher(QObject):
     new_scan = pyqtSignal(dict, dict)
     scan_segment = pyqtSignal(dict, dict)
-    new_dap_data = pyqtSignal(dict)
+    new_dap_data = pyqtSignal(dict, dict)
 
     new_projection_id = pyqtSignal(dict)
     new_projection_data = pyqtSignal(dict)
@@ -62,7 +62,7 @@ class _BECDispatcher(QObject):
 
             def _dap_cb(msg):
                 msg = BECMessage.ProcessedDataMessage.loads(msg.value)
-                self.new_dap_data.emit(msg.content["data"])
+                self.new_dap_data.emit(msg.content["data"], msg.metadata)
 
             dap_ep = MessageEndpoints.processed_data(dap_name)
             consumer = self.client.connector.consumer(topics=dap_ep, cb=_dap_cb)
