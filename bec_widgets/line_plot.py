@@ -61,7 +61,7 @@ class BasicPlot(QtWidgets.QWidget):
             "symbol": "o",
             "symbolSize": 10,
         }
-        color_list = ["#384c6b", "#e28a2b", "#5E3023", "#e41a1c", "#984e83", "#4daf4a"]
+
         color_list = BasicPlot.golden_angle_color(colormap="CET-R2", num=len(self.y_value_list))
 
         # setup plots - GraphicsLayoutWidget
@@ -187,18 +187,18 @@ class BasicPlot(QtWidgets.QWidget):
         closest_point = self.closest_x_y_value(
             mousePoint.x(), self.plotter_data_x[0], self.plotter_data_y[0]
         )
-        self.precision = 3
-        ii = 0
-        y_value = self.y_value_list[ii]
-        x_data = f"{10**closest_point[0]:.{self.precision}f}"
-        y_data = f"{10**closest_point[1]:.{self.precision}f}"
-
-        # Write coordinate to QTable
-        self.mouse_table.setItem(ii, 1, QTableWidgetItem(str(y_value)))
-        self.mouse_table.setItem(ii, 2, QTableWidgetItem(str(x_data)))
-        self.mouse_table.setItem(ii, 3, QTableWidgetItem(str(y_data)))
-
-        self.mouse_table.resizeColumnsToContents()
+        # self.precision = 3
+        # ii = 0
+        # y_value = self.y_value_list[ii]
+        # x_data = f"{10**closest_point[0]:.{self.precision}f}"
+        # y_data = f"{10**closest_point[1]:.{self.precision}f}"
+        #
+        # # Write coordinate to QTable
+        # self.mouse_table.setItem(ii, 1, QTableWidgetItem(str(y_value)))
+        # self.mouse_table.setItem(ii, 2, QTableWidgetItem(str(x_data)))
+        # self.mouse_table.setItem(ii, 3, QTableWidgetItem(str(y_data)))
+        #
+        # self.mouse_table.resizeColumnsToContents()
 
     def closest_x_y_value(self, input_value, list_x, list_y) -> tuple:
         """
@@ -394,12 +394,15 @@ class BasicPlot(QtWidgets.QWidget):
                     axis=0,
                 ).squeeze()
             ]
-
             self.update_signal.emit()
 
     @pyqtSlot(dict, dict)
     def on_dap_update(self, data: dict, metadata: dict):
         time.sleep(0.1)
+        # todo emit here to plot
+
+        # self.img.clear()
+        self.img.setImage(data["z"])
 
     @pyqtSlot(dict)
     def new_proj(self, data):
