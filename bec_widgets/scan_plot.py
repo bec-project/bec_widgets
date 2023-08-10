@@ -1,6 +1,7 @@
 import itertools
 
 import pyqtgraph as pg
+from bec_lib.core import MessageEndpoints
 from bec_lib.core.logger import bec_logger
 from PyQt5.QtCore import pyqtProperty, pyqtSlot
 
@@ -61,8 +62,9 @@ class BECScanPlot(pg.GraphicsView):
 
             plot_curve.setData(x=[*x, x_new], y=[*y, y_new])
 
-    @pyqtSlot(dict, dict)
-    def redraw_dap(self, data, _metadata):
+    @pyqtSlot("PyQt_PyObject")
+    def redraw_dap(self, msg):
+        data = msg.content["data"]
         for chan, plot_curve in self.dap_curves.items():
             if not chan:
                 continue
@@ -86,7 +88,8 @@ class BECScanPlot(pg.GraphicsView):
         chan_removed = [chan for chan in self._y_channel_list if chan not in new_list]
         if chan_removed and chan_removed[0].startswith("dap."):
             chan_removed = chan_removed[0].partition("dap.")[-1]
-            bec_dispatcher.disconnect_dap_slot(self.redraw_dap, chan_removed)
+            chan_removed_ep = MessageEndpoints.processed_data(chan_removed)
+            bec_dispatcher.disconnect_slot(self.redraw_dap, chan_removed_ep)
 
         self._y_channel_list = new_list
 
@@ -100,7 +103,8 @@ class BECScanPlot(pg.GraphicsView):
             if y_chan.startswith("dap."):
                 y_chan = y_chan.partition("dap.")[-1]
                 curves = self.dap_curves
-                bec_dispatcher.connect_dap_slot(self.redraw_dap, y_chan)
+                y_chan_ep = MessageEndpoints.processed_data(y_chan)
+                bec_dispatcher.connect_slot(self.redraw_dap, y_chan_ep)
             else:
                 curves = self.scan_curves
 

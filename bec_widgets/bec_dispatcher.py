@@ -1,4 +1,5 @@
 import argparse
+import itertools
 import os
 from dataclasses import dataclass
 from threading import RLock
@@ -15,6 +16,27 @@ class _BECDap:
 
     consumer: RedisConsumerThreaded
     slots = set()
+
+
+# Adding a new pyqt signal requres a class factory, as they must be part of the class definition
+# and cannot be dynamically added as class attributes after the class has been defined.
+_signal_class_factory = (
+    type(f"Signal{i}", (QObject,), dict(signal=pyqtSignal("PyQt_PyObject")))
+    for i in itertools.count()
+)
+
+
+@dataclass
+class _Connection:
+    """Utility class to keep track of slots connected to a particular redis consumer"""
+
+    consumer: RedisConsumerThreaded
+    slots = set()
+    # keep a reference to a new signal class, so it is not gc'ed
+    _signal_container = next(_signal_class_factory)()
+
+    def __post_init__(self):
+        self.signal = self._signal_container.signal
 
 
 class _BECDispatcher(QObject):
@@ -42,6 +64,7 @@ class _BECDispatcher(QObject):
             "on_new_scan": self.new_scan,
         }
         self._daps = {}
+        self._connections = {}
 
         self._scan_id = None
         scan_lock = RLock()
@@ -64,6 +87,39 @@ class _BECDispatcher(QObject):
             slot = getattr(widget, slot_name, None)
             if callable(slot):
                 signal.connect(slot)
+
+    def connect_slot(self, slot, topic):
+        # create new connection for topic if it doesn't exist
+        if topic not in self._connections:
+
+            def cb(msg):
+                msg = BECMessage.MessageReader.loads(msg.value)
+                self._connections[topic].signal.emit(msg)
+
+            consumer = self.client.connector.consumer(topics=topic, cb=cb)
+            consumer.start()
+
+            self._connections[topic] = _Connection(consumer)
+
+        # connect slot if it's not connected
+        if slot not in self._connections[topic].slots:
+            self._connections[topic].signal.connect(slot)
+            self._connections[topic].slots.add(slot)
+
+    def disconnect_slot(self, slot, topic):
+        if topic not in self._connections:
+            return
+
+        if slot not in self._connections[topic].slots:
+            return
+
+        self._connections[topic].signal.disconnect(slot)
+        self._connections[topic].slots.remove(slot)
+
+        if not self._connections[topic].slots:
+            # shutdown consumer if there are no more connected slots
+            self._connections[topic].consumer.shutdown()
+            del self._connections[topic]
 
     def connect_dap_slot(self, slot, dap_name):
         if dap_name not in self._daps:
