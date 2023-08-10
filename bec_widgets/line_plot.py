@@ -1,20 +1,22 @@
 import os
-import warnings
-import time
-from typing import Any
 import threading
+import time
+import warnings
+from typing import Any
+
 import numpy as np
 import pyqtgraph
 import pyqtgraph as pg
+from bec_lib.core import BECMessage
 from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtWidgets import QTableWidgetItem, QCheckBox
-
-from bec_lib import BECClient
+from PyQt5.QtWidgets import QCheckBox, QTableWidgetItem
 from pyqtgraph import mkBrush, mkColor, mkPen
 from pyqtgraph.Qt import QtCore, QtWidgets, uic
 from pyqtgraph.Qt.QtCore import pyqtSignal
 
-from bec_lib.core import BECMessage
+from bec_widgets.bec_dispatcher import bec_dispatcher
+
+client = bec_dispatcher.client
 
 
 class BasicPlot(QtWidgets.QWidget):
@@ -418,9 +420,9 @@ class BasicPlot(QtWidgets.QWidget):
 
 if __name__ == "__main__":
     import argparse
-    from bec_widgets.bec_dispatcher import bec_dispatcher
 
     from bec_widgets import ctrl_c
+    from bec_widgets.bec_dispatcher import bec_dispatcher
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
