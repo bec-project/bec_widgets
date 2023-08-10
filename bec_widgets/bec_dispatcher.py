@@ -57,7 +57,6 @@ class _BECDispatcher(QObject):
             bec_config = "bec_config.yaml"
 
         self.client.initialize(config=ServiceConfig(config_path=bec_config))
-        self.client.start()
 
         self._slot_signal_map = {
             "on_scan_segment": self.scan_segment,
@@ -71,16 +70,22 @@ class _BECDispatcher(QObject):
 
         # self.new_projection_id.connect(self.new_projection_data)
 
-        def _scan_segment_cb(scan_segment, metadata):
+        def _scan_segment_cb(msg):
+            msg = BECMessage.ScanMessage.loads(msg.value)[0]
             with scan_lock:
                 # TODO: use ScanStatusMessage instead?
-                scan_id = metadata["scanID"]
+                scan_id = msg.content["scanID"]
                 if self._scan_id != scan_id:
                     self._scan_id = scan_id
-                    self.new_scan.emit(scan_segment, metadata)
-            self.scan_segment.emit(scan_segment, metadata)
+                    self.new_scan.emit(msg.content, msg.metadata)
+            self.scan_segment.emit(msg.content, msg.metadata)
 
-        self.client.callbacks.register("scan_segment", _scan_segment_cb, sync=False)
+        scan_segment_topic = MessageEndpoints.scan_segment()
+        self._scan_segment_thread = self.client.connector.consumer(
+            topics=scan_segment_topic,
+            cb=_scan_segment_cb,
+        )
+        self._scan_segment_thread.start()
 
     def connect(self, widget):
         for slot_name, signal in self._slot_signal_map.items():
