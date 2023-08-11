@@ -222,7 +222,6 @@ class _BECDispatcher(QObject):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--bec-config", default=None)
-parser.add_argument("args", nargs=argparse.REMAINDER)
-args = parser.parse_args()
+args, _ = parser.parse_known_args()
 
 bec_dispatcher = _BECDispatcher(args.bec_config)
