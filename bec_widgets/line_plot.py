@@ -15,6 +15,7 @@ from pyqtgraph.Qt import QtCore, QtWidgets, uic
 from pyqtgraph.Qt.QtCore import pyqtSignal
 
 from bec_widgets.bec_dispatcher import bec_dispatcher
+from bec_lib.core.redis_connector import MessageObject, RedisConnector
 
 client = bec_dispatcher.client
 
@@ -46,6 +47,7 @@ class BasicPlot(QtWidgets.QWidget):
         self.title = ""
         self.label_bottom = ""
         self.label_left = ""
+        self.producer = RedisConnector(["localhost:6379"]).producer()
 
         self.scan_motors = []
         self.y_value_list = y_value_list
@@ -160,6 +162,14 @@ class BasicPlot(QtWidgets.QWidget):
         """For testing purpose now, get roi region and print it to self.label as tuple"""
         region = self.roi_selector.getRegion()
         self.label.setText(f"x = {(10**region[0]):.4f}, y ={(10**region[1]):.4f}")
+        return_dict = {
+            "qranges": [
+                np.where(self.plotter_data_x[0] > 10 ** region[0])[0][0],
+                np.where(self.plotter_data_x[0] < 10 ** region[1])[0][-1],
+            ]
+        }
+        msg = BECMessage.DeviceMessage(signals=return_dict).dumps()
+        self.producer.set_and_publish("px_stream/gui_event", msg=msg)
         self.roi_signal.emit(region)
 
     def add_text_items(self):  # TODO probably can be removed
@@ -388,14 +398,14 @@ class BasicPlot(QtWidgets.QWidget):
             data = [BECMessage.DeviceMessage.loads(msg) for msg in msgs]
             if not data:
                 continue
-
-            self.plotter_data_y = [
-                np.sum(
-                    np.sum(data[-1].content["signals"]["data"] * self._current_norm, axis=1)
-                    / np.sum(self._current_norm, axis=0),
-                    axis=0,
-                ).squeeze()
-            ]
+            with np.errstate(divide="ignore", invalid="ignore"):
+                self.plotter_data_y = [
+                    np.sum(
+                        np.sum(data[-1].content["signals"]["data"] * self._current_norm, axis=1)
+                        / np.sum(self._current_norm, axis=0),
+                        axis=0,
+                    ).squeeze()
+                ]
 
             self.update_signal.emit()
 
