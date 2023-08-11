@@ -67,8 +67,8 @@ class Crosshair(QObject):
                 y_values = [round(y_val, self.precision) for y_val in y_values]
             return x, y_values
         elif isinstance(data[0], np.ndarray):  # 2D plot
-            x_idx = int(np.clip(x, 0, data[0].shape[1] - 1))
-            y_idx = int(np.clip(y, 0, data[0].shape[0] - 1))
+            x_idx = int(np.clip(x, 0, data[0].shape[0] - 1))
+            y_idx = int(np.clip(y, 0, data[0].shape[1] - 1))
             return x_idx, y_idx
         return x, y
 

@@ -13,30 +13,33 @@
   <property name="windowTitle">
    <string>Line Plot</string>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout">
+  <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QSplitter" name="splitter">
+    <widget class="QPushButton" name="pushButton_generate">
+     <property name="text">
+      <string>Generate 1D and 2D data without stream</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QSplitter" name="splitter_H">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
-     <property name="opaqueResize">
-      <bool>false</bool>
-     </property>
-     <widget class="QWidget" name="verticalLayoutWidget">
-      <layout class="QVBoxLayout" name="verticalLayout">
-       <item>
-        <widget class="QPushButton" name="pushButton_debug">
-         <property name="text">
-          <string>Debug</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="GraphicsLayoutWidget" name="glw"/>
-       </item>
-      </layout>
+     <widget class="QSplitter" name="splitter_plot">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <widget class="GraphicsLayoutWidget" name="glw_plot"/>
+      <widget class="GraphicsLayoutWidget" name="glw_image"/>
      </widget>
-     <widget class="QTableWidget" name="mouse_table">
+     <widget class="QTableWidget" name="cursor_table">
       <property name="textElideMode">
        <enum>Qt::ElideMiddle</enum>
       </property>

@@ -29,15 +29,26 @@ class ExampleApp(QWidget):
         # PlotWidget
         self.plot_widget_1d = pg.PlotWidget(title="1D PlotWidget with multiple curves")
         self.plot_item_1d = self.plot_widget_1d.getPlotItem()
+        self.plot_item_1d.setLogMode(True, False)
+
         # 1D Datasets
         self.x_data = np.linspace(0, 10, 1000)
+
+        def gauss(x, mu, sigma):
+            return (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
+
+        mu = 1  # mean
+        sigma = 1  # standard deviation
+
         # same convention as in line_plot.py
         self.y_value_list = [
             np.sin(self.x_data),
             np.cos(self.x_data),
             np.sin(2 * self.x_data),
         ]  # List of y-values for multiple curves
-        self.curve_names = ["Sine", "Cosine", "Sine2x"]
+
+        self.y_value_list = [gauss(self.x_data, mu, sigma)]
+        self.curve_names = ["Gauss"]  # ,"Sine", "Cosine", "Sine2x"]
 
         # Curves
         color_list = ["#384c6b", "#e28a2b", "#5E3023", "#e41a1c", "#984e83", "#4daf4a"]
