@@ -38,7 +38,7 @@ class BasicPlot(QtWidgets.QWidget):
         pg.setConfigOption("background", "w")
         pg.setConfigOption("foreground", "k")
         current_path = os.path.dirname(__file__)
-        uic.loadUi(os.path.join(current_path, "line_plot.ui"), self)
+        uic.loadUi(os.path.join(current_path, "basic_plot.ui"), self)
 
         # Set splitter distribution of widgets
         self.splitter.setSizes([3, 1])
