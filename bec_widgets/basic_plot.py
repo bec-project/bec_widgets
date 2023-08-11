@@ -1,20 +1,23 @@
 import os
-import warnings
-import time
-from typing import Any
 import threading
+import time
+import warnings
+from typing import Any
+
 import numpy as np
 import pyqtgraph
 import pyqtgraph as pg
+from bec_lib.core import BECMessage
 from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtWidgets import QTableWidgetItem, QCheckBox
-
-from bec_lib import BECClient
+from PyQt5.QtWidgets import QCheckBox, QTableWidgetItem
 from pyqtgraph import mkBrush, mkColor, mkPen
 from pyqtgraph.Qt import QtCore, QtWidgets, uic
 from pyqtgraph.Qt.QtCore import pyqtSignal
 
-from bec_lib.core import BECMessage
+from bec_widgets.bec_dispatcher import bec_dispatcher
+from bec_lib.core.redis_connector import MessageObject, RedisConnector
+
+client = bec_dispatcher.client
 
 
 class BasicPlot(QtWidgets.QWidget):
@@ -35,7 +38,7 @@ class BasicPlot(QtWidgets.QWidget):
         pg.setConfigOption("background", "w")
         pg.setConfigOption("foreground", "k")
         current_path = os.path.dirname(__file__)
-        uic.loadUi(os.path.join(current_path, "line_plot.ui"), self)
+        uic.loadUi(os.path.join(current_path, "basic_plot.ui"), self)
 
         # Set splitter distribution of widgets
         self.splitter.setSizes([3, 1])
@@ -44,6 +47,7 @@ class BasicPlot(QtWidgets.QWidget):
         self.title = ""
         self.label_bottom = ""
         self.label_left = ""
+        self.producer = RedisConnector(["localhost:6379"]).producer()
 
         self.scan_motors = []
         self.y_value_list = y_value_list
@@ -158,6 +162,14 @@ class BasicPlot(QtWidgets.QWidget):
         """For testing purpose now, get roi region and print it to self.label as tuple"""
         region = self.roi_selector.getRegion()
         self.label.setText(f"x = {(10**region[0]):.4f}, y ={(10**region[1]):.4f}")
+        return_dict = {
+            "horiz_roi": [
+                np.where(self.plotter_data_x[0] > 10 ** region[0])[0][0],
+                np.where(self.plotter_data_x[0] < 10 ** region[1])[0][-1],
+            ]
+        }
+        msg = BECMessage.DeviceMessage(signals=return_dict).dumps()
+        self.producer.set_and_publish("px_stream/gui_event", msg=msg)
         self.roi_signal.emit(region)
 
     def add_text_items(self):  # TODO probably can be removed
@@ -386,14 +398,14 @@ class BasicPlot(QtWidgets.QWidget):
             data = [BECMessage.DeviceMessage.loads(msg) for msg in msgs]
             if not data:
                 continue
-
-            self.plotter_data_y = [
-                np.sum(
-                    np.sum(data[-1].content["signals"]["data"] * self._current_norm, axis=1)
-                    / np.sum(self._current_norm, axis=0),
-                    axis=0,
-                ).squeeze()
-            ]
+            with np.errstate(divide="ignore", invalid="ignore"):
+                self.plotter_data_y = [
+                    np.sum(
+                        np.sum(data[-1].content["signals"]["data"] * self._current_norm, axis=1)
+                        / np.sum(self._current_norm, axis=0),
+                        axis=0,
+                    ).squeeze()
+                ]
 
             self.update_signal.emit()
 
@@ -418,9 +430,9 @@ class BasicPlot(QtWidgets.QWidget):
 
 if __name__ == "__main__":
     import argparse
-    from bec_widgets.bec_dispatcher import bec_dispatcher
 
     from bec_widgets import ctrl_c
+    from bec_widgets.bec_dispatcher import bec_dispatcher
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
