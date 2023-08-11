@@ -163,7 +163,7 @@ class BasicPlot(QtWidgets.QWidget):
         region = self.roi_selector.getRegion()
         self.label.setText(f"x = {(10**region[0]):.4f}, y ={(10**region[1]):.4f}")
         return_dict = {
-            "qranges": [
+            "horiz_roi": [
                 np.where(self.plotter_data_x[0] > 10 ** region[0])[0][0],
                 np.where(self.plotter_data_x[0] < 10 ** region[1])[0][-1],
             ]
