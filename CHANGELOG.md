@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.6.0 (2023-08-11)
+
+### Feature
+
+* New GUI for line_plot.py ([`b57b3bb`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/b57b3bb1afc7c85acc7ed328ac8a219f392869f1))
+* Cursor universal signals ([`20e9516`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/20e951659558b7fc023e357bfe07d812c5fd020a))
+
 ## v0.5.0 (2023-08-11)
 
 ### Feature
