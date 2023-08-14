@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.6.1 (2023-08-14)
+
+### Fix
+
+* Crosshair snaps to correct coordinates also with logx and logy ([`167a891`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/167a891c474b09ef7738e473c4a2e89dbbcbe881))
+
 ## v0.6.0 (2023-08-11)
 
 ### Feature
