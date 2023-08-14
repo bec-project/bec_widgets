@@ -13,6 +13,8 @@ class Crosshair(QObject):
 
     def __init__(self, plot_item, precision=None, parent=None):
         super().__init__(parent)
+        self.is_log_y = None
+        self.is_log_x = None
         self.plot_item = plot_item
         self.precision = precision
         self.v_line = pg.InfiniteLine(angle=90, movable=False)
@@ -62,9 +64,6 @@ class Crosshair(QObject):
             for x_data, y_data in data:
                 closest_x, closest_y = self.closest_x_y_value(x, x_data, y_data)
                 y_values.append(closest_y)
-            if self.precision is not None:
-                x = round(x, self.precision)
-                y_values = [round(y_val, self.precision) for y_val in y_values]
             return x, y_values
         elif isinstance(data[0], np.ndarray):  # 2D plot
             x_idx = int(np.clip(x, 0, data[0].shape[0] - 1))
@@ -89,27 +88,54 @@ class Crosshair(QObject):
         return list_x[i], list_y[i]
 
     def mouse_moved(self, event):
+        self.check_log()
         pos = event[0]
         if self.plot_item.vb.sceneBoundingRect().contains(pos):
             mouse_point = self.plot_item.vb.mapSceneToView(pos)
-            x, y_values = self.snap_to_data(mouse_point.x(), mouse_point.y())
+            x, y = mouse_point.x(), mouse_point.y()
+            if self.is_log_x:
+                x = 10**x
+            if self.is_log_y:
+                y = 10**y
+            x, y_values = self.snap_to_data(x, y)
             self.v_line.setPos(mouse_point.x())
             self.h_line.setPos(mouse_point.y())
             if isinstance(y_values, list):  # 1D plot
-                self.coordinatesChanged1D.emit(x, y_values)
+                self.coordinatesChanged1D.emit(
+                    round(x, self.precision), [round(y_val, self.precision) for y_val in y_values]
+                )
                 for i, y_val in enumerate(y_values):
-                    self.marker_moved_1d[i].setData([x], [y_val])
+                    self.marker_moved_1d[i].setData(
+                        [x if not self.is_log_x else np.log10(x)],
+                        [y_val if not self.is_log_y else np.log10(y_val)],
+                    )
             else:  # 2D plot
                 self.coordinatesChanged2D.emit(x, y_values)
 
     def mouse_clicked(self, event):
+        self.check_log()
         if self.plot_item.vb.sceneBoundingRect().contains(event._scenePos):
             mouse_point = self.plot_item.vb.mapSceneToView(event._scenePos)
-            x, y_values = self.snap_to_data(mouse_point.x(), mouse_point.y())
+            x, y = mouse_point.x(), mouse_point.y()
+            if self.is_log_x:
+                x = 10**x
+            if self.is_log_y:
+                y = 10**y
+            x, y_values = self.snap_to_data(x, y)
             if isinstance(y_values, list):  # 1D plot
-                self.coordinatesClicked1D.emit(x, y_values)
+                self.coordinatesClicked1D.emit(
+                    round(x, self.precision), [round(y_val, self.precision) for y_val in y_values]
+                )
                 for i, y_val in enumerate(y_values):
-                    self.marker_clicked_1d[i].setData([x], [y_val])
+                    self.marker_clicked_1d[i].setData(
+                        [x if not self.is_log_x else np.log10(x)],
+                        [y_val if not self.is_log_y else np.log10(y_val)],
+                    )
             else:  # 2D plot
                 self.coordinatesClicked2D.emit(x, y_values)
                 self.marker_2d.setPos([x, y_values])
+
+    def check_log(self):
+        # Check if plot uses log scale
+        self.is_log_x = self.plot_item.ctrl.logXCheck.isChecked()
+        self.is_log_y = self.plot_item.ctrl.logYCheck.isChecked()

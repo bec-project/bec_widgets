@@ -29,16 +29,13 @@ class ExampleApp(QWidget):
         # PlotWidget
         self.plot_widget_1d = pg.PlotWidget(title="1D PlotWidget with multiple curves")
         self.plot_item_1d = self.plot_widget_1d.getPlotItem()
-        self.plot_item_1d.setLogMode(True, False)
+        self.plot_item_1d.setLogMode(True, True)
 
         # 1D Datasets
         self.x_data = np.linspace(0, 10, 1000)
 
         def gauss(x, mu, sigma):
             return (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
-
-        mu = 1  # mean
-        sigma = 1  # standard deviation
 
         # same convention as in line_plot.py
         self.y_value_list = [
@@ -47,8 +44,8 @@ class ExampleApp(QWidget):
             np.sin(2 * self.x_data),
         ]  # List of y-values for multiple curves
 
-        self.y_value_list = [gauss(self.x_data, mu, sigma)]
-        self.curve_names = ["Gauss"]  # ,"Sine", "Cosine", "Sine2x"]
+        self.y_value_list = [gauss(self.x_data, 1, 1), gauss(self.x_data, 1.5, 3)]
+        self.curve_names = ["Gauss(1,1)", "Gauss(1.5,3)"]  # ,"Sine", "Cosine", "Sine2x"]
 
         # Curves
         color_list = ["#384c6b", "#e28a2b", "#5E3023", "#e41a1c", "#984e83", "#4daf4a"]
@@ -66,7 +63,7 @@ class ExampleApp(QWidget):
         # 2D Plot
         ##########################
         self.plot_widget_2d = pg.PlotWidget(title="2D plot with crosshair and ROI square")
-        self.data_2D = np.random.random((100, 100))
+        self.data_2D = np.random.random((100, 200))
         self.plot_item_2d = self.plot_widget_2d.getPlotItem()
         self.image_item = pg.ImageItem(self.data_2D)
         self.plot_item_2d.addItem(self.image_item)
@@ -83,7 +80,7 @@ class ExampleApp(QWidget):
         # Signals & Cross-hairs
         ##########################
         # 1D
-        self.crosshair_1d = Crosshair(self.plot_item_1d, precision=2)
+        self.crosshair_1d = Crosshair(self.plot_item_1d, precision=4)
         self.crosshair_1d.coordinatesChanged1D.connect(
             lambda x, y: self.update_table(self.table, x, y, column=0)
         )
