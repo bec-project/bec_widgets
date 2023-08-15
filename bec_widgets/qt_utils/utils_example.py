@@ -16,6 +16,7 @@ from crosshair import Crosshair
 
 class ExampleApp(QWidget):
     def __init__(self):
+        """Example application for using the Crosshair class"""
         super().__init__()
 
         # Layout
@@ -128,6 +129,7 @@ class ExampleApp(QWidget):
         self.column2.addWidget(self.plot_widget_2d)
 
     def update_table(self, table_widget, x, y_values, column):
+        """Update the table with the new coordinates"""
         for i, y in enumerate(y_values):
             table_widget.setItem(i, column, QTableWidgetItem(f"({x}, {y})"))
             table_widget.resizeColumnsToContents()

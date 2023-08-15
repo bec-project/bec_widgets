@@ -42,30 +42,15 @@ class BasicPlot(QtWidgets.QWidget):
         current_path = os.path.dirname(__file__)
         uic.loadUi(os.path.join(current_path, "line_plot.ui"), self)
 
-        self.splitter_H.setSizes([1, 1])
-
         self._idle_time = 100
-        self.title = ""
-        self.label_bottom = ""
-        self.label_left = ""
         self.producer = RedisConnector(["localhost:6379"]).producer()
 
-        self.scan_motors = []
         self.y_value_list = y_value_list
         self.previous_y_value_list = None
         self.plotter_data_x = []
         self.plotter_data_y = []
 
         self.plotter_scan_id = None
-
-        ##########################
-        # Buttons
-        ##########################
-        self.init_ui()
-
-        self.hook_crosshair()
-
-        self.pushButton_generate.clicked.connect(self.generate_data)
 
         self._current_proj = None
         self._current_metadata_ep = "px_stream/projection_{}/metadata"
@@ -74,6 +59,21 @@ class BasicPlot(QtWidgets.QWidget):
 
         self.data_retriever = threading.Thread(target=self.on_projection, daemon=True)
         self.data_retriever.start()
+
+        # self.comboBox.currentIndexChanged.connect(lambda : print(f'current comboText: {self.comboBox.currentText()}'))
+        # self.comboBox.currentIndexChanged.connect(lambda: print(f'current comboIndex: {self.comboBox.currentIndex()}'))
+        #
+        # self.doubleSpinBox.valueChanged.connect(lambda : print('Spin Changed'))
+
+        # self.splitterH_main.setSizes([1, 1])
+
+        ##########################
+        # UI
+        ##########################
+        self.init_ui()
+        self.init_curves()
+        self.hook_crosshair()
+        self.pushButton_generate.clicked.connect(self.generate_data)
 
     def init_ui(self):
         """Setup all ui elements"""
@@ -89,16 +89,16 @@ class BasicPlot(QtWidgets.QWidget):
         # ROI selector - so far from [-1,1] #TODO update to scale with xrange
         self.roi_selector = pg.LinearRegionItem([-1, 1])
 
-        # self.glw_plot.nextRow() #TODO update of cursor
-        # self.label_plot_moved = pg.LabelItem(justify="center")
-        # self.glw_plot.addItem(self.label_plot_moved)
-        # self.label_plot_moved.setText("Actual coordinates (X, Y)")
-        #
-        # # Label for coordinates clicked
-        # self.glw_plot.nextRow()
-        # self.label_plot_clicked = pg.LabelItem(justify="center")
-        # self.glw_plot.addItem(self.label_plot_clicked)
-        # self.label_plot_clicked.setText("Clicked coordinates (X, Y)")
+        self.glw_plot.nextRow()  # TODO update of cursor
+        self.label_plot_moved = pg.LabelItem(justify="center")
+        self.glw_plot.addItem(self.label_plot_moved)
+        self.label_plot_moved.setText("Actual coordinates (X, Y)")
+
+        # Label for coordinates clicked
+        self.glw_plot.nextRow()
+        self.label_plot_clicked = pg.LabelItem(justify="center")
+        self.glw_plot.addItem(self.label_plot_clicked)
+        self.label_plot_clicked.setText("Clicked coordinates (X, Y)")
 
         # 1D PlotItem
         self.glw_plot.nextRow()
@@ -107,9 +107,47 @@ class BasicPlot(QtWidgets.QWidget):
         self.glw_plot.addItem(self.plot)
         self.plot.addLegend()
 
-        # check if roi selector is in the plot
-        if self.roi_selector not in self.plot.items:
-            self.plot.addItem(self.roi_selector)
+        ##########################
+        # 2D Plot
+        ##########################
+
+        # Label for coordinates moved
+        self.label_image_moved = pg.LabelItem(justify="center")
+        self.glw_image.addItem(self.label_image_moved)
+        self.label_image_moved.setText("Actual coordinates (X, Y)")
+
+        # Label for coordinates clicked
+        self.glw_image.nextRow()
+        self.label_image_clicked = pg.LabelItem(justify="center")
+        self.glw_image.addItem(self.label_image_clicked)
+        self.label_image_clicked.setText("Clicked coordinates (X, Y)")
+
+        # TODO try to lock aspect ratio with view
+
+        # # Create a window
+        # win = pg.GraphicsLayoutWidget()
+        # win.show()
+        #
+        # # Create a ViewBox
+        # view = win.addViewBox()
+        #
+        # # Lock the aspect ratio
+        # view.setAspectLocked(True)
+
+        # # Create an ImageItem
+        # image_item = pg.ImageItem(np.random.random((100, 100)))
+        #
+        # # Add the ImageItem to the ViewBox
+        # view.addItem(image_item)
+
+        # 2D ImageItem
+        self.glw_image.nextRow()
+        self.plot_image = pg.PlotItem()
+        self.glw_image.addItem(self.plot_image)
+
+    def init_curves(self):
+        # init of 1D plot
+        self.plot.clear()
 
         self.curves = []
         self.pens = []
@@ -128,31 +166,36 @@ class BasicPlot(QtWidgets.QWidget):
             self.pens.append(pen)
             self.brushs.append(brush)
 
-        ##########################
-        # 2D Plot
-        ##########################
+        # check if roi selector is in the plot
+        if self.roi_selector not in self.plot.items:
+            self.plot.addItem(self.roi_selector)
 
-        # Label for coordinates moved
-        self.label_image_moved = pg.LabelItem(justify="center")
-        self.glw_image.addItem(self.label_image_moved)
-        self.label_image_moved.setText("Actual coordinates (X, Y)")
+        # init of 2D plot
+        self.plot_image.clear()
 
-        # Label for coordinates clicked
-        self.glw_image.nextRow()
-        self.label_image_clicked = pg.LabelItem(justify="center")
-        self.glw_image.addItem(self.label_image_clicked)
-        self.label_image_clicked.setText("Clicked coordinates (X, Y)")
-
-        # 2D ImageItem
-        self.glw_image.nextRow()
-        self.plot_image = pg.PlotItem()
         self.img = pg.ImageItem()
-        self.glw_image.addItem(self.plot_image)
         self.plot_image.addItem(self.img)
 
-    def hook_crosshair(self):
+        # hooking signals
+        self.hook_crosshair()
+        self.init_table()
+
+    def splitter_sizes(self):
         ...
-        # self.crosshair_plot = Crosshair(self.plot, precision=2)
+
+    def hook_crosshair(self):
+        self.crosshair_1d = Crosshair(self.plot, precision=4)
+
+        self.crosshair_1d.coordinatesChanged1D.connect(
+            lambda x, y: self.label_plot_moved.setText(f"Moved : ({x}, {y})")
+        )
+        self.crosshair_1d.coordinatesClicked1D.connect(
+            lambda x, y: self.label_plot_clicked.setText(f"Moved : ({x}, {y})")
+        )
+
+        self.crosshair_1d.coordinatesChanged1D.connect(
+            lambda x, y: self.update_table(table_widget=self.cursor_table, x=x, y_values=y)
+        )
 
         self.crosshair_2D = Crosshair(self.plot_image)
 
@@ -170,20 +213,20 @@ class BasicPlot(QtWidgets.QWidget):
         def gauss(x, mu, sigma):
             return (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
 
-        mu = 0  # mean
-        sigma = 1  # standard deviation
-
         self.plotter_data_x = np.linspace(0, 10, 1000)
         self.plotter_data_y = [
-            gauss(self.plotter_data_x, mu, sigma),
+            gauss(self.plotter_data_x, 1, 1),
+            gauss(self.plotter_data_x, 1.5, 3),
             np.sin(self.plotter_data_x),
             np.cos(self.plotter_data_x),
             np.sin(2 * self.plotter_data_x),
         ]  # List of y-values for multiple curves
-        self.y_value_list = ["gauss"]  # ["Sine"]#, "Cosine", "Sine2x"]
+        self.y_value_list = ["Gauss (1,1)", "Gauss (1.5,3)"]  # ["Sine"]#, "Cosine", "Sine2x"]
 
         # Curves
         color_list = ["#384c6b", "#e28a2b", "#5E3023", "#e41a1c", "#984e83", "#4daf4a"]
+
+        self.init_curves()
 
         for ii in range(len(self.y_value_list)):
             self.curves[ii].setData(self.plotter_data_x, self.plotter_data_y[ii])
@@ -208,10 +251,21 @@ class BasicPlot(QtWidgets.QWidget):
         self.producer.set_and_publish("px_stream/gui_event", msg=msg)
         self.roi_signal.emit(region)
 
+    def init_table(self):
+        # Init number of rows in table according to n of devices
+        self.cursor_table.setRowCount(len(self.y_value_list))
+        # self.table.setHorizontalHeaderLabels(["(X, Y) - Moved", "(X, Y) - Clicked"]) #TODO can be dynamic
+        self.cursor_table.setVerticalHeaderLabels(self.y_value_list)
+        self.cursor_table.resizeColumnsToContents()
+
+    def update_table(self, table_widget, x, y_values):
+        for i, y in enumerate(y_values):
+            table_widget.setItem(i, 1, QTableWidgetItem(str(x)))
+            table_widget.setItem(i, 2, QTableWidgetItem(str(y)))
+            table_widget.resizeColumnsToContents()
+
     def update(self):
         """Update the plot with the new data."""
-
-        print("updated")
 
         # check if QTable was initialised and if list of devices was changed
         # if self.y_value_list != self.previous_y_value_list:
@@ -307,7 +361,6 @@ class BasicPlot(QtWidgets.QWidget):
     @pyqtSlot(dict, dict)
     def on_dap_update(self, data: dict, metadata: dict):
         self.img.setImage(data["z"])
-        # time.sleep(0,1)
 
     @pyqtSlot(dict)
     def new_proj(self, data):
@@ -337,6 +390,7 @@ if __name__ == "__main__":
         default=["gauss_bpm"],
     )
     # default = ["gauss_bpm", "bpm4i", "bpm5i", "bpm6i", "xert"],
+    # dispatcher = bec_dispatcher
     value = parser.parse_args()
     print(f"Plotting signals for: {', '.join(value.signals)}")
     client = bec_dispatcher.client
@@ -347,6 +401,8 @@ if __name__ == "__main__":
     # bec_dispatcher.connect(plot)
     bec_dispatcher.connect_proj_id(plot.new_proj)
     bec_dispatcher.connect_dap_slot(plot.on_dap_update, "px_dap_worker")
+    plot.roi_signal.connect(lambda x: print(f"signal from ROI {x}"))
+    plot.roi_signal.connect(lambda x: bec_dispatcher.getStuff(x))
     plot.show()
     # client.callbacks.register("scan_segment", plot, sync=False)
     app.exec_()

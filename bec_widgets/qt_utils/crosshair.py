@@ -55,10 +55,19 @@ class Crosshair(QObject):
                 curves.append((item.xData, item.yData))
             elif isinstance(item, pg.ImageItem):  # 2D plot
                 return item.image, None
+
         return curves
+
+        # if curves:
+        #     return curves
+        # else:
+        #     return None
 
     def snap_to_data(self, x, y):
         data = self.get_data()
+        # if data is None: #TODO hadle if data are None
+        #     return x, y
+
         if isinstance(data, list):  # 1D plot
             y_values = []
             for x_data, y_data in data:
@@ -92,14 +101,16 @@ class Crosshair(QObject):
         pos = event[0]
         if self.plot_item.vb.sceneBoundingRect().contains(pos):
             mouse_point = self.plot_item.vb.mapSceneToView(pos)
+            self.v_line.setPos(mouse_point.x())
+            self.h_line.setPos(mouse_point.y())
+
             x, y = mouse_point.x(), mouse_point.y()
             if self.is_log_x:
                 x = 10**x
             if self.is_log_y:
                 y = 10**y
             x, y_values = self.snap_to_data(x, y)
-            self.v_line.setPos(mouse_point.x())
-            self.h_line.setPos(mouse_point.y())
+
             if isinstance(y_values, list):  # 1D plot
                 self.coordinatesChanged1D.emit(
                     round(x, self.precision), [round(y_val, self.precision) for y_val in y_values]
@@ -136,6 +147,8 @@ class Crosshair(QObject):
                 self.marker_2d.setPos([x, y_values])
 
     def check_log(self):
-        # Check if plot uses log scale
+        """
+        Check if x or y axis is in log scale
+        """
         self.is_log_x = self.plot_item.ctrl.logXCheck.isChecked()
         self.is_log_y = self.plot_item.ctrl.logYCheck.isChecked()
