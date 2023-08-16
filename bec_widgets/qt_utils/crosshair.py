@@ -11,7 +11,14 @@ class Crosshair(QObject):
     coordinatesChanged2D = pyqtSignal(float, float)
     coordinatesClicked2D = pyqtSignal(float, float)
 
-    def __init__(self, plot_item, precision=None, parent=None):
+    def __init__(self, plot_item: pg.PlotItem, precision: int = None, parent=None):
+        """
+        Crosshair for 1D and 2D plots.
+        Args:
+            plot_item (pyqtgraph.PlotItem): The plot item to which the crosshair will be attached.
+            precision (int, optional): Number of decimal places to round the coordinates to. Defaults to None.
+            parent (QObject, optional): Parent object for the QObject. Defaults to None.
+        """
         super().__init__(parent)
         self.is_log_y = None
         self.is_log_x = None
@@ -33,6 +40,8 @@ class Crosshair(QObject):
         self.update_markers()
 
     def update_markers(self):
+        """Update the markers for the crosshair, creating new ones if necessary."""
+
         # Clear existing markers
         for marker in self.marker_moved_1d + self.marker_clicked_1d:
             self.plot_item.removeItem(marker)
@@ -62,7 +71,17 @@ class Crosshair(QObject):
                 )
                 self.plot_item.addItem(self.marker_2d)
 
-    def snap_to_data(self, x, y):
+    def snap_to_data(self, x, y) -> tuple:
+        """
+        Finds the nearest data points to the given x and y coordinates.
+
+        Args:
+            x: The x-coordinate
+            y: The y-coordinate
+
+        Returns:
+            tuple: The nearest x and y values
+        """
         y_values_1d = []
         x_values_1d = []
         image_2d = None
@@ -99,7 +118,7 @@ class Crosshair(QObject):
 
         return None, None
 
-    def closest_x_y_value(self, input_value, list_x, list_y):
+    def closest_x_y_value(self, input_value: float, list_x: list, list_y: list) -> tuple:
         """
         Find the closest x and y value to the input value.
 
@@ -116,6 +135,11 @@ class Crosshair(QObject):
         return list_x[i], list_y[i]
 
     def mouse_moved(self, event):
+        """Handles the mouse moved event, updating the crosshair position and emitting signals.
+
+        Args:
+            event: The mouse moved event
+        """
         self.check_log()
         pos = event[0]
         if self.plot_item.vb.sceneBoundingRect().contains(pos):
@@ -149,6 +173,11 @@ class Crosshair(QObject):
                     self.coordinatesChanged2D.emit(x, y_values)
 
     def mouse_clicked(self, event):
+        """Handles the mouse clicked event, updating the crosshair position and emitting signals.
+
+        Args:
+            event: The mouse clicked event
+        """
         self.check_log()
         if self.plot_item.vb.sceneBoundingRect().contains(event._scenePos):
             mouse_point = self.plot_item.vb.mapSceneToView(event._scenePos)
@@ -180,8 +209,6 @@ class Crosshair(QObject):
                     self.marker_2d.setPos([x, y_values])
 
     def check_log(self):
-        """
-        Check if x or y axis is in log scale
-        """
+        """Checks if the x or y axis is in log scale and updates the internal state accordingly."""
         self.is_log_x = self.plot_item.ctrl.logXCheck.isChecked()
         self.is_log_y = self.plot_item.ctrl.logYCheck.isChecked()
