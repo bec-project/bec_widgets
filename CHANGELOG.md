@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.6.3 (2023-08-17)
+
+### Fix
+
+* Crosshair handles dynamic changes of number of curves in 1D plot ([`242737b`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/242737b516af7c524a6c8a98db566815f0f4ab65))
+
+### Documentation
+
+* Crosshair class documentation ([`8a60cad`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/8a60cad9187df2b2bc93dc78dd01ceb42df9c9af))
+
 ## v0.6.2 (2023-08-17)
 
 ### Fix
