@@ -1,18 +1,15 @@
 import os
 
-import PyQt5.QtWidgets
 import numpy as np
-
+import PyQt5.QtWidgets
 import pyqtgraph as pg
+from bec_lib.core import MessageEndpoints
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QApplication, QWidget
-from PyQt5.QtWidgets import QTableWidgetItem
-from pyqtgraph import mkBrush, mkPen
+from PyQt5.QtWidgets import QApplication, QTableWidgetItem, QWidget
 from pyqtgraph import mkBrush, mkColor, mkPen
 from pyqtgraph.Qt import QtCore, uic
 
 from bec_widgets.qt_utils import Crosshair
-from bec_lib.core import MessageEndpoints
 
 # TODO implement:
 #   - implement scanID database for visualizing previous scans
@@ -106,10 +103,7 @@ class PlotApp(QWidget):
             # for ii, (monitor, color) in enumerate(zip(self.dap_worker, colors_y_daps)):#TODO adapt for multiple dap_workers
             pen_dap = mkPen(color="#3b5998", width=2, style=QtCore.Qt.DashLine)
             curve_dap = pg.PlotDataItem(
-                pen=pen_dap,
-                skipFiniteCheck=True,
-                symbolSize=5,
-                name=f"{self.dap_worker}",
+                pen=pen_dap, skipFiniteCheck=True, symbolSize=5, name=f"{self.dap_worker}"
             )
             self.curves_dap.append(curve_dap)
             self.plot.addItem(curve_dap)
@@ -243,6 +237,7 @@ class PlotApp(QWidget):
 
 if __name__ == "__main__":
     import yaml
+
     from bec_widgets import ctrl_c
     from bec_widgets.bec_dispatcher import bec_dispatcher
 
@@ -267,7 +262,7 @@ if __name__ == "__main__":
     plotApp = PlotApp(x_value=x_value, y_values=y_values, dap_worker=dap_worker)
 
     # Connecting signals from bec_dispatcher
-    bec_dispatcher.connect_dap_slot(plotApp.on_dap_update, dap_worker)
+    bec_dispatcher.connect_slot(plotApp.on_dap_update, MessageEndpoints.processed_data(dap_worker))
     bec_dispatcher.connect_slot(plotApp.on_scan_segment, MessageEndpoints.scan_segment())
     ctrl_c.setup(app)
 

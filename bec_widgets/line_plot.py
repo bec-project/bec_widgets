@@ -7,17 +7,16 @@ from typing import Any
 import numpy as np
 import pyqtgraph
 import pyqtgraph as pg
-from bec_lib.core import BECMessage
+from bec_lib.core import BECMessage, MessageEndpoints
+from bec_lib.core.redis_connector import MessageObject, RedisConnector
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QCheckBox, QTableWidgetItem
 from pyqtgraph import mkBrush, mkColor, mkPen
 from pyqtgraph.Qt import QtCore, QtWidgets, uic
 from pyqtgraph.Qt.QtCore import pyqtSignal
+from qt_utils import Crosshair
 
 from bec_widgets.bec_dispatcher import bec_dispatcher
-from bec_lib.core.redis_connector import MessageObject, RedisConnector
-
-from qt_utils import Crosshair
 
 client = bec_dispatcher.client
 
@@ -372,9 +371,9 @@ class BasicPlot(QtWidgets.QWidget):
 
         self.img.setImage(flipped_data)
 
-    @pyqtSlot(dict)
-    def new_proj(self, data):
-        proj_nr = data["proj_nr"]
+    @pyqtSlot(dict, dict)
+    def new_proj(self, content: dict, _metadata: dict):
+        proj_nr = content["signals"]["proj_nr"]
         endpoint = f"px_stream/projection_{proj_nr}/metadata"
         msg_raw = client.producer.get(topic=endpoint)
         msg = BECMessage.DeviceMessage.loads(msg_raw)
@@ -390,14 +389,10 @@ if __name__ == "__main__":
     import argparse
 
     from bec_widgets import ctrl_c
-    from bec_widgets.bec_dispatcher import bec_dispatcher
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--signals",
-        help="specify recorded signals",
-        nargs="+",
-        default=["gauss_bpm"],
+        "--signals", help="specify recorded signals", nargs="+", default=["gauss_bpm"]
     )
     # default = ["gauss_bpm", "bpm4i", "bpm5i", "bpm6i", "xert"],
     # dispatcher = bec_dispatcher
@@ -407,8 +402,11 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication([])
     ctrl_c.setup(app)
     plot = BasicPlot(y_value_list=value.signals)
-    bec_dispatcher.connect_proj_id(plot.new_proj)
-    bec_dispatcher.connect_dap_slot(plot.on_dap_update, "px_dap_worker")
+
+    bec_dispatcher.connect_slot(plot.new_proj, "px_stream/proj_nr")
+    bec_dispatcher.connect_slot(
+        plot.on_dap_update, MessageEndpoints.processed_data("px_dap_worker")
+    )
     plot.show()
     # client.callbacks.register("scan_segment", plot, sync=False)
     app.exec_()

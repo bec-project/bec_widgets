@@ -83,7 +83,7 @@ def test_scan_plot_redraws_dap(qtbot):
 
     plot.y_channel_list = ["dap.y1", "dap.y2"]
 
-    plot.redraw_dap({"y1": {"x": [1], "y": [1]}, "y2": {"x": [2], "y": [2]}}, {})
+    plot.redraw_dap({"data": {"y1": {"x": [1], "y": [1]}, "y2": {"x": [2], "y": [2]}}}, {})
 
     assert all(plot.dap_curves["y1"].getData()[0] == [1])
     assert all(plot.dap_curves["y2"].getData()[1] == [2])
