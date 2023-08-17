@@ -54,7 +54,8 @@ class Crosshair(QObject):
         self.marker_2d = None
         for item in self.plot_item.items:
             if isinstance(item, pg.PlotDataItem):  # 1D plot
-                color = item.opts["pen"].color()
+                pen = item.opts["pen"]
+                color = pen.color() if hasattr(pen, "color") else pg.mkColor(pen)
                 marker_moved = pg.ScatterPlotItem(
                     size=10, pen=pg.mkPen(color), brush=pg.mkBrush(None)
                 )
