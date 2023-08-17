@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.6.2 (2023-08-17)
+
+### Fix
+
+* Correct coordinates for cursor table ([`ce54daf`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ce54daf754cb2410790216585467c0ffcc8e3587))
+
 ## v0.6.1 (2023-08-14)
 
 ### Fix
