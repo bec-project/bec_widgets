@@ -6,31 +6,72 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>266</height>
+    <width>1289</width>
+    <height>596</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Motor Controller</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QHBoxLayout" name="horizontalLayout_3">
    <item>
-    <widget class="QLabel" name="label_status">
-     <property name="text">
-      <string>Motor Position</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignCenter</set>
-     </property>
-    </widget>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,1,1">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QLabel" name="label_status">
+       <property name="text">
+        <string>Motor Position</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
+        <widget class="QPushButton" name="pushButton_2">
+         <property name="text">
+          <string>Go</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_3">
+         <property name="text">
+          <string>Save</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
      <item>
       <widget class="GraphicsLayoutWidget" name="glw">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout_4" stretch="1,10,10">
+     <item>
+      <widget class="QGroupBox" name="groupBox_2">
+       <property name="title">
+        <string>General</string>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QLabel" name="label_5">
+          <property name="text">
+           <string>Decimal precision</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSpinBox" name="spinBox"/>
+        </item>
+       </layout>
       </widget>
      </item>
      <item>
@@ -92,7 +133,7 @@
      <item>
       <widget class="QGroupBox" name="groupBox">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="title">
         <string>Motor Limits</string>
@@ -120,13 +161,34 @@
          </widget>
         </item>
         <item row="2" column="1">
-         <widget class="QSpinBox" name="spinBox_samxN"/>
+         <widget class="QSpinBox" name="spinBox_x_min">
+          <property name="minimum">
+           <number>-1000</number>
+          </property>
+          <property name="maximum">
+           <number>1000</number>
+          </property>
+         </widget>
         </item>
         <item row="1" column="2">
-         <widget class="QSpinBox" name="spinBox_samyP"/>
+         <widget class="QSpinBox" name="spinBox_y_max">
+          <property name="minimum">
+           <number>-1000</number>
+          </property>
+          <property name="maximum">
+           <number>1000</number>
+          </property>
+         </widget>
         </item>
         <item row="2" column="3">
-         <widget class="QSpinBox" name="spinBox_samxP"/>
+         <widget class="QSpinBox" name="spinBox_x_max">
+          <property name="minimum">
+           <number>-1000</number>
+          </property>
+          <property name="maximum">
+           <number>1000</number>
+          </property>
+         </widget>
         </item>
         <item row="1" column="3">
          <widget class="QLabel" name="label_3">
@@ -136,12 +198,12 @@
          </widget>
         </item>
         <item row="3" column="2">
-         <widget class="QSpinBox" name="spinBox_samyN"/>
-        </item>
-        <item row="2" column="2">
-         <widget class="QPushButton" name="pushButton">
-          <property name="text">
-           <string>Update</string>
+         <widget class="QSpinBox" name="spinBox_y_min">
+          <property name="minimum">
+           <number>-1000</number>
+          </property>
+          <property name="maximum">
+           <number>1000</number>
           </property>
          </widget>
         </item>
@@ -149,6 +211,94 @@
       </widget>
      </item>
     </layout>
+   </item>
+   <item>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tab">
+      <attribute name="title">
+       <string>Saved</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QPushButton" name="pushButton_4">
+         <property name="text">
+          <string>Go to selected</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTableWidget" name="tableWidget">
+         <column>
+          <property name="text">
+           <string>Show</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>X</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Y</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_2">
+      <attribute name="title">
+       <string>Queue</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QPushButton" name="pushButton_5">
+         <property name="text">
+          <string>Reset Queue</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTableWidget" name="tableWidget_2">
+         <column>
+          <property name="text">
+           <string>queueID</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>scanID</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>is_scan</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>type</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>scan_number</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>IQ status</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
    </item>
   </layout>
  </widget>
