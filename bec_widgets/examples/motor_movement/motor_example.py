@@ -24,6 +24,8 @@ class MotorApp(QWidget):
             dev.samy
         )
 
+        print(f"Init limits: samx:{self.limit_x}, samy:{self.limit_y}")
+
         self.label_status.setText(
             f"Motor position: ({dev.samx.position():.2f}, {dev.samy.position():.2f})"
         )
@@ -35,7 +37,9 @@ class MotorApp(QWidget):
         # 2D Plot
         ##########################
 
-        self.label_coorditanes = self.glw.addLabel("Current Motor Coordinates", row=0, col=0)
+        self.label_coorditanes = self.glw.addLabel(
+            f"Motor position: ({dev.samx.position():.2f}, {dev.samy.position():.2f})", row=0, col=0
+        )
         self.plot_map = self.glw.addPlot(row=1, col=0)
         self.image_map = pg.ImageItem()
         self.plot_map.addItem(self.image_map)
@@ -80,6 +84,19 @@ class MotorApp(QWidget):
         self.spinBox_x_max.setValue(self.limit_x[1])
         self.spinBox_y_min.setValue(self.limit_y[0])
         self.spinBox_y_max.setValue(self.limit_y[1])
+
+        # SpinBoxes change color to yellow before updated, limits are updated with update button
+        self.spinBox_x_min.valueChanged.connect(lambda: self.param_changed(self.spinBox_x_min))
+        self.spinBox_x_max.valueChanged.connect(lambda: self.param_changed(self.spinBox_x_max))
+        self.spinBox_y_min.valueChanged.connect(lambda: self.param_changed(self.spinBox_y_min))
+        self.spinBox_y_max.valueChanged.connect(lambda: self.param_changed(self.spinBox_y_max))
+
+        self.pushButton_updateLimits.clicked.connect(
+            lambda: self.update_all_motor_limits(
+                x_limit=[self.spinBox_x_min.value(), self.spinBox_x_max.value()],
+                y_limit=[self.spinBox_y_min.value(), self.spinBox_y_max.value()],
+            )
+        )
 
         # Map
         self.motor_position.connect(lambda x: self.update_image_map(*self.get_xy()))
@@ -163,6 +180,27 @@ class MotorApp(QWidget):
         if high_limit is not None and high_limit != current_high_limit:
             motor.high_limit = high_limit
 
+        # self.init_motor_map()  # reinitialize the map with the new limits
+
+    def update_all_motor_limits(self, x_limit: list = None, y_limit: list = None) -> None:
+        # check if current motor position if within the new limits
+
+        current_position = self.get_xy()
+
+        if x_limit is not None:
+            if current_position[0] < x_limit[0] or current_position[0] > x_limit[1]:
+                raise ValueError("Current motor position is outside the new limits (X)")
+            else:
+                self.update_motor_limits(dev.samx, low_limit=x_limit[0], high_limit=x_limit[1])
+
+        if y_limit is not None:
+            if current_position[1] < y_limit[0] or current_position[1] > y_limit[1]:
+                raise ValueError("Current motor position is outside the new limits (Y)")
+            else:
+                self.update_motor_limits(dev.samy, low_limit=y_limit[0], high_limit=y_limit[1])
+
+        self.init_motor_map()  # reinitialize the map with the new limits
+
     def move_motor(self, motor, value: float) -> None:
         try:
             status = scans.mv(motor, value, relative=True)
@@ -184,6 +222,9 @@ class MotorApp(QWidget):
         x = dev.samx.position()
         y = dev.samy.position()
         return x, y
+
+    def param_changed(self, ui_element):
+        ui_element.setStyleSheet("background-color: #FFA700;")
 
     def update_arrow_key_shortcuts(self):
         if self.checkBox_enableArrows.isChecked():

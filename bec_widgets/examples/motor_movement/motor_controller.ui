@@ -138,6 +138,13 @@
           </item>
          </layout>
         </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_stop">
+          <property name="text">
+           <string>Stop Movement</string>
+          </property>
+         </widget>
+        </item>
        </layout>
       </widget>
      </item>
