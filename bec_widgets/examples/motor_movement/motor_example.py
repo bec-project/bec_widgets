@@ -12,6 +12,7 @@ import pyqtgraph as pg
 class MotorApp(QWidget):
     motor_position = pyqtSignal(float)  # TODO hook to motor position update
     motor_update = pyqtSignal()
+    motor_position_xy = pyqtSignal(list)
 
     def __init__(self):
         super().__init__()
@@ -72,6 +73,13 @@ class MotorApp(QWidget):
         self.checkBox_enableArrows.stateChanged.connect(self.update_arrow_key_shortcuts)
         self.update_arrow_key_shortcuts()
 
+        # Move to absolute coordinates
+        self.pushButton_go_absolute.clicked.connect(
+            lambda: self.move_motor_coordinates(
+                [self.spinBox_absolute_x.value(), self.spinBox_absolute_y.value()]
+            )
+        )
+
         # SpinBoxes - Motor Limits #TODO make spinboxes own limits updated, currently is [-1000, 1000]
         # manually set limits before readout #TODO will be removed when spinboxes have own limits
         # dev.samx.low_limit = -100
@@ -100,6 +108,7 @@ class MotorApp(QWidget):
 
         # Map
         self.motor_position.connect(lambda x: self.update_image_map(*self.get_xy()))
+        self.motor_update.connect(lambda: self.update_image_map(*self.get_xy()))
 
         self.motor_position.connect(lambda x: print(f"motor position updated: {x}"))
         self.motor_update.connect(
@@ -207,6 +216,8 @@ class MotorApp(QWidget):
 
             while status.status not in ["COMPLETED", "STOPPED"]:
                 print(status.status)
+                motor_position = motor.position()
+                self.motor_position.emit(motor_position)
 
             # return status
         except Exception as e:
@@ -215,6 +226,21 @@ class MotorApp(QWidget):
         motor_position = motor.position()
 
         self.motor_position.emit(motor_position)
+        self.motor_update.emit()
+
+    def move_motor_coordinates(self, coor: list) -> None:
+        try:
+            status = scans.mv(dev.samx, coor[0], dev.samy, coor[1], relative=False)
+
+            while status.status not in ["COMPLETED", "STOPPED"]:
+                print(status.status)
+
+        except Exception as e:
+            print(e)
+
+        # motor_position = self.get_xy()
+        # self.motor_position_xy.emit(motor_position)
+
         self.motor_update.emit()
 
     def get_xy(self):  # TODO decide if useful

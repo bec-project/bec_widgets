@@ -139,6 +139,43 @@
          </layout>
         </item>
         <item>
+         <layout class="QGridLayout" name="gridLayout_3">
+          <item row="0" column="1">
+           <widget class="QLabel" name="label_6">
+            <property name="text">
+             <string>X</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLabel" name="label_7">
+            <property name="text">
+             <string>Y</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QPushButton" name="pushButton_go_absolute">
+            <property name="text">
+             <string>Go</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QSpinBox" name="spinBox_absolute_x"/>
+          </item>
+          <item row="1" column="2">
+           <widget class="QSpinBox" name="spinBox_absolute_y"/>
+          </item>
+         </layout>
+        </item>
+        <item>
          <widget class="QPushButton" name="pushButton_stop">
           <property name="text">
            <string>Stop Movement</string>
