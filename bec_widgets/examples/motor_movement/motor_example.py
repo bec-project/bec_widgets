@@ -2,8 +2,9 @@ import os
 
 import numpy as np
 from PyQt5 import QtGui
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QApplication, QWidget
+from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtGui import QKeySequence
+from PyQt5.QtWidgets import QApplication, QWidget, QShortcut
 from pyqtgraph.Qt import QtCore, QtWidgets, uic
 import pyqtgraph as pg
 
@@ -64,6 +65,9 @@ class MotorApp(QWidget):
             lambda: self.move_motor(dev.samy, -self.spinBox_step.value())
         )
 
+        self.checkBox_enableArrows.stateChanged.connect(self.update_arrow_key_shortcuts)
+        self.update_arrow_key_shortcuts()
+
         # SpinBoxes - Motor Limits #TODO make spinboxes own limits updated, currently is [-1000, 1000]
         # manually set limits before readout #TODO will be removed when spinboxes have own limits
         # dev.samx.low_limit = -100
@@ -76,30 +80,9 @@ class MotorApp(QWidget):
         self.spinBox_x_max.setValue(self.limit_x[1])
         self.spinBox_y_min.setValue(self.limit_y[0])
         self.spinBox_y_max.setValue(self.limit_y[1])
-        # # change limits of motors for all motors and spinboxes
-        self.spinBox_x_min.valueChanged.connect(
-            lambda x: self.update_motor_limits(dev.samx, low_limit=x)
-        )
-        self.spinBox_x_max.valueChanged.connect(
-            lambda x: self.update_motor_limits(dev.samx, high_limit=x)
-        )
-        self.spinBox_y_min.valueChanged.connect(
-            lambda x: self.update_motor_limits(dev.samy, low_limit=x)
-        )
-        self.spinBox_y_max.valueChanged.connect(
-            lambda x: self.update_motor_limits(dev.samy, high_limit=x)
-        )
 
         # Map
         self.motor_position.connect(lambda x: self.update_image_map(*self.get_xy()))
-
-        # make keybindings for motor movement
-        self.toolButton_right.setShortcut("Right")
-        self.toolButton_left.setShortcut("Left")
-        self.toolButton_up.setShortcut("Up")
-        self.toolButton_down.setShortcut("Down")
-
-        # self.toolButton_left.clicked.connect(lambda: print(self.client))
 
         self.motor_position.connect(lambda x: print(f"motor position updated: {x}"))
         self.motor_update.connect(
@@ -166,7 +149,9 @@ class MotorApp(QWidget):
 
         return low_limit, high_limit
 
-    def update_motor_limits(self, motor, low_limit=None, high_limit=None):
+    def update_motor_limits(
+        self, motor, low_limit=None, high_limit=None
+    ):  # TODO limits cannot be smaller that the current location of motor
         # Get current limits
         current_low_limit, current_high_limit = motor.limits[0], motor.limits[1]
 
@@ -200,11 +185,32 @@ class MotorApp(QWidget):
         y = dev.samy.position()
         return x, y
 
+    def update_arrow_key_shortcuts(self):
+        if self.checkBox_enableArrows.isChecked():
+            # Set the arrow key shortcuts for motor movement
+            self.toolButton_right.setShortcut(Qt.Key_Right)
+            self.toolButton_left.setShortcut(Qt.Key_Left)
+            self.toolButton_up.setShortcut(Qt.Key_Up)
+            self.toolButton_down.setShortcut(Qt.Key_Down)
+        else:
+            # Clear the shortcuts
+            self.toolButton_right.setShortcut("")
+            self.toolButton_left.setShortcut("")
+            self.toolButton_up.setShortcut("")
+            self.toolButton_down.setShortcut("")
+
 
 if __name__ == "__main__":
     from bec_widgets.bec_dispatcher import bec_dispatcher
 
-    # Client initialization
+    # from bec_lib import BECClient
+    # from bec_lib.core import ServiceConfig,RedisConnector
+
+    # client = BECClient()
+    # client.initialize(config=ServiceConfig(config_path="test_config.yaml"))
+    # client.initialize(config=ServiceConfig(config_path="test_config.yaml"))
+
+    # Client initialization - by dispatcher
     client = bec_dispatcher.client
     client.start()
     dev = client.device_manager.devices
