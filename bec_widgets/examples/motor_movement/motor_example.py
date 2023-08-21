@@ -1,12 +1,11 @@
 import os
 
 import numpy as np
+import pyqtgraph as pg
 from PyQt5 import QtGui
 from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QApplication, QWidget, QShortcut
-from pyqtgraph.Qt import QtCore, QtWidgets, uic
-import pyqtgraph as pg
+from PyQt5.QtWidgets import QApplication, QWidget
+from pyqtgraph.Qt import QtWidgets, uic
 
 
 class MotorApp(QWidget):
@@ -117,6 +116,11 @@ class MotorApp(QWidget):
             )
         )
 
+        # Coordinates table
+        self.generate_table_coordinate(
+            self.tableWidget_coordinates, self.get_xy(), tag="Initial", precision=0
+        )
+
         self.init_motor_map()
 
     def init_motor_map(self):
@@ -208,6 +212,14 @@ class MotorApp(QWidget):
             else:
                 self.update_motor_limits(dev.samy, low_limit=y_limit[0], high_limit=y_limit[1])
 
+        for spinBox in (
+            self.spinBox_x_min,
+            self.spinBox_x_max,
+            self.spinBox_y_min,
+            self.spinBox_y_max,
+        ):
+            spinBox.setStyleSheet("")
+
         self.init_motor_map()  # reinitialize the map with the new limits
 
     def move_motor(self, motor, value: float) -> None:
@@ -265,6 +277,41 @@ class MotorApp(QWidget):
             self.toolButton_left.setShortcut("")
             self.toolButton_up.setShortcut("")
             self.toolButton_down.setShortcut("")
+
+    def generate_table_coordinate(
+        self, table: QtWidgets.QTableWidget, coordinates: list, tag: str = None, precision: int = 0
+    ) -> None:
+        current_row_count = table.rowCount()
+
+        table.setRowCount(current_row_count + 1)
+
+        # table.insertRow(current_row_count)
+
+        checkBox = QtWidgets.QCheckBox()
+        checkBox.setChecked(True)
+        button = QtWidgets.QPushButton("Go")
+
+        table.setItem(current_row_count, 0, QtWidgets.QTableWidgetItem(str(tag)))
+        table.setCellWidget(current_row_count, 1, checkBox)
+        table.setItem(
+            current_row_count, 2, QtWidgets.QTableWidgetItem(str(f"{coordinates[0]:.{precision}f}"))
+        )
+        table.setItem(
+            current_row_count, 3, QtWidgets.QTableWidgetItem(str(f"{coordinates[1]:.{precision}f}"))
+        )
+        table.setCellWidget(current_row_count, 4, button)
+
+        # hook signals of table
+        button.clicked.connect(
+            lambda: self.move_motor_coordinates(
+                [
+                    float(table.item(current_row_count, 2).text()),
+                    float(table.item(current_row_count, 3).text()),
+                ]
+            )
+        )
+
+        table.resizeColumnsToContents()
 
 
 if __name__ == "__main__":
