@@ -25,6 +25,7 @@ class MotorApp(QWidget):
         # UI
         self.start_x, self.start_y = self.get_xy()
         self.current_x, self.current_y = self.get_xy()
+
         self.limit_x, self.limit_y = self.get_motor_limits(dev.samx), self.get_motor_limits(
             dev.samy
         )
@@ -35,40 +36,22 @@ class MotorApp(QWidget):
             f"Motor position: ({dev.samx.position():.2f}, {dev.samy.position():.2f})"
         )
 
-        # self.samx_consumer = client.connector.consumer(topics=[MessageEndpoints.device_readback('samx'),
-        #                                                        MessageEndpoints.device_readback('samy')],
-        #                                                cb=self._device_status_callback,parent=self)
-        # self.samx_consumer.start()
-
-        # self.samx_consumer = client.connector.consumer(
-        #     topics=[MessageEndpoints.device_readback("samx")],
-        #     cb=self._device_status_callback_samx,
-        #     parent=self,
-        # )
-        #
-        # self.samy_consumer = client.connector.consumer(
-        #     topics=[MessageEndpoints.device_readback("samy")],
-        #     cb=self._device_status_callback_samy,
-        #     parent=self,
-        # )
-        # self.samx_consumer.start()
-        # self.samy_consumer.start()
-
         self.motor_thread = MotorMovement()
 
         self.init_ui()
 
-    def on_move_to_coordinates_button_clicked(self):
-        x = self.spinBox_absolute_x.value()
-        y = self.spinBox_absolute_y.value()
+    def move_motor_absolute(self, x, y):
+        # x = self.spinBox_absolute_x.value()
+        # y = self.spinBox_absolute_y.value()
         target_coordinates = (x, y)
         self.motor_thread.move_to_coordinates(target_coordinates)
 
-    def on_move_relative_button_clicked(self, motor, value: float):
+    def move_motor_relative(self, motor, value: float):
         self.motor_thread.move_relative(motor, value)
 
     def init_ui(self):
         """Setup all ui elements"""
+
         ##########################
         # 2D Plot
         ##########################
@@ -80,42 +63,21 @@ class MotorApp(QWidget):
         self.image_map = pg.ImageItem()
         self.plot_map.addItem(self.image_map)
 
-        # self.image_map_data = np.zeros((100, 100), dtype=np.float32)
-        # x, y = self.get_xy()  # Assuming get_xy returns the motor position
-        # self.update_image_map(x, y)
-        # self.image_map.setImage(self.image_map_data.T)  # Set the image
-
-        # self.init_motor_map()
-
         ##########################
         # Signals
         ##########################
 
-        # Buttons - Motor Movement
-        # self.toolButton_right.clicked.connect(
-        #     lambda: self.move_motor(dev.samx, self.spinBox_step.value())
-        # )
-        # self.toolButton_left.clicked.connect(
-        #     lambda: self.move_motor(dev.samx, -self.spinBox_step.value())
-        # )
-        # self.toolButton_up.clicked.connect(
-        #     lambda: self.move_motor(dev.samy, self.spinBox_step.value())
-        # )
-        # self.toolButton_down.clicked.connect(
-        #     lambda: self.move_motor(dev.samy, -self.spinBox_step.value())
-        # )
-
         self.toolButton_right.clicked.connect(
-            lambda: self.on_move_relative_button_clicked(dev.samx, self.spinBox_step.value())
+            lambda: self.move_motor_relative(dev.samx, self.spinBox_step.value())
         )
         self.toolButton_left.clicked.connect(
-            lambda: self.on_move_relative_button_clicked(dev.samx, -self.spinBox_step.value())
+            lambda: self.move_motor_relative(dev.samx, -self.spinBox_step.value())
         )
         self.toolButton_up.clicked.connect(
-            lambda: self.on_move_relative_button_clicked(dev.samy, self.spinBox_step.value())
+            lambda: self.move_motor_relative(dev.samy, self.spinBox_step.value())
         )
         self.toolButton_down.clicked.connect(
-            lambda: self.on_move_relative_button_clicked(dev.samy, -self.spinBox_step.value())
+            lambda: self.move_motor_relative(dev.samy, -self.spinBox_step.value())
         )
 
         self.checkBox_enableArrows.stateChanged.connect(self.update_arrow_key_shortcuts)
@@ -123,8 +85,8 @@ class MotorApp(QWidget):
 
         # Move to absolute coordinates
         self.pushButton_go_absolute.clicked.connect(
-            lambda: self.move_motor_coordinates(
-                [self.spinBox_absolute_x.value(), self.spinBox_absolute_y.value()]
+            lambda: self.move_motor_absolute(
+                self.spinBox_absolute_x.value(), self.spinBox_absolute_y.value()
             )
         )
 
@@ -270,54 +232,14 @@ class MotorApp(QWidget):
 
         self.init_motor_map()  # reinitialize the map with the new limits
 
-    def move_motor(self, motor, value: float) -> None:
-        self.current_x, self.current_y = self.get_xy()
-        scans.mv(motor, value, relative=True)
-
-    # def move_motor(self, motor, value: float) -> None:
-    #     # self.current_x, self.current_y = self.get_xy()
-    #     scans.mv(motor, value, relative=True)
-    # try:
-    #     status = scans.mv(motor, value, relative=True)
-    #
-    #     # while status.status not in ["COMPLETED", "STOPPED"]:
-    #     #     print(status.status)
-    #     #     print(f"motor read{motor.read(cached=True)}")
-    #     #     motor_position = motor.position()
-    #     #     self.motor_position.emit(motor_position)
-    #
-    #     # return status
-    # except Exception as e:
-    #     print(e)
-
-    # motor_position = motor.position()
-
-    # self.motor_position.emit(motor_position)
-    # self.motor_update.emit()
-
-    def move_motor_coordinates(self, coor: list) -> None:
-        scans.mv(dev.samx, coor[0], dev.samy, coor[1], relative=False)
-        try:
-            status = scans.mv(dev.samx, coor[0], dev.samy, coor[1], relative=False)
-
-            # while status.status not in ["COMPLETED", "STOPPED"]:
-            # print(status.status)
-
-        except Exception as e:
-            print(e)
-
-        # motor_position = self.get_xy()
-        # self.motor_position_xy.emit(motor_position)
-
-        self.motor_update.emit()
-
     def get_xy(self):  # TODO decide if useful
         """Get current motor position"""
         x = dev.samx.position()
         y = dev.samy.position()
         return x, y
 
-    def param_changed(self, ui_element):
+    @staticmethod
+    def param_changed(ui_element):
         ui_element.setStyleSheet("background-color: #FFA700;")
 
     def update_arrow_key_shortcuts(self):
@@ -359,44 +281,12 @@ class MotorApp(QWidget):
 
         # hook signals of table
         button.clicked.connect(
-            lambda: self.move_motor_coordinates(
-                [
-                    float(table.item(current_row_count, 2).text()),
-                    float(table.item(current_row_count, 3).text()),
-                ]
+            lambda: self.move_motor_absolute(
+                float(table.item(current_row_count, 2).text()),
+                float(table.item(current_row_count, 3).text()),
             )
         )
-
         table.resizeColumnsToContents()
-
-    # @staticmethod
-    # def _device_status_callback(msg, *, parent, **_kwargs) -> None:
-    #     deviceMSG = BECMessage.DeviceMessage.loads(msg.value)
-    #     # current_coordinates = (deviceMSG.content['signals']['samx']['value'],deviceMSG.content['signals']['samy']['value'])
-    #     # print(f'current coordinates: {current_coordinates}')
-    #     # parent.scan_storage.update_with_scan_status(scan)
-    #     print(deviceMSG)
-
-    # print(deviceMSG.metadata)
-    # parent.motor_update.emit(deviceMSG)
-
-    # @staticmethod
-    # def _device_status_callback_samx(msg, *, parent, **_kwargs) -> None:
-    #     deviceMSG = BECMessage.DeviceMessage.loads(msg.value)
-    #     x = deviceMSG.content["signals"]["samx"]["value"]
-    #     print(f"x: {x}")
-    #     # Assuming you have a way to retrieve or store the current samy value
-    #     y = parent.current_y
-    #     parent.coordinates_updated.emit(x, y)
-    #
-    # @staticmethod
-    # def _device_status_callback_samy(msg, *, parent, **_kwargs) -> None:
-    #     deviceMSG = BECMessage.DeviceMessage.loads(msg.value)
-    #     y = deviceMSG.content["signals"]["samy"]["value"]
-    #     print(f"y: {y}")
-    #     # # Assuming you have a way to retrieve or store the current samx value
-    #     x = parent.current_x
-    #     parent.coordinates_updated.emit(x, y)
 
 
 class MotorMovement(QThread):
