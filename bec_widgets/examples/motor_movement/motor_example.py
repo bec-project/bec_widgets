@@ -66,11 +66,25 @@ class MotorApp(QWidget):
 
         self.init_motor_map()  # reinitialize the map with the new limits
 
+    @pyqtSlot()
+    def enable_motor_control(self):
+        self.motorControl.setEnabled(True)
+
+    def enable_motor_controls(self, disable: bool) -> None:
+        # Disable or enable all controls within the motorControl group box
+        for widget in self.motorControl.findChildren(QtWidgets.QWidget):
+            widget.setEnabled(disable)
+
+        # Enable the pushButton_stop if the motor is moving
+        self.pushButton_stop.setEnabled(not disable)
+
     def move_motor_absolute(self, x: float, y: float) -> None:
+        self.enable_motor_controls(False)
         target_coordinates = (x, y)
         self.motor_thread.move_to_coordinates(target_coordinates)
 
     def move_motor_relative(self, motor, value: float) -> None:
+        self.enable_motor_controls(False)
         self.motor_thread.move_relative(motor, value)
 
     def init_ui(self) -> None:
@@ -119,6 +133,8 @@ class MotorApp(QWidget):
             )
         )
         self.pushButton_go_absolute.clicked.connect(self.save_absolute_coordinates)
+
+        self.motor_thread.move_finished.connect(lambda: self.enable_motor_controls(True))
 
         # SpinBoxes - Motor Limits #TODO make spinboxes own limits updated, currently is [-1000, 1000]
 
@@ -313,6 +329,7 @@ class MotorApp(QWidget):
 class MotorControl(QThread):
     coordinates_updated = pyqtSignal(float, float)  # Signal to emit current coordinates
     limits_retrieved = pyqtSignal(list, list)  # Signal to emit current limits (samx, samy)
+    move_finished = pyqtSignal()  # Signal to emit when the move is finished
     # progress_updated = pyqtSignal(int)  #TODO  Signal to emit progress percentage
 
     def __init__(self, parent=None):
@@ -433,6 +450,8 @@ class MotorControl(QThread):
         parent.current_x = deviceMSG.content["signals"]["samx"]["value"]
         # print(f"samx moving: {parent.current_x,parent.current_y}")
         parent.coordinates_updated.emit(parent.current_x, parent.current_y)
+        if deviceMSG.content["signals"]["samx_motor_is_moving"]["value"] == 0:
+            parent.move_finished.emit()
 
     @staticmethod
     def _device_status_callback_samy(msg, *, parent, **_kwargs) -> None:
@@ -440,6 +459,8 @@ class MotorControl(QThread):
         parent.current_y = deviceMSG.content["signals"]["samy"]["value"]
         #         print(f"samy moving: {parent.current_x,parent.current_y}")
         parent.coordinates_updated.emit(parent.current_x, parent.current_y)
+        if deviceMSG.content["signals"]["samy_motor_is_moving"]["value"] == 0:
+            parent.move_finished.emit()
 
 
 if __name__ == "__main__":
