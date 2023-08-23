@@ -20,6 +20,8 @@ class MotorApp(QWidget):
         uic.loadUi(os.path.join(current_path, "motor_controller.ui"), self)
 
         self.limit_x, self.limit_y = None, None
+        # Coordinates tracking
+        self.motor_positions = []
 
         # QThread for motor movement + signals
         self.motor_thread = MotorControl()
@@ -37,6 +39,13 @@ class MotorApp(QWidget):
         self.label_status.setText(
             f"Motor position: ({dev.samx.position():.2f}, {dev.samy.position():.2f})"
         )  # TODO has to be change to get positions from thread not directly from device
+
+        # self.background_map_scale = 10
+        # self.visited_coordinates = {}
+        # self.precision = 2  # Define the decimal precision
+
+        # Initialize the image map
+        self.init_motor_map()
 
     @pyqtSlot(list, list)
     def update_limits(self, x_limits: list, y_limits: list) -> None:
@@ -75,8 +84,12 @@ class MotorApp(QWidget):
             f"Motor position: ({dev.samx.position():.2f}, {dev.samy.position():.2f})", row=0, col=0
         )
         self.plot_map = self.glw.addPlot(row=1, col=0)
-        self.image_map = pg.ImageItem()
-        self.plot_map.addItem(self.image_map)
+        self.limit_map = pg.ImageItem()
+        self.plot_map.addItem(self.limit_map)
+        self.motor_map = pg.ScatterPlotItem(
+            size=2, pen=pg.mkPen(None), brush=pg.mkBrush(255, 255, 255, 255)
+        )
+        self.plot_map.addItem(self.motor_map)
 
         ##########################
         # Signals
@@ -124,7 +137,7 @@ class MotorApp(QWidget):
 
         # TODO map with floats as well -> or decide system for higher precision
         self.motor_thread.coordinates_updated.connect(
-            lambda x, y: self.update_image_map(int(x), int(y))
+            lambda x, y: self.update_image_map(round(x, 2), round(y, 2))
         )
 
         # Coordinates table
@@ -149,39 +162,87 @@ class MotorApp(QWidget):
 
         # Create an empty image map
         self.background_value = 15
-        self.image_map_data = np.full(
+        self.limit_map_data = np.full(
             (map_width, map_height), self.background_value, dtype=np.float32
         )
+        self.limit_map.setImage(self.limit_map_data)
+        # # Set the initial position on the map
+        init_pos = self.motor_thread.retrieve_coordinates()
+        init_brush = pg.mkBrush(255, 255, 255, 255)
+        self.motor_positions.append({"pos": init_pos, "brush": init_brush})
 
-        # Set the initial position on the map
-        x, y = self.motor_thread.retrieve_coordinates()
-        self.update_image_map(x, y)
+        self.motor_map.setData(
+            pos=[point["pos"] for point in self.motor_positions],
+            brush=[point["brush"] for point in self.motor_positions],
+        )
 
+        # self.update_image_map(x, y)
+        #
         # Translate and scale the image item to match the motor coordinates
         self.tr = QtGui.QTransform()
         self.tr.translate(limit_x_min, limit_y_min)
-        self.image_map.setTransform(self.tr)
-
-        self.image_map.dataTransform()
+        self.limit_map.setTransform(self.tr)
+        #
+        # self.image_map.dataTransform()
 
     def update_image_map(self, x, y):
-        """Update the image map with the new motor position"""
+        # Dim previous points
+        # for point in self.motor_positions.values():
+        #     point["brush"] = pg.mkBrush(
+        #         255, 255, 255, max(50, point["brush"].color().alpha() * 0.95)
+        #     )
 
-        # Define the dimming factor
-        dimming_factor = 0.95
+        # Add new point with full brightness
+        new_pos = (x, y)
+        new_brush = pg.mkBrush(255, 255, 255, 255)
+        self.motor_positions.append({"pos": new_pos, "brush": new_brush})
+        self.motor_map.setData(
+            pos=[point["pos"] for point in self.motor_positions],
+            brush=[point["brush"] for point in self.motor_positions],
+        )
 
-        # Apply the dimming factor only to pixels above the background value
-        self.image_map_data[self.image_map_data > 50] *= dimming_factor
+        # new_point = {"pos": key, "brush": pg.mkBrush(255, 255, 255, 255)}
+        # self.motor_positions[key] = new_point
+        #
+        # Update ScatterPlotItem
+        # positions = np.array([point["pos"] for point in self.motor_positions.values()])
+        # brushes = [point["brush"] for point in self.motor_positions.values()]
+        # self.scatter_plot_item.setData(pos=positions, brush=brushes)
 
-        # Mapping of motor coordinates to pixel coordinates
-        pixel_x = int(x - self.offset_x)
-        pixel_y = int(y - self.offset_y)
+        # # Dim previous points
+        # for point in self.motor_positions.values():
+        #     point["brush"] = pg.mkBrush(
+        #         255, 255, 255, max(50, point["brush"].color().alpha() * 0.95)
+        #     )
+        #
+        # # Add new point with full brightness
+        # key = (x, y)
+        # new_point = {"pos": key, "brush": pg.mkBrush(255, 255, 255, 255)}
+        # self.motor_positions[key] = new_point
+        #
+        # # Update ScatterPlotItem
+        # positions = [point["pos"] for point in self.motor_positions.values()]
+        # brushes = [point["brush"] for point in self.motor_positions.values()]
+        # self.motor_map.setData(positions[0], positions[1], brush=brushes)
 
-        # Set the bright pixel at the new position
-        self.image_map_data[pixel_x, pixel_y] = 255
-
-        # Update the display
-        self.image_map.updateImage(self.image_map_data, levels=(0, 255))
+    # def update_image_map(self, x, y):
+    #     """Update the image map with the new motor position"""
+    #
+    #     # Define the dimming factor
+    #     dimming_factor = 0.95
+    #
+    #     # Apply the dimming factor only to pixels above the background value
+    #     self.image_map_data[self.image_map_data > 50] *= dimming_factor
+    #
+    #     # Mapping of motor coordinates to pixel coordinates
+    #     pixel_x = int(x - self.offset_x)
+    #     pixel_y = int(y - self.offset_y)
+    #
+    #     # Set the bright pixel at the new position
+    #     self.image_map_data[pixel_x, pixel_y] = 255
+    #
+    #     # Update the display
+    #     self.image_map.updateImage(self.image_map_data, levels=(0, 255))
 
     def update_all_motor_limits(
         self, x_limit: list = None, y_limit: list = None
@@ -370,14 +431,14 @@ class MotorControl(QThread):
     def _device_status_callback_samx(msg, *, parent, **_kwargs) -> None:
         deviceMSG = BECMessage.DeviceMessage.loads(msg.value)
         parent.current_x = deviceMSG.content["signals"]["samx"]["value"]
-        print(f"samx moving: {parent.current_x,parent.current_y}")
+        # print(f"samx moving: {parent.current_x,parent.current_y}")
         parent.coordinates_updated.emit(parent.current_x, parent.current_y)
 
     @staticmethod
     def _device_status_callback_samy(msg, *, parent, **_kwargs) -> None:
         deviceMSG = BECMessage.DeviceMessage.loads(msg.value)
         parent.current_y = deviceMSG.content["signals"]["samy"]["value"]
-        print(f"samy moving: {parent.current_x,parent.current_y}")
+        #         print(f"samy moving: {parent.current_x,parent.current_y}")
         parent.coordinates_updated.emit(parent.current_x, parent.current_y)
 
 
