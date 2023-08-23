@@ -135,8 +135,8 @@ class MotorApp(QWidget):
 
     def init_motor_map(self):
         # Get motor limits
-        limit_x_min, limit_x_max = self.get_motor_limits(dev.samx)
-        limit_y_min, limit_y_max = self.get_motor_limits(dev.samy)
+        limit_x_min, limit_x_max = self.motor_thread.get_motor_limits(dev.samx)
+        limit_y_min, limit_y_max = self.motor_thread.get_motor_limits(dev.samy)
 
         self.offset_x = limit_x_min
         self.offset_y = limit_y_min
@@ -181,12 +181,12 @@ class MotorApp(QWidget):
         # Update the display
         self.image_map.updateImage(self.image_map_data, levels=(0, 255))
 
-    def get_motor_limits(self, motor):
-        """Get the limits of a motor"""
-        high_limit = motor.high_limit
-        low_limit = motor.low_limit
-
-        return low_limit, high_limit
+    # def get_motor_limits(self, motor):
+    #     """Get the limits of a motor"""
+    #     high_limit = motor.high_limit
+    #     low_limit = motor.low_limit
+    #
+    #     return low_limit, high_limit
 
     def update_all_motor_limits(
         self, x_limit: list = None, y_limit: list = None
