@@ -27,6 +27,7 @@ class MotorApp(QWidget):
 
         # UI
         self.init_ui()
+        self.tag_N = 1  # position label for saved coordinates
 
         # Initialize current coordinates with the provided initial coordinates
         self.motor_thread.retrieve_motor_limits(dev.samx, dev.samy)
@@ -104,6 +105,7 @@ class MotorApp(QWidget):
                 self.spinBox_absolute_x.value(), self.spinBox_absolute_y.value()
             )
         )
+        self.pushButton_go_absolute.clicked.connect(self.save_absolute_coordinates)
 
         # SpinBoxes - Motor Limits #TODO make spinboxes own limits updated, currently is [-1000, 1000]
 
@@ -181,13 +183,6 @@ class MotorApp(QWidget):
         # Update the display
         self.image_map.updateImage(self.image_map_data, levels=(0, 255))
 
-    # def get_motor_limits(self, motor):
-    #     """Get the limits of a motor"""
-    #     high_limit = motor.high_limit
-    #     low_limit = motor.low_limit
-    #
-    #     return low_limit, high_limit
-
     def update_all_motor_limits(
         self, x_limit: list = None, y_limit: list = None
     ) -> None:  # TODO will be moved to thread
@@ -238,6 +233,16 @@ class MotorApp(QWidget):
             )
         )
         table.resizeColumnsToContents()
+
+    def save_absolute_coordinates(self):
+        self.generate_table_coordinate(
+            self.tableWidget_coordinates,
+            (self.spinBox_absolute_x.value(), self.spinBox_absolute_y.value()),
+            tag=f"Pos {self.tag_N}",
+            precision=0,
+        )
+
+        self.tag_N += 1
 
     @staticmethod
     def param_changed(ui_element):
