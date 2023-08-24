@@ -20,8 +20,9 @@ class MotorApp(QWidget):
         uic.loadUi(os.path.join(current_path, "motor_controller.ui"), self)
 
         self.limit_x, self.limit_y = None, None
+
         # Coordinates tracking
-        self.motor_positions = []
+        self.motor_positions = np.array([])
 
         # QThread for motor movement + signals
         self.motor_thread = MotorControl()
@@ -184,15 +185,13 @@ class MotorApp(QWidget):
             (map_width, map_height), self.background_value, dtype=np.float32
         )
         self.limit_map.setImage(self.limit_map_data)
-        # # Set the initial position on the map
-        init_pos = self.motor_thread.retrieve_coordinates()
-        init_brush = pg.mkBrush(255, 255, 255, 255)
-        self.motor_positions.append({"pos": init_pos, "brush": init_brush})
 
-        self.motor_map.setData(
-            pos=[point["pos"] for point in self.motor_positions],
-            brush=[point["brush"] for point in self.motor_positions],
-        )
+        # Set the initial position on the map
+        init_pos = self.motor_thread.retrieve_coordinates()
+        self.motor_positions = np.array([init_pos])
+        self.brushes = [pg.mkBrush(255, 255, 255, 255)]
+
+        self.motor_map.setData(pos=self.motor_positions, brush=self.brushes)
 
         # Translate and scale the image item to match the motor coordinates
         self.tr = QtGui.QTransform()
@@ -203,19 +202,18 @@ class MotorApp(QWidget):
         # Update label
         self.label_coorditanes.setText(f"Motor position: ({x:.2f}, {y:.2f})")
 
-        # Dim previous points
-        last_brush = self.motor_positions[-1]["brush"].color().getRgb()
-        dimmer_brush = tuple(max(int(0.8 * c), 50) for c in last_brush[:3]) + (255,)
-        self.motor_positions[-1]["brush"] = pg.mkBrush(dimmer_brush)
+        # Determine brushes based on position in the array
+        self.brushes = [pg.mkBrush(50, 50, 50, 255)] * len(self.motor_positions)
+        for i in range(1, min(6, len(self.motor_positions) + 1)):
+            brightness = max(50, 255 - 20 * (i - 1))
+            self.brushes[-i] = pg.mkBrush(brightness, brightness, brightness, 255)
 
         # Add new point with full brightness
         new_pos = (x, y)
-        new_brush = pg.mkBrush(255, 255, 255, 255)
-        self.motor_positions.append({"pos": new_pos, "brush": new_brush})
-        self.motor_map.setData(
-            pos=[point["pos"] for point in self.motor_positions],
-            brush=[point["brush"] for point in self.motor_positions],
-        )
+        self.motor_positions = np.vstack((self.motor_positions, new_pos))
+        self.brushes.append(pg.mkBrush(255, 255, 255, 255))
+
+        self.motor_map.setData(pos=self.motor_positions, brush=self.brushes)
 
     def update_all_motor_limits(
         self, x_limit: list = None, y_limit: list = None
