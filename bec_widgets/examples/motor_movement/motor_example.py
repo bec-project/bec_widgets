@@ -23,6 +23,9 @@ class MotorApp(QWidget):
 
         # Coordinates tracking
         self.motor_positions = np.array([])
+        self.max_points = 50  # Maximum number of points to keep
+        self.num_dim_points = 15  # Number of points to dim gradually
+        self.precision = 2  # Define the decimal precision
 
         # QThread for motor movement + signals
         self.motor_thread = MotorControl()
@@ -39,7 +42,6 @@ class MotorApp(QWidget):
 
         # self.background_map_scale = 10
         # self.visited_coordinates = {}
-        # self.precision = 2  # Define the decimal precision
 
         # Initialize the image map
         self.init_motor_map()
@@ -202,16 +204,21 @@ class MotorApp(QWidget):
         # Update label
         self.label_coorditanes.setText(f"Motor position: ({x:.2f}, {y:.2f})")
 
+        # Add new point with full brightness
+        new_pos = np.array([x, y])
+        self.motor_positions = np.vstack((self.motor_positions, new_pos))
+
+        # If the number of points exceeds max_points, delete the oldest points
+        if len(self.motor_positions) > self.max_points:
+            self.motor_positions = self.motor_positions[-self.max_points :]
+
         # Determine brushes based on position in the array
         self.brushes = [pg.mkBrush(50, 50, 50, 255)] * len(self.motor_positions)
-        for i in range(1, min(6, len(self.motor_positions) + 1)):
+        for i in range(1, min(self.num_dim_points + 1, len(self.motor_positions) + 1)):
             brightness = max(50, 255 - 20 * (i - 1))
             self.brushes[-i] = pg.mkBrush(brightness, brightness, brightness, 255)
 
-        # Add new point with full brightness
-        new_pos = (x, y)
-        self.motor_positions = np.vstack((self.motor_positions, new_pos))
-        self.brushes.append(pg.mkBrush(255, 255, 255, 255))
+        self.brushes[-1] = pg.mkBrush(255, 255, 255, 255)  # Newest point is always full brightness
 
         self.motor_map.setData(pos=self.motor_positions, brush=self.brushes)
 
