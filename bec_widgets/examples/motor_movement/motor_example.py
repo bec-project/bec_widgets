@@ -15,9 +15,7 @@ from bec_lib.core import MessageEndpoints, BECMessage
 #  - setting motor speed and frequency
 #  - setting motor acceleration
 #  - updating motor precision
-#  - put motor selection dropdown or listwidget
 #  - put motor status (moving, stopped, etc)
-#  - remove all hardcoded references to samx and samy
 #  - add spinBox for motor scatter size
 #  - add mouse interactions with the plot -> click to select coordinates, double click to move?
 #  - adjust right click actions
@@ -34,7 +32,7 @@ class MotorApp(QWidget):
         # Motor Control Thread
         self.motor_thread = MotorControl()
 
-        self.motor_x, self.motor_y = None, None  # dev.samx, dev.samy
+        self.motor_x, self.motor_y = None, None
         self.limit_x, self.limit_y = None, None
 
         # Coordinates tracking
@@ -105,8 +103,11 @@ class MotorApp(QWidget):
         self.motorControl.setEnabled(True)
 
     def enable_motor_controls(self, disable: bool) -> None:
-        # Disable or enable all controls within the motorControl group box
-        for widget in self.motorControl.findChildren(QtWidgets.QWidget):
+        self.motorControl.setEnabled(disable)
+        self.motorSelection.setEnabled(disable)
+
+        # Disable or enable all controls within the motorControl_absolute group box
+        for widget in self.motorControl_absolute.findChildren(QtWidgets.QWidget):
             widget.setEnabled(disable)
 
         # Enable the pushButton_stop if the motor is moving
@@ -358,7 +359,6 @@ class MotorControl(QThread):
 
     def __init__(
         self,
-        active_devices=["samx", "samy"],
         parent=None,
     ):
         super().__init__(parent)
