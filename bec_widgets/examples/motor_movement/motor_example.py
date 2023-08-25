@@ -9,6 +9,9 @@ from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtWidgets import QApplication, QWidget
 from pyqtgraph.Qt import QtWidgets, uic
 
+from PyQt5.QtGui import QKeySequence
+from PyQt5.QtWidgets import QShortcut
+
 from bec_lib.core import MessageEndpoints, BECMessage
 
 
@@ -220,6 +223,12 @@ class MotorApp(QWidget):
             self.motorControl_absolute.setEnabled(False)
             self.tabWidget_tables.setTabEnabled(1, False)
 
+        # Keyboard shortcuts
+        delete_shortcut = QShortcut(QKeySequence("Delete"), self)
+        backspace_shortcut = QShortcut(QKeySequence("Backspace"), self)
+        delete_shortcut.activated.connect(self.delete_selected_row)
+        backspace_shortcut.activated.connect(self.delete_selected_row)
+
     def init_motor_map(self):
         # Get motor limits
         limit_x_min, limit_x_max = self.motor_thread.get_motor_limits(self.motor_x)
@@ -322,6 +331,15 @@ class MotorApp(QWidget):
         )
         table.resizeColumnsToContents()
 
+    def delete_selected_row(self):
+        selected_rows = self.tableWidget_coordinates.selectionModel().selectedRows()
+
+        # If you allow multiple selections, you may want to loop through all selected rows
+        for row in reversed(selected_rows):  # Reverse to delete from the end
+            self.tableWidget_coordinates.removeRow(row.row())
+
+        print(f"deleted {selected_rows}")
+
     def save_absolute_coordinates(self):
         self.generate_table_coordinate(
             self.tableWidget_coordinates,
@@ -357,18 +375,7 @@ class MotorControl(QThread):
         super().__init__(parent)
 
         self.action = None
-
-        self.motor_x, self.motor_y = None, None
-        self.current_x, self.current_y = None, None
-
-        self.motors_consumer = None
-
-        # Get all available motors in the client
-        self.all_motors = self.get_all_motors()
-        self.all_motors_names = self.get_all_motors_names()
-        self.retrieve_all_motors()  # send motor list to GUI
-
-        self.target_coordinates = None
+        self._initialize_motor()
 
     def motor_by_string(self, motor_x_name: str, motor_y_name: str) -> tuple:
         motor_x_index = self.all_motors_names.index(motor_x_name)
@@ -482,6 +489,19 @@ class MotorControl(QThread):
 
     def set_target_coordinates(self, target_coordinates: tuple) -> None:
         self.target_coordinates = target_coordinates
+
+    def _initialize_motor(self) -> None:
+        self.motor_x, self.motor_y = None, None
+        self.current_x, self.current_y = None, None
+
+        self.motors_consumer = None
+
+        # Get all available motors in the client
+        self.all_motors = self.get_all_motors()
+        self.all_motors_names = self.get_all_motors_names()
+        self.retrieve_all_motors()  # send motor list to GUI
+
+        self.target_coordinates = None
 
     def _move_motor_coordinate(self) -> None:
         """Move the motor to the specified coordinates"""
