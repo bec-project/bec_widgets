@@ -582,7 +582,7 @@
            </widget>
           </item>
           <item row="0" column="0">
-           <widget class="QPushButton" name="pushButton">
+           <widget class="QPushButton" name="pushButton_update_config">
             <property name="text">
              <string>Update</string>
             </property>

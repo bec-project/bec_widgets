@@ -146,6 +146,7 @@ class MotorApp(QWidget):
 
     def init_ui(self) -> None:
         """Setup all ui elements"""
+        # TODO can be separated to multiple functions
 
         ##########################
         # 2D Plot
@@ -216,10 +217,33 @@ class MotorApp(QWidget):
         self.spinBox_y_min.valueChanged.connect(lambda: self.param_changed(self.spinBox_y_min))
         self.spinBox_y_max.valueChanged.connect(lambda: self.param_changed(self.spinBox_y_max))
 
+        # SpinBoxes - Motor Speed
+        self.spinBox_speed_x.valueChanged.connect(lambda: self.param_changed(self.spinBox_speed_x))
+        self.spinBox_speed_y.valueChanged.connect(lambda: self.param_changed(self.spinBox_speed_y))
+
+        # SpinBoxes - Motor Update Frequency
+        self.spinBox_update_frequency_x.valueChanged.connect(
+            lambda: self.param_changed(self.spinBox_update_frequency_x)
+        )
+        self.spinBox_update_frequency_y.valueChanged.connect(
+            lambda: self.param_changed(self.spinBox_update_frequency_y)
+        )
+
+        # Confog updates
         self.pushButton_updateLimits.clicked.connect(
             lambda: self.update_all_motor_limits(
                 x_limit=[self.spinBox_x_min.value(), self.spinBox_x_max.value()],
                 y_limit=[self.spinBox_y_min.value(), self.spinBox_y_max.value()],
+            )
+        )
+
+        self.pushButton_update_config.clicked.connect(
+            lambda: self.update_all_config(
+                speed=[self.spinBox_speed_x.value(), self.spinBox_speed_y.value()],
+                update_frequency=[
+                    self.spinBox_update_frequency_x.value(),
+                    self.spinBox_update_frequency_y.value(),
+                ],
             )
         )
 
@@ -246,8 +270,6 @@ class MotorApp(QWidget):
         backspace_shortcut = QShortcut(QKeySequence("Backspace"), self)
         delete_shortcut.activated.connect(self.delete_selected_row)
         backspace_shortcut.activated.connect(self.delete_selected_row)
-
-        # Get speed and update frequency
 
     def init_motor_map(self):
         # Get motor limits
@@ -304,6 +326,10 @@ class MotorApp(QWidget):
 
     def update_all_motor_limits(self, x_limit: list = None, y_limit: list = None) -> None:
         self.motor_thread.update_all_motor_limits(x_limit=x_limit, y_limit=y_limit)
+
+    def update_all_config(self, speed: list = None, update_frequency: list = None) -> None:
+        # TODO now only speed and update frequency
+        self.motor_thread.update_all_config(speed=speed, update_frequency=update_frequency)
 
     def update_arrow_key_shortcuts(self):
         if self.checkBox_enableArrows.isChecked():
@@ -461,21 +487,18 @@ class MotorControl(QThread):
         """Get the configuration of a motor"""  # TODO at this moment just for speed and update_frequency
         return motor.get_device_config()
 
-    def get_motor_speed(self, motor) -> float:
-        """Get the speed of a motor"""
-        return motor.speed
+    def update_all_config(self, speed: list = None, update_frequency: list = None) -> None:
+        # TODO now only speed and update frequency
+        if speed is not None:
+            self.motor_x.set_device_config({"speed": speed[0]})
+            self.motor_y.set_device_config({"speed": speed[1]})
 
-    def set_motor_speed(self, motor, speed: float) -> None:
-        """Set the speed of a motor"""
-        motor.speed = speed
+        if update_frequency is not None:
+            self.motor_x.set_device_config({"update_frequency": update_frequency[0]})
+            self.motor_y.set_device_config({"update_frequency": update_frequency[1]})
 
-    def get_motor_update_frequency(self, motor) -> float:
-        """Get the update frequency of a motor"""
-        return motor.update_frequency
-
-    def set_motor_update_frequency(self, motor, update_frequency: float) -> None:
-        """Set the update frequency of a motor"""
-        motor.update_frequency = update_frequency
+        self.retrieve_motor_speed(self.motor_x, self.motor_y)
+        self.retrieve_motor_update_frequency(self.motor_x, self.motor_y)
 
     def retrieve_motor_speed(
         self, motor_x, motor_y
