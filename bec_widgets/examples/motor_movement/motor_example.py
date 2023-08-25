@@ -11,6 +11,18 @@ from pyqtgraph.Qt import QtWidgets, uic
 from bec_lib.core import MessageEndpoints, BECMessage
 
 
+# TODO - General features
+#  - setting motor speed and frequency
+#  - setting motor acceleration
+#  - updating motor precision
+#  - put motor selection dropdown or listwidget
+#  - put motor status (moving, stopped, etc)
+#  - remove all hardcoded references to samx and samy
+#  - add spinBox for motor scatter size
+#  - add mouse interactions with the plot -> click to select coordinates, double click to move?
+#  - adjust right click actions
+
+
 class MotorApp(QWidget):
     coordinates_updated = pyqtSignal(float, float)
 
@@ -23,9 +35,8 @@ class MotorApp(QWidget):
 
         # Coordinates tracking
         self.motor_positions = np.array([])
-        self.max_points = 50  # Maximum number of points to keep
+        self.max_points = 5000  # Maximum number of points to keep
         self.num_dim_points = 15  # Number of points to dim gradually
-        self.precision = 2  # Define the decimal precision
 
         # QThread for motor movement + signals
         self.motor_thread = MotorControl()
@@ -39,9 +50,6 @@ class MotorApp(QWidget):
         self.motor_thread.retrieve_motor_limits(dev.samx, dev.samy)
 
         print(f"Init limits: samx:{self.limit_x}, samy:{self.limit_y}")
-
-        # self.background_map_scale = 10
-        # self.visited_coordinates = {}
 
         # Initialize the image map
         self.init_motor_map()
@@ -103,6 +111,14 @@ class MotorApp(QWidget):
             size=2, pen=pg.mkPen(None), brush=pg.mkBrush(255, 255, 255, 255)
         )
         self.plot_map.addItem(self.motor_map)
+        self.plot_map.showGrid(x=True, y=True)
+
+        ##########################
+        # Motor General setting
+        ##########################
+
+        # TODO make function to update precision
+        self.precision = 2  # self.spinBox_precision.value()  # Define the decimal precision
 
         ##########################
         # Motor movements signals
@@ -132,6 +148,9 @@ class MotorApp(QWidget):
             )
         )
         self.pushButton_go_absolute.clicked.connect(self.save_absolute_coordinates)
+        self.pushButton_go_absolute.setShortcut("Ctrl+G")
+        self.pushButton_go_absolute.setToolTip("Ctrl+G")
+
         self.motor_thread.move_finished.connect(lambda: self.enable_motor_controls(True))
 
         # Stop Button
@@ -158,7 +177,7 @@ class MotorApp(QWidget):
 
         # TODO map with floats as well -> or decide system for higher precision
         self.motor_thread.coordinates_updated.connect(
-            lambda x, y: self.update_image_map(round(x, 2), round(y, 2))
+            lambda x, y: self.update_image_map(round(x, self.precision), round(y, self.precision))
         )
 
         # Coordinates table
@@ -294,18 +313,22 @@ class MotorControl(QThread):
     move_finished = pyqtSignal()  # Signal to emit when the move is finished
     # progress_updated = pyqtSignal(int)  #TODO  Signal to emit progress percentage
 
-    def __init__(self, parent=None):
+    def __init__(
+        self,
+        active_devices=["samx", "samy"],
+        parent=None,
+    ):
         super().__init__(parent)
         self.target_coordinates = None
         self.running = False
+
+        self.active_devices = active_devices
 
         # Initialize current coordinates with the provided initial coordinates
         (
             self.current_x,
             self.current_y,
         ) = self.get_coordinates()  # TODO maybe not needed, coordinates always stored in redis
-
-        self.active_devices = ["samx", "samy"]
 
         self.motors_consumer = client.connector.consumer(
             topics=[
@@ -319,13 +342,9 @@ class MotorControl(QThread):
         self.motors_consumer.start()
 
     def get_coordinates(self) -> tuple:
-        # TODO decide if the get_coordinates and retrieve coordinates makes sense
-        # TODO or move also to signal/slot as in the case of limits
-        # TODO or move just to redis CB function
         """Get current motor position"""
-        dev.samx.read(cached=True)  # TODO to get last message ['value'] -> last position
-        x = dev.samx.position()
-        y = dev.samy.position()
+        x = dev.samx.read(cached=True)["value"]  # TODO remove hardcoded samx and samy
+        y = dev.samx.read(cached=True)["value"]
         return x, y
 
     def retrieve_coordinates(self) -> tuple:
@@ -360,7 +379,9 @@ class MotorControl(QThread):
             if current_position[0] < x_limit[0] or current_position[0] > x_limit[1]:
                 raise ValueError("Current motor position is outside the new limits (X)")
             else:
-                self.update_motor_limits(dev.samx, low_limit=x_limit[0], high_limit=x_limit[1])
+                self.update_motor_limits(
+                    dev.samx, low_limit=x_limit[0], high_limit=x_limit[1]
+                )  # TODO Remove hardcoded samx and samy
 
         if y_limit is not None:
             if current_position[1] < y_limit[0] or current_position[1] > y_limit[1]:
