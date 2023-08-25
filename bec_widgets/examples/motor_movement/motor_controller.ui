@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1115</width>
-    <height>506</height>
+    <width>1120</width>
+    <height>547</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -43,6 +43,12 @@
            </property>
           </widget>
          </item>
+         <item row="1" column="1">
+          <widget class="QComboBox" name="comboBox_motor_x"/>
+         </item>
+         <item row="2" column="1">
+          <widget class="QComboBox" name="comboBox_motor_y"/>
+         </item>
          <item row="1" column="0">
           <widget class="QLabel" name="label_5">
            <property name="text">
@@ -50,11 +56,12 @@
            </property>
           </widget>
          </item>
-         <item row="1" column="1">
-          <widget class="QComboBox" name="comboBox"/>
-         </item>
-         <item row="2" column="1">
-          <widget class="QComboBox" name="comboBox_2"/>
+         <item row="3" column="0" colspan="2">
+          <widget class="QPushButton" name="pushButton_connecMotors">
+           <property name="text">
+            <string>Connect Motors</string>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>
@@ -208,7 +215,7 @@
        </spacer>
       </item>
       <item>
-       <widget class="QGroupBox" name="groupBox">
+       <widget class="QGroupBox" name="motorControl_absolute">
         <property name="title">
          <string>Move Absolute</string>
         </property>
@@ -271,7 +278,7 @@
      <property name="currentIndex">
       <number>0</number>
      </property>
-     <widget class="QWidget" name="tab">
+     <widget class="QWidget" name="tab_coordinates">
       <attribute name="title">
        <string>Coordinates</string>
       </attribute>
@@ -307,7 +314,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tab_3">
+     <widget class="QWidget" name="tab_settings">
       <attribute name="title">
        <string>Settings</string>
       </attribute>
@@ -510,7 +517,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tab_2">
+     <widget class="QWidget" name="tab_queue">
       <attribute name="title">
        <string>Queue</string>
       </attribute>
