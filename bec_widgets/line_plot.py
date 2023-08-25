@@ -26,7 +26,7 @@ class BasicPlot(QtWidgets.QWidget):
     update_signal = pyqtSignal()
     roi_signal = pyqtSignal(tuple)
 
-    def __init__(self, name="", y_value_list=["samx", "samy"]) -> None:
+    def __init__(self, name="", y_value_list=["gauss_bpm"]) -> None:
         """
         Basic plot widget for displaying scan data.
 
@@ -387,7 +387,7 @@ if __name__ == "__main__":
         "--signals",
         help="specify recorded signals",
         nargs="+",
-        default=["samx", "samy"],
+        default=["gauss_bpm"],
     )
     # default = ["gauss_bpm", "bpm4i", "bpm5i", "bpm6i", "xert"],
     # dispatcher = bec_dispatcher
