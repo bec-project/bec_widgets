@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+from enum import Enum
 import pyqtgraph as pg
 from PyQt5 import QtGui
 from PyQt5.QtCore import QThread, pyqtSlot
@@ -19,6 +20,7 @@ from bec_lib.core import MessageEndpoints, BECMessage
 #  - add spinBox for motor scatter size
 #  - add mouse interactions with the plot -> click to select coordinates, double click to move?
 #  - adjust right click actions
+#  - implement logic to check if motor actually has limits
 
 
 class MotorApp(QWidget):
@@ -52,14 +54,6 @@ class MotorApp(QWidget):
         # Get all motors available
         self.motor_thread.retrieve_all_motors()
 
-        # Initialize current coordinates with the provided initial coordinates
-        # self.motor_thread.retrieve_motor_limits(self.motor_x, self.motor_y) #TODO move after connection of motors
-
-        # print(f"Init limits: samx:{self.limit_x}, samy:{self.limit_y}")  # TODO get to motor connect
-
-        # Initialize the image map
-        # self.init_motor_map()
-
     def connect_motor(self, motor_x_name: str, motor_y_name: str):
         self.motor_thread.connect_motors(motor_x_name, motor_y_name)
         self.motor_thread.retrieve_motor_limits(self.motor_x, self.motor_y)
@@ -68,6 +62,13 @@ class MotorApp(QWidget):
         self.motorControl.setEnabled(True)
         self.motorControl_absolute.setEnabled(True)
         self.tabWidget_tables.setTabEnabled(1, True)
+
+        self.generate_table_coordinate(
+            self.tableWidget_coordinates,
+            self.motor_thread.retrieve_coordinates(),
+            tag=f"{motor_x_name},{motor_y_name}",
+            precision=0,
+        )
 
     @pyqtSlot(object, object)
     def get_selected_motors(self, motor_x, motor_y):
@@ -129,12 +130,7 @@ class MotorApp(QWidget):
         # 2D Plot
         ##########################
 
-        # self.label_coorditanes = self.glw.addLabel(
-        #     f"Motor position: ({dev.samx.position():.2f}, {dev.samy.position():.2f})", row=0, col=0
-        # ) #TODO remove hardcoded samx and samy
-        self.label_coorditanes = self.glw.addLabel(
-            f"Motor position: (X, Y)", row=0, col=0
-        )  # TODO remove hardcoded samx and samy
+        self.label_coorditanes = self.glw.addLabel(f"Motor position: (X, Y)", row=0, col=0)
         self.plot_map = self.glw.addPlot(row=1, col=0)
         self.limit_map = pg.ImageItem()
         self.plot_map.addItem(self.limit_map)
@@ -211,14 +207,6 @@ class MotorApp(QWidget):
             lambda x, y: self.update_image_map(round(x, self.precision), round(y, self.precision))
         )
 
-        # Coordinates table
-        self.generate_table_coordinate(
-            self.tableWidget_coordinates,
-            self.motor_thread.retrieve_coordinates(),
-            tag="Initial",
-            precision=0,
-        )
-
         # Motor connections
         self.pushButton_connecMotors.clicked.connect(
             lambda: self.connect_motor(
@@ -265,7 +253,7 @@ class MotorApp(QWidget):
 
     def update_image_map(self, x, y):
         # Update label
-        self.label_coorditanes.setText(f"Motor position: ({x:.2f}, {y:.2f})")
+        self.label_coorditanes.setText(f"Motor position: ({x}, {y})")
 
         # Add new point with full brightness
         new_pos = np.array([x, y])
@@ -349,9 +337,14 @@ class MotorApp(QWidget):
         ui_element.setStyleSheet("background-color: #FFA700;")
 
 
+class MotorActions(Enum):
+    MOVE_TO_COORDINATES = "move_to_coordinates"
+    MOVE_RELATIVE = "move_relative"
+
+
 class MotorControl(QThread):
     coordinates_updated = pyqtSignal(float, float)  # Signal to emit current coordinates
-    limits_retrieved = pyqtSignal(list, list)  # Signal to emit current limits (samx, samy)
+    limits_retrieved = pyqtSignal(list, list)  # Signal to emit current limits
     move_finished = pyqtSignal()  # Signal to emit when the move is finished
     motors_loaded = pyqtSignal(list, list)  # Signal to emit when the motors are loaded
     motors_selected = pyqtSignal(object, object)  # Signal to emit when the motors are selected
@@ -363,6 +356,8 @@ class MotorControl(QThread):
     ):
         super().__init__(parent)
 
+        self.action = None
+
         self.motor_x, self.motor_y = None, None
         self.current_x, self.current_y = None, None
 
@@ -373,18 +368,7 @@ class MotorControl(QThread):
         self.all_motors_names = self.get_all_motors_names()
         self.retrieve_all_motors()  # send motor list to GUI
 
-        self.connect_motors("samx", "samy")
-
         self.target_coordinates = None
-
-        self.motor_x_debug = dev.samx
-        # self.all_motors = self.get_all_motors()
-        # self.all_motors_names = self.get_all_motors_names()
-
-        # find index of samx in self.all_motors_names
-        # self.motor_x_index = self.all_motors_names.index(self.active_devices[0])
-
-        print(f"Motor debug: {self.motor_x_debug}")
 
     def motor_by_string(self, motor_x_name: str, motor_y_name: str) -> tuple:
         motor_x_index = self.all_motors_names.index(motor_x_name)
@@ -434,7 +418,7 @@ class MotorControl(QThread):
 
     def get_coordinates(self) -> tuple:
         """Get current motor position"""
-        x = self.motor_x.read(cached=True)["value"]  # TODO remove hardcoded samx and samy
+        x = self.motor_x.read(cached=True)["value"]
         y = self.motor_y.read(cached=True)["value"]
         return x, y
 
@@ -463,16 +447,13 @@ class MotorControl(QThread):
             motor.high_limit = high_limit
 
     def update_all_motor_limits(self, x_limit: list = None, y_limit: list = None) -> None:
-        # TODO can be generalized to any motor not just samx samy
         current_position = self.get_coordinates()
 
         if x_limit is not None:
             if current_position[0] < x_limit[0] or current_position[0] > x_limit[1]:
                 raise ValueError("Current motor position is outside the new limits (X)")
             else:
-                self.update_motor_limits(
-                    self.motor_x, low_limit=x_limit[0], high_limit=x_limit[1]
-                )  # TODO Remove hardcoded samx and samy
+                self.update_motor_limits(self.motor_x, low_limit=x_limit[0], high_limit=x_limit[1])
 
         if y_limit is not None:
             if current_position[1] < y_limit[0] or current_position[1] > y_limit[1]:
@@ -483,26 +464,26 @@ class MotorControl(QThread):
         self.retrieve_motor_limits(self.motor_x, self.motor_y)
 
     def move_to_coordinates(self, target_coordinates: tuple):
-        self.action = "move_to_coordinates"
+        self.action = MotorActions.MOVE_TO_COORDINATES
         self.target_coordinates = target_coordinates
         self.start()
 
     def move_relative(self, motor, value: float):
-        self.action = "move_relative"
+        self.action = MotorActions.MOVE_RELATIVE
         self.motor = motor
         self.value = value
         self.start()
 
     def run(self):
-        if self.action == "move_to_coordinates":
-            self.move_motor_coordinate()
-        elif self.action == "move_relative":
-            self.move_motor_relative(self.motor, self.value)
+        if self.action == MotorActions.MOVE_TO_COORDINATES:
+            self._move_motor_coordinate()
+        elif self.action == MotorActions.MOVE_RELATIVE:
+            self._move_motor_relative(self.motor, self.value)
 
     def set_target_coordinates(self, target_coordinates: tuple) -> None:
         self.target_coordinates = target_coordinates
 
-    def move_motor_coordinate(self) -> None:
+    def _move_motor_coordinate(self) -> None:
         """Move the motor to the specified coordinates"""
         status = scans.mv(
             self.motor_x,
@@ -515,7 +496,7 @@ class MotorControl(QThread):
         status.wait()
         self.move_finished.emit()
 
-    def move_motor_relative(self, motor, value: float) -> None:
+    def _move_motor_relative(self, motor, value: float) -> None:
         status = scans.mv(motor, value, relative=True)
 
         status.wait()
