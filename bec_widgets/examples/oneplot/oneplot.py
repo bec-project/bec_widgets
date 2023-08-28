@@ -17,6 +17,7 @@ from bec_lib.core import MessageEndpoints
 #   - implement scanID database for visualizing previous scans
 #   - multiple signals for different monitors
 #   - user can choose what motor against what monitor to plot
+#   - crosshair snaps now just to fit, not to actual data
 
 
 class PlotApp(QWidget):
@@ -38,6 +39,7 @@ class PlotApp(QWidget):
 
         self.init_ui()
         self.init_curves()
+        self.hook_crosshair()
 
         self.pushButton_hook.clicked.connect(self.hook_crosshair)
 
@@ -80,15 +82,17 @@ class PlotApp(QWidget):
 
         # TODO hook signals
         # TODO hook crosshair
-        # self.hook_crosshair()
+        self.tableWidget_crosshair.setRowCount(len(self.monitor_names))
+        self.tableWidget_crosshair.setVerticalHeaderLabels(self.monitor_names)
+        self.hook_crosshair()
 
     def hook_crosshair(self):
-        self.crosshair_1d = Crosshair(self.plot, precision=10)
+        self.crosshair_1d = Crosshair(self.plot, precision=3)
         self.crosshair_1d.coordinatesChanged1D.connect(
             lambda x, y: self.update_table(self.tableWidget_crosshair, x, y, column=0)
         )
-        self.crosshair_1d.coordinatesChanged1D.connect(
-            lambda x, y: print(f"crosshair 1d x = {x}, y = {y}")
+        self.crosshair_1d.coordinatesClicked1D.connect(
+            lambda x, y: self.update_table(self.tableWidget_crosshair, x, y, column=1)
         )
 
     def update_table(self, table_widget, x, y_values, column):
