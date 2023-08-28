@@ -12,12 +12,11 @@ from PyQt5.QtWidgets import (
 )
 from pyqtgraph import mkPen
 from pyqtgraph.Qt import QtCore
-from crosshair import Crosshair
+from bec_widgets.qt_utils import Crosshair
 
 
 class ExampleApp(QWidget):
     def __init__(self):
-        """Example application for using the Crosshair class"""
         super().__init__()
 
         # Layout
