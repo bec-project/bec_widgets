@@ -2,6 +2,38 @@
 
 <!--next-version-placeholder-->
 
+## v0.7.0 (2023-08-28)
+
+### Feature
+
+* Labels of current motors are shown in motors limits ([`413e435`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/413e4356cfde6e2432682332e470eb69427ad397))
+* Total number of points, scatter size and number of point to dim after last position can be changed from GUI ([`e0b52fc`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/e0b52fcedca46d913d1677b45f9815eccd92e8f7))
+* Speed and frequency can be updated from GUI ([`f391a2f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/f391a2fd004f1dc8187cfe12d60f856427ae01ec))
+* Speed and frequency is retrieved from devices ([`ce98164`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ce9816480b82373895b602d1a1bca7d1d9725f01))
+* Delete coordinate table row by DELETE or BACKSPACE key ([`5dd0af6`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/5dd0af6894a5d97457d60ef18b098e40856e4875))
+* Motor selection ([`cab32be`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/cab32be0092185870b5a12398103475342c8b1fd))
+* New GUI ([`0226188`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/0226188079f1dac4eece6b1a6fa330620f1504bc))
+* Keyboard shortcut to go to coordinates ([`3c0e595`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/3c0e5955d40a67935b8fb064d5c52fd3f29bd1a1))
+* Ability to choose how many points should be dimmed before reaching the threshold + total number of point which should be stored. ([`9eae697`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/9eae697df8a2f3961454db9ed397353f110c0e67))
+* Stop movement function, one callback function for 2 motors, move_finished is emitted in move_motor function not in callback ([`187c748`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/187c748e87264448d5026d9fa2f15b5fc9a55949))
+* Controls are disabled while motor is moving and enabled when motor movement is finished ([`ed84293`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ed842931971fbf87ed2f3e366eb822531ef5aacc))
+* Motor coordinates are now scatter instead of image ([`3f6d5c6`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/3f6d5c66411459703c402f7449e8b1abae9a2b08))
+* Going to absolute coordinates saves coordinate in the table for later use with tag ([`8be98c9`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/8be98c9bb6af941a69c593c62d5c52339d2262bc))
+* Table with coordinates getting initial coordinates of motor ([`92388c3`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/92388c3cab7e024978aaa2906afbd698015dec66))
+* Motor move to absolute (X,Y) coordinates ([`cbe27e4`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/cbe27e46cfb6282c71844641e1ed6059e8fa96bf))
+* Motor limits can be changed by spinBoxes ([`2d1665c`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/2d1665c76b8174d9fffa3442afa98fe1ea6ac207))
+* Switch for keyboard shortcuts for motor movement ([`cac4562`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/cac45626fc9a315f9012b110760a92e27e5ed226))
+* Setting map according to motor limits ([`512e698`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/512e698e26d9eef05b4f430475ccc268b68ad632))
+* Map of motor position ([`e6952a6`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/e6952a6d13c84487fd6ab08056f1f5b46d594b8a))
+* Motor_example.py created, motor samx and samy can be moved by buttons ([`947ba9f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/947ba9f8b730e96082cb51ff6894734a0e119ca1))
+
+### Fix
+
+* Line_plot.py default changed back to "gauss_bpm" ([`64708bc`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/64708bc1b2e6a4256da9123d0215fc87e0afa455))
+* Motor selection is disabled while motor is moving ([`c7e35d7`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/c7e35d7da69853343aa7eee53c8ad988eb490d93))
+* Init_motor_map receive motor position from motor_thread ([`95ead71`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/95ead7117e59e0979aec51b85b49537ab728cad4))
+* Motor movement absolute fixed - movement by thread ([`11aa15f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/11aa15fefda7433e885cc8586f93c97af83b0c48))
+
 ## v0.6.3 (2023-08-17)
 
 ### Fix
