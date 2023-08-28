@@ -1,16 +1,14 @@
+import os
 import numpy as np
 
-from bec_lib.core import MessageEndpoints
-import os
-
 import pyqtgraph as pg
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QApplication, QWidget
+from PyQt5.QtWidgets import QTableWidgetItem
 from pyqtgraph import mkBrush, mkPen
-from pyqtgraph.Qt import QtCore
-from pyqtgraph.Qt import uic
+from pyqtgraph.Qt import QtCore, uic
 
+from bec_widgets.qt_utils import Crosshair
 from bec_lib.core import MessageEndpoints
 
 # TODO implement:
@@ -22,9 +20,6 @@ from bec_lib.core import MessageEndpoints
 
 
 class PlotApp(QWidget):
-    update_plot = pyqtSignal()
-    # update_scatters = pyqtSignal()
-    init_plot = pyqtSignal()
     update_signal = pyqtSignal()
 
     def __init__(self):
@@ -43,6 +38,8 @@ class PlotApp(QWidget):
 
         self.init_ui()
         self.init_curves()
+
+        self.pushButton_hook.clicked.connect(self.hook_crosshair)
 
         self.proxy_update = pg.SignalProxy(self.update_signal, rateLimit=25, slot=self.update)
 
@@ -70,7 +67,10 @@ class PlotApp(QWidget):
             curve = pg.PlotDataItem(
                 pen=pen, skipFiniteCheck=True, name=monitor + " fit"
             )  # ,symbolBrush=brush)
-            scatter = pg.ScatterPlotItem(pen=pen, size=10, name=monitor)  # ,brush=brush,)
+            scatter = pg.ScatterPlotItem(pen=pen, size=5, name=monitor)  # ,brush=brush,)
+            # scatter = pg.PlotDataItem(
+            #     pen=None, symbol="o", symbolBrush=color_list[ii], name=monitor
+            # )
             self.curves.append(curve)
             self.scatters.append(scatter)
             self.pens.append(pen)
@@ -78,9 +78,24 @@ class PlotApp(QWidget):
             self.plot.addItem(curve)
             self.plot.addItem(scatter)
 
-        # self.plot.addLegend() # TODO check if needed
         # TODO hook signals
         # TODO hook crosshair
+        # self.hook_crosshair()
+
+    def hook_crosshair(self):
+        self.crosshair_1d = Crosshair(self.plot, precision=10)
+        self.crosshair_1d.coordinatesChanged1D.connect(
+            lambda x, y: self.update_table(self.tableWidget_crosshair, x, y, column=0)
+        )
+        self.crosshair_1d.coordinatesChanged1D.connect(
+            lambda x, y: print(f"crosshair 1d x = {x}, y = {y}")
+        )
+
+    def update_table(self, table_widget, x, y_values, column):
+        """Update the table with the new coordinates"""
+        for i, y in enumerate(y_values):
+            table_widget.setItem(i, column, QTableWidgetItem(f"({x}, {y})"))
+            table_widget.resizeColumnsToContents()
 
     def update(self):
         self.curves[0].setData(self.dap_x, self.dap_y)
@@ -169,7 +184,7 @@ if __name__ == "__main__":
 
     bec_dispatcher.connect_dap_slot(plotApp.on_dap_update, "gaussian_fit_worker_3")
     bec_dispatcher.connect_slot(plotApp.on_scan_segment, MessageEndpoints.scan_segment())
-    bec_dispatcher.new_scan.connect(plotApp.on_new_scan)  # TODO check if works!
+    # bec_dispatcher.new_scan.connect(plotApp.on_new_scan)  # TODO check if works!
     # bec_dispatcher.connect_slot(plotApp.on_new_scan,)
     ctrl_c.setup(app)
 

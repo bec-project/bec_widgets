@@ -109,7 +109,8 @@ class Crosshair(QObject):
         if y_values_1d:
             if all(v is None for v in x_values_1d) or all(v is None for v in y_values_1d):
                 return None, None
-            return x, y_values_1d
+            closest_x = min(x_values_1d, key=lambda xi: abs(xi - x))  # Snap x to closest data point
+            return closest_x, y_values_1d
 
         # Handle 2D plot
         if image_2d is not None:
