@@ -15,23 +15,59 @@ from PyQt5 import QtGui
 from PyQt5.QtCore import QThread, pyqtSlot
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtWidgets import QApplication, QWidget
+from pyqtgraph import mkPen
+from pyqtgraph.Qt import QtCore
+from pyqtgraph import mkBrush, mkColor, mkPen
 
 
 class PlotApp(QWidget):
+    update_plot = pyqtSignal()
+    init_plot = pyqtSignal()
+
     def __init__(self):
         super().__init__()
-        self.motor_data = None
-        self.monitor_data = None
+        self.motor_data = []
+        self.monitor_data = []
         current_path = os.path.dirname(__file__)
         uic.loadUi(os.path.join(current_path, "oneplot.ui"), self)
 
+        self.monitor_names = ["gauss_bpm"]
+
         self.init_ui()
+
+        self.init_plot.connect(self.init_curves)
+        self.update_plot.connect(self.update_curves)
 
     def init_ui(self):
         self.plot = pg.PlotItem()
         self.glw.addItem(self.plot)
         self.plot.setLabel("bottom", "Motor")
         self.plot.setLabel("left", "Monitor")
+
+    def init_curves(self):
+        self.plot.clear()
+
+        self.curves = []
+        self.pens = []
+        self.brushs = []
+
+        color_list = ["#384c6b", "#e28a2b", "#5E3023", "#e41a1c", "#984e83", "#4daf4a"]
+
+        for ii, monitor in enumerate(self.monitor_names):
+            pen = mkPen(color=color_list[ii], width=2, style=QtCore.Qt.DashLine)
+            brush = mkBrush(color=color_list[ii])
+            curve = pg.PlotDataItem(symbolBrush=brush, pen=pen, skipFiniteCheck=True, name=monitor)
+            self.plot.addItem(curve)
+            self.curves.append(curve)
+            self.pens.append(pen)
+            self.brushs.append(brush)
+
+        self.plot.addLegend()
+        # TODO hook signals
+        # TODO hook crosshair
+
+    def update_curves(self):
+        self.curves[0].setData(self.motor_data, self.monitor_data)
 
     def on_dap_update(self, msg, metadata):
         ...
@@ -46,25 +82,25 @@ class PlotApp(QWidget):
         # TODO y -> monitor._hints :list
         print("on_scan_segment")
         # scanMSG = BECMessage.ScanMessage.loads(msg.value)
-        self.motor_data = msg["samx"]["samx"]["value"]
-        self.monitor_data = msg["gauss_bpm"]["gauss_bpm"][
+        # message = msg
+        # print(f"message = {message}")
+        motor_data = msg["data"]["samx"]["samx"]["value"]
+        monitor_data = msg["data"]["gauss_bpm"]["gauss_bpm"][
             "value"
         ]  # gaussbpm._hints -> implement logic with list
+        #
+        self.motor_data.append(motor_data)
+        self.monitor_data.append(monitor_data)
 
-        # self.scan_x =
-        # scanMSG = msg.content["data"]
-
-        # self.data_x = BECMessage.ScanMessage.loads(msg)
-
-        # self.data_y = BECMessage.ScanMessage.loads(msg)
-
-        # print(msg)
-        print(f'msg "on_scan_segment" = {msg}')
+        self.update_plot.emit()
 
     def on_new_scan(self, msg, metadata):
-        ...
-        # print("on_new_scan")
-        # print(f'msg "on_new_scan" = {msg}')
+        print(30 * "#" + "NEW SCAN" + 30 * "#")
+
+        self.motor_data = [msg["data"]["samx"]["samx"]["value"]]
+        self.monitor_data = [msg["data"]["gauss_bpm"]["gauss_bpm"]["value"]]
+        self.init_curves()
+        print(f'msg "on_new_scan" = {msg}')
         # print(metadata)
 
 
