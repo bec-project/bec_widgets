@@ -1,3 +1,5 @@
+import numpy as np
+
 from bec_lib.core import MessageEndpoints
 import os
 
@@ -31,8 +33,8 @@ class PlotApp(QWidget):
         self.motor_data = []
         self.monitor_data = []
 
-        self.dap_x = []
-        self.dap_y = []
+        self.dap_x = np.array([])
+        self.dap_y = np.array([])
 
         current_path = os.path.dirname(__file__)
         uic.loadUi(os.path.join(current_path, "oneplot.ui"), self)
@@ -81,7 +83,7 @@ class PlotApp(QWidget):
         # TODO hook crosshair
 
     def update(self):
-        self.curves[0].setData(self.motor_data, self.monitor_data)
+        self.curves[0].setData(self.dap_x, self.dap_y)
         self.scatters[0].setData(self.motor_data, self.monitor_data)
 
     @pyqtSlot(dict, dict)
@@ -96,13 +98,12 @@ class PlotApp(QWidget):
         ...
         print("on_dap_update")
         # print(f'msg "on_dap_update" = {msg}')
-        dap_x = msg["gaussian_fit_worker_3"]["x"]
-        dap_y = msg["gaussian_fit_worker_3"]["y"]
 
-        self.dap_x.append(dap_x)
-        self.dap_y.append(dap_y)
-        # self.update_signal.emit()
-        # print(metadata)
+        dapMSG = msg
+        metaMSG = metadata
+
+        self.dap_x = msg["gaussian_fit_worker_3"]["x"]
+        self.dap_y = msg["gaussian_fit_worker_3"]["y"]
 
     @pyqtSlot(dict, dict)
     def on_scan_segment(self, msg, metadata):
@@ -111,7 +112,7 @@ class PlotApp(QWidget):
         print("on_scan_segment")
 
         current_scanID = msg["scanID"]
-        print(f"current_scanID = {current_scanID}")
+        # print(f"current_scanID = {current_scanID}")
 
         # implement if condition that if scan id is different than last one init new scan variables
         if current_scanID != self.scanID:
@@ -131,23 +132,23 @@ class PlotApp(QWidget):
         # self.update_plot.emit()
         self.update_signal.emit()
 
-    @pyqtSlot(dict, dict)
-    def on_new_scan(self, msg, metadata):  # TODO probably not needed
-        """
-        Initiate new scan and clear previous data
-        Args:
-            msg(dict):
-            metadata(dict):
+    # @pyqtSlot(dict, dict)
+    # def on_new_scan(self, msg, metadata):  # TODO probably not needed
+    #     """
+    #     Initiate new scan and clear previous data
+    #     Args:
+    #         msg(dict):
+    #         metadata(dict):
+    #
+    #     Returns:
+    #
+    #     """
 
-        Returns:
+    # print(40 * "#" + "on_new_scan" + 40 * "#")
 
-        """
-
-        print(40 * "#" + "on_new_scan" + 40 * "#")
-
-        # self.motor_data = [msg["data"]["samx"]["samx"]["value"]]
-        # self.monitor_data = [msg["data"]["gauss_bpm"]["gauss_bpm"]["value"]]
-        # self.init_curves()
+    # self.motor_data = [msg["data"]["samx"]["samx"]["value"]]
+    # self.monitor_data = [msg["data"]["gauss_bpm"]["gauss_bpm"]["value"]]
+    # self.init_curves()
 
 
 if __name__ == "__main__":
