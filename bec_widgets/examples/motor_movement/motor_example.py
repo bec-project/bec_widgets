@@ -44,6 +44,7 @@ class MotorApp(QWidget):
         self.motor_positions = np.array([])
         self.max_points = 5000  # Maximum number of points to keep
         self.num_dim_points = 15  # Number of points to dim gradually
+        self.scatter_size = 5
 
         # QThread for motor movement + signals
         self.motor_thread.motors_loaded.connect(self.get_available_motors)
@@ -144,6 +145,18 @@ class MotorApp(QWidget):
         self.enable_motor_controls(False)
         self.motor_thread.move_relative(motor, value)
 
+    def update_plot_setting(self, max_points, num_dim_points, scatter_size):
+        self.max_points = max_points
+        self.num_dim_points = num_dim_points
+        self.scatter_size = scatter_size
+
+        for spinBox in (
+            self.spinBox_max_points,
+            self.spinBox_num_dim_points,
+            self.spinBox_scatter_size,
+        ):
+            spinBox.setStyleSheet("")
+
     def init_ui(self) -> None:
         """Setup all ui elements"""
         # TODO can be separated to multiple functions
@@ -157,7 +170,7 @@ class MotorApp(QWidget):
         self.limit_map = pg.ImageItem()
         self.plot_map.addItem(self.limit_map)
         self.motor_map = pg.ScatterPlotItem(
-            size=2, pen=pg.mkPen(None), brush=pg.mkBrush(255, 255, 255, 255)
+            size=self.scatter_size, pen=pg.mkPen(None), brush=pg.mkBrush(255, 255, 255, 255)
         )
         self.plot_map.addItem(self.motor_map)
         self.plot_map.showGrid(x=True, y=True)
@@ -206,7 +219,7 @@ class MotorApp(QWidget):
         self.pushButton_stop.clicked.connect(self.motor_thread.stop_movement)
 
         ##########################
-        # Motor limits signals
+        # Motor Configs
         ##########################
 
         # SpinBoxes - Motor Limits #TODO make spinboxes own limits updated, currently is [-1000, 1000]
@@ -229,11 +242,30 @@ class MotorApp(QWidget):
             lambda: self.param_changed(self.spinBox_update_frequency_y)
         )
 
-        # Confog updates
+        # SpinBoxes - Max Points and N Dim Points
+        self.spinBox_max_points.valueChanged.connect(
+            lambda: self.param_changed(self.spinBox_max_points)
+        )
+        self.spinBox_num_dim_points.valueChanged.connect(
+            lambda: self.param_changed(self.spinBox_num_dim_points)
+        )
+        self.spinBox_scatter_size.valueChanged.connect(
+            lambda: self.param_changed(self.spinBox_scatter_size)
+        )
+
+        # Config updates
         self.pushButton_updateLimits.clicked.connect(
             lambda: self.update_all_motor_limits(
                 x_limit=[self.spinBox_x_min.value(), self.spinBox_x_max.value()],
                 y_limit=[self.spinBox_y_min.value(), self.spinBox_y_max.value()],
+            )
+        )
+
+        self.pushButton_update_config.clicked.connect(
+            lambda: self.update_plot_setting(
+                max_points=self.spinBox_max_points.value(),
+                num_dim_points=self.spinBox_num_dim_points.value(),
+                scatter_size=self.spinBox_scatter_size.value(),
             )
         )
 
@@ -316,13 +348,17 @@ class MotorApp(QWidget):
 
         # Determine brushes based on position in the array
         self.brushes = [pg.mkBrush(50, 50, 50, 255)] * len(self.motor_positions)
+
+        # Calculate the decrement step based on self.num_dim_points
+        decrement_step = (255 - 50) / self.num_dim_points
+
         for i in range(1, min(self.num_dim_points + 1, len(self.motor_positions) + 1)):
-            brightness = max(50, 255 - 20 * (i - 1))
+            brightness = max(50, 255 - decrement_step * (i - 1))
             self.brushes[-i] = pg.mkBrush(brightness, brightness, brightness, 255)
 
         self.brushes[-1] = pg.mkBrush(255, 255, 255, 255)  # Newest point is always full brightness
 
-        self.motor_map.setData(pos=self.motor_positions, brush=self.brushes)
+        self.motor_map.setData(pos=self.motor_positions, brush=self.brushes, size=self.scatter_size)
 
     def update_all_motor_limits(self, x_limit: list = None, y_limit: list = None) -> None:
         self.motor_thread.update_all_motor_limits(x_limit=x_limit, y_limit=y_limit)
