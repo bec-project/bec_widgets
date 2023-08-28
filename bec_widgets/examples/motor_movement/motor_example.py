@@ -86,7 +86,6 @@ class MotorApp(QWidget):
     def get_available_motors(self, motors_x, motors_y):
         self.comboBox_motor_x.addItems(motors_x)
         self.comboBox_motor_y.addItems(motors_y)
-        print(f"got motors {motors_x} and {motors_y}")
 
     @pyqtSlot(list, list)
     def update_limits(self, x_limits: list, y_limits: list) -> None:
@@ -104,6 +103,12 @@ class MotorApp(QWidget):
             self.spinBox_y_max,
         ):
             spinBox.setStyleSheet("")
+
+        # TODO - names can be get from MotorController
+        self.label_Y_max.setText(f"+ ({self.motor_y.name})")
+        self.label_Y_min.setText(f"- ({self.motor_y.name})")
+        self.label_X_max.setText(f"+ ({self.motor_x.name})")
+        self.label_X_min.setText(f"- ({self.motor_x.name})")
 
         self.init_motor_map()  # reinitialize the map with the new limits
 
@@ -418,8 +423,6 @@ class MotorApp(QWidget):
         for row in reversed(selected_rows):  # Reverse to delete from the end
             self.tableWidget_coordinates.removeRow(row.row())
 
-        print(f"deleted {selected_rows}")
-
     def save_absolute_coordinates(self):
         self.generate_table_coordinate(
             self.tableWidget_coordinates,
@@ -501,7 +504,6 @@ class MotorControl(QThread):
         self.all_motors = self.get_all_motors()
         self.all_motors_names = self.get_all_motors_names()
         self.motors_loaded.emit(self.all_motors_names, self.all_motors_names)
-        print("motors sent to GUI")
 
         return self.all_motors, self.all_motors_names
 
