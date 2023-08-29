@@ -80,11 +80,11 @@ class PlotApp(QWidget):
 
         self.curves_data = []
         self.curves_dap = []
-        # self.pens = []
-        # self.brushs = []  # todo check if needed
 
         colors_y_values = PlotApp.golden_angle_color(colormap="CET-R2", num=len(self.y_values))
-        colors_y_daps = PlotApp.golden_angle_color(colormap="CET-I2", num=len(self.y_values))
+        # colors_y_daps = PlotApp.golden_angle_color(
+        #     colormap="CET-I2", num=len(self.dap_worker)
+        # )  # TODO adapt for multiple dap_workers
 
         # Initialize curves for y_values
         for ii, (signal, color) in enumerate(zip(self.y_values, colors_y_values)):
@@ -102,16 +102,16 @@ class PlotApp(QWidget):
 
         # Initialize curves for DAP if dap_worker is not None
         if self.dap_worker is not None:
-            for ii, (monitor, color) in enumerate(zip(self.dap_worker, colors_y_daps)):
-                pen_dap = mkPen(color=color[ii + 1], width=2, style=QtCore.Qt.DashLine)
-                curve_dap = pg.PlotDataItem(
-                    pen=pen_dap,
-                    skipFiniteCheck=True,
-                    symbolSize=5,
-                    name=f"{monitor}_fit",
-                )
-                self.curves_dap.append(curve_dap)
-                self.plot.addItem(curve_dap)
+            # for ii, (monitor, color) in enumerate(zip(self.dap_worker, colors_y_daps)):#TODO adapt for multiple dap_workers
+            pen_dap = mkPen(color="#3b5998", width=2, style=QtCore.Qt.DashLine)
+            curve_dap = pg.PlotDataItem(
+                pen=pen_dap,
+                skipFiniteCheck=True,
+                symbolSize=5,
+                name=f"{self.dap_worker}",
+            )
+            self.curves_dap.append(curve_dap)
+            self.plot.addItem(curve_dap)
 
         self.tableWidget_crosshair.setRowCount(len(self.y_values))
         self.tableWidget_crosshair.setVerticalHeaderLabels(self.y_values)
@@ -140,8 +140,9 @@ class PlotApp(QWidget):
             curve.setData(self.data_x, self.data_y[ii])
 
         if self.dap_worker is not None:
-            for ii, curve in enumerate(self.curves_dap):
-                curve.setData(self.dap_x, self.dap_y[ii])
+            # for ii, curve in enumerate(self.curves_dap): #TODO adapt for multiple dap_workers
+            #     curve.setData(self.dap_x, self.dap_y[ii])
+            self.curves_dap[0].setData(self.dap_x, self.dap_y)
 
     def update_fit_table(self):
         """Update the table for fit data."""
@@ -240,32 +241,18 @@ class PlotApp(QWidget):
 
 
 if __name__ == "__main__":
-    import argparse
-
+    import yaml
     from bec_widgets import ctrl_c
     from bec_widgets.bec_dispatcher import bec_dispatcher
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--x_value",
-        type=str,
-        default="samx",
-        help="Specify the x device/signal for plotting",
-    )
-    parser.add_argument(
-        "--y_values",
-        type=str,
-        nargs="+",
-        default=["gauss_bpm", "gauss_adc1"],
-        help="Specify the y device/signals for plotting",
-    )
-    parser.add_argument("--dap_worker", type=str, default=None, help="Specify the DAP process")
+    with open("config_noworker.yaml", "r") as file:
+        config = yaml.safe_load(file)
 
-    args = parser.parse_args()
+    x_value = config["x_value"]
+    y_values = config["y_values"]
+    dap_worker = config["dap_worker"]
 
-    x_value = args.x_value
-    y_values = args.y_values
-    dap_worker = None if args.dap_worker == "None" else args.dap_worker
+    dap_worker = None if dap_worker == "None" else dap_worker
 
     # BECclient global variables
     client = bec_dispatcher.client

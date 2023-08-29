@@ -1,0 +1,3 @@
+x_value: "samx"
+y_values: ["gauss_bpm", "gauss_adc1", "gauss_adc2"]
+dap_worker: None
