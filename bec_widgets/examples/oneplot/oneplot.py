@@ -24,11 +24,17 @@ class PlotApp(QWidget):
     update_signal = pyqtSignal()
     update_dap_signal = pyqtSignal()
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, x_y_values=None, dap_worker=None, parent=None):
+        super(PlotApp, self).__init__(parent)
+        self.x_y_values = x_y_values if x_y_values is not None else []
+        self.dap_worker = dap_worker if dap_worker is not None else ""
+
+        self.x_values = [x for x, y in self.x_y_values]
+        self.y_values = [y for x, y in self.x_y_values]
+
         self.scanID = None
-        self.motor_data = []
-        self.monitor_data = []
+        self.data_x = []
+        self.data_y = []
 
         self.dap_x = np.array([])
         self.dap_y = np.array([])
@@ -54,38 +60,39 @@ class PlotApp(QWidget):
     def init_ui(self):
         self.plot = pg.PlotItem()
         self.glw.addItem(self.plot)
-        self.plot.setLabel("bottom", "Motor")
-        self.plot.setLabel("left", "Monitor")
+        self.plot.setLabel("bottom", self.x_values[0])
+        self.plot.setLabel("left", self.y_values[0])
         self.plot.addLegend()
 
     def init_curves(self):
         self.plot.clear()
 
-        self.curves = []
-        self.scatters = []
+        self.curves_data = []
+        self.curves_dap = []
         self.pens = []
         self.brushs = []  # todo check if needed
 
         color_list = ["#384c6b", "#e28a2b", "#5E3023", "#e41a1c", "#984e83", "#4daf4a"]
 
-        for ii, monitor in enumerate(self.monitor_names):
-            print(self.monitor_names[ii])
-            pen = mkPen(color=color_list[ii], width=2, style=QtCore.Qt.DashLine)
-            # brush = mkBrush(color=color_list[ii])
-            curve = pg.PlotDataItem(pen=pen, skipFiniteCheck=True)  # ,symbolBrush=brush)
-            scatter = pg.ScatterPlotItem(pen=pen, size=5, name=monitor)  # ,brush=brush,)
-            # scatter = pg.PlotDataItem(
-            #     pen=None, symbol="o", symbolBrush=color_list[ii], name=monitor
-            # )
-            self.curves.append(curve)
-            self.scatters.append(scatter)
-            self.pens.append(pen)
+        for ii, monitor in enumerate(self.y_values):
+            pen_curve = mkPen(color=color_list[ii], width=2, style=QtCore.Qt.DashLine)
+            pen_dap = mkPen(color=color_list[ii + 1], width=2, style=QtCore.Qt.DashLine)
+            brush = mkBrush(color=color_list[ii], width=2, style=QtCore.Qt.DashLine)
+            curve_data = pg.PlotDataItem(
+                pen=pen_curve,
+                skipFiniteCheck=True,
+                symbolBrush=brush,
+                symbolSize=5,
+                name=monitor + "_data",
+            )
+            curve_dap = pg.PlotDataItem(pen=pen_dap, size=5, name=monitor + "_fit")
+            self.curves_data.append(curve_data)
+            self.curves_dap.append(curve_dap)
+            self.pens.append(pen_curve)
             # self.brushs.append(brush)
-            self.plot.addItem(curve)
-            self.plot.addItem(scatter)
+            self.plot.addItem(curve_data)
+            self.plot.addItem(curve_dap)
 
-        # TODO hook signals
-        # TODO hook crosshair
         self.tableWidget_crosshair.setRowCount(len(self.monitor_names))
         self.tableWidget_crosshair.setVerticalHeaderLabels(self.monitor_names)
         self.hook_crosshair()
@@ -106,8 +113,8 @@ class PlotApp(QWidget):
             table_widget.resizeColumnsToContents()
 
     def update_plot(self):
-        self.curves[0].setData(self.dap_x, self.dap_y)
-        self.scatters[0].setData(self.motor_data, self.monitor_data)
+        self.curves_data[0].setData(self.dap_x, self.dap_y)
+        self.curves_dap[0].setData(self.data_x, self.data_y)
 
     def update_fit_table(self):
         self.tableWidget_fit.setData(self.fit)
@@ -121,15 +128,9 @@ class PlotApp(QWidget):
             msg (dict):
             metadata(dict):
         """
-        ...
-        print("on_dap_update")
-        # print(f'msg "on_dap_update" = {msg}')
 
-        dapMSG = msg
-        metaMSG = metadata
-
-        self.dap_x = msg["gaussian_fit_worker_3"]["x"]
-        self.dap_y = msg["gaussian_fit_worker_3"]["y"]
+        self.dap_x = msg[self.dap_worker]["x"]
+        self.dap_y = msg[self.dap_worker]["y"]
 
         self.fit = metadata["fit_parameters"]
 
@@ -137,55 +138,63 @@ class PlotApp(QWidget):
 
     @pyqtSlot(dict, dict)
     def on_scan_segment(self, msg, metadata):
-        # TODO x -> motor
-        # TODO y -> monitor._hints :list
-        print("on_scan_segment")
-
         current_scanID = msg["scanID"]
         # print(f"current_scanID = {current_scanID}")
 
         # implement if condition that if scan id is different than last one init new scan variables
         if current_scanID != self.scanID:
             self.scanID = current_scanID
-            self.motor_data = []
-            self.monitor_data = []
+            self.data_x = []
+            self.data_y = []
             self.init_curves()
 
-        motor_data = msg["data"]["samx"]["samx"]["value"]
-        monitor_data = msg["data"]["gauss_bpm"]["gauss_bpm"][
-            "value"
-        ]  # gaussbpm._hints -> implement logic with list
-        #
-        self.motor_data.append(motor_data)
-        self.monitor_data.append(monitor_data)
+        dev_x = self.x_values[0]
+        dev_y = self.y_values[0]
 
-        # self.update_plot.emit()
+        # TODO put warning that I am putting 1st one
+
+        data_x = msg["data"][dev_x][dev[dev_x]._hints[0]]["value"]
+        data_y = msg["data"][dev_y][dev[dev_y]._hints[0]]["value"]
+
+        self.data_x.append(data_x)
+        self.data_y.append(data_y)
+
         self.update_signal.emit()
-
-    # @pyqtSlot(dict, dict)
-    # def on_new_scan(self, msg, metadata):  # TODO probably not needed
-    #     """
-    #     Initiate new scan and clear previous data
-    #     Args:
-    #         msg(dict):
-    #         metadata(dict):
-    #
-    #     Returns:
-    #
-    #     """
-
-    # print(40 * "#" + "on_new_scan" + 40 * "#")
-
-    # self.motor_data = [msg["data"]["samx"]["samx"]["value"]]
-    # self.monitor_data = [msg["data"]["gauss_bpm"]["gauss_bpm"]["value"]]
-    # self.init_curves()
 
 
 if __name__ == "__main__":
-    # from bec_lib import BECClient
+    import argparse
+    import ast
+
     from bec_widgets import ctrl_c
     from bec_widgets.bec_dispatcher import bec_dispatcher
 
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--x_y_values",
+        type=str,
+        default="[('samx', 'gauss_bpm')]",
+        help="Specify x y device/signals pairs for plotting as [tuple(str,str)]",
+    )
+
+    parser.add_argument(
+        "--dap_process", type=str, default="gaussian_fit_worker_3", help="Specify the DAP process"
+    )
+
+    args = parser.parse_args()
+
+    try:
+        x_y_values = ast.literal_eval(args.x_y_values)
+        if not all(isinstance(item, tuple) and len(item) == 2 for item in x_y_values):
+            raise ValueError("Invalid format: All elements must be 2-tuples.")
+    except (ValueError, SyntaxError):
+        raise ValueError("Invalid input format. Expected a list of 2-tuples.")
+
+    # Retrieve the dap_process value
+    dap_process = args.dap_process
+
+    # BECclient global variables
     client = bec_dispatcher.client
     client.start()
 
@@ -194,13 +203,11 @@ if __name__ == "__main__":
     queue = client.queue
 
     app = QApplication([])
+    plotApp = PlotApp(x_y_values=x_y_values, dap_worker=dap_process)
 
-    plotApp = PlotApp()
-
-    bec_dispatcher.connect_dap_slot(plotApp.on_dap_update, "gaussian_fit_worker_3")
+    # Connecting signals from bec_dispatcher
+    bec_dispatcher.connect_dap_slot(plotApp.on_dap_update, dap_process)
     bec_dispatcher.connect_slot(plotApp.on_scan_segment, MessageEndpoints.scan_segment())
-    # bec_dispatcher.new_scan.connect(plotApp.on_new_scan)  # TODO check if works!
-    # bec_dispatcher.connect_slot(plotApp.on_new_scan,)
     ctrl_c.setup(app)
 
     window = plotApp
