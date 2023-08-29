@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.8.1 (2023-08-29)
+
+### Fix
+
+* Added missing local .ui file ([`f0589b7`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/f0589b79ec7f50ee9d040b911d1874b4232659d5))
+
 ## v0.8.0 (2023-08-29)
 
 ### Feature
