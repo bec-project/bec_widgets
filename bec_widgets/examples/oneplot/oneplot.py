@@ -27,7 +27,8 @@ class PlotApp(QWidget):
         update_dap_signal (pyqtSignal): Signal to trigger DAP updates.
 
     Args:
-        x_y_values (list of tuple, optional): List of (x, y) device/signal pairs for plotting.
+        x_value (str): The x device/signal for plotting.
+        y_values (list of str): List of y device/signals for plotting.
         dap_worker (str, optional): DAP process to specify. Set to None to disable.
         parent (QWidget, optional): Parent widget.
     """
@@ -35,16 +36,14 @@ class PlotApp(QWidget):
     update_signal = pyqtSignal()
     update_dap_signal = pyqtSignal()
 
-    def __init__(self, x_y_values=None, dap_worker=None, parent=None):
+    def __init__(self, x_value, y_values, dap_worker=None, parent=None):
         super(PlotApp, self).__init__(parent)
         current_path = os.path.dirname(__file__)
         uic.loadUi(os.path.join(current_path, "oneplot.ui"), self)
 
-        self.x_y_values = x_y_values if x_y_values is not None else []
+        self.x_value = x_value
+        self.y_values = y_values
         self.dap_worker = dap_worker  # if dap_worker is not None else ""
-
-        self.x_values = [x for x, y in self.x_y_values]
-        self.y_values = [y for x, y in self.x_y_values]
 
         self.scanID = None
         self.data_x = []
@@ -68,10 +67,10 @@ class PlotApp(QWidget):
 
     def init_ui(self) -> None:
         """Initialize the UI components."""
-        self.plot = pg.PlotItem(title=self.y_values[0])
+        self.plot = pg.PlotItem()
         self.glw.addItem(self.plot)
-        self.plot.setLabel("bottom", self.x_values[0])
-        self.plot.setLabel("left", self.y_values[0])
+        self.plot.setLabel("bottom", self.x_value)
+        self.plot.setLabel("left", ", ".join(self.y_values))
         self.plot.addLegend()
 
     def init_curves(self) -> None:
@@ -177,7 +176,7 @@ class PlotApp(QWidget):
             self.data_y = []
             self.init_curves()
 
-        dev_x = self.x_values[0]
+        dev_x = self.x_value
         dev_y = self.y_values[0]
 
         # TODO put warning that I am putting 1st one
@@ -193,30 +192,31 @@ class PlotApp(QWidget):
 
 if __name__ == "__main__":
     import argparse
-    import ast
 
     from bec_widgets import ctrl_c
     from bec_widgets.bec_dispatcher import bec_dispatcher
 
     parser = argparse.ArgumentParser()
-
     parser.add_argument(
-        "--x_y_values",
+        "--x_value",
         type=str,
-        default="[('samx', 'gauss_bpm')]",
-        help="Specify x y device/signals pairs for plotting as [tuple(str,str)]",
+        default="samx",
+        help="Specify the x device/signal for plotting",
     )
-
+    parser.add_argument(
+        "--y_values",
+        type=str,
+        nargs="+",
+        default=["gauss_bpm"],
+        help="Specify the y device/signals for plotting",
+    )
     parser.add_argument("--dap_worker", type=str, default=None, help="Specify the DAP process")
 
     args = parser.parse_args()
 
-    try:
-        x_y_values = ast.literal_eval(args.x_y_values)
-        if not all(isinstance(item, tuple) and len(item) == 2 for item in x_y_values):
-            raise ValueError("Invalid format: All elements must be 2-tuples.")
-    except (ValueError, SyntaxError):
-        raise ValueError("Invalid input format. Expected a list of 2-tuples.")
+    x_value = args.x_value
+    y_values = args.y_values
+    dap_worker = None if args.dap_worker == "None" else args.dap_worker
 
     # Convert dap_worker to None if it's the string "None", for testing "gaussian_fit_worker_3"
     dap_worker = None if args.dap_worker == "None" else args.dap_worker
@@ -233,7 +233,7 @@ if __name__ == "__main__":
     queue = client.queue
 
     app = QApplication([])
-    plotApp = PlotApp(x_y_values=x_y_values, dap_worker=dap_worker)
+    plotApp = PlotApp(x_value=x_value, y_values=y_values, dap_worker=dap_worker)
 
     # Connecting signals from bec_dispatcher
     bec_dispatcher.connect_dap_slot(plotApp.on_dap_update, dap_worker)
