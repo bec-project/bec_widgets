@@ -12,12 +12,8 @@ from bec_widgets.qt_utils import Crosshair
 from bec_lib.core import MessageEndpoints
 
 # TODO implement:
-#   - add crosshair
-#   - add crosshair table
 #   - implement scanID database for visualizing previous scans
 #   - multiple signals for different monitors
-#   - user can choose what motor against what monitor to plot
-#   - crosshair snaps now just to fit, not to actual data
 
 
 class PlotApp(QWidget):
@@ -26,8 +22,11 @@ class PlotApp(QWidget):
 
     def __init__(self, x_y_values=None, dap_worker=None, parent=None):
         super(PlotApp, self).__init__(parent)
+        current_path = os.path.dirname(__file__)
+        uic.loadUi(os.path.join(current_path, "oneplot.ui"), self)
+
         self.x_y_values = x_y_values if x_y_values is not None else []
-        self.dap_worker = dap_worker if dap_worker is not None else ""
+        self.dap_worker = dap_worker  # if dap_worker is not None else ""
 
         self.x_values = [x for x, y in self.x_y_values]
         self.y_values = [y for x, y in self.x_y_values]
@@ -41,11 +40,6 @@ class PlotApp(QWidget):
 
         self.fit = None
 
-        current_path = os.path.dirname(__file__)
-        uic.loadUi(os.path.join(current_path, "oneplot.ui"), self)
-
-        self.monitor_names = ["gauss_bpm"]
-
         self.init_ui()
         self.init_curves()
         self.hook_crosshair()
@@ -58,13 +52,15 @@ class PlotApp(QWidget):
         )
 
     def init_ui(self):
-        self.plot = pg.PlotItem()
+        """Initialize the UI"""
+        self.plot = pg.PlotItem(title=self.y_values[0])
         self.glw.addItem(self.plot)
         self.plot.setLabel("bottom", self.x_values[0])
         self.plot.setLabel("left", self.y_values[0])
         self.plot.addLegend()
 
     def init_curves(self):
+        """Initialize the curves and hook crosshair"""
         self.plot.clear()
 
         self.curves_data = []
@@ -76,7 +72,6 @@ class PlotApp(QWidget):
 
         for ii, monitor in enumerate(self.y_values):
             pen_curve = mkPen(color=color_list[ii], width=2, style=QtCore.Qt.DashLine)
-            pen_dap = mkPen(color=color_list[ii + 1], width=2, style=QtCore.Qt.DashLine)
             brush = mkBrush(color=color_list[ii], width=2, style=QtCore.Qt.DashLine)
             curve_data = pg.PlotDataItem(
                 pen=pen_curve,
@@ -85,19 +80,21 @@ class PlotApp(QWidget):
                 symbolSize=5,
                 name=monitor + "_data",
             )
-            curve_dap = pg.PlotDataItem(pen=pen_dap, size=5, name=monitor + "_fit")
             self.curves_data.append(curve_data)
-            self.curves_dap.append(curve_dap)
             self.pens.append(pen_curve)
-            # self.brushs.append(brush)
             self.plot.addItem(curve_data)
-            self.plot.addItem(curve_dap)
+            if self.dap_worker is not None:
+                pen_dap = mkPen(color=color_list[ii + 1], width=2, style=QtCore.Qt.DashLine)
+                curve_dap = pg.PlotDataItem(pen=pen_dap, size=5, name=monitor + "_fit")
+                self.curves_dap.append(curve_dap)
+                self.plot.addItem(curve_dap)
 
-        self.tableWidget_crosshair.setRowCount(len(self.monitor_names))
-        self.tableWidget_crosshair.setVerticalHeaderLabels(self.monitor_names)
+        self.tableWidget_crosshair.setRowCount(len(self.y_values))
+        self.tableWidget_crosshair.setVerticalHeaderLabels(self.y_values)
         self.hook_crosshair()
 
     def hook_crosshair(self):
+        """Hook the crosshair to the plot"""
         self.crosshair_1d = Crosshair(self.plot, precision=3)
         self.crosshair_1d.coordinatesChanged1D.connect(
             lambda x, y: self.update_table(self.tableWidget_crosshair, x, y, column=0)
@@ -107,14 +104,14 @@ class PlotApp(QWidget):
         )
 
     def update_table(self, table_widget, x, y_values, column):
-        """Update the table with the new coordinates"""
         for i, y in enumerate(y_values):
             table_widget.setItem(i, column, QTableWidgetItem(f"({x}, {y})"))
             table_widget.resizeColumnsToContents()
 
     def update_plot(self):
-        self.curves_data[0].setData(self.dap_x, self.dap_y)
-        self.curves_dap[0].setData(self.data_x, self.data_y)
+        self.curves_data[0].setData(self.data_x, self.data_y)
+        if self.dap_worker is not None:
+            self.curves_dap[0].setData(self.dap_x, self.dap_y)
 
     def update_fit_table(self):
         self.tableWidget_fit.setData(self.fit)
@@ -178,9 +175,7 @@ if __name__ == "__main__":
         help="Specify x y device/signals pairs for plotting as [tuple(str,str)]",
     )
 
-    parser.add_argument(
-        "--dap_process", type=str, default="gaussian_fit_worker_3", help="Specify the DAP process"
-    )
+    parser.add_argument("--dap_worker", type=str, default=None, help="Specify the DAP process")
 
     args = parser.parse_args()
 
@@ -191,8 +186,11 @@ if __name__ == "__main__":
     except (ValueError, SyntaxError):
         raise ValueError("Invalid input format. Expected a list of 2-tuples.")
 
+    # Convert dap_worker to None if it's the string "None", for testing "gaussian_fit_worker_3"
+    dap_worker = None if args.dap_worker == "None" else args.dap_worker
+
     # Retrieve the dap_process value
-    dap_process = args.dap_process
+    # dap_worker = args.dap_worker
 
     # BECclient global variables
     client = bec_dispatcher.client
@@ -203,10 +201,10 @@ if __name__ == "__main__":
     queue = client.queue
 
     app = QApplication([])
-    plotApp = PlotApp(x_y_values=x_y_values, dap_worker=dap_process)
+    plotApp = PlotApp(x_y_values=x_y_values, dap_worker=dap_worker)
 
     # Connecting signals from bec_dispatcher
-    bec_dispatcher.connect_dap_slot(plotApp.on_dap_update, dap_process)
+    bec_dispatcher.connect_dap_slot(plotApp.on_dap_update, dap_worker)
     bec_dispatcher.connect_slot(plotApp.on_scan_segment, MessageEndpoints.scan_segment())
     ctrl_c.setup(app)
 
