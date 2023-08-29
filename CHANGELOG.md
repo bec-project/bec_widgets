@@ -2,6 +2,23 @@
 
 <!--next-version-placeholder-->
 
+## v0.8.0 (2023-08-29)
+
+### Feature
+
+* User can specify tuple of (x,y) devices which wants to plot ([`3344f1b`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/3344f1b92a7e4f4ecd2e63c66aa01d3a4c325070))
+* Fit table hardcode to "gaussian_fit_worker_3" ([`3af57ab`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/3af57abc4888dfcd0224bf50708488dc8192be84))
+* Crosshair snapped to x, y data automatically, clicked coordinates glows ([`49ba6fe`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/49ba6feb3a8494336c5772a06e9569d611fc240a))
+* Crosshair snaps to data, but it is activated with button due to debug ([`223f102`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/223f102aa9f0e625fecef37c827c55f9062330d7))
+* Dap fit plotted as curve, data as scatter ([`118f6af`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/118f6af2b97188398a3dd0e2121f73328c53465b))
+* Oneplot can receive one motor and one monitor signal ([`ff545bf`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ff545bf5c9e707f2dd9b43f9d059aa8605f3916b))
+* Oneplot initialized as an example app for plotting motor vs monitor signals + dispatcher loop over msg ([`98c0c64`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/98c0c64e8577f7e40eb0324dfe97d0ae4670c3a2))
+
+### Fix
+
+* User can disable dap_worker and just choose signals to plot ([`cab5354`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/cab53543e644921df69c57c70ad2b3a03bbafcc1))
+* Crosshair snaps correctly to x dataset ([`2ed5d72`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/2ed5d7208c42f8a1175a49236d706ebf503875e4))
+
 ## v0.7.0 (2023-08-28)
 
 ### Feature
