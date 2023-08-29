@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.9.0 (2023-08-29)
+
+### Feature
+
+* Migrate to .yaml config file instead of argparse ([`a9f1688`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/a9f16884b0b274e36fdb531b56a26343692a78f5))
+* Better color coding of curves ([`0eff18f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/0eff18f5a074ea806d43d52ae72bf87f0187a26d))
+
 ## v0.8.1 (2023-08-29)
 
 ### Fix
