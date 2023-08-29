@@ -22,6 +22,7 @@ from bec_lib.core import MessageEndpoints
 
 class PlotApp(QWidget):
     update_signal = pyqtSignal()
+    update_dap_signal = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -32,6 +33,8 @@ class PlotApp(QWidget):
         self.dap_x = np.array([])
         self.dap_y = np.array([])
 
+        self.fit = None
+
         current_path = os.path.dirname(__file__)
         uic.loadUi(os.path.join(current_path, "oneplot.ui"), self)
 
@@ -41,9 +44,12 @@ class PlotApp(QWidget):
         self.init_curves()
         self.hook_crosshair()
 
-        self.pushButton_hook.clicked.connect(self.hook_crosshair)
-
-        self.proxy_update = pg.SignalProxy(self.update_signal, rateLimit=25, slot=self.update)
+        self.proxy_update_plot = pg.SignalProxy(
+            self.update_signal, rateLimit=25, slot=self.update_plot
+        )
+        self.proxy_update_fit = pg.SignalProxy(
+            self.update_dap_signal, rateLimit=25, slot=self.update_fit_table
+        )
 
     def init_ui(self):
         self.plot = pg.PlotItem()
@@ -66,9 +72,7 @@ class PlotApp(QWidget):
             print(self.monitor_names[ii])
             pen = mkPen(color=color_list[ii], width=2, style=QtCore.Qt.DashLine)
             # brush = mkBrush(color=color_list[ii])
-            curve = pg.PlotDataItem(
-                pen=pen, skipFiniteCheck=True, name=monitor + " fit"
-            )  # ,symbolBrush=brush)
+            curve = pg.PlotDataItem(pen=pen, skipFiniteCheck=True)  # ,symbolBrush=brush)
             scatter = pg.ScatterPlotItem(pen=pen, size=5, name=monitor)  # ,brush=brush,)
             # scatter = pg.PlotDataItem(
             #     pen=None, symbol="o", symbolBrush=color_list[ii], name=monitor
@@ -101,9 +105,12 @@ class PlotApp(QWidget):
             table_widget.setItem(i, column, QTableWidgetItem(f"({x}, {y})"))
             table_widget.resizeColumnsToContents()
 
-    def update(self):
+    def update_plot(self):
         self.curves[0].setData(self.dap_x, self.dap_y)
         self.scatters[0].setData(self.motor_data, self.monitor_data)
+
+    def update_fit_table(self):
+        self.tableWidget_fit.setData(self.fit)
 
     @pyqtSlot(dict, dict)
     def on_dap_update(self, msg, metadata) -> None:
@@ -123,6 +130,10 @@ class PlotApp(QWidget):
 
         self.dap_x = msg["gaussian_fit_worker_3"]["x"]
         self.dap_y = msg["gaussian_fit_worker_3"]["y"]
+
+        self.fit = metadata["fit_parameters"]
+
+        self.update_dap_signal.emit()
 
     @pyqtSlot(dict, dict)
     def on_scan_segment(self, msg, metadata):
