@@ -8,6 +8,7 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QApplication, QWidget
 from PyQt5.QtWidgets import QTableWidgetItem
 from pyqtgraph import mkBrush, mkPen
+from pyqtgraph import mkBrush, mkColor, mkPen
 from pyqtgraph.Qt import QtCore, uic
 
 from bec_widgets.qt_utils import Crosshair
@@ -43,7 +44,7 @@ class PlotApp(QWidget):
 
         self.x_value = x_value
         self.y_values = y_values
-        self.dap_worker = dap_worker  # if dap_worker is not None else ""
+        self.dap_worker = dap_worker
 
         self.scanID = None
         self.data_x = []
@@ -79,34 +80,36 @@ class PlotApp(QWidget):
 
         self.curves_data = []
         self.curves_dap = []
-        self.pens = []
-        self.brushs = []  # todo check if needed
+        # self.pens = []
+        # self.brushs = []  # todo check if needed
 
-        color_list = [
-            "#384c6b",
-            "#e28a2b",
-            "#5E3023",
-            "#e41a1c",
-            "#984e83",
-            "#4daf4a",
-        ]  # todo change to cmap
+        colors_y_values = PlotApp.golden_angle_color(colormap="CET-R2", num=len(self.y_values))
+        colors_y_daps = PlotApp.golden_angle_color(colormap="CET-I2", num=len(self.y_values))
 
-        for ii, monitor in enumerate(self.y_values):
-            pen_curve = mkPen(color=color_list[ii], width=2, style=QtCore.Qt.DashLine)
-            brush = mkBrush(color=color_list[ii], width=2, style=QtCore.Qt.DashLine)
+        # Initialize curves for y_values
+        for ii, (signal, color) in enumerate(zip(self.y_values, colors_y_values)):
+            pen_curve = mkPen(color=color, width=2, style=QtCore.Qt.DashLine)
+            brush_curve = mkBrush(color=color)
             curve_data = pg.PlotDataItem(
+                symbolSize=5,
+                symbolBrush=brush_curve,
                 pen=pen_curve,
                 skipFiniteCheck=True,
-                symbolBrush=brush,
-                symbolSize=5,
-                name=monitor + "_data",
+                name=f"{signal}",
             )
             self.curves_data.append(curve_data)
-            self.pens.append(pen_curve)
             self.plot.addItem(curve_data)
-            if self.dap_worker is not None:
-                pen_dap = mkPen(color=color_list[ii + 1], width=2, style=QtCore.Qt.DashLine)
-                curve_dap = pg.PlotDataItem(pen=pen_dap, size=5, name=monitor + "_fit")
+
+        # Initialize curves for DAP if dap_worker is not None
+        if self.dap_worker is not None:
+            for ii, (monitor, color) in enumerate(zip(self.dap_worker, colors_y_daps)):
+                pen_dap = mkPen(color=color[ii + 1], width=2, style=QtCore.Qt.DashLine)
+                curve_dap = pg.PlotDataItem(
+                    pen=pen_dap,
+                    skipFiniteCheck=True,
+                    symbolSize=5,
+                    name=f"{monitor}_fit",
+                )
                 self.curves_dap.append(curve_dap)
                 self.plot.addItem(curve_dap)
 
@@ -133,9 +136,12 @@ class PlotApp(QWidget):
 
     def update_plot(self) -> None:
         """Update the plot data."""
-        self.curves_data[0].setData(self.data_x, self.data_y)
+        for ii, curve in enumerate(self.curves_data):
+            curve.setData(self.data_x, self.data_y[ii])
+
         if self.dap_worker is not None:
-            self.curves_dap[0].setData(self.dap_x, self.dap_y)
+            for ii, curve in enumerate(self.curves_dap):
+                curve.setData(self.dap_x, self.dap_y[ii])
 
     def update_fit_table(self):
         """Update the table for fit data."""
@@ -152,6 +158,7 @@ class PlotApp(QWidget):
             metadata (dict): Metadata of the DAP.
         """
 
+        # TODO adapt for multiple dap_workers
         self.dap_x = msg[self.dap_worker]["x"]
         self.dap_y = msg[self.dap_worker]["y"]
 
@@ -173,21 +180,63 @@ class PlotApp(QWidget):
         if current_scanID != self.scanID:
             self.scanID = current_scanID
             self.data_x = []
-            self.data_y = []
+            self.data_y = [[] for _ in self.y_values]
             self.init_curves()
 
         dev_x = self.x_value
-        dev_y = self.y_values[0]
-
-        # TODO put warning that I am putting 1st one
-
         data_x = msg["data"][dev_x][dev[dev_x]._hints[0]]["value"]
-        data_y = msg["data"][dev_y][dev[dev_y]._hints[0]]["value"]
-
         self.data_x.append(data_x)
-        self.data_y.append(data_y)
+
+        for ii, dev_y in enumerate(self.y_values):
+            data_y = msg["data"][dev_y][dev[dev_y]._hints[0]]["value"]
+            self.data_y[ii].append(data_y)
 
         self.update_signal.emit()
+
+    @staticmethod
+    def golden_ratio(num: int) -> list:
+        """Calculate the golden ratio for a given number of angles.
+
+        Args:
+            num (int): Number of angles
+        """
+        phi = 2 * np.pi * ((1 + np.sqrt(5)) / 2)
+        angles = []
+        for ii in range(num):
+            x = np.cos(ii * phi)
+            y = np.sin(ii * phi)
+            angle = np.arctan2(y, x)
+            angles.append(angle)
+        return angles
+
+    @staticmethod
+    def golden_angle_color(colormap: str, num: int) -> list:
+        """
+        Extract num colors for from the specified colormap following golden angle distribution.
+
+        Args:
+            colormap (str): Name of the colormap
+            num (int): Number of requested colors
+
+        Returns:
+            list: List of colors with length <num>
+
+        Raises:
+            ValueError: If the number of requested colors is greater than the number of colors in the colormap.
+        """
+
+        cmap = pg.colormap.get(colormap)
+        cmap_colors = cmap.color
+        if num > len(cmap_colors):
+            raise ValueError(
+                f"Number of colors requested ({num}) is greater than the number of colors in the colormap ({len(cmap_colors)})"
+            )
+        angles = PlotApp.golden_ratio(len(cmap_colors))
+        color_selection = np.round(np.interp(angles, (-np.pi, np.pi), (0, len(cmap_colors))))
+        colors = [
+            mkColor(tuple((cmap_colors[int(ii)] * 255).astype(int))) for ii in color_selection[:num]
+        ]
+        return colors
 
 
 if __name__ == "__main__":
@@ -207,7 +256,7 @@ if __name__ == "__main__":
         "--y_values",
         type=str,
         nargs="+",
-        default=["gauss_bpm"],
+        default=["gauss_bpm", "gauss_adc1"],
         help="Specify the y device/signals for plotting",
     )
     parser.add_argument("--dap_worker", type=str, default=None, help="Specify the DAP process")
@@ -217,12 +266,6 @@ if __name__ == "__main__":
     x_value = args.x_value
     y_values = args.y_values
     dap_worker = None if args.dap_worker == "None" else args.dap_worker
-
-    # Convert dap_worker to None if it's the string "None", for testing "gaussian_fit_worker_3"
-    dap_worker = None if args.dap_worker == "None" else args.dap_worker
-
-    # Retrieve the dap_process value
-    # dap_worker = args.dap_worker
 
     # BECclient global variables
     client = bec_dispatcher.client
