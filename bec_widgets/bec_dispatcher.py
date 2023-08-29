@@ -21,8 +21,7 @@ class _BECDap:
 # Adding a new pyqt signal requres a class factory, as they must be part of the class definition
 # and cannot be dynamically added as class attributes after the class has been defined.
 _signal_class_factory = (
-    type(f"Signal{i}", (QObject,), dict(signal=pyqtSignal("PyQt_PyObject")))
-    for i in itertools.count()
+    type(f"Signal{i}", (QObject,), dict(signal=pyqtSignal(dict, dict))) for i in itertools.count()
 )
 
 
@@ -99,7 +98,10 @@ class _BECDispatcher(QObject):
 
             def cb(msg):
                 msg = BECMessage.MessageReader.loads(msg.value)
-                self._connections[topic].signal.emit(msg)
+                if not isinstance(msg, list):
+                    msg = [msg]
+                for msg_i in msg:
+                    self._connections[topic].signal.emit(msg_i.content, msg_i.metadata)
 
             consumer = self.client.connector.consumer(topics=topic, cb=cb)
             consumer.start()
@@ -132,7 +134,10 @@ class _BECDispatcher(QObject):
 
             def _dap_cb(msg):
                 msg = BECMessage.ProcessedDataMessage.loads(msg.value)
-                self.new_dap_data.emit(msg.content["data"], msg.metadata)
+                if not isinstance(msg, list):
+                    msg = [msg]
+                for i in msg:
+                    self.new_dap_data.emit(i.content["data"], i.metadata)
 
             dap_ep = MessageEndpoints.processed_data(dap_name)
             consumer = self.client.connector.consumer(topics=dap_ep, cb=_dap_cb)

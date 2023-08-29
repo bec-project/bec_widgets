@@ -63,9 +63,19 @@ class Crosshair(QObject):
                     size=10, pen=pg.mkPen(None), brush=pg.mkBrush(color)
                 )
                 self.marker_moved_1d.append(marker_moved)
-                self.marker_clicked_1d.append(marker_clicked)
                 self.plot_item.addItem(marker_moved)
-                self.plot_item.addItem(marker_clicked)
+                # Create glowing effect markers for clicked events
+                marker_clicked_list = []
+                for size, alpha in [(18, 64), (14, 128), (10, 255)]:
+                    marker_clicked = pg.ScatterPlotItem(
+                        size=size,
+                        pen=pg.mkPen(None),
+                        brush=pg.mkBrush(color.red(), color.green(), color.blue(), alpha),
+                    )
+                    marker_clicked_list.append(marker_clicked)
+                    self.plot_item.addItem(marker_clicked)
+
+                self.marker_clicked_1d.append(marker_clicked_list)
             elif isinstance(item, pg.ImageItem):  # 2D plot
                 self.marker_2d = pg.ROI(
                     [0, 0], size=[1, 1], pen=pg.mkPen("r", width=2), movable=False
@@ -109,7 +119,8 @@ class Crosshair(QObject):
         if y_values_1d:
             if all(v is None for v in x_values_1d) or all(v is None for v in y_values_1d):
                 return None, None
-            return x, y_values_1d
+            closest_x = min(x_values_1d, key=lambda xi: abs(xi - x))  # Snap x to closest data point
+            return closest_x, y_values_1d
 
         # Handle 2D plot
         if image_2d is not None:
@@ -199,10 +210,11 @@ class Crosshair(QObject):
                         [round(y_val, self.precision) for y_val in y_values],
                     )
                     for i, y_val in enumerate(y_values):
-                        self.marker_clicked_1d[i].setData(
-                            [x if not self.is_log_x else np.log10(x)],
-                            [y_val if not self.is_log_y else np.log10(y_val)],
-                        )
+                        for marker in self.marker_clicked_1d[i]:
+                            marker.setData(
+                                [x if not self.is_log_x else np.log10(x)],
+                                [y_val if not self.is_log_y else np.log10(y_val)],
+                            )
                 elif isinstance(item, pg.ImageItem):
                     if x is None or y_values is None:
                         return
