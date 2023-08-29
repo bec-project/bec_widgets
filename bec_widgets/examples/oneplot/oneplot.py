@@ -1,4 +1,6 @@
 import os
+
+import PyQt5.QtWidgets
 import numpy as np
 
 import pyqtgraph as pg
@@ -17,6 +19,19 @@ from bec_lib.core import MessageEndpoints
 
 
 class PlotApp(QWidget):
+    """
+    Main class for the PlotApp used to plot two signals from the BEC.
+
+    Attributes:
+        update_signal (pyqtSignal): Signal to trigger plot updates.
+        update_dap_signal (pyqtSignal): Signal to trigger DAP updates.
+
+    Args:
+        x_y_values (list of tuple, optional): List of (x, y) device/signal pairs for plotting.
+        dap_worker (str, optional): DAP process to specify. Set to None to disable.
+        parent (QWidget, optional): Parent widget.
+    """
+
     update_signal = pyqtSignal()
     update_dap_signal = pyqtSignal()
 
@@ -51,16 +66,16 @@ class PlotApp(QWidget):
             self.update_dap_signal, rateLimit=25, slot=self.update_fit_table
         )
 
-    def init_ui(self):
-        """Initialize the UI"""
+    def init_ui(self) -> None:
+        """Initialize the UI components."""
         self.plot = pg.PlotItem(title=self.y_values[0])
         self.glw.addItem(self.plot)
         self.plot.setLabel("bottom", self.x_values[0])
         self.plot.setLabel("left", self.y_values[0])
         self.plot.addLegend()
 
-    def init_curves(self):
-        """Initialize the curves and hook crosshair"""
+    def init_curves(self) -> None:
+        """Initialize curve data and properties."""
         self.plot.clear()
 
         self.curves_data = []
@@ -68,7 +83,14 @@ class PlotApp(QWidget):
         self.pens = []
         self.brushs = []  # todo check if needed
 
-        color_list = ["#384c6b", "#e28a2b", "#5E3023", "#e41a1c", "#984e83", "#4daf4a"]
+        color_list = [
+            "#384c6b",
+            "#e28a2b",
+            "#5E3023",
+            "#e41a1c",
+            "#984e83",
+            "#4daf4a",
+        ]  # todo change to cmap
 
         for ii, monitor in enumerate(self.y_values):
             pen_curve = mkPen(color=color_list[ii], width=2, style=QtCore.Qt.DashLine)
@@ -93,8 +115,8 @@ class PlotApp(QWidget):
         self.tableWidget_crosshair.setVerticalHeaderLabels(self.y_values)
         self.hook_crosshair()
 
-    def hook_crosshair(self):
-        """Hook the crosshair to the plot"""
+    def hook_crosshair(self) -> None:
+        """Attach the crosshair to the plot."""
         self.crosshair_1d = Crosshair(self.plot, precision=3)
         self.crosshair_1d.coordinatesChanged1D.connect(
             lambda x, y: self.update_table(self.tableWidget_crosshair, x, y, column=0)
@@ -103,27 +125,32 @@ class PlotApp(QWidget):
             lambda x, y: self.update_table(self.tableWidget_crosshair, x, y, column=1)
         )
 
-    def update_table(self, table_widget, x, y_values, column):
+    def update_table(
+        self, table_widget: PyQt5.QtWidgets.QTableWidget, x: float, y_values: list, column: int
+    ) -> None:
         for i, y in enumerate(y_values):
             table_widget.setItem(i, column, QTableWidgetItem(f"({x}, {y})"))
             table_widget.resizeColumnsToContents()
 
-    def update_plot(self):
+    def update_plot(self) -> None:
+        """Update the plot data."""
         self.curves_data[0].setData(self.data_x, self.data_y)
         if self.dap_worker is not None:
             self.curves_dap[0].setData(self.dap_x, self.dap_y)
 
     def update_fit_table(self):
+        """Update the table for fit data."""
+
         self.tableWidget_fit.setData(self.fit)
 
     @pyqtSlot(dict, dict)
-    def on_dap_update(self, msg, metadata) -> None:
+    def on_dap_update(self, msg: dict, metadata: dict) -> None:
         """
-        Getting processed data from DAP
+        Update DAP  related data.
 
         Args:
-            msg (dict):
-            metadata(dict):
+            msg (dict): Message received with data.
+            metadata (dict): Metadata of the DAP.
         """
 
         self.dap_x = msg[self.dap_worker]["x"]
@@ -134,11 +161,16 @@ class PlotApp(QWidget):
         self.update_dap_signal.emit()
 
     @pyqtSlot(dict, dict)
-    def on_scan_segment(self, msg, metadata):
-        current_scanID = msg["scanID"]
-        # print(f"current_scanID = {current_scanID}")
+    def on_scan_segment(self, msg: dict, metadata: dict):
+        """
+        Handle new scan segments.
 
-        # implement if condition that if scan id is different than last one init new scan variables
+        Args:
+            msg (dict): Message received with scan data.
+            metadata (dict): Metadata of the scan.
+        """
+        current_scanID = msg["scanID"]
+
         if current_scanID != self.scanID:
             self.scanID = current_scanID
             self.data_x = []
