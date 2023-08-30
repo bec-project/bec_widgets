@@ -18,16 +18,19 @@ from bec_widgets.qt_utils import Crosshair
 
 class PlotApp(QWidget):
     """
-    Main class for the PlotApp used to plot two signals from the BEC.
+    Main class for PlotApp, designed to plot multiple signals in a grid layout.
 
     Attributes:
         update_signal (pyqtSignal): Signal to trigger plot updates.
-        update_dap_signal (pyqtSignal): Signal to trigger DAP updates.
+        xy_pairs (list of tuples): List of tuples containing x-y pairs for each plot.
+                                    Each tuple has the x-value as its first element and
+                                    a list of y-values as its second element.
 
     Args:
-        x_value (str): The x device/signal for plotting.
-        y_values (list of str): List of y device/signals for plotting.
-        dap_worker (str, optional): DAP process to specify. Set to None to disable.
+        xy_pairs (list of lists): List of x-y pairs specifying the signals to plot.
+                                   Each tuple consists of an x-value string and a list
+                                   of y-value strings.
+                                   Example: [["x1", ["y1", "y2"]], ["x2", ["y3"]]]
         parent (QWidget, optional): Parent widget.
     """
 
@@ -59,9 +62,11 @@ class PlotApp(QWidget):
         self.proxy_update_plot = pg.SignalProxy(
             self.update_signal, rateLimit=25, slot=self.update_plot
         )
+
+        # Change layout of plots when the number of columns is changed in GUI
         self.spinBox_N_columns.valueChanged.connect(lambda x: self.init_ui(x))
 
-    def init_ui(self, num_columns=3) -> None:
+    def init_ui(self, num_columns: int = 3) -> None:
         """
         Initialize the UI components, create plots and store their grid positions.
 
