@@ -17,6 +17,7 @@ from bec_lib.core import MessageEndpoints
 # TODO implement:
 #   - implement scanID database for visualizing previous scans
 #   - multiple signals for different monitors
+#   - change how dap is handled in bec_dispatcher to handle more workers
 
 
 class PlotApp(QWidget):
