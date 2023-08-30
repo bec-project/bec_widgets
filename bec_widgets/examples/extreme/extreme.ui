@@ -20,23 +20,62 @@
       <enum>Qt::Horizontal</enum>
      </property>
      <widget class="GraphicsLayoutWidget" name="glw"/>
-     <widget class="QGroupBox" name="groupBox">
-      <property name="title">
-       <string>Cursor</string>
-      </property>
-      <layout class="QGridLayout" name="gridLayout">
+     <widget class="QWidget" name="">
+      <layout class="QGridLayout" name="gridLayout_2">
+       <item row="0" column="1">
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>Number of Columns:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <widget class="QSpinBox" name="spinBox_N_columns">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>10</number>
+         </property>
+         <property name="value">
+          <number>3</number>
+         </property>
+        </widget>
+       </item>
        <item row="0" column="0">
-        <widget class="QTableWidget" name="tableWidget_crosshair">
-         <column>
-          <property name="text">
-           <string>Moved</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Clicked</string>
-          </property>
-         </column>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="1" column="0" colspan="3">
+        <widget class="QGroupBox" name="groupBox">
+         <property name="title">
+          <string>Cursor</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout">
+          <item row="0" column="0">
+           <widget class="QTableWidget" name="tableWidget_crosshair">
+            <column>
+             <property name="text">
+              <string>Moved</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Clicked</string>
+             </property>
+            </column>
+           </widget>
+          </item>
+         </layout>
         </widget>
        </item>
       </layout>

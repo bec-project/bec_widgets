@@ -1,3 +1,6 @@
+xy_pairs_1: [["samx", ["gauss_bpm", "gauss_adc1"]]]
 xy_pairs: [["samx", ["gauss_bpm", "gauss_adc1"]],
            ["samx", ["gauss_adc1", "gauss_adc2"]],
-           ["samx", ["gauss_adc2"]]]
+           ["samx", ["gauss_adc2"]],
+           ["samx", ["gauss_bpm", "gauss_adc2"]],
+           ["samx", ["gauss_bpm"]]]

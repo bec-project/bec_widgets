@@ -52,35 +52,56 @@ class PlotApp(QWidget):
         self.scanID = None
 
         # Initialize the UI
-        self.init_ui()
-        self.init_curves()
+        self.init_ui(self.spinBox_N_columns.value())
+        self.splitter.setSizes([400, 100])
 
         # Connect the update signal to the update plot method
         self.proxy_update_plot = pg.SignalProxy(
             self.update_signal, rateLimit=25, slot=self.update_plot
         )
+        self.spinBox_N_columns.valueChanged.connect(lambda x: self.init_ui(x))
 
-    def init_ui(self) -> None:
+    def init_ui(self, num_columns=3) -> None:
         """
         Initialize the UI components, create plots and store their grid positions.
 
+        Args:
+            num_columns (int): Number of columns to wrap the layout.
+
         This method initializes a dictionary `self.plots` to store the plot objects
-        along with their corresponding x and y signal names. It also keeps track of
-        the row and column grid positions for each plot in `self.grid_coordinates`.
+        along with their corresponding x and y signal names. It dynamically arranges
+        the plots in a grid layout with a given number of columns and stretches the
+        last plots to fit the remaining space.
         """
+
+        self.glw.clear()
         self.plots = {}
         self.grid_coordinates = []  # List to keep track of grid positions for each plot
 
+        num_plots = len(self.xy_pairs)
+        num_rows = num_plots // num_columns  # Calculate the number of full rows
+        last_row_cols = num_plots % num_columns  # Number of plots in the last row
+
         for i, (x, ys) in enumerate(self.xy_pairs):
-            row, col = i // 2, i % 2  # Change these numbers based on your grid layout
-            plot = self.glw.addPlot(row=row, col=col)
+            row, col = i // num_columns, i % num_columns  # Calculate grid position
+
+            colspan = 1  # Default colspan
+
+            # Check if we are in the last row
+            if row == num_rows:
+                if last_row_cols == 1:
+                    colspan = num_columns  # Stretch across all columns
+                elif last_row_cols == 2 and col == 1:  # Special case for 5 plots
+                    colspan = num_columns - 1  # Stretch to fill remaining space
+
+            plot = self.glw.addPlot(row=row, col=col, colspan=colspan)
             plot.setLabel("bottom", x)
             plot.setLabel("left", ", ".join(ys))
             plot.addLegend()
             self.plots[(x, tuple(ys))] = plot
             self.grid_coordinates.append((row, col))  # Store the grid position
 
-        self.splitter.setSizes([200, 100])
+        self.init_curves()
 
     def init_curves(self) -> None:
         """
