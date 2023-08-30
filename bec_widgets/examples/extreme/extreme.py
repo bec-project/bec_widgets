@@ -70,36 +70,39 @@ class PlotApp(QWidget):
 
         This method initializes a dictionary `self.plots` to store the plot objects
         along with their corresponding x and y signal names. It dynamically arranges
-        the plots in a grid layout with a given number of columns and stretches the
-        last plots to fit the remaining space.
+        the plots in a grid layout based on the given number of columns and dynamically
+        stretches the last plots to fit the remaining space.
         """
-
         self.glw.clear()
+
         self.plots = {}
         self.grid_coordinates = []  # List to keep track of grid positions for each plot
 
         num_plots = len(self.xy_pairs)
         num_rows = num_plots // num_columns  # Calculate the number of full rows
         last_row_cols = num_plots % num_columns  # Number of plots in the last row
+        remaining_space = num_columns - last_row_cols  # Remaining space in the last row
 
         for i, (x, ys) in enumerate(self.xy_pairs):
             row, col = i // num_columns, i % num_columns  # Calculate grid position
 
             colspan = 1  # Default colspan
 
-            # Check if we are in the last row
-            if row == num_rows:
+            # Check if we are in the last row and there's remaining space
+            if row == num_rows and remaining_space > 0:
                 if last_row_cols == 1:
                     colspan = num_columns  # Stretch across all columns
-                elif last_row_cols == 2 and col == 1:  # Special case for 5 plots
-                    colspan = num_columns - 1  # Stretch to fill remaining space
+                else:
+                    colspan = remaining_space // last_row_cols + 1  # Proportional stretch
+                    remaining_space -= colspan - 1  # Update remaining space
+                    last_row_cols -= 1  # Update remaining plots
 
             plot = self.glw.addPlot(row=row, col=col, colspan=colspan)
             plot.setLabel("bottom", x)
             plot.setLabel("left", ", ".join(ys))
             plot.addLegend()
             self.plots[(x, tuple(ys))] = plot
-            self.grid_coordinates.append((row, col))  # Store the grid position
+            self.grid_coordinates.append((row, col))
 
         self.init_curves()
 
