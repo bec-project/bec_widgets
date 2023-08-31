@@ -291,10 +291,13 @@ class PlotApp(QWidget):
 
         for plot_config in self.plot_data:
             x_config = plot_config["x"]
-            x_signal_config = x_config["signals"][0]
-            x_name = x_signal_config.get("name", "")
-            x_entry_list = x_signal_config.get("entry", [])
+            x_signal_config = x_config["signals"][0]  # Assuming there's at least one signal for x
 
+            x_name = x_signal_config.get("name", "")
+            if not x_name:
+                raise ValueError("Name for x signal must be specified.")
+
+            x_entry_list = x_signal_config.get("entry", [])
             if not x_entry_list:
                 x_entry_list = dev[x_name]._hints if hasattr(dev[x_name], "_hints") else [x_name]
 
@@ -306,8 +309,10 @@ class PlotApp(QWidget):
             for x_entry in x_entry_list:
                 for y_config in y_configs:
                     y_name = y_config.get("name", "")
-                    y_entry_list = y_config.get("entry", [])
+                    if not y_name:
+                        raise ValueError("Name for y signal must be specified.")
 
+                    y_entry_list = y_config.get("entry", [])
                     if not y_entry_list:
                         y_entry_list = (
                             dev[y_name]._hints if hasattr(dev[y_name], "_hints") else [y_name]
@@ -321,6 +326,17 @@ class PlotApp(QWidget):
 
                         data_x = msg["data"].get(x_name, {}).get(x_entry, {}).get("value", None)
                         data_y = msg["data"].get(y_name, {}).get(y_entry, {}).get("value", None)
+
+                        if data_x is None:
+                            raise ValueError(f"Incorrect entry specified for x: {x_entry}")
+
+                        if data_y is None:
+                            if hasattr(dev[y_name], "_hints"):
+                                raise ValueError(f"Incorrect entry specified for y: {y_entry}")
+                            else:
+                                raise ValueError(
+                                    f"No hints available for y, and name did not work as entry: {y_name}"
+                                )
 
                         if data_x is not None:
                             self.data.setdefault(key, {}).setdefault("x", []).append(data_x)
