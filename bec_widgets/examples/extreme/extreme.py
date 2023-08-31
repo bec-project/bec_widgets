@@ -283,13 +283,29 @@ class PlotApp(QWidget):
 
 if __name__ == "__main__":
     import yaml
+    import argparse
+
     from bec_widgets import ctrl_c
     from bec_widgets.bec_dispatcher import bec_dispatcher
 
-    with open("config.yaml", "r") as file:
-        config = yaml.safe_load(file)
+    parser = argparse.ArgumentParser(description="Plotting App")
+    parser.add_argument(
+        "--config", "-c", help="Path to the .yaml configuration file", default="config.yaml"
+    )
+    args = parser.parse_args()
 
-    xy_pairs = config["xy_pairs"]
+    try:
+        with open(args.config, "r") as file:
+            config = yaml.safe_load(file)
+            xy_pairs = config.get("xy_pairs", [])
+    except FileNotFoundError:
+        print(f"The file {args.config} was not found.")
+        exit(1)
+    except Exception as e:
+        print(f"An error occurred while loading the config file: {e}")
+        exit(1)
+
+        # TODO PUT RAISE ERROR HERE to check for xy_pairs
 
     # BECclient global variables
     client = bec_dispatcher.client
