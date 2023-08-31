@@ -8,12 +8,15 @@ from pyqtgraph import mkBrush, mkColor, mkPen
 from pyqtgraph.Qt import QtCore, uic
 
 from bec_lib.core import MessageEndpoints
-from bec_widgets.qt_utils import Crosshair
+from bec_widgets.qt_utils import Crosshair, Colors
 
 
 # TODO implement:
 #   - implement scanID database for visualizing previous scans
 #   - change how dap is handled in bec_dispatcher to handle more workers
+#   - YAML config -> plot settings
+#   - YAML config -> xy pairs -> multiple subsignals for different devices
+#   - Internal logic -> if user specify
 
 
 class PlotApp(QWidget):
@@ -37,13 +40,20 @@ class PlotApp(QWidget):
     update_signal = pyqtSignal()
     update_dap_signal = pyqtSignal()
 
-    def __init__(self, xy_pairs, parent=None):
+    def __init__(self, plot_settings: dict, xy_pairs: list, plot_data: dict, parent=None):
         super(PlotApp, self).__init__(parent)
+
+        # YAML config
+        self.plot_settings = plot_settings
+        self.xy_pairs = xy_pairs
+        self.plot_data = plot_data
+
+        # Setting global plot settings
+        self.init_plot_background(self.plot_settings["background_color"])
+
+        # Loading UI
         current_path = os.path.dirname(__file__)
         uic.loadUi(os.path.join(current_path, "extreme.ui"), self)
-
-        # xy pairs for setting number of windows
-        self.xy_pairs = xy_pairs
 
         # Nested dictionary to hold x and y data for multiple plots
         self.data = {}
@@ -55,7 +65,8 @@ class PlotApp(QWidget):
         self.scanID = None
 
         # Initialize the UI
-        self.init_ui(self.spinBox_N_columns.value())
+        self.init_ui(self.plot_settings["num_columns"])
+        self.spinBox_N_columns.setValue(self.plot_settings["num_columns"])
         self.splitter.setSizes([400, 100])
 
         # Connect the update signal to the update plot method
@@ -65,6 +76,26 @@ class PlotApp(QWidget):
 
         # Change layout of plots when the number of columns is changed in GUI
         self.spinBox_N_columns.valueChanged.connect(lambda x: self.init_ui(x))
+
+    def init_plot_background(self, background_color: str) -> None:
+        """
+        Initialize plot settings based on the background color.
+
+        Args:
+            background_color (str): The background color ('white' or 'black').
+
+        This method sets the background and foreground colors for pyqtgraph.
+        If the background is dark ('black'), the foreground will be set to 'white',
+        and vice versa.
+        """
+        if background_color.lower() == "black":
+            pg.setConfigOption("background", "k")
+            pg.setConfigOption("foreground", "w")
+        elif background_color.lower() == "white":
+            pg.setConfigOption("background", "w")
+            pg.setConfigOption("foreground", "k")
+        else:
+            print(f"Warning: Unknown background color {background_color}. Using default settings.")
 
     def init_ui(self, num_columns: int = 3) -> None:
         """
@@ -79,7 +110,6 @@ class PlotApp(QWidget):
         stretches the last plots to fit the remaining space.
         """
         self.glw.clear()
-
         self.plots = {}
         self.grid_coordinates = []  # List to keep track of grid positions for each plot
 
@@ -102,7 +132,9 @@ class PlotApp(QWidget):
                     remaining_space -= colspan - 1  # Update remaining space
                     last_row_cols -= 1  # Update remaining plots
 
-            plot = self.glw.addPlot(row=row, col=col, colspan=colspan)
+            plot = self.glw.addPlot(
+                row=row, col=col, colspan=colspan, title=list(self.plot_data[i].keys())[0]
+            )
             plot.setLabel("bottom", x)
             plot.setLabel("left", ", ".join(ys))
             plot.addLegend()
@@ -126,7 +158,7 @@ class PlotApp(QWidget):
         for idx, ((x, ys), plot) in enumerate(self.plots.items()):
             plot.clear()
             self.curves_data[(x, tuple(ys))] = []
-            colors_ys = PlotApp.golden_angle_color(colormap="CET-R2", num=len(ys))
+            colors_ys = Colors.golden_angle_color(colormap="plasma", num=len(ys))
 
             row, col = self.grid_coordinates[idx]  # Retrieve the grid position for this plot
 
@@ -235,51 +267,6 @@ class PlotApp(QWidget):
 
         self.update_signal.emit()
 
-    @staticmethod
-    def golden_ratio(num: int) -> list:
-        """Calculate the golden ratio for a given number of angles.
-
-        Args:
-            num (int): Number of angles
-        """
-        phi = 2 * np.pi * ((1 + np.sqrt(5)) / 2)
-        angles = []
-        for ii in range(num):
-            x = np.cos(ii * phi)
-            y = np.sin(ii * phi)
-            angle = np.arctan2(y, x)
-            angles.append(angle)
-        return angles
-
-    @staticmethod
-    def golden_angle_color(colormap: str, num: int) -> list:
-        """
-        Extract num colors for from the specified colormap following golden angle distribution.
-
-        Args:
-            colormap (str): Name of the colormap
-            num (int): Number of requested colors
-
-        Returns:
-            list: List of colors with length <num>
-
-        Raises:
-            ValueError: If the number of requested colors is greater than the number of colors in the colormap.
-        """
-
-        cmap = pg.colormap.get(colormap)
-        cmap_colors = cmap.color
-        if num > len(cmap_colors):
-            raise ValueError(
-                f"Number of colors requested ({num}) is greater than the number of colors in the colormap ({len(cmap_colors)})"
-            )
-        angles = PlotApp.golden_ratio(len(cmap_colors))
-        color_selection = np.round(np.interp(angles, (-np.pi, np.pi), (0, len(cmap_colors))))
-        colors = [
-            mkColor(tuple((cmap_colors[int(ii)] * 255).astype(int))) for ii in color_selection[:num]
-        ]
-        return colors
-
 
 if __name__ == "__main__":
     import yaml
@@ -297,7 +284,10 @@ if __name__ == "__main__":
     try:
         with open(args.config, "r") as file:
             config = yaml.safe_load(file)
+
+            plot_settings = config.get("plot_settings", {})
             xy_pairs = config.get("xy_pairs", [])
+            plot_data = config.get("plot_data", {})
     except FileNotFoundError:
         print(f"The file {args.config} was not found.")
         exit(1)
@@ -316,7 +306,7 @@ if __name__ == "__main__":
     queue = client.queue
 
     app = QApplication([])
-    plotApp = PlotApp(xy_pairs=xy_pairs)
+    plotApp = PlotApp(xy_pairs=xy_pairs, plot_settings=plot_settings, plot_data=plot_data)
 
     # Connecting signals from bec_dispatcher
     bec_dispatcher.connect_slot(plotApp.on_scan_segment, MessageEndpoints.scan_segment())

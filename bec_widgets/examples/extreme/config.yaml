@@ -1,6 +1,32 @@
+plot_settings:
+  background_color: "white"
+  num_columns: 2
+
 xy_pairs: [["samx", ["gauss_bpm", "gauss_adc1"]],
-           ["samx", ["gauss_adc1", "gauss_adc2"]],
-           ["samx", ["gauss_adc2"]],
-           ["samx", ["gauss_adc1"]],
-           ["samx", ["gauss_bpm", "gauss_adc2"]],
-           ["samx", ["gauss_bpm", "gauss_adc1", "gauss_adc2"]]]
+           ["samx", ["gauss_adc1", "gauss_adc2"]]]
+
+plot_data:
+  - BPM plot:
+      - x:
+          - signal:
+              - name: "samx"
+              - entry: "samx"
+          - label: 'Motor X' # will serve as x label
+      - y:
+          - signal:
+              - name: "gauss_bpm"
+              - entry: "gauss_bpm"
+          - label: 'BPM' # will serve as y label
+
+  - ADC plot:
+      - name: "gauss_adc1"
+      - x:
+          - signal:
+              - name: "samy"
+              - entry: "samy"
+          - label: 'Motor Y'
+      - y:
+          - signal:
+              - name: "gauss_adc"
+              - entry: ["gauss_adc1", "gauss_adc2"]
+          - label: 'ADC'
