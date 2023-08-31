@@ -290,12 +290,13 @@ class PlotApp(QWidget):
             self.init_curves()
 
         for plot_config in self.plot_data:
+            plot_name = plot_config.get("plot_name", "Unnamed Plot")
             x_config = plot_config["x"]
             x_signal_config = x_config["signals"][0]  # Assuming there's at least one signal for x
 
             x_name = x_signal_config.get("name", "")
             if not x_name:
-                raise ValueError("Name for x signal must be specified.")
+                raise ValueError(f"Name for x signal must be specified in plot: {plot_name}.")
 
             x_entry_list = x_signal_config.get("entry", [])
             if not x_entry_list:
@@ -310,7 +311,9 @@ class PlotApp(QWidget):
                 for y_config in y_configs:
                     y_name = y_config.get("name", "")
                     if not y_name:
-                        raise ValueError("Name for y signal must be specified.")
+                        raise ValueError(
+                            f"Name for y signal must be specified in plot: {plot_name}."
+                        )
 
                     y_entry_list = y_config.get("entry", [])
                     if not y_entry_list:
@@ -328,14 +331,18 @@ class PlotApp(QWidget):
                         data_y = msg["data"].get(y_name, {}).get(y_entry, {}).get("value", None)
 
                         if data_x is None:
-                            raise ValueError(f"Incorrect entry specified for x: {x_entry}")
+                            raise ValueError(
+                                f"Incorrect entry '{x_entry}' specified for x in plot: {plot_name}, x name: {x_name}"
+                            )
 
                         if data_y is None:
                             if hasattr(dev[y_name], "_hints"):
-                                raise ValueError(f"Incorrect entry specified for y: {y_entry}")
+                                raise ValueError(
+                                    f"Incorrect entry '{y_entry}' specified for y in plot: {plot_name}, y name: {y_name}"
+                                )
                             else:
                                 raise ValueError(
-                                    f"No hints available for y, and name did not work as entry: {y_name}"
+                                    f"No hints available for y in plot: {plot_name}, and name '{y_name}' did not work as entry"
                                 )
 
                         if data_x is not None:
