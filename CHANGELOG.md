@@ -2,6 +2,29 @@
 
 <!--next-version-placeholder-->
 
+## v0.10.0 (2023-09-01)
+
+### Feature
+
+* Load and export configuration into .yaml from GUI ([`e527353`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/e5273539741a1261e69b1bf76af78c7c1ab0d901))
+* Error messages if name or entry is wrong ([`415c4ee`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/415c4ee3f232c02ee5a00a82352c7fbb0d324449))
+* Number of columns can be dynamically changed ([`65bfccc`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/65bfccce8fce158150652fead769721de805d99e))
+* Multi window interface created for extreme BL ([`69c38d6`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/69c38d67e4e9b8a30767f6f67defce6c5c2e5b16))
+
+### Fix
+
+* Check if num_columns is not higher that actual number of plots ([`aac6e17`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/aac6e172f6e4583e751bee00db6f381aaff8ac69))
+* Add max number of columns according to the number of plots ([`fbd71c1`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/fbd71c131386508a9ec7bb5963afefc13f8b1618))
+* More specific error messages ([`583e643`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/583e643dacac3d7aaa744751baef2da69f6f892e))
+* Bec_dispatcher.py can take multiple workers as a list ([`7bcf88d`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/7bcf88d5eb139aa3cf491185b9fb3f45aa5e39a2))
+* Config.yaml can be passed as a console argument to extreme.py ([`b8aa373`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/b8aa37321d6ac0ebd9f2237c8d2ed6594b614b57))
+* Columns span generalised for any number of columns ([`2d851b6`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/2d851b6b4eb0002e32908c2effbfb79122f18c24))
+
+### Documentation
+
+* Updated documentation and TODOs ([`0ebe35a`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/0ebe35ac7a144db84c323f9ecb85dfdf6de66c21))
+* Fixed documentation ([`2f7c1b9`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/2f7c1b92a9624741f6dea44fc8f3c19a8a506fd9))
+
 ## v0.9.0 (2023-08-29)
 
 ### Feature
