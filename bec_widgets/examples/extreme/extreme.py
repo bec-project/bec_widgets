@@ -242,7 +242,9 @@ class PlotApp(QWidget):
         """Change the color of a curve."""
         color = btn.color()
         pen_curve = mkPen(color=color, width=2, style=QtCore.Qt.DashLine)
+        brush_curve = mkBrush(color=color)
         curve.setPen(pen_curve)
+        curve.setSymbolBrush(brush_curve)
 
     def hook_crosshair(self):
         """Attach crosshairs to each plot and connect them to the update_table method."""
