@@ -13,7 +13,6 @@ from bec_widgets.qt_utils import Crosshair, Colors
 
 # TODO implement:
 #   - implement scanID database for visualizing previous scans
-#   - change how dap is handled in bec_dispatcher to handle more workers
 
 
 class PlotApp(QWidget):
@@ -406,7 +405,8 @@ class PlotApp(QWidget):
                 self.plot_settings = config.get("plot_settings", {})
                 self.plot_data = config.get("plot_data", {})
                 # Reinitialize the UI and plots
-                # self.init_plot_background(self.plot_settings["background_color"]) #TODO implement
+                # TODO implement, change background works only before loading .ui file
+                # self.init_plot_background(self.plot_settings["background_color"])
                 self.init_ui(self.plot_settings["num_columns"])
                 self.init_curves()
                 print(f"Settings loaded from {file_path}")
