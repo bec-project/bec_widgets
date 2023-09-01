@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pyqtgraph as pg
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QApplication, QWidget, QTableWidgetItem, QTableWidget
+from PyQt5.QtWidgets import QApplication, QWidget, QTableWidgetItem, QTableWidget, QFileDialog
 from pyqtgraph import mkBrush, mkColor, mkPen
 from pyqtgraph.Qt import QtCore, uic
 
@@ -75,9 +75,15 @@ class PlotApp(QWidget):
 
         # Initialize the UI
         self.init_ui(self.plot_settings["num_columns"])
-        self.spinBox_N_columns.setValue(self.plot_settings["num_columns"])
+        self.spinBox_N_columns.setValue(
+            self.plot_settings["num_columns"]
+        )  # TODO has to be checked if it will not setup more columns than plots
         self.spinBox_N_columns.setMaximum(len(self.plot_data))
         self.splitter.setSizes([400, 100])
+
+        # Buttons
+        self.pushButton_save.clicked.connect(self.save_settings_to_yaml)
+        self.pushButton_load.clicked.connect(self.load_settings_from_yaml)
 
         # Connect the update signal to the update plot method
         self.proxy_update_plot = pg.SignalProxy(
@@ -353,6 +359,52 @@ class PlotApp(QWidget):
                             self.data.setdefault(key, {}).setdefault("y", []).append(data_y)
 
         self.update_signal.emit()
+
+    def save_settings_to_yaml(self):
+        """Save the current settings to a .yaml file using a file dialog."""
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save Settings", "", "YAML Files (*.yaml);;All Files (*)", options=options
+        )
+
+        if file_path:
+            try:
+                if not file_path.endswith(".yaml"):
+                    file_path += ".yaml"
+
+                with open(file_path, "w") as file:
+                    yaml.dump(
+                        {"plot_settings": self.plot_settings, "plot_data": self.plot_data}, file
+                    )
+                print(f"Settings saved to {file_path}")
+            except Exception as e:
+                print(f"An error occurred while saving the settings to {file_path}: {e}")
+
+    def load_settings_from_yaml(self):
+        """Load settings from a .yaml file using a file dialog and update the current settings."""
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Load Settings", "", "YAML Files (*.yaml);;All Files (*)", options=options
+        )
+
+        if file_path:
+            try:
+                with open(file_path, "r") as file:
+                    config = yaml.safe_load(file)
+
+                self.plot_settings = config.get("plot_settings", {})
+                self.plot_data = config.get("plot_data", {})
+                # Reinitialize the UI and plots
+                # self.init_plot_background(self.plot_settings["background_color"]) #TODO implement
+                self.init_ui(self.plot_settings["num_columns"])
+                self.init_curves()
+                print(f"Settings loaded from {file_path}")
+            except FileNotFoundError:
+                print(f"The file {file_path} was not found.")
+            except Exception as e:
+                print(f"An error occurred while loading the settings from {file_path}: {e}")
 
 
 if __name__ == "__main__":
