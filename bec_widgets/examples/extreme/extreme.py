@@ -130,6 +130,15 @@ class PlotApp(QWidget):
         self.grid_coordinates = []
 
         num_plots = len(self.plot_data)
+
+        # Check if num_columns exceeds the number of plots
+        if num_columns > num_plots:
+            num_columns = num_plots
+            self.plot_settings["num_columns"] = num_columns  # Update the settings
+            print(
+                f"Warning: num_columns in the YAML file was greater than the number of plots. Resetting num_columns to {num_columns}."
+            )
+
         num_rows = num_plots // num_columns
         last_row_cols = num_plots % num_columns
         remaining_space = num_columns - last_row_cols
