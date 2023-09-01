@@ -76,6 +76,7 @@ class PlotApp(QWidget):
         # Initialize the UI
         self.init_ui(self.plot_settings["num_columns"])
         self.spinBox_N_columns.setValue(self.plot_settings["num_columns"])
+        self.spinBox_N_columns.setMaximum(len(self.plot_data))
         self.splitter.setSizes([400, 100])
 
         # Connect the update signal to the update plot method
@@ -373,6 +374,7 @@ if __name__ == "__main__":
 
             plot_settings = config.get("plot_settings", {})
             plot_data = config.get("plot_data", {})
+
     except FileNotFoundError:
         print(f"The file {args.config} was not found.")
         exit(1)
