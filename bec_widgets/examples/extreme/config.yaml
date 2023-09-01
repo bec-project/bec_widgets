@@ -1,0 +1,49 @@
+plot_settings:
+  background_color: "black"
+  num_columns: 3
+  colormap: "plasma"
+  #TODO add more settings
+  # - plot size
+
+plot_data:
+  - plot_name: "BPM plot"
+    x:
+      label: 'Motor X'
+      signals:
+        - name: "samx"
+          entry: "samx"
+    y:
+      label: 'BPM'
+      signals:
+        - name: "gauss_bpm"
+          entry: "gauss_bpm"
+        - name: "gauss_adc1"
+          entry: "gauss_adc1"
+
+  - plot_name: "ADC plot"
+    x:
+      label: 'Motor Y'
+      signals:
+        - name: "samy"
+#          entry: "samy" # here I also forgot to specify entry
+    y:
+      label: 'ADC'
+      signals:
+        - name: "gauss_bpm"
+          entry: "gauss_bpm"
+        - name: "samx"
+          # I will not specify entry, because I want to take hint from gauss_adc2
+  - plot_name: "Multi"
+    x:
+      label: 'Motor X'
+      signals:
+        - name: "samx"
+          entry: "samx"
+    y:
+      label: 'Multi'
+      signals:
+        - name: "gauss_bpm"
+          entry: "gauss_bpm"
+        - name: "samx"
+          entry: ["samx", "samx_setpoint"]
+#          entry: ["samx","incorect"] #multiple entries for one device

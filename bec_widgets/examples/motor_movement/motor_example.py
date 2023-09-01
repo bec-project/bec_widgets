@@ -16,7 +16,6 @@ from bec_lib.core import MessageEndpoints, BECMessage
 
 
 # TODO - General features
-#  - setting motor speed and frequency
 #  - setting motor acceleration
 #  - updating motor precision
 #  - put motor status (moving, stopped, etc)
