@@ -25,7 +25,7 @@ from bec_lib.core import MessageEndpoints, BECMessage
 class MotorApp(QWidget):
     coordinates_updated = pyqtSignal(float, float)
 
-    def __init__(self):
+    def __init__(self, selected_motors: dict = {}, plot_motors: dict = {}):
         super().__init__()
         current_path = os.path.dirname(__file__)
         uic.loadUi(os.path.join(current_path, "motor_controller.ui"), self)
@@ -38,9 +38,12 @@ class MotorApp(QWidget):
 
         # Coordinates tracking
         self.motor_positions = np.array([])
-        self.max_points = 5000  # Maximum number of points to keep
-        self.num_dim_points = 15  # Number of points to dim gradually
-        self.scatter_size = 5
+        self.max_points = plot_motors.get("max_points", 5000)
+        self.num_dim_points = plot_motors.get("num_dim_points", 100)
+        self.scatter_size = plot_motors.get("scatter_size", 5)
+
+        # Saved motors from config file
+        self.selected_motors = selected_motors
 
         # QThread for motor movement + signals
         self.motor_thread.motors_loaded.connect(self.get_available_motors)
@@ -79,6 +82,33 @@ class MotorApp(QWidget):
     def get_available_motors(self, motors_x, motors_y):
         self.comboBox_motor_x.addItems(motors_x)
         self.comboBox_motor_y.addItems(motors_y)
+
+        # Set index based on the motor names in the configuration, if available
+        selected_motor_x = ""
+        selected_motor_y = ""
+
+        if self.selected_motors:
+            selected_motor_x = self.selected_motors.get("motor_x", "")
+            selected_motor_y = self.selected_motors.get("motor_y", "")
+
+        index_x = self.comboBox_motor_x.findText(selected_motor_x)
+        index_y = self.comboBox_motor_y.findText(selected_motor_y)
+
+        if index_x != -1:
+            self.comboBox_motor_x.setCurrentIndex(index_x)
+        else:
+            print(
+                f"Warning: Motor '{selected_motor_x}' specified in the config file is not available."
+            )
+            self.comboBox_motor_x.setCurrentIndex(0)  # Optionally set to first item or any default
+
+        if index_y != -1:
+            self.comboBox_motor_y.setCurrentIndex(index_y)
+        else:
+            print(
+                f"Warning: Motor '{selected_motor_y}' specified in the config file is not available."
+            )
+            self.comboBox_motor_y.setCurrentIndex(0)  # Optionally set to first item or any default
 
     @pyqtSlot(list, list)
     def update_limits(self, x_limits: list, y_limits: list) -> None:
@@ -467,39 +497,6 @@ class MotorControl(QThread):
         """Get the limits of a motor"""
         return motor.limits
 
-    # def get_motor_config(self, motor) -> dict:
-    #     """Get the configuration of a motor"""  # TODO at this moment just for speed and update_frequency
-    #     return motor.get_device_config()
-
-    # def update_all_config(self, speed: list = None, update_frequency: list = None) -> None:
-    #     # TODO now only speed and update frequency
-    #     if speed is not None:
-    #         self.motor_x.set_device_config({"speed": speed[0]})
-    #         self.motor_y.set_device_config({"speed": speed[1]})
-    #
-    #     if update_frequency is not None:
-    #         self.motor_x.set_device_config({"update_frequency": update_frequency[0]})
-    #         self.motor_y.set_device_config({"update_frequency": update_frequency[1]})
-    #
-    #     self.retrieve_motor_speed(self.motor_x, self.motor_y)
-    #     self.retrieve_motor_update_frequency(self.motor_x, self.motor_y)
-
-    # def retrieve_motor_speed(
-    #     self, motor_x, motor_y
-    # ) -> None:  # TODO can be migrated to some general config function
-    #     """Get the speed of a motor"""
-    #     speed_x = motor_x.get_device_config()["speed"]
-    #     speed_y = motor_y.get_device_config()["speed"]
-    #     self.speed_retrieved.emit(int(speed_x), int(speed_y))
-
-    # def retrieve_motor_update_frequency(
-    #     self, motor_x, motor_y
-    # ) -> None:  # TODO can be migrated to some general config function
-    #     """Get the speed of a motor"""
-    #     update_frequency_x = motor_x.get_device_config()["update_frequency"]
-    #     update_frequency_y = motor_y.get_device_config()["update_frequency"]
-    #     self.update_frequency_retrieved.emit(int(update_frequency_x), int(update_frequency_y))
-
     def retrieve_motor_limits(self, motor_x, motor_y):
         limit_x = self.get_motor_limits(motor_x)
         limit_y = self.get_motor_limits(motor_y)
@@ -600,9 +597,33 @@ class MotorControl(QThread):
 
 
 if __name__ == "__main__":
+    import yaml
+    import argparse
+
     from bec_lib import BECClient
 
     # from bec_lib.core import ServiceConfig,RedisConnector
+
+    parser = argparse.ArgumentParser(description="Motor App")
+
+    parser.add_argument(
+        "--config", "-c", help="Path to the .yaml configuration file", default="config_example.yaml"
+    )
+    args = parser.parse_args()
+
+    try:
+        with open(args.config, "r") as file:
+            config = yaml.safe_load(file)
+
+            selected_motors = config.get("selected_motors", {})
+            plot_motors = config.get("plot_motors", {})
+
+    except FileNotFoundError:
+        print(f"The file {args.config} was not found.")
+        exit(1)
+    except Exception as e:
+        print(f"An error occurred while loading the config file: {e}")
+        exit(1)
 
     client = BECClient()
     # client.initialize(config=ServiceConfig(config_path="test_config.yaml"))
@@ -615,6 +636,7 @@ if __name__ == "__main__":
     queue = client.queue
 
     app = QApplication([])
-    window = MotorApp()
+    MotorApp = MotorApp(selected_motors=selected_motors, plot_motors=plot_motors)
+    window = MotorApp
     window.show()
     app.exec_()
