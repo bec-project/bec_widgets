@@ -461,16 +461,11 @@ class MotorControl(QThread):
         self.action = None
         self._initialize_motor()
 
-    def motor_by_string(self, motor_x_name: str, motor_y_name: str) -> tuple:
-        motor_x_index = self.all_motors_names.index(motor_x_name)
-        motor_y_index = self.all_motors_names.index(motor_y_name)
-
-        motor_x = self.all_motors[motor_x_index]
-        motor_y = self.all_motors[motor_y_index]
-        return motor_x, motor_y
-
     def connect_motors(self, motor_x_name: str, motor_y_name: str) -> None:
-        self.motor_x, self.motor_y = self.motor_by_string(motor_x_name, motor_y_name)
+        self.motor_x, self.motor_y = (
+            dev[motor_x_name],
+            dev[motor_y_name],
+        )  # self.motor_by_string(motor_x_name, motor_y_name)
 
         (self.current_x, self.current_y) = self.get_coordinates()
 
