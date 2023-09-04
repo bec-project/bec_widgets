@@ -23,10 +23,24 @@ from bec_lib.core import MessageEndpoints, BECMessage
 
 
 class MotorApp(QWidget):
+    """
+    Main class for MotorApp, designed to control motor positions based on a flexible YAML configuration.
+
+    Attributes:
+        coordinates_updated (pyqtSignal): Signal to trigger coordinate updates.
+        selected_motors (dict): Dictionary containing pre-selected motors from the configuration file.
+        plot_motors (dict): Dictionary containing settings for plotting motor positions.
+
+    Args:
+        selected_motors (dict): Dictionary specifying the selected motors.
+        plot_motors (dict): Dictionary specifying settings for plotting motor positions.
+        parent (QWidget, optional): Parent widget.
+    """
+
     coordinates_updated = pyqtSignal(float, float)
 
-    def __init__(self, selected_motors: dict = {}, plot_motors: dict = {}):
-        super().__init__()
+    def __init__(self, selected_motors: dict = {}, plot_motors: dict = {}, parent=None):
+        super(MotorApp, self).__init__(parent)
         current_path = os.path.dirname(__file__)
         uic.loadUi(os.path.join(current_path, "motor_controller.ui"), self)
 
@@ -58,6 +72,13 @@ class MotorApp(QWidget):
         self.motor_thread.retrieve_all_motors()
 
     def connect_motor(self, motor_x_name: str, motor_y_name: str):
+        """
+        Connects to the specified motors and initializes the UI for motor control.
+
+        Args:
+            motor_x_name (str): Name of the motor controlling the x-axis.
+            motor_y_name (str): Name of the motor controlling the y-axis.
+        """
         self.motor_thread.connect_motors(motor_x_name, motor_y_name)
         self.motor_thread.retrieve_motor_limits(self.motor_x, self.motor_y)
 
@@ -76,10 +97,24 @@ class MotorApp(QWidget):
 
     @pyqtSlot(object, object)
     def get_selected_motors(self, motor_x, motor_y):
+        """
+        Slot to receive and set the selected motors.
+
+        Args:
+            motor_x (object): The selected motor for the x-axis.
+            motor_y (object): The selected motor for the y-axis.
+        """
         self.motor_x, self.motor_y = motor_x, motor_y
 
     @pyqtSlot(list, list)
     def get_available_motors(self, motors_x, motors_y):
+        """
+        Slot to populate the available motors in the combo boxes and set the index based on the configuration.
+
+        Args:
+            motors_x (list): List of available motors for the x-axis.
+            motors_y (list): List of available motors for the y-axis.
+        """
         self.comboBox_motor_x.addItems(motors_x)
         self.comboBox_motor_y.addItems(motors_y)
 
@@ -112,6 +147,13 @@ class MotorApp(QWidget):
 
     @pyqtSlot(list, list)
     def update_limits(self, x_limits: list, y_limits: list) -> None:
+        """
+        Slot to update the limits for x and y motors.
+
+        Args:
+            x_limits (list): List containing the lower and upper limits for the x-axis motor.
+            y_limits (list): List containing the lower and upper limits for the y-axis motor.
+        """
         self.limit_x = x_limits
         self.limit_y = y_limits
         self.spinBox_x_min.setValue(self.limit_x[0])
@@ -427,6 +469,17 @@ class MotorActions(Enum):
 
 
 class MotorControl(QThread):
+    """
+    QThread subclass for controlling motor actions asynchronously.
+
+    Attributes:
+        coordinates_updated (pyqtSignal): Signal to emit current coordinates.
+        limits_retrieved (pyqtSignal): Signal to emit current limits.
+        move_finished (pyqtSignal): Signal to emit when the move is finished.
+        motors_loaded (pyqtSignal): Signal to emit when the motors are loaded.
+        motors_selected (pyqtSignal): Signal to emit when the motors are selected.
+    """
+
     coordinates_updated = pyqtSignal(float, float)  # Signal to emit current coordinates
     limits_retrieved = pyqtSignal(list, list)  # Signal to emit current limits
     move_finished = pyqtSignal()  # Signal to emit when the move is finished
@@ -444,6 +497,14 @@ class MotorControl(QThread):
         self._initialize_motor()
 
     def connect_motors(self, motor_x_name: str, motor_y_name: str) -> None:
+        """
+        Connect to the specified motors by their names.
+
+        Args:
+            motor_x_name (str): The name of the motor for the x-axis.
+            motor_y_name (str): The name of the motor for the y-axis.
+        """
+
         self.motor_x, self.motor_y = (
             dev[motor_x_name],
             dev[motor_y_name],
@@ -468,11 +529,19 @@ class MotorControl(QThread):
         self.motors_selected.emit(self.motor_x, self.motor_y)
 
     def get_all_motors(self) -> list:
-        all_motors = client.device_manager.devices.acquisition_group("motor")
+        """
+        Retrieve a list of all available motors.
+
+        Returns:
+            list: List of all available motors.
+        """
+        all_motors = (
+            client.device_manager.devices.enabled_devices
+        )  # .acquisition_group("motor") #TODO remove motor group?
         return all_motors
 
     def get_all_motors_names(self) -> list:
-        all_motors = client.device_manager.devices.acquisition_group("motor")
+        all_motors = client.device_manager.devices.enabled_devices  # .acquisition_group("motor")
         all_motors_names = [motor.name for motor in all_motors]
         return all_motors_names
 
@@ -494,7 +563,6 @@ class MotorControl(QThread):
         return self.current_x, self.current_y
 
     def get_motor_limits(self, motor) -> list:
-        """Get the limits of a motor"""
         return motor.limits
 
     def retrieve_motor_limits(self, motor_x, motor_y):
