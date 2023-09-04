@@ -16,20 +16,31 @@ from bec_lib.core import MessageEndpoints, BECMessage
 
 
 # TODO - General features
-#  - setting motor acceleration
 #  - updating motor precision
 #  - put motor status (moving, stopped, etc)
-#  - add spinBox for motor scatter size
 #  - add mouse interactions with the plot -> click to select coordinates, double click to move?
 #  - adjust right click actions
-#  - implement logic to check if motor actually has limits
 
 
 class MotorApp(QWidget):
+    """
+    Main class for MotorApp, designed to control motor positions based on a flexible YAML configuration.
+
+    Attributes:
+        coordinates_updated (pyqtSignal): Signal to trigger coordinate updates.
+        selected_motors (dict): Dictionary containing pre-selected motors from the configuration file.
+        plot_motors (dict): Dictionary containing settings for plotting motor positions.
+
+    Args:
+        selected_motors (dict): Dictionary specifying the selected motors.
+        plot_motors (dict): Dictionary specifying settings for plotting motor positions.
+        parent (QWidget, optional): Parent widget.
+    """
+
     coordinates_updated = pyqtSignal(float, float)
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, selected_motors: dict = {}, plot_motors: dict = {}, parent=None):
+        super(MotorApp, self).__init__(parent)
         current_path = os.path.dirname(__file__)
         uic.loadUi(os.path.join(current_path, "motor_controller.ui"), self)
 
@@ -41,16 +52,17 @@ class MotorApp(QWidget):
 
         # Coordinates tracking
         self.motor_positions = np.array([])
-        self.max_points = 5000  # Maximum number of points to keep
-        self.num_dim_points = 15  # Number of points to dim gradually
-        self.scatter_size = 5
+        self.max_points = plot_motors.get("max_points", 5000)
+        self.num_dim_points = plot_motors.get("num_dim_points", 100)
+        self.scatter_size = plot_motors.get("scatter_size", 5)
+
+        # Saved motors from config file
+        self.selected_motors = selected_motors
 
         # QThread for motor movement + signals
         self.motor_thread.motors_loaded.connect(self.get_available_motors)
         self.motor_thread.motors_selected.connect(self.get_selected_motors)
         self.motor_thread.limits_retrieved.connect(self.update_limits)
-        self.motor_thread.speed_retrieved.connect(self.update_speed)
-        self.motor_thread.update_frequency_retrieved.connect(self.update_update_frequency)
 
         # UI
         self.init_ui()
@@ -60,10 +72,16 @@ class MotorApp(QWidget):
         self.motor_thread.retrieve_all_motors()
 
     def connect_motor(self, motor_x_name: str, motor_y_name: str):
+        """
+        Connects to the specified motors and initializes the UI for motor control.
+
+        Args:
+            motor_x_name (str): Name of the motor controlling the x-axis.
+            motor_y_name (str): Name of the motor controlling the y-axis.
+        """
         self.motor_thread.connect_motors(motor_x_name, motor_y_name)
         self.motor_thread.retrieve_motor_limits(self.motor_x, self.motor_y)
-        self.motor_thread.retrieve_motor_speed(self.motor_x, self.motor_y)
-        self.motor_thread.retrieve_motor_update_frequency(self.motor_x, self.motor_y)
+
         self.init_motor_map()
 
         self.motorControl.setEnabled(True)
@@ -79,15 +97,63 @@ class MotorApp(QWidget):
 
     @pyqtSlot(object, object)
     def get_selected_motors(self, motor_x, motor_y):
+        """
+        Slot to receive and set the selected motors.
+
+        Args:
+            motor_x (object): The selected motor for the x-axis.
+            motor_y (object): The selected motor for the y-axis.
+        """
         self.motor_x, self.motor_y = motor_x, motor_y
 
     @pyqtSlot(list, list)
     def get_available_motors(self, motors_x, motors_y):
+        """
+        Slot to populate the available motors in the combo boxes and set the index based on the configuration.
+
+        Args:
+            motors_x (list): List of available motors for the x-axis.
+            motors_y (list): List of available motors for the y-axis.
+        """
         self.comboBox_motor_x.addItems(motors_x)
         self.comboBox_motor_y.addItems(motors_y)
 
+        # Set index based on the motor names in the configuration, if available
+        selected_motor_x = ""
+        selected_motor_y = ""
+
+        if self.selected_motors:
+            selected_motor_x = self.selected_motors.get("motor_x", "")
+            selected_motor_y = self.selected_motors.get("motor_y", "")
+
+        index_x = self.comboBox_motor_x.findText(selected_motor_x)
+        index_y = self.comboBox_motor_y.findText(selected_motor_y)
+
+        if index_x != -1:
+            self.comboBox_motor_x.setCurrentIndex(index_x)
+        else:
+            print(
+                f"Warning: Motor '{selected_motor_x}' specified in the config file is not available."
+            )
+            self.comboBox_motor_x.setCurrentIndex(0)  # Optionally set to first item or any default
+
+        if index_y != -1:
+            self.comboBox_motor_y.setCurrentIndex(index_y)
+        else:
+            print(
+                f"Warning: Motor '{selected_motor_y}' specified in the config file is not available."
+            )
+            self.comboBox_motor_y.setCurrentIndex(0)  # Optionally set to first item or any default
+
     @pyqtSlot(list, list)
     def update_limits(self, x_limits: list, y_limits: list) -> None:
+        """
+        Slot to update the limits for x and y motors.
+
+        Args:
+            x_limits (list): List containing the lower and upper limits for the x-axis motor.
+            y_limits (list): List containing the lower and upper limits for the y-axis motor.
+        """
         self.limit_x = x_limits
         self.limit_y = y_limits
         self.spinBox_x_min.setValue(self.limit_x[0])
@@ -110,20 +176,6 @@ class MotorApp(QWidget):
         self.label_X_min.setText(f"- ({self.motor_x.name})")
 
         self.init_motor_map()  # reinitialize the map with the new limits
-
-    @pyqtSlot(int, int)
-    def update_speed(self, speed_x, speed_y):
-        self.spinBox_speed_x.setValue(speed_x)
-        self.spinBox_speed_y.setValue(speed_y)
-        for spinBox in (self.spinBox_speed_x, self.spinBox_speed_y):
-            spinBox.setStyleSheet("")
-
-    @pyqtSlot(int, int)
-    def update_update_frequency(self, update_frequency_x, update_frequency_y):
-        self.spinBox_update_frequency_x.setValue(update_frequency_x)
-        self.spinBox_update_frequency_y.setValue(update_frequency_y)
-        for spinBox in (self.spinBox_update_frequency_x, self.spinBox_update_frequency_y):
-            spinBox.setStyleSheet("")
 
     @pyqtSlot()
     def enable_motor_control(self):
@@ -234,18 +286,6 @@ class MotorApp(QWidget):
         self.spinBox_y_min.valueChanged.connect(lambda: self.param_changed(self.spinBox_y_min))
         self.spinBox_y_max.valueChanged.connect(lambda: self.param_changed(self.spinBox_y_max))
 
-        # SpinBoxes - Motor Speed
-        self.spinBox_speed_x.valueChanged.connect(lambda: self.param_changed(self.spinBox_speed_x))
-        self.spinBox_speed_y.valueChanged.connect(lambda: self.param_changed(self.spinBox_speed_y))
-
-        # SpinBoxes - Motor Update Frequency
-        self.spinBox_update_frequency_x.valueChanged.connect(
-            lambda: self.param_changed(self.spinBox_update_frequency_x)
-        )
-        self.spinBox_update_frequency_y.valueChanged.connect(
-            lambda: self.param_changed(self.spinBox_update_frequency_y)
-        )
-
         # SpinBoxes - Max Points and N Dim Points
         self.spinBox_max_points.valueChanged.connect(
             lambda: self.param_changed(self.spinBox_max_points)
@@ -270,16 +310,6 @@ class MotorApp(QWidget):
                 max_points=self.spinBox_max_points.value(),
                 num_dim_points=self.spinBox_num_dim_points.value(),
                 scatter_size=self.spinBox_scatter_size.value(),
-            )
-        )
-
-        self.pushButton_update_config.clicked.connect(
-            lambda: self.update_all_config(
-                speed=[self.spinBox_speed_x.value(), self.spinBox_speed_y.value()],
-                update_frequency=[
-                    self.spinBox_update_frequency_x.value(),
-                    self.spinBox_update_frequency_y.value(),
-                ],
             )
         )
 
@@ -367,10 +397,6 @@ class MotorApp(QWidget):
     def update_all_motor_limits(self, x_limit: list = None, y_limit: list = None) -> None:
         self.motor_thread.update_all_motor_limits(x_limit=x_limit, y_limit=y_limit)
 
-    def update_all_config(self, speed: list = None, update_frequency: list = None) -> None:
-        # TODO now only speed and update frequency
-        self.motor_thread.update_all_config(speed=speed, update_frequency=update_frequency)
-
     def update_arrow_key_shortcuts(self):
         if self.checkBox_enableArrows.isChecked():
             # Set the arrow key shortcuts for motor movement
@@ -443,10 +469,19 @@ class MotorActions(Enum):
 
 
 class MotorControl(QThread):
+    """
+    QThread subclass for controlling motor actions asynchronously.
+
+    Attributes:
+        coordinates_updated (pyqtSignal): Signal to emit current coordinates.
+        limits_retrieved (pyqtSignal): Signal to emit current limits.
+        move_finished (pyqtSignal): Signal to emit when the move is finished.
+        motors_loaded (pyqtSignal): Signal to emit when the motors are loaded.
+        motors_selected (pyqtSignal): Signal to emit when the motors are selected.
+    """
+
     coordinates_updated = pyqtSignal(float, float)  # Signal to emit current coordinates
     limits_retrieved = pyqtSignal(list, list)  # Signal to emit current limits
-    speed_retrieved = pyqtSignal(int, int)  # Signal to emit current speed
-    update_frequency_retrieved = pyqtSignal(int, int)  # Signal to emit current update frequency
     move_finished = pyqtSignal()  # Signal to emit when the move is finished
     motors_loaded = pyqtSignal(list, list)  # Signal to emit when the motors are loaded
     motors_selected = pyqtSignal(object, object)  # Signal to emit when the motors are selected
@@ -461,16 +496,19 @@ class MotorControl(QThread):
         self.action = None
         self._initialize_motor()
 
-    def motor_by_string(self, motor_x_name: str, motor_y_name: str) -> tuple:
-        motor_x_index = self.all_motors_names.index(motor_x_name)
-        motor_y_index = self.all_motors_names.index(motor_y_name)
-
-        motor_x = self.all_motors[motor_x_index]
-        motor_y = self.all_motors[motor_y_index]
-        return motor_x, motor_y
-
     def connect_motors(self, motor_x_name: str, motor_y_name: str) -> None:
-        self.motor_x, self.motor_y = self.motor_by_string(motor_x_name, motor_y_name)
+        """
+        Connect to the specified motors by their names.
+
+        Args:
+            motor_x_name (str): The name of the motor for the x-axis.
+            motor_y_name (str): The name of the motor for the y-axis.
+        """
+
+        self.motor_x, self.motor_y = (
+            dev[motor_x_name],
+            dev[motor_y_name],
+        )
 
         (self.current_x, self.current_y) = self.get_coordinates()
 
@@ -491,11 +529,19 @@ class MotorControl(QThread):
         self.motors_selected.emit(self.motor_x, self.motor_y)
 
     def get_all_motors(self) -> list:
-        all_motors = client.device_manager.devices.acquisition_group("motor")
+        """
+        Retrieve a list of all available motors.
+
+        Returns:
+            list: List of all available motors.
+        """
+        all_motors = (
+            client.device_manager.devices.enabled_devices
+        )  # .acquisition_group("motor") #TODO remove motor group?
         return all_motors
 
     def get_all_motors_names(self) -> list:
-        all_motors = client.device_manager.devices.acquisition_group("motor")
+        all_motors = client.device_manager.devices.enabled_devices  # .acquisition_group("motor")
         all_motors_names = [motor.name for motor in all_motors]
         return all_motors_names
 
@@ -517,41 +563,21 @@ class MotorControl(QThread):
         return self.current_x, self.current_y
 
     def get_motor_limits(self, motor) -> list:
-        """Get the limits of a motor"""
-        return motor.limits
+        """
+        Retrieve the limits for a specific motor.
 
-    def get_motor_config(self, motor) -> dict:
-        """Get the configuration of a motor"""  # TODO at this moment just for speed and update_frequency
-        return motor.get_device_config()
+        Args:
+            motor (object): Motor object.
 
-    def update_all_config(self, speed: list = None, update_frequency: list = None) -> None:
-        # TODO now only speed and update frequency
-        if speed is not None:
-            self.motor_x.set_device_config({"speed": speed[0]})
-            self.motor_y.set_device_config({"speed": speed[1]})
-
-        if update_frequency is not None:
-            self.motor_x.set_device_config({"update_frequency": update_frequency[0]})
-            self.motor_y.set_device_config({"update_frequency": update_frequency[1]})
-
-        self.retrieve_motor_speed(self.motor_x, self.motor_y)
-        self.retrieve_motor_update_frequency(self.motor_x, self.motor_y)
-
-    def retrieve_motor_speed(
-        self, motor_x, motor_y
-    ) -> None:  # TODO can be migrated to some general config function
-        """Get the speed of a motor"""
-        speed_x = motor_x.get_device_config()["speed"]
-        speed_y = motor_y.get_device_config()["speed"]
-        self.speed_retrieved.emit(int(speed_x), int(speed_y))
-
-    def retrieve_motor_update_frequency(
-        self, motor_x, motor_y
-    ) -> None:  # TODO can be migrated to some general config function
-        """Get the speed of a motor"""
-        update_frequency_x = motor_x.get_device_config()["update_frequency"]
-        update_frequency_y = motor_y.get_device_config()["update_frequency"]
-        self.update_frequency_retrieved.emit(int(update_frequency_x), int(update_frequency_y))
+        Returns:
+            tuple: Lower and upper limit for the motor.
+        """
+        try:
+            return motor.limits
+        except AttributeError:
+            # If the motor doesn't have a 'limits' attribute, return a default value or raise a custom exception
+            print(f"The device {motor} does not have defined limits.")
+            return None
 
     def retrieve_motor_limits(self, motor_x, motor_y):
         limit_x = self.get_motor_limits(motor_x)
@@ -653,9 +679,33 @@ class MotorControl(QThread):
 
 
 if __name__ == "__main__":
+    import yaml
+    import argparse
+
     from bec_lib import BECClient
 
     # from bec_lib.core import ServiceConfig,RedisConnector
+
+    parser = argparse.ArgumentParser(description="Motor App")
+
+    parser.add_argument(
+        "--config", "-c", help="Path to the .yaml configuration file", default="config_example.yaml"
+    )
+    args = parser.parse_args()
+
+    try:
+        with open(args.config, "r") as file:
+            config = yaml.safe_load(file)
+
+            selected_motors = config.get("selected_motors", {})
+            plot_motors = config.get("plot_motors", {})
+
+    except FileNotFoundError:
+        print(f"The file {args.config} was not found.")
+        exit(1)
+    except Exception as e:
+        print(f"An error occurred while loading the config file: {e}")
+        exit(1)
 
     client = BECClient()
     # client.initialize(config=ServiceConfig(config_path="test_config.yaml"))
@@ -668,6 +718,7 @@ if __name__ == "__main__":
     queue = client.queue
 
     app = QApplication([])
-    window = MotorApp()
+    MotorApp = MotorApp(selected_motors=selected_motors, plot_motors=plot_motors)
+    window = MotorApp
     window.show()
     app.exec_()
