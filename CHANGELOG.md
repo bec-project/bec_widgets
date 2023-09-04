@@ -2,6 +2,21 @@
 
 <!--next-version-placeholder-->
 
+## v0.12.0 (2023-09-04)
+
+### Feature
+
+* Config from .yaml file ([`1a67758`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/1a677584708e1c91491fe84db169103bdda488e5))
+* Removal of motor configurations from user ([`34212d4`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/34212d4d45c88a7bba75f289a25e5488ff95fc73))
+
+### Fix
+
+* Error message if motor do not have limits attribute ([`bf93b02`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/bf93b02cdc82086b32e2bd16f4b506c1bb76c65d))
+
+### Documentation
+
+* Added documentation to all classes and methods ([`4afaa1b`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/4afaa1b0ce1f29e4193e6999ecc13b1f0f662213))
+
 ## v0.11.0 (2023-09-04)
 
 ### Feature
