@@ -11,6 +11,22 @@ plot_data:
       label: 'Motor X'
       signals:
         - name: "samx"
+#          entry: "samx"
+    y:
+      label: 'BPM'
+      signals:
+        - name: "gauss_bpm"
+          entry: "gauss_bpm"
+        - name: "gauss_adc1"
+          entry: "gauss_adc1"
+        - name: "gauss_adc2"
+          entry: "gauss_adc2"
+
+  - plot_name: "BPM plot 2"
+    x:
+      label: 'Motor X'
+      signals:
+        - name: "samx"
           entry: "samx"
     y:
       label: 'BPM'
@@ -19,7 +35,19 @@ plot_data:
           entry: "gauss_bpm"
         - name: "gauss_adc1"
           entry: "gauss_adc1"
-
+  - plot_name: "BPM plot 3"
+    x:
+      label: 'Motor X'
+      signals:
+        - name: "samx"
+          entry: "samx"
+    y:
+      label: 'BPM'
+      signals:
+        - name: "gauss_bpm"
+          entry: "gauss_bpm"
+        - name: "gauss_adc1"
+          entry: "gauss_adc1"
   - plot_name: "ADC plot"
     x:
       label: 'Motor Y'

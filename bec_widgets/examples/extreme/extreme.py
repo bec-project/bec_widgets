@@ -74,6 +74,8 @@ class PlotApp(QWidget):
         self.grid_coordinates = None
         self.scanID = None
 
+        self.user_colors = {}  # key: (plot_name, y_name, y_entry), value: color
+
         # Initialize the UI
         self.init_ui(self.plot_settings["num_columns"])
         self.spinBox_N_columns.setValue(
@@ -200,8 +202,11 @@ class PlotApp(QWidget):
                     y_entries = [y_entries]
 
                 for y_entry in y_entries:
-                    pen_curve = mkPen(color=color, width=2, style=QtCore.Qt.DashLine)
-                    brush_curve = mkBrush(color=color)
+                    user_color = self.user_colors.get((plot_name, y_name, y_entry), None)
+                    color_to_use = user_color if user_color else color
+
+                    pen_curve = mkPen(color=color_to_use, width=2, style=QtCore.Qt.DashLine)
+                    brush_curve = mkBrush(color=color_to_use)
 
                     curve_data = pg.PlotDataItem(
                         symbolSize=5,
@@ -217,9 +222,11 @@ class PlotApp(QWidget):
 
                     # Create a ColorButton and set its color
                     color_btn = ColorButton()
-                    color_btn.setColor(color)
+                    color_btn.setColor(color_to_use)
                     color_btn.sigColorChanged.connect(
-                        lambda btn=color_btn, curve=curve_data: self.change_curve_color(btn, curve)
+                        lambda btn=color_btn, plot=plot_name, yname=y_name, yentry=y_entry, curve=curve_data: self.change_curve_color(
+                            btn, plot, yname, yentry, curve
+                        )
                     )
 
                     # Add the ColorButton as a QWidget to the table
@@ -238,13 +245,31 @@ class PlotApp(QWidget):
         self.tableWidget_crosshair.setVerticalHeaderLabels(row_labels)
         self.hook_crosshair()
 
-    def change_curve_color(self, btn, curve):
-        """Change the color of a curve."""
+    # def change_curve_color(self, btn, curve):
+    #     """Change the color of a curve."""
+    #     color = btn.color()
+    #     pen_curve = mkPen(color=color, width=2, style=QtCore.Qt.DashLine)
+    #     brush_curve = mkBrush(color=color)
+    #     curve.setPen(pen_curve)
+    #     curve.setSymbolBrush(brush_curve)
+
+    def change_curve_color(self, btn, plot_name, y_name, y_entry, curve):
+        """
+        Change the color of a curve and update the corresponding ColorButton.
+
+        Args:
+            btn (ColorButton): The ColorButton that was clicked.
+            plot_name (str): The name of the plot where the curve belongs.
+            y_name (str): The name of the y signal.
+            y_entry (str): The entry of the y signal.
+            curve (PlotDataItem): The curve to be changed.
+        """
         color = btn.color()
         pen_curve = mkPen(color=color, width=2, style=QtCore.Qt.DashLine)
         brush_curve = mkBrush(color=color)
         curve.setPen(pen_curve)
         curve.setSymbolBrush(brush_curve)
+        self.user_colors[(plot_name, y_name, y_entry)] = color
 
     def hook_crosshair(self):
         """Attach crosshairs to each plot and connect them to the update_table method."""
@@ -322,6 +347,7 @@ class PlotApp(QWidget):
             msg (dict): Message received with scan data.
             metadata (dict): Metadata of the scan.
         """
+
         current_scanID = msg.get("scanID", None)
         if current_scanID is None:
             return
@@ -452,7 +478,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Plotting App")
     parser.add_argument(
-        "--config", "-c", help="Path to the .yaml configuration file", default="config.yaml"
+        "--config", "-c", help="Path to the .yaml configuration file", default="config_example.yaml"
     )
     args = parser.parse_args()
 
