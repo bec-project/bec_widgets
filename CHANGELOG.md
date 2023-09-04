@@ -2,6 +2,17 @@
 
 <!--next-version-placeholder-->
 
+## v0.11.0 (2023-09-04)
+
+### Feature
+
+* Colorbutton next to each curve in the table to be able to set up colors ([`2c6719c`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/2c6719cf390e6638cadbc814eb0c085bb45c3c6c))
+
+### Fix
+
+* User selected colors are preserved with the new scan ([`8e7885f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/8e7885f36dd2812e3285c4d2d101212055644c7b))
+* Colorbutton change now symbols as well ([`6d2e1c9`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/6d2e1c9d08595a45f502287c6490905e8df3db10))
+
 ## v0.10.0 (2023-09-01)
 
 ### Feature
