@@ -563,7 +563,21 @@ class MotorControl(QThread):
         return self.current_x, self.current_y
 
     def get_motor_limits(self, motor) -> list:
-        return motor.limits
+        """
+        Retrieve the limits for a specific motor.
+
+        Args:
+            motor (object): Motor object.
+
+        Returns:
+            tuple: Lower and upper limit for the motor.
+        """
+        try:
+            return motor.limits
+        except AttributeError:
+            # If the motor doesn't have a 'limits' attribute, return a default value or raise a custom exception
+            print(f"The device {motor} does not have defined limits.")
+            return None
 
     def retrieve_motor_limits(self, motor_x, motor_y):
         limit_x = self.get_motor_limits(motor_x)
