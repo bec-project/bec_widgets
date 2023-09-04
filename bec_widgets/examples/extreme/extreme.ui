@@ -53,6 +53,11 @@
               <string>Clicked</string>
              </property>
             </column>
+            <column>
+             <property name="text">
+              <string>Color</string>
+             </property>
+            </column>
            </widget>
           </item>
          </layout>
