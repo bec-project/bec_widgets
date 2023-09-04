@@ -16,13 +16,10 @@ from bec_lib.core import MessageEndpoints, BECMessage
 
 
 # TODO - General features
-#  - setting motor acceleration
 #  - updating motor precision
 #  - put motor status (moving, stopped, etc)
-#  - add spinBox for motor scatter size
 #  - add mouse interactions with the plot -> click to select coordinates, double click to move?
 #  - adjust right click actions
-#  - implement logic to check if motor actually has limits
 
 
 class MotorApp(QWidget):
@@ -49,8 +46,6 @@ class MotorApp(QWidget):
         self.motor_thread.motors_loaded.connect(self.get_available_motors)
         self.motor_thread.motors_selected.connect(self.get_selected_motors)
         self.motor_thread.limits_retrieved.connect(self.update_limits)
-        self.motor_thread.speed_retrieved.connect(self.update_speed)
-        self.motor_thread.update_frequency_retrieved.connect(self.update_update_frequency)
 
         # UI
         self.init_ui()
@@ -62,8 +57,7 @@ class MotorApp(QWidget):
     def connect_motor(self, motor_x_name: str, motor_y_name: str):
         self.motor_thread.connect_motors(motor_x_name, motor_y_name)
         self.motor_thread.retrieve_motor_limits(self.motor_x, self.motor_y)
-        self.motor_thread.retrieve_motor_speed(self.motor_x, self.motor_y)
-        self.motor_thread.retrieve_motor_update_frequency(self.motor_x, self.motor_y)
+
         self.init_motor_map()
 
         self.motorControl.setEnabled(True)
@@ -110,20 +104,6 @@ class MotorApp(QWidget):
         self.label_X_min.setText(f"- ({self.motor_x.name})")
 
         self.init_motor_map()  # reinitialize the map with the new limits
-
-    @pyqtSlot(int, int)
-    def update_speed(self, speed_x, speed_y):
-        self.spinBox_speed_x.setValue(speed_x)
-        self.spinBox_speed_y.setValue(speed_y)
-        for spinBox in (self.spinBox_speed_x, self.spinBox_speed_y):
-            spinBox.setStyleSheet("")
-
-    @pyqtSlot(int, int)
-    def update_update_frequency(self, update_frequency_x, update_frequency_y):
-        self.spinBox_update_frequency_x.setValue(update_frequency_x)
-        self.spinBox_update_frequency_y.setValue(update_frequency_y)
-        for spinBox in (self.spinBox_update_frequency_x, self.spinBox_update_frequency_y):
-            spinBox.setStyleSheet("")
 
     @pyqtSlot()
     def enable_motor_control(self):
@@ -234,18 +214,6 @@ class MotorApp(QWidget):
         self.spinBox_y_min.valueChanged.connect(lambda: self.param_changed(self.spinBox_y_min))
         self.spinBox_y_max.valueChanged.connect(lambda: self.param_changed(self.spinBox_y_max))
 
-        # SpinBoxes - Motor Speed
-        self.spinBox_speed_x.valueChanged.connect(lambda: self.param_changed(self.spinBox_speed_x))
-        self.spinBox_speed_y.valueChanged.connect(lambda: self.param_changed(self.spinBox_speed_y))
-
-        # SpinBoxes - Motor Update Frequency
-        self.spinBox_update_frequency_x.valueChanged.connect(
-            lambda: self.param_changed(self.spinBox_update_frequency_x)
-        )
-        self.spinBox_update_frequency_y.valueChanged.connect(
-            lambda: self.param_changed(self.spinBox_update_frequency_y)
-        )
-
         # SpinBoxes - Max Points and N Dim Points
         self.spinBox_max_points.valueChanged.connect(
             lambda: self.param_changed(self.spinBox_max_points)
@@ -270,16 +238,6 @@ class MotorApp(QWidget):
                 max_points=self.spinBox_max_points.value(),
                 num_dim_points=self.spinBox_num_dim_points.value(),
                 scatter_size=self.spinBox_scatter_size.value(),
-            )
-        )
-
-        self.pushButton_update_config.clicked.connect(
-            lambda: self.update_all_config(
-                speed=[self.spinBox_speed_x.value(), self.spinBox_speed_y.value()],
-                update_frequency=[
-                    self.spinBox_update_frequency_x.value(),
-                    self.spinBox_update_frequency_y.value(),
-                ],
             )
         )
 
@@ -367,10 +325,6 @@ class MotorApp(QWidget):
     def update_all_motor_limits(self, x_limit: list = None, y_limit: list = None) -> None:
         self.motor_thread.update_all_motor_limits(x_limit=x_limit, y_limit=y_limit)
 
-    def update_all_config(self, speed: list = None, update_frequency: list = None) -> None:
-        # TODO now only speed and update frequency
-        self.motor_thread.update_all_config(speed=speed, update_frequency=update_frequency)
-
     def update_arrow_key_shortcuts(self):
         if self.checkBox_enableArrows.isChecked():
             # Set the arrow key shortcuts for motor movement
@@ -445,8 +399,6 @@ class MotorActions(Enum):
 class MotorControl(QThread):
     coordinates_updated = pyqtSignal(float, float)  # Signal to emit current coordinates
     limits_retrieved = pyqtSignal(list, list)  # Signal to emit current limits
-    speed_retrieved = pyqtSignal(int, int)  # Signal to emit current speed
-    update_frequency_retrieved = pyqtSignal(int, int)  # Signal to emit current update frequency
     move_finished = pyqtSignal()  # Signal to emit when the move is finished
     motors_loaded = pyqtSignal(list, list)  # Signal to emit when the motors are loaded
     motors_selected = pyqtSignal(object, object)  # Signal to emit when the motors are selected
@@ -465,7 +417,7 @@ class MotorControl(QThread):
         self.motor_x, self.motor_y = (
             dev[motor_x_name],
             dev[motor_y_name],
-        )  # self.motor_by_string(motor_x_name, motor_y_name)
+        )
 
         (self.current_x, self.current_y) = self.get_coordinates()
 
@@ -515,38 +467,38 @@ class MotorControl(QThread):
         """Get the limits of a motor"""
         return motor.limits
 
-    def get_motor_config(self, motor) -> dict:
-        """Get the configuration of a motor"""  # TODO at this moment just for speed and update_frequency
-        return motor.get_device_config()
+    # def get_motor_config(self, motor) -> dict:
+    #     """Get the configuration of a motor"""  # TODO at this moment just for speed and update_frequency
+    #     return motor.get_device_config()
 
-    def update_all_config(self, speed: list = None, update_frequency: list = None) -> None:
-        # TODO now only speed and update frequency
-        if speed is not None:
-            self.motor_x.set_device_config({"speed": speed[0]})
-            self.motor_y.set_device_config({"speed": speed[1]})
+    # def update_all_config(self, speed: list = None, update_frequency: list = None) -> None:
+    #     # TODO now only speed and update frequency
+    #     if speed is not None:
+    #         self.motor_x.set_device_config({"speed": speed[0]})
+    #         self.motor_y.set_device_config({"speed": speed[1]})
+    #
+    #     if update_frequency is not None:
+    #         self.motor_x.set_device_config({"update_frequency": update_frequency[0]})
+    #         self.motor_y.set_device_config({"update_frequency": update_frequency[1]})
+    #
+    #     self.retrieve_motor_speed(self.motor_x, self.motor_y)
+    #     self.retrieve_motor_update_frequency(self.motor_x, self.motor_y)
 
-        if update_frequency is not None:
-            self.motor_x.set_device_config({"update_frequency": update_frequency[0]})
-            self.motor_y.set_device_config({"update_frequency": update_frequency[1]})
+    # def retrieve_motor_speed(
+    #     self, motor_x, motor_y
+    # ) -> None:  # TODO can be migrated to some general config function
+    #     """Get the speed of a motor"""
+    #     speed_x = motor_x.get_device_config()["speed"]
+    #     speed_y = motor_y.get_device_config()["speed"]
+    #     self.speed_retrieved.emit(int(speed_x), int(speed_y))
 
-        self.retrieve_motor_speed(self.motor_x, self.motor_y)
-        self.retrieve_motor_update_frequency(self.motor_x, self.motor_y)
-
-    def retrieve_motor_speed(
-        self, motor_x, motor_y
-    ) -> None:  # TODO can be migrated to some general config function
-        """Get the speed of a motor"""
-        speed_x = motor_x.get_device_config()["speed"]
-        speed_y = motor_y.get_device_config()["speed"]
-        self.speed_retrieved.emit(int(speed_x), int(speed_y))
-
-    def retrieve_motor_update_frequency(
-        self, motor_x, motor_y
-    ) -> None:  # TODO can be migrated to some general config function
-        """Get the speed of a motor"""
-        update_frequency_x = motor_x.get_device_config()["update_frequency"]
-        update_frequency_y = motor_y.get_device_config()["update_frequency"]
-        self.update_frequency_retrieved.emit(int(update_frequency_x), int(update_frequency_y))
+    # def retrieve_motor_update_frequency(
+    #     self, motor_x, motor_y
+    # ) -> None:  # TODO can be migrated to some general config function
+    #     """Get the speed of a motor"""
+    #     update_frequency_x = motor_x.get_device_config()["update_frequency"]
+    #     update_frequency_y = motor_y.get_device_config()["update_frequency"]
+    #     self.update_frequency_retrieved.emit(int(update_frequency_x), int(update_frequency_y))
 
     def retrieve_motor_limits(self, motor_x, motor_y):
         limit_x = self.get_motor_limits(motor_x)
