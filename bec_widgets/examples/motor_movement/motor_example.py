@@ -241,7 +241,16 @@ class MotorApp(QWidget):
         self.motor_map = pg.ScatterPlotItem(
             size=self.scatter_size, pen=pg.mkPen(None), brush=pg.mkBrush(255, 255, 255, 255)
         )
+        self.motor_map.setZValue(0)
+
+        self.saved_motor_positions = np.array([])  # to track saved motor positions
+        self.saved_motor_map = pg.ScatterPlotItem(
+            size=self.scatter_size, pen=pg.mkPen(None), brush=pg.mkBrush(255, 0, 0, 255)
+        )
+        self.saved_motor_map.setZValue(1)  # for saved motor positions
+
         self.plot_map.addItem(self.motor_map)
+        self.plot_map.addItem(self.saved_motor_map)
         self.plot_map.showGrid(x=True, y=True)
 
         ##########################
@@ -495,13 +504,38 @@ class MotorApp(QWidget):
                 float(table.item(current_row_count, 3).text()),
             )
         )
+
+        # Add point to scatter plot
+        new_pos = np.array(coordinates)
+        if self.saved_motor_positions.size == 0:
+            self.saved_motor_positions = np.array([new_pos])
+        else:
+            self.saved_motor_positions = np.vstack((self.saved_motor_positions, new_pos))
+        self.saved_motor_map.setData(
+            pos=self.saved_motor_positions, brush=pg.mkBrush(255, 0, 0, 255)
+        )
+
         table.resizeColumnsToContents()
+
+    def toggle_point_visibility(self, state, coord):
+        index = np.where((self.saved_motor_positions == coord).all(axis=1))[0][0]
+        new_brush = pg.mkBrush(255, 0, 0, 255 if state == Qt.Checked else 0)
+        self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=new_brush)
 
     def delete_selected_row(self):
         selected_rows = self.tableWidget_coordinates.selectionModel().selectedRows()
-
-        # If you allow multiple selections, you may want to loop through all selected rows
-        for row in reversed(selected_rows):  # Reverse to delete from the end
+        for row in reversed(selected_rows):
+            coord = np.array(
+                [
+                    float(self.tableWidget_coordinates.item(row.row(), 2).text()),
+                    float(self.tableWidget_coordinates.item(row.row(), 3).text()),
+                ]
+            )
+            index = np.where((self.saved_motor_positions == coord).all(axis=1))[0][0]
+            self.saved_motor_positions = np.delete(self.saved_motor_positions, index, axis=0)
+            self.saved_motor_map.setData(
+                pos=self.saved_motor_positions, brush=pg.mkBrush(255, 0, 0, 255)
+            )
             self.tableWidget_coordinates.removeRow(row.row())
 
     def save_absolute_coordinates(self):
