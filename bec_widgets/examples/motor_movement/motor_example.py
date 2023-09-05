@@ -417,6 +417,10 @@ class MotorApp(QWidget):
         self.tr.translate(limit_x_min, limit_y_min)
         self.limit_map.setTransform(self.tr)
 
+        if hasattr(self, "highlight_V") and hasattr(self, "highlight_H"):
+            self.plot_map.removeItem(self.highlight_V)
+            self.plot_map.removeItem(self.highlight_H)
+
         # Crosshair to highlight the current position
         self.highlight_V = pg.InfiniteLine(
             angle=90, movable=False, pen=pg.mkPen(color="r", width=1, style=QtCore.Qt.DashLine)
@@ -503,7 +507,7 @@ class MotorApp(QWidget):
         )
         table.setCellWidget(current_row_count, 4, button)
 
-        # hook signals of table
+        # Hook signals of table
         button.clicked.connect(
             lambda: self.move_motor_absolute(
                 float(table.item(current_row_count, 2).text()),
@@ -516,17 +520,18 @@ class MotorApp(QWidget):
         self.saved_point_visibility.append(True)
 
         # Update the scatter plot to maintain the visibility of existing points
-        brushes = [
-            pg.mkBrush(255, 0, 0, 255) if visible else pg.mkBrush(255, 0, 0, 0)
-            for visible in self.saved_point_visibility
-        ]
-
         new_pos = np.array(coordinates)
         if self.saved_motor_positions.size == 0:
             self.saved_motor_positions = np.array([new_pos])
         else:
             self.saved_motor_positions = np.vstack((self.saved_motor_positions, new_pos))
-            self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
+
+        brushes = [
+            pg.mkBrush(255, 0, 0, 255) if visible else pg.mkBrush(255, 0, 0, 0)
+            for visible in self.saved_point_visibility
+        ]
+
+        self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
 
         table.resizeColumnsToContents()
 
