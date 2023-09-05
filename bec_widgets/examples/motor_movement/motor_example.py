@@ -529,7 +529,7 @@ class MotorApp(QWidget):
             self.saved_motor_positions = np.vstack((self.saved_motor_positions, new_pos))
 
         brushes = [
-            pg.mkBrush(255, 0, 0, 255) if visible else pg.mkBrush(255, 0, 0, 0)
+            pg.mkBrush(255, 165, 0, 255) if visible else pg.mkBrush(255, 165, 0, 0)
             for visible in self.saved_point_visibility
         ]
 
@@ -827,13 +827,17 @@ if __name__ == "__main__":
 
     from bec_lib import BECClient
 
-    # from bec_lib.core import ServiceConfig,RedisConnector
+    from bec_lib.core import ServiceConfig, RedisConnector
 
     parser = argparse.ArgumentParser(description="Motor App")
 
     parser.add_argument(
         "--config", "-c", help="Path to the .yaml configuration file", default="config_example.yaml"
     )
+    parser.add_argument(
+        "--bec-config", "-b", help="Path to the BEC .yaml configuration file", default=None
+    )
+
     args = parser.parse_args()
 
     try:
@@ -851,10 +855,10 @@ if __name__ == "__main__":
         exit(1)
 
     client = BECClient()
-    # client.initialize(config=ServiceConfig(config_path="test_config.yaml"))
 
-    # Client initialization - by dispatcher
-    # client = bec_dispatcher.client
+    if args.bec_config:
+        client.initialize(config=ServiceConfig(config_path=args.bec_config))
+
     client.start()
     dev = client.device_manager.devices
     scans = client.scans
