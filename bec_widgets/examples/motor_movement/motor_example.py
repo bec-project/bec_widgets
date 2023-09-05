@@ -286,13 +286,13 @@ class MotorApp(QWidget):
 
         # Set absolute coordinates
         self.pushButton_set.clicked.connect(self.save_absolute_coordinates)
-        self.pushButton_set.setShortcut("Ctrl+S")
-        self.pushButton_set.setToolTip("Ctrl+S")
+        self.pushButton_set.setShortcut("Ctrl+D")
+        self.pushButton_set.setToolTip("Ctrl+D")
 
         # Save Current coordinates
         self.pushButton_save.clicked.connect(self.save_current_coordinates)
-        self.pushButton_save.setShortcut("Ctrl+D")
-        self.pushButton_save.setToolTip("Ctrl+D")
+        self.pushButton_save.setShortcut("Ctrl+S")
+        self.pushButton_save.setToolTip("Ctrl+S")
 
         # Stop Button
         self.pushButton_stop.clicked.connect(self.motor_thread.stop_movement)
@@ -362,10 +362,18 @@ class MotorApp(QWidget):
             self.tabWidget_tables.setTabEnabled(1, False)
 
         # Keyboard shortcuts
+
+        # Delete table entry
         delete_shortcut = QShortcut(QKeySequence("Delete"), self)
         backspace_shortcut = QShortcut(QKeySequence("Backspace"), self)
         delete_shortcut.activated.connect(self.delete_selected_row)
         backspace_shortcut.activated.connect(self.delete_selected_row)
+
+        # Increase/decrease step
+        increase_shortcut = QShortcut(QKeySequence("Ctrl+A"), self)
+        decrease_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self)
+        increase_shortcut.activated.connect(self.increase_step)
+        decrease_shortcut.activated.connect(self.decrease_step)
 
     def init_motor_map(self):
         # Get motor limits
@@ -380,7 +388,7 @@ class MotorApp(QWidget):
         map_height = limit_y_max - limit_y_min + 1
 
         # Create an empty image map
-        self.background_value = 15
+        self.background_value = 25
         self.limit_map_data = np.full(
             (map_width, map_height), self.background_value, dtype=np.float32
         )
@@ -417,7 +425,7 @@ class MotorApp(QWidget):
         decrement_step = (255 - 50) / self.num_dim_points
 
         for i in range(1, min(self.num_dim_points + 1, len(self.motor_positions) + 1)):
-            brightness = max(50, 255 - decrement_step * (i - 1))
+            brightness = max(60, 255 - decrement_step * (i - 1))
             self.brushes[-i] = pg.mkBrush(brightness, brightness, brightness, 255)
 
         self.brushes[-1] = pg.mkBrush(255, 255, 255, 255)  # Newest point is always full brightness
@@ -503,6 +511,18 @@ class MotorApp(QWidget):
         self.spinBox_step.setDecimals(self.precision)
         self.spinBox_absolute_x.setDecimals(self.precision)
         self.spinBox_absolute_y.setDecimals(self.precision)
+
+    def increase_step(self):
+        old_step = self.spinBox_step.value()
+        new_step = old_step * 2
+
+        self.spinBox_step.setValue(new_step)
+
+    def decrease_step(self):
+        old_step = self.spinBox_step.value()
+        new_step = old_step / 2
+
+        self.spinBox_step.setValue(new_step)
 
     @staticmethod
     def param_changed(ui_element):
