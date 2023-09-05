@@ -7,7 +7,7 @@ from PyQt5 import QtGui
 from PyQt5.QtCore import QThread, pyqtSlot
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtWidgets import QApplication, QWidget
-from pyqtgraph.Qt import QtWidgets, uic
+from pyqtgraph.Qt import QtWidgets, uic, QtCore
 
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QShortcut
@@ -83,7 +83,7 @@ class MotorApp(QWidget):
         self.motor_thread.connect_motors(motor_x_name, motor_y_name)
         self.motor_thread.retrieve_motor_limits(self.motor_x, self.motor_y)
 
-        self.init_motor_map()
+        # self.init_motor_map()
 
         self.motorControl.setEnabled(True)
         self.motorControl_absolute.setEnabled(True)
@@ -406,6 +406,20 @@ class MotorApp(QWidget):
         self.tr.translate(limit_x_min, limit_y_min)
         self.limit_map.setTransform(self.tr)
 
+        # Crosshair to highlight the current position
+        self.highlight_V = pg.InfiniteLine(
+            angle=90, movable=False, pen=pg.mkPen(color="r", width=1, style=QtCore.Qt.DashLine)
+        )
+        self.highlight_H = pg.InfiniteLine(
+            angle=0, movable=False, pen=pg.mkPen(color="r", width=1, style=QtCore.Qt.DashLine)
+        )
+
+        self.plot_map.addItem(self.highlight_V)
+        self.plot_map.addItem(self.highlight_H)
+
+        self.highlight_V.setPos(init_pos[0])
+        self.highlight_H.setPos(init_pos[1])
+
     def update_image_map(self, x, y):
         # Update label
         self.label_coorditanes.setText(f"Motor position: ({x}, {y})")
@@ -431,6 +445,10 @@ class MotorApp(QWidget):
         self.brushes[-1] = pg.mkBrush(255, 255, 255, 255)  # Newest point is always full brightness
 
         self.motor_map.setData(pos=self.motor_positions, brush=self.brushes, size=self.scatter_size)
+
+        # Set Highlight
+        self.highlight_V.setPos(x)
+        self.highlight_H.setPos(y)
 
     def update_all_motor_limits(self, x_limit: list = None, y_limit: list = None) -> None:
         self.motor_thread.update_all_motor_limits(x_limit=x_limit, y_limit=y_limit)
