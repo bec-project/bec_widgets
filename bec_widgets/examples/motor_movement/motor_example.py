@@ -480,12 +480,16 @@ class MotorApp(QWidget):
         self, table: QtWidgets.QTableWidget, coordinates: tuple, tag: str = None, precision: int = 0
     ) -> None:
         current_row_count = table.rowCount()
-
         table.setRowCount(current_row_count + 1)
 
         checkBox = QtWidgets.QCheckBox()
         checkBox.setChecked(True)
         button = QtWidgets.QPushButton("Go")
+
+        # Connect checkBox state change to toggle visibility
+        checkBox.stateChanged.connect(
+            lambda state, coord=coordinates: self.toggle_point_visibility(state, coord)
+        )
 
         table.setItem(current_row_count, 0, QtWidgets.QTableWidgetItem(str(tag)))
         table.setCellWidget(current_row_count, 1, checkBox)
@@ -519,8 +523,16 @@ class MotorApp(QWidget):
 
     def toggle_point_visibility(self, state, coord):
         index = np.where((self.saved_motor_positions == coord).all(axis=1))[0][0]
-        new_brush = pg.mkBrush(255, 0, 0, 255 if state == Qt.Checked else 0)
-        self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=new_brush)
+        if state == Qt.Checked:
+            new_brush = pg.mkBrush(255, 0, 0, 255)
+        else:
+            new_brush = pg.mkBrush(255, 0, 0, 0)  # Invisible
+
+        brushes = [
+            pg.mkBrush(255, 0, 0, 255) if i != index else new_brush
+            for i in range(len(self.saved_motor_positions))
+        ]
+        self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
 
     def delete_selected_row(self):
         selected_rows = self.tableWidget_coordinates.selectionModel().selectedRows()
