@@ -361,14 +361,18 @@ class MotorApp(QWidget):
         # Increase/decrease step size for X motor
         increase_x_shortcut = QShortcut(QKeySequence("Ctrl+A"), self)
         decrease_x_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self)
-        increase_x_shortcut.activated.connect(self.increase_step_x)
-        decrease_x_shortcut.activated.connect(self.decrease_step_x)
+        increase_x_shortcut.activated.connect(lambda: self.change_step_size(self.spinBox_step_x, 2))
+        decrease_x_shortcut.activated.connect(
+            lambda: self.change_step_size(self.spinBox_step_x, 0.5)
+        )
 
         # Increase/decrease step size for Y motor
         increase_y_shortcut = QShortcut(QKeySequence("Alt+A"), self)
         decrease_y_shortcut = QShortcut(QKeySequence("Alt+Z"), self)
-        increase_y_shortcut.activated.connect(self.increase_step_y)
-        decrease_y_shortcut.activated.connect(self.decrease_step_y)
+        increase_y_shortcut.activated.connect(lambda: self.change_step_size(self.spinBox_step_y, 2))
+        decrease_y_shortcut.activated.connect(
+            lambda: self.change_step_size(self.spinBox_step_y, 0.5)
+        )
 
         # Go absolute button
         self.pushButton_go_absolute.setShortcut("Ctrl+G")
@@ -598,25 +602,12 @@ class MotorApp(QWidget):
         self.spinBox_absolute_x.setDecimals(self.precision)
         self.spinBox_absolute_y.setDecimals(self.precision)
 
-    def increase_step_x(self):
-        old_step = self.spinBox_step_x.value()
-        new_step = old_step * 2
-        self.spinBox_step_x.setValue(new_step)
+    def change_step_size(self, spinBox: QtWidgets.QDoubleSpinBox, factor: float) -> None:
+        old_step = spinBox.value()
+        new_step = old_step * factor
+        spinBox.setValue(new_step)
 
-    def decrease_step_x(self):
-        old_step = self.spinBox_step_x.value()
-        new_step = old_step / 2
-        self.spinBox_step_x.setValue(new_step)
-
-    def increase_step_y(self):
-        old_step = self.spinBox_step_y.value()
-        new_step = old_step * 2
-        self.spinBox_step_y.setValue(new_step)
-
-    def decrease_step_y(self):
-        old_step = self.spinBox_step_y.value()
-        new_step = old_step / 2
-        self.spinBox_step_y.setValue(new_step)
+    # TODO generalise the following functions:
 
     def sync_step_sizes(self):
         """Sync step sizes based on checkbox state."""
