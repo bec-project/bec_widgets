@@ -244,6 +244,8 @@ class MotorApp(QWidget):
         self.motor_map.setZValue(0)
 
         self.saved_motor_positions = np.array([])  # to track saved motor positions
+        self.saved_point_visibility = []  # to track visibility of saved motor positions
+
         self.saved_motor_map = pg.ScatterPlotItem(
             size=self.scatter_size, pen=pg.mkPen(None), brush=pg.mkBrush(255, 0, 0, 255)
         )
@@ -510,27 +512,32 @@ class MotorApp(QWidget):
         )
 
         # Add point to scatter plot
+        # Add a True value to saved_point_visibility list when a new point is added.
+        self.saved_point_visibility.append(True)
+
+        # Update the scatter plot to maintain the visibility of existing points
+        brushes = [
+            pg.mkBrush(255, 0, 0, 255) if visible else pg.mkBrush(255, 0, 0, 0)
+            for visible in self.saved_point_visibility
+        ]
+
         new_pos = np.array(coordinates)
         if self.saved_motor_positions.size == 0:
             self.saved_motor_positions = np.array([new_pos])
         else:
             self.saved_motor_positions = np.vstack((self.saved_motor_positions, new_pos))
-        self.saved_motor_map.setData(
-            pos=self.saved_motor_positions, brush=pg.mkBrush(255, 0, 0, 255)
-        )
+            self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
 
         table.resizeColumnsToContents()
 
     def toggle_point_visibility(self, state, coord):
         index = np.where((self.saved_motor_positions == coord).all(axis=1))[0][0]
-        if state == Qt.Checked:
-            new_brush = pg.mkBrush(255, 0, 0, 255)
-        else:
-            new_brush = pg.mkBrush(255, 0, 0, 0)  # Invisible
+        self.saved_point_visibility[index] = state == Qt.Checked
 
+        # Generate brushes based on visibility state
         brushes = [
-            pg.mkBrush(255, 0, 0, 255) if i != index else new_brush
-            for i in range(len(self.saved_motor_positions))
+            pg.mkBrush(255, 0, 0, 255) if visible else pg.mkBrush(255, 0, 0, 0)
+            for visible in self.saved_point_visibility
         ]
         self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
 
