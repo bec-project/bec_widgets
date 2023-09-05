@@ -241,7 +241,18 @@ class MotorApp(QWidget):
         self.motor_map = pg.ScatterPlotItem(
             size=self.scatter_size, pen=pg.mkPen(None), brush=pg.mkBrush(255, 255, 255, 255)
         )
+        self.motor_map.setZValue(0)
+
+        self.saved_motor_positions = np.array([])  # to track saved motor positions
+        self.saved_point_visibility = []  # to track visibility of saved motor positions
+
+        self.saved_motor_map = pg.ScatterPlotItem(
+            size=self.scatter_size, pen=pg.mkPen(None), brush=pg.mkBrush(255, 0, 0, 255)
+        )
+        self.saved_motor_map.setZValue(1)  # for saved motor positions
+
         self.plot_map.addItem(self.motor_map)
+        self.plot_map.addItem(self.saved_motor_map)
         self.plot_map.showGrid(x=True, y=True)
 
         ##########################
@@ -408,6 +419,10 @@ class MotorApp(QWidget):
         self.tr.translate(limit_x_min, limit_y_min)
         self.limit_map.setTransform(self.tr)
 
+        if hasattr(self, "highlight_V") and hasattr(self, "highlight_H"):
+            self.plot_map.removeItem(self.highlight_V)
+            self.plot_map.removeItem(self.highlight_H)
+
         # Crosshair to highlight the current position
         self.highlight_V = pg.InfiniteLine(
             angle=90, movable=False, pen=pg.mkPen(color="r", width=1, style=QtCore.Qt.DashLine)
@@ -473,12 +488,16 @@ class MotorApp(QWidget):
         self, table: QtWidgets.QTableWidget, coordinates: tuple, tag: str = None, precision: int = 0
     ) -> None:
         current_row_count = table.rowCount()
-
         table.setRowCount(current_row_count + 1)
 
         checkBox = QtWidgets.QCheckBox()
         checkBox.setChecked(True)
         button = QtWidgets.QPushButton("Go")
+
+        # Connect checkBox state change to toggle visibility
+        checkBox.stateChanged.connect(
+            lambda state, coord=coordinates: self.toggle_point_visibility(state, coord)
+        )
 
         table.setItem(current_row_count, 0, QtWidgets.QTableWidgetItem(str(tag)))
         table.setCellWidget(current_row_count, 1, checkBox)
@@ -490,21 +509,59 @@ class MotorApp(QWidget):
         )
         table.setCellWidget(current_row_count, 4, button)
 
-        # hook signals of table
+        # Hook signals of table
         button.clicked.connect(
             lambda: self.move_motor_absolute(
                 float(table.item(current_row_count, 2).text()),
                 float(table.item(current_row_count, 3).text()),
             )
         )
+
+        # Add point to scatter plot
+        # Add a True value to saved_point_visibility list when a new point is added.
+        self.saved_point_visibility.append(True)
+
+        # Update the scatter plot to maintain the visibility of existing points
+        new_pos = np.array(coordinates)
+        if self.saved_motor_positions.size == 0:
+            self.saved_motor_positions = np.array([new_pos])
+        else:
+            self.saved_motor_positions = np.vstack((self.saved_motor_positions, new_pos))
+
+        brushes = [
+            pg.mkBrush(255, 0, 0, 255) if visible else pg.mkBrush(255, 0, 0, 0)
+            for visible in self.saved_point_visibility
+        ]
+
+        self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
+
         table.resizeColumnsToContents()
+
+    def toggle_point_visibility(self, state, coord):
+        index = np.where((self.saved_motor_positions == coord).all(axis=1))[0][0]
+        self.saved_point_visibility[index] = state == Qt.Checked
+
+        # Generate brushes based on visibility state
+        brushes = [
+            pg.mkBrush(255, 0, 0, 255) if visible else pg.mkBrush(255, 0, 0, 0)
+            for visible in self.saved_point_visibility
+        ]
+        self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
 
     def delete_selected_row(self):
         selected_rows = self.tableWidget_coordinates.selectionModel().selectedRows()
-
-        # If you allow multiple selections, you may want to loop through all selected rows
-        for row in reversed(selected_rows):  # Reverse to delete from the end
-            self.tableWidget_coordinates.removeRow(row.row())
+        for row in reversed(selected_rows):
+            row_index = row.row()
+            self.saved_motor_positions = np.delete(self.saved_motor_positions, row_index, axis=0)
+            del self.saved_point_visibility[row_index]  # Update this line
+            brushes = [
+                pg.mkBrush(255, 0, 0, 255) if visible else pg.mkBrush(255, 0, 0, 0)
+                for visible in self.saved_point_visibility
+            ]  # Regenerate brushes
+            self.saved_motor_map.setData(
+                pos=self.saved_motor_positions, brush=brushes
+            )  # Update this line
+            self.tableWidget_coordinates.removeRow(row_index)
 
     def save_absolute_coordinates(self):
         self.generate_table_coordinate(
