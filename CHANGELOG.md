@@ -2,6 +2,19 @@
 
 <!--next-version-placeholder-->
 
+## v0.13.0 (2023-09-05)
+
+### Feature
+
+* Crosshair highlight at motor position ([`9228e5a`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/9228e5aea3d5e4192733539643654fd635c63559))
+* Increase step size double with key bindings ([`e9ef1e3`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/e9ef1e315bc7222c38c1f2f3f410f5cdff994f08))
+* Go, set, save current coordinates and keyboard shortcuts ([`5d6a328`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/5d6a328728a017eb4f1d191c96d2659800d41941))
+
+### Fix
+
+* Spinbox limits in ui file ([`8de08cf`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/8de08cf9ccb092b3cfa5cf751f69fbf5edd2b217))
+* Precision updated correctly ([`172ccc6`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/172ccc69056380abcddf572f668a4ddbd5d34eec))
+
 ## v0.12.0 (2023-09-04)
 
 ### Feature
