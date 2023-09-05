@@ -127,7 +127,10 @@
               <set>Qt::AlignCenter</set>
              </property>
              <property name="minimum">
-              <double>0.100000000000000</double>
+              <double>0.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>99.000000000000000</double>
              </property>
              <property name="singleStep">
               <double>0.100000000000000</double>
