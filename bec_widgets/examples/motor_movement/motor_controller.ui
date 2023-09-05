@@ -387,7 +387,7 @@
       <bool>true</bool>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="tab_coordinates">
       <attribute name="title">
@@ -614,6 +614,13 @@
             </property>
            </widget>
           </item>
+          <item row="3" column="0" colspan="3">
+           <widget class="QPushButton" name="pushButton_update_config">
+            <property name="text">
+             <string>Update Settings</string>
+            </property>
+           </widget>
+          </item>
           <item row="1" column="1" colspan="2">
            <widget class="QSpinBox" name="spinBox_num_dim_points">
             <property name="alignment">
@@ -640,10 +647,10 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="0" colspan="3">
-           <widget class="QPushButton" name="pushButton_update_config">
+          <item row="4" column="0" colspan="3">
+           <widget class="QPushButton" name="pushButton_enableGUI">
             <property name="text">
-             <string>Update Settings</string>
+             <string>Enable Control GUI</string>
             </property>
            </widget>
           </item>

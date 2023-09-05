@@ -191,7 +191,7 @@ class MotorApp(QWidget):
             widget.setEnabled(disable)
 
         # Enable the pushButton_stop if the motor is moving
-        self.pushButton_stop.setEnabled(not disable)
+        self.pushButton_stop.setEnabled(True)
 
     def move_motor_absolute(self, x: float, y: float) -> None:
         self.enable_motor_controls(False)
@@ -374,6 +374,8 @@ class MotorApp(QWidget):
         decrease_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self)
         increase_shortcut.activated.connect(self.increase_step)
         decrease_shortcut.activated.connect(self.decrease_step)
+
+        self.pushButton_enableGUI.clicked.connect(lambda: self.enable_motor_controls(True))
 
     def init_motor_map(self):
         # Get motor limits
