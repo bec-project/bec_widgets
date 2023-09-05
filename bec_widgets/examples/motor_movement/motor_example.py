@@ -16,7 +16,6 @@ from bec_lib.core import MessageEndpoints, BECMessage
 
 
 # TODO - General features
-#  - updating motor precision
 #  - put motor status (moving, stopped, etc)
 #  - add mouse interactions with the plot -> click to select coordinates, double click to move?
 #  - adjust right click actions
@@ -200,9 +199,13 @@ class MotorApp(QWidget):
         if self.checkBox_save_with_go.isChecked():
             self.save_absolute_coordinates()
 
-    def move_motor_relative(self, motor, value: float) -> None:
+    def move_motor_relative(self, motor, axis: str, direction: int) -> None:
         self.enable_motor_controls(False)
-        self.motor_thread.move_relative(motor, value)
+        if axis == "x":
+            step = direction * self.spinBox_step_x.value()
+        elif axis == "y":
+            step = direction * self.spinBox_step_y.value()
+        self.motor_thread.move_relative(motor, step)
 
     def update_plot_setting(self, max_points, num_dim_points, scatter_size):
         self.max_points = max_points
@@ -251,18 +254,20 @@ class MotorApp(QWidget):
     def init_ui_motor_control(self) -> None:
         """Initialize the motor control elements"""
 
-        # Directional buttons for relative movement
+        # Connect checkbox and spinBoxes
+        self.checkBox_same_xy.stateChanged.connect(self.sync_step_sizes)
+        self.spinBox_step_x.valueChanged.connect(self.update_step_size_x)
+        self.spinBox_step_y.valueChanged.connect(self.update_step_size_y)
+
         self.toolButton_right.clicked.connect(
-            lambda: self.move_motor_relative(self.motor_x, self.spinBox_step.value())
+            lambda: self.move_motor_relative(self.motor_x, "x", 1)
         )
         self.toolButton_left.clicked.connect(
-            lambda: self.move_motor_relative(self.motor_x, -self.spinBox_step.value())
+            lambda: self.move_motor_relative(self.motor_x, "x", -1)
         )
-        self.toolButton_up.clicked.connect(
-            lambda: self.move_motor_relative(self.motor_y, self.spinBox_step.value())
-        )
+        self.toolButton_up.clicked.connect(lambda: self.move_motor_relative(self.motor_y, "y", 1))
         self.toolButton_down.clicked.connect(
-            lambda: self.move_motor_relative(self.motor_y, -self.spinBox_step.value())
+            lambda: self.move_motor_relative(self.motor_y, "y", -1)
         )
 
         # Switch between key shortcuts active
@@ -353,11 +358,17 @@ class MotorApp(QWidget):
         delete_shortcut.activated.connect(self.delete_selected_row)
         backspace_shortcut.activated.connect(self.delete_selected_row)
 
-        # Increase/decrease step #TODO has to be adapted for separate x and y
-        increase_shortcut = QShortcut(QKeySequence("Ctrl+A"), self)
-        decrease_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self)
-        increase_shortcut.activated.connect(self.increase_step)
-        decrease_shortcut.activated.connect(self.decrease_step)
+        # Increase/decrease step size for X motor
+        increase_x_shortcut = QShortcut(QKeySequence("Ctrl+A"), self)
+        decrease_x_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self)
+        increase_x_shortcut.activated.connect(self.increase_step_x)
+        decrease_x_shortcut.activated.connect(self.decrease_step_x)
+
+        # Increase/decrease step size for Y motor
+        increase_y_shortcut = QShortcut(QKeySequence("Alt+A"), self)
+        decrease_y_shortcut = QShortcut(QKeySequence("Alt+Z"), self)
+        increase_y_shortcut.activated.connect(self.increase_step_y)
+        decrease_y_shortcut.activated.connect(self.decrease_step_y)
 
         # Go absolute button
         self.pushButton_go_absolute.setShortcut("Ctrl+G")
@@ -582,21 +593,48 @@ class MotorApp(QWidget):
 
     def update_precision(self, precision: int):
         self.precision = precision
-        self.spinBox_step.setDecimals(self.precision)
+        self.spinBox_step_x.setDecimals(self.precision)
+        self.spinBox_step_y.setDecimals(self.precision)
         self.spinBox_absolute_x.setDecimals(self.precision)
         self.spinBox_absolute_y.setDecimals(self.precision)
 
-    def increase_step(self):
-        old_step = self.spinBox_step.value()
+    def increase_step_x(self):
+        old_step = self.spinBox_step_x.value()
         new_step = old_step * 2
+        self.spinBox_step_x.setValue(new_step)
 
-        self.spinBox_step.setValue(new_step)
-
-    def decrease_step(self):
-        old_step = self.spinBox_step.value()
+    def decrease_step_x(self):
+        old_step = self.spinBox_step_x.value()
         new_step = old_step / 2
+        self.spinBox_step_x.setValue(new_step)
 
-        self.spinBox_step.setValue(new_step)
+    def increase_step_y(self):
+        old_step = self.spinBox_step_y.value()
+        new_step = old_step * 2
+        self.spinBox_step_y.setValue(new_step)
+
+    def decrease_step_y(self):
+        old_step = self.spinBox_step_y.value()
+        new_step = old_step / 2
+        self.spinBox_step_y.setValue(new_step)
+
+    def sync_step_sizes(self):
+        """Sync step sizes based on checkbox state."""
+        if self.checkBox_same_xy.isChecked():
+            value = self.spinBox_step_x.value()
+            self.spinBox_step_y.setValue(value)
+
+    def update_step_size_x(self):
+        """Update step size for x if checkbox is checked."""
+        if self.checkBox_same_xy.isChecked():
+            value = self.spinBox_step_x.value()
+            self.spinBox_step_y.setValue(value)
+
+    def update_step_size_y(self):
+        """Update step size for y if checkbox is checked."""
+        if self.checkBox_same_xy.isChecked():
+            value = self.spinBox_step_y.value()
+            self.spinBox_step_x.setValue(value)
 
     @staticmethod
     def param_changed(ui_element):

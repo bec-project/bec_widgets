@@ -129,7 +129,7 @@
          <item>
           <layout class="QGridLayout" name="step_grid">
            <item row="2" column="0">
-            <widget class="QLabel" name="label_step_x">
+            <widget class="QLabel" name="label_step_y">
              <property name="minimumSize">
               <size>
                <width>111</width>
@@ -137,26 +137,7 @@
               </size>
              </property>
              <property name="text">
-              <string>Step [X]</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QSpinBox" name="spinBox_precision">
-             <property name="minimumSize">
-              <size>
-               <width>110</width>
-               <height>19</height>
-              </size>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-             <property name="maximum">
-              <number>8</number>
-             </property>
-             <property name="value">
-              <number>2</number>
+              <string>Step [Y]</string>
              </property>
             </widget>
            </item>
@@ -173,7 +154,7 @@
              </property>
             </widget>
            </item>
-           <item row="2" column="1">
+           <item row="1" column="1">
             <widget class="QDoubleSpinBox" name="spinBox_step_x">
              <property name="minimumSize">
               <size>
@@ -198,8 +179,8 @@
              </property>
             </widget>
            </item>
-           <item row="3" column="0">
-            <widget class="QLabel" name="label_step_y">
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_step_x">
              <property name="minimumSize">
               <size>
                <width>111</width>
@@ -207,11 +188,11 @@
               </size>
              </property>
              <property name="text">
-              <string>Step [Y]</string>
+              <string>Step [X]</string>
              </property>
             </widget>
            </item>
-           <item row="3" column="1">
+           <item row="2" column="1">
             <widget class="QDoubleSpinBox" name="spinBox_step_y">
              <property name="minimumSize">
               <size>
@@ -236,21 +217,8 @@
              </property>
             </widget>
            </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label">
-             <property name="minimumSize">
-              <size>
-               <width>111</width>
-               <height>19</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Old step</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QDoubleSpinBox" name="spinBox_step">
+           <item row="0" column="1">
+            <widget class="QSpinBox" name="spinBox_precision">
              <property name="minimumSize">
               <size>
                <width>110</width>
@@ -260,17 +228,11 @@
              <property name="alignment">
               <set>Qt::AlignCenter</set>
              </property>
-             <property name="minimum">
-              <double>0.000000000000000</double>
-             </property>
              <property name="maximum">
-              <double>99.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>0.100000000000000</double>
+              <number>8</number>
              </property>
              <property name="value">
-              <double>1.000000000000000</double>
+              <number>2</number>
              </property>
             </widget>
            </item>
