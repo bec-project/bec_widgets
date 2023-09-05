@@ -225,17 +225,8 @@ class MotorApp(QWidget):
         self.spinBox_precision.setValue(self.precision)
         self.update_precision(self.precision)
 
-    def init_ui(self) -> None:
-        """Setup all ui elements"""
-        # TODO can be separated to multiple functions
-
-        # Set default parameters
-        self.set_from_config()
-
-        ##########################
-        # 2D Plot
-        ##########################
-
+    def init_ui_plot_elements(self) -> None:
+        """Initialize the plot elements"""
         self.label_coorditanes = self.glw.addLabel(f"Motor position: (X, Y)", row=0, col=0)
         self.plot_map = self.glw.addPlot(row=1, col=0)
         self.limit_map = pg.ImageItem()
@@ -257,17 +248,10 @@ class MotorApp(QWidget):
         self.plot_map.addItem(self.saved_motor_map)
         self.plot_map.showGrid(x=True, y=True)
 
-        ##########################
-        # Motor General setting
-        ##########################
+    def init_ui_motor_control(self) -> None:
+        """Initialize the motor control elements"""
 
-        # # TODO make function to update precision
-        # self.precision = 2  # self.spinBox_precision.value()  # Define the decimal precision
-
-        ##########################
-        # Motor movements signals
-        ##########################
-
+        # Directional buttons for relative movement
         self.toolButton_right.clicked.connect(
             lambda: self.move_motor_relative(self.motor_x, self.spinBox_step.value())
         )
@@ -292,36 +276,18 @@ class MotorApp(QWidget):
             )
         )
 
-        # Go absolute button
-        # self.pushButton_go_absolute.clicked.connect(self.save_absolute_coordinates)
-        self.pushButton_go_absolute.setShortcut("Ctrl+G")
-        self.pushButton_go_absolute.setToolTip("Ctrl+G")
-
-        # Set absolute coordinates
         self.pushButton_set.clicked.connect(self.save_absolute_coordinates)
-        self.pushButton_set.setShortcut("Ctrl+D")
-        self.pushButton_set.setToolTip("Ctrl+D")
-
-        # Save Current coordinates
         self.pushButton_save.clicked.connect(self.save_current_coordinates)
-        self.pushButton_save.setShortcut("Ctrl+S")
-        self.pushButton_save.setToolTip("Ctrl+S")
-
-        # Stop Button
         self.pushButton_stop.clicked.connect(self.motor_thread.stop_movement)
-        self.pushButton_stop.setShortcut("Ctrl+X")
-        self.pushButton_stop.setToolTip("Ctrl+X")
 
+        # Enable/Disable GUI
         self.motor_thread.move_finished.connect(lambda: self.enable_motor_controls(True))
 
-        # Update precision
+        # Precision update
         self.spinBox_precision.valueChanged.connect(lambda x: self.update_precision(x))
 
-        ##########################
-        # Motor Configs
-        ##########################
-
-        # SpinBoxes - Motor Limits #TODO make spinboxes own limits updated, currently is [-1000, 1000]
+    def init_ui_motor_configs(self) -> None:
+        """Limit and plot spinBoxes"""
 
         # SpinBoxes change color to yellow before updated, limits are updated with update button
         self.spinBox_x_min.valueChanged.connect(lambda: self.param_changed(self.spinBox_x_min))
@@ -340,7 +306,7 @@ class MotorApp(QWidget):
             lambda: self.param_changed(self.spinBox_scatter_size)
         )
 
-        # Config updates
+        # Limit Update
         self.pushButton_updateLimits.clicked.connect(
             lambda: self.update_all_motor_limits(
                 x_limit=[self.spinBox_x_min.value(), self.spinBox_x_max.value()],
@@ -348,6 +314,7 @@ class MotorApp(QWidget):
             )
         )
 
+        # Plot Update
         self.pushButton_update_config.clicked.connect(
             lambda: self.update_plot_setting(
                 max_points=self.spinBox_max_points.value(),
@@ -356,12 +323,15 @@ class MotorApp(QWidget):
             )
         )
 
-        # TODO map with floats as well -> or decide system for higher precision
+        self.pushButton_enableGUI.clicked.connect(lambda: self.enable_motor_controls(True))
+
+    def init_ui_motor_connections(self) -> None:
+        # Signal from motor thread to update coordinates
         self.motor_thread.coordinates_updated.connect(
             lambda x, y: self.update_image_map(round(x, self.precision), round(y, self.precision))
         )
 
-        # Motor connections
+        # Motor connections button
         self.pushButton_connecMotors.clicked.connect(
             lambda: self.connect_motor(
                 self.comboBox_motor_x.currentText(), self.comboBox_motor_y.currentText()
@@ -374,7 +344,8 @@ class MotorApp(QWidget):
             self.motorControl_absolute.setEnabled(False)
             self.tabWidget_tables.setTabEnabled(1, False)
 
-        # Keyboard shortcuts
+    def init_keyboard_shortcuts(self) -> None:
+        """Initialize the keyboard shortcuts"""
 
         # Delete table entry
         delete_shortcut = QShortcut(QKeySequence("Delete"), self)
@@ -382,13 +353,37 @@ class MotorApp(QWidget):
         delete_shortcut.activated.connect(self.delete_selected_row)
         backspace_shortcut.activated.connect(self.delete_selected_row)
 
-        # Increase/decrease step
+        # Increase/decrease step #TODO has to be adapted for separate x and y
         increase_shortcut = QShortcut(QKeySequence("Ctrl+A"), self)
         decrease_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self)
         increase_shortcut.activated.connect(self.increase_step)
         decrease_shortcut.activated.connect(self.decrease_step)
 
-        self.pushButton_enableGUI.clicked.connect(lambda: self.enable_motor_controls(True))
+        # Go absolute button
+        self.pushButton_go_absolute.setShortcut("Ctrl+G")
+        self.pushButton_go_absolute.setToolTip("Ctrl+G")
+
+        # Set absolute coordinates
+        self.pushButton_set.setShortcut("Ctrl+D")
+        self.pushButton_set.setToolTip("Ctrl+D")
+
+        # Save Current coordinates
+        self.pushButton_save.setShortcut("Ctrl+S")
+        self.pushButton_save.setToolTip("Ctrl+S")
+
+        # Stop Button
+        self.pushButton_stop.setShortcut("Ctrl+X")
+        self.pushButton_stop.setToolTip("Ctrl+X")
+
+    def init_ui(self) -> None:
+        """Setup all ui elements"""
+
+        self.set_from_config()  # Set default parameters
+        self.init_ui_plot_elements()  # 2D Plot
+        self.init_ui_motor_control()  # Motor Controls
+        self.init_ui_motor_configs()  # Motor Configs
+        self.init_ui_motor_connections()  # Motor Connections
+        self.init_keyboard_shortcuts()  # Keyboard Shortcuts
 
     def init_motor_map(self):
         # Get motor limits
