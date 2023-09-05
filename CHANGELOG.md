@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.14.1 (2023-09-05)
+
+### Fix
+
+* Gui default tab changed to coordinates table ([`3c74fa5`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/3c74fa59b7b83976b13afc821c1333868e62a686))
+
 ## v0.14.0 (2023-09-05)
 
 ### Feature
