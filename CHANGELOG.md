@@ -2,6 +2,21 @@
 
 <!--next-version-placeholder-->
 
+## v0.14.0 (2023-09-05)
+
+### Feature
+
+* Enable gui button, in the case that motor movement is not finished ([`84155d2`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/84155d22640e229820fa5104975d2675f63cef31))
+* Saved coordinates are shown on the map ([`0ca665a`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/0ca665a1e91d9c5dee9af0218c2e211de8304b26))
+
+### Fix
+
+* Motor position points can be switched on/off if points were deleted ([`5b30dfd`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/5b30dfd43fcbe4b9941e26cab76005ffeb21d95f))
+* Highlight disapear with new motor ([`3fb8651`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/3fb8651dd5777861488928b414d5bdacb517d0e9))
+* New points do not make invisible points visible again ([`fb10551`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/fb105513e52bcd9c62dfead16e91b45ecd817612))
+* Checkbox visibility toggle is working. ([`a178c43`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/a178c434b1d9efc1795b6f5115e2a8b9685ccdf2))
+* Saved coordinates can be removed from table and from the map again ([`c32e95a`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/c32e95a57d3faec46652b413581d830698855367))
+
 ## v0.13.0 (2023-09-05)
 
 ### Feature
