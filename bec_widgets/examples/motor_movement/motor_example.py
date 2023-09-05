@@ -525,18 +525,12 @@ class MotorApp(QWidget):
     def delete_selected_row(self):
         selected_rows = self.tableWidget_coordinates.selectionModel().selectedRows()
         for row in reversed(selected_rows):
-            coord = np.array(
-                [
-                    float(self.tableWidget_coordinates.item(row.row(), 2).text()),
-                    float(self.tableWidget_coordinates.item(row.row(), 3).text()),
-                ]
-            )
-            index = np.where((self.saved_motor_positions == coord).all(axis=1))[0][0]
-            self.saved_motor_positions = np.delete(self.saved_motor_positions, index, axis=0)
+            row_index = row.row()
+            self.saved_motor_positions = np.delete(self.saved_motor_positions, row_index, axis=0)
             self.saved_motor_map.setData(
                 pos=self.saved_motor_positions, brush=pg.mkBrush(255, 0, 0, 255)
             )
-            self.tableWidget_coordinates.removeRow(row.row())
+            self.tableWidget_coordinates.removeRow(row_index)
 
     def save_absolute_coordinates(self):
         self.generate_table_coordinate(
