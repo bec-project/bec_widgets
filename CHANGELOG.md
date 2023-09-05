@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.14.2 (2023-09-05)
+
+### Fix
+
+* Bec_config initialisation by command line argument ([`b7a1b8b`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/b7a1b8bca1b89df859c9ed0ed17862bb6d533de7))
+
 ## v0.14.1 (2023-09-05)
 
 ### Fix
