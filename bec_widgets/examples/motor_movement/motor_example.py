@@ -551,9 +551,14 @@ class MotorApp(QWidget):
         for row in reversed(selected_rows):
             row_index = row.row()
             self.saved_motor_positions = np.delete(self.saved_motor_positions, row_index, axis=0)
+            del self.saved_point_visibility[row_index]  # Update this line
+            brushes = [
+                pg.mkBrush(255, 0, 0, 255) if visible else pg.mkBrush(255, 0, 0, 0)
+                for visible in self.saved_point_visibility
+            ]  # Regenerate brushes
             self.saved_motor_map.setData(
-                pos=self.saved_motor_positions, brush=pg.mkBrush(255, 0, 0, 255)
-            )
+                pos=self.saved_motor_positions, brush=brushes
+            )  # Update this line
             self.tableWidget_coordinates.removeRow(row_index)
 
     def save_absolute_coordinates(self):
