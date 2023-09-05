@@ -55,6 +55,7 @@ class MotorApp(QWidget):
         self.max_points = plot_motors.get("max_points", 5000)
         self.num_dim_points = plot_motors.get("num_dim_points", 100)
         self.scatter_size = plot_motors.get("scatter_size", 5)
+        self.precision = plot_motors.get("precision", 2)
 
         # Saved motors from config file
         self.selected_motors = selected_motors
@@ -92,7 +93,7 @@ class MotorApp(QWidget):
             self.tableWidget_coordinates,
             self.motor_thread.retrieve_coordinates(),
             tag=f"{motor_x_name},{motor_y_name}",
-            precision=0,
+            precision=self.precision,
         )
 
     @pyqtSlot(object, object)
@@ -213,9 +214,21 @@ class MotorApp(QWidget):
         ):
             spinBox.setStyleSheet("")
 
+    def set_from_config(self) -> None:
+        """Set the values from the config file to the UI elements"""
+
+        self.spinBox_max_points.setValue(self.max_points)
+        self.spinBox_num_dim_points.setValue(self.num_dim_points)
+        self.spinBox_scatter_size.setValue(self.scatter_size)
+        self.spinBox_precision.setValue(self.precision)
+        self.update_precision(self.precision)
+
     def init_ui(self) -> None:
         """Setup all ui elements"""
         # TODO can be separated to multiple functions
+
+        # Set default parameters
+        self.set_from_config()
 
         ##########################
         # 2D Plot
@@ -235,8 +248,8 @@ class MotorApp(QWidget):
         # Motor General setting
         ##########################
 
-        # TODO make function to update precision
-        self.precision = 2  # self.spinBox_precision.value()  # Define the decimal precision
+        # # TODO make function to update precision
+        # self.precision = 2  # self.spinBox_precision.value()  # Define the decimal precision
 
         ##########################
         # Motor movements signals
@@ -281,12 +294,15 @@ class MotorApp(QWidget):
         self.pushButton_save.setShortcut("Ctrl+D")
         self.pushButton_save.setToolTip("Ctrl+D")
 
-        self.motor_thread.move_finished.connect(lambda: self.enable_motor_controls(True))
-
         # Stop Button
         self.pushButton_stop.clicked.connect(self.motor_thread.stop_movement)
         self.pushButton_stop.setShortcut("Ctrl+X")
         self.pushButton_stop.setToolTip("Ctrl+X")
+
+        self.motor_thread.move_finished.connect(lambda: self.enable_motor_controls(True))
+
+        # Update precision
+        self.spinBox_precision.valueChanged.connect(lambda x: self.update_precision(x))
 
         ##########################
         # Motor Configs
@@ -467,7 +483,7 @@ class MotorApp(QWidget):
             self.tableWidget_coordinates,
             (self.spinBox_absolute_x.value(), self.spinBox_absolute_y.value()),
             tag=f"Pos {self.tag_N}",
-            precision=self.spinBox_precision.value(),
+            precision=self.precision,
         )
 
         self.tag_N += 1
@@ -477,10 +493,16 @@ class MotorApp(QWidget):
             self.tableWidget_coordinates,
             self.motor_thread.retrieve_coordinates(),
             tag=f"Current {self.tag_N}",
-            precision=self.spinBox_precision.value(),
+            precision=self.precision,
         )
 
         self.tag_N += 1
+
+    def update_precision(self, precision: int):
+        self.precision = precision
+        self.spinBox_step.setDecimals(self.precision)
+        self.spinBox_absolute_x.setDecimals(self.precision)
+        self.spinBox_absolute_y.setDecimals(self.precision)
 
     @staticmethod
     def param_changed(ui_element):

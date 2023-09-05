@@ -6,3 +6,4 @@ plot_motors:
   max_points: 1000
   num_dim_points: 100
   scatter_size: 5
+  precision: 3
