@@ -69,7 +69,7 @@ class MotorApp(QWidget):
         self.tag_N = 1  # position label for saved coordinates
 
         # Get all motors available
-        self.motor_thread.retrieve_all_motors()
+        self.motor_thread.retrieve_all_motors()  # TODO link to combobox that it always refresh
 
     def connect_motor(self, motor_x_name: str, motor_y_name: str):
         """
@@ -265,14 +265,28 @@ class MotorApp(QWidget):
                 self.spinBox_absolute_x.value(), self.spinBox_absolute_y.value()
             )
         )
+
+        # Go absolute button
         self.pushButton_go_absolute.clicked.connect(self.save_absolute_coordinates)
         self.pushButton_go_absolute.setShortcut("Ctrl+G")
         self.pushButton_go_absolute.setToolTip("Ctrl+G")
+
+        # Set absolute coordinates
+        self.pushButton_set.clicked.connect(self.save_absolute_coordinates)
+        self.pushButton_set.setShortcut("Ctrl+S")
+        self.pushButton_set.setToolTip("Ctrl+S")
+
+        # Save Current coordinates
+        self.pushButton_save.clicked.connect(self.save_current_coordinates)
+        self.pushButton_save.setShortcut("Ctrl+D")
+        self.pushButton_save.setToolTip("Ctrl+D")
 
         self.motor_thread.move_finished.connect(lambda: self.enable_motor_controls(True))
 
         # Stop Button
         self.pushButton_stop.clicked.connect(self.motor_thread.stop_movement)
+        self.pushButton_stop.setShortcut("Ctrl+X")
+        self.pushButton_stop.setToolTip("Ctrl+X")
 
         ##########################
         # Motor Configs
@@ -453,7 +467,17 @@ class MotorApp(QWidget):
             self.tableWidget_coordinates,
             (self.spinBox_absolute_x.value(), self.spinBox_absolute_y.value()),
             tag=f"Pos {self.tag_N}",
-            precision=0,
+            precision=self.spinBox_precision.value(),
+        )
+
+        self.tag_N += 1
+
+    def save_current_coordinates(self):
+        self.generate_table_coordinate(
+            self.tableWidget_coordinates,
+            self.motor_thread.retrieve_coordinates(),
+            tag=f"Current {self.tag_N}",
+            precision=self.spinBox_precision.value(),
         )
 
         self.tag_N += 1
