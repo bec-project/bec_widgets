@@ -197,6 +197,8 @@ class MotorApp(QWidget):
         self.enable_motor_controls(False)
         target_coordinates = (x, y)
         self.motor_thread.move_to_coordinates(target_coordinates)
+        if self.checkBox_save_with_go.isChecked():
+            self.save_absolute_coordinates()
 
     def move_motor_relative(self, motor, value: float) -> None:
         self.enable_motor_controls(False)
@@ -291,7 +293,7 @@ class MotorApp(QWidget):
         )
 
         # Go absolute button
-        self.pushButton_go_absolute.clicked.connect(self.save_absolute_coordinates)
+        # self.pushButton_go_absolute.clicked.connect(self.save_absolute_coordinates)
         self.pushButton_go_absolute.setShortcut("Ctrl+G")
         self.pushButton_go_absolute.setToolTip("Ctrl+G")
 
