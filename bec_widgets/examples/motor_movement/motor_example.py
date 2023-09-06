@@ -400,10 +400,14 @@ class MotorApp(QWidget):
         self.pushButton_stop.setToolTip("Ctrl+X")
 
     def init_ui_table(self) -> None:
-        """Initialize the table validators for x and y coordinates"""
+        """Initialize the table validators for x and y coordinates and table signals"""
+        # Validators
         self.double_delegate = DoubleValidationDelegate(self.tableWidget_coordinates)
         self.tableWidget_coordinates.setItemDelegateForColumn(2, self.double_delegate)
         self.tableWidget_coordinates.setItemDelegateForColumn(3, self.double_delegate)
+
+        # Signals
+        self.tableWidget_coordinates.itemChanged.connect(self.update_saved_coordinates)
 
     def init_ui(self) -> None:
         """Setup all ui elements"""
@@ -602,20 +606,43 @@ class MotorApp(QWidget):
         ]
         self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
 
-    def delete_selected_row(self):
-        selected_rows = self.tableWidget_coordinates.selectionModel().selectedRows()
-        for row in reversed(selected_rows):
-            row_index = row.row()
-            self.saved_motor_positions = np.delete(self.saved_motor_positions, row_index, axis=0)
-            del self.saved_point_visibility[row_index]  # Update this line
-            brushes = [
-                pg.mkBrush(255, 0, 0, 255) if visible else pg.mkBrush(255, 0, 0, 0)
-                for visible in self.saved_point_visibility
-            ]  # Regenerate brushes
-            self.saved_motor_map.setData(
-                pos=self.saved_motor_positions, brush=brushes
-            )  # Update this line
-            self.tableWidget_coordinates.removeRow(row_index)
+    def update_saved_coordinates(self):
+        """
+        Update the saved coordinates and replot them.
+        """
+        rows = self.tableWidget_coordinates.rowCount()
+        # Initialize an empty array to hold new coordinates
+        new_saved_positions = np.empty((0, 2))
+        new_visibility = []
+
+        for row in range(rows):
+            x = (
+                float(self.tableWidget_coordinates.item(row, 2).text())
+                if self.tableWidget_coordinates.item(row, 2) is not None
+                else None
+            )
+            y = (
+                float(self.tableWidget_coordinates.item(row, 3).text())
+                if self.tableWidget_coordinates.item(row, 3) is not None
+                else None
+            )
+
+            # Only add the point if both x and y are not None
+            if x is not None and y is not None:
+                new_saved_positions = np.vstack((new_saved_positions, [x, y]))
+                checkbox = self.tableWidget_coordinates.cellWidget(row, 1)
+                new_visibility.append(checkbox.isChecked())
+
+        # Update saved positions and visibility
+        self.saved_motor_positions = new_saved_positions
+        self.saved_point_visibility = new_visibility
+
+        # Replot saved positions based on new data
+        brushes = [
+            pg.mkBrush(255, 165, 0, 255) if visible else pg.mkBrush(255, 165, 0, 0)
+            for visible in self.saved_point_visibility
+        ]
+        self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
 
     def delete_selected_row(self):
         selected_rows = self.tableWidget_coordinates.selectionModel().selectedRows()
