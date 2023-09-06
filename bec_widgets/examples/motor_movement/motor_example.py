@@ -271,10 +271,10 @@ class MotorApp(QWidget):
     def init_ui_motor_control(self) -> None:
         """Initialize the motor control elements"""
 
-        # Connect CheckBox stateChanged signal to sync function
-        self.checkBox_same_xy.stateChanged.connect(
-            lambda: self.sync_step_sizes(self.spinBox_step_x, self.spinBox_step_y)
-        )
+        # Connect checkbox and spinBoxes
+        self.checkBox_same_xy.stateChanged.connect(self.sync_step_sizes)
+        self.spinBox_step_x.valueChanged.connect(self.update_step_size_x)
+        self.spinBox_step_y.valueChanged.connect(self.update_step_size_y)
 
         self.toolButton_right.clicked.connect(
             lambda: self.move_motor_relative(self.motor_x, "x", 1)
@@ -845,10 +845,30 @@ class MotorApp(QWidget):
         new_step = old_step * factor
         spinBox.setValue(new_step)
 
-    def sync_step_sizes(self, spinBox1, spinBox2):
+    # TODO generalize these functions
+
+    def sync_step_sizes(self):
+        """Sync step sizes based on checkbox state."""
         if self.checkBox_same_xy.isChecked():
-            value = spinBox1.value()
-            spinBox2.setValue(value)
+            value = self.spinBox_step_x.value()
+            self.spinBox_step_y.setValue(value)
+
+    def update_step_size_x(self):
+        """Update step size for x if checkbox is checked."""
+        if self.checkBox_same_xy.isChecked():
+            value = self.spinBox_step_x.value()
+            self.spinBox_step_y.setValue(value)
+
+    def update_step_size_y(self):
+        """Update step size for y if checkbox is checked."""
+        if self.checkBox_same_xy.isChecked():
+            value = self.spinBox_step_y.value()
+            self.spinBox_step_x.setValue(value)
+
+    # def sync_step_sizes(self, spinBox1, spinBox2): #TODO move to more general solution like this
+    #     if self.checkBox_same_xy.isChecked():
+    #         value = spinBox1.value()
+    #         spinBox2.setValue(value)
 
     def show_help_dialog(self):
         dialog = QDialog(self)
