@@ -10,7 +10,7 @@ from PyQt5.QtCore import QThread, pyqtSlot, QPoint
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QDoubleValidator
 from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QApplication, QWidget, QTableWidget, QFileDialog
+from PyQt5.QtWidgets import QApplication, QWidget, QTableWidget, QFileDialog, QLineEdit
 from PyQt5.QtWidgets import QShortcut
 from pyqtgraph.Qt import QtWidgets, uic, QtCore
 
@@ -411,6 +411,10 @@ class MotorApp(QWidget):
             lambda: self.export_table_to_csv(self.tableWidget_coordinates)
         )
 
+        self.pushButton_importCSV.clicked.connect(
+            lambda: self.load_table_from_csv(self.tableWidget_coordinates, precision=self.precision)
+        )
+
     def init_ui(self) -> None:
         """Setup all ui elements"""
 
@@ -562,17 +566,36 @@ class MotorApp(QWidget):
         ]
 
         # Adding extra columns
-        if extra_columns:
+        # if self.extra_columns:
+        #     col_index = 5  # Starting index for extra columns
+        #     table.setColumnCount(col_index + len(self.extra_columns))
+        #     for col_dict in self.extra_columns:
+        #         for col_name, default_value in col_dict.items():
+        #             if current_row_count == 0:
+        #                 item = QtWidgets.QTableWidgetItem(str(default_value))
+        #             else:
+        #                 item = QtWidgets.QTableWidgetItem(
+        #                     table.item(current_row_count - 1, col_index).text()
+        #                 )
+        #
+        #             item.setFlags(item.flags() | Qt.ItemIsEditable)
+        #             table.setItem(current_row_count, col_index, item)
+        #
+        #             if current_row_count == 0:
+        #                 table.setHorizontalHeaderItem(
+        #                     col_index, QtWidgets.QTableWidgetItem(col_name)
+        #                 )
+        #
+        #             col_index += 1
+
+        if self.extra_columns:
             col_index = 5  # Starting index for extra columns
             table.setColumnCount(col_index + len(self.extra_columns))
             for col_dict in self.extra_columns:
-                for col_name, default_value in col_dict.items():
-                    if current_row_count == 0:
-                        item = QtWidgets.QTableWidgetItem(str(default_value))
-                    else:
-                        item = QtWidgets.QTableWidgetItem(
-                            table.item(current_row_count - 1, col_index).text()
-                        )
+                for col_name, _ in col_dict.items():
+                    prev_item = table.item(current_row_count - 1, col_index)
+                    item_text = prev_item.text() if prev_item else ""
+                    item = QtWidgets.QTableWidgetItem(item_text)
 
                     item.setFlags(item.flags() | Qt.ItemIsEditable)
                     table.setItem(current_row_count, col_index, item)
@@ -719,6 +742,62 @@ class MotorApp(QWidget):
                         item = table.item(row, col)
                         row_data.append(item.text() if item else "")
                     writer.writerow(row_data)
+
+    def load_table_from_csv(self, table: QtWidgets.QTableWidget, precision: int = 0):
+        options = QFileDialog.Options()
+        filePath, _ = QFileDialog.getOpenFileName(
+            self, "Open File", "", "CSV Files (*.csv);;All Files (*)", options=options
+        )
+
+        if filePath:
+            with open(filePath, mode="r") as file:
+                reader = csv.reader(file)
+                header = next(reader)
+
+                # Wipe the current table
+                table.setRowCount(0)
+
+                # Dynamically update self.extra_columns
+                new_extra_columns = []
+                for col_name in header:
+                    if col_name not in ["X", "Y"]:
+                        new_extra_columns.append({col_name: ""})
+                self.extra_columns = new_extra_columns
+
+                table.setColumnCount(5 + len(self.extra_columns))
+
+                for index, col_name in enumerate(
+                    ["Button", "Checkbox", "X", "Y", "Tag"] + header[2:]
+                ):
+                    header_item = QtWidgets.QTableWidgetItem(col_name)
+                    header_item.setTextAlignment(Qt.AlignCenter)
+                    table.setHorizontalHeaderItem(index, header_item)
+
+                for row_data in reader:
+                    current_row = table.rowCount()
+                    table.insertRow(current_row)
+
+                    button = QtWidgets.QPushButton("Go")
+                    checkBox = QtWidgets.QCheckBox()
+                    checkBox.setChecked(True)
+
+                    # Connect button and checkbox to their respective slots
+                    button.clicked.connect(
+                        partial(self.move_to_row_coordinates, table, current_row)
+                    )
+                    checkBox.stateChanged.connect(
+                        lambda state, widget=checkBox: self.toggle_point_visibility(state, widget)
+                    )
+
+                    table.setCellWidget(current_row, 0, button)
+                    table.setCellWidget(current_row, 1, checkBox)
+
+                    for col, data in enumerate(row_data):
+                        item = QtWidgets.QTableWidgetItem(data)
+                        item.setTextAlignment(Qt.AlignCenter)
+                        table.setItem(current_row, col + 2, item)
+
+                table.resizeColumnsToContents()
 
     def save_absolute_coordinates(self):
         self.generate_table_coordinate(
@@ -1002,7 +1081,7 @@ if __name__ == "__main__":
 
             selected_motors = config.get("selected_motors", {})
             plot_motors = config.get("plot_motors", {})
-            extra_columns = config.get("plot_motors", {}).get("extra_columns", [])
+            # extra_columns = config.get("plot_motors", {}).get("extra_columns", [])
 
     except FileNotFoundError:
         print(f"The file {args.config} was not found.")

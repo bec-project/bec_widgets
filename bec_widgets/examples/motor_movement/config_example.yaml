@@ -8,7 +8,7 @@ plot_motors:
   scatter_size: 5
   precision: 3
   extra_columns:
-    - sample name: "sample 1"
-    - Step [x]: 1
-    - Step [y]: 1
-    - Exposure time [s]: 1
+#    - sample name: "sample 1"
+#    - Step [x]: 1
+#    - Step [y]: 1
+#    - Exposure time [s]: 1
