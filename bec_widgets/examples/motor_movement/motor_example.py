@@ -10,7 +10,17 @@ from PyQt5.QtCore import QThread, pyqtSlot, QPoint
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QDoubleValidator
 from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QApplication, QWidget, QTableWidget, QFileDialog, QLineEdit
+from PyQt5.QtWidgets import (
+    QApplication,
+    QWidget,
+    QTableWidget,
+    QFileDialog,
+    QLineEdit,
+    QDialog,
+    QVBoxLayout,
+    QLabel,
+    QPushButton,
+)
 from PyQt5.QtWidgets import QShortcut
 from pyqtgraph.Qt import QtWidgets, uic, QtCore
 
@@ -414,6 +424,8 @@ class MotorApp(QWidget):
         self.pushButton_importCSV.clicked.connect(
             lambda: self.load_table_from_csv(self.tableWidget_coordinates, precision=self.precision)
         )
+
+        self.pushButton_help.clicked.connect(self.show_help_dialog)
 
     def init_ui(self) -> None:
         """Setup all ui elements"""
@@ -836,6 +848,34 @@ class MotorApp(QWidget):
         if self.checkBox_same_xy.isChecked():
             value = spinBox1.value()
             spinBox2.setValue(value)
+
+    def show_help_dialog(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Keyboard Shortcuts")
+
+        layout = QVBoxLayout()
+
+        key_bindings = [
+            ("Delete/Backspace", "Delete selected row"),
+            ("Ctrl+A", "Increase step size for X motor"),
+            ("Ctrl+Z", "Decrease step size for X motor"),
+            ("Alt+A", "Increase step size for Y motor"),
+            ("Alt+Z", "Decrease step size for Y motor"),
+            ("Ctrl+G", "Go absolute"),
+            ("Ctrl+D", "Set absolute coordinates"),
+            ("Ctrl+S", "Save Current coordinates"),
+            ("Ctrl+X", "Stop"),
+        ]
+
+        for keys, action in key_bindings:
+            layout.addWidget(QLabel(f"{keys} - {action}"))
+
+        ok_button = QPushButton("OK")
+        ok_button.clicked.connect(dialog.close)
+        layout.addWidget(ok_button)
+
+        dialog.setLayout(layout)
+        dialog.exec_()
 
     @staticmethod
     def param_changed(ui_element):
