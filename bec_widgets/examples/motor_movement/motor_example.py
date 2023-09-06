@@ -542,7 +542,7 @@ class MotorApp(QWidget):
 
         # Create QDoubleValidator
         validator = QDoubleValidator()
-        validator.setDecimals(precision)  # TODO not sure if necessary
+        validator.setDecimals(precision)
 
         checkBox = QtWidgets.QCheckBox()
         checkBox.setChecked(True)
