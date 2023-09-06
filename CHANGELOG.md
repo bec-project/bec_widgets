@@ -2,6 +2,22 @@
 
 <!--next-version-placeholder-->
 
+## v0.15.0 (2023-09-06)
+
+### Feature
+
+* Step for x and y can be linked or separated ([`16ab746`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/16ab746f54007ee0647b6602b7d74a4a59401705))
+* User can choose if to save coordinates when moving to absolute coordinates ([`6324199`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/632419929921fbe4e970149ce8d4e617566f71fc))
+
+### Fix
+
+* Table checkbox fixed ([`7e6244c`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/7e6244c5d3698e6fea944b9501064470b6c884c7))
+* Partial fix to table checkBox ([`75f5c8f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/75f5c8fcd6e80288e1f3bc1b9c0c0b3edd1335bc))
+* Coordinates markers are updated on the map, if X, Y in table manually is changed ([`0aa667b`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/0aa667b70d48356bdda59b879baa3862c5e2e756))
+* Added float validator to the table ([`be1bd81`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/be1bd81d60373a0d9e776dc3f0d879d1bf905f7a))
+* Table bug, when deleted multiple rows ([`9d83a45`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/9d83a455e899e3018364123707064882076c4eb0))
+* Table bug, when user deleted row and wanted to go to the previous position ([`63e6d61`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/63e6d61c2e6f9cbc069c9d55c7006d18b6b34b4d))
+
 ## v0.14.2 (2023-09-05)
 
 ### Fix
