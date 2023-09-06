@@ -2,6 +2,22 @@
 
 <!--next-version-placeholder-->
 
+## v0.16.0 (2023-09-06)
+
+### Feature
+
+* Added help button ([`2087d19`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/2087d19d3c2349e160327880210a5cf129852f09))
+* Table can be loaded from .csv ([`15d995f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/15d995f66b892f55526bd8b0954b6886d8f861ea))
+* Table can be exported to csv ([`772f18f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/772f18fa09bef54c849d2fdd58e02e8dada84a4e))
+* Additional extra rows takes values from previous row ([`1235294`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/1235294b034dae50ff9a2ea93bc1a318383cbbf5))
+* Additional columns can be added through .yaml ([`fa76acb`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/fa76acbd6dda1695add1c1159c4a96c33741a4c7))
+
+### Fix
+
+* Help extended ([`9fba033`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/9fba0334a0389f66344b84dd434d4d9a39b1565e))
+* Table loads number of columns correctly ([`bf12963`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/bf129632471da2e6dc5d637a5b02c321d8d3dcac))
+* Content always aligned to centre ([`74884a3`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/74884a37076cd047e2dc75e07246f73e5f93167e))
+
 ## v0.15.0 (2023-09-06)
 
 ### Feature
