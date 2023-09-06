@@ -516,7 +516,7 @@
          </property>
          <column>
           <property name="text">
-           <string>Tag</string>
+           <string>Move</string>
           </property>
          </column>
          <column>
@@ -536,7 +536,7 @@
          </column>
          <column>
           <property name="text">
-           <string>Move</string>
+           <string>Tag</string>
           </property>
          </column>
         </widget>

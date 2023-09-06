@@ -530,7 +530,7 @@ class MotorApp(QWidget):
             lambda state, widget=checkBox: self.toggle_point_visibility(state, widget)
         )
 
-        table.setItem(current_row_count, 0, QtWidgets.QTableWidgetItem(str(tag)))
+        table.setItem(current_row_count, 4, QtWidgets.QTableWidgetItem(str(tag)))
         table.setCellWidget(current_row_count, 1, checkBox)
 
         # Apply validator to x and y coordinate QTableWidgetItem
@@ -546,7 +546,7 @@ class MotorApp(QWidget):
             current_row_count, 3, QtWidgets.QTableWidgetItem(str(f"{coordinates[1]:.{precision}f}"))
         )
 
-        table.setCellWidget(current_row_count, 4, button)
+        table.setCellWidget(current_row_count, 0, button)
 
         button.clicked.connect(partial(self.move_to_row_coordinates, table, current_row_count))
 
@@ -674,7 +674,7 @@ class MotorApp(QWidget):
 
         # Update the 'Go' buttons
         for row in range(self.tableWidget_coordinates.rowCount()):
-            button = self.tableWidget_coordinates.cellWidget(row, 4)
+            button = self.tableWidget_coordinates.cellWidget(row, 0)
             button.clicked.disconnect()
             button.clicked.connect(
                 partial(self.move_to_row_coordinates, self.tableWidget_coordinates, row)
