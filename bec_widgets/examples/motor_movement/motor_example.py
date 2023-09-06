@@ -20,6 +20,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QLabel,
     QPushButton,
+    QFrame,
 )
 from PyQt5.QtWidgets import QShortcut
 from pyqtgraph.Qt import QtWidgets, uic, QtCore
@@ -851,16 +852,19 @@ class MotorApp(QWidget):
 
     def show_help_dialog(self):
         dialog = QDialog(self)
-        dialog.setWindowTitle("Keyboard Shortcuts")
+        dialog.setWindowTitle("Help")
 
         layout = QVBoxLayout()
 
+        # Key bindings section
+        layout.addWidget(QLabel("Keyboard Shortcuts:"))
+
         key_bindings = [
             ("Delete/Backspace", "Delete selected row"),
-            ("Ctrl+A", "Increase step size for X motor"),
-            ("Ctrl+Z", "Decrease step size for X motor"),
-            ("Alt+A", "Increase step size for Y motor"),
-            ("Alt+Z", "Decrease step size for Y motor"),
+            ("Ctrl+A", "Increase step size for X motor by factor of 2"),
+            ("Ctrl+Z", "Decrease step size for X motor by factor of 2"),
+            ("Alt+A", "Increase step size for Y motor by factor of 2"),
+            ("Alt+Z", "Decrease step size for Y motor by factor of 2"),
             ("Ctrl+G", "Go absolute"),
             ("Ctrl+D", "Set absolute coordinates"),
             ("Ctrl+S", "Save Current coordinates"),
@@ -869,6 +873,21 @@ class MotorApp(QWidget):
 
         for keys, action in key_bindings:
             layout.addWidget(QLabel(f"{keys} - {action}"))
+
+        # Separator
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setFrameShadow(QFrame.Sunken)
+        layout.addWidget(separator)
+
+        # Import/Export section
+        layout.addWidget(QLabel("Import/Export of Table:"))
+        layout.addWidget(
+            QLabel(
+                "When importing a table, the first three columns must be X, Y, and Tag. Failing to do so will break the table."
+            )
+        )
+        layout.addWidget(QLabel("Note: Importing a table will overwrite the current table."))
 
         ok_button = QPushButton("OK")
         ok_button.clicked.connect(dialog.close)
