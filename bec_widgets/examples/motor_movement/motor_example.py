@@ -9,6 +9,8 @@ from PyQt5.QtCore import QThread, pyqtSlot
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtWidgets import QApplication, QWidget
 from pyqtgraph.Qt import QtWidgets, uic, QtCore
+from PyQt5.QtGui import QDoubleValidator
+from PyQt5.QtWidgets import QStyledItemDelegate, QLineEdit
 
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QShortcut
@@ -395,6 +397,12 @@ class MotorApp(QWidget):
         self.pushButton_stop.setShortcut("Ctrl+X")
         self.pushButton_stop.setToolTip("Ctrl+X")
 
+    def init_ui_table(self) -> None:
+        """Initialize the table validators for x and y coordinates"""
+        self.double_delegate = DoubleValidationDelegate(self.tableWidget_coordinates)
+        self.tableWidget_coordinates.setItemDelegateForColumn(2, self.double_delegate)
+        self.tableWidget_coordinates.setItemDelegateForColumn(3, self.double_delegate)
+
     def init_ui(self) -> None:
         """Setup all ui elements"""
 
@@ -404,6 +412,7 @@ class MotorApp(QWidget):
         self.init_ui_motor_configs()  # Motor Configs
         self.init_ui_motor_connections()  # Motor Connections
         self.init_keyboard_shortcuts()  # Keyboard Shortcuts
+        self.init_ui_table()  # Table validators for x and y coordinates
 
     def init_motor_map(self):
         # Get motor limits
@@ -507,6 +516,10 @@ class MotorApp(QWidget):
         current_row_count = table.rowCount()
         table.setRowCount(current_row_count + 1)
 
+        # Create QDoubleValidator
+        validator = QDoubleValidator()
+        validator.setDecimals(precision)
+
         checkBox = QtWidgets.QCheckBox()
         checkBox.setChecked(True)
         button = QtWidgets.QPushButton("Go")
@@ -517,12 +530,20 @@ class MotorApp(QWidget):
 
         table.setItem(current_row_count, 0, QtWidgets.QTableWidgetItem(str(tag)))
         table.setCellWidget(current_row_count, 1, checkBox)
+
+        # Apply validator to x and y coordinate QTableWidgetItem
+        item_x = QtWidgets.QTableWidgetItem(str(f"{coordinates[0]:.{precision}f}"))
+        item_y = QtWidgets.QTableWidgetItem(str(f"{coordinates[1]:.{precision}f}"))
+        item_x.setFlags(item_x.flags() | Qt.ItemIsEditable)
+        item_y.setFlags(item_y.flags() | Qt.ItemIsEditable)
+
         table.setItem(
             current_row_count, 2, QtWidgets.QTableWidgetItem(str(f"{coordinates[0]:.{precision}f}"))
         )
         table.setItem(
             current_row_count, 3, QtWidgets.QTableWidgetItem(str(f"{coordinates[1]:.{precision}f}"))
         )
+
         table.setCellWidget(current_row_count, 4, button)
 
         button.clicked.connect(partial(self.move_to_row_coordinates, table, current_row_count))
@@ -661,6 +682,14 @@ class MotorApp(QWidget):
     @staticmethod
     def param_changed(ui_element):
         ui_element.setStyleSheet("background-color: #FFA700;")
+
+
+class DoubleValidationDelegate(QStyledItemDelegate):
+    def createEditor(self, parent, option, index):
+        editor = QLineEdit(parent)
+        validator = QDoubleValidator()
+        editor.setValidator(validator)
+        return editor
 
 
 class MotorActions(Enum):
