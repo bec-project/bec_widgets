@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.16.4 (2023-09-06)
+
+### Fix
+
+* Self.limit_map_data fixed to be initialised only with integers from limits ([`b62509a`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/b62509a28e970358c3ffd4f7d55c2a6bbef35970))
+
 ## v0.16.3 (2023-09-06)
 
 ### Fix
