@@ -596,17 +596,21 @@ class MotorApp(QWidget):
 
     def delete_selected_row(self):
         selected_rows = self.tableWidget_coordinates.selectionModel().selectedRows()
-        for row in reversed(selected_rows):
-            row_index = row.row()
+        rows_to_delete = [row.row() for row in selected_rows]
+        rows_to_delete.sort(reverse=True)  # Sort in descending order
+
+        for row_index in rows_to_delete:
             self.saved_motor_positions = np.delete(self.saved_motor_positions, row_index, axis=0)
-            del self.saved_point_visibility[row_index]  # Update this line
+            del self.saved_point_visibility[row_index]
+
+            # Update the plot
             brushes = [
                 pg.mkBrush(255, 165, 0, 255) if visible else pg.mkBrush(255, 165, 0, 0)
                 for visible in self.saved_point_visibility
-            ]  # Regenerate brushes
-            self.saved_motor_map.setData(
-                pos=self.saved_motor_positions, brush=brushes
-            )  # Update this line
+            ]
+            self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
+
+            # Remove the row from the table
             self.tableWidget_coordinates.removeRow(row_index)
 
         # Update the 'Go' buttons
