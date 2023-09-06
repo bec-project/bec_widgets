@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.16.2 (2023-09-06)
+
+### Fix
+
+* X and y motor can be linked again ([`f45512e`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/f45512e0ae9c189a1d26456333c5b348cd681ce7))
+
 ## v0.16.1 (2023-09-06)
 
 ### Fix
