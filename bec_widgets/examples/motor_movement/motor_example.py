@@ -889,6 +889,21 @@ class MotorApp(QWidget):
         )
         layout.addWidget(QLabel("Note: Importing a table will overwrite the current table."))
 
+        # Another Separator
+        another_separator = QFrame()
+        another_separator.setFrameShape(QFrame.HLine)
+        another_separator.setFrameShadow(QFrame.Sunken)
+        layout.addWidget(another_separator)
+
+        # PyQtGraph Controls
+        layout.addWidget(QLabel("Graph Window Controls:"))
+        graph_controls = [
+            ("Left Drag", "Pan the view"),
+            ("Right Drag or Scroll", "Zoom in/out"),
+        ]
+        for action, description in graph_controls:
+            layout.addWidget(QLabel(f"{action} - {description}"))
+
         ok_button = QPushButton("OK")
         ok_button.clicked.connect(dialog.close)
         layout.addWidget(ok_button)
