@@ -760,15 +760,16 @@ class MotorApp(QWidget):
                 # Dynamically update self.extra_columns
                 new_extra_columns = []
                 for col_name in header:
-                    if col_name not in ["X", "Y"]:
+                    if col_name not in ["X", "Y", "Tag"]:
                         new_extra_columns.append({col_name: ""})
                 self.extra_columns = new_extra_columns
 
+                # Set column count and headers
                 table.setColumnCount(5 + len(self.extra_columns))
-
-                for index, col_name in enumerate(
-                    ["Button", "Checkbox", "X", "Y", "Tag"] + header[2:]
-                ):
+                new_headers = ["Button", "Checkbox", "X", "Y", "Tag"] + [
+                    col for col in header if col not in ["X", "Y", "Tag"]
+                ]
+                for index, col_name in enumerate(new_headers):
                     header_item = QtWidgets.QTableWidgetItem(col_name)
                     header_item.setTextAlignment(Qt.AlignCenter)
                     table.setHorizontalHeaderItem(index, header_item)
@@ -781,7 +782,6 @@ class MotorApp(QWidget):
                     checkBox = QtWidgets.QCheckBox()
                     checkBox.setChecked(True)
 
-                    # Connect button and checkbox to their respective slots
                     button.clicked.connect(
                         partial(self.move_to_row_coordinates, table, current_row)
                     )
@@ -792,6 +792,7 @@ class MotorApp(QWidget):
                     table.setCellWidget(current_row, 0, button)
                     table.setCellWidget(current_row, 1, checkBox)
 
+                    # Populate data
                     for col, data in enumerate(row_data):
                         item = QtWidgets.QTableWidgetItem(data)
                         item.setTextAlignment(Qt.AlignCenter)
