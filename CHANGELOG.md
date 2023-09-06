@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.16.1 (2023-09-06)
+
+### Fix
+
+* Default values fixed from .yaml ([`8a6e2da`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/8a6e2daaf95cb5417951cbe3cca0cb3e909b08b4))
+
 ## v0.16.0 (2023-09-06)
 
 ### Feature
