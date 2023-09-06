@@ -1,4 +1,5 @@
 import os
+from functools import partial
 
 import numpy as np
 from enum import Enum
@@ -510,7 +511,6 @@ class MotorApp(QWidget):
         checkBox.setChecked(True)
         button = QtWidgets.QPushButton("Go")
 
-        # Connect checkBox state change to toggle visibility
         checkBox.stateChanged.connect(
             lambda state, coord=coordinates: self.toggle_point_visibility(state, coord)
         )
@@ -525,13 +525,7 @@ class MotorApp(QWidget):
         )
         table.setCellWidget(current_row_count, 4, button)
 
-        # Hook signals of table
-        button.clicked.connect(
-            lambda: self.move_motor_absolute(
-                float(table.item(current_row_count, 2).text()),
-                float(table.item(current_row_count, 3).text()),
-            )
-        )
+        button.clicked.connect(partial(self.move_to_row_coordinates, table, current_row_count))
 
         # Add point to scatter plot
         # Add a True value to saved_point_visibility list when a new point is added.
@@ -552,6 +546,27 @@ class MotorApp(QWidget):
         self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
 
         table.resizeColumnsToContents()
+
+    def check_and_move(self, table):
+        """Check if the coordinates are valid and move the motor"""
+        selected_rows = table.selectionModel().selectedRows()
+        if selected_rows:
+            row_index = selected_rows[-1].row()  # Take the last selected row
+            item_x = table.item(row_index, 2)
+            item_y = table.item(row_index, 3)
+            if item_x is not None and item_y is not None:
+                self.move_motor_absolute(float(item_x.text()), float(item_y.text()))
+
+    # def move_to_row_coordinates(self, table, row):
+    #     item_x = table.item(row, 2)
+    #     item_y = table.item(row, 3)
+    #     if item_x is not None and item_y is not None:
+    #         self.move_motor_absolute(float(item_x.text()), float(item_y.text()))
+
+    def move_to_row_coordinates(self, table, row):
+        x = float(table.item(row, 2).text())
+        y = float(table.item(row, 3).text())
+        self.move_motor_absolute(x, y)
 
     def toggle_point_visibility(self, state, coord):
         index = np.where((self.saved_motor_positions == coord).all(axis=1))[0][0]
@@ -578,6 +593,29 @@ class MotorApp(QWidget):
                 pos=self.saved_motor_positions, brush=brushes
             )  # Update this line
             self.tableWidget_coordinates.removeRow(row_index)
+
+    def delete_selected_row(self):
+        selected_rows = self.tableWidget_coordinates.selectionModel().selectedRows()
+        for row in reversed(selected_rows):
+            row_index = row.row()
+            self.saved_motor_positions = np.delete(self.saved_motor_positions, row_index, axis=0)
+            del self.saved_point_visibility[row_index]  # Update this line
+            brushes = [
+                pg.mkBrush(255, 165, 0, 255) if visible else pg.mkBrush(255, 165, 0, 0)
+                for visible in self.saved_point_visibility
+            ]  # Regenerate brushes
+            self.saved_motor_map.setData(
+                pos=self.saved_motor_positions, brush=brushes
+            )  # Update this line
+            self.tableWidget_coordinates.removeRow(row_index)
+
+        # Update the 'Go' buttons
+        for row in range(self.tableWidget_coordinates.rowCount()):
+            button = self.tableWidget_coordinates.cellWidget(row, 4)
+            button.clicked.disconnect()
+            button.clicked.connect(
+                partial(self.move_to_row_coordinates, self.tableWidget_coordinates, row)
+            )
 
     def save_absolute_coordinates(self):
         self.generate_table_coordinate(
