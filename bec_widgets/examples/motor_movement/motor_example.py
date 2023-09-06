@@ -5,11 +5,11 @@ from functools import partial
 import numpy as np
 import pyqtgraph as pg
 from PyQt5 import QtGui
-from PyQt5.QtCore import QThread, pyqtSlot
+from PyQt5.QtCore import QThread, pyqtSlot, QPoint
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QDoubleValidator
 from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QApplication, QWidget
+from PyQt5.QtWidgets import QApplication, QWidget, QTableWidget
 from PyQt5.QtWidgets import QShortcut
 from pyqtgraph.Qt import QtWidgets, uic, QtCore
 
@@ -524,7 +524,7 @@ class MotorApp(QWidget):
         button = QtWidgets.QPushButton("Go")
 
         checkBox.stateChanged.connect(
-            lambda state, row=current_row_count: self.toggle_point_visibility(state, row)
+            lambda state, widget=checkBox: self.toggle_point_visibility(state, widget)
         )
 
         table.setItem(current_row_count, 0, QtWidgets.QTableWidgetItem(str(tag)))
@@ -547,17 +547,6 @@ class MotorApp(QWidget):
 
         button.clicked.connect(partial(self.move_to_row_coordinates, table, current_row_count))
 
-        # Add point to scatter plot
-        # Add a True value to saved_point_visibility list when a new point is added.
-        self.saved_point_visibility.append(True)
-
-        # Update the scatter plot to maintain the visibility of existing points
-        new_pos = np.array(coordinates)
-        if self.saved_motor_positions.size == 0:
-            self.saved_motor_positions = np.array([new_pos])
-        else:
-            self.saved_motor_positions = np.vstack((self.saved_motor_positions, new_pos))
-
         brushes = [
             pg.mkBrush(255, 165, 0, 255) if visible else pg.mkBrush(255, 165, 0, 0)
             for visible in self.saved_point_visibility
@@ -572,7 +561,19 @@ class MotorApp(QWidget):
         y = float(table.item(row, 3).text())
         self.move_motor_absolute(x, y)
 
-    def toggle_point_visibility(self, state, row_index):
+    def toggle_point_visibility(self, state, checkBox_widget):
+        parent = checkBox_widget.parent()
+        while not isinstance(parent, QTableWidget):
+            parent = parent.parent()
+
+        table = parent
+
+        pos = checkBox_widget.pos()
+        item = table.indexAt(pos)
+        row_index = item.row()
+
+        # print(f"Row {row_index} visibility changed to {state == Qt.Checked}")
+
         self.saved_point_visibility[row_index] = state == Qt.Checked
 
         # Generate brushes based on visibility state
@@ -580,6 +581,12 @@ class MotorApp(QWidget):
             pg.mkBrush(255, 165, 0, 255) if visible else pg.mkBrush(255, 165, 0, 0)
             for visible in self.saved_point_visibility
         ]
+
+        # brushed_rgb = [brush.color().getRgb() for brush in brushes]
+
+        # print(f"Poinst: {self.saved_motor_positions}")
+        # print(f"Brushes: {brushed_rgb}")
+
         self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
 
     def update_saved_coordinates(self):
