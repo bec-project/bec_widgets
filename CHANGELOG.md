@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.16.3 (2023-09-06)
+
+### Fix
+
+* Limit spinBoxes morphed to doubleSpinBoxes ([`a1264fe`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/a1264fe4e2e0c864c68786d6db16550f489b00fa))
+
+### Documentation
+
+* PyqtGraph controls in help ([`2397af1`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/2397af140f2f9ee23ed5e62ef9bdf4d0aba249a1))
+
 ## v0.16.2 (2023-09-06)
 
 ### Fix
