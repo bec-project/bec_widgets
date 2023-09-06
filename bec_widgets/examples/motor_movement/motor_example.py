@@ -517,7 +517,6 @@ class MotorApp(QWidget):
     ) -> None:
         current_row_count = table.rowCount()
         table.setRowCount(current_row_count + 1)
-        table.setColumnCount(5 + len(self.extra_columns))
 
         # Create QDoubleValidator
         validator = QDoubleValidator()
@@ -559,15 +558,24 @@ class MotorApp(QWidget):
         # Adding extra columns
         if extra_columns:
             col_index = 5  # Starting index for extra columns
-            for col_dict in extra_columns:
+            table.setColumnCount(col_index + len(self.extra_columns))
+            for col_dict in self.extra_columns:
                 for col_name, default_value in col_dict.items():
-                    item = QtWidgets.QTableWidgetItem(str(default_value))
+                    if current_row_count == 0:
+                        item = QtWidgets.QTableWidgetItem(str(default_value))
+                    else:
+                        item = QtWidgets.QTableWidgetItem(
+                            table.item(current_row_count - 1, col_index).text()
+                        )
+
                     item.setFlags(item.flags() | Qt.ItemIsEditable)
                     table.setItem(current_row_count, col_index, item)
+
                     if current_row_count == 0:
                         table.setHorizontalHeaderItem(
                             col_index, QtWidgets.QTableWidgetItem(col_name)
                         )
+
                     col_index += 1
 
         self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
