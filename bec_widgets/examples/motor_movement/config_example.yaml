@@ -1,9 +1,14 @@
 selected_motors:
-  motor_x: 'samx'
-  motor_y: 'samy'
+  motor_x: "samx"
+  motor_y: "samy"
 
 plot_motors:
   max_points: 1000
   num_dim_points: 100
   scatter_size: 5
   precision: 3
+  extra_columns:
+    - sample name: "sample 1"
+    - Step [x]: 1
+    - Step [y]: 1
+    - Exposure time [s]: 1

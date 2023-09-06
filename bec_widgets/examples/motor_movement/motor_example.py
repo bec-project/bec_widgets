@@ -53,10 +53,13 @@ class MotorApp(QWidget):
 
         # Coordinates tracking
         self.motor_positions = np.array([])
+
+        # Config file settings
         self.max_points = plot_motors.get("max_points", 5000)
         self.num_dim_points = plot_motors.get("num_dim_points", 100)
         self.scatter_size = plot_motors.get("scatter_size", 5)
         self.precision = plot_motors.get("precision", 2)
+        self.extra_columns = plot_motors.get("extra_columns", None)
 
         # Saved motors from config file
         self.selected_motors = selected_motors
@@ -514,6 +517,7 @@ class MotorApp(QWidget):
     ) -> None:
         current_row_count = table.rowCount()
         table.setRowCount(current_row_count + 1)
+        table.setColumnCount(5 + len(self.extra_columns))
 
         # Create QDoubleValidator
         validator = QDoubleValidator()
@@ -551,6 +555,20 @@ class MotorApp(QWidget):
             pg.mkBrush(255, 165, 0, 255) if visible else pg.mkBrush(255, 165, 0, 0)
             for visible in self.saved_point_visibility
         ]
+
+        # Adding extra columns
+        if extra_columns:
+            col_index = 5  # Starting index for extra columns
+            for col_dict in extra_columns:
+                for col_name, default_value in col_dict.items():
+                    item = QtWidgets.QTableWidgetItem(str(default_value))
+                    item.setFlags(item.flags() | Qt.ItemIsEditable)
+                    table.setItem(current_row_count, col_index, item)
+                    if current_row_count == 0:
+                        table.setHorizontalHeaderItem(
+                            col_index, QtWidgets.QTableWidgetItem(col_name)
+                        )
+                    col_index += 1
 
         self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
 
@@ -936,6 +954,7 @@ if __name__ == "__main__":
 
             selected_motors = config.get("selected_motors", {})
             plot_motors = config.get("plot_motors", {})
+            extra_columns = config.get("plot_motors", {}).get("extra_columns", [])
 
     except FileNotFoundError:
         print(f"The file {args.config} was not found.")
