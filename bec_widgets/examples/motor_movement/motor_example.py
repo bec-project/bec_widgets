@@ -15,6 +15,8 @@ from PyQt5.QtWidgets import QStyledItemDelegate, QLineEdit
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QShortcut
 
+from bec_widgets.qt_utils import DoubleValidationDelegate
+
 from bec_lib.core import MessageEndpoints, BECMessage
 
 
@@ -684,12 +686,12 @@ class MotorApp(QWidget):
         ui_element.setStyleSheet("background-color: #FFA700;")
 
 
-class DoubleValidationDelegate(QStyledItemDelegate):
-    def createEditor(self, parent, option, index):
-        editor = QLineEdit(parent)
-        validator = QDoubleValidator()
-        editor.setValidator(validator)
-        return editor
+# class DoubleValidationDelegate(QStyledItemDelegate):
+#     def createEditor(self, parent, option, index):
+#         editor = QLineEdit(parent)
+#         validator = QDoubleValidator()
+#         editor.setValidator(validator)
+#         return editor
 
 
 class MotorActions(Enum):
