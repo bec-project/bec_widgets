@@ -580,6 +580,12 @@ class MotorApp(QWidget):
 
         self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
 
+        for row in range(table.rowCount()):
+            for col in range(table.columnCount()):
+                item = table.item(row, col)
+                if item:
+                    item.setTextAlignment(Qt.AlignCenter)
+
         table.resizeColumnsToContents()
 
     def move_to_row_coordinates(self, table, row):
@@ -694,7 +700,7 @@ class MotorApp(QWidget):
         self.generate_table_coordinate(
             self.tableWidget_coordinates,
             self.motor_thread.retrieve_coordinates(),
-            tag=f"Current {self.tag_N}",
+            tag=f"Cur {self.tag_N}",
             precision=self.precision,
         )
 
