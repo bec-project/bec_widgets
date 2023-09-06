@@ -6,7 +6,7 @@ from functools import partial
 import numpy as np
 import pyqtgraph as pg
 from PyQt5 import QtGui
-from PyQt5.QtCore import QThread, pyqtSlot, QPoint
+from PyQt5.QtCore import QThread, pyqtSlot
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QDoubleValidator
 from PyQt5.QtGui import QKeySequence
@@ -15,7 +15,6 @@ from PyQt5.QtWidgets import (
     QWidget,
     QTableWidget,
     QFileDialog,
-    QLineEdit,
     QDialog,
     QVBoxLayout,
     QLabel,
@@ -600,25 +599,6 @@ class MotorApp(QWidget):
                         )
 
                     col_index += 1
-
-        # if self.extra_columns:
-        #     col_index = 5  # Starting index for extra columns
-        #     table.setColumnCount(col_index + len(self.extra_columns))
-        #     for col_dict in self.extra_columns:
-        #         for col_name, _ in col_dict.items():
-        #             prev_item = table.item(current_row_count - 1, col_index)
-        #             item_text = prev_item.text() if prev_item else ""
-        #             item = QtWidgets.QTableWidgetItem(item_text)
-        #
-        #             item.setFlags(item.flags() | Qt.ItemIsEditable)
-        #             table.setItem(current_row_count, col_index, item)
-        #
-        #             if current_row_count == 0:
-        #                 table.setHorizontalHeaderItem(
-        #                     col_index, QtWidgets.QTableWidgetItem(col_name)
-        #                 )
-        #
-        #             col_index += 1
 
         self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
 
