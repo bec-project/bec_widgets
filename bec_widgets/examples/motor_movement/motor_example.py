@@ -447,8 +447,8 @@ class MotorApp(QWidget):
         self.offset_y = limit_y_min
 
         # Define the size of the image map based on the motor's limits
-        map_width = limit_x_max - limit_x_min + 1
-        map_height = limit_y_max - limit_y_min + 1
+        map_width = int(limit_x_max - limit_x_min + 1)
+        map_height = int(limit_y_max - limit_y_min + 1)
 
         # Create an empty image map
         self.background_value = 25
