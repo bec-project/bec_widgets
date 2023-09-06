@@ -524,7 +524,7 @@ class MotorApp(QWidget):
         button = QtWidgets.QPushButton("Go")
 
         checkBox.stateChanged.connect(
-            lambda state, coord=coordinates: self.toggle_point_visibility(state, coord)
+            lambda state, row=current_row_count: self.toggle_point_visibility(state, row)
         )
 
         table.setItem(current_row_count, 0, QtWidgets.QTableWidgetItem(str(tag)))
@@ -572,13 +572,12 @@ class MotorApp(QWidget):
         y = float(table.item(row, 3).text())
         self.move_motor_absolute(x, y)
 
-    def toggle_point_visibility(self, state, coord):
-        index = np.where((self.saved_motor_positions == coord).all(axis=1))[0][0]
-        self.saved_point_visibility[index] = state == Qt.Checked
+    def toggle_point_visibility(self, state, row_index):
+        self.saved_point_visibility[row_index] = state == Qt.Checked
 
         # Generate brushes based on visibility state
         brushes = [
-            pg.mkBrush(255, 0, 0, 255) if visible else pg.mkBrush(255, 0, 0, 0)
+            pg.mkBrush(255, 165, 0, 255) if visible else pg.mkBrush(255, 165, 0, 0)
             for visible in self.saved_point_visibility
         ]
         self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
