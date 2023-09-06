@@ -1,3 +1,4 @@
+import csv
 import os
 from enum import Enum
 from functools import partial
@@ -9,7 +10,7 @@ from PyQt5.QtCore import QThread, pyqtSlot, QPoint
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QDoubleValidator
 from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QApplication, QWidget, QTableWidget
+from PyQt5.QtWidgets import QApplication, QWidget, QTableWidget, QFileDialog
 from PyQt5.QtWidgets import QShortcut
 from pyqtgraph.Qt import QtWidgets, uic, QtCore
 
@@ -405,6 +406,11 @@ class MotorApp(QWidget):
         # Signals
         self.tableWidget_coordinates.itemChanged.connect(self.update_saved_coordinates)
 
+        # Buttons
+        self.pushButton_exportCSV.clicked.connect(
+            lambda: self.export_table_to_csv(self.tableWidget_coordinates)
+        )
+
     def init_ui(self) -> None:
         """Setup all ui elements"""
 
@@ -685,6 +691,34 @@ class MotorApp(QWidget):
             button.clicked.connect(
                 partial(self.move_to_row_coordinates, self.tableWidget_coordinates, row)
             )
+
+    def export_table_to_csv(self, table: QtWidgets.QTableWidget):
+        options = QFileDialog.Options()
+        filePath, _ = QFileDialog.getSaveFileName(
+            self, "Save File", "", "CSV Files (*.csv);;All Files (*)", options=options
+        )
+
+        if filePath:
+            if not filePath.endswith(".csv"):
+                filePath += ".csv"
+
+            with open(filePath, mode="w", newline="") as file:
+                writer = csv.writer(file)
+
+                # Write the header
+                header = []
+                for col in range(2, table.columnCount()):
+                    header_item = table.horizontalHeaderItem(col)
+                    header.append(header_item.text() if header_item else "")
+                writer.writerow(header)
+
+                # Write the content
+                for row in range(table.rowCount()):
+                    row_data = []
+                    for col in range(2, table.columnCount()):
+                        item = table.item(row, col)
+                        row_data.append(item.text() if item else "")
+                    writer.writerow(row_data)
 
     def save_absolute_coordinates(self):
         self.generate_table_coordinate(

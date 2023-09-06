@@ -541,6 +541,20 @@
          </column>
         </widget>
        </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_exportCSV">
+         <property name="text">
+          <string>Export CSV</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_2">
+         <property name="text">
+          <string>Import CSV</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </widget>
      <widget class="QWidget" name="tab_settings">
