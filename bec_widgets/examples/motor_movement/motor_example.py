@@ -1,23 +1,20 @@
 import os
+from enum import Enum
 from functools import partial
 
 import numpy as np
-from enum import Enum
 import pyqtgraph as pg
 from PyQt5 import QtGui
 from PyQt5.QtCore import QThread, pyqtSlot
 from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtWidgets import QApplication, QWidget
-from pyqtgraph.Qt import QtWidgets, uic, QtCore
 from PyQt5.QtGui import QDoubleValidator
-from PyQt5.QtWidgets import QStyledItemDelegate, QLineEdit
-
 from PyQt5.QtGui import QKeySequence
+from PyQt5.QtWidgets import QApplication, QWidget
 from PyQt5.QtWidgets import QShortcut
-
-from bec_widgets.qt_utils import DoubleValidationDelegate
+from pyqtgraph.Qt import QtWidgets, uic, QtCore
 
 from bec_lib.core import MessageEndpoints, BECMessage
+from bec_widgets.qt_utils import DoubleValidationDelegate
 
 
 # TODO - General features
@@ -263,10 +260,6 @@ class MotorApp(QWidget):
         self.checkBox_same_xy.stateChanged.connect(
             lambda: self.sync_step_sizes(self.spinBox_step_x, self.spinBox_step_y)
         )
-
-        # TODO remove
-        # self.spinBox_step_x.valueChanged.connect(self.update_step_size_x)
-        # self.spinBox_step_y.valueChanged.connect(self.update_step_size_y)
 
         self.toolButton_right.clicked.connect(
             lambda: self.move_motor_relative(self.motor_x, "x", 1)
@@ -524,7 +517,7 @@ class MotorApp(QWidget):
 
         # Create QDoubleValidator
         validator = QDoubleValidator()
-        validator.setDecimals(precision)
+        validator.setDecimals(precision)  # TODO not sure if necessary
 
         checkBox = QtWidgets.QCheckBox()
         checkBox.setChecked(True)
@@ -573,22 +566,6 @@ class MotorApp(QWidget):
         self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
 
         table.resizeColumnsToContents()
-
-    def check_and_move(self, table):
-        """Check if the coordinates are valid and move the motor"""
-        selected_rows = table.selectionModel().selectedRows()
-        if selected_rows:
-            row_index = selected_rows[-1].row()  # Take the last selected row
-            item_x = table.item(row_index, 2)
-            item_y = table.item(row_index, 3)
-            if item_x is not None and item_y is not None:
-                self.move_motor_absolute(float(item_x.text()), float(item_y.text()))
-
-    # def move_to_row_coordinates(self, table, row):
-    #     item_x = table.item(row, 2)
-    #     item_y = table.item(row, 3)
-    #     if item_x is not None and item_y is not None:
-    #         self.move_motor_absolute(float(item_x.text()), float(item_y.text()))
 
     def move_to_row_coordinates(self, table, row):
         x = float(table.item(row, 2).text())
@@ -711,14 +688,6 @@ class MotorApp(QWidget):
     @staticmethod
     def param_changed(ui_element):
         ui_element.setStyleSheet("background-color: #FFA700;")
-
-
-# class DoubleValidationDelegate(QStyledItemDelegate):
-#     def createEditor(self, parent, option, index):
-#         editor = QLineEdit(parent)
-#         validator = QDoubleValidator()
-#         editor.setValidator(validator)
-#         return editor
 
 
 class MotorActions(Enum):
@@ -942,7 +911,7 @@ if __name__ == "__main__":
 
     from bec_lib import BECClient
 
-    from bec_lib.core import ServiceConfig, RedisConnector
+    from bec_lib.core import ServiceConfig
 
     parser = argparse.ArgumentParser(description="Motor App")
 
