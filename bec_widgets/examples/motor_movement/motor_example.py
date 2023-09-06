@@ -579,36 +579,17 @@ class MotorApp(QWidget):
         ]
 
         # Adding extra columns
-        # if self.extra_columns:
-        #     col_index = 5  # Starting index for extra columns
-        #     table.setColumnCount(col_index + len(self.extra_columns))
-        #     for col_dict in self.extra_columns:
-        #         for col_name, default_value in col_dict.items():
-        #             if current_row_count == 0:
-        #                 item = QtWidgets.QTableWidgetItem(str(default_value))
-        #             else:
-        #                 item = QtWidgets.QTableWidgetItem(
-        #                     table.item(current_row_count - 1, col_index).text()
-        #                 )
-        #
-        #             item.setFlags(item.flags() | Qt.ItemIsEditable)
-        #             table.setItem(current_row_count, col_index, item)
-        #
-        #             if current_row_count == 0:
-        #                 table.setHorizontalHeaderItem(
-        #                     col_index, QtWidgets.QTableWidgetItem(col_name)
-        #                 )
-        #
-        #             col_index += 1
-
         if self.extra_columns:
             col_index = 5  # Starting index for extra columns
             table.setColumnCount(col_index + len(self.extra_columns))
             for col_dict in self.extra_columns:
-                for col_name, _ in col_dict.items():
-                    prev_item = table.item(current_row_count - 1, col_index)
-                    item_text = prev_item.text() if prev_item else ""
-                    item = QtWidgets.QTableWidgetItem(item_text)
+                for col_name, default_value in col_dict.items():
+                    if current_row_count == 0:
+                        item = QtWidgets.QTableWidgetItem(str(default_value))
+                    else:
+                        prev_item = table.item(current_row_count - 1, col_index)
+                        item_text = prev_item.text() if prev_item else ""
+                        item = QtWidgets.QTableWidgetItem(item_text)
 
                     item.setFlags(item.flags() | Qt.ItemIsEditable)
                     table.setItem(current_row_count, col_index, item)
@@ -619,6 +600,25 @@ class MotorApp(QWidget):
                         )
 
                     col_index += 1
+
+        # if self.extra_columns:
+        #     col_index = 5  # Starting index for extra columns
+        #     table.setColumnCount(col_index + len(self.extra_columns))
+        #     for col_dict in self.extra_columns:
+        #         for col_name, _ in col_dict.items():
+        #             prev_item = table.item(current_row_count - 1, col_index)
+        #             item_text = prev_item.text() if prev_item else ""
+        #             item = QtWidgets.QTableWidgetItem(item_text)
+        #
+        #             item.setFlags(item.flags() | Qt.ItemIsEditable)
+        #             table.setItem(current_row_count, col_index, item)
+        #
+        #             if current_row_count == 0:
+        #                 table.setHorizontalHeaderItem(
+        #                     col_index, QtWidgets.QTableWidgetItem(col_name)
+        #                 )
+        #
+        #             col_index += 1
 
         self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
 
