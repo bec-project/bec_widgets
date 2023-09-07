@@ -78,12 +78,12 @@ class StreamApp(QWidget):
         row = msgMCS.content["signals"]["mca1"]
         metadata = msgMCS.metadata
 
+        # Check if the current number of rows is odd
+        if parent.data is not None and parent.data.shape[0] % 2 == 1:
+            row = np.flip(row)  # Flip the row
+
         if parent.data is None:
             parent.data = np.array([row])
-
-        # Check if the current number of rows is odd
-        # if parent.data is not None and parent.data.shape[0] % 2 == 0:
-        #     row = np.flip(row)  # Flip the rowR
         else:
             parent.data = np.vstack((parent.data, row))
 
