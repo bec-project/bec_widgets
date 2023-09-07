@@ -5,7 +5,7 @@ connector = RedisConnector("localhost:6379")
 producer = connector.producer()
 metadata = {}
 
-scanID = "ScanID3"
+scanID = "ScanID1"
 
 metadata.update(
     {

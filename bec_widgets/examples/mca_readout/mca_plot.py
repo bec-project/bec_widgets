@@ -15,7 +15,7 @@ class StreamApp(QWidget):
     update_signal = pyqtSignal()
     new_scanID = pyqtSignal(str)
 
-    def __init__(self):
+    def __init__(self, device, sub_device):
         super().__init__()
 
         self.init_ui()
@@ -24,7 +24,10 @@ class StreamApp(QWidget):
         self.scanID = None
         self.stream_consumer = None
 
-        self.device_consumer("mca")
+        self.device = device
+        self.sub_device = sub_device
+
+        self.device_consumer(self.device)
 
         self.new_scanID.connect(self.create_new_stream_consumer)
         self.update_signal.connect(self.plot_new)
@@ -47,7 +50,7 @@ class StreamApp(QWidget):
     def create_new_stream_consumer(self, scanID: str):
         print(f"Creating new stream consumer for scanID: {scanID}")
 
-        self.connect_stream_consumer(scanID, "mca")
+        self.connect_stream_consumer(scanID, self.device)
 
     def connect_stream_consumer(self, scanID, device):
         if self.stream_consumer is not None:
@@ -75,7 +78,7 @@ class StreamApp(QWidget):
     def _streamer_cb(msg, *, parent, **_kwargs) -> None:
         msgMCS = BECMessage.DeviceMessage.loads(msg.value)
 
-        row = msgMCS.content["signals"]["mca1"]
+        row = msgMCS.content["signals"][parent.sub_device]
         metadata = msgMCS.metadata
 
         # Check if the current number of rows is odd
@@ -108,16 +111,24 @@ class StreamApp(QWidget):
 
             print(f"New scanID: {current_scanID}")
 
-        # print(msgDEV)
-
 
 if __name__ == "__main__":
+    import argparse
     from bec_lib.core import RedisConnector
 
-    connector = RedisConnector("localhost:6379")
+    parser = argparse.ArgumentParser(description="Stream App.")
+    parser.add_argument(
+        "--port", type=str, default="localhost:6379", help="Port for RedisConnector"
+    )
+    parser.add_argument("--device", type=str, default="mca", help="Device name")
+    parser.add_argument("--sub_device", type=str, default="mca1", help="Sub-device name")
+
+    args = parser.parse_args()
+
+    connector = RedisConnector(args.port)
 
     app = QApplication([])
-    streamApp = StreamApp()
+    streamApp = StreamApp(device=args.device, sub_device=args.sub_device)
 
     streamApp.show()
     app.exec_()
