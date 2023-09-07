@@ -37,7 +37,7 @@ class StreamApp(QWidget):
 
         self.stream_consumer = connector.stream_consumer(
             topics=MessageEndpoints.device_async_readback(scanID="ScanID1", device="mca"),
-            cb=self._stremer_cb,
+            cb=self._streamer_cb,
             parent=self,
         )
 
@@ -52,15 +52,8 @@ class StreamApp(QWidget):
     def plot_new(self):
         self.image_item.setImage(self.data)
 
-    @pyqtSlot(dict, dict)
-    def get_stream(self, msg, metadata):
-        print(msg)
-        print(metadata)
-
-    # def connect_stream_slot(self, slot, topic):
-
     @staticmethod
-    def _stremer_cb(msg, *, parent, **_kwargs) -> None:
+    def _streamer_cb(msg, *, parent, **_kwargs) -> None:
         msgMCS = BECMessage.DeviceMessage.loads(msg.value)
 
         row = msgMCS.content["signals"]["mca1"]
@@ -75,39 +68,16 @@ class StreamApp(QWidget):
             parent.data = row
             parent.image_item.clear()
 
-        # print(f"metadata: {metadata}")
-
-        # add row vertically to data
         parent.data = np.vstack((parent.data, row))
 
         parent.update_plot.emit()
 
-        # print(f"msg: {msgMCS}")
-        # print(f"row: {row}")
-
 
 if __name__ == "__main__":
-    from bec_widgets.bec_dispatcher import bec_dispatcher
-
-    # BECclient global variables
-    # client = bec_dispatcher.client
-    # client.start()
-    #
-    # dev = client.device_manager.devices
-    # scans = client.scans
-    # queue = client.queue
-
     connector = RedisConnector("localhost:6379")
 
     app = QApplication([])
-    progressApp = StreamApp()
+    streamApp = StreamApp()
 
-    # bec_dispatcher.connect_slot(
-    #     slot=progressApp.get_stream,
-    #     topic=MessageEndpoints.device_async_readback(scanID="ScanID1", device="mca"),
-    # )
-
-    # window = ProgressApp()
-    # window.show()
-    progressApp.show()
+    streamApp.show()
     app.exec_()
