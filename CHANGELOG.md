@@ -2,6 +2,15 @@
 
 <!--next-version-placeholder-->
 
+## v0.17.0 (2023-09-07)
+
+### Feature
+
+* Console arguments added for Redis port, device, and sub_device tag ([`fb52b2a`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/fb52b2a8e59fca556764e0dc32bd4edc167e31d3))
+* Plot flips every second row ([`c368871`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/c36887191914d23e85a1b480dac324be0eefb963))
+* Device_consumer is getting scanID and initialise stream_consumer ([`9271b91`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/9271b91113a3bbd46f0bffdaef7b50b629e4f44f))
+* Simulation and simple 2D plot for mca card stream ([`bfef713`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/bfef71382e6a1180d750d2c800650942c5da7a21))
+
 ## v0.16.4 (2023-09-06)
 
 ### Fix
