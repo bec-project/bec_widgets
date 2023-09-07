@@ -16,11 +16,21 @@ from bec_lib.core import MessageEndpoints, RedisConnector, BECMessage
 
 
 class StreamApp(QWidget):
-    update_plot = pyqtSignal()
+    update_signal = pyqtSignal()
 
     def __init__(self):
         super().__init__()
 
+        self.init_ui()
+
+        self.data = None
+        # self.scanID = None
+        self.stream_consumer = None
+
+        self.update_signal.connect(self.plot_new)
+        self.connect_stream_consumer("ScanID1", "mca")
+
+    def init_ui(self):
         # Create layout and add widgets
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
@@ -35,19 +45,17 @@ class StreamApp(QWidget):
         # Add widgets to the layout
         self.layout.addWidget(self.plot_widget)
 
+    def connect_stream_consumer(self, scanID, device):
+        if self.stream_consumer is not None:
+            self.stream_consumer.shutdown()
+
         self.stream_consumer = connector.stream_consumer(
-            topics=MessageEndpoints.device_async_readback(scanID="ScanID1", device="mca"),
+            topics=MessageEndpoints.device_async_readback(scanID=scanID, device=device),
             cb=self._streamer_cb,
             parent=self,
         )
 
         self.stream_consumer.start()
-
-        self.data = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-
-        self.scanID = None
-
-        self.update_plot.connect(self.plot_new)
 
     def plot_new(self):
         self.image_item.setImage(self.data)
@@ -59,21 +67,30 @@ class StreamApp(QWidget):
         row = msgMCS.content["signals"]["mca1"]
         metadata = msgMCS.metadata
 
-        current_scanID = metadata.get("scanID", None)
-        if current_scanID is None:
-            return
-
-        if current_scanID != parent.scanID:
-            parent.scanID = current_scanID
+        if parent.data is None:
             parent.data = row
-            parent.image_item.clear()
+        else:
+            parent.data = np.vstack((parent.data, row))
 
-        parent.data = np.vstack((parent.data, row))
+        # current_scanID = metadata.get("scanID", None)
+        # if current_scanID is None:
+        #     return
 
-        parent.update_plot.emit()
+        # if current_scanID != parent.scanID:
+        #     parent.scanID = current_scanID
+        #     parent.data = row
+        #     parent.image_item.clear()
+
+        print(f"msg: {msg}")
+        print(f"metadata: {metadata}")
+        print(f"parent.data: {parent.data}")
+
+        parent.update_signal.emit()
 
 
 if __name__ == "__main__":
+    from bec_lib.core import RedisConnector
+
     connector = RedisConnector("localhost:6379")
 
     app = QApplication([])
