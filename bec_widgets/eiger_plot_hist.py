@@ -6,8 +6,8 @@ from PyQt5.QtWidgets import QHBoxLayout, QWidget, QCheckBox
 
 import zmq
 import json
-
-
+import h5py
+import os
 
 
 
@@ -16,6 +16,7 @@ class EigerPlot(QWidget):
     update_signale = pyqtSignal()
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.mask_file = os.path.expanduser('~/Data10/software/radial_integration_scipts/bad_pix_map_Eiger9M.h5')
 
         pg.setConfigOptions(background="w", foreground="k", antialias=True)
 
@@ -23,13 +24,17 @@ class EigerPlot(QWidget):
 
         self.setLayout(self.layout)
 
+        self.hist_lim = [0,20]
+
 
         self.glw = pg.GraphicsLayoutWidget()
+        self.use_fft = False
 
         # self.glw.show()
         # self.setCentralItem(self.glw)
 
         self.checkBox_FFT = QCheckBox("FFT")
+        self.checkBox_FFT.stateChanged.connect(self.on_fft_changed)
 
         self.layout.addWidget(self.checkBox_FFT)
 
@@ -45,7 +50,10 @@ class EigerPlot(QWidget):
 
         self.hist = pg.HistogramLUTItem()
         self.hist.setImageItem(self.imageItem)
-        self.hist.setLevels(min=0,max=100)
+        self.hist.setLevels(min=self.hist_lim[0],max=self.hist_lim[1])
+        self.hist.setHistogramRange(self.hist_lim[0] - 0.1 * self.hist_lim[0],self.hist_lim[1] + 0.1 * self.hist_lim[1])
+        self.hist.disableAutoHistogramRange()
+
         self.hist.gradient.loadPreset('magma')
 
         self.glw.addItem(self.hist)
@@ -58,10 +66,17 @@ class EigerPlot(QWidget):
 
         # self.imageItem.setImage([[0,1,2],[4,5,6]])
         self.update_signale.connect(self.on_image_update)
+        self.mask = None
+        self._load_mask()
+
         self.start_zmq_consumer()
 
     def start_zmq_consumer(self):
         consumer_thread = threading.Thread(target=self.zmq_consumer, daemon=True).start()
+
+    def _load_mask(self):
+        with h5py.File(self.mask_file, "r") as f:
+            self.mask = f["data"][...]
 
     def zmq_consumer(self):
         try:
@@ -82,13 +97,22 @@ class EigerPlot(QWidget):
             receiver.disconnect(live_stream_url)
             receiver.context.term()
 
-
+    @pyqtSlot()
+    def on_fft_changed(self):
+        self.update_signale.emit()
 
     @pyqtSlot()
     def on_image_update(self):
-        self.imageItem.setImage(self.image)
+        # if self.checkBox_FFT.isChecked():
+        #     img = np.log10(np.abs(np.fft.fftshift(np.fft.fft2(self.image*(1-self.mask.T)))))
+        # else:
 
+        img = np.log10(self.image*(1-self.mask)+1)
+        self.imageItem.setImage(img,autoLevels=False)
 
+        # hardcoded hist level
+        # self.hist.setLevels(min=self.hist_lim[0],max=self.hist_lim[1])
+        # self.hist.setHistogramRange(self.hist_lim[0] - 0.1 * self.hist_lim[0],self.hist_lim[1] + 0.1 * self.hist_lim[1])
 
 if __name__ == "__main__":
     import sys
