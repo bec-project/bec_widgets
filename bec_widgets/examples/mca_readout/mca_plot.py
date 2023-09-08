@@ -130,7 +130,7 @@ class StreamApp(QWidget):
         if current_scanID != parent.scanID:
             parent.scanID = current_scanID
             parent.data = None
-            parent.image_item.clear()
+            parent.imageItem.clear()
             parent.new_scanID.emit(current_scanID)
 
             print(f"New scanID: {current_scanID}")
