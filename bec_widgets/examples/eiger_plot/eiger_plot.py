@@ -1,22 +1,26 @@
-import csv
+import json
 import json
 import os
 import threading
 import time
-from functools import partial
 
 import h5py
 import numpy as np
 import pyqtgraph as pg
 import zmq
-from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import (
     QWidget,
     QFileDialog,
+    QShortcut,
+    QDialog,
+    QVBoxLayout,
+    QLabel,
+    QFrame,
 )
-from pyqtgraph.Qt import QtWidgets, uic
-
+from pyqtgraph.Qt import uic
 from scipy.stats import multivariate_normal
 
 
@@ -30,6 +34,9 @@ class EigerPlot(QWidget):
         current_path = os.path.dirname(__file__)
         uic.loadUi(os.path.join(current_path, "eiger_plot.ui"), self)
 
+        # Set widow name
+        self.setWindowTitle("Eiger Plot")
+
         self.hist_lims = None
         self.mask = None
         self.image = None
@@ -37,6 +44,7 @@ class EigerPlot(QWidget):
         # UI
         self.init_ui()
         self.hook_signals()
+        self.key_bindings()
 
         # ZMQ Consumer
         self.start_zmq_consumer()
@@ -63,6 +71,7 @@ class EigerPlot(QWidget):
         self.pushButton_test.clicked.connect(self.start_sim_stream)
         self.pushButton_mask.clicked.connect(self.load_mask_dialog)
         self.pushButton_delete_mask.clicked.connect(self.delete_mask)
+        self.pushButton_help.clicked.connect(self.show_help_dialog)
 
         # SpinBoxes
         self.doubleSpinBox_hist_min.valueChanged.connect(self.update_hist)
@@ -70,6 +79,47 @@ class EigerPlot(QWidget):
 
         # Signal/Slots
         self.update_signal.connect(self.on_image_update)
+
+    def key_bindings(self):
+        # Key bindings for rotation
+        rotate_plus = QShortcut(QKeySequence("Ctrl+A"), self)
+        rotate_minus = QShortcut(QKeySequence("Ctrl+Z"), self)
+        self.comboBox_rotation.setToolTip("Increase rotation: Ctrl+A\nDecrease rotation: Ctrl+Z")
+        self.checkBox_transpose.setToolTip("Toggle transpose: Ctrl+T")
+
+        max_index = self.comboBox_rotation.count() - 1  # Maximum valid index
+
+        rotate_plus.activated.connect(
+            lambda: self.comboBox_rotation.setCurrentIndex(
+                min(self.comboBox_rotation.currentIndex() + 1, max_index)
+            )
+        )
+
+        rotate_minus.activated.connect(
+            lambda: self.comboBox_rotation.setCurrentIndex(
+                max(self.comboBox_rotation.currentIndex() - 1, 0)
+            )
+        )
+
+        # Key bindings for transpose
+        transpose = QShortcut(QKeySequence("Ctrl+T"), self)
+        transpose.activated.connect(self.checkBox_transpose.toggle)
+
+        FFT = QShortcut(QKeySequence("Ctrl+F"), self)
+        FFT.activated.connect(self.checkBox_FFT.toggle)
+        self.checkBox_FFT.setToolTip("Toggle FFT: Ctrl+F")
+
+        log = QShortcut(QKeySequence("Ctrl+L"), self)
+        log.activated.connect(self.checkBox_log.toggle)
+        self.checkBox_log.setToolTip("Toggle log: Ctrl+L")
+
+        mask = QShortcut(QKeySequence("Ctrl+M"), self)
+        mask.activated.connect(self.pushButton_mask.click)
+        self.pushButton_mask.setToolTip("Load mask: Ctrl+M")
+
+        delete_mask = QShortcut(QKeySequence("Ctrl+D"), self)
+        delete_mask.activated.connect(self.pushButton_delete_mask.click)
+        self.pushButton_delete_mask.setToolTip("Delete mask: Ctrl+D")
 
     def update_hist(self):
         self.hist_levels = [
@@ -92,11 +142,19 @@ class EigerPlot(QWidget):
             self.load_mask(file_name)
 
     def load_mask(self, path):
-        with h5py.File(path, "r") as f:
-            self.mask = f["data"][...]
+        try:
+            with h5py.File(path, "r") as f:
+                self.mask = f["data"][...]
+            if self.mask is not None:
+                # Set label to mask name without path
+                self.label_mask.setText(os.path.basename(path))
+        except KeyError as e:
+            # Update GUI with the error message
+            print(f"Error: {str(e)}")
 
     def delete_mask(self):
         self.mask = None
+        self.label_mask.setText("No Mask")
 
     @pyqtSlot()
     def on_image_update(self):
@@ -143,6 +201,63 @@ class EigerPlot(QWidget):
         finally:
             receiver.disconnect(live_stream_url)
             receiver.context.term()
+
+    ###############################
+    # just simulations from here
+    ###############################
+
+    def show_help_dialog(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Help")
+
+        layout = QVBoxLayout()
+
+        # Key bindings section
+        layout.addWidget(QLabel("Keyboard Shortcuts:"))
+
+        key_bindings = [
+            ("Ctrl+A", "Increase rotation"),
+            ("Ctrl+Z", "Decrease rotation"),
+            ("Ctrl+T", "Toggle transpose"),
+            ("Ctrl+F", "Toggle FFT"),
+            ("Ctrl+L", "Toggle log scale"),
+            ("Ctrl+M", "Load mask"),
+            ("Ctrl+D", "Delete mask"),
+        ]
+
+        for keys, action in key_bindings:
+            layout.addWidget(QLabel(f"{keys} - {action}"))
+
+        # Separator
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setFrameShadow(QFrame.Sunken)
+        layout.addWidget(separator)
+
+        # Histogram section
+        layout.addWidget(QLabel("Histogram:"))
+        layout.addWidget(
+            QLabel(
+                "Use the Double Spin Boxes to adjust the minimum and maximum values of the histogram."
+            )
+        )
+
+        # Another Separator
+        another_separator = QFrame()
+        another_separator.setFrameShape(QFrame.HLine)
+        another_separator.setFrameShadow(QFrame.Sunken)
+        layout.addWidget(another_separator)
+
+        # Mask section
+        layout.addWidget(QLabel("Mask:"))
+        layout.addWidget(
+            QLabel(
+                "Use 'Load Mask' to load a mask from an H5 file. 'Delete Mask' removes the current mask."
+            )
+        )
+
+        dialog.setLayout(layout)
+        dialog.exec_()
 
     ###############################
     # just simulations from here

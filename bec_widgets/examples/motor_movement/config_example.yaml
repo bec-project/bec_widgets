@@ -10,6 +10,5 @@ plot_motors:
   extra_columns:
     - sample name: "sample 1"
     - Step [x]: 1
-#    - Step [y]: 1
-#    - Exposure time [s]: 1
-    - Temperature [K]: 270
+    - Step [y]: 1
+    - Exposure time [s]: 1

@@ -150,10 +150,36 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="pushButton_test">
-       <property name="text">
-        <string>stream test</string>
+      <widget class="QGroupBox" name="groupBox_4">
+       <property name="title">
+        <string>Help</string>
        </property>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
+         <widget class="QLabel" name="label_mask">
+          <property name="text">
+           <string>No Mask</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_help">
+          <property name="text">
+           <string>Help</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_test">
+          <property name="text">
+           <string>Simulated Stream</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </widget>
      </item>
      <item>
