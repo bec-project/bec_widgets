@@ -70,6 +70,9 @@
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
          <widget class="QCheckBox" name="checkBox">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="text">
            <string>FFT</string>
           </property>
@@ -83,9 +86,16 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton">
+         <widget class="QPushButton" name="pushButton_mask">
           <property name="text">
            <string>Load Mask</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pushButton_delete_mask">
+          <property name="text">
+           <string>Delete Mask</string>
           </property>
          </widget>
         </item>

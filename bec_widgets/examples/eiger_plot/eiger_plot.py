@@ -1,14 +1,22 @@
+import csv
 import json
 import os
 import threading
 import time
+from functools import partial
 
+import h5py
 import numpy as np
 import pyqtgraph as pg
 import zmq
-from PyQt5.QtCore import pyqtSlot, pyqtSignal
-from PyQt5.QtWidgets import QWidget
-from pyqtgraph.Qt import uic
+from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtWidgets import (
+    QWidget,
+    QFileDialog,
+)
+from pyqtgraph.Qt import QtWidgets, uic
+
 from scipy.stats import multivariate_normal
 
 
@@ -23,6 +31,8 @@ class EigerPlot(QWidget):
         uic.loadUi(os.path.join(current_path, "eiger_plot.ui"), self)
 
         self.hist_lims = None
+        self.mask = None
+        self.image = None
 
         # UI
         self.init_ui()
@@ -51,6 +61,8 @@ class EigerPlot(QWidget):
     def hook_signals(self):
         # Buttons
         self.pushButton_test.clicked.connect(self.start_sim_stream)
+        self.pushButton_mask.clicked.connect(self.load_mask_dialog)
+        self.pushButton_delete_mask.clicked.connect(self.delete_mask)
 
         # SpinBoxes
         self.doubleSpinBox_hist_min.valueChanged.connect(self.update_hist)
@@ -70,9 +82,28 @@ class EigerPlot(QWidget):
             self.hist_levels[1] + 0.1 * self.hist_levels[1],
         )
 
+    def load_mask_dialog(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.ReadOnly
+        file_name, _ = QFileDialog.getOpenFileName(
+            self, "Select Mask File", "", "H5 Files (*.h5);;All Files (*)", options=options
+        )
+        if file_name:
+            self.load_mask(file_name)
+
+    def load_mask(self):
+        with h5py.File(self.mask_file, "r") as f:
+            self.mask = f["data"][...]
+
+    def delete_mask(self):
+        self.mask = None
+
     @pyqtSlot()
     def on_image_update(self):
         # TODO first rotate then transpose
+        if self.mask is not None:
+            # self.image = np.ma.masked_array(self.image, mask=self.mask) #TODO test if np works
+            self.image = self.image * (1 - self.mask) + 1
 
         if self.comboBox_rotation.currentIndex() > 0:  # rotate
             self.image = np.rot90(self.image, k=self.comboBox_rotation.currentIndex(), axes=(0, 1))
