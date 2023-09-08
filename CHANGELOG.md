@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.21.2 (2023-09-08)
+
+### Fix
+
+* Moved mask as a last step of image processing ([`87d5467`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/87d546764318679cd80e56d17d590f0e31e51504))
+
 ## v0.21.1 (2023-09-08)
 
 ### Fix
