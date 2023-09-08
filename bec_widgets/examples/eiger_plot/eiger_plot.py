@@ -90,9 +90,7 @@ class EigerPlot(QWidget):
 
     @pyqtSlot()
     def on_image_update(self):
-        if self.comboBox_rotation.currentIndex() == 0:  # non rotated image
-            self.imageItem.setImage(self.image, autoLevels=False)
-        else:  # rotated image
+        if self.comboBox_rotation.currentIndex() > 0:  # rotated image
             self.image = self.rotate_data(data=self.image, k=self.comboBox_rotation.currentIndex())
 
         self.imageItem.setImage(self.image, autoLevels=False)
