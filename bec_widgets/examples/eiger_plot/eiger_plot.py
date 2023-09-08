@@ -10,13 +10,15 @@ from PyQt5.QtCore import pyqtSlot, pyqtSignal
 from PyQt5.QtWidgets import QWidget
 from pyqtgraph.Qt import uic
 
+from scipy.stats import multivariate_normal
+
 
 class EigerPlot(QWidget):
     update_signale = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        pg.setConfigOptions(background="w", foreground="k", antialias=True)
+        # pg.setConfigOptions(background="w", foreground="k", antialias=True)
 
         current_path = os.path.dirname(__file__)
         uic.loadUi(os.path.join(current_path, "eiger_plot.ui"), self)
@@ -55,6 +57,9 @@ class EigerPlot(QWidget):
         self.doubleSpinBox_hist_min.valueChanged.connect(self.update_hist)
         self.doubleSpinBox_hist_max.valueChanged.connect(self.update_hist)
 
+        # ComboBoxes
+        self.comboBox_rotation.currentIndexChanged.connect(lambda k: self.rotate_data(k))
+
         # Signal/Slots
         self.update_signale.connect(self.on_image_update)
 
@@ -68,6 +73,25 @@ class EigerPlot(QWidget):
             self.hist_levels[0] - 0.1 * self.hist_levels[0],
             self.hist_levels[1] + 0.1 * self.hist_levels[1],
         )
+
+    def rotate_data(self, k: int = 0) -> None:
+        """Rotate image by 90 degrees k times.
+
+        Args:
+            k(int): Number of times to rotate image by 90 degrees.
+        """
+        self.image = np.rot90(self.image, k=k)
+
+    def transpose_data(self):
+        self.image = np.transpose(self.image)
+
+    @pyqtSlot()
+    def on_image_update(self):
+        self.imageItem.setImage(self.image, autoLevels=False)
+
+    ###############################
+    # ZMQ Consumer
+    ###############################
 
     def start_zmq_consumer(self):
         consumer_thread = threading.Thread(target=self.zmq_consumer, daemon=True).start()
@@ -90,10 +114,6 @@ class EigerPlot(QWidget):
             receiver.disconnect(live_stream_url)
             receiver.context.term()
 
-    @pyqtSlot()
-    def on_image_update(self):
-        self.imageItem.setImage(self.image, autoLevels=False)
-
     ###############################
     # just simulations from here
     ###############################
@@ -103,20 +123,31 @@ class EigerPlot(QWidget):
 
     def sim_stream(self):
         for i in range(100):
-            self.image = np.random.rand(100, 100) * 10
+            # Generate 100x100 image of random noise
+            self.image = np.random.rand(100, 100) * 0.2
+
+            # Define Gaussian parameters
+            x, y = np.mgrid[0:50, 0:50]
+            pos = np.dstack((x, y))
+
+            # Center at (25, 25) longer along y-axis
+            rv = multivariate_normal(mean=[25, 25], cov=[[25, 0], [0, 80]])
+
+            # Generate Gaussian in the first quadrant
+            gaussian_quadrant = rv.pdf(pos) * 40
+
+            # Place Gaussian in the first quadrant
+            self.image[0:50, 0:50] += gaussian_quadrant * 10
+
             self.update_signale.emit()
             time.sleep(0.1)
 
 
 if __name__ == "__main__":
     import sys
-
     from PyQt5.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-
     plot = EigerPlot()
-
     plot.show()
-
     sys.exit(app.exec_())
