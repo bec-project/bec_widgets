@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.20.0 (2023-09-08)
+
+### Feature
+
+* Added rotate and transpose logic ([`acd7a3b`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/acd7a3bc92746c7e56dc8699c4378d2ab778267f))
+
+### Fix
+
+* Added missing .ui file to git ([`ae8fc94`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ae8fc9497954ca49c16d76eaeea7ecc7659c1269))
+
 ## v0.19.2 (2023-09-08)
 
 ### Fix
