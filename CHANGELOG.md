@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.19.2 (2023-09-08)
+
+### Fix
+
+* Rotation logic fixed ([`6733371`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/6733371c2ccb4e233d9aa9421e21d627978925d7))
+
 ## v0.19.1 (2023-09-08)
 
 ### Fix
