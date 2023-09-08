@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.19.1 (2023-09-08)
+
+### Fix
+
+* Rotation always counter-clockwise ([`00385ab`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/00385abbf98add7945af170b292774d377473a70))
+
 ## v0.19.0 (2023-09-08)
 
 ### Feature
