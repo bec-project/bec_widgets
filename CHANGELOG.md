@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.18.1 (2023-09-08)
+
+### Fix
+
+* Online changes ([`29c983f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/29c983fb268bb2dbcfe552453501ff42442f075f))
+
 ## v0.18.0 (2023-09-08)
 
 ### Feature
