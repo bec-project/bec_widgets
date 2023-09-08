@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.21.0 (2023-09-08)
+
+### Feature
+
+* Added functionality to load mask ([`33d1193`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/33d1193c9623b157cc74883184677a727b8e33ce))
+
+### Fix
+
+* Path to mask fixed ([`ef42921`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ef42921c9a585bce8a97fc8bb251e27a9455a771))
+
 ## v0.20.0 (2023-09-08)
 
 ### Feature
