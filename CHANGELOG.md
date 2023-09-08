@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.17.1 (2023-09-08)
+
+### Fix
+
+* Start_device_consumer changed from EP device_status to scan_status ([`46a3981`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/46a3981e7dfd5ded7b7f325301d2a25c47abd16f))
+
 ## v0.17.0 (2023-09-07)
 
 ### Feature
