@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.24.1 (2023-09-08)
+
+### Fix
+
+* Typo fixed in mca_plot.py ([`3b12f1b`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/3b12f1bc1d65772fc3613f62013809445dcead7a))
+
 ## v0.24.0 (2023-09-08)
 
 ### Feature
