@@ -2,6 +2,14 @@
 
 <!--next-version-placeholder-->
 
+## v0.19.0 (2023-09-08)
+
+### Feature
+
+* Rotation of the image to the left/right by 90, 180, 270 degree ([`327f6b3`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/327f6b3df300d1f88b475973a86175379688aa9b))
+* Simulation stream with Gaussian peak in 1st quadrant ([`4fa8d46`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/4fa8d46631ff822d5465564434d173dd766a6b1a))
+* Eiger_plot.py in example folder with new GUI ([`5cbedec`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/5cbedec5d9f6a6ae763e2cb336ecb40c4d3e1ed1))
+
 ## v0.18.1 (2023-09-08)
 
 ### Fix
