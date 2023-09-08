@@ -9,7 +9,6 @@ import zmq
 from PyQt5.QtCore import pyqtSlot, pyqtSignal
 from PyQt5.QtWidgets import QWidget
 from pyqtgraph.Qt import uic
-
 from scipy.stats import multivariate_normal
 
 
@@ -58,7 +57,9 @@ class EigerPlot(QWidget):
         self.doubleSpinBox_hist_max.valueChanged.connect(self.update_hist)
 
         # ComboBoxes
-        self.comboBox_rotation.currentIndexChanged.connect(lambda k: self.rotate_data(k))
+        self.comboBox_rotation.currentIndexChanged.connect(
+            lambda k: self.rotate_data(self.image, k)
+        )
 
         # Signal/Slots
         self.update_signale.connect(self.on_image_update)
@@ -74,19 +75,35 @@ class EigerPlot(QWidget):
             self.hist_levels[1] + 0.1 * self.hist_levels[1],
         )
 
-    def rotate_data(self, k: int = 0) -> None:
+    def rotate_data(self, data, k: int = 0, direction: int = 0) -> np.ndarray:
         """Rotate image by 90 degrees k times.
 
         Args:
             k(int): Number of times to rotate image by 90 degrees.
+            direction(int): 0 for clockwise, 1 for counter-clockwise
         """
-        self.image = np.rot90(self.image, k=k)
+
+        if direction == 0:
+            data = np.rot90(self.image, k=k, axes=(1, 0))
+        else:
+            data = np.rot90(self.image, k=k, axes=(0, 1))
+
+        return data
 
     def transpose_data(self):
         self.image = np.transpose(self.image)
 
     @pyqtSlot()
     def on_image_update(self):
+        if self.comboBox_rotation.currentIndex() == 0:  # non rotated image
+            self.imageItem.setImage(self.image, autoLevels=False)
+        else:  # rotated image
+            self.image = self.rotate_data(
+                data=self.image,
+                k=self.comboBox_rotation.currentIndex(),
+                direction=self.comboBox_direction.currentIndex(),
+            )
+
         self.imageItem.setImage(self.image, autoLevels=False)
 
     ###############################
