@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.23.0 (2023-09-08)
+
+### Feature
+
+* Added key bindings and help dialog ([`ade893d`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ade893d33d07f1190994de19b84d4021586bcbcb))
+
 ## v0.22.0 (2023-09-08)
 
 ### Feature
