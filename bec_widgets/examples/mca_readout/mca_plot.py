@@ -27,7 +27,9 @@ class StreamApp(QWidget):
         self.device = device
         self.sub_device = sub_device
 
-        self.device_consumer(self.device)
+        self.start_device_consumer()
+
+        # self.start_device_consumer(self.device) # for simulation
 
         self.new_scanID.connect(self.create_new_stream_consumer)
         self.update_signal.connect(self.plot_new)
@@ -64,12 +66,19 @@ class StreamApp(QWidget):
 
         self.stream_consumer.start()
 
-    def device_consumer(self, device):
+    def start_device_consumer(self):
         self.device_consumer = connector.consumer(
-            topics=MessageEndpoints.device_status(device), cb=self._device_cv, parent=self
+            topics=MessageEndpoints.scan_status(), cb=self._device_cv, parent=self
         )
 
         self.device_consumer.start()
+
+    # def start_device_consumer(self, device): #for simulation
+    #     self.device_consumer = connector.consumer(
+    #         topics=MessageEndpoints.device_status(device), cb=self._device_cv, parent=self
+    #     )
+    #
+    #     self.device_consumer.start()
 
     def plot_new(self):
         self.image_item.setImage(self.data.T)
@@ -94,9 +103,11 @@ class StreamApp(QWidget):
 
     @staticmethod
     def _device_cv(msg, *, parent, **_kwargs) -> None:
-        msgDEV = BECMessage.DeviceMessage.loads(msg.value)
+        print("Getting ScanID")
 
-        current_scanID = msgDEV.metadata["scanID"]
+        msgDEV = BECMessage.ScanStatusMessage.loads(msg.value)
+
+        current_scanID = msgDEV.content["scanID"]
 
         if parent.scanID is None:
             parent.scanID = current_scanID

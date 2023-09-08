@@ -20,7 +20,7 @@ for ii in range(20):
         metadata=metadata,
     ).dumps()
 
-    producer.send(topic=MessageEndpoints.device_status(device="mca"), msg=msg)
+    # producer.send(topic=MessageEndpoints.device_status(device="mca"), msg=msg)
 
     producer.xadd(
         topic=MessageEndpoints.device_async_readback(
