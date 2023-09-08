@@ -101,6 +101,12 @@ class EigerPlot(QWidget):
     @pyqtSlot()
     def on_image_update(self):
         # TODO first rotate then transpose
+        if self.mask is not None:
+            # self.image = np.ma.masked_array(self.image, mask=self.mask) #TODO test if np works
+            self.image = self.image * (1 - self.mask) + 1
+
+        if self.checkBox_FFT.isChecked():
+            self.image = np.abs(np.fft.fftshift(np.fft.fft2(self.image)))
 
         if self.comboBox_rotation.currentIndex() > 0:  # rotate
             self.image = np.rot90(self.image, k=self.comboBox_rotation.currentIndex(), axes=(0, 1))
@@ -110,10 +116,6 @@ class EigerPlot(QWidget):
 
         if self.checkBox_log.isChecked():
             self.image = np.log(self.image)
-
-        if self.mask is not None:
-            # self.image = np.ma.masked_array(self.image, mask=self.mask) #TODO test if np works
-            self.image = self.image * (1 - self.mask) + 1
 
         self.imageItem.setImage(self.image, autoLevels=False)
 
