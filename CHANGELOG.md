@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.24.0 (2023-09-08)
+
+### Feature
+
+* HistogramLUT for mca_plot ([`ae04072`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ae040727fc60160de8b50ac1af51fba676106e52))
+
 ## v0.23.0 (2023-09-08)
 
 ### Feature
