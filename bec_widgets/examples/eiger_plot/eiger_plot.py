@@ -56,11 +56,6 @@ class EigerPlot(QWidget):
         self.doubleSpinBox_hist_min.valueChanged.connect(self.update_hist)
         self.doubleSpinBox_hist_max.valueChanged.connect(self.update_hist)
 
-        # ComboBoxes
-        self.comboBox_rotation.currentIndexChanged.connect(
-            lambda k: self.rotate_data(self.image, k)
-        )
-
         # Signal/Slots
         self.update_signale.connect(self.on_image_update)
 
@@ -84,6 +79,9 @@ class EigerPlot(QWidget):
 
         if self.checkBox_transpose.isChecked():  # transpose
             self.image = np.transpose(self.image)
+
+        if self.checkBox_log.isChecked():
+            self.image = np.log(self.image)
 
         self.imageItem.setImage(self.image, autoLevels=False)
 
