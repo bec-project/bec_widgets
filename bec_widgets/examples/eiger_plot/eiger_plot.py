@@ -21,7 +21,7 @@ from scipy.stats import multivariate_normal
 
 
 class EigerPlot(QWidget):
-    update_signale = pyqtSignal()
+    update_signal = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -69,7 +69,7 @@ class EigerPlot(QWidget):
         self.doubleSpinBox_hist_max.valueChanged.connect(self.update_hist)
 
         # Signal/Slots
-        self.update_signale.connect(self.on_image_update)
+        self.update_signal.connect(self.on_image_update)
 
     def update_hist(self):
         self.hist_levels = [
@@ -135,7 +135,7 @@ class EigerPlot(QWidget):
                 raw_meta, raw_data = receiver.recv_multipart()
                 meta = json.loads(raw_meta.decode("utf-8"))
                 self.image = np.frombuffer(raw_data, dtype=meta["type"]).reshape(meta["shape"])
-                self.update_signale.emit()
+                self.update_signal.emit()
 
         finally:
             receiver.disconnect(live_stream_url)
@@ -166,7 +166,7 @@ class EigerPlot(QWidget):
             # Place Gaussian in the first quadrant
             self.image[0:50, 0:50] += gaussian_quadrant * 10
 
-            self.update_signale.emit()
+            self.update_signal.emit()
             time.sleep(0.1)
 
 
