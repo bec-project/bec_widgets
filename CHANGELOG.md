@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.21.1 (2023-09-08)
+
+### Fix
+
+* Update_signal typo fixed ([`43f03b5`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/43f03b543083da9b743828139a92f87732187dd9))
+
 ## v0.21.0 (2023-09-08)
 
 ### Feature
