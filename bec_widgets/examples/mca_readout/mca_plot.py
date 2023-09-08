@@ -17,8 +17,10 @@ class StreamApp(QWidget):
 
     def __init__(self, device, sub_device):
         super().__init__()
-
+        pg.setConfigOptions(background="w", foreground="k")
         self.init_ui()
+
+        self.setWindowTitle("MCA readout")
 
         self.data = None
         self.scanID = None
@@ -29,7 +31,7 @@ class StreamApp(QWidget):
 
         self.start_device_consumer()
 
-        # self.start_device_consumer(self.device) # for simulation
+        # self.start_device_consumer(self.device)  # for simulation
 
         self.new_scanID.connect(self.create_new_stream_consumer)
         self.update_signal.connect(self.plot_new)
@@ -40,13 +42,24 @@ class StreamApp(QWidget):
         self.setLayout(self.layout)
 
         # Create plot
-        # self.glw = pg.GraphicsLayoutWidget()
-        self.plot_widget = pg.PlotWidget(title="MCA readout")
-        self.image_item = pg.ImageItem()
-        self.plot_widget.addItem(self.image_item)
+        self.glw = pg.GraphicsLayoutWidget()
+        self.layout.addWidget(self.glw)
 
-        # Add widgets to the layout
-        self.layout.addWidget(self.plot_widget)
+        # Create Plot and add ImageItem
+        self.plot_item = pg.PlotItem()
+        self.plot_item.setAspectLocked(True)
+        self.imageItem = pg.ImageItem()
+        self.plot_item.addItem(self.imageItem)
+
+        # Setting up histogram
+        self.hist = pg.HistogramLUTItem()
+        self.hist.setImageItem(self.imageItem)
+        self.hist.gradient.loadPreset("magma")
+        # self.update_hist()
+
+        # Adding Items to Graphical Layout
+        self.glw.addItem(self.plot_item)
+        self.glw.addItem(self.hist)
 
     @pyqtSlot(str)
     def create_new_stream_consumer(self, scanID: str):
@@ -81,7 +94,7 @@ class StreamApp(QWidget):
     #     self.device_consumer.start()
 
     def plot_new(self):
-        self.image_item.setImage(self.data.T)
+        self.imageItem.setImage(self.data, autoLevels=False)
 
     @staticmethod
     def _streamer_cb(msg, *, parent, **_kwargs) -> None:
