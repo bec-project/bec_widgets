@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.18.0 (2023-09-08)
+
+### Feature
+
+* Eigerplot added ([`70d74c7`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/70d74c774d2b318d99c049f0f03743e77812df98))
+
 ## v0.17.1 (2023-09-08)
 
 ### Fix
