@@ -91,8 +91,8 @@ class EigerPlot(QWidget):
         if file_name:
             self.load_mask(file_name)
 
-    def load_mask(self):
-        with h5py.File(self.mask_file, "r") as f:
+    def load_mask(self, path):
+        with h5py.File(path, "r") as f:
             self.mask = f["data"][...]
 
     def delete_mask(self):
