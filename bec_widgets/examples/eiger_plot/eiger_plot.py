@@ -75,18 +75,13 @@ class EigerPlot(QWidget):
             self.hist_levels[1] + 0.1 * self.hist_levels[1],
         )
 
-    def rotate_data(self, data, k: int = 0, direction: int = 0) -> np.ndarray:
+    def rotate_data(self, data, k: int = 0) -> np.ndarray:
         """Rotate image by 90 degrees k times.
 
         Args:
             k(int): Number of times to rotate image by 90 degrees.
-            direction(int): 0 for clockwise, 1 for counter-clockwise
         """
-
-        if direction == 0:
-            data = np.rot90(self.image, k=k, axes=(1, 0))
-        else:
-            data = np.rot90(self.image, k=k, axes=(0, 1))
+        data = np.rot90(data, k=k, axes=(0, 1))
 
         return data
 
@@ -98,11 +93,7 @@ class EigerPlot(QWidget):
         if self.comboBox_rotation.currentIndex() == 0:  # non rotated image
             self.imageItem.setImage(self.image, autoLevels=False)
         else:  # rotated image
-            self.image = self.rotate_data(
-                data=self.image,
-                k=self.comboBox_rotation.currentIndex(),
-                direction=self.comboBox_direction.currentIndex(),
-            )
+            self.image = self.rotate_data(data=self.image, k=self.comboBox_rotation.currentIndex())
 
         self.imageItem.setImage(self.image, autoLevels=False)
 
