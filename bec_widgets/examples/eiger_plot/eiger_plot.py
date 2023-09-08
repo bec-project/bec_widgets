@@ -75,23 +75,15 @@ class EigerPlot(QWidget):
             self.hist_levels[1] + 0.1 * self.hist_levels[1],
         )
 
-    def rotate_data(self, data, k: int = 0) -> np.ndarray:
-        """Rotate image by 90 degrees k times.
-
-        Args:
-            k(int): Number of times to rotate image by 90 degrees.
-        """
-        data = np.rot90(data, k=k, axes=(0, 1))
-
-        return data
-
-    def transpose_data(self):
-        self.image = np.transpose(self.image)
-
     @pyqtSlot()
     def on_image_update(self):
-        if self.comboBox_rotation.currentIndex() > 0:  # rotated image
-            self.image = self.rotate_data(data=self.image, k=self.comboBox_rotation.currentIndex())
+        # TODO first rotate then transpose
+
+        if self.comboBox_rotation.currentIndex() > 0:  # rotate
+            self.image = np.rot90(self.image, k=self.comboBox_rotation.currentIndex(), axes=(0, 1))
+
+        if self.checkBox_transpose.isChecked():  # transpose
+            self.image = np.transpose(self.image)
 
         self.imageItem.setImage(self.image, autoLevels=False)
 
