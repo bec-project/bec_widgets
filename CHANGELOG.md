@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.22.0 (2023-09-08)
+
+### Feature
+
+* Added FFT ([`b984f0f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/b984f0f36e2178690eaaec091d4a7b9443f2378f))
+
 ## v0.21.2 (2023-09-08)
 
 ### Fix
