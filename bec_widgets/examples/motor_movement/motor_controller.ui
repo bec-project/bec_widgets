@@ -507,6 +507,34 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <item>
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>Entries Mode:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="radioButton_individual">
+           <property name="text">
+            <string>Individuals</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="radioButton_start_stop">
+           <property name="text">
+            <string>Start/Stop</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
         <widget class="QTableWidget" name="tableWidget_coordinates">
          <property name="selectionMode">
           <enum>QAbstractItemView::MultiSelection</enum>
@@ -526,17 +554,17 @@
          </column>
          <column>
           <property name="text">
+           <string>Tag</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
            <string>X</string>
           </property>
          </column>
          <column>
           <property name="text">
            <string>Y</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>Tag</string>
           </property>
          </column>
         </widget>

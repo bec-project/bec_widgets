@@ -560,7 +560,7 @@ class MotorApp(QWidget):
             lambda state, widget=checkBox: self.toggle_point_visibility(state, widget)
         )
 
-        table.setItem(current_row_count, 4, QtWidgets.QTableWidgetItem(str(tag)))
+        table.setItem(current_row_count, 2, QtWidgets.QTableWidgetItem(str(tag)))
         table.setCellWidget(current_row_count, 1, checkBox)
 
         # Apply validator to x and y coordinate QTableWidgetItem
@@ -570,10 +570,10 @@ class MotorApp(QWidget):
         item_y.setFlags(item_y.flags() | Qt.ItemIsEditable)
 
         table.setItem(
-            current_row_count, 2, QtWidgets.QTableWidgetItem(str(f"{coordinates[0]:.{precision}f}"))
+            current_row_count, 3, QtWidgets.QTableWidgetItem(str(f"{coordinates[0]:.{precision}f}"))
         )
         table.setItem(
-            current_row_count, 3, QtWidgets.QTableWidgetItem(str(f"{coordinates[1]:.{precision}f}"))
+            current_row_count, 4, QtWidgets.QTableWidgetItem(str(f"{coordinates[1]:.{precision}f}"))
         )
 
         table.setCellWidget(current_row_count, 0, button)
@@ -699,13 +699,13 @@ class MotorApp(QWidget):
 
         for row in range(rows):
             x = (
-                float(self.tableWidget_coordinates.item(row, 2).text())
-                if self.tableWidget_coordinates.item(row, 2) is not None
+                float(self.tableWidget_coordinates.item(row, 3).text())
+                if self.tableWidget_coordinates.item(row, 3) is not None
                 else None
             )
             y = (
-                float(self.tableWidget_coordinates.item(row, 3).text())
-                if self.tableWidget_coordinates.item(row, 3) is not None
+                float(self.tableWidget_coordinates.item(row, 4).text())
+                if self.tableWidget_coordinates.item(row, 4) is not None
                 else None
             )
 
