@@ -87,6 +87,7 @@ class MotorApp(QWidget):
 
         # State tracking for entries
         self.last_selected_index = -1
+        self.is_next_entry_end = False
 
         # Get all motors available
         self.motor_thread.retrieve_all_motors()  # TODO link to combobox that it always refresh
@@ -414,8 +415,9 @@ class MotorApp(QWidget):
         """Initialize the table validators for x and y coordinates and table signals"""
         # Validators
         self.double_delegate = DoubleValidationDelegate(self.tableWidget_coordinates)
-        self.tableWidget_coordinates.setItemDelegateForColumn(2, self.double_delegate)
-        self.tableWidget_coordinates.setItemDelegateForColumn(3, self.double_delegate)
+        self.update_table_header()
+        # self.tableWidget_coordinates.setItemDelegateForColumn(3, self.double_delegate) #TODO check where to delegate
+        # self.tableWidget_coordinates.setItemDelegateForColumn(4, self.double_delegate)
 
         # Signals
         self.tableWidget_coordinates.itemChanged.connect(self.update_saved_coordinates)
@@ -574,20 +576,33 @@ class MotorApp(QWidget):
             self.tableWidget_coordinates.setHorizontalHeaderLabels(
                 ["Move", "Show", "Tag", "X", "Y"]
             )
+            self.tableWidget_coordinates.setItemDelegateForColumn(3, self.double_delegate)
+            self.tableWidget_coordinates.setItemDelegateForColumn(4, self.double_delegate)
 
         elif current_index == 1:  # 'start/stop' is selected
             self.tableWidget_coordinates.setColumnCount(7)
             self.tableWidget_coordinates.setHorizontalHeaderLabels(
                 ["Move", "Show", "Tag", "X [start]", "Y [start]", "X [end]", "Y [end]"]
             )
+            self.tableWidget_coordinates.setItemDelegateForColumn(3, self.double_delegate)
+            self.tableWidget_coordinates.setItemDelegateForColumn(4, self.double_delegate)
+            self.tableWidget_coordinates.setItemDelegateForColumn(5, self.double_delegate)
+            self.tableWidget_coordinates.setItemDelegateForColumn(6, self.double_delegate)
 
         self.last_selected_index = current_index  # Save the last selected index
 
     def generate_table_coordinate(
         self, table: QtWidgets.QTableWidget, coordinates: tuple, tag: str = None, precision: int = 0
     ) -> None:
-        current_row_count = table.rowCount()
-        table.setRowCount(current_row_count + 1)
+        current_index = self.comboBox_mode.currentIndex()
+        # current_col_count = table.columnCount()
+
+        if current_index == 1 and self.is_next_entry_end:
+            target_row = table.rowCount() - 1  # Last row
+        else:
+            new_row_count = table.rowCount() + 1
+            table.setRowCount(new_row_count)
+            target_row = new_row_count - 1  # New row
 
         # Create QDoubleValidator
         validator = QDoubleValidator()
@@ -601,8 +616,8 @@ class MotorApp(QWidget):
             lambda state, widget=checkBox: self.toggle_point_visibility(state, widget)
         )
 
-        table.setItem(current_row_count, 2, QtWidgets.QTableWidgetItem(str(tag)))
-        table.setCellWidget(current_row_count, 1, checkBox)
+        table.setItem(target_row, 2, QtWidgets.QTableWidgetItem(str(tag)))
+        table.setCellWidget(target_row, 1, checkBox)
 
         # Apply validator to x and y coordinate QTableWidgetItem
         item_x = QtWidgets.QTableWidgetItem(str(f"{coordinates[0]:.{precision}f}"))
@@ -610,16 +625,22 @@ class MotorApp(QWidget):
         item_x.setFlags(item_x.flags() | Qt.ItemIsEditable)
         item_y.setFlags(item_y.flags() | Qt.ItemIsEditable)
 
-        table.setItem(
-            current_row_count, 3, QtWidgets.QTableWidgetItem(str(f"{coordinates[0]:.{precision}f}"))
-        )
-        table.setItem(
-            current_row_count, 4, QtWidgets.QTableWidgetItem(str(f"{coordinates[1]:.{precision}f}"))
-        )
+        if current_index == 1:
+            col_index = 7
+            if self.is_next_entry_end:
+                table.setItem(target_row, 5, item_x)
+                table.setItem(target_row, 6, item_y)
+            else:
+                table.setItem(target_row, 3, item_x)
+                table.setItem(target_row, 4, item_y)
+            self.is_next_entry_end = not self.is_next_entry_end
+        else:
+            col_index = 5
+            table.setItem(target_row, 3, item_x)
+            table.setItem(target_row, 4, item_y)
 
-        table.setCellWidget(current_row_count, 0, button)
-
-        button.clicked.connect(partial(self.move_to_row_coordinates, table, current_row_count))
+        table.setCellWidget(target_row, 0, button)
+        button.clicked.connect(partial(self.move_to_row_coordinates, table, target_row))
 
         brushes = [
             pg.mkBrush(255, 165, 0, 255) if visible else pg.mkBrush(255, 165, 0, 0)
@@ -628,21 +649,20 @@ class MotorApp(QWidget):
 
         # Adding extra columns
         if self.extra_columns:
-            col_index = 5  # Starting index for extra columns
             table.setColumnCount(col_index + len(self.extra_columns))
             for col_dict in self.extra_columns:
                 for col_name, default_value in col_dict.items():
-                    if current_row_count == 0:
+                    if target_row == 0 or (current_index == 1 and not self.is_next_entry_end):
                         item = QtWidgets.QTableWidgetItem(str(default_value))
                     else:
-                        prev_item = table.item(current_row_count - 1, col_index)
+                        prev_item = table.item(target_row - 1, col_index)
                         item_text = prev_item.text() if prev_item else ""
                         item = QtWidgets.QTableWidgetItem(item_text)
 
                     item.setFlags(item.flags() | Qt.ItemIsEditable)
-                    table.setItem(current_row_count, col_index, item)
+                    table.setItem(target_row, col_index, item)
 
-                    if current_row_count == 0:
+                    if target_row == 0 or (current_index == 1 and not self.is_next_entry_end):
                         table.setHorizontalHeaderItem(
                             col_index, QtWidgets.QTableWidgetItem(col_name)
                         )
@@ -697,8 +717,8 @@ class MotorApp(QWidget):
                     item.setTextAlignment(Qt.AlignCenter)
 
     def move_to_row_coordinates(self, table, row):
-        x = float(table.item(row, 2).text())
-        y = float(table.item(row, 3).text())
+        x = float(table.item(row, 3).text())
+        y = float(table.item(row, 4).text())
         self.move_motor_absolute(x, y)
 
     def toggle_point_visibility(self, state, checkBox_widget):
@@ -775,6 +795,11 @@ class MotorApp(QWidget):
         for row_index in rows_to_delete:
             self.saved_motor_positions = np.delete(self.saved_motor_positions, row_index, axis=0)
             del self.saved_point_visibility[row_index]
+
+            # If in 'start/stop' mode, check if only the 'start' coordinates are present in the row being deleted
+            if self.comboBox_mode.currentIndex() == 1:
+                if self.tableWidget_coordinates.item(row_index, 5) is None:
+                    self.is_next_entry_end = False
 
             # Update the plot
             brushes = [
