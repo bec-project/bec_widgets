@@ -578,6 +578,13 @@
            </property>
           </widget>
          </item>
+         <item row="2" column="1">
+          <widget class="QPushButton" name="pushButton_duplicate">
+           <property name="text">
+            <string>Duplicate Last Entry</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </item>
       </layout>

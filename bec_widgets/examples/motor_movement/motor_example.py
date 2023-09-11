@@ -429,6 +429,10 @@ class MotorApp(QWidget):
             lambda: self.resizeTable(self.tableWidget_coordinates)
         )
 
+        self.pushButton_duplicate.clicked.connect(
+            lambda: self.duplicate_last_row(self.tableWidget_coordinates)
+        )
+
         self.pushButton_help.clicked.connect(self.show_help_dialog)
 
     def init_ui(self) -> None:
@@ -606,14 +610,50 @@ class MotorApp(QWidget):
 
         self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
 
+        self.align_table_center(table)
+
+        if self.checkBox_resize_auto.isChecked():
+            table.resizeColumnsToContents()
+
+    def duplicate_last_row(self, table: QtWidgets.QTableWidget) -> None:
+        last_row = table.rowCount() - 1
+        if last_row == -1:
+            return
+
+        table.setRowCount(last_row + 2)
+        new_row = last_row + 1
+
+        for col in range(table.columnCount()):
+            cell_widget = table.cellWidget(last_row, col)
+            cell_item = table.item(last_row, col)
+
+            if isinstance(cell_widget, QtWidgets.QCheckBox):
+                new_checkbox = QtWidgets.QCheckBox()
+                new_checkbox.setChecked(cell_widget.isChecked())
+                table.setCellWidget(new_row, col, new_checkbox)
+
+            elif isinstance(cell_widget, QtWidgets.QPushButton):
+                new_button = QtWidgets.QPushButton(cell_widget.text())
+                new_button.clicked.connect(partial(self.move_to_row_coordinates, table, new_row))
+                table.setCellWidget(new_row, col, new_button)
+
+            elif cell_item:
+                new_item = QtWidgets.QTableWidgetItem(cell_item.text())
+                new_item.setFlags(cell_item.flags())
+                table.setItem(new_row, col, new_item)
+
+        self.align_table_center(table)
+
+        if self.checkBox_resize_auto.isChecked():
+            table.resizeColumnsToContents()
+
+    @staticmethod
+    def align_table_center(table: QtWidgets.QTableWidget) -> None:
         for row in range(table.rowCount()):
             for col in range(table.columnCount()):
                 item = table.item(row, col)
                 if item:
                     item.setTextAlignment(Qt.AlignCenter)
-
-        if self.checkBox_resize_auto.isChecked():
-            table.resizeColumnsToContents()
 
     def move_to_row_coordinates(self, table, row):
         x = float(table.item(row, 2).text())
