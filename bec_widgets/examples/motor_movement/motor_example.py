@@ -23,6 +23,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtWidgets import QShortcut
 from pyqtgraph.Qt import QtWidgets, uic, QtCore
+from PyQt5.QtWidgets import QMessageBox
 
 from bec_lib.core import MessageEndpoints, BECMessage
 from bec_widgets.qt_utils import DoubleValidationDelegate
@@ -83,6 +84,9 @@ class MotorApp(QWidget):
         # UI
         self.init_ui()
         self.tag_N = 1  # position label for saved coordinates
+
+        # State tracking for entries
+        self.last_selected_index = -1
 
         # Get all motors available
         self.motor_thread.retrieve_all_motors()  # TODO link to combobox that it always refresh
@@ -435,6 +439,9 @@ class MotorApp(QWidget):
 
         self.pushButton_help.clicked.connect(self.show_help_dialog)
 
+        # Mode switch
+        self.comboBox_mode.currentIndexChanged.connect(self.update_table_header)
+
     def init_ui(self) -> None:
         """Setup all ui elements"""
 
@@ -541,6 +548,40 @@ class MotorApp(QWidget):
             self.toolButton_left.setShortcut("")
             self.toolButton_up.setShortcut("")
             self.toolButton_down.setShortcut("")
+
+    def update_table_header(self):
+        current_index = self.comboBox_mode.currentIndex()
+
+        if self.tableWidget_coordinates.rowCount() > 0:
+            msgBox = QMessageBox()
+            msgBox.setIcon(QMessageBox.Warning)
+            msgBox.setText(
+                "Switching modes will delete all table entries. Do you want to continue?"
+            )
+            msgBox.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+            returnValue = msgBox.exec()
+
+            if returnValue == QMessageBox.Cancel:
+                self.comboBox_mode.blockSignals(True)  # Block signals
+                self.comboBox_mode.setCurrentIndex(self.last_selected_index)
+                self.comboBox_mode.blockSignals(False)  # Unblock signals
+                return
+
+        self.tableWidget_coordinates.setRowCount(0)  # Wipe table
+
+        if current_index == 0:  # 'individual' is selected
+            self.tableWidget_coordinates.setColumnCount(5)
+            self.tableWidget_coordinates.setHorizontalHeaderLabels(
+                ["Move", "Show", "Tag", "X", "Y"]
+            )
+
+        elif current_index == 1:  # 'start/stop' is selected
+            self.tableWidget_coordinates.setColumnCount(7)
+            self.tableWidget_coordinates.setHorizontalHeaderLabels(
+                ["Move", "Show", "Tag", "X [start]", "Y [start]", "X [end]", "Y [end]"]
+            )
+
+        self.last_selected_index = current_index  # Save the last selected index
 
     def generate_table_coordinate(
         self, table: QtWidgets.QTableWidget, coordinates: tuple, tag: str = None, precision: int = 0
