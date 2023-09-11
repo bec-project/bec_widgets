@@ -425,6 +425,10 @@ class MotorApp(QWidget):
             lambda: self.load_table_from_csv(self.tableWidget_coordinates, precision=self.precision)
         )
 
+        self.pushButton_resize_table.clicked.connect(
+            lambda: self.resizeTable(self.tableWidget_coordinates)
+        )
+
         self.pushButton_help.clicked.connect(self.show_help_dialog)
 
     def init_ui(self) -> None:
@@ -608,7 +612,8 @@ class MotorApp(QWidget):
                 if item:
                     item.setTextAlignment(Qt.AlignCenter)
 
-        table.resizeColumnsToContents()
+        if self.checkBox_resize_auto.isChecked():
+            table.resizeColumnsToContents()
 
     def move_to_row_coordinates(self, table, row):
         x = float(table.item(row, 2).text())
@@ -708,6 +713,9 @@ class MotorApp(QWidget):
                 partial(self.move_to_row_coordinates, self.tableWidget_coordinates, row)
             )
 
+    def resizeTable(self, table):
+        table.resizeColumnsToContents()
+
     def export_table_to_csv(self, table: QtWidgets.QTableWidget):
         options = QFileDialog.Options()
         filePath, _ = QFileDialog.getSaveFileName(
@@ -791,7 +799,8 @@ class MotorApp(QWidget):
                         item.setTextAlignment(Qt.AlignCenter)
                         table.setItem(current_row, col + 2, item)
 
-                table.resizeColumnsToContents()
+                if self.checkBox_resize_auto.isChecked():
+                    table.resizeColumnsToContents()
 
     def save_absolute_coordinates(self):
         self.generate_table_coordinate(
