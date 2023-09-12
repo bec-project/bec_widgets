@@ -72,6 +72,7 @@ class MotorApp(QWidget):
         self.scatter_size = plot_motors.get("scatter_size", 5)
         self.precision = plot_motors.get("precision", 2)
         self.extra_columns = plot_motors.get("extra_columns", None)
+        self.mode_lock = plot_motors.get("mode_lock", False)
 
         # Saved motors from config file
         self.selected_motors = selected_motors
@@ -444,6 +445,20 @@ class MotorApp(QWidget):
         # Mode switch
         self.comboBox_mode.currentIndexChanged.connect(self.update_table_header)
 
+    def init_mode_lock(self) -> None:
+        if self.mode_lock is False:
+            return
+        elif self.mode_lock == "Individual":
+            self.comboBox_mode.setCurrentIndex(0)
+            self.comboBox_mode.setEnabled(False)
+        elif self.mode_lock == "Start/Stop":
+            self.comboBox_mode.setCurrentIndex(1)
+            self.comboBox_mode.setEnabled(False)
+        else:
+            self.mode_lock = False
+            print(f"Warning: Mode lock '{self.mode_lock}' not recognized.")
+            print(f"Unlocking mode lock.")
+
     def init_ui(self) -> None:
         """Setup all ui elements"""
 
@@ -454,6 +469,7 @@ class MotorApp(QWidget):
         self.init_ui_motor_connections()  # Motor Connections
         self.init_keyboard_shortcuts()  # Keyboard Shortcuts
         self.init_ui_table()  # Table validators for x and y coordinates
+        self.init_mode_lock()  # Mode lock
 
     def init_motor_map(self):
         # Get motor limits
