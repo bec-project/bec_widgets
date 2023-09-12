@@ -67,6 +67,18 @@ plot_data:
           - name: "gauss_adc1"
             entry: "gauss_adc1"
 
+    - plot_name: "Grid plot 3"
+      x:
+        label: 'Motor Y'
+        signals:
+          - name: "samy"
+            entry: "samy"
+      y:
+        label: 'BPM'
+        signals:
+          - name: "gauss_bpm"
+            entry: "gauss_bpm"
+
 #plot_data:
 #  - plot_name: "ADC plot"
 #    x:
