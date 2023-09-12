@@ -21,9 +21,9 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QFrame,
 )
+from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QShortcut
 from pyqtgraph.Qt import QtWidgets, uic, QtCore
-from PyQt5.QtWidgets import QMessageBox
 
 from bec_lib.core import MessageEndpoints, BECMessage
 from bec_widgets.qt_utils import DoubleValidationDelegate
@@ -663,10 +663,9 @@ class MotorApp(QWidget):
             for visible in self.saved_point_visibility
         ]
 
-        # if not (current_index == 1 and not self.is_next_entry_end):
-        #     print("not change table")
         # Adding extra columns
-        if not (current_index == 1 and not self.is_next_entry_end):  # TODO simplify nesting
+        # TODO simplify nesting
+        if current_index != 1 or self.is_next_entry_end:
             if self.extra_columns:
                 table.setColumnCount(col_index + len(self.extra_columns))
                 for col_dict in self.extra_columns:
@@ -675,8 +674,7 @@ class MotorApp(QWidget):
                             target_row == 0
                         ):  # or (current_index == 1 and not self.is_next_entry_end):
                             item = QtWidgets.QTableWidgetItem(str(default_value))
-                        # elif current_index == 1 and not self.is_next_entry_end:
-                        #     print("not change table")
+
                         else:
                             prev_item = table.item(target_row - 1, col_index)
                             item_text = prev_item.text() if prev_item else ""
@@ -904,9 +902,7 @@ class MotorApp(QWidget):
                 self.extra_columns = new_extra_columns
 
                 # Set column count and headers
-                table.setColumnCount(
-                    col_limit + len(self.extra_columns)
-                )  # TODO implement logic for both modes
+                table.setColumnCount(col_limit + len(self.extra_columns))
                 new_headers = (
                     ["Move", "Show"] + col_header + [col for col in header if col not in col_header]
                 )
@@ -942,7 +938,12 @@ class MotorApp(QWidget):
                 if self.checkBox_resize_auto.isChecked():
                     table.resizeColumnsToContents()
 
-                self.is_next_entry_end = False  # todo logic for both modes
+                if self.comboBox_mode.currentIndex() == 1:
+                    last_row = table.rowCount() - 1
+                    if table.item(last_row, 5) is None:
+                        self.is_next_entry_end = True
+                    else:
+                        self.is_next_entry_end = False
 
     def save_absolute_coordinates(self):
         self.generate_table_coordinate(

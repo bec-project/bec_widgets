@@ -7,7 +7,7 @@ plot_motors:
   num_dim_points: 100
   scatter_size: 5
   precision: 3
-  mode_lock: Start/Stop # "Individual" or "Start/Stop"
+  mode_lock: False # "Individual" or "Start/Stop". False to unlock
   extra_columns:
     - sample name: "sample 1"
     - step_x [mu]: 25
