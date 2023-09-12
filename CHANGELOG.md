@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.26.0 (2023-09-12)
+
+### Feature
+
+* Plot different signals and plot configurations based on different scans ([`57e6990`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/57e69907d55f7693e97d48026f3bb426adfb4870))
+
 ## v0.25.1 (2023-09-12)
 
 ### Fix
