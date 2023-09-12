@@ -56,7 +56,9 @@ class PlotApp(QWidget):
 
         # YAML config
         self.plot_settings = plot_settings
-        self.plot_data = plot_data
+        self.scan_types = self.plot_settings.get("scan_types", False)
+        self.plot_data_config = plot_data
+        self.plot_data = {}
 
         # Setting global plot settings
         self.init_plot_background(self.plot_settings["background_color"])
@@ -77,11 +79,11 @@ class PlotApp(QWidget):
         self.user_colors = {}  # key: (plot_name, y_name, y_entry), value: color
 
         # Initialize the UI
-        self.init_ui(self.plot_settings["num_columns"])
-        self.spinBox_N_columns.setValue(
-            self.plot_settings["num_columns"]
-        )  # TODO has to be checked if it will not setup more columns than plots
-        self.spinBox_N_columns.setMaximum(len(self.plot_data))
+        # self.init_ui(self.plot_settings["num_columns"])
+        # self.spinBox_N_columns.setValue(
+        #     self.plot_settings["num_columns"]
+        # )  # TODO has to be checked if it will not setup more columns than plots
+        # self.spinBox_N_columns.setMaximum(len(self.plot_data))
         self.splitter.setSizes([400, 100])
 
         # Buttons
@@ -353,6 +355,19 @@ class PlotApp(QWidget):
             return
 
         if current_scanID != self.scanID:
+            if self.scan_types is False:
+                self.plot_data = self.plot_data_config
+            elif self.scan_types is True:
+                currentName = metadata.get("scan_name")
+                self.plot_data = self.plot_data_config.get(currentName, [])
+
+            # Init UI
+            self.init_ui(self.plot_settings["num_columns"])
+            self.spinBox_N_columns.setValue(
+                self.plot_settings["num_columns"]
+            )  # TODO has to be checked if it will not setup more columns than plots
+            self.spinBox_N_columns.setMaximum(len(self.plot_data))
+
             self.scanID = current_scanID
             self.data = {}
             self.init_curves()
