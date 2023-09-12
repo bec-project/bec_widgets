@@ -21,7 +21,8 @@ from PyQt5.QtWidgets import (
     QFrame,
 )
 from pyqtgraph.Qt import uic
-from scipy.stats import multivariate_normal
+
+# from scipy.stats import multivariate_normal
 
 
 class EigerPlot(QWidget):
@@ -68,7 +69,7 @@ class EigerPlot(QWidget):
 
     def hook_signals(self):
         # Buttons
-        self.pushButton_test.clicked.connect(self.start_sim_stream)
+        # self.pushButton_test.clicked.connect(self.start_sim_stream)
         self.pushButton_mask.clicked.connect(self.load_mask_dialog)
         self.pushButton_delete_mask.clicked.connect(self.delete_mask)
         self.pushButton_help.clicked.connect(self.show_help_dialog)
@@ -262,30 +263,30 @@ class EigerPlot(QWidget):
     ###############################
     # just simulations from here
     ###############################
-    def start_sim_stream(self):
-        sim_stream_thread = threading.Thread(target=self.sim_stream, daemon=True)
-        sim_stream_thread.start()
-
-    def sim_stream(self):
-        for i in range(100):
-            # Generate 100x100 image of random noise
-            self.image = np.random.rand(100, 100) * 0.2
-
-            # Define Gaussian parameters
-            x, y = np.mgrid[0:50, 0:50]
-            pos = np.dstack((x, y))
-
-            # Center at (25, 25) longer along y-axis
-            rv = multivariate_normal(mean=[25, 25], cov=[[25, 0], [0, 80]])
-
-            # Generate Gaussian in the first quadrant
-            gaussian_quadrant = rv.pdf(pos) * 40
-
-            # Place Gaussian in the first quadrant
-            self.image[0:50, 0:50] += gaussian_quadrant * 10
-
-            self.update_signal.emit()
-            time.sleep(0.1)
+    # def start_sim_stream(self):
+    #     sim_stream_thread = threading.Thread(target=self.sim_stream, daemon=True)
+    #     sim_stream_thread.start()
+    #
+    # def sim_stream(self):
+    #     for i in range(100):
+    #         # Generate 100x100 image of random noise
+    #         self.image = np.random.rand(100, 100) * 0.2
+    #
+    #         # Define Gaussian parameters
+    #         x, y = np.mgrid[0:50, 0:50]
+    #         pos = np.dstack((x, y))
+    #
+    #         # Center at (25, 25) longer along y-axis
+    #         rv = multivariate_normal(mean=[25, 25], cov=[[25, 0], [0, 80]])
+    #
+    #         # Generate Gaussian in the first quadrant
+    #         gaussian_quadrant = rv.pdf(pos) * 40
+    #
+    #         # Place Gaussian in the first quadrant
+    #         self.image[0:50, 0:50] += gaussian_quadrant * 10
+    #
+    #         self.update_signal.emit()
+    #         time.sleep(0.1)
 
 
 if __name__ == "__main__":
