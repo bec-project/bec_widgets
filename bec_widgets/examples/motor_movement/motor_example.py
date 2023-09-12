@@ -663,27 +663,34 @@ class MotorApp(QWidget):
             for visible in self.saved_point_visibility
         ]
 
+        # if not (current_index == 1 and not self.is_next_entry_end):
+        #     print("not change table")
         # Adding extra columns
-        if self.extra_columns:
-            table.setColumnCount(col_index + len(self.extra_columns))
-            for col_dict in self.extra_columns:
-                for col_name, default_value in col_dict.items():
-                    if target_row == 0 or (current_index == 1 and not self.is_next_entry_end):
-                        item = QtWidgets.QTableWidgetItem(str(default_value))
-                    else:
-                        prev_item = table.item(target_row - 1, col_index)
-                        item_text = prev_item.text() if prev_item else ""
-                        item = QtWidgets.QTableWidgetItem(item_text)
+        if not (current_index == 1 and not self.is_next_entry_end):  # TODO simplify nesting
+            if self.extra_columns:
+                table.setColumnCount(col_index + len(self.extra_columns))
+                for col_dict in self.extra_columns:
+                    for col_name, default_value in col_dict.items():
+                        if (
+                            target_row == 0
+                        ):  # or (current_index == 1 and not self.is_next_entry_end):
+                            item = QtWidgets.QTableWidgetItem(str(default_value))
+                        # elif current_index == 1 and not self.is_next_entry_end:
+                        #     print("not change table")
+                        else:
+                            prev_item = table.item(target_row - 1, col_index)
+                            item_text = prev_item.text() if prev_item else ""
+                            item = QtWidgets.QTableWidgetItem(item_text)
 
-                    item.setFlags(item.flags() | Qt.ItemIsEditable)
-                    table.setItem(target_row, col_index, item)
+                        item.setFlags(item.flags() | Qt.ItemIsEditable)
+                        table.setItem(target_row, col_index, item)
 
-                    if target_row == 0 or (current_index == 1 and not self.is_next_entry_end):
-                        table.setHorizontalHeaderItem(
-                            col_index, QtWidgets.QTableWidgetItem(col_name)
-                        )
+                        if target_row == 0 or (current_index == 1 and not self.is_next_entry_end):
+                            table.setHorizontalHeaderItem(
+                                col_index, QtWidgets.QTableWidgetItem(col_name)
+                            )
 
-                    col_index += 1
+                        col_index += 1
 
         self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
 
@@ -883,14 +890,26 @@ class MotorApp(QWidget):
                 # Dynamically update self.extra_columns
                 new_extra_columns = []
                 for col_name in header:
-                    if col_name not in ["X", "Y", "Tag"]:
+                    if col_name not in ["Tag", "X [start]", "Y [start]", "X [end]", "Y [end]"]:
                         new_extra_columns.append({col_name: ""})
                 self.extra_columns = new_extra_columns
 
                 # Set column count and headers
-                table.setColumnCount(5 + len(self.extra_columns))
-                new_headers = ["Button", "Checkbox", "X", "Y", "Tag"] + [
-                    col for col in header if col not in ["X", "Y", "Tag"]
+                table.setColumnCount(
+                    7 + len(self.extra_columns)
+                )  # TODO implement logic for both modes
+                new_headers = [
+                    "Move",
+                    "Show",
+                    "Tag",
+                    "X [start]",
+                    "Y [start]",
+                    "X [end]",
+                    "Y [end]",
+                ] + [
+                    col
+                    for col in header
+                    if col not in ["Tag", "X [start]", "Y [start]", "X [end]", "Y [end]"]
                 ]
                 for index, col_name in enumerate(new_headers):
                     header_item = QtWidgets.QTableWidgetItem(col_name)
@@ -923,6 +942,8 @@ class MotorApp(QWidget):
 
                 if self.checkBox_resize_auto.isChecked():
                     table.resizeColumnsToContents()
+
+                self.is_next_entry_end = False  # todo logic for both modes
 
     def save_absolute_coordinates(self):
         self.generate_table_coordinate(
