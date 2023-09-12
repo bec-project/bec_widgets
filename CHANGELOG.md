@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.25.1 (2023-09-12)
+
+### Fix
+
+* Specific config for csaxs ([`8ff983f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/8ff983f16e78d881582d4aaaa0261e10d9d62bf2))
+* Mode lock in config to disable changing the mode for users ([`10ccf0c`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/10ccf0cc977cae30c0c185a920e15b9cf2def58f))
+
 ## v0.25.0 (2023-09-12)
 
 ### Feature
