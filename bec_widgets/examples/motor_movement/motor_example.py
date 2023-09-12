@@ -889,28 +889,27 @@ class MotorApp(QWidget):
 
                 # Dynamically update self.extra_columns
                 new_extra_columns = []
+
+                # for Individual and Start/Stop modes
+                if self.comboBox_mode.currentIndex() == 0:
+                    col_header = ["Tag", "X", "Y"]
+                    col_limit = 5
+                elif self.comboBox_mode.currentIndex() == 1:
+                    col_header = ["Tag", "X [start]", "Y [start]", "X [end]", "Y [end]"]
+                    col_limit = 7
+
                 for col_name in header:
-                    if col_name not in ["Tag", "X [start]", "Y [start]", "X [end]", "Y [end]"]:
+                    if col_name not in col_header:
                         new_extra_columns.append({col_name: ""})
                 self.extra_columns = new_extra_columns
 
                 # Set column count and headers
                 table.setColumnCount(
-                    7 + len(self.extra_columns)
+                    col_limit + len(self.extra_columns)
                 )  # TODO implement logic for both modes
-                new_headers = [
-                    "Move",
-                    "Show",
-                    "Tag",
-                    "X [start]",
-                    "Y [start]",
-                    "X [end]",
-                    "Y [end]",
-                ] + [
-                    col
-                    for col in header
-                    if col not in ["Tag", "X [start]", "Y [start]", "X [end]", "Y [end]"]
-                ]
+                new_headers = (
+                    ["Move", "Show"] + col_header + [col for col in header if col not in col_header]
+                )
                 for index, col_name in enumerate(new_headers):
                     header_item = QtWidgets.QTableWidgetItem(col_name)
                     header_item.setTextAlignment(Qt.AlignCenter)
