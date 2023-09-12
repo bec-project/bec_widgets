@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.26.4 (2023-09-12)
+
+### Fix
+
+* Logic fixed ([`7cb56e9`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/7cb56e9e7f2cbeee5a141c4a52a3489c26963839))
+
 ## v0.26.3 (2023-09-12)
 
 ### Fix
