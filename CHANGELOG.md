@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.24.2 (2023-09-12)
+
+### Fix
+
+* Changes e20643 ([`2657440`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/265744076cc53bd054b45c12de3bb24b23e1845c))
+
 ## v0.24.1 (2023-09-08)
 
 ### Fix
