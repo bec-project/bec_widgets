@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.26.2 (2023-09-12)
+
+### Fix
+
+* Import with start/stop mode works again ([`cacc076`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/cacc076959cdd55218b74de2974d890e583c3d94))
+
 ## v0.26.1 (2023-09-12)
 
 ### Fix
