@@ -2,6 +2,17 @@
 
 <!--next-version-placeholder-->
 
+## v0.25.0 (2023-09-12)
+
+### Feature
+
+* ComboBox to switch between entries mode ([`f2fde2c`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/f2fde2cf5c4b219520eb0257c1c8e02ce66cde87))
+
+### Fix
+
+* Extra columns works again ([`2123361`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/2123361ada9767333792d34de56d6f1447f67cda))
+* Resize table is user controlled ([`63e3896`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/63e389672560e505159de2014846d1506b05633f))
+
 ## v0.24.2 (2023-09-12)
 
 ### Fix
