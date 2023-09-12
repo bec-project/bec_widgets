@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.26.3 (2023-09-12)
+
+### Fix
+
+* Import works for both modes ([`b867f25`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/b867f25c780ba97393ca65fe76c1cb492f365ded))
+
 ## v0.26.2 (2023-09-12)
 
 ### Fix
