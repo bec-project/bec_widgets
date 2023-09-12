@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.26.1 (2023-09-12)
+
+### Fix
+
+* Removed scipy from eiger_plot.py ([`0e634ee`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/0e634ee2ac58b8be43b7f4e64fbc08ef08675aa1))
+
 ## v0.26.0 (2023-09-12)
 
 ### Feature
