@@ -9,6 +9,7 @@ plot_motors:
   precision: 3
   extra_columns:
     - sample name: "sample 1"
-    - Step [x]: 1
-    - Step [y]: 1
-    - Exposure time [s]: 1
+    - step_x [mu]: 25
+    - step_y [mu]: 25
+    - exp_time [s]: 1
+    - start: 1

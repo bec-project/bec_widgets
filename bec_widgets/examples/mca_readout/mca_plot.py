@@ -99,7 +99,7 @@ class StreamApp(QWidget):
     @staticmethod
     def _streamer_cb(msg, *, parent, **_kwargs) -> None:
         msgMCS = BECMessage.DeviceMessage.loads(msg.value)
-
+        print(msgMCS)
         row = msgMCS.content["signals"][parent.sub_device]
         metadata = msgMCS.metadata
 
@@ -144,8 +144,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--port", type=str, default="localhost:6379", help="Port for RedisConnector"
     )
-    parser.add_argument("--device", type=str, default="mca", help="Device name")
-    parser.add_argument("--sub_device", type=str, default="mca1", help="Sub-device name")
+    parser.add_argument("--device", type=str, default="mcs", help="Device name")
+    parser.add_argument("--sub_device", type=str, default="mca4", help="Sub-device name")
 
     args = parser.parse_args()
 
