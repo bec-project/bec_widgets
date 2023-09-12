@@ -1,0 +1,17 @@
+selected_motors:
+  motor_x: "samx"
+  motor_y: "samy"
+
+plot_motors:
+  max_points: 1000
+  num_dim_points: 100
+  scatter_size: 5
+  precision: 3
+  mode_lock: Start/Stop # "Individual" or "Start/Stop"
+  extra_columns:
+    - sample name: "sample 1"
+    - step_x [mu]: 25
+    - step_y [mu]: 25
+    - exp_time [s]: 1
+    - start: 1
+    - tilt [deg]: 0
