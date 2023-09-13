@@ -1036,10 +1036,18 @@ class MotorApp(QWidget):
         layout.addWidget(QLabel("Import/Export of Table:"))
         layout.addWidget(
             QLabel(
-                "When importing a table, the first three columns must be X, Y, and Tag. Failing to do so will break the table."
+                "Create additional table columns in config yaml file.\n"
+                "Be sure to load the correct config file with console argument -c.\n"
+                "When importing a table, the first three columns must be [Tag, X, Y] in the case of Individual mode \n"
+                "and [Tag, X [start], Y [start], X [end], Y [end] in the case of Start/Stop mode.\n"
+                "Failing to do so will break the table!"
             )
         )
-        layout.addWidget(QLabel("Note: Importing a table will overwrite the current table."))
+        layout.addWidget(
+            QLabel(
+                "Note: Importing a table will overwrite the current table. Import in correct mode."
+            )
+        )
 
         # Another Separator
         another_separator = QFrame()
