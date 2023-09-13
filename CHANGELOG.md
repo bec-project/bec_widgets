@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.26.5 (2023-09-13)
+
+### Fix
+
+* Motor_example.py help extended ([`a5c6ffa`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/a5c6ffaa024a0dd6901976c81ea9146e5be016ec))
+
 ## v0.26.4 (2023-09-12)
 
 ### Fix
