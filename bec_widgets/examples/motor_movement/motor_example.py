@@ -651,21 +651,10 @@ class MotorApp(QWidget):
             # Create buttons for start and end coordinates
             button_start = QPushButton("Go [start]")
             button_end = QPushButton("Go [end]")
-            button_end.setEnabled(
-                self.is_next_entry_end
-            )  # Enable only if end coordinate is present
 
-            # Link signals to move to coordinates
-            button_start.clicked.connect(
-                lambda: self.move_to_row_coordinates(4, 5, table, target_row)
+            self.connect_table_go_buttons(
+                table, target_row, current_index, button_start, button_end
             )
-            button_end.clicked.connect(
-                lambda: self.move_to_row_coordinates(6, 7, table, target_row)
-            )
-
-            # Add buttons to table
-            table.setCellWidget(target_row, 1, button_start)
-            table.setCellWidget(target_row, 2, button_end)
 
             # Set Tag
             table.setItem(target_row, 3, QtWidgets.QTableWidgetItem(str(tag)))
@@ -680,9 +669,8 @@ class MotorApp(QWidget):
                 table.setItem(target_row, 5, item_y)
             self.is_next_entry_end = not self.is_next_entry_end
         else:  # Individual mode
-            button_go = QPushButton("Go")
-            button_go.clicked.connect(lambda: self.move_to_row_coordinates(3, 4, table, target_row))
-            table.setCellWidget(target_row, 1, button_go)
+            button_start = QPushButton("Go")
+            self.connect_table_go_buttons(table, target_row, current_index, button_start)
 
             # Set Tag
             table.setItem(target_row, 2, QtWidgets.QTableWidgetItem(str(tag)))
@@ -832,12 +820,12 @@ class MotorApp(QWidget):
         rows_to_delete.sort(reverse=True)  # Sort in descending order
 
         for row_index in rows_to_delete:
-            self.saved_motor_positions = np.delete(self.saved_motor_positions, row_index, axis=0)
-            del self.saved_point_visibility[row_index]
+            # self.saved_motor_positions = np.delete(self.saved_motor_positions, row_index, axis=0) #TODO Re-enable later
+            # del self.saved_point_visibility[row_index]
 
             # If in 'start/stop' mode, check if only the 'start' coordinates are present in the row being deleted
             if self.comboBox_mode.currentIndex() == 1:
-                if self.tableWidget_coordinates.item(row_index, 5) is None:
+                if self.tableWidget_coordinates.item(row_index, 6) is None:
                     self.is_next_entry_end = False
 
             # Update the plot
@@ -845,7 +833,7 @@ class MotorApp(QWidget):
                 pg.mkBrush(255, 165, 0, 255) if visible else pg.mkBrush(255, 165, 0, 0)
                 for visible in self.saved_point_visibility
             ]
-            self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
+            # self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes) #TODO Re-enable later
 
             # Remove the row from the table
             self.tableWidget_coordinates.removeRow(row_index)
@@ -857,6 +845,31 @@ class MotorApp(QWidget):
             button.clicked.connect(
                 partial(self.move_to_row_coordinates, self.tableWidget_coordinates, row)
             )
+
+    def connect_table_go_buttons(
+        self, table, target_row, mode: int = 0, button_start=None, button_end=None
+    ) -> None:
+        if mode == 1:
+            button_end.setEnabled(
+                self.is_next_entry_end
+            )  # Enable only if end coordinate is present
+
+            # Link signals to move to coordinates
+            button_start.clicked.connect(
+                lambda: self.move_to_row_coordinates(4, 5, table, target_row)
+            )
+            button_end.clicked.connect(
+                lambda: self.move_to_row_coordinates(6, 7, table, target_row)
+            )
+
+            # Add buttons to table
+            table.setCellWidget(target_row, 1, button_start)
+            table.setCellWidget(target_row, 2, button_end)
+        else:
+            button_start.clicked.connect(
+                lambda: self.move_to_row_coordinates(3, 4, table, target_row)
+            )
+            table.setCellWidget(target_row, 1, button_start)
 
     def resizeTable(self, table):
         table.resizeColumnsToContents()
