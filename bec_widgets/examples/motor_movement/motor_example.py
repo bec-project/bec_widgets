@@ -420,8 +420,8 @@ class MotorApp(QWidget):
         # self.tableWidget_coordinates.setItemDelegateForColumn(3, self.double_delegate) #TODO check where to delegate
         # self.tableWidget_coordinates.setItemDelegateForColumn(4, self.double_delegate)
 
-        # Signals
-        self.tableWidget_coordinates.itemChanged.connect(self.update_saved_coordinates)
+        # Signals #TODO reenable later
+        # self.tableWidget_coordinates.itemChanged.connect(self.update_saved_coordinates)
 
         # Buttons
         self.pushButton_exportCSV.clicked.connect(
@@ -588,18 +588,26 @@ class MotorApp(QWidget):
         self.tableWidget_coordinates.setRowCount(0)  # Wipe table
 
         if current_index == 0:  # 'individual' is selected
-            self.tableWidget_coordinates.setColumnCount(5)
-            self.tableWidget_coordinates.setHorizontalHeaderLabels(
-                ["Move", "Show", "Tag", "X", "Y"]
-            )
+            header = ["Show", "Move", "Tag", "X", "Y"]
+
+            self.tableWidget_coordinates.setColumnCount(len(header))
+            self.tableWidget_coordinates.setHorizontalHeaderLabels(header)
             self.tableWidget_coordinates.setItemDelegateForColumn(3, self.double_delegate)
             self.tableWidget_coordinates.setItemDelegateForColumn(4, self.double_delegate)
 
         elif current_index == 1:  # 'start/stop' is selected
-            self.tableWidget_coordinates.setColumnCount(7)
-            self.tableWidget_coordinates.setHorizontalHeaderLabels(
-                ["Move", "Show", "Tag", "X [start]", "Y [start]", "X [end]", "Y [end]"]
-            )
+            header = [
+                "Show",
+                "Move [start]",
+                "Move [end]",
+                "Tag",
+                "X [start]",
+                "Y [start]",
+                "X [end]",
+                "Y [end]",
+            ]
+            self.tableWidget_coordinates.setColumnCount(len(header))
+            self.tableWidget_coordinates.setHorizontalHeaderLabels(header)
             self.tableWidget_coordinates.setItemDelegateForColumn(3, self.double_delegate)
             self.tableWidget_coordinates.setItemDelegateForColumn(4, self.double_delegate)
             self.tableWidget_coordinates.setItemDelegateForColumn(5, self.double_delegate)
@@ -624,16 +632,13 @@ class MotorApp(QWidget):
         validator = QDoubleValidator()
         validator.setDecimals(precision)
 
+        # Checkbox for visibility switch -> always first column
         checkBox = QtWidgets.QCheckBox()
         checkBox.setChecked(True)
-        button = QtWidgets.QPushButton("Go")
-
         checkBox.stateChanged.connect(
             lambda state, widget=checkBox: self.toggle_point_visibility(state, widget)
         )
-
-        table.setItem(target_row, 2, QtWidgets.QTableWidgetItem(str(tag)))
-        table.setCellWidget(target_row, 1, checkBox)
+        table.setCellWidget(target_row, 0, checkBox)
 
         # Apply validator to x and y coordinate QTableWidgetItem
         item_x = QtWidgets.QTableWidgetItem(str(f"{coordinates[0]:.{precision}f}"))
@@ -641,22 +646,50 @@ class MotorApp(QWidget):
         item_x.setFlags(item_x.flags() | Qt.ItemIsEditable)
         item_y.setFlags(item_y.flags() | Qt.ItemIsEditable)
 
-        if current_index == 1:
-            col_index = 7
+        # Mode switch
+        if current_index == 1:  # start/stop mode
+            # Create buttons for start and end coordinates
+            button_start = QPushButton("Go [start]")
+            button_end = QPushButton("Go [end]")
+            button_end.setEnabled(
+                self.is_next_entry_end
+            )  # Enable only if end coordinate is present
+
+            # Link signals to move to coordinates
+            button_start.clicked.connect(
+                lambda: self.move_to_row_coordinates(4, 5, table, target_row)
+            )
+            button_end.clicked.connect(
+                lambda: self.move_to_row_coordinates(6, 7, table, target_row)
+            )
+
+            # Add buttons to table
+            table.setCellWidget(target_row, 1, button_start)
+            table.setCellWidget(target_row, 2, button_end)
+
+            # Set Tag
+            table.setItem(target_row, 3, QtWidgets.QTableWidgetItem(str(tag)))
+
+            # Add coordinates to table
+            col_index = 8
             if self.is_next_entry_end:
-                table.setItem(target_row, 5, item_x)
-                table.setItem(target_row, 6, item_y)
+                table.setItem(target_row, 6, item_x)
+                table.setItem(target_row, 7, item_y)
             else:
-                table.setItem(target_row, 3, item_x)
-                table.setItem(target_row, 4, item_y)
+                table.setItem(target_row, 4, item_x)
+                table.setItem(target_row, 5, item_y)
             self.is_next_entry_end = not self.is_next_entry_end
-        else:
+        else:  # Individual mode
+            button_go = QPushButton("Go")
+            button_go.clicked.connect(lambda: self.move_to_row_coordinates(3, 4, table, target_row))
+            table.setCellWidget(target_row, 1, button_go)
+
+            # Set Tag
+            table.setItem(target_row, 2, QtWidgets.QTableWidgetItem(str(tag)))
+
             col_index = 5
             table.setItem(target_row, 3, item_x)
             table.setItem(target_row, 4, item_y)
-
-        table.setCellWidget(target_row, 0, button)
-        button.clicked.connect(partial(self.move_to_row_coordinates, table, target_row))
 
         brushes = [
             pg.mkBrush(255, 165, 0, 255) if visible else pg.mkBrush(255, 165, 0, 0)
@@ -690,7 +723,7 @@ class MotorApp(QWidget):
 
                         col_index += 1
 
-        self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
+        # self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes) #TODO reenable later
 
         self.align_table_center(table)
 
@@ -737,9 +770,9 @@ class MotorApp(QWidget):
                 if item:
                     item.setTextAlignment(Qt.AlignCenter)
 
-    def move_to_row_coordinates(self, table, row):
-        x = float(table.item(row, 3).text())
-        y = float(table.item(row, 4).text())
+    def move_to_row_coordinates(self, x_col, y_col, table, row):
+        x = float(table.item(row, x_col).text())
+        y = float(table.item(row, y_col).text())
         self.move_motor_absolute(x, y)
 
     def toggle_point_visibility(self, state, checkBox_widget):
@@ -753,8 +786,6 @@ class MotorApp(QWidget):
         item = table.indexAt(pos)
         row_index = item.row()
 
-        # print(f"Row {row_index} visibility changed to {state == Qt.Checked}")
-
         self.saved_point_visibility[row_index] = state == Qt.Checked
 
         # Generate brushes based on visibility state
@@ -763,38 +794,25 @@ class MotorApp(QWidget):
             for visible in self.saved_point_visibility
         ]
 
-        # brushed_rgb = [brush.color().getRgb() for brush in brushes]
-
-        # print(f"Poinst: {self.saved_motor_positions}")
-        # print(f"Brushes: {brushed_rgb}")
-
         self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
 
-    def update_saved_coordinates(self):
+    def update_saved_coordinates(self, x_col, y_col, table, rgb=None):
         """
         Update the saved coordinates and replot them.
         """
-        rows = self.tableWidget_coordinates.rowCount()
+        rows = table.rowCount()
         # Initialize an empty array to hold new coordinates
         new_saved_positions = np.empty((0, 2))
         new_visibility = []
 
         for row in range(rows):
-            x = (
-                float(self.tableWidget_coordinates.item(row, 3).text())
-                if self.tableWidget_coordinates.item(row, 3) is not None
-                else None
-            )
-            y = (
-                float(self.tableWidget_coordinates.item(row, 4).text())
-                if self.tableWidget_coordinates.item(row, 4) is not None
-                else None
-            )
+            x = float(table.item(row, x_col).text()) if table.item(row, x_col) is not None else None
+            y = float(table.item(row, y_col).text()) if table.item(row, y_col) is not None else None
 
             # Only add the point if both x and y are not None
             if x is not None and y is not None:
                 new_saved_positions = np.vstack((new_saved_positions, [x, y]))
-                checkbox = self.tableWidget_coordinates.cellWidget(row, 1)
+                checkbox = table.cellWidget(row, 0)
                 new_visibility.append(checkbox.isChecked())
 
         # Update saved positions and visibility

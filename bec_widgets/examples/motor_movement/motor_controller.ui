@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1409</width>
+    <width>1561</width>
     <height>748</height>
    </rect>
   </property>
@@ -554,12 +554,12 @@
          </property>
          <column>
           <property name="text">
-           <string>Move</string>
+           <string>Show</string>
           </property>
          </column>
          <column>
           <property name="text">
-           <string>Show</string>
+           <string>Move</string>
           </property>
          </column>
          <column>
@@ -581,10 +581,10 @@
        </item>
        <item>
         <layout class="QGridLayout" name="gridLayout">
-         <item row="0" column="0">
-          <widget class="QPushButton" name="pushButton_exportCSV">
+         <item row="1" column="1">
+          <widget class="QPushButton" name="pushButton_resize_table">
            <property name="text">
-            <string>Export CSV</string>
+            <string>Resize Table</string>
            </property>
           </widget>
          </item>
@@ -605,10 +605,10 @@
            </property>
           </widget>
          </item>
-         <item row="1" column="1">
-          <widget class="QPushButton" name="pushButton_resize_table">
+         <item row="0" column="0">
+          <widget class="QPushButton" name="pushButton_exportCSV">
            <property name="text">
-            <string>Resize Table</string>
+            <string>Export CSV</string>
            </property>
           </widget>
          </item>
