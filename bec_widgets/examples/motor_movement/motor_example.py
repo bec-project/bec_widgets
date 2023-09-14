@@ -649,12 +649,28 @@ class MotorApp(QWidget):
         # Mode switch
         if current_index == 1:  # start/stop mode
             # Create buttons for start and end coordinates
+            # button_start = QPushButton("Go [start]")
+            # button_end = QPushButton("Go [end]")
+            #
+            # self.connect_table_go_buttons(
+            #     table, target_row, current_index, button_start, button_end
+            # )
+
+            # Create buttons for start and end coordinates
             button_start = QPushButton("Go [start]")
             button_end = QPushButton("Go [end]")
 
-            self.connect_table_go_buttons(
-                table, target_row, current_index, button_start, button_end
-            )
+            # Add buttons to table
+            table.setCellWidget(target_row, 1, button_start)
+            table.setCellWidget(target_row, 2, button_end)
+
+            button_end.setEnabled(
+                self.is_next_entry_end
+            )  # Enable only if end coordinate is present
+
+            # Connect buttons to the slot
+            button_start.clicked.connect(self.move_to_row_coordinates)
+            button_end.clicked.connect(self.move_to_row_coordinates)
 
             # Set Tag
             table.setItem(target_row, 3, QtWidgets.QTableWidgetItem(str(tag)))
@@ -669,8 +685,12 @@ class MotorApp(QWidget):
                 table.setItem(target_row, 5, item_y)
             self.is_next_entry_end = not self.is_next_entry_end
         else:  # Individual mode
+            # button_start = QPushButton("Go")
+            # self.connect_table_go_buttons(table, target_row, current_index, button_start)
+
             button_start = QPushButton("Go")
-            self.connect_table_go_buttons(table, target_row, current_index, button_start)
+            table.setCellWidget(target_row, 1, button_start)
+            button_start.clicked.connect(self.move_to_row_coordinates)
 
             # Set Tag
             table.setItem(target_row, 2, QtWidgets.QTableWidgetItem(str(tag)))
@@ -758,9 +778,29 @@ class MotorApp(QWidget):
                 if item:
                     item.setTextAlignment(Qt.AlignCenter)
 
-    def move_to_row_coordinates(self, x_col, y_col, table, row):
-        x = float(table.item(row, x_col).text())
-        y = float(table.item(row, y_col).text())
+    def move_to_row_coordinates(self):  # , x_col, y_col, table, row):
+        # Find out the mode and decide columns accordingly
+        mode = self.comboBox_mode.currentIndex()
+
+        # Get the button that emitted the signal# Get the button that emitted the signal
+        button = self.sender()
+
+        # Find the row and column where the button is located
+        row = self.tableWidget_coordinates.indexAt(button.pos()).row()
+        col = self.tableWidget_coordinates.indexAt(button.pos()).column()
+
+        # Decide which coordinates to move to based on the column
+        if mode == 1:
+            if col == 1:  # Go to 'start' coordinates
+                x_col, y_col = 4, 5
+            elif col == 2:  # Go to 'end' coordinates
+                x_col, y_col = 6, 7
+        else:  # Default case
+            x_col, y_col = 3, 4  # For "individual" mode
+
+        # Fetch and move coordinates
+        x = float(self.tableWidget_coordinates.item(row, x_col).text())
+        y = float(self.tableWidget_coordinates.item(row, y_col).text())
         self.move_motor_absolute(x, y)
 
     def toggle_point_visibility(self, state, checkBox_widget):
@@ -814,7 +854,7 @@ class MotorApp(QWidget):
         ]
         self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
 
-    def delete_selected_row(self):
+    def delete_selected_row(self):  # TODO generalise this function to any table
         selected_rows = self.tableWidget_coordinates.selectionModel().selectedRows()
         rows_to_delete = [row.row() for row in selected_rows]
         rows_to_delete.sort(reverse=True)  # Sort in descending order
@@ -839,12 +879,39 @@ class MotorApp(QWidget):
             self.tableWidget_coordinates.removeRow(row_index)
 
         # Update the 'Go' buttons
-        for row in range(self.tableWidget_coordinates.rowCount()):
-            button = self.tableWidget_coordinates.cellWidget(row, 0)
-            button.clicked.disconnect()
-            button.clicked.connect(
-                partial(self.move_to_row_coordinates, self.tableWidget_coordinates, row)
-            )
+        # for row in range(self.tableWidget_coordinates.rowCount()):
+        #     if self.comboBox_mode.currentIndex() == 1:
+        #         # Find buttons
+        #         button_start = self.tableWidget_coordinates.cellWidget(row, 1)
+        #         button_end = self.tableWidget_coordinates.cellWidget(row, 2)
+        #         # Disconnect buttons
+        #         button_start.clicked.disconnect()
+        #         button_end.clicked.disconnect()
+        #         # Reconnect to correct coordinates
+        #         self.connect_table_go_buttons(
+        #             self.tableWidget_coordinates,
+        #             row,
+        #             self.comboBox_mode.currentIndex(),
+        #             button_start,
+        #             button_end,
+        #         )
+        #     else:
+        #         # Find buttons
+        #         button_start = self.tableWidget_coordinates.cellWidget(row, 1)
+        #         # Disconnect buttons
+        #         button_start.clicked.disconnect()
+        #         # Reconnect to correct coordinates
+        #         self.connect_table_go_buttons(
+        #             self.tableWidget_coordinates,
+        #             row,
+        #             self.comboBox_mode.currentIndex(),
+        #             button_start,
+        #         )
+        # button = self.tableWidget_coordinates.cellWidget(row, 0)
+        # button.clicked.disconnect()
+        # button.clicked.connect(
+        #     partial(self.move_to_row_coordinates, self.tableWidget_coordinates, row)
+        # )
 
     def connect_table_go_buttons(
         self, table, target_row, mode: int = 0, button_start=None, button_end=None
