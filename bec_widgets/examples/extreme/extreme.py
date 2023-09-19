@@ -53,8 +53,10 @@ class PlotApp(QWidget):
     def __init__(self, config: dict, parent=None):
         super(PlotApp, self).__init__(parent)
 
-        # YAML config
-        self.init_config(config)
+        # Loading UI
+        current_path = os.path.dirname(__file__)
+        uic.loadUi(os.path.join(current_path, "extreme.ui"), self)
+
         # self.plot_settings = config.get("plot_settings", {})
         # self.plot_data_config = config.get("plot_data", {})
         # self.scan_types = self.plot_settings.get("scan_types", False)
@@ -64,12 +66,8 @@ class PlotApp(QWidget):
         # else:
         #     self.plot_data = {}
 
-        # Setting global plot settings
-        self.init_plot_background(self.plot_settings["background_color"])
-
-        # Loading UI
-        current_path = os.path.dirname(__file__)
-        uic.loadUi(os.path.join(current_path, "extreme.ui"), self)
+        # # Setting global plot settings
+        # self.init_plot_background(self.plot_settings["background_color"])
 
         # Nested dictionary to hold x and y data for multiple plots
         self.data = {}
@@ -82,13 +80,17 @@ class PlotApp(QWidget):
 
         self.user_colors = {}  # key: (plot_name, y_name, y_entry), value: color
 
-        # Initialize the UI
-        if self.scan_types is False:
-            self.init_ui(self.plot_settings["num_columns"])
-            self.spinBox_N_columns.setValue(
-                self.plot_settings["num_columns"]
-            )  # TODO has to be checked if it will not setup more columns than plots
-            self.spinBox_N_columns.setMaximum(len(self.plot_data))
+        # # Initialize the UI
+        # if self.scan_types is False:
+        #     self.init_ui(self.plot_settings["num_columns"])
+        #     self.spinBox_N_columns.setValue(
+        #         self.plot_settings["num_columns"]
+        #     )  # TODO has to be checked if it will not setup more columns than plots
+        #     self.spinBox_N_columns.setMaximum(len(self.plot_data))
+
+        # YAML config
+        self.init_config(config)
+
         self.splitter.setSizes([400, 100])
 
         # Buttons
@@ -113,6 +115,17 @@ class PlotApp(QWidget):
             self.plot_data = self.plot_data_config  # TODO logic has to be improved
         else:
             self.plot_data = {}
+
+        # Setting global plot settings
+        self.init_plot_background(self.plot_settings["background_color"])
+
+        # Initialize the UI
+        if self.scan_types is False:
+            self.init_ui(self.plot_settings["num_columns"])
+            self.spinBox_N_columns.setValue(
+                self.plot_settings["num_columns"]
+            )  # TODO has to be checked if it will not setup more columns than plots
+            self.spinBox_N_columns.setMaximum(len(self.plot_data))
 
     def init_plot_background(self, background_color: str) -> None:
         """
@@ -262,14 +275,6 @@ class PlotApp(QWidget):
         self.tableWidget_crosshair.setRowCount(len(row_labels))
         self.tableWidget_crosshair.setVerticalHeaderLabels(row_labels)
         self.hook_crosshair()
-
-    # def change_curve_color(self, btn, curve):
-    #     """Change the color of a curve."""
-    #     color = btn.color()
-    #     pen_curve = mkPen(color=color, width=2, style=QtCore.Qt.DashLine)
-    #     brush_curve = mkBrush(color=color)
-    #     curve.setPen(pen_curve)
-    #     curve.setSymbolBrush(brush_curve)
 
     def change_curve_color(self, btn, plot_name, y_name, y_entry, curve):
         """
@@ -503,13 +508,13 @@ class PlotApp(QWidget):
                 # self.init_ui(self.plot_settings["num_columns"])
                 # self.init_curves()
 
-                if self.scan_types is False:
-                    self.init_ui(self.plot_settings["num_columns"])
-                    self.init_curves()
-                    self.spinBox_N_columns.setValue(
-                        self.plot_settings["num_columns"]
-                    )  # TODO has to be checked if it will not setup more columns than plots
-                    self.spinBox_N_columns.setMaximum(len(self.plot_data))
+                # if self.scan_types is False:
+                #     self.init_ui(self.plot_settings["num_columns"])
+                #     self.init_curves()
+                #     self.spinBox_N_columns.setValue(
+                #         self.plot_settings["num_columns"]
+                #     )  # TODO has to be checked if it will not setup more columns than plots
+                #     self.spinBox_N_columns.setMaximum(len(self.plot_data))
 
                 print(f"Settings loaded from {file_path}")
             except FileNotFoundError:
