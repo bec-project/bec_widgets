@@ -1,5 +1,6 @@
 import os
 
+import pyqtgraph
 import pyqtgraph as pg
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QApplication, QWidget, QTableWidgetItem, QTableWidget, QFileDialog
@@ -28,23 +29,45 @@ class PlotApp(QWidget):
                                   name and entry, for a particular plot.
 
     Args:
-        plot_settings (dict): Dictionary containing global plot settings such as background color.
-        plot_data (list of dict): List of dictionaries specifying the signals to plot.
-                                  Each dictionary should contain:
-                                  - 'x': Dictionary specifying the x-axis settings including
-                                        a 'signals' list with 'name' and 'entry' fields.
-                                        If there are multiple entries for one device name, they can be passed as a list.
-                                  - 'y': Similar to 'x', but for the y-axis.
-                                  Example:
-                                  [
-                                      {
-                                          'plot_name': 'Plot 1',
-                                          'x': {'label': 'X Label', 'signals': [{'name': 'x1', 'entry': 'x1_entry'}]},
-                                          'y': {'label': 'Y Label', 'signals': [{'name': 'y1', 'entry': 'y1_entry'}]}
-                                      },
-                                      ...
-                                  ]
+        config (dict): Configuration dictionary containing all settings for the plotting app.
+                      It should include the following keys:
+                      - 'plot_settings': Dictionary containing global plot settings.
+                      - 'plot_data': List of dictionaries specifying the signals to plot.
         parent (QWidget, optional): Parent widget.
+
+    Example:
+        General Plot Configuration:
+        {
+            'plot_settings': {'background_color': 'black', 'num_columns': 2, 'colormap': 'plasma', 'scan_types': False},
+            'plot_data': [
+                {
+                    'plot_name': 'Plot A',
+                    'x': {'label': 'X-axis', 'signals': [{'name': 'device_x', 'entry': 'entry_x'}]},
+                    'y': {'label': 'Y-axis', 'signals': [{'name': 'device_y', 'entry': 'entry_y'}]}
+                }
+            ]
+        }
+
+        Different Scans Mode Configuration:
+        {
+            'plot_settings': {'background_color': 'black', 'num_columns': 2, 'colormap': 'plasma', 'scan_types': True},
+            'plot_data': {
+                'scan_type_1': [
+                    {
+                        'plot_name': 'Plot 1',
+                        'x': {'label': 'X-axis', 'signals': [{'name': 'device_x1', 'entry': 'entry_x1'}]},
+                        'y': {'label': 'Y-axis', 'signals': [{'name': 'device_y1', 'entry': 'entry_y1'}]}
+                    }
+                ],
+                'scan_type_2': [
+                    {
+                        'plot_name': 'Plot 2',
+                        'x': {'label': 'X-axis', 'signals': [{'name': 'device_x2', 'entry': 'entry_x2'}]},
+                        'y': {'label': 'Y-axis', 'signals': [{'name': 'device_y2', 'entry': 'entry_y2'}]}
+                    }
+                ]
+            }
+        }
     """
 
     update_signal = pyqtSignal()
@@ -57,19 +80,6 @@ class PlotApp(QWidget):
         current_path = os.path.dirname(__file__)
         uic.loadUi(os.path.join(current_path, "extreme.ui"), self)
 
-        # self.plot_settings = config.get("plot_settings", {})
-        # self.plot_data_config = config.get("plot_data", {})
-        # self.scan_types = self.plot_settings.get("scan_types", False)
-        #
-        # if self.scan_types is False:
-        #     self.plot_data = self.plot_data_config  # TODO logic has to be improved
-        # else:
-        #     self.plot_data = {}
-
-        # # Setting global plot settings
-        # self.init_plot_background(self.plot_settings["background_color"])
-
-        # Nested dictionary to hold x and y data for multiple plots
         self.data = {}
 
         self.crosshairs = None
@@ -79,14 +89,6 @@ class PlotApp(QWidget):
         self.scanID = None
 
         self.user_colors = {}  # key: (plot_name, y_name, y_entry), value: color
-
-        # # Initialize the UI
-        # if self.scan_types is False:
-        #     self.init_ui(self.plot_settings["num_columns"])
-        #     self.spinBox_N_columns.setValue(
-        #         self.plot_settings["num_columns"]
-        #     )  # TODO has to be checked if it will not setup more columns than plots
-        #     self.spinBox_N_columns.setMaximum(len(self.plot_data))
 
         # YAML config
         self.init_config(config)
@@ -105,7 +107,14 @@ class PlotApp(QWidget):
         # Change layout of plots when the number of columns is changed in GUI
         self.spinBox_N_columns.valueChanged.connect(lambda x: self.init_ui(x))
 
-    def init_config(self, config):
+    def init_config(self, config: dict) -> None:
+        """
+        Initializes or update the configuration settings for the PlotApp.
+
+        Args:
+            config (dict): Dictionary containing plot settings and data configurations.
+        """
+
         # YAML config
         self.plot_settings = config.get("plot_settings", {})
         self.plot_data_config = config.get("plot_data", {})
@@ -276,7 +285,14 @@ class PlotApp(QWidget):
         self.tableWidget_crosshair.setVerticalHeaderLabels(row_labels)
         self.hook_crosshair()
 
-    def change_curve_color(self, btn, plot_name, y_name, y_entry, curve):
+    def change_curve_color(
+        self,
+        btn: pyqtgraph.ColorButton,
+        plot_name: str,
+        y_name: str,
+        y_entry: str,
+        curve: pyqtgraph.PlotDataItem,
+    ) -> None:
         """
         Change the color of a curve and update the corresponding ColorButton.
 
@@ -294,7 +310,7 @@ class PlotApp(QWidget):
         curve.setSymbolBrush(brush_curve)
         self.user_colors[(plot_name, y_name, y_entry)] = color
 
-    def hook_crosshair(self):
+    def hook_crosshair(self) -> None:
         """Attach crosshairs to each plot and connect them to the update_table method."""
         self.crosshairs = {}
         for plot_name, plot in self.plots.items():
@@ -364,7 +380,7 @@ class PlotApp(QWidget):
     @pyqtSlot(dict, dict)
     def on_scan_segment(self, msg, metadata) -> None:
         """
-        Handle new scan segments and saves data to a dictionary.
+        Handle new scan segments and saves data to a dictionary. Linked through bec_dispatcher.
 
         Args:
             msg (dict): Message received with scan data.
@@ -382,7 +398,7 @@ class PlotApp(QWidget):
                 currentName = metadata.get("scan_name")
                 self.plot_data = self.plot_data_config.get(currentName, [])
 
-                # Init UI #TODO has to be fixed for different scan types
+                # Init UI
                 self.init_ui(self.plot_settings["num_columns"])
                 self.spinBox_N_columns.setValue(
                     self.plot_settings["num_columns"]
@@ -494,28 +510,6 @@ class PlotApp(QWidget):
 
                 # YAML config
                 self.init_config(config)
-                # self.plot_settings = config.get("plot_settings", {})
-                # self.plot_data_config = config.get("plot_data", {})
-                # self.scan_types = self.plot_settings.get("scan_types", False)
-                #
-                # if self.scan_types is False:
-                #     self.plot_data = self.plot_data_config  # TODO logic has to be improved
-                # else:
-                #     self.plot_data = {}
-
-                # Reinitialize the UI and plots
-                # TODO implement, change background works only before loading .ui file
-                # self.init_plot_background(self.plot_settings["background_color"])
-                # self.init_ui(self.plot_settings["num_columns"])
-                # self.init_curves()
-
-                # if self.scan_types is False:
-                #     self.init_ui(self.plot_settings["num_columns"])
-                #     self.init_curves()
-                #     self.spinBox_N_columns.setValue(
-                #         self.plot_settings["num_columns"]
-                #     )  # TODO has to be checked if it will not setup more columns than plots
-                #     self.spinBox_N_columns.setMaximum(len(self.plot_data))
 
                 print(f"Settings loaded from {file_path}")
             except FileNotFoundError:
@@ -540,9 +534,6 @@ if __name__ == "__main__":
     try:
         with open(args.config, "r") as file:
             config = yaml.safe_load(file)
-
-            # plot_settings = config.get("plot_settings", {})
-            # plot_data = config.get("plot_data", {})
 
     except FileNotFoundError:
         print(f"The file {args.config} was not found.")
