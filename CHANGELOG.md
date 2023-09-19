@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.26.7 (2023-09-19)
+
+### Fix
+
+* Eiger_plot_hist.py removed ([`abe35bf`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/abe35bf96757a38395733bddbd8702a29fd26f42))
+
 ## v0.26.6 (2023-09-19)
 
 ### Fix
