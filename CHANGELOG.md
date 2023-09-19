@@ -2,6 +2,17 @@
 
 <!--next-version-placeholder-->
 
+## v0.26.6 (2023-09-19)
+
+### Fix
+
+* Extreme.py saved to .yaml works correctly for different scans configurations ([`cb144c7`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/cb144c7c2cba50fc49ba53b0a9e3293b549665be))
+* Extreme.py fixed logic of loading new config.yaml during app operation ([`4287ac8`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/4287ac888591abf27a4e4ce8c23f94d54bc6c2a9))
+
+### Documentation
+
+* Extreme.py updated documentation ([`7ff72b4`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/7ff72b4086e5e340d591d130f011f83fc8370315))
+
 ## v0.26.5 (2023-09-13)
 
 ### Fix
