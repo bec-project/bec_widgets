@@ -54,15 +54,15 @@ class PlotApp(QWidget):
         super(PlotApp, self).__init__(parent)
 
         # YAML config
-
-        self.plot_settings = config.get("plot_settings", {})
-        self.plot_data_config = config.get("plot_data", {})
-        self.scan_types = self.plot_settings.get("scan_types", False)
-
-        if self.scan_types is False:
-            self.plot_data = self.plot_data_config  # TODO logic has to be improved
-        else:
-            self.plot_data = {}
+        self.init_config(config)
+        # self.plot_settings = config.get("plot_settings", {})
+        # self.plot_data_config = config.get("plot_data", {})
+        # self.scan_types = self.plot_settings.get("scan_types", False)
+        #
+        # if self.scan_types is False:
+        #     self.plot_data = self.plot_data_config  # TODO logic has to be improved
+        # else:
+        #     self.plot_data = {}
 
         # Setting global plot settings
         self.init_plot_background(self.plot_settings["background_color"])
@@ -102,6 +102,17 @@ class PlotApp(QWidget):
 
         # Change layout of plots when the number of columns is changed in GUI
         self.spinBox_N_columns.valueChanged.connect(lambda x: self.init_ui(x))
+
+    def init_config(self, config):
+        # YAML config
+        self.plot_settings = config.get("plot_settings", {})
+        self.plot_data_config = config.get("plot_data", {})
+        self.scan_types = self.plot_settings.get("scan_types", False)
+
+        if self.scan_types is False:
+            self.plot_data = self.plot_data_config  # TODO logic has to be improved
+        else:
+            self.plot_data = {}
 
     def init_plot_background(self, background_color: str) -> None:
         """
@@ -476,14 +487,15 @@ class PlotApp(QWidget):
                     config = yaml.safe_load(file)
 
                 # YAML config
-                self.plot_settings = config.get("plot_settings", {})
-                self.plot_data_config = config.get("plot_data", {})
-                self.scan_types = self.plot_settings.get("scan_types", False)
-
-                if self.scan_types is False:
-                    self.plot_data = self.plot_data_config  # TODO logic has to be improved
-                else:
-                    self.plot_data = {}
+                self.init_config(config)
+                # self.plot_settings = config.get("plot_settings", {})
+                # self.plot_data_config = config.get("plot_data", {})
+                # self.scan_types = self.plot_settings.get("scan_types", False)
+                #
+                # if self.scan_types is False:
+                #     self.plot_data = self.plot_data_config  # TODO logic has to be improved
+                # else:
+                #     self.plot_data = {}
 
                 # Reinitialize the UI and plots
                 # TODO implement, change background works only before loading .ui file

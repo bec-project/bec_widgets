@@ -77,3 +77,15 @@ plot_data:
           - name: "gauss_bpm"
             entry: "gauss_bpm"
 
+    - plot_name: "Grid plot 4"
+      x:
+        label: 'Motor Y'
+        signals:
+          - name: "samy"
+            entry: "samy"
+      y:
+        label: 'BPM'
+        signals:
+          - name: "gauss_adc3"
+            entry: "gauss_adc3"
+
