@@ -1,16 +1,15 @@
 import os
 
-import numpy as np
 import pyqtgraph as pg
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QApplication, QWidget, QTableWidgetItem, QTableWidget, QFileDialog
-from pyqtgraph import mkBrush, mkColor, mkPen
+from pyqtgraph import ColorButton
+from pyqtgraph import mkBrush, mkPen
 from pyqtgraph.Qt import QtCore, uic
+from pyqtgraph.Qt import QtWidgets
 
 from bec_lib.core import MessageEndpoints
 from bec_widgets.qt_utils import Crosshair, Colors
-from pyqtgraph.Qt import QtWidgets
-from pyqtgraph import ColorButton
 
 
 # TODO implement:
@@ -51,14 +50,19 @@ class PlotApp(QWidget):
     update_signal = pyqtSignal()
     update_dap_signal = pyqtSignal()
 
-    def __init__(self, plot_settings: dict, plot_data: list, parent=None):
+    def __init__(self, config: dict, parent=None):
         super(PlotApp, self).__init__(parent)
 
         # YAML config
-        self.plot_settings = plot_settings
+
+        self.plot_settings = config.get("plot_settings", {})
+        self.plot_data_config = config.get("plot_data", {})
         self.scan_types = self.plot_settings.get("scan_types", False)
-        self.plot_data_config = plot_data
-        self.plot_data = {}
+
+        if self.scan_types is False:
+            self.plot_data = self.plot_data_config  # TODO logic has to be improved
+        else:
+            self.plot_data = {}
 
         # Setting global plot settings
         self.init_plot_background(self.plot_settings["background_color"])
@@ -79,11 +83,12 @@ class PlotApp(QWidget):
         self.user_colors = {}  # key: (plot_name, y_name, y_entry), value: color
 
         # Initialize the UI
-        # self.init_ui(self.plot_settings["num_columns"])
-        # self.spinBox_N_columns.setValue(
-        #     self.plot_settings["num_columns"]
-        # )  # TODO has to be checked if it will not setup more columns than plots
-        # self.spinBox_N_columns.setMaximum(len(self.plot_data))
+        if self.scan_types is False:
+            self.init_ui(self.plot_settings["num_columns"])
+            self.spinBox_N_columns.setValue(
+                self.plot_settings["num_columns"]
+            )  # TODO has to be checked if it will not setup more columns than plots
+            self.spinBox_N_columns.setMaximum(len(self.plot_data))
         self.splitter.setSizes([400, 100])
 
         # Buttons
@@ -361,12 +366,12 @@ class PlotApp(QWidget):
                 currentName = metadata.get("scan_name")
                 self.plot_data = self.plot_data_config.get(currentName, [])
 
-            # Init UI
-            self.init_ui(self.plot_settings["num_columns"])
-            self.spinBox_N_columns.setValue(
-                self.plot_settings["num_columns"]
-            )  # TODO has to be checked if it will not setup more columns than plots
-            self.spinBox_N_columns.setMaximum(len(self.plot_data))
+                # Init UI #TODO has to be fixed for different scan types
+                self.init_ui(self.plot_settings["num_columns"])
+                self.spinBox_N_columns.setValue(
+                    self.plot_settings["num_columns"]
+                )  # TODO has to be checked if it will not setup more columns than plots
+                self.spinBox_N_columns.setMaximum(len(self.plot_data))
 
             self.scanID = current_scanID
             self.data = {}
@@ -470,13 +475,30 @@ class PlotApp(QWidget):
                 with open(file_path, "r") as file:
                     config = yaml.safe_load(file)
 
+                # YAML config
                 self.plot_settings = config.get("plot_settings", {})
-                self.plot_data = config.get("plot_data", {})
+                self.plot_data_config = config.get("plot_data", {})
+                self.scan_types = self.plot_settings.get("scan_types", False)
+
+                if self.scan_types is False:
+                    self.plot_data = self.plot_data_config  # TODO logic has to be improved
+                else:
+                    self.plot_data = {}
+
                 # Reinitialize the UI and plots
                 # TODO implement, change background works only before loading .ui file
                 # self.init_plot_background(self.plot_settings["background_color"])
-                self.init_ui(self.plot_settings["num_columns"])
-                self.init_curves()
+                # self.init_ui(self.plot_settings["num_columns"])
+                # self.init_curves()
+
+                if self.scan_types is False:
+                    self.init_ui(self.plot_settings["num_columns"])
+                    self.init_curves()
+                    self.spinBox_N_columns.setValue(
+                        self.plot_settings["num_columns"]
+                    )  # TODO has to be checked if it will not setup more columns than plots
+                    self.spinBox_N_columns.setMaximum(len(self.plot_data))
+
                 print(f"Settings loaded from {file_path}")
             except FileNotFoundError:
                 print(f"The file {file_path} was not found.")
@@ -501,8 +523,8 @@ if __name__ == "__main__":
         with open(args.config, "r") as file:
             config = yaml.safe_load(file)
 
-            plot_settings = config.get("plot_settings", {})
-            plot_data = config.get("plot_data", {})
+            # plot_settings = config.get("plot_settings", {})
+            # plot_data = config.get("plot_data", {})
 
     except FileNotFoundError:
         print(f"The file {args.config} was not found.")
@@ -520,7 +542,7 @@ if __name__ == "__main__":
     queue = client.queue
 
     app = QApplication([])
-    plotApp = PlotApp(plot_settings=plot_settings, plot_data=plot_data)
+    plotApp = PlotApp(config=config)
 
     # Connecting signals from bec_dispatcher
     bec_dispatcher.connect_slot(plotApp.on_scan_segment, MessageEndpoints.scan_segment())
