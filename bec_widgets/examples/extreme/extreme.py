@@ -472,7 +472,8 @@ class PlotApp(QWidget):
 
                 with open(file_path, "w") as file:
                     yaml.dump(
-                        {"plot_settings": self.plot_settings, "plot_data": self.plot_data}, file
+                        {"plot_settings": self.plot_settings, "plot_data": self.plot_data_config},
+                        file,
                     )
                 print(f"Settings saved to {file_path}")
             except Exception as e:
