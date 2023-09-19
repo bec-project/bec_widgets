@@ -739,6 +739,16 @@ class MotorApp(QWidget):
             table.resizeColumnsToContents()
 
     def duplicate_last_row(self, table: QtWidgets.QTableWidget) -> None:
+        if self.is_next_entry_end is True:
+            msgBox = QMessageBox()
+            msgBox.setIcon(QMessageBox.Warning)
+            msgBox.setText("The end coordinates were not set for previous entry!")
+            msgBox.setStandardButtons(QMessageBox.Ok)
+            returnValue = msgBox.exec()
+
+            if returnValue == QMessageBox.Ok:
+                return
+
         last_row = table.rowCount() - 1
         if last_row == -1:
             return
