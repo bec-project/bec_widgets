@@ -275,6 +275,12 @@ class BasicPlot(QtWidgets.QWidget):
         self.curves[0].setData(self.plotter_data_x[0], self.plotter_data_y[0])
 
     @staticmethod
+    def flip_even_rows(arr):
+        arr_copy = np.copy(arr)  # Create a writable copy
+        arr_copy[1::2, :] = arr_copy[1::2, ::-1]
+        return arr_copy
+
+    @staticmethod
     def remove_curve_by_name(plot: pyqtgraph.PlotItem, name: str) -> None:
         # def remove_curve_by_name(plot: pyqtgraph.PlotItem, checkbox: QtWidgets.QCheckBox, name: str) -> None:
         """Removes a curve from the given plot by the specified name.
@@ -360,7 +366,11 @@ class BasicPlot(QtWidgets.QWidget):
 
     @pyqtSlot(dict, dict)
     def on_dap_update(self, data: dict, metadata: dict):
-        self.img.setImage(data["z"])
+        data_test = data
+
+        flipped_data = self.flip_even_rows(data["z"])
+
+        self.img.setImage(flipped_data)
 
     @pyqtSlot(dict)
     def new_proj(self, data):
@@ -394,15 +404,11 @@ if __name__ == "__main__":
     value = parser.parse_args()
     print(f"Plotting signals for: {', '.join(value.signals)}")
     client = bec_dispatcher.client
-    # client.start()
     app = QtWidgets.QApplication([])
     ctrl_c.setup(app)
     plot = BasicPlot(y_value_list=value.signals)
-    # bec_dispatcher.connect(plot)
     bec_dispatcher.connect_proj_id(plot.new_proj)
     bec_dispatcher.connect_dap_slot(plot.on_dap_update, "px_dap_worker")
-    plot.roi_signal.connect(lambda x: print(f"signal from ROI {x}"))
-    plot.roi_signal.connect(lambda x: bec_dispatcher.getStuff(x))
     plot.show()
     # client.callbacks.register("scan_segment", plot, sync=False)
     app.exec_()
