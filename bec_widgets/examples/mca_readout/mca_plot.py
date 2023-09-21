@@ -47,19 +47,21 @@ class StreamApp(QWidget):
 
         # Create Plot and add ImageItem
         self.plot_item = pg.PlotItem()
-        self.plot_item.setAspectLocked(True)
+        self.plot_item.setAspectLocked(False)
         self.imageItem = pg.ImageItem()
-        self.plot_item.addItem(self.imageItem)
+        #self.plot_item1D = pg.PlotItem()
+        #self.plot_item.addItem(self.imageItem)
+        #self.plot_item.addItem(self.plot_item1D)
 
         # Setting up histogram
-        self.hist = pg.HistogramLUTItem()
-        self.hist.setImageItem(self.imageItem)
-        self.hist.gradient.loadPreset("magma")
+        # self.hist = pg.HistogramLUTItem()
+        # self.hist.setImageItem(self.imageItem)
+        # self.hist.gradient.loadPreset("magma")
         # self.update_hist()
 
         # Adding Items to Graphical Layout
         self.glw.addItem(self.plot_item)
-        self.glw.addItem(self.hist)
+        # self.glw.addItem(self.hist)
 
     @pyqtSlot(str)
     def create_new_stream_consumer(self, scanID: str):
@@ -94,7 +96,9 @@ class StreamApp(QWidget):
     #     self.device_consumer.start()
 
     def plot_new(self):
-        self.imageItem.setImage(self.data, autoLevels=False)
+        print(f'Printing data from plot update: {self.data}')
+        self.plot_item.plot(self.data[0])
+        #self.imageItem.setImage(self.data, autoLevels=False)
 
     @staticmethod
     def _streamer_cb(msg, *, parent, **_kwargs) -> None:
@@ -104,13 +108,14 @@ class StreamApp(QWidget):
         metadata = msgMCS.metadata
 
         # Check if the current number of rows is odd
-        if parent.data is not None and parent.data.shape[0] % 2 == 1:
-            row = np.flip(row)  # Flip the row
-
-        if parent.data is None:
-            parent.data = np.array([row])
-        else:
-            parent.data = np.vstack((parent.data, row))
+        # if parent.data is not None and parent.data.shape[0] % 2 == 1:
+        #     row = np.flip(row)  # Flip the row
+        print(f'Printing data from callback update: {row}')
+        parent.data = np.array([row])
+        # if parent.data is None:
+        #     parent.data = np.array([row])
+        # else:
+        #     parent.data = np.vstack((parent.data, row))
 
         parent.update_signal.emit()
 
@@ -129,8 +134,8 @@ class StreamApp(QWidget):
 
         if current_scanID != parent.scanID:
             parent.scanID = current_scanID
-            parent.data = None
-            parent.imageItem.clear()
+            #parent.data = None
+            #parent.imageItem.clear()
             parent.new_scanID.emit(current_scanID)
 
             print(f"New scanID: {current_scanID}")
@@ -142,7 +147,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Stream App.")
     parser.add_argument(
-        "--port", type=str, default="localhost:6379", help="Port for RedisConnector"
+        "--port", type=str, default="pc15543:6379", help="Port for RedisConnector"
     )
     parser.add_argument("--device", type=str, default="mcs", help="Device name")
     parser.add_argument("--sub_device", type=str, default="mca4", help="Sub-device name")

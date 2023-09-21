@@ -4,7 +4,7 @@ __version__ = "0.26.7"
 
 if __name__ == "__main__":
     setup(
-        install_requires=["pyqt5", "pyqtgraph", "bec_lib"],
+        install_requires=["pyqt5", "pyqtgraph", "bec_lib", "zmq", "h5py","epics"],
         extras_require={"dev": ["pytest", "pytest-random-order", "coverage", "pytest-qt", "black"]},
         version=__version__,
     )

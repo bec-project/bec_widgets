@@ -174,7 +174,7 @@ class EigerPlot(QWidget):
             self.image = np.transpose(self.image)
 
         if self.checkBox_log.isChecked():
-            self.image = np.log(self.image)
+            self.image = np.log10(self.image)
 
         self.imageItem.setImage(self.image, autoLevels=False)
 
