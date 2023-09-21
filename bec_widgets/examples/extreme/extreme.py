@@ -523,7 +523,7 @@ if __name__ == "__main__":
     import yaml
     import argparse
 
-    #from bec_widgets import ctrl_c
+    # from bec_widgets import ctrl_c
     from bec_widgets.bec_dispatcher import bec_dispatcher
 
     parser = argparse.ArgumentParser(description="Plotting App")
@@ -556,7 +556,7 @@ if __name__ == "__main__":
 
     # Connecting signals from bec_dispatcher
     bec_dispatcher.connect_slot(plotApp.on_scan_segment, MessageEndpoints.scan_segment())
-    #ctrl_c.setup(app)
+    # ctrl_c.setup(app)
 
     window = plotApp
     window.show()
