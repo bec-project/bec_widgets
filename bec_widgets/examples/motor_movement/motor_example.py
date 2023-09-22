@@ -459,6 +459,9 @@ class MotorApp(QWidget):
         # Mode switch
         self.comboBox_mode.currentIndexChanged.connect(self.mode_switch)
 
+        # Manual Edit
+        self.tableWidget_coordinates.itemChanged.connect(self.handle_manual_edit)
+
     def init_mode_lock(self) -> None:
         if self.mode_lock is False:
             return
@@ -640,6 +643,8 @@ class MotorApp(QWidget):
     ) -> None:
         # self.is_manual_edit = False  # Disable manual edit flag
 
+        self.replot_lock = True
+
         current_index = self.comboBox_mode.currentIndex()
 
         if current_index == 1 and self.is_next_entry_end:
@@ -720,9 +725,6 @@ class MotorApp(QWidget):
         #     {"coordinates": np.array([coordinates]), "visible": True, "type": point_type}
         # )
 
-        # Replot the saved motor map
-        self.replot_based_on_table(table)
-
         # Adding extra columns
         # TODO simplify nesting
         if current_index != 1 or self.is_next_entry_end:
@@ -748,17 +750,16 @@ class MotorApp(QWidget):
 
                         col_index += 1
 
-        # self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes) #TODO probably can be removed as well
-
         self.align_table_center(table)
 
         if self.checkBox_resize_auto.isChecked():
             table.resizeColumnsToContents()
 
-        # TODO move to some init method
-        self.tableWidget_coordinates.itemChanged.connect(self.handle_manual_edit)
+        # Unlock Replot
+        self.replot_lock = False
 
-        # self.is_manual_edit = True  # Re-enable manual edit flag
+        # Replot the saved motor map
+        self.replot_based_on_table(table)
 
     def duplicate_last_row(
         self, table: QtWidgets.QTableWidget
@@ -799,43 +800,6 @@ class MotorApp(QWidget):
 
             # Duplicate the coordinates
             self.generate_table_coordinate(table, (x, y), tag, precision=self.precision)
-
-        # last_row = table.rowCount() - 1
-        # if last_row == -1:
-        #     return
-        #
-        # table.setRowCount(last_row + 2)
-        # new_row = last_row + 1
-        #
-        # for col in range(table.columnCount()):
-        #     cell_widget = table.cellWidget(last_row, col)
-        #     cell_item = table.item(last_row, col)
-        #
-        #     if isinstance(cell_widget, QtWidgets.QCheckBox):
-        #         new_checkbox = QtWidgets.QCheckBox()
-        #         new_checkbox.setChecked(cell_widget.isChecked())
-        #         table.setCellWidget(new_row, col, new_checkbox)
-        #
-        #     elif isinstance(cell_widget, QtWidgets.QPushButton):
-        #         new_button = QtWidgets.QPushButton(cell_widget.text())
-        #         new_button.clicked.connect(partial(self.move_to_row_coordinates, table, new_row))
-        #         table.setCellWidget(new_row, col, new_button)
-        #
-        #     # TODO check if needed
-        #     # elif cell_item:
-        #     #     new_item = QtWidgets.QTableWidgetItem(cell_item.text())
-        #     #     new_item.setFlags(cell_item.flags())
-        #     #     table.setItem(new_row, col, new_item)
-        #
-        #     if isinstance(cell_item, QtWidgets.QTableWidgetItem):
-        #         new_item = QtWidgets.QTableWidgetItem(cell_item.text())
-        #         new_item.setFlags(cell_item.flags())
-        #         table.setItem(new_row, col, new_item)
-        #
-        #     x_col, y_col = (4, 5) if self.comboBox_mode.currentIndex() == 1 else (3, 4)
-        #     # new_x = float(table.item(new_row, x_col).text())
-        #     # new_y = float(table.item(new_row, y_col).text())
-        #     # new_checkbox = table.cellWidget(new_row, 0)
 
         self.align_table_center(table)
 
@@ -890,6 +854,9 @@ class MotorApp(QWidget):
         self.move_motor_absolute(x, y)
 
     def replot_based_on_table(self, table):
+        if self.replot_lock is True:
+            return
+
         print("Replot Triggered")
         start_points = []
         end_points = []
