@@ -22,7 +22,6 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QShortcut
-from pyqtgraph import mkBrush, ROI
 from pyqtgraph.Qt import QtWidgets, uic, QtCore
 
 from bec_lib.core import MessageEndpoints, BECMessage
@@ -261,13 +260,6 @@ class MotorApp(QWidget):
         )
         self.motor_map.setZValue(0)
 
-        # TODO check if needed
-        # self.saved_motor_positions = np.array([])  # to track saved motor positions
-        # self.saved_point_visibility = []  # to track visibility of saved motor positions
-
-        # self.saved_points = []
-        # self.rectangles = []
-
         self.saved_motor_map_start = pg.ScatterPlotItem(
             size=self.scatter_size, pen=pg.mkPen(None), brush=pg.mkBrush(255, 0, 0, 255)
         )
@@ -430,30 +422,26 @@ class MotorApp(QWidget):
 
     def init_ui_table(self) -> None:
         """Initialize the table validators for x and y coordinates and table signals"""
+
         # Validators
         self.double_delegate = DoubleValidationDelegate(self.tableWidget_coordinates)
-        self.mode_switch()
 
-        # Signals #TODO reenable later -> is it needed?
-        # self.tableWidget_coordinates.itemChanged.connect(self.handle_manual_edit)
+        # Init Default mode
+        self.mode_switch()
 
         # Buttons
         self.pushButton_exportCSV.clicked.connect(
             lambda: self.export_table_to_csv(self.tableWidget_coordinates)
         )
-
         self.pushButton_importCSV.clicked.connect(
             lambda: self.load_table_from_csv(self.tableWidget_coordinates, precision=self.precision)
         )
-
         self.pushButton_resize_table.clicked.connect(
             lambda: self.resizeTable(self.tableWidget_coordinates)
         )
-
         self.pushButton_duplicate.clicked.connect(
             lambda: self.duplicate_last_row(self.tableWidget_coordinates)
         )
-
         self.pushButton_help.clicked.connect(self.show_help_dialog)
 
         # Mode switch
@@ -603,7 +591,6 @@ class MotorApp(QWidget):
                 return
 
         self.tableWidget_coordinates.setRowCount(0)  # Wipe table
-        # self.saved_points = []  # Wipe save points # TODO check if needed now
 
         # Clear saved points from map
         self.saved_motor_map_start.clear()
@@ -641,23 +628,17 @@ class MotorApp(QWidget):
     def generate_table_coordinate(
         self, table: QtWidgets.QTableWidget, coordinates: tuple, tag: str = None, precision: int = 0
     ) -> None:
-        # self.is_manual_edit = False  # Disable manual edit flag
-
+        # To not call replot points during table generation
         self.replot_lock = True
 
         current_index = self.comboBox_mode.currentIndex()
 
         if current_index == 1 and self.is_next_entry_end:
             target_row = table.rowCount() - 1  # Last row
-            # point_type = "end"
         else:
             new_row_count = table.rowCount() + 1
             table.setRowCount(new_row_count)
             target_row = new_row_count - 1  # New row
-            # if current_index == 1:
-            #     point_type = "start"
-            # else:
-            #     point_type = "individual"
 
         # Create QDoubleValidator
         validator = QDoubleValidator()
@@ -666,10 +647,7 @@ class MotorApp(QWidget):
         # Checkbox for visibility switch -> always first column
         checkBox = QtWidgets.QCheckBox()
         checkBox.setChecked(True)
-        checkBox.stateChanged.connect(
-            lambda: self.replot_based_on_table(table)
-        )  # TODO probably can be removed
-        # checkBox.stateChanged.connect(self.toggle_point_visibility) #TODO probably can be removed
+        checkBox.stateChanged.connect(lambda: self.replot_based_on_table(table))
         table.setCellWidget(target_row, 0, checkBox)
 
         # Apply validator to x and y coordinate QTableWidgetItem
@@ -720,11 +698,6 @@ class MotorApp(QWidget):
             table.setItem(target_row, 3, item_x)
             table.setItem(target_row, 4, item_y)
 
-        # Add the new point to the saved_points list #TODO has to be removed -> no database, all based on table
-        # self.saved_points.append(
-        #     {"coordinates": np.array([coordinates]), "visible": True, "type": point_type}
-        # )
-
         # Adding extra columns
         # TODO simplify nesting
         if current_index != 1 or self.is_next_entry_end:
@@ -761,9 +734,7 @@ class MotorApp(QWidget):
         # Replot the saved motor map
         self.replot_based_on_table(table)
 
-    def duplicate_last_row(
-        self, table: QtWidgets.QTableWidget
-    ) -> None:  # TODO has to be simplified
+    def duplicate_last_row(self, table: QtWidgets.QTableWidget) -> None:
         if self.is_next_entry_end is True:
             msgBox = QMessageBox()
             msgBox.setIcon(QMessageBox.Warning)
