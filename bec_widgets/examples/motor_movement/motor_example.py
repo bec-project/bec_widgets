@@ -905,9 +905,11 @@ class MotorApp(QWidget):
             with open(filePath, mode="w", newline="") as file:
                 writer = csv.writer(file)
 
+                col_offset = 2 if self.comboBox_mode.currentIndex() == 0 else 3
+
                 # Write the header
                 header = []
-                for col in range(2, table.columnCount()):
+                for col in range(col_offset, table.columnCount()):
                     header_item = table.horizontalHeaderItem(col)
                     header.append(header_item.text() if header_item else "")
                 writer.writerow(header)
@@ -915,7 +917,7 @@ class MotorApp(QWidget):
                 # Write the content
                 for row in range(table.rowCount()):
                     row_data = []
-                    for col in range(2, table.columnCount()):
+                    for col in range(col_offset, table.columnCount()):
                         item = table.item(row, col)
                         row_data.append(item.text() if item else "")
                     writer.writerow(row_data)
