@@ -788,17 +788,17 @@ class MotorApp(QWidget):
             y_end = float(table.item(last_row, 7).text()) if table.item(last_row, 7) else None
 
             # Duplicate the 'start' coordinates
-            self.generate_table_coordinate(table, (x_start, y_start), tag)
+            self.generate_table_coordinate(table, (x_start, y_start), tag, precision=self.precision)
 
             # Duplicate the 'end' coordinates
-            self.generate_table_coordinate(table, (x_end, y_end), tag)
+            self.generate_table_coordinate(table, (x_end, y_end), tag, precision=self.precision)
 
         else:  # individual mode
             x = float(table.item(last_row, 3).text()) if table.item(last_row, 3) else None
             y = float(table.item(last_row, 4).text()) if table.item(last_row, 4) else None
 
             # Duplicate the coordinates
-            self.generate_table_coordinate(table, (x, y), tag)
+            self.generate_table_coordinate(table, (x, y), tag, precision=self.precision)
 
         # last_row = table.rowCount() - 1
         # if last_row == -1:
