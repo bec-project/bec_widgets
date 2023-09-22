@@ -13,7 +13,6 @@ from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import (
     QApplication,
     QWidget,
-    QTableWidget,
     QFileDialog,
     QDialog,
     QVBoxLayout,
@@ -23,6 +22,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QShortcut
+from pyqtgraph import mkBrush, ROI
 from pyqtgraph.Qt import QtWidgets, uic, QtCore
 
 from bec_lib.core import MessageEndpoints, BECMessage
@@ -261,16 +261,32 @@ class MotorApp(QWidget):
         )
         self.motor_map.setZValue(0)
 
+        # TODO check if needed
         self.saved_motor_positions = np.array([])  # to track saved motor positions
         self.saved_point_visibility = []  # to track visibility of saved motor positions
+
+        self.saved_points = []
+        self.rectangles = []
 
         self.saved_motor_map = pg.ScatterPlotItem(
             size=self.scatter_size, pen=pg.mkPen(None), brush=pg.mkBrush(255, 0, 0, 255)
         )
+        self.saved_motor_map_end = pg.ScatterPlotItem(
+            size=self.scatter_size, pen=pg.mkPen(None), brush=pg.mkBrush(0, 0, 255, 255)
+        )
+
+        self.saved_motor_map_individual = pg.ScatterPlotItem(
+            size=self.scatter_size, pen=pg.mkPen(None), brush=pg.mkBrush(0, 255, 0, 255)
+        )
+
         self.saved_motor_map.setZValue(1)  # for saved motor positions
+        self.saved_motor_map_end.setZValue(1)  # for saved motor positions
+        self.saved_motor_map_individual.setZValue(1)  # for saved motor positions
 
         self.plot_map.addItem(self.motor_map)
         self.plot_map.addItem(self.saved_motor_map)
+        self.plot_map.addItem(self.saved_motor_map_end)
+        self.plot_map.addItem(self.saved_motor_map_individual)
         self.plot_map.showGrid(x=True, y=True)
 
     def init_ui_motor_control(self) -> None:
@@ -421,7 +437,7 @@ class MotorApp(QWidget):
         # self.tableWidget_coordinates.setItemDelegateForColumn(4, self.double_delegate)
 
         # Signals #TODO reenable later
-        # self.tableWidget_coordinates.itemChanged.connect(self.update_saved_coordinates)
+        # self.tableWidget_coordinates.itemChanged.connect(self.handle_manual_edit)
 
         # Buttons
         self.pushButton_exportCSV.clicked.connect(
@@ -586,6 +602,7 @@ class MotorApp(QWidget):
                 return
 
         self.tableWidget_coordinates.setRowCount(0)  # Wipe table
+        self.saved_points = []  # Wipe save points
 
         if current_index == 0:  # 'individual' is selected
             header = ["Show", "Move", "Tag", "X", "Y"]
@@ -618,15 +635,22 @@ class MotorApp(QWidget):
     def generate_table_coordinate(
         self, table: QtWidgets.QTableWidget, coordinates: tuple, tag: str = None, precision: int = 0
     ) -> None:
+        self.is_manual_edit = False  # Disable manual edit flag
+
         current_index = self.comboBox_mode.currentIndex()
         # current_col_count = table.columnCount()
 
         if current_index == 1 and self.is_next_entry_end:
             target_row = table.rowCount() - 1  # Last row
+            point_type = "end"
         else:
             new_row_count = table.rowCount() + 1
             table.setRowCount(new_row_count)
             target_row = new_row_count - 1  # New row
+            if current_index == 1:
+                point_type = "start"
+            else:
+                point_type = "individual"
 
         # Create QDoubleValidator
         validator = QDoubleValidator()
@@ -635,9 +659,10 @@ class MotorApp(QWidget):
         # Checkbox for visibility switch -> always first column
         checkBox = QtWidgets.QCheckBox()
         checkBox.setChecked(True)
-        checkBox.stateChanged.connect(
-            lambda state, widget=checkBox: self.toggle_point_visibility(state, widget)
-        )
+        # checkBox.stateChanged.connect(
+        #     lambda state, widget=checkBox: self.toggle_point_visibility(state, widget)
+        # ) #TODO probably can be safely removed
+        checkBox.stateChanged.connect(self.toggle_point_visibility)
         table.setCellWidget(target_row, 0, checkBox)
 
         # Apply validator to x and y coordinate QTableWidgetItem
@@ -648,14 +673,6 @@ class MotorApp(QWidget):
 
         # Mode switch
         if current_index == 1:  # start/stop mode
-            # Create buttons for start and end coordinates
-            # button_start = QPushButton("Go [start]")
-            # button_end = QPushButton("Go [end]")
-            #
-            # self.connect_table_go_buttons(
-            #     table, target_row, current_index, button_start, button_end
-            # )
-
             # Create buttons for start and end coordinates
             button_start = QPushButton("Go [start]")
             button_end = QPushButton("Go [end]")
@@ -685,9 +702,6 @@ class MotorApp(QWidget):
                 table.setItem(target_row, 5, item_y)
             self.is_next_entry_end = not self.is_next_entry_end
         else:  # Individual mode
-            # button_start = QPushButton("Go")
-            # self.connect_table_go_buttons(table, target_row, current_index, button_start)
-
             button_start = QPushButton("Go")
             table.setCellWidget(target_row, 1, button_start)
             button_start.clicked.connect(self.move_to_row_coordinates)
@@ -699,10 +713,20 @@ class MotorApp(QWidget):
             table.setItem(target_row, 3, item_x)
             table.setItem(target_row, 4, item_y)
 
-        brushes = [
-            pg.mkBrush(255, 165, 0, 255) if visible else pg.mkBrush(255, 165, 0, 0)
-            for visible in self.saved_point_visibility
-        ]
+        # Add the new point to the saved_points list #TODO has to be removed -> no database, all based on table
+        self.saved_points.append(
+            {"coordinates": np.array([coordinates]), "visible": True, "type": point_type}
+        )
+
+        # Replot the saved motor map
+        # self.replot_saved_motor_map() # TODO change ploting technique to replot based on the table only
+        self.replot_based_on_table(table)
+
+        # TODO Check if needed -> probably can be safety removed -> new system for saving point now
+        # brushes = [
+        #     pg.mkBrush(255, 165, 0, 255) if visible else pg.mkBrush(255, 165, 0, 0)
+        #     for visible in self.saved_point_visibility
+        # ]
 
         # Adding extra columns
         # TODO simplify nesting
@@ -711,9 +735,7 @@ class MotorApp(QWidget):
                 table.setColumnCount(col_index + len(self.extra_columns))
                 for col_dict in self.extra_columns:
                     for col_name, default_value in col_dict.items():
-                        if (
-                            target_row == 0
-                        ):  # or (current_index == 1 and not self.is_next_entry_end):
+                        if target_row == 0:
                             item = QtWidgets.QTableWidgetItem(str(default_value))
 
                         else:
@@ -731,12 +753,17 @@ class MotorApp(QWidget):
 
                         col_index += 1
 
-        # self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes) #TODO reenable later
+        # self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes) #TODO probably can be removed as well
 
         self.align_table_center(table)
 
         if self.checkBox_resize_auto.isChecked():
             table.resizeColumnsToContents()
+
+        # TODO move to some init method
+        self.tableWidget_coordinates.itemChanged.connect(self.handle_manual_edit)
+
+        self.is_manual_edit = True  # Re-enable manual edit flag
 
     def duplicate_last_row(self, table: QtWidgets.QTableWidget) -> None:
         if self.is_next_entry_end is True:
@@ -770,15 +797,57 @@ class MotorApp(QWidget):
                 new_button.clicked.connect(partial(self.move_to_row_coordinates, table, new_row))
                 table.setCellWidget(new_row, col, new_button)
 
-            elif cell_item:
+            # TODO check if needed
+            # elif cell_item:
+            #     new_item = QtWidgets.QTableWidgetItem(cell_item.text())
+            #     new_item.setFlags(cell_item.flags())
+            #     table.setItem(new_row, col, new_item)
+
+            if isinstance(cell_item, QtWidgets.QTableWidgetItem):
                 new_item = QtWidgets.QTableWidgetItem(cell_item.text())
                 new_item.setFlags(cell_item.flags())
                 table.setItem(new_row, col, new_item)
+
+            x_col, y_col = (4, 5) if self.comboBox_mode.currentIndex() == 1 else (3, 4)
+            new_x = float(table.item(new_row, x_col).text())
+            new_y = float(table.item(new_row, y_col).text())
+            new_checkbox = table.cellWidget(new_row, 0)
+            visibility = new_checkbox.isChecked()
+            point_type = "start" if self.comboBox_mode.currentIndex() == 1 else "individual"
+
+            self.saved_points.append(
+                {"x": new_x, "y": new_y, "visible": visibility, "type": point_type}
+            )
+            self.update_saved_coordinates(x_col, y_col, table)
 
         self.align_table_center(table)
 
         if self.checkBox_resize_auto.isChecked():
             table.resizeColumnsToContents()
+
+    def handle_manual_edit(self, item):
+        if not self.is_manual_edit:
+            return
+
+        row = item.row()
+        col = item.column()
+        table = item.tableWidget()
+
+        x_col, y_col = (4, 5) if self.comboBox_mode.currentIndex() == 1 else (3, 4)
+
+        # Only proceed if the edited columns are coordinate columns
+        if (row, col) == (x_col, y_col):
+            return
+
+        if col == x_col or col == y_col:
+            new_x = float(table.item(row, x_col).text())
+            new_y = float(table.item(row, y_col).text())
+
+            self.saved_points[row]["x"] = new_x
+            self.saved_points[row]["y"] = new_y
+
+            # self.update_saved_coordinates(x_col, y_col, table)
+            self.replot_based_on_table(self.tableWidget_coordinates)
 
     @staticmethod
     def align_table_center(table: QtWidgets.QTableWidget) -> None:
@@ -813,56 +882,140 @@ class MotorApp(QWidget):
         y = float(self.tableWidget_coordinates.item(row, y_col).text())
         self.move_motor_absolute(x, y)
 
-    def toggle_point_visibility(self, state, checkBox_widget):
-        parent = checkBox_widget.parent()
-        while not isinstance(parent, QTableWidget):
-            parent = parent.parent()
+    def toggle_point_visibility(self, state):  # , checkBox_widget):
+        checkBox = self.sender()
+        table = checkBox.parent().parent()
+        row_index = table.indexAt(checkBox.pos()).row()
+        self.saved_points[row_index]["visible"] = state == Qt.Checked
+        # self.replot_saved_motor_map() # TODO change how point are reploted
+        self.replot_based_on_table(table)
 
-        table = parent
+    def replot_based_on_table(self, table):
+        start_points = []
+        end_points = []
+        individual_points = []
+        self.rectangles = []
 
-        pos = checkBox_widget.pos()
-        item = table.indexAt(pos)
-        row_index = item.row()
+        for row in range(table.rowCount()):
+            visibility = table.cellWidget(row, 0).isChecked()
+            if not visibility:
+                continue
 
-        self.saved_point_visibility[row_index] = state == Qt.Checked
+            if self.comboBox_mode.currentIndex() == 1:  # start/stop mode
+                x_start = float(table.item(row, 4).text()) if table.item(row, 4) else None
+                y_start = float(table.item(row, 5).text()) if table.item(row, 5) else None
+                x_end = float(table.item(row, 6).text()) if table.item(row, 6) else None
+                y_end = float(table.item(row, 7).text()) if table.item(row, 7) else None
 
-        # Generate brushes based on visibility state
-        brushes = [
-            pg.mkBrush(255, 165, 0, 255) if visible else pg.mkBrush(255, 165, 0, 0)
-            for visible in self.saved_point_visibility
-        ]
+                if x_start is not None and y_start is not None:
+                    start_points.append([x_start, y_start])
+                    print(f"added start points:{start_points}")
+                if x_end is not None and y_end is not None:
+                    end_points.append([x_end, y_end])
+                    print(f"added end points:{end_points}")
 
-        self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
+            else:  # individual mode
+                x_ind = float(table.item(row, 3).text()) if table.item(row, 3) else None
+                y_ind = float(table.item(row, 4).text()) if table.item(row, 4) else None
+                if x_ind is not None and y_ind is not None:
+                    individual_points.append([x_ind, y_ind])
+                    print(f"added individual points:{individual_points}")
+
+        if start_points:
+            self.saved_motor_map.setData(pos=np.array(start_points))
+            print("plotted start")
+        if end_points:
+            self.saved_motor_map_end.setData(pos=np.array(end_points))
+            print("plotted end")
+        if individual_points:
+            self.saved_motor_map_individual.setData(pos=np.array(individual_points))
+            print("plotted individual")
+
+    def replot_saved_motor_map(self):
+        current_index = self.comboBox_mode.currentIndex()
+        start_points = np.empty((0, 2))
+        end_points = np.empty((0, 2))
+        individual_points = np.empty((0, 2))
+
+        for point in self.saved_points:
+            if point["visible"]:
+                if current_index == 1:  # start/stop mode
+                    if point["type"] == "start":
+                        start_points = np.vstack([start_points, point["coordinates"]])
+                    elif point["type"] == "end":  # end
+                        end_points = np.vstack([end_points, point["coordinates"]])
+                else:  # individual mode
+                    individual_points = np.vstack([individual_points, point["coordinates"]])
+            # Update the saved motor map based on the mode
+        if current_index == 1:  # start/stop mode
+            self.saved_motor_map.setData(
+                pos=start_points, brush=mkBrush(255, 0, 0, 255)  # Red for start points
+            )
+            self.saved_motor_map_end.setData(
+                pos=end_points, brush=mkBrush(0, 0, 255, 255)  # Blue for end points
+            )
+            # TODO here will go rectangle drawing
+
+        else:  # individual mode
+            self.saved_motor_map.setData(
+                pos=individual_points, brush=mkBrush(0, 255, 0, 255)  # Green for individual points
+            )
+
+    # TODO will be adapted with logic to handle start/end points
+    def draw_rectangles(self, start_points, end_points):
+        for start, end in zip(start_points, end_points):
+            self.draw_rectangle(start, end)
+
+    def draw_rectangle(self, start, end):
+        pass
 
     def update_saved_coordinates(self, x_col, y_col, table, rgb=None):
         """
         Update the saved coordinates and replot them.
         """
-        rows = table.rowCount()
-        # Initialize an empty array to hold new coordinates
-        new_saved_positions = np.empty((0, 2))
-        new_visibility = []
 
-        for row in range(rows):
-            x = float(table.item(row, x_col).text()) if table.item(row, x_col) is not None else None
-            y = float(table.item(row, y_col).text()) if table.item(row, y_col) is not None else None
+        self.saved_points = []
+        self.rectangles = []
 
-            # Only add the point if both x and y are not None
+        for row in range(table.rowCount()):
+            x = float(table.item(row, x_col).text()) if table.item(row, x_col) else None
+            y = float(table.item(row, y_col).text()) if table.item(row, y_col) else None
+
+            checkbox = table.cellWidget(row, 0)
+            visibility = checkbox.isChecked()
+
             if x is not None and y is not None:
-                new_saved_positions = np.vstack((new_saved_positions, [x, y]))
-                checkbox = table.cellWidget(row, 0)
-                new_visibility.append(checkbox.isChecked())
+                point_type = (
+                    "start"
+                    if x_col == 4
+                    else "end"
+                    if self.comboBox_mode.currentIndex() == 1
+                    else "individual"
+                )
+                self.saved_points.append(
+                    {"x": x, "y": y, "visible": visibility, "type": point_type}
+                )
 
-        # Update saved positions and visibility
-        self.saved_motor_positions = new_saved_positions
-        self.saved_point_visibility = new_visibility
+        if self.comboBox_mode.currentIndex() == 1:  # start/stop mode
+            start_points = np.array(
+                [[pt["x"], pt["y"]] for pt in self.saved_points if pt["type"] == "start"]
+            )
+            end_points = np.array(
+                [[pt["x"], pt["y"]] for pt in self.saved_points if pt["type"] == "end"]
+            )
+            if point_type == "start":
+                self.saved_motor_map.setData(pos=start_points)
+            elif point_type == "end":
+                self.saved_motor_map_end.setData(pos=end_points)
 
-        # Replot saved positions based on new data
-        brushes = [
-            pg.mkBrush(255, 165, 0, 255) if visible else pg.mkBrush(255, 165, 0, 0)
-            for visible in self.saved_point_visibility
-        ]
-        self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes)
+            # TODO Draw rectangles here...
+
+        else:  # individual mode
+            individual_points = np.array(
+                [[pt["x"], pt["y"]] for pt in self.saved_points if pt["type"] == "individual"]
+            )
+            self.saved_motor_map.setData(pos=individual_points)
+            # self.saved_motor_map_end.setData(pos=np.array([]))  # Clears any end points if present
 
     def delete_selected_row(self):  # TODO generalise this function to any table
         selected_rows = self.tableWidget_coordinates.selectionModel().selectedRows()
@@ -878,75 +1031,51 @@ class MotorApp(QWidget):
                 if self.tableWidget_coordinates.item(row_index, 6) is None:
                     self.is_next_entry_end = False
 
-            # Update the plot
-            brushes = [
-                pg.mkBrush(255, 165, 0, 255) if visible else pg.mkBrush(255, 165, 0, 0)
-                for visible in self.saved_point_visibility
-            ]
+            # TODO check if needed
+            # # Update the plot
+            # brushes = [
+            #     pg.mkBrush(255, 165, 0, 255) if visible else pg.mkBrush(255, 165, 0, 0)
+            #     for visible in self.saved_point_visibility
+            # ]
             # self.saved_motor_map.setData(pos=self.saved_motor_positions, brush=brushes) #TODO Re-enable later
+
+            # Remove the corresponding points from saved_points
+            for row_index in sorted(rows_to_delete, reverse=True):
+                del self.saved_points[row_index]
+
+            # Replot the saved motor map
+            # self.replot_saved_motor_map() #TODO change to table logic
+            self.replot_based_on_table(self.tableWidget_coordinates)
 
             # Remove the row from the table
             self.tableWidget_coordinates.removeRow(row_index)
 
-        # Update the 'Go' buttons
-        # for row in range(self.tableWidget_coordinates.rowCount()):
-        #     if self.comboBox_mode.currentIndex() == 1:
-        #         # Find buttons
-        #         button_start = self.tableWidget_coordinates.cellWidget(row, 1)
-        #         button_end = self.tableWidget_coordinates.cellWidget(row, 2)
-        #         # Disconnect buttons
-        #         button_start.clicked.disconnect()
-        #         button_end.clicked.disconnect()
-        #         # Reconnect to correct coordinates
-        #         self.connect_table_go_buttons(
-        #             self.tableWidget_coordinates,
-        #             row,
-        #             self.comboBox_mode.currentIndex(),
-        #             button_start,
-        #             button_end,
-        #         )
-        #     else:
-        #         # Find buttons
-        #         button_start = self.tableWidget_coordinates.cellWidget(row, 1)
-        #         # Disconnect buttons
-        #         button_start.clicked.disconnect()
-        #         # Reconnect to correct coordinates
-        #         self.connect_table_go_buttons(
-        #             self.tableWidget_coordinates,
-        #             row,
-        #             self.comboBox_mode.currentIndex(),
-        #             button_start,
-        #         )
-        # button = self.tableWidget_coordinates.cellWidget(row, 0)
-        # button.clicked.disconnect()
-        # button.clicked.connect(
-        #     partial(self.move_to_row_coordinates, self.tableWidget_coordinates, row)
-        # )
+    # TODO can be removed after checked if needed in new button logic
 
-    def connect_table_go_buttons(
-        self, table, target_row, mode: int = 0, button_start=None, button_end=None
-    ) -> None:
-        if mode == 1:
-            button_end.setEnabled(
-                self.is_next_entry_end
-            )  # Enable only if end coordinate is present
-
-            # Link signals to move to coordinates
-            button_start.clicked.connect(
-                lambda: self.move_to_row_coordinates(4, 5, table, target_row)
-            )
-            button_end.clicked.connect(
-                lambda: self.move_to_row_coordinates(6, 7, table, target_row)
-            )
-
-            # Add buttons to table
-            table.setCellWidget(target_row, 1, button_start)
-            table.setCellWidget(target_row, 2, button_end)
-        else:
-            button_start.clicked.connect(
-                lambda: self.move_to_row_coordinates(3, 4, table, target_row)
-            )
-            table.setCellWidget(target_row, 1, button_start)
+    # def connect_table_go_buttons(
+    #     self, table, target_row, mode: int = 0, button_start=None, button_end=None
+    # ) -> None:
+    #     if mode == 1:
+    #         button_end.setEnabled(
+    #             self.is_next_entry_end
+    #         )  # Enable only if end coordinate is present
+    #
+    #         # Link signals to move to coordinates
+    #         button_start.clicked.connect(
+    #             lambda: self.move_to_row_coordinates(4, 5, table, target_row)
+    #         )
+    #         button_end.clicked.connect(
+    #             lambda: self.move_to_row_coordinates(6, 7, table, target_row)
+    #         )
+    #
+    #         # Add buttons to table
+    #         table.setCellWidget(target_row, 1, button_start)
+    #         table.setCellWidget(target_row, 2, button_end)
+    #     else:
+    #         button_start.clicked.connect(
+    #             lambda: self.move_to_row_coordinates(3, 4, table, target_row)
+    #         )
+    #         table.setCellWidget(target_row, 1, button_start)
 
     def resizeTable(self, table):
         table.resizeColumnsToContents()
@@ -1424,7 +1553,6 @@ if __name__ == "__main__":
 
             selected_motors = config.get("selected_motors", {})
             plot_motors = config.get("plot_motors", {})
-            # extra_columns = config.get("plot_motors", {}).get("extra_columns", [])
 
     except FileNotFoundError:
         print(f"The file {args.config} was not found.")
