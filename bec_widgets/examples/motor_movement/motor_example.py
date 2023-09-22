@@ -922,9 +922,7 @@ class MotorApp(QWidget):
                         row_data.append(item.text() if item else "")
                     writer.writerow(row_data)
 
-    def load_table_from_csv(
-        self, table: QtWidgets.QTableWidget, precision: int = 0
-    ):  # TODO has to be simplified -> probably use of generate_coordinate_table method?
+    def load_table_from_csv(self, table: QtWidgets.QTableWidget, precision: int = 0):
         options = QFileDialog.Options()
         filePath, _ = QFileDialog.getOpenFileName(
             self, "Open File", "", "CSV Files (*.csv);;All Files (*)", options=options
@@ -938,62 +936,26 @@ class MotorApp(QWidget):
                 # Wipe the current table
                 table.setRowCount(0)
 
-                # Dynamically update self.extra_columns
-                new_extra_columns = []
-
-                # for Individual and Start/Stop modes
-                if self.comboBox_mode.currentIndex() == 0:
-                    col_header = ["Tag", "X", "Y"]
-                    col_limit = 5
-                elif self.comboBox_mode.currentIndex() == 1:
-                    col_header = ["Tag", "X [start]", "Y [start]", "X [end]", "Y [end]"]
-                    col_limit = 7
-
-                for col_name in header:
-                    if col_name not in col_header:
-                        new_extra_columns.append({col_name: ""})
-                self.extra_columns = new_extra_columns
-
-                # Set column count and headers
-                table.setColumnCount(col_limit + len(self.extra_columns))
-                new_headers = (
-                    ["Move", "Show"] + col_header + [col for col in header if col not in col_header]
-                )
-                for index, col_name in enumerate(new_headers):
-                    header_item = QtWidgets.QTableWidgetItem(col_name)
-                    header_item.setTextAlignment(Qt.AlignCenter)
-                    table.setHorizontalHeaderItem(index, header_item)
-
+                # Populate data
                 for row_data in reader:
-                    current_row = table.rowCount()
-                    table.insertRow(current_row)
+                    tag = row_data[0]
 
-                    button = QtWidgets.QPushButton("Go")
-                    checkBox = QtWidgets.QCheckBox()
-                    checkBox.setChecked(True)
+                    if self.comboBox_mode.currentIndex() == 0:  # Individual mode
+                        x = float(row_data[1])
+                        y = float(row_data[2])
+                        self.generate_table_coordinate(table, (x, y), tag, precision)
 
-                    button.clicked.connect(
-                        partial(self.move_to_row_coordinates, table, current_row)
-                    )
+                    elif self.comboBox_mode.currentIndex() == 1:  # Start/Stop mode
+                        x_start = float(row_data[1])
+                        y_start = float(row_data[2])
+                        x_end = float(row_data[3])
+                        y_end = float(row_data[4])
 
-                    table.setCellWidget(current_row, 0, button)
-                    table.setCellWidget(current_row, 1, checkBox)
-
-                    # Populate data
-                    for col, data in enumerate(row_data):
-                        item = QtWidgets.QTableWidgetItem(data)
-                        item.setTextAlignment(Qt.AlignCenter)
-                        table.setItem(current_row, col + 2, item)
+                        self.generate_table_coordinate(table, (x_start, y_start), tag, precision)
+                        self.generate_table_coordinate(table, (x_end, y_end), tag, precision)
 
                 if self.checkBox_resize_auto.isChecked():
                     table.resizeColumnsToContents()
-
-                if self.comboBox_mode.currentIndex() == 1:
-                    last_row = table.rowCount() - 1
-                    if table.item(last_row, 5) is None:
-                        self.is_next_entry_end = True
-                    else:
-                        self.is_next_entry_end = False
 
     def save_absolute_coordinates(self):
         self.generate_table_coordinate(
