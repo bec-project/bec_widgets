@@ -2,6 +2,32 @@
 
 <!--next-version-placeholder-->
 
+## v0.27.0 (2023-09-25)
+
+### Feature
+
+* Motor_example.py in start/end mode new button allowing user to go to end position ([`65b045e`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/65b045e1a26a0f799311e9dca25e2a9dfd7f7147))
+
+### Fix
+
+* Epics removed from requirements ([`44cc881`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/44cc881ac9e69c68f1f5296fea62a14daa55d4e3))
+* Motor_example.py load .csv logic fixed ([`b78152b`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/b78152b14999ba5c07d7cd2ef2e3309df1ba5ca6))
+* Motor_example.py export .csv logic fixed ([`85841cd`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/85841cdf1fc44472cfcc7e3e6529a41018140896))
+* Motor_example.py precision in duplicate table fixed ([`05f48de`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/05f48de3f1f6793de3f6a8bc2c5e3ad3261dfcf0))
+* Motor_example.py duplicate table fixed ([`401fec8`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/401fec85395886ea2816b6993bf8084b6e652967))
+* Motor_example.py manual changing coordinates in start/stop works again ([`b13509e`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/b13509e9eb88b55a59b141b0cec06f3c8a983151))
+* Motor_example.py replot points logic simplified ([`a15860a`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/a15860abac984328382868b0a953960c44792c41))
+* Motor_example.py new independent mapping relying on the table ([`673ed32`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/673ed325d1f56505035899549ea555497823a31f))
+* Extreme.py formatting fixed ([`63f52fc`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/63f52fc8419cd53856a32af6be3f548f8e077cd1))
+* Line_plot.py ROI interactions fixed ([`e4f23f5`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/e4f23f51012b54cde5cd41bb9ab356a277ef4b2f))
+* Online changes e21543 ([`b41d63e`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/b41d63ea4d6e15c80a7baab7a70c607079152d0a))
+* Motor_example.py user is blocked to duplicate last entry in start/end mode if end coordinate was not defined ([`418480f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/418480f1fcdc72c05887e8b73c24f76e1e8475b2))
+* Motor_example.py - new more robust logic for getting coordinates for table go buttons ([`08f508f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/08f508f4c3c3e1f3c2d4c6dda0d8e6693e9331b5))
+
+### Performance
+
+* Motor_example.py replot logic optimizes ([`a4fb6bd`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/a4fb6bd1d2c819740077cdc7291daf28a9e4abdd))
+
 ## v0.26.7 (2023-09-19)
 
 ### Fix
