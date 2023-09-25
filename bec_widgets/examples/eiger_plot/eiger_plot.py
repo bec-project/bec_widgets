@@ -1,8 +1,6 @@
 import json
-import json
 import os
 import threading
-import time
 
 import h5py
 import numpy as np
@@ -21,6 +19,7 @@ from PyQt5.QtWidgets import (
     QFrame,
 )
 from pyqtgraph.Qt import uic
+
 
 # from scipy.stats import multivariate_normal
 
