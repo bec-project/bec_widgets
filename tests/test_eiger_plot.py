@@ -12,6 +12,7 @@ from bec_widgets.examples.eiger_plot.eiger_plot import EigerPlot
 def eiger_plot_instance(qtbot):
     widget = EigerPlot()
     qtbot.addWidget(widget)
+    qtbot.waitExposed(widget)
     return widget
 
 
