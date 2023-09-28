@@ -1,10 +1,9 @@
-import pytest
-from unittest.mock import MagicMock, patch, Mock
+import json
+from unittest.mock import MagicMock, patch
 import numpy as np
 import pyqtgraph as pg
+import pytest
 import zmq
-import json
-from PyQt5.QtWidgets import QPushButton
 from bec_widgets.examples.eiger_plot.eiger_plot import EigerPlot
 
 
@@ -16,8 +15,6 @@ def eiger_plot_instance(qtbot):
     return widget
 
 
-# Tests for on_image_update method
-# class TestOnImageUpdate:
 @pytest.mark.parametrize(
     "fft_checked, rotation_index, transpose_checked, log_checked, expected_image",
     [
