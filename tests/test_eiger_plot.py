@@ -78,9 +78,6 @@ def test_start_zmq_consumer(eiger_plot_instance):
         MockThread.return_value.start.assert_called_once()
 
 
-# TODO fix this test
-
-
 def test_zmq_consumer(eiger_plot_instance, qtbot):
     fake_meta = json.dumps({"type": "int32", "shape": (2, 2)}).encode("utf-8")
     fake_data = np.array([[1, 2], [3, 4]], dtype="int32").tobytes()
