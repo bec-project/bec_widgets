@@ -49,9 +49,9 @@ class StreamApp(QWidget):
         self.plot_item = pg.PlotItem()
         self.plot_item.setAspectLocked(False)
         self.imageItem = pg.ImageItem()
-        #self.plot_item1D = pg.PlotItem()
-        #self.plot_item.addItem(self.imageItem)
-        #self.plot_item.addItem(self.plot_item1D)
+        # self.plot_item1D = pg.PlotItem()
+        # self.plot_item.addItem(self.imageItem)
+        # self.plot_item.addItem(self.plot_item1D)
 
         # Setting up histogram
         # self.hist = pg.HistogramLUTItem()
@@ -96,9 +96,9 @@ class StreamApp(QWidget):
     #     self.device_consumer.start()
 
     def plot_new(self):
-        print(f'Printing data from plot update: {self.data}')
+        print(f"Printing data from plot update: {self.data}")
         self.plot_item.plot(self.data[0])
-        #self.imageItem.setImage(self.data, autoLevels=False)
+        # self.imageItem.setImage(self.data, autoLevels=False)
 
     @staticmethod
     def _streamer_cb(msg, *, parent, **_kwargs) -> None:
@@ -110,7 +110,7 @@ class StreamApp(QWidget):
         # Check if the current number of rows is odd
         # if parent.data is not None and parent.data.shape[0] % 2 == 1:
         #     row = np.flip(row)  # Flip the row
-        print(f'Printing data from callback update: {row}')
+        print(f"Printing data from callback update: {row}")
         parent.data = np.array([row])
         # if parent.data is None:
         #     parent.data = np.array([row])
@@ -134,8 +134,8 @@ class StreamApp(QWidget):
 
         if current_scanID != parent.scanID:
             parent.scanID = current_scanID
-            #parent.data = None
-            #parent.imageItem.clear()
+            # parent.data = None
+            # parent.imageItem.clear()
             parent.new_scanID.emit(current_scanID)
 
             print(f"New scanID: {current_scanID}")
@@ -146,9 +146,7 @@ if __name__ == "__main__":
     from bec_lib.core import RedisConnector
 
     parser = argparse.ArgumentParser(description="Stream App.")
-    parser.add_argument(
-        "--port", type=str, default="pc15543:6379", help="Port for RedisConnector"
-    )
+    parser.add_argument("--port", type=str, default="pc15543:6379", help="Port for RedisConnector")
     parser.add_argument("--device", type=str, default="mcs", help="Device name")
     parser.add_argument("--sub_device", type=str, default="mca4", help="Sub-device name")
 
