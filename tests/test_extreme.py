@@ -112,6 +112,17 @@ config_scan_mode = config = {
                     ],
                 },
             },
+            {
+                "plot_name": "Multi",
+                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "Multi",
+                    "signals": [
+                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
+                        {"name": "samx", "entry": ["samx", "samx_setpoint"]},
+                    ],
+                },
+            },
         ],
         "grid_scan": [
             {
@@ -162,7 +173,12 @@ config_scan_mode = config = {
     [
         (config_device_mode_all_filled, "black", 2, "k"),
         (config_device_mode_no_entry, "white", 2, "w"),
-        # (config_scan_mode, "white", 5, "w") #TODO fix the extreme plot function to be able to init the plot before scan mode
+        (
+            config_scan_mode,
+            "white",
+            3,
+            "w",
+        ),
     ],
 )
 def test_init_config(qtbot, config, plot_setting_bg, num_plot, pg_background):
@@ -251,3 +267,112 @@ def test_on_scan_segment_device_mode_all_entries_in_config(qtbot, msg, metadata,
 
     plot_app.on_scan_segment(msg, metadata)
     assert plot_app.data == expected_data
+
+
+def mock_getitem(dev_name):
+    mock_instance = MagicMock()
+    # Here we match the dev_name to the corresponding hints
+    if dev_name == "samy":
+        mock_instance._hints = "samy"
+    elif dev_name == "bpm4i":
+        mock_instance._hints = "bpm4i"
+    elif dev_name == "gauss_bpm":
+        mock_instance._hints = "gauss_bpm"
+
+    return mock_instance
+
+
+@pytest.mark.parametrize(
+    "config, msg, metadata, expected_data, mock_hints",
+    [
+        # Case: msg does not have 'scanID'
+        (config_device_mode_all_filled, {"data": {}}, {}, {}, None),
+        # Case: msg contains all valid fields
+        (
+            config_device_mode_all_filled,
+            {
+                "data": {
+                    "samy": {"samy": {"value": 10}},
+                    "bpm4i": {"bpm4i": {"value": 5}},
+                    "gauss_bpm": {"gauss_bpm": {"value": 7}},
+                },
+                "scanID": 1,
+            },
+            {},
+            {
+                ("samy", "samy", "bpm4i", "bpm4i"): {"x": [10], "y": [5]},
+                ("samy", "samy", "gauss_bpm", "gauss_bpm"): {"x": [10], "y": [7]},
+            },
+            None,
+        ),
+        # Case: msg contains all valid fields and entry is missing in config, should use hints
+        (
+            config_device_mode_no_entry,
+            {
+                "data": {
+                    "samy": {"samy": {"value": 10}},
+                    "bpm4i": {"bpm4i": {"value": 5}},
+                    "gauss_bpm": {"gauss_bpm": {"value": 7}},
+                },
+                "scanID": 1,
+            },
+            {},
+            {
+                ("samy", "samy", "bpm4i", "bpm4i"): {"x": [10], "y": [5]},
+                ("samy", "samy", "gauss_bpm", "gauss_bpm"): {"x": [10], "y": [7]},
+            },
+            {"samy": "samy", "bpm4i": "bpm4i", "gauss_bpm": "gauss_bpm"},
+        ),
+    ],
+)
+def test_on_scan_segment_device_mode_with_hints(
+    qtbot, config, msg, metadata, expected_data, mock_hints
+):
+    plot_app = setup_plot_app(qtbot, config)
+
+    # if mock_hints:
+    #     with patch.object(plot_app.dev, "__getitem__", autospec=True) as mock_dev_getitem:
+    #         mock_instance = MagicMock()
+    #         for k, v in mock_hints.items():
+    #             mock_instance._hints = v
+    #             mock_dev_getitem.side_effect = (
+    #                 lambda dev_name: mock_instance if dev_name == k else None
+    #             )
+
+    # plot_app.dev.__getitem__.return_value._hints = "samy"
+
+    # Initialize and run test
+    plot_app.init_curves = MagicMock()
+    plot_app.data = {}
+    plot_app.scanID = 0
+
+    # with patch.object(plot_app.dev, "__getitem__", side_effect=mock_getitem):
+    #     plot_app.on_scan_segment(msg, metadata)
+
+    plot_app.dev.__getitem__.side_effect = mock_getitem
+
+    plot_app.on_scan_segment(msg, metadata)
+    assert plot_app.data == expected_data
+
+
+# def test_on_scan_segment_device_mode(qtbot, msg, metadata, expected_data):
+#     plot_app = setup_plot_app(qtbot, config_device_mode_all_filled)
+#
+#     # with patch("bec_widgets.examples.extreme.extreme.dev") as dev:
+#     # plot_app.dev.__getitem__.return_value._hints = {
+#     #     "samy": MagicMock(_hints=["samy"]),
+#     #     "bpm4i": MagicMock(_hints=["bpm4i"]),
+#     # }
+#     # print(plot_app.dev.__getitem__.return_value._hints)
+#     # dev = {
+#     #     "samy": MagicMock(_hints=["samy"]),
+#     #     "bpm4i": MagicMock(_hints=["bpm4i"]),
+#     # }
+#
+#     # Create an instance of class and pass in the mock object for 'dev'
+#     plot_app.init_curves = MagicMock()
+#     plot_app.data = {}
+#     plot_app.scanID = 0
+#
+#     plot_app.on_scan_segment(msg, metadata)
+#     assert plot_app.data == expected_data
