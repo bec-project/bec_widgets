@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import pyqtgraph as pg
 import pytest
 
@@ -6,12 +8,13 @@ from bec_widgets.examples.extreme.extreme import PlotApp
 
 def setup_plot_app(qtbot, config):
     """Helper function to setup the PlotApp widget."""
-    widget = PlotApp(config)
+    client = MagicMock()
+    widget = PlotApp(config=config, client=client)
     qtbot.addWidget(widget)
     return widget
 
 
-config_device_mode = {
+config_device_mode_all_filled = {
     "plot_settings": {
         "background_color": "black",
         "num_columns": 2,
@@ -23,7 +26,7 @@ config_device_mode = {
             "plot_name": "BPM4i plots vs samy",
             "x": {
                 "label": "Motor Y",
-                "signals": [{"name": "samy"}],
+                "signals": [{"name": "samy", "entry": "samy"}],
             },
             "y": {
                 "label": "bpm4i",
@@ -34,11 +37,44 @@ config_device_mode = {
             "plot_name": "Gauss plots vs samx",
             "x": {
                 "label": "Motor X",
-                "signals": [{"name": "samx"}],
+                "signals": [{"name": "samy", "entry": "samy"}],
             },
             "y": {
                 "label": "Gauss",
                 "signals": [{"name": "gauss_bpm", "entry": "gauss_bpm"}],
+            },
+        },
+    ],
+}
+
+config_device_mode_no_entry = {
+    "plot_settings": {
+        "background_color": "black",
+        "num_columns": 2,
+        "colormap": "plasma",
+        "scan_types": False,
+    },
+    "plot_data": [
+        {
+            "plot_name": "BPM4i plots vs samy",
+            "x": {
+                "label": "Motor Y",
+                "signals": [{"name": "samy"}],  # Entry is missing
+            },
+            "y": {
+                "label": "bpm4i",
+                "signals": [{"name": "bpm4i"}],  # Entry is missing
+            },
+        },
+        {
+            "plot_name": "Gauss plots vs samx",
+            "x": {
+                "label": "Motor X",
+                "signals": [{"name": "samy"}],  # Entry is missing
+            },
+            "y": {
+                "label": "Gauss",
+                "signals": [{"name": "gauss_bpm"}],  # Entry is missing
             },
         },
     ],
@@ -124,7 +160,7 @@ config_scan_mode = config = {
 @pytest.mark.parametrize(
     "config, plot_setting_bg, num_plot ,pg_background",
     [
-        (config_device_mode, "black", 2, "k"),
+        (config_device_mode_all_filled, "black", 2, "k"),
         # (config_scan_mode, "white", 5, "w") #TODO fix the extreme plot function to be able to init the plot before scan mode
     ],
 )
@@ -139,14 +175,14 @@ def test_init_config(qtbot, config, plot_setting_bg, num_plot, pg_background):
     "config, num_columns_input, expected_num_columns, expected_plot_names, expected_coordinates",
     [
         (
-            config_device_mode,
+            config_device_mode_all_filled,
             2,
             2,
             ["BPM4i plots vs samy", "Gauss plots vs samx"],
             [(0, 0), (0, 1)],
         ),
         (
-            config_device_mode,
+            config_device_mode_all_filled,
             5,
             2,
             ["BPM4i plots vs samy", "Gauss plots vs samx"],
@@ -175,3 +211,42 @@ def test_init_ui(
 
     # Validate the grid_coordinates
     assert plot_app.grid_coordinates == expected_coordinates
+
+
+@pytest.mark.parametrize(
+    "msg, metadata, expected_data",
+    [
+        # Case: msg does not have 'scanID'
+        ({"data": {}}, {}, {}),
+        # Case: msg contains all valid fields for multiple plots
+        (
+            {
+                "data": {
+                    "samy": {"samy": {"value": 10}},
+                    "bpm4i": {"bpm4i": {"value": 5}},
+                    "gauss_bpm": {"gauss_bpm": {"value": 7}},
+                },
+                "scanID": 1,
+            },
+            {},
+            {
+                ("samy", "samy", "bpm4i", "bpm4i"): {"x": [10], "y": [5]},
+                ("samy", "samy", "gauss_bpm", "gauss_bpm"): {"x": [10], "y": [7]},
+            },
+        ),
+    ],
+)
+def test_on_scan_segment_device_mode_all_entries_in_config(qtbot, msg, metadata, expected_data):
+    """
+    Ideal case when user fills config with both name and entry for all signals
+    and both name and entry is included in msg as well.
+    """
+    plot_app = setup_plot_app(qtbot, config_device_mode_all_filled)
+
+    # Create an instance of class and pass in the mock object for 'dev'
+    plot_app.init_curves = MagicMock()
+    plot_app.data = {}
+    plot_app.scanID = 0
+
+    plot_app.on_scan_segment(msg, metadata)
+    assert plot_app.data == expected_data
