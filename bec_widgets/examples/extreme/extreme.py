@@ -11,7 +11,7 @@ from pyqtgraph.Qt import QtWidgets
 
 from bec_lib.core import MessageEndpoints
 from bec_widgets.qt_utils import Crosshair, Colors
-
+from bec_widgets.bec_dispatcher import bec_dispatcher
 
 # TODO implement:
 #   - implement scanID database for visualizing previous scans
@@ -73,8 +73,11 @@ class PlotApp(QWidget):
     update_signal = pyqtSignal()
     update_dap_signal = pyqtSignal()
 
-    def __init__(self, config: dict, parent=None):
+    def __init__(self, config: dict, client=None, parent=None):
         super(PlotApp, self).__init__(parent)
+
+        self.client = bec_dispatcher.client if client is None else client
+        self.dev = self.client.device_manager.devices
 
         # Loading UI
         current_path = os.path.dirname(__file__)
@@ -421,7 +424,9 @@ class PlotApp(QWidget):
 
             x_entry_list = x_signal_config.get("entry", [])
             if not x_entry_list:
-                x_entry_list = dev[x_name]._hints if hasattr(dev[x_name], "_hints") else [x_name]
+                x_entry_list = (
+                    self.dev[x_name]._hints if hasattr(self.dev[x_name], "_hints") else [x_name]
+                )
 
             if not isinstance(x_entry_list, list):
                 x_entry_list = [x_entry_list]
@@ -439,7 +444,9 @@ class PlotApp(QWidget):
                     y_entry_list = y_config.get("entry", [])
                     if not y_entry_list:
                         y_entry_list = (
-                            dev[y_name]._hints if hasattr(dev[y_name], "_hints") else [y_name]
+                            self.dev[y_name]._hints
+                            if hasattr(self.dev[y_name], "_hints")
+                            else [y_name]
                         )
 
                     if not isinstance(y_entry_list, list):
@@ -457,7 +464,7 @@ class PlotApp(QWidget):
                             )
 
                         if data_y is None:
-                            if hasattr(dev[y_name], "_hints"):
+                            if hasattr(self.dev[y_name], "_hints"):
                                 raise ValueError(
                                     f"Incorrect entry '{y_entry}' specified for y in plot: {plot_name}, y name: {y_name}"
                                 )
@@ -547,12 +554,8 @@ if __name__ == "__main__":
     client = bec_dispatcher.client
     client.start()
 
-    dev = client.device_manager.devices
-    scans = client.scans
-    queue = client.queue
-
     app = QApplication([])
-    plotApp = PlotApp(config=config)
+    plotApp = PlotApp(config=config, client=client)
 
     # Connecting signals from bec_dispatcher
     bec_dispatcher.connect_slot(plotApp.on_scan_segment, MessageEndpoints.scan_segment())
