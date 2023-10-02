@@ -49,8 +49,8 @@ config_device_mode_all_filled = {
 
 config_device_mode_no_entry = {
     "plot_settings": {
-        "background_color": "black",
-        "num_columns": 2,
+        "background_color": "white",
+        "num_columns": 1,
         "colormap": "plasma",
         "scan_types": False,
     },
@@ -161,6 +161,7 @@ config_scan_mode = config = {
     "config, plot_setting_bg, num_plot ,pg_background",
     [
         (config_device_mode_all_filled, "black", 2, "k"),
+        (config_device_mode_no_entry, "white", 2, "w"),
         # (config_scan_mode, "white", 5, "w") #TODO fix the extreme plot function to be able to init the plot before scan mode
     ],
 )
