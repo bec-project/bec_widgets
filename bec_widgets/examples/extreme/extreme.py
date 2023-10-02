@@ -11,7 +11,7 @@ from pyqtgraph.Qt import QtWidgets
 
 from bec_lib.core import MessageEndpoints
 from bec_widgets.qt_utils import Crosshair, Colors
-from bec_widgets.bec_dispatcher import bec_dispatcher
+
 
 # TODO implement:
 #   - implement scanID database for visualizing previous scans
@@ -123,21 +123,20 @@ class PlotApp(QWidget):
         self.plot_data_config = config.get("plot_data", {})
         self.scan_types = self.plot_settings.get("scan_types", False)
 
-        if self.scan_types is False:
+        if self.scan_types is False:  # Device tracking mode
             self.plot_data = self.plot_data_config  # TODO logic has to be improved
-        else:
-            self.plot_data = {}
+        else:  # setup first line scan as default, then changed with different scan type
+            self.plot_data = self.plot_data_config[list(self.plot_data_config.keys())[0]]
 
         # Setting global plot settings
         self.init_plot_background(self.plot_settings["background_color"])
 
         # Initialize the UI
-        if self.scan_types is False:
-            self.init_ui(self.plot_settings["num_columns"])
-            self.spinBox_N_columns.setValue(
-                self.plot_settings["num_columns"]
-            )  # TODO has to be checked if it will not setup more columns than plots
-            self.spinBox_N_columns.setMaximum(len(self.plot_data))
+        self.init_ui(self.plot_settings["num_columns"])
+        self.spinBox_N_columns.setValue(
+            self.plot_settings["num_columns"]
+        )  # TODO has to be checked if it will not setup more columns than plots
+        self.spinBox_N_columns.setMaximum(len(self.plot_data))
 
     def init_plot_background(self, background_color: str) -> None:
         """
@@ -535,7 +534,10 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Plotting App")
     parser.add_argument(
-        "--config", "-c", help="Path to the .yaml configuration file", default="config_example.yaml"
+        "--config",
+        "-c",
+        help="Path to the .yaml configuration file",
+        default="config_scans_example.yaml",
     )
     args = parser.parse_args()
 
