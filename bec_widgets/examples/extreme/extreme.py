@@ -83,9 +83,6 @@ class PlotApp(QWidget):
     def __init__(self, config: dict, client=None, parent=None):
         super(PlotApp, self).__init__(parent)
 
-        # Validate the configuration before proceeding
-        self.validate_config(config)
-
         # Client and device manager from BEC
         self.client = bec_dispatcher.client if client is None else client
         self.dev = self.client.device_manager.devices
@@ -103,6 +100,9 @@ class PlotApp(QWidget):
         self.scanID = None
 
         self.user_colors = {}  # key: (plot_name, y_name, y_entry), value: color
+
+        # Validate the configuration before proceeding
+        self.load_config(config)
 
         # YAML config
         self.init_config(config)
@@ -130,40 +130,103 @@ class PlotApp(QWidget):
         Returns:
             None
         """
+        errors = []
+
+        # Validate common keys
         required_top_level_keys = ["plot_settings", "plot_data"]
         for key in required_top_level_keys:
             if key not in config:
-                error_message = f"Missing required key: {key}"
-                self.display_error(error_message)
-                raise ValueError(error_message)
+                errors.append(f"Missing required key: {key}")
+
+        # Determine the configuration mode (device or scan)
+        plot_settings = config.get("plot_settings", {})
+        is_scan_mode = plot_settings.get("scan_types", False)
 
         plot_data = config.get("plot_data", [])
-        for i, plot_config in enumerate(plot_data):
-            for axis in ["x", "y"]:
-                axis_config = plot_config.get(axis)
-                plot_name = plot_config.get("plot_name", "")
-                if axis_config is None:
-                    error_message = f"Missing '{axis}' configuration in plot {i} - {plot_name}"
-                    self.display_error(error_message)
-                    raise ValueError(error_message)
 
-                signals_config = axis_config.get("signals")
-                if signals_config is None:
-                    error_message = f"Missing 'signals' configuration for {axis} axis in plot {i} - '{plot_name}'"
-                    self.display_error(error_message)
-                    raise ValueError(error_message)
-                elif not isinstance(signals_config, list) or len(signals_config) == 0:
-                    error_message = f"'signals' configuration for {axis} axis in plot {i} must be a non-empty list"
-                    self.display_error(error_message)
-                    raise ValueError(error_message)
+        if is_scan_mode:
+            # Validate scan mode configuration
+            for scan_type, plots in plot_data.items():
+                for i, plot_config in enumerate(plots):
+                    self.validate_plot_config(plot_config, errors, i)
+        else:
+            # Validate device mode configuration
+            for i, plot_config in enumerate(plot_data):
+                self.validate_plot_config(plot_config, errors, i)
 
-    def display_error(self, error_message: str) -> None:
-        """Display an error message in a QMessageBox."""
-        msg_box = QMessageBox()
-        msg_box.setIcon(QMessageBox.Critical)
-        msg_box.setText(error_message)
-        msg_box.setWindowTitle("Configuration Error")
-        msg_box.exec_()
+        if errors:
+            error_message = "\n".join(errors)
+            # self.display_error(error_message)
+            raise ValueError(error_message)
+
+    # def display_error(self, error_message: str) -> None: #TODO maybe can be used for some other error messages
+    #     """
+    #     Display an error message in a QMessageBox.
+    #     Args:
+    #         error_message (str): The error message to display.
+    #
+    #     Returns:
+    #
+    #     """
+    #     QMessageBox.critical(self, "Configuration Error", error_message)
+
+    def load_config(self, initial_config: dict) -> None:
+        """
+        Load and validate the configuration, retrying until a valid configuration is provided or the user cancels.
+        Args:
+            config (dict): Configuration dictionary form .yaml file.
+
+        Returns:
+            None
+        """
+        valid_config = False
+        config = initial_config  # Use the initial_config if provided
+        while not valid_config:
+            if config is None:
+                config = self.load_settings_from_yaml()  # Load config if it hasn't been loaded yet
+            try:
+                self.validate_config(config)
+                valid_config = True
+            except ValueError as e:
+                choice = QMessageBox.critical(
+                    self,
+                    "Configuration Error",
+                    str(e) + "\n\nWould you like to reload the configuration?",
+                    QMessageBox.Retry | QMessageBox.Cancel,
+                )
+                if choice == QMessageBox.Retry:
+                    config = (
+                        self.load_settings_from_yaml()
+                    )  # Update config with newly loaded config
+                else:
+                    exit(1)  # Exit the program if the user selects Cancel
+
+    def validate_plot_config(self, plot_config: dict, errors: list, i: int):
+        """
+        Validate individual plot configuration.
+        Args:
+            plot_config (dict): Individual plot configuration.
+            errors (list): List to collect error messages.
+            i (int): Index of the plot configuration.
+
+        Returns:
+            None
+        """
+        for axis in ["x", "y"]:
+            axis_config = plot_config.get(axis)
+            plot_name = plot_config.get("plot_name", "")
+            if axis_config is None:
+                errors.append(f"Missing '{axis}' configuration in plot {i} - {plot_name}")
+
+            signals_config = axis_config.get("signals")
+            if signals_config is None:
+                errors.append(
+                    f"Missing 'signals' configuration for {axis} axis in plot {i} - '{plot_name}'"
+                )
+            elif not isinstance(signals_config, list) or len(signals_config) == 0:
+                errors.append(
+                    f"'signals' configuration for {axis} axis in plot {i} must be a non-empty list"
+                )
 
     def init_config(self, config: dict) -> None:
         """
@@ -573,7 +636,7 @@ class PlotApp(QWidget):
             except Exception as e:
                 print(f"An error occurred while saving the settings to {file_path}: {e}")
 
-    def load_settings_from_yaml(self):
+    def load_settings_from_yaml(self) -> dict:
         """Load settings from a .yaml file using a file dialog and update the current settings."""
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -587,12 +650,13 @@ class PlotApp(QWidget):
                     config = yaml.safe_load(file)
 
                 # Validate config
-                self.validate_config(config)
+                self.load_config(config)
 
                 # YAML config
                 self.init_config(config)
 
                 print(f"Settings loaded from {file_path}")
+                return config
             except FileNotFoundError:
                 print(f"The file {file_path} was not found.")
             except Exception as e:
