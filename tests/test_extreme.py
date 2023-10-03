@@ -23,10 +23,10 @@ config_device_mode_all_filled = {
     },
     "plot_data": [
         {
-            "plot_name": "BPM4i plots vs samy",
+            "plot_name": "BPM4i plots vs samx",
             "x": {
                 "label": "Motor Y",
-                "signals": [{"name": "samy", "entry": "samy"}],
+                "signals": [{"name": "samx", "entry": "samx"}],
             },
             "y": {
                 "label": "bpm4i",
@@ -37,7 +37,7 @@ config_device_mode_all_filled = {
             "plot_name": "Gauss plots vs samx",
             "x": {
                 "label": "Motor X",
-                "signals": [{"name": "samy", "entry": "samy"}],
+                "signals": [{"name": "samx", "entry": "samx"}],
             },
             "y": {
                 "label": "Gauss",
@@ -56,10 +56,10 @@ config_device_mode_no_entry = {
     },
     "plot_data": [
         {
-            "plot_name": "BPM4i plots vs samy",
+            "plot_name": "BPM4i plots vs samx",
             "x": {
                 "label": "Motor Y",
-                "signals": [{"name": "samy"}],  # Entry is missing
+                "signals": [{"name": "samx"}],  # Entry is missing
             },
             "y": {
                 "label": "bpm4i",
@@ -70,7 +70,7 @@ config_device_mode_no_entry = {
             "plot_name": "Gauss plots vs samx",
             "x": {
                 "label": "Motor X",
-                "signals": [{"name": "samy"}],  # Entry is missing
+                "signals": [{"name": "samx"}],  # Entry is missing
             },
             "y": {
                 "label": "Gauss",
@@ -113,7 +113,7 @@ config_scan_mode = config = {
             },
             {
                 "plot_name": "Grid plot 3",
-                "x": {"label": "Motor Y", "signals": [{"name": "samy", "entry": "samy"}]},
+                "x": {"label": "Motor Y", "signals": [{"name": "samx", "entry": "samx"}]},
                 "y": {
                     "label": "BPM",
                     "signals": [{"name": "gauss_bpm", "entry": "gauss_bpm"}],
@@ -121,7 +121,7 @@ config_scan_mode = config = {
             },
             {
                 "plot_name": "Grid plot 4",
-                "x": {"label": "Motor Y", "signals": [{"name": "samy", "entry": "samy"}]},
+                "x": {"label": "Motor Y", "signals": [{"name": "samx", "entry": "samx"}]},
                 "y": {
                     "label": "BPM",
                     "signals": [{"name": "gauss_adc3", "entry": "gauss_adc3"}],
@@ -173,7 +173,7 @@ config_scan_mode = config = {
     [
         (config_device_mode_all_filled, "black", 2, "k"),
         (config_device_mode_no_entry, "white", 2, "w"),
-        (config_scan_mode, "white", 3, "w"),
+        (config_scan_mode, "white", 4, "w"),
     ],
 )
 def test_init_config(qtbot, config, plot_setting_bg, num_plot, pg_background):
@@ -190,35 +190,35 @@ def test_init_config(qtbot, config, plot_setting_bg, num_plot, pg_background):
             config_device_mode_all_filled,
             2,
             2,
-            ["BPM4i plots vs samy", "Gauss plots vs samx"],
+            ["BPM4i plots vs samx", "Gauss plots vs samx"],
             [(0, 0), (0, 1)],
         ),
         (
             config_device_mode_all_filled,
             5,
             2,
-            ["BPM4i plots vs samy", "Gauss plots vs samx"],
+            ["BPM4i plots vs samx", "Gauss plots vs samx"],
             [(0, 0), (0, 1)],
         ),  # num_columns greater than number of plots
         (
             config_device_mode_no_entry,
             1,
             1,
-            ["BPM4i plots vs samy", "Gauss plots vs samx"],
+            ["BPM4i plots vs samx", "Gauss plots vs samx"],
             [(0, 0), (1, 0)],
         ),
         (
             config_device_mode_no_entry,
             2,
             2,
-            ["BPM4i plots vs samy", "Gauss plots vs samx"],
+            ["BPM4i plots vs samx", "Gauss plots vs samx"],
             [(0, 0), (0, 1)],
         ),
         (
             config_device_mode_no_entry,
             5,
             2,
-            ["BPM4i plots vs samy", "Gauss plots vs samx"],
+            ["BPM4i plots vs samx", "Gauss plots vs samx"],
             [(0, 0), (0, 1)],
         ),  # num_columns greater than number of plots,
         (
@@ -281,50 +281,11 @@ def test_init_ui(
     assert plot_app.grid_coordinates == expected_coordinates
 
 
-@pytest.mark.parametrize(
-    "msg, metadata, expected_data",
-    [
-        # Case: msg does not have 'scanID'
-        ({"data": {}}, {}, {}),
-        # Case: msg contains all valid fields for multiple plots
-        (
-            {
-                "data": {
-                    "samy": {"samy": {"value": 10}},
-                    "bpm4i": {"bpm4i": {"value": 5}},
-                    "gauss_bpm": {"gauss_bpm": {"value": 7}},
-                },
-                "scanID": 1,
-            },
-            {},
-            {
-                ("samy", "samy", "bpm4i", "bpm4i"): {"x": [10], "y": [5]},
-                ("samy", "samy", "gauss_bpm", "gauss_bpm"): {"x": [10], "y": [7]},
-            },
-        ),
-    ],
-)
-def test_on_scan_segment_device_mode_all_entries_in_config(qtbot, msg, metadata, expected_data):
-    """
-    Ideal case when user fills config with both name and entry for all signals
-    and both name and entry is included in msg as well.
-    """
-    plot_app = setup_plot_app(qtbot, config_device_mode_all_filled)
-
-    # Create an instance of class and pass in the mock object for 'dev'
-    plot_app.init_curves = MagicMock()
-    plot_app.data = {}
-    plot_app.scanID = 0
-
-    plot_app.on_scan_segment(msg, metadata)
-    assert plot_app.data == expected_data
-
-
 def mock_getitem(dev_name):
+    """Helper function to mock the __getitem__ method of the 'dev' object.""" ""
     mock_instance = MagicMock()
-    # Here we match the dev_name to the corresponding hints
-    if dev_name == "samy":
-        mock_instance._hints = "samy"
+    if dev_name == "samx":
+        mock_instance._hints = "samx"
     elif dev_name == "bpm4i":
         mock_instance._hints = "bpm4i"
     elif dev_name == "gauss_bpm":
@@ -338,12 +299,12 @@ def mock_getitem(dev_name):
     [
         # Case: msg does not have 'scanID'
         (config_device_mode_all_filled, {"data": {}}, {}, {}, None),
-        # Case: msg contains all valid fields
+        # Case: scan_types is False, msg contains all valid fields, and entry is present in config
         (
             config_device_mode_all_filled,
             {
                 "data": {
-                    "samy": {"samy": {"value": 10}},
+                    "samx": {"samx": {"value": 10}},
                     "bpm4i": {"bpm4i": {"value": 5}},
                     "gauss_bpm": {"gauss_bpm": {"value": 7}},
                 },
@@ -351,17 +312,17 @@ def mock_getitem(dev_name):
             },
             {},
             {
-                ("samy", "samy", "bpm4i", "bpm4i"): {"x": [10], "y": [5]},
-                ("samy", "samy", "gauss_bpm", "gauss_bpm"): {"x": [10], "y": [7]},
+                ("samx", "samx", "bpm4i", "bpm4i"): {"x": [10], "y": [5]},
+                ("samx", "samx", "gauss_bpm", "gauss_bpm"): {"x": [10], "y": [7]},
             },
             None,
         ),
-        # Case: msg contains all valid fields and entry is missing in config, should use hints
+        # Case: scan_types is False, msg contains all valid fields and entry is missing in config, should use hints
         (
             config_device_mode_no_entry,
             {
                 "data": {
-                    "samy": {"samy": {"value": 10}},
+                    "samx": {"samx": {"value": 10}},
                     "bpm4i": {"bpm4i": {"value": 5}},
                     "gauss_bpm": {"gauss_bpm": {"value": 7}},
                 },
@@ -369,36 +330,20 @@ def mock_getitem(dev_name):
             },
             {},
             {
-                ("samy", "samy", "bpm4i", "bpm4i"): {"x": [10], "y": [5]},
-                ("samy", "samy", "gauss_bpm", "gauss_bpm"): {"x": [10], "y": [7]},
+                ("samx", "samx", "bpm4i", "bpm4i"): {"x": [10], "y": [5]},
+                ("samx", "samx", "gauss_bpm", "gauss_bpm"): {"x": [10], "y": [7]},
             },
-            {"samy": "samy", "bpm4i": "bpm4i", "gauss_bpm": "gauss_bpm"},
+            {"samx": "samx", "bpm4i": "bpm4i", "gauss_bpm": "gauss_bpm"},
         ),
     ],
 )
-def test_on_scan_segment_device_mode_with_hints(
-    qtbot, config, msg, metadata, expected_data, mock_hints
-):
+def test_on_scan_segment(qtbot, config, msg, metadata, expected_data, mock_hints):
     plot_app = setup_plot_app(qtbot, config)
-
-    # if mock_hints:
-    #     with patch.object(plot_app.dev, "__getitem__", autospec=True) as mock_dev_getitem:
-    #         mock_instance = MagicMock()
-    #         for k, v in mock_hints.items():
-    #             mock_instance._hints = v
-    #             mock_dev_getitem.side_effect = (
-    #                 lambda dev_name: mock_instance if dev_name == k else None
-    #             )
-
-    # plot_app.dev.__getitem__.return_value._hints = "samy"
 
     # Initialize and run test
     plot_app.init_curves = MagicMock()
     plot_app.data = {}
     plot_app.scanID = 0
-
-    # with patch.object(plot_app.dev, "__getitem__", side_effect=mock_getitem):
-    #     plot_app.on_scan_segment(msg, metadata)
 
     plot_app.dev.__getitem__.side_effect = mock_getitem
 
@@ -406,24 +351,36 @@ def test_on_scan_segment_device_mode_with_hints(
     assert plot_app.data == expected_data
 
 
-# def test_on_scan_segment_device_mode(qtbot, msg, metadata, expected_data):
-#     plot_app = setup_plot_app(qtbot, config_device_mode_all_filled)
-#
-#     # with patch("bec_widgets.examples.extreme.extreme.dev") as dev:
-#     # plot_app.dev.__getitem__.return_value._hints = {
-#     #     "samy": MagicMock(_hints=["samy"]),
-#     #     "bpm4i": MagicMock(_hints=["bpm4i"]),
-#     # }
-#     # print(plot_app.dev.__getitem__.return_value._hints)
-#     # dev = {
-#     #     "samy": MagicMock(_hints=["samy"]),
-#     #     "bpm4i": MagicMock(_hints=["bpm4i"]),
-#     # }
-#
-#     # Create an instance of class and pass in the mock object for 'dev'
-#     plot_app.init_curves = MagicMock()
-#     plot_app.data = {}
-#     plot_app.scanID = 0
-#
-#     plot_app.on_scan_segment(msg, metadata)
-#     assert plot_app.data == expected_data
+@pytest.mark.parametrize(
+    "config, msg, metadata, expected_exception_message",
+    [
+        # Case: scan_types is True, but metadata does not contain 'scan_name'
+        (
+            config_scan_mode,
+            {"data": {}, "scanID": 1},
+            {},  # No 'scan_name' in metadata
+            "Scan name not found in metadata. Please check the scan_name in the YAML config or in bec configuration.",
+        ),
+        # Case: scan_types is True, metadata contains non-existing 'scan_name'
+        (
+            config_scan_mode,
+            {"data": {}, "scanID": 1},
+            {"scan_name": "non_existing_scan"},
+            "Scan name non_existing_scan not found in the YAML config. Please check the scan_name in the YAML config "
+            "or in bec configuration.",
+        ),
+    ],
+)
+def test_on_scan_segment_error_handling(qtbot, config, msg, metadata, expected_exception_message):
+    plot_app = setup_plot_app(qtbot, config)
+
+    # Initialize
+    plot_app.init_curves = MagicMock()
+    plot_app.data = {}
+    plot_app.scanID = 0
+
+    plot_app.dev.__getitem__.side_effect = mock_getitem
+
+    with pytest.raises(ValueError) as exc_info:
+        plot_app.on_scan_segment(msg, metadata)
+    assert str(exc_info.value) == expected_exception_message
