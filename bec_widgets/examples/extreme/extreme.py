@@ -183,8 +183,10 @@ class PlotApp(QWidget):
             num_columns = num_plots
             self.plot_settings["num_columns"] = num_columns  # Update the settings
             print(
-                f"Warning: num_columns in the YAML file was greater than the number of plots. Resetting num_columns to {num_columns}."
+                f"Warning: num_columns in the YAML file was greater than the number of plots. Resetting num_columns to number of plots:{num_columns}."
             )
+        else:
+            self.plot_settings["num_columns"] = num_columns  # Update the settings
 
         num_rows = num_plots // num_columns
         last_row_cols = num_plots % num_columns
@@ -239,7 +241,7 @@ class PlotApp(QWidget):
 
             curve_list = []
             for i, (y_config, color) in enumerate(zip(y_configs, colors_ys)):
-                print(y_config)
+                # print(y_config)
                 y_name = y_config["name"]
                 y_entries = y_config.get("entry", [y_name])
 

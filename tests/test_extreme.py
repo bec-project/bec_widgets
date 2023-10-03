@@ -88,42 +88,6 @@ config_scan_mode = config = {
         "scan_types": True,
     },
     "plot_data": {
-        "line_scan": [
-            {
-                "plot_name": "BPM plot",
-                "x": {"label": "Motor X", "signals": [{"name": "samx"}]},
-                "y": {
-                    "label": "BPM",
-                    "signals": [
-                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                        {"name": "gauss_adc1", "entry": "gauss_adc1"},
-                        {"name": "gauss_adc2", "entry": "gauss_adc2"},
-                    ],
-                },
-            },
-            {
-                "plot_name": "Multi",
-                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {
-                    "label": "Multi",
-                    "signals": [
-                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                        {"name": "samx", "entry": ["samx", "samx_setpoint"]},
-                    ],
-                },
-            },
-            {
-                "plot_name": "Multi",
-                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {
-                    "label": "Multi",
-                    "signals": [
-                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                        {"name": "samx", "entry": ["samx", "samx_setpoint"]},
-                    ],
-                },
-            },
-        ],
         "grid_scan": [
             {
                 "plot_name": "Grid plot 1",
@@ -164,6 +128,42 @@ config_scan_mode = config = {
                 },
             },
         ],
+        "line_scan": [
+            {
+                "plot_name": "BPM plot",
+                "x": {"label": "Motor X", "signals": [{"name": "samx"}]},
+                "y": {
+                    "label": "BPM",
+                    "signals": [
+                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
+                        {"name": "gauss_adc1", "entry": "gauss_adc1"},
+                        {"name": "gauss_adc2", "entry": "gauss_adc2"},
+                    ],
+                },
+            },
+            {
+                "plot_name": "Multi",
+                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "Multi",
+                    "signals": [
+                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
+                        {"name": "samx", "entry": ["samx", "samx_setpoint"]},
+                    ],
+                },
+            },
+            {
+                "plot_name": "Multi",
+                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "Multi",
+                    "signals": [
+                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
+                        {"name": "samx", "entry": ["samx", "samx_setpoint"]},
+                    ],
+                },
+            },
+        ],
     },
 }
 
@@ -173,12 +173,7 @@ config_scan_mode = config = {
     [
         (config_device_mode_all_filled, "black", 2, "k"),
         (config_device_mode_no_entry, "white", 2, "w"),
-        (
-            config_scan_mode,
-            "white",
-            3,
-            "w",
-        ),
+        (config_scan_mode, "white", 3, "w"),
     ],
 )
 def test_init_config(qtbot, config, plot_setting_bg, num_plot, pg_background):
@@ -205,7 +200,63 @@ def test_init_config(qtbot, config, plot_setting_bg, num_plot, pg_background):
             ["BPM4i plots vs samy", "Gauss plots vs samx"],
             [(0, 0), (0, 1)],
         ),  # num_columns greater than number of plots
-        # (config_scan_mode, 3, 3, ["BPM plot", "Multi", "Grid plot 1", "Grid plot 2", "Grid plot 3", "Grid plot 4"], [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2)]),
+        (
+            config_device_mode_no_entry,
+            1,
+            1,
+            ["BPM4i plots vs samy", "Gauss plots vs samx"],
+            [(0, 0), (1, 0)],
+        ),
+        (
+            config_device_mode_no_entry,
+            2,
+            2,
+            ["BPM4i plots vs samy", "Gauss plots vs samx"],
+            [(0, 0), (0, 1)],
+        ),
+        (
+            config_device_mode_no_entry,
+            5,
+            2,
+            ["BPM4i plots vs samy", "Gauss plots vs samx"],
+            [(0, 0), (0, 1)],
+        ),  # num_columns greater than number of plots,
+        (
+            config_scan_mode,
+            2,
+            2,
+            [
+                "Grid plot 1",
+                "Grid plot 2",
+                "Grid plot 3",
+                "Grid plot 4",
+            ],
+            [(0, 0), (0, 1), (1, 0), (1, 1)],
+        ),
+        (
+            config_scan_mode,
+            3,
+            3,
+            [
+                "Grid plot 1",
+                "Grid plot 2",
+                "Grid plot 3",
+                "Grid plot 4",
+            ],
+            [(0, 0), (0, 1), (0, 2), (1, 0)],
+        ),
+        (
+            config_scan_mode,
+            5,
+            4,
+            [
+                "Grid plot 1",
+                "Grid plot 2",
+                "Grid plot 3",
+                "Grid plot 4",
+            ],
+            [(0, 0), (0, 1), (0, 2), (0, 3)],
+        ),  # num_columns greater than number of plots
     ],
 )
 def test_init_ui(
