@@ -3,7 +3,14 @@ import os
 import pyqtgraph
 import pyqtgraph as pg
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QApplication, QWidget, QTableWidgetItem, QTableWidget, QFileDialog
+from PyQt5.QtWidgets import (
+    QApplication,
+    QWidget,
+    QTableWidgetItem,
+    QTableWidget,
+    QFileDialog,
+    QMessageBox,
+)
 from pyqtgraph import ColorButton
 from pyqtgraph import mkBrush, mkPen
 from pyqtgraph.Qt import QtCore, uic
@@ -114,12 +121,21 @@ class PlotApp(QWidget):
         # Change layout of plots when the number of columns is changed in GUI
         self.spinBox_N_columns.valueChanged.connect(lambda x: self.init_ui(x))
 
-    @staticmethod
-    def validate_config(config: dict) -> None:
+    def validate_config(self, config: dict) -> None:
+        """
+        Validate the configuration dictionary.
+        Args:
+            config (dict): Configuration dictionary form .yaml file.
+
+        Returns:
+            None
+        """
         required_top_level_keys = ["plot_settings", "plot_data"]
         for key in required_top_level_keys:
             if key not in config:
-                raise ValueError(f"Missing required key: {key}")
+                error_message = f"Missing required key: {key}"
+                self.display_error(error_message)
+                raise ValueError(error_message)
 
         plot_data = config.get("plot_data", [])
         for i, plot_config in enumerate(plot_data):
@@ -127,17 +143,27 @@ class PlotApp(QWidget):
                 axis_config = plot_config.get(axis)
                 plot_name = plot_config.get("plot_name", "")
                 if axis_config is None:
-                    raise ValueError(f"Missing '{axis}' configuration in plot {i} - {plot_name}")
+                    error_message = f"Missing '{axis}' configuration in plot {i} - {plot_name}"
+                    self.display_error(error_message)
+                    raise ValueError(error_message)
 
                 signals_config = axis_config.get("signals")
                 if signals_config is None:
-                    raise ValueError(
-                        f"Missing 'signals' configuration for {axis} axis in plot {i} - \"{plot_name}\""
-                    )
+                    error_message = f"Missing 'signals' configuration for {axis} axis in plot {i} - '{plot_name}'"
+                    self.display_error(error_message)
+                    raise ValueError(error_message)
                 elif not isinstance(signals_config, list) or len(signals_config) == 0:
-                    raise ValueError(
-                        f"'signals' configuration for {axis} axis in plot {i} must be a non-empty list"
-                    )
+                    error_message = f"'signals' configuration for {axis} axis in plot {i} must be a non-empty list"
+                    self.display_error(error_message)
+                    raise ValueError(error_message)
+
+    def display_error(self, error_message: str) -> None:
+        """Display an error message in a QMessageBox."""
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Critical)
+        msg_box.setText(error_message)
+        msg_box.setWindowTitle("Configuration Error")
+        msg_box.exec_()
 
     def init_config(self, config: dict) -> None:
         """
