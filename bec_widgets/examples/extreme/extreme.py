@@ -76,6 +76,10 @@ class PlotApp(QWidget):
     def __init__(self, config: dict, client=None, parent=None):
         super(PlotApp, self).__init__(parent)
 
+        # Validate the configuration before proceeding
+        self.validate_config(config)
+
+        # Client and device manager from BEC
         self.client = bec_dispatcher.client if client is None else client
         self.dev = self.client.device_manager.devices
 
@@ -109,6 +113,31 @@ class PlotApp(QWidget):
 
         # Change layout of plots when the number of columns is changed in GUI
         self.spinBox_N_columns.valueChanged.connect(lambda x: self.init_ui(x))
+
+    @staticmethod
+    def validate_config(config: dict) -> None:
+        required_top_level_keys = ["plot_settings", "plot_data"]
+        for key in required_top_level_keys:
+            if key not in config:
+                raise ValueError(f"Missing required key: {key}")
+
+        plot_data = config.get("plot_data", [])
+        for i, plot_config in enumerate(plot_data):
+            for axis in ["x", "y"]:
+                axis_config = plot_config.get(axis)
+                plot_name = plot_config.get("plot_name", "")
+                if axis_config is None:
+                    raise ValueError(f"Missing '{axis}' configuration in plot {i} - {plot_name}")
+
+                signals_config = axis_config.get("signals")
+                if signals_config is None:
+                    raise ValueError(
+                        f"Missing 'signals' configuration for {axis} axis in plot {i} - \"{plot_name}\""
+                    )
+                elif not isinstance(signals_config, list) or len(signals_config) == 0:
+                    raise ValueError(
+                        f"'signals' configuration for {axis} axis in plot {i} must be a non-empty list"
+                    )
 
     def init_config(self, config: dict) -> None:
         """
@@ -531,6 +560,9 @@ class PlotApp(QWidget):
                 with open(file_path, "r") as file:
                     config = yaml.safe_load(file)
 
+                # Validate config
+                self.validate_config(config)
+
                 # YAML config
                 self.init_config(config)
 
@@ -553,7 +585,7 @@ if __name__ == "__main__":
         "--config",
         "-c",
         help="Path to the .yaml configuration file",
-        default="config_scans_example.yaml",
+        default="config_wrong.yaml",
     )
     args = parser.parse_args()
 
