@@ -156,7 +156,9 @@ class PlotApp(QWidget):
             pg.setConfigOption("background", "w")
             pg.setConfigOption("foreground", "k")
         else:
-            print(f"Warning: Unknown background color {background_color}. Using default settings.")
+            raise ValueError(
+                f"Invalid background color {background_color}. Allowed values are 'white' or 'black'."
+            )
 
     def init_ui(self, num_columns: int = 3) -> None:
         """
