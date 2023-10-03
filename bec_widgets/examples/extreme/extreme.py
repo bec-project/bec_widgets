@@ -403,7 +403,19 @@ class PlotApp(QWidget):
                 self.plot_data = self.plot_data_config
             elif self.scan_types is True:
                 currentName = metadata.get("scan_name")
+                if currentName is None:
+                    raise ValueError(
+                        f"Scan name not found in metadata. Please check the scan_name in the YAML config or in bec "
+                        f"configuration."
+                    )
+                    return
                 self.plot_data = self.plot_data_config.get(currentName, [])
+                if self.plot_data == []:
+                    raise ValueError(
+                        f"Scan name {currentName} not found in the YAML config. Please check the scan_name in the "
+                        f"YAML config or in bec configuration."
+                    )
+                    return
 
                 # Init UI
                 self.init_ui(self.plot_settings["num_columns"])
