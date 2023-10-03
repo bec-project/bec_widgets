@@ -179,7 +179,7 @@ class PlotApp(QWidget):
         num_plots = len(self.plot_data)
 
         # Check if num_columns exceeds the number of plots
-        if num_columns > num_plots:
+        if num_columns >= num_plots:
             num_columns = num_plots
             self.plot_settings["num_columns"] = num_columns  # Update the settings
             print(
