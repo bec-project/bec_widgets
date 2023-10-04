@@ -1,3 +1,4 @@
+import logging
 import os
 
 import pyqtgraph
@@ -86,9 +87,6 @@ class PlotApp(QWidget):
         # Error handler
         self.error_handler = ErrorHandler(parent=self)
 
-        # # TODO should be removed when test are figured out how to suppress error message boxes rendering
-        # self.testing = False  # Set to True during testing to suppress error message boxes.
-
         # Client and device manager from BEC
         self.client = bec_dispatcher.client if client is None else client
         self.dev = self.client.device_manager.devices
@@ -107,13 +105,13 @@ class PlotApp(QWidget):
 
         self.user_colors = {}  # key: (plot_name, y_name, y_entry), value: color
 
+        # Default config
+        self.config = config
+
         # Validate the configuration before proceeding
+        self.load_config(self.config)
 
-        self.load_config(config)
-
-        # YAML config
-        self.init_config(config)
-
+        # Default splitter size
         self.splitter.setSizes([400, 100])
 
         # Buttons
@@ -128,55 +126,7 @@ class PlotApp(QWidget):
         # Change layout of plots when the number of columns is changed in GUI
         self.spinBox_N_columns.valueChanged.connect(lambda x: self.init_ui(x))
 
-    # def validate_config_file(self, config: dict) -> None:
-    #     """
-    #     Validate the configuration dictionary.
-    #     Args:
-    #         config (dict): Configuration dictionary form .yaml file.
-    #
-    #     Returns:
-    #         None
-    #     """
-    #     errors = []
-    #
-    #     # Validate common keys
-    #     required_top_level_keys = ["plot_settings", "plot_data"]
-    #     for key in required_top_level_keys:
-    #         if key not in config:
-    #             errors.append(f"Missing required key: {key}")
-    #
-    #     # Determine the configuration mode (device or scan)
-    #     plot_settings = config.get("plot_settings", {})
-    #     is_scan_mode = plot_settings.get("scan_types", False)
-    #
-    #     plot_data = config.get("plot_data", [])
-    #
-    #     if is_scan_mode:
-    #         # Validate scan mode configuration
-    #         for scan_type, plots in plot_data.items():
-    #             for i, plot_config in enumerate(plots):
-    #                 self.validate_plot_config(plot_config, errors, i)
-    #     else:
-    #         # Validate device mode configuration
-    #         for i, plot_config in enumerate(plot_data):
-    #             self.validate_plot_config(plot_config, errors, i)
-    #
-    #     if errors:
-    #         error_message = "\n".join(errors)
-    #         raise ValueError(error_message)
-
-    # def display_error(self, error_message: str) -> None: #TODO maybe can be used for some other error messages
-    #     """
-    #     Display an error message in a QMessageBox.
-    #     Args:
-    #         error_message (str): The error message to display.
-    #
-    #     Returns:
-    #
-    #     """
-    #     QMessageBox.critical(self, "Configuration Error", error_message)
-
-    def load_config(self, initial_config: dict) -> None:
+    def load_config(self, config: dict) -> None:
         """
         Load and validate the configuration, retrying until a valid configuration is provided or the user cancels.
         Args:
@@ -186,58 +136,21 @@ class PlotApp(QWidget):
             None
         """
         valid_config = False
-        config = initial_config  # Use the initial_config if provided
         while not valid_config:
             if config is None:
-                config = self.load_settings_from_yaml()  # Load config if it hasn't been loaded yet
-            try:
-                self.error_handler.validate_config_file(config)  # Validate loaded config file
+                self.config = (
+                    self.load_settings_from_yaml()
+                )  # Load config if it hasn't been loaded yet
+            try:  # Validate loaded config file
+                self.error_handler.validate_config_file(config)
                 valid_config = True
             except ValueError as e:
-                config = self.error_handler.handle_error(
-                    str(e) + "\n\nWould you like to reload the configuration?",
-                    retry_action=self.load_settings_from_yaml,
+                self.config = None  # Reset config_to_test to force reloading configuration
+                self.config = self.error_handler.handle_error(
+                    str(e), retry_action=lambda: self.load_settings_from_yaml()
                 )
-
-                # choice = QMessageBox.critical(
-                #     self,
-                #     "Configuration Error",
-                #     str(e) + "\n\nWould you like to reload the configuration?",
-                #     QMessageBox.Retry | QMessageBox.Cancel,
-                # )
-                # if choice == QMessageBox.Retry:
-                #     config = (
-                #         self.load_settings_from_yaml()
-                #     )  # Update config with newly loaded config
-                # else:
-                #     exit(1)  # Exit the program if the user selects Cancel
-
-    # def validate_plot_config(self, plot_config: dict, errors: list, i: int):
-    #     """
-    #     Validate individual plot configuration.
-    #     Args:
-    #         plot_config (dict): Individual plot configuration.
-    #         errors (list): List to collect error messages.
-    #         i (int): Index of the plot configuration.
-    #
-    #     Returns:
-    #         None
-    #     """
-    #     for axis in ["x", "y"]:
-    #         axis_config = plot_config.get(axis)
-    #         plot_name = plot_config.get("plot_name", "")
-    #         if axis_config is None:
-    #             errors.append(f"Missing '{axis}' configuration in plot {i} - {plot_name}")
-    #
-    #         signals_config = axis_config.get("signals")
-    #         if signals_config is None:
-    #             errors.append(
-    #                 f"Missing 'signals' configuration for {axis} axis in plot {i} - '{plot_name}'"
-    #             )
-    #         elif not isinstance(signals_config, list) or len(signals_config) == 0:
-    #             errors.append(
-    #                 f"'signals' configuration for {axis} axis in plot {i} must be a non-empty list"
-    #             )
+        if valid_config is True:  # Initialize config if validation succeeds
+            self.init_config(self.config)
 
     def init_config(self, config: dict) -> None:
         """
@@ -665,27 +578,25 @@ class PlotApp(QWidget):
         if file_path:
             try:
                 with open(file_path, "r") as file:
-                    config = yaml.safe_load(file)
-
-                # Validate config
-                self.load_config(config)
-
-                # YAML config
-                self.init_config(config)
-
-                print(f"Settings loaded from {file_path}")
+                    self.config = yaml.safe_load(file)
+                    self.load_config(self.config)  # validate new config
                 return config
             except FileNotFoundError:
                 print(f"The file {file_path} was not found.")
             except Exception as e:
                 print(f"An error occurred while loading the settings from {file_path}: {e}")
+                return None  # Return None on exception to indicate failure
 
 
 class ErrorHandler:
     def __init__(self, parent=None):
         self.parent = parent
+        self.errors = []
+        logging.basicConfig(level=logging.ERROR)  # Configure logging
 
     def handle_error(self, error_message: str, retry_action=None):
+        retry_action = self.parent.load_settings_from_yaml
+
         choice = QMessageBox.critical(
             self.parent,
             "Error",
@@ -706,41 +617,40 @@ class ErrorHandler:
         Returns:
             None
         """
-        errors = []
+        self.errors = []
 
         # Validate common keys
         required_top_level_keys = ["plot_settings", "plot_data"]
         for key in required_top_level_keys:
             if key not in config:
-                errors.append(f"Missing required key: {key}")
+                self.errors.append(f"Missing required key: {key}")
 
-        # Determine the configuration mode (device or scan)
-        plot_settings = config.get("plot_settings", {})
-        is_scan_mode = plot_settings.get("scan_types", False)
+        # Only continue if no errors so far
+        if not self.errors:
+            # Determine the configuration mode (device or scan)
+            plot_settings = config.get("plot_settings", {})
+            scan_types = plot_settings.get("scan_types", False)
 
-        plot_data = config.get("plot_data", [])
+            plot_data = config.get("plot_data", [])
 
-        if is_scan_mode:
-            # Validate scan mode configuration
-            for scan_type, plots in plot_data.items():
-                for i, plot_config in enumerate(plots):
-                    self.validate_plot_config(plot_config, errors, i)
-        else:
-            # Validate device mode configuration
-            for i, plot_config in enumerate(plot_data):
-                self.validate_plot_config(plot_config, errors, i)
+            if scan_types:
+                # Validate scan mode configuration
+                for scan_type, plots in plot_data.items():
+                    for i, plot_config in enumerate(plots):
+                        self.validate_plot_config(plot_config, i)
+            else:
+                # Validate device mode configuration
+                for i, plot_config in enumerate(plot_data):
+                    self.validate_plot_config(plot_config, i)
 
-        if errors:
-            error_message = "\n".join(errors)
-            raise ValueError(error_message)
+        if self.errors != []:
+            self.handle_error("\n".join(self.errors))
 
-    @staticmethod
-    def validate_plot_config(plot_config: dict, errors: list, i: int):
+    def validate_plot_config(self, plot_config: dict, i: int):
         """
         Validate individual plot configuration.
         Args:
             plot_config (dict): Individual plot configuration.
-            errors (list): List to collect error messages.
             i (int): Index of the plot configuration.
 
         Returns:
@@ -750,17 +660,27 @@ class ErrorHandler:
             axis_config = plot_config.get(axis)
             plot_name = plot_config.get("plot_name", "")
             if axis_config is None:
-                errors.append(f"Missing '{axis}' configuration in plot {i} - {plot_name}")
+                error_msg = f"Missing '{axis}' configuration in plot {i} - {plot_name}"
+                logging.error(error_msg)  # Log the error
+                self.errors.append(error_msg)
 
             signals_config = axis_config.get("signals")
             if signals_config is None:
-                errors.append(
+                error_msg = (
                     f"Missing 'signals' configuration for {axis} axis in plot {i} - '{plot_name}'"
                 )
+                logging.error(error_msg)  # Log the error
+                self.errors.append(error_msg)
             elif not isinstance(signals_config, list) or len(signals_config) == 0:
-                errors.append(
+                error_msg = (
                     f"'signals' configuration for {axis} axis in plot {i} must be a non-empty list"
                 )
+                logging.error(error_msg)  # Log the error
+                self.errors.append(error_msg)
+            # TODO add condition for name and entry
+
+    def retry_action_test(self):
+        print("Retry action")
 
 
 if __name__ == "__main__":
