@@ -19,6 +19,7 @@ def setup_plot_app(qtbot, config):
 
 @pytest.fixture
 def error_handler():
+    # TODO so far tested separately, but the error message scenarios can be tested direclty in the plot app
     return ErrorHandler()
 
 
@@ -417,19 +418,29 @@ def test_on_scan_message_error_handling(qtbot, config, msg, metadata, expected_e
     assert str(exc_info.value) == expected_exception_message
 
 
-def test_error_handler(qtbot, monkeypatch):
-    plot_app = setup_plot_app(qtbot, config_all_wrong)
+####################
+# ErrorHandler tests
+####################
+def test_initialization(error_handler):
+    assert error_handler.errors == []
+    assert error_handler.parent is None
 
-    expected_error = "Error: missing signals field for x axis in plot 0 - BPM4i plots vs samx"
 
-    with patch.object(QMessageBox, "critical", return_value=QMessageBox.Cancel) as mock_critical:
-        plot_app.load_config(config_all_wrong)
-        mock_critical.assert_called_once_with(
-            plot_app,
-            "Configuration Error",
-            expected_error,
-            QMessageBox.Cancel,
-        )
+@patch("bec_widgets.examples.extreme.extreme.QMessageBox.critical", return_value=QMessageBox.Retry)
+def test_handle_error_retry(mocked_critical, error_handler):
+    retry_action = MagicMock()
+    error_handler.set_retry_action(retry_action)
+    error_handler.handle_error("error message")
+    retry_action.assert_called_once()
+
+
+@patch("bec_widgets.examples.extreme.extreme.QMessageBox.critical", return_value=QMessageBox.Cancel)
+def test_handle_error_cancel(mocked_critical, error_handler):
+    retry_action = MagicMock()
+    with pytest.raises(SystemExit) as excinfo:
+        error_handler.handle_error("error message")
+    assert excinfo.value.code == 1
+    retry_action.assert_not_called()
 
 
 @pytest.mark.parametrize(
