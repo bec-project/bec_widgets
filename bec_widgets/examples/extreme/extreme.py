@@ -138,6 +138,7 @@ class PlotApp(QWidget):
             None
         """
         valid_config = False
+        self.error_handler.set_retry_action(self.load_settings_from_yaml)
         while not valid_config:
             if config is None:
                 self.config = (
@@ -148,9 +149,7 @@ class PlotApp(QWidget):
                 valid_config = True
             except ValueError as e:
                 self.config = None  # Reset config_to_test to force reloading configuration
-                self.config = self.error_handler.handle_error(
-                    str(e), retry_action=lambda: self.load_settings_from_yaml()
-                )
+                self.config = self.error_handler.handle_error(str(e))
         if valid_config is True:  # Initialize config if validation succeeds
             self.init_config(self.config)
 
@@ -594,11 +593,14 @@ class ErrorHandler:
     def __init__(self, parent=None):
         self.parent = parent
         self.errors = []
+        self.retry_action = None
         logging.basicConfig(level=logging.ERROR)  # Configure logging
 
-    def handle_error(self, error_message: str, retry_action=None):
+    def set_retry_action(self, action):
+        self.retry_action = action  # Store a reference to the retry action
+
+    def handle_error(self, error_message: str):
         # logging.error(f"{error_message}\n{traceback.format_exc()}") #TODO decide if useful
-        retry_action = self.parent.load_settings_from_yaml
 
         choice = QMessageBox.critical(
             self.parent,
@@ -606,8 +608,8 @@ class ErrorHandler:
             f"{error_message}\n\nWould you like to retry?",
             QMessageBox.Retry | QMessageBox.Cancel,
         )
-        if choice == QMessageBox.Retry and retry_action is not None:
-            return retry_action()
+        if choice == QMessageBox.Retry and self.retry_action is not None:
+            return self.retry_action()
         else:
             exit(1)  # Exit the program if the user selects Cancel or if no retry_action is provided
 
