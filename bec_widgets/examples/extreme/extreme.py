@@ -697,7 +697,7 @@ if __name__ == "__main__":
         "--config",
         "-c",
         help="Path to the .yaml configuration file",
-        default="config_wrong.yaml",
+        default="config_example.yaml",
     )
     args = parser.parse_args()
 
