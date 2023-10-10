@@ -1,6 +1,8 @@
 import logging
 import os
 
+# import traceback
+
 import pyqtgraph
 import pyqtgraph as pg
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
@@ -595,6 +597,7 @@ class ErrorHandler:
         logging.basicConfig(level=logging.ERROR)  # Configure logging
 
     def handle_error(self, error_message: str, retry_action=None):
+        # logging.error(f"{error_message}\n{traceback.format_exc()}") #TODO decide if useful
         retry_action = self.parent.load_settings_from_yaml
 
         choice = QMessageBox.critical(
@@ -678,9 +681,6 @@ class ErrorHandler:
                 logging.error(error_msg)  # Log the error
                 self.errors.append(error_msg)
             # TODO add condition for name and entry
-
-    def retry_action_test(self):
-        print("Retry action")
 
 
 if __name__ == "__main__":
