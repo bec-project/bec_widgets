@@ -1,9 +1,11 @@
-from unittest.mock import MagicMock
+import unittest
+from unittest.mock import MagicMock, patch
 
 import pyqtgraph as pg
 import pytest
+from PyQt5.QtWidgets import QMessageBox
 
-from bec_widgets.examples.extreme.extreme import PlotApp
+from bec_widgets.examples.extreme.extreme import PlotApp, ErrorHandler
 
 
 def setup_plot_app(qtbot, config):
@@ -11,7 +13,13 @@ def setup_plot_app(qtbot, config):
     client = MagicMock()
     widget = PlotApp(config=config, client=client)
     qtbot.addWidget(widget)
+    qtbot.waitExposed(widget)
     return widget
+
+
+@pytest.fixture
+def error_handler():
+    return ErrorHandler()
 
 
 config_device_mode_all_filled = {
@@ -165,6 +173,28 @@ config_scan_mode = config = {
             },
         ],
     },
+}
+
+config_all_wrong = {
+    "plot_settings": {
+        "background_color": "white",
+        "num_columns": 1,
+        "colormap": "plasma",
+        "scan_types": False,
+    },
+    "plot_data": [
+        {
+            "plot_name": "BPM4i plots vs samx",
+            "x": {
+                "label": "Motor Y",
+                # signals are missing
+            },
+            "y": {
+                "label": "bpm4i",
+                "signals": [{"name": "bpm4i", "entry": "gauss_bpm"}],  # wrong entry
+            },
+        },
+    ],
 }
 
 
@@ -345,6 +375,7 @@ def test_on_scan_segment(qtbot, config, msg, metadata, expected_data, mock_hints
     plot_app.data = {}
     plot_app.scanID = 0
 
+    # Get hints
     plot_app.dev.__getitem__.side_effect = mock_getitem
 
     plot_app.on_scan_segment(msg, metadata)
@@ -371,7 +402,7 @@ def test_on_scan_segment(qtbot, config, msg, metadata, expected_data, mock_hints
         ),
     ],
 )
-def test_on_scan_segment_error_handling(qtbot, config, msg, metadata, expected_exception_message):
+def test_on_scan_message_error_handling(qtbot, config, msg, metadata, expected_exception_message):
     plot_app = setup_plot_app(qtbot, config)
 
     # Initialize
@@ -384,3 +415,59 @@ def test_on_scan_segment_error_handling(qtbot, config, msg, metadata, expected_e
     with pytest.raises(ValueError) as exc_info:
         plot_app.on_scan_segment(msg, metadata)
     assert str(exc_info.value) == expected_exception_message
+
+
+def test_error_handler(qtbot, monkeypatch):
+    plot_app = setup_plot_app(qtbot, config_all_wrong)
+
+    expected_error = "Error: missing signals field for x axis in plot 0 - BPM4i plots vs samx"
+
+    with patch.object(QMessageBox, "critical", return_value=QMessageBox.Cancel) as mock_critical:
+        plot_app.load_config(config_all_wrong)
+        mock_critical.assert_called_once_with(
+            plot_app,
+            "Configuration Error",
+            expected_error,
+            QMessageBox.Cancel,
+        )
+
+
+@pytest.mark.parametrize(
+    "config, expected_errors",
+    [
+        (config_device_mode_all_filled, []),
+        (config_device_mode_no_entry, []),
+        (config_scan_mode, []),
+        (
+            config_all_wrong,
+            ["Missing 'signals' configuration for x axis in plot 0 - 'BPM4i plots vs samx'"],
+        ),
+    ],
+)
+def test_error_handler(error_handler, config, expected_errors):
+    # Mock QMessageBox
+    error_handler.handle_error = MagicMock()
+
+    # Mock logging
+    with unittest.mock.patch("bec_widgets.examples.extreme.extreme.logging") as mocked_logging:
+        error_handler.validate_config_file(config)
+
+        # Assert
+        assert error_handler.errors == expected_errors
+
+        # If there are expected errors, check if handle_error was called
+        if expected_errors:
+            error_handler.handle_error.assert_called_once()
+        else:
+            error_handler.handle_error.assert_not_called()
+
+
+def test_validate_plot_config(error_handler):
+    plot_config = {
+        "x": {"label": "Motor X", "signals": []},  # empty signals list should trigger an error
+        "y": {"label": "Motor Y", "signals": [{"name": "samx", "entry": "samx"}]},
+    }
+    error_handler.validate_plot_config(plot_config, 0)
+    assert error_handler.errors == [
+        "'signals' configuration for x axis in plot 0 must be a non-empty list"
+    ]
