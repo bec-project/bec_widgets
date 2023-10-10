@@ -9,7 +9,7 @@ from bec_widgets.examples.extreme.extreme import PlotApp, ErrorHandler
 
 
 def setup_plot_app(qtbot, config):
-    """Helper function to setup the PlotApp widget."""
+    """Helper function to set up the PlotApp widget."""
     client = MagicMock()
     widget = PlotApp(config=config, client=client)
     qtbot.addWidget(widget)
@@ -19,7 +19,7 @@ def setup_plot_app(qtbot, config):
 
 @pytest.fixture
 def error_handler():
-    # TODO so far tested separately, but the error message scenarios can be tested direclty in the plot app
+    # TODO so far tested separately, but the error message scenarios can be tested directly in the plot app
     return ErrorHandler()
 
 
@@ -424,6 +424,7 @@ def test_on_scan_message_error_handling(qtbot, config, msg, metadata, expected_e
 def test_initialization(error_handler):
     assert error_handler.errors == []
     assert error_handler.parent is None
+    assert error_handler.retry_action is None
 
 
 @patch("bec_widgets.examples.extreme.extreme.QMessageBox.critical", return_value=QMessageBox.Retry)
@@ -469,7 +470,9 @@ def test_error_handler(error_handler, config, expected_errors):
         # If there are expected errors, check if handle_error was called
         if expected_errors:
             error_handler.handle_error.assert_called_once()
+            mocked_logging.error.assert_called()
         else:
+            mocked_logging.error.assert_not_called()
             error_handler.handle_error.assert_not_called()
 
 
