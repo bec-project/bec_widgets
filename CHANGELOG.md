@@ -2,6 +2,32 @@
 
 <!--next-version-placeholder-->
 
+## v0.27.1 (2023-10-10)
+
+### Fix
+
+* Extreme.py default config file changed to the config_example.yaml ([`5814113`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/5814113f73fb1c4552bb715b27d3330decd9c878))
+* Extreme.py retry action fixed in ErrorHandler ([`5162270`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/5162270d28ca8eab4eac9d9665e2fb4c5e8a33a3))
+* Extreme.py advanced error handling with possibility to reload different config ([`51c3a9e`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/51c3a9e9ee3d75c8324300afac366dcdb9adb876))
+* Extreme.py error in configuration are displayed as messagebox ([`9750039`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/9750039097c9e4b9a45603dcefe76e5b2e8920fd))
+* Extreme.py validation function to check config key component structure ([`824ce82`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/824ce821cd5f060f2c550b970afb1f3479a006ef))
+* Extreme.py improved error handling for scan types mode ([`fbd299c`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/fbd299c7e7cf548886e2b1787d8e188c708ee8cd))
+* Extreme.py init_ui changed > to >= for setting number of columns ([`6c773c7`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/6c773c7c94e5eee700b74a792657978be86dbbf4))
+* Extreme.py init_plot_background error handling ([`c525eba`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/c525eba88576e0094063019d00fba6a43c52b42e))
+* Extreme.py ui is initialised for the first scan of config in scan mode ([`fc60984`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/fc6098414e328e14ec9ab6006538f46e36f17723))
+* Extreme.py client and device manager initialisation ([`ae79faa`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ae79faa7ed8e9d8f680e1be1afefe43706305d9a))
+* Extreme.py default config file changed to the config_example.yaml ([`d356cf7`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/d356cf734b81fd7ed2c9b48ee85a1722af179d83))
+* Extreme.py retry action fixed in ErrorHandler ([`b76df1b`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/b76df1b583a5922229f97876f9e65e0cad64c88e))
+* Extreme.py advanced error handling with possibility to reload different config ([`d623cf9`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/d623cf95391adfc89837cd54ca1b2a1b6e491a3c))
+* Extreme.py error in configuration are displayed as messagebox ([`89a52a0`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/89a52a0948ee300e57bb7198eac339ee771bff06))
+* Extreme.py validation function to check config key component structure ([`5a7ac86`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/5a7ac860a8cf5cef53ae699b2869e649c1721f9d))
+* Extreme.py improved error handling for scan types mode ([`ece1859`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ece1859a63b83b1d56b33cc610efea6876dd9e1f))
+* Extreme.py init_ui changed > to >= for setting number of columns ([`a0a89fe`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/a0a89fe704db6c11a99a26a080051af1c677ba7a))
+* Extreme.py init_plot_background error handling ([`dafb6fa`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/dafb6fae7a526d5b311ded1d0424ac4dbb3c8b74))
+* Extreme.py ui is initialised for the first scan of config in scan mode ([`82bebe6`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/82bebe6b41004befcb1b54db141e20ff844f76e5))
+* Extreme.py client and device manager initialisation ([`cf15163`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/cf15163bd91291e9851662c147b2e799ae022b9e))
+* Formatter fixed ([`153c5f4`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/153c5f4f9d168f433380bd2deddd2b17a45916a3))
+
 ## v0.27.0 (2023-09-25)
 
 ### Feature
