@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.27.2 (2023-10-12)
+
+### Fix
+
+* Scan_plot tests ([`f7cbdbc`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/f7cbdbc5ca318d60a9501df3fa03c7dea15b5b21))
+
 ## v0.27.1 (2023-10-10)
 
 ### Fix
