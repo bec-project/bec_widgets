@@ -19,7 +19,8 @@ def test_scan_plot(qtbot):
                 "x": {"x": {"value": 1}},
                 "y1": {"y1": {"value": 1}},
                 "y2": {"y2": {"value": 3}},
-            }
+            },
+            "scanID": "test",
         },
         {"scanID": "test", "scan_number": 1, "scan_report_devices": ["x"]},
     )
@@ -29,7 +30,8 @@ def test_scan_plot(qtbot):
                 "x": {"x": {"value": 2}},
                 "y1": {"y1": {"value": 2}},
                 "y2": {"y2": {"value": 4}},
-            }
+            },
+            "scanID": "test",
         },
         {"scanID": "test", "scan_number": 1, "scan_report_devices": ["x"]},
     )
@@ -54,7 +56,8 @@ def test_scan_plot_clears_data(qtbot):
                 "x": {"x": {"value": 1}},
                 "y1": {"y1": {"value": 1}},
                 "y2": {"y2": {"value": 3}},
-            }
+            },
+            "scanID": "test",
         },
         {"scanID": "test", "scan_number": 1, "scan_report_devices": ["x"]},
     )
@@ -65,7 +68,8 @@ def test_scan_plot_clears_data(qtbot):
                 "x": {"x": {"value": 2}},
                 "y1": {"y1": {"value": 2}},
                 "y2": {"y2": {"value": 4}},
-            }
+            },
+            "scanID": "test",
         },
         {"scanID": "test", "scan_number": 1, "scan_report_devices": ["x"]},
     )
