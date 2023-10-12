@@ -58,7 +58,7 @@ def test_scan_plot_clears_data(qtbot):
         },
         {"scanID": "test", "scan_number": 1, "scan_report_devices": ["x"]},
     )
-    plot.on_new_scan({}, {})
+    plot.reset_plots({}, {})
     plot.on_scan_segment(
         {
             "data": {

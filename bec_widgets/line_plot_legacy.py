@@ -5,10 +5,10 @@ from typing import Any
 import numpy as np
 import pyqtgraph
 import pyqtgraph as pg
-from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtWidgets import QTableWidgetItem, QCheckBox
-
 from bec_lib import BECClient
+from bec_lib.core import MessageEndpoints
+from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtWidgets import QCheckBox, QTableWidgetItem
 from pyqtgraph import mkBrush, mkColor, mkPen
 from pyqtgraph.Qt import QtCore, QtWidgets, uic
 from pyqtgraph.Qt.QtCore import pyqtSignal
@@ -54,10 +54,7 @@ class BasicPlot(QtWidgets.QWidget):
         self.plotter_scan_id = None
 
         # TODO to be moved to utils function
-        plotstyles = {
-            "symbol": "o",
-            "symbolSize": 10,
-        }
+        plotstyles = {"symbol": "o", "symbolSize": 10}
         color_list = ["#384c6b", "#e28a2b", "#5E3023", "#e41a1c", "#984e83", "#4daf4a"]
         color_list = BasicPlot.golden_angle_color(colormap="CET-R2", num=len(self.y_value_list))
 
@@ -336,9 +333,9 @@ class BasicPlot(QtWidgets.QWidget):
 
 if __name__ == "__main__":
     import argparse
-    from bec_widgets.bec_dispatcher import bec_dispatcher
 
     from bec_widgets import ctrl_c
+    from bec_widgets.bec_dispatcher import bec_dispatcher
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -354,7 +351,7 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication([])
     ctrl_c.setup(app)
     plot = BasicPlot(y_value_list=value.signals)
-    bec_dispatcher.connect(plot)
+    bec_dispatcher.connect_slot(plot.on_scan_segment, MessageEndpoints.scan_segment())
     plot.show()
     # client.callbacks.register("scan_segment", plot, sync=False)
     app.exec_()

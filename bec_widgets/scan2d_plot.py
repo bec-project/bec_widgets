@@ -1,5 +1,8 @@
+from threading import RLock
+
 import numpy as np
 import pyqtgraph as pg
+from bec_lib.core import MessageEndpoints
 from bec_lib.core.logger import bec_logger
 from PyQt5.QtCore import pyqtProperty, pyqtSlot
 
@@ -14,7 +17,10 @@ pg.setConfigOptions(background="w", foreground="k", antialias=True)
 class BECScanPlot2D(pg.GraphicsView):
     def __init__(self, parent=None, background="default"):
         super().__init__(parent, background)
-        bec_dispatcher.connect(self)
+        bec_dispatcher.connect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
+
+        self._scanID = None
+        self._scanID_lock = RLock()
 
         self._x_channel = ""
         self._y_channel = ""
@@ -33,8 +39,7 @@ class BECScanPlot2D(pg.GraphicsView):
         self.imageItem = pg.ImageItem()
         self.plot_item.addItem(self.imageItem)
 
-    @pyqtSlot(dict, dict)
-    def on_new_scan(self, _scan_segment, metadata):
+    def reset_plots(self, _scan_segment, metadata):
         # TODO: Do we reset in case of a scan type change?
         self.imageItem.clear()
 
@@ -79,6 +84,13 @@ class BECScanPlot2D(pg.GraphicsView):
 
     @pyqtSlot(dict, dict)
     def on_scan_segment(self, scan_segment, metadata):
+        # reset plots on scanID change
+        with self._scanID_lock:
+            scan_id = scan_segment["scanID"]
+            if self._scanID != scan_id:
+                self._scanID = scan_id
+                self.reset_plots(scan_segment, metadata)
+
         if not self.z_channel or metadata["scan_name"] != "grid_scan":
             return
 

@@ -1,4 +1,5 @@
 import itertools
+from threading import RLock
 
 import pyqtgraph as pg
 from bec_lib.core import MessageEndpoints
@@ -17,10 +18,13 @@ COLORS = ["#fd7f6f", "#7eb0d5", "#b2e061", "#bd7ebe", "#ffb55a"]
 class BECScanPlot(pg.GraphicsView):
     def __init__(self, parent=None, background="default"):
         super().__init__(parent, background)
-        bec_dispatcher.connect(self)
+        bec_dispatcher.connect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
 
         self.view = pg.PlotItem()
         self.setCentralItem(self.view)
+
+        self._scanID = None
+        self._scanID_lock = RLock()
 
         self._x_channel = ""
         self._y_channel_list = []
@@ -28,13 +32,19 @@ class BECScanPlot(pg.GraphicsView):
         self.scan_curves = {}
         self.dap_curves = {}
 
-    @pyqtSlot(dict, dict)
-    def on_new_scan(self, _scan_segment, _metadata):
+    def reset_plots(self, _scan_segment, _metadata):
         for plot_curve in {**self.scan_curves, **self.dap_curves}.values():
             plot_curve.setData(x=[], y=[])
 
     @pyqtSlot(dict, dict)
-    def on_scan_segment(self, scan_segment, _metadata):
+    def on_scan_segment(self, scan_segment, metadata):
+        # reset plots on scanID change
+        with self._scanID_lock:
+            scan_id = scan_segment["scanID"]
+            if self._scanID != scan_id:
+                self._scanID = scan_id
+                self.reset_plots(scan_segment, metadata)
+
         if not self.x_channel:
             return
 

@@ -2,11 +2,10 @@ import argparse
 import itertools
 import os
 from dataclasses import dataclass
-from threading import RLock
 from typing import Callable
 
 from bec_lib import BECClient
-from bec_lib.core import BECMessage, MessageEndpoints, ServiceConfig
+from bec_lib.core import BECMessage, ServiceConfig
 from bec_lib.core.redis_connector import RedisConsumerThreaded
 from PyQt5.QtCore import QObject, pyqtSignal
 
@@ -31,9 +30,6 @@ class _Connection:
 
 
 class _BECDispatcher(QObject):
-    new_scan = pyqtSignal(dict, dict)
-    scan_segment = pyqtSignal(dict, dict)
-
     def __init__(self, bec_config=None):
         super().__init__()
         self.client = BECClient()
@@ -44,34 +40,7 @@ class _BECDispatcher(QObject):
             bec_config = "bec_config.yaml"
 
         self.client.initialize(config=ServiceConfig(config_path=bec_config))
-
-        self._slot_signal_map = {"on_scan_segment": self.scan_segment, "on_new_scan": self.new_scan}
         self._connections = {}
-
-        self._scan_id = None
-        scan_lock = RLock()
-
-        def _scan_segment_cb(msg):
-            msg = BECMessage.ScanMessage.loads(msg.value)[0]
-            with scan_lock:
-                # TODO: use ScanStatusMessage instead?
-                scan_id = msg.content["scanID"]
-                if self._scan_id != scan_id:
-                    self._scan_id = scan_id
-                    self.new_scan.emit(msg.content, msg.metadata)
-            self.scan_segment.emit(msg.content, msg.metadata)
-
-        scan_segment_topic = MessageEndpoints.scan_segment()
-        self._scan_segment_thread = self.client.connector.consumer(
-            topics=scan_segment_topic, cb=_scan_segment_cb
-        )
-        self._scan_segment_thread.start()
-
-    def connect(self, widget):
-        for slot_name, signal in self._slot_signal_map.items():
-            slot = getattr(widget, slot_name, None)
-            if callable(slot):
-                signal.connect(slot)
 
     def connect_slot(self, slot: Callable, topic: str) -> None:
         """Connect widget's pyqt slot, so that it is called on new pub/sub topic message
