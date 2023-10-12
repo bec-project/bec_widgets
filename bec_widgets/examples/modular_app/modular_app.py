@@ -68,6 +68,92 @@ config_2 = {
         },
     ],
 }
+config_scan_mode = config = {
+    "plot_settings": {
+        "background_color": "white",
+        "num_columns": 3,
+        "colormap": "plasma",
+        "scan_types": True,
+    },
+    "plot_data": {
+        "grid_scan": [
+            {
+                "plot_name": "Grid plot 1",
+                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "BPM",
+                    "signals": [
+                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
+                        {"name": "gauss_adc1", "entry": "gauss_adc1"},
+                    ],
+                },
+            },
+            {
+                "plot_name": "Grid plot 2",
+                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "BPM",
+                    "signals": [
+                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
+                        {"name": "gauss_adc1", "entry": "gauss_adc1"},
+                    ],
+                },
+            },
+            {
+                "plot_name": "Grid plot 3",
+                "x": {"label": "Motor Y", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "BPM",
+                    "signals": [{"name": "gauss_bpm", "entry": "gauss_bpm"}],
+                },
+            },
+            {
+                "plot_name": "Grid plot 4",
+                "x": {"label": "Motor Y", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "BPM",
+                    "signals": [{"name": "gauss_adc3", "entry": "gauss_adc3"}],
+                },
+            },
+        ],
+        "line_scan": [
+            {
+                "plot_name": "BPM plot",
+                "x": {"label": "Motor X", "signals": [{"name": "samx"}]},
+                "y": {
+                    "label": "BPM",
+                    "signals": [
+                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
+                        {"name": "gauss_adc1", "entry": "gauss_adc1"},
+                        {"name": "gauss_adc2", "entry": "gauss_adc2"},
+                    ],
+                },
+            },
+            {
+                "plot_name": "Multi",
+                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "Multi",
+                    "signals": [
+                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
+                        {"name": "samx", "entry": ["samx", "samx_setpoint"]},
+                    ],
+                },
+            },
+            {
+                "plot_name": "Multi",
+                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "Multi",
+                    "signals": [
+                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
+                        {"name": "samx", "entry": ["samx", "samx_setpoint"]},
+                    ],
+                },
+            },
+        ],
+    },
+}
 
 
 class ModularApp(QMainWindow):
@@ -91,6 +177,10 @@ class ModularApp(QMainWindow):
         self.glw_2_layout = QVBoxLayout(self.glw_2)  # Create a new QVBoxLayout
         self.bec_device_monitor_2 = BECDeviceMonitor(parent=self, config=config_2)
         self.glw_2_layout.addWidget(self.bec_device_monitor_2)  # Add BECDeviceMonitor to the layout
+
+        self.glw_3_layout = QVBoxLayout(self.glw_3)  # Create a new QVBoxLayout
+        self.bec_device_monitor_3 = BECDeviceMonitor(parent=self, config=config_scan_mode)
+        self.glw_3_layout.addWidget(self.bec_device_monitor_3)  # Add BECDeviceMonitor to the layout
 
 
 if __name__ == "__main__":

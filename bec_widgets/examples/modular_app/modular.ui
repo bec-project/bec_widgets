@@ -15,33 +15,33 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
+    <item row="2" column="1">
+     <widget class="QGraphicsView" name="glw_2"/>
+    </item>
     <item row="1" column="1">
-     <widget class="QLabel" name="label_2">
+     <widget class="QLabel" name="label_3">
       <property name="text">
-       <string>Table </string>
+       <string>Plot  Config 2</string>
       </property>
      </widget>
     </item>
-    <item row="1" column="2">
-     <widget class="QLabel" name="label_3">
+    <item row="1" column="0">
+     <widget class="QLabel" name="label">
       <property name="text">
-       <string>Plot 2</string>
+       <string>Plot Config 1</string>
       </property>
      </widget>
     </item>
     <item row="2" column="0">
      <widget class="QGraphicsView" name="glw_1"/>
     </item>
-    <item row="2" column="1">
-     <widget class="QTableWidget" name="tableWidget"/>
-    </item>
     <item row="2" column="2">
-     <widget class="QGraphicsView" name="glw_2"/>
+     <widget class="QGraphicsView" name="glw_3"/>
     </item>
-    <item row="1" column="0">
-     <widget class="QLabel" name="label">
+    <item row="1" column="2">
+     <widget class="QLabel" name="label_2">
       <property name="text">
-       <string>Plot 1</string>
+       <string>Plot Scan Types = True</string>
       </property>
      </widget>
     </item>

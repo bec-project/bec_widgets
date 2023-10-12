@@ -259,7 +259,7 @@ class BECDeviceMonitor(pg.GraphicsLayoutWidget):
                     )
 
                 # Init UI
-                self.init_ui(self.plot_settings["num_columns"])
+                self._init_ui(self.plot_settings["num_columns"])
 
             self.scanID = current_scanID
             self.data = {}
