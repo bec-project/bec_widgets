@@ -2,6 +2,17 @@
 
 <!--next-version-placeholder-->
 
+## v0.28.0 (2023-10-13)
+
+### Feature
+
+* BECDeviceMonitor modular class which can be used to replace placeholder in .ui file. ([`f3f55a7`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/f3f55a7ee0ad58aab74526a24f27436fd2bef61d))
+* Placeholders initialised ([`75af040`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/75af0404b3aa5f454528255e8971af07c4e8b39b))
+
+### Fix
+
+* Scan_mode for BECDeviceMonitor fixed init_ui ([`59bba14`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/59bba1429c1f8aeeb562b539583e71303506bd58))
+
 ## v0.27.2 (2023-10-12)
 
 ### Fix
