@@ -1,7 +1,9 @@
 import os
+
 from PyQt5 import uic
 from PyQt5.QtWidgets import QMainWindow, QApplication, QVBoxLayout
-from bec_widgets.widgets.device_monitor import BECDeviceMonitor
+
+from bec_widgets.widgets.monitor.device_monitor import BECDeviceMonitor
 
 config_1 = {
     "plot_settings": {
