@@ -58,13 +58,6 @@ class BasicPlot(QtWidgets.QWidget):
         self.data_retriever = threading.Thread(target=self.on_projection, daemon=True)
         self.data_retriever.start()
 
-        # self.comboBox.currentIndexChanged.connect(lambda : print(f'current comboText: {self.comboBox.currentText()}'))
-        # self.comboBox.currentIndexChanged.connect(lambda: print(f'current comboIndex: {self.comboBox.currentIndex()}'))
-        #
-        # self.doubleSpinBox.valueChanged.connect(lambda : print('Spin Changed'))
-
-        # self.splitterH_main.setSizes([1, 1])
-
         ##########################
         # UI
         ##########################
@@ -151,9 +144,7 @@ class BasicPlot(QtWidgets.QWidget):
         self.pens = []
         self.brushs = []
 
-        self.color_list = BasicPlot.golden_angle_color(
-            colormap="CET-R2", num=len(self.y_value_list)
-        )
+        self.color_list = Colors.golden_angle_color(colormap="CET-R2", num=len(self.y_value_list))
 
         for ii, y_value in enumerate(self.y_value_list):
             pen = mkPen(color=self.color_list[ii], width=2, style=QtCore.Qt.DashLine)
@@ -296,51 +287,6 @@ class BasicPlot(QtWidgets.QWidget):
         # else:
         #     return
 
-    @staticmethod
-    def golden_ratio(num: int) -> list:
-        """Calculate the golden ratio for a given number of angles.
-
-        Args:
-            num (int): Number of angles
-        """
-        phi = 2 * np.pi * ((1 + np.sqrt(5)) / 2)
-        angles = []
-        for ii in range(num):
-            x = np.cos(ii * phi)
-            y = np.sin(ii * phi)
-            angle = np.arctan2(y, x)
-            angles.append(angle)
-        return angles
-
-    @staticmethod
-    def golden_angle_color(colormap: str, num: int) -> list:
-        """
-        Extract num colors for from the specified colormap following golden angle distribution.
-
-        Args:
-            colormap (str): Name of the colormap
-            num (int): Number of requested colors
-
-        Returns:
-            list: List of colors with length <num>
-
-        Raises:
-            ValueError: If the number of requested colors is greater than the number of colors in the colormap.
-        """
-
-        cmap = pg.colormap.get(colormap)
-        cmap_colors = cmap.color
-        if num > len(cmap_colors):
-            raise ValueError(
-                f"Number of colors requested ({num}) is greater than the number of colors in the colormap ({len(cmap_colors)})"
-            )
-        angles = BasicPlot.golden_ratio(len(cmap_colors))
-        color_selection = np.round(np.interp(angles, (-np.pi, np.pi), (0, len(cmap_colors))))
-        colors = [
-            mkColor(tuple((cmap_colors[int(ii)] * 255).astype(int))) for ii in color_selection[:num]
-        ]
-        return colors
-
     def on_projection(self):
         while True:
             if self._current_proj is None:
@@ -364,8 +310,6 @@ class BasicPlot(QtWidgets.QWidget):
 
     @pyqtSlot(dict, dict)
     def on_dap_update(self, data: dict, metadata: dict):
-        data_test = data
-
         flipped_data = self.flip_even_rows(data["z"])
 
         self.img.setImage(flipped_data)
@@ -394,7 +338,6 @@ if __name__ == "__main__":
         "--signals", help="specify recorded signals", nargs="+", default=["gauss_bpm"]
     )
     # default = ["gauss_bpm", "bpm4i", "bpm5i", "bpm6i", "xert"],
-    # dispatcher = bec_dispatcher
     value = parser.parse_args()
     print(f"Plotting signals for: {', '.join(value.signals)}")
     client = bec_dispatcher.client
