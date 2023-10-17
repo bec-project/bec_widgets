@@ -1,7 +1,6 @@
 import argparse
 import itertools
 import os
-from dataclasses import dataclass
 from typing import Callable
 
 from bec_lib import BECClient
@@ -16,17 +15,15 @@ _signal_class_factory = (
 )
 
 
-@dataclass
 class _Connection:
     """Utility class to keep track of slots connected to a particular redis consumer"""
 
-    consumer: RedisConsumerThreaded
-    slots = set()
-    # keep a reference to a new signal class, so it is not gc'ed
-    _signal_container = next(_signal_class_factory)()
-
-    def __post_init__(self):
-        self.signal = self._signal_container.signal
+    def __init__(self, consumer) -> None:
+        self.consumer: RedisConsumerThreaded = consumer
+        self.slots = set()
+        # keep a reference to a new signal class, so it is not gc'ed
+        self._signal_container = next(_signal_class_factory)()
+        self.signal: pyqtSignal = self._signal_container.signal
 
 
 class _BECDispatcher(QObject):
