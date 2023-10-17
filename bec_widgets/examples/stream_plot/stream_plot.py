@@ -67,7 +67,6 @@ class StreamPlot(QtWidgets.QWidget):
         self.init_ui()
         self.init_curves()
         self.hook_crosshair()
-        self.pushButton_generate.clicked.connect(self.generate_data)
 
     def init_ui(self):
         """Setup all ui elements"""
@@ -200,34 +199,6 @@ class StreamPlot(QtWidgets.QWidget):
 
         # ROI
         self.roi_selector.sigRegionChangeFinished.connect(self.get_roi_region)
-
-    def generate_data(self):
-        def gauss(x, mu, sigma):
-            return (1 / (sigma * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
-
-        self.plotter_data_x = np.linspace(0, 10, 1000)
-        self.plotter_data_y = [
-            gauss(self.plotter_data_x, 1, 1),
-            gauss(self.plotter_data_x, 1.5, 3),
-            np.sin(self.plotter_data_x),
-            np.cos(self.plotter_data_x),
-            np.sin(2 * self.plotter_data_x),
-        ]  # List of y-values for multiple curves
-        self.y_value_list = ["Gauss (1,1)", "Gauss (1.5,3)"]  # ["Sine"]#, "Cosine", "Sine2x"]
-
-        # Curves
-        color_list = ["#384c6b", "#e28a2b", "#5E3023", "#e41a1c", "#984e83", "#4daf4a"]
-
-        self.init_curves()
-
-        for ii in range(len(self.y_value_list)):
-            self.curves[ii].setData(self.plotter_data_x, self.plotter_data_y[ii])
-
-        self.data_2D = np.random.random((150, 30))
-        self.img.setImage(self.data_2D)
-
-        if self.roi_selector not in self.plot.items:
-            self.plot.addItem(self.roi_selector)
 
     def get_roi_region(self):
         """For testing purpose now, get roi region and print it to self.label as tuple"""
