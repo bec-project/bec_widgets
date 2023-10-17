@@ -310,7 +310,7 @@ class BasicPlot(QtWidgets.QWidget):
 
     @pyqtSlot(dict, dict)
     def on_dap_update(self, data: dict, metadata: dict):
-        flipped_data = self.flip_even_rows(data["z"])
+        flipped_data = self.flip_even_rows(data["data"]["z"])
 
         self.img.setImage(flipped_data)
 
