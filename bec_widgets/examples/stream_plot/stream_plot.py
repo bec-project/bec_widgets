@@ -17,14 +17,14 @@ from pyqtgraph.Qt.QtCore import pyqtSignal
 from bec_widgets.qt_utils import Crosshair, Colors
 from bec_widgets.bec_dispatcher import bec_dispatcher
 
-client = bec_dispatcher.client
+# client = bec_dispatcher.client
 
 
 class StreamPlot(QtWidgets.QWidget):
     update_signal = pyqtSignal()
     roi_signal = pyqtSignal(tuple)
 
-    def __init__(self, name="", y_value_list=["gauss_bpm"]) -> None:
+    def __init__(self, name="", y_value_list=["gauss_bpm"], client=None, parent=None) -> None:
         """
         Basic plot widget for displaying scan data.
 
@@ -32,6 +32,9 @@ class StreamPlot(QtWidgets.QWidget):
             name (str, optional): Name of the plot. Defaults to "".
             y_value_list (list, optional): List of signals to be plotted. Defaults to ["gauss_bpm"].
         """
+
+        # Client and device manager from BEC
+        self.client = bec_dispatcher.client if client is None else client
 
         super(StreamPlot, self).__init__()
         # Set style for pyqtgraph plots
@@ -293,7 +296,7 @@ class StreamPlot(QtWidgets.QWidget):
                 time.sleep(0.1)
                 continue
             endpoint = f"px_stream/projection_{self._current_proj}/data"
-            msgs = client.producer.lrange(topic=endpoint, start=-1, end=-1)
+            msgs = self.client.producer.lrange(topic=endpoint, start=-1, end=-1)
             data = [BECMessage.DeviceMessage.loads(msg) for msg in msgs]
             if not data:
                 continue
@@ -318,7 +321,7 @@ class StreamPlot(QtWidgets.QWidget):
     def new_proj(self, content: dict, _metadata: dict):
         proj_nr = content["signals"]["proj_nr"]
         endpoint = f"px_stream/projection_{proj_nr}/metadata"
-        msg_raw = client.producer.get(topic=endpoint)
+        msg_raw = self.client.producer.get(topic=endpoint)
         msg = BECMessage.DeviceMessage.loads(msg_raw)
         self._current_q = msg.content["signals"]["q"]
         self._current_norm = msg.content["signals"]["norm_sum"]
@@ -340,10 +343,13 @@ if __name__ == "__main__":
     # default = ["gauss_bpm", "bpm4i", "bpm5i", "bpm6i", "xert"],
     value = parser.parse_args()
     print(f"Plotting signals for: {', '.join(value.signals)}")
+
+    # Client from dispatcher
     client = bec_dispatcher.client
+
     app = QtWidgets.QApplication([])
     ctrl_c.setup(app)
-    plot = StreamPlot(y_value_list=value.signals)
+    plot = StreamPlot(y_value_list=value.signals, client=client)
 
     bec_dispatcher.connect_slot(plot.new_proj, "px_stream/proj_nr")
     bec_dispatcher.connect_slot(
