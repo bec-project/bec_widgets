@@ -20,7 +20,7 @@ from bec_widgets.bec_dispatcher import bec_dispatcher
 client = bec_dispatcher.client
 
 
-class BasicPlot(QtWidgets.QWidget):
+class StreamPlot(QtWidgets.QWidget):
     update_signal = pyqtSignal()
     roi_signal = pyqtSignal(tuple)
 
@@ -33,7 +33,7 @@ class BasicPlot(QtWidgets.QWidget):
             y_value_list (list, optional): List of signals to be plotted. Defaults to ["gauss_bpm"].
         """
 
-        super(BasicPlot, self).__init__()
+        super(StreamPlot, self).__init__()
         # Set style for pyqtgraph plots
         pg.setConfigOption("background", "w")
         pg.setConfigOption("foreground", "k")
@@ -343,7 +343,7 @@ if __name__ == "__main__":
     client = bec_dispatcher.client
     app = QtWidgets.QApplication([])
     ctrl_c.setup(app)
-    plot = BasicPlot(y_value_list=value.signals)
+    plot = StreamPlot(y_value_list=value.signals)
 
     bec_dispatcher.connect_slot(plot.new_proj, "px_stream/proj_nr")
     bec_dispatcher.connect_slot(

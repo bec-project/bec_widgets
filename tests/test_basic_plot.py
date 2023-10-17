@@ -10,7 +10,7 @@ def test_basic_plot_emits_no_signal(qtbot):
     """Test LinePlot emits no signal when only one data entry is present."""
 
     y_value_list = ["y1", "y2"]
-    plot = basic_plot.BasicPlot(y_value_list=y_value_list)
+    plot = basic_plot.StreamPlot(y_value_list=y_value_list)
     data = {
         "data": {
             "x": {"x": {"value": 1}},
@@ -29,7 +29,7 @@ def test_basic_plot_emits_signal(qtbot):
     """Test LinePlot emits signal."""
 
     y_value_list = ["y1", "y2"]
-    plot = basic_plot.BasicPlot(y_value_list=y_value_list)
+    plot = basic_plot.StreamPlot(y_value_list=y_value_list)
     data = {
         "data": {
             "x": {"x": {"value": 1}},
@@ -54,7 +54,7 @@ def test_basic_plot_raise_warning_wrong_signal_request(qtbot):
     """Test LinePlot raises warning and skips signal when entry not present in data."""
 
     y_value_list = ["y1", "y22"]
-    plot = basic_plot.BasicPlot(y_value_list=y_value_list)
+    plot = basic_plot.StreamPlot(y_value_list=y_value_list)
     data = {
         "data": {
             "x": {"x": {"value": [1, 2, 3, 4, 5]}},
@@ -79,7 +79,7 @@ def test_basic_plot_raise_warning_wrong_signal_request(qtbot):
 #     """Test LinePlot update."""
 
 #     y_value_list = ["y1", "y2"]
-#     plot = basic_plot.BasicPlot(y_value_list=y_value_list)
+#     plot = basic_plot.StreamPlot(y_value_list=y_value_list)
 #     plot.label_bottom = "x"
 #     plot.label_left = f"{', '.join(y_value_list)}"
 #     plot.plotter_data_x = [1, 2, 3, 4, 5]
@@ -96,7 +96,7 @@ def test_basic_plot_raise_warning_wrong_signal_request(qtbot):
 #     """Test LinePlot update."""
 
 #     y_value_list = ["y1", "y2"]
-#     plot = basic_plot.BasicPlot(y_value_list=y_value_list)
+#     plot = basic_plot.StreamPlot(y_value_list=y_value_list)
 #     plot.label_bottom = "x"
 #     plot.label_left = f"{', '.join(y_value_list)}"
 #     plot.plotter_data_x = [1, 2, 3, 4, 5]
@@ -112,7 +112,7 @@ def test_basic_plot_raise_warning_wrong_signal_request(qtbot):
 #     """Test LinePlot mouse_moved."""
 
 #     y_value_list = ["y1", "y2"]
-#     plot = basic_plot.BasicPlot(y_value_list=y_value_list)
+#     plot = basic_plot.StreamPlot(y_value_list=y_value_list)
 #     plot.plotter_data_x = [1, 2, 3, 4, 5]
 #     plot.plotter_data_y = [[1, 2, 3, 4, 5], [3, 4, 5, 6, 7]]
 #     plot.precision = 3
