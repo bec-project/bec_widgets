@@ -1,4 +1,7 @@
+import os
+
 from PyQt5 import uic
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import (
     QApplication,
     QWidget,
@@ -11,11 +14,15 @@ from PyQt5.QtWidgets import (
     QTableWidgetItem,
 )
 
-Ui_Form, BaseClass = uic.loadUiType("config_dialog.ui")
-Tab_Ui_Form, Tab_BaseClass = uic.loadUiType("tab_template.ui")
+
+current_path = os.path.dirname(__file__)
+Ui_Form, BaseClass = uic.loadUiType(os.path.join(current_path, "config_dialog.ui"))
+Tab_Ui_Form, Tab_BaseClass = uic.loadUiType(os.path.join(current_path, "tab_template.ui"))
 
 
-class MainApp(QWidget, Ui_Form):
+class ConfigDialog(QWidget, Ui_Form):
+    config_updated = pyqtSignal(dict)
+
     def __init__(self):
         super().__init__()
         self.setupUi(self)
@@ -66,10 +73,10 @@ class MainApp(QWidget, Ui_Form):
     def get_configuration(self):
         config = {
             "plot_settings": {
-                "background_color": "black",
+                "background_color": self.comboBox_appearance.currentText(),
                 "num_columns": self.spinBox.value(),
-                "colormap": self.comboBox_2.currentText(),
-                "scan_types": self.comboBox.currentText() == "Enabled",
+                "colormap": self.comboBox_colormap.currentText(),
+                "scan_types": self.comboBox_scanTypes.currentText() == "Enabled",
             },
             "plot_data": [],
         }
@@ -105,6 +112,7 @@ class MainApp(QWidget, Ui_Form):
             config["plot_data"].append(plot_config)
 
         print(config)
+        self.config_updated.emit(config)
         return config
 
     @staticmethod
@@ -114,6 +122,6 @@ class MainApp(QWidget, Ui_Form):
 
 if __name__ == "__main__":
     app = QApplication([])
-    main_app = MainApp()
+    main_app = ConfigDialog()
     main_app.show()
     app.exec_()

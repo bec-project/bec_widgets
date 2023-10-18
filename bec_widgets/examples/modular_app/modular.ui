@@ -15,13 +15,37 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
-    <item row="2" column="1">
-     <widget class="QGraphicsView" name="glw_2"/>
-    </item>
-    <item row="1" column="1">
+    <item row="1" column="2">
      <widget class="QLabel" name="label_3">
       <property name="text">
        <string>Plot  Config 2</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="0" colspan="2">
+     <widget class="QGraphicsView" name="glw_1"/>
+    </item>
+    <item row="1" column="3">
+     <widget class="QPushButton" name="pushButton_setting_2">
+      <property name="text">
+       <string>Setting Plot 2</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="2" colspan="2">
+     <widget class="QGraphicsView" name="glw_2"/>
+    </item>
+    <item row="1" column="4">
+     <widget class="QLabel" name="label_2">
+      <property name="text">
+       <string>Plot Scan Types = True</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QPushButton" name="pushButton_setting_1">
+      <property name="text">
+       <string>Setting Plot 1</string>
       </property>
      </widget>
     </item>
@@ -32,18 +56,15 @@
       </property>
      </widget>
     </item>
-    <item row="2" column="0">
-     <widget class="QGraphicsView" name="glw_1"/>
-    </item>
-    <item row="2" column="2">
-     <widget class="QGraphicsView" name="glw_3"/>
-    </item>
-    <item row="1" column="2">
-     <widget class="QLabel" name="label_2">
+    <item row="1" column="5">
+     <widget class="QPushButton" name="pushButton_setting_3">
       <property name="text">
-       <string>Plot Scan Types = True</string>
+       <string>Setting Plot 3</string>
       </property>
      </widget>
+    </item>
+    <item row="3" column="4" colspan="2">
+     <widget class="QGraphicsView" name="glw_3"/>
     </item>
    </layout>
   </widget>
@@ -53,7 +74,7 @@
      <x>0</x>
      <y>0</y>
      <width>1433</width>
-     <height>24</height>
+     <height>37</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuSettings">

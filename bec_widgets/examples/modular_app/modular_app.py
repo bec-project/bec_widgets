@@ -3,7 +3,7 @@ import os
 from PyQt5 import uic
 from PyQt5.QtWidgets import QMainWindow, QApplication, QVBoxLayout
 
-from bec_widgets.widgets.monitor.device_monitor import BECDeviceMonitor
+from bec_widgets.widgets.monitor import BECDeviceMonitor, ConfigDialog
 
 config_1 = {
     "plot_settings": {
@@ -171,6 +171,18 @@ class ModularApp(QMainWindow):
 
         self._init_plots()
 
+        # Config Dialog
+        self.config_dialog = ConfigDialog()
+        self.pushButton_setting_1.clicked.connect(
+            lambda: self.show_config_dialog(config_1, self.bec_device_monitor_1)
+        )
+        self.pushButton_setting_2.clicked.connect(
+            lambda: self.show_config_dialog(config_2, self.bec_device_monitor_2)
+        )
+        self.pushButton_setting_3.clicked.connect(
+            lambda: self.show_config_dialog(config_scan_mode, self.bec_device_monitor_3)
+        )
+
     def _init_plots(self):
         self.glw_1_layout = QVBoxLayout(self.glw_1)  # Create a new QVBoxLayout
         self.bec_device_monitor_1 = BECDeviceMonitor(parent=self, config=config_1)
@@ -183,6 +195,13 @@ class ModularApp(QMainWindow):
         self.glw_3_layout = QVBoxLayout(self.glw_3)  # Create a new QVBoxLayout
         self.bec_device_monitor_3 = BECDeviceMonitor(parent=self, config=config_scan_mode)
         self.glw_3_layout.addWidget(self.bec_device_monitor_3)  # Add BECDeviceMonitor to the layout
+
+    def show_config_dialog(self, config, monitor):
+        # self.config_dialog.load_config(config)  # Load the configuration into the dialog
+        self.config_dialog.config_updated.connect(
+            monitor.update_config
+        )  # Connect the signal to the monitor's slot
+        self.config_dialog.show()  # Show the dialog
 
 
 if __name__ == "__main__":

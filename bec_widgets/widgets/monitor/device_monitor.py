@@ -228,6 +228,11 @@ class BECDeviceMonitor(pg.GraphicsLayoutWidget):
 
                 curve.setData(data_x, data_y)
 
+    @pyqtSlot(dict)
+    def update_config(self, config):
+        self.config = config
+        self._init_config()
+
     @pyqtSlot(dict, dict)
     def on_scan_segment(self, msg, metadata):
         """
