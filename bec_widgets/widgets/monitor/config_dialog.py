@@ -40,11 +40,22 @@ class MainApp(QWidget, Ui_Form):
         new_tab.pushButton_y_new.clicked.connect(
             lambda: self.add_new_signal(new_tab.tableWidget_y_signals)
         )
+        new_tab.pushButton_remove_current_plot.clicked.connect(self.remove_current_plot)
+
+        # Tab header name
         new_tab_name = f"Plot {self.tabWidget_plots.count() + 1}"
+
+        # Add new tab
         self.tabWidget_plots.addTab(
             new_tab_widget, new_tab_name
         )  # Add the new QWidget as a new tab
         self.tab_ui_objects.append(new_tab)  # Append the Tab_Ui_Form object to the list
+
+    def remove_current_plot(self):
+        current_index = self.tabWidget_plots.currentIndex()
+        if current_index != -1:  # Ensure there is a tab to remove
+            self.tabWidget_plots.removeTab(current_index)
+            del self.tab_ui_objects[current_index]
 
     def add_new_signal(self, tableWidget_y_signals):
         row_position = tableWidget_y_signals.rowCount()
@@ -64,7 +75,7 @@ class MainApp(QWidget, Ui_Form):
         }
 
         for index in range(self.tabWidget_plots.count()):
-            tab = self.tabWidget_plots.widget(index)
+            # tab = self.tabWidget_plots.widget(index) #TODO can be removed
             ui_object = self.tab_ui_objects[index]
             table = ui_object.tableWidget_y_signals
             signals = [
