@@ -106,7 +106,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QTableWidget" name="tableWidget_y_signals">
+      <widget class="BECTable" name="tableWidget_y_signals">
        <column>
         <property name="text">
          <string>Name</string>
@@ -159,6 +159,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>BECTable</class>
+   <extends>QTableWidget</extends>
+   <header>bec_widgets.qt_utils.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

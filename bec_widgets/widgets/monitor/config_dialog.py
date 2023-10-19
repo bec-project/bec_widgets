@@ -1,6 +1,6 @@
 import os
 
-from PyQt5.QtCore import Qt
+from bec_widgets.qt_utils import BECTable
 from PyQt5 import uic
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import (
