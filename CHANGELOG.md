@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.28.1 (2023-10-19)
+
+### Fix
+
+* Stream_plot.py on_dap_update data dict opened correctly ([`28908dd`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/28908dd07c1eef8a9d3213a581393e665b310d1b))
+
 ## v0.28.0 (2023-10-13)
 
 ### Feature
