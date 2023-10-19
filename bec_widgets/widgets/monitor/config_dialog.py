@@ -1,5 +1,6 @@
 import os
 
+from PyQt5.QtCore import Qt
 from PyQt5 import uic
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import (
@@ -12,6 +13,7 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QPushButton,
     QTableWidgetItem,
+    QTableWidget,
 )
 
 
@@ -31,9 +33,13 @@ class ConfigDialog(QWidget, Ui_Form):
 
         self.tab_ui_objects = []  # Create a list to hold the Tab_Ui_Form objects
 
-        # Connect the buttons
+        # Connect the buttons inside the dialog
         self.pushButton_add_new_plot.clicked.connect(self.add_new_plot)
-        self.pushButton_ok.clicked.connect(self.get_configuration)
+
+        # Connect the Ok/Apply/Cancel buttons
+        self.pushButton_ok.clicked.connect(self.apply_and_close)
+        self.pushButton_apply.clicked.connect(self.apply_config)
+        self.pushButton_cancel.clicked.connect(self.close)
 
         self.add_new_plot()  # add initial first plot tab
 
@@ -43,11 +49,8 @@ class ConfigDialog(QWidget, Ui_Form):
         new_tab = Tab_Ui_Form()
         new_tab.setupUi(new_tab_widget)
 
-        # Tab Signals
-        new_tab.pushButton_y_new.clicked.connect(
-            lambda: self.add_new_signal(new_tab.tableWidget_y_signals)
-        )
-        new_tab.pushButton_remove_current_plot.clicked.connect(self.remove_current_plot)
+        # Connect tab buttons
+        self.hook_tab_buttons(new_tab)
 
         # Tab header name
         new_tab_name = f"Plot {self.tabWidget_plots.count() + 1}"
@@ -57,6 +60,12 @@ class ConfigDialog(QWidget, Ui_Form):
             new_tab_widget, new_tab_name
         )  # Add the new QWidget as a new tab
         self.tab_ui_objects.append(new_tab)  # Append the Tab_Ui_Form object to the list
+
+    def hook_tab_buttons(self, tab_ui_object):
+        tab_ui_object.pushButton_y_new.clicked.connect(
+            lambda: self.add_new_signal(tab_ui_object.tableWidget_y_signals)
+        )
+        tab_ui_object.pushButton_remove_current_plot.clicked.connect(self.remove_current_plot)
 
     def remove_current_plot(self):
         current_index = self.tabWidget_plots.currentIndex()
@@ -70,11 +79,11 @@ class ConfigDialog(QWidget, Ui_Form):
         tableWidget_y_signals.setItem(row_position, 0, QTableWidgetItem(""))
         tableWidget_y_signals.setItem(row_position, 1, QTableWidgetItem(""))
 
-    def get_configuration(self):
+    def apply_configuration(self):
         config = {
             "plot_settings": {
                 "background_color": self.comboBox_appearance.currentText(),
-                "num_columns": self.spinBox.value(),
+                "num_columns": self.spinBox_n_column.value(),
                 "colormap": self.comboBox_colormap.currentText(),
                 "scan_types": self.comboBox_scanTypes.currentText() == "Enabled",
             },
@@ -112,8 +121,68 @@ class ConfigDialog(QWidget, Ui_Form):
             config["plot_data"].append(plot_config)
 
         print(config)
-        self.config_updated.emit(config)
         return config
+
+    def load_config(self, config):
+        plot_settings = config.get("plot_settings", {})
+        plot_data = config.get("plot_data", [])
+
+        # Set plot settings in the dialog
+        self.comboBox_appearance.setCurrentText(
+            plot_settings.get("background_color", "")
+        )  # TODO implement more robust logic
+        self.spinBox_n_column.setValue(plot_settings.get("num_columns", 1))
+        self.comboBox_colormap.setCurrentText(plot_settings.get("colormap", ""))
+        self.comboBox_scanTypes.setCurrentText(
+            "Enabled" if plot_settings.get("scan_types", False) else "Disabled"
+        )
+
+        # Clear existing tabs
+        self.tabWidget_plots.clear()
+        self.tab_ui_objects = []
+
+        # Set plot data in the dialog
+        for plot_config in plot_data:
+            new_tab_widget = QWidget()
+            new_tab = Tab_Ui_Form()
+            new_tab.setupUi(new_tab_widget)
+
+            # Set tab values
+            new_tab.lineEdit_plot_title.setText(plot_config.get("plot_name", ""))
+            x_config = plot_config.get("x", {})
+            new_tab.lineEdit_x_label.setText(x_config.get("label", ""))
+            x_signals = x_config.get("signals", [{}])[0]  # Assuming at least one x signal
+            new_tab.lineEdit_x_name.setText(x_signals.get("name", ""))
+            new_tab.lineEdit_x_entry.setText(x_signals.get("entry", ""))
+
+            y_config = plot_config.get("y", {})
+            new_tab.lineEdit_y_label.setText(y_config.get("label", ""))
+            y_signals = y_config.get("signals", [])
+            for y_signal in y_signals:
+                row_position = new_tab.tableWidget_y_signals.rowCount()
+                new_tab.tableWidget_y_signals.insertRow(row_position)
+                new_tab.tableWidget_y_signals.setItem(
+                    row_position, 0, QTableWidgetItem(y_signal.get("name", ""))
+                )
+                new_tab.tableWidget_y_signals.setItem(
+                    row_position, 1, QTableWidgetItem(y_signal.get("entry", ""))
+                )
+
+            # Connect tab buttons
+            self.hook_tab_buttons(new_tab)
+
+            # Add tab to dialog
+            new_tab_name = f"Plot {self.tabWidget_plots.count() + 1}"
+            self.tabWidget_plots.addTab(new_tab_widget, new_tab_name)
+            self.tab_ui_objects.append(new_tab)
+
+    def apply_config(self):
+        config_to_emit = self.apply_configuration()
+        self.config_updated.emit(config_to_emit)
+
+    def apply_and_close(self):
+        self.apply_config()
+        self.close()
 
     @staticmethod
     def safe_text(line_edit):

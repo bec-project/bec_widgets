@@ -32,7 +32,7 @@
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QSpinBox" name="spinBox"/>
+           <widget class="QSpinBox" name="spinBox_n_column"/>
           </item>
           <item row="1" column="0">
            <widget class="QLabel" name="label_6">
@@ -82,14 +82,17 @@
           </item>
           <item>
            <widget class="QComboBox" name="comboBox_appearance">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <item>
              <property name="text">
-              <string>dark</string>
+              <string>black</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>bright</string>
+              <string>white</string>
              </property>
             </item>
            </widget>

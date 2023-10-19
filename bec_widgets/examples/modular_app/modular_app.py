@@ -197,7 +197,7 @@ class ModularApp(QMainWindow):
         self.glw_3_layout.addWidget(self.bec_device_monitor_3)  # Add BECDeviceMonitor to the layout
 
     def show_config_dialog(self, config, monitor):
-        # self.config_dialog.load_config(config)  # Load the configuration into the dialog
+        self.config_dialog.load_config(config)  # Load the configuration into the dialog
         self.config_dialog.config_updated.connect(
             monitor.update_config
         )  # Connect the signal to the monitor's slot
