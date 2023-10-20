@@ -25,8 +25,8 @@ Tab_Ui_Form, Tab_BaseClass = uic.loadUiType(os.path.join(current_path, "tab_temp
 class ConfigDialog(QWidget, Ui_Form):
     config_updated = pyqtSignal(dict)
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, default_config=None):
+        super(ConfigDialog, self).__init__()
         self.setupUi(self)
 
         self.signal_count = 1  # TODO decide if useful
@@ -42,6 +42,9 @@ class ConfigDialog(QWidget, Ui_Form):
         self.pushButton_cancel.clicked.connect(self.close)
 
         self.add_new_plot()  # add initial first plot tab
+
+        if default_config is not None:
+            self.load_config(default_config)
 
     def add_new_plot(self):
         # Set tabs

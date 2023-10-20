@@ -1,12 +1,14 @@
+import os
+
 import pyqtgraph as pg
 from bec_lib.core import MessageEndpoints
 from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QTableWidgetItem, QWidget
 from pyqtgraph import mkPen, mkBrush
+from PyQt5 import uic
 
 from bec_widgets.bec_dispatcher import bec_dispatcher
-
 from bec_widgets.qt_utils import Crosshair, Colors
 
 config_simple = {
@@ -230,6 +232,13 @@ class BECDeviceMonitor(pg.GraphicsLayoutWidget):
 
     def get_config(self):
         return self.config
+
+    def show_config_dialog(self):
+        from .config_dialog import ConfigDialog
+
+        dialog = ConfigDialog(default_config=self.config)
+        dialog.config_updated.connect(self.update_config)
+        dialog.show()
 
     @pyqtSlot(dict)
     def update_config(self, config):

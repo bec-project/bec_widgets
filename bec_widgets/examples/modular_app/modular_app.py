@@ -3,7 +3,7 @@ import os
 from PyQt5 import uic
 from PyQt5.QtWidgets import QMainWindow, QApplication, QVBoxLayout
 
-from bec_widgets.widgets.monitor import BECDeviceMonitor, ConfigDialog
+from bec_widgets.widgets.monitor import BECDeviceMonitor
 
 config_1 = {
     "plot_settings": {
@@ -81,6 +81,7 @@ config_2 = {
         },
     ],
 }
+
 config_scan_mode = config = {
     "plot_settings": {
         "background_color": "white",
@@ -185,36 +186,27 @@ class ModularApp(QMainWindow):
     def _init_plots(self):
         self.glw_1_layout = QVBoxLayout(self.glw_1)  # Create a new QVBoxLayout
         self.bec_device_monitor_1 = BECDeviceMonitor(parent=self, config=config_1)
-        self.config_dialog_1 = ConfigDialog()
         self.glw_1_layout.addWidget(self.bec_device_monitor_1)  # Add BECDeviceMonitor to the layout
         self.pushButton_setting_1.clicked.connect(
-            lambda: self.show_config_dialog(self.bec_device_monitor_1, self.config_dialog_1)
+            lambda: self.bec_device_monitor_1.show_config_dialog()
         )
 
         self.glw_2_layout = QVBoxLayout(self.glw_2)  # Create a new QVBoxLayout
         self.bec_device_monitor_2 = BECDeviceMonitor(parent=self, config=config_2)
-        self.config_dialog_2 = ConfigDialog()
         self.glw_2_layout.addWidget(self.bec_device_monitor_2)  # Add BECDeviceMonitor to the layout
         self.pushButton_setting_2.clicked.connect(
-            lambda: self.show_config_dialog(self.bec_device_monitor_2, self.config_dialog_2)
+            lambda: self.bec_device_monitor_2.show_config_dialog()
         )
 
         self.glw_3_layout = QVBoxLayout(self.glw_3)  # Create a new QVBoxLayout
         self.bec_device_monitor_3 = BECDeviceMonitor(parent=self, config=config_scan_mode)
-        self.config_dialog_3 = ConfigDialog()
         self.glw_3_layout.addWidget(self.bec_device_monitor_3)  # Add BECDeviceMonitor to the layout
         self.pushButton_setting_3.clicked.connect(
-            lambda: self.show_config_dialog(self.bec_device_monitor_3, self.config_dialog_3)
+            lambda: self.bec_device_monitor_3.show_config_dialog()
         )
 
-    def show_config_dialog(self, monitor, config_dialog):
-        config = monitor.get_config()
-
-        config_dialog.load_config(config)  # Load the configuration into the dialog
-        config_dialog.config_updated.connect(
-            monitor.update_config
-        )  # Connect the signal to the monitor's slot
-        config_dialog.show()  # Show the dialog
+    def show_config_dialog(self, monitor):
+        monitor.show_config_dialog()
 
 
 if __name__ == "__main__":
