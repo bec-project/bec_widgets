@@ -68,6 +68,17 @@ config_2 = {
                 "signals": [{"name": "gauss_adc1", "entry": "gauss_adc1"}],
             },
         },
+        {
+            "plot_name": "Plot 3",
+            "x": {
+                "label": "Motor X",
+                "signals": [{"name": "samx", "entry": "samx"}],
+            },
+            "y": {
+                "label": "Gauss ADC",
+                "signals": [{"name": "gauss_adc3", "entry": "gauss_adc3"}],
+            },
+        },
     ],
 }
 config_scan_mode = config = {
@@ -171,37 +182,39 @@ class ModularApp(QMainWindow):
 
         self._init_plots()
 
-        # Config Dialog
-        self.config_dialog = ConfigDialog()
-        self.pushButton_setting_1.clicked.connect(
-            lambda: self.show_config_dialog(config_1, self.bec_device_monitor_1)
-        )
-        self.pushButton_setting_2.clicked.connect(
-            lambda: self.show_config_dialog(config_2, self.bec_device_monitor_2)
-        )
-        self.pushButton_setting_3.clicked.connect(
-            lambda: self.show_config_dialog(config_scan_mode, self.bec_device_monitor_3)
-        )
-
     def _init_plots(self):
         self.glw_1_layout = QVBoxLayout(self.glw_1)  # Create a new QVBoxLayout
         self.bec_device_monitor_1 = BECDeviceMonitor(parent=self, config=config_1)
+        self.config_dialog_1 = ConfigDialog()
         self.glw_1_layout.addWidget(self.bec_device_monitor_1)  # Add BECDeviceMonitor to the layout
+        self.pushButton_setting_1.clicked.connect(
+            lambda: self.show_config_dialog(self.bec_device_monitor_1, self.config_dialog_1)
+        )
 
         self.glw_2_layout = QVBoxLayout(self.glw_2)  # Create a new QVBoxLayout
         self.bec_device_monitor_2 = BECDeviceMonitor(parent=self, config=config_2)
+        self.config_dialog_2 = ConfigDialog()
         self.glw_2_layout.addWidget(self.bec_device_monitor_2)  # Add BECDeviceMonitor to the layout
+        self.pushButton_setting_2.clicked.connect(
+            lambda: self.show_config_dialog(self.bec_device_monitor_2, self.config_dialog_2)
+        )
 
         self.glw_3_layout = QVBoxLayout(self.glw_3)  # Create a new QVBoxLayout
         self.bec_device_monitor_3 = BECDeviceMonitor(parent=self, config=config_scan_mode)
+        self.config_dialog_3 = ConfigDialog()
         self.glw_3_layout.addWidget(self.bec_device_monitor_3)  # Add BECDeviceMonitor to the layout
+        self.pushButton_setting_3.clicked.connect(
+            lambda: self.show_config_dialog(self.bec_device_monitor_3, self.config_dialog_3)
+        )
 
-    def show_config_dialog(self, config, monitor):
-        self.config_dialog.load_config(config)  # Load the configuration into the dialog
-        self.config_dialog.config_updated.connect(
+    def show_config_dialog(self, monitor, config_dialog):
+        config = monitor.get_config()
+
+        config_dialog.load_config(config)  # Load the configuration into the dialog
+        config_dialog.config_updated.connect(
             monitor.update_config
         )  # Connect the signal to the monitor's slot
-        self.config_dialog.show()  # Show the dialog
+        config_dialog.show()  # Show the dialog
 
 
 if __name__ == "__main__":

@@ -228,6 +228,9 @@ class BECDeviceMonitor(pg.GraphicsLayoutWidget):
 
                 curve.setData(data_x, data_y)
 
+    def get_config(self):
+        return self.config
+
     @pyqtSlot(dict)
     def update_config(self, config):
         self.config = config
