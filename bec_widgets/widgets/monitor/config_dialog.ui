@@ -31,13 +31,17 @@
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QSpinBox" name="spinBox_n_column"/>
-          </item>
           <item row="1" column="0">
            <widget class="QLabel" name="label_6">
             <property name="text">
              <string>Scan Types</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QPushButton" name="pushButton_new_scan_type">
+            <property name="text">
+             <string>New Scan Type</string>
             </property>
            </widget>
           </item>
@@ -55,12 +59,11 @@
             </item>
            </widget>
           </item>
-          <item row="2" column="0" colspan="2">
-           <widget class="QPushButton" name="pushButton_add_new_plot">
-            <property name="text">
-             <string>Add New Plot</string>
-            </property>
-           </widget>
+          <item row="0" column="1">
+           <widget class="QSpinBox" name="spinBox_n_column"/>
+          </item>
+          <item row="3" column="1">
+           <widget class="QLineEdit" name="lineEdit_scan_type"/>
           </item>
          </layout>
         </item>
@@ -154,10 +157,30 @@
     </layout>
    </item>
    <item>
-    <widget class="QTabWidget" name="tabWidget_plots">
-     <property name="currentIndex">
-      <number>-1</number>
+    <widget class="QTabWidget" name="tabWidget_scan_types">
+     <property name="tabPosition">
+      <enum>QTabWidget::West</enum>
      </property>
+     <property name="tabShape">
+      <enum>QTabWidget::Rounded</enum>
+     </property>
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="tab_1">
+      <attribute name="title">
+       <string>Device Monitor</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_5">
+       <item>
+        <widget class="QTabWidget" name="tabWidget_plots">
+         <property name="currentIndex">
+          <number>-1</number>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
    <item>

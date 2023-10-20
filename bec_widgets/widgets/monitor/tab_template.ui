@@ -106,22 +106,31 @@
       </widget>
      </item>
      <item>
-      <widget class="BECTable" name="tableWidget_y_signals">
-       <column>
-        <property name="text">
-         <string>Name</string>
-        </property>
-       </column>
-       <column>
-        <property name="text">
-         <string>Entries</string>
-        </property>
-       </column>
-       <column>
-        <property name="text">
-         <string>Color</string>
-        </property>
-       </column>
+      <widget class="QGroupBox" name="groupBox_y_signals">
+       <property name="title">
+        <string>Y Signals</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
+         <widget class="BECTable" name="tableWidget_y_signals">
+          <column>
+           <property name="text">
+            <string>Name</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Entries</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Color</string>
+           </property>
+          </column>
+         </widget>
+        </item>
+       </layout>
       </widget>
      </item>
      <item>
@@ -130,6 +139,13 @@
         <widget class="QPushButton" name="pushButton_remove_current_plot">
          <property name="text">
           <string>Remove Current Plot</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_add_new_plot">
+         <property name="text">
+          <string>Add New Plot</string>
          </property>
         </widget>
        </item>

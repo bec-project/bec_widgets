@@ -82,7 +82,7 @@ config_2 = {
     ],
 }
 
-config_scan_mode = config = {
+config_scan_mode = {
     "plot_settings": {
         "background_color": "white",
         "num_columns": 3,

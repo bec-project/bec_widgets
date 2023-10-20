@@ -14,6 +14,7 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QTableWidgetItem,
     QTableWidget,
+    QTabWidget,
 )
 
 
@@ -31,50 +32,110 @@ class ConfigDialog(QWidget, Ui_Form):
 
         self.signal_count = 1  # TODO decide if useful
 
-        self.tab_ui_objects = []  # Create a list to hold the Tab_Ui_Form objects
+        self.tab_ui_objects = {}  # []  # Create a list to hold the Tab_Ui_Form objects
 
         # Connect the buttons inside the dialog
-        self.pushButton_add_new_plot.clicked.connect(self.add_new_plot)
+        # self.pushButton_add_new_plot.clicked.connect(self.add_new_plot)  # TODO move to tabs
 
         # Connect the Ok/Apply/Cancel buttons
         self.pushButton_ok.clicked.connect(self.apply_and_close)
         self.pushButton_apply.clicked.connect(self.apply_config)
         self.pushButton_cancel.clicked.connect(self.close)
 
+        # Scan types
+        self.pushButton_new_scan_type.clicked.connect(self.add_new_scan_type)
+
         self.add_new_plot()  # add initial first plot tab
 
         if default_config is not None:
             self.load_config(default_config)
 
+    def add_new_scan_type(self):
+        scan_type_name = self.lineEdit_scan_type.text()
+        if not scan_type_name:
+            return
+
+        new_scan_tab = QWidget()
+        new_scan_tab_layout = QVBoxLayout(new_scan_tab)
+        new_tabWidget_plots = QTabWidget()
+        new_tabWidget_plots.setObjectName("tabWidget_plots")
+
+        new_scan_tab_layout.addWidget(new_tabWidget_plots)
+
+        self.tabWidget_scan_types.addTab(new_scan_tab, scan_type_name)
+        # self.tab_ui_objects[scan_type_name] = []
+
+        # Store tab structure in the dict
+        self.tab_ui_objects[scan_type_name] = {"tab_widget": new_scan_tab, "plots": []}
+
+        # Set the newly created scan tab as the current tab
+        self.tabWidget_scan_types.setCurrentWidget(new_scan_tab)
+
+        # Generate the first plot tab
+        self.add_new_plot()
+
     def add_new_plot(self):
-        # Set tabs
-        new_tab_widget = QWidget()
-        new_tab = Tab_Ui_Form()
-        new_tab.setupUi(new_tab_widget)
+        # Get the currently selected scan tab
+        current_scan_type_index = self.tabWidget_scan_types.currentIndex()
+        if current_scan_type_index == -1:
+            return  # Exit if no scan tab is selected
 
-        # Connect tab buttons
-        self.hook_tab_buttons(new_tab)
+        # Get the tab widget of the currently selected scan tab
+        current_scan_tab_widget = self.tabWidget_scan_types.widget(current_scan_type_index)
 
-        # Tab header name
-        new_tab_name = f"Plot {self.tabWidget_plots.count() + 1}"
+        # Get the QTabWidget object from the current scan tab widget
+        current_tabWidget_plots = current_scan_tab_widget.findChild(QTabWidget, "tabWidget_plots")
+        if current_tabWidget_plots is None:
+            return  # Exit if the QTabWidget object is not found
 
-        # Add new tab
-        self.tabWidget_plots.addTab(
-            new_tab_widget, new_tab_name
-        )  # Add the new QWidget as a new tab
-        self.tab_ui_objects.append(new_tab)  # Append the Tab_Ui_Form object to the list
+        # Create a new plot tab
+        new_plot_tab = QWidget()
+        new_plot_tab_ui = Tab_Ui_Form()
+        new_plot_tab_ui.setupUi(new_plot_tab)
+
+        # Hook the buttons in the new plot tab
+        self.hook_tab_buttons(new_plot_tab_ui)
+
+        # Add this new plot tab to the currently selected scan tab's tab widget
+        current_tabWidget_plots.addTab(new_plot_tab, f"Plot {current_tabWidget_plots.count() + 1}")
+
+        # Store tab structure in the dict
+        scan_type_name = self.tabWidget_scan_types.tabText(current_scan_type_index)
+        if scan_type_name not in self.tab_ui_objects:
+            self.tab_ui_objects[scan_type_name] = {
+                "tab_widget": current_scan_tab_widget,
+                "plots": [],
+            }
+        self.tab_ui_objects[scan_type_name]["plots"].append(new_plot_tab_ui)
+
+        # Connect tab buttons # TODO decide what has to be hooked
+        # self.hook_tab_buttons(new_plot_tab_ui)
 
     def hook_tab_buttons(self, tab_ui_object):
         tab_ui_object.pushButton_y_new.clicked.connect(
             lambda: self.add_new_signal(tab_ui_object.tableWidget_y_signals)
         )
-        tab_ui_object.pushButton_remove_current_plot.clicked.connect(self.remove_current_plot)
+        tab_ui_object.pushButton_remove_current_plot.clicked.connect(
+            lambda: self.remove_current_plot(tab_ui_object)
+        )
+        tab_ui_object.pushButton_add_new_plot.clicked.connect(self.add_new_plot)
 
-    def remove_current_plot(self):
-        current_index = self.tabWidget_plots.currentIndex()
+    def remove_current_plot(self, tab_ui_object):
+        current_scan_type_index = self.tabWidget_scan_types.currentIndex()
+        if current_scan_type_index == -1:
+            return  # Exit if no scan tab is selected
+
+        # Get the tab widget of the currently selected scan tab
+        current_scan_tab_widget = self.tab_ui_objects[
+            self.tabWidget_scan_types.tabText(current_scan_type_index)
+        ]["tab_widget"].findChild(QTabWidget, "tabWidget_plots")
+
+        current_index = current_scan_tab_widget.currentIndex()
         if current_index != -1:  # Ensure there is a tab to remove
-            self.tabWidget_plots.removeTab(current_index)
-            del self.tab_ui_objects[current_index]
+            current_scan_tab_widget.removeTab(current_index)
+            del self.tab_ui_objects[self.tabWidget_scan_types.tabText(current_scan_type_index)][
+                "plots"
+            ][current_index]
 
     def add_new_signal(self, tableWidget_y_signals):
         row_position = tableWidget_y_signals.rowCount()
