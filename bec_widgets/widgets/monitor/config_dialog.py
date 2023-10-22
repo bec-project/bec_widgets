@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import (
     QTableWidget,
     QTabWidget,
     QTableWidgetItem,
+    QLineEdit,
 )
 
 current_path = os.path.dirname(__file__)
@@ -96,6 +97,7 @@ class ConfigDialog(QWidget, Ui_Form):
         plot_tab = QWidget()
         plot_tab_ui = Tab_Ui_Form()
         plot_tab_ui.setupUi(plot_tab)
+        plot_tab.ui = plot_tab_ui
 
         # Add plot to current scan tab
         tabWidget_plots = scan_tab.findChild(QTabWidget, "tabWidget_plots")
@@ -103,7 +105,7 @@ class ConfigDialog(QWidget, Ui_Form):
         tabWidget_plots.addTab(plot_tab, plot_name)
 
         # Hook signal
-        self.hook_plot_tab_signals(scan_tab=scan_tab, plot_tab=plot_tab_ui)
+        self.hook_plot_tab_signals(scan_tab=scan_tab, plot_tab=plot_tab.ui)
 
     def hook_plot_tab_signals(self, scan_tab: QTabWidget, plot_tab: Tab_Ui_Form) -> None:
         """
@@ -116,9 +118,7 @@ class ConfigDialog(QWidget, Ui_Form):
             lambda: self.add_new_plot(scan_tab=scan_tab)
         )
         plot_tab.pushButton_y_new.clicked.connect(
-            lambda: self.add_new_signal(
-                scan_tab.findChild(QTabWidget, "tabWidget_plots").table_y_signals
-            )
+            lambda: self.add_new_signal(plot_tab.tableWidget_y_signals)
         )
 
     def add_new_signal(self, table: QTableWidget) -> None:
@@ -134,19 +134,74 @@ class ConfigDialog(QWidget, Ui_Form):
         Args:
             index(int): Index of the tab to be closed
         """
-        print(index)
         parent_tab = self.sender()
         parent_tab.removeTab(index)
 
+    def get_plot_config(self, plot_tab: Tab_Ui_Form) -> dict:
+        """
+        Get plot configuration from the plot tab
+
+        Args:
+            plot_tab(Tab_Ui_Form): Plot tab widget
+
+        Returns:
+            dict: Plot configuration
+        """
+
+        table = plot_tab.tableWidget_y_signals
+        signals = [
+            {
+                "name": self.safe_text(table.item(row, 0)),
+                "entry": self.safe_text(table.item(row, 1)),
+            }
+            for row in range(table.rowCount())
+        ]
+
+        plot_data = {
+            "plot_name": self.safe_text(plot_tab.lineEdit_plot_title),
+            "x": {
+                "label": self.safe_text(plot_tab.lineEdit_x_label),
+                "signals": [
+                    {
+                        "name": self.safe_text(plot_tab.lineEdit_x_name),
+                        "entry": self.safe_text(plot_tab.lineEdit_x_entry),
+                    }
+                ],
+            },
+            "y": {
+                "label": self.safe_text(plot_tab.lineEdit_y_label),
+                "signals": signals,
+            },
+        }
+        return plot_data
+
     def apply_config(self):
-        ...
-        # config_to_emit = self.apply_configuration()
-        # self.config_updated.emit(config_to_emit)
+        config = {
+            "plot_settings": {
+                "background_color": self.comboBox_appearance.currentText(),
+                "num_columns": self.spinBox_n_column.value(),
+                "colormap": self.comboBox_colormap.currentText(),
+                "scan_types": True if self.comboBox_scanTypes.currentText() == "Enabled" else False,
+            },
+            "plot_data": {} if self.comboBox_scanTypes.currentText() == "Enabled" else [],
+        }
+
+        if config["plot_settings"]["scan_types"] == False:
+            plot_tab = self.tabWidget_scan_types.findChild(QTabWidget, "tabWidget_plots")
+            for index in range(plot_tab.count()):
+                plot_data = self.get_plot_config(plot_tab.widget(index).ui)
+                config["plot_data"].append(plot_data)
+
+        print(config)
+        return config
+
+    @staticmethod
+    def safe_text(line_edit: QLineEdit) -> str:
+        return "" if line_edit is None else line_edit.text()
 
     def apply_and_close(self):
-        ...
-        # self.apply_config()
-        # self.close()
+        self.apply_config()
+        self.close()
 
     def load_config(self):
         ...
