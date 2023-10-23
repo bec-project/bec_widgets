@@ -136,13 +136,6 @@
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_2">
        <item>
-        <widget class="QPushButton" name="pushButton_remove_current_plot">
-         <property name="text">
-          <string>Remove Current Plot</string>
-         </property>
-        </widget>
-       </item>
-       <item>
         <widget class="QPushButton" name="pushButton_add_new_plot">
          <property name="text">
           <string>Add New Plot</string>

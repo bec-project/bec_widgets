@@ -24,19 +24,21 @@ class ConfigDialog(QWidget, Ui_Form):
         super(ConfigDialog, self).__init__()
         self.setupUi(self)
 
-        # Connect the Ok/Apply/Cancel buttons #TODO this is useful
+        # Connect the Ok/Apply/Cancel buttons
         self.pushButton_ok.clicked.connect(self.apply_and_close)
         self.pushButton_apply.clicked.connect(self.apply_config)
         self.pushButton_cancel.clicked.connect(self.close)
 
-        # Hook signals
+        # Hook signals top level
         self.pushButton_new_scan_type.clicked.connect(
             lambda: self.add_new_scan(
                 self.tabWidget_scan_types, self.lineEdit_scan_type.text(), True
             )
         )
+
         # Scan Types changed
         self.comboBox_scanTypes.currentIndexChanged.connect(self._init_default)
+
         # Make scan tabs closable
         self.tabWidget_scan_types.tabCloseRequested.connect(self.handle_tab_close_request)
 
@@ -139,7 +141,7 @@ class ConfigDialog(QWidget, Ui_Form):
 
     def get_plot_config(self, plot_tab: Tab_Ui_Form) -> dict:
         """
-        Get plot configuration from the plot tab
+        Get plot configuration from the plot tab adn send it as dict
 
         Args:
             plot_tab(Tab_Ui_Form): Plot tab widget
@@ -175,7 +177,15 @@ class ConfigDialog(QWidget, Ui_Form):
         }
         return plot_data
 
-    def apply_config(self):
+    def apply_config(self) -> dict:
+        """
+        Apply configuration from the whole configuration window
+
+        Returns:
+            dict: Configuration
+
+        """
+        # General settings
         config = {
             "plot_settings": {
                 "background_color": self.comboBox_appearance.currentText(),
@@ -186,17 +196,38 @@ class ConfigDialog(QWidget, Ui_Form):
             "plot_data": {} if self.comboBox_scanTypes.currentText() == "Enabled" else [],
         }
 
+        # Iterate through the plot tabs - Device monitor mode
         if config["plot_settings"]["scan_types"] == False:
             plot_tab = self.tabWidget_scan_types.findChild(QTabWidget, "tabWidget_plots")
             for index in range(plot_tab.count()):
                 plot_data = self.get_plot_config(plot_tab.widget(index).ui)
                 config["plot_data"].append(plot_data)
 
+        # Iterate through the scan tabs - Scan mode
+        elif config["plot_settings"]["scan_types"] == True:
+            # Iterate through the scan tabs
+            for index in range(self.tabWidget_scan_types.count()):
+                scan_tab = self.tabWidget_scan_types.widget(index)
+                scan_name = self.tabWidget_scan_types.tabText(index)
+                plot_tab = scan_tab.findChild(QTabWidget, "tabWidget_plots")
+                plot_data = {}
+                for index in range(plot_tab.count()):
+                    plot_data = self.get_plot_config(plot_tab.widget(index).ui)
+                config["plot_data"][scan_name] = plot_data
+
         print(config)
         return config
 
     @staticmethod
     def safe_text(line_edit: QLineEdit) -> str:
+        """
+        Get text from a line edit, if it is None, return empty string
+        Args:
+            line_edit(QLineEdit): Line edit widget
+
+        Returns:
+            str: Text from the line edit
+        """
         return "" if line_edit is None else line_edit.text()
 
     def apply_and_close(self):
@@ -205,10 +236,6 @@ class ConfigDialog(QWidget, Ui_Form):
 
     def load_config(self):
         ...
-
-    @staticmethod
-    def safe_text(line_edit):
-        return "" if line_edit is None else line_edit.text()
 
 
 if __name__ == "__main__":
