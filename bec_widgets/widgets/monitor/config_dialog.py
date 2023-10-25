@@ -1,4 +1,5 @@
 import os
+import time
 
 from PyQt5 import uic
 from PyQt5.QtCore import pyqtSignal
@@ -15,6 +16,131 @@ from PyQt5.QtWidgets import (
 current_path = os.path.dirname(__file__)
 Ui_Form, BaseClass = uic.loadUiType(os.path.join(current_path, "config_dialog.ui"))
 Tab_Ui_Form, Tab_BaseClass = uic.loadUiType(os.path.join(current_path, "tab_template.ui"))
+# test configs #TODO delete after loading works
+
+config_default = {
+    "plot_settings": {
+        "background_color": "black",
+        "num_columns": 1,
+        "colormap": "plasma",
+        "scan_types": False,
+    },
+    "plot_data": [
+        {
+            "plot_name": "BPM4i plots vs samx",
+            "x": {
+                "label": "Motor Y",
+                "signals": [{"name": "samx", "entry": "samx"}],
+            },
+            "y": {
+                "label": "bpm4i",
+                "signals": [{"name": "bpm4i", "entry": "bpm4i"}],
+            },
+        },
+        {
+            "plot_name": "Gauss plots vs samx",
+            "x": {
+                "label": "Motor X",
+                "signals": [{"name": "samx", "entry": "samx"}],
+            },
+            "y": {
+                "label": "Gauss",
+                "signals": [
+                    {"name": "gauss_bpm", "entry": "gauss_bpm"},
+                    {"name": "gauss_acd1", "entry": "gauss_adc1"},
+                    {"name": "gauss_acd2", "entry": "gauss_adc2"},
+                ],
+            },
+        },
+    ],
+}
+
+config_scan = {
+    "plot_settings": {
+        "background_color": "white",
+        "num_columns": 3,
+        "colormap": "plasma",
+        "scan_types": True,
+    },
+    "plot_data": {
+        "grid_scan": [
+            {
+                "plot_name": "Grid plot 1",
+                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "BPM",
+                    "signals": [
+                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
+                        {"name": "gauss_adc1", "entry": "gauss_adc1"},
+                    ],
+                },
+            },
+            {
+                "plot_name": "Grid plot 2",
+                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "BPM",
+                    "signals": [
+                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
+                        {"name": "gauss_adc1", "entry": "gauss_adc1"},
+                    ],
+                },
+            },
+            {
+                "plot_name": "Grid plot 3",
+                "x": {"label": "Motor Y", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "BPM",
+                    "signals": [{"name": "gauss_bpm", "entry": "gauss_bpm"}],
+                },
+            },
+            {
+                "plot_name": "Grid plot 4",
+                "x": {"label": "Motor Y", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "BPM",
+                    "signals": [{"name": "gauss_adc3", "entry": "gauss_adc3"}],
+                },
+            },
+        ],
+        "line_scan": [
+            {
+                "plot_name": "BPM plot",
+                "x": {"label": "Motor X", "signals": [{"name": "samx"}]},
+                "y": {
+                    "label": "BPM",
+                    "signals": [
+                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
+                        {"name": "gauss_adc1", "entry": "gauss_adc1"},
+                        {"name": "gauss_adc2", "entry": "gauss_adc2"},
+                    ],
+                },
+            },
+            {
+                "plot_name": "Multi",
+                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "Multi",
+                    "signals": [
+                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
+                        {"name": "samx", "entry": ["samx", "samx_setpoint"]},
+                    ],
+                },
+            },
+            {
+                "plot_name": "Multi",
+                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "Multi",
+                    "signals": [
+                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
+                        {"name": "samx", "entry": ["samx", "samx_setpoint"]},
+                    ],
+                },
+            },
+        ],
+    },
+}
 
 
 class ConfigDialog(QWidget, Ui_Form):
@@ -36,6 +162,9 @@ class ConfigDialog(QWidget, Ui_Form):
             )
         )
 
+        # Test button configuration to load configs from dict
+        self.pushButton_import.clicked.connect(lambda: self.load_config(config=config_default))
+        self.pushButton_export.clicked.connect(lambda: self.load_config(config=config_scan))
         # Scan Types changed
         self.comboBox_scanTypes.currentIndexChanged.connect(self._init_default)
 
@@ -51,9 +180,11 @@ class ConfigDialog(QWidget, Ui_Form):
     def _init_default(self):
         if self.comboBox_scanTypes.currentText() == "Disabled":
             self.add_new_scan(self.tabWidget_scan_types, "Default")
+            self.add_new_plot(self.tabWidget_scan_types.widget(0))
             self.pushButton_new_scan_type.setEnabled(False)
             self.lineEdit_scan_type.setEnabled(False)
         else:
+            print("scan mode from _init")
             self.pushButton_new_scan_type.setEnabled(True)
             self.lineEdit_scan_type.setEnabled(True)
             self.tabWidget_scan_types.clear()
@@ -85,14 +216,17 @@ class ConfigDialog(QWidget, Ui_Form):
         # Optionally, connect the tabCloseRequested signal to a slot to handle the tab close request
         if closable:
             parent_tab.setTabsClosable(closable)
-        # Add first plot
-        self.add_new_plot(scan_tab)
+        # Add first plot #TODO decide if useful for both modes
+        # self.add_new_plot(scan_tab)
 
-    def add_new_plot(self, scan_tab: QWidget) -> None:
+    def add_new_plot(self, scan_tab: QWidget) -> QWidget:
         """
         Add a new plot tab to the scan tab
         Args:
             scan_tab (QWidget): Scan tab widget
+
+        Returns:
+            plot_tab (QWidget): Plot tab
 
         """
         # Create a new plot tab from .ui template
@@ -108,6 +242,8 @@ class ConfigDialog(QWidget, Ui_Form):
 
         # Hook signal
         self.hook_plot_tab_signals(scan_tab=scan_tab, plot_tab=plot_tab.ui)
+
+        return plot_tab
 
     def hook_plot_tab_signals(self, scan_tab: QTabWidget, plot_tab: Tab_Ui_Form) -> None:
         """
@@ -218,6 +354,68 @@ class ConfigDialog(QWidget, Ui_Form):
         print(config)
         return config
 
+    def load_config(self, config: dict) -> None:
+        # Plot setting General box
+        plot_settings = config.get("plot_settings", {})
+
+        # TODO implement more robust logic for color apply/select
+        self.comboBox_appearance.setCurrentText(plot_settings.get("background_color", ""))
+        self.spinBox_n_column.setValue(plot_settings.get("num_columns", 1))
+        self.comboBox_colormap.setCurrentText(plot_settings.get("colormap", ""))
+        self.comboBox_scanTypes.setCurrentText(
+            "Enabled" if plot_settings.get("scan_types", False) else "Disabled"
+        )
+
+        # Clear exiting scan tabs
+        self.tabWidget_scan_types.clear()
+
+        # Get what mode is active - scan vs default device monitor
+        mode = plot_settings.get("scan_types", False)
+
+        print(f"scan mode:{mode}")
+
+        # default mode
+        if mode is False:
+            plot_data = config.get("plot_data", [])
+            self.add_new_scan(self.tabWidget_scan_types, "Default")
+            # add as many plots as are in the plot_data
+            for plot_config in plot_data:  # TODO iterate through all plots
+                # Create plot tab for each plot and populate GUI
+                plot = self.add_new_plot(self.tabWidget_scan_types.widget(0))
+                self.load_plot_setting(plot, plot_config)
+
+    def load_plot_setting(self, plot: QWidget, plot_config: dict) -> None:
+        """
+        Load plot setting from config
+        Args:
+            plot (QWidget): plot tab widget
+            plot_config (dict): config for single plot tab
+        """
+        x_config = plot_config.get("x", {})
+        x_signals = x_config.get("signals", [{}])[0]  # Assuming at least one x signal
+        y_config = plot_config.get("y", {})
+        y_signals = y_config.get("signals", [])
+
+        # LabelBox
+        plot.ui.lineEdit_plot_title.setText(plot_config.get("plot_name", ""))
+        plot.ui.lineEdit_x_label.setText(x_config.get("label", ""))
+        plot.ui.lineEdit_y_label.setText(y_config.get("label", ""))
+
+        # X axis
+        plot.ui.lineEdit_x_name.setText(x_signals.get("name", ""))
+        plot.ui.lineEdit_x_entry.setText(x_signals.get("entry", ""))
+
+        # Y axis
+        for y_signal in y_signals:
+            row_position = plot.ui.tableWidget_y_signals.rowCount()
+            plot.ui.tableWidget_y_signals.insertRow(row_position)
+            plot.ui.tableWidget_y_signals.setItem(
+                row_position, 0, QTableWidgetItem(y_signal.get("name", ""))
+            )
+            plot.ui.tableWidget_y_signals.setItem(
+                row_position, 1, QTableWidgetItem(y_signal.get("entry", ""))
+            )
+
     @staticmethod
     def safe_text(line_edit: QLineEdit) -> str:
         """
@@ -233,9 +431,6 @@ class ConfigDialog(QWidget, Ui_Form):
     def apply_and_close(self):
         self.apply_config()
         self.close()
-
-    def load_config(self):
-        ...
 
 
 if __name__ == "__main__":
