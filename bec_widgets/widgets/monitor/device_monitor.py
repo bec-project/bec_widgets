@@ -48,7 +48,9 @@ config_simple = {
 class BECDeviceMonitor(pg.GraphicsLayoutWidget):
     update_signal = pyqtSignal()
 
-    def __init__(self, config: dict = config_simple, client=None, parent=None):
+    def __init__(
+        self, config: dict = config_simple, client=None, enable_crosshair: bool = False, parent=None
+    ):
         super(BECDeviceMonitor, self).__init__(parent=None)
 
         # Client and device manager from BEC
@@ -60,6 +62,9 @@ class BECDeviceMonitor(pg.GraphicsLayoutWidget):
 
         # Current configuration
         self.config = config
+
+        # Enable crosshair
+        self.enable_crosshair = enable_crosshair
 
         # Displayed Data
         self.data = {}
@@ -211,7 +216,17 @@ class BECDeviceMonitor(pg.GraphicsLayoutWidget):
 
             self.curves_data[plot_name] = curve_list
 
-    # TODO hook crosshairs here
+        # Hook Crosshair
+        if self.enable_crosshair == True:
+            self.hook_crosshair()
+
+    def hook_crosshair(self) -> None:
+        """Hook the crosshair to all plots."""
+        # TODO can be extendet to hook crosshair signal for mouse move/clicked
+        self.crosshairs = {}
+        for plot_name, plot in self.plots.items():
+            crosshair = Crosshair(plot, precision=3)
+            self.crosshairs[plot_name] = crosshair
 
     def update_plot(self) -> None:
         """Update the plot data based on the stored data dictionary."""
