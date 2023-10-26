@@ -150,7 +150,7 @@ config_scan_mode = {
                     "label": "Multi",
                     "signals": [
                         {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                        {"name": "samx", "entry": ["samx", "samx_setpoint"]},
+                        {"name": "samx", "entry": "samx"},
                     ],
                 },
             },
@@ -161,7 +161,7 @@ config_scan_mode = {
                     "label": "Multi",
                     "signals": [
                         {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                        {"name": "samx", "entry": ["samx", "samx_setpoint"]},
+                        {"name": "samx", "entry": "samx"},
                     ],
                 },
             },

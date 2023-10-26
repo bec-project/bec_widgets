@@ -13,7 +13,6 @@ from PyQt5.QtWidgets import (
 )
 
 from bec_widgets.qt_utils.yaml_dialog import load_yaml, save_yaml
-from bec_widgets.qt_utils.widget_hierarchy import print_widget_hierarchy, export_config_to_dict
 
 current_path = os.path.dirname(__file__)
 Ui_Form, BaseClass = uic.loadUiType(os.path.join(current_path, "config_dialog.ui"))
@@ -164,14 +163,6 @@ class ConfigDialog(QWidget, Ui_Form):
             )
         )
 
-        # Debug buttons
-        self.pushButton_hirarchy.clicked.connect(self.debug_hierarchy)
-
-        # Test button configuration to load configs from dict
-        self.pushButton_def.clicked.connect(lambda: self.load_config(config=config_default))
-        self.pushButton_scan.clicked.connect(lambda: self.load_config(config=config_scan))
-        # self.pushButton_hierarchy.clicked.connect(lambda: print_widget_hierarchy(self))
-
         # Load/save yaml file buttons
         self.pushButton_import.clicked.connect(self.load_config_from_yaml)
         self.pushButton_export.clicked.connect(self.save_config_to_yaml)
@@ -182,24 +173,21 @@ class ConfigDialog(QWidget, Ui_Form):
         # Make scan tabs closable
         self.tabWidget_scan_types.tabCloseRequested.connect(self.handle_tab_close_request)
 
-        # Default configuration
-        # Init functions to make a default dialog #TODO this is useful, but has to be made better
+        # Init functions to make a default dialog
         if default_config is None:
             self._init_default()
-        # self.load_config()
-
-    def debug_hierarchy(self):
-        self.hierarchy_dict = export_config_to_dict(self, grab_values=True, print_hierarchy=True)
-        print(self.hierarchy_dict)
+        else:
+            self.load_config(default_config)
 
     def _init_default(self):
-        if self.comboBox_scanTypes.currentText() == "Disabled":
+        """Init default dialog"""
+
+        if self.comboBox_scanTypes.currentText() == "Disabled":  # Default mode
             self.add_new_scan(self.tabWidget_scan_types, "Default")
             self.add_new_plot(self.tabWidget_scan_types.widget(0))
             self.pushButton_new_scan_type.setEnabled(False)
             self.lineEdit_scan_type.setEnabled(False)
-        else:
-            print("scan mode from _init")
+        else:  # Scan mode with clear tab
             self.pushButton_new_scan_type.setEnabled(True)
             self.lineEdit_scan_type.setEnabled(True)
             self.tabWidget_scan_types.clear()
@@ -214,16 +202,18 @@ class ConfigDialog(QWidget, Ui_Form):
             parent_tab(QTabWidget): Parent tab widget, where to add scan tab
             scan_name(str): Scan name
             closable(bool): If True, the scan tab will be closable
+
         Returns:
             scan_tab(QWidget): Scan tab widget
         """
+
         # Create a new scan tab
         scan_tab = QWidget()
         scan_tab_layout = QVBoxLayout(scan_tab)
 
         # Set a tab widget for plots
         tabWidget_plots = QTabWidget()
-        tabWidget_plots.setObjectName("tabWidget_plots")
+        tabWidget_plots.setObjectName("tabWidget_plots")  # TODO decide if needed to give a name
         tabWidget_plots.setTabsClosable(True)
         tabWidget_plots.tabCloseRequested.connect(self.handle_tab_close_request)
         scan_tab_layout.addWidget(tabWidget_plots)
@@ -231,23 +221,23 @@ class ConfigDialog(QWidget, Ui_Form):
         # Add scan tab
         parent_tab.addTab(scan_tab, scan_name)
 
-        # Optionally, connect the tabCloseRequested signal to a slot to handle the tab close request
+        # Make tabs closable
         if closable:
             parent_tab.setTabsClosable(closable)
-        # Add first plot #TODO decide if useful for both modes
-        # self.add_new_plot(scan_tab)
+
         return scan_tab
 
     def add_new_plot(self, scan_tab: QWidget) -> QWidget:
         """
         Add a new plot tab to the scan tab
+
         Args:
             scan_tab (QWidget): Scan tab widget
 
         Returns:
             plot_tab (QWidget): Plot tab
-
         """
+
         # Create a new plot tab from .ui template
         plot_tab = QWidget()
         plot_tab_ui = Tab_Ui_Form()
@@ -255,7 +245,9 @@ class ConfigDialog(QWidget, Ui_Form):
         plot_tab.ui = plot_tab_ui
 
         # Add plot to current scan tab
-        tabWidget_plots = scan_tab.findChild(QTabWidget, "tabWidget_plots")
+        tabWidget_plots = scan_tab.findChild(
+            QTabWidget, "tabWidget_plots"
+        )  # TODO decide if putting name is needed
         plot_name = f"Plot {tabWidget_plots.count() + 1}"
         tabWidget_plots.addTab(plot_tab, plot_name)
 
@@ -281,9 +273,11 @@ class ConfigDialog(QWidget, Ui_Form):
     def add_new_signal(self, table: QTableWidget) -> None:
         """
         Add a new signal to the table
+
         Args:
             table(QTableWidget): Table widget
         """
+
         row_position = table.rowCount()
         table.insertRow(row_position)
         table.setItem(row_position, 0, QTableWidgetItem(""))
@@ -296,17 +290,21 @@ class ConfigDialog(QWidget, Ui_Form):
         Args:
             index(int): Index of the tab to be closed
         """
+
         parent_tab = self.sender()
-        parent_tab.removeTab(index)
+        if parent_tab.count() > 1:  # ensure there is at least one tab
+            parent_tab.removeTab(index)
 
     def generate_empty_scan_tab(self, parent_tab: QTabWidget, scan_name: str):
         """
         Generate an empty scan tab
+
         Args:
             parent_tab (QTabWidget): Parent tab widget where to add the scan tab
             scan_name(str): name of the scan tab
         """
-        scan_tab = self.add_new_scan(parent_tab, scan_name, True)
+
+        scan_tab = self.add_new_scan(parent_tab, scan_name, closable=True)
         self.add_new_plot(scan_tab)
 
     def get_plot_config(self, plot_tab: QWidget) -> dict:
@@ -346,6 +344,7 @@ class ConfigDialog(QWidget, Ui_Form):
                 "signals": signals,
             },
         }
+
         return plot_data
 
     def apply_config(self) -> dict:
@@ -353,9 +352,10 @@ class ConfigDialog(QWidget, Ui_Form):
         Apply configuration from the whole configuration window
 
         Returns:
-            dict: Configuration
+            dict: Current configuration
 
         """
+
         # General settings
         config = {
             "plot_settings": {
@@ -369,13 +369,8 @@ class ConfigDialog(QWidget, Ui_Form):
 
         # Iterate through the plot tabs - Device monitor mode
         if config["plot_settings"]["scan_types"] == False:
-            plot_tab = self.tabWidget_scan_types.widget(0).findChild(
-                QTabWidget
-            )  # , "tabWidget_plots") #TODO bug was here?
-            print(f"number of tabs: {plot_tab.count()}")
+            plot_tab = self.tabWidget_scan_types.widget(0).findChild(QTabWidget)
             for index in range(plot_tab.count()):
-                print(f"plot MODE tab index: {index}")
-                # export_config_to_dict(plot_tab.widget(index), print_hierarchy=True, grab_values=True)
                 plot_data = self.get_plot_config(plot_tab.widget(index))
                 config["plot_data"].append(plot_data)
 
@@ -383,54 +378,50 @@ class ConfigDialog(QWidget, Ui_Form):
         elif config["plot_settings"]["scan_types"] == True:
             # Iterate through the scan tabs
             for index in range(self.tabWidget_scan_types.count()):
-                print(f"scan tab index: {index}")
                 scan_tab = self.tabWidget_scan_types.widget(index)
                 scan_name = self.tabWidget_scan_types.tabText(index)
-                plot_tab = scan_tab.findChild(QTabWidget)  # TODO here bug?
+                plot_tab = scan_tab.findChild(QTabWidget)
                 config["plot_data"][scan_name] = []
+                # Iterate through the plot tabs
                 for index in range(plot_tab.count()):
-                    print(f"plot tab index: {index}")
                     plot_data = self.get_plot_config(plot_tab.widget(index))
                     config["plot_data"][scan_name].append(plot_data)
 
-        print(f"applied config: {config})")
         return config
 
     def load_config(self, config: dict) -> None:
+        """
+        Load configuration to the configuration window
+
+        Args:
+            config(dict): Configuration to be loaded
+        """
+
         # Plot setting General box
         plot_settings = config.get("plot_settings", {})
 
-        # TODO implement more robust logic for color apply/select
-        self.comboBox_appearance.setCurrentText(plot_settings.get("background_color", ""))
+        self.comboBox_appearance.setCurrentText(plot_settings.get("background_color", "black"))
         self.spinBox_n_column.setValue(plot_settings.get("num_columns", 1))
-        self.comboBox_colormap.setCurrentText(plot_settings.get("colormap", ""))
+        self.comboBox_colormap.setCurrentText(plot_settings.get("colormap", "magma"))
         self.comboBox_scanTypes.setCurrentText(
             "Enabled" if plot_settings.get("scan_types", False) else "Disabled"
         )
 
         # Clear exiting scan tabs
-        self.tabWidget_scan_types.clear()  # TODO can cause var leak?
+        self.tabWidget_scan_types.clear()
 
         # Get what mode is active - scan vs default device monitor
-        mode = plot_settings.get("scan_types", False)
+        scan_mode = plot_settings.get("scan_types", False)
 
-        print(f"scan mode:{mode}")
-
-        # default mode
-        if mode is False:
+        if scan_mode is False:  # default mode:
             plot_data = config.get("plot_data", [])
             self.add_new_scan(self.tabWidget_scan_types, "Default")
-            for plot_config in plot_data:  # TODO iterate through all plots
-                print(f"plot_config: {plot_config}")
-
-                # Create plot tab for each plot and populate GUI
+            for plot_config in plot_data:  # Create plot tab for each plot and populate GUI
                 plot = self.add_new_plot(self.tabWidget_scan_types.widget(0))
                 self.load_plot_setting(plot, plot_config)
-        elif mode is True:
+        elif scan_mode is True:  # scan mode
             plot_data = config.get("plot_data", {})
             for scan_name, scan_config in plot_data.items():
-                print(f"scan name: {scan_name}")
-                print(f"scan config: {scan_config}")
                 scan_tab = self.add_new_scan(self.tabWidget_scan_types, scan_name)
                 for plot_config in scan_config:
                     plot = self.add_new_plot(scan_tab)
@@ -439,6 +430,7 @@ class ConfigDialog(QWidget, Ui_Form):
     def load_plot_setting(self, plot: QWidget, plot_config: dict) -> None:
         """
         Load plot setting from config
+
         Args:
             plot (QWidget): plot tab widget
             plot_config (dict): config for single plot tab
@@ -480,7 +472,6 @@ class ConfigDialog(QWidget, Ui_Form):
         Save configuration to yaml file
         """
         config = self.apply_config()
-        print(f"confgi to save:{config}")
         save_yaml(self, config)
 
     @staticmethod
@@ -496,7 +487,8 @@ class ConfigDialog(QWidget, Ui_Form):
         return "" if line_edit is None else line_edit.text()
 
     def apply_and_close(self):
-        self.apply_config()
+        new_config = self.apply_config()
+        self.config_updated.emit(new_config)
         self.close()
 
 

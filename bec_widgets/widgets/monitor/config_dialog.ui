@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>585</width>
+    <width>597</width>
     <height>769</height>
    </rect>
   </property>
@@ -141,27 +141,6 @@
         <string>Configuration</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout">
-        <item>
-         <widget class="QPushButton" name="pushButton_hirarchy">
-          <property name="text">
-           <string>Hiearchy</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pushButton_def">
-          <property name="text">
-           <string>ImpDef</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="pushButton_scan">
-          <property name="text">
-           <string>ImpScan</string>
-          </property>
-         </widget>
-        </item>
         <item>
          <widget class="QPushButton" name="pushButton_import">
           <property name="text">

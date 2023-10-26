@@ -435,7 +435,9 @@ class PlotApp(QWidget):
                 curve.setData(data_x, data_y)
 
     @pyqtSlot(dict, dict)
-    def on_scan_segment(self, msg, metadata) -> None:
+    def on_scan_segment(
+        self, msg, metadata
+    ) -> None:  # TODO the logic should be separated from GUI operation
         """
         Handle new scan segments and saves data to a dictionary. Linked through bec_dispatcher.
 
@@ -566,7 +568,7 @@ class PlotApp(QWidget):
             except Exception as e:
                 print(f"An error occurred while saving the settings to {file_path}: {e}")
 
-    def load_settings_from_yaml(self) -> dict:
+    def load_settings_from_yaml(self) -> dict:  # TODO can be replace by the qt_utils function
         """Load settings from a .yaml file using a file dialog and update the current settings."""
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
