@@ -1,0 +1,92 @@
+plot_settings:
+  background_color: "black"
+  num_columns: 2
+  colormap: "plasma"
+  scan_types: True
+
+plot_data:
+  line_scan:
+
+    - plot_name: "BPM plot"
+      x:
+        label: 'Motor X'
+        signals:
+          - name: "samx"
+            entry: "samx"
+      y:
+        label: 'BPM'
+        signals:
+          - name: "gauss_bpm"
+            entry: "gauss_bpm"
+          - name: "gauss_adc1"
+            entry: "gauss_adc1"
+          - name: "gauss_adc2"
+            entry: "gauss_adc2"
+
+    - plot_name: "Multi"
+      x:
+        label: 'Motor X'
+        signals:
+          - name: "samx"
+            entry: "samx"
+      y:
+        label: 'Multi'
+        signals:
+          - name: "gauss_bpm"
+            entry: "gauss_bpm"
+          - name: "samx"
+            entry: "samx"
+
+  grid_scan:
+    - plot_name: "Grid plot 1"
+      x:
+        label: 'Motor X'
+        signals:
+          - name: "samx"
+            entry: "samx"
+      y:
+        label: 'BPM'
+        signals:
+          - name: "gauss_bpm"
+            entry: "gauss_bpm"
+          - name: "gauss_adc1"
+            entry: "gauss_adc1"
+
+    - plot_name: "Grid plot 2"
+      x:
+        label: 'Motor X'
+        signals:
+          - name: "samx"
+            entry: "samx"
+      y:
+        label: 'BPM'
+        signals:
+          - name: "gauss_bpm"
+            entry: "gauss_bpm"
+          - name: "gauss_adc1"
+            entry: "gauss_adc1"
+
+    - plot_name: "Grid plot 3"
+      x:
+        label: 'Motor Y'
+        signals:
+          - name: "samy"
+            entry: "samy"
+      y:
+        label: 'BPM'
+        signals:
+          - name: "gauss_bpm"
+            entry: "gauss_bpm"
+
+    - plot_name: "Grid plot 4"
+      x:
+        label: 'Motor Y'
+        signals:
+          - name: "samy"
+            entry: "samy"
+      y:
+        label: 'BPM'
+        signals:
+          - name: "gauss_adc3"
+            entry: "gauss_adc3"
+

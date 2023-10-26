@@ -1,5 +1,4 @@
 import os
-import time
 
 from PyQt5 import uic
 from PyQt5.QtCore import pyqtSignal
@@ -12,6 +11,9 @@ from PyQt5.QtWidgets import (
     QTableWidgetItem,
     QLineEdit,
 )
+
+from bec_widgets.qt_utils.yaml_dialog import load_yaml, save_yaml
+from bec_widgets.qt_utils.widget_hierarchy import print_widget_hierarchy, export_config_to_dict
 
 current_path = os.path.dirname(__file__)
 Ui_Form, BaseClass = uic.loadUiType(os.path.join(current_path, "config_dialog.ui"))
@@ -123,7 +125,7 @@ config_scan = {
                     "label": "Multi",
                     "signals": [
                         {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                        {"name": "samx", "entry": ["samx", "samx_setpoint"]},
+                        {"name": "samx", "entry": "samx"},
                     ],
                 },
             },
@@ -134,7 +136,7 @@ config_scan = {
                     "label": "Multi",
                     "signals": [
                         {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                        {"name": "samx", "entry": ["samx", "samx_setpoint"]},
+                        {"name": "samx", "entry": "samx"},
                     ],
                 },
             },
@@ -157,14 +159,23 @@ class ConfigDialog(QWidget, Ui_Form):
 
         # Hook signals top level
         self.pushButton_new_scan_type.clicked.connect(
-            lambda: self.add_new_scan(
-                self.tabWidget_scan_types, self.lineEdit_scan_type.text(), True
+            lambda: self.generate_empty_scan_tab(
+                self.tabWidget_scan_types, self.lineEdit_scan_type.text()
             )
         )
 
+        # Debug buttons
+        self.pushButton_hirarchy.clicked.connect(self.debug_hierarchy)
+
         # Test button configuration to load configs from dict
-        self.pushButton_import.clicked.connect(lambda: self.load_config(config=config_default))
-        self.pushButton_export.clicked.connect(lambda: self.load_config(config=config_scan))
+        self.pushButton_def.clicked.connect(lambda: self.load_config(config=config_default))
+        self.pushButton_scan.clicked.connect(lambda: self.load_config(config=config_scan))
+        # self.pushButton_hierarchy.clicked.connect(lambda: print_widget_hierarchy(self))
+
+        # Load/save yaml file buttons
+        self.pushButton_import.clicked.connect(self.load_config_from_yaml)
+        self.pushButton_export.clicked.connect(self.save_config_to_yaml)
+
         # Scan Types changed
         self.comboBox_scanTypes.currentIndexChanged.connect(self._init_default)
 
@@ -176,6 +187,10 @@ class ConfigDialog(QWidget, Ui_Form):
         if default_config is None:
             self._init_default()
         # self.load_config()
+
+    def debug_hierarchy(self):
+        self.hierarchy_dict = export_config_to_dict(self, grab_values=True, print_hierarchy=True)
+        print(self.hierarchy_dict)
 
     def _init_default(self):
         if self.comboBox_scanTypes.currentText() == "Disabled":
@@ -189,15 +204,18 @@ class ConfigDialog(QWidget, Ui_Form):
             self.lineEdit_scan_type.setEnabled(True)
             self.tabWidget_scan_types.clear()
 
-    def add_new_scan(self, parent_tab: QTabWidget, scan_name: str, closable: bool = False) -> None:
+    def add_new_scan(
+        self, parent_tab: QTabWidget, scan_name: str, closable: bool = False
+    ) -> QWidget:
         """
         Add a new scan tab to the parent tab widget
 
         Args:
-            closable:
             parent_tab(QTabWidget): Parent tab widget, where to add scan tab
             scan_name(str): Scan name
             closable(bool): If True, the scan tab will be closable
+        Returns:
+            scan_tab(QWidget): Scan tab widget
         """
         # Create a new scan tab
         scan_tab = QWidget()
@@ -218,6 +236,7 @@ class ConfigDialog(QWidget, Ui_Form):
             parent_tab.setTabsClosable(closable)
         # Add first plot #TODO decide if useful for both modes
         # self.add_new_plot(scan_tab)
+        return scan_tab
 
     def add_new_plot(self, scan_tab: QWidget) -> QWidget:
         """
@@ -260,6 +279,11 @@ class ConfigDialog(QWidget, Ui_Form):
         )
 
     def add_new_signal(self, table: QTableWidget) -> None:
+        """
+        Add a new signal to the table
+        Args:
+            table(QTableWidget): Table widget
+        """
         row_position = table.rowCount()
         table.insertRow(row_position)
         table.setItem(row_position, 0, QTableWidgetItem(""))
@@ -275,18 +299,29 @@ class ConfigDialog(QWidget, Ui_Form):
         parent_tab = self.sender()
         parent_tab.removeTab(index)
 
-    def get_plot_config(self, plot_tab: Tab_Ui_Form) -> dict:
+    def generate_empty_scan_tab(self, parent_tab: QTabWidget, scan_name: str):
+        """
+        Generate an empty scan tab
+        Args:
+            parent_tab (QTabWidget): Parent tab widget where to add the scan tab
+            scan_name(str): name of the scan tab
+        """
+        scan_tab = self.add_new_scan(parent_tab, scan_name, True)
+        self.add_new_plot(scan_tab)
+
+    def get_plot_config(self, plot_tab: QWidget) -> dict:
         """
         Get plot configuration from the plot tab adn send it as dict
 
         Args:
-            plot_tab(Tab_Ui_Form): Plot tab widget
+            plot_tab(QWidget): Plot tab widget
 
         Returns:
             dict: Plot configuration
         """
 
-        table = plot_tab.tableWidget_y_signals
+        ui = plot_tab.ui
+        table = ui.tableWidget_y_signals
         signals = [
             {
                 "name": self.safe_text(table.item(row, 0)),
@@ -296,18 +331,18 @@ class ConfigDialog(QWidget, Ui_Form):
         ]
 
         plot_data = {
-            "plot_name": self.safe_text(plot_tab.lineEdit_plot_title),
+            "plot_name": self.safe_text(ui.lineEdit_plot_title),
             "x": {
-                "label": self.safe_text(plot_tab.lineEdit_x_label),
+                "label": self.safe_text(ui.lineEdit_x_label),
                 "signals": [
                     {
-                        "name": self.safe_text(plot_tab.lineEdit_x_name),
-                        "entry": self.safe_text(plot_tab.lineEdit_x_entry),
+                        "name": self.safe_text(ui.lineEdit_x_name),
+                        "entry": self.safe_text(ui.lineEdit_x_entry),
                     }
                 ],
             },
             "y": {
-                "label": self.safe_text(plot_tab.lineEdit_y_label),
+                "label": self.safe_text(ui.lineEdit_y_label),
                 "signals": signals,
             },
         }
@@ -334,24 +369,31 @@ class ConfigDialog(QWidget, Ui_Form):
 
         # Iterate through the plot tabs - Device monitor mode
         if config["plot_settings"]["scan_types"] == False:
-            plot_tab = self.tabWidget_scan_types.findChild(QTabWidget, "tabWidget_plots")
+            plot_tab = self.tabWidget_scan_types.widget(0).findChild(
+                QTabWidget
+            )  # , "tabWidget_plots") #TODO bug was here?
+            print(f"number of tabs: {plot_tab.count()}")
             for index in range(plot_tab.count()):
-                plot_data = self.get_plot_config(plot_tab.widget(index).ui)
+                print(f"plot MODE tab index: {index}")
+                # export_config_to_dict(plot_tab.widget(index), print_hierarchy=True, grab_values=True)
+                plot_data = self.get_plot_config(plot_tab.widget(index))
                 config["plot_data"].append(plot_data)
 
         # Iterate through the scan tabs - Scan mode
         elif config["plot_settings"]["scan_types"] == True:
             # Iterate through the scan tabs
             for index in range(self.tabWidget_scan_types.count()):
+                print(f"scan tab index: {index}")
                 scan_tab = self.tabWidget_scan_types.widget(index)
                 scan_name = self.tabWidget_scan_types.tabText(index)
-                plot_tab = scan_tab.findChild(QTabWidget, "tabWidget_plots")
-                plot_data = {}
+                plot_tab = scan_tab.findChild(QTabWidget)  # TODO here bug?
+                config["plot_data"][scan_name] = []
                 for index in range(plot_tab.count()):
-                    plot_data = self.get_plot_config(plot_tab.widget(index).ui)
-                config["plot_data"][scan_name] = plot_data
+                    print(f"plot tab index: {index}")
+                    plot_data = self.get_plot_config(plot_tab.widget(index))
+                    config["plot_data"][scan_name].append(plot_data)
 
-        print(config)
+        print(f"applied config: {config})")
         return config
 
     def load_config(self, config: dict) -> None:
@@ -367,7 +409,7 @@ class ConfigDialog(QWidget, Ui_Form):
         )
 
         # Clear exiting scan tabs
-        self.tabWidget_scan_types.clear()
+        self.tabWidget_scan_types.clear()  # TODO can cause var leak?
 
         # Get what mode is active - scan vs default device monitor
         mode = plot_settings.get("scan_types", False)
@@ -378,11 +420,21 @@ class ConfigDialog(QWidget, Ui_Form):
         if mode is False:
             plot_data = config.get("plot_data", [])
             self.add_new_scan(self.tabWidget_scan_types, "Default")
-            # add as many plots as are in the plot_data
             for plot_config in plot_data:  # TODO iterate through all plots
+                print(f"plot_config: {plot_config}")
+
                 # Create plot tab for each plot and populate GUI
                 plot = self.add_new_plot(self.tabWidget_scan_types.widget(0))
                 self.load_plot_setting(plot, plot_config)
+        elif mode is True:
+            plot_data = config.get("plot_data", {})
+            for scan_name, scan_config in plot_data.items():
+                print(f"scan name: {scan_name}")
+                print(f"scan config: {scan_config}")
+                scan_tab = self.add_new_scan(self.tabWidget_scan_types, scan_name)
+                for plot_config in scan_config:
+                    plot = self.add_new_plot(scan_tab)
+                    self.load_plot_setting(plot, plot_config)
 
     def load_plot_setting(self, plot: QWidget, plot_config: dict) -> None:
         """
@@ -415,6 +467,21 @@ class ConfigDialog(QWidget, Ui_Form):
             plot.ui.tableWidget_y_signals.setItem(
                 row_position, 1, QTableWidgetItem(y_signal.get("entry", ""))
             )
+
+    def load_config_from_yaml(self):
+        """
+        Load configuration from yaml file
+        """
+        config = load_yaml(self)
+        self.load_config(config)
+
+    def save_config_to_yaml(self):
+        """
+        Save configuration to yaml file
+        """
+        config = self.apply_config()
+        print(f"confgi to save:{config}")
+        save_yaml(self, config)
 
     @staticmethod
     def safe_text(line_edit: QLineEdit) -> str:
