@@ -206,6 +206,11 @@ class ConfigDialog(QWidget, Ui_Form):
         Returns:
             scan_tab(QWidget): Scan tab widget
         """
+        # Check for an existing tab with the same name
+        for index in range(parent_tab.count()):
+            if parent_tab.tabText(index) == scan_name:
+                print(f'Scan name "{scan_name}" already exists.')
+                return None  # or return the existing tab: return parent_tab.widget(index)
 
         # Create a new scan tab
         scan_tab = QWidget()
@@ -305,7 +310,8 @@ class ConfigDialog(QWidget, Ui_Form):
         """
 
         scan_tab = self.add_new_scan(parent_tab, scan_name, closable=True)
-        self.add_new_plot(scan_tab)
+        if scan_tab is not None:
+            self.add_new_plot(scan_tab)
 
     def get_plot_config(self, plot_tab: QWidget) -> dict:
         """
