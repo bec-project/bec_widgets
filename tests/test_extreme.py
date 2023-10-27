@@ -326,10 +326,10 @@ def mock_getitem(dev_name):
 
 
 @pytest.mark.parametrize(
-    "config, msg, metadata, expected_data, mock_hints",
+    "config, msg, metadata, expected_data",
     [
         # Case: msg does not have 'scanID'
-        (config_device_mode_all_filled, {"data": {}}, {}, {}, None),
+        (config_device_mode_all_filled, {"data": {}}, {}, {}),
         # Case: scan_types is False, msg contains all valid fields, and entry is present in config
         (
             config_device_mode_all_filled,
@@ -346,7 +346,6 @@ def mock_getitem(dev_name):
                 ("samx", "samx", "bpm4i", "bpm4i"): {"x": [10], "y": [5]},
                 ("samx", "samx", "gauss_bpm", "gauss_bpm"): {"x": [10], "y": [7]},
             },
-            None,
         ),
         # Case: scan_types is False, msg contains all valid fields and entry is missing in config, should use hints
         (
@@ -364,15 +363,13 @@ def mock_getitem(dev_name):
                 ("samx", "samx", "bpm4i", "bpm4i"): {"x": [10], "y": [5]},
                 ("samx", "samx", "gauss_bpm", "gauss_bpm"): {"x": [10], "y": [7]},
             },
-            {"samx": "samx", "bpm4i": "bpm4i", "gauss_bpm": "gauss_bpm"},
         ),
     ],
 )
-def test_on_scan_segment(qtbot, config, msg, metadata, expected_data, mock_hints):
+def test_on_scan_segment(qtbot, config, msg, metadata, expected_data):
     plot_app = setup_plot_app(qtbot, config)
 
     # Initialize and run test
-    plot_app.init_curves = MagicMock()
     plot_app.data = {}
     plot_app.scanID = 0
 

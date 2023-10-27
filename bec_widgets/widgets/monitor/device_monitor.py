@@ -286,6 +286,7 @@ class BECDeviceMonitor(pg.GraphicsLayoutWidget):
             metadata (dict): Metadata of the scan.
         """
         # TODO logic can be separated into different methods or there could be separate class for scan data handling
+        # TODO for scan mode, if there are same names for different plots, the data are assigned multiple times
         current_scanID = msg.get("scanID", None)
         if current_scanID is None:
             return
