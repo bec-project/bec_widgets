@@ -11,6 +11,7 @@ from PyQt5 import uic
 from bec_widgets.bec_dispatcher import bec_dispatcher
 from bec_widgets.qt_utils import Crosshair, Colors
 
+# just for demonstration purposes is script run directly
 config_simple = {
     "plot_settings": {
         "background_color": "black",
@@ -103,7 +104,7 @@ class BECDeviceMonitor(pg.GraphicsLayoutWidget):
         else:  # setup first line scan as default, then changed with different scan type
             self.plot_data = self.plot_data_config[list(self.plot_data_config.keys())[0]]
 
-        # TODO init plot background -> so far not used, I don;t like how it is done in extreme.py
+        # TODO init plot background -> so far not used, I don't like how it is done in extreme.py
 
         # Initialize the UI
         self._init_ui(self.plot_settings["num_columns"])
@@ -166,7 +167,7 @@ class BECDeviceMonitor(pg.GraphicsLayoutWidget):
 
         self.init_curves()
 
-    def init_curves(self):
+    def init_curves(self) -> None:
         """
         Initialize curve data and properties, and update table row labels.
 
@@ -189,7 +190,6 @@ class BECDeviceMonitor(pg.GraphicsLayoutWidget):
 
             curve_list = []
             for i, (y_config, color) in enumerate(zip(y_configs, colors_ys)):
-                # print(y_config)
                 y_name = y_config["name"]
                 y_entries = y_config.get("entry", [y_name])
 
@@ -247,21 +247,32 @@ class BECDeviceMonitor(pg.GraphicsLayoutWidget):
                 curve.setData(data_x, data_y)
 
     def get_config(self):
+        """Return the current configuration settings."""
         return self.config
 
     def show_config_dialog(self):
+        """Show the configuration dialog."""
         from .config_dialog import ConfigDialog
 
         dialog = ConfigDialog(default_config=self.config)
         dialog.config_updated.connect(self.update_config)
         dialog.show()
 
-    def update_client(self, client):
+    def update_client(self, client) -> None:
+        """Update the client and device manager from BEC.
+        Args:
+            client: BEC client
+        """
         self.client = client
         self.dev = self.client.device_manager.devices
 
     @pyqtSlot(dict)
-    def update_config(self, config):
+    def update_config(self, config: dict) -> None:
+        """
+        Update the configuration settings for the PlotApp.
+        Args:
+            config(dict): Configuration settings
+        """
         self.config = config
         self._init_config()
 
@@ -274,6 +285,7 @@ class BECDeviceMonitor(pg.GraphicsLayoutWidget):
             msg (dict): Message received with scan data.
             metadata (dict): Metadata of the scan.
         """
+        # TODO logic can be separated into different methods or there could be separate class for scan data handling
         current_scanID = msg.get("scanID", None)
         if current_scanID is None:
             return
