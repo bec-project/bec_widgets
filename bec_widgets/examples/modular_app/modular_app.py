@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QMainWindow, QApplication, QVBoxLayout
 
 from bec_widgets.widgets.monitor import BECDeviceMonitor
 
+# some default configs for demonstration purposes
 config_1 = {
     "plot_settings": {
         "background_color": "black",
@@ -184,29 +185,15 @@ class ModularApp(QMainWindow):
         self._init_plots()
 
     def _init_plots(self):
-        self.glw_1_layout = QVBoxLayout(self.glw_1)  # Create a new QVBoxLayout
-        self.bec_device_monitor_1 = BECDeviceMonitor(parent=self, config=config_1)
-        self.glw_1_layout.addWidget(self.bec_device_monitor_1)  # Add BECDeviceMonitor to the layout
-        self.pushButton_setting_1.clicked.connect(
-            lambda: self.bec_device_monitor_1.show_config_dialog()
-        )
+        """Initialize plots and connect the buttons to the config dialogs"""
+        plots = [self.plot_1, self.plot_2, self.plot_3]
+        configs = [config_1, config_2, config_scan_mode]
+        buttons = [self.pushButton_setting_1, self.pushButton_setting_2, self.pushButton_setting_3]
 
-        self.glw_2_layout = QVBoxLayout(self.glw_2)  # Create a new QVBoxLayout
-        self.bec_device_monitor_2 = BECDeviceMonitor(parent=self, config=config_2)
-        self.glw_2_layout.addWidget(self.bec_device_monitor_2)  # Add BECDeviceMonitor to the layout
-        self.pushButton_setting_2.clicked.connect(
-            lambda: self.bec_device_monitor_2.show_config_dialog()
-        )
-
-        self.glw_3_layout = QVBoxLayout(self.glw_3)  # Create a new QVBoxLayout
-        self.bec_device_monitor_3 = BECDeviceMonitor(parent=self, config=config_scan_mode)
-        self.glw_3_layout.addWidget(self.bec_device_monitor_3)  # Add BECDeviceMonitor to the layout
-        self.pushButton_setting_3.clicked.connect(
-            lambda: self.bec_device_monitor_3.show_config_dialog()
-        )
-
-    def show_config_dialog(self, monitor):
-        monitor.show_config_dialog()
+        # hook plots, configs and buttons together
+        for plot, config, button in zip(plots, configs, buttons):
+            plot.update_config(config)
+            button.clicked.connect(plot.show_config_dialog)
 
 
 if __name__ == "__main__":

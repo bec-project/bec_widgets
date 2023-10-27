@@ -49,9 +49,9 @@ class BECDeviceMonitor(pg.GraphicsLayoutWidget):
     update_signal = pyqtSignal()
 
     def __init__(
-        self, config: dict = config_simple, client=None, enable_crosshair: bool = False, parent=None
+        self, parent=None, client=None, config: dict = None, enable_crosshair: bool = False
     ):
-        super(BECDeviceMonitor, self).__init__(parent=None)
+        super(BECDeviceMonitor, self).__init__(parent=parent)
 
         # Client and device manager from BEC
         self.client = bec_dispatcher.client if client is None else client
@@ -83,9 +83,10 @@ class BECDeviceMonitor(pg.GraphicsLayoutWidget):
         )
 
         # Init UI
-        self._init_config()
-        # self._init_ui() #TODO could be removed
-        # self._init_curves()
+        if self.config is None:
+            print("No initial config found for BECDeviceMonitor")
+        else:
+            self.update_config(self.config)
 
     def _init_config(self):
         """
@@ -222,7 +223,7 @@ class BECDeviceMonitor(pg.GraphicsLayoutWidget):
 
     def hook_crosshair(self) -> None:
         """Hook the crosshair to all plots."""
-        # TODO can be extendet to hook crosshair signal for mouse move/clicked
+        # TODO can be extended to hook crosshair signal for mouse move/clicked
         self.crosshairs = {}
         for plot_name, plot in self.plots.items():
             crosshair = Crosshair(plot, precision=3)
@@ -254,6 +255,10 @@ class BECDeviceMonitor(pg.GraphicsLayoutWidget):
         dialog = ConfigDialog(default_config=self.config)
         dialog.config_updated.connect(self.update_config)
         dialog.show()
+
+    def update_client(self, client):
+        self.client = client
+        self.dev = self.client.device_manager.devices
 
     @pyqtSlot(dict)
     def update_config(self, config):
