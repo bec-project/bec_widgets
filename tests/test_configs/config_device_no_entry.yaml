@@ -1,0 +1,24 @@
+plot_settings:
+  background_color: "white"
+  num_columns: 5
+  colormap: "plasma"
+  scan_types: false
+plot_data:
+- plot_name: "BPM4i plots vs samx"
+  x:
+    label: "Motor Y"
+    signals:
+    - name: "samx"
+  y:
+    label: "bpm4i"
+    signals:
+    - name: "bpm4i"
+- plot_name: "Gauss plots vs samx"
+  x:
+    label: "Motor X"
+    signals:
+    - name: "samx"
+  y:
+    label: "Gauss"
+    signals:
+    - name: "gauss_bpm"
