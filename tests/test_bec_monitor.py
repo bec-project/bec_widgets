@@ -1,155 +1,30 @@
-from unittest.mock import MagicMock
+import os
+import yaml
 
 import pytest
+from unittest.mock import MagicMock
 from PyQt5.QtWidgets import QApplication
 
 from bec_widgets.widgets import BECMonitor
 
-config_device = {
-    "plot_settings": {
-        "background_color": "black",
-        "num_columns": 1,
-        "colormap": "plasma",
-        "scan_types": False,
-    },
-    "plot_data": [
-        {
-            "plot_name": "BPM4i plots vs samx",
-            "x": {
-                "label": "Motor Y",
-                "signals": [{"name": "samx", "entry": "samx"}],
-            },
-            "y": {
-                "label": "bpm4i",
-                "signals": [{"name": "bpm4i", "entry": "bpm4i"}],
-            },
-        },
-        {
-            "plot_name": "Gauss plots vs samx",
-            "x": {
-                "label": "Motor X",
-                "signals": [{"name": "samx", "entry": "samx"}],
-            },
-            "y": {
-                "label": "Gauss",
-                "signals": [
-                    {"name": "gauss_adc1", "entry": "gauss_adc1"},
-                    {"name": "gauss_adc2", "entry": "gauss_adc2"},
-                ],
-            },
-        },
-    ],
-}
+current_path = os.path.dirname(__file__)
 
 
-config_device_no_entry = {
-    "plot_settings": {
-        "background_color": "white",
-        "num_columns": 5,  # Number of columns higher than the actual number of plots
-        "colormap": "plasma",
-        "scan_types": False,
-    },
-    "plot_data": [
-        {
-            "plot_name": "BPM4i plots vs samx",
-            "x": {
-                "label": "Motor Y",
-                "signals": [{"name": "samx"}],  # Entry is missing
-            },
-            "y": {
-                "label": "bpm4i",
-                "signals": [{"name": "bpm4i"}],  # Entry is missing
-            },
-        },
-        {
-            "plot_name": "Gauss plots vs samx",
-            "x": {
-                "label": "Motor X",
-                "signals": [{"name": "samx"}],  # Entry is missing
-            },
-            "y": {
-                "label": "Gauss",
-                "signals": [{"name": "gauss_bpm"}],  # Entry is missing
-            },
-        },
-    ],
-}
-
-config_scan = {
-    "plot_settings": {
-        "background_color": "white",
-        "num_columns": 3,
-        "colormap": "plasma",
-        "scan_types": True,
-    },
-    "plot_data": {
-        "grid_scan": [
-            {
-                "plot_name": "Grid plot 1",
-                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {
-                    "label": "BPM",
-                    "signals": [
-                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                    ],
-                },
-            },
-            {
-                "plot_name": "Grid plot 2",
-                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {
-                    "label": "BPM",
-                    "signals": [
-                        {"name": "gauss_adc1", "entry": "gauss_adc1"},
-                    ],
-                },
-            },
-            {
-                "plot_name": "Grid plot 3",
-                "x": {"label": "Motor Y", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {
-                    "label": "BPM",
-                    "signals": [{"name": "gauss_adc2", "entry": "gauss_adc2"}],
-                },
-            },
-            {
-                "plot_name": "Grid plot 4",
-                "x": {"label": "Motor Y", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {
-                    "label": "BPM",
-                    "signals": [{"name": "bpm4i", "entry": "bpm4i"}],
-                },
-            },
-        ],
-        "line_scan": [
-            {
-                "plot_name": "Multiple Gauss Plot",
-                "x": {"label": "Motor X", "signals": [{"name": "samx"}]},
-                "y": {
-                    "label": "BPM",
-                    "signals": [
-                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                        {"name": "gauss_adc1", "entry": "gauss_adc1"},
-                        {"name": "gauss_adc2", "entry": "gauss_adc2"},
-                    ],
-                },
-            },
-            {
-                "plot_name": "BPM Plot",
-                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {
-                    "label": "Multi",
-                    "signals": [
-                        {"name": "bpm4i", "entry": "bpm4i"},
-                    ],
-                },
-            },
-        ],
-    },
-}
+def load_config(config_path):
+    """Helper function to load config from yaml file."""
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)
+    return config
 
 
-def setup_monitor(qtbot, config):
+config_device = load_config(os.path.join(current_path, "test_configs/config_device.yaml"))
+config_device_no_entry = load_config(
+    os.path.join(current_path, "test_configs/config_device_no_entry.yaml")
+)
+config_scan = load_config(os.path.join(current_path, "test_configs/config_scan.yaml"))
+
+
+def setup_monitor(qtbot, config):  # TODO fixture or helper function?
     """Helper function to set up the BECDeviceMonitor widget."""
     client = MagicMock()
     widget = BECMonitor(config=config, client=client)
@@ -246,7 +121,7 @@ def mock_getitem(dev_name):
     return mock_instance
 
 
-# mocked messages and metadatas
+# mocked messages and metadata
 msg_1 = {
     "data": {
         "samx": {"samx": {"value": 10}},
@@ -316,7 +191,6 @@ def test_on_scan_segment(qtbot, config, msg, metadata, expected_data):
     plot_app = setup_monitor(qtbot, config)
 
     # Initialize and run test
-    # plot_app.init_curves = MagicMock()
     plot_app.data = {}
     plot_app.scanID = 0
 

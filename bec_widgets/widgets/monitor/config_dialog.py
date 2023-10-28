@@ -17,8 +17,8 @@ from bec_widgets.qt_utils.yaml_dialog import load_yaml, save_yaml
 current_path = os.path.dirname(__file__)
 Ui_Form, BaseClass = uic.loadUiType(os.path.join(current_path, "config_dialog.ui"))
 Tab_Ui_Form, Tab_BaseClass = uic.loadUiType(os.path.join(current_path, "tab_template.ui"))
-# test configs #TODO delete after loading works
 
+# test configs for demonstration purpose
 config_default = {
     "plot_settings": {
         "background_color": "black",
@@ -408,7 +408,9 @@ class ConfigDialog(QWidget, Ui_Form):
 
         self.comboBox_appearance.setCurrentText(plot_settings.get("background_color", "black"))
         self.spinBox_n_column.setValue(plot_settings.get("num_columns", 1))
-        self.comboBox_colormap.setCurrentText(plot_settings.get("colormap", "magma"))
+        self.comboBox_colormap.setCurrentText(
+            plot_settings.get("colormap", "magma")
+        )  # TODO make logic to allow also different colormaps -> validation of incoming dict
         self.comboBox_scanTypes.setCurrentText(
             "Enabled" if plot_settings.get("scan_types", False) else "Disabled"
         )
