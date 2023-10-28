@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 from PyQt5.QtWidgets import QApplication
 
-from bec_widgets.widgets import BECDeviceMonitor
+from bec_widgets.widgets import BECMonitor
 
 config_device = {
     "plot_settings": {
@@ -122,7 +122,7 @@ config_scan = {
 def setup_monitor(qtbot, config):
     """Helper function to set up the BECDeviceMonitor widget."""
     client = MagicMock()
-    widget = BECDeviceMonitor(config=config, client=client)
+    widget = BECMonitor(config=config, client=client)
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     return widget
@@ -149,7 +149,7 @@ def qtbot(app, qtbot):  # TODO is this needed?
 )
 def test_initialization_with_device_config(qtbot, config, scan_type, number_of_plots):
     widget = setup_monitor(qtbot, config)
-    assert isinstance(widget, BECDeviceMonitor)
+    assert isinstance(widget, BECMonitor)
     assert widget.config == config
     assert widget.client is not None
     assert len(widget.plot_data) == number_of_plots

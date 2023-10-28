@@ -1,1 +1,1 @@
-from .monitor import BECDeviceMonitor
+from .monitor import BECDeviceMonitor, ConfigDialog

@@ -1,2 +1,2 @@
-from .device_monitor import BECDeviceMonitor
+from .monitor import BECMonitor
 from .config_dialog import ConfigDialog

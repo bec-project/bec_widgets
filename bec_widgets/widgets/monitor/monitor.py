@@ -46,13 +46,13 @@ config_simple = {
 }
 
 
-class BECDeviceMonitor(pg.GraphicsLayoutWidget):
+class BECMonitor(pg.GraphicsLayoutWidget):
     update_signal = pyqtSignal()
 
     def __init__(
         self, parent=None, client=None, config: dict = None, enable_crosshair: bool = False
     ):
-        super(BECDeviceMonitor, self).__init__(parent=parent)
+        super(BECMonitor, self).__init__(parent=parent)
 
         # Client and device manager from BEC
         self.client = bec_dispatcher.client if client is None else client
@@ -392,6 +392,6 @@ if __name__ == "__main__":
     client.start()
 
     app = QApplication(sys.argv)
-    monitor = BECDeviceMonitor()
+    monitor = BECMonitor()
     monitor.show()
     sys.exit(app.exec_())
