@@ -2,7 +2,7 @@ import os
 import yaml
 
 import pytest
-from PyQt5.QtWidgets import QTabWidget, QTableWidgetItem
+from PyQt5.QtWidgets import QTabWidget, QTableWidgetItem, QApplication
 
 from bec_widgets.widgets import ConfigDialog
 
@@ -24,8 +24,23 @@ config_device_no_entry = load_config(
 config_scan = load_config(os.path.join(current_path, "test_configs/config_scan.yaml"))
 
 
+@pytest.fixture(scope="module")  # TODO is this needed?
+def app():
+    app = QApplication([])
+    yield app
+
+
 @pytest.fixture
-def config_dialog(qtbot):
+def qtbot(app, qtbot):  # TODO is this needed?
+    """A qtbot fixture to ensure that widgets are closed after being used."""
+    qtbot.old_widgets = set(app.topLevelWidgets())
+    yield qtbot
+    new_widgets = set(app.topLevelWidgets()) - qtbot.old_widgets
+    for widget in new_widgets:
+        widget.close()
+
+
+def setup_config_dialog(qtbot):
     widget = ConfigDialog()
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
@@ -33,7 +48,8 @@ def config_dialog(qtbot):
 
 
 @pytest.mark.parametrize("config", [config_device, config_scan])
-def test_load_config(config_dialog, config):
+def test_load_config(qtbot, config):
+    config_dialog = setup_config_dialog(qtbot)
     config_dialog.load_config(config)
 
     assert (
@@ -52,7 +68,8 @@ def test_load_config(config_dialog, config):
         (config_device_no_entry, False),
     ],
 )
-def test_initialization(config_dialog, config, scan_mode):
+def test_initialization(qtbot, config, scan_mode):
+    config_dialog = setup_config_dialog(qtbot)
     config_dialog.load_config(config)
 
     assert isinstance(config_dialog, ConfigDialog)
@@ -78,7 +95,8 @@ def test_initialization(config_dialog, config, scan_mode):
         )  # Ensures plot tab widget exists in default mode
 
 
-def test_edit_and_apply_config(config_dialog):
+def test_edit_and_apply_config(qtbot):
+    config_dialog = setup_config_dialog(qtbot)
     config_dialog.load_config(config_device)
 
     config_dialog.comboBox_appearance.setCurrentText("white")
@@ -92,7 +110,8 @@ def test_edit_and_apply_config(config_dialog):
     assert applied_config["plot_settings"]["colormap"] == "viridis"
 
 
-def test_edit_and_apply_config_scan_mode(config_dialog):
+def test_edit_and_apply_config_scan_mode(qtbot):
+    config_dialog = setup_config_dialog(qtbot)
     config_dialog.load_config(config_scan)
 
     config_dialog.comboBox_appearance.setCurrentText("white")
@@ -108,7 +127,8 @@ def test_edit_and_apply_config_scan_mode(config_dialog):
     assert applied_config["plot_settings"]["scan_types"] is True
 
 
-def test_add_new_scan(config_dialog):
+def test_add_new_scan(qtbot):
+    config_dialog = setup_config_dialog(qtbot)
     # Ensure the tab count is initially 1 (from the default config)
     assert config_dialog.tabWidget_scan_types.count() == 1
 
@@ -122,7 +142,8 @@ def test_add_new_scan(config_dialog):
     assert config_dialog.tabWidget_scan_types.tabText(1) == "Test Scan Tab"
 
 
-def test_add_new_plot_and_modify(config_dialog):
+def test_add_new_plot_and_modify(qtbot):
+    config_dialog = setup_config_dialog(qtbot)
     # Ensure the tab count is initially 1 and it is called "Default"
     assert config_dialog.tabWidget_scan_types.count() == 1
     assert config_dialog.tabWidget_scan_types.tabText(0) == "Default"
