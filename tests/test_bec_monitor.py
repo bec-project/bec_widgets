@@ -58,21 +58,21 @@ def qtbot(app, qtbot):  # TODO is this needed?
     ],
 )
 def test_initialization_with_device_config(qtbot, config, scan_type, number_of_plots):
-    widget = setup_monitor(qtbot, config)
-    assert isinstance(widget, BECMonitor)
-    assert widget.config == config
-    assert widget.client is not None
-    assert len(widget.plot_data) == number_of_plots
-    assert widget.scan_types == scan_type
+    monitor = setup_monitor(qtbot, config)
+    assert isinstance(monitor, BECMonitor)
+    assert monitor.config == config
+    assert monitor.client is not None
+    assert len(monitor.plot_data) == number_of_plots
+    assert monitor.scan_types == scan_type
 
 
 @pytest.mark.parametrize(
     "config_initial,config_update", [(config_device, config_scan), (config_scan, config_device)]
 )
 def test_update_config(qtbot, config_initial, config_update):
-    widget = setup_monitor(qtbot, config_initial)
-    widget.update_config(config_update)
-    assert widget.config == config_update
+    monitor = setup_monitor(qtbot, config_initial)
+    monitor.update_config(config_update)
+    assert monitor.config == config_update
 
 
 @pytest.mark.parametrize(
@@ -95,17 +95,17 @@ def test_update_config(qtbot, config_initial, config_update):
 def test_render_initial_plots(
     qtbot, config, expected_num_columns, expected_plot_names, expected_coordinates
 ):
-    widget = setup_monitor(qtbot, config)
+    monitor = setup_monitor(qtbot, config)
 
     # Validate number of columns
-    assert widget.plot_settings["num_columns"] == expected_num_columns
+    assert monitor.plot_settings["num_columns"] == expected_num_columns
 
     # Validate the plots are created correctly
     for expected_name in expected_plot_names:
-        assert expected_name in widget.plots.keys()
+        assert expected_name in monitor.plots.keys()
 
     # Validate the grid_coordinates
-    assert widget.grid_coordinates == expected_coordinates
+    assert monitor.grid_coordinates == expected_coordinates
 
 
 def mock_getitem(dev_name):
@@ -188,14 +188,10 @@ metadata_line = {"scan_name": "line_scan"}
     ],
 )
 def test_on_scan_segment(qtbot, config, msg, metadata, expected_data):
-    plot_app = setup_monitor(qtbot, config)
-
-    # Initialize and run test
-    plot_app.data = {}
-    plot_app.scanID = 0
+    monitor = setup_monitor(qtbot, config)
 
     # Get hints
-    plot_app.dev.__getitem__.side_effect = mock_getitem
+    monitor.dev.__getitem__.side_effect = mock_getitem
 
-    plot_app.on_scan_segment(msg, metadata)
-    assert plot_app.data == expected_data
+    monitor.on_scan_segment(msg, metadata)
+    assert monitor.data == expected_data
