@@ -33,20 +33,20 @@ def setup_monitor(qtbot, config):  # TODO fixture or helper function?
     return widget
 
 
-@pytest.fixture(scope="module")  # TODO is this needed?
-def app():
-    app = QApplication([])
-    yield app
-
-
-@pytest.fixture
-def qtbot(app, qtbot):  # TODO is this needed?
-    """A qtbot fixture to ensure that widgets are closed after being used."""
-    qtbot.old_widgets = set(app.topLevelWidgets())
-    yield qtbot
-    new_widgets = set(app.topLevelWidgets()) - qtbot.old_widgets
-    for widget in new_widgets:
-        widget.close()
+# @pytest.fixture(scope="module")  # TODO is this needed?
+# def app():
+#     app = QApplication([])
+#     yield app
+#
+#
+# @pytest.fixture
+# def qtbot(app, qtbot):  # TODO is this needed?
+#     """A qtbot fixture to ensure that widgets are closed after being used."""
+#     qtbot.old_widgets = set(app.topLevelWidgets())
+#     yield qtbot
+#     new_widgets = set(app.topLevelWidgets()) - qtbot.old_widgets
+#     for widget in new_widgets:
+#         widget.close()
 
 
 @pytest.mark.parametrize(
