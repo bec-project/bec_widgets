@@ -23,13 +23,13 @@ config_device_no_entry = load_config(
 config_scan = load_config(os.path.join(current_path, "test_configs/config_scan.yaml"))
 
 
-def setup_monitor(qtbot, config):  # TODO fixture or helper function?
-    """Helper function to set up the BECDeviceMonitor widget."""
+@pytest.fixture(scope="function")
+def monitor(qtbot):
     client = MagicMock()
-    widget = BECMonitor(config=config, client=client)
+    widget = BECMonitor(client=client)
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
-    return widget
+    yield widget
 
 
 @pytest.mark.parametrize(
@@ -40,8 +40,9 @@ def setup_monitor(qtbot, config):  # TODO fixture or helper function?
         (config_device_no_entry, False, 2),
     ],
 )
-def test_initialization_with_device_config(qtbot, config, scan_type, number_of_plots):
-    monitor = setup_monitor(qtbot, config)
+def test_initialization_with_device_config(monitor, config, scan_type, number_of_plots):
+    # monitor = setup_monitor(qtbot, config)
+    monitor.update_config(config)
     assert isinstance(monitor, BECMonitor)
     assert monitor.config == config
     assert monitor.client is not None
@@ -52,8 +53,9 @@ def test_initialization_with_device_config(qtbot, config, scan_type, number_of_p
 @pytest.mark.parametrize(
     "config_initial,config_update", [(config_device, config_scan), (config_scan, config_device)]
 )
-def test_update_config(qtbot, config_initial, config_update):
-    monitor = setup_monitor(qtbot, config_initial)
+def test_update_config(monitor, config_initial, config_update):
+    monitor.update_config(config_initial)
+    assert monitor.config == config_initial
     monitor.update_config(config_update)
     assert monitor.config == config_update
 
@@ -76,9 +78,9 @@ def test_update_config(qtbot, config_initial, config_update):
     ],
 )
 def test_render_initial_plots(
-    qtbot, config, expected_num_columns, expected_plot_names, expected_coordinates
+    monitor, config, expected_num_columns, expected_plot_names, expected_coordinates
 ):
-    monitor = setup_monitor(qtbot, config)
+    monitor.update_config(config)
 
     # Validate number of columns
     assert monitor.plot_settings["num_columns"] == expected_num_columns
@@ -170,9 +172,8 @@ metadata_line = {"scan_name": "line_scan"}
         ),
     ],
 )
-def test_on_scan_segment(qtbot, config, msg, metadata, expected_data):
-    monitor = setup_monitor(qtbot, config)
-
+def test_on_scan_segment(monitor, config, msg, metadata, expected_data):
+    monitor.update_config(config)
     # Get hints
     monitor.dev.__getitem__.side_effect = mock_getitem
 
