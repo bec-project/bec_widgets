@@ -13,7 +13,7 @@ def eiger_plot_instance(qtbot):
     widget = EigerPlot()
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
-    return widget
+    yield widget
 
 
 @pytest.mark.parametrize(

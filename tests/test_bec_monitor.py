@@ -6,21 +6,15 @@ from unittest.mock import MagicMock
 
 from bec_widgets.widgets import BECMonitor
 
-current_path = os.path.dirname(__file__)
+# current_path = os.path.dirname(__file__)
 
 
-def load_config(config_path):
+def load_test_config(config_name):
     """Helper function to load config from yaml file."""
+    config_path = os.path.join(os.path.dirname(__file__), "test_configs", f"{config_name}.yaml")
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
     return config
-
-
-config_device = load_config(os.path.join(current_path, "test_configs/config_device.yaml"))
-config_device_no_entry = load_config(
-    os.path.join(current_path, "test_configs/config_device_no_entry.yaml")
-)
-config_scan = load_config(os.path.join(current_path, "test_configs/config_scan.yaml"))
 
 
 @pytest.fixture(scope="function")
@@ -33,15 +27,15 @@ def monitor(qtbot):
 
 
 @pytest.mark.parametrize(
-    "config, scan_type, number_of_plots",
+    "config_name, scan_type, number_of_plots",
     [
-        (config_device, False, 2),
-        (config_scan, True, 4),
-        (config_device_no_entry, False, 2),
+        ("config_device", False, 2),
+        ("config_device_no_entry", False, 2),
+        ("config_scan", True, 4),
     ],
 )
-def test_initialization_with_device_config(monitor, config, scan_type, number_of_plots):
-    # monitor = setup_monitor(qtbot, config)
+def test_initialization_with_device_config(monitor, config_name, scan_type, number_of_plots):
+    config = load_test_config(config_name)
     monitor.update_config(config)
     assert isinstance(monitor, BECMonitor)
     assert monitor.config == config
@@ -51,9 +45,12 @@ def test_initialization_with_device_config(monitor, config, scan_type, number_of
 
 
 @pytest.mark.parametrize(
-    "config_initial,config_update", [(config_device, config_scan), (config_scan, config_device)]
+    "config_initial,config_update",
+    [("config_device", "config_scan"), ("config_scan", "config_device")],
 )
 def test_update_config(monitor, config_initial, config_update):
+    config_initial = load_test_config(config_initial)
+    config_update = load_test_config(config_update)
     monitor.update_config(config_initial)
     assert monitor.config == config_initial
     monitor.update_config(config_update)
@@ -61,16 +58,16 @@ def test_update_config(monitor, config_initial, config_update):
 
 
 @pytest.mark.parametrize(
-    "config, expected_num_columns, expected_plot_names, expected_coordinates",
+    "config_name, expected_num_columns, expected_plot_names, expected_coordinates",
     [
         (
-            config_device,
+            "config_device",
             1,
             ["BPM4i plots vs samx", "Gauss plots vs samx"],
             [(0, 0), (1, 0)],
         ),
         (
-            config_scan,
+            "config_scan",
             3,
             ["Grid plot 1", "Grid plot 2", "Grid plot 3", "Grid plot 4"],
             [(0, 0), (0, 1), (0, 2), (1, 0)],
@@ -78,10 +75,12 @@ def test_update_config(monitor, config_initial, config_update):
     ],
 )
 def test_render_initial_plots(
-    monitor, config, expected_num_columns, expected_plot_names, expected_coordinates
+    monitor, config_name, expected_num_columns, expected_plot_names, expected_coordinates
 ):
+    config = load_test_config(config_name)
     monitor.update_config(config)
 
+    assert monitor.config == config
     # Validate number of columns
     assert monitor.plot_settings["num_columns"] == expected_num_columns
 
@@ -122,13 +121,13 @@ metadata_line = {"scan_name": "line_scan"}
 
 
 @pytest.mark.parametrize(
-    "config, msg, metadata, expected_data",
+    "config_name, msg, metadata, expected_data",
     [
         # case: msg does not have 'scanid'
-        (config_device, {"data": {}}, {}, {}),
+        ("config_device", {"data": {}}, {}, {}),
         # case: scan_types is false, msg contains all valid fields, and entry is present in config
         (
-            config_device,
+            "config_device",
             msg_1,
             {},
             {
@@ -139,7 +138,7 @@ metadata_line = {"scan_name": "line_scan"}
         ),
         # case: scan_types is false, msg contains all valid fields and entry is missing in config, should use hints
         (
-            config_device_no_entry,
+            "config_device_no_entry",
             msg_1,
             {},
             {
@@ -149,7 +148,7 @@ metadata_line = {"scan_name": "line_scan"}
         ),
         # case: scan_types is true, msg contains all valid fields, metadata contains scan "line_scan:"
         (
-            config_scan,
+            "config_scan",
             msg_1,
             metadata_line,
             {
@@ -160,7 +159,7 @@ metadata_line = {"scan_name": "line_scan"}
             },
         ),
         (
-            config_scan,
+            "config_scan",
             msg_1,
             metadata_grid,
             {
@@ -172,7 +171,8 @@ metadata_line = {"scan_name": "line_scan"}
         ),
     ],
 )
-def test_on_scan_segment(monitor, config, msg, metadata, expected_data):
+def test_on_scan_segment(monitor, config_name, msg, metadata, expected_data):
+    config = load_test_config(config_name)
     monitor.update_config(config)
     # Get hints
     monitor.dev.__getitem__.side_effect = mock_getitem

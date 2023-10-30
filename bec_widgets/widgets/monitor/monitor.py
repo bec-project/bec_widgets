@@ -101,8 +101,8 @@ class BECMonitor(pg.GraphicsLayoutWidget):
 
         if self.scan_types is False:  # Device tracking mode
             self.plot_data = self.plot_data_config  # TODO logic has to be improved
-        else:  # setup first line scan as default, then changed with different scan type
-            self.plot_data = self.plot_data_config[list(self.plot_data_config.keys())[0]]
+        else:  # without incoming data setup the first configuration to the first scan type sorted alphabetically by name
+            self.plot_data = self.plot_data_config[min(list(self.plot_data_config.keys()))]
 
         # TODO init plot background -> so far not used, I don't like how it is done in extreme.py
 

@@ -10,14 +10,14 @@ from bec_lib.core import RedisConnector
 from bec_widgets.examples.stream_plot.stream_plot import StreamPlot
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def stream_app(qtbot):
     """Helper function to set up the StreamPlot widget."""
     client = mock.MagicMock()
     widget = StreamPlot(client=client)
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
-    return widget
+    yield widget
 
 
 def test_roi_signals_emitted(qtbot, stream_app):
@@ -125,6 +125,10 @@ def test_on_dap_update(qtbot, stream_app):
     # For example, check the data of the image plot:
     np.testing.assert_array_equal(stream_app.img.image, expected_data)
 
+
+####################
+# Until Here
+####################
 
 # def test_new_proj(qtbot, stream_app): #TODO this test is not working, does it make sense testing even?
 #     # Create some mock content to be "received" by the slot
