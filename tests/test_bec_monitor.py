@@ -6,8 +6,6 @@ from unittest.mock import MagicMock
 
 from bec_widgets.widgets import BECMonitor
 
-# current_path = os.path.dirname(__file__)
-
 
 def load_test_config(config_name):
     """Helper function to load config from yaml file."""

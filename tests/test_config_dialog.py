@@ -6,22 +6,13 @@ from PyQt5.QtWidgets import QTabWidget, QTableWidgetItem
 
 from bec_widgets.widgets import ConfigDialog
 
-current_path = os.path.dirname(__file__)
 
-
-def load_config(config_path):
+def load_test_config(config_name):
     """Helper function to load config from yaml file."""
+    config_path = os.path.join(os.path.dirname(__file__), "test_configs", f"{config_name}.yaml")
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
     return config
-
-
-# load saved configurations from .yaml files
-config_device = load_config(os.path.join(current_path, "test_configs/config_device.yaml"))
-config_device_no_entry = load_config(
-    os.path.join(current_path, "test_configs/config_device_no_entry.yaml")
-)
-config_scan = load_config(os.path.join(current_path, "test_configs/config_scan.yaml"))
 
 
 @pytest.fixture(scope="function")
@@ -32,8 +23,9 @@ def config_dialog(qtbot):
     yield widget
 
 
-@pytest.mark.parametrize("config", [config_device, config_scan])
-def test_load_config(config_dialog, config):
+@pytest.mark.parametrize("config_name", ["config_device", "config_scan"])
+def test_load_config(config_dialog, config_name):
+    config = load_test_config(config_name)
     config_dialog.load_config(config)
 
     assert (
@@ -45,14 +37,15 @@ def test_load_config(config_dialog, config):
 
 
 @pytest.mark.parametrize(
-    "config, scan_mode",
+    "config_name, scan_mode",
     [
-        (config_device, False),
-        (config_scan, True),
-        (config_device_no_entry, False),
+        ("config_device", False),
+        ("config_scan", True),
+        ("config_device_no_entry", False),
     ],
 )
-def test_initialization(config_dialog, config, scan_mode):
+def test_initialization(config_dialog, config_name, scan_mode):
+    config = load_test_config(config_name)
     config_dialog.load_config(config)
 
     assert isinstance(config_dialog, ConfigDialog)
@@ -79,6 +72,7 @@ def test_initialization(config_dialog, config, scan_mode):
 
 
 def test_edit_and_apply_config(config_dialog):
+    config_device = load_test_config("config_device")
     config_dialog.load_config(config_device)
 
     config_dialog.comboBox_appearance.setCurrentText("white")
@@ -93,6 +87,7 @@ def test_edit_and_apply_config(config_dialog):
 
 
 def test_edit_and_apply_config_scan_mode(config_dialog):
+    config_scan = load_test_config("config_scan")
     config_dialog.load_config(config_scan)
 
     config_dialog.comboBox_appearance.setCurrentText("white")
