@@ -32,6 +32,9 @@ def load_yaml(instance) -> dict:
             print(f"An error occurred while loading the settings from {file_path}: {e}")
             return None  # Return None on exception to indicate failure
 
+    if not file_path:
+        return None
+
 
 def save_yaml(instance, config: dict) -> None:
     """
@@ -57,3 +60,6 @@ def save_yaml(instance, config: dict) -> None:
                 print(f"Settings saved to {file_path}")
         except Exception as e:
             print(f"An error occurred while saving the settings to {file_path}: {e}")
+
+    if not file_path:
+        return None
