@@ -119,7 +119,12 @@ def print_widget_hierarchy(
 
 
 def export_config_to_dict(
-    widget, config=None, indent=0, grab_values: bool = False, print_hierarchy: bool = False
+    widget,
+    config=None,
+    indent=0,
+    grab_values: bool = False,
+    print_hierarchy: bool = False,
+    save_all: bool = True,
 ) -> dict:
     """
     Export the widget hierarchy to a dictionary.
@@ -129,21 +134,34 @@ def export_config_to_dict(
         indent(int,optional): Level of indentation.
         grab_values(bool,optional): Whether to grab the values of the widgets.
         print_hierarchy(bool,optional): Whether to print the hierarchy to the console.
+        save_all(bool,optional): Whether to save all widgets or only those with values.
     Returns:
         config(dict): Dictionary containing the widget hierarchy.
     """
     if config is None:
         config = {}
     widget_info = f"{widget.__class__.__name__} ({widget.objectName()})"
-    config[widget_info] = {}
+
     if grab_values:
         value = get_value(widget)
-        if value is not None:
-            config[widget_info]["value"] = value
+        if value is not None or save_all:
+            if widget_info not in config:
+                config[widget_info] = {}
+            if value is not None:
+                config[widget_info]["value"] = value
+
     if print_hierarchy:
         print_widget_hierarchy(widget, indent, grab_values)
+
     for child in widget.children():
-        export_config_to_dict(child, config, indent + 1, grab_values, print_hierarchy)
+        child_config = export_config_to_dict(
+            child, None, indent + 1, grab_values, print_hierarchy, save_all
+        )
+        if child_config or save_all:
+            if widget_info not in config:
+                config[widget_info] = {}
+            config[widget_info].update(child_config)
+
     return config
 
 
@@ -208,7 +226,11 @@ if __name__ == "__main__":
     import_config_from_dict(main_widget, new_config_dict, set_values=True)
     print(30 * "#")
     config_dict_new = export_config_to_dict(main_widget, grab_values=True, print_hierarchy=True)
+    config_dict_new_reduced = export_config_to_dict(
+        main_widget, grab_values=True, print_hierarchy=True, save_all=False
+    )
     print(30 * "#")
-    print(f"Config dict new: {config_dict_new}")
+    print(f"Config dict new FULL: {config_dict_new}")
+    print(f"Config dict new REDUCED: {config_dict_new_reduced}")
 
     app.exec()
