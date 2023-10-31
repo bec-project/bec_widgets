@@ -19,6 +19,8 @@ Ui_Form, BaseClass = uic.loadUiType(os.path.join(current_path, "config_dialog.ui
 Tab_Ui_Form, Tab_BaseClass = uic.loadUiType(os.path.join(current_path, "tab_template.ui"))
 
 # test configs for demonstration purpose
+
+# Configuration for default mode when only devices are monitored
 config_default = {
     "plot_settings": {
         "background_color": "black",
@@ -56,6 +58,7 @@ config_default = {
     ],
 }
 
+# Configuration which is dynamically changing depending on the scan type
 config_scan = {
     "plot_settings": {
         "background_color": "white",
