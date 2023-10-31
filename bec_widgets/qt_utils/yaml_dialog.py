@@ -1,23 +1,12 @@
 import yaml
 from PyQt5.QtWidgets import QFileDialog
 
-# TODO add pydantic/json scheme validation for config files as an optional argument
-
 
 def load_yaml(instance) -> dict:
-    """
-    Load a YAML file and update the settings
-    Args:
-        instance: parent instance (named instance to avoid conflict with keyword in QFileDialog)
-
-    Returns:
-        config(dict): dictionary of settings
-    """
     options = QFileDialog.Options()
-
     options |= QFileDialog.DontUseNativeDialog
     file_path, _ = QFileDialog.getOpenFileName(
-        instance, "Load Settings", "", "YAML Files (*.yaml);;All Files (*)", options=options
+        instance, "Load Settings", "", "YAML Files (*.yaml *.yml);;All Files (*)", options=options
     )
 
     if file_path:
@@ -37,22 +26,15 @@ def load_yaml(instance) -> dict:
 
 
 def save_yaml(instance, config: dict) -> None:
-    """
-    Save the settings to a YAML file
-    Args:
-        instance: parent instance (named instance to avoid conflict with keyword in QFileDialog)
-        config(dict): dictionary of settings to save to .yaml file
-    """
-
     options = QFileDialog.Options()
     options |= QFileDialog.DontUseNativeDialog
     file_path, _ = QFileDialog.getSaveFileName(
-        instance, "Save Settings", "", "YAML Files (*.yaml);;All Files (*)", options=options
+        instance, "Save Settings", "", "YAML Files (*.yaml *.yml);;All Files (*)", options=options
     )
 
     if file_path:
         try:
-            if not file_path.endswith(".yaml"):
+            if not (file_path.endswith(".yaml") or file_path.endswith(".yml")):
                 file_path += ".yaml"
 
             with open(file_path, "w") as file:
