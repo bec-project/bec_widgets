@@ -108,7 +108,7 @@ def test_add_new_scan(config_dialog):
     assert config_dialog.tabWidget_scan_types.count() == 1
 
     # Add a new scan tab
-    config_dialog.add_new_scan(config_dialog.tabWidget_scan_types, "Test Scan Tab")
+    config_dialog.add_new_scan_tab(config_dialog.tabWidget_scan_types, "Test Scan Tab")
 
     # Ensure the tab count is now 2
     assert config_dialog.tabWidget_scan_types.count() == 2
@@ -130,7 +130,7 @@ def test_add_new_plot_and_modify(config_dialog):
     assert tabWidget_plots.tabText(0) == "Plot 1"
 
     # Add a new plot tab
-    config_dialog.add_new_plot(scan_tab)
+    config_dialog.add_new_plot_tab(scan_tab)
 
     # Ensure the plot tab count is now 2
     assert tabWidget_plots.count() == 2

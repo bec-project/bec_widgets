@@ -183,8 +183,8 @@ class ConfigDialog(QWidget, Ui_Form):
         """Init default dialog"""
 
         if self.comboBox_scanTypes.currentText() == "Disabled":  # Default mode
-            self.add_new_scan(self.tabWidget_scan_types, "Default")
-            self.add_new_plot(self.tabWidget_scan_types.widget(0))
+            self.add_new_scan_tab(self.tabWidget_scan_types, "Default")
+            self.add_new_plot_tab(self.tabWidget_scan_types.widget(0))
             self.pushButton_new_scan_type.setEnabled(False)
             self.lineEdit_scan_type.setEnabled(False)
         else:  # Scan mode with clear tab
@@ -192,7 +192,7 @@ class ConfigDialog(QWidget, Ui_Form):
             self.lineEdit_scan_type.setEnabled(True)
             self.tabWidget_scan_types.clear()
 
-    def add_new_scan(
+    def add_new_scan_tab(
         self, parent_tab: QTabWidget, scan_name: str, closable: bool = False
     ) -> QWidget:
         """
@@ -232,7 +232,7 @@ class ConfigDialog(QWidget, Ui_Form):
 
         return scan_tab
 
-    def add_new_plot(self, scan_tab: QWidget) -> QWidget:
+    def add_new_plot_tab(self, scan_tab: QWidget) -> QWidget:
         """
         Add a new plot tab to the scan tab
 
@@ -269,7 +269,7 @@ class ConfigDialog(QWidget, Ui_Form):
             plot_tab(Tab_Ui_Form): Plot tab widget
         """
         plot_tab.pushButton_add_new_plot.clicked.connect(
-            lambda: self.add_new_plot(scan_tab=scan_tab)
+            lambda: self.add_new_plot_tab(scan_tab=scan_tab)
         )
         plot_tab.pushButton_y_new.clicked.connect(
             lambda: self.add_new_signal(plot_tab.tableWidget_y_signals)
@@ -309,9 +309,9 @@ class ConfigDialog(QWidget, Ui_Form):
             scan_name(str): name of the scan tab
         """
 
-        scan_tab = self.add_new_scan(parent_tab, scan_name, closable=True)
+        scan_tab = self.add_new_scan_tab(parent_tab, scan_name, closable=True)
         if scan_tab is not None:
-            self.add_new_plot(scan_tab)
+            self.add_new_plot_tab(scan_tab)
 
     def get_plot_config(self, plot_tab: QWidget) -> dict:
         """
@@ -423,16 +423,16 @@ class ConfigDialog(QWidget, Ui_Form):
 
         if scan_mode is False:  # default mode:
             plot_data = config.get("plot_data", [])
-            self.add_new_scan(self.tabWidget_scan_types, "Default")
+            self.add_new_scan_tab(self.tabWidget_scan_types, "Default")
             for plot_config in plot_data:  # Create plot tab for each plot and populate GUI
-                plot = self.add_new_plot(self.tabWidget_scan_types.widget(0))
+                plot = self.add_new_plot_tab(self.tabWidget_scan_types.widget(0))
                 self.load_plot_setting(plot, plot_config)
         elif scan_mode is True:  # scan mode
             plot_data = config.get("plot_data", {})
             for scan_name, scan_config in plot_data.items():
-                scan_tab = self.add_new_scan(self.tabWidget_scan_types, scan_name)
+                scan_tab = self.add_new_scan_tab(self.tabWidget_scan_types, scan_name)
                 for plot_config in scan_config:
-                    plot = self.add_new_plot(scan_tab)
+                    plot = self.add_new_plot_tab(scan_tab)
                     self.load_plot_setting(plot, plot_config)
 
     def load_plot_setting(self, plot: QWidget, plot_config: dict) -> None:
