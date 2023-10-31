@@ -2,6 +2,44 @@
 
 <!--next-version-placeholder-->
 
+## v0.29.0 (2023-10-31)
+
+### Feature
+
+* Widget_hierarchy.py tool to inspect hierarchy of the widget ([`cda8dae`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/cda8daeb35b36692316173a19fb29f1cc0dbdb7c))
+* Yaml_dialog.py interactive QFileDialog window to load/save .yaml files to/from dict ([`2b29b6c`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/2b29b6cfe2ea94a974da4a332c47473176ddddff))
+* Qt_utils custom class for class where one can delete the row with backspace or delete ([`a6616f5`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/a6616f5986d59ad8d065105234f5b704731cce71))
+* Modular_app.py, device_monitor.py, config_dialog.py linked together, plot configuration can be done through GUI ([`bf2a09e`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/bf2a09e6307da63ecf02a1286095a19e5f1dcab4))
+* Config_dialog.py interactive editor of plot settings ([`c9e5dd5`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/c9e5dd542c9eb7c9069d1c0f1256a634a166eb40))
+
+### Fix
+
+* Yaml_dialog.py added support for .yml files ([`10539f0`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/10539f0ba59be716102b2c0577ea62f5c4a3136a))
+* Yaml_dialog.py added return None if no file path is specified ([`ff1d918`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ff1d918d43f0f2e5fe8d78c6de9051c50e0e12c1))
+* Wrong __init__.py in modular_app ([`d52aa15`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/d52aa15aac42f09487c828836e377c78596037bd))
+* Test_bec_monitor.py config loaded fresh in the test function to avoid parameter leak ([`3866d7c`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/3866d7ce4de3391fe57ef872808f7620562eeeb0))
+* Test_bec_monitor.py setup_monitor help function changed to pytest.fixture ([`989cd51`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/989cd51162147805db1229b50b330af29f275204))
+* Test_config_dialog.py - QApplication removed ([`1cdd760`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/1cdd760e4062de1f19837737766ce05edc9ac2da))
+* Test_config_dialog.py - test_add_new_plot_and_modify qtbot action .click() changed -> function called directly ([`1333e6c`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/1333e6cbca18943b0a61206dc1ba63720b031b40))
+* Test_config_dialog.py disabled ([`4e710dd`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/4e710dda5e88b2e82ec87db350e8b1fe6aa09181))
+* Test_bec_monitor.py QApplication instance removed ([`77e1d09`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/77e1d0925db2dc6669159fbe3fb08daf330cb5c8))
+* Test_config_dialog.py QApplication instance added ([`60e864b`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/60e864b2590d121e1b0ad645d39d1a028abe8d7b))
+* Device_monitor.py BECDeviceMonitor can be promoted in the QtDesigner and then setup in the modular app ([`afab283`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/afab283988a1acc008bc53ae5a56a8f67504da81))
+* Device_monitor.py crosshairs can be attached again ([`644a97a`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/644a97aee848c973125375d5f28d3edf2ffc20cf))
+* Config_dialog.py prevents to add one scan twice ([`12469c8`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/12469c8c1e45f83cc0c65708bd412103a8ec1838))
+* Config_dialog.py export to .yaml fixed ([`7e99920`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/7e99920fc565acd59cb3a4286ac5ee40597d8af4))
+* Config_dialog.py scan_type structure implemented ([`e41d81c`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/e41d81cbd9371f8633c1e7de82c8f9b64fcb721b))
+* Config_dialog.py config from default mode can be exported to dict ([`55b5ca7`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/55b5ca7381dc33119baac0f48c76fc9d9e8215ae))
+* Config_dialog.py tabs for scans and plots are closable now ([`ec88564`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ec88564e6577cd6579c30f36193c4a0e5fcbc483))
+* Modular_app.py configs are linked to the actual version of the state of the device monitor ([`d78940d`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/d78940da3f114062aa397b87c169f26cbc131a5f))
+* Config_dialog.py can load the current configuration of the plot ([`f94a29b`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/f94a29bf4be0a883abc200821746c3d81a0c00d4))
+
+### Documentation
+
+* Config_dialog.py comments added to example cases ([`4a6e73f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/4a6e73f4f791d2152ff29680a4e28529a8df0b47))
+* Device_monitor.py update docstrings ([`a785bca`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/a785bca8806613f9e1e4b67380e72867b581fe6e))
+* Added sphinx base structure ([`9d36b96`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/9d36b9686e31b2c4b4206ad47b385c8f2769c641))
+
 ## v0.28.1 (2023-10-19)
 
 ### Fix
