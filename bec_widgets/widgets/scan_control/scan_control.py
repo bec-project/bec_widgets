@@ -107,42 +107,42 @@ class ScanControl(QWidget):
         print(10 * "#" + "selected_scan_info" + 10 * "#")
         print(selected_scan_info)
 
+    def clear_previous_fields(self, layout):
+        for i in reversed(range(layout.count())):
+            layout.itemAt(i).widget().deleteLater()
+
+    def add_widgets_to_layout(self, layout, items, signature=None):
+        for row_idx, item in enumerate(items):
+            if signature:  # handling kwargs
+                kwarg_info = next((info for info in signature if info["name"] == item), None)
+                if kwarg_info:
+                    item_type = kwarg_info.get("annotation", "_empty")
+                    item_name = item
+            else:  # handling arg_input
+                item_name, item_type = item
+
+            widget_class = self.WIDGET_HANDLER.get(item_type, None)
+            if widget_class is None:
+                print(f"Unsupported annotation '{item_type}' for parameter '{item_name}'")
+                continue  # Skip unsupported annotations
+
+            label = QLabel(item_name.capitalize(), self.scan_control_group)
+            widget = widget_class(self.scan_control_group)
+            layout.addWidget(label, row_idx, 0)
+            layout.addWidget(widget, row_idx, 1)
+
     def generate_input_fields(self, scan_info):
         # Clear the previous input fields
-        for i in reversed(range(self.kwargs_layout.count())):
-            self.kwargs_layout.itemAt(i).widget().deleteLater()
-        for i in reversed(range(self.args_layout.count())):
-            self.args_layout.itemAt(i).widget().deleteLater()
+        self.clear_previous_fields(self.kwargs_layout)
+        self.clear_previous_fields(self.args_layout)
 
         arg_input = scan_info.get("arg_input", {})
         required_kwargs = scan_info.get("required_kwargs", [])
 
-        for row_idx, kwarg in enumerate(required_kwargs):
-            kwarg_info = next(
-                (item for item in scan_info.get("signature", []) if item["name"] == kwarg), None
-            )
-            if kwarg_info:
-                kwarg_type = kwarg_info.get("annotation", "_empty")
-                widget_class = self.WIDGET_HANDLER.get(kwarg_type, None)
-                if widget_class is None:
-                    print(f"Unsupported annotation '{kwarg_type}' for parameter '{kwarg}'")
-                    continue  # Skip unsupported annotations
-
-                label = QLabel(kwarg.capitalize(), self.scan_control_group)
-                widget = widget_class(self.scan_control_group)
-                self.kwargs_layout.addWidget(label, row_idx, 0)
-                self.kwargs_layout.addWidget(widget, row_idx, 1)
-
-        for row_idx, (arg_name, arg_type) in enumerate(arg_input.items()):
-            widget_class = self.WIDGET_HANDLER.get(arg_type, None)
-            if widget_class is None:
-                print(f"Unsupported annotation '{arg_type}' for parameter '{arg_name}'")
-                continue  # Skip unsupported annotations
-
-            label = QLabel(arg_name.capitalize(), self.scan_control_group)
-            widget = widget_class(self.scan_control_group)
-            self.args_layout.addWidget(label, row_idx, 0)
-            self.args_layout.addWidget(widget, row_idx, 1)
+        self.add_widgets_to_layout(
+            self.kwargs_layout, required_kwargs, scan_info.get("signature", [])
+        )
+        self.add_widgets_to_layout(self.args_layout, arg_input.items())
 
 
 if __name__ == "__main__":
