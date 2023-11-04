@@ -1,4 +1,4 @@
-import sys
+import msgpack
 from PyQt5.QtWidgets import (
     QApplication,
     QWidget,
@@ -9,18 +9,13 @@ from PyQt5.QtWidgets import (
     QLabel,
     QLineEdit,
     QDoubleSpinBox,
-    QFormLayout,
     QSpinBox,
     QCheckBox,
     QFrame,
     QHBoxLayout,
-    QGridLayout,
     QLayout,
 )
-from PyQt5.QtCore import Qt
-import msgpack
 
-from bec_widgets.bec_dispatcher import bec_dispatcher
 from bec_lib.core import MessageEndpoints
 
 
@@ -29,32 +24,6 @@ class ScanArgType:
     FLOAT = "float"
     INT = "int"
     BOOL = "bool"
-
-
-class BundleGroup(QWidget):
-    WIDGET_HANDLER = {
-        ScanArgType.DEVICE: QLineEdit,
-        ScanArgType.FLOAT: QDoubleSpinBox,
-        ScanArgType.INT: QSpinBox,
-        ScanArgType.BOOL: QCheckBox,
-    }
-
-    def __init__(self, arg_input, parent=None):
-        super().__init__(parent)
-        self.arg_input = arg_input
-        self.init_ui()
-
-    def init_ui(self):
-        self.layout = QHBoxLayout(self)
-        for param, param_type in self.arg_input.items():
-            widget_class = self.WIDGET_HANDLER.get(param_type)
-            if widget_class:
-                widget = widget_class(self)
-                if isinstance(widget, QDoubleSpinBox):
-                    widget.setAlignment(Qt.AlignLeft)  # Align to left
-                self.layout.addWidget(widget)
-            else:
-                print(f"Unsupported annotation '{param_type}' for parameter '{param}'")
 
 
 class ScanControl(QWidget):
@@ -82,15 +51,14 @@ class ScanControl(QWidget):
     def _init_UI(self):
         self.verticalLayout = QVBoxLayout(self)
 
+        # Scan selection group box
         self.scan_selection_group = QGroupBox("Scan Selection", self)
         self.scan_selection_layout = QVBoxLayout(self.scan_selection_group)
-
         self.comboBox_scan_selection = QComboBox(self.scan_selection_group)
         self.scan_selection_layout.addWidget(self.comboBox_scan_selection)
-        # self.scan_selection_layout.addWidget(QPushButton("Connect", self.scan_selection_group)) #TODO button probably not needed
-
         self.verticalLayout.addWidget(self.scan_selection_group)
 
+        # Scan control group box
         self.scan_control_group = QGroupBox("Scan Control", self)
         self.scan_control_layout = QVBoxLayout(self.scan_control_group)
         self.verticalLayout.addWidget(self.scan_control_group)
@@ -119,6 +87,7 @@ class ScanControl(QWidget):
         self.args_layout = QVBoxLayout()
         self.scan_control_layout.addLayout(self.args_layout)
 
+        # Initialize scan selection
         self.populate_scans()
         self.comboBox_scan_selection.currentIndexChanged.connect(self.on_scan_selected)
 
@@ -150,19 +119,12 @@ class ScanControl(QWidget):
         # Generate kwargs input
         self.generate_kwargs_input_fields(selected_scan_info)
 
-        # TODO until HERE!
         # Args section
         self.arg_input = selected_scan_info.get("arg_input", {})  # Get arg_input from selected scan
         self.add_labels(self.arg_input.keys(), self.args_layout)  # Add labels
         self.add_widgets_row_to_layout(
             self.args_layout, self.arg_input.items()
         )  # Add first row of widgets
-
-        # self.generate_input_fields(selected_scan_info) #TODO probably not needed
-
-        print(10 * "#" + f"{selected_scan_name}" + 10 * "#")
-        print(10 * "#" + "selected_scan_info" + 10 * "#")
-        print(selected_scan_info)
 
     def add_labels(self, labels: list, layout) -> None:
         """
@@ -207,9 +169,6 @@ class ScanControl(QWidget):
             layout(QLayout): Layout to add the widgets to
             items(list): List of items to add
             signature(dict): Dictionary containing signature information for kwargs
-
-        Returns:
-
         """
         item_type, item_name = None, None
         widget_row_layout = QHBoxLayout()
@@ -222,19 +181,14 @@ class ScanControl(QWidget):
             else:
                 item_name, item_type = item
 
-            widget_class = self.WIDGET_HANDLER.get(
-                item_type, None
-            )  # TODO fix crash when unsupported annotation
+            widget_class = self.WIDGET_HANDLER.get(item_type, None)
             if widget_class is None:
                 print(f"Unsupported annotation '{item_type}' for parameter '{item_name}'")
                 continue
+
             # Generated widget by HANDLER
             widget = widget_class(self.scan_control_group)
             widget_row_layout.addWidget(widget)
-            print(
-                f"Added widget {widget} to layout {layout}"
-            )  # TODO remove when app will be working correctly
-
         layout.addLayout(widget_row_layout)
 
     def clear_layout(self, layout: QLayout) -> None:  # TODO like this probably
@@ -262,13 +216,6 @@ class ScanControl(QWidget):
             self.args_layout, self.arg_input.items()
         )  # Add first row of widgets
 
-    # def remove_bundle(self):
-    #     # print layout children
-    #     print("layout children:")
-    #     for i in range(self.args_layout.count()):
-    #         print(self.args_layout.itemAt(i).widget())
-
-    #
     def remove_bundle(self) -> None:
         """Removes the last bundle from the scan control layout"""
         last_bundle_index = self.args_layout.count() - 1  # Index of the last bundle
@@ -281,9 +228,6 @@ class ScanControl(QWidget):
             last_bundle_layout_item.deleteLater()  # Schedule layout item for deletion
 
         self.window().resize(self.window().sizeHint())  # Resize window to fit contents
-
-    # remove last row of widgets
-    # self.args_layout.itemAt(self.args_layout.count() - 1).widget().deleteLater()
 
 
 if __name__ == "__main__":
