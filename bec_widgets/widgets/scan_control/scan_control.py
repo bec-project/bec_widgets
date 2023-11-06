@@ -90,6 +90,7 @@ class ScanControl(QWidget):
         # Initialize scan selection
         self.populate_scans()
         self.comboBox_scan_selection.currentIndexChanged.connect(self.on_scan_selected)
+        self.on_scan_selected()
 
     def add_horizontal_separator(self, layout) -> None:
         """
@@ -103,6 +104,7 @@ class ScanControl(QWidget):
         layout.addWidget(separator)
 
     def populate_scans(self):
+        """Populates the scan selection combo box with available scans"""
         msg = self.client.producer.get(MessageEndpoints.available_scans())
         self.available_scans = msgpack.loads(msg)
         if self.allowed_scans is None:
@@ -136,7 +138,6 @@ class ScanControl(QWidget):
         Args:
             labels(list): List of labels to add
             layout: Layout to add the labels to
-
         """
         label_layout = QHBoxLayout()
         for col_idx, param in enumerate(labels):
@@ -154,15 +155,17 @@ class ScanControl(QWidget):
         # Clear the previous input fields
         self.clear_layout(self.kwargs_layout)
 
-        # Get kwargs and signature
-        required_kwargs = scan_info.get("required_kwargs", [])
+        # Get signature
         signature = scan_info.get("signature", [])
 
+        # Extract kwargs from the converted signature
+        kwargs = [param["name"] for param in signature if param["kind"] == "KEYWORD_ONLY"]
+
         # Add labels
-        self.add_labels(required_kwargs, self.kwargs_layout)
+        self.add_labels(kwargs, self.kwargs_layout)
 
         # Add widgets
-        self.add_widgets_row_to_layout(self.kwargs_layout, required_kwargs, signature)
+        self.add_widgets_row_to_layout(self.kwargs_layout, kwargs, signature)
 
     def add_widgets_row_to_layout(
         self, layout: QLayout, items: list, signature: dict = None
