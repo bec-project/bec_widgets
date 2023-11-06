@@ -34,7 +34,7 @@ class ScanControl(QWidget):
         ScanArgType.BOOL: QCheckBox,
     }
 
-    def __init__(self, parent=None, client=None):
+    def __init__(self, parent=None, client=None, allowed_scans=None):
         super().__init__(parent)
 
         # Client from BEC + shortcuts to device manager and scans
@@ -42,11 +42,11 @@ class ScanControl(QWidget):
         self.dev = self.client.device_manager.devices
         self.scans = self.client.scans
 
+        # Scan list - allowed scans for the GUI
+        self.allowed_scans = allowed_scans
+
         # Create and set main layout
         self._init_UI()
-
-        # Populate scans to ComboBox for scan selection
-        self.populate_scans()
 
     def _init_UI(self):
         self.verticalLayout = QVBoxLayout(self)
@@ -96,7 +96,6 @@ class ScanControl(QWidget):
         Adds a horizontal separator to the given layout
         Args:
             layout: Layout to add the separator to
-
         """
         separator = QFrame(self.scan_control_group)
         separator.setFrameShape(QFrame.HLine)
@@ -106,7 +105,12 @@ class ScanControl(QWidget):
     def populate_scans(self):
         msg = self.client.producer.get(MessageEndpoints.available_scans())
         self.available_scans = msgpack.loads(msg)
-        self.comboBox_scan_selection.addItems(self.available_scans.keys())
+        if self.allowed_scans is None:
+            allowed_scans = self.available_scans.keys()
+        else:
+            allowed_scans = self.allowed_scans
+        # TODO check parent class is ScanBase -> filter out the scans not relevant for GUI
+        self.comboBox_scan_selection.addItems(allowed_scans)
 
     def on_scan_selected(self):
         selected_scan_name = self.comboBox_scan_selection.currentText()
@@ -183,7 +187,9 @@ class ScanControl(QWidget):
 
             widget_class = self.WIDGET_HANDLER.get(item_type, None)
             if widget_class is None:
-                print(f"Unsupported annotation '{item_type}' for parameter '{item_name}'")
+                print(
+                    f"Unsupported annotation '{item_type}' for parameter '{item_name}'"
+                )  # TODO add type hinting!!!
                 continue
 
             # Generated widget by HANDLER
@@ -238,7 +244,7 @@ if __name__ == "__main__":
     client.start()
 
     app = QApplication([])
-    scan_control = ScanControl(client=client)
+    scan_control = ScanControl(client=client, allowed_scans=["line_scan", "grid_scan"])
 
     window = scan_control
     window.show()
