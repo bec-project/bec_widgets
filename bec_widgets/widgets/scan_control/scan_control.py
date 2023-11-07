@@ -1,4 +1,5 @@
 import msgpack
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QApplication,
     QWidget,
@@ -15,9 +16,14 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QLayout,
     QGridLayout,
+    QTableWidget,
+    QTableWidgetItem,
 )
 
 from bec_lib.core import MessageEndpoints
+from bec_widgets.qt_utils.widget_hierarchy import print_widget_hierarchy
+
+# from bec_widgets.qt_utils.layout_tools import remove_empty_cells
 
 
 class ScanArgType:
@@ -56,7 +62,9 @@ class ScanControl(QWidget):
         self.scan_selection_group = QGroupBox("Scan Selection", self)
         self.scan_selection_layout = QVBoxLayout(self.scan_selection_group)
         self.comboBox_scan_selection = QComboBox(self.scan_selection_group)
+        self.button_run_scan = QPushButton("Run Scan", self.scan_selection_group)
         self.scan_selection_layout.addWidget(self.comboBox_scan_selection)
+        self.scan_selection_layout.addWidget(self.button_run_scan)
         self.verticalLayout.addWidget(self.scan_selection_group)
 
         # Scan control group box
@@ -64,7 +72,7 @@ class ScanControl(QWidget):
         self.scan_control_layout = QVBoxLayout(self.scan_control_group)
         self.verticalLayout.addWidget(self.scan_control_group)
 
-        # Kwargs layout
+        # Kwargs layout - just placeholder
         self.kwargs_layout = QGridLayout()
         self.scan_control_layout.addLayout(self.kwargs_layout)
 
@@ -84,14 +92,16 @@ class ScanControl(QWidget):
         # 2nd Separator
         self.add_horizontal_separator(self.scan_control_layout)
 
-        # Args layout
-        self.args_layout = QGridLayout()
-        self.scan_control_layout.addLayout(self.args_layout)
+        # Initialize the QTableWidget for args
+        self.args_table = QTableWidget()
+        self.scan_control_layout.addWidget(self.args_table)
+
+        # Connect signals
+        self.comboBox_scan_selection.currentIndexChanged.connect(self.on_scan_selected)
+        self.button_run_scan.clicked.connect(self.run_scan)
 
         # Initialize scan selection
         self.populate_scans()
-        self.comboBox_scan_selection.currentIndexChanged.connect(self.on_scan_selected)
-        self.on_scan_selected()
 
     def add_horizontal_separator(self, layout) -> None:
         """
@@ -119,21 +129,18 @@ class ScanControl(QWidget):
         selected_scan_name = self.comboBox_scan_selection.currentText()
         selected_scan_info = self.available_scans.get(selected_scan_name, {})
 
-        # Clear the previous input fields
-        self.clear_layout(self.args_layout)
-        self.clear_layout(self.kwargs_layout)
+        # Create a new kwarg layout to replace the old one - this is necessary because otherwise row count is not reseted
+        self.clear_and_delete_layout(self.kwargs_layout)
+        self.kwargs_layout = self.create_new_grid_layout()  # Create new grid layout
+        self.scan_control_layout.insertLayout(0, self.kwargs_layout)
 
         # Generate kwargs input
         self.generate_kwargs_input_fields(selected_scan_info)
 
         # Args section
-        self.arg_input = selected_scan_info.get("arg_input", {})  # Get arg_input from selected scan
-        self.add_labels(self.arg_input.keys(), self.args_layout)  # Add labels
-        self.add_widgets_row_to_layout(
-            self.args_layout, self.arg_input.items()
-        )  # Add first row of widgets
+        self.generate_args_input_fields(selected_scan_info)
 
-    def add_labels(self, labels: list, grid_layout: QGridLayout) -> None:
+    def add_labels_to_layout(self, labels: list, grid_layout: QGridLayout) -> None:
         """
         Adds labels to the given grid layout as a separate row.
         Args:
@@ -146,15 +153,26 @@ class ScanControl(QWidget):
             # Add the label to the grid layout at the calculated row and current column
             grid_layout.addWidget(label, row_index, column_index)
 
+    def add_labels_to_table(self, labels: list, table: QTableWidget) -> None:
+        table.setColumnCount(len(labels))
+        table.setHorizontalHeaderLabels(labels)
+
+    def generate_args_input_fields(self, scan_info: dict) -> None:
+        # Get arg_input from selected scan
+        self.arg_input = scan_info.get("arg_input", {})
+
+        # Generate labels for table
+        self.add_labels_to_table(list(self.arg_input.keys()), self.args_table)
+
+        # Generate first row for input
+        self.add_bundle()
+
     def generate_kwargs_input_fields(self, scan_info: dict) -> None:
         """
         Generates input fields for kwargs
         Args:
             scan_info(dict): Dictionary containing scan information
         """
-        # Clear the previous input fields
-        self.clear_layout(self.kwargs_layout)
-
         # Get signature
         signature = scan_info.get("signature", [])
 
@@ -162,23 +180,16 @@ class ScanControl(QWidget):
         kwargs = [param["name"] for param in signature if param["kind"] == "KEYWORD_ONLY"]
 
         # Add labels
-        self.add_labels(kwargs, self.kwargs_layout)
+        self.add_labels_to_layout(kwargs, self.kwargs_layout)
 
         # Add widgets
-        self.add_widgets_row_to_layout(self.kwargs_layout, kwargs, signature)
+        widgets = self.generate_widgets_from_signature(kwargs, signature)
+        self.add_widgets_row_to_layout(self.kwargs_layout, widgets)
 
-    def add_widgets_row_to_layout(
-        self, grid_layout: QGridLayout, items: list, signature: dict = None
-    ) -> None:
-        """
-        Adds widgets to the given grid layout as a row.
-        Args:
-            grid_layout (QGridLayout): The grid layout to which widgets will be added.
-            items (list): List of items to add, where each item is a tuple (item_name, item_type).
-            signature (dict): Dictionary containing signature information for kwargs.
-        """
-        row_index = grid_layout.rowCount()  # Get the next available row
-        for column_index, item in enumerate(items):
+    def generate_widgets_from_signature(self, items: list, signature: dict = None) -> list:
+        widgets = []  # Initialize an empty list to hold the widgets
+
+        for item in items:
             if signature:
                 # If a signature is provided, extract type and name from it
                 kwarg_info = next((info for info in signature if info["name"] == item), None)
@@ -191,74 +202,146 @@ class ScanControl(QWidget):
 
             widget_class = self.WIDGET_HANDLER.get(item_type, None)
             if widget_class is None:
-                print(
-                    f"Unsupported annotation '{item_type}' for parameter '{item_name}'"
-                )  # TODO add type hinting!!!
+                print(f"Unsupported annotation '{item_type}' for parameter '{item_name}'")
                 continue
 
             # Instantiate the widget and set some properties if necessary
-            widget = widget_class(self.scan_control_group)
-            if isinstance(widget, QLineEdit):
-                widget.setMinimumWidth(100)  # Set a minimum width for QLineEdit if needed
+            widget = widget_class()
 
-            # Add the widget to the grid layout at the calculated row and current column
+            # Add the widget to the list
+            widgets.append(widget)
+
+        return widgets
+
+    def add_widgets_row_to_layout(
+        self, grid_layout: QGridLayout, widgets: list, row_index: int = None
+    ) -> None:
+        """
+        Adds a row of widgets to the given grid layout.
+
+        Args:
+            grid_layout (QGridLayout): The grid layout to which widgets will be added.
+            items (list): List of parameter names to create widgets for.
+            row_index (int): The row index where the widgets should be added.
+        """
+        # If row_index is not specified, add to the next available row
+        if row_index is None:
+            row_index = grid_layout.rowCount()
+
+        for column_index, widget in enumerate(widgets):
+            # Add the widget to the grid layout at the specified row and column
             grid_layout.addWidget(widget, row_index, column_index)
 
-    def clear_layout(self, layout: QLayout) -> None:  # TODO like this probably
+    def add_widgets_row_to_table(
+        self, table_widget: QTableWidget, widgets: list, row_index: int = None
+    ) -> None:
         """
-        Clears completely the given layout, even if there are  sub-layouts
+        Adds a row of widgets to the given QTableWidget.
+
         Args:
-            layout: Layout to clear
+            table_widget (QTableWidget): The table widget to which widgets will be added.
+            widgets (list): List of widgets to add to the table.
+            row_index (int): The row index where the widgets should be added. If None, add to the end.
         """
-        while layout.count():
-            item = layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.setParent(None)
-                widget.deleteLater()
-            else:
-                sub_layout = item.layout()
-                if sub_layout:
-                    self.clear_layout(sub_layout)
-                    sub_layout.setParent(None)  # disown layout
-                    sub_layout.deleteLater()  # schedule layout for deletion
+        # If row_index is not specified, add to the end of the table
+        if row_index is None or row_index > table_widget.rowCount():
+            row_index = table_widget.rowCount()
+            table_widget.insertRow(row_index)
 
-    def remove_last_row_from_grid_layout(self, grid_layout: QGridLayout) -> None:
+        for column_index, widget in enumerate(widgets):
+            # If the widget is a subclass of QWidget, use setCellWidget
+            if issubclass(type(widget), QWidget):
+                table_widget.setCellWidget(row_index, column_index, widget)
+            else:
+                # Otherwise, assume it's a string or some other value that should be displayed as text
+                item = QTableWidgetItem(str(widget))
+                table_widget.setItem(row_index, column_index, item)
+
+        # Optionally, adjust the row height based on the content #TODO decide if needed
+        table_widget.setRowHeight(
+            row_index,
+            max(widget.sizeHint().height() for widget in widgets if isinstance(widget, QWidget)),
+        )
+
+    def remove_last_row_from_table(self, table_widget: QTableWidget) -> None:
         """
-        Removes the last row from the given grid layout.
+        Removes the last row from the given QTableWidget until only one row is left.
+
         Args:
-            grid_layout(QGridLayout): Layout to remove the last row from
+            table_widget (QTableWidget): The table widget from which the last row will be removed.
         """
-        row_index = grid_layout.rowCount() - 1
-        # Find the actual last occupied row
-        while row_index > 0:
-            items_in_row = [
-                grid_layout.itemAtPosition(row_index, col)
-                for col in range(grid_layout.columnCount())
-            ]
-            if not any(items_in_row):  # If the row is empty, decrement the row index
-                row_index -= 1
-            else:
-                break  # Found the last occupied row
+        row_count = table_widget.rowCount()
+        if row_count > 1:  # Check to ensure at least one row remains after removal
+            table_widget.removeRow(row_count - 1)
 
-        # Proceed if we have more than one occupied row
-        if row_index > 2:
-            for column_index in range(grid_layout.columnCount()):
-                item = grid_layout.itemAtPosition(row_index, column_index)
-                if item is not None:
-                    widget = item.widget()
-                    if widget:
-                        grid_layout.removeWidget(widget)
-                        widget.deleteLater()
+    def create_new_grid_layout(self):
+        new_layout = QGridLayout()
+        # TODO maybe setup other layouts properties here?
+        return new_layout
 
-            # Adjust the window size
-            self.window().resize(self.window().sizeHint())
+    def clear_and_delete_layout(self, layout: QLayout):
+        """
+        Clears and deletes the given layout and all its child widgets.
+        Args:
+            layout(QLayout): Layout to clear and delete
+        """
+        if layout is not None:
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget()
+                if widget:
+                    widget.deleteLater()
+                else:
+                    sub_layout = item.layout()
+                    if sub_layout:
+                        self.clear_and_delete_layout(sub_layout)
+            layout.deleteLater()
 
     def add_bundle(self) -> None:
-        self.add_widgets_row_to_layout(self.args_layout, self.arg_input.items())
+        """Adds a new bundle to the scan control layout"""
+        # Get widgets used for particular scan and save them to be able to use for adding bundles
+        args_widgets = self.generate_widgets_from_signature(
+            self.arg_input.items()
+        )  # TODO decide if make sense to put widget list into method parameters
+
+        # Add first widgets row to the table
+        self.add_widgets_row_to_table(self.args_table, args_widgets)
 
     def remove_bundle(self) -> None:
-        self.remove_last_row_from_grid_layout(self.args_layout)
+        """Removes the last bundle from the scan control layout"""
+        self.remove_last_row_from_table(self.args_table)
+
+    def extract_kwargs_from_row(self, grid_layout: QGridLayout, row: int) -> dict:
+        """
+        Extracts keyword arguments and their values from a specific row of a QGridLayout.
+
+        Args:
+            grid_layout (QGridLayout): The grid layout from which to extract kwargs.
+            row (int): The row index from which to extract the kwargs.
+
+        Returns:
+            dict: A dictionary with kwargs names as keys and their corresponding values.
+        """
+        ...
+        # kwargs = {}
+        # for col in range(0, grid_layout.columnCount(), 2):  # Assuming even columns are labels
+        #     label_item = grid_layout.itemAtPosition(row, col)
+        #     widget_item = grid_layout.itemAtPosition(row, col + 1)
+        #     if label_item is not None and widget_item is not None:
+        #         label_widget = label_item.widget()
+        #         value_widget = widget_item.widget()
+        #         if label_widget and value_widget:
+        #             kwarg_name = label_widget.text().rstrip(":").lower()
+        #             kwarg_value = self.get_widget_value(value_widget)
+        #             kwargs[kwarg_name] = kwarg_value
+        # return kwargs}
+
+    def run_scan(self):
+        ...
+
+    def get_widget_value(self, widget):
+        if isinstance(widget, QLabel):
+            return widget.text()
 
 
 if __name__ == "__main__":
