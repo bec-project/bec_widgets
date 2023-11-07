@@ -338,19 +338,18 @@ class ScanControl(QWidget):
                         kwargs[key] = value
         return kwargs
 
-    def run_scan(self):
-        # Extract kwargs for the scan
-        kwargs = {
-            k.lower(): v
-            for k, v in self.extract_kwargs_from_grid_row(self.kwargs_layout, 1).items()
-        }
-
+    def extract_args_from_table(self, table: QTableWidget) -> list:
+        """
+        Extracts the arguments from the given table widget.
+        Args:
+            table(QTableWidget): Table widget from which to extract the arguments
+        """
         # Extract args from the table
         args = []
-        for row in range(self.args_table.rowCount()):
+        for row in range(table.rowCount()):
             row_args = []
-            for column in range(self.args_table.columnCount()):
-                widget = self.args_table.cellWidget(row, column)
+            for column in range(table.columnCount()):
+                widget = table.cellWidget(row, column)
                 if widget:
                     # Extract the value from the widget
                     if isinstance(widget, QLineEdit):
@@ -364,6 +363,17 @@ class ScanControl(QWidget):
                         value = None  # You can decide how to handle other widget types
                     row_args.append(value)
             args.extend(row_args)
+        return args
+
+    def run_scan(self):
+        # Extract kwargs for the scan
+        kwargs = {
+            k.lower(): v
+            for k, v in self.extract_kwargs_from_grid_row(self.kwargs_layout, 1).items()
+        }
+
+        # Extract args from the table
+        args = self.extract_args_from_table()
 
         # Convert args to lowercase if they are strings
         args = [arg.lower() if isinstance(arg, str) else arg for arg in args]
