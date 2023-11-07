@@ -311,33 +311,71 @@ class ScanControl(QWidget):
         """Removes the last bundle from the scan control layout"""
         self.remove_last_row_from_table(self.args_table)
 
-    def extract_kwargs_from_row(self, grid_layout: QGridLayout, row: int) -> dict:
-        """
-        Extracts keyword arguments and their values from a specific row of a QGridLayout.
+    def extract_kwargs_from_grid_row(self, grid_layout: QGridLayout, row: int) -> dict:
+        kwargs = {}
+        for column in range(grid_layout.columnCount()):
+            label_item = grid_layout.itemAtPosition(row, column)
+            if label_item is not None:
+                label_widget = label_item.widget()
+                if isinstance(label_widget, QLabel):
+                    key = label_widget.text()
 
-        Args:
-            grid_layout (QGridLayout): The grid layout from which to extract kwargs.
-            row (int): The row index from which to extract the kwargs.
-
-        Returns:
-            dict: A dictionary with kwargs names as keys and their corresponding values.
-        """
-        ...
-        # kwargs = {}
-        # for col in range(0, grid_layout.columnCount(), 2):  # Assuming even columns are labels
-        #     label_item = grid_layout.itemAtPosition(row, col)
-        #     widget_item = grid_layout.itemAtPosition(row, col + 1)
-        #     if label_item is not None and widget_item is not None:
-        #         label_widget = label_item.widget()
-        #         value_widget = widget_item.widget()
-        #         if label_widget and value_widget:
-        #             kwarg_name = label_widget.text().rstrip(":").lower()
-        #             kwarg_value = self.get_widget_value(value_widget)
-        #             kwargs[kwarg_name] = kwarg_value
-        # return kwargs}
+                    # The corresponding value widget is in the next row
+                    value_item = grid_layout.itemAtPosition(row + 1, column)
+                    if value_item is not None:
+                        value_widget = value_item.widget()
+                        # Extract the value from the widget
+                        if isinstance(value_widget, QLineEdit):
+                            value = value_widget.text()
+                        elif isinstance(value_widget, QSpinBox) or isinstance(
+                            value_widget, QDoubleSpinBox
+                        ):
+                            value = value_widget.value()
+                        elif isinstance(value_widget, QCheckBox):
+                            value = value_widget.isChecked()
+                        else:
+                            value = None  # You can decide how to handle other widget types
+                        kwargs[key] = value
+        return kwargs
 
     def run_scan(self):
-        ...
+        # Extract kwargs for the scan
+        kwargs = {
+            k.lower(): v
+            for k, v in self.extract_kwargs_from_grid_row(self.kwargs_layout, 1).items()
+        }
+
+        # Extract args from the table
+        args = []
+        for row in range(self.args_table.rowCount()):
+            row_args = []
+            for column in range(self.args_table.columnCount()):
+                widget = self.args_table.cellWidget(row, column)
+                if widget:
+                    # Extract the value from the widget
+                    if isinstance(widget, QLineEdit):
+                        value = widget.text().lower()
+                        # If the value corresponds to a device, retrieve the device object
+                        if value in self.dev:
+                            value = getattr(self.dev, value)
+                    elif isinstance(widget, QSpinBox) or isinstance(widget, QDoubleSpinBox):
+                        value = widget.value()
+                    else:
+                        value = None  # You can decide how to handle other widget types
+                    row_args.append(value)
+            args.extend(row_args)
+
+        # Convert args to lowercase if they are strings
+        args = [arg.lower() if isinstance(arg, str) else arg for arg in args]
+
+        # TODO remove when function exec works
+        print(f"Args: {args}")
+        print(f"Kwargs: {kwargs}")
+
+        # Execute the scan
+        scan_function = getattr(self.scans, self.comboBox_scan_selection.currentText())
+        if callable(scan_function):
+            scan_function(*args, **kwargs)
 
     def get_widget_value(self, widget):
         if isinstance(widget, QLabel):
