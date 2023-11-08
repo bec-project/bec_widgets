@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import (
     QDoubleSpinBox,
     QTableWidgetItem,
     QVBoxLayout,
+    QCheckBox,
 )
 
 from abc import ABC, abstractmethod
@@ -68,6 +69,14 @@ class SpinBoxHandler(WidgetHandler):
         widget.setValue(value)
 
 
+class CheckBoxHandler(WidgetHandler):
+    def get_value(self, widget):
+        return widget.isChecked()
+
+    def set_value(self, widget, value):
+        widget.setChecked(value)
+
+
 class WidgetIO:
     """Public interface for getting and setting values using handler mapping"""
 
@@ -77,6 +86,7 @@ class WidgetIO:
         QTableWidget: TableWidgetHandler,
         QSpinBox: SpinBoxHandler,
         QDoubleSpinBox: SpinBoxHandler,
+        QCheckBox: CheckBoxHandler,
     }
 
     @staticmethod
