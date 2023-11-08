@@ -1,5 +1,4 @@
 import msgpack
-from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QApplication,
     QWidget,
@@ -18,12 +17,11 @@ from PyQt5.QtWidgets import (
     QGridLayout,
     QTableWidget,
     QTableWidgetItem,
+    QHeaderView,
 )
 
 from bec_lib.core import MessageEndpoints
-from bec_widgets.qt_utils.widget_hierarchy import print_widget_hierarchy
-
-# from bec_widgets.qt_utils.layout_tools import remove_empty_cells
+from bec_widgets.qt_utils.widget_io import WidgetIO
 
 
 class ScanArgType:
@@ -94,6 +92,8 @@ class ScanControl(QWidget):
 
         # Initialize the QTableWidget for args
         self.args_table = QTableWidget()
+        self.args_table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
+
         self.scan_control_layout.addWidget(self.args_table)
 
         # Connect signals
@@ -126,6 +126,7 @@ class ScanControl(QWidget):
         self.comboBox_scan_selection.addItems(allowed_scans)
 
     def on_scan_selected(self):
+        """Callback for scan selection combo box"""
         selected_scan_name = self.comboBox_scan_selection.currentText()
         selected_scan_info = self.available_scans.get(selected_scan_name, {})
 
@@ -154,10 +155,21 @@ class ScanControl(QWidget):
             grid_layout.addWidget(label, row_index, column_index)
 
     def add_labels_to_table(self, labels: list, table: QTableWidget) -> None:
+        """
+        Adds labels to the given table widget as a header row.
+        Args:
+            labels(list): List of label names to add.
+            table(QTableWidget): The table widget to which labels will be added.
+        """
         table.setColumnCount(len(labels))
         table.setHorizontalHeaderLabels(labels)
 
     def generate_args_input_fields(self, scan_info: dict) -> None:
+        """
+        Generates input fields for args
+        Args:
+            scan_info(dict): Scan signature dictionary from BEC.
+        """
         # Get arg_input from selected scan
         self.arg_input = scan_info.get("arg_input", {})
 
@@ -171,7 +183,7 @@ class ScanControl(QWidget):
         """
         Generates input fields for kwargs
         Args:
-            scan_info(dict): Dictionary containing scan information
+            scan_info(dict): Scan signature dictionary from BEC.
         """
         # Get signature
         signature = scan_info.get("signature", [])
@@ -187,6 +199,15 @@ class ScanControl(QWidget):
         self.add_widgets_row_to_layout(self.kwargs_layout, widgets)
 
     def generate_widgets_from_signature(self, items: list, signature: dict = None) -> list:
+        """
+        Generates widgets from the given list of items.
+        Args:
+            items(list): List of items to create widgets for.
+            signature(dict, optional): Scan signature dictionary from BEC.
+
+        Returns:
+
+        """
         widgets = []  # Initialize an empty list to hold the widgets
 
         for item in items:
@@ -324,17 +345,8 @@ class ScanControl(QWidget):
                     value_item = grid_layout.itemAtPosition(row + 1, column)
                     if value_item is not None:
                         value_widget = value_item.widget()
-                        # Extract the value from the widget
-                        if isinstance(value_widget, QLineEdit):
-                            value = value_widget.text()
-                        elif isinstance(value_widget, QSpinBox) or isinstance(
-                            value_widget, QDoubleSpinBox
-                        ):
-                            value = value_widget.value()
-                        elif isinstance(value_widget, QCheckBox):
-                            value = value_widget.isChecked()
-                        else:
-                            value = None  # You can decide how to handle other widget types
+                        # Use WidgetIO.get_value to extract the value
+                        value = WidgetIO.get_value(value_widget)
                         kwargs[key] = value
         return kwargs
 
@@ -344,23 +356,20 @@ class ScanControl(QWidget):
         Args:
             table(QTableWidget): Table widget from which to extract the arguments
         """
-        # Extract args from the table
         args = []
         for row in range(table.rowCount()):
             row_args = []
             for column in range(table.columnCount()):
                 widget = table.cellWidget(row, column)
                 if widget:
-                    # Extract the value from the widget
-                    if isinstance(widget, QLineEdit):
+                    if isinstance(widget, QLineEdit):  # special case for QLineEdit for Devices
                         value = widget.text().lower()
-                        # If the value corresponds to a device, retrieve the device object
                         if value in self.dev:
                             value = getattr(self.dev, value)
-                    elif isinstance(widget, QSpinBox) or isinstance(widget, QDoubleSpinBox):
-                        value = widget.value()
+                        else:
+                            raise ValueError(f"The device '{value}' is not recognized.")
                     else:
-                        value = None  # You can decide how to handle other widget types
+                        value = WidgetIO.get_value(widget)
                     row_args.append(value)
             args.extend(row_args)
         return args
@@ -373,23 +382,15 @@ class ScanControl(QWidget):
         }
 
         # Extract args from the table
-        args = self.extract_args_from_table()
+        args = self.extract_args_from_table(self.args_table)
 
         # Convert args to lowercase if they are strings
         args = [arg.lower() if isinstance(arg, str) else arg for arg in args]
-
-        # TODO remove when function exec works
-        print(f"Args: {args}")
-        print(f"Kwargs: {kwargs}")
 
         # Execute the scan
         scan_function = getattr(self.scans, self.comboBox_scan_selection.currentText())
         if callable(scan_function):
             scan_function(*args, **kwargs)
-
-    def get_widget_value(self, widget):
-        if isinstance(widget, QLabel):
-            return widget.text()
 
 
 if __name__ == "__main__":
