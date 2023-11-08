@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (
     QSpinBox,
 )
 
-from bec_widgets.qt_utils.widget_IO import WidgetHierarchy
+from bec_widgets.qt_utils.widget_io import WidgetHierarchy
 
 
 @pytest.fixture(scope="function")
