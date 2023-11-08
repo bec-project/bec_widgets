@@ -130,11 +130,6 @@ class ScanControl(QWidget):
         selected_scan_name = self.comboBox_scan_selection.currentText()
         selected_scan_info = self.available_scans.get(selected_scan_name, {})
 
-        # Create a new kwarg layout to replace the old one - this is necessary because otherwise row count is not reseted
-        self.clear_and_delete_layout(self.kwargs_layout)
-        self.kwargs_layout = self.create_new_grid_layout()  # Create new grid layout
-        self.scan_control_layout.insertLayout(0, self.kwargs_layout)
-
         # Generate kwargs input
         self.generate_kwargs_input_fields(selected_scan_info)
 
@@ -154,7 +149,9 @@ class ScanControl(QWidget):
             # Add the label to the grid layout at the calculated row and current column
             grid_layout.addWidget(label, row_index, column_index)
 
-    def add_labels_to_table(self, labels: list, table: QTableWidget) -> None:
+    def add_labels_to_table(
+        self, labels: list, table: QTableWidget
+    ) -> None:  # TODO could be moved to BECTable
         """
         Adds labels to the given table widget as a header row.
         Args:
@@ -170,6 +167,9 @@ class ScanControl(QWidget):
         Args:
             scan_info(dict): Scan signature dictionary from BEC.
         """
+        # Clear the previous input fields
+        self.args_table.setRowCount(0)  # Wipe table
+
         # Get arg_input from selected scan
         self.arg_input = scan_info.get("arg_input", {})
 
@@ -185,6 +185,11 @@ class ScanControl(QWidget):
         Args:
             scan_info(dict): Scan signature dictionary from BEC.
         """
+        # Create a new kwarg layout to replace the old one - this is necessary because otherwise row count is not reseted
+        self.clear_and_delete_layout(self.kwargs_layout)
+        self.kwargs_layout = self.create_new_grid_layout()  # Create new grid layout
+        self.scan_control_layout.insertLayout(0, self.kwargs_layout)
+
         # Get signature
         signature = scan_info.get("signature", [])
 
