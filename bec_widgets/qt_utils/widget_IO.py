@@ -68,30 +68,6 @@ class SpinBoxHandler(WidgetHandler):
         widget.setValue(value)
 
 
-# TODO remove when widgetIO works
-# HANDLERS = {
-#     QLineEdit: LineEditHandler,
-#     QComboBox: ComboBoxHandler,
-#     QTableWidget: TableWidgetHandler,
-#     QSpinBox: SpinBoxHandler,
-#     QDoubleSpinBox: SpinBoxHandler,
-# }
-#
-
-##################### Public interface for getting and setting values #####################
-# def get_value(widget):
-#     handler_class = HANDLERS.get(type(widget))
-#     if handler_class:
-#         return handler_class.get_value(widget)
-#     return None
-#
-#
-# def set_value(widget, value):
-#     handler_class = HANDLERS.get(type(widget))
-#     if handler_class:
-#         handler_class.set_value(widget, value)
-
-
 class WidgetIO:
     """Public interface for getting and setting values using handler mapping"""
 
