@@ -130,6 +130,7 @@ class ScanControl(QWidget):
         selected_scan_name = self.comboBox_scan_selection.currentText()
         selected_scan_info = self.available_scans.get(selected_scan_name, {})
 
+        print(selected_scan_info)
         # Generate kwargs input
         self.generate_kwargs_input_fields(selected_scan_info)
 
@@ -167,8 +168,9 @@ class ScanControl(QWidget):
         Args:
             scan_info(dict): Scan signature dictionary from BEC.
         """
-        # Clear the previous input fields
-        self.args_table.setRowCount(0)  # Wipe table
+
+        # Setup args table limits
+        self.set_args_table_limits(self.args_table, scan_info)
 
         # Get arg_input from selected scan
         self.arg_input = scan_info.get("arg_input", {})
@@ -176,8 +178,10 @@ class ScanControl(QWidget):
         # Generate labels for table
         self.add_labels_to_table(list(self.arg_input.keys()), self.args_table)
 
-        # Generate first row for input
-        self.add_bundle()
+        # add minimum number of args rows
+        if self.arg_size_min is not None:
+            for i in range(self.arg_size_min):
+                self.add_bundle()
 
     def generate_kwargs_input_fields(self, scan_info: dict) -> None:
         """
@@ -201,6 +205,7 @@ class ScanControl(QWidget):
 
         # Add widgets
         widgets = self.generate_widgets_from_signature(kwargs, signature)
+
         self.add_widgets_row_to_layout(self.kwargs_layout, widgets)
 
     def generate_widgets_from_signature(self, items: list, signature: dict = None) -> list:
@@ -238,6 +243,19 @@ class ScanControl(QWidget):
             widgets.append(widget)
 
         return widgets
+
+    def set_args_table_limits(self, table: QTableWidget, scan_info: dict) -> None:
+        # Get bundle info
+        arg_bundle_size = scan_info.get("arg_bundle_size", {})
+        self.arg_size_min = arg_bundle_size.get("min", 1)
+        self.arg_size_max = arg_bundle_size.get("max", None)
+
+        # Clear the previous input fields
+        table.setRowCount(0)  # Wipe table
+
+        # Set max number of args rows for table
+        if self.arg_size_max is not None:
+            table.setRowCount(self.arg_size_max)
 
     def add_widgets_row_to_layout(
         self, grid_layout: QGridLayout, widgets: list, row_index: int = None
@@ -297,7 +315,9 @@ class ScanControl(QWidget):
             table_widget (QTableWidget): The table widget from which the last row will be removed.
         """
         row_count = table_widget.rowCount()
-        if row_count > 1:  # Check to ensure at least one row remains after removal
+        if (
+            row_count > self.arg_size_min
+        ):  # Check to ensure there is a minimum number of rows remaining
             table_widget.removeRow(row_count - 1)
 
     def create_new_grid_layout(self):
