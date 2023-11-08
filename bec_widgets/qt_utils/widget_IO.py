@@ -191,7 +191,8 @@ class WidgetHierarchy:
             config = {}
         widget_info = f"{widget.__class__.__name__} ({widget.objectName()})"
 
-        if grab_values and type(widget) in WidgetIO._handlers:
+        # if grab_values and type(widget) in WidgetIO._handlers:
+        if grab_values:
             value = WidgetIO.get_value(widget, ignore_errors=True)
             if value is not None or save_all:
                 if widget_info not in config:

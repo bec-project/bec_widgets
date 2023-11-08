@@ -8,10 +8,7 @@ from PyQt5.QtWidgets import (
     QSpinBox,
 )
 
-from bec_widgets.qt_utils.widget_hierarchy import (
-    export_config_to_dict,
-    import_config_from_dict,
-)
+from bec_widgets.qt_utils.widget_IO import WidgetHierarchy
 
 
 @pytest.fixture(scope="function")
@@ -45,10 +42,10 @@ def test_export_import_config(example_widget):
             "QSpinBox ()": {"value": 10},
         }
     }
-    import_config_from_dict(example_widget, initial_config, set_values=True)
+    WidgetHierarchy.import_config_from_dict(example_widget, initial_config, set_values=True)
 
-    exported_config_full = export_config_to_dict(example_widget, grab_values=True)
-    exported_config_reduced = export_config_to_dict(
+    exported_config_full = WidgetHierarchy.export_config_to_dict(example_widget, grab_values=True)
+    exported_config_reduced = WidgetHierarchy.export_config_to_dict(
         example_widget, grab_values=True, save_all=False
     )
 
