@@ -239,6 +239,10 @@ class ScanControl(QWidget):
             # Instantiate the widget and set some properties if necessary
             widget = widget_class()
 
+            # set high default range for spin boxes #TODO can be linked to motor/device limits from BEC
+            if isinstance(widget, (QSpinBox, QDoubleSpinBox)):
+                widget.setRange(-9999, 9999)
+                widget.setValue(0)
             # Add the widget to the list
             widgets.append(widget)
 
