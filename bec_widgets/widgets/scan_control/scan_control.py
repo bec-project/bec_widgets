@@ -29,6 +29,7 @@ class ScanArgType:
     FLOAT = "float"
     INT = "int"
     BOOL = "bool"
+    STR = "str"
 
 
 class ScanControl(QWidget):
@@ -37,6 +38,7 @@ class ScanControl(QWidget):
         ScanArgType.FLOAT: QDoubleSpinBox,
         ScanArgType.INT: QSpinBox,
         ScanArgType.BOOL: QCheckBox,
+        ScanArgType.STR: QLineEdit,
     }
 
     def __init__(self, parent=None, client=None, allowed_scans=None):
@@ -257,10 +259,6 @@ class ScanControl(QWidget):
         # Clear the previous input fields
         table.setRowCount(0)  # Wipe table
 
-        # Set max number of args rows for table
-        if self.arg_size_max is not None:
-            table.setRowCount(self.arg_size_max)
-
     def add_widgets_row_to_layout(
         self, grid_layout: QGridLayout, widgets: list, row_index: int = None
     ) -> None:
@@ -294,6 +292,9 @@ class ScanControl(QWidget):
         # If row_index is not specified, add to the end of the table
         if row_index is None or row_index > table_widget.rowCount():
             row_index = table_widget.rowCount()
+            if self.arg_size_max is not None:  # ensure the max args size is not exceeded
+                if row_index >= self.arg_size_max:
+                    return
             table_widget.insertRow(row_index)
 
         for column_index, widget in enumerate(widgets):
@@ -430,7 +431,9 @@ if __name__ == "__main__":
     client.start()
 
     app = QApplication([])
-    scan_control = ScanControl(client=client, allowed_scans=["line_scan", "grid_scan"])
+    scan_control = ScanControl(
+        client=client,
+    )  # allowed_scans=["line_scan", "grid_scan"])
 
     window = scan_control
     window.show()
