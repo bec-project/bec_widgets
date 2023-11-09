@@ -384,7 +384,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         self.update_signal.emit()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import sys
     from bec_widgets.bec_dispatcher import bec_dispatcher
 

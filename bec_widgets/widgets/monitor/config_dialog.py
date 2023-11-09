@@ -503,7 +503,7 @@ class ConfigDialog(QWidget, Ui_Form):
         self.close()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     app = QApplication([])
     main_app = ConfigDialog()
     main_app.show()
