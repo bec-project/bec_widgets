@@ -81,12 +81,12 @@ class ScanControl(QWidget):
 
         # Buttons
         self.button_layout = QHBoxLayout()
-        self.add_bundle_button = QPushButton("Add Bundle", self.scan_control_group)
-        self.add_bundle_button.clicked.connect(self.add_bundle)
-        self.remove_bundle_button = QPushButton("Remove Bundle", self.scan_control_group)
-        self.remove_bundle_button.clicked.connect(self.remove_bundle)
-        self.button_layout.addWidget(self.add_bundle_button)
-        self.button_layout.addWidget(self.remove_bundle_button)
+        self.pushButton_add_bundle = QPushButton("Add Bundle", self.scan_control_group)
+        self.pushButton_add_bundle.clicked.connect(self.add_bundle)
+        self.pushButton_remove_bundle = QPushButton("Remove Bundle", self.scan_control_group)
+        self.pushButton_remove_bundle.clicked.connect(self.remove_bundle)
+        self.button_layout.addWidget(self.pushButton_add_bundle)
+        self.button_layout.addWidget(self.pushButton_remove_bundle)
         self.scan_control_layout.addLayout(self.button_layout)
 
         # 2nd Separator
@@ -132,7 +132,7 @@ class ScanControl(QWidget):
         selected_scan_name = self.comboBox_scan_selection.currentText()
         selected_scan_info = self.available_scans.get(selected_scan_name, {})
 
-        print(selected_scan_info)
+        print(selected_scan_info)  # TODO remove when widget will be more mature
         # Generate kwargs input
         self.generate_kwargs_input_fields(selected_scan_info)
 
@@ -423,7 +423,8 @@ class ScanControl(QWidget):
             scan_function(*args, **kwargs)
 
 
-if __name__ == "__main__":
+# Application example
+if __name__ == "__main__":  # pragma: no cover
     from bec_widgets.bec_dispatcher import bec_dispatcher
 
     # BECclient global variables
