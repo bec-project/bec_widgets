@@ -192,7 +192,7 @@ class ModularApp(QMainWindow):
 
         # hook plots, configs and buttons together
         for plot, config, button in zip(plots, configs, buttons):
-            plot.update_config(config)
+            plot.on_config_update(config)
             button.clicked.connect(plot.show_config_dialog)
 
 

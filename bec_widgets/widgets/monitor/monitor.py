@@ -2,18 +2,134 @@ import os
 import time
 
 import pyqtgraph as pg
-from bec_lib import MessageEndpoints
+from pydantic import ValidationError
+
+from bec_lib.core import MessageEndpoints
 from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QApplication, QTableWidgetItem, QWidget
+from PyQt5.QtWidgets import QApplication, QTableWidgetItem, QWidget, QMessageBox
 from pyqtgraph import mkPen, mkBrush
 from PyQt5 import uic
 
 from bec_widgets.bec_dispatcher import bec_dispatcher
 from bec_widgets.qt_utils import Crosshair, Colors
 
-# just for demonstration purposes is script run directly
+# from bec_widgets.validation import validate_monitor_config, ValidationError
+from bec_widgets.validation import MonitorConfigValidator
+
+# just for demonstration purposes if script run directly
+config_scan_mode = {
+    "plot_settings": {
+        "background_color": "white",
+        "num_columns": 3,
+        "colormap": "plasma",
+        "scan_types": True,
+    },
+    "plot_data": {
+        "grid_scan": [
+            {
+                "plot_name": "Grid plot 1",
+                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "BPM",
+                    "signals": [
+                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
+                        {"name": "gauss_adc1", "entry": "gauss_adc1"},
+                    ],
+                },
+            },
+            {
+                "plot_name": "Grid plot 2",
+                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "BPM",
+                    "signals": [
+                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
+                        {"name": "gauss_adc1", "entry": "gauss_adc1"},
+                    ],
+                },
+            },
+            {
+                "plot_name": "Grid plot 3",
+                "x": {"label": "Motor Y", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "BPM",
+                    "signals": [{"name": "gauss_bpm", "entry": "gauss_bpm"}],
+                },
+            },
+            {
+                "plot_name": "Grid plot 4",
+                "x": {"label": "Motor Y", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "BPM",
+                    "signals": [{"name": "gauss_adc3", "entry": "gauss_adc3"}],
+                },
+            },
+        ],
+        "line_scan": [
+            {
+                "plot_name": "BPM plot",
+                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "BPM",
+                    "signals": [
+                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
+                        {"name": "gauss_adc1"},
+                        {"name": "gauss_adc2", "entry": "gauss_adc2"},
+                    ],
+                },
+            },
+            {
+                "plot_name": "Multi",
+                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
+                "y": {
+                    "label": "Multi",
+                    "signals": [
+                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
+                        {"name": "samx", "entry": "samx"},
+                    ],
+                },
+            },
+        ],
+    },
+}
+
 config_simple = {
+    "plot_settings": {
+        "background_color": "black",
+        "num_columns": 2,
+        "colormap": "plasma",
+        "scan_types": False,
+    },
+    "plot_data": [
+        {
+            "plot_name": "BPM4i plots vs samx",
+            "x": {
+                "label": "Motor Y",
+                # "signals": [{"name": "samx", "entry": "samx"}],
+                "signals": [{"name": "samy"}],
+            },
+            "y": {
+                "label": "bpm4i",
+                "signals": [{"name": "bpm4i", "entry": "bpm4i"}],
+            },
+        },
+        {
+            "plot_name": "Gauss plots vs samx",
+            "x": {
+                "label": "Motor X",
+                "signals": [{"name": "samx", "entry": "samx"}],
+            },
+            "y": {
+                "label": "Gauss",
+                # "signals": [{"name": "gauss_bpm", "entry": "gauss_bpm"}],
+                "signals": [{"name": "gauss_bpm"}],
+            },
+        },
+    ],
+}
+
+config_wrong = {
     "plot_settings": {
         "background_color": "black",
         "num_columns": 2,
@@ -40,7 +156,7 @@ config_simple = {
             },
             "y": {
                 "label": "Gauss",
-                "signals": [{"name": "gauss_bpm", "entry": "gauss_bpm"}],
+                "signals": [{"name": "gauss_bpm", "entry": "BS"}],
             },
         },
     ],
@@ -63,6 +179,9 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         # Client and device manager from BEC
         self.client = bec_dispatcher.client if client is None else client
         self.dev = self.client.device_manager.devices
+        self.queue = self.client.queue
+
+        self.validator = MonitorConfigValidator(self.dev)
 
         if gui_id is None:
             self.gui_id = self.__class__.__name__ + str(time.time())  # TODO still in discussion
@@ -248,7 +367,9 @@ class BECMonitor(pg.GraphicsLayoutWidget):
                 )
                 x_signal_config = x_config["signals"][0]
                 x_name = x_signal_config.get("name", "")
-                x_entry = x_signal_config.get("entry", x_name)
+                x_entry = x_signal_config.get(
+                    "entry", x_name
+                )  # TODO this is buggy if the entry is not specified in the config for x
 
                 key = (x_name, x_entry, y_name, y_entry)
                 data_x = self.data.get(key, {}).get("x", [])
@@ -265,7 +386,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         from .config_dialog import ConfigDialog
 
         dialog = ConfigDialog(default_config=self.config)
-        dialog.config_updated.connect(self.update_config)
+        dialog.config_updated.connect(self.on_config_update)
         dialog.show()
 
     def update_client(self, client) -> None:
@@ -279,12 +400,21 @@ class BECMonitor(pg.GraphicsLayoutWidget):
     @pyqtSlot(dict)
     def on_config_update(self, config: dict) -> None:
         """
-        Update the configuration settings for the PlotApp.
+        Validate and update the configuration settings for the PlotApp.
         Args:
             config(dict): Configuration settings
         """
-        self.config = config
-        self._init_config()
+
+        # self.config = config
+        # self._init_config()
+        try:
+            validated_config = self.validator.validate_monitor_config(config)
+            self.config = validated_config.model_dump()
+            self._init_config()
+        except ValidationError as e:
+            error_message = f"Monitor configuration validation error: {e}"
+            print(error_message)
+        # QMessageBox.critical(self, "Configuration Error", error_message) #TODO do better error popups
 
     @pyqtSlot(dict, dict)
     def on_scan_segment(self, msg, metadata):
@@ -402,6 +532,6 @@ if __name__ == "__main__":  # pragma: no cover
     client.start()
 
     app = QApplication(sys.argv)
-    monitor = BECMonitor(config=config_simple)
+    monitor = BECMonitor(config=config_wrong)
     monitor.show()
     sys.exit(app.exec_())
