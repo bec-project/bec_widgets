@@ -2,6 +2,26 @@
 
 <!--next-version-placeholder-->
 
+## v0.30.0 (2023-11-10)
+
+### Feature
+
+* WidgetIO support for QLabel ([`aa4c7c3`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/aa4c7c3385f52e4bbc805ee2aced181929943a89))
+* Scan_control.py added option to limit scan selection from list of strings as init parameter ([`0fe06ad`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/0fe06ade5b44d13a9188aef474364b36baa480ef))
+* Scan_control.py a general widget which can generate GUI for scan input ([`088fa51`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/088fa516a8876d112a98cd60aa2a5701dff6b97c))
+
+### Fix
+
+* Added imports to __init__.py in widget for ScanControl class ([`b85cc89`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/b85cc898d521df1c99a65e579b8fe853bb04cc32))
+* Scan_control.py args_size_max fixed ([`da9025e`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/da9025e032c2bc9b34cf359a20745e3156d2f731))
+* Scan_control.py default spinBox limits increases ([`5c67026`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/5c67026637472d9c77185a59e1bf9a24cfe01307))
+* Scan_control.py supports minimum and maximum number of args ([`ee2f36f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ee2f36fb402d626c300a018afacbd57eff14a665))
+* Scan_control.py wipe table and reinitialise devices when scan is changed ([`5ac3526`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/5ac3526384b9ee0eb94568bac035b348eaa52abd))
+* Widget_IO.py added handler for QCheckBox ([`18a7025`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/18a702572f6bed41081d368e39c8fc69122c6203))
+* Scan_control.py scan can be executed from GUI ([`2e42ba1`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/2e42ba174f7abe1590b9afb099dc2d068eb848ae))
+* Scan_control.py all kwargs are rendered ([`4b7592c`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/4b7592c2795a26591b3e30870c73aa406316588d))
+* Scan_control.py kwargs and args are added to the correct layouts ([`b311069`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/b311069722226b95a7902f42815d2c1e219e9584))
+
 ## v0.29.0 (2023-10-31)
 
 ### Feature
