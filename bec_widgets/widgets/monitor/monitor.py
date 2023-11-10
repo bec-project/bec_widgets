@@ -1,4 +1,5 @@
 import os
+import time
 
 import pyqtgraph as pg
 from bec_lib import MessageEndpoints
@@ -50,7 +51,12 @@ class BECMonitor(pg.GraphicsLayoutWidget):
     update_signal = pyqtSignal()
 
     def __init__(
-        self, parent=None, client=None, config: dict = None, enable_crosshair: bool = False
+        self,
+        parent=None,
+        client=None,
+        config: dict = None,
+        enable_crosshair: bool = False,
+        gui_id=None,
     ):
         super(BECMonitor, self).__init__(parent=parent)
 
@@ -58,8 +64,12 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         self.client = bec_dispatcher.client if client is None else client
         self.dev = self.client.device_manager.devices
 
+        if gui_id is None:
+            self.gui_id = self.__class__.__name__ + str(time.time())  # TODO still in discussion
+
         # Connect slots dispatcher
         bec_dispatcher.connect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
+        # bec_dispatcher.connect_slot(self.on_config_update, MessageEndpoints.gui_config(self.gui_id)) #TODO connect when ready
 
         # Current configuration
         self.config = config
@@ -87,7 +97,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         if self.config is None:
             print("No initial config found for BECDeviceMonitor")
         else:
-            self.update_config(self.config)
+            self.on_config_update(self.config)
 
     def _init_config(self):
         """
@@ -267,7 +277,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         self.dev = self.client.device_manager.devices
 
     @pyqtSlot(dict)
-    def update_config(self, config: dict) -> None:
+    def on_config_update(self, config: dict) -> None:
         """
         Update the configuration settings for the PlotApp.
         Args:
@@ -392,6 +402,6 @@ if __name__ == "__main__":  # pragma: no cover
     client.start()
 
     app = QApplication(sys.argv)
-    monitor = BECMonitor()
+    monitor = BECMonitor(config=config_simple)
     monitor.show()
     sys.exit(app.exec_())
