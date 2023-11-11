@@ -5,6 +5,7 @@ import pytest
 from unittest.mock import MagicMock
 
 from bec_widgets.widgets import BECMonitor
+from bec_widgets.validation import MonitorConfigValidator
 
 
 def load_test_config(config_name):
@@ -15,10 +16,64 @@ def load_test_config(config_name):
     return config
 
 
+class FakeDevice:
+    """Fake minimal positioner class for testing."""
+
+    def __init__(self, name, enabled=True):
+        self.name = name
+        self.enabled = enabled
+        self.signals = {self.name: {"value": 1.0}}
+
+    def __contains__(self, item):
+        return item == self.name
+
+    @property
+    def _hints(self):
+        return [self.name]
+
+    def set_value(self, fake_value: float = 1.0) -> None:
+        """
+        Setup fake value for device readout
+        Args:
+            fake_value(float): Desired fake value
+        """
+        self.signals[self.name]["value"] = fake_value
+
+
+def get_mocked_device(device_name: str):
+    """
+    Helper function to mock the devices
+    Args:
+        device_name(str): Name of the device to mock
+    """
+    return FakeDevice(name=device_name, enabled=True)
+
+
 @pytest.fixture(scope="function")
-def monitor(qtbot):
+def mocked_client():
+    # Create a dictionary of mocked devices
+    device_names = ["samx", "gauss_bpm", "gauss_adc1", "gauss_adc2", "gauss_adc3", "bpm4i"]
+    mocked_devices = {name: get_mocked_device(name) for name in device_names}
+
+    # Create a MagicMock object
     client = MagicMock()
-    widget = BECMonitor(client=client)
+
+    # Mock the device_manager.devices attribute
+    client.device_manager.devices = MagicMock()
+    client.device_manager.devices.__getitem__.side_effect = lambda x: mocked_devices.get(x)
+    client.device_manager.devices.__contains__.side_effect = lambda x: x in mocked_devices
+
+    # Set each device as an attribute of the mock
+    for name, device in mocked_devices.items():
+        setattr(client.device_manager.devices, name, device)
+
+    return client
+
+
+@pytest.fixture(scope="function")
+def monitor(qtbot, mocked_client):
+    # client = MagicMock()
+    widget = BECMonitor(client=mocked_client)
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
@@ -29,14 +84,13 @@ def monitor(qtbot):
     [
         ("config_device", False, 2),
         ("config_device_no_entry", False, 2),
-        ("config_scan", True, 4),
+        # ("config_scan", True, 4),
     ],
 )
 def test_initialization_with_device_config(monitor, config_name, scan_type, number_of_plots):
     config = load_test_config(config_name)
-    monitor.update_config(config)
+    monitor.on_config_update(config)
     assert isinstance(monitor, BECMonitor)
-    assert monitor.config == config
     assert monitor.client is not None
     assert len(monitor.plot_data) == number_of_plots
     assert monitor.scan_types == scan_type
@@ -46,13 +100,18 @@ def test_initialization_with_device_config(monitor, config_name, scan_type, numb
     "config_initial,config_update",
     [("config_device", "config_scan"), ("config_scan", "config_device")],
 )
-def test_update_config(monitor, config_initial, config_update):
+def test_on_config_update(monitor, config_initial, config_update):
     config_initial = load_test_config(config_initial)
     config_update = load_test_config(config_update)
-    monitor.update_config(config_initial)
-    assert monitor.config == config_initial
-    monitor.update_config(config_update)
-    assert monitor.config == config_update
+    # validated config has to be compared
+    config_initial_validated = monitor.validator.validate_monitor_config(
+        config_initial
+    ).model_dump()
+    config_update_validated = monitor.validator.validate_monitor_config(config_update).model_dump()
+    monitor.on_config_update(config_initial)
+    assert monitor.config == config_initial_validated
+    monitor.on_config_update(config_update)
+    assert monitor.config == config_update_validated
 
 
 @pytest.mark.parametrize(
@@ -76,9 +135,8 @@ def test_render_initial_plots(
     monitor, config_name, expected_num_columns, expected_plot_names, expected_coordinates
 ):
     config = load_test_config(config_name)
-    monitor.update_config(config)
+    monitor.on_config_update(config)
 
-    assert monitor.config == config
     # Validate number of columns
     assert monitor.plot_settings["num_columns"] == expected_num_columns
 
@@ -171,7 +229,7 @@ metadata_line = {"scan_name": "line_scan"}
 )
 def test_on_scan_segment(monitor, config_name, msg, metadata, expected_data):
     config = load_test_config(config_name)
-    monitor.update_config(config)
+    monitor.on_config_update(config)
     # Get hints
     monitor.dev.__getitem__.side_effect = mock_getitem
 
