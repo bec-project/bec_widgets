@@ -14,7 +14,6 @@ from PyQt5 import uic
 from bec_widgets.bec_dispatcher import bec_dispatcher
 from bec_widgets.qt_utils import Crosshair, Colors
 
-# from bec_widgets.validation import validate_monitor_config, ValidationError
 from bec_widgets.validation import MonitorConfigValidator
 
 # just for demonstration purposes if script run directly
@@ -132,35 +131,23 @@ config_simple = {
     ],
 }
 
-config_wrong = {
+config_no_entry = {
     "plot_settings": {
-        "background_color": "black",
-        "num_columns": 2,
-        # "colormap": "plasma",
+        "background_color": "white",
+        "num_columns": 5,
+        "colormap": "plasma",
         "scan_types": False,
     },
     "plot_data": [
         {
             "plot_name": "BPM4i plots vs samx",
-            "x": {
-                "label": "Motor Y",
-                "signals": [{"name": "samx", "entry": "samx"}],
-            },
-            "y": {
-                "label": "bpm4i",
-                "signals": [{"name": "bpm4i", "entry": "bpm4i"}],
-            },
+            "x": {"label": "Motor Y", "signals": [{"name": "samx"}]},
+            "y": {"label": "bpm4i", "signals": [{"name": "bpm4i"}]},
         },
         {
             "plot_name": "Gauss plots vs samx",
-            "x": {
-                "label": "Motor X",
-                "signals": [{"name": "samx", "entry": ["samx", "samx_setpoint"]}],
-            },
-            "y": {
-                "label": "Gauss",
-                "signals": [{"name": "gauss_bpm", "entry": "BS"}],
-            },
+            "x": {"label": "Motor X", "signals": [{"name": "samx"}]},
+            "y": {"label": "Gauss", "signals": [{"name": "gauss_bpm"}, {"name": "gauss_adc1"}]},
         },
     ],
 }

@@ -62,7 +62,9 @@ class Signal(BaseModel):
 
         # Set entry based on hints if not provided
         if v is None and hasattr(device, "_hints"):
-            v = next(iter(device._hints), device_name)
+            v = next(
+                iter(device._hints), device_name
+            )  # TODO check if device_manager[device_name]._hints in not enough?
         elif v is None:
             v = device_name
 
