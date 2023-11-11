@@ -86,7 +86,7 @@ config_scan_mode = {
                     "label": "Multi",
                     "signals": [
                         {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                        {"name": "samx", "entry": "samx"},
+                        {"name": "samx", "entry": ["samx", "samx_setpoint"]},
                     ],
                 },
             },
@@ -123,7 +123,10 @@ config_simple = {
             "y": {
                 "label": "Gauss",
                 # "signals": [{"name": "gauss_bpm", "entry": "gauss_bpm"}],
-                "signals": [{"name": "gauss_bpm"}],
+                "signals": [
+                    {"name": "gauss_bpm"},
+                    {"name": "samy", "entry": "samy"},
+                ],
             },
         },
     ],
@@ -133,7 +136,7 @@ config_wrong = {
     "plot_settings": {
         "background_color": "black",
         "num_columns": 2,
-        "colormap": "plasma",
+        # "colormap": "plasma",
         "scan_types": False,
     },
     "plot_data": [
@@ -152,7 +155,7 @@ config_wrong = {
             "plot_name": "Gauss plots vs samx",
             "x": {
                 "label": "Motor X",
-                "signals": [{"name": "samx", "entry": "samx"}],
+                "signals": [{"name": "samx", "entry": ["samx", "samx_setpoint"]}],
             },
             "y": {
                 "label": "Gauss",
@@ -205,6 +208,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         self.grid_coordinates = None
         self.scanID = None
 
+        # TODO make colors accessible to users
         self.user_colors = {}  # key: (plot_name, y_name, y_entry), value: color
 
         # Connect the update signal to the update plot method #TODO enable when update is fixed
@@ -320,29 +324,25 @@ class BECMonitor(pg.GraphicsLayoutWidget):
             curve_list = []
             for i, (y_config, color) in enumerate(zip(y_configs, colors_ys)):
                 y_name = y_config["name"]
-                y_entries = y_config.get("entry", [y_name])
+                y_entry = y_config["entry"]
 
-                if not isinstance(y_entries, list):
-                    y_entries = [y_entries]
+                user_color = self.user_colors.get((plot_name, y_name, y_entry), None)
+                color_to_use = user_color if user_color else color
 
-                for y_entry in y_entries:
-                    user_color = self.user_colors.get((plot_name, y_name, y_entry), None)
-                    color_to_use = user_color if user_color else color
+                pen_curve = mkPen(color=color_to_use, width=2, style=QtCore.Qt.DashLine)
+                brush_curve = mkBrush(color=color_to_use)
 
-                    pen_curve = mkPen(color=color_to_use, width=2, style=QtCore.Qt.DashLine)
-                    brush_curve = mkBrush(color=color_to_use)
+                curve_data = pg.PlotDataItem(
+                    symbolSize=5,
+                    symbolBrush=brush_curve,
+                    pen=pen_curve,
+                    skipFiniteCheck=True,
+                    name=f"{y_name} ({y_entry})",
+                )
 
-                    curve_data = pg.PlotDataItem(
-                        symbolSize=5,
-                        symbolBrush=brush_curve,
-                        pen=pen_curve,
-                        skipFiniteCheck=True,
-                        name=f"{y_name} ({y_entry})",
-                    )
-
-                    curve_list.append((y_name, y_entry, curve_data))
-                    plot.addItem(curve_data)
-                    row_labels.append(f"{y_name} ({y_entry}) - {plot_name}")
+                curve_list.append((y_name, y_entry, curve_data))
+                plot.addItem(curve_data)
+                row_labels.append(f"{y_name} ({y_entry}) - {plot_name}")
 
             self.curves_data[plot_name] = curve_list
 
@@ -367,9 +367,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
                 )
                 x_signal_config = x_config["signals"][0]
                 x_name = x_signal_config.get("name", "")
-                x_entry = x_signal_config.get(
-                    "entry", x_name
-                )  # TODO this is buggy if the entry is not specified in the config for x
+                x_entry = x_signal_config.get("entry", x_name)
 
                 key = (x_name, x_entry, y_name, y_entry)
                 data_x = self.data.get(key, {}).get("x", [])
@@ -405,8 +403,6 @@ class BECMonitor(pg.GraphicsLayoutWidget):
             config(dict): Configuration settings
         """
 
-        # self.config = config
-        # self._init_config()
         try:
             validated_config = self.validator.validate_monitor_config(config)
             self.config = validated_config.model_dump()
@@ -425,7 +421,6 @@ class BECMonitor(pg.GraphicsLayoutWidget):
             msg (dict): Message received with scan data.
             metadata (dict): Metadata of the scan.
         """
-        # TODO logic can be separated into different methods or there could be separate class for scan data handling
         # TODO for scan mode, if there are same names for different plots, the data are assigned multiple times
         current_scanID = msg.get("scanID", None)
         if current_scanID is None:
@@ -456,70 +451,27 @@ class BECMonitor(pg.GraphicsLayoutWidget):
             self.init_curves()
 
         for plot_config in self.plot_data:
-            plot_name = plot_config.get("plot_name", "Unnamed Plot")
             x_config = plot_config["x"]
-            x_signal_config = x_config["signals"][0]  # Assuming there's at least one signal for x
+            x_signal_config = x_config["signals"][0]  # There is exactly 1 config for x signals
 
             x_name = x_signal_config.get("name", "")
-            if not x_name:
-                raise ValueError(f"Name for x signal must be specified in plot: {plot_name}.")
-
-            x_entry_list = x_signal_config.get("entry", [])
-            if not x_entry_list:
-                x_entry_list = (
-                    self.dev[x_name]._hints if hasattr(self.dev[x_name], "_hints") else [x_name]
-                )
-
-            if not isinstance(x_entry_list, list):
-                x_entry_list = [x_entry_list]
+            x_entry = x_signal_config.get("entry", [])
 
             y_configs = plot_config["y"]["signals"]
+            for y_config in y_configs:
+                y_name = y_config.get("name", "")
+                y_entry = y_config.get("entry", [])
 
-            for x_entry in x_entry_list:
-                for y_config in y_configs:
-                    y_name = y_config.get("name", "")
-                    if not y_name:
-                        raise ValueError(
-                            f"Name for y signal must be specified in plot: {plot_name}."
-                        )
+                key = (x_name, x_entry, y_name, y_entry)
 
-                    y_entry_list = y_config.get("entry", [])
-                    if not y_entry_list:
-                        y_entry_list = (
-                            self.dev[y_name]._hints
-                            if hasattr(self.dev[y_name], "_hints")
-                            else [y_name]
-                        )
+                data_x = msg["data"].get(x_name, {}).get(x_entry, {}).get("value", None)
+                data_y = msg["data"].get(y_name, {}).get(y_entry, {}).get("value", None)
 
-                    if not isinstance(y_entry_list, list):
-                        y_entry_list = [y_entry_list]
+                if data_x is not None:
+                    self.data.setdefault(key, {}).setdefault("x", []).append(data_x)
 
-                    for y_entry in y_entry_list:
-                        key = (x_name, x_entry, y_name, y_entry)
-
-                        data_x = msg["data"].get(x_name, {}).get(x_entry, {}).get("value", None)
-                        data_y = msg["data"].get(y_name, {}).get(y_entry, {}).get("value", None)
-
-                        if data_x is None:
-                            raise ValueError(
-                                f"Incorrect entry '{x_entry}' specified for x in plot: {plot_name}, x name: {x_name}"
-                            )
-
-                        if data_y is None:
-                            if hasattr(self.dev[y_name], "_hints"):
-                                raise ValueError(
-                                    f"Incorrect entry '{y_entry}' specified for y in plot: {plot_name}, y name: {y_name}"
-                                )
-                            else:
-                                raise ValueError(
-                                    f"No hints available for y in plot: {plot_name}, and name '{y_name}' did not work as entry"
-                                )
-
-                        if data_x is not None:
-                            self.data.setdefault(key, {}).setdefault("x", []).append(data_x)
-
-                        if data_y is not None:
-                            self.data.setdefault(key, {}).setdefault("y", []).append(data_y)
+                if data_y is not None:
+                    self.data.setdefault(key, {}).setdefault("y", []).append(data_y)
 
         self.update_signal.emit()
 
@@ -532,6 +484,6 @@ if __name__ == "__main__":  # pragma: no cover
     client.start()
 
     app = QApplication(sys.argv)
-    monitor = BECMonitor(config=config_wrong)
+    monitor = BECMonitor(config=config_simple)
     monitor.show()
     sys.exit(app.exec_())
