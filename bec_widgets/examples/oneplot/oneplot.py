@@ -3,7 +3,7 @@ import os
 import numpy as np
 import PyQt5.QtWidgets
 import pyqtgraph as pg
-from bec_lib.core import MessageEndpoints
+from bec_lib import MessageEndpoints
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QApplication, QTableWidgetItem, QWidget
 from pyqtgraph import mkBrush, mkColor, mkPen

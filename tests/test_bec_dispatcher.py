@@ -1,8 +1,8 @@
 from unittest.mock import Mock
 
 import pytest
-from bec_lib.core.BECMessage import ScanMessage
-from bec_lib.core.connector import MessageObject
+from bec_lib.messages import ScanMessage
+from bec_lib.connector import MessageObject
 
 # TODO: find a better way to mock singletons
 from bec_widgets.bec_dispatcher import _BECDispatcher

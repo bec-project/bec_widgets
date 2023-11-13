@@ -2,8 +2,8 @@ import itertools
 from threading import RLock
 
 import pyqtgraph as pg
-from bec_lib.core import MessageEndpoints
-from bec_lib.core.logger import bec_logger
+from bec_lib import MessageEndpoints
+from bec_lib.logger import bec_logger
 from PyQt5.QtCore import pyqtProperty, pyqtSlot
 
 from bec_widgets.bec_dispatcher import bec_dispatcher

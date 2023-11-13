@@ -3,9 +3,8 @@ import itertools
 import os
 from typing import Callable
 
-from bec_lib import BECClient
-from bec_lib.core import BECMessage, ServiceConfig
-from bec_lib.core.redis_connector import RedisConsumerThreaded
+from bec_lib import BECClient, messages, ServiceConfig
+from bec_lib.redis_connector import RedisConsumerThreaded
 from PyQt5.QtCore import QObject, pyqtSignal
 
 # Adding a new pyqt signal requres a class factory, as they must be part of the class definition
@@ -45,13 +44,13 @@ class _BECDispatcher(QObject):
         Args:
             slot (Callable): A slot method/function that accepts two inputs: content and metadata of
                 the corresponding pub/sub message
-            topic (str): A topic that can typically be acquired via bec_lib.core.MessageEndpoints
+            topic (str): A topic that can typically be acquired via bec_lib.MessageEndpoints
         """
         # create new connection for topic if it doesn't exist
         if topic not in self._connections:
 
             def cb(msg):
-                msg = BECMessage.MessageReader.loads(msg.value)
+                msg = messages.MessageReader.loads(msg.value)
                 # TODO: this can could be replaced with a simple
                 # self._connections[topic].signal.emit(msg.content, msg.metadata)
                 # once all dispatcher.connect_slot calls are made with a single topic only
@@ -76,7 +75,7 @@ class _BECDispatcher(QObject):
         Args:
             slot (Callable): A slot to be disconnected
             topic (str): A corresponding topic that can typically be acquired via
-                bec_lib.core.MessageEndpoints
+                bec_lib.MessageEndpoints
         """
         if topic not in self._connections:
             return

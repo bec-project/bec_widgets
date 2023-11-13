@@ -24,7 +24,7 @@ from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtWidgets import QShortcut
 from pyqtgraph.Qt import QtWidgets, uic, QtCore
 
-from bec_lib.core import MessageEndpoints, BECMessage
+from bec_lib import MessageEndpoints, messages
 from bec_widgets.qt_utils import DoubleValidationDelegate
 
 
@@ -1295,7 +1295,7 @@ class MotorControl(QThread):
 
     @staticmethod
     def _device_status_callback_motors(msg, *, parent, **_kwargs) -> None:
-        deviceMSG = BECMessage.DeviceMessage.loads(msg.value)
+        deviceMSG = messages.DeviceMessage.loads(msg.value)
         if parent.motor_x.name in deviceMSG.content["signals"]:
             parent.current_x = deviceMSG.content["signals"][parent.motor_x.name]["value"]
         elif parent.motor_y.name in deviceMSG.content["signals"]:
@@ -1307,9 +1307,7 @@ if __name__ == "__main__":
     import yaml
     import argparse
 
-    from bec_lib import BECClient
-
-    from bec_lib.core import ServiceConfig
+    from bec_lib import BECClient, ServiceConfig
 
     parser = argparse.ArgumentParser(description="Motor App")
 

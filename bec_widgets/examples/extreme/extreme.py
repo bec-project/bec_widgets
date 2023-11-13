@@ -19,7 +19,7 @@ from pyqtgraph import mkBrush, mkPen
 from pyqtgraph.Qt import QtCore, uic
 from pyqtgraph.Qt import QtWidgets
 
-from bec_lib.core import MessageEndpoints
+from bec_lib import MessageEndpoints
 from bec_widgets.qt_utils import Crosshair, Colors
 
 

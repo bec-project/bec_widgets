@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import (
     QHeaderView,
 )
 
-from bec_lib.core import MessageEndpoints
+from bec_lib import MessageEndpoints
 from bec_widgets.qt_utils.widget_io import WidgetIO
 
 

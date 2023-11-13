@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-from bec_lib.core import MessageEndpoints, BECMessage
+from bec_lib import MessageEndpoints, messages
 
 
 class StreamApp(QWidget):
@@ -102,7 +102,7 @@ class StreamApp(QWidget):
 
     @staticmethod
     def _streamer_cb(msg, *, parent, **_kwargs) -> None:
-        msgMCS = BECMessage.DeviceMessage.loads(msg.value)
+        msgMCS = messages.DeviceMessage.loads(msg.value)
         print(msgMCS)
         row = msgMCS.content["signals"][parent.sub_device]
         metadata = msgMCS.metadata
@@ -123,7 +123,7 @@ class StreamApp(QWidget):
     def _device_cv(msg, *, parent, **_kwargs) -> None:
         print("Getting ScanID")
 
-        msgDEV = BECMessage.ScanStatusMessage.loads(msg.value)
+        msgDEV = messages.ScanStatusMessage.loads(msg.value)
 
         current_scanID = msgDEV.content["scanID"]
 
@@ -143,7 +143,7 @@ class StreamApp(QWidget):
 
 if __name__ == "__main__":
     import argparse
-    from bec_lib.core import RedisConnector
+    from bec_lib import RedisConnector
 
     parser = argparse.ArgumentParser(description="Stream App.")
     parser.add_argument("--port", type=str, default="pc15543:6379", help="Port for RedisConnector")

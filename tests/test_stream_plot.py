@@ -2,11 +2,10 @@ from unittest import mock
 
 import numpy as np
 import pytest
-from bec_lib.core import BECMessage
+from bec_lib import messages, RedisConnector
 from pytestqt import qtbot
 import threading
 
-from bec_lib.core import RedisConnector
 from bec_widgets.examples.stream_plot.stream_plot import StreamPlot
 
 
@@ -144,7 +143,7 @@ def test_on_dap_update(qtbot, stream_app):
 #     }
 #
 #     # Assume the RedisConnector client would return this data when new_proj is called
-#     mock_message = mock.MagicMock(spec=BECMessage.DeviceMessage)
+#     mock_message = mock.MagicMock(spec=messages.DeviceMessage)
 #     mock_message.__getitem__.side_effect = lambda key: mock_data[key]
 #     stream_app.client.producer.get = mock.MagicMock(return_value=mock_message.dumps())
 #

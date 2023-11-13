@@ -7,8 +7,8 @@ from typing import Any
 import numpy as np
 import pyqtgraph
 import pyqtgraph as pg
-from bec_lib.core import BECMessage, MessageEndpoints
-from bec_lib.core.redis_connector import MessageObject, RedisConnector
+from bec_lib import messages, MessageEndpoints
+from bec_lib.redis_connector import MessageObject, RedisConnector
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QCheckBox, QTableWidgetItem
 from pyqtgraph import mkBrush, mkColor, mkPen
@@ -210,7 +210,7 @@ class StreamPlot(QtWidgets.QWidget):
                 np.where(self.plotter_data_x[0] < 10 ** region[1])[0][-1],
             ]
         }
-        msg = BECMessage.DeviceMessage(signals=return_dict).dumps()
+        msg = messages.DeviceMessage(signals=return_dict).dumps()
         self.producer.set_and_publish("px_stream/gui_event", msg=msg)
         self.roi_signal.emit(region)
 
@@ -268,7 +268,7 @@ class StreamPlot(QtWidgets.QWidget):
                 continue
             endpoint = f"px_stream/projection_{self._current_proj}/data"
             msgs = self.client.producer.lrange(topic=endpoint, start=-1, end=-1)
-            data = [BECMessage.DeviceMessage.loads(msg) for msg in msgs]
+            data = [messages.DeviceMessage.loads(msg) for msg in msgs]
             if not data:
                 continue
             with np.errstate(divide="ignore", invalid="ignore"):
@@ -293,7 +293,7 @@ class StreamPlot(QtWidgets.QWidget):
         proj_nr = content["signals"]["proj_nr"]
         endpoint = f"px_stream/projection_{proj_nr}/metadata"
         msg_raw = self.client.producer.get(topic=endpoint)
-        msg = BECMessage.DeviceMessage.loads(msg_raw)
+        msg = messages.DeviceMessage.loads(msg_raw)
         self._current_q = msg.content["signals"]["q"]
         self._current_norm = msg.content["signals"]["norm_sum"]
         self._current_metadata = msg.content["signals"]["metadata"]
