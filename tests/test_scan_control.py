@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import msgpack
 import pytest
-from PyQt5.QtWidgets import QLineEdit
+from qtpy.QtWidgets import QLineEdit
 
 from bec_widgets.widgets import ScanControl
 from bec_widgets.qt_utils.widget_io import WidgetIO

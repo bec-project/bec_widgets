@@ -5,8 +5,10 @@ import os
 
 import pyqtgraph
 import pyqtgraph as pg
-from PyQt5.QtCore import pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import (
+
+from qtpy.QtCore import Signal as pyqtSignal, Slot as pyqtSlot
+
+from qtpy.QtWidgets import (
     QApplication,
     QWidget,
     QTableWidgetItem,

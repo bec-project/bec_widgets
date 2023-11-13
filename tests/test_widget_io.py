@@ -1,5 +1,5 @@
 import pytest
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QWidget,
     QVBoxLayout,
     QLineEdit,

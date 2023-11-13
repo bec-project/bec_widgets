@@ -1,6 +1,8 @@
 import numpy as np
 import pyqtgraph as pg
-from PyQt5.QtCore import QObject, pyqtSignal
+
+# from qtpy.QtCore import QObject, pyqtSignal
+from qtpy.QtCore import QObject, Signal as pyqtSignal
 
 
 class Crosshair(QObject):

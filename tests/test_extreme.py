@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pyqtgraph as pg
 import pytest
-from PyQt5.QtWidgets import QMessageBox
+from qtpy.QtWidgets import QMessageBox
 
 from bec_widgets.examples.extreme.extreme import PlotApp, ErrorHandler
 

@@ -5,11 +5,11 @@ import pyqtgraph as pg
 from pydantic import ValidationError
 
 from bec_lib import MessageEndpoints
-from PyQt5 import QtCore
-from PyQt5.QtCore import pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QApplication, QTableWidgetItem, QWidget, QMessageBox
+from qtpy import QtCore
+from qtpy.QtCore import Signal as pyqtSignal, Slot as pyqtSlot
+from qtpy.QtWidgets import QApplication, QTableWidgetItem, QWidget, QMessageBox
 from pyqtgraph import mkPen, mkBrush
-from PyQt5 import uic
+from qtpy import uic
 
 from bec_widgets.bec_dispatcher import bec_dispatcher
 from bec_widgets.qt_utils import Crosshair, Colors

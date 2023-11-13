@@ -3,7 +3,7 @@ import tempfile
 from unittest.mock import patch
 import pytest
 import yaml
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QPushButton
+from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton
 
 from bec_widgets.qt_utils.yaml_dialog import load_yaml, save_yaml
 
@@ -38,7 +38,7 @@ def test_load_yaml(qtbot, example_widget):
     example_widget.import_button.clicked.connect(load_yaml_wrapper)
 
     # Mock user selecting the file in the dialog
-    with patch("PyQt5.QtWidgets.QFileDialog.getOpenFileName", return_value=(temp_file.name, "")):
+    with patch("qtpy.QtWidgets.QFileDialog.getOpenFileName", return_value=(temp_file.name, "")):
         example_widget.import_button.click()
 
     assert example_widget.config == {"name": "test", "value": 42}
@@ -59,7 +59,7 @@ def test_save_yaml(qtbot, example_widget):
     example_widget.export_button.clicked.connect(save_yaml_wrapper)
 
     # Mock user selecting the file in the dialog
-    with patch("PyQt5.QtWidgets.QFileDialog.getSaveFileName", return_value=(temp_file_path, "")):
+    with patch("qtpy.QtWidgets.QFileDialog.getSaveFileName", return_value=(temp_file_path, "")):
         example_widget.export_button.click()
 
     # Check if the data was saved correctly

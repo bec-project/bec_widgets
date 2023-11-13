@@ -5,7 +5,7 @@ from typing import Callable
 
 from bec_lib import BECClient, messages, ServiceConfig
 from bec_lib.redis_connector import RedisConsumerThreaded
-from PyQt5.QtCore import QObject, pyqtSignal
+from qtpy.QtCore import QObject, Signal as pyqtSignal
 
 # Adding a new pyqt signal requres a class factory, as they must be part of the class definition
 # and cannot be dynamically added as class attributes after the class has been defined.

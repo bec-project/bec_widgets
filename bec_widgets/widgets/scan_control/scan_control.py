@@ -1,5 +1,5 @@
 import msgpack
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QApplication,
     QWidget,
     QComboBox,

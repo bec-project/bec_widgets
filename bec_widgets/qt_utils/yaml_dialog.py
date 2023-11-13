@@ -1,5 +1,5 @@
 import yaml
-from PyQt5.QtWidgets import QFileDialog
+from qtpy.QtWidgets import QFileDialog
 
 
 def load_yaml(instance) -> dict:

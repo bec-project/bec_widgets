@@ -4,7 +4,7 @@ import numpy as np
 import pyqtgraph as pg
 from bec_lib import MessageEndpoints
 from bec_lib.logger import bec_logger
-from PyQt5.QtCore import pyqtProperty, pyqtSlot
+from qtpy.QtCore import Property as pyqtProperty, Slot as pyqtSlot
 
 from bec_widgets.bec_dispatcher import bec_dispatcher
 
@@ -139,7 +139,7 @@ class BECScanPlot2D(pg.GraphicsView):
 if __name__ == "__main__":
     import sys
 
-    from PyQt5.QtWidgets import QApplication
+    from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
 

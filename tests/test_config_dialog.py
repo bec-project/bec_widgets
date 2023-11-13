@@ -2,7 +2,7 @@ import os
 import yaml
 
 import pytest
-from PyQt5.QtWidgets import QTabWidget, QTableWidgetItem
+from qtpy.QtWidgets import QTabWidget, QTableWidgetItem
 
 from bec_widgets.widgets import ConfigDialog
 

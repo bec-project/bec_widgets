@@ -1,11 +1,11 @@
 import os
 
 import numpy as np
-import PyQt5.QtWidgets
+import qtpy.QtWidgets
 import pyqtgraph as pg
 from bec_lib import MessageEndpoints
-from PyQt5.QtCore import pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QApplication, QTableWidgetItem, QWidget
+from qtpy.QtCore import Signal as pyqtSignal, Slot as pyqtSlot
+from qtpy.QtWidgets import QApplication, QTableWidgetItem, QWidget
 from pyqtgraph import mkBrush, mkColor, mkPen
 from pyqtgraph.Qt import QtCore, uic
 
@@ -123,7 +123,7 @@ class PlotApp(QWidget):
         )
 
     def update_table(
-        self, table_widget: PyQt5.QtWidgets.QTableWidget, x: float, y_values: list, column: int
+        self, table_widget: qtpy.QtWidgets.QTableWidget, x: float, y_values: list, column: int
     ) -> None:
         for i, y in enumerate(y_values):
             table_widget.setItem(i, column, QTableWidgetItem(f"({x}, {y})"))

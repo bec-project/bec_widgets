@@ -1,7 +1,7 @@
 import os
 
-from PyQt5 import uic
-from PyQt5.QtWidgets import QMainWindow, QApplication, QVBoxLayout
+from qtpy import uic
+from qtpy.QtWidgets import QMainWindow, QApplication, QVBoxLayout
 
 from bec_widgets.widgets.monitor import BECMonitor
 

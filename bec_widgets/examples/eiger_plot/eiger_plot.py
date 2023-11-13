@@ -6,10 +6,10 @@ import h5py
 import numpy as np
 import pyqtgraph as pg
 import zmq
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import (
+from qtpy.QtCore import Signal as pyqtSignal
+from qtpy.QtCore import Slot as pyqtSlot
+from qtpy.QtGui import QKeySequence
+from qtpy.QtWidgets import (
     QWidget,
     QFileDialog,
     QShortcut,
@@ -290,7 +290,7 @@ class EigerPlot(QWidget):
 
 if __name__ == "__main__":
     import sys
-    from PyQt5.QtWidgets import QApplication
+    from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
     plot = EigerPlot()

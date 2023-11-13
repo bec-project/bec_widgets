@@ -9,8 +9,8 @@ import pyqtgraph
 import pyqtgraph as pg
 from bec_lib import messages, MessageEndpoints
 from bec_lib.redis_connector import MessageObject, RedisConnector
-from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtWidgets import QCheckBox, QTableWidgetItem
+from qtpy.QtCore import Slot as pyqtSlot
+from qtpy.QtWidgets import QCheckBox, QTableWidgetItem
 from pyqtgraph import mkBrush, mkColor, mkPen
 from pyqtgraph.Qt import QtCore, QtWidgets, uic
 from pyqtgraph.Qt.QtCore import pyqtSignal
@@ -305,7 +305,7 @@ class StreamPlot(QtWidgets.QWidget):
 if __name__ == "__main__":
     import argparse
 
-    from bec_widgets import ctrl_c
+    # from bec_widgets import ctrl_c  # TODO uncomment when ctrl_c is ready to be compatible with qtpy
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -319,7 +319,7 @@ if __name__ == "__main__":
     client = bec_dispatcher.client
 
     app = QtWidgets.QApplication([])
-    ctrl_c.setup(app)
+    # ctrl_c.setup(app) # TODO uncomment when ctrl_c is ready to be compatible with qtpy
     plot = StreamPlot(y_value_list=value.signals, client=client)
 
     bec_dispatcher.connect_slot(plot.new_proj, "px_stream/proj_nr")

@@ -5,12 +5,12 @@ from functools import partial
 
 import numpy as np
 import pyqtgraph as pg
-from PyQt5 import QtGui
-from PyQt5.QtCore import QThread, pyqtSlot
-from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtGui import QDoubleValidator
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import (
+from qtpy import QtGui
+from qtpy.QtCore import QThread, Slot as pyqtSlot
+from qtpy.QtCore import Signal as pyqtSignal, Qt
+from qtpy.QtGui import QDoubleValidator
+from qtpy.QtGui import QKeySequence
+from qtpy.QtWidgets import (
     QApplication,
     QWidget,
     QFileDialog,
@@ -20,8 +20,8 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QFrame,
 )
-from PyQt5.QtWidgets import QMessageBox
-from PyQt5.QtWidgets import QShortcut
+from qtpy.QtWidgets import QMessageBox
+from qtpy.QtWidgets import QShortcut
 from pyqtgraph.Qt import QtWidgets, uic, QtCore
 
 from bec_lib import MessageEndpoints, messages

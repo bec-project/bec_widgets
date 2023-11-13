@@ -1,6 +1,6 @@
 import numpy as np
 import pyqtgraph as pg
-from PyQt5.QtCore import QPointF
+from qtpy.QtCore import QPointF
 
 from bec_widgets.qt_utils import Crosshair
 

@@ -1,6 +1,6 @@
 import numpy as np
 import pyqtgraph as pg
-from PyQt5.QtWidgets import (
+from qtpy.QtWidgets import (
     QApplication,
     QVBoxLayout,
     QLabel,
