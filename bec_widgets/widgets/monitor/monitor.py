@@ -4,7 +4,7 @@ import time
 import pyqtgraph as pg
 from pydantic import ValidationError
 
-from bec_lib.core import MessageEndpoints
+from bec_lib import MessageEndpoints
 from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QApplication, QTableWidgetItem, QWidget, QMessageBox

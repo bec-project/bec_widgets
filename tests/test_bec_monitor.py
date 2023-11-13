@@ -5,7 +5,6 @@ import pytest
 from unittest.mock import MagicMock
 
 from bec_widgets.widgets import BECMonitor
-from bec_widgets.validation import MonitorConfigValidator
 
 
 def load_test_config(config_name):
