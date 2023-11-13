@@ -45,7 +45,7 @@ tests:
       QT_QPA_PLATFORM: "offscreen"
   script:
     - apt-get update
-    - apt-get install -y libgl1-mesa-glx x11-utils libxkbcommon-x11-0 
+    - apt-get install -y libgl1-mesa-glx libegl1-mesa x11-utils libxkbcommon-x11-0
     - pip install .[dev]
     - coverage run --source=./bec_widgets -m pytest -v --junitxml=report.xml --random-order --full-trace ./tests
     - coverage report
