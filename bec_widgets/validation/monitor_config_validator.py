@@ -33,16 +33,16 @@ class Signal(BaseModel):
             )
 
         # Check if device exists in BEC
-        try:
-            device = getattr(devices, v)
-        except:
+        if v not in devices:
             raise PydanticCustomError(
                 "no_device_bec",
                 'Device "{wrong_value}" not found in current BEC session',
                 dict(wrong_value=v),
             )
 
-        # Check if device have signals #TODO not sure if devices can be defined also without signals
+        device = devices.get(v)  # get the device to check if it has signals
+
+        # Check if device have signals
         if not hasattr(device, "signals"):
             raise PydanticCustomError(
                 "no_device_signals",
@@ -57,6 +57,7 @@ class Signal(BaseModel):
     def set_and_validate_entry(cls, v, values):
         devices = MonitorConfigValidator.devices
 
+        # Get device name from values -> device is already validated
         device_name = values.data.get("name")
         device = getattr(devices, device_name, None)
 
