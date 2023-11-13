@@ -23,7 +23,7 @@ class Signal(BaseModel):
     @field_validator("name")
     @classmethod
     def validate_name(cls, v):
-        device_manager = MonitorConfigValidator.device_manager
+        devices = MonitorConfigValidator.devices
         # Check if device name provided
         if v is None:
             raise PydanticCustomError(
@@ -34,7 +34,7 @@ class Signal(BaseModel):
 
         # Check if device exists in BEC
         try:
-            device = getattr(device_manager, v)
+            device = getattr(devices, v)
         except:
             raise PydanticCustomError(
                 "no_device_bec",
@@ -55,16 +55,16 @@ class Signal(BaseModel):
     @field_validator("entry")
     @classmethod
     def set_and_validate_entry(cls, v, values):
-        device_manager = MonitorConfigValidator.device_manager
+        devices = MonitorConfigValidator.devices
 
         device_name = values.data.get("name")
-        device = getattr(device_manager, device_name, None)
+        device = getattr(devices, device_name, None)
 
         # Set entry based on hints if not provided
         if v is None and hasattr(device, "_hints"):
             v = next(
                 iter(device._hints), device_name
-            )  # TODO check if device_manager[device_name]._hints in not enough?
+            )  # TODO check if devices[device_name]._hints in not enough?
         elif v is None:
             v = device_name
 
@@ -163,11 +163,11 @@ class ScanModeConfig(BaseModel):
 
 
 class MonitorConfigValidator:
-    device_manager = None
+    devices = None
 
-    def __init__(self, device_manager):
+    def __init__(self, devices):
         # self.device_manager = device_manager
-        MonitorConfigValidator.device_manager = device_manager
+        MonitorConfigValidator.devices = devices
 
     def validate_monitor_config(
         self, config_data: dict
