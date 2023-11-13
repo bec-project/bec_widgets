@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.31.0 (2023-11-13)
+
+### Feature
+
+* Pydantic validation module for monitor.py ([`7fec0c7`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/7fec0c7e4411c221413d69aeeb4d68ade10d502b))
+
+### Documentation
+
+* Pydantic validation module docs ([`92a5325`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/92a5325aad02fe308caaf9088a3c4386ca055124))
+
 ## v0.30.0 (2023-11-10)
 
 ### Feature
