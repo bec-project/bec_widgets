@@ -3,7 +3,7 @@ import subprocess
 import threading
 
 import qdarktheme
-from PyQt6.QtCore import QFile, QTextStream, pyqtSignal
+from PyQt6.QtCore import QFile, QTextStream, pyqtSignal, QThread
 from PyQt6.QtGui import QColor, QFont, QAction
 from PyQt6.QtWidgets import (
     QApplication,
@@ -15,6 +15,34 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 from PyQt6.Qsci import QsciScintilla, QsciLexerPython
+
+
+class ScriptRunnerThread(QThread):
+    outputSignal = pyqtSignal(str)
+
+    def __init__(self, script):
+        super().__init__()
+        self.script = script
+
+    def run(self):
+        process = subprocess.Popen(
+            ["python", "-u", "-c", self.script],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=1,
+            universal_newlines=True,
+            text=True,
+        )
+
+        while True:
+            output = process.stdout.readline()
+            if output == "" and process.poll() is not None:
+                break
+            if output:
+                self.outputSignal.emit(output)
+        error = process.communicate()[1]
+        if error:
+            self.outputSignal.emit(error)
 
 
 class PythonEditor(QMainWindow):
@@ -104,27 +132,36 @@ class PythonEditor(QMainWindow):
             lexer.setColor(classFunctionColor, QsciLexerPython.FunctionMethodName)
 
     def runScript(self):
+        script = self.editor.text()
+        self.scriptRunnerThread = ScriptRunnerThread(script)
+        self.scriptRunnerThread.outputSignal.connect(self.updateTerminal)
+        self.scriptRunnerThread.start()
+
+    def updateTerminal(self, text):
+        self.terminal.append(text)
+
         # Use threading to run the script
         # thread = threading.Thread(target=self.executeScript)
         # thread.start()
 
-        # Save the current script to a temporary file or use the existing file
-        script = self.editor.text()
-        with open("temp_script.py", "w") as file:
-            file.write(script)
-
-        # Run the script and capture output
-        process = subprocess.Popen(
-            ["python", "temp_script.py"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-        )
-        output, error = process.communicate()
-
-        # Display output and error in the terminal
-        self.terminal.clear()
-        if output:
-            self.terminal.append(output)
-        if error:
-            self.terminal.append(error)
+        # # Save the current script to a temporary file or use the existing file
+        # script = self.editor.text()
+        # with open("temp_script.py", "w") as file:
+        #     file.write(script)
+        #
+        # # Run the script and capture output
+        # process = subprocess.Popen(
+        #     ["python", "temp_script.py"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        # )
+        # output, error = process.communicate()
+        #
+        # # Display output and error in the terminal
+        # self.terminal.clear()
+        # if output:
+        #     self.terminal.append(output)
+        # if error:
+        #     self.terminal.append(error)
+        #
 
     # def executeScript(self):
     #     # Save the current script to a temporary file or use the existing file
