@@ -1,10 +1,8 @@
-import sys
 import subprocess
-import threading
 
 import qdarktheme
 from PyQt6.QtCore import QFile, QTextStream, pyqtSignal, QThread
-from PyQt6.QtGui import QColor, QFont, QAction
+from PyQt6.QtGui import QColor, QFont, QAction, QShortcut, QKeySequence
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -45,9 +43,7 @@ class ScriptRunnerThread(QThread):
             self.outputSignal.emit(error)
 
 
-class PythonEditor(QMainWindow):
-    # outputSignal = pyqtSignal(str)
-
+class BECEditor(QWidget):
     def __init__(self):
         super().__init__()
 
@@ -62,17 +58,12 @@ class PythonEditor(QMainWindow):
         layout.addWidget(self.editor)
         layout.addWidget(self.runButton)
         layout.addWidget(self.terminal)
-        # Container widget
-        container = QWidget()
-        container.setLayout(layout)
-        self.setCentralWidget(container)
+        self.setLayout(layout)
 
         self.setupEditor()
 
         # Connect the run button
         self.runButton.clicked.connect(self.runScript)
-
-        # self.outputSignal.connect(self.updateTerminal)
 
     def setupEditor(self):
         # Set the lexer for Python
@@ -140,59 +131,22 @@ class PythonEditor(QMainWindow):
     def updateTerminal(self, text):
         self.terminal.append(text)
 
-        # Use threading to run the script
-        # thread = threading.Thread(target=self.executeScript)
-        # thread.start()
-
-        # # Save the current script to a temporary file or use the existing file
-        # script = self.editor.text()
-        # with open("temp_script.py", "w") as file:
-        #     file.write(script)
-        #
-        # # Run the script and capture output
-        # process = subprocess.Popen(
-        #     ["python", "temp_script.py"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-        # )
-        # output, error = process.communicate()
-        #
-        # # Display output and error in the terminal
-        # self.terminal.clear()
-        # if output:
-        #     self.terminal.append(output)
-        # if error:
-        #     self.terminal.append(error)
-        #
-
-    # def executeScript(self):
-    #     # Save the current script to a temporary file or use the existing file
-    #     script = self.editor.text()
-    #     with open("temp_script.py", "w") as file:
-    #         file.write(script)
-    #
-    #     # Run the script and capture output
-    #     process = subprocess.Popen(
-    #         ["python", "temp_script.py"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
-    #     )
-    #     output, error = process.communicate()
-    #
-    #     # Emit the signal with the output
-    #     if output:
-    #         self.outputSignal.emit(output)
-    #     if error:
-    #         self.outputSignal.emit(error)
-    #
-    # def updateTerminal(self, text):
-    #     # Update the terminal with output
-    #     self.terminal.append(text)
-    #
     def createMenus(self):
-        self.fileMenu = self.menuBar().addMenu("&File")
-        self.fileMenu.addAction(self.openAct)
-        self.fileMenu.addAction(self.saveAct)
+        ...
+        # self.fileMenu = self.menuBar().addMenu("&File")
+        # self.fileMenu.addAction(self.openAct)
+        # self.fileMenu.addAction(self.saveAct)
 
     def createActions(self):
-        self.openAct = QAction("&Open...", self, shortcut="Ctrl+O", triggered=self.openFile)
-        self.saveAct = QAction("&Save", self, shortcut="Ctrl+S", triggered=self.saveFile)
+        self.openAct = QAction("&Open...", self, triggered=self.openFile)
+        self.saveAct = QAction("&Save", self, triggered=self.saveFile)
+
+        # Shortcuts
+        self.openShortcut = QShortcut(QKeySequence("Ctrl+O"), self)
+        self.openShortcut.activated.connect(self.openFile)
+
+        self.saveShortcut = QShortcut(QKeySequence("Ctrl+S"), self)
+        self.saveShortcut.activated.connect(self.saveFile)
 
     def openFile(self):
         path, _ = QFileDialog.getOpenFileName(self, "Open file", "", "Python files (*.py)")
@@ -215,7 +169,7 @@ class PythonEditor(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication([])
-    qdarktheme.setup_theme()
-    mainWin = PythonEditor()
+    qdarktheme.setup_theme("auto")
+    mainWin = BECEditor()
     mainWin.show()
     app.exec()
