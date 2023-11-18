@@ -1,9 +1,9 @@
 import subprocess
 
 import qdarktheme
-from PyQt6.QtCore import QFile, QTextStream, pyqtSignal, QThread
-from PyQt6.QtGui import QColor, QFont, QAction, QShortcut, QKeySequence
-from PyQt6.QtWidgets import (
+from qtpy.QtCore import QFile, QTextStream, Signal, QThread
+from qtpy.QtGui import QColor, QFont, QAction, QShortcut, QKeySequence
+from qtpy.QtWidgets import (
     QApplication,
     QMainWindow,
     QFileDialog,
@@ -12,11 +12,13 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from PyQt6.Qsci import QsciScintilla, QsciLexerPython
+
+# from PyQt6.Qsci import QsciScintilla, QsciLexerPython
+from qtpy.Qsci import QsciScintilla, QsciLexerPython
 
 
 class ScriptRunnerThread(QThread):
-    outputSignal = pyqtSignal(str)
+    outputSignal = Signal(str)
 
     def __init__(self, script):
         super().__init__()
