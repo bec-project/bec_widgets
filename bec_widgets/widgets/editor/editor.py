@@ -16,6 +16,10 @@ from qtpy.QtWidgets import (
 # from PyQt6.Qsci import QsciScintilla, QsciLexerPython
 from qtpy.Qsci import QsciScintilla, QsciLexerPython
 
+# from bec_widgets.widgets.toolbar.toolbar import ModularToolbar
+
+# from bec_widgets.widgets import ModularToolbar
+
 
 class ScriptRunnerThread(QThread):
     outputSignal = Signal(str)
@@ -53,19 +57,19 @@ class BECEditor(QWidget):
         self.editor = QsciScintilla()
         self.terminal = QTextEdit()
         self.terminal.setReadOnly(True)
-        self.runButton = QPushButton("Run Script")
+        # self.runButton = QPushButton("Run Script")
 
         # Layout
         layout = QVBoxLayout()
         layout.addWidget(self.editor)
-        layout.addWidget(self.runButton)
+        # layout.addWidget(self.runButton)
         layout.addWidget(self.terminal)
         self.setLayout(layout)
 
         self.setupEditor()
 
         # Connect the run button
-        self.runButton.clicked.connect(self.runScript)
+        # self.runButton.clicked.connect(self.runScript)
 
     def setupEditor(self):
         # Set the lexer for Python
@@ -170,8 +174,28 @@ class BECEditor(QWidget):
 
 
 if __name__ == "__main__":
+    from bec_widgets.widgets.toolbar.toolbar import ModularToolbar
+
+    # app = QApplication([])
+    # qdarktheme.setup_theme("auto")
+    # mainWin = BECEditor()
+    # mainWin.show()
+    # app.exec()
     app = QApplication([])
     qdarktheme.setup_theme("auto")
-    mainWin = BECEditor()
-    mainWin.show()
+    window = QWidget()
+    layout = QVBoxLayout(window)
+
+    editor = BECEditor()
+    # toolbar_auto = ModularToolbar()
+
+    # Manual initialization
+    toolbar_manual = ModularToolbar(auto_init=False)
+    toolbar_manual.set_target_widget(editor)
+
+    layout.addWidget(toolbar_manual)
+    layout.addWidget(editor)
+
+    window.setLayout(layout)
+    window.show()
     app.exec()
