@@ -42,7 +42,7 @@ class ScriptRunnerThread(QThread):
 
 
 class BECEditor(QWidget):
-    def __init__(self):
+    def __init__(self, toolbar_enabled=True):
         super().__init__()
 
         # Initialize the editor and terminal
@@ -52,6 +52,13 @@ class BECEditor(QWidget):
 
         # Layout
         self.layout = QVBoxLayout()
+
+        # Initialize and add the toolbar if enabled
+        if toolbar_enabled:
+            self.toolbar = ModularToolBar(self)
+            self.layout.addWidget(self.toolbar)
+
+        self.layout.addWidget(self.toolbar)
         self.layout.addWidget(self.editor)
         self.layout.addWidget(self.terminal)
         self.setLayout(self.layout)
@@ -142,16 +149,12 @@ class BECEditor(QWidget):
 
 
 if __name__ == "__main__":
-    from bec_widgets.widgets.toolbar.toolbar import ModularToolBar
+    from bec_widgets.widgets.toolbar.toolbar import ModularToolBar, OpenFileAction, SaveFileAction
 
     app = QApplication([])
     qdarktheme.setup_theme("auto")
 
     mainWin = BECEditor()
 
-    toolbar_manual = ModularToolBar()
-    toolbar_manual.set_target_widget(mainWin)
-
-    mainWin.layout.insertWidget(0, toolbar_manual)
     mainWin.show()
     app.exec()
