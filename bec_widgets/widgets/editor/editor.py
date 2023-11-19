@@ -1,6 +1,8 @@
 import subprocess
 
 import qdarktheme
+from qtpy.QtCore import Qt
+from qtpy.QtWidgets import QSplitter
 from qtpy.Qsci import QsciScintilla, QsciLexerPython
 from qtpy.QtCore import QFile, QTextStream, Signal, QThread
 from qtpy.QtGui import QColor, QFont
@@ -58,9 +60,14 @@ class BECEditor(QWidget):
             self.toolbar = ModularToolBar(self)
             self.layout.addWidget(self.toolbar)
 
-        self.layout.addWidget(self.toolbar)
-        self.layout.addWidget(self.editor)
-        self.layout.addWidget(self.terminal)
+        # Initialize the splitter
+        self.splitter = QSplitter(Qt.Orientation.Vertical, self)
+        self.splitter.addWidget(self.editor)
+        self.splitter.addWidget(self.terminal)
+        # self.splitter.setSizes([400, 100]) #todo optional to set sizes
+
+        # Add Splitter to layout
+        self.layout.addWidget(self.splitter)
         self.setLayout(self.layout)
 
         self.setupEditor()

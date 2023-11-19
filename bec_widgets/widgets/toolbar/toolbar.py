@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
-from qtpy.QtWidgets import QToolBar
+from qtpy.QtCore import QSize
+from qtpy.QtWidgets import QToolBar, QStyle, QApplication
 from qtpy.QtCore import QTimer
 from qtpy.QtGui import QAction
 from qtpy.QtWidgets import QWidget
@@ -14,21 +15,27 @@ class ToolBarAction(ABC):
 
 class OpenFileAction:  # (ToolBarAction):
     def create(self, target: QWidget):
-        action = QAction("Open File", target)
+        icon = QApplication.style().standardIcon(QStyle.StandardPixmap.SP_DialogOpenButton)
+        action = QAction(icon, "Open File", target)
+        # action = QAction("Open File", target)
         action.triggered.connect(target.openFile)
         return action
 
 
 class SaveFileAction:
     def create(self, target):
-        action = QAction("Save File", target)
+        icon = QApplication.style().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton)
+        action = QAction(icon, "Save File", target)
+        # action = QAction("Save File", target)
         action.triggered.connect(target.saveFile)
         return action
 
 
 class RunScriptAction:
     def create(self, target):
-        action = QAction("Run Script", target)
+        icon = QApplication.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
+        action = QAction(icon, "Run Script", target)
+        # action = QAction("Run Script", target)
         action.triggered.connect(target.runScript)
         return action
 
@@ -42,6 +49,9 @@ class ModularToolBar(QToolBar):
             # BECMonitor: [SomeOtherAction(), AnotherAction()],  # Example for another widget
         }
         self.setStyleSheet("QToolBar { background: transparent; }")
+        # Set the icon size for the toolbar
+        self.setIconSize(QSize(20, 20))
+
         if self.auto_init:
             QTimer.singleShot(0, self.auto_detect_and_populate)
 
