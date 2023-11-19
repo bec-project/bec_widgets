@@ -1,24 +1,16 @@
 import subprocess
 
 import qdarktheme
+from qtpy.Qsci import QsciScintilla, QsciLexerPython
 from qtpy.QtCore import QFile, QTextStream, Signal, QThread
-from qtpy.QtGui import QColor, QFont, QAction, QShortcut, QKeySequence
+from qtpy.QtGui import QColor, QFont
 from qtpy.QtWidgets import (
     QApplication,
-    QMainWindow,
     QFileDialog,
-    QPushButton,
     QTextEdit,
     QVBoxLayout,
     QWidget,
 )
-
-# from PyQt6.Qsci import QsciScintilla, QsciLexerPython
-from qtpy.Qsci import QsciScintilla, QsciLexerPython
-
-# from bec_widgets.widgets.toolbar.toolbar import ModularToolbar
-
-# from bec_widgets.widgets import ModularToolbar
 
 
 class ScriptRunnerThread(QThread):
@@ -57,19 +49,14 @@ class BECEditor(QWidget):
         self.editor = QsciScintilla()
         self.terminal = QTextEdit()
         self.terminal.setReadOnly(True)
-        # self.runButton = QPushButton("Run Script")
 
         # Layout
-        layout = QVBoxLayout()
-        layout.addWidget(self.editor)
-        # layout.addWidget(self.runButton)
-        layout.addWidget(self.terminal)
-        self.setLayout(layout)
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.editor)
+        self.layout.addWidget(self.terminal)
+        self.setLayout(self.layout)
 
         self.setupEditor()
-
-        # Connect the run button
-        # self.runButton.clicked.connect(self.runScript)
 
     def setupEditor(self):
         # Set the lexer for Python
@@ -89,8 +76,6 @@ class BECEditor(QWidget):
 
         # Additional UI elements like menu for load/save can be added here
         self.setEditorStyle()
-        self.createActions()
-        self.createMenus()
 
     def setEditorStyle(self):
         # Dracula Theme Colors
@@ -137,23 +122,6 @@ class BECEditor(QWidget):
     def updateTerminal(self, text):
         self.terminal.append(text)
 
-    def createMenus(self):
-        ...
-        # self.fileMenu = self.menuBar().addMenu("&File")
-        # self.fileMenu.addAction(self.openAct)
-        # self.fileMenu.addAction(self.saveAct)
-
-    def createActions(self):
-        self.openAct = QAction("&Open...", self, triggered=self.openFile)
-        self.saveAct = QAction("&Save", self, triggered=self.saveFile)
-
-        # Shortcuts
-        self.openShortcut = QShortcut(QKeySequence("Ctrl+O"), self)
-        self.openShortcut.activated.connect(self.openFile)
-
-        self.saveShortcut = QShortcut(QKeySequence("Ctrl+S"), self)
-        self.saveShortcut.activated.connect(self.saveFile)
-
     def openFile(self):
         path, _ = QFileDialog.getOpenFileName(self, "Open file", "", "Python files (*.py)")
         if path:
@@ -174,28 +142,16 @@ class BECEditor(QWidget):
 
 
 if __name__ == "__main__":
-    from bec_widgets.widgets.toolbar.toolbar import ModularToolbar
+    from bec_widgets.widgets.toolbar.toolbar import ModularToolBar
 
-    # app = QApplication([])
-    # qdarktheme.setup_theme("auto")
-    # mainWin = BECEditor()
-    # mainWin.show()
-    # app.exec()
     app = QApplication([])
     qdarktheme.setup_theme("auto")
-    window = QWidget()
-    layout = QVBoxLayout(window)
 
-    editor = BECEditor()
-    # toolbar_auto = ModularToolbar()
+    mainWin = BECEditor()
 
-    # Manual initialization
-    toolbar_manual = ModularToolbar(auto_init=False)
-    toolbar_manual.set_target_widget(editor)
+    toolbar_manual = ModularToolBar()
+    toolbar_manual.set_target_widget(mainWin)
 
-    layout.addWidget(toolbar_manual)
-    layout.addWidget(editor)
-
-    window.setLayout(layout)
-    window.show()
+    mainWin.layout.insertWidget(0, toolbar_manual)
+    mainWin.show()
     app.exec()

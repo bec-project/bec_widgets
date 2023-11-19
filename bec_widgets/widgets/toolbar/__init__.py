@@ -1,1 +1,1 @@
-from .toolbar import ModularToolbar
+from .toolbar import ModularToolBar
