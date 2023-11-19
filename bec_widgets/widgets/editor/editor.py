@@ -1,5 +1,8 @@
 import subprocess
 
+import jedi
+from jedi.api import Script
+from jedi.api.environment import InterpreterEnvironment
 import qdarktheme
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QSplitter
@@ -13,6 +16,8 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from bec_widgets.widgets import ModularToolBar
 
 
 class ScriptRunnerThread(QThread):
@@ -112,13 +117,13 @@ class BECEditor(QWidget):
         self.editor.setMarginsForegroundColor(textColor)
         self.editor.setCaretForegroundColor(textColor)
         self.editor.setCaretLineBackgroundColor(QColor("#44475a"))
-        self.editor.setPaper(backgroundColor)
+        self.editor.setPaper(backgroundColor)  # Set the background color for the entire paper
         self.editor.setColor(textColor)
-
+        #
         # Syntax Highlighting Colors
         lexer = self.editor.lexer()
         if lexer:
-            lexer.setDefaultPaper(backgroundColor)
+            lexer.setDefaultPaper(backgroundColor)  # Set the background color for the text area
             lexer.setDefaultColor(textColor)
             lexer.setColor(keywordColor, QsciLexerPython.Keyword)
             lexer.setColor(stringColor, QsciLexerPython.DoubleQuotedString)
@@ -126,6 +131,11 @@ class BECEditor(QWidget):
             lexer.setColor(commentColor, QsciLexerPython.Comment)
             lexer.setColor(classFunctionColor, QsciLexerPython.ClassName)
             lexer.setColor(classFunctionColor, QsciLexerPython.FunctionMethodName)
+
+        # Set the style for all text to have a transparent background
+        # TODO find better way how to do it!
+        for style in range(128):  # QsciScintilla supports 128 styles by default
+            self.lexer.setPaper(backgroundColor, style)
 
     def runScript(self):
         script = self.editor.text()
@@ -156,8 +166,6 @@ class BECEditor(QWidget):
 
 
 if __name__ == "__main__":
-    from bec_widgets.widgets.toolbar.toolbar import ModularToolBar, OpenFileAction, SaveFileAction
-
     app = QApplication([])
     qdarktheme.setup_theme("auto")
 
