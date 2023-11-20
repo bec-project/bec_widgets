@@ -1,12 +1,10 @@
 import subprocess
-
-import jedi
-from jedi.api import Script
-from jedi.api.environment import InterpreterEnvironment
 import qdarktheme
+from PyQt6.QtGui import QKeyEvent
+
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QSplitter
-from qtpy.Qsci import QsciScintilla, QsciLexerPython
+from qtpy.Qsci import QsciScintilla, QsciLexerPython, QsciAPIs
 from qtpy.QtCore import QFile, QTextStream, Signal, QThread
 from qtpy.QtGui import QColor, QFont
 from qtpy.QtWidgets import (
@@ -17,7 +15,43 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from jedi import Script
+from jedi.api import Completion
+
 from bec_widgets.widgets import ModularToolBar
+
+
+class AutoCompleter(QThread):
+    def __init__(self, file_path, api):
+        super(AutoCompleter, self).__init__(None)
+        self.file_path = file_path
+        self.script: Script = None
+        self.api: QsciAPIs = api
+        self.completions: list[Completion] = None
+        self.line = 0
+        self.index = 0
+        self.text = ""
+
+    def run(self):
+        try:
+            self.script = Script(self.text, path=self.file_path)
+            self.completions = self.script.complete(self.line, self.index)
+            self.load_autocomplete(self.completions)
+        except Exception as err:
+            print(err)
+
+        self.finished.emit()
+
+    def load_autocomplete(self, completions):
+        self.api.clear()
+        [self.api.add(i.name) for i in completions]
+        self.api.prepare()
+
+    def get_completions(self, line: int, index: int, text: str):
+        self.line = line
+        self.index = index
+        self.text = text
+        self.start()
 
 
 class ScriptRunnerThread(QThread):
@@ -52,6 +86,9 @@ class BECEditor(QWidget):
     def __init__(self, toolbar_enabled=True):
         super().__init__()
 
+        # Flag to check if the file is a python file #TODO just temporary solution, could be extended to other languages
+        self.is_python_file = True
+
         # Initialize the editor and terminal
         self.editor = QsciScintilla()
         self.terminal = QTextEdit()
@@ -69,7 +106,7 @@ class BECEditor(QWidget):
         self.splitter = QSplitter(Qt.Orientation.Vertical, self)
         self.splitter.addWidget(self.editor)
         self.splitter.addWidget(self.terminal)
-        # self.splitter.setSizes([400, 100]) #todo optional to set sizes
+        # self.splitter.setSizes([400, 100]) #TODO optional to set sizes
 
         # Add Splitter to layout
         self.layout.addWidget(self.splitter)
@@ -89,12 +126,30 @@ class BECEditor(QWidget):
         self.editor.setAutoCompletionSource(QsciScintilla.AutoCompletionSource.AcsAll)
         self.editor.setAutoCompletionThreshold(1)
 
+        # Autocomplete for python file
+        # Connect cursor position change signal for autocompletion
+        self.editor.cursorPositionChanged.connect(self.onCursorPositionChanged)
+
+        # if self.is_python_file: #TODO can be changed depending on supported languages
+        self.__api = QsciAPIs(self.lexer)
+        self.auto_completer = AutoCompleter(self.editor.text(), self.__api)
+        self.auto_completer.finished.connect(self.loaded_autocomplete)
+
         # Enable line numbers in the margin
         self.editor.setMarginType(0, QsciScintilla.MarginType.NumberMargin)
         self.editor.setMarginWidth(0, "0000")  # Adjust the width as needed
 
         # Additional UI elements like menu for load/save can be added here
         self.setEditorStyle()
+
+    def onCursorPositionChanged(self, line, index):
+        # if self.is_python_file: #TODO can be changed depending on supported languages
+        self.auto_completer.get_completions(line + 1, index, self.editor.text())
+        self.editor.autoCompleteFromAPIs()
+
+    def loaded_autocomplete(self):
+        # Placeholder for any action after autocompletion data is loaded
+        pass
 
     def setEditorStyle(self):
         # Dracula Theme Colors
@@ -134,7 +189,9 @@ class BECEditor(QWidget):
 
         # Set the style for all text to have a transparent background
         # TODO find better way how to do it!
-        for style in range(128):  # QsciScintilla supports 128 styles by default
+        for style in range(
+            128
+        ):  # QsciScintilla supports 128 styles by default, this set all to transpatrent background
             self.lexer.setPaper(backgroundColor, style)
 
     def runScript(self):
