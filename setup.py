@@ -19,6 +19,7 @@ if __name__ == "__main__":
             "pydantic",
             qt_dependency,
             qscintilla_dependency,
+            "jedi",
             "qtpy",
             "pyqtgraph",
             "bec_lib",
