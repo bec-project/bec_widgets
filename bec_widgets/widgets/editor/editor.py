@@ -20,7 +20,7 @@ from bec_widgets.widgets import ModularToolBar
 
 
 class AutoCompleter(QThread):
-    def __init__(self, file_path, api):
+    def __init__(self, file_path, api, enable_docstring=False):
         super(AutoCompleter, self).__init__(None)
         self.file_path = file_path
         self.script: Script = None
@@ -30,26 +30,33 @@ class AutoCompleter(QThread):
         self.index = 0
         self.text = ""
 
+        self.enable_docstring = enable_docstring
+
+    def update_script(self, text: str):
+        if self.script is None or self.script.path != text:
+            self.script = Script(text, path=self.file_path)
+
     def run(self):
+        self.update_script(self.text)
         try:
-            self.script = Script(self.text, path=self.file_path)
             self.completions = self.script.complete(self.line, self.index)
             self.load_autocomplete(self.completions)
         except Exception as err:
             print(err)
-
         self.finished.emit()
 
     def get_function_signature(self, line: int, index: int, text: str) -> str:
+        self.update_script(text)
         try:
-            script = Script(text, path=self.file_path)
-            signatures = script.get_signatures(line, index)
-            if signatures:
+            signatures = self.script.get_signatures(line, index)
+            if signatures and self.enable_docstring is True:
                 full_docstring = signatures[0].docstring(raw=True)
                 compact_docstring = self.get_compact_docstring(full_docstring)
                 return compact_docstring
+            elif signatures and self.enable_docstring is False:
+                return signatures[0].to_string()
         except Exception as err:
-            print(err)
+            print(f"Signature Error:{err}")
         return ""
 
     def load_autocomplete(self, completions):
