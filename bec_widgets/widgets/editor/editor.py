@@ -1,12 +1,13 @@
 import os
 import subprocess
 import tempfile
-import qdarktheme
 
-from qtpy.QtCore import Qt
-from qtpy.QtWidgets import QSplitter
+import qdarktheme
+from jedi import Script
+from jedi.api import Completion
 from qtpy.Qsci import QsciScintilla, QsciLexerPython, QsciAPIs
 from qtpy.QtCore import QFile, QTextStream, Signal, QThread
+from qtpy.QtCore import Qt
 from qtpy.QtGui import QColor, QFont
 from qtpy.QtWidgets import (
     QApplication,
@@ -15,9 +16,7 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
-from jedi import Script
-from jedi.api import Completion
+from qtpy.QtWidgets import QSplitter
 
 from bec_widgets.widgets import ModularToolBar
 
@@ -42,6 +41,16 @@ class AutoCompleter(QThread):
             print(err)
 
         self.finished.emit()
+
+    def get_function_signature(self, line: int, index: int, text: str) -> str:
+        try:
+            script = Script(text, path=self.file_path)
+            signatures = script.get_signatures(line, index)
+            if signatures:
+                return signatures[0].to_string()
+        except Exception as err:
+            print(err)
+        return ""
 
     def load_autocomplete(self, completions):
         self.api.clear()
@@ -87,6 +96,7 @@ class BECEditor(QWidget):
     def __init__(self, toolbar_enabled=True):
         super().__init__()
 
+        self.scriptRunnerThread = None
         self.file_path = None
         # Flag to check if the file is a python file #TODO just temporary solution, could be extended to other languages
         self.is_python_file = True
@@ -114,14 +124,12 @@ class BECEditor(QWidget):
         self.layout.addWidget(self.splitter)
         self.setLayout(self.layout)
 
-        self.setupEditor()
+        self.setup_editor()
 
-    def setupEditor(self):
+    def setup_editor(self):
         # Set the lexer for Python
         self.lexer = QsciLexerPython()
         self.editor.setLexer(self.lexer)
-        # Set up for call tips
-        self.editor.SendScintilla(QsciScintilla.SCI_SETMOUSEDWELLTIME, 500)  # Example dwell time
 
         # Enable auto indentation and competition within the editor
         self.editor.setAutoIndent(True)
@@ -132,7 +140,7 @@ class BECEditor(QWidget):
 
         # Autocomplete for python file
         # Connect cursor position change signal for autocompletion
-        self.editor.cursorPositionChanged.connect(self.onCursorPositionChanged)
+        self.editor.cursorPositionChanged.connect(self.on_cursor_position_changed)
 
         # if self.is_python_file: #TODO can be changed depending on supported languages
         self.__api = QsciAPIs(self.lexer)
@@ -143,94 +151,37 @@ class BECEditor(QWidget):
         self.editor.setMarginType(0, QsciScintilla.MarginType.NumberMargin)
         self.editor.setMarginWidth(0, "0000")  # Adjust the width as needed
 
-        # Set up call tips
-        # self.editor.setCallTipsStyle(QsciScintilla.CallTipsNo
-        #                              CallTipsNoContext)
-        # self.editor.setCallTipsVisible(0)  # Show all applicable call tips
-        # self.editor.setCallTipsPosition(QsciScintilla.CallTipsBelowText)
-        # self.editor.setCallTipsBackgroundColor(QColor(0x20, 0x30, 0xFF, 0xFF))
-        # self.editor.setCallTipsForegroundColor(Qt.black)
-        # self.editor.setCallTipsHighlightColor(Qt.red)
-        #
-        # Connect signals for autocompletion and call tips
-        self.editor.cursorPositionChanged.connect(self.onCursorPositionChanged)
-        self.editor.SCN_CHARADDED.connect(self.onCharacterAdded)
-
         # Additional UI elements like menu for load/save can be added here
-        self.setEditorStyle()
+        self.set_editor_style()
 
-    def onCharacterAdded(self, char_added):
-        # Check if the added character is an opening parenthesis for call tips
-        if chr(char_added) == "(":
-            cursor_line, cursor_index = self.editor.getCursorPosition()
-            self.showCallTip(cursor_line, cursor_index)
+    def show_call_tip(self, position):
+        line, index = self.editor.lineIndexFromPosition(position)
+        signature = self.auto_completer.get_function_signature(line + 1, index, self.editor.text())
+        if signature:
+            self.editor.showUserList(1, [signature])
 
-    def create_temporary_file(self, content):
-        """Creates a temporary file with the given content."""
-        # Create a new temporary file
-        with tempfile.NamedTemporaryFile(
-            delete=False, suffix=".py", mode="w+t", encoding="utf-8"
-        ) as temp_file:
-            # Write the content to the temporary file
-            temp_file.write(content)
-            # The file is automatically closed when exiting the 'with' block
-
-        # Return the path of the temporary file
-        return temp_file.name
-
-    def showCallTip(self, line, index):
-        editor_text = self.editor.text()
-        line_text_up_to_cursor = editor_text.split("\n")[line][:index]
-        last_open_paren = line_text_up_to_cursor.rfind("(")
-
-        if last_open_paren != -1:
-            file_path = (
-                self.file_path if self.file_path else self.create_temporary_file(editor_text)
-            )
-
-            try:
-                script = Script(code=editor_text, path=file_path)
-                call_signatures = script.get_signatures(line + 1, index)
-
-                if call_signatures:
-                    signature = call_signatures[0]
-                    calltip = signature.to_string()
-
-                    # Encode the call tip string to bytes
-                    calltip_bytes = calltip.encode("utf-8")
-
-                    # Show the call tip using sendScintilla
-                    self.editor.SendScintilla(
-                        QsciScintilla.SCI_CALLTIPSHOW,
-                        self.editor.positionFromLineIndex(line, last_open_paren),
-                        calltip_bytes,
-                    )
-            except Exception as e:
-                print(f"Error getting calltip information: {e}")
-            finally:
-                if not self.file_path and file_path:
-                    os.unlink(file_path)
-
-    def onCursorPositionChanged(self, line, index):
+    def on_cursor_position_changed(self, line, index):
         # if self.is_python_file: #TODO can be changed depending on supported languages
+        # Get completions
         self.auto_completer.get_completions(line + 1, index, self.editor.text())
         self.editor.autoCompleteFromAPIs()
 
-        # Call tip logic (you may need to adjust this logic based on when you want to show call tips)
-        self.showCallTip(line, index)
+        # Show call tip - signature
+        position = self.editor.positionFromLineIndex(line, index)
+        self.show_call_tip(position)
 
     def loaded_autocomplete(self):
         # Placeholder for any action after autocompletion data is loaded
         pass
 
-    def setEditorStyle(self):
+    def set_editor_style(self):
         # Dracula Theme Colors
-        backgroundColor = QColor("#282a36")
-        textColor = QColor("#f8f8f2")
-        keywordColor = QColor("#8be9fd")
-        stringColor = QColor("#f1fa8c")
-        commentColor = QColor("#6272a4")
-        classFunctionColor = QColor("#50fa7b")
+        background_color = QColor("#282a36")
+        text_color = QColor("#f8f8f2")
+        keyword_color = QColor("#8be9fd")
+        string_color = QColor("#f1fa8c")
+        comment_color = QColor("#6272a4")
+        class_function_color = QColor("#50fa7b")
 
         # Set Font
         font = QFont()
@@ -240,42 +191,43 @@ class BECEditor(QWidget):
         self.editor.setMarginsFont(font)
 
         # Set Editor Colors
-        self.editor.setMarginsBackgroundColor(backgroundColor)
-        self.editor.setMarginsForegroundColor(textColor)
-        self.editor.setCaretForegroundColor(textColor)
+        self.editor.setMarginsBackgroundColor(background_color)
+        self.editor.setMarginsForegroundColor(text_color)
+        self.editor.setCaretForegroundColor(text_color)
         self.editor.setCaretLineBackgroundColor(QColor("#44475a"))
-        self.editor.setPaper(backgroundColor)  # Set the background color for the entire paper
-        self.editor.setColor(textColor)
-        #
+        self.editor.setPaper(background_color)  # Set the background color for the entire paper
+        self.editor.setColor(text_color)
+
+        # Set editor
         # Syntax Highlighting Colors
         lexer = self.editor.lexer()
         if lexer:
-            lexer.setDefaultPaper(backgroundColor)  # Set the background color for the text area
-            lexer.setDefaultColor(textColor)
-            lexer.setColor(keywordColor, QsciLexerPython.Keyword)
-            lexer.setColor(stringColor, QsciLexerPython.DoubleQuotedString)
-            lexer.setColor(stringColor, QsciLexerPython.SingleQuotedString)
-            lexer.setColor(commentColor, QsciLexerPython.Comment)
-            lexer.setColor(classFunctionColor, QsciLexerPython.ClassName)
-            lexer.setColor(classFunctionColor, QsciLexerPython.FunctionMethodName)
+            lexer.setDefaultPaper(background_color)  # Set the background color for the text area
+            lexer.setDefaultColor(text_color)
+            lexer.setColor(keyword_color, QsciLexerPython.Keyword)
+            lexer.setColor(string_color, QsciLexerPython.DoubleQuotedString)
+            lexer.setColor(string_color, QsciLexerPython.SingleQuotedString)
+            lexer.setColor(comment_color, QsciLexerPython.Comment)
+            lexer.setColor(class_function_color, QsciLexerPython.ClassName)
+            lexer.setColor(class_function_color, QsciLexerPython.FunctionMethodName)
 
         # Set the style for all text to have a transparent background
         # TODO find better way how to do it!
         for style in range(
             128
         ):  # QsciScintilla supports 128 styles by default, this set all to transpatrent background
-            self.lexer.setPaper(backgroundColor, style)
+            self.lexer.setPaper(background_color, style)
 
-    def runScript(self):
+    def run_script(self):
         script = self.editor.text()
         self.scriptRunnerThread = ScriptRunnerThread(script)
-        self.scriptRunnerThread.outputSignal.connect(self.updateTerminal)
+        self.scriptRunnerThread.outputSignal.connect(self.update_terminal)
         self.scriptRunnerThread.start()
 
-    def updateTerminal(self, text):
+    def update_terminal(self, text):
         self.terminal.append(text)
 
-    def openFile(self):
+    def open_file(self):
         path, _ = QFileDialog.getOpenFileName(self, "Open file", "", "Python files (*.py)")
         if path:
             file = QFile(path)
@@ -284,7 +236,7 @@ class BECEditor(QWidget):
                 self.editor.setText(text)
                 file.close()
 
-    def saveFile(self):
+    def save_file(self):
         path, _ = QFileDialog.getSaveFileName(self, "Save file", "", "Python files (*.py)")
         if path:
             file = QFile(path)

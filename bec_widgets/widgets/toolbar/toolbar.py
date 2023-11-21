@@ -18,7 +18,7 @@ class OpenFileAction:  # (ToolBarAction):
         icon = QApplication.style().standardIcon(QStyle.StandardPixmap.SP_DialogOpenButton)
         action = QAction(icon, "Open File", target)
         # action = QAction("Open File", target)
-        action.triggered.connect(target.openFile)
+        action.triggered.connect(target.open_file)
         return action
 
 
@@ -27,7 +27,7 @@ class SaveFileAction:
         icon = QApplication.style().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton)
         action = QAction(icon, "Save File", target)
         # action = QAction("Save File", target)
-        action.triggered.connect(target.saveFile)
+        action.triggered.connect(target.save_file)
         return action
 
 
@@ -36,7 +36,7 @@ class RunScriptAction:
         icon = QApplication.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay)
         action = QAction(icon, "Run Script", target)
         # action = QAction("Run Script", target)
-        action.triggered.connect(target.runScript)
+        action.triggered.connect(target.run_script)
         return action
 
 
