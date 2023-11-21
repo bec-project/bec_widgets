@@ -1,6 +1,4 @@
-import os
 import subprocess
-import tempfile
 
 import qdarktheme
 from jedi import Script
@@ -47,7 +45,9 @@ class AutoCompleter(QThread):
             script = Script(text, path=self.file_path)
             signatures = script.get_signatures(line, index)
             if signatures:
-                return signatures[0].to_string()
+                full_docstring = signatures[0].docstring(raw=True)
+                compact_docstring = self.get_compact_docstring(full_docstring)
+                return compact_docstring
         except Exception as err:
             print(err)
         return ""
@@ -62,6 +62,20 @@ class AutoCompleter(QThread):
         self.index = index
         self.text = text
         self.start()
+
+    def get_compact_docstring(self, full_docstring):
+        lines = full_docstring.split("\n")
+        cutoff_indices = [
+            i
+            for i, line in enumerate(lines)
+            if line.strip().lower() in ["parameters", "returns", "examples", "see also", "warnings"]
+        ]
+
+        if cutoff_indices:
+            lines = lines[: cutoff_indices[0]]
+
+        compact_docstring = "\n".join(lines).strip()
+        return compact_docstring
 
 
 class ScriptRunnerThread(QThread):
