@@ -1,6 +1,7 @@
+import os
 import subprocess
+import tempfile
 import qdarktheme
-from PyQt6.QtGui import QKeyEvent
 
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QSplitter
@@ -86,6 +87,7 @@ class BECEditor(QWidget):
     def __init__(self, toolbar_enabled=True):
         super().__init__()
 
+        self.file_path = None
         # Flag to check if the file is a python file #TODO just temporary solution, could be extended to other languages
         self.is_python_file = True
 
@@ -118,8 +120,10 @@ class BECEditor(QWidget):
         # Set the lexer for Python
         self.lexer = QsciLexerPython()
         self.editor.setLexer(self.lexer)
+        # Set up for call tips
+        self.editor.SendScintilla(QsciScintilla.SCI_SETMOUSEDWELLTIME, 500)  # Example dwell time
 
-        # Enable features
+        # Enable auto indentation and competition within the editor
         self.editor.setAutoIndent(True)
         self.editor.setIndentationsUseTabs(False)
         self.editor.setIndentationWidth(4)
@@ -139,13 +143,81 @@ class BECEditor(QWidget):
         self.editor.setMarginType(0, QsciScintilla.MarginType.NumberMargin)
         self.editor.setMarginWidth(0, "0000")  # Adjust the width as needed
 
+        # Set up call tips
+        # self.editor.setCallTipsStyle(QsciScintilla.CallTipsNo
+        #                              CallTipsNoContext)
+        # self.editor.setCallTipsVisible(0)  # Show all applicable call tips
+        # self.editor.setCallTipsPosition(QsciScintilla.CallTipsBelowText)
+        # self.editor.setCallTipsBackgroundColor(QColor(0x20, 0x30, 0xFF, 0xFF))
+        # self.editor.setCallTipsForegroundColor(Qt.black)
+        # self.editor.setCallTipsHighlightColor(Qt.red)
+        #
+        # Connect signals for autocompletion and call tips
+        self.editor.cursorPositionChanged.connect(self.onCursorPositionChanged)
+        self.editor.SCN_CHARADDED.connect(self.onCharacterAdded)
+
         # Additional UI elements like menu for load/save can be added here
         self.setEditorStyle()
+
+    def onCharacterAdded(self, char_added):
+        # Check if the added character is an opening parenthesis for call tips
+        if chr(char_added) == "(":
+            cursor_line, cursor_index = self.editor.getCursorPosition()
+            self.showCallTip(cursor_line, cursor_index)
+
+    def create_temporary_file(self, content):
+        """Creates a temporary file with the given content."""
+        # Create a new temporary file
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=".py", mode="w+t", encoding="utf-8"
+        ) as temp_file:
+            # Write the content to the temporary file
+            temp_file.write(content)
+            # The file is automatically closed when exiting the 'with' block
+
+        # Return the path of the temporary file
+        return temp_file.name
+
+    def showCallTip(self, line, index):
+        editor_text = self.editor.text()
+        line_text_up_to_cursor = editor_text.split("\n")[line][:index]
+        last_open_paren = line_text_up_to_cursor.rfind("(")
+
+        if last_open_paren != -1:
+            file_path = (
+                self.file_path if self.file_path else self.create_temporary_file(editor_text)
+            )
+
+            try:
+                script = Script(code=editor_text, path=file_path)
+                call_signatures = script.get_signatures(line + 1, index)
+
+                if call_signatures:
+                    signature = call_signatures[0]
+                    calltip = signature.to_string()
+
+                    # Encode the call tip string to bytes
+                    calltip_bytes = calltip.encode("utf-8")
+
+                    # Show the call tip using sendScintilla
+                    self.editor.SendScintilla(
+                        QsciScintilla.SCI_CALLTIPSHOW,
+                        self.editor.positionFromLineIndex(line, last_open_paren),
+                        calltip_bytes,
+                    )
+            except Exception as e:
+                print(f"Error getting calltip information: {e}")
+            finally:
+                if not self.file_path and file_path:
+                    os.unlink(file_path)
 
     def onCursorPositionChanged(self, line, index):
         # if self.is_python_file: #TODO can be changed depending on supported languages
         self.auto_completer.get_completions(line + 1, index, self.editor.text())
         self.editor.autoCompleteFromAPIs()
+
+        # Call tip logic (you may need to adjust this logic based on when you want to show call tips)
+        self.showCallTip(line, index)
 
     def loaded_autocomplete(self):
         # Placeholder for any action after autocompletion data is loaded
