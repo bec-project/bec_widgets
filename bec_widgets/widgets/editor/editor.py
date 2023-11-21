@@ -20,7 +20,15 @@ from bec_widgets.widgets import ModularToolBar
 
 
 class AutoCompleter(QThread):
-    def __init__(self, file_path, api, enable_docstring=False):
+    """Initializes the AutoCompleter thread for handling autocompletion and signature help.
+
+    Args:
+        file_path (str): The path to the file for which autocompletion is required.
+        api (QsciAPIs): The QScintilla API instance used for managing autocompletions.
+        enable_docstring (bool, optional): Flag to determine if docstrings should be included in the signatures.
+    """
+
+    def __init__(self, file_path: str, api: QsciAPIs, enable_docstring: bool = False):
         super(AutoCompleter, self).__init__(None)
         self.file_path = file_path
         self.script: Script = None
@@ -30,13 +38,20 @@ class AutoCompleter(QThread):
         self.index = 0
         self.text = ""
 
+        # TODO so far disabled, quite buggy, docstring extraction has to be generalised
         self.enable_docstring = enable_docstring
 
     def update_script(self, text: str):
+        """Updates the script for Jedi completion based on the current editor text.
+
+        Args:
+            text (str): The current text of the editor.
+        """
         if self.script is None or self.script.path != text:
             self.script = Script(text, path=self.file_path)
 
     def run(self):
+        """Runs the thread for generating autocompletions. Overrides QThread.run."""
         self.update_script(self.text)
         try:
             self.completions = self.script.complete(self.line, self.index)
@@ -46,6 +61,16 @@ class AutoCompleter(QThread):
         self.finished.emit()
 
     def get_function_signature(self, line: int, index: int, text: str) -> str:
+        """Fetches the function signature for a given position in the text.
+
+        Args:
+            line (int): The line number in the editor.
+            index (int): The index (column number) in the line.
+            text (str): The current text of the editor.
+
+        Returns:
+            str: A string containing the function signature or an empty string if not available.
+        """
         self.update_script(text)
         try:
             signatures = self.script.get_signatures(line, index)
@@ -59,19 +84,40 @@ class AutoCompleter(QThread):
             print(f"Signature Error:{err}")
         return ""
 
-    def load_autocomplete(self, completions):
+    def load_autocomplete(self, completions: list):
+        """Loads the autocomplete suggestions into the QScintilla API.
+
+        Args:
+            completions (list[Completion]): A list of Completion objects to be added to the API.
+        """
         self.api.clear()
         [self.api.add(i.name) for i in completions]
         self.api.prepare()
 
     def get_completions(self, line: int, index: int, text: str):
+        """Starts the autocompletion process for a given position in the text.
+
+        Args:
+            line (int): The line number in the editor.
+            index (int): The index (column number) in the line.
+            text (str): The current text of the editor.
+        """
         self.line = line
         self.index = index
         self.text = text
         self.start()
 
     def get_compact_docstring(self, full_docstring):
+        """Generates a compact version of a function's docstring.
+
+        Args:
+            full_docstring (str): The full docstring of a function.
+
+        Returns:
+            str: A compact version of the docstring.
+        """
         lines = full_docstring.split("\n")
+        # TODO make it also for different docstring styles, now it is only for numpy style
         cutoff_indices = [
             i
             for i, line in enumerate(lines)
@@ -86,6 +132,12 @@ class AutoCompleter(QThread):
 
 
 class ScriptRunnerThread(QThread):
+    """Initializes the thread for running a Python script.
+
+    Args:
+        script (str): The script to be executed.
+    """
+
     outputSignal = Signal(str)
 
     def __init__(self, script):
@@ -93,6 +145,7 @@ class ScriptRunnerThread(QThread):
         self.script = script
 
     def run(self):
+        """Executes the script in a subprocess and emits output through a signal. Overrides QThread.run."""
         process = subprocess.Popen(
             ["python", "-u", "-c", self.script],
             stdout=subprocess.PIPE,
@@ -114,12 +167,18 @@ class ScriptRunnerThread(QThread):
 
 
 class BECEditor(QWidget):
+    """Initializes the BEC Editor widget.
+
+    Args:
+        toolbar_enabled (bool, optional): Determines if the toolbar should be enabled. Defaults to True.
+    """
+
     def __init__(self, toolbar_enabled=True):
         super().__init__()
 
         self.scriptRunnerThread = None
         self.file_path = None
-        # Flag to check if the file is a python file #TODO just temporary solution, could be extended to other languages
+        # TODO just temporary solution, could be extended to other languages
         self.is_python_file = True
 
         # Initialize the editor and terminal
@@ -139,7 +198,7 @@ class BECEditor(QWidget):
         self.splitter = QSplitter(Qt.Orientation.Vertical, self)
         self.splitter.addWidget(self.editor)
         self.splitter.addWidget(self.terminal)
-        # self.splitter.setSizes([400, 100]) #TODO optional to set sizes
+        self.splitter.setSizes([400, 200])
 
         # Add Splitter to layout
         self.layout.addWidget(self.splitter)
@@ -148,6 +207,7 @@ class BECEditor(QWidget):
         self.setup_editor()
 
     def setup_editor(self):
+        """Sets up the editor with necessary configurations like lexer, auto indentation, and line numbers."""
         # Set the lexer for Python
         self.lexer = QsciLexerPython()
         self.editor.setLexer(self.lexer)
@@ -176,12 +236,23 @@ class BECEditor(QWidget):
         self.set_editor_style()
 
     def show_call_tip(self, position):
+        """Shows a call tip at the given position in the editor.
+
+        Args:
+            position (int): The position in the editor where the call tip should be shown.
+        """
         line, index = self.editor.lineIndexFromPosition(position)
         signature = self.auto_completer.get_function_signature(line + 1, index, self.editor.text())
         if signature:
             self.editor.showUserList(1, [signature])
 
     def on_cursor_position_changed(self, line, index):
+        """Handles the event of cursor position change in the editor.
+
+        Args:
+            line (int): The current line number where the cursor is.
+            index (int): The current column index where the cursor is.
+        """
         # if self.is_python_file: #TODO can be changed depending on supported languages
         # Get completions
         self.auto_completer.get_completions(line + 1, index, self.editor.text())
@@ -192,10 +263,11 @@ class BECEditor(QWidget):
         self.show_call_tip(position)
 
     def loaded_autocomplete(self):
-        # Placeholder for any action after autocompletion data is loaded
+        """Placeholder method for actions after autocompletion data is loaded."""
         pass
 
     def set_editor_style(self):
+        """Sets the style and color scheme for the editor."""
         # Dracula Theme Colors
         background_color = QColor("#282a36")
         text_color = QColor("#f8f8f2")
@@ -236,19 +308,26 @@ class BECEditor(QWidget):
         # TODO find better way how to do it!
         for style in range(
             128
-        ):  # QsciScintilla supports 128 styles by default, this set all to transpatrent background
+        ):  # QsciScintilla supports 128 styles by default, this set all to transparent background
             self.lexer.setPaper(background_color, style)
 
     def run_script(self):
+        """Runs the current script in the editor."""
         script = self.editor.text()
         self.scriptRunnerThread = ScriptRunnerThread(script)
         self.scriptRunnerThread.outputSignal.connect(self.update_terminal)
         self.scriptRunnerThread.start()
 
     def update_terminal(self, text):
+        """Updates the terminal with new text.
+
+        Args:
+            text (str): The text to be appended to the terminal.
+        """
         self.terminal.append(text)
 
     def open_file(self):
+        """Opens a file dialog for selecting and opening a Python file in the editor."""
         path, _ = QFileDialog.getOpenFileName(self, "Open file", "", "Python files (*.py)")
         if path:
             file = QFile(path)
@@ -258,6 +337,7 @@ class BECEditor(QWidget):
                 file.close()
 
     def save_file(self):
+        """Opens a save file dialog for saving the current script in the editor."""
         path, _ = QFileDialog.getSaveFileName(self, "Save file", "", "Python files (*.py)")
         if path:
             file = QFile(path)
