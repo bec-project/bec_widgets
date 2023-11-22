@@ -173,11 +173,12 @@ class BECEditor(QWidget):
         toolbar_enabled (bool, optional): Determines if the toolbar should be enabled. Defaults to True.
     """
 
-    def __init__(self, toolbar_enabled=True):
+    def __init__(self, toolbar_enabled=True, docstring_tooltip=False):
         super().__init__()
 
         self.scriptRunnerThread = None
         self.file_path = None
+        self.docstring_tooltip = docstring_tooltip
         # TODO just temporary solution, could be extended to other languages
         self.is_python_file = True
 
@@ -225,7 +226,9 @@ class BECEditor(QWidget):
 
         # if self.is_python_file: #TODO can be changed depending on supported languages
         self.__api = QsciAPIs(self.lexer)
-        self.auto_completer = AutoCompleter(self.editor.text(), self.__api)
+        self.auto_completer = AutoCompleter(
+            self.editor.text(), self.__api, enable_docstring=self.docstring_tooltip
+        )
         self.auto_completer.finished.connect(self.loaded_autocomplete)
 
         # Enable line numbers in the margin
@@ -326,28 +329,53 @@ class BECEditor(QWidget):
         """
         self.terminal.append(text)
 
+    def enable_docstring_tooltip(self):
+        """Enables the docstring tooltip."""
+        self.docstring_tooltip = True
+        self.auto_completer.enable_docstring = True
+
     def open_file(self):
         """Opens a file dialog for selecting and opening a Python file in the editor."""
-        path, _ = QFileDialog.getOpenFileName(self, "Open file", "", "Python files (*.py)")
-        if path:
-            file = QFile(path)
-            if file.open(QFile.OpenModeFlag.ReadOnly | QFile.OpenModeFlag.Text):
-                text = QTextStream(file).readAll()
-                self.editor.setText(text)
-                file.close()
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Open file", "", "Python files (*.py);;All Files (*)", options=options
+        )
+
+        if not file_path:
+            return
+        try:
+            with open(file_path, "r") as file:
+                text = file.read()
+            self.editor.setText(text)
+        except FileNotFoundError:
+            print(f"The file {file_path} was not found.")
+        except Exception as e:
+            print(f"An error occurred while opening the file {file_path}: {e}")
 
     def save_file(self):
         """Opens a save file dialog for saving the current script in the editor."""
-        path, _ = QFileDialog.getSaveFileName(self, "Save file", "", "Python files (*.py)")
-        if path:
-            file = QFile(path)
-            if file.open(QFile.OpenModeFlag.WriteOnly | QFile.OpenModeFlag.Text):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save file", "", "Python files (*.py);;All Files (*)", options=options
+        )
+
+        if not file_path:
+            return
+        try:
+            if not file_path.endswith(".py"):
+                file_path += ".py"
+
+            with open(file_path, "w") as file:
                 text = self.editor.text()
-                QTextStream(file) << text
-                file.close()
+                file.write(text)
+                print(f"File saved to {file_path}")
+        except Exception as e:
+            print(f"An error occurred while saving the file to {file_path}: {e}")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     app = QApplication([])
     qdarktheme.setup_theme("auto")
 
