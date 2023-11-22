@@ -17,6 +17,8 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 from qtpy.QtWidgets import QSplitter
+from qtconsole.manager import QtKernelManager
+from qtconsole.rich_jupyter_widget import RichJupyterWidget
 
 from bec_widgets.widgets import ModularToolBar
 
@@ -176,19 +178,25 @@ class BECEditor(QWidget):
         toolbar_enabled (bool, optional): Determines if the toolbar should be enabled. Defaults to True.
     """
 
-    def __init__(self, toolbar_enabled=True, docstring_tooltip=False):
+    def __init__(
+        self, toolbar_enabled=True, jupyter_terminal_enabled=False, docstring_tooltip=False
+    ):
         super().__init__()
 
         self.script_runner_thread = None
         self.file_path = None
         self.docstring_tooltip = docstring_tooltip
+        self.jupyter_terminal_enabled = jupyter_terminal_enabled
         # TODO just temporary solution, could be extended to other languages
         self.is_python_file = True
 
         # Initialize the editor and terminal
         self.editor = QsciScintilla()
-        self.terminal = QTextEdit()
-        self.terminal.setReadOnly(True)
+        if self.jupyter_terminal_enabled:
+            self.terminal = self.make_jupyter_widget_with_kernel()
+        else:
+            self.terminal = QTextEdit()
+            self.terminal.setReadOnly(True)
 
         # Layout
         self.layout = QVBoxLayout()
@@ -240,6 +248,21 @@ class BECEditor(QWidget):
 
         # Additional UI elements like menu for load/save can be added here
         self.set_editor_style()
+
+    @staticmethod
+    def make_jupyter_widget_with_kernel() -> object:
+        """Start a kernel, connect to it, and create a RichJupyterWidget to use it"""
+        kernel_manager = QtKernelManager(kernel_name="python3")
+        kernel_manager.start_kernel()
+
+        kernel_client = kernel_manager.client()
+        kernel_client.start_channels()
+
+        jupyter_widget = RichJupyterWidget()
+        jupyter_widget.set_default_style("linux")
+        jupyter_widget.kernel_manager = kernel_manager
+        jupyter_widget.kernel_client = kernel_client
+        return jupyter_widget
 
     def show_call_tip(self, position):
         """Shows a call tip at the given position in the editor.
@@ -318,10 +341,15 @@ class BECEditor(QWidget):
 
     def run_script(self):
         """Runs the current script in the editor."""
-        script = self.editor.text()
-        self.script_runner_thread = ScriptRunnerThread(script)
-        self.script_runner_thread.outputSignal.connect(self.update_terminal)
-        self.script_runner_thread.start()
+        if self.jupyter_terminal_enabled:
+            script = self.editor.text()
+            self.terminal.execute(script)
+
+        else:
+            script = self.editor.text()
+            self.script_runner_thread = ScriptRunnerThread(script)
+            self.script_runner_thread.outputSignal.connect(self.update_terminal)
+            self.script_runner_thread.start()
 
     def update_terminal(self, text):
         """Updates the terminal with new text.
@@ -381,7 +409,7 @@ if __name__ == "__main__":  # pragma: no cover
     app = QApplication([])
     qdarktheme.setup_theme("auto")
 
-    mainWin = BECEditor()
+    mainWin = BECEditor(jupyter_terminal_enabled=True)
 
     mainWin.show()
     app.exec()
