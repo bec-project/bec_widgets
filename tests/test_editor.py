@@ -1,16 +1,16 @@
+# pylint: disable=no-name-in-module
+
 import os
-import subprocess
 import tempfile
-import time
+from unittest.mock import MagicMock
+from unittest.mock import patch, mock_open
 
 import pytest
-from unittest.mock import MagicMock, Mock, patch
-from unittest.mock import patch, mock_open
-from PyQt6.QtWidgets import QTextEdit
-from qtpy.Qsci import QsciScintilla, QsciLexerPython, QsciAPIs
 
-from bec_widgets.widgets import BECEditor
-from bec_widgets.widgets.editor.editor import AutoCompleter, ScriptRunnerThread, BECEditor
+from qtpy.QtWidgets import QTextEdit
+from qtpy.Qsci import QsciScintilla
+
+from bec_widgets.widgets.editor.editor import AutoCompleter, BECEditor
 
 
 @pytest.fixture(scope="function")
@@ -66,7 +66,7 @@ def test_autocompleter_suggestions(mock_script, editor, qtbot):
     "docstring_enabled, expected_signature",
     [(True, "Mocked signature with docstring"), (False, "Mocked signature")],
 )
-def test_autocompleter_signature(mock_script, editor, qtbot, docstring_enabled, expected_signature):
+def test_autocompleter_signature(mock_script, editor, docstring_enabled, expected_signature):
     """Test if the autocompleter provides correct function signature based on docstring setting."""
     # Set docstring mode based on parameter
     editor.docstring_tooltip = docstring_enabled
@@ -92,7 +92,7 @@ def test_autocompleter_signature(mock_script, editor, qtbot, docstring_enabled, 
     assert signature == expected_signature
 
 
-def test_open_file(editor, qtbot):
+def test_open_file(editor):
     """Test open_file method of BECEditor."""
     # Create a temporary file with some content
     with tempfile.NamedTemporaryFile(delete=False, suffix=".py") as temp_file:
@@ -104,15 +104,13 @@ def test_open_file(editor, qtbot):
             editor.open_file()
 
             # Verify if the editor's text is set to the file content
-            assert (
-                editor.editor.text() == "test file content"
-            ), "Editor should contain the text from the opened file"
+            assert editor.editor.text() == "test file content"
 
     # Clean up by removing the temporary file
     os.remove(temp_file.name)
 
 
-def test_save_file(editor, qtbot):
+def test_save_file(editor):
     """Test save_file method of BECEditor."""
     # Set some text in the editor
     editor.editor.setText("test save content")
@@ -131,7 +129,7 @@ def test_save_file(editor, qtbot):
             mock_file().write.assert_called_with("test save content")
 
 
-def test_open_file_through_toolbar(editor, qtbot):
+def test_open_file_through_toolbar(editor):
     """Test the open_file method through the ModularToolBar."""
     # Create a temporary file
     with tempfile.NamedTemporaryFile(delete=False, suffix=".py") as temp_file:
@@ -146,15 +144,13 @@ def test_open_file_through_toolbar(editor, qtbot):
         with patch("builtins.open", new_callable=mock_open, read_data="test file content"):
             open_action.trigger()
             # Verify if the editor's text is set to the file content
-            assert (
-                editor.editor.text() == "test file content"
-            ), "Editor should contain the text from the opened file"
+            assert editor.editor.text() == "test file content"
 
     # Clean up
     os.remove(temp_file.name)
 
 
-def test_save_file_through_toolbar(editor, qtbot):
+def test_save_file_through_toolbar(editor):
     """Test the save_file method through the ModularToolBar."""
     # Set some text in the editor
     editor.editor.setText("test save content")

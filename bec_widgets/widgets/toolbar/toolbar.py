@@ -9,6 +9,8 @@ from qtpy.QtWidgets import QWidget
 
 
 class ToolBarAction(ABC):
+    """Abstract base class for action creators for the toolbar."""
+
     @abstractmethod
     def create(self, target: QWidget):
         """Creates and returns an action to be added to a toolbar.
@@ -21,10 +23,11 @@ class ToolBarAction(ABC):
         Returns:
             QAction: The action created for the toolbar.
         """
-        pass
 
 
 class OpenFileAction:  # (ToolBarAction):
+    """Action creator for the 'Open File' action in the toolbar."""
+
     def create(self, target: QWidget):
         """Creates an 'Open File' action for the toolbar.
 
@@ -42,6 +45,8 @@ class OpenFileAction:  # (ToolBarAction):
 
 
 class SaveFileAction:
+    """Action creator for the 'Save File' action in the toolbar."""
+
     def create(self, target):
         """Creates a 'Save File' action for the toolbar.
 
@@ -59,6 +64,8 @@ class SaveFileAction:
 
 
 class RunScriptAction:
+    """Action creator for the 'Run Script' action in the toolbar."""
+
     def create(self, target):
         """Creates a 'Run Script' action for the toolbar.
 

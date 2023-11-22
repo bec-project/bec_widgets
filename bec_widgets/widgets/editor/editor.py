@@ -3,9 +3,11 @@ import subprocess
 import qdarktheme
 from jedi import Script
 from jedi.api import Completion
+
+# pylint: disable=no-name-in-module
 from qtpy.Qsci import QsciScintilla, QsciLexerPython, QsciAPIs
-from qtpy.QtCore import QFile, QTextStream, Signal, QThread
 from qtpy.QtCore import Qt
+from qtpy.QtCore import Signal, QThread
 from qtpy.QtGui import QColor, QFont
 from qtpy.QtWidgets import (
     QApplication,
@@ -29,7 +31,7 @@ class AutoCompleter(QThread):
     """
 
     def __init__(self, file_path: str, api: QsciAPIs, enable_docstring: bool = False):
-        super(AutoCompleter, self).__init__(None)
+        super().__init__(None)
         self.file_path = file_path
         self.script: Script = None
         self.api: QsciAPIs = api
@@ -78,7 +80,7 @@ class AutoCompleter(QThread):
                 full_docstring = signatures[0].docstring(raw=True)
                 compact_docstring = self.get_compact_docstring(full_docstring)
                 return compact_docstring
-            elif signatures and self.enable_docstring is False:
+            if signatures and self.enable_docstring is False:
                 return signatures[0].to_string()
         except Exception as err:
             print(f"Signature Error:{err}")
@@ -91,7 +93,8 @@ class AutoCompleter(QThread):
             completions (list[Completion]): A list of Completion objects to be added to the API.
         """
         self.api.clear()
-        [self.api.add(i.name) for i in completions]
+        for i in completions:
+            self.api.add(i.name)
         self.api.prepare()
 
     def get_completions(self, line: int, index: int, text: str):
@@ -176,7 +179,7 @@ class BECEditor(QWidget):
     def __init__(self, toolbar_enabled=True, docstring_tooltip=False):
         super().__init__()
 
-        self.scriptRunnerThread = None
+        self.script_runner_thread = None
         self.file_path = None
         self.docstring_tooltip = docstring_tooltip
         # TODO just temporary solution, could be extended to other languages
@@ -267,7 +270,6 @@ class BECEditor(QWidget):
 
     def loaded_autocomplete(self):
         """Placeholder method for actions after autocompletion data is loaded."""
-        pass
 
     def set_editor_style(self):
         """Sets the style and color scheme for the editor."""
@@ -317,9 +319,9 @@ class BECEditor(QWidget):
     def run_script(self):
         """Runs the current script in the editor."""
         script = self.editor.text()
-        self.scriptRunnerThread = ScriptRunnerThread(script)
-        self.scriptRunnerThread.outputSignal.connect(self.update_terminal)
-        self.scriptRunnerThread.start()
+        self.script_runner_thread = ScriptRunnerThread(script)
+        self.script_runner_thread.outputSignal.connect(self.update_terminal)
+        self.script_runner_thread.start()
 
     def update_terminal(self, text):
         """Updates the terminal with new text.
