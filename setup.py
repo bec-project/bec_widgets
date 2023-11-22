@@ -1,24 +1,27 @@
+# pylint: disable= missing-module-docstring
 from setuptools import setup
 
 __version__ = "0.31.0"
 
 # Default to PyQt6 if no other Qt binding is installed
-qt_dependency = "PyQt6>=6.0"
-qscintilla_dependency = "PyQt6-QScintilla"
+QT_DEPENDENCY = "PyQt6>=6.0"
+QSCINTILLA_DEPENDENCY = "PyQt6-QScintilla"
+
+# pylint: disable=unused-import
 try:
     import PyQt5
 except ImportError:
     pass
 else:
-    qt_dependency = "PyQt5>=5.9"
-    qscintilla_dependency = "QScintilla"
+    QT_DEPENDENCY = "PyQt5>=5.9"
+    QSCINTILLA_DEPENDENCY = "QScintilla"
 
 if __name__ == "__main__":
     setup(
         install_requires=[
             "pydantic",
-            qt_dependency,
-            qscintilla_dependency,
+            QT_DEPENDENCY,
+            QSCINTILLA_DEPENDENCY,
             "jedi",
             "qtpy",
             "pyqtgraph",
