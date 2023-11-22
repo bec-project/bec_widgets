@@ -20,6 +20,7 @@ if __name__ == "__main__":
     setup(
         install_requires=[
             "pydantic",
+            "qtconsole",
             QT_DEPENDENCY,
             QSCINTILLA_DEPENDENCY,
             "jedi",
