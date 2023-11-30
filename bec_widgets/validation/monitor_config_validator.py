@@ -53,7 +53,10 @@ class Signal(BaseModel):
 
         # Get device name from values -> device is already validated
         device_name = values.data.get("name")
-        device = getattr(devices, device_name, None)
+        if device_name is not None:
+            device = getattr(devices, device_name, None)
+        else:  # if device is not in bec than validator_name return None and entry validation is not executed
+            return
 
         # Set entry based on hints if not provided
         if v is None and hasattr(device, "_hints"):
