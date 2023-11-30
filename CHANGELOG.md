@@ -2,6 +2,26 @@
 
 <!--next-version-placeholder-->
 
+## v0.32.0 (2023-11-30)
+
+### Feature
+
+* Jupyter rich console added as alternative to default QTextEdit terminal output ([`016b26f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/016b26f5cf05e90da144487a9359ac2a54c8e549))
+* Editor.py basic signature calltip ([`045b1ba`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/045b1baa60a93d2266800821940d7aa29bd8bbe1))
+* Editor.py jedi autocomplete hooked ([`fb555b2`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/fb555b278a5139f180592280408742d34dc5fa84))
+* Editor.py added splitter between editor and terminal ([`c70ddb3`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/c70ddb3cb19fecf7ce14b551d7d265e2e0cff357))
+* Toolbar.py proof-of-concept ([`286e62d`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/286e62df92927d2efe0b4ab07995f7b5e36a0435))
+* Basic text editor + running terminal output ([`9487844`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/94878448c8f39a69e9e65df2789da029a9acfc0e))
+
+### Fix
+
+* Added missing dependency jedi ([`d978740`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/d978740f9879580d01e092ad1fead46786d3ed5c))
+* Editor.py switch to disable docstring ([`3cc05cd`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/3cc05cde147cd520b98f0896beb64781ea47d816))
+* Editor.py compact signature on tooltip ([`f96cacc`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/f96caccfcb43c904887ebfc0b34fd779ffff8bf1))
+* Editor.py removed automatic background behind edited text ([`d865e2f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/d865e2f1af6eb3d5fb31f9c53088b629a232343f))
+* Toolbar.py automatic initialisation works ([`8ad3059`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/8ad305959257a58b297896218baae06d09520ee1))
+* Terminal output as QThread ([`a0d172e`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/a0d172e3dc35bdc2d7e1b43185e31bb9a3629631))
+
 ## v0.31.0 (2023-11-13)
 
 ### Feature
