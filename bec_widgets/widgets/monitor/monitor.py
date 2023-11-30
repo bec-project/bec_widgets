@@ -136,6 +136,35 @@ config_no_entry = {
     ],
 }
 
+config_wrong = {
+    "plot_settings": {
+        "background_color": "white",
+        "num_columns": 5,
+        "colormap": "plasma",
+        "scan_types": False,
+    },
+    "plot_data": [
+        {
+            "plot_name": "BPM4i plots vs samx",
+            "x": {"label": "Motor Y", "signals": [{"name": "samx"}]},
+            "y": {"label": "bpm4i", "signals": [{"name": "bpm4i"}]},
+        },
+        {
+            "plot_name": "Gauss plots vs samx",
+            "x": {"label": "Motor X", "signals": [{"name": "samx"}]},
+            "y": {
+                "label": "Gauss",
+                "signals": [
+                    {"name": "gauss_bpm"},
+                    {"name": "non_exist1"},
+                    {"name": "non_exist2"},
+                    {"name": "gauss_bpm", "entry": "samx"},
+                ],
+            },
+        },
+    ],
+}
+
 test_config = {
     "plot_settings": {
         "background_color": "white",
@@ -459,9 +488,30 @@ class BECMonitor(pg.GraphicsLayoutWidget):
             self.config = validated_config.model_dump()
             self._init_config()
         except ValidationError as e:
-            error_message = f"Monitor configuration validation error: {e}"
-            print(error_message)
-        # QMessageBox.critical(self, "Configuration Error", error_message) #TODO do better error popups
+            error_str = str(e)
+            formatted_error_message = BECMonitor.format_validation_error(error_str)
+
+            # Display the formatted error message in a popup
+            QMessageBox.critical(self, "Configuration Error", formatted_error_message)
+
+    @staticmethod
+    def format_validation_error(error_str: str) -> str:
+        error_lines = error_str.split("\n")
+        # The first line contains the number of errors.
+        error_header = f"<p><b>{error_lines[0]}</b></p><hr>"
+
+        formatted_error_message = error_header
+        # Skip the first line as it's the header.
+        error_details = error_lines[1:]
+
+        # Iterate through pairs of lines (each error's two lines).
+        for i in range(0, len(error_details), 2):
+            location = error_details[i]
+            message = error_details[i + 1] if i + 1 < len(error_details) else ""
+
+            formatted_error_message += f"<p><b>{location}</b><br>{message}</p><hr>"
+
+        return formatted_error_message
 
     def flush(self) -> None:
         """Flush the data dictionary."""
