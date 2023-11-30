@@ -193,6 +193,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         config: dict = None,
         enable_crosshair: bool = True,
         gui_id=None,
+        legacy_scan_segment: bool = True,
     ):
         super(BECMonitor, self).__init__(parent=parent)
 
@@ -217,6 +218,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
 
         # Current configuration
         self.config = config
+        self.legacy_scan_segment = legacy_scan_segment
 
         # Enable crosshair
         self.enable_crosshair = enable_crosshair
@@ -418,6 +420,12 @@ class BECMonitor(pg.GraphicsLayoutWidget):
 
     def update_plot(self) -> None:
         """Update the plot data based on the stored data dictionary."""
+        if self.legacy_scan_segment is True:
+            self.legacy_update_plot()
+
+    def legacy_update_plot(self) -> None:
+        """Legacy version of how data are update from on_scan_segment.
+        Update the plot data based on the stored data dictionary."""
         for plot_name, curve_list in self.curves_data.items():
             for y_name, y_entry, curve in curve_list:
                 x_config = next(
@@ -523,7 +531,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         self.init_curves()
 
     @pyqtSlot(dict, dict)
-    def on_scan_segment(self, msg, metadata):
+    def on_scan_segment(self, msg: dict, metadata: dict):
         """
         Handle new scan segments and saves data to a dictionary. Linked through bec_dispatcher.
 
@@ -543,14 +551,14 @@ class BECMonitor(pg.GraphicsLayoutWidget):
                 current_name = metadata.get("scan_name")
                 if current_name is None:
                     raise ValueError(
-                        f"Scan name not found in metadata. Please check the scan_name in the YAML"
-                        f" config or in bec configuration."
+                        "Scan name not found in metadata. Please check the scan_name in the YAML"
+                        " config or in bec configuration."
                     )
                 self.plot_data = self.plot_data_config.get(current_name, [])
                 if self.plot_data == []:
                     raise ValueError(
                         f"Scan name {current_name} not found in the YAML config. Please check the scan_name in the "
-                        f"YAML config or in bec configuration."
+                        "YAML config or in bec configuration."
                     )
 
                 # Init UI
@@ -559,6 +567,17 @@ class BECMonitor(pg.GraphicsLayoutWidget):
             self.scanID = current_scanID
             self.flush()
 
+        if self.legacy_scan_segment is True:
+            self.legacy_on_scan_segment(msg)
+
+        self.update_signal.emit()
+
+    def legacy_on_scan_segment(self, msg: dict):
+        """
+        Legacy method to handle scan segments appending each line from scan message.
+        Args:
+            msg(dict): Message received with scan data.
+        """
         for plot_config in self.plot_data:
             x_config = plot_config["x"]
             x_signal_config = x_config["signals"][0]  # There is exactly 1 config for x signals
@@ -582,8 +601,6 @@ class BECMonitor(pg.GraphicsLayoutWidget):
                 if data_y is not None:
                     self.data.setdefault(key, {}).setdefault("y", []).append(data_y)
 
-        self.update_signal.emit()
-
 
 if __name__ == "__main__":  # pragma: no cover
     import argparse
@@ -605,7 +622,7 @@ if __name__ == "__main__":  # pragma: no cover
         # Load config from file
         config = load_yaml(args.config_file)
     else:
-        config = test_config
+        config = CONFIG_SIMPLE
 
     client = bec_dispatcher.client
     client.start()
