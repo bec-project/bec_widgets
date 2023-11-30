@@ -1,4 +1,4 @@
-import os
+# pylint: disable = no-name-in-module,
 import time
 
 import pyqtgraph as pg
@@ -16,7 +16,7 @@ from bec_widgets.qt_utils.yaml_dialog import load_yaml
 from bec_widgets.validation import MonitorConfigValidator
 
 # just for demonstration purposes if script run directly
-config_scan_mode = {
+CONFIG_SCAN_MODE = {
     "plot_settings": {
         "background_color": "white",
         "num_columns": 3,
@@ -86,7 +86,7 @@ config_scan_mode = {
     },
 }
 
-config_simple = {
+CONFIG_SIMPLE = {
     "plot_settings": {
         "background_color": "black",
         "num_columns": 2,
@@ -115,7 +115,7 @@ config_simple = {
     ],
 }
 
-config_no_entry = {
+CONFIG_NO_ENTRY = {
     "plot_settings": {
         "background_color": "white",
         "num_columns": 5,
@@ -136,7 +136,7 @@ config_no_entry = {
     ],
 }
 
-config_wrong = {
+CONFIG_WRONG = {
     "plot_settings": {
         "background_color": "white",
         "num_columns": 5,
@@ -197,6 +197,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         super(BECMonitor, self).__init__(parent=parent)
 
         # Client and device manager from BEC
+        self.plot_data = None
         self.client = bec_dispatcher.client if client is None else client
         self.dev = self.client.device_manager.devices
         self.queue = self.client.queue
@@ -480,8 +481,6 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         Args:
             config(dict): Configuration settings
         """
-        if "config" in config:
-            config = config["config"]
 
         try:
             validated_config = self.validator.validate_monitor_config(config)
@@ -496,6 +495,11 @@ class BECMonitor(pg.GraphicsLayoutWidget):
 
     @staticmethod
     def format_validation_error(error_str: str) -> str:
+        """
+        Format the validation error string to be displayed in a popup.
+        Args:
+            error_str(str): Error string from the validation error.
+        """
         error_lines = error_str.split("\n")
         # The first line contains the number of errors.
         error_header = f"<p><b>{error_lines[0]}</b></p><hr>"
@@ -536,17 +540,17 @@ class BECMonitor(pg.GraphicsLayoutWidget):
             if self.scan_types is False:
                 self.plot_data = self.plot_data_config
             elif self.scan_types is True:
-                currentName = metadata.get("scan_name")
-                if currentName is None:
+                current_name = metadata.get("scan_name")
+                if current_name is None:
                     raise ValueError(
                         f"Scan name not found in metadata. Please check the scan_name in the YAML"
                         f" config or in bec configuration."
                     )
-                self.plot_data = self.plot_data_config.get(currentName, [])
+                self.plot_data = self.plot_data_config.get(current_name, [])
                 if self.plot_data == []:
                     raise ValueError(
-                        f"Scan name {currentName} not found in the YAML config. Please check the"
-                        " scan_name in the YAML config or in bec configuration."
+                        f"Scan name {current_name} not found in the YAML config. Please check the scan_name in the "
+                        f"YAML config or in bec configuration."
                     )
 
                 # Init UI
