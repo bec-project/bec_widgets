@@ -2,18 +2,17 @@ import os
 import time
 
 import pyqtgraph as pg
-from pydantic import ValidationError
-
 from bec_lib import MessageEndpoints
-from qtpy import QtCore
-from qtpy.QtCore import Signal as pyqtSignal, Slot as pyqtSlot
-from qtpy.QtWidgets import QApplication, QTableWidgetItem, QWidget, QMessageBox
-from pyqtgraph import mkPen, mkBrush
-from qtpy import uic
+from pydantic import ValidationError
+from pyqtgraph import mkBrush, mkPen
+from qtpy import QtCore, uic
+from qtpy.QtCore import Signal as pyqtSignal
+from qtpy.QtCore import Slot as pyqtSlot
+from qtpy.QtWidgets import QApplication, QMessageBox, QTableWidgetItem, QWidget
 
 from bec_widgets.bec_dispatcher import bec_dispatcher
-from bec_widgets.qt_utils import Crosshair, Colors
-
+from bec_widgets.qt_utils import Colors, Crosshair
+from bec_widgets.qt_utils.yaml_dialog import load_yaml
 from bec_widgets.validation import MonitorConfigValidator
 
 # just for demonstration purposes if script run directly
@@ -51,18 +50,12 @@ config_scan_mode = {
             {
                 "plot_name": "Grid plot 3",
                 "x": {"label": "Motor Y", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {
-                    "label": "BPM",
-                    "signals": [{"name": "gauss_bpm", "entry": "gauss_bpm"}],
-                },
+                "y": {"label": "BPM", "signals": [{"name": "gauss_bpm", "entry": "gauss_bpm"}]},
             },
             {
                 "plot_name": "Grid plot 4",
                 "x": {"label": "Motor Y", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {
-                    "label": "BPM",
-                    "signals": [{"name": "gauss_adc3", "entry": "gauss_adc3"}],
-                },
+                "y": {"label": "BPM", "signals": [{"name": "gauss_adc3", "entry": "gauss_adc3"}]},
             },
         ],
         "line_scan": [
@@ -108,24 +101,15 @@ config_simple = {
                 # "signals": [{"name": "samx", "entry": "samx"}],
                 "signals": [{"name": "samy"}],
             },
-            "y": {
-                "label": "bpm4i",
-                "signals": [{"name": "bpm4i", "entry": "bpm4i"}],
-            },
+            "y": {"label": "bpm4i", "signals": [{"name": "bpm4i", "entry": "bpm4i"}]},
         },
         {
             "plot_name": "Gauss plots vs samx",
-            "x": {
-                "label": "Motor X",
-                "signals": [{"name": "samx", "entry": "samx"}],
-            },
+            "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
             "y": {
                 "label": "Gauss",
                 # "signals": [{"name": "gauss_bpm", "entry": "gauss_bpm"}],
-                "signals": [
-                    {"name": "gauss_bpm"},
-                    {"name": "samy", "entry": "samy"},
-                ],
+                "signals": [{"name": "gauss_bpm"}, {"name": "samy", "entry": "samy"}],
             },
         },
     ],
@@ -152,6 +136,23 @@ config_no_entry = {
     ],
 }
 
+test_config = {
+    "plot_settings": {
+        "background_color": "white",
+        "axis_width": 2,
+        "num_columns": 5,
+        "colormap": "plasma",
+        "scan_types": False,
+    },
+    "plot_data": [
+        {
+            "plot_name": "BPM4i plots vs samx",
+            "x": {"label": "Motor Y", "signals": [{"name": "samx"}]},
+            "y": {"label": "bpm4i", "signals": [{"name": "bpm4i"}]},
+        }
+    ],
+}
+
 
 class BECMonitor(pg.GraphicsLayoutWidget):
     update_signal = pyqtSignal()
@@ -161,7 +162,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         parent=None,
         client=None,
         config: dict = None,
-        enable_crosshair: bool = False,
+        enable_crosshair: bool = True,
         gui_id=None,
     ):
         super(BECMonitor, self).__init__(parent=parent)
@@ -172,13 +173,17 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         self.queue = self.client.queue
 
         self.validator = MonitorConfigValidator(self.dev)
+        self.gui_id = gui_id
 
-        if gui_id is None:
+        if self.gui_id is None:
             self.gui_id = self.__class__.__name__ + str(time.time())  # TODO still in discussion
 
         # Connect slots dispatcher
         bec_dispatcher.connect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
-        # bec_dispatcher.connect_slot(self.on_config_update, MessageEndpoints.gui_config(self.gui_id)) #TODO connect when ready
+        bec_dispatcher.connect_slot(self.on_config_update, MessageEndpoints.gui_config(self.gui_id))
+        bec_dispatcher.connect_slot(
+            self.on_instruction, MessageEndpoints.gui_instructions(self.gui_id)
+        )
 
         # Current configuration
         self.config = config
@@ -224,8 +229,6 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         else:  # without incoming data setup the first configuration to the first scan type sorted alphabetically by name
             self.plot_data = self.plot_data_config[min(list(self.plot_data_config.keys()))]
 
-        # TODO init plot background -> so far not used, I don't like how it is done in extreme.py
-
         # Initialize the UI
         self._init_ui(self.plot_settings["num_columns"])
 
@@ -252,7 +255,8 @@ class BECMonitor(pg.GraphicsLayoutWidget):
             num_columns = num_plots
             self.plot_settings["num_columns"] = num_columns  # Update the settings
             print(
-                f"Warning: num_columns in the YAML file was greater than the number of plots. Resetting num_columns to number of plots:{num_columns}."
+                "Warning: num_columns in the YAML file was greater than the number of plots."
+                f" Resetting num_columns to number of plots:{num_columns}."
             )
         else:
             self.plot_settings["num_columns"] = num_columns  # Update the settings
@@ -281,11 +285,48 @@ class BECMonitor(pg.GraphicsLayoutWidget):
             plot.setLabel("bottom", x_label)
             plot.setLabel("left", y_label)
             plot.addLegend()
+            self._set_plot_colors(plot, self.plot_settings)
 
             self.plots[plot_name] = plot
             self.grid_coordinates.append((row, col))
 
         self.init_curves()
+
+    def _set_plot_colors(self, plot: pg.PlotItem, plot_settings: dict) -> None:
+        """
+        Set the plot colors based on the plot config.
+
+        Args:
+            plot (pg.PlotItem): Plot object to set the colors.
+            plot_settings (dict): Plot settings dictionary.
+        """
+        if plot_settings.get("show_grid", False):
+            plot.showGrid(x=True, y=True, alpha=0.5)
+        pen_width = plot_settings.get("axis_width", 2)
+        color = plot_settings.get("axis_color")
+        if color is None:
+            if plot_settings["background_color"].lower() == "black":
+                color = "w"
+                self.setBackground("k")
+            elif plot_settings["background_color"].lower() == "white":
+                color = "k"
+                self.setBackground("w")
+            else:
+                raise ValueError(
+                    f"Invalid background color {plot_settings['background_color']}. Allowed values"
+                    " are 'white' or 'black'."
+                )
+        print(plot_settings)
+        pen = pg.mkPen(color=color, width=pen_width)
+        x_axis = plot.getAxis("bottom")  # 'bottom' corresponds to the x-axis
+        x_axis.setPen(pen)
+        x_axis.setTextPen(pen)
+        x_axis.setTickPen(pen)
+
+        y_axis = plot.getAxis("left")  # 'left' corresponds to the y-axis
+        y_axis.setPen(pen)
+        y_axis.setTextPen(pen)
+        y_axis.setTickPen(pen)
 
     def init_curves(self) -> None:
         """
@@ -383,12 +424,35 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         self.dev = self.client.device_manager.devices
 
     @pyqtSlot(dict)
+    def on_instruction(self, msg_content: dict) -> None:
+        """
+        Handle instructions sent to the GUI.
+        Possible actions are:
+            - clear: Clear the plots
+            - close: Close the GUI
+
+        Args:
+            msg_content (dict): Message content with the instruction and parameters.
+        """
+        action = msg_content.get("action", None)
+        parameters = msg_content.get("parameters", None)
+
+        if action == "clear":
+            self.flush()
+        elif action == "close":
+            self.close()
+        else:
+            print(f"Unknown instruction received: {msg_content}")
+
+    @pyqtSlot(dict)
     def on_config_update(self, config: dict) -> None:
         """
         Validate and update the configuration settings for the PlotApp.
         Args:
             config(dict): Configuration settings
         """
+        if "config" in config:
+            config = config["config"]
 
         try:
             validated_config = self.validator.validate_monitor_config(config)
@@ -398,6 +462,11 @@ class BECMonitor(pg.GraphicsLayoutWidget):
             error_message = f"Monitor configuration validation error: {e}"
             print(error_message)
         # QMessageBox.critical(self, "Configuration Error", error_message) #TODO do better error popups
+
+    def flush(self) -> None:
+        """Flush the data dictionary."""
+        self.data = {}
+        self.init_curves()
 
     @pyqtSlot(dict, dict)
     def on_scan_segment(self, msg, metadata):
@@ -420,22 +489,21 @@ class BECMonitor(pg.GraphicsLayoutWidget):
                 currentName = metadata.get("scan_name")
                 if currentName is None:
                     raise ValueError(
-                        f"Scan name not found in metadata. Please check the scan_name in the YAML config or in bec "
-                        f"configuration."
+                        f"Scan name not found in metadata. Please check the scan_name in the YAML"
+                        f" config or in bec configuration."
                     )
                 self.plot_data = self.plot_data_config.get(currentName, [])
                 if self.plot_data == []:
                     raise ValueError(
-                        f"Scan name {currentName} not found in the YAML config. Please check the scan_name in the "
-                        f"YAML config or in bec configuration."
+                        f"Scan name {currentName} not found in the YAML config. Please check the"
+                        " scan_name in the YAML config or in bec configuration."
                     )
 
                 # Init UI
                 self._init_ui(self.plot_settings["num_columns"])
 
             self.scanID = current_scanID
-            self.data = {}
-            self.init_curves()
+            self.flush()
 
         for plot_config in self.plot_data:
             x_config = plot_config["x"]
@@ -464,13 +532,30 @@ class BECMonitor(pg.GraphicsLayoutWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
+    import argparse
+    import json
     import sys
+
     from bec_widgets.bec_dispatcher import bec_dispatcher
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config_file", help="Path to the config file.")
+    parser.add_argument("--config", help="Path to the config file.")
+    parser.add_argument("--id", help="GUI ID.")
+    args = parser.parse_args()
+
+    if args.config is not None:
+        # Load config from file
+        config = json.loads(args.config)
+    elif args.config_file is not None:
+        # Load config from file
+        config = load_yaml(args.config_file)
+    else:
+        config = test_config
 
     client = bec_dispatcher.client
     client.start()
-
     app = QApplication(sys.argv)
-    monitor = BECMonitor(config=config_simple)
+    monitor = BECMonitor(config=config, gui_id=args.id)
     monitor.show()
     sys.exit(app.exec())
