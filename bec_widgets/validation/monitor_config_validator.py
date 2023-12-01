@@ -1,10 +1,6 @@
-from typing import List, Dict, Union, Optional
+from typing import Dict, List, Optional, Union
 
-from pydantic import (
-    BaseModel,
-    Field,
-    field_validator,
-)
+from pydantic import BaseModel, Field, field_validator
 from pydantic_core import PydanticCustomError
 
 
@@ -27,9 +23,7 @@ class Signal(BaseModel):
         # Check if device name provided
         if v is None:
             raise PydanticCustomError(
-                "no_device_name",
-                "Device name must be provided",
-                dict(wrong_value=v),
+                "no_device_name", "Device name must be provided", dict(wrong_value=v)
             )
 
         # Check if device exists in BEC
@@ -125,12 +119,16 @@ class PlotSettings(BaseModel):
 
     Attributes:
         background_color (str): Color of the plot background.
+        axis_width (Optional[int]): Width of the plot axes.
+        axis_color (Optional[str]): Color of the plot axes.
         num_columns (int): Number of columns in the plot layout.
         colormap (str): Colormap to be used.
         scan_types (bool): Indicates if the configuration is for different scan types.
     """
 
     background_color: str
+    axis_width: Optional[int] = None
+    axis_color: Optional[str] = None
     num_columns: int
     colormap: str
     scan_types: bool
