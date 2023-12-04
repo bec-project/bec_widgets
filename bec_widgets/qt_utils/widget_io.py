@@ -1,3 +1,6 @@
+# pylint: disable=no-name-in-module
+from abc import ABC, abstractmethod
+
 from qtpy.QtWidgets import (
     QApplication,
     QWidget,
@@ -12,8 +15,6 @@ from qtpy.QtWidgets import (
     QLabel,
 )
 
-from abc import ABC, abstractmethod
-
 
 class WidgetHandler(ABC):
     """Abstract base class for all widget handlers."""
@@ -21,15 +22,15 @@ class WidgetHandler(ABC):
     @abstractmethod
     def get_value(self, widget: QWidget):
         """Retrieve value from the widget instance."""
-        pass
 
     @abstractmethod
     def set_value(self, widget: QWidget, value):
         """Set a value on the widget instance."""
-        pass
 
 
 class LineEditHandler(WidgetHandler):
+    """Handler for QLineEdit widgets."""
+
     def get_value(self, widget: QLineEdit) -> str:
         return widget.text()
 
@@ -38,6 +39,8 @@ class LineEditHandler(WidgetHandler):
 
 
 class ComboBoxHandler(WidgetHandler):
+    """Handler for QComboBox widgets."""
+
     def get_value(self, widget: QComboBox) -> int:
         return widget.currentIndex()
 
@@ -46,6 +49,8 @@ class ComboBoxHandler(WidgetHandler):
 
 
 class TableWidgetHandler(WidgetHandler):
+    """Handler for QTableWidget widgets."""
+
     def get_value(self, widget: QTableWidget) -> list:
         return [
             [
@@ -63,6 +68,8 @@ class TableWidgetHandler(WidgetHandler):
 
 
 class SpinBoxHandler(WidgetHandler):
+    """Handler for QSpinBox and QDoubleSpinBox widgets."""
+
     def get_value(self, widget):
         return widget.value()
 
@@ -71,6 +78,8 @@ class SpinBoxHandler(WidgetHandler):
 
 
 class CheckBoxHandler(WidgetHandler):
+    """Handler for QCheckBox widgets."""
+
     def get_value(self, widget):
         return widget.isChecked()
 
@@ -79,6 +88,8 @@ class CheckBoxHandler(WidgetHandler):
 
 
 class LabelHandler(WidgetHandler):
+    """Handler for QLabel widgets."""
+
     def get_value(self, widget):
         return widget.text()
 
@@ -130,7 +141,7 @@ class WidgetIO:
             raise ValueError(f"No handler for widget type: {type(widget)}")
 
 
-##################### Public interface for exporting and importing widget hierarchies #####################
+################## for exporting and importing widget hierarchies ##################
 
 
 class WidgetHierarchy:
