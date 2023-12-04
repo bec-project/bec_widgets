@@ -164,12 +164,13 @@ class WidgetHierarchy:
 
     @staticmethod
     def export_config_to_dict(
-        widget,
-        config=None,
-        indent=0,
+        widget: QWidget,
+        config: dict = None,
+        indent: int = 0,
         grab_values: bool = False,
         print_hierarchy: bool = False,
         save_all: bool = True,
+        exclude_internal_widgets: bool = True,
     ) -> dict:
         """
         Export the widget hierarchy to a dictionary.
@@ -180,6 +181,7 @@ class WidgetHierarchy:
             grab_values(bool,optional): Whether to grab the values of the widgets.
             print_hierarchy(bool,optional): Whether to print the hierarchy to the console.
             save_all(bool,optional): Whether to save all widgets or only those with values.
+            exclude_internal_widgets(bool,optional): Whether to exclude internal widgets (e.g. QComboBox in PyQt6).
         Returns:
             config(dict): Dictionary containing the widget hierarchy.
         """
@@ -200,6 +202,13 @@ class WidgetHierarchy:
             WidgetHierarchy.print_widget_hierarchy(widget, indent, grab_values)
 
         for child in widget.children():
+            # Skip internal widgets of QComboBox in PyQt6
+            if (
+                exclude_internal_widgets
+                and isinstance(widget, QComboBox)
+                and child.__class__.__name__ in ["QFrame", "QBoxLayout", "QListView"]
+            ):
+                continue
             child_config = WidgetHierarchy.export_config_to_dict(
                 child, None, indent + 1, grab_values, print_hierarchy, save_all
             )
