@@ -1,10 +1,20 @@
+# pylint: disable=no-name-in-module
+
+from typing import Union
 import yaml
 from qtpy.QtWidgets import QFileDialog
 
 
-def load_yaml(instance) -> dict:
+def load_yaml(instance) -> Union[dict, None]:
+    """
+    Load YAML file from disk.
+    Args:
+        instance: Instance of the calling widget.
+
+    Returns:
+        dict: Configuration data loaded from the YAML file.
+    """
     options = QFileDialog.Options()
-    options |= QFileDialog.DontUseNativeDialog
     file_path, _ = QFileDialog.getOpenFileName(
         instance, "Load Settings", "", "YAML Files (*.yaml *.yml);;All Files (*)", options=options
     )
@@ -18,20 +28,28 @@ def load_yaml(instance) -> dict:
 
     except FileNotFoundError:
         print(f"The file {file_path} was not found.")
+    except PermissionError:
+        print(f"Permission denied for file {file_path}.")
+    except yaml.YAMLError as e:
+        print(f"Error parsing YAML file {file_path}: {e}")
     except Exception as e:
         print(f"An error occurred while loading the settings from {file_path}: {e}")
-        return None  # Return None on exception to indicate failure
 
 
 def save_yaml(instance, config: dict) -> None:
+    """
+    Save YAML file to disk.
+    Args:
+        instance: Instance of the calling widget.
+        config: Configuration data to be saved.
+    """
     options = QFileDialog.Options()
-    options |= QFileDialog.DontUseNativeDialog
     file_path, _ = QFileDialog.getSaveFileName(
         instance, "Save Settings", "", "YAML Files (*.yaml *.yml);;All Files (*)", options=options
     )
 
     if not file_path:
-        return None
+        return
     try:
         if not (file_path.endswith(".yaml") or file_path.endswith(".yml")):
             file_path += ".yaml"
