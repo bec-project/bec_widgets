@@ -147,15 +147,20 @@ class WidgetIO:
 class WidgetHierarchy:
     @staticmethod
     def print_widget_hierarchy(
-        widget, indent: int = 0, grab_values: bool = False, prefix: str = ""
+        widget,
+        indent: int = 0,
+        grab_values: bool = False,
+        prefix: str = "",
+        exclude_internal_widgets: bool = True,
     ) -> None:
         """
         Print the widget hierarchy to the console.
         Args:
-            widget: Widget to print the hierarchy of.
+            widget: Widget to print the hierarchy of
             indent(int, optional): Level of indentation.
             grab_values(bool,optional): Whether to grab the values of the widgets.
             prefix(stc,optional): Custom string prefix for indentation.
+            exclude_internal_widgets(bool,optional): Whether to exclude internal widgets (e.g. QComboBox in PyQt6).
         """
         widget_info = f"{widget.__class__.__name__} ({widget.objectName()})"
         if grab_values:
@@ -167,6 +172,12 @@ class WidgetHierarchy:
 
         children = widget.children()
         for child in children:
+            if (
+                exclude_internal_widgets
+                and isinstance(widget, QComboBox)
+                and child.__class__.__name__ in ["QFrame", "QBoxLayout", "QListView"]
+            ):
+                continue
             child_prefix = prefix + "  "
             arrow = "├─ " if child != children[-1] else "└─ "
             WidgetHierarchy.print_widget_hierarchy(
