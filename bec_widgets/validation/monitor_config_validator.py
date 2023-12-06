@@ -1,6 +1,6 @@
-from typing import Dict, List, Optional, Union
+from typing import List, Dict, Union, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
 
@@ -16,65 +16,56 @@ class Signal(BaseModel):
     name: str
     entry: Optional[str] = Field(None, validate_default=True)
 
-    @field_validator("name")
+    @model_validator(mode="before")
     @classmethod
-    def validate_name(cls, v):
+    def validate_fields(cls, values):
+        """Validate the fields of the model.
+        First validate the 'name' field, then validate the 'entry' field.
+        Args:
+            values (dict): The values to be validated."""
         devices = MonitorConfigValidator.devices
-        # Check if device name provided
-        if v is None:
-            raise PydanticCustomError(
-                "no_device_name", "Device name must be provided", dict(wrong_value=v)
-            )
 
+        # Validate 'name'
+        name = values.get("name")
+
+        # Check if device name provided
+        if name is None:
+            raise PydanticCustomError(
+                "no_device_name", "Device name must be provided", {"wrong_value": name}
+            )
         # Check if device exists in BEC
-        if v not in devices:
+        if name not in devices:
             raise PydanticCustomError(
                 "no_device_bec",
                 'Device "{wrong_value}" not found in current BEC session',
-                dict(wrong_value=v),
+                {"wrong_value": name},
             )
 
-        device = devices.get(v)  # get the device to check if it has signals
+        device = devices[name]  # get the device to check if it has signals
 
         # Check if device have signals
         if not hasattr(device, "signals"):
             raise PydanticCustomError(
                 "no_device_signals",
-                'Device "{wrong_value}" do not have "signals" defined. Check device configuration.',
-                dict(wrong_value=v),
+                'Device "{wrong_value}" does not have "signals" defined. Check device configuration.',
+                {"wrong_value": name},
             )
 
-        return v
-
-    @field_validator("entry")
-    @classmethod
-    def set_and_validate_entry(cls, v, values):
-        devices = MonitorConfigValidator.devices
-
-        # Get device name from values -> device is already validated
-        device_name = values.data.get("name")
-        if device_name is not None:
-            device = getattr(devices, device_name, None)
-        else:  # if device is not in bec than validator_name return None and entry validation is not executed
-            return
+        # Validate 'entry'
+        entry = values.get("entry")
 
         # Set entry based on hints if not provided
-        if v is None and hasattr(device, "_hints"):
-            v = next(
-                iter(device._hints), device_name
-            )  # TODO check if devices[device_name]._hints in not enough?
-        elif v is None:
-            v = device_name
-
-        # Validate that the entry exists in device signals
-        if v not in device.signals:
+        if entry is None:
+            entry = next(iter(device._hints), name) if hasattr(device, "_hints") else name
+        if entry not in device.signals:
             raise PydanticCustomError(
                 "no_entry_for_device",
                 "Entry '{wrong_value}' not found in device '{device_name}' signals",
-                dict(wrong_value=v, device_name=device_name),
+                {"wrong_value": entry, "device_name": name},
             )
 
-        return v
+        values["entry"] = entry
+        return values
 
 
 class PlotAxis(BaseModel):
@@ -105,12 +96,13 @@ class PlotConfig(BaseModel):
     y: PlotAxis = Field(...)
 
     @field_validator("x")
+    @classmethod
     def validate_x_signals(cls, v):
         if len(v.signals) != 1:
             raise PydanticCustomError(
-                "no_entry_for_device",
+                "x_device_one_signal",
                 "There must be exactly one signal for x axis. Number of x signals: '{wrong_value}'",
-                dict(wrong_value=v),
+                {"wrong_value": v},
             )
 
         return v
@@ -165,6 +157,8 @@ class ScanModeConfig(BaseModel):
 
 
 class MonitorConfigValidator:
+    """Validates the configuration data for the BECMonitor."""
+
     devices = None
 
     def __init__(self, devices):
