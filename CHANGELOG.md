@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.32.1 (2023-12-06)
+
+### Fix
+
+* Widget_io print_widget_hierarchy fix comboboxes ([`d1f9979`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/d1f9979ab1372c2f650c8aff12ccb17d668b52eb))
+* WidgetIO combobox fixed for qt6 distributions ([`4f70097`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/4f700976ddd78a6f06e358950786b731ef9051ce))
+
 ## v0.32.0 (2023-11-30)
 
 ### Feature
