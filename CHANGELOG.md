@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.32.2 (2023-12-06)
+
+### Fix
+
+* Changed exec_ to exec for all apps ([`080c258`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/080c258d1542aaace093bca74225297b30453f77))
+* Yaml_dialog.py changed to use native solution of OS -> should prevent crashing on py3.11 ([`5adde23`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/5adde23a457bbd3ae1488b77d4b927b5bded0473))
+
 ## v0.32.1 (2023-12-06)
 
 ### Fix
