@@ -473,4 +473,4 @@ if __name__ == "__main__":  # pragma: no cover
     app = QApplication(sys.argv)
     monitor = BECMonitor(config=config_simple)
     monitor.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

@@ -438,4 +438,4 @@ if __name__ == "__main__":  # pragma: no cover
 
     window = scan_control
     window.show()
-    app.exec_()
+    app.exec()

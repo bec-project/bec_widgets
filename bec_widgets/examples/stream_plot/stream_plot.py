@@ -328,4 +328,4 @@ if __name__ == "__main__":
     )
     plot.show()
     # client.callbacks.register("scan_segment", plot, sync=False)
-    app.exec_()
+    app.exec()

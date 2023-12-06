@@ -257,7 +257,7 @@ class EigerPlot(QWidget):
         )
 
         dialog.setLayout(layout)
-        dialog.exec_()
+        dialog.exec()
 
     ###############################
     # just simulations from here
@@ -295,4 +295,4 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     plot = EigerPlot()
     plot.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

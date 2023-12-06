@@ -507,4 +507,4 @@ if __name__ == "__main__":  # pragma: no cover
     app = QApplication([])
     main_app = ConfigDialog()
     main_app.show()
-    app.exec_()
+    app.exec()

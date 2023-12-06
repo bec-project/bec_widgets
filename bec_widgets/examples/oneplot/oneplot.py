@@ -268,4 +268,4 @@ if __name__ == "__main__":
 
     window = plotApp
     window.show()
-    app.exec_()
+    app.exec()

@@ -1081,7 +1081,7 @@ class MotorApp(QWidget):
         layout.addWidget(ok_button)
 
         dialog.setLayout(layout)
-        dialog.exec_()
+        dialog.exec()
 
     @staticmethod
     def param_changed(ui_element):
@@ -1348,4 +1348,4 @@ if __name__ == "__main__":
     MotorApp = MotorApp(selected_motors=selected_motors, plot_motors=plot_motors)
     window = MotorApp
     window.show()
-    app.exec_()
+    app.exec()

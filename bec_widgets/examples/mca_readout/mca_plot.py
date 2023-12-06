@@ -158,4 +158,4 @@ if __name__ == "__main__":
     streamApp = StreamApp(device=args.device, sub_device=args.sub_device)
 
     streamApp.show()
-    app.exec_()
+    app.exec()

@@ -208,4 +208,4 @@ if __name__ == "__main__":
 
     window = modularApp
     window.show()
-    app.exec_()
+    app.exec()
