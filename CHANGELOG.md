@@ -2,6 +2,17 @@
 
 <!--next-version-placeholder-->
 
+## v0.33.0 (2023-12-07)
+
+### Feature
+
+* Added axis_width and axis_color as optional plot settings ([`504944f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/504944f696a7b2881adec06d29c271fec7e2c981))
+
+### Fix
+
+* Fixed default config options ([`03bdf98`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/03bdf980bcfc37e217cde1beb258d11cee97e0eb))
+* Added hooks to react to incoming config messages and instructions ([`1084bc0`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/1084bc0a803ff73cfa2ab53819bc9809588fa622))
+
 ## v0.32.2 (2023-12-06)
 
 ### Fix
