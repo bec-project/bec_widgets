@@ -60,7 +60,7 @@ class Signal(BaseModel):
         if entry not in device.signals:
             raise PydanticCustomError(
                 "no_entry_for_device",
-                "Entry '{wrong_value}' not found in device '{device_name}' signals",
+                'Entry "{wrong_value}" not found in device "{device_name}" signals',
                 {"wrong_value": entry, "device_name": name},
             )
 
@@ -100,8 +100,8 @@ class PlotConfig(BaseModel):
     def validate_x_signals(cls, v):
         if len(v.signals) != 1:
             raise PydanticCustomError(
-                "x_device_one_signal",
-                "There must be exactly one signal for x axis. Number of x signals: '{wrong_value}'",
+                "x_axis_multiple_signals",
+                'There must be exactly one signal for x axis. Number of x signals: "{wrong_value}"',
                 {"wrong_value": v},
             )
 
