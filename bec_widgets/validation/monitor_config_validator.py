@@ -127,7 +127,7 @@ class PlotSettings(BaseModel):
     """
 
     background_color: str
-    axis_width: Optional[int] = None
+    axis_width: Optional[int] = 2
     axis_color: Optional[str] = None
     num_columns: int
     colormap: str

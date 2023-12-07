@@ -302,7 +302,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         """
         if plot_settings.get("show_grid", False):
             plot.showGrid(x=True, y=True, alpha=0.5)
-        pen_width = plot_settings.get("axis_width", 2)
+        pen_width = plot_settings.get("axis_width")
         color = plot_settings.get("axis_color")
         if color is None:
             if plot_settings["background_color"].lower() == "black":
