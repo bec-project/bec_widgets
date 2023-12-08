@@ -2,6 +2,17 @@
 
 <!--next-version-placeholder-->
 
+## v0.34.0 (2023-12-08)
+
+### Feature
+
+* Monitor.py error message popup ([`a3b24f9`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/a3b24f92420420c8968ef4793342c3857c826e57))
+
+### Fix
+
+* Monitor_config_validator.py - Signal validation changed from field_validator to model_validator to check first name and then entry ([`0868047`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/086804780d19956331d8385381d2f7f9c181e77c))
+* Monitor_config_validator.py fix entry validation executed only if name validator is successful ([`af71e35`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/af71e35e73733472228c4be0061faefaf655b769))
+
 ## v0.33.0 (2023-12-07)
 
 ### Feature
