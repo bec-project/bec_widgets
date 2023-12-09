@@ -182,6 +182,59 @@ test_config = {
     ],
 }
 
+CONFIG_SOURCE = {
+    "plot_settings": {
+        "background_color": "black",
+        "num_columns": 2,
+        "colormap": "plasma",
+        "scan_types": False,
+    },
+    "plot_data": [
+        {
+            "plot_name": "BPM4i plots vs samx",
+            "x_label": "Motor Y",
+            "y_label": "bpm4i",
+            "sources": [
+                {
+                    "type": "scan_segment",
+                    "signals": {
+                        "x": [{"name": "samy"}],
+                        "y": [{"name": "bpm4i", "entry": "bpm4i"}],
+                    },
+                },
+                # {
+                #     "type": "history",
+                #     "scanID": "<scanID>",
+                #     "signals": {
+                #         "y": [{"name": "bpm4i", "entry": "bpm4i_history_entry"}]
+                #     }
+                # },
+                # {
+                #     "type": "redis",
+                #     "endpoint": "endpoint1",
+                #     "signals": {
+                #         "y": [{"name": "bpm4i", "entry": "bpm4i_redis_entry"}]
+                #     }
+                # }
+            ],
+        },
+        {
+            "plot_name": "Gauss plots vs samx",
+            "x_label": "Motor X",
+            "y_label": "Gauss",
+            "sources": [
+                {
+                    "type": "scan_segment",
+                    "signals": {
+                        "x": [{"name": "samx", "entry": "samx"}],
+                        "y": [{"name": "gauss_bpm"}, {"name": "samy", "entry": "samy"}],
+                    },
+                }
+            ],
+        },
+    ],
+}
+
 
 class BECMonitor(pg.GraphicsLayoutWidget):
     update_signal = pyqtSignal()
@@ -193,6 +246,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         config: dict = None,
         enable_crosshair: bool = True,
         gui_id=None,
+        skip_validation: bool = False,
         legacy_scan_segment: bool = True,
     ):
         super(BECMonitor, self).__init__(parent=parent)
@@ -219,12 +273,14 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         # Current configuration
         self.config = config
         self.legacy_scan_segment = legacy_scan_segment
+        self.skip_validation = skip_validation
 
         # Enable crosshair
         self.enable_crosshair = enable_crosshair
 
         # Displayed Data
-        self.data = {}
+        self.data = {}  # TODO old type of data to display, to be removed
+        self.database = {}
 
         self.crosshairs = None
         self.plots = None
@@ -261,8 +317,39 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         else:  # without incoming data setup the first configuration to the first scan type sorted alphabetically by name
             self.plot_data = self.plot_data_config[min(list(self.plot_data_config.keys()))]
 
+        # Initialize the database
+        self.database = self._init_database(self.plot_data)
+
         # Initialize the UI
         self._init_ui(self.plot_settings["num_columns"])
+
+    def _init_database(self, plot_data_config: dict) -> dict:
+        """
+        Initializes the database for the PlotApp.
+        Args:
+            plot_data_config(dict): Configuration settings for plots
+        Returns:
+            dict: Database dictionary
+        """
+        database = {}
+
+        for plot in plot_data_config:
+            for source in plot["sources"]:
+                source_type = source["type"]
+                if source_type not in database:
+                    database[source_type] = {}
+
+                for axis, signals in source["signals"].items():
+                    for signal in signals:
+                        name = signal["name"]
+                        entry = signal.get("entry", name)
+
+                        if name not in database[source_type]:
+                            database[source_type][name] = {}
+                        if entry not in database[source_type][name]:
+                            database[source_type][name][entry] = []
+
+        return database
 
     def _init_ui(self, num_columns: int = 3) -> None:
         """
@@ -310,19 +397,27 @@ class BECMonitor(pg.GraphicsLayoutWidget):
                     last_row_cols -= 1
 
             plot_name = plot_config.get("plot_name", "")
-            x_label = plot_config["x"].get("label", "")
-            y_label = plot_config["y"].get("label", "")
+            if self.legacy_scan_segment is True:
+                x_label = plot_config["x"].get("label", "")
+                y_label = plot_config["y"].get("label", "")
+            else:
+                x_label = plot_config.get("x_label", "")
+                y_label = plot_config.get("y_label", "")
 
             plot = self.addPlot(row=row, col=col, colspan=colspan, title=plot_name)
             plot.setLabel("bottom", x_label)
             plot.setLabel("left", y_label)
             plot.addLegend()
-            self._set_plot_colors(plot, self.plot_settings)
+            # self._set_plot_colors(plot, self.plot_settings) #TODO disabled because I am skipping validation
 
             self.plots[plot_name] = plot
             self.grid_coordinates.append((row, col))
 
-        self.init_curves()
+        # Initialize curves
+        if self.legacy_scan_segment is True:
+            self.legacy_init_curves()
+        else:
+            self.init_curves()
 
     def _set_plot_colors(self, plot: pg.PlotItem, plot_settings: dict) -> None:
         """
@@ -361,6 +456,57 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         y_axis.setTickPen(pen)
 
     def init_curves(self) -> None:
+        """
+        Initialize curve data and properties, and update table row labels.
+
+        This method initializes a nested dictionary `self.curves_data` to store
+        the curve objects for each x and y signal pair. It also updates the row labels
+        in `self.tableWidget_crosshair` to include the grid position for each y-value.
+        """
+        self.curves_data = {}
+        row_labels = []
+
+        for idx, plot_config in enumerate(self.plot_data):
+            plot_name = plot_config.get("plot_name", "")
+            plot = self.plots[plot_name]
+            plot.clear()
+
+            for source in plot_config["sources"]:
+                y_signals = source["signals"].get("y", [])
+                colors_ys = Colors.golden_angle_color(
+                    colormap=self.plot_settings["colormap"], num=len(y_signals)
+                )
+
+                curve_list = []
+                for i, (y_signal, color) in enumerate(zip(y_signals, colors_ys)):
+                    y_name = y_signal["name"]
+                    y_entry = y_signal.get("entry", y_name)
+
+                    user_color = self.user_colors.get((plot_name, y_name, y_entry), None)
+                    color_to_use = user_color if user_color else color
+
+                    pen_curve = mkPen(color=color_to_use, width=2, style=QtCore.Qt.DashLine)
+                    brush_curve = mkBrush(color=color_to_use)
+
+                    curve_data = pg.PlotDataItem(
+                        symbolSize=5,
+                        symbolBrush=brush_curve,
+                        pen=pen_curve,
+                        skipFiniteCheck=True,
+                        name=f"{y_name} ({y_entry})",
+                    )
+
+                    curve_list.append((y_name, y_entry, curve_data))
+                    plot.addItem(curve_data)
+                    row_labels.append(f"{y_name} ({y_entry}) - {plot_name}")
+
+                self.curves_data[plot_name] = curve_list
+
+        # Hook Crosshair
+        if self.enable_crosshair is True:
+            self.hook_crosshair()
+
+    def legacy_init_curves(self) -> None:
         """
         Initialize curve data and properties, and update table row labels.
 
@@ -422,6 +568,41 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         """Update the plot data based on the stored data dictionary."""
         if self.legacy_scan_segment is True:
             self.legacy_update_plot()
+        else:
+            self.source_update_plot()
+
+    def source_update_plot(self):
+        """Update the plot data based on the stored data dictionary."""
+        for plot_name, curve_list in self.curves_data.items():
+            plot_config = next(
+                (pc for pc in self.plot_data_config if pc.get("plot_name") == plot_name), None
+            )
+            if not plot_config:
+                continue
+
+            # Find the source and signal configurations for x and y axes
+            x_name, x_entry, y_configurations = self.extract_signal_configurations(plot_config)
+
+            for y_name, y_entry, curve in curve_list:
+                data_x = self.database.get("scan_segment", {}).get(x_name, {}).get(x_entry, [])
+                data_y = self.database.get("scan_segment", {}).get(y_name, {}).get(y_entry, [])
+
+                curve.setData(data_x, data_y)
+
+    def extract_signal_configurations(self, plot_config):
+        """Extract the signal configurations for x and y axes from plot_config."""
+        x_name, x_entry, y_configurations = None, None, []
+
+        for source in plot_config["sources"]:
+            if "x" in source["signals"]:
+                x_signal = source["signals"]["x"][0]
+                x_name = x_signal.get("name", "")
+                x_entry = x_signal.get("entry", x_name)
+
+            if "y" in source["signals"]:
+                y_configurations.extend(source["signals"]["y"])
+
+        return x_name, x_entry, y_configurations
 
     def legacy_update_plot(self) -> None:
         """Legacy version of how data are update from on_scan_segment.
@@ -489,17 +670,20 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         Args:
             config(dict): Configuration settings
         """
-
-        try:
-            validated_config = self.validator.validate_monitor_config(config)
-            self.config = validated_config.model_dump()
+        if self.skip_validation is True:
+            self.config = config
             self._init_config()
-        except ValidationError as e:
-            error_str = str(e)
-            formatted_error_message = BECMonitor.format_validation_error(error_str)
+        else:
+            try:
+                validated_config = self.validator.validate_monitor_config(config)
+                self.config = validated_config.model_dump()
+                self._init_config()
+            except ValidationError as e:
+                error_str = str(e)
+                formatted_error_message = BECMonitor.format_validation_error(error_str)
 
-            # Display the formatted error message in a popup
-            QMessageBox.critical(self, "Configuration Error", formatted_error_message)
+                # Display the formatted error message in a popup
+                QMessageBox.critical(self, "Configuration Error", formatted_error_message)
 
     @staticmethod
     def format_validation_error(error_str: str) -> str:
@@ -526,8 +710,9 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         return formatted_error_message
 
     def flush(self) -> None:
-        """Flush the data dictionary."""
+        """Flush the data dictionary (legacy) and recreate the database."""
         self.data = {}
+        self.database = self._init_database(self.plot_data)
         self.init_curves()
 
     @pyqtSlot(dict, dict)
@@ -568,11 +753,27 @@ class BECMonitor(pg.GraphicsLayoutWidget):
             self.flush()
 
         if self.legacy_scan_segment is True:
-            self.legacy_on_scan_segment(msg)
+            self.legacy_scan_segment_update(msg)
+        else:
+            self.scan_segment_update(msg)
 
         self.update_signal.emit()
 
-    def legacy_on_scan_segment(self, msg: dict):
+    def scan_segment_update(self, msg: dict):
+        """
+        Update the database based on the scan segment message.
+
+        Args:
+            msg (dict): Message received with scan data.
+        """
+        # Append new data to the database based on the incoming message
+        for device_name, device_entries in self.database.get("scan_segment", {}).items():
+            for entry, data_list in device_entries.items():
+                data_value = msg["data"].get(device_name, {}).get(entry, {}).get("value", None)
+                if data_value is not None:
+                    data_list.append(data_value)
+
+    def legacy_scan_segment_update(self, msg: dict):
         """
         Legacy method to handle scan segments appending each line from scan message.
         Args:
@@ -622,11 +823,13 @@ if __name__ == "__main__":  # pragma: no cover
         # Load config from file
         config = load_yaml(args.config_file)
     else:
-        config = CONFIG_SIMPLE
+        config = CONFIG_SOURCE
 
     client = bec_dispatcher.client
     client.start()
     app = QApplication(sys.argv)
-    monitor = BECMonitor(config=config, gui_id=args.id)
+    monitor = BECMonitor(
+        config=config, gui_id=args.id, skip_validation=True, legacy_scan_segment=False
+    )
     monitor.show()
     sys.exit(app.exec())
