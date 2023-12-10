@@ -248,6 +248,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         gui_id=None,
         skip_validation: bool = False,
         legacy_scan_segment: bool = True,
+        scan_storage_access: bool = False,
     ):
         super(BECMonitor, self).__init__(parent=parent)
 
@@ -274,6 +275,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         self.config = config
         self.legacy_scan_segment = legacy_scan_segment
         self.skip_validation = skip_validation
+        self.scan_storage_access = scan_storage_access
 
         # Enable crosshair
         self.enable_crosshair = enable_crosshair
@@ -754,6 +756,8 @@ class BECMonitor(pg.GraphicsLayoutWidget):
 
         if self.legacy_scan_segment is True:
             self.legacy_scan_segment_update(msg)
+        elif self.scan_storage_access is True:
+            self.update_from_scan_storage(current_scanID)
         else:
             self.scan_segment_update(msg)
 
@@ -772,6 +776,26 @@ class BECMonitor(pg.GraphicsLayoutWidget):
                 data_value = msg["data"].get(device_name, {}).get(entry, {}).get("value", None)
                 if data_value is not None:
                     data_list.append(data_value)
+
+    def update_from_scan_storage(self, scanID: str):
+        """
+        Update the database with data from scan storage based on the provided scanID.
+
+        Args:
+            scanID (str): The scan ID used to find the relevant scan data.
+        """
+        scan_data = self.queue.scan_storage.find_scan_by_ID(scanID).data
+        if not scan_data:
+            print(f"No data found for scanID: {scanID}")
+            return
+
+        for device_name, device_entries in self.database.get("scan_segment", {}).items():
+            for entry in device_entries.keys():
+                dataset = scan_data[device_name][entry].val
+                if dataset:
+                    self.database["scan_segment"][device_name][entry] = dataset
+                else:
+                    print(f"No data found for {device_name} {entry}")
 
     def legacy_scan_segment_update(self, msg: dict):
         """
@@ -829,7 +853,11 @@ if __name__ == "__main__":  # pragma: no cover
     client.start()
     app = QApplication(sys.argv)
     monitor = BECMonitor(
-        config=config, gui_id=args.id, skip_validation=True, legacy_scan_segment=False
+        config=config,
+        gui_id=args.id,
+        skip_validation=True,
+        legacy_scan_segment=False,
+        scan_storage_access=False,
     )
     monitor.show()
     sys.exit(app.exec())
