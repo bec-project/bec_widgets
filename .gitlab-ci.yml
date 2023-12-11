@@ -147,17 +147,15 @@ semver:
   rules:
     - if: '$CI_COMMIT_REF_NAME == "master"'
 
-# pages:
-#   stage: Deploy
-#   needs: ["tests"]
-#   script:
-#     - git clone --branch $OPHYD_DEVICES_BRANCH https://oauth2:$CI_OPHYD_DEVICES_KEY@gitlab.psi.ch/bec/ophyd_devices.git
-#     - export OPHYD_DEVICES_PATH=$PWD/ophyd_devices    
-#     - pip install -r ./docs/source/requirements.txt
-#     - apt-get install -y gcc
-#     - *install-bec-services    
-#     - cd ./docs/source; make html
-#     - curl -X POST -d "branches=$CI_COMMIT_REF_NAME" -d "token=$RTD_TOKEN" https://readthedocs.org/api/v2/webhook/beamline-experiment-control/221870/
-#   rules:
-#     - if: '$CI_COMMIT_REF_NAME == "master"'
-#     - if: '$CI_COMMIT_REF_NAME == "production"'
+pages:
+  stage: Deploy
+  needs: ["semver"]
+  variables:
+    TARGET_BRANCH: $CI_COMMIT_REF_NAME
+  rules:
+    - if: '$CI_COMMIT_TAG != null'
+      variables:
+        TARGET_BRANCH: $CI_COMMIT_TAG
+    - if: '$CI_COMMIT_REF_NAME == "master"'
+  script:
+    - curl -X POST -d "branches=$CI_COMMIT_REF_NAME" -d "token=$RTD_TOKEN" https://readthedocs.org/api/v2/webhook/bec-widgets/253243/
