@@ -424,7 +424,9 @@ def test_initialization(error_handler):
     assert error_handler.retry_action is None
 
 
-@patch("bec_widgets.examples.plot_app.plot_app.QMessageBox.critical", return_value=QMessageBox.Retry)
+@patch(
+    "bec_widgets.examples.plot_app.plot_app.QMessageBox.critical", return_value=QMessageBox.Retry
+)
 def test_handle_error_retry(mocked_critical, error_handler):
     retry_action = MagicMock()
     error_handler.set_retry_action(retry_action)
@@ -432,7 +434,9 @@ def test_handle_error_retry(mocked_critical, error_handler):
     retry_action.assert_called_once()
 
 
-@patch("bec_widgets.examples.plot_app.plot_app.QMessageBox.critical", return_value=QMessageBox.Cancel)
+@patch(
+    "bec_widgets.examples.plot_app.plot_app.QMessageBox.critical", return_value=QMessageBox.Cancel
+)
 def test_handle_error_cancel(mocked_critical, error_handler):
     retry_action = MagicMock()
     with pytest.raises(SystemExit) as excinfo:

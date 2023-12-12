@@ -13,6 +13,7 @@ from qtpy.QtWidgets import QApplication, QMessageBox
 from bec_widgets.utils import Colors, Crosshair
 from bec_widgets.utils.yaml_dialog import load_yaml
 from bec_widgets.validation import MonitorConfigValidator
+from bec_widgets.utils.bec_dispatcher import bec_dispatcher
 
 # just for demonstration purposes if script run directly
 CONFIG_SCAN_MODE = {

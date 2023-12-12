@@ -172,7 +172,7 @@
   <customwidget>
    <class>BECTable</class>
    <extends>QTableWidget</extends>
-   <header>bec_widgets.qt_utils.h</header>
+   <header>bec_widgets.utils.h</header>
   </customwidget>
  </customwidgets>
  <resources/>
