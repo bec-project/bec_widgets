@@ -97,7 +97,7 @@ class PlotApp(QWidget):
 
         # Loading UI
         current_path = os.path.dirname(__file__)
-        uic.loadUi(os.path.join(current_path, "extreme.ui"), self)
+        uic.loadUi(os.path.join(current_path, "plot_app.ui"), self)
 
         self.data = {}
 

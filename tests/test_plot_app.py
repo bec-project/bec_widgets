@@ -5,7 +5,7 @@ import pyqtgraph as pg
 import pytest
 from qtpy.QtWidgets import QMessageBox
 
-from bec_widgets.examples.extreme.extreme import PlotApp, ErrorHandler
+from bec_widgets.examples.plot_app.plot_app import PlotApp, ErrorHandler
 
 
 def setup_plot_app(qtbot, config):
@@ -424,7 +424,7 @@ def test_initialization(error_handler):
     assert error_handler.retry_action is None
 
 
-@patch("bec_widgets.examples.extreme.extreme.QMessageBox.critical", return_value=QMessageBox.Retry)
+@patch("bec_widgets.examples.plot_app.plot_app.QMessageBox.critical", return_value=QMessageBox.Retry)
 def test_handle_error_retry(mocked_critical, error_handler):
     retry_action = MagicMock()
     error_handler.set_retry_action(retry_action)
@@ -432,7 +432,7 @@ def test_handle_error_retry(mocked_critical, error_handler):
     retry_action.assert_called_once()
 
 
-@patch("bec_widgets.examples.extreme.extreme.QMessageBox.critical", return_value=QMessageBox.Cancel)
+@patch("bec_widgets.examples.plot_app.plot_app.QMessageBox.critical", return_value=QMessageBox.Cancel)
 def test_handle_error_cancel(mocked_critical, error_handler):
     retry_action = MagicMock()
     with pytest.raises(SystemExit) as excinfo:
@@ -458,7 +458,7 @@ def test_error_handler(error_handler, config, expected_errors):
     error_handler.handle_error = MagicMock()
 
     # Mock logging
-    with unittest.mock.patch("bec_widgets.examples.extreme.extreme.logging") as mocked_logging:
+    with unittest.mock.patch("bec_widgets.examples.plot_app.plot_app.logging") as mocked_logging:
         error_handler.validate_config_file(config)
 
         # Assert
