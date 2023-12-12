@@ -1,4 +1,4 @@
-from typing import List, Dict, Union, Optional
+from typing import Optional, Union
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
@@ -74,11 +74,11 @@ class PlotAxis(BaseModel):
 
     Attributes:
         label (Optional[str]): The label for the axis.
-        signals (List[Signal]): A list of signals to be plotted on this axis.
+        signals (list[Signal]): A list of signals to be plotted on this axis.
     """
 
     label: Optional[str]
-    signals: List[Signal] = Field(default_factory=list)
+    signals: list[Signal] = Field(default_factory=list)
 
 
 class PlotConfig(BaseModel):
@@ -135,11 +135,11 @@ class DeviceMonitorConfig(BaseModel):
 
     Attributes:
         plot_settings (PlotSettings): Global settings for plotting.
-        plot_data (List[PlotConfig]): List of plot configurations.
+        plot_data (list[PlotConfig]): List of plot configurations.
     """
 
     plot_settings: PlotSettings
-    plot_data: List[PlotConfig]
+    plot_data: list[PlotConfig]
 
 
 class ScanModeConfig(BaseModel):
@@ -148,12 +148,12 @@ class ScanModeConfig(BaseModel):
 
     Attributes:
         plot_settings (PlotSettings): Global settings for plotting.
-        plot_data (Dict[str, List[PlotConfig]]): Dictionary of plot configurations,
+        plot_data (dict[str, list[PlotConfig]]): Dictionary of plot configurations,
                                                  keyed by scan type.
     """
 
     plot_settings: PlotSettings
-    plot_data: Dict[str, List[PlotConfig]]
+    plot_data: dict[str, list[PlotConfig]]
 
 
 class MonitorConfigValidator:

@@ -1,5 +1,3 @@
-from typing import List
-
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph import mkPen
@@ -27,7 +25,7 @@ class ConfigPlotter(pg.GraphicsWidget):
 
     """
 
-    def __init__(self, configs: List[dict], parent=None):
+    def __init__(self, configs: list[dict], parent=None):
         super().__init__(parent)
         self.configs = configs
         self.plots = {}

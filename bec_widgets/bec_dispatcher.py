@@ -1,7 +1,7 @@
 import argparse
 import itertools
 import os
-from typing import Callable
+from collections.abc import Callable
 
 from bec_lib import BECClient, messages, ServiceConfig
 from bec_lib.redis_connector import RedisConsumerThreaded
