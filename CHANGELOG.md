@@ -2,6 +2,18 @@
 
 <!--next-version-placeholder-->
 
+## v0.34.1 (2023-12-12)
+
+### Fix
+
+* Formatter and tests fixed ([`186c42d`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/186c42d6676a495bc2f66d8b7ed37dbf7d0be747))
+
+### Documentation
+
+* Readdocs updated ([`af995a7`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/af995a74f34d59eeaff5d9100117f103ec79765d))
+* Readme.md updated ([`cba8131`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/cba81313671acfee0a40410753c1974008316d07))
+* Gitlab templates for issues and merge requests from main bec repo ([`831eddc`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/831eddc13600cc06b67de92d39509af37bb05002))
+
 ## v0.34.0 (2023-12-08)
 
 ### Feature
