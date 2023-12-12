@@ -6,7 +6,7 @@ from bec_lib import MessageEndpoints
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import Property as pyqtProperty, Slot as pyqtSlot
 
-from bec_widgets.bec_dispatcher import bec_dispatcher
+from bec_widgets.utils.bec_dispatcher import bec_dispatcher
 
 logger = bec_logger.logger
 

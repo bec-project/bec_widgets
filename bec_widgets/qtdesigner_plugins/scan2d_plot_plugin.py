@@ -1,7 +1,7 @@
 from qtpy.QtDesigner import QPyDesignerCustomWidgetPlugin
 from qtpy.QtGui import QIcon
 
-from bec_widgets.scan2d_plot import BECScanPlot2D
+from bec_widgets.widgets.scan_plot.scan2d_plot import BECScanPlot2D
 
 
 class BECScanPlot2DPlugin(QPyDesignerCustomWidgetPlugin):

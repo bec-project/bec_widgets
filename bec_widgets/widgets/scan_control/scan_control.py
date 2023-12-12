@@ -21,7 +21,7 @@ from qtpy.QtWidgets import (
 )
 
 from bec_lib import MessageEndpoints
-from bec_widgets.qt_utils.widget_io import WidgetIO
+from bec_widgets.utils.widget_io import WidgetIO
 
 
 class ScanArgType:
@@ -425,7 +425,7 @@ class ScanControl(QWidget):
 
 # Application example
 if __name__ == "__main__":  # pragma: no cover
-    from bec_widgets.bec_dispatcher import bec_dispatcher
+    from bec_widgets.utils.bec_dispatcher import bec_dispatcher
 
     # BECclient global variables
     client = bec_dispatcher.client

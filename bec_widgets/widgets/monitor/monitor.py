@@ -5,14 +5,13 @@ import pyqtgraph as pg
 from bec_lib import MessageEndpoints
 from pydantic import ValidationError
 from pyqtgraph import mkBrush, mkPen
-from qtpy import QtCore, uic
+from qtpy import QtCore
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtCore import Slot as pyqtSlot
-from qtpy.QtWidgets import QApplication, QMessageBox, QTableWidgetItem, QWidget
+from qtpy.QtWidgets import QApplication, QMessageBox
 
-from bec_widgets.bec_dispatcher import bec_dispatcher
-from bec_widgets.qt_utils import Colors, Crosshair
-from bec_widgets.qt_utils.yaml_dialog import load_yaml
+from bec_widgets.utils import Colors, Crosshair
+from bec_widgets.utils.yaml_dialog import load_yaml
 from bec_widgets.validation import MonitorConfigValidator
 
 # just for demonstration purposes if script run directly
@@ -590,7 +589,7 @@ if __name__ == "__main__":  # pragma: no cover
     import json
     import sys
 
-    from bec_widgets.bec_dispatcher import bec_dispatcher
+    from bec_widgets.utils.bec_dispatcher import bec_dispatcher
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_file", help="Path to the config file.")

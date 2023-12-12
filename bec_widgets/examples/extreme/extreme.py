@@ -22,7 +22,7 @@ from pyqtgraph.Qt import QtCore, uic
 from pyqtgraph.Qt import QtWidgets
 
 from bec_lib import MessageEndpoints
-from bec_widgets.qt_utils import Crosshair, Colors
+from bec_widgets.utils import Crosshair, Colors
 
 
 # TODO implement:
@@ -570,7 +570,7 @@ class PlotApp(QWidget):
             except Exception as e:
                 print(f"An error occurred while saving the settings to {file_path}: {e}")
 
-    def load_settings_from_yaml(self) -> dict:  # TODO can be replace by the qt_utils function
+    def load_settings_from_yaml(self) -> dict:  # TODO can be replace by the utils function
         """Load settings from a .yaml file using a file dialog and update the current settings."""
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -692,7 +692,7 @@ if __name__ == "__main__":
     import argparse
 
     # from bec_widgets import ctrl_c
-    from bec_widgets.bec_dispatcher import bec_dispatcher
+    from bec_widgets.utils.bec_dispatcher import bec_dispatcher
 
     parser = argparse.ArgumentParser(description="Plotting App")
     parser.add_argument(

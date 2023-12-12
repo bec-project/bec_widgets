@@ -1,9 +1,7 @@
 import os
 
 from qtpy import uic
-from qtpy.QtWidgets import QMainWindow, QApplication, QVBoxLayout
-
-from bec_widgets.widgets.monitor import BECMonitor
+from qtpy.QtWidgets import QMainWindow, QApplication
 
 # some default configs for demonstration purposes
 config_1 = {
@@ -197,7 +195,7 @@ class ModularApp(QMainWindow):
 
 
 if __name__ == "__main__":
-    from bec_widgets.bec_dispatcher import bec_dispatcher
+    from bec_widgets.utils.bec_dispatcher import bec_dispatcher
 
     # BECclient global variables
     client = bec_dispatcher.client

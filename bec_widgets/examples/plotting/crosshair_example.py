@@ -12,7 +12,7 @@ from qtpy.QtWidgets import (
 )
 from pyqtgraph import mkPen
 from pyqtgraph.Qt import QtCore
-from bec_widgets.qt_utils import Crosshair
+from bec_widgets.utils import Crosshair
 
 
 class ExampleApp(QWidget):

@@ -5,7 +5,7 @@ import pytest
 import yaml
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton
 
-from bec_widgets.qt_utils.yaml_dialog import load_yaml, save_yaml
+from bec_widgets.utils.yaml_dialog import load_yaml, save_yaml
 
 
 @pytest.fixture(scope="function")

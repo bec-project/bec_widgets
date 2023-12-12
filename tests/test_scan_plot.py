@@ -1,6 +1,4 @@
-from pytestqt import qtbot
-
-from bec_widgets import scan_plot
+from bec_widgets.widgets.scan_plot import scan_plot
 
 
 def test_scan_plot(qtbot):

@@ -12,7 +12,7 @@ from qtpy.QtWidgets import (
     QLineEdit,
 )
 
-from bec_widgets.qt_utils.yaml_dialog import load_yaml, save_yaml
+from bec_widgets.utils.yaml_dialog import load_yaml, save_yaml
 
 current_path = os.path.dirname(__file__)
 Ui_Form, BaseClass = uic.loadUiType(os.path.join(current_path, "config_dialog.ui"))

@@ -7,7 +7,7 @@ import pytest
 from qtpy.QtWidgets import QLineEdit
 
 from bec_widgets.widgets import ScanControl
-from bec_widgets.qt_utils.widget_io import WidgetIO
+from bec_widgets.utils.widget_io import WidgetIO
 
 
 # TODO there has to be a better way to mock messages than this, in this case I just took the msg from bec

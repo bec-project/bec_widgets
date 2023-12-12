@@ -2,7 +2,7 @@ import numpy as np
 import pyqtgraph as pg
 from qtpy.QtCore import QPointF
 
-from bec_widgets.qt_utils import Crosshair
+from bec_widgets.utils import Crosshair
 
 
 def test_mouse_moved_lines(qtbot):

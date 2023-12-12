@@ -5,7 +5,7 @@ from bec_lib.messages import ScanMessage
 from bec_lib.connector import MessageObject
 
 # TODO: find a better way to mock singletons
-from bec_widgets.bec_dispatcher import _BECDispatcher
+from bec_widgets.utils.bec_dispatcher import _BECDispatcher
 
 msg = MessageObject(topic="", value=ScanMessage(point_id=0, scanID=0, data={}).dumps())
 

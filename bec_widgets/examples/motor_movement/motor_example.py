@@ -25,7 +25,7 @@ from qtpy.QtWidgets import QShortcut
 from pyqtgraph.Qt import QtWidgets, uic, QtCore
 
 from bec_lib import MessageEndpoints, messages
-from bec_widgets.qt_utils import DoubleValidationDelegate
+from bec_widgets.utils import DoubleValidationDelegate
 
 
 # TODO - General features
