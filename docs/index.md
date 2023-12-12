@@ -9,29 +9,31 @@
 :link: introduction
 :link-type: ref
 
-General information about BEC Widgets.
+General information.
 ```
 
 ```{grid-item-card}  User
 :link: user
 :link-type: ref
 
-Information for users of BEC Widgets.
+Information for users.
 ```
 
 ```{grid-item-card}  Developer
 :link: developer
 :link-type: ref
 
-Information for developers of BEC Widgets.
+Information for developers.
 ```
 ````
 
 
 ```{toctree}
-:maxdepth: 2
+---
+numbered: true
+maxdepth: 1
+---
 
 introduction/introduction
 user/user
 developer/developer
-```
