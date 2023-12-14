@@ -1,6 +1,6 @@
-from typing import Optional, Union
+from typing import Optional, Union, Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator, ValidationError
 from pydantic_core import PydanticCustomError
 
 
@@ -68,37 +68,22 @@ class Signal(BaseModel):
         return values
 
 
-class PlotAxis(BaseModel):
+class AxisSignal(BaseModel):
     """
-    Represents an axis (X or Y) in a plot configuration.
-
+    Configuration signal axis for a single plot.
     Attributes:
-        label (Optional[str]): The label for the axis.
-        signals (list[Signal]): A list of signals to be plotted on this axis.
+        x (list): Signal for the X axis.
+        y (list): Signals for the Y axis.
     """
 
-    label: Optional[str]
-    signals: list[Signal] = Field(default_factory=list)
-
-
-class PlotConfig(BaseModel):
-    """
-    Configuration for a single plot.
-
-    Attributes:
-        plot_name (Optional[str]): Name of the plot.
-        x (PlotAxis): Configuration for the X axis.
-        y (PlotAxis): Configuration for the Y axis.
-    """
-
-    plot_name: Optional[str]
-    x: PlotAxis = Field(...)
-    y: PlotAxis = Field(...)
+    x: list[Signal] = Field(default_factory=list)
+    y: list[Signal] = Field(default_factory=list)
 
     @field_validator("x")
     @classmethod
     def validate_x_signals(cls, v):
-        if len(v.signals) != 1:
+        """Ensure that there is only one signal for x-axis."""
+        if len(v) != 1:
             raise PydanticCustomError(
                 "x_axis_multiple_signals",
                 'There must be exactly one signal for x axis. Number of x signals: "{wrong_value}"',
@@ -108,9 +93,92 @@ class PlotConfig(BaseModel):
         return v
 
 
+class SourceHistoryValidator(BaseModel):
+    """History source validator
+    Attributes:
+        type (str): type of source - history
+        scanID (str): Scan ID for history source.
+        signals (list): Signal for the source.
+    """
+
+    type: Literal["history"]
+    scanID: str  # TODO can be validated if it is a valid scanID
+    signals: AxisSignal
+
+
+class SourceSegmentValidator(BaseModel):
+    """Scan Segment source validator
+    Attributes:
+        type (str): type of source - scan_segment
+        signals (AxisSignal): Signal for the source.
+    """
+
+    type: Literal["scan_segment"]
+    signals: AxisSignal
+
+
+class Source(BaseModel):  # TODO decide if it should stay for general Source validation
+    """
+    General source validation, includes all Optional arguments of all other sources.
+    Attributes:
+        type (list): type of source (scan_segment, history)
+        scanID (Optional[str]): Scan ID for history source.
+        signals (Optional[AxisSignal]): Signal for the source.
+    """
+
+    type: Literal["scan_segment", "history"]
+    scanID: Optional[str] = None
+    signals: Optional[AxisSignal] = None
+
+
+class PlotConfig(BaseModel):
+    """
+    Configuration for a single plot.
+
+    Attributes:
+        plot_name (Optional[str]): Name of the plot.
+        x_label (Optional[str]): The label for the x-axis.
+        y_label (Optional[str]): The label for the y-axis.
+        sources (list): A list of sources to be plotted on this axis.
+    """
+
+    plot_name: Optional[str]
+    x_label: Optional[str]
+    y_label: Optional[str]
+    sources: list = Field(default_factory=list)
+
+    @field_validator("sources")
+    @classmethod
+    def validate_sources(cls, values):
+        """Validate the sources of the plot configuration, based on the type of source."""
+        validated_sources = []
+        for source in values:
+            Source(**source)
+            source_type = source.get("type", None)
+
+            # Check if source type provided
+            if source_type is None:
+                raise PydanticCustomError(
+                    "no_source_type", "Source type must be provided", {"wrong_value": source}
+                )
+
+            # Check if source type is supported
+            if source_type == "scan_segment":
+                validated_sources.append(SourceSegmentValidator(**source))
+            elif source_type == "history":
+                validated_sources.append(SourceHistoryValidator(**source))
+            else:
+                raise PydanticCustomError(
+                    "unsupported_source_type",
+                    "Unsupported source type: '{wrong_value}'",
+                    {"wrong_value": source_type},
+                )
+        return validated_sources
+
+
 class PlotSettings(BaseModel):
     """
-    Global settings for plotting.
+    Global settings for plotting affecting mostly visuals.
 
     Attributes:
         background_color (str): Color of the plot background.

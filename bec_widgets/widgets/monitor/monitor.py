@@ -98,7 +98,6 @@ CONFIG_SIMPLE = {
             "plot_name": "BPM4i plots vs samx",
             "x": {
                 "label": "Motor Y",
-                # "signals": [{"name": "samx", "entry": "samx"}],
                 "signals": [{"name": "samy"}],
             },
             "y": {"label": "bpm4i", "signals": [{"name": "bpm4i", "entry": "bpm4i"}]},
@@ -108,7 +107,6 @@ CONFIG_SIMPLE = {
             "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
             "y": {
                 "label": "Gauss",
-                # "signals": [{"name": "gauss_bpm", "entry": "gauss_bpm"}],
                 "signals": [{"name": "gauss_bpm"}, {"name": "samy", "entry": "samy"}],
             },
         },
@@ -202,20 +200,14 @@ CONFIG_SOURCE = {
                         "y": [{"name": "bpm4i", "entry": "bpm4i"}],
                     },
                 },
-                # {
-                #     "type": "history",
-                #     "scanID": "<scanID>",
-                #     "signals": {
-                #         "y": [{"name": "bpm4i", "entry": "bpm4i_history_entry"}]
-                #     }
-                # },
-                # {
-                #     "type": "redis",
-                #     "endpoint": "endpoint1",
-                #     "signals": {
-                #         "y": [{"name": "bpm4i", "entry": "bpm4i_redis_entry"}]
-                #     }
-                # }
+                {
+                    "type": "history",
+                    "scanID": "<scanID>",
+                    "signals": {
+                        "x": [{"name": "samy"}],
+                        "y": [{"name": "bpm4i", "entry": "bpm4i"}],
+                    },
+                },
             ],
         },
         {
@@ -464,6 +456,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
             plot.clear()
 
             for source in plot_config["sources"]:
+                source_type = source["type"][0]
                 y_signals = source["signals"].get("y", [])
                 colors_ys = Colors.golden_angle_color(
                     colormap=self.plot_settings["colormap"], num=len(y_signals)
@@ -474,20 +467,8 @@ class BECMonitor(pg.GraphicsLayoutWidget):
                     y_name = y_signal["name"]
                     y_entry = y_signal.get("entry", y_name)
 
-                    user_color = self.user_colors.get((plot_name, y_name, y_entry), None)
-                    color_to_use = user_color if user_color else color
-
-                    pen_curve = mkPen(color=color_to_use, width=2, style=QtCore.Qt.DashLine)
-                    brush_curve = mkBrush(color=color_to_use)
-
-                    curve_data = pg.PlotDataItem(
-                        symbolSize=5,
-                        symbolBrush=brush_curve,
-                        pen=pen_curve,
-                        skipFiniteCheck=True,
-                        name=f"{y_name} ({y_entry})",
-                    )
-
+                    curve_name = f"{y_name} ({y_entry})-{source_type.upper()}"
+                    curve_data = self.create_curve(curve_name, color)
                     curve_list.append((y_name, y_entry, curve_data))
                     plot.addItem(curve_data)
                     row_labels.append(f"{y_name} ({y_entry}) - {plot_name}")
@@ -497,6 +478,29 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         # Hook Crosshair
         if self.enable_crosshair is True:
             self.hook_crosshair()
+
+    def create_curve(self, curve_name, color):
+        """
+        Create
+        Args:
+            curve_name:
+            color:
+
+        Returns:
+
+        """
+        user_color = self.user_colors.get(curve_name, None)
+        color_to_use = user_color if user_color else color
+        pen_curve = mkPen(color=color_to_use, width=2, style=QtCore.Qt.DashLine)
+        brush_curve = mkBrush(color=color_to_use)
+
+        return pg.PlotDataItem(
+            symbolSize=5,
+            symbolBrush=brush_curve,
+            pen=pen_curve,
+            skipFiniteCheck=True,
+            name=curve_name,
+        )
 
     def hook_crosshair(self) -> None:
         """Hook the crosshair to all plots."""
@@ -723,7 +727,7 @@ if __name__ == "__main__":  # pragma: no cover
     monitor = BECMonitor(
         config=config,
         gui_id=args.id,
-        skip_validation=True,
+        skip_validation=False,
     )
     monitor.show()
     sys.exit(app.exec())
