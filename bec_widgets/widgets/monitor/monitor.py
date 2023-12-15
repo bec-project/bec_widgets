@@ -187,14 +187,6 @@ CONFIG_SIMPLE = {
                         "y": [{"name": "bpm4i", "entry": "bpm4i"}],
                     },
                 },
-                # {
-                #     "type": "history",
-                #     "scanID": "<scanID>",
-                #     "signals": {
-                #         "x": [{"name": "samx"}],
-                #         "y": [{"name": "bpm4i", "entry": "bpm4i"}],
-                #     },
-                # },
             ],
         },
         {

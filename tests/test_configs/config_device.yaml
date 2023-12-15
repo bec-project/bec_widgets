@@ -5,26 +5,29 @@ plot_settings:
   scan_types: false
 plot_data:
 - plot_name: "BPM4i plots vs samx"
-  x:
-    label: "Motor Y"
-    signals:
-    - name: "samx"
-      entry: "samx"
-  y:
-    label: "bpm4i"
-    signals:
-    - name: "bpm4i"
-      entry: "bpm4i"
+  x_label: "Motor X"
+  y_label: "bpm4i"
+  sources:
+    - type: "scan_segment"
+      signals:
+        x:
+          - name : "samx"
+            entry: "samx"
+        y:
+          - name : "bpm4i"
+            entry: "bpm4i"
+
 - plot_name: "Gauss plots vs samx"
-  x:
-    label: "Motor X"
-    signals:
-    - name: "samx"
-      entry: "samx"
-  y:
-    label: "Gauss"
-    signals:
-    - name: "gauss_adc1"
-      entry: "gauss_adc1"
-    - name: "gauss_adc2"
-      entry: "gauss_adc2"
+  x_label: "Motor X"
+  y_label: "Gauss"
+  sources:
+    - type: "scan_segment"
+      signals:
+        x:
+          - name: "samx"
+            entry: "samx"
+        y:
+          - name: "gauss_adc1"
+            entry: "gauss_adc1"
+          - name: "gauss_adc2"
+            entry: "gauss_adc2"

@@ -165,6 +165,13 @@ def mock_getitem(dev_name):
     return mock_instance
 
 
+def mock_get_scan_storage(scan_id, data):
+    """Helper function to mock the __getitem__ method of the 'dev'."""
+    mock_instance = MagicMock()
+    mock_instance.get_scan_storage.return_value = data
+    return mock_instance
+
+
 # mocked messages and metadata
 msg_1 = {
     "data": {
@@ -183,17 +190,32 @@ metadata_line = {"scan_name": "line_scan"}
 @pytest.mark.parametrize(
     "config_name, msg, metadata, expected_data",
     [
-        # case: msg does not have 'scanid'
-        ("config_device", {"data": {}}, {}, {}),
+        # case: msg does not have 'scanID'
+        (
+            "config_device",
+            {"data": {}},
+            {},
+            {
+                "scan_segment": {
+                    "bpm4i": {"bpm4i": []},
+                    "gauss_adc1": {"gauss_adc1": []},
+                    "gauss_adc2": {"gauss_adc2": []},
+                    "samx": {"samx": []},
+                }
+            },
+        ),
         # case: scan_types is false, msg contains all valid fields, and entry is present in config
         (
             "config_device",
             msg_1,
             {},
             {
-                ("samx", "samx", "bpm4i", "bpm4i"): {"x": [10], "y": [5]},
-                ("samx", "samx", "gauss_adc1", "gauss_adc1"): {"x": [10], "y": [8]},
-                ("samx", "samx", "gauss_adc2", "gauss_adc2"): {"x": [10], "y": [9]},
+                "scan_segment": {
+                    "bpm4i": {"bpm4i": [5]},
+                    "gauss_adc1": {"gauss_adc1": [8]},
+                    "gauss_adc2": {"gauss_adc2": [9]},
+                    "samx": {"samx": [10]},
+                }
             },
         ),
         # case: scan_types is false, msg contains all valid fields and entry is missing in config, should use hints
@@ -202,8 +224,11 @@ metadata_line = {"scan_name": "line_scan"}
             msg_1,
             {},
             {
-                ("samx", "samx", "bpm4i", "bpm4i"): {"x": [10], "y": [5]},
-                ("samx", "samx", "gauss_bpm", "gauss_bpm"): {"x": [10], "y": [6]},
+                "scan_segment": {
+                    "bpm4i": {"bpm4i": [5]},
+                    "gauss_bpm": {"gauss_bpm": [6]},
+                    "samx": {"samx": [10]},
+                }
             },
         ),
         # case: scan_types is true, msg contains all valid fields, metadata contains scan "line_scan:"
@@ -212,10 +237,13 @@ metadata_line = {"scan_name": "line_scan"}
             msg_1,
             metadata_line,
             {
-                ("samx", "samx", "bpm4i", "bpm4i"): {"x": [10], "y": [5]},
-                ("samx", "samx", "gauss_bpm", "gauss_bpm"): {"x": [10], "y": [6]},
-                ("samx", "samx", "gauss_adc1", "gauss_adc1"): {"x": [10], "y": [8]},
-                ("samx", "samx", "gauss_adc2", "gauss_adc2"): {"x": [10], "y": [9]},
+                "scan_segment": {
+                    "bpm4i": {"bpm4i": [5]},
+                    "gauss_adc1": {"gauss_adc1": [8]},
+                    "gauss_adc2": {"gauss_adc2": [9]},
+                    "gauss_bpm": {"gauss_bpm": [6]},
+                    "samx": {"samx": [10]},
+                }
             },
         ),
         (
@@ -223,10 +251,13 @@ metadata_line = {"scan_name": "line_scan"}
             msg_1,
             metadata_grid,
             {
-                ("samx", "samx", "bpm4i", "bpm4i"): {"x": [10], "y": [5]},
-                ("samx", "samx", "gauss_adc1", "gauss_adc1"): {"x": [10], "y": [8]},
-                ("samx", "samx", "gauss_adc2", "gauss_adc2"): {"x": [10], "y": [9]},
-                ("samx", "samx", "gauss_bpm", "gauss_bpm"): {"x": [10], "y": [6]},
+                "scan_segment": {
+                    "bpm4i": {"bpm4i": [5]},
+                    "gauss_adc1": {"gauss_adc1": [8]},
+                    "gauss_adc2": {"gauss_adc2": [9]},
+                    "gauss_bpm": {"gauss_bpm": [6]},
+                    "samx": {"samx": [10]},
+                }
             },
         ),
     ],
@@ -234,8 +265,20 @@ metadata_line = {"scan_name": "line_scan"}
 def test_on_scan_segment(monitor, config_name, msg, metadata, expected_data):
     config = load_test_config(config_name)
     monitor.on_config_update(config)
+
     # Get hints
     monitor.dev.__getitem__.side_effect = mock_getitem
 
+    # Mock scan_storage.find_scan_by_ID
+    mock_scan_data = MagicMock()
+    mock_scan_data.data = {
+        device_name: {
+            entry: MagicMock(val=[msg["data"][device_name][entry]["value"]])
+            for entry in msg["data"][device_name]
+        }
+        for device_name in msg["data"]
+    }
+    monitor.queue.scan_storage.find_scan_by_ID.return_value = mock_scan_data
+
     monitor.on_scan_segment(msg, metadata)
-    assert monitor.data == expected_data
+    assert monitor.database == expected_data
