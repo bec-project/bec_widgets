@@ -1,4 +1,4 @@
-# pylint: disable = no-name-in-module,
+# pylint: disable = no-name-in-module,missing-module-docstring
 import time
 
 import pyqtgraph as pg
@@ -227,7 +227,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         gui_id=None,
         skip_validation: bool = False,
     ):
-        super(BECMonitor, self).__init__(parent=parent)
+        super().__init__(parent=parent)
 
         # Client and device manager from BEC
         self.plot_data = None
@@ -239,7 +239,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         self.gui_id = gui_id
 
         if self.gui_id is None:
-            self.gui_id = self.__class__.__name__ + str(time.time())  # TODO still in discussion
+            self.gui_id = self.__class__.__name__ + str(time.time())
 
         # Connect slots dispatcher
         bec_dispatcher.connect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
@@ -256,7 +256,6 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         self.enable_crosshair = enable_crosshair
 
         # Displayed Data
-        self.data = {}  # TODO old type of data to display, to be removed
         self.database = {}
 
         self.crosshairs = None
@@ -268,7 +267,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         # TODO make colors accessible to users
         self.user_colors = {}  # key: (plot_name, y_name, y_entry), value: color
 
-        # Connect the update signal to the update plot method #TODO enable when update is fixed
+        # Connect the update signal to the update plot method
         self.proxy_update_plot = pg.SignalProxy(
             self.update_signal, rateLimit=25, slot=self.update_plot
         )
@@ -382,7 +381,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
             plot.setLabel("bottom", x_label)
             plot.setLabel("left", y_label)
             plot.addLegend()
-            # self._set_plot_colors(plot, self.plot_settings) #TODO disabled because I am skipping validation
+            self._set_plot_colors(plot, self.plot_settings)
 
             self.plots[plot_name] = plot
             self.grid_coordinates.append((row, col))
@@ -414,7 +413,6 @@ class BECMonitor(pg.GraphicsLayoutWidget):
                     f"Invalid background color {plot_settings['background_color']}. Allowed values"
                     " are 'white' or 'black'."
                 )
-        print(plot_settings)
         pen = pg.mkPen(color=color, width=pen_width)
         x_axis = plot.getAxis("bottom")  # 'bottom' corresponds to the x-axis
         x_axis.setPen(pen)
@@ -466,15 +464,15 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         if self.enable_crosshair is True:
             self.hook_crosshair()
 
-    def create_curve(self, curve_name, color):
+    def create_curve(self, curve_name: str, color: str) -> pg.PlotDataItem:
         """
         Create
         Args:
-            curve_name:
-            color:
+            curve_name: Name of the curve
+            color(str): Color of the curve
 
         Returns:
-
+            pg.PlotDataItem: Assigned curve object
         """
         user_color = self.user_colors.get(curve_name, None)
         color_to_use = user_color if user_color else color
@@ -506,8 +504,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
             if not plot_config:
                 continue
 
-            # Find the source and signal configurations for x and y axes
-            x_name, x_entry, y_configurations = self.extract_signal_configurations(plot_config)
+            x_name, x_entry = self.extract_x_config(plot_config)
 
             for y_name, y_entry, curve in curve_list:
                 data_x = self.database.get("scan_segment", {}).get(x_name, {}).get(x_entry, [])
@@ -515,24 +512,22 @@ class BECMonitor(pg.GraphicsLayoutWidget):
 
                 curve.setData(data_x, data_y)
 
-    def extract_signal_configurations(
-        self, plot_config: dict
-    ):  # TODO can be probably removed when validation is up
-        """Extract the signal configurations for x and y axes from plot_config."""
-        x_name, x_entry, y_configurations = None, None, []
+    def extract_x_config(self, plot_config: dict) -> tuple:
+        """Extract the signal configurations for x and y axes from plot_config.
+        Args:
+            plot_config (dict): Plot configuration.
+        Returns:
+            tuple: Tuple containing the x name and x entry.
+        """
+        x_name, x_entry = None, None
 
-        for source in plot_config["sources"]:  # TODO has to be fixed for scan mode!!!!
+        for source in plot_config["sources"]:
             if "x" in source["signals"]:
                 x_signal = source["signals"]["x"][0]
-                x_name = x_signal.get("name", "")
-                x_entry = x_signal.get(
-                    "entry", x_name
-                )  # todo can be removed when validation is up again
+                x_name = x_signal.get("name")
+                x_entry = x_signal.get("entry")
 
-            if "y" in source["signals"]:
-                y_configurations.extend(source["signals"]["y"])
-
-        return x_name, x_entry, y_configurations
+        return x_name, x_entry
 
     def get_config(self):
         """Return the current configuration settings."""
@@ -623,7 +618,6 @@ class BECMonitor(pg.GraphicsLayoutWidget):
 
     def flush(self) -> None:
         """Flush the data dictionary (legacy) and recreate the database."""
-        self.data = {}
         self.database = self._init_database(self.plot_data)
         self.init_curves()
 
@@ -636,7 +630,6 @@ class BECMonitor(pg.GraphicsLayoutWidget):
             msg (dict): Message received with scan data.
             metadata (dict): Metadata of the scan.
         """
-        # TODO for scan mode, if there are same names for different plots, the data are assigned multiple times
         current_scanID = msg.get("scanID", None)
         if current_scanID is None:
             return
@@ -651,8 +644,8 @@ class BECMonitor(pg.GraphicsLayoutWidget):
                         "Scan name not found in metadata. Please check the scan_name in the YAML"
                         " config or in bec configuration."
                     )
-                self.plot_data = self.plot_data_config.get(current_name, [])
-                if self.plot_data == []:
+                self.plot_data = self.plot_data_config.get(current_name, None)
+                if not self.plot_data:
                     raise ValueError(
                         f"Scan name {current_name} not found in the YAML config. Please check the scan_name in the "
                         "YAML config or in bec configuration."
@@ -691,8 +684,6 @@ if __name__ == "__main__":  # pragma: no cover
     import json
     import sys
 
-    from bec_widgets.utils.bec_dispatcher import bec_dispatcher
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_file", help="Path to the config file.")
     parser.add_argument("--config", help="Path to the config file.")
@@ -706,7 +697,7 @@ if __name__ == "__main__":  # pragma: no cover
         # Load config from file
         config = load_yaml(args.config_file)
     else:
-        config = CONFIG_SIMPLE
+        config = CONFIG_SCAN_MODE
 
     client = bec_dispatcher.client
     client.start()
