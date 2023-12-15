@@ -189,7 +189,7 @@ class PlotSettings(BaseModel):
         scan_types (bool): Indicates if the configuration is for different scan types.
     """
 
-    background_color: str
+    background_color: Literal["black", "white"] = "black"
     axis_width: Optional[int] = 2
     axis_color: Optional[str] = None
     num_columns: int
