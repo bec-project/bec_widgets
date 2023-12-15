@@ -27,160 +27,96 @@ CONFIG_SCAN_MODE = {
         "grid_scan": [
             {
                 "plot_name": "Grid plot 1",
-                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {
-                    "label": "BPM",
-                    "signals": [
-                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                        {"name": "gauss_adc1", "entry": "gauss_adc1"},
-                    ],
-                },
+                "x_label": "Motor X",
+                "y_label": "BPM",
+                "sources": [
+                    {
+                        "type": "scan_segment",
+                        "signals": {
+                            "x": [{"name": "samx", "entry": "samx"}],
+                            "y": [{"name": "gauss_bpm"}],
+                        },
+                    }
+                ],
             },
             {
                 "plot_name": "Grid plot 2",
-                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {
-                    "label": "BPM",
-                    "signals": [
-                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                        {"name": "gauss_adc1", "entry": "gauss_adc1"},
-                    ],
-                },
+                "x_label": "Motor X",
+                "y_label": "BPM",
+                "sources": [
+                    {
+                        "type": "scan_segment",
+                        "signals": {
+                            "x": [{"name": "samx", "entry": "samx"}],
+                            "y": [{"name": "gauss_adc1"}],
+                        },
+                    }
+                ],
             },
             {
                 "plot_name": "Grid plot 3",
-                "x": {"label": "Motor Y", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {"label": "BPM", "signals": [{"name": "gauss_bpm", "entry": "gauss_bpm"}]},
+                "x_label": "Motor X",
+                "y_label": "BPM",
+                "sources": [
+                    {
+                        "type": "scan_segment",
+                        "signals": {
+                            "x": [{"name": "samy"}],
+                            "y": [{"name": "gauss_adc2"}],
+                        },
+                    }
+                ],
             },
             {
                 "plot_name": "Grid plot 4",
-                "x": {"label": "Motor Y", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {"label": "BPM", "signals": [{"name": "gauss_adc3", "entry": "gauss_adc3"}]},
+                "x_label": "Motor X",
+                "y_label": "BPM",
+                "sources": [
+                    {
+                        "type": "scan_segment",
+                        "signals": {
+                            "x": [{"name": "samy", "entry": "samy"}],
+                            "y": [{"name": "gauss_adc3"}],
+                        },
+                    }
+                ],
             },
         ],
         "line_scan": [
             {
-                "plot_name": "BPM plot",
-                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {
-                    "label": "BPM",
-                    "signals": [
-                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                        {"name": "gauss_adc1"},
-                        {"name": "gauss_adc2", "entry": "gauss_adc2"},
-                    ],
-                },
+                "plot_name": "BPM plots vs samx",
+                "x_label": "Motor X",
+                "y_label": "Gauss",
+                "sources": [
+                    {
+                        "type": "scan_segment",
+                        "signals": {
+                            "x": [{"name": "samx", "entry": "samx"}],
+                            "y": [{"name": "bpm4i"}],
+                        },
+                    }
+                ],
             },
             {
-                "plot_name": "Multi",
-                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {
-                    "label": "Multi",
-                    "signals": [
-                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                        {"name": "samx", "entry": "samx"},
-                    ],
-                },
+                "plot_name": "Gauss plots vs samx",
+                "x_label": "Motor X",
+                "y_label": "Gauss",
+                "sources": [
+                    {
+                        "type": "scan_segment",
+                        "signals": {
+                            "x": [{"name": "samx", "entry": "samx"}],
+                            "y": [{"name": "gauss_bpm"}, {"name": "gauss_adc1"}],
+                        },
+                    }
+                ],
             },
         ],
     },
 }
 
-CONFIG_SIMPLE = {
-    "plot_settings": {
-        "background_color": "black",
-        "num_columns": 2,
-        "colormap": "plasma",
-        "scan_types": False,
-    },
-    "plot_data": [
-        {
-            "plot_name": "BPM4i plots vs samx",
-            "x": {
-                "label": "Motor Y",
-                "signals": [{"name": "samy"}],
-            },
-            "y": {"label": "bpm4i", "signals": [{"name": "bpm4i", "entry": "bpm4i"}]},
-        },
-        {
-            "plot_name": "Gauss plots vs samx",
-            "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
-            "y": {
-                "label": "Gauss",
-                "signals": [{"name": "gauss_bpm"}, {"name": "samy", "entry": "samy"}],
-            },
-        },
-    ],
-}
-
-CONFIG_NO_ENTRY = {
-    "plot_settings": {
-        "background_color": "white",
-        "num_columns": 5,
-        "colormap": "plasma",
-        "scan_types": False,
-    },
-    "plot_data": [
-        {
-            "plot_name": "BPM4i plots vs samx",
-            "x": {"label": "Motor Y", "signals": [{"name": "samx"}]},
-            "y": {"label": "bpm4i", "signals": [{"name": "bpm4i"}]},
-        },
-        {
-            "plot_name": "Gauss plots vs samx",
-            "x": {"label": "Motor X", "signals": [{"name": "samx"}]},
-            "y": {"label": "Gauss", "signals": [{"name": "gauss_bpm"}, {"name": "gauss_adc1"}]},
-        },
-    ],
-}
 
 CONFIG_WRONG = {
-    "plot_settings": {
-        "background_color": "white",
-        "num_columns": 5,
-        "colormap": "plasma",
-        "scan_types": False,
-    },
-    "plot_data": [
-        {
-            "plot_name": "BPM4i plots vs samx",
-            "x": {"label": "Motor Y", "signals": [{"name": "samx"}]},
-            "y": {"label": "bpm4i", "signals": [{"name": "bpm4i"}]},
-        },
-        {
-            "plot_name": "Gauss plots vs samx",
-            "x": {"label": "Motor X", "signals": [{"name": "samx"}]},
-            "y": {
-                "label": "Gauss",
-                "signals": [
-                    {"name": "gauss_bpm"},
-                    {"name": "non_exist1"},
-                    {"name": "non_exist2"},
-                    {"name": "gauss_bpm", "entry": "samx"},
-                ],
-            },
-        },
-    ],
-}
-
-test_config = {
-    "plot_settings": {
-        "background_color": "white",
-        "axis_width": 2,
-        "num_columns": 5,
-        "colormap": "plasma",
-        "scan_types": False,
-    },
-    "plot_data": [
-        {
-            "plot_name": "BPM4i plots vs samx",
-            "x": {"label": "Motor Y", "signals": [{"name": "samx"}]},
-            "y": {"label": "bpm4i", "signals": [{"name": "bpm4i"}]},
-        }
-    ],
-}
-
-CONFIG_SOURCE = {
     "plot_settings": {
         "background_color": "black",
         "num_columns": 2,
@@ -194,7 +130,7 @@ CONFIG_SOURCE = {
             "y_label": "bpm4i",
             "sources": [
                 {
-                    "type": "scan_segment",
+                    "type": "non_existing_source",
                     "signals": {
                         "x": [{"name": "samy"}],
                         "y": [{"name": "bpm4i", "entry": "bpm4i"}],
@@ -218,8 +154,59 @@ CONFIG_SOURCE = {
                 {
                     "type": "scan_segment",
                     "signals": {
+                        "x": [{"name": "samx", "entry": "non_sense_entry"}],
+                        "y": [
+                            {"name": "non_existing_name"},
+                            {"name": "samy", "entry": "non_existing_entry"},
+                        ],
+                    },
+                }
+            ],
+        },
+    ],
+}
+
+
+CONFIG_SIMPLE = {
+    "plot_settings": {
+        "background_color": "black",
+        "num_columns": 2,
+        "colormap": "plasma",
+        "scan_types": False,
+    },
+    "plot_data": [
+        {
+            "plot_name": "BPM4i plots vs samx",
+            "x_label": "Motor Y",
+            "y_label": "bpm4i",
+            "sources": [
+                {
+                    "type": "scan_segment",
+                    "signals": {
+                        "x": [{"name": "samx"}],
+                        "y": [{"name": "bpm4i", "entry": "bpm4i"}],
+                    },
+                },
+                # {
+                #     "type": "history",
+                #     "scanID": "<scanID>",
+                #     "signals": {
+                #         "x": [{"name": "samx"}],
+                #         "y": [{"name": "bpm4i", "entry": "bpm4i"}],
+                #     },
+                # },
+            ],
+        },
+        {
+            "plot_name": "Gauss plots vs samx",
+            "x_label": "Motor X",
+            "y_label": "Gauss",
+            "sources": [
+                {
+                    "type": "scan_segment",
+                    "signals": {
                         "x": [{"name": "samx", "entry": "samx"}],
-                        "y": [{"name": "gauss_bpm"}, {"name": "samy", "entry": "samy"}],
+                        "y": [{"name": "gauss_bpm"}, {"name": "gauss_adc1"}],
                     },
                 }
             ],
@@ -514,7 +501,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         """Update the plot data based on the stored data dictionary."""
         for plot_name, curve_list in self.curves_data.items():
             plot_config = next(
-                (pc for pc in self.plot_data_config if pc.get("plot_name") == plot_name), None
+                (pc for pc in self.plot_data if pc.get("plot_name") == plot_name), None
             )
             if not plot_config:
                 continue
@@ -534,7 +521,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         """Extract the signal configurations for x and y axes from plot_config."""
         x_name, x_entry, y_configurations = None, None, []
 
-        for source in plot_config["sources"]:
+        for source in plot_config["sources"]:  # TODO has to be fixed for scan mode!!!!
             if "x" in source["signals"]:
                 x_signal = source["signals"]["x"][0]
                 x_name = x_signal.get("name", "")
@@ -719,7 +706,7 @@ if __name__ == "__main__":  # pragma: no cover
         # Load config from file
         config = load_yaml(args.config_file)
     else:
-        config = CONFIG_SOURCE
+        config = CONFIG_SIMPLE
 
     client = bec_dispatcher.client
     client.start()
