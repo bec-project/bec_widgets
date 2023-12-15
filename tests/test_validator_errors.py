@@ -4,7 +4,7 @@ from pydantic import ValidationError
 from bec_widgets.validation.monitor_config_validator import (
     MonitorConfigValidator,
     Signal,
-    PlotAxis,
+    AxisSignal,
     PlotConfig,
 )
 
@@ -63,18 +63,43 @@ def test_plot_config_x_axis_signal_validation(setup_devices):
     # Setup a valid signal
     valid_signal = Signal(name="samx")
 
-    # Case with more than one signal for x-axis
-    plot_axis_multiple_signals = PlotAxis(
-        signals=[valid_signal, valid_signal], label="X Axis Label"
-    )
     with pytest.raises(ValidationError) as excinfo:
-        PlotConfig(
-            plot_name="Test Plot",
-            x=plot_axis_multiple_signals,
-            y=PlotAxis(signals=[valid_signal], label="Y Axis Label"),
-        )
+        AxisSignal(x=[valid_signal, valid_signal], y=[valid_signal, valid_signal])
 
     errors = excinfo.value.errors()
     assert len(errors) == 1
     assert errors[0]["type"] == "x_axis_multiple_signals"
     assert "There must be exactly one signal for x axis" in errors[0]["msg"]
+
+
+def test_plot_config_unsupported_source_type(setup_devices):
+    with pytest.raises(ValidationError) as excinfo:
+        PlotConfig(sources=[{"type": "unsupported_type", "signals": {}}])
+
+    errors = excinfo.value.errors()
+    print(errors)
+    assert len(errors) == 1
+    assert errors[0]["type"] == "literal_error"
+
+
+def test_plot_config_no_source_type_provided(setup_devices):
+    with pytest.raises(ValidationError) as excinfo:
+        PlotConfig(sources=[{"signals": {}}])
+
+    errors = excinfo.value.errors()
+    assert len(errors) == 1
+    assert errors[0]["type"] == "missing"
+
+
+def test_plot_config_history_source_type(setup_devices):
+    history_source = {
+        "type": "history",
+        "scanID": "valid_scan_id",
+        "signals": {"x": [{"name": "samx"}], "y": [{"name": "samx"}]},
+    }
+
+    plot_config = PlotConfig(sources=[history_source])
+
+    assert len(plot_config.sources) == 1
+    assert plot_config.sources[0].type == "history"
+    assert plot_config.sources[0].scanID == "valid_scan_id"

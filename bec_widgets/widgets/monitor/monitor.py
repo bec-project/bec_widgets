@@ -163,6 +163,22 @@ CONFIG_WRONG = {
                 }
             ],
         },
+        {
+            "plot_name": "Gauss plots vs samx",
+            "x_label": "Motor X",
+            "y_label": "Gauss",
+            "sources": [
+                {
+                    "signals": {
+                        "x": [{"name": "samx", "entry": "samx"}],
+                        "y": [
+                            {"name": "samx"},
+                            {"name": "samy", "entry": "samx"},
+                        ],
+                    },
+                }
+            ],
+        },
     ],
 }
 

@@ -142,9 +142,9 @@ class PlotConfig(BaseModel):
         sources (list): A list of sources to be plotted on this axis.
     """
 
-    plot_name: Optional[str]
-    x_label: Optional[str]
-    y_label: Optional[str]
+    plot_name: Optional[str] = None
+    x_label: Optional[str] = None
+    y_label: Optional[str] = None
     sources: list = Field(default_factory=list)
 
     @field_validator("sources")
@@ -156,23 +156,11 @@ class PlotConfig(BaseModel):
             Source(**source)
             source_type = source.get("type", None)
 
-            # Check if source type provided
-            if source_type is None:
-                raise PydanticCustomError(
-                    "no_source_type", "Source type must be provided", {"wrong_value": source}
-                )
-
             # Check if source type is supported
             if source_type == "scan_segment":
                 validated_sources.append(SourceSegmentValidator(**source))
             elif source_type == "history":
                 validated_sources.append(SourceHistoryValidator(**source))
-            else:
-                raise PydanticCustomError(
-                    "unsupported_source_type",
-                    "Unsupported source type: '{wrong_value}'",
-                    {"wrong_value": source_type},
-                )
         return validated_sources
 
 
@@ -192,9 +180,9 @@ class PlotSettings(BaseModel):
     background_color: Literal["black", "white"] = "black"
     axis_width: Optional[int] = 2
     axis_color: Optional[str] = None
-    num_columns: int
-    colormap: str
-    scan_types: bool
+    num_columns: Optional[int] = 1
+    colormap: Optional[str] = "magma"
+    scan_types: Optional[bool] = False
 
 
 class DeviceMonitorConfig(BaseModel):
