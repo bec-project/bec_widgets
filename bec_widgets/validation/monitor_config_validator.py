@@ -236,7 +236,8 @@ class MonitorConfigValidator:
         Raises:
             ValidationError: If the configuration data does not conform to the schema.
         """
-        if config_data["plot_settings"]["scan_types"]:
+        config_type = config_data.get("plot_settings", {}).get("scan_types", False)
+        if config_type:
             validated_config = ScanModeConfig(**config_data)
         else:
             validated_config = DeviceMonitorConfig(**config_data)

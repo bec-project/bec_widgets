@@ -193,7 +193,7 @@ CONFIG_SIMPLE = {
     "plot_data": [
         {
             "plot_name": "BPM4i plots vs samx",
-            "x_label": "Motor Y",
+            "x_label": "Motor X",
             "y_label": "bpm4i",
             "sources": [
                 {
@@ -203,6 +203,21 @@ CONFIG_SIMPLE = {
                         "y": [{"name": "bpm4i", "entry": "bpm4i"}],
                     },
                 },
+                # {
+                #     "type": "history",
+                #     "signals": {
+                #         "x": [{"name": "samx"}],
+                #         "y": [{"name": "bpm4i", "entry": "bpm4i"}],
+                #     },
+                # },
+                # {
+                #     "type": "dap",
+                #     'worker':'some_worker',
+                #     "signals": {
+                #         "x": [{"name": "samx"}],
+                #         "y": [{"name": "bpm4i", "entry": "bpm4i"}],
+                #     },
+                # },
             ],
         },
         {
@@ -585,6 +600,11 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         Args:
             config(dict): Configuration settings
         """
+        # convert config from BEC CLI to correct formatting
+        config_tag = config.get("config", None)
+        if config_tag is not None:
+            config = config["config"]
+
         if self.skip_validation is True:
             self.config = config
             self._init_config()
