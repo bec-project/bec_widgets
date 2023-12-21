@@ -43,13 +43,8 @@ class Signal(BaseModel):
 
         device = devices[name]  # get the device to check if it has signals
 
-        # Check if device have signals
-        if not hasattr(device, "signals"):
-            raise PydanticCustomError(
-                "no_device_signals",
-                'Device "{wrong_value}" does not have "signals" defined. Check device configuration.',
-                {"wrong_value": name},
-            )
+        # Get device description
+        description = device.describe()
 
         # Validate 'entry'
         entry = values.get("entry")
@@ -57,7 +52,7 @@ class Signal(BaseModel):
         # Set entry based on hints if not provided
         if entry is None:
             entry = next(iter(device._hints), name) if hasattr(device, "_hints") else name
-        if entry not in device.signals:
+        if entry not in description:
             raise PydanticCustomError(
                 "no_entry_for_device",
                 'Entry "{wrong_value}" not found in device "{device_name}" signals',
@@ -117,6 +112,20 @@ class SourceSegmentValidator(BaseModel):
     signals: AxisSignal
 
 
+class SourceRedisValidator(BaseModel):
+    """Scan Segment source validator
+    Attributes:
+        type (str): type of source - scan_segment
+        endpoint (str): Endpoint reference in redis.
+        update (str): Update type.
+    """
+
+    type: Literal["redis"]
+    endpoint: str
+    update: str
+    signals: dict
+
+
 class Source(BaseModel):  # TODO decide if it should stay for general Source validation
     """
     General source validation, includes all Optional arguments of all other sources.
@@ -126,9 +135,9 @@ class Source(BaseModel):  # TODO decide if it should stay for general Source val
         signals (Optional[AxisSignal]): Signal for the source.
     """
 
-    type: Literal["scan_segment", "history"]
+    type: Literal["scan_segment", "history", "redis"]
     scanID: Optional[str] = None
-    signals: Optional[AxisSignal] = None
+    signals: Optional[dict] = None
 
 
 class PlotConfig(BaseModel):
@@ -153,14 +162,17 @@ class PlotConfig(BaseModel):
         """Validate the sources of the plot configuration, based on the type of source."""
         validated_sources = []
         for source in values:
+            # Check if source type is supported
             Source(**source)
             source_type = source.get("type", None)
 
-            # Check if source type is supported
+            # Validate source based on type
             if source_type == "scan_segment":
                 validated_sources.append(SourceSegmentValidator(**source))
             elif source_type == "history":
                 validated_sources.append(SourceHistoryValidator(**source))
+            elif source_type == "redis":
+                validated_sources.append(SourceRedisValidator(**source))
         return validated_sources
 
 

@@ -22,6 +22,7 @@ class FakeDevice:
         self.name = name
         self.enabled = enabled
         self.signals = {self.name: {"value": 1.0}}
+        self.description = {self.name: {"source": self.name}}
 
     def __contains__(self, item):
         return item == self.name
@@ -38,6 +39,14 @@ class FakeDevice:
         """
         self.signals[self.name]["value"] = fake_value
 
+    def describe(self) -> dict:
+        """
+        Get the description of the device
+        Returns:
+            dict: Description of the device
+        """
+        return self.description
+
 
 def get_mocked_device(device_name: str):
     """
@@ -53,11 +62,6 @@ def mocked_client():
     # Create a dictionary of mocked devices
     device_names = ["samx", "gauss_bpm", "gauss_adc1", "gauss_adc2", "gauss_adc3", "bpm4i"]
     mocked_devices = {name: get_mocked_device(name) for name in device_names}
-
-    # Adding a device with empty signals for validation tests
-    no_signal_device = FakeDevice(name="no_signal_device")
-    del no_signal_device.signals  # Simulate a device with no signals
-    mocked_devices["no_signal_device"] = no_signal_device
 
     # Create a MagicMock object
     client = MagicMock()

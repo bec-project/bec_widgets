@@ -34,16 +34,6 @@ def test_signal_validation_name_not_in_bec(setup_devices):
     assert 'Device "non_existent_device" not found in current BEC session' in str(excinfo.value)
 
 
-def test_signal_validation_device_has_no_signals(setup_devices):
-    with pytest.raises(ValidationError) as excinfo:
-        Signal(name="no_signal_device")
-
-    errors = excinfo.value.errors()
-    assert len(errors) == 1
-    assert errors[0]["type"] == "no_device_signals"
-    assert 'Device "no_signal_device" does not have "signals" defined' in errors[0]["msg"]
-
-
 def test_signal_validation_entry_not_in_device(setup_devices):
     with pytest.raises(ValidationError) as excinfo:
         Signal(name="samx", entry="non_existent_entry")
@@ -103,3 +93,17 @@ def test_plot_config_history_source_type(setup_devices):
     assert len(plot_config.sources) == 1
     assert plot_config.sources[0].type == "history"
     assert plot_config.sources[0].scanID == "valid_scan_id"
+
+
+def test_plot_config_redis_source_type(setup_devices):
+    history_source = {
+        "type": "redis",
+        "endpoint": "valid_endpoint",
+        "update": "append",
+        "signals": {"x": [{"name": "samx"}], "y": [{"name": "samx"}]},
+    }
+
+    plot_config = PlotConfig(sources=[history_source])
+
+    assert len(plot_config.sources) == 1
+    assert plot_config.sources[0].type == "redis"
