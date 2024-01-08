@@ -506,7 +506,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
                 for i, (y_signal, color) in enumerate(zip(y_signals, colors_ys)):
                     y_name = y_signal["name"]
                     y_entry = y_signal.get("entry", y_name)
-                    curve_name = f"{y_name} ({y_entry})-{source_type.upper()}"
+                    curve_name = f"{y_name} ({y_entry})-{source_type[0].upper()}"
                     curve_data = self.create_curve(curve_name, color)
                     plot.addItem(curve_data)
                     self.curves_data[source_type][plot_name].append((y_name, y_entry, curve_data))
@@ -599,7 +599,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
 
     def show_config_dialog(self):
         """Show the configuration dialog."""
-        from .config_dialog import ConfigDialog
+        from bec_widgets.widgets import ConfigDialog
 
         dialog = ConfigDialog(default_config=self.config)
         dialog.config_updated.connect(self.on_config_update)
@@ -631,6 +631,8 @@ class BECMonitor(pg.GraphicsLayoutWidget):
             self.flush()
         elif action == "close":
             self.close()
+        elif action == "config_dialog":
+            self.show_config_dialog()
         else:
             print(f"Unknown instruction received: {msg_content}")
 
@@ -771,6 +773,9 @@ class BECMonitor(pg.GraphicsLayoutWidget):
             msg (dict): Message received with  data.
         """
 
+        # wait until new config is loaded
+        while "redis" not in self.database:
+            time.sleep(0.1)
         self._init_database(
             self.plot_data, source_type_to_init="redis"
         )  # add database entry for redis dataset
@@ -790,6 +795,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
 
         # Trigger plot update
         self.update_plot(source_type="redis")
+        print(f"database after: {self.database}")
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -810,7 +816,7 @@ if __name__ == "__main__":  # pragma: no cover
         # Load config from file
         config = load_yaml(args.config_file)
     else:
-        config = CONFIG_REDIS
+        config = CONFIG_SIMPLE
 
     client = bec_dispatcher.client
     client.start()
