@@ -21,7 +21,7 @@ Tab_Ui_Form, Tab_BaseClass = uic.loadUiType(os.path.join(current_path, "tab_temp
 # test configs for demonstration purpose
 
 # Configuration for default mode when only devices are monitored
-config_default = {
+CONFIG_DEFAULT = {
     "plot_settings": {
         "background_color": "black",
         "num_columns": 1,
@@ -31,35 +31,41 @@ config_default = {
     "plot_data": [
         {
             "plot_name": "BPM4i plots vs samx",
-            "x": {
-                "label": "Motor Y",
-                "signals": [{"name": "samx", "entry": "samx"}],
-            },
-            "y": {
-                "label": "bpm4i",
-                "signals": [{"name": "bpm4i", "entry": "bpm4i"}],
-            },
+            "x_label": "Motor Y",
+            "y_label": "bpm4i",
+            "sources": [
+                {
+                    "type": "scan_segment",
+                    "signals": {
+                        "x": [{"name": "samx", "entry": "samx"}],
+                        "y": [{"name": "bpm4i", "entry": "bpm4i"}],
+                    },
+                }
+            ],
         },
         {
             "plot_name": "Gauss plots vs samx",
-            "x": {
-                "label": "Motor X",
-                "signals": [{"name": "samx", "entry": "samx"}],
-            },
-            "y": {
-                "label": "Gauss",
-                "signals": [
-                    {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                    {"name": "gauss_acd1", "entry": "gauss_adc1"},
-                    {"name": "gauss_acd2", "entry": "gauss_adc2"},
-                ],
-            },
+            "x_label": "Motor X",
+            "y_label": "Gauss",
+            "sources": [
+                {
+                    "type": "scan_segment",
+                    "signals": {
+                        "x": [{"name": "samx", "entry": "samx"}],
+                        "y": [
+                            {"name": "gauss_bpm"},
+                            {"name": "gauss_adc1"},
+                            {"name": "gauss_adc2"},
+                        ],
+                    },
+                }
+            ],
         },
     ],
 }
 
 # Configuration which is dynamically changing depending on the scan type
-config_scan = {
+CONFIG_SCAN_MODE = {
     "plot_settings": {
         "background_color": "white",
         "num_columns": 3,
@@ -70,77 +76,89 @@ config_scan = {
         "grid_scan": [
             {
                 "plot_name": "Grid plot 1",
-                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {
-                    "label": "BPM",
-                    "signals": [
-                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                        {"name": "gauss_adc1", "entry": "gauss_adc1"},
-                    ],
-                },
+                "x_label": "Motor X",
+                "y_label": "BPM",
+                "sources": [
+                    {
+                        "type": "scan_segment",
+                        "signals": {
+                            "x": [{"name": "samx", "entry": "samx"}],
+                            "y": [{"name": "gauss_bpm"}],
+                        },
+                    }
+                ],
             },
             {
                 "plot_name": "Grid plot 2",
-                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {
-                    "label": "BPM",
-                    "signals": [
-                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                        {"name": "gauss_adc1", "entry": "gauss_adc1"},
-                    ],
-                },
+                "x_label": "Motor X",
+                "y_label": "BPM",
+                "sources": [
+                    {
+                        "type": "scan_segment",
+                        "signals": {
+                            "x": [{"name": "samx", "entry": "samx"}],
+                            "y": [{"name": "gauss_adc1"}],
+                        },
+                    }
+                ],
             },
             {
                 "plot_name": "Grid plot 3",
-                "x": {"label": "Motor Y", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {
-                    "label": "BPM",
-                    "signals": [{"name": "gauss_bpm", "entry": "gauss_bpm"}],
-                },
+                "x_label": "Motor X",
+                "y_label": "BPM",
+                "sources": [
+                    {
+                        "type": "scan_segment",
+                        "signals": {
+                            "x": [{"name": "samy"}],
+                            "y": [{"name": "gauss_adc2"}],
+                        },
+                    }
+                ],
             },
             {
                 "plot_name": "Grid plot 4",
-                "x": {"label": "Motor Y", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {
-                    "label": "BPM",
-                    "signals": [{"name": "gauss_adc3", "entry": "gauss_adc3"}],
-                },
+                "x_label": "Motor X",
+                "y_label": "BPM",
+                "sources": [
+                    {
+                        "type": "scan_segment",
+                        "signals": {
+                            "x": [{"name": "samy", "entry": "samy"}],
+                            "y": [{"name": "gauss_adc3"}],
+                        },
+                    }
+                ],
             },
         ],
         "line_scan": [
             {
-                "plot_name": "BPM plot",
-                "x": {"label": "Motor X", "signals": [{"name": "samx"}]},
-                "y": {
-                    "label": "BPM",
-                    "signals": [
-                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                        {"name": "gauss_adc1", "entry": "gauss_adc1"},
-                        {"name": "gauss_adc2", "entry": "gauss_adc2"},
-                    ],
-                },
+                "plot_name": "BPM plots vs samx",
+                "x_label": "Motor X",
+                "y_label": "Gauss",
+                "sources": [
+                    {
+                        "type": "scan_segment",
+                        "signals": {
+                            "x": [{"name": "samx", "entry": "samx"}],
+                            "y": [{"name": "bpm4i"}],
+                        },
+                    }
+                ],
             },
             {
-                "plot_name": "Multi",
-                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {
-                    "label": "Multi",
-                    "signals": [
-                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                        {"name": "samx", "entry": "samx"},
-                    ],
-                },
-            },
-            {
-                "plot_name": "Multi",
-                "x": {"label": "Motor X", "signals": [{"name": "samx", "entry": "samx"}]},
-                "y": {
-                    "label": "Multi",
-                    "signals": [
-                        {"name": "gauss_bpm", "entry": "gauss_bpm"},
-                        {"name": "samx", "entry": "samx"},
-                    ],
-                },
+                "plot_name": "Gauss plots vs samx",
+                "x_label": "Motor X",
+                "y_label": "Gauss",
+                "sources": [
+                    {
+                        "type": "scan_segment",
+                        "signals": {
+                            "x": [{"name": "samx", "entry": "samx"}],
+                            "y": [{"name": "gauss_bpm"}, {"name": "gauss_adc1"}],
+                        },
+                    }
+                ],
             },
         ],
     },
@@ -329,7 +347,15 @@ class ConfigDialog(QWidget, Ui_Form):
 
         ui = plot_tab.ui
         table = ui.tableWidget_y_signals
-        signals = [
+
+        x_signals = [
+            {
+                "name": self.safe_text(ui.lineEdit_x_name),
+                "entry": self.safe_text(ui.lineEdit_x_entry),
+            }
+        ]
+
+        y_signals = [
             {
                 "name": self.safe_text(table.item(row, 0)),
                 "entry": self.safe_text(table.item(row, 1)),
@@ -339,19 +365,17 @@ class ConfigDialog(QWidget, Ui_Form):
 
         plot_data = {
             "plot_name": self.safe_text(ui.lineEdit_plot_title),
-            "x": {
-                "label": self.safe_text(ui.lineEdit_x_label),
-                "signals": [
-                    {
-                        "name": self.safe_text(ui.lineEdit_x_name),
-                        "entry": self.safe_text(ui.lineEdit_x_entry),
-                    }
-                ],
-            },
-            "y": {
-                "label": self.safe_text(ui.lineEdit_y_label),
-                "signals": signals,
-            },
+            "x_label": self.safe_text(ui.lineEdit_x_label),
+            "y_label": self.safe_text(ui.lineEdit_y_label),
+            "sources": [
+                {
+                    "type": "scan_segment",
+                    "signals": {
+                        "x": x_signals,
+                        "y": y_signals,
+                    },
+                }
+            ],
         }
 
         return plot_data
@@ -446,15 +470,14 @@ class ConfigDialog(QWidget, Ui_Form):
             plot (QWidget): plot tab widget
             plot_config (dict): config for single plot tab
         """
-        x_config = plot_config.get("x", {})
-        x_signals = x_config.get("signals", [{}])[0]  # Assuming at least one x signal
-        y_config = plot_config.get("y", {})
-        y_signals = y_config.get("signals", [])
+        sources = plot_config.get("sources", [{}])[0]
+        x_signals = sources.get("signals", {}).get("x", [{}])[0]
+        y_signals = sources.get("signals", {}).get("y", [])
 
         # LabelBox
         plot.ui.lineEdit_plot_title.setText(plot_config.get("plot_name", ""))
-        plot.ui.lineEdit_x_label.setText(x_config.get("label", ""))
-        plot.ui.lineEdit_y_label.setText(y_config.get("label", ""))
+        plot.ui.lineEdit_x_label.setText(plot_config.get("x_label", ""))
+        plot.ui.lineEdit_y_label.setText(plot_config.get("y_label", ""))
 
         # X axis
         plot.ui.lineEdit_x_name.setText(x_signals.get("name", ""))
@@ -507,4 +530,5 @@ if __name__ == "__main__":  # pragma: no cover
     app = QApplication([])
     main_app = ConfigDialog()
     main_app.show()
+    main_app.load_config(CONFIG_SCAN_MODE)
     app.exec()

@@ -121,6 +121,7 @@ def test_add_new_plot_and_modify(config_dialog):
     # Ensure the tab count is initially 1 and it is called "Default"
     assert config_dialog.tabWidget_scan_types.count() == 1
     assert config_dialog.tabWidget_scan_types.tabText(0) == "Default"
+
     # Get the first tab (which should be a scan tab)
     scan_tab = config_dialog.tabWidget_scan_types.widget(0)
 
@@ -149,8 +150,7 @@ def test_add_new_plot_and_modify(config_dialog):
     new_plot_tab.ui.lineEdit_x_entry.setText("Modified X Entry")
 
     # Modify the table for signals
-    # new_plot_tab.ui.pushButton_y_new.click()  # Press button to add a new row
-    config_dialog.add_new_signal(new_plot_tab.ui.tableWidget_y_signals)  # TODO change to click?
+    config_dialog.add_new_signal(new_plot_tab.ui.tableWidget_y_signals)
 
     table = new_plot_tab.ui.tableWidget_y_signals
     assert table.rowCount() == 1  # Ensure the new row is added
@@ -160,17 +160,18 @@ def test_add_new_plot_and_modify(config_dialog):
     # Modify the first row
     table.setItem(row_position, 0, QTableWidgetItem("New Signal Name"))
     table.setItem(row_position, 1, QTableWidgetItem("New Signal Entry"))
+
     # Apply the configuration
     config = config_dialog.apply_config()
 
     # Check if the modifications are reflected in the configuration
-    modified_plot_config = config["plot_data"][
-        1
-    ]  # Assuming the new plot is the second item in the plot_data list
+    modified_plot_config = config["plot_data"][1]  # Access the second plot in the plot_data list
+    sources = modified_plot_config["sources"][0]  # Access the first source in the sources list
+
     assert modified_plot_config["plot_name"] == "Modified Plot Title"
-    assert modified_plot_config["x"]["label"] == "Modified X Label"
-    assert modified_plot_config["y"]["label"] == "Modified Y Label"
-    assert modified_plot_config["x"]["signals"][0]["name"] == "Modified X Name"
-    assert modified_plot_config["x"]["signals"][0]["entry"] == "Modified X Entry"
-    assert modified_plot_config["y"]["signals"][0]["name"] == "New Signal Name"
-    assert modified_plot_config["y"]["signals"][0]["entry"] == "New Signal Entry"
+    assert modified_plot_config["x_label"] == "Modified X Label"
+    assert modified_plot_config["y_label"] == "Modified Y Label"
+    assert sources["signals"]["x"][0]["name"] == "Modified X Name"
+    assert sources["signals"]["x"][0]["entry"] == "Modified X Entry"
+    assert sources["signals"]["y"][0]["name"] == "New Signal Name"
+    assert sources["signals"]["y"][0]["entry"] == "New Signal Entry"
