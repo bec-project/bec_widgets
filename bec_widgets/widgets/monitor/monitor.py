@@ -514,8 +514,8 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         # Render static plot elements
         self.update_plot()
         # # Hook Crosshair #TODO enable later, currently not working
-        # if self.enable_crosshair is True:
-        #     self.hook_crosshair()
+        if self.enable_crosshair is True:
+            self.hook_crosshair()
 
     def create_curve(self, curve_name: str, color: str) -> pg.PlotDataItem:
         """
