@@ -87,7 +87,9 @@ tests:
   artifacts:
     reports:
       junit: report.xml
-      cobertura: coverage.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
 
 #tests-3.9-pyqt5: #todo enable when we decide what qt distributions we want to support
 #  extends: "tests"
