@@ -1129,10 +1129,12 @@ class MotorControl(QThread):
             motor_x_name (str): The name of the motor for the x-axis.
             motor_y_name (str): The name of the motor for the y-axis.
         """
+        self.motor_x_name = motor_x_name
+        self.motor_y_name = motor_y_name
 
         self.motor_x, self.motor_y = (
-            dev[motor_x_name],
-            dev[motor_y_name],
+            dev[self.motor_x_name],
+            dev[self.motor_y_name],
         )
 
         (self.current_x, self.current_y) = self.get_coordinates()
@@ -1179,8 +1181,8 @@ class MotorControl(QThread):
 
     def get_coordinates(self) -> tuple:
         """Get current motor position"""
-        x = self.motor_x.read(cached=True)["value"]
-        y = self.motor_y.read(cached=True)["value"]
+        x = self.motor_x.read()[self.motor_x_name]["value"]
+        y = self.motor_y.read()[self.motor_y_name]["value"]
         return x, y
 
     def retrieve_coordinates(self) -> tuple:
