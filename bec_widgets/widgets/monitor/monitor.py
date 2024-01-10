@@ -613,6 +613,11 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         self.client = client
         self.dev = self.client.device_manager.devices
 
+    def _close_all_plots(self):
+        """Close all plots."""
+        for plot in self.plots.values():
+            plot.clear()
+
     @pyqtSlot(dict)
     def on_instruction(self, msg_content: dict) -> None:
         """
@@ -620,6 +625,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         Possible actions are:
             - clear: Clear the plots
             - close: Close the GUI
+            - config_dialog: Open the configuration dialog
 
         Args:
             msg_content (dict): Message content with the instruction and parameters.
@@ -629,6 +635,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
 
         if action == "clear":
             self.flush()
+            self._close_all_plots()
         elif action == "close":
             self.close()
         elif action == "config_dialog":
