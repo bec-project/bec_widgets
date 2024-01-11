@@ -10,8 +10,7 @@ from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QApplication, QMessageBox
 
-from bec_widgets.utils import Colors, Crosshair
-from bec_widgets.utils.yaml_dialog import load_yaml
+from bec_widgets.utils import Colors, Crosshair, yaml_dialog
 from bec_widgets.validation import MonitorConfigValidator
 from bec_widgets.utils.bec_dispatcher import bec_dispatcher
 
@@ -821,7 +820,7 @@ if __name__ == "__main__":  # pragma: no cover
         config = json.loads(args.config)
     elif args.config_file is not None:
         # Load config from file
-        config = load_yaml(args.config_file)
+        config = yaml_dialog.load_yaml(args.config_file)
     else:
         config = CONFIG_SIMPLE
 

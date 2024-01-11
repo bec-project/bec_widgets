@@ -181,12 +181,12 @@ class PlotSettings(BaseModel):
     Global settings for plotting affecting mostly visuals.
 
     Attributes:
-        background_color (str): Color of the plot background.
-        axis_width (Optional[int]): Width of the plot axes.
-        axis_color (Optional[str]): Color of the plot axes.
-        num_columns (int): Number of columns in the plot layout.
-        colormap (str): Colormap to be used.
-        scan_types (bool): Indicates if the configuration is for different scan types.
+        background_color (str): Color of the plot background. Default is black.
+        axis_width (Optional[int]): Width of the plot axes. Default is 2.
+        axis_color (Optional[str]): Color of the plot axes. Default is None.
+        num_columns (int): Number of columns in the plot layout. Default is 1.
+        colormap (str): Colormap to be used. Default is magma.
+        scan_types (bool): Indicates if the configuration is for different scan types. Default is False.
     """
 
     background_color: Literal["black", "white"] = "black"
