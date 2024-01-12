@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.36.0 (2024-01-12)
+
+### Feature
+
+* Bec_dispatcher can link multiple endpoints topics for one qt slot ([`58721be`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/58721bea1a2b4b06220ef0e3b2dcec8c1656213d))
+
 ## v0.35.0 (2024-01-12)
 
 ### Feature
