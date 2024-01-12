@@ -26,7 +26,7 @@ def _consumer(bec_dispatcher):
 @pytest.mark.filterwarnings("ignore:Failed to connect to redis.")
 def test_connect_one_slot(bec_dispatcher, consumer):
     slot1 = Mock()
-    bec_dispatcher.connect_slot(slot=slot1, topic="topic0")
+    bec_dispatcher.connect_slot(slot=slot1, topics="topic0")
     consumer.assert_called_once()
     # trigger consumer callback as if a message was published
     consumer.call_args.kwargs["cb"](msg)
@@ -37,8 +37,8 @@ def test_connect_one_slot(bec_dispatcher, consumer):
 
 def test_connect_identical(bec_dispatcher, consumer):
     slot1 = Mock()
-    bec_dispatcher.connect_slot(slot=slot1, topic="topic0")
-    bec_dispatcher.connect_slot(slot=slot1, topic="topic0")
+    bec_dispatcher.connect_slot(slot=slot1, topics="topic0")
+    bec_dispatcher.connect_slot(slot=slot1, topics="topic0")
     consumer.assert_called_once()
 
     consumer.call_args.kwargs["cb"](msg)
@@ -47,9 +47,9 @@ def test_connect_identical(bec_dispatcher, consumer):
 
 def test_connect_many_slots_one_topic(bec_dispatcher, consumer):
     slot1, slot2 = Mock(), Mock()
-    bec_dispatcher.connect_slot(slot=slot1, topic="topic0")
+    bec_dispatcher.connect_slot(slot=slot1, topics="topic0")
     consumer.assert_called_once()
-    bec_dispatcher.connect_slot(slot=slot2, topic="topic0")
+    bec_dispatcher.connect_slot(slot=slot2, topics="topic0")
     consumer.assert_called_once()
     # trigger consumer callback as if a message was published
     consumer.call_args.kwargs["cb"](msg)
@@ -62,9 +62,9 @@ def test_connect_many_slots_one_topic(bec_dispatcher, consumer):
 
 def test_connect_one_slot_many_topics(bec_dispatcher, consumer):
     slot1 = Mock()
-    bec_dispatcher.connect_slot(slot=slot1, topic="topic0")
+    bec_dispatcher.connect_slot(slot=slot1, topics="topic0")
     assert consumer.call_count == 1
-    bec_dispatcher.connect_slot(slot=slot1, topic="topic1")
+    bec_dispatcher.connect_slot(slot=slot1, topics="topic1")
     assert consumer.call_count == 2
     # trigger consumer callback as if a message was published
     consumer.call_args_list[0].kwargs["cb"](msg)
@@ -75,52 +75,52 @@ def test_connect_one_slot_many_topics(bec_dispatcher, consumer):
 
 def test_disconnect_one_slot_one_topic(bec_dispatcher, consumer):
     slot1, slot2 = Mock(), Mock()
-    bec_dispatcher.connect_slot(slot=slot1, topic="topic0")
+    bec_dispatcher.connect_slot(slot=slot1, topics="topic0")
 
     # disconnect using a different slot
-    bec_dispatcher.disconnect_slot(slot=slot1, topic="topic1")
+    bec_dispatcher.disconnect_slot(slot=slot1, topics="topic1")
     consumer.call_args.kwargs["cb"](msg)
     assert slot1.call_count == 1
 
-    # disconnect using a different topic
-    bec_dispatcher.disconnect_slot(slot=slot2, topic="topic0")
+    # disconnect using a different topics
+    bec_dispatcher.disconnect_slot(slot=slot2, topics="topic0")
     consumer.call_args.kwargs["cb"](msg)
     assert slot1.call_count == 2
 
-    # disconnect using the right slot and topic
-    bec_dispatcher.disconnect_slot(slot=slot1, topic="topic0")
+    # disconnect using the right slot and topics
+    bec_dispatcher.disconnect_slot(slot=slot1, topics="topic0")
     with pytest.raises(KeyError):
         consumer.call_args.kwargs["cb"](msg)
 
 
 def test_disconnect_identical(bec_dispatcher, consumer):
     slot1 = Mock()
-    bec_dispatcher.connect_slot(slot=slot1, topic="topic0")
-    bec_dispatcher.connect_slot(slot=slot1, topic="topic0")
-    bec_dispatcher.disconnect_slot(slot=slot1, topic="topic0")
+    bec_dispatcher.connect_slot(slot=slot1, topics="topic0")
+    bec_dispatcher.connect_slot(slot=slot1, topics="topic0")
+    bec_dispatcher.disconnect_slot(slot=slot1, topics="topic0")
     with pytest.raises(KeyError):
         consumer.call_args.kwargs["cb"](msg)
 
 
 def test_disconnect_many_slots_one_topic(bec_dispatcher, consumer):
     slot1, slot2, slot3 = Mock(), Mock(), Mock()
-    bec_dispatcher.connect_slot(slot=slot1, topic="topic0")
-    bec_dispatcher.connect_slot(slot=slot2, topic="topic0")
+    bec_dispatcher.connect_slot(slot=slot1, topics="topic0")
+    bec_dispatcher.connect_slot(slot=slot2, topics="topic0")
 
     # disconnect using a different slot
-    bec_dispatcher.disconnect_slot(slot3, topic="topic0")
+    bec_dispatcher.disconnect_slot(slot3, topics="topic0")
     consumer.call_args.kwargs["cb"](msg)
     assert slot1.call_count == 1
     assert slot2.call_count == 1
 
-    # disconnect using a different topic
-    bec_dispatcher.disconnect_slot(slot1, topic="topic1")
+    # disconnect using a different topics
+    bec_dispatcher.disconnect_slot(slot1, topics="topic1")
     consumer.call_args.kwargs["cb"](msg)
     assert slot1.call_count == 2
     assert slot2.call_count == 2
 
-    # disconnect using the right slot and topic
-    bec_dispatcher.disconnect_slot(slot1, topic="topic0")
+    # disconnect using the right slot and topics
+    bec_dispatcher.disconnect_slot(slot1, topics="topic0")
     consumer.call_args.kwargs["cb"](msg)
     assert slot1.call_count == 2
     assert slot2.call_count == 3
@@ -128,33 +128,64 @@ def test_disconnect_many_slots_one_topic(bec_dispatcher, consumer):
 
 def test_disconnect_one_slot_many_topics(bec_dispatcher, consumer):
     slot1, slot2 = Mock(), Mock()
-    bec_dispatcher.connect_slot(slot=slot1, topic="topic0")
-    bec_dispatcher.connect_slot(slot=slot1, topic="topic1")
+    bec_dispatcher.connect_slot(slot=slot1, topics="topic0")
+    bec_dispatcher.connect_slot(slot=slot1, topics="topic1")
 
     # disconnect using a different slot
-    bec_dispatcher.disconnect_slot(slot=slot2, topic="topic0")
+    bec_dispatcher.disconnect_slot(slot=slot2, topics="topic0")
     consumer.call_args_list[0].kwargs["cb"](msg)
     assert slot1.call_count == 1
     consumer.call_args_list[1].kwargs["cb"](msg)
     assert slot1.call_count == 2
 
-    # disconnect using a different topic
-    bec_dispatcher.disconnect_slot(slot=slot1, topic="topic3")
+    # disconnect using a different topics
+    bec_dispatcher.disconnect_slot(slot=slot1, topics="topic3")
     consumer.call_args_list[0].kwargs["cb"](msg)
     assert slot1.call_count == 3
     consumer.call_args_list[1].kwargs["cb"](msg)
     assert slot1.call_count == 4
 
-    # disconnect using the right slot and topic
-    bec_dispatcher.disconnect_slot(slot=slot1, topic="topic0")
+    # disconnect using the right slot and topics
+    bec_dispatcher.disconnect_slot(slot=slot1, topics="topic0")
     with pytest.raises(KeyError):
         consumer.call_args_list[0].kwargs["cb"](msg)
     consumer.call_args_list[1].kwargs["cb"](msg)
     assert slot1.call_count == 5
 
-    bec_dispatcher.disconnect_slot(slot=slot1, topic="topic1")
+    bec_dispatcher.disconnect_slot(slot=slot1, topics="topic1")
     with pytest.raises(KeyError):
         consumer.call_args_list[0].kwargs["cb"](msg)
     with pytest.raises(KeyError):
         consumer.call_args_list[1].kwargs["cb"](msg)
     assert slot1.call_count == 5
+
+
+def test_disconnect_all(bec_dispatcher, consumer):
+    # Mock slots to connect
+    slot1, slot2, slot3 = Mock(), Mock(), Mock()
+
+    # Connect slots to different topics
+    bec_dispatcher.connect_slot(slot=slot1, topics="topic0")
+    bec_dispatcher.connect_slot(slot=slot2, topics="topic1")
+    bec_dispatcher.connect_slot(slot=slot3, topics="topic2")
+
+    # Call disconnect_all method
+    bec_dispatcher.disconnect_all()
+
+    # Simulate messages and verify that none of the slots are called
+    with pytest.raises(KeyError):
+        consumer.call_args_list[0].kwargs["cb"](msg)
+    with pytest.raises(KeyError):
+        consumer.call_args_list[1].kwargs["cb"](msg)
+    with pytest.raises(KeyError):
+        consumer.call_args_list[2].kwargs["cb"](msg)
+
+    # Ensure that the slots have not been called
+    assert slot1.call_count == 0
+    assert slot2.call_count == 0
+    assert slot3.call_count == 0
+
+    # Also, check that the consumer for each topic is shutdown
+    assert "topic0" not in bec_dispatcher._connections
+    assert "topic1" not in bec_dispatcher._connections
+    assert "topic2" not in bec_dispatcher._connections
