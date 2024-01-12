@@ -2,6 +2,24 @@
 
 <!--next-version-placeholder-->
 
+## v0.35.0 (2024-01-12)
+
+### Feature
+
+* Monitor.py can access custom data send through redis ([`6e4775a`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/6e4775a1248153f6027be754054f3f43c18514d1))
+* Monitor.py access data directly from scan storage ([`26c07c3`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/26c07c3205debaf88a346410a8ebab0a3ab7a5d9))
+
+### Fix
+
+* Monitor.py clear command from BECPlotter CLI clear now flush database and clear the plots ([`ebd4fcc`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ebd4fccda2321aa0dc108a5436fb4cc717911d4b))
+* Monitor.py crosshair enabled by default ([`97dcc5a`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/97dcc5ac768cc4f0122382591238fd5a9d035270))
+* Monitor.py change import of ConfigDialog from relative to absolute in order to make BECPlotter be able to open it ([`6061b31`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/6061b3150e990141eafb8d5b17c7e931c7bf8631))
+* Monitor_config_validator.py changed to check .describe() instead of signals ([`5ab82bc`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/5ab82bc13340adb992c921a7211e8e2265861f7a))
+* Monitor.py fixed not updating config changes after receiving refresh from BECPlotter ([`00ef3ae`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/00ef3ae9256a368f4842c1dc38a407131181ec1d))
+* Monitor_config_validator.py valid color is Literal['black','white'] ([`86c5f25`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/86c5f25205dbaa45b7b2efd255f3a3cb2d3eb0b1))
+* Monitor.py fixed scan mode ([`a706da2`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/a706da2490f4cce80e9515633e8437b3667b0db0))
+* Motor_config_validation changed to new monitor config structure ([`d67bdd2`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/d67bdd26167dca6c65627192dbd098af08355d06))
+
 ## v0.34.1 (2023-12-12)
 
 ### Fix
