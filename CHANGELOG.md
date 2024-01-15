@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.36.1 (2024-01-15)
+
+### Fix
+
+* Motor_example.py fix to the new .read() structure from bec_lib ([`f9c5c82`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/f9c5c82381907a19582bf9132740fe27b48d48cc))
+
 ## v0.36.0 (2024-01-12)
 
 ### Feature
