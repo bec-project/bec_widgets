@@ -1,5 +1,6 @@
-import pytest
+# pylint: disable = no-name-in-module,missing-module-docstring, missing-function-docstring
 from unittest.mock import MagicMock
+import pytest
 
 from bec_widgets.widgets import MotorMap
 

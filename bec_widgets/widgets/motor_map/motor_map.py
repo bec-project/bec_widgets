@@ -1,3 +1,4 @@
+# pylint: disable = no-name-in-module,missing-module-docstring
 from __future__ import annotations
 
 import time
@@ -79,6 +80,20 @@ class MotorMap(pg.GraphicsLayoutWidget):
         self.proxy_update_plot = pg.SignalProxy(
             self.update_signal, rateLimit=25, slot=self._update_plots
         )
+
+        # Config related variables
+        self.plot_data = None
+        self.plot_settings = None
+        self.max_points = None
+        self.num_dim_points = None
+        self.scatter_size = None
+        self.precision = None
+        self.background_value = None
+        self.database = {}
+        self.device_mapping = {}
+        self.plots = {}
+        self.grid_coordinates = []
+        self.curves_data = {}
 
         # Init UI with config
         if self.config is None:
@@ -190,7 +205,7 @@ class MotorMap(pg.GraphicsLayoutWidget):
                     motor_limits = self._get_motor_limit(motor_name)
                     signal["limits"] = motor_limits
 
-    def _get_motor_limit(self, motor: str) -> Union[Any | None]:
+    def _get_motor_limit(self, motor: str) -> Union[list | None]:
         """
         Get the motor limit from the config.
         Args:
@@ -203,11 +218,11 @@ class MotorMap(pg.GraphicsLayoutWidget):
             limits = self.dev[motor].limits
             if limits == [0, 0]:
                 return None
-            else:
-                return limits
+            return limits
         except AttributeError:  # TODO maybe not needed, if no limits it returns [0,0]
             # If the motor doesn't have a 'limits' attribute, return a default value or raise a custom exception
             print(f"The device '{motor}' does not have defined limits.")
+            return None
 
     def _init_database(self):
         """Initiate the database according the config."""
