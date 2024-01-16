@@ -78,29 +78,40 @@ def test_disconnect_one_slot_one_topic(bec_dispatcher, consumer):
     slot1, slot2 = Mock(), Mock()
     bec_dispatcher.connect_slot(slot=slot1, topics="topic0")
 
-    # disconnect using a different slot
+    # disconnect using a different topic
     bec_dispatcher.disconnect_slot(slot=slot1, topics="topic1")
     consumer.call_args.kwargs["cb"](msg)
     assert slot1.call_count == 1
 
-    # disconnect using a different topics
+    # disconnect using a different slot
     bec_dispatcher.disconnect_slot(slot=slot2, topics="topic0")
     consumer.call_args.kwargs["cb"](msg)
     assert slot1.call_count == 2
 
     # disconnect using the right slot and topics
     bec_dispatcher.disconnect_slot(slot=slot1, topics="topic0")
-    with pytest.raises(KeyError):
-        consumer.call_args.kwargs["cb"](msg)
+    # reset count to 0 for slot
+    slot1.reset_mock()
+    consumer.call_args.kwargs["cb"](msg)
+    assert slot1.call_count == 0
 
 
 def test_disconnect_identical(bec_dispatcher, consumer):
     slot1 = Mock()
+    # Try to connect slot twice
     bec_dispatcher.connect_slot(slot=slot1, topics="topic0")
     bec_dispatcher.connect_slot(slot=slot1, topics="topic0")
+
+    # Test to call the slot once (slot should be not connected twice)
+    consumer.call_args.kwargs["cb"](msg)
+    assert slot1.call_count == 1
+
+    # Disconnect the slot
     bec_dispatcher.disconnect_slot(slot=slot1, topics="topic0")
-    with pytest.raises(KeyError):
-        consumer.call_args.kwargs["cb"](msg)
+
+    # Test to call the slot once (slot should be not connected anymore), count remains 1
+    consumer.call_args.kwargs["cb"](msg)
+    assert slot1.call_count == 1
 
 
 def test_disconnect_many_slots_one_topic(bec_dispatcher, consumer):
@@ -148,16 +159,17 @@ def test_disconnect_one_slot_many_topics(bec_dispatcher, consumer):
 
     # disconnect using the right slot and topics
     bec_dispatcher.disconnect_slot(slot=slot1, topics="topic0")
-    with pytest.raises(KeyError):
-        consumer.call_args_list[0].kwargs["cb"](msg)
+    # Calling disconnected topic0 should not call slot1
+    consumer.call_args_list[0].kwargs["cb"](msg)
+    assert slot1.call_count == 4
+    # Calling topic1 should still call slot1
     consumer.call_args_list[1].kwargs["cb"](msg)
     assert slot1.call_count == 5
 
+    # disconnect remaining topic1 from slot1, calling any topic should not increase count
     bec_dispatcher.disconnect_slot(slot=slot1, topics="topic1")
-    with pytest.raises(KeyError):
-        consumer.call_args_list[0].kwargs["cb"](msg)
-    with pytest.raises(KeyError):
-        consumer.call_args_list[1].kwargs["cb"](msg)
+    consumer.call_args_list[0].kwargs["cb"](msg)
+    consumer.call_args_list[1].kwargs["cb"](msg)
     assert slot1.call_count == 5
 
 
@@ -174,12 +186,9 @@ def test_disconnect_all(bec_dispatcher, consumer):
     bec_dispatcher.disconnect_all()
 
     # Simulate messages and verify that none of the slots are called
-    with pytest.raises(KeyError):
-        consumer.call_args_list[0].kwargs["cb"](msg)
-    with pytest.raises(KeyError):
-        consumer.call_args_list[1].kwargs["cb"](msg)
-    with pytest.raises(KeyError):
-        consumer.call_args_list[2].kwargs["cb"](msg)
+    consumer.call_args_list[0].kwargs["cb"](msg)
+    consumer.call_args_list[1].kwargs["cb"](msg)
+    consumer.call_args_list[2].kwargs["cb"](msg)
 
     # Ensure that the slots have not been called
     assert slot1.call_count == 0
@@ -236,6 +245,5 @@ def test_disconnect_all_with_single_callback_for_multiple_topics(bec_dispatcher,
     assert slot1.call_count == 0  # Slot has not been called
 
     # Simulate messages and verify that the slot is not called
-    msg = MessageObject(topic="topic1", value=ScanMessage(point_id=0, scanID=0, data={}).dumps())
-    with pytest.raises(KeyError):
-        consumer.call_args.kwargs["cb"](msg)
+    consumer.call_args.kwargs["cb"](msg)
+    assert slot1.call_count == 0  # Slot has not been called
