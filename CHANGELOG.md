@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.36.2 (2024-01-17)
+
+### Fix
+
+* Bec_dispatcher.py can partially disconnect topics from slot ([`7607d7a`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/7607d7a3b64b3861f4833c9b8f5afc360f31b38d))
+* Bec_dispatcher.py can connect multiple topics to one callback slot ([`e51be04`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/e51be04b95f1a9549a4a3b00d76944aa58b0526a))
+
 ## v0.36.1 (2024-01-15)
 
 ### Fix
