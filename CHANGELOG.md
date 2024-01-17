@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.37.0 (2024-01-17)
+
+### Feature
+
+* Independent motor_map widget ([`1a429b3`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/1a429b3024e76446ed530bee71ed797c20843fba))
+
 ## v0.36.2 (2024-01-17)
 
 ### Fix
