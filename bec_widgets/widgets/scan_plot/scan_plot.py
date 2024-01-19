@@ -6,7 +6,7 @@ from bec_lib import MessageEndpoints
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import Property as pyqtProperty, Slot as pyqtSlot
 
-from bec_widgets.utils.bec_dispatcher import bec_dispatcher
+from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 logger = bec_logger.logger
 
@@ -18,7 +18,7 @@ COLORS = ["#fd7f6f", "#7eb0d5", "#b2e061", "#bd7ebe", "#ffb55a"]
 class BECScanPlot(pg.GraphicsView):
     def __init__(self, parent=None, background="default"):
         super().__init__(parent, background)
-        bec_dispatcher.connect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
+        BECDispatcher().connect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
 
         self.view = pg.PlotItem()
         self.setCentralItem(self.view)
@@ -94,6 +94,7 @@ class BECScanPlot(pg.GraphicsView):
 
     @y_channel_list.setter
     def y_channel_list(self, new_list):
+        bec_dispatcher = BECDispatcher()
         # TODO: do we want to care about dap/not dap here?
         chan_removed = [chan for chan in self._y_channel_list if chan not in new_list]
         if chan_removed and chan_removed[0].startswith("dap."):

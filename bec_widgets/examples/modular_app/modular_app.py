@@ -3,6 +3,7 @@ import os
 from qtpy import uic
 from qtpy.QtWidgets import QMainWindow, QApplication
 
+from bec_widgets.utils.bec_dispatcher import BECDispatcher
 from bec_widgets.widgets import BECMonitor
 
 # some default configs for demonstration purposes
@@ -166,7 +167,7 @@ class ModularApp(QMainWindow):
         super(ModularApp, self).__init__(parent)
 
         # Client and device manager from BEC
-        self.client = bec_dispatcher.client if client is None else client
+        self.client = BECDispatcher().client if client is None else client
 
         # Loading UI
         current_path = os.path.dirname(__file__)
@@ -187,10 +188,8 @@ class ModularApp(QMainWindow):
 
 
 if __name__ == "__main__":
-    from bec_widgets.utils.bec_dispatcher import bec_dispatcher
-
     # BECclient global variables
-    client = bec_dispatcher.client
+    client = BECDispatcher().client
     client.start()
 
     app = QApplication([])

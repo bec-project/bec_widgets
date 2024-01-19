@@ -6,7 +6,7 @@ from bec_lib import MessageEndpoints
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import Property as pyqtProperty, Slot as pyqtSlot
 
-from bec_widgets.utils.bec_dispatcher import bec_dispatcher
+from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 logger = bec_logger.logger
 
@@ -17,7 +17,7 @@ pg.setConfigOptions(background="w", foreground="k", antialias=True)
 class BECScanPlot2D(pg.GraphicsView):
     def __init__(self, parent=None, background="default"):
         super().__init__(parent, background)
-        bec_dispatcher.connect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
+        BECDispatcher().connect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
 
         self._scanID = None
         self._scanID_lock = RLock()

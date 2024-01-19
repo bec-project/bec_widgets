@@ -23,6 +23,7 @@ from pyqtgraph.Qt import QtWidgets
 
 from bec_lib import MessageEndpoints
 from bec_widgets.utils import Crosshair, Colors
+from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 
 # TODO implement:
@@ -92,7 +93,7 @@ class PlotApp(QWidget):
         self.error_handler = ErrorHandler(parent=self)
 
         # Client and device manager from BEC
-        self.client = bec_dispatcher.client if client is None else client
+        self.client = BECDispatcher().client if client is None else client
         self.dev = self.client.device_manager.devices
 
         # Loading UI
@@ -692,8 +693,6 @@ if __name__ == "__main__":
     import argparse
 
     # from bec_widgets import ctrl_c
-    from bec_widgets.utils.bec_dispatcher import bec_dispatcher
-
     parser = argparse.ArgumentParser(description="Plotting App")
     parser.add_argument(
         "--config",
@@ -715,6 +714,7 @@ if __name__ == "__main__":
         exit(1)
 
     # BECclient global variables
+    bec_dispatcher = BECDispatcher()
     client = bec_dispatcher.client
     client.start()
 

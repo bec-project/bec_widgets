@@ -12,7 +12,7 @@ from qtpy.QtWidgets import QApplication, QMessageBox
 
 from bec_widgets.utils import Colors, Crosshair, yaml_dialog
 from bec_widgets.validation import MonitorConfigValidator
-from bec_widgets.utils.bec_dispatcher import bec_dispatcher
+from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 # just for demonstration purposes if script run directly
 CONFIG_SCAN_MODE = {
@@ -282,6 +282,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
 
         # Client and device manager from BEC
         self.plot_data = None
+        bec_dispatcher = BECDispatcher()
         self.client = bec_dispatcher.client if client is None else client
         self.dev = self.client.device_manager.devices
         self.queue = self.client.queue
@@ -824,7 +825,7 @@ if __name__ == "__main__":  # pragma: no cover
     else:
         config = CONFIG_SIMPLE
 
-    client = bec_dispatcher.client
+    client = BECDispatcher().client
     client.start()
     app = QApplication(sys.argv)
     monitor = BECMonitor(

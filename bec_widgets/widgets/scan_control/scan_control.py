@@ -22,6 +22,7 @@ from qtpy.QtWidgets import (
 
 from bec_lib import MessageEndpoints
 from bec_widgets.utils.widget_io import WidgetIO
+from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 
 class ScanArgType:
@@ -45,7 +46,7 @@ class ScanControl(QWidget):
         super().__init__(parent)
 
         # Client from BEC + shortcuts to device manager and scans
-        self.client = bec_dispatcher.client if client is None else client
+        self.client = BECDispatcher().client if client is None else client
         self.dev = self.client.device_manager.devices
         self.scans = self.client.scans
 
@@ -425,10 +426,8 @@ class ScanControl(QWidget):
 
 # Application example
 if __name__ == "__main__":  # pragma: no cover
-    from bec_widgets.utils.bec_dispatcher import bec_dispatcher
-
     # BECclient global variables
-    client = bec_dispatcher.client
+    client = BECDispatcher().client
     client.start()
 
     app = QApplication([])

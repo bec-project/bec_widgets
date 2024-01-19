@@ -10,6 +10,7 @@ from pyqtgraph import mkBrush, mkColor, mkPen
 from pyqtgraph.Qt import QtCore, uic
 
 from bec_widgets.utils import Crosshair, ctrl_c
+from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 
 # TODO implement:
@@ -239,8 +240,6 @@ class PlotApp(QWidget):
 if __name__ == "__main__":
     import yaml
 
-    from bec_widgets.utils.bec_dispatcher import bec_dispatcher
-
     with open("config_noworker.yaml", "r") as file:
         config = yaml.safe_load(file)
 
@@ -251,6 +250,7 @@ if __name__ == "__main__":
     dap_worker = None if dap_worker == "None" else dap_worker
 
     # BECclient global variables
+    bec_dispatcher = BECDispatcher()
     client = bec_dispatcher.client
     client.start()
 

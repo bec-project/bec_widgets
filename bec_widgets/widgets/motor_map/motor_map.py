@@ -14,7 +14,7 @@ from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QApplication
 
 from bec_widgets.utils.yaml_dialog import load_yaml
-from bec_widgets.utils.bec_dispatcher import bec_dispatcher
+from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 CONFIG_DEFAULT = {
     "plot_settings": {
@@ -63,6 +63,7 @@ class MotorMap(pg.GraphicsLayoutWidget):
         super().__init__(parent=parent)
 
         # Import BEC related stuff
+        bec_dispatcher = BECDispatcher()
         self.client = bec_dispatcher.client if client is None else client
         self.dev = self.client.device_manager.devices
 
@@ -172,6 +173,7 @@ class MotorMap(pg.GraphicsLayoutWidget):
         """Connect motors to slots."""
 
         # Disconnect all slots before connecting a new ones
+        bec_dispatcher = BECDispatcher()
         bec_dispatcher.disconnect_all()
 
         # Get list of all unique motors
@@ -541,7 +543,7 @@ if __name__ == "__main__":  # pragma: no cover
     else:
         config = CONFIG_DEFAULT
 
-    client = bec_dispatcher.client
+    client = BECDispatcher().client
     client.start()
     app = QApplication(sys.argv)
     motor_map = MotorMap(

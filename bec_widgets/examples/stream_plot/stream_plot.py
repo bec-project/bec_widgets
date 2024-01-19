@@ -13,9 +13,7 @@ from pyqtgraph import mkBrush, mkPen
 from pyqtgraph.Qt import QtCore, QtWidgets, uic
 from pyqtgraph.Qt.QtCore import pyqtSignal
 from bec_widgets.utils import Crosshair, Colors
-from bec_widgets.utils.bec_dispatcher import bec_dispatcher
-
-# client = bec_dispatcher.client
+from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 
 class StreamPlot(QtWidgets.QWidget):
@@ -32,7 +30,7 @@ class StreamPlot(QtWidgets.QWidget):
         """
 
         # Client and device manager from BEC
-        self.client = bec_dispatcher.client if client is None else client
+        self.client = BECDispatcher().client if client is None else client
 
         super(StreamPlot, self).__init__()
         # Set style for pyqtgraph plots
@@ -314,6 +312,7 @@ if __name__ == "__main__":
     print(f"Plotting signals for: {', '.join(value.signals)}")
 
     # Client from dispatcher
+    bec_dispatcher = BECDispatcher()
     client = bec_dispatcher.client
 
     app = QtWidgets.QApplication([])

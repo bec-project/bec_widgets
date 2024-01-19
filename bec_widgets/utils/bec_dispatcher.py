@@ -90,6 +90,16 @@ class _BECDispatcher(QObject):
         consumer.start()
         return _Connection(consumer)
 
+    def _do_disconnect_slot(self, topic, slot):
+        connection = self._connections[topic]
+        connection.signal.disconnect(slot)
+        connection.slots.remove(slot)
+        if not connection.slots:
+            print(f"{connection.consumer} is shutting down")
+            connection.consumer.shutdown()
+            connection.consumer.join()
+            del self._connections[topic]
+
     def _disconnect_slot_from_topic(self, slot: Callable, topic: str) -> None:
         """A helper method to disconnect a slot from a specific topic.
 
@@ -100,11 +110,7 @@ class _BECDispatcher(QObject):
         """
         connection = self._connections.get(topic)
         if connection and slot in connection.slots:
-            connection.signal.disconnect(slot)
-            connection.slots.remove(slot)
-            if not connection.slots:
-                connection.consumer.shutdown()
-                del self._connections[topic]
+            self._do_disconnect_slot(topic, slot)
 
     def disconnect_slot(self, slot: Callable, topics: Union[str, list]) -> None:
         """Disconnect widget's pyqt slot from pub/sub updates on a topic.
@@ -123,12 +129,7 @@ class _BECDispatcher(QObject):
                 if common_topics:
                     remaining_topics = set(key) - set(topics)
                     # Disconnect slot from common topics
-                    connection.signal.disconnect(slot)
-                    connection.slots.remove(slot)
-                    if not connection.slots:
-                        print(f"{connection.consumer} is shutting down")
-                        connection.consumer.shutdown()
-                        del self._connections[key]
+                    self._do_disconnect_slot(key, slot)
                     # Reconnect slot to remaining topics if any
                     if remaining_topics:
                         self.connect_slot(slot, list(remaining_topics), True)
@@ -139,13 +140,17 @@ class _BECDispatcher(QObject):
             for slot in list(connection.slots):
                 self._disconnect_slot_from_topic(slot, key)
 
-            if key in self._connections and not connection.slots:
-                connection.consumer.shutdown()
-                del self._connections[key]
+
+# variable holding the Singleton instance of BECDispatcher
+_bec_dispatcher = None
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--bec-config", default=None)
-args, _ = parser.parse_known_args()
+def BECDispatcher():
+    global _bec_dispatcher
+    if _bec_dispatcher is None:
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--bec-config", default=None)
+        args, _ = parser.parse_known_args()
 
-bec_dispatcher = _BECDispatcher(args.bec_config)
+        _bec_dispatcher = _BECDispatcher(args.bec_config)
+    return _bec_dispatcher
