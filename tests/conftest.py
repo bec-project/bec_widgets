@@ -1,6 +1,7 @@
 import pytest
 import threading
 
+from bec_lib.bec_service import BECService
 from bec_widgets.utils import bec_dispatcher as bec_dispatcher_module
 
 
@@ -28,5 +29,7 @@ def bec_dispatcher(threads_check):
     bec_dispatcher = bec_dispatcher_module.BECDispatcher()
     yield bec_dispatcher
     bec_dispatcher.disconnect_all()
+    # clean BEC client
+    BECService.shutdown(bec_dispatcher.client)
     # reinitialize singleton for next test
     bec_dispatcher_module._bec_dispatcher = None
