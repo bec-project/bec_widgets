@@ -14,6 +14,7 @@ def eiger_plot_instance(qtbot):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
+    widget.close()
 
 
 @pytest.mark.parametrize(
@@ -80,27 +81,24 @@ def test_zmq_consumer(eiger_plot_instance, qtbot):
     fake_meta = json.dumps({"type": "int32", "shape": (2, 2)}).encode("utf-8")
     fake_data = np.array([[1, 2], [3, 4]], dtype="int32").tobytes()
 
-    with patch("zmq.Context") as MockContext:
-        MockContext.reset_mock()  # Reset the mock here
-
-        # Mocking zmq socket and its methods
+    with patch("zmq.Context", autospec=True) as MockContext:
         mock_socket = MagicMock()
-        MockContext().socket.return_value = mock_socket
-        mock_socket.recv_multipart.side_effect = [[fake_meta, fake_data], Exception("Break loop")]
+        mock_socket.recv_multipart.side_effect = ((fake_meta, fake_data),)
+        MockContext.return_value.socket.return_value = mock_socket
 
         # Mocking the update_signal to check if it gets emitted
         eiger_plot_instance.update_signal = MagicMock()
 
-        try:
+        with patch("zmq.Poller"):
+            # will do only 1 iteration of the loop in the thread
+            eiger_plot_instance._zmq_consumer_exit_event.set()
             # Run the method under test
-            eiger_plot_instance.zmq_consumer()
-        except Exception as e:
-            # Ensure the loop was broken by our mocked exception
-            assert str(e) == "Break loop"
+            consumer_thread = eiger_plot_instance.start_zmq_consumer()
+            consumer_thread.join()
 
         # Check if zmq methods are called
         # MockContext.assert_called_once()
-        assert MockContext.call_count == 2  # TODO why 2?
+        assert MockContext.call_count == 1
         mock_socket.connect.assert_called_with("tcp://129.129.95.38:20000")
         mock_socket.setsockopt_string.assert_called_with(zmq.SUBSCRIBE, "")
         mock_socket.recv_multipart.assert_called()

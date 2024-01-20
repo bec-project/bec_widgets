@@ -47,7 +47,13 @@ class EigerPlot(QWidget):
         self.key_bindings()
 
         # ZMQ Consumer
-        self.start_zmq_consumer()
+        self._zmq_consumer_exit_event = threading.Event()
+        self._zmq_consumer_thread = self.start_zmq_consumer()
+
+    def close(self):
+        super().close()
+        self._zmq_consumer_exit_event.set()
+        self._zmq_consumer_thread.join()
 
     def init_ui(self):
         # Create Plot and add ImageItem
@@ -182,25 +188,36 @@ class EigerPlot(QWidget):
     ###############################
 
     def start_zmq_consumer(self):
-        consumer_thread = threading.Thread(target=self.zmq_consumer, daemon=True).start()
+        consumer_thread = threading.Thread(
+            target=self.zmq_consumer, args=(self._zmq_consumer_exit_event,), daemon=True
+        )
+        consumer_thread.start()
+        return consumer_thread
 
-    def zmq_consumer(self):
-        try:
-            print("starting consumer")
-            live_stream_url = "tcp://129.129.95.38:20000"
-            receiver = zmq.Context().socket(zmq.SUB)
-            receiver.connect(live_stream_url)
-            receiver.setsockopt_string(zmq.SUBSCRIBE, "")
+    def zmq_consumer(self, exit_event):
+        print("starting consumer")
+        live_stream_url = "tcp://129.129.95.38:20000"
+        receiver = zmq.Context().socket(zmq.SUB)
+        receiver.connect(live_stream_url)
+        receiver.setsockopt_string(zmq.SUBSCRIBE, "")
 
-            while True:
-                raw_meta, raw_data = receiver.recv_multipart()
+        poller = zmq.Poller()
+        poller.register(receiver, zmq.POLLIN)
+
+        # code could be a bit simpler here, testing exit_event in
+        # 'while' condition, but like this it is easier for the
+        # 'test_zmq_consumer' test
+        while True:
+            if poller.poll(1000):  # 1s timeout
+                raw_meta, raw_data = receiver.recv_multipart(zmq.NOBLOCK)
+
                 meta = json.loads(raw_meta.decode("utf-8"))
                 self.image = np.frombuffer(raw_data, dtype=meta["type"]).reshape(meta["shape"])
                 self.update_signal.emit()
+            if exit_event.is_set():
+                break
 
-        finally:
-            receiver.disconnect(live_stream_url)
-            receiver.context.term()
+        receiver.disconnect(live_stream_url)
 
     ###############################
     # just simulations from here

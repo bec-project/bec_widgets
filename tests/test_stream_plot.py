@@ -17,6 +17,7 @@ def stream_app(qtbot):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
+    widget.close()
 
 
 def test_roi_signals_emitted(qtbot, stream_app):

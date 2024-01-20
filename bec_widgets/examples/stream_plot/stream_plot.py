@@ -54,7 +54,10 @@ class StreamPlot(QtWidgets.QWidget):
 
         self.proxy_update = pg.SignalProxy(self.update_signal, rateLimit=25, slot=self.update)
 
-        self.data_retriever = threading.Thread(target=self.on_projection, daemon=True)
+        self._data_retriever_thread_exit_event = threading.Event()
+        self.data_retriever = threading.Thread(
+            target=self.on_projection, args=(self._data_retriever_thread_exit_event,), daemon=True
+        )
         self.data_retriever.start()
 
         ##########################
@@ -63,6 +66,11 @@ class StreamPlot(QtWidgets.QWidget):
         self.init_ui()
         self.init_curves()
         self.hook_crosshair()
+
+    def close(self):
+        super().close()
+        self._data_retriever_thread_exit_event.set()
+        self.data_retriever.join()
 
     def init_ui(self):
         """Setup all ui elements"""
@@ -257,8 +265,8 @@ class StreamPlot(QtWidgets.QWidget):
         # else:
         #     return
 
-    def on_projection(self):
-        while True:
+    def on_projection(self, exit_event):
+        while not exit_event.is_set():
             if self._current_proj is None:
                 time.sleep(0.1)
                 continue
