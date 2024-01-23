@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.38.0 (2024-01-23)
+
+### Feature
+
+* BECMonitor2DScatter for plotting x/y/z signal as a mesh of scatter plot ([`75090b8`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/75090b857526fa642218986806d0daeb1dec0914))
+
+### Fix
+
+* Monitor_scatter_2D.py changed to new BECDispatcher definition ([`747e97e`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/747e97e0c924cdedb85e9fe7d47512002b791b10))
+
 ## v0.37.1 (2024-01-23)
 
 ### Fix
