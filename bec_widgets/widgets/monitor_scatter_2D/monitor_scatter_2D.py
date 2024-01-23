@@ -1,5 +1,6 @@
 # pylint: disable = no-name-in-module,missing-module-docstring
 import time
+from collections import defaultdict
 
 import numpy as np
 import pyqtgraph as pg
@@ -157,15 +158,8 @@ class BECMonitor2DScatter(QWidget):
             dict: The database.
         """
 
-        database = {}
-        for plot in self.plot_data:
-            plot_name = plot.get("plot_name", "Plot")
-            database[plot_name] = {}
-            for axis in ["x", "y", "z"]:
-                database[plot_name][axis] = {}
-                for signal in plot["signals"][axis]:
-                    database[plot_name][axis][signal["name"]] = []
-        print(database)
+        database = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+
         return database
 
     def _init_ui(self, num_columns: int = 3) -> None:
