@@ -1,4 +1,5 @@
 # pylint: disable=missing-module-docstring, missing-function-docstring
+from collections import defaultdict
 
 import pytest
 from unittest.mock import MagicMock
@@ -89,10 +90,22 @@ def test_initialization(monitor_2Dscatter, config, number_of_plots):
 )
 def test_database_initialization(monitor_2Dscatter, config):
     monitor_2Dscatter.on_config_update(config)
+    # Check if the database is a defaultdict
+    assert isinstance(monitor_2Dscatter.database, defaultdict)
+    for axis_dict in monitor_2Dscatter.database.values():
+        assert isinstance(axis_dict, defaultdict)
+        for signal_list in axis_dict.values():
+            assert isinstance(signal_list, defaultdict)
+
+    # Access the elements
     for plot_config in config["waveform2D"]:
         plot_name = plot_config["plot_name"]
-        assert plot_name in monitor_2Dscatter.database
-        assert all(axis in monitor_2Dscatter.database[plot_name] for axis in ["x", "y", "z"])
+
+        for axis in ["x", "y", "z"]:
+            for signal in plot_config["signals"][axis]:
+                signal_name = signal["name"]
+                assert not monitor_2Dscatter.database[plot_name][axis][signal_name]
+                assert isinstance(monitor_2Dscatter.database[plot_name][axis][signal_name], list)
 
 
 @pytest.mark.parametrize(
