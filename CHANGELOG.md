@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.37.1 (2024-01-23)
+
+### Fix
+
+* **tests:** Ensure BEC service is shutdown after bec dispatcher test ([`4664568`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/46645686725a2acb7196dbd1a504c98dbf2e4b5d))
+* **tests:** Ensure threads started during plot tests are properly stopped ([`3fb6644`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/3fb6644543b4065236216b70a583641956a09a60))
+
 ## v0.37.0 (2024-01-17)
 
 ### Feature
