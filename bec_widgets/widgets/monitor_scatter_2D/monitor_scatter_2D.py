@@ -10,7 +10,7 @@ from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_lib import MessageEndpoints
 from bec_widgets.utils import yaml_dialog
-from bec_widgets.utils.bec_dispatcher import bec_dispatcher
+from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 CONFIG_DEFAULT = {
     "plot_settings": {
@@ -59,6 +59,7 @@ class BECMonitor2DScatter(QWidget):
 
         # Client and device manager from BEC
         self.plot_data = None
+        bec_dispatcher = BECDispatcher()
         self.client = bec_dispatcher.client if client is None else client
         self.dev = self.client.device_manager.devices
         self.queue = self.client.queue
@@ -375,7 +376,7 @@ if __name__ == "__main__":  # pragma: no cover
     else:
         config = CONFIG_DEFAULT
 
-    client = bec_dispatcher.client
+    client = BECDispatcher().client
     client.start()
     app = QApplication(sys.argv)
     monitor = BECMonitor2DScatter(
