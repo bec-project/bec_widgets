@@ -13,6 +13,11 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils.yaml_dialog import load_yaml, save_yaml
+from bec_widgets.validation import MonitorConfigValidator
+from pydantic import ValidationError
+from qtpy.QtWidgets import QApplication, QMessageBox
+from bec_widgets.utils.bec_dispatcher import BECDispatcher
+
 
 current_path = os.path.dirname(__file__)
 Ui_Form, BaseClass = uic.loadUiType(os.path.join(current_path, "config_dialog.ui"))
@@ -168,9 +173,24 @@ CONFIG_SCAN_MODE = {
 class ConfigDialog(QWidget, Ui_Form):
     config_updated = pyqtSignal(dict)
 
-    def __init__(self, default_config=None):
+    def __init__(
+        self,
+        client=None,
+        default_config=None,
+        skip_validation: bool = False,
+    ):
         super(ConfigDialog, self).__init__()
         self.setupUi(self)
+
+        # Client
+        bec_dispatcher = BECDispatcher()
+        self.client = bec_dispatcher.client if client is None else client
+        self.dev = self.client.device_manager.devices
+
+        # Init validator
+        self.skip_validation = skip_validation
+        if self.skip_validation is False:
+            self.validator = MonitorConfigValidator(self.dev)
 
         # Connect the Ok/Apply/Cancel buttons
         self.pushButton_ok.clicked.connect(self.apply_and_close)
@@ -522,8 +542,45 @@ class ConfigDialog(QWidget, Ui_Form):
 
     def apply_and_close(self):
         new_config = self.apply_config()
-        self.config_updated.emit(new_config)
-        self.close()
+        if self.skip_validation is True:
+            self.config_updated.emit(new_config)
+            self.close()
+        else:
+            try:
+                validated_config = self.validator.validate_monitor_config(new_config)
+                approved_config = validated_config.model_dump()
+                self.config_updated.emit(approved_config)
+                self.close()
+            except ValidationError as e:
+                error_str = str(e)
+                formatted_error_message = ConfigDialog.format_validation_error(error_str)
+
+                # Display the formatted error message in a popup
+                QMessageBox.critical(self, "Configuration Error", formatted_error_message)
+
+    @staticmethod
+    def format_validation_error(error_str: str) -> str:
+        """
+        Format the validation error string to be displayed in a popup.
+        Args:
+            error_str(str): Error string from the validation error.
+        """
+        error_lines = error_str.split("\n")
+        # The first line contains the number of errors.
+        error_header = f"<p><b>{error_lines[0]}</b></p><hr>"
+
+        formatted_error_message = error_header
+        # Skip the first line as it's the header.
+        error_details = error_lines[1:]
+
+        # Iterate through pairs of lines (each error's two lines).
+        for i in range(0, len(error_details), 2):
+            location = error_details[i]
+            message = error_details[i + 1] if i + 1 < len(error_details) else ""
+
+            formatted_error_message += f"<p><b>{location}</b><br>{message}</p><hr>"
+
+        return formatted_error_message
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -309,7 +309,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         self.enable_crosshair = enable_crosshair
 
         # Displayed Data
-        self.database = {}
+        self.database = None
 
         self.crosshairs = None
         self.plots = None
@@ -351,6 +351,9 @@ class BECMonitor(pg.GraphicsLayoutWidget):
 
         # Initialize the UI
         self._init_ui(self.plot_settings["num_columns"])
+
+        if self.scanID is not None:
+            self.replot_last_scan()
 
     def _init_database(self, plot_data_config: dict, source_type_to_init=None) -> dict:
         """
@@ -601,7 +604,9 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         """Show the configuration dialog."""
         from bec_widgets.widgets import ConfigDialog
 
-        dialog = ConfigDialog(default_config=self.config)
+        dialog = ConfigDialog(
+            client=self.client, default_config=self.config, skip_validation=self.skip_validation
+        )
         dialog.config_updated.connect(self.on_config_update)
         dialog.show()
 
@@ -771,6 +776,13 @@ class BECMonitor(pg.GraphicsLayoutWidget):
                     self.database["scan_segment"][device_name][entry] = dataset
                 else:
                     print(f"No data found for {device_name} {entry}")
+
+    def replot_last_scan(self):
+        """
+        Replot the last scan.
+        """
+        self.scan_segment_update()
+        self.update_plot(source_type="scan_segment")
 
     @pyqtSlot(dict)
     def on_data_from_redis(self, msg) -> None:
