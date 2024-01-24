@@ -16,9 +16,9 @@ BEC Widgets includes a variety of visualization widgets designed to cater to div
 
 **Example of Use:**
 ![Waveform 1D](./widgets/w1D.gif)
-### 2D Waveform Scatter Plot
+### 2D Scatter Plot
 
-**Purpose:** The 2D waveform scatter plot widget is designed for more complex data visualization. It employs a false color map to represent a third dimension (z-axis), making it an ideal tool for visualizing multidimensional data sets.
+**Purpose:** The 2D scatter plot widget is designed for more complex data visualization. It employs a false color map to represent a third dimension (z-axis), making it an ideal tool for visualizing multidimensional data sets.
 
 **Key Features:**
 
