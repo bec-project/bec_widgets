@@ -1,7 +1,3 @@
-# TODO last backup
-
-# todo super last refactor
-
 from __future__ import annotations
 
 import argparse
