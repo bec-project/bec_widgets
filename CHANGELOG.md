@@ -2,6 +2,17 @@
 
 <!--next-version-placeholder-->
 
+## v0.38.1 (2024-01-26)
+
+### Fix
+
+* Monitor.py replots last scan after changing config with new signals; config_dialog.py checks if the new config is valid with BEC ([`ab275b8`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ab275b8e5f226d6c5d22a844c4c0fae0fdc66108))
+
+### Documentation
+
+* 2D waveform scatter plot changed to 2D scatter plot ([`812ffaf`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/812ffaf8eafc3f8c3a6973717149e4befba2c395))
+* Documentation for example apps and widgets updated ([`f7a4967`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/f7a496723c3fd113867a712928e06636e3212e1a))
+
 ## v0.38.0 (2024-01-23)
 
 ### Feature
