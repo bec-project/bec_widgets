@@ -175,8 +175,7 @@ class StreamPlot(QtWidgets.QWidget):
         self.hook_crosshair()
         self.init_table()
 
-    def splitter_sizes(self):
-        ...
+    def splitter_sizes(self): ...
 
     def hook_crosshair(self):
         self.crosshair_1d = Crosshair(self.plot, precision=4)
