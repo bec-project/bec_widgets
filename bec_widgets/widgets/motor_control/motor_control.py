@@ -94,10 +94,17 @@ class MotorControlSelection(MotorControlWidget):
         """Initialize the UI."""
         # Lock GUI while motors are moving
         self.motor_thread.lock_gui.connect(self.enable_motor_controls)
-        # self.motor_thread.move_finished.connect(self.motorSelection.setEnabled(True))
 
         self.pushButton_connecMotors.clicked.connect(self.select_motor)
         self.get_available_motors()
+
+        # Connect change signals to change color
+        self.comboBox_motor_x.currentIndexChanged.connect(
+            lambda: self.set_combobox_style(self.comboBox_motor_x, "#ffa700")
+        )
+        self.comboBox_motor_y.currentIndexChanged.connect(
+            lambda: self.set_combobox_style(self.comboBox_motor_y, "#ffa700")
+        )
 
     @pyqtSlot(dict)
     def on_config_update(self, config: dict) -> None:
@@ -143,10 +150,18 @@ class MotorControlSelection(MotorControlWidget):
             self.comboBox_motor_x.setCurrentIndex(index_x if index_x != -1 else 0)
             self.comboBox_motor_y.setCurrentIndex(index_y if index_y != -1 else 0)
 
+    def set_combobox_style(self, combobox, color):
+        """Set the background color of the combobox."""
+        combobox.setStyleSheet(f"QComboBox {{ background-color: {color}; }}")
+
     def select_motor(self):
         """Emit the selected motors"""
         motor_x = self.comboBox_motor_x.currentText()
         motor_y = self.comboBox_motor_y.currentText()
+
+        # Reset the combobox color to normal after selection
+        self.set_combobox_style(self.comboBox_motor_x, "")
+        self.set_combobox_style(self.comboBox_motor_y, "")
 
         self.selected_motors_signal.emit(motor_x, motor_y)
 
@@ -380,6 +395,7 @@ class MotorControlRelative(MotorControlWidget):
         decrease_x_shortcut.activated.connect(
             lambda: self._change_step_size(self.spinBox_step_x, 0.5)
         )
+        self.spinBox_step_x.setToolTip("Increase step size: Ctrl+A\nDecrease step size: Ctrl+Z")
 
         # Increase/decrease step size for Y motor
         increase_y_shortcut = QShortcut(QKeySequence("Alt+A"), self)
@@ -390,6 +406,7 @@ class MotorControlRelative(MotorControlWidget):
         decrease_y_shortcut.activated.connect(
             lambda: self._change_step_size(self.spinBox_step_y, 0.5)
         )
+        self.spinBox_step_y.setToolTip("Increase step size: Alt+A\nDecrease step size: Alt+Z")
 
         # Stop Button
         self.pushButton_stop.setShortcut("Ctrl+X")
