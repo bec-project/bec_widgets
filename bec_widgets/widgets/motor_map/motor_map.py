@@ -122,6 +122,28 @@ class MotorMap(pg.GraphicsLayoutWidget):
         else:  # TODO implement validator
             print("Do validation")
 
+    @pyqtSlot(str, str, int)
+    def change_motors(self, motor_x: str, motor_y: str, subplot: int = 0) -> None:
+        """
+        Change the active motors for the plot.
+        Args:
+            motor_x(str): Motor name for the X axis.
+            motor_y(str): Motor name for the Y axis.
+            subplot(int): Subplot number.
+        """
+        if subplot >= len(self.plot_data):
+            print(f"Invalid subplot index: {subplot}. Available subplots: {len(self.plot_data)}")
+            return
+
+        # Update the motor names in the plot configuration
+        self.config["motors"][subplot]["signals"]["x"][0]["name"] = motor_x
+        self.config["motors"][subplot]["signals"]["x"][0]["entry"] = motor_x
+        self.config["motors"][subplot]["signals"]["y"][0]["name"] = motor_y
+        self.config["motors"][subplot]["signals"]["y"][0]["entry"] = motor_y
+
+        # reinitialise the config and UI
+        self._init_config()
+
     def _init_config(self):
         """Initiate the configuration."""
 
@@ -145,6 +167,9 @@ class MotorMap(pg.GraphicsLayoutWidget):
 
         # Connect motors to slots
         self._connect_motors_to_slots()
+
+        # Render init position of selected motors
+        self._update_plots()
 
     def _get_global_settings(self):
         """Get global settings from the config."""

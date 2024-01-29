@@ -383,6 +383,9 @@ class MotorControlRelative(MotorControlWidget):
             lambda error: MotorControlErrors.display_error_message(error)
         )
 
+        # Stop Button
+        self.pushButton_stop.clicked.connect(self.motor_thread.stop_movement)
+
     def _init_keyboard_shortcuts(self) -> None:
         """Initialize the keyboard shortcuts"""
 

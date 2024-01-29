@@ -74,6 +74,11 @@ class MotorControlMap(QWidget):
         layout.addWidget(splitter)
         self.setLayout(layout)
 
+        # Connecting signals and slots
+        self.motor_control_panel.selection_widget.selected_motors_signal.connect(
+            lambda x, y: self.motion_map.change_motors(x, y, 0)
+        )
+
 
 class MotorControlPanel(QWidget):
     def __init__(self, parent=None, client=None, config=None):
