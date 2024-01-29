@@ -4,7 +4,6 @@ from enum import Enum
 
 import qdarktheme
 
-from pyqtgraph.Qt import uic
 from qtpy import uic
 from qtpy.QtCore import QThread, Slot as pyqtSlot
 from qtpy.QtCore import Signal as pyqtSignal, Qt
@@ -34,41 +33,24 @@ CONFIG_DEFAULT = {
     }
 }
 
-# class MotorControlConnectAbsoltue(QWidget):
 
+class MotorControlWidget(QWidget):
+    """Base class for motor control widgets."""
 
-# class MotorControlPanel(QWidget):
-#     def __init__(self,parent=None):
-#         super().__init__()
-#         self.init_ui()
-#     def init_ui(self):
-#         """Initialize the UI."""
-class MotorControlSelection(QWidget):
-    update_signal = pyqtSignal()
-    selected_motors_signal = pyqtSignal(str, str)
-
-    def __init__(
-        self,
-        parent=None,
-        client=None,
-        motor_thread=None,
-        config: dict = None,
-    ):
-        super().__init__(parent=parent)
-
-        bec_dispatcher = BECDispatcher()
-        self.client = bec_dispatcher.client if client is None else client
-        self.dev = self.client.device_manager.devices
+    def __init__(self, parent=None, client=None, motor_thread=None, config=None):
+        super().__init__(parent)
+        self.client = client
+        self.motor_thread = motor_thread
         self.config = config
 
-        # Loading UI
-        current_path = os.path.dirname(__file__)
-        uic.loadUi(os.path.join(current_path, "motor_control_selection.ui"), self)
+        if not self.client:
+            bec_dispatcher = BECDispatcher()
+            self.client = bec_dispatcher.client
 
-        # Motor Control Thread
-        self.motor_thread = (
-            MotorThread(client=self.client) if motor_thread is None else motor_thread
-        )
+        if not self.motor_thread:
+            self.motor_thread = MotorThread(client=self.client)
+
+        self._load_ui()
 
         if self.config is None:
             print(f"No initial config found for {self.__class__.__name__}")
@@ -76,8 +58,44 @@ class MotorControlSelection(QWidget):
         else:
             self.on_config_update(self.config)
 
+    def _load_ui(self):
+        """Load the UI from the .ui file."""
+
+    def _init_ui(self):
+        """Initialize the UI components specific to the widget."""
+
+    @pyqtSlot(dict)
+    def on_config_update(self, config):
+        """Handle configuration updates."""
+        self.config = config
+        self._init_ui()
+
+
+class MotorControlSelection(MotorControlWidget):
+    """
+    Widget for selecting the motors to control.
+
+    Signals:
+        selected_motors_signal (pyqtSignal): Signal to emit the selected motors.
+    Slots:
+        get_available_motors (pyqtSlot): Slot to populate the available motors in the combo boxes and set the index based on the configuration.
+        select_motor (pyqtSlot): Slot to emit the selected motors.
+        enable_motor_controls (pyqtSlot): Slot to enable/disable the motor controls GUI.
+    """
+
+    selected_motors_signal = pyqtSignal(str, str)
+
+    def _load_ui(self):
+        """Load the UI from the .ui file."""
+        current_path = os.path.dirname(__file__)
+        uic.loadUi(os.path.join(current_path, "motor_control_selection.ui"), self)
+
     def _init_ui(self):
         """Initialize the UI."""
+        # Lock GUI while motors are moving
+        self.motor_thread.lock_gui.connect(self.enable_motor_controls)
+        # self.motor_thread.move_finished.connect(self.motorSelection.setEnabled(True))
+
         self.pushButton_connecMotors.clicked.connect(self.select_motor)
         self.get_available_motors()
 
@@ -98,6 +116,15 @@ class MotorControlSelection(QWidget):
 
         self._init_ui()
 
+    @pyqtSlot(bool)
+    def enable_motor_controls(self, enable: bool) -> None:
+        """
+        Enable or disable the motor controls.
+        Args:
+            enable(bool): True to enable, False to disable.
+        """
+        self.motorSelection.setEnabled(enable)
+
     def get_available_motors(self):
         """
         Slot to populate the available motors in the combo boxes and set the index based on the configuration.
@@ -110,31 +137,11 @@ class MotorControlSelection(QWidget):
         self.comboBox_motor_y.addItems(self.motor_list)
 
         # Set the index based on the config if provided
-        if self.config is not None:
+        if self.config:
             index_x = self.comboBox_motor_x.findText(self.motor_x)
             index_y = self.comboBox_motor_y.findText(self.motor_y)
-
-            if index_x != -1:
-                self.comboBox_motor_x.setCurrentIndex(index_x)
-            else:
-                print(
-                    f"Warning: Motor '{self.motor_x}' specified in the config file is not available."
-                )
-                self.comboBox_motor_x.setCurrentIndex(0)
-
-            if index_y != -1:
-                self.comboBox_motor_y.setCurrentIndex(index_y)
-            else:
-                print(
-                    f"Warning: Motor '{self.motor_y}' specified in the config file is not available."
-                )
-                self.comboBox_motor_y.setCurrentIndex(0)
-            if index_x != -1 and index_y != -1:
-                self.selected_motors_signal.emit(self.motor_x, self.motor_y)
-        # setup default index 0, if there is no config
-        else:
-            self.comboBox_motor_x.setCurrentIndex(0)
-            self.comboBox_motor_y.setCurrentIndex(0)
+            self.comboBox_motor_x.setCurrentIndex(index_x if index_x != -1 else 0)
+            self.comboBox_motor_y.setCurrentIndex(index_y if index_y != -1 else 0)
 
     def select_motor(self):
         """Emit the selected motors"""
@@ -142,41 +149,53 @@ class MotorControlSelection(QWidget):
         motor_y = self.comboBox_motor_y.currentText()
 
         self.selected_motors_signal.emit(motor_x, motor_y)
-        print(f"emitted motors {motor_x} and {motor_y}")
 
 
-class MotorControlAbsolute(QWidget):
-    update_signal = pyqtSignal()
+class MotorControlAbsolute(MotorControlWidget):
+    """
+    Widget for controlling the motors to absolute coordinates.
+
+    Signals:
+        coordinates_signal (pyqtSignal): Signal to emit the coordinates.
+    Slots:
+        change_motors (pyqtSlot): Slot to change the active motors.
+        enable_motor_controls (pyqtSlot): Slot to enable/disable the motor controls.
+    """
+
     coordinates_signal = pyqtSignal(tuple)
 
-    def __init__(
-        self,
-        parent=None,
-        client=None,
-        motor_thread=None,
-        config: dict = None,
-    ):
-        super().__init__(parent=parent)
-
-        bec_dispatcher = BECDispatcher()
-        self.client = bec_dispatcher.client if client is None else client
-        self.dev = self.client.device_manager.devices
-        self.config = config
-
-        # Loading UI
+    def _load_ui(self):
+        """Load the UI from the .ui file."""
         current_path = os.path.dirname(__file__)
         uic.loadUi(os.path.join(current_path, "motor_control_absolute.ui"), self)
 
-        # Motor Control Thread
-        self.motor_thread = (
-            MotorThread(client=self.client) if motor_thread is None else motor_thread
+    def _init_ui(self):
+        """Initialize the UI."""
+
+        # Check if there are any motors connected
+        if self.motor_x is None or self.motor_y is None:
+            self.motorControl_absolute.setEnabled(False)
+            return
+
+        # Move to absolute coordinates
+        self.pushButton_go_absolute.clicked.connect(
+            lambda: self.move_motor_absolute(
+                self.spinBox_absolute_x.value(), self.spinBox_absolute_y.value()
+            )
         )
 
-        if self.config is None:
-            print(f"No initial config found for {self.__class__.__name__}")
-            self._init_ui()
-        else:
-            self.on_config_update(self.config)
+        self.pushButton_set.clicked.connect(self.save_absolute_coordinates)
+        self.pushButton_save.clicked.connect(self.save_current_coordinates)
+        self.pushButton_stop.clicked.connect(self.motor_thread.stop_movement)
+
+        # Enable/Disable GUI
+        self.motor_thread.lock_gui.connect(self.enable_motor_controls)
+        # self.motor_thread.move_finished.connect(lambda: self._enable_motor_controls(True))
+
+        # Error messages
+        self.motor_thread.motor_error.connect(
+            lambda error: MotorControlErrors.display_error_message(error)
+        )
 
     @pyqtSlot(dict)
     def on_config_update(self, config: dict) -> None:
@@ -194,51 +213,50 @@ class MotorControlAbsolute(QWidget):
 
         self._init_ui()
 
-    def _init_ui(self):
-        """Initialize the UI."""
+    @pyqtSlot(bool)
+    def enable_motor_controls(self, enable: bool) -> None:
+        """
+        Enable or disable the motor controls.
+        Args:
+            enable(bool): True to enable, False to disable.
+        """
 
-        # Check if there are any motors connected
-        if (
-            self.motor_x is None or self.motor_y is None
-        ):  # TODO change logic of checking -> jsut check names
-            self.motorControl_absolute.setEnabled(False)
-            return
-
-        # Move to absolute coordinates
-        self.pushButton_go_absolute.clicked.connect(
-            lambda: self.move_motor_absolute(
-                self.spinBox_absolute_x.value(), self.spinBox_absolute_y.value()
-            )
-        )
-
-        self.pushButton_set.clicked.connect(self.save_absolute_coordinates)
-        self.pushButton_save.clicked.connect(self.save_current_coordinates)
-        self.pushButton_stop.clicked.connect(self.motor_thread.stop_movement)
-
-        # Enable/Disable GUI
-        self.motor_thread.move_finished.connect(lambda: self._enable_motor_controls(True))
-
-        # Error messages
-        self.motor_thread.motor_error.connect(
-            lambda error: MotorControlErrors.display_error_message(error)
-        )
-
-    def _enable_motor_controls(self, disable: bool) -> None:
         # Disable or enable all controls within the motorControl_absolute group box
         for widget in self.motorControl_absolute.findChildren(QWidget):
-            widget.setEnabled(disable)
+            widget.setEnabled(enable)
 
         # Enable the pushButton_stop if the motor is moving
         self.pushButton_stop.setEnabled(True)
 
+    @pyqtSlot(str, str)
+    def change_motors(self, motor_x: str, motor_y: str):
+        """
+        Change the active motors and update config.
+        Can be connected to the selected_motors_signal from MotorControlSelection.
+        Args:
+            motor_x(str): New motor X to be controlled.
+            motor_y(str): New motor Y to be controlled.
+        """
+        self.motor_x = motor_x
+        self.motor_y = motor_y
+        self.config["motor_control"]["motor_x"] = motor_x
+        self.config["motor_control"]["motor_y"] = motor_y
+
     def move_motor_absolute(self, x: float, y: float) -> None:
-        self._enable_motor_controls(False)
+        """
+        Move the motor to the target coordinates.
+        Args:
+            x(float): Target x coordinate.
+            y(float): Target y coordinate.
+        """
+        # self._enable_motor_controls(False)
         target_coordinates = (x, y)
         self.motor_thread.move_absolute(self.motor_x, self.motor_y, target_coordinates)
         if self.checkBox_save_with_go.isChecked():
             self.save_absolute_coordinates()
 
     def _init_keyboard_shortcuts(self):
+        """Initialize the keyboard shortcuts."""
         # Go absolute button
         self.pushButton_go_absolute.setShortcut("Ctrl+G")
         self.pushButton_go_absolute.setToolTip("Ctrl+G")
@@ -265,42 +283,26 @@ class MotorControlAbsolute(QWidget):
 
     def save_current_coordinates(self):
         """Emit the current coordinates from the motor thread"""
-        x, y = self.motor_thread.retrieve_coordinates()
-        self.coordinates_signal.emit((x, y))
+        x, y = self.motor_thread.get_coordinates(self.motor_x, self.motor_y)
+        self.coordinates_signal.emit((round(x, self.precision), round(y, self.precision)))
 
 
-class MotorControlRelative(QWidget):
-    update_signal = pyqtSignal()
+class MotorControlRelative(MotorControlWidget):
+    """
+    Widget for controlling the motors to relative coordinates.
 
-    def __init__(
-        self,
-        parent=None,
-        client=None,
-        motor_thread=None,
-        config: dict = None,
-    ):
-        super().__init__(parent=parent)
+    Signals:
+        coordinates_signal (pyqtSignal): Signal to emit the coordinates.
+    Slots:
+        change_motors (pyqtSlot): Slot to change the active motors.
+        enable_motor_controls (pyqtSlot): Slot to enable/disable the motor controls.
+    """
 
-        # BECclient
-        bec_dispatcher = BECDispatcher()
-        self.client = bec_dispatcher.client if client is None else client
-        self.dev = self.client.device_manager.devices
-        self.config = config
-
+    def _load_ui(self):
+        """Load the UI from the .ui file."""
         # Loading UI
         current_path = os.path.dirname(__file__)
         uic.loadUi(os.path.join(current_path, "motor_control_relative.ui"), self)
-
-        # Motor Control Thread
-        self.motor_thread = (
-            MotorThread(client=self.client) if motor_thread is None else motor_thread
-        )
-
-        self._init_ui()
-        if self.config is None:
-            print(f"No initial config found for {self.__class__.__name__}")
-        else:
-            self.on_config_update(self.config)
 
     def _init_ui(self):
         """Initialize the UI."""
@@ -330,6 +332,8 @@ class MotorControlRelative(QWidget):
         self.checkBox_same_xy.setChecked(self.config["motor_control"]["step_x_y_same"])
         self.checkBox_enableArrows.setChecked(self.config["motor_control"]["move_with_arrows"])
 
+        self._init_ui()
+
     def _init_ui_motor_control(self) -> None:
         """Initialize the motor control elements"""
 
@@ -354,7 +358,7 @@ class MotorControlRelative(QWidget):
         self._update_arrow_key_shortcuts()
 
         # Enable/Disable GUI
-        self.motor_thread.move_finished.connect(lambda: self.enable_motor_controls(True))
+        self.motor_thread.lock_gui.connect(self.enable_motor_controls)
 
         # Precision update
         self.spinBox_precision.valueChanged.connect(lambda x: self._update_precision(x))
@@ -440,15 +444,11 @@ class MotorControlRelative(QWidget):
             value = self.spinBox_step_y.value()
             self.spinBox_step_x.setValue(value)
 
-    @pyqtSlot()
-    def enable_motor_control(self):
-        """Enable the motor control buttons."""
-        self.motorControl.setEnabled(True)
-
     @pyqtSlot(str, str)
     def change_motors(self, motor_x: str, motor_y: str):
         """
         Change the active motors and update config.
+        Can be connected to the selected_motors_signal from MotorControlSelection.
         Args:
             motor_x(str): New motor X to be controlled.
             motor_y(str): New motor Y to be controlled.
@@ -458,11 +458,12 @@ class MotorControlRelative(QWidget):
         self.config["motor_control"]["motor_x"] = motor_x
         self.config["motor_control"]["motor_y"] = motor_y
 
+    @pyqtSlot(bool)
     def enable_motor_controls(self, disable: bool) -> None:
         """
         Enable or disable the motor controls.
         Args:
-            disable(bool): True to disable, False to enable.
+            enable(bool): True to disable, False to enable.
         """
 
         # Disable or enable all controls within the motorControl_absolute group box
@@ -480,7 +481,6 @@ class MotorControlRelative(QWidget):
             axis(str): Axis to move.
             direction(int): Direction to move. 1 for positive, -1 for negative.
         """
-        self.enable_motor_controls(False)
         if axis == "x":
             step = direction * self.spinBox_step_x.value()
         elif axis == "y":
@@ -489,6 +489,8 @@ class MotorControlRelative(QWidget):
 
 
 class MotorControlErrors:
+    """Class for displaying formatted error messages."""
+
     @staticmethod
     def display_error_message(error_message: str) -> None:
         """
@@ -543,24 +545,15 @@ class MotorThread(QThread):
     """
     QThread subclass for controlling motor actions asynchronously.
 
-    Attributes:
+    Signals:
         coordinates_updated (pyqtSignal): Signal to emit current coordinates.
-        limits_retrieved (pyqtSignal): Signal to emit current limits.
-        move_finished (pyqtSignal): Signal to emit when the move is finished.
-        motors_loaded (pyqtSignal): Signal to emit when the motors are loaded.
-        motors_selected (pyqtSignal): Signal to emit when the motors are selected.
+        motor_error (pyqtSignal): Signal to emit when there is an error with the motors.
+        lock_gui (pyqtSignal): Signal to lock/unlock the GUI.
     """
 
     coordinates_updated = pyqtSignal(float, float)  # Signal to emit current coordinates
-    limits_retrieved = pyqtSignal(list, list)  # Signal to emit current limits #TODO remove?
-    move_finished = pyqtSignal()  # Signal to emit when the move is finished
-    motors_loaded = pyqtSignal(
-        list, list
-    )  # Signal to emit when the motors are loaded #todo remove?
-    motors_selected = pyqtSignal(
-        object, object
-    )  # Signal to emit when the motors are selected #TODO remove?
     motor_error = pyqtSignal(str)  # Signal to emit when there is an error with the motors
+    lock_gui = pyqtSignal(bool)  # Signal to lock/unlock the GUI
 
     def __init__(self, parent=None, client=None):
         super().__init__(parent)
@@ -648,6 +641,7 @@ class MotorThread(QThread):
             motor_y(str): Motor Y to move.
             target_coordinates(tuple): Target coordinates.
         """
+        self.lock_gui.emit(False)
         try:
             status = self.scans.mv(
                 self.dev[motor_x],
@@ -660,7 +654,7 @@ class MotorThread(QThread):
         except AlarmBase as e:
             self.motor_error.emit(str(e))
         finally:
-            self.move_finished.emit()
+            self.lock_gui.emit(True)
 
     def _move_motor_relative(self, motor, value: float) -> None:
         """
@@ -669,31 +663,15 @@ class MotorThread(QThread):
             motor(str): Motor to move.
             value(float): Value to move.
         """
+        self.lock_gui.emit(False)
         try:
             status = self.scans.mv(self.dev[motor], value, relative=True)
             status.wait()
         except AlarmBase as e:
-            print(e)
             self.motor_error.emit(str(e))
         finally:
-            self.move_finished.emit()
+            self.lock_gui.emit(True)
 
     def stop_movement(self):
         self.queue.request_scan_abortion()
         self.queue.request_queue_reset()
-
-
-if __name__ == "__main__":
-    bec_dispatcher = BECDispatcher()
-    # BECclient global variables
-    client = bec_dispatcher.client
-    client.start()
-
-    app = QApplication([])
-    qdarktheme.setup_theme("auto")
-    # motor_control = MotorControlRelative(client=client, config=CONFIG_DEFAULT)
-
-    motor_control = MotorControlSelection(client=client, config=CONFIG_DEFAULT)
-    window = motor_control
-    window.show()
-    app.exec()
