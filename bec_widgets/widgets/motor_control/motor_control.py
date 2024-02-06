@@ -3,6 +3,8 @@ import os
 from enum import Enum
 
 import qdarktheme
+from PyQt6.QtGui import QDoubleValidator
+from PyQt6.QtWidgets import QPushButton, QTableWidgetItem, QCheckBox, QLineEdit
 
 from qtpy import uic
 from qtpy.QtCore import QThread, Slot as pyqtSlot
@@ -10,10 +12,13 @@ from qtpy.QtCore import Signal as pyqtSignal, Qt
 from qtpy.QtGui import QKeySequence
 from qtpy.QtWidgets import (
     QApplication,
+    QHeaderView,
     QWidget,
     QSpinBox,
     QDoubleSpinBox,
     QShortcut,
+    QVBoxLayout,
+    QTableWidget,
 )
 
 from qtpy.QtWidgets import QApplication, QMessageBox
@@ -205,7 +210,6 @@ class MotorControlAbsolute(MotorControlWidget):
 
         # Enable/Disable GUI
         self.motor_thread.lock_gui.connect(self.enable_motor_controls)
-        # self.motor_thread.move_finished.connect(lambda: self._enable_motor_controls(True))
 
         # Error messages
         self.motor_thread.motor_error.connect(
@@ -506,6 +510,237 @@ class MotorControlRelative(MotorControlWidget):
         elif axis == "y":
             step = direction * self.spinBox_step_y.value()
         self.motor_thread.move_relative(motor, step)
+
+
+class MotorCoordinateTable(MotorControlWidget):
+    plot_coordinates_signal = pyqtSignal(list)
+
+    def _load_ui(self):
+        """Load the UI for the coordinate table."""
+        current_path = os.path.dirname(__file__)
+        uic.loadUi(os.path.join(current_path, "motor_control_table.ui"), self)
+
+    def _init_ui(self):
+        """Initialize the UI"""
+        # Setup table behaviour
+        self._setup_table()
+        self.table.setSelectionBehavior(QTableWidget.SelectRows)
+
+        # for tag columns default tag
+        self.tag_counter = 1
+
+        # Connect signals and slots
+        self.checkBox_resize_auto.stateChanged.connect(self.resize_table_auto)
+
+        # Keyboard shortcuts for deleting a row
+        self.delete_shortcut = QShortcut(QKeySequence(Qt.Key_Delete), self.table)
+        self.delete_shortcut.activated.connect(self.delete_selected_row)
+        self.backspace_shortcut = QShortcut(QKeySequence(Qt.Key_Backspace), self.table)
+        self.backspace_shortcut.activated.connect(self.delete_selected_row)
+
+    @pyqtSlot(dict)
+    def on_config_update(self, config: dict) -> None:
+        """
+        Update config dict
+        Args:
+            config(dict): New config dict
+        """
+        self.config = config
+
+        # Get motor names
+        self.motor_x, self.motor_y = (
+            self.config["motor_control"]["motor_x"],
+            self.config["motor_control"]["motor_y"],
+        )
+
+        # Decimal precision of the table coordinates
+        self.precision = self.config["motor_control"].get("precision", 3)
+
+        # Mode switch default option
+        self.mode = self.config["motor_control"].get("mode", "Individual")
+
+        # Set combobox to default mode
+        self.mode_combobox.setCurrentText(self.mode)
+
+        self._init_ui()
+
+    def _setup_table(self):
+        """Setup the table with appropriate headers and configurations."""
+        mode = self.mode_combobox.currentText()
+
+        if mode == "Individual":
+            self._setup_individual_mode()
+        elif mode == "Start/Stop":
+            self._setup_start_stop_mode()
+            self.start_stop_counter = 0
+
+    def _setup_individual_mode(self):
+        self.table.setColumnCount(5)
+        self.table.setHorizontalHeaderLabels(["Show", "Move", "Tag", "X", "Y"])
+        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.verticalHeader().setVisible(False)
+
+    def _setup_start_stop_mode(self):
+        self.table.setColumnCount(8)
+        self.table.setHorizontalHeaderLabels(
+            [
+                "Show",
+                "Move [start]",
+                "Move [end]" "Tag",
+                "X [start]",
+                "Y [start]",
+                "X [end]",
+                "Y [end]",
+            ]
+        )
+        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.verticalHeader().setVisible(False)
+
+    @pyqtSlot(tuple)
+    def add_coordinate(self, coordinates: tuple):
+        """
+        Add a coordinate to the table.
+        Args:
+            coordinates(tuple): Coordinates (x,y) to add to the table.
+        """
+        tag = f"Pos {self.tag_counter}"
+        self.tag_counter += 1
+        x, y = coordinates
+        self._add_row(tag, x, y)
+
+    def _add_row(self, tag, x, y):
+        """Internal method to add a row to the table."""
+        row_count = self.table.rowCount()
+        self.table.insertRow(row_count)
+
+        # Checkbox for toggling visibility
+        show_checkbox = QCheckBox()
+        show_checkbox.setChecked(True)
+        show_checkbox.stateChanged.connect(self.emit_plot_coordinates)
+        self.table.setCellWidget(row_count, 0, show_checkbox)
+
+        # TODO add mode switch recognision
+        # Move button
+        move_button = QPushButton("Move")
+        move_button.clicked.connect(self.handle_move_button_click)
+        self.table.setCellWidget(row_count, 1, move_button)
+
+        # Tag
+        self.table.setItem(row_count, 2, QTableWidgetItem(tag))
+
+        # Adding validator
+        validator = QDoubleValidator()
+        validator.setDecimals(self.precision)
+
+        # X as QLineEdit with validator
+        x_edit = QLineEdit(str(f"{x:.{self.precision}f}"))
+        x_edit.setValidator(validator)
+        self.table.setCellWidget(row_count, 3, x_edit)
+        x_edit.textChanged.connect(self.emit_plot_coordinates)
+
+        # Y as QLineEdit with validator
+        y_edit = QLineEdit(str(f"{y:.{self.precision}f}"))
+        y_edit.setValidator(validator)
+        self.table.setCellWidget(row_count, 4, y_edit)
+        y_edit.textChanged.connect(self.emit_plot_coordinates)
+
+        # Emit the coordinates to be plotted
+        self.emit_plot_coordinates()
+
+        # Connect item edit to emit coordinates
+        self.table.itemChanged.connect(self.emit_plot_coordinates)
+
+        # Auto table resize
+        self.resize_table_auto()
+
+        # Align table center
+        self._align_table_center()
+
+    def handle_move_button_click(self):
+        """Handle the click event of the move button."""
+        button = self.sender()
+        row = self.table.indexAt(button.pos()).row()
+
+        x = self.get_coordinate(row, 3)
+        y = self.get_coordinate(row, 4)
+        self.move_motor(x, y)
+
+        # Emit updated coordinates to update the map
+        self.emit_plot_coordinates()
+
+    def emit_plot_coordinates(self):
+        """Emit the coordinates to be plotted."""
+        coordinates = []
+        for row in range(self.table.rowCount()):
+            show = self.table.cellWidget(row, 0).isChecked()
+            x = self.get_coordinate(row, 3)
+            y = self.get_coordinate(row, 4)
+
+            coordinates.append((x, y, show))  # (x, y, show_flag)
+        self.plot_coordinates_signal.emit(coordinates)
+
+    def get_coordinate(self, row: int, column: int) -> float:
+        """
+        Helper function to get the coordinate from the table QLineEdit cells.
+        Args:
+            row(int): Row of the table.
+            column(int): Column of the table.
+        Returns:
+            float: Value of the coordinate.
+        """
+        edit = self.table.cellWidget(row, column)
+        if edit.text() is not None and edit.text() != "":
+            value = float(edit.text()) if edit else None
+        return value
+
+    def delete_selected_row(self):
+        """Delete the selected row from the table."""
+        selected_rows = self.table.selectionModel().selectedRows()
+        for row in selected_rows:
+            self.table.removeRow(row.row())
+        self.emit_plot_coordinates()
+
+    def resize_table_auto(self):
+        """Resize the table to fit the contents."""
+        if self.checkBox_resize_auto.isChecked():
+            self.table.resizeColumnsToContents()
+
+    def _align_table_center(self) -> None:
+        for row in range(self.table.rowCount()):
+            for col in range(self.table.columnCount()):
+                item = self.table.item(row, col)
+                if item:
+                    item.setTextAlignment(Qt.AlignCenter)
+
+    def move_motor(self, x, y):
+        """Move the motor to the specified coordinates."""
+        self.motor_thread.move_absolute(self.motor_x, self.motor_y, (x, y))
+
+    @pyqtSlot(str, str)
+    def change_motors(self, motor_x: str, motor_y: str):
+        """
+        Change the active motors and update config.
+        Can be connected to the selected_motors_signal from MotorControlSelection.
+        Args:
+            motor_x(str): New motor X to be controlled.
+            motor_y(str): New motor Y to be controlled.
+        """
+        self.motor_x = motor_x
+        self.motor_y = motor_y
+        self.config["motor_control"]["motor_x"] = motor_x
+        self.config["motor_control"]["motor_y"] = motor_y
+
+    @pyqtSlot(int)
+    def set_precision(self, precision: int) -> None:
+        """
+        Set the precision of the coordinates.
+        Args:
+            precision(int): Precision of the coordinates.
+        """
+        self.precision = precision
+        self.config["motor_control"]["precision"] = precision
 
 
 class MotorControlErrors:

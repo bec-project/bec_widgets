@@ -3,4 +3,5 @@ from .motor_control import (
     MotorControlAbsolute,
     MotorControlSelection,
     MotorThread,
+    MotorCoordinateTable,
 )
