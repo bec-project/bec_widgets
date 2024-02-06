@@ -16,6 +16,7 @@ from bec_widgets.widgets import (
     MotorControlSelection,
     MotorThread,
     MotorMap,
+    MotorCoordinateTable,
 )
 
 CONFIG_DEFAULT = {
@@ -23,7 +24,7 @@ CONFIG_DEFAULT = {
         "motor_x": "samx",
         "motor_y": "samy",
         "step_size_x": 3,
-        "step_size_y": 50,
+        "step_size_y": 3,
         "precision": 4,
         "step_x_y_same": False,
         "move_with_arrows": False,
@@ -49,6 +50,49 @@ CONFIG_DEFAULT = {
         },
     ],
 }
+
+
+class MotorControlApp(QWidget):
+    def __init__(self, parent=None, client=None, config=None):
+        super().__init__(parent)
+
+        bec_dispatcher = BECDispatcher()
+        self.client = bec_dispatcher.client if client is None else client
+        self.config = config
+
+        # Widgets
+        self.motor_control_panel = MotorControlPanel(client=self.client, config=self.config)
+        # Create MotorMap
+        self.motion_map = MotorMap(client=self.client, config=self.config)
+        # Create MotorCoordinateTable
+        self.motor_table = MotorCoordinateTable(client=self.client, config=self.config)
+
+        # Create the splitter and add MotorMap and MotorControlPanel
+        splitter = QSplitter(Qt.Horizontal)
+        splitter.addWidget(self.motion_map)
+        splitter.addWidget(self.motor_control_panel)
+        splitter.addWidget(self.motor_table)
+
+        # Set the main layout
+        layout = QVBoxLayout(self)
+        layout.addWidget(splitter)
+        self.setLayout(layout)
+
+        # Connecting signals and slots
+        self.motor_control_panel.selection_widget.selected_motors_signal.connect(
+            lambda x, y: self.motion_map.change_motors(x, y, 0)
+        )
+        self.motor_control_panel.absolute_widget.coordinates_signal.connect(
+            self.motor_table.add_coordinate
+        )
+        self.motor_control_panel.relative_widget.precision_signal.connect(
+            self.motor_table.set_precision
+        )
+        self.motor_control_panel.relative_widget.precision_signal.connect(
+            self.motor_control_panel.absolute_widget.set_precision
+        )
+
+        self.motor_table.plot_coordinates_signal.connect(self.motion_map.plot_saved_coordinates)
 
 
 class MotorControlMap(QWidget):
@@ -171,18 +215,45 @@ class MotorControlPanelRelative(QWidget):
 
 
 if __name__ == "__main__":
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(description="Run various Motor Control Widgets compositions.")
+    parser.add_argument(
+        "-v",
+        "--variant",
+        type=str,
+        choices=["app", "map", "panel", "panel_abs", "panel_rel"],
+        help="Select the variant of the motor control to run. "
+        "'app' for the full application, "
+        "'map' for MotorMap, "
+        "'panel' for the MotorControlPanel, "
+        "'panel_abs' for MotorControlPanel with absolute control, "
+        "'panel_rel' for MotorControlPanel with relative control.",
+    )
+
+    args = parser.parse_args()
+
     bec_dispatcher = BECDispatcher()
-    # BECclient global variables
     client = bec_dispatcher.client
     client.start()
 
     app = QApplication([])
     qdarktheme.setup_theme("auto")
 
-    motor_control = MotorControlMap(client=client, config=CONFIG_DEFAULT)
-    # motor_control = MotorControlPanel(client=client, config=CONFIG_DEFAULT)
-    # motor_control = MotorControlPanelRelative(client=client, config=CONFIG_DEFAULT)
-    # motor_control = MotorControlPanelAbsolute(client=client, config=CONFIG_DEFAULT)
-    window = motor_control
+    if args.variant == "app":
+        window = MotorControlApp(client=client, config=CONFIG_DEFAULT)
+    elif args.variant == "map":
+        window = MotorControlMap(client=client, config=CONFIG_DEFAULT)
+    elif args.variant == "panel":
+        window = MotorControlPanel(client=client, config=CONFIG_DEFAULT)
+    elif args.variant == "panel_abs":
+        window = MotorControlPanelAbsolute(client=client, config=CONFIG_DEFAULT)
+    elif args.variant == "panel_rel":
+        window = MotorControlPanelRelative(client=client, config=CONFIG_DEFAULT)
+    else:
+        print("Please specify a valid variant to run. Use -h for help.")
+        sys.exit(1)
+
     window.show()
-    app.exec()
+    sys.exit(app.exec())
