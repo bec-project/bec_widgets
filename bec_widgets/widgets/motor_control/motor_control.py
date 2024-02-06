@@ -2,26 +2,23 @@
 import os
 from enum import Enum
 
-import qdarktheme
-from PyQt6.QtGui import QDoubleValidator
-from PyQt6.QtWidgets import QPushButton, QTableWidgetItem, QCheckBox, QLineEdit
-
 from qtpy import uic
 from qtpy.QtCore import QThread, Slot as pyqtSlot
 from qtpy.QtCore import Signal as pyqtSignal, Qt
-from qtpy.QtGui import QKeySequence
+from qtpy.QtGui import QKeySequence, QDoubleValidator
+from qtpy.QtWidgets import QMessageBox
 from qtpy.QtWidgets import (
-    QApplication,
-    QHeaderView,
+    QComboBox,
     QWidget,
-    QSpinBox,
     QDoubleSpinBox,
     QShortcut,
-    QVBoxLayout,
     QTableWidget,
+    QPushButton,
+    QTableWidgetItem,
+    QCheckBox,
+    QLineEdit,
 )
 
-from qtpy.QtWidgets import QApplication, QMessageBox
 from bec_lib.alarm_handler import AlarmBase
 from bec_lib.device import Positioner
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
@@ -81,11 +78,11 @@ class MotorControlSelection(MotorControlWidget):
     Widget for selecting the motors to control.
 
     Signals:
-        selected_motors_signal (pyqtSignal): Signal to emit the selected motors.
+        selected_motors_signal (pyqtSignal(str,str)): Signal to emit the selected motors.
     Slots:
         get_available_motors (pyqtSlot): Slot to populate the available motors in the combo boxes and set the index based on the configuration.
-        select_motor (pyqtSlot): Slot to emit the selected motors.
-        enable_motor_controls (pyqtSlot): Slot to enable/disable the motor controls GUI.
+        enable_motor_controls (pyqtSlot(bool)): Slot to enable/disable the motor controls GUI.
+        on_config_update (pyqtSlot(dict)): Slot to update the config dict.
     """
 
     selected_motors_signal = pyqtSignal(str, str)
@@ -137,7 +134,8 @@ class MotorControlSelection(MotorControlWidget):
         """
         self.motorSelection.setEnabled(enable)
 
-    def get_available_motors(self):
+    @pyqtSlot()
+    def get_available_motors(self) -> None:
         """
         Slot to populate the available motors in the combo boxes and set the index based on the configuration.
         """
@@ -155,8 +153,13 @@ class MotorControlSelection(MotorControlWidget):
             self.comboBox_motor_x.setCurrentIndex(index_x if index_x != -1 else 0)
             self.comboBox_motor_y.setCurrentIndex(index_y if index_y != -1 else 0)
 
-    def set_combobox_style(self, combobox, color):
-        """Set the background color of the combobox."""
+    def set_combobox_style(self, combobox: QComboBox, color: str) -> None:
+        """
+        Set the combobox style to a specific color.
+        Args:
+            combobox(QComboBox): Combobox to change the color.
+            color(str): Color to set the combobox to.
+        """
         combobox.setStyleSheet(f"QComboBox {{ background-color: {color}; }}")
 
     def select_motor(self):
@@ -176,10 +179,10 @@ class MotorControlAbsolute(MotorControlWidget):
     Widget for controlling the motors to absolute coordinates.
 
     Signals:
-        coordinates_signal (pyqtSignal): Signal to emit the coordinates.
+        coordinates_signal (pyqtSignal(tuple)): Signal to emit the coordinates.
     Slots:
         change_motors (pyqtSlot): Slot to change the active motors.
-        enable_motor_controls (pyqtSlot): Slot to enable/disable the motor controls.
+        enable_motor_controls (pyqtSlot(bool)): Slot to enable/disable the motor controls.
     """
 
     coordinates_signal = pyqtSignal(tuple)
@@ -323,10 +326,9 @@ class MotorControlRelative(MotorControlWidget):
     Widget for controlling the motors to relative coordinates.
 
     Signals:
-        coordinates_signal (pyqtSignal): Signal to emit the coordinates.
         precision_signal (pyqtSignal): Signal to emit the precision of the coordinates.
     Slots:
-        change_motors (pyqtSlot): Slot to change the active motors.
+        change_motors (pyqtSlot(str,str)): Slot to change the active motors.
         enable_motor_controls (pyqtSlot): Slot to enable/disable the motor controls.
     """
 
@@ -345,7 +347,11 @@ class MotorControlRelative(MotorControlWidget):
 
     @pyqtSlot(dict)
     def on_config_update(self, config: dict) -> None:
-        """Update config dict"""
+        """
+        Update config dict
+        Args:
+            config(dict): New config dict
+        """
         self.config = config
 
         # Get motor names
@@ -434,7 +440,7 @@ class MotorControlRelative(MotorControlWidget):
         self.pushButton_stop.setShortcut("Ctrl+X")
         self.pushButton_stop.setToolTip("Ctrl+X")
 
-    def _update_arrow_key_shortcuts(self):
+    def _update_arrow_key_shortcuts(self) -> None:
         """Update the arrow key shortcuts based on the checkbox state."""
         if self.checkBox_enableArrows.isChecked():
             # Set the arrow key shortcuts for motor movement
@@ -449,8 +455,12 @@ class MotorControlRelative(MotorControlWidget):
             self.toolButton_up.setShortcut("")
             self.toolButton_down.setShortcut("")
 
-    def _update_precision(self, precision: int):
-        """Update the precision of the spinboxes."""
+    def _update_precision(self, precision: int) -> None:
+        """
+        Update the precision of the coordinates.
+        Args:
+            precision(int): Precision of the coordinates.
+        """
         self.spinBox_step_x.setDecimals(precision)
         self.spinBox_step_y.setDecimals(precision)
         self.precision_signal.emit(precision)
@@ -503,7 +513,7 @@ class MotorControlRelative(MotorControlWidget):
         """
         Enable or disable the motor controls.
         Args:
-            enable(bool): True to disable, False to enable.
+            disable(bool): True to disable, False to enable.
         """
 
         # Disable or enable all controls within the motorControl_absolute group box
@@ -529,6 +539,18 @@ class MotorControlRelative(MotorControlWidget):
 
 
 class MotorCoordinateTable(MotorControlWidget):
+    """
+    Widget to save coordinates from motor, display them in the table and move back to them.
+    There are two modes of operation:
+        - Individual: Each row is a single coordinate.
+        - Start/Stop: Each pair of rows is a start and end coordinate.
+    Signals:
+        plot_coordinates_signal (pyqtSignal(list, str, str)): Signal to plot the coordinates in the MotorMap.
+    Slots:
+        add_coordinate (pyqtSlot(tuple)): Slot to add a coordinate to the table.
+        mode_switch (pyqtSlot): Slot to switch between individual and start/stop mode.
+    """
+
     plot_coordinates_signal = pyqtSignal(list, str, str)
 
     def _load_ui(self):
@@ -594,11 +616,13 @@ class MotorCoordinateTable(MotorControlWidget):
         self.wipe_motor_map_coordinates()
 
     def _setup_individual_mode(self):
+        """Setup the table for individual mode."""
         self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels(["Show", "Move", "Tag", "X", "Y"])
         self.table.verticalHeader().setVisible(False)
 
     def _setup_start_stop_mode(self):
+        """Setup the table for start/stop mode."""
         self.table.setColumnCount(8)
         self.table.setHorizontalHeaderLabels(
             [
@@ -653,8 +677,14 @@ class MotorCoordinateTable(MotorControlWidget):
         x, y = coordinates
         self._add_row(tag, x, y)
 
-    def _add_row(self, tag, x, y):
-        """Internal method to add a row to the table."""
+    def _add_row(self, tag: str, x: float, y: float) -> None:
+        """
+        Add a row to the table.
+        Args:
+            tag(str): Tag of the coordinate.
+            x(float): X coordinate.
+            y(float): Y coordinate.
+        """
 
         mode = self.comboBox_mode.currentText()
         if mode == "Individual":
@@ -803,7 +833,6 @@ class MotorCoordinateTable(MotorControlWidget):
             checkBox_pos(int): Column where to put CheckBox.
             x_pos(int): Column where to link x coordinate.
             y_pos(int): Column where to link y coordinate.
-
         """
         show_checkbox = QCheckBox()
         show_checkbox.setChecked(True)
@@ -936,12 +965,17 @@ class MotorCoordinateTable(MotorControlWidget):
         if self.checkBox_resize_auto.isChecked():
             self.table.resizeColumnsToContents()
 
-    def move_motor(self, x, y):
-        """Move the motor to the specified coordinates."""
+    def move_motor(self, x: float, y: float) -> None:
+        """
+        Move the motor to the target coordinates.
+        Args:
+            x(float): Target x coordinate.
+            y(float): Target y coordinate.
+        """
         self.motor_thread.move_absolute(self.motor_x, self.motor_y, (x, y))
 
     @pyqtSlot(str, str)
-    def change_motors(self, motor_x: str, motor_y: str):
+    def change_motors(self, motor_x: str, motor_y: str) -> None:
         """
         Change the active motors and update config.
         Can be connected to the selected_motors_signal from MotorControlSelection.
