@@ -261,6 +261,18 @@ class MotorControlAbsolute(MotorControlWidget):
         self.config["motor_control"]["motor_x"] = motor_x
         self.config["motor_control"]["motor_y"] = motor_y
 
+    @pyqtSlot(int)
+    def set_precision(self, precision: int) -> None:
+        """
+        Set the precision of the coordinates.
+        Args:
+            precision(int): Precision of the coordinates.
+        """
+        self.precision = precision
+        self.config["motor_control"]["precision"] = precision
+        self.spinBox_absolute_x.setDecimals(precision)
+        self.spinBox_absolute_y.setDecimals(precision)
+
     def move_motor_absolute(self, x: float, y: float) -> None:
         """
         Move the motor to the target coordinates.
@@ -312,10 +324,13 @@ class MotorControlRelative(MotorControlWidget):
 
     Signals:
         coordinates_signal (pyqtSignal): Signal to emit the coordinates.
+        precision_signal (pyqtSignal): Signal to emit the precision of the coordinates.
     Slots:
         change_motors (pyqtSlot): Slot to change the active motors.
         enable_motor_controls (pyqtSlot): Slot to enable/disable the motor controls.
     """
+
+    precision_signal = pyqtSignal(int)
 
     def _load_ui(self):
         """Load the UI from the .ui file."""
@@ -438,6 +453,7 @@ class MotorControlRelative(MotorControlWidget):
         """Update the precision of the spinboxes."""
         self.spinBox_step_x.setDecimals(precision)
         self.spinBox_step_y.setDecimals(precision)
+        self.precision_signal.emit(precision)
 
     def _change_step_size(self, spinBox: QDoubleSpinBox, factor: float) -> None:
         """
@@ -513,7 +529,7 @@ class MotorControlRelative(MotorControlWidget):
 
 
 class MotorCoordinateTable(MotorControlWidget):
-    plot_coordinates_signal = pyqtSignal(list)
+    plot_coordinates_signal = pyqtSignal(list, str, str)
 
     def _load_ui(self):
         """Load the UI for the coordinate table."""
@@ -531,6 +547,7 @@ class MotorCoordinateTable(MotorControlWidget):
 
         # Connect signals and slots
         self.checkBox_resize_auto.stateChanged.connect(self.resize_table_auto)
+        self.comboBox_mode.currentIndexChanged.connect(self.mode_switch)
 
         # Keyboard shortcuts for deleting a row
         self.delete_shortcut = QShortcut(QKeySequence(Qt.Key_Delete), self.table)
@@ -560,25 +577,25 @@ class MotorCoordinateTable(MotorControlWidget):
         self.mode = self.config["motor_control"].get("mode", "Individual")
 
         # Set combobox to default mode
-        self.mode_combobox.setCurrentText(self.mode)
+        self.comboBox_mode.setCurrentText(self.mode)
 
         self._init_ui()
 
     def _setup_table(self):
         """Setup the table with appropriate headers and configurations."""
-        mode = self.mode_combobox.currentText()
+        mode = self.comboBox_mode.currentText()
 
         if mode == "Individual":
             self._setup_individual_mode()
         elif mode == "Start/Stop":
             self._setup_start_stop_mode()
-            self.start_stop_counter = 0
+            self.start_stop_counter = 0  # TODO: remove this??
+
+        self.wipe_motor_map_coordinates()
 
     def _setup_individual_mode(self):
         self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels(["Show", "Move", "Tag", "X", "Y"])
-        self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.verticalHeader().setVisible(False)
 
     def _setup_start_stop_mode(self):
@@ -587,16 +604,42 @@ class MotorCoordinateTable(MotorControlWidget):
             [
                 "Show",
                 "Move [start]",
-                "Move [end]" "Tag",
+                "Move [end]",
+                "Tag",
                 "X [start]",
                 "Y [start]",
                 "X [end]",
                 "Y [end]",
             ]
         )
-        self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.verticalHeader().setVisible(False)
+        # Set flag to track if the coordinate is stat or the end of the entry
+        self.is_next_entry_end = False
+
+    def mode_switch(self):
+        """Switch between individual and start/stop mode."""
+        last_selected_index = self.comboBox_mode.currentIndex()
+
+        if self.table.rowCount() > 0:
+            msgBox = QMessageBox()
+            msgBox.setIcon(QMessageBox.Critical)
+            msgBox.setText(
+                "Switching modes will delete all table entries. Do you want to continue?"
+            )
+            msgBox.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+            returnValue = msgBox.exec()
+
+            if returnValue is QMessageBox.Cancel:
+                self.comboBox_mode.blockSignals(True)  # Block signals
+                self.comboBox_mode.setCurrentIndex(last_selected_index)
+                self.comboBox_mode.blockSignals(False)  # Unblock signals
+                return
+
+        # Wipe table
+        self.wipe_motor_map_coordinates()
+
+        # Initiate new table with new mode
+        self._setup_table()
 
     @pyqtSlot(tuple)
     def add_coordinate(self, coordinates: tuple):
@@ -612,74 +655,255 @@ class MotorCoordinateTable(MotorControlWidget):
 
     def _add_row(self, tag, x, y):
         """Internal method to add a row to the table."""
-        row_count = self.table.rowCount()
-        self.table.insertRow(row_count)
 
-        # Checkbox for toggling visibility
-        show_checkbox = QCheckBox()
-        show_checkbox.setChecked(True)
-        show_checkbox.stateChanged.connect(self.emit_plot_coordinates)
-        self.table.setCellWidget(row_count, 0, show_checkbox)
+        mode = self.comboBox_mode.currentText()
+        if mode == "Individual":
+            checkbox_pos = 0
+            button_pos = 1
+            tag_pos = 2
+            x_pos = 3
+            y_pos = 4
+            coordinate_reference = "Individual"
+            color = "green"
 
-        # TODO add mode switch recognision
-        # Move button
-        move_button = QPushButton("Move")
-        move_button.clicked.connect(self.handle_move_button_click)
-        self.table.setCellWidget(row_count, 1, move_button)
+            # Add new row -> new entry
+            row_count = self.table.rowCount()
+            self.table.insertRow(row_count)
 
-        # Tag
-        self.table.setItem(row_count, 2, QTableWidgetItem(tag))
+            # Add Widgets
+            self._add_widgets(
+                tag,
+                x,
+                y,
+                row_count,
+                checkbox_pos,
+                tag_pos,
+                button_pos,
+                x_pos,
+                y_pos,
+                coordinate_reference,
+                color,
+            )
 
-        # Adding validator
-        validator = QDoubleValidator()
-        validator.setDecimals(self.precision)
+        if mode == "Start/Stop":
+            # These positions are always fixed
+            checkbox_pos = 0
+            tag_pos = 3
 
-        # X as QLineEdit with validator
-        x_edit = QLineEdit(str(f"{x:.{self.precision}f}"))
-        x_edit.setValidator(validator)
-        self.table.setCellWidget(row_count, 3, x_edit)
-        x_edit.textChanged.connect(self.emit_plot_coordinates)
+            if self.is_next_entry_end is False:  # It is the start position of the entry
+                print("Start position")
+                button_pos = 1
+                x_pos = 4
+                y_pos = 5
+                coordinate_reference = "Start"
+                color = "blue"
 
-        # Y as QLineEdit with validator
-        y_edit = QLineEdit(str(f"{y:.{self.precision}f}"))
-        y_edit.setValidator(validator)
-        self.table.setCellWidget(row_count, 4, y_edit)
-        y_edit.textChanged.connect(self.emit_plot_coordinates)
+                # Add new row -> new entry
+                row_count = self.table.rowCount()
+                self.table.insertRow(row_count)
 
-        # Emit the coordinates to be plotted
-        self.emit_plot_coordinates()
+                # Add Widgets
+                self._add_widgets(
+                    tag,
+                    x,
+                    y,
+                    row_count,
+                    checkbox_pos,
+                    tag_pos,
+                    button_pos,
+                    x_pos,
+                    y_pos,
+                    coordinate_reference,
+                    color,
+                )
 
-        # Connect item edit to emit coordinates
-        self.table.itemChanged.connect(self.emit_plot_coordinates)
+                # Next entry will be the end of the current entry
+                self.is_next_entry_end = True
+
+            elif self.is_next_entry_end is True:  # It is the end position of the entry
+                print("End position")
+                row_count = self.table.rowCount() - 1  # Current row
+                button_pos = 2
+                x_pos = 6
+                y_pos = 7
+                coordinate_reference = "Stop"
+                color = "red"
+
+                # Add Widgets
+                self._add_widgets(
+                    tag,
+                    x,
+                    y,
+                    row_count,
+                    checkbox_pos,
+                    tag_pos,
+                    button_pos,
+                    x_pos,
+                    y_pos,
+                    coordinate_reference,
+                    color,
+                )
+                self.is_next_entry_end = False  # Next entry will be the start of the new entry
 
         # Auto table resize
         self.resize_table_auto()
 
-        # Align table center
-        self._align_table_center()
+    def _add_widgets(
+        self,
+        tag: str,
+        x: float,
+        y: float,
+        row: int,
+        checkBox_pos: int,
+        tag_pos: int,
+        button_pos: int,
+        x_pos: int,
+        y_pos: int,
+        coordinate_reference: str,
+        color: str,
+    ) -> None:
+        """
+        Add widgets to the table.
+        Args:
+            tag(str): Tag of the coordinate.
+            x(float): X coordinate.
+            y(float): Y coordinate.
+            row(int): Row of the QTableWidget where to add the widgets.
+            checkBox_pos(int): Column where to put CheckBox.
+            tag_pos(int): Column where to put Tag.
+            button_pos(int): Column where to put Move button.
+            x_pos(int): Column where to link x coordinate.
+            y_pos(int): Column where to link y coordinate.
+            coordinate_reference(str): Reference to the coordinate for MotorMap.
+            color(str): Color of the coordinate for MotorMap.
+        """
+        # Add widgets
+        self._add_checkbox(row, checkBox_pos, x_pos, y_pos)
+        self._add_move_button(row, button_pos, x_pos, y_pos)
+        self.table.setItem(row, tag_pos, QTableWidgetItem(tag))
+        self._add_line_edit(x, row, x_pos, x_pos, y_pos, coordinate_reference, color)
+        self._add_line_edit(y, row, y_pos, x_pos, y_pos, coordinate_reference, color)
 
-    def handle_move_button_click(self):
-        """Handle the click event of the move button."""
+        # # Emit the coordinates to be plotted
+        self.emit_plot_coordinates(x_pos, y_pos, coordinate_reference, color)
+
+        # Connect item edit to emit coordinates
+        self.table.itemChanged.connect(
+            lambda: print(f"item changed from {coordinate_reference} slot \n {x}-{y}-{color}")
+        )
+        self.table.itemChanged.connect(
+            lambda: self.emit_plot_coordinates(x_pos, y_pos, coordinate_reference, color)
+        )
+
+    def _add_checkbox(self, row: int, checkBox_pos: int, x_pos: int, y_pos: int):
+        """
+        Add a checkbox to the table.
+        Args:
+            row(int): Row of QTableWidget where to add the checkbox.
+            checkBox_pos(int): Column where to put CheckBox.
+            x_pos(int): Column where to link x coordinate.
+            y_pos(int): Column where to link y coordinate.
+
+        """
+        show_checkbox = QCheckBox()
+        show_checkbox.setChecked(True)
+        show_checkbox.stateChanged.connect(lambda: self.emit_plot_coordinates(x_pos, y_pos))
+        self.table.setCellWidget(row, checkBox_pos, show_checkbox)
+
+    def _add_move_button(self, row: int, button_pos: int, x_pos: int, y_pos: int) -> None:
+        """
+        Add a move button to the table.
+        Args:
+            row(int): Row of QTableWidget where to add the move button.
+            button_pos(int): Column where to put move button.
+            x_pos(int): Column where to link x coordinate.
+            y_pos(int): Column where to link y coordinate.
+        """
+        move_button = QPushButton("Move")
+        move_button.clicked.connect(lambda: self.handle_move_button_click(x_pos, y_pos))
+        self.table.setCellWidget(row, button_pos, move_button)
+
+    def _add_line_edit(
+        self,
+        value: float,
+        row: int,
+        line_pos: int,
+        x_pos: int,
+        y_pos: int,
+        coordinate_reference: str,
+        color: str,
+    ) -> None:
+        """
+        Add a QLineEdit to the table.
+        Args:
+            value(float): Initial value of the QLineEdit.
+            row(int): Row of QTableWidget where to add the QLineEdit.
+            line_pos(int): Column where to put QLineEdit.
+            x_pos(int): Column where to link x coordinate.
+            y_pos(int): Column where to link y coordinate.
+            coordinate_reference(str): Reference to the coordinate for MotorMap.
+            color(str): Color of the coordinate for MotorMap.
+        """
+        # Adding validator
+        validator = QDoubleValidator()
+        validator.setDecimals(self.precision)
+
+        # Create line edit
+        edit = QLineEdit(str(f"{value:.{self.precision}f}"))
+        edit.setValidator(validator)
+        edit.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # Add line edit to the table
+        self.table.setCellWidget(row, line_pos, edit)
+        edit.textChanged.connect(
+            lambda: self.emit_plot_coordinates(x_pos, y_pos, coordinate_reference, color)
+        )
+
+    def wipe_motor_map_coordinates(self):
+        """Wipe the motor map coordinates."""
+        try:
+            self.table.itemChanged.disconnect()  # Disconnect all previous connections
+        except TypeError:
+            print("No previous connections to disconnect")
+        self.table.setRowCount(0)
+        reference_tags = ["Individual", "Start", "Stop"]
+        for reference_tag in reference_tags:
+            self.plot_coordinates_signal.emit([], reference_tag, "green")
+
+    def handle_move_button_click(self, x_pos: int, y_pos: int) -> None:
+        """
+        Handle the move button click.
+        Args:
+            x_pos(int): X position of the coordinate.
+            y_pos(int): Y position of the coordinate.
+        """
         button = self.sender()
         row = self.table.indexAt(button.pos()).row()
 
-        x = self.get_coordinate(row, 3)
-        y = self.get_coordinate(row, 4)
+        x = self.get_coordinate(row, x_pos)
+        y = self.get_coordinate(row, y_pos)
         self.move_motor(x, y)
 
-        # Emit updated coordinates to update the map
-        self.emit_plot_coordinates()
-
-    def emit_plot_coordinates(self):
-        """Emit the coordinates to be plotted."""
+    def emit_plot_coordinates(self, x_pos: float, y_pos: float, reference_tag: str, color: str):
+        """
+        Emit the coordinates to be plotted.
+        Args:
+            x_pos(float): X position of the coordinate.
+            y_pos(float): Y position of the coordinate.
+            reference_tag(str): Reference tag of the coordinate.
+            color(str): Color of the coordinate.
+        """
+        print(
+            f"Emitting plot coordinates: x_pos={x_pos}, y_pos={y_pos}, reference_tag={reference_tag}, color={color}"
+        )
         coordinates = []
         for row in range(self.table.rowCount()):
             show = self.table.cellWidget(row, 0).isChecked()
-            x = self.get_coordinate(row, 3)
-            y = self.get_coordinate(row, 4)
+            x = self.get_coordinate(row, x_pos)
+            y = self.get_coordinate(row, y_pos)
 
             coordinates.append((x, y, show))  # (x, y, show_flag)
-        self.plot_coordinates_signal.emit(coordinates)
+        self.plot_coordinates_signal.emit(coordinates, reference_tag, color)
 
     def get_coordinate(self, row: int, column: int) -> float:
         """
@@ -691,28 +915,26 @@ class MotorCoordinateTable(MotorControlWidget):
             float: Value of the coordinate.
         """
         edit = self.table.cellWidget(row, column)
-        if edit.text() is not None and edit.text() != "":
-            value = float(edit.text()) if edit else None
-        return value
+        value = float(edit.text()) if edit and edit.text() != "" else None
+        if value:
+            return value
 
     def delete_selected_row(self):
         """Delete the selected row from the table."""
         selected_rows = self.table.selectionModel().selectedRows()
         for row in selected_rows:
             self.table.removeRow(row.row())
-        self.emit_plot_coordinates()
+        if self.comboBox_mode.currentText() == "Start/Stop":
+            self.emit_plot_coordinates(x_pos=4, y_pos=5, reference_tag="Start", color="blue")
+            self.emit_plot_coordinates(x_pos=6, y_pos=7, reference_tag="Stop", color="red")
+            self.is_next_entry_end = False
+        elif self.comboBox_mode.currentText() == "Individual":
+            self.emit_plot_coordinates(x_pos=3, y_pos=4, reference_tag="Individual", color="green")
 
     def resize_table_auto(self):
         """Resize the table to fit the contents."""
         if self.checkBox_resize_auto.isChecked():
             self.table.resizeColumnsToContents()
-
-    def _align_table_center(self) -> None:
-        for row in range(self.table.rowCount()):
-            for col in range(self.table.columnCount()):
-                item = self.table.item(row, col)
-                if item:
-                    item.setTextAlignment(Qt.AlignCenter)
 
     def move_motor(self, x, y):
         """Move the motor to the specified coordinates."""

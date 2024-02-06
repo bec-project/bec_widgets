@@ -57,9 +57,9 @@
       </widget>
      </item>
      <item>
-      <widget class="QComboBox" name="mode_combobox">
+      <widget class="QComboBox" name="comboBox_mode">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <item>
         <property name="text">
@@ -76,7 +76,11 @@
     </layout>
    </item>
    <item>
-    <widget class="QTableWidget" name="table"/>
+    <widget class="QTableWidget" name="table">
+     <property name="gridStyle">
+      <enum>Qt::SolidLine</enum>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

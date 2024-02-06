@@ -513,25 +513,31 @@ class MotorMap(pg.GraphicsLayoutWidget):
                 self.curves_data[plot_name]["highlight_V"].setPos(current_x)
                 self.curves_data[plot_name]["highlight_H"].setPos(current_y)
 
-    @pyqtSlot(list)
-    def plot_saved_coordinates(self, coordinates):
-        """Plot the saved coordinates on the map."""
+    @pyqtSlot(list, str, str)
+    def plot_saved_coordinates(self, coordinates: list, tag: str, color: str):
+        """
+        Plot saved coordinates on the map.
+        Args:
+            coordinates(list): List of coordinates to be plotted.
+            tag(str): Tag for the coordinates for future reference.
+            color(str): Color to plot coordinates in.
+        """
         for plot_name in self.plots:
             plot = self.plots[plot_name]
 
             # Clear previous saved points
-            if "saved_points" in self.curves_data[plot_name]:
-                plot.removeItem(self.curves_data[plot_name]["saved_points"])
+            if tag in self.curves_data[plot_name]:
+                plot.removeItem(self.curves_data[plot_name][tag])
 
             # Filter coordinates to be shown
             visible_coords = [coord[:2] for coord in coordinates if coord[2]]
 
             if visible_coords:
                 saved_points = pg.ScatterPlotItem(
-                    pos=np.array(visible_coords), brush=pg.mkBrush(0, 255, 0, 255)
+                    pos=np.array(visible_coords), brush=pg.mkBrush(color)
                 )
                 plot.addItem(saved_points)
-                self.curves_data[plot_name]["saved_points"] = saved_points
+                self.curves_data[plot_name][tag] = saved_points
 
     @pyqtSlot(dict)
     def on_device_readback(self, msg: dict):
