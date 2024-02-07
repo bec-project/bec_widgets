@@ -219,6 +219,9 @@ class MotorControlAbsolute(MotorControlWidget):
             lambda error: MotorControlErrors.display_error_message(error)
         )
 
+        # Keyboard shortcuts
+        self._init_keyboard_shortcuts()
+
     @pyqtSlot(dict)
     def on_config_update(self, config: dict) -> None:
         """Update config dict"""
@@ -577,6 +580,9 @@ class MotorCoordinateTable(MotorControlWidget):
         self.backspace_shortcut = QShortcut(QKeySequence(Qt.Key_Backspace), self.table)
         self.backspace_shortcut.activated.connect(self.delete_selected_row)
 
+        # Warning message for mode switch enable/disable
+        self.warning_message = True
+
     @pyqtSlot(dict)
     def on_config_update(self, config: dict) -> None:
         """
@@ -644,7 +650,7 @@ class MotorCoordinateTable(MotorControlWidget):
         """Switch between individual and start/stop mode."""
         last_selected_index = self.comboBox_mode.currentIndex()
 
-        if self.table.rowCount() > 0:
+        if self.table.rowCount() > 0 and self.warning_message is True:
             msgBox = QMessageBox()
             msgBox.setIcon(QMessageBox.Critical)
             msgBox.setText(

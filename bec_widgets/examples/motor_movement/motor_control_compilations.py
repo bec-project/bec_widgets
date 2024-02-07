@@ -214,7 +214,7 @@ class MotorControlPanelRelative(QWidget):
         self.layout().setSizeConstraint(layout.SetFixedSize)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import argparse
     import sys
 
@@ -253,7 +253,8 @@ if __name__ == "__main__":
         window = MotorControlPanelRelative(client=client, config=CONFIG_DEFAULT)
     else:
         print("Please specify a valid variant to run. Use -h for help.")
-        sys.exit(1)
+        print("Running the full application by default.")
+        window = MotorControlApp(client=client, config=CONFIG_DEFAULT)
 
     window.show()
     sys.exit(app.exec())
