@@ -271,7 +271,7 @@ class StreamPlot(QtWidgets.QWidget):
                 continue
             endpoint = f"px_stream/projection_{self._current_proj}/data"
             msgs = self.client.producer.lrange(topic=endpoint, start=-1, end=-1)
-            data = [messages.DeviceMessage.loads(msg) for msg in msgs]
+            data = msgs
             if not data:
                 continue
             with np.errstate(divide="ignore", invalid="ignore"):

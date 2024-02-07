@@ -1297,7 +1297,7 @@ class MotorControl(QThread):
 
     @staticmethod
     def _device_status_callback_motors(msg, *, parent, **_kwargs) -> None:
-        deviceMSG = messages.DeviceMessage.loads(msg.value)
+        deviceMSG = msg.value
         if parent.motor_x.name in deviceMSG.content["signals"]:
             parent.current_x = deviceMSG.content["signals"][parent.motor_x.name]["value"]
         elif parent.motor_y.name in deviceMSG.content["signals"]:

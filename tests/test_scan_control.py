@@ -2,24 +2,13 @@ import os
 import pickle
 from unittest.mock import MagicMock
 
-import msgpack
 import pytest
 from qtpy.QtWidgets import QLineEdit
 
 from bec_widgets.widgets import ScanControl
 from bec_widgets.utils.widget_io import WidgetIO
 
-
-# TODO there has to be a better way to mock messages than this, in this case I just took the msg from bec
-def load_test_msg(msg_name):
-    """Helper function to load msg from pickle file."""
-    msg_path = os.path.join(os.path.dirname(__file__), "test_msgs", f"{msg_name}.pkl")
-    with open(msg_path, "rb") as f:
-        msg = pickle.load(f)
-    return msg
-
-
-packed_message = load_test_msg("msg_dict")["available_scans"]
+from .test_msgs.available_scans_message import available_scans_message
 
 
 class FakePositioner:
@@ -45,7 +34,7 @@ def mocked_client():
     client = MagicMock()
 
     # Mock the producer.get method to return the packed message
-    client.producer.get.return_value = packed_message
+    client.producer.get.return_value = available_scans_message
 
     # # Mock the device_manager.devices attribute to return a mock object for samx
     client.device_manager.devices = MagicMock()
@@ -66,7 +55,7 @@ def scan_control(qtbot, mocked_client):  # , mock_dev):
 
 def test_populate_scans(scan_control, mocked_client):
     # The comboBox should be populated with all scan from the message right after initialization
-    expected_scans = msgpack.loads(packed_message).keys()
+    expected_scans = available_scans_message.resource.keys()
     assert scan_control.comboBox_scan_selection.count() == len(expected_scans)
     for scan in expected_scans:  # Each scan should be in the comboBox
         assert scan_control.comboBox_scan_selection.findText(scan) != -1
@@ -77,7 +66,7 @@ def test_populate_scans(scan_control, mocked_client):
 )  # TODO now only for line_scan and grid_scan, later for all loaded scans
 def test_on_scan_selected(scan_control, scan_name):
     # Expected scan info from the message signature
-    expected_scan_info = msgpack.loads(packed_message)[scan_name]
+    expected_scan_info = available_scans_message.resource[scan_name]
 
     # Select a scan from the comboBox
     scan_control.comboBox_scan_selection.setCurrentText(scan_name)
@@ -110,7 +99,7 @@ def test_on_scan_selected(scan_control, scan_name):
 @pytest.mark.parametrize("scan_name", ["line_scan", "grid_scan"])
 def test_add_remove_bundle(scan_control, scan_name):
     # Expected scan info from the message signature
-    expected_scan_info = msgpack.loads(packed_message)[scan_name]
+    expected_scan_info = available_scans_message.resource[scan_name]
 
     # Select a scan from the comboBox
     scan_control.comboBox_scan_selection.setCurrentText(scan_name)

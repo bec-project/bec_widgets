@@ -10,7 +10,7 @@ import os
 from collections.abc import Callable
 from typing import Union
 
-from bec_lib import BECClient, messages, ServiceConfig
+from bec_lib import BECClient, ServiceConfig
 from bec_lib.redis_connector import RedisConsumerThreaded
 from qtpy.QtCore import QObject, Signal as pyqtSignal
 
@@ -76,7 +76,7 @@ class _BECDispatcher(QObject):
         """Creates a new connection for given topics."""
 
         def cb(msg):
-            msg = messages.MessageReader.loads(msg.value)
+            msg = msg.value
             if not isinstance(msg, list):
                 msg = [msg]
             for msg_i in msg:

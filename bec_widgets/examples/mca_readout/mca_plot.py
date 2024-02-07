@@ -102,7 +102,7 @@ class StreamApp(QWidget):
 
     @staticmethod
     def _streamer_cb(msg, *, parent, **_kwargs) -> None:
-        msgMCS = messages.DeviceMessage.loads(msg.value)
+        msgMCS = msg.value
         print(msgMCS)
         row = msgMCS.content["signals"][parent.sub_device]
         metadata = msgMCS.metadata
@@ -123,7 +123,7 @@ class StreamApp(QWidget):
     def _device_cv(msg, *, parent, **_kwargs) -> None:
         print("Getting ScanID")
 
-        msgDEV = messages.ScanStatusMessage.loads(msg.value)
+        msgDEV = msg.value
 
         current_scanID = msgDEV.content["scanID"]
 

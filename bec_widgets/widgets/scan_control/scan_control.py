@@ -119,8 +119,7 @@ class ScanControl(QWidget):
 
     def populate_scans(self):
         """Populates the scan selection combo box with available scans"""
-        msg = self.client.producer.get(MessageEndpoints.available_scans())
-        self.available_scans = msgpack.loads(msg)
+        self.available_scans = self.client.producer.get(MessageEndpoints.available_scans()).resource
         if self.allowed_scans is None:
             allowed_scans = self.available_scans.keys()
         else:
