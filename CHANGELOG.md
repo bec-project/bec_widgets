@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.38.2 (2024-02-07)
+
+### Fix
+
+* Adapt code to BEC 1.0 ([`b36131e`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/b36131eed5c3a3ea58c0fa4d083e63a3717cdf22))
+
 ## v0.38.1 (2024-01-26)
 
 ### Fix
