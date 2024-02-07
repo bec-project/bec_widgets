@@ -1,3 +1,4 @@
+# pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 import unittest
 from unittest.mock import MagicMock, patch
 

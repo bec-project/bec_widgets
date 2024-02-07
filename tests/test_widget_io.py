@@ -1,3 +1,4 @@
+# pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 import pytest
 from qtpy.QtWidgets import (
     QWidget,

@@ -1,4 +1,4 @@
-# pylint: disable=missing-function-docstring
+# pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 import pytest
 from pydantic import ValidationError
 from bec_widgets.validation.monitor_config_validator import (

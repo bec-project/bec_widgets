@@ -1,3 +1,4 @@
+# pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 import numpy as np
 import pyqtgraph as pg
 from qtpy.QtCore import QPointF

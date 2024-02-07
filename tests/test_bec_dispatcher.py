@@ -1,4 +1,4 @@
-# pylint: disable=missing-function-docstring
+# pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 from unittest.mock import Mock
 
 import pytest

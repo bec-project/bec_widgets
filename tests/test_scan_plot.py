@@ -1,3 +1,4 @@
+# pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 from bec_widgets.widgets.scan_plot import scan_plot
 
 

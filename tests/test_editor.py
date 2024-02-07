@@ -1,4 +1,4 @@
-# pylint: disable=no-name-in-module
+# pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 
 import os
 import tempfile
