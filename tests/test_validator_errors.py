@@ -8,7 +8,7 @@ from bec_widgets.validation.monitor_config_validator import (
     PlotConfig,
 )
 
-from test_bec_monitor import mocked_client
+from .test_bec_monitor import mocked_client
 
 
 @pytest.fixture(scope="function")
