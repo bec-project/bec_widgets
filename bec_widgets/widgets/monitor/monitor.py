@@ -33,7 +33,7 @@ CONFIG_SCAN_MODE = {
                         "type": "scan_segment",
                         "signals": {
                             "x": [{"name": "samx", "entry": "samx"}],
-                            "y": [{"name": "gauss_bpm"}],
+                            "y": [{"name": "bpm4i"}],
                         },
                     }
                 ],
@@ -47,7 +47,7 @@ CONFIG_SCAN_MODE = {
                         "type": "scan_segment",
                         "signals": {
                             "x": [{"name": "samx", "entry": "samx"}],
-                            "y": [{"name": "gauss_adc1"}],
+                            "y": [{"name": "bpm4i"}],
                         },
                     }
                 ],
@@ -61,7 +61,7 @@ CONFIG_SCAN_MODE = {
                         "type": "scan_segment",
                         "signals": {
                             "x": [{"name": "samy"}],
-                            "y": [{"name": "gauss_adc2"}],
+                            "y": [{"name": "bpm4i"}],
                         },
                     }
                 ],
@@ -75,7 +75,7 @@ CONFIG_SCAN_MODE = {
                         "type": "scan_segment",
                         "signals": {
                             "x": [{"name": "samy", "entry": "samy"}],
-                            "y": [{"name": "gauss_adc3"}],
+                            "y": [{"name": "bpm4i"}],
                         },
                     }
                 ],
@@ -105,7 +105,7 @@ CONFIG_SCAN_MODE = {
                         "type": "scan_segment",
                         "signals": {
                             "x": [{"name": "samx", "entry": "samx"}],
-                            "y": [{"name": "gauss_bpm"}, {"name": "gauss_adc1"}],
+                            "y": [{"name": "bpm4i"}, {"name": "bpm4i"}],
                         },
                     }
                 ],
@@ -228,7 +228,7 @@ CONFIG_SIMPLE = {
                     "type": "scan_segment",
                     "signals": {
                         "x": [{"name": "samx", "entry": "samx"}],
-                        "y": [{"name": "gauss_bpm"}, {"name": "gauss_adc1"}],
+                        "y": [{"name": "bpm4i"}, {"name": "bpm4i"}],
                     },
                 }
             ],
