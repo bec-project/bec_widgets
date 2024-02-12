@@ -2,6 +2,18 @@
 
 <!--next-version-placeholder-->
 
+## v0.39.0 (2024-02-12)
+
+### Feature
+
+* Added full app with all motor movement related widgets into motor_control_compilations.py ([`fa4ca93`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/fa4ca935bb39fdba4c6500ce9569d47400190e65))
+* MotorCoordinateTable mode_switch added for "Individual" and "Start/Stop" modes ([`2f96e10`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/2f96e10b9deb76eedd8f6b6e201ba3b0e526a6f0))
+* Motor_control.py MotorCoordinateTable added basic version to store coordinates and show them in motor_map.py ([`031cb09`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/031cb094e7f8a7be4a295bea99b7ca8e095db8d7))
+* Active motors from motor_map.py can be changed by slot without changing the whole config ([`17f1458`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/17f14581d7c4662a2f5814ea477dfae8ef6de555))
+* Control panels compilations ([`8361736`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/83617366796ce2926650e38a1a9cec296befd3c6))
+* Comboboxes of motor selection are changed to orange if the motors are not connected yet ([`0b9927f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/0b9927fcf5f46410d05187b2e5a83f97a6ca9246))
+* Motor_control.py MotorControl widgets - Absolute + Relative movement, MotorSelection, ErrorMessage popups ([`6fe08e6`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/6fe08e6b8206bcaaa292b7ff0e6b0d32b883f24f))
+
 ## v0.38.2 (2024-02-07)
 
 ### Fix
