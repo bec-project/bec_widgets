@@ -17,7 +17,7 @@ from bec_widgets.utils import (
     register_rpc_methods,
     rpc_public,
 )
-from bec_widgets.widgets.plots import WidgetConfig, BECPlotBase
+from bec_widgets.widgets.plots import WidgetConfig, BECPlotBase, Waveform1DConfig, BECWaveform1D
 
 
 class FigureConfig(ConnectionConfig):
@@ -28,6 +28,55 @@ class FigureConfig(ConnectionConfig):
     widgets: dict[str, WidgetConfig] = Field(
         {}, description="The list of widgets to be added to the figure widget."
     )
+
+
+class WidgetHandler:
+    """Factory for creating and configuring BEC widgets for BECFigure."""
+
+    def __init__(self):
+        self.widget_factory = {
+            "PlotBase": (BECPlotBase, WidgetConfig),
+            "Waveform1D": (BECWaveform1D, Waveform1DConfig),
+        }
+
+    def create_widget(
+        self,
+        widget_type: str,
+        widget_id: str,
+        parent_figure_id: str,
+        config: dict = None,
+        **axis_kwargs,
+    ) -> BECPlotBase:
+        """
+        Create and configure a widget based on its type.
+
+        Args:
+            widget_type (str): The type of the widget to create.
+            widget_id (str): Unique identifier for the widget.
+            parent_figure_id (str): Identifier of the parent figure.
+            config (dict, optional): Additional configuration for the widget.
+            **axis_kwargs: Additional axis properties to set on the widget after creation.
+
+        Returns:
+            BECPlotBase: The created and configured widget instance.
+        """
+        entry = self.widget_factory.get(widget_type)
+        if not entry:
+            raise ValueError(f"Unsupported widget type: {widget_type}")
+
+        widget_class, config_class = entry
+        widget_config_dict = {
+            "parent_figure_id": parent_figure_id,
+            "gui_id": widget_id,
+            **(config if config is not None else {}),
+        }
+        widget_config = config_class(**widget_config_dict)
+        widget = widget_class(config=widget_config)
+
+        if axis_kwargs:
+            widget.set(**axis_kwargs)
+
+        return widget
 
 
 @register_rpc_methods
@@ -46,10 +95,11 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         super().__init__(client=client, config=config, gui_id=gui_id)
         pg.GraphicsLayoutWidget.__init__(self, parent)  # in case of inheritance
 
+        self.widget_handler = WidgetHandler()
         self.widgets = {}
 
         # TODO just testing adding plot
-        self.add_widget("widget_1", row=0, col=0, title="Plot 1")
+        self.add_widget(widget_id="widget_1", row=0, col=0, title="Plot 1")
         self.widgets["widget_1"].plot_data(
             np.linspace(0, 10, 100), np.sin(np.linspace(0, 10, 100)), label="sin(x)"
         )
@@ -64,48 +114,58 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     #         self.window.close()
 
     @rpc_public
-    def add_widget(self, widget_id: str = None, row: int = None, col: int = None, **kwargs):
-        # Generate unique widget_id if not provided
+    def add_widget(
+        self,
+        widget_type: str = "PlotBase",
+        widget_id: str = None,
+        row: int = None,
+        col: int = None,
+        config: dict = None,
+        **axis_kwargs,
+    ):
+        """
+        Add a widget to the figure at the specified position.
+        Args:
+            widget_type(str): The type of the widget to add.
+            widget_id(str): The unique identifier of the widget. If not provided, a unique ID will be generated.
+            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
+            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
+            config(dict): Additional configuration for the widget.
+            **axis_kwargs(dict): Additional axis properties to set on the widget after creation.
+        """
         if not widget_id:
             widget_id = self._generate_unique_widget_id()
-
-        # Check if id is available
         if widget_id in self.widgets:
-            print(f"Widget with ID {widget_id} already exists.")  # TODO change to raise error)
-            return
+            raise ValueError(f"Widget with ID {widget_id} already exists.")
 
-        # Crete widget instance and its config
-        widget_config = WidgetConfig(
-            parent_figure_id=self.gui_id, widget_class="BECPlotBase", gui_id=widget_id
+        widget = self.widget_handler.create_widget(
+            widget_type=widget_type,
+            widget_id=widget_id,
+            parent_figure_id=self.gui_id,
+            config=config,
+            **axis_kwargs,
         )
-
-        widget = BECPlotBase(config=widget_config)
-        widget.set(**kwargs)  # TODO can be done througt config somehow
 
         # Check if position is occupied
         if row is not None and col is not None:
-            print("adding plot")
             if self.getItem(row, col):
-                print(
-                    f"Position at row {row} and column {col} is already occupied."
-                )  # TODO change to raise error
-                return
+                raise ValueError(f"Position at row {row} and column {col} is already occupied.")
             else:
-                widget_config.row = row
-                widget_config.column = col
+                widget.config.row = row
+                widget.config.column = col
 
                 # Add widget to the figure
                 self.addItem(widget, row=row, col=col)
         else:
             row, col = self._find_next_empty_position()
-            widget_config.row = row
-            widget_config.column = col
+            widget.config.row = row
+            widget.config.column = col
 
             # Add widget to the figure
             self.addItem(widget, row=row, col=col)
 
         # Saving config for future referencing
-        self.config.widgets[widget_id] = widget_config
+        self.config.widgets[widget_id] = widget.config
         self.widgets[widget_id] = widget
 
     def __getitem__(self, key: tuple | str):
@@ -118,7 +178,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             return self.widgets.get(key)
         else:
             raise TypeError(
-                "Key must be a string (widget id) or a tuple of two integers (coordinates)"
+                "Key must be a string (widget id) or a tuple of two integers (grid coordinates)"
             )
 
     def _get_widget_by_coordinates(self, row: int, col: int) -> BECPlotBase:
@@ -135,19 +195,6 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         if widget is None:
             raise KeyError(f"No widget at coordinates ({row}, {col})")
         return widget
-
-    def _add_waveform1d(self, widget_id: str = None, row: int = None, col: int = None, **kwargs):
-        """
-        Add a 1D waveform widget to the figure.
-        Args:
-            widget_id:
-            row:
-            col:
-            **kwargs:
-
-        Returns:
-
-        """
 
     def _find_next_empty_position(self):
         """Find the next empty position (new row) in the figure."""
