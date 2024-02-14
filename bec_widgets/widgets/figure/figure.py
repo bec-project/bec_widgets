@@ -10,7 +10,13 @@ from pydantic import Field
 from pyqtgraph.Qt import uic
 from qtpy.QtWidgets import QApplication, QWidget
 
-from bec_widgets.utils import BECDispatcher, BECConnector, ConnectionConfig
+from bec_widgets.utils import (
+    BECDispatcher,
+    BECConnector,
+    ConnectionConfig,
+    register_rpc_methods,
+    rpc_public,
+)
 from bec_widgets.widgets.plots import WidgetConfig, BECPlotBase
 
 
@@ -24,6 +30,7 @@ class FigureConfig(ConnectionConfig):
     )
 
 
+@register_rpc_methods
 class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     def __init__(
         self,
@@ -56,6 +63,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     #     if hasattr(self, "window"):
     #         self.window.close()
 
+    @rpc_public
     def add_widget(self, widget_id: str = None, row: int = None, col: int = None, **kwargs):
         # Generate unique widget_id if not provided
         if not widget_id:

@@ -5,7 +5,7 @@ import numpy as np
 from pydantic import BaseModel, Field
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.utils import BECConnector, ConnectionConfig
+from bec_widgets.utils import BECConnector, ConnectionConfig, register_rpc_methods, rpc_public
 
 
 class AxisConfig(BaseModel):
@@ -33,19 +33,8 @@ class WidgetConfig(ConnectionConfig):
     )
 
 
+@register_rpc_methods
 class BECPlotBase(BECConnector, pg.PlotItem):
-    USER_ACCESS = [
-        "set",
-        "set_title",
-        "set_x_label",
-        "set_y_label",
-        "set_x_scale",
-        "set_y_scale",
-        "set_x_lim",
-        "set_y_lim",
-        "plot",
-    ]
-
     def __init__(
         self,
         parent: Optional[QWidget] = None,  # TODO decide if needed for this class
@@ -58,6 +47,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         super().__init__(client=client, config=config, gui_id=gui_id)
         pg.PlotItem.__init__(self, parent)
 
+    @rpc_public
     def set(self, **kwargs) -> None:
         """
         Set the properties of the plot widget.
@@ -101,6 +91,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
 
         self.set(**{k: v for k, v in config_mappings.items() if v is not None})
 
+    @rpc_public
     def set_title(self, title: str):
         """
         Set the title of the plot widget.
@@ -110,6 +101,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         self.plt.setTitle(title)
         self.config.axis.title = title
 
+    @rpc_public
     def set_x_label(self, label: str):
         """
         Set the label of the x-axis.
@@ -119,6 +111,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         self.plt.setLabel("bottom", label)
         self.config.axis.x_label = label
 
+    @rpc_public
     def set_y_label(self, label: str):
         """
         Set the label of the y-axis.
@@ -128,6 +121,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         self.plt.setLabel("left", label)
         self.config.axis.y_label = label
 
+    @rpc_public
     def set_x_scale(self, scale: Literal["linear", "log"] = "linear"):
         """
         Set the scale of the x-axis.
@@ -137,6 +131,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         self.plt.setLogMode(x=(scale == "log"))
         self.config.axis.x_scale = scale
 
+    @rpc_public
     def set_y_scale(self, scale: Literal["linear", "log"] = "linear"):
         """
         Set the scale of the y-axis.
@@ -146,6 +141,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         self.plt.setLogMode(y=(scale == "log"))
         self.config.axis.y_scale = scale
 
+    @rpc_public
     def set_x_lim(self, x_lim: tuple) -> None:
         """
         Set the limits of the x-axis.
@@ -155,6 +151,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         self.plt.setXRange(x_lim[0], x_lim[1])
         self.config.axis.x_lim = x_lim
 
+    @rpc_public
     def set_y_lim(self, y_lim: tuple) -> None:
         """
         Set the limits of the y-axis.
@@ -164,6 +161,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         self.plt.setYRange(y_lim[0], y_lim[1])
         self.config.axis.y_lim = y_lim
 
+    @rpc_public
     def set_grid(self, x: bool = False, y: bool = False):
         """
         Set the grid of the plot widget.
@@ -175,6 +173,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         self.config.axis.x_grid = x
         self.config.axis.y_grid = y
 
+    @rpc_public
     def plot_data(self, data_x: list | np.ndarray, data_y: list | np.ndarray, label: str = None):
         """
         Plot custom data on the plot widget. These data are not saved in config.
