@@ -33,7 +33,7 @@ class WidgetConfig(ConnectionConfig):
     )
 
 
-class BECPlotBase(BECConnector):  # , pg.PlotItem):
+class BECPlotBase(BECConnector, pg.PlotItem):
     USER_ACCESS = [
         "set",
         "set_title",
@@ -49,7 +49,6 @@ class BECPlotBase(BECConnector):  # , pg.PlotItem):
     def __init__(
         self,
         parent: Optional[QWidget] = None,  # TODO decide if needed for this class
-        plot_item: Optional[pg.PlotItem] = None,
         config: Optional[WidgetConfig] = None,
         client=None,
         gui_id: Optional[str] = None,
@@ -57,7 +56,7 @@ class BECPlotBase(BECConnector):  # , pg.PlotItem):
         if config is None:
             config = WidgetConfig(widget_class=self.__class__.__name__)
         super().__init__(client=client, config=config, gui_id=gui_id)
-        self.plt = plot_item if plot_item else pg.PlotItem(parent=parent)
+        pg.PlotItem.__init__(self, parent)
 
     def set(self, **kwargs) -> None:
         """
@@ -176,7 +175,7 @@ class BECPlotBase(BECConnector):  # , pg.PlotItem):
         self.config.axis.x_grid = x
         self.config.axis.y_grid = y
 
-    def plot(self, data_x: list | np.ndarray, data_y: list | np.ndarray, label: str = None):
+    def plot_data(self, data_x: list | np.ndarray, data_y: list | np.ndarray, label: str = None):
         """
         Plot custom data on the plot widget. These data are not saved in config.
         Args:
@@ -184,4 +183,4 @@ class BECPlotBase(BECConnector):  # , pg.PlotItem):
             data_y(list|np.ndarray): y-axis data
             label(str): label of the plot
         """
-        self.plt.plot(data_x, data_y, name=label)
+        self.plot(data_x, data_y, name=label)

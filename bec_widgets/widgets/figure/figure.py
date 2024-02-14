@@ -24,44 +24,37 @@ class FigureConfig(ConnectionConfig):
     )
 
 
-class BECFigure(BECConnector):
+class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     def __init__(
         self,
         parent: Optional[QWidget] = None,
         config: Optional[FigureConfig] = None,
         client=None,
         gui_id: Optional[str] = None,
-        graphics_layout_widget: Optional[pg.GraphicsLayoutWidget] = None,
     ):
         if config is None:
             config = FigureConfig(widget_class=self.__class__.__name__)
         else:
             self.config = config
         super().__init__(client=client, config=config, gui_id=gui_id)
-        # pg.GraphicsLayoutWidget.__init__(self, parent) #in case of inheritance
-
-        self.glw = (
-            graphics_layout_widget
-            if graphics_layout_widget
-            else pg.GraphicsLayoutWidget(parent=parent)
-        )
+        pg.GraphicsLayoutWidget.__init__(self, parent)  # in case of inheritance
 
         self.widgets = {}
 
         # TODO just testing adding plot
         self.add_widget("widget_1", row=0, col=0, title="Plot 1")
-        self.widgets["widget_1"].plot(
+        self.widgets["widget_1"].plot_data(
             np.linspace(0, 10, 100), np.sin(np.linspace(0, 10, 100)), label="sin(x)"
         )
 
-    def show(self):  # TODO check if useful for anything
-        self.window = QMainWindow()
-        self.window.setCentralWidget(self.glw)
-        self.window.show()
-
-    def close(self):  # TODO check if useful for anything
-        if hasattr(self, "window"):
-            self.window.close()
+    # def show(self):  # TODO check if useful for anything
+    #     self.window = QMainWindow()
+    #     self.window.setCentralWidget(self)
+    #     self.window.show()
+    #
+    # def close(self):  # TODO check if useful for anything
+    #     if hasattr(self, "window"):
+    #         self.window.close()
 
     def add_widget(self, widget_id: str = None, row: int = None, col: int = None, **kwargs):
         # Generate unique widget_id if not provided
@@ -78,13 +71,12 @@ class BECFigure(BECConnector):
             parent_figure_id=self.gui_id, widget_class="BECPlotBase", gui_id=widget_id, **kwargs
         )
 
-        plot_item = pg.PlotItem()
-        widget = BECPlotBase(plot_item=plot_item, config=widget_config)
+        widget = BECPlotBase(config=widget_config)
 
         # Check if position is occupied
         if row is not None and col is not None:
             print("adding plot")
-            if self.glw.getItem(row, col):
+            if self.getItem(row, col):
                 print(
                     f"Position at row {row} and column {col} is already occupied."
                 )  # TODO change to raise error
@@ -94,14 +86,14 @@ class BECFigure(BECConnector):
                 widget_config.column = col
 
                 # Add widget to the figure
-                self.glw.addItem(widget.plt, row=row, col=col)
+                self.addItem(widget, row=row, col=col)
         else:
             row, col = self._find_next_empty_position()
             widget_config.row = row
             widget_config.column = col
 
             # Add widget to the figure
-            self.glw.addItem(widget.plt, row=row, col=col)
+            self.addItem(widget, row=row, col=col)
 
         # Saving config for future referencing
         self.config.widgets[widget_id] = widget_config
@@ -130,7 +122,7 @@ class BECFigure(BECConnector):
         Returns:
             BECPlotBase: the widget at the given coordinates
         """
-        widget = self.glw.getItem(row, col)
+        widget = self.getItem(row, col)
         if widget is None:
             raise KeyError(f"No widget at coordinates ({row}, {col})")
         return widget
@@ -151,7 +143,7 @@ class BECFigure(BECConnector):
     def _find_next_empty_position(self):
         """Find the next empty position (new row) in the figure."""
         row, col = 0, 0
-        while self.glw.getItem(row, col):
+        while self.getItem(row, col):
             row += 1
         return row, col
 
@@ -207,13 +199,8 @@ class DebugWindow(QWidget):
     def _init_ui(self):
         # Plotting window
         self.glw_1_layout = QVBoxLayout(self.glw)  # Create a new QVBoxLayout
-        graphics_layout_widget = (
-            pg.GraphicsLayoutWidget()
-        )  # create a new pg.GraphicsLayoutWidget instance
-        self.figure = BECFigure(
-            graphics_layout_widget=graphics_layout_widget, parent=self
-        )  # Create a new BECDeviceMonitor
-        self.glw_1_layout.addWidget(self.figure.glw)  # Add BECDeviceMonitor to the layout
+        self.figure = BECFigure(parent=self)  # Create a new BECDeviceMonitor
+        self.glw_1_layout.addWidget(self.figure)  # Add BECDeviceMonitor to the layout
 
         self.console_layout = QVBoxLayout(self.widget_console)
         self.console = JupyterConsoleWidget()
