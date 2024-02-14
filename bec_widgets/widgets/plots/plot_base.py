@@ -98,7 +98,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         Args:
             title(str): Title of the plot widget.
         """
-        self.plt.setTitle(title)
+        self.setTitle(title)
         self.config.axis.title = title
 
     @rpc_public
@@ -108,7 +108,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         Args:
             label(str): Label of the x-axis.
         """
-        self.plt.setLabel("bottom", label)
+        self.setLabel("bottom", label)
         self.config.axis.x_label = label
 
     @rpc_public
@@ -118,7 +118,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         Args:
             label(str): Label of the y-axis.
         """
-        self.plt.setLabel("left", label)
+        self.setLabel("left", label)
         self.config.axis.y_label = label
 
     @rpc_public
@@ -128,7 +128,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         Args:
             scale(Literal["linear", "log"]): Scale of the x-axis.
         """
-        self.plt.setLogMode(x=(scale == "log"))
+        self.setLogMode(x=(scale == "log"))
         self.config.axis.x_scale = scale
 
     @rpc_public
@@ -138,7 +138,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         Args:
             scale(Literal["linear", "log"]): Scale of the y-axis.
         """
-        self.plt.setLogMode(y=(scale == "log"))
+        self.setLogMode(y=(scale == "log"))
         self.config.axis.y_scale = scale
 
     @rpc_public
@@ -148,7 +148,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         Args:
             x_lim(tuple): Limits of the x-axis.
         """
-        self.plt.setXRange(x_lim[0], x_lim[1])
+        self.setXRange(x_lim[0], x_lim[1])
         self.config.axis.x_lim = x_lim
 
     @rpc_public
@@ -158,7 +158,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         Args:
             y_lim(tuple): Limits of the y-axis.
         """
-        self.plt.setYRange(y_lim[0], y_lim[1])
+        self.setYRange(y_lim[0], y_lim[1])
         self.config.axis.y_lim = y_lim
 
     @rpc_public
@@ -169,7 +169,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
             x(bool): Show grid on the x-axis.
             y(bool): Show grid on the y-axis.
         """
-        self.plt.showGrid(x, y)
+        self.showGrid(x, y)
         self.config.axis.x_grid = x
         self.config.axis.y_grid = y
 
@@ -182,4 +182,5 @@ class BECPlotBase(BECConnector, pg.PlotItem):
             data_y(list|np.ndarray): y-axis data
             label(str): label of the plot
         """
+        # TODO very basic so far, add more options
         self.plot(data_x, data_y, name=label)

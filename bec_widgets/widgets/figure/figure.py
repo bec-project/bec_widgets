@@ -76,10 +76,11 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
         # Crete widget instance and its config
         widget_config = WidgetConfig(
-            parent_figure_id=self.gui_id, widget_class="BECPlotBase", gui_id=widget_id, **kwargs
+            parent_figure_id=self.gui_id, widget_class="BECPlotBase", gui_id=widget_id
         )
 
         widget = BECPlotBase(config=widget_config)
+        widget.set(**kwargs)  # TODO can be done througt config somehow
 
         # Check if position is occupied
         if row is not None and col is not None:
