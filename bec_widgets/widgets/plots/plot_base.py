@@ -38,6 +38,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
     def __init__(
         self,
         parent: Optional[QWidget] = None,  # TODO decide if needed for this class
+        parent_figure=None,
         config: Optional[WidgetConfig] = None,
         client=None,
         gui_id: Optional[str] = None,
@@ -46,6 +47,8 @@ class BECPlotBase(BECConnector, pg.PlotItem):
             config = WidgetConfig(widget_class=self.__class__.__name__)
         super().__init__(client=client, config=config, gui_id=gui_id)
         pg.PlotItem.__init__(self, parent)
+
+        self.figure = parent_figure
 
     @rpc_public
     def set(self, **kwargs) -> None:
@@ -174,13 +177,20 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         self.config.axis.y_grid = y
 
     @rpc_public
-    def plot_data(self, data_x: list | np.ndarray, data_y: list | np.ndarray, label: str = None):
+    def plot_data(self, data_x: list | np.ndarray, data_y: list | np.ndarray, **kwargs):
         """
         Plot custom data on the plot widget. These data are not saved in config.
         Args:
             data_x(list|np.ndarray): x-axis data
             data_y(list|np.ndarray): y-axis data
-            label(str): label of the plot
+            **kwargs: Keyword arguments for the plot.
         """
         # TODO very basic so far, add more options
-        self.plot(data_x, data_y, name=label)
+        # TODO decide name of the method
+        self.plot(data_x, data_y, **kwargs)
+
+    @rpc_public
+    def remove(self):
+        """Remove the plot widget from the figure."""
+        if self.figure is not None:
+            self.figure.remove(widget_id=self.gui_id)

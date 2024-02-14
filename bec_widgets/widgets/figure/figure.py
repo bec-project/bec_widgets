@@ -43,6 +43,7 @@ class WidgetHandler:
         self,
         widget_type: str,
         widget_id: str,
+        parent_figure,
         parent_figure_id: str,
         config: dict = None,
         **axis_kwargs,
@@ -66,12 +67,13 @@ class WidgetHandler:
 
         widget_class, config_class = entry
         widget_config_dict = {
+            "widget_class": widget_class.__name__,
             "parent_figure_id": parent_figure_id,
             "gui_id": widget_id,
             **(config if config is not None else {}),
         }
         widget_config = config_class(**widget_config_dict)
-        widget = widget_class(config=widget_config)
+        widget = widget_class(config=widget_config, parent_figure=parent_figure)
 
         if axis_kwargs:
             widget.set(**axis_kwargs)
@@ -141,6 +143,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         widget = self.widget_handler.create_widget(
             widget_type=widget_type,
             widget_id=widget_id,
+            parent_figure=self,
             parent_figure_id=self.gui_id,
             config=config,
             **axis_kwargs,
@@ -167,6 +170,64 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         # Saving config for future referencing
         self.config.widgets[widget_id] = widget.config
         self.widgets[widget_id] = widget
+
+    @rpc_public
+    def remove(
+        self,
+        row: int = None,
+        col: int = None,
+        widget_id: str = None,
+        coordinates: tuple[int, int] = None,
+    ) -> None:
+        """
+        Remove a widget from the figure. Can be removed by its unique identifier or by its coordinates.
+        Args:
+            row(int): The row coordinate of the widget to remove.
+            col(int): The column coordinate of the widget to remove.
+            widget_id(str): The unique identifier of the widget to remove.
+            coordinates(tuple[int, int], optional): The coordinates of the widget to remove.
+        """
+        if widget_id:
+            self._remove_by_id(widget_id)
+        elif row is not None and col is not None:
+            self._remove_by_coordinates(row, col)
+        elif coordinates:
+            self._remove_by_coordinates(*coordinates)
+        else:
+            raise ValueError("Must provide either widget_id or coordinates for removal.")
+
+    def _remove_by_coordinates(self, row: int, col: int) -> None:
+        """
+        Remove a widget from the figure by its coordinates.
+        Args:
+            row(int): The row coordinate of the widget to remove.
+            col(int): The column coordinate of the widget to remove.
+        """
+        widget = self._get_widget_by_coordinates(row, col)
+        if widget:
+            widget_id = widget.config.gui_id
+            if widget_id and widget_id in self.widgets:
+                self._remove_by_id(widget_id)
+            else:
+                raise ValueError(f"No widget found at coordinates ({row}, {col}).")
+        else:
+            raise ValueError(f"No widget found at coordinates ({row}, {col}).")
+
+    def _remove_by_id(self, widget_id: str) -> None:
+        """
+        Remove a widget from the figure by its unique identifier.
+        Args:
+            widget_id(str): The unique identifier of the widget to remove.
+        """
+        if widget_id in self.widgets:
+            widget = self.widgets.pop(widget_id)
+            self.removeItem(widget)
+            # Assuming self.config.widgets is a dict tracking widgets by their IDs
+            if widget_id in self.config.widgets:
+                self.config.widgets.pop(widget_id)
+            print(f"Removed widget {widget_id}.")
+        else:
+            raise ValueError(f"Widget with ID {widget_id} does not exist.")
 
     def __getitem__(self, key: tuple | str):
         if isinstance(key, tuple) and len(key) == 2:
@@ -257,6 +318,8 @@ class DebugWindow(QWidget):
         self.glw_1_layout = QVBoxLayout(self.glw)  # Create a new QVBoxLayout
         self.figure = BECFigure(parent=self)  # Create a new BECDeviceMonitor
         self.glw_1_layout.addWidget(self.figure)  # Add BECDeviceMonitor to the layout
+
+        print(f"USER_ACCESS for BECFigure: {self.figure.USER_ACCESS}")
 
         self.console_layout = QVBoxLayout(self.widget_console)
         self.console = JupyterConsoleWidget()
