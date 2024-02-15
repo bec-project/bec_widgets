@@ -10,12 +10,12 @@ from pydantic import Field
 from pyqtgraph.Qt import uic
 from qtpy.QtWidgets import QApplication, QWidget
 
+from bec_lib.utils import user_access
+
 from bec_widgets.utils import (
     BECDispatcher,
     BECConnector,
     ConnectionConfig,
-    register_rpc_methods,
-    rpc_public,
 )
 from bec_widgets.widgets.plots import WidgetConfig, BECPlotBase, Waveform1DConfig, BECWaveform1D
 
@@ -81,7 +81,6 @@ class WidgetHandler:
         return widget
 
 
-@register_rpc_methods
 class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     def __init__(
         self,
@@ -106,6 +105,9 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             np.linspace(0, 10, 100), np.sin(np.linspace(0, 10, 100)), label="sin(x)"
         )
 
+        # TODO debug 1dwaveform
+        self.add_widget(widget_type="Waveform1D", widget_id="widget_2", row=1, col=0)
+
     # def show(self):  # TODO check if useful for anything
     #     self.window = QMainWindow()
     #     self.window.setCentralWidget(self)
@@ -115,10 +117,10 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     #     if hasattr(self, "window"):
     #         self.window.close()
 
-    @rpc_public
+    @user_access
     def add_widget(
         self,
-        widget_type: str = "PlotBase",
+        widget_type: Literal["PlotBase", "Waveform1D"] = "PlotBase",
         widget_id: str = None,
         row: int = None,
         col: int = None,
@@ -128,7 +130,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         """
         Add a widget to the figure at the specified position.
         Args:
-            widget_type(str): The type of the widget to add.
+            widget_type(Literal["PlotBase","Waveform1D"]): The type of the widget to add.
             widget_id(str): The unique identifier of the widget. If not provided, a unique ID will be generated.
             row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
             col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
@@ -171,7 +173,10 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         self.config.widgets[widget_id] = widget.config
         self.widgets[widget_id] = widget
 
-    @rpc_public
+        # TODO rpc debug
+        print(f"Added widget {widget_id} at position ({row}, {col}).")
+
+    @user_access
     def remove(
         self,
         row: int = None,
@@ -318,8 +323,6 @@ class DebugWindow(QWidget):
         self.glw_1_layout = QVBoxLayout(self.glw)  # Create a new QVBoxLayout
         self.figure = BECFigure(parent=self)  # Create a new BECDeviceMonitor
         self.glw_1_layout.addWidget(self.figure)  # Add BECDeviceMonitor to the layout
-
-        print(f"USER_ACCESS for BECFigure: {self.figure.USER_ACCESS}")
 
         self.console_layout = QVBoxLayout(self.widget_console)
         self.console = JupyterConsoleWidget()
