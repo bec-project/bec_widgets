@@ -1,6 +1,7 @@
 # pylint: disable = no-name-in-module,missing-module-docstring
 import itertools
 import os
+import sys
 from typing import Literal, Optional
 
 import numpy as np
@@ -106,7 +107,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         )
 
         # TODO debug 1dwaveform
-        self.add_widget(widget_type="Waveform1D", widget_id="widget_2", row=1, col=0)
+        # self.add_widget(widget_type="Waveform1D", widget_id="widget_2", row=1, col=0)
 
     # def show(self):  # TODO check if useful for anything
     #     self.window = QMainWindow()
@@ -277,6 +278,14 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             if widget_id not in existing_ids:
                 return widget_id
 
+    def start(self):
+        app = QApplication(sys.argv)
+        win = QMainWindow()
+        win.setCentralWidget(self)
+        win.show()
+
+        sys.exit(app.exec_())
+
 
 ##################################################
 ##################################################
@@ -330,18 +339,21 @@ class DebugWindow(QWidget):
         self.console.set_default_style("linux")
 
 
-if __name__ == "__main__":  # pragma: no cover
-    import sys
+widget = BECFigure()
 
-    bec_dispatcher = BECDispatcher()
-    client = bec_dispatcher.client
-    client.start()
-
-    app = QApplication(sys.argv)
-    win = DebugWindow()
-    win.show()
-
-    sys.exit(app.exec_())
+widget.start()
+# if __name__ == "__main__":  # pragma: no cover
+#     import sys
+#
+#     bec_dispatcher = BECDispatcher()
+#     client = bec_dispatcher.client
+#     client.start()
+#
+#     app = QApplication(sys.argv)
+#     win = DebugWindow()
+#     win.show()
+#
+#     sys.exit(app.exec_())
 
 # if __name__ == "__main__":  # pragma: no cover
 #     from PyQt6.QtWidgets import QApplication
