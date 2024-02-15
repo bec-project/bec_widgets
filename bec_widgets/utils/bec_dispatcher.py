@@ -7,7 +7,7 @@ from collections.abc import Callable
 from typing import Union
 
 from bec_lib import BECClient, ServiceConfig
-from bec_lib.redis_connector import RedisConsumerThreaded
+from bec_lib.connector import ConnectorBase
 from qtpy.QtCore import QObject, Signal as pyqtSignal
 
 # Adding a new pyqt signal requires a class factory, as they must be part of the class definition
@@ -18,10 +18,11 @@ _signal_class_factory = (
 
 
 class _Connection:
-    """Utility class to keep track of slots connected to a particular redis consumer"""
+    """Utility class to keep track of slots connected to a particular redis connector"""
 
-    def __init__(self, consumer) -> None:
-        self.consumer: RedisConsumerThreaded = consumer
+    def __init__(self, callback) -> None:
+        self.callback = callback
+
         self.slots = set()
         # keep a reference to a new signal class, so it is not gc'ed
         self._signal_container = next(_signal_class_factory)()
@@ -29,7 +30,7 @@ class _Connection:
 
 
 class _BECDispatcher(QObject):
-    """Utility class to keep track of slots connected to a particular redis consumer"""
+    """Utility class to keep track of slots connected to a particular redis connector"""
 
     def __init__(self, bec_config=None):
         super().__init__()
@@ -73,18 +74,13 @@ class _BECDispatcher(QObject):
 
         def cb(msg):
             msg = msg.value
-            if not isinstance(msg, list):
-                msg = [msg]
-            for msg_i in msg:
-                for connection_key, connection in self._connections.items():
-                    if set(topics).intersection(
-                        connection_key if isinstance(connection_key, tuple) else [connection_key]
-                    ):
-                        connection.signal.emit(msg_i.content, msg_i.metadata)
+            for connection_key, connection in self._connections.items():
+                if set(topics).intersection(connection_key):
+                    connection.signal.emit(msg.content, msg.metadata)
 
-        consumer = self.client.connector.consumer(topics=topics, cb=cb)
-        consumer.start()
-        return _Connection(consumer)
+        self.client.connector.register(topics=topics, cb=cb)
+
+        return _Connection(cb)
 
     def _do_disconnect_slot(self, topic, slot):
         print(f"Disconnecting {slot} from {topic}")
@@ -96,9 +92,6 @@ class _BECDispatcher(QObject):
             print("Continue to remove slot:'{slot}' from 'connection.slots'.")
         connection.slots.remove(slot)
         if not connection.slots:
-            print(f"{connection.consumer} is shutting down")
-            connection.consumer.shutdown()
-            connection.consumer.join()
             del self._connections[topic]
 
     def _disconnect_slot_from_topic(self, slot: Callable, topic: str) -> None:

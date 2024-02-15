@@ -80,7 +80,7 @@ def mocked_client():
 
 
 @pytest.fixture(scope="function")
-def monitor(qtbot, mocked_client):
+def monitor(bec_dispatcher, qtbot, mocked_client):
     # client = MagicMock()
     widget = BECMonitor(client=mocked_client)
     qtbot.addWidget(widget)
