@@ -270,6 +270,57 @@ class BECWaveform1D(BECPlotBase):
                     return True
         return False
 
+    def remove_curve(self, *identifiers):
+        """
+        Remove a curve from the plot widget.
+        Args:
+            *identifiers: Identifier of the curve to be removed. Can be either an integer (index) or a string (curve_id).
+        """
+        for identifier in identifiers:
+            if isinstance(identifier, int):
+                self._remove_curve_by_order(identifier)
+            elif isinstance(identifier, str):
+                self._remove_curve_by_id(identifier)
+            else:
+                raise ValueError(
+                    "Each identifier must be either an integer (index) or a string (curve_id)."
+                )
+
+    def _remove_curve_by_id(self, curve_id):
+        """
+        Remove a curve by its ID from the plot widget.
+        Args:
+            curve_id(str): ID of the curve to be removed.
+        """
+        for source, curves in self.curve_data.items():
+            if curve_id in curves:
+                curve = curves.pop(curve_id)
+                self.removeItem(curve)
+                del self.config.curves[curve_id]
+                if curve in self.curves:
+                    self.curves.remove(curve)
+                return
+        raise KeyError(f"Curve with ID '{curve_id}' not found.")
+
+    def _remove_curve_by_order(self, N):
+        """
+        Remove a curve by its order from the plot widget.
+        Args:
+            N(int): Order of the curve to be removed.
+        """
+        if N < len(self.curves):
+            curve = self.curves[N]
+            curve_id = curve.name()  # Assuming curve's name is used as its ID
+            self.removeItem(curve)
+            del self.config.curves[curve_id]
+            # Remove from self.curve_data
+            for source, curves in self.curve_data.items():
+                if curve_id in curves:
+                    del curves[curve_id]
+                    break
+        else:
+            raise IndexError(f"Curve order {N} out of range.")
+
     @pyqtSlot(dict, dict)
     def on_scan_segment(self, msg: dict, metadata: dict):
         """
