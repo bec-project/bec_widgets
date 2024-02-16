@@ -6,7 +6,7 @@ from typing import Literal, Optional
 
 import numpy as np
 import pyqtgraph as pg
-from PyQt6.QtWidgets import QVBoxLayout, QMainWindow
+from qtpy.QtWidgets import QVBoxLayout, QMainWindow
 from pydantic import Field
 from pyqtgraph.Qt import uic
 from qtpy.QtWidgets import QApplication, QWidget
@@ -100,15 +100,6 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         self.widget_handler = WidgetHandler()
         self.widgets = {}
 
-        # TODO just testing adding plot
-        self.add_widget(widget_id="widget_1", row=0, col=0, title="Plot 1")
-        self.widgets["widget_1"].plot_data(
-            np.linspace(0, 10, 100), np.sin(np.linspace(0, 10, 100)), label="sin(x)"
-        )
-
-        # TODO debug 1dwaveform
-        self.add_widget(widget_type="Waveform1D", widget_id="widget_2", row=1, col=0)
-
     # def show(self):  # TODO check if useful for anything
     #     self.window = QMainWindow()
     #     self.window.setCentralWidget(self)
@@ -173,9 +164,6 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         # Saving config for future referencing
         self.config.widgets[widget_id] = widget.config
         self.widgets[widget_id] = widget
-
-        # TODO rpc debug
-        print(f"Added widget {widget_id} at position ({row}, {col}).")
 
     @user_access
     def remove(
@@ -324,8 +312,12 @@ class DebugWindow(QWidget):
 
         self._init_ui()
 
+        self.splitter.setSizes([200, 100])
+
         # console push
-        self.console.kernel_manager.kernel.shell.push({"fig": self.figure})
+        self.console.kernel_manager.kernel.shell.push(
+            {"fig": self.figure, "w1": self.w1, "w2": self.w2, "np": np, "pg": pg}
+        )
 
     def _init_ui(self):
         # Plotting window
@@ -333,10 +325,35 @@ class DebugWindow(QWidget):
         self.figure = BECFigure(parent=self)  # Create a new BECDeviceMonitor
         self.glw_1_layout.addWidget(self.figure)  # Add BECDeviceMonitor to the layout
 
+        # add stuff to figure
+        self._init_figure()
+
         self.console_layout = QVBoxLayout(self.widget_console)
         self.console = JupyterConsoleWidget()
         self.console_layout.addWidget(self.console)
         self.console.set_default_style("linux")
+
+    def _init_figure(self):
+        self.figure.add_widget(widget_type="Waveform1D", row=0, col=0, title="Plot 1")
+        self.figure.add_widget(widget_type="Waveform1D", row=1, col=0, title="Plot 2")
+
+        self.w1 = self.figure[0, 0]
+        self.w2 = self.figure[1, 0]
+
+        # curves for w1
+        self.w1.add_scan("samx", "samx", "bpm4i", "bpm4i", pen_style="dash")
+        self.w1.add_curve(
+            x=[1, 2, 3, 4, 5],
+            y=[1, 2, 3, 4, 5],
+            label="curve-custom",
+            color="blue",
+            pen_style="dashdot",
+        )
+
+        # curves for w2
+        self.w2.add_scan("samx", "samx", "bpm3a", "bpm3a", pen_style="solid")
+        self.w2.add_scan("samx", "samx", "bpm4d", "bpm4d", pen_style="dot")
+        self.w2.add_curve(x=[1, 2, 3, 4, 5], y=[5, 4, 3, 2, 1], color="red", pen_style="dashdot")
 
 
 if __name__ == "__main__":  # pragma: no cover

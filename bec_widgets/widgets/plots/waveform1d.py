@@ -5,17 +5,14 @@ import numpy as np
 import pyqtgraph as pg
 from pydantic import Field, BaseModel
 from pyqtgraph import mkBrush
-
-from qtpy.QtWidgets import QWidget
 from qtpy import QtCore
-from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtCore import Signal as pyqtSignal
-from qtpy.QtGui import QColor
+from qtpy.QtCore import Slot as pyqtSlot
+from qtpy.QtWidgets import QWidget
 
-from bec_lib.scan_data import ScanData
-from bec_lib.scan_items import ScanItem
-from bec_lib.utils import user_access
 from bec_lib import MessageEndpoints
+from bec_lib.scan_data import ScanData
+from bec_lib.utils import user_access
 from bec_widgets.utils import Colors
 from bec_widgets.widgets.plots import BECPlotBase, WidgetConfig
 
@@ -47,7 +44,7 @@ class CurveConfig(BaseModel):
     pen_width: Optional[int] = Field(2, description="The width of the pen of the curve.")
     pen_style: Optional[Literal["solid", "dash", "dot", "dashdot"]] = Field(
         "solid", description="The style of the pen of the curve."
-    )  # TODO check if valid
+    )
     source: Optional[str] = Field(
         None, description="The source of the curve."
     )  # TODO here on or curve??
@@ -96,11 +93,96 @@ class BECCurve(pg.PlotDataItem):  # TODO decide what will be accessible from the
             self.setSymbolSize(self.config.symbol_size)
             self.setSymbol(self.config.symbol)
 
-    def update_data(self, x, y):
+    def set_data(self, x, y):
         if self.config.source == "custom":
             self.setData(x, y)
         else:
             raise ValueError(f"Source {self.config.source} do not allow custom data setting.")
+
+    def set(self, **kwargs):
+        """
+        Set the properties of the curve.
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+        Possible properties:
+            - color: str
+            - symbol: str
+            - symbol_color: str
+            - symbol_size: int
+            - pen_width: int
+            - pen_style: Literal["solid", "dash", "dot", "dashdot"]
+        """
+
+        # Mapping of keywords to setter methods
+        method_map = {
+            "color": self.set_color,
+            "symbol": self.set_symbol,
+            "symbol_color": self.set_symbol_color,
+            "symbol_size": self.set_symbol_size,
+            "pen_width": self.set_pen_width,
+            "pen_style": self.set_pen_style,
+        }
+        for key, value in kwargs.items():
+            if key in method_map:
+                method_map[key](value)
+            else:
+                print(f"Warning: '{key}' is not a recognized property.")
+
+    def set_color(self, color: str, symbol_color: Optional[str] = None):
+        """
+        Change the color of the curve.
+        Args:
+            color(str): Color of the curve.
+            symbol_color(str, optional): Color of the symbol. Defaults to None.
+        """
+        self.config.color = color
+        self.config.symbol_color = symbol_color or color
+        self.apply_config()
+
+    def set_symbol(self, symbol: str):
+        """
+        Change the symbol of the curve.
+        Args:
+            symbol(str): Symbol of the curve.
+        """
+        self.config.symbol = symbol
+        self.apply_config()
+
+    def set_symbol_color(self, symbol_color: str):
+        """
+        Change the symbol color of the curve.
+        Args:
+            symbol_color(str): Color of the symbol.
+        """
+        self.config.symbol_color = symbol_color
+        self.apply_config()
+
+    def set_symbol_size(self, symbol_size: int):
+        """
+        Change the symbol size of the curve.
+        Args:
+            symbol_size(int): Size of the symbol.
+        """
+        self.config.symbol_size = symbol_size
+        self.apply_config()
+
+    def set_pen_width(self, pen_width: int):
+        """
+        Change the pen width of the curve.
+        Args:
+            pen_width(int): Width of the pen.
+        """
+        self.config.pen_width = pen_width
+        self.apply_config()
+
+    def set_pen_style(self, pen_style: Literal["solid", "dash", "dot", "dashdot"]):
+        """
+        Change the pen style of the curve.
+        Args:
+            pen_style(Literal["solid", "dash", "dot", "dashdot"]): Style of the pen.
+        """
+        self.config.pen_style = pen_style
+        self.apply_config()
 
 
 class BECWaveform1D(BECPlotBase):
@@ -120,7 +202,7 @@ class BECWaveform1D(BECPlotBase):
             parent=parent, parent_figure=parent_figure, config=config, client=client, gui_id=gui_id
         )
 
-        self.curve_data = defaultdict(dict)
+        self.curves_data = defaultdict(dict)
         self.scanID = None
 
         self.proxy_update_plot = pg.SignalProxy(
@@ -133,26 +215,49 @@ class BECWaveform1D(BECPlotBase):
         # Connect dispatcher signals
         self.bec_dispatcher.connect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
 
-        # TODO DEbug
-        # Scan curves
-        self.add_scan("samx", "samx", "bpm4i", "bpm4i", pen_style="dash")
-        self.add_scan("samx", "samx", "bpm3a", "bpm3a", pen_style="solid")
-        self.add_scan("samx", "samx", "bpm4d", "bpm4d", pen_style="dot")
-        # Custom curves
-        self.add_curve(
-            x=[1, 2, 3, 4, 5],
-            y=[1, 2, 3, 4, 5],
-            label="curve-custom",
-            color="blue",
-            pen_style="dashdot",
-        )
-        self.add_curve(x=[1, 2, 3, 4, 5], y=[5, 4, 3, 2, 1], color="red", pen_style="dashdot")
-
         self.addLegend()
 
-    def add_curve_by_config(self, curve_config: CurveConfig): ...
+    def add_curve_by_config(self, curve_config: CurveConfig | dict):
+        """
+        Add a curve to the plot widget by its configuration.
+        Args:
+            curve_config(CurveConfig|dict): Configuration of the curve to be added.
+        """
+        if isinstance(curve_config, dict):
+            curve_config = CurveConfig(**curve_config)
+        self._add_curve_object(
+            name=curve_config.label, source=curve_config.source, config=curve_config
+        )
 
-    def save_curve_config(self): ...
+    def get_curve_config(self, curve_id: str) -> CurveConfig:
+        """
+        Get the configuration of a curve by its ID.
+        Args:
+            curve_id(str): ID of the curve.
+        Returns:
+            CurveConfig: Configuration of the curve.
+        """
+        for source, curves in self.curves_data.items():
+            if curve_id in curves:
+                return curves[curve_id].config
+
+    @user_access
+    def curves(self) -> list:  # TODO discuss if it should be marked as @property for RPC
+        """
+        Get the curves of the plot widget as a list
+        Returns:
+            list: List of curves.
+        """
+        return self.curves
+
+    @user_access
+    def curves_data(self) -> dict:  # TODO discuss if it should be marked as @property for RPC
+        """
+        Get the curves data of the plot widget as a dictionary
+        Returns:
+            dict: Dictionary of curves data.
+        """
+        return self.curves_data
 
     @user_access
     def add_scan(
@@ -169,7 +274,7 @@ class BECWaveform1D(BECPlotBase):
         curve_source = "scan_segment"
         label = label or f"{y_name}-{y_entry}"
 
-        curve_exits = self._check_curve_id(label, self.curve_data)
+        curve_exits = self._check_curve_id(label, self.curves_data)
         if curve_exits:
             raise ValueError(f"Curve with ID '{label}' already exists in widget '{self.gui_id}'.")
             return
@@ -207,7 +312,7 @@ class BECWaveform1D(BECPlotBase):
         curve_source = "custom"
         curve_id = label or f"Curve {len(self.curves) + 1}"
 
-        curve_exits = self._check_curve_id(curve_id, self.curve_data)
+        curve_exits = self._check_curve_id(curve_id, self.curves_data)
         if curve_exits:
             raise ValueError(
                 f"Curve with ID '{curve_id}' already exists in widget '{self.gui_id}'."
@@ -230,6 +335,8 @@ class BECWaveform1D(BECPlotBase):
 
         self._add_curve_object(name=curve_id, source=curve_source, config=curve_config, data=(x, y))
 
+        # self.crosshair = Crosshair(self, precision=3)
+
     def _add_curve_object(
         self,
         name: str,
@@ -246,7 +353,7 @@ class BECWaveform1D(BECPlotBase):
             data(tuple[list|np.ndarray,list|np.ndarray], optional): Data (x,y) to be plotted. Defaults to None.
         """
         curve = BECCurve(config=config, name=name)
-        self.curve_data[source][name] = curve
+        self.curves_data[source][name] = curve
         self.addItem(curve)
         self.config.curves[name] = curve.config
         if data is not None:
@@ -292,7 +399,7 @@ class BECWaveform1D(BECPlotBase):
         Args:
             curve_id(str): ID of the curve to be removed.
         """
-        for source, curves in self.curve_data.items():
+        for source, curves in self.curves_data.items():
             if curve_id in curves:
                 curve = curves.pop(curve_id)
                 self.removeItem(curve)
@@ -314,7 +421,7 @@ class BECWaveform1D(BECPlotBase):
             self.removeItem(curve)
             del self.config.curves[curve_id]
             # Remove from self.curve_data
-            for source, curves in self.curve_data.items():
+            for source, curves in self.curves_data.items():
                 if curve_id in curves:
                     del curves[curve_id]
                     break
@@ -352,7 +459,7 @@ class BECWaveform1D(BECPlotBase):
         Args:
             data(ScanData): Data from the scan segment.
         """
-        for curve_id, curve in self.curve_data["scan_segment"].items():
+        for curve_id, curve in self.curves_data["scan_segment"].items():
             x_name = curve.config.signals.x.name
             x_entry = curve.config.signals.x.entry
             y_name = curve.config.signals.y.name
