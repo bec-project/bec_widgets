@@ -107,7 +107,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         )
 
         # TODO debug 1dwaveform
-        # self.add_widget(widget_type="Waveform1D", widget_id="widget_2", row=1, col=0)
+        self.add_widget(widget_type="Waveform1D", widget_id="widget_2", row=1, col=0)
 
     # def show(self):  # TODO check if useful for anything
     #     self.window = QMainWindow()
@@ -339,28 +339,15 @@ class DebugWindow(QWidget):
         self.console.set_default_style("linux")
 
 
-widget = BECFigure()
+if __name__ == "__main__":  # pragma: no cover
+    import sys
 
-widget.start()
-# if __name__ == "__main__":  # pragma: no cover
-#     import sys
-#
-#     bec_dispatcher = BECDispatcher()
-#     client = bec_dispatcher.client
-#     client.start()
-#
-#     app = QApplication(sys.argv)
-#     win = DebugWindow()
-#     win.show()
-#
-#     sys.exit(app.exec_())
+    bec_dispatcher = BECDispatcher()
+    client = bec_dispatcher.client
+    client.start()
 
-# if __name__ == "__main__":  # pragma: no cover
-#     from PyQt6.QtWidgets import QApplication
-#
-#     app = QApplication([])
-#
-#     fig = BECFigure()
-#     fig.show()
-#
-#     app.exec()
+    app = QApplication(sys.argv)
+    win = DebugWindow()
+    win.show()
+
+    sys.exit(app.exec_())
