@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.40.0 (2024-02-16)
+
+### Feature
+
+* **utils.colors:** Golden_angle_color utility can return colors as a  list of QColor, RGB or HEC ([`5125909`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/51259097fa23ff861eac3f7c63624ea591bf1bd3))
+
 ## v0.39.0 (2024-02-12)
 
 ### Feature
