@@ -1,11 +1,13 @@
-from typing import Optional, Literal
+from __future__ import annotations
 
-import pyqtgraph as pg
+from typing import Literal, Optional
+
 import numpy as np
+import pyqtgraph as pg
+from bec_lib.utils import user_access
 from pydantic import BaseModel, Field
 from qtpy.QtWidgets import QWidget
 
-from bec_lib.utils import user_access
 from bec_widgets.utils import BECConnector, ConnectionConfig
 
 
@@ -52,7 +54,6 @@ class BECPlotBase(BECConnector, pg.PlotItem):
 
         self.add_legend()
 
-    @user_access
     def set(self, **kwargs) -> None:
         """
         Set the properties of the plot widget.
@@ -100,7 +101,6 @@ class BECPlotBase(BECConnector, pg.PlotItem):
 
         self.set(**{k: v for k, v in config_mappings.items() if v is not None})
 
-    @user_access
     def set_title(self, title: str):
         """
         Set the title of the plot widget.

@@ -1,26 +1,24 @@
+from __future__ import annotations
+
 # pylint: disable = no-name-in-module,missing-module-docstring
 import itertools
 import os
 import sys
+from typing import Literal, Optional, overload
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Literal, Optional
 
 import numpy as np
 import pyqtgraph as pg
+from bec_lib.utils import user_access
 from qtpy.QtWidgets import QVBoxLayout, QMainWindow
 from pydantic import Field
 from pyqtgraph.Qt import uic
 from qtpy.QtWidgets import QApplication, QWidget
 
-from bec_lib.utils import user_access
-
-from bec_widgets.utils import (
-    BECDispatcher,
-    BECConnector,
-    ConnectionConfig,
-)
-from bec_widgets.widgets.plots import WidgetConfig, BECPlotBase, Waveform1DConfig, BECWaveform1D
+from bec_widgets.utils import BECConnector, BECDispatcher, ConnectionConfig
+from bec_widgets.widgets.plots import BECPlotBase, BECWaveform1D, Waveform1DConfig, WidgetConfig
 
 
 class FigureConfig(ConnectionConfig):
@@ -86,13 +84,15 @@ class WidgetHandler:
 
 
 class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
+    USER_ACCESS = ["add_widget", "remove"]
+
     def __init__(
         self,
         parent: Optional[QWidget] = None,
         config: Optional[FigureConfig] = None,
         client=None,
         gui_id: Optional[str] = None,
-    ):
+    ) -> None:
         if config is None:
             config = FigureConfig(widget_class=self.__class__.__name__)
         else:
@@ -144,7 +144,50 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             for col_idx, widget in enumerate(row):
                 self.addItem(self.widgets[widget], row=row_idx, col=col_idx)
 
-    @user_access
+    @overload
+    def add_widget(
+        self,
+        widget_type: Literal["Waveform1D"] = "Waveform1D",
+        widget_id: str = ...,
+        row: int = ...,
+        col: int = ...,
+        config: dict = ...,
+        **axis_kwargs,
+    ) -> BECWaveform1D: ...
+
+    @overload
+    def add_widget(
+        self,
+        widget_type: Literal["PlotBase"] = "PlotBase",
+        widget_id: str = ...,
+        row: int = ...,
+        col: int = ...,
+        config: dict = ...,
+        **axis_kwargs,
+    ) -> BECPlotBase: ...
+
+    # @overload
+    # def add_widget(
+    #     self,
+    #     widget_type: Literal["Waveform1D"] = "Waveform1D",
+    #     widget_id: str = None,
+    #     row: int = None,
+    #     col: int = None,
+    #     config: dict = None,
+    #     **axis_kwargs,
+    # ) -> BECWaveform1D: ...
+
+    # @overload
+    # def add_widget(
+    #     self,
+    #     widget_type: Literal["PlotBase"] = "PlotBase",
+    #     widget_id: str = None,
+    #     row: int = None,
+    #     col: int = None,
+    #     config: dict = None,
+    #     **axis_kwargs,
+    # ) -> BECPlotBase: ...
+
     def add_widget(
         self,
         widget_type: Literal["PlotBase", "Waveform1D"] = "PlotBase",
@@ -153,7 +196,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         col: int = None,
         config=None,
         **axis_kwargs,
-    ):
+    ) -> BECPlotBase:
         """
         Add a widget to the figure at the specified position.
         Args:
@@ -212,7 +255,8 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         # Reflect the grid coordinates
         self.change_grid(widget_id, row, col)
 
-    @user_access
+        return widget
+
     def remove(
         self,
         row: int = None,
@@ -310,7 +354,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         """Generate a unique widget ID."""
         existing_ids = set(self.widgets.keys())
         for i in itertools.count(1):
-            widget_id = f"Widget {i}"
+            widget_id = f"widget_{i}"
             if widget_id not in existing_ids:
                 return widget_id
 
@@ -329,9 +373,9 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 ##################################################
 ##################################################
 
-from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 import matplotlib.pyplot as plt
+from qtconsole.rich_jupyter_widget import RichJupyterWidget
 
 
 class JupyterConsoleWidget(RichJupyterWidget):
