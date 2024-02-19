@@ -26,7 +26,7 @@ for ii in range(20):
         topic=MessageEndpoints.device_async_readback(
             scanID=scanID, device="mca"
         ),  # scanID will be different for each scan
-        msg={"data": msg},
+        msg={"data": msg},  # TODO should be msg_dict
         expire=1800,
     )
 

@@ -59,6 +59,10 @@ class BECConnector:
         """
         self.config.gui_id = gui_id
 
+    def get_obj_by_id(self, obj_id: str):
+        if obj_id == self.gui_id:
+            return self
+
     def get_bec_shortcuts(self):
         """Get BEC shortcuts for the widget."""
         self.dev = self.client.device_manager.devices

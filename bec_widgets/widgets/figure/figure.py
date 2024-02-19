@@ -2,6 +2,8 @@
 import itertools
 import os
 import sys
+from collections import defaultdict
+from dataclasses import dataclass
 from typing import Literal, Optional
 
 import numpy as np
@@ -26,6 +28,7 @@ class FigureConfig(ConnectionConfig):
 
     theme: Literal["dark", "light"] = Field("dark", description="The theme of the figure widget.")
     num_columns: int = Field(1, description="The number of columns in the figure widget.")
+    num_rows: int = Field(1, description="The number of rows in the figure widget.")
     widgets: dict[str, WidgetConfig] = Field(
         {}, description="The list of widgets to be added to the figure widget."
     )
@@ -98,16 +101,48 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         pg.GraphicsLayoutWidget.__init__(self, parent)  # in case of inheritance
 
         self.widget_handler = WidgetHandler()
-        self.widgets = {}
+        self.widgets = defaultdict(dict)
 
-    # def show(self):  # TODO check if useful for anything
-    #     self.window = QMainWindow()
-    #     self.window.setCentralWidget(self)
-    #     self.window.show()
-    #
-    # def close(self):  # TODO check if useful for anything
-    #     if hasattr(self, "window"):
-    #         self.window.close()
+        self.grid = []
+
+    def change_grid(self, widget_id: str, row: int, col: int):
+        """
+        Change the grid to reflect the new position of the widget.
+        Args:
+            widget_id(str): The unique identifier of the widget.
+            row(int): The new row coordinate of the widget in the figure.
+            col(int): The new column coordinate of the widget in the figure.
+        """
+        while len(self.grid) <= row:
+            self.grid.append([])
+        row = self.grid[row]
+        while len(row) <= col:
+            row.append(None)
+        row[col] = widget_id
+
+    def reindex_grid(self):
+        """Reindex the grid to remove empty rows and columns."""
+        print(f"old grid: {self.grid}")
+        new_grid = []
+        for row in self.grid:
+            new_row = [widget for widget in row if widget is not None]
+            if new_row:
+                new_grid.append(new_row)
+        #
+        # Update the config of each object to reflect its new position
+        for row_idx, row in enumerate(new_grid):
+            for col_idx, widget in enumerate(row):
+                self.widgets[widget].config.row, self.widgets[widget].config.col = row_idx, col_idx
+
+        self.grid = new_grid
+        self.replot_layout()
+
+    def replot_layout(self):
+        """Replot the layout based on the current grid configuration."""
+        self.clear()
+        for row_idx, row in enumerate(self.grid):
+            for col_idx, widget in enumerate(row):
+                self.addItem(self.widgets[widget], row=row_idx, col=col_idx)
 
     @user_access
     def add_widget(
@@ -116,7 +151,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         widget_id: str = None,
         row: int = None,
         col: int = None,
-        config: dict = None,
+        config=None,
         **axis_kwargs,
     ):
         """
@@ -149,21 +184,33 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
                 raise ValueError(f"Position at row {row} and column {col} is already occupied.")
             else:
                 widget.config.row = row
-                widget.config.column = col
+                widget.config.col = col
 
                 # Add widget to the figure
                 self.addItem(widget, row=row, col=col)
         else:
             row, col = self._find_next_empty_position()
             widget.config.row = row
-            widget.config.column = col
+            widget.config.col = col
 
             # Add widget to the figure
             self.addItem(widget, row=row, col=col)
 
+        #
+        # TODO decide if needed
+        # Update num_columns and num_rows based on the added widget
+        self.config.num_rows = max(self.config.num_rows, row + 1)
+        self.config.num_columns = max(self.config.num_columns, col + 1)
+
+        # By default, set the title of the widget to its unique identifier #TODO will be removed after debugging
+        widget.set_title(f"{widget_id}")
+
         # Saving config for future referencing
         self.config.widgets[widget_id] = widget.config
         self.widgets[widget_id] = widget
+
+        # Reflect the grid coordinates
+        self.change_grid(widget_id, row, col)
 
     @user_access
     def remove(
@@ -216,7 +263,8 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         if widget_id in self.widgets:
             widget = self.widgets.pop(widget_id)
             self.removeItem(widget)
-            # Assuming self.config.widgets is a dict tracking widgets by their IDs
+            self.grid[widget.config.row][widget.config.col] = None
+            self.reindex_grid()
             if widget_id in self.config.widgets:
                 self.config.widgets.pop(widget_id)
             print(f"Removed widget {widget_id}.")
@@ -262,7 +310,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         """Generate a unique widget ID."""
         existing_ids = set(self.widgets.keys())
         for i in itertools.count(1):
-            widget_id = f"widget_{i}"
+            widget_id = f"Widget {i}"
             if widget_id not in existing_ids:
                 return widget_id
 
@@ -283,6 +331,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
+import matplotlib.pyplot as plt
 
 
 class JupyterConsoleWidget(RichJupyterWidget):
@@ -294,7 +343,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
         self.kernel_client = self.kernel_manager.client()
         self.kernel_client.start_channels()
 
-        self.kernel_manager.kernel.shell.push({"np": np, "pg": pg})
+        self.kernel_manager.kernel.shell.push({"np": np, "pg": pg, "plt": plt})
 
     def shutdown_kernel(self):
         self.kernel_client.stop_channels()
@@ -314,9 +363,10 @@ class DebugWindow(QWidget):
 
         self.splitter.setSizes([200, 100])
 
+        # self.con_w1 =
         # console push
         self.console.kernel_manager.kernel.shell.push(
-            {"fig": self.figure, "w1": self.w1, "w2": self.w2, "np": np, "pg": pg}
+            {"fig": self.figure, "w1": self.w1, "w2": self.w2}
         )
 
     def _init_ui(self):
@@ -334,11 +384,15 @@ class DebugWindow(QWidget):
         self.console.set_default_style("linux")
 
     def _init_figure(self):
-        self.figure.add_widget(widget_type="Waveform1D", row=0, col=0, title="Plot 1")
-        self.figure.add_widget(widget_type="Waveform1D", row=1, col=0, title="Plot 2")
+        self.figure.add_widget(widget_type="Waveform1D", row=0, col=0)  # , title="Plot 1")
+        self.figure.add_widget(widget_type="Waveform1D", row=1, col=0)  # , title="Plot 2")
+        self.figure.add_widget(widget_type="Waveform1D", row=0, col=1)  # , title="Plot 3")
+        self.figure.add_widget(widget_type="Waveform1D", row=1, col=1)  # , title="Plot 4")
 
         self.w1 = self.figure[0, 0]
         self.w2 = self.figure[1, 0]
+        self.w3 = self.figure[0, 1]
+        self.w4 = self.figure[1, 1]
 
         # curves for w1
         self.w1.add_scan("samx", "samx", "bpm4i", "bpm4i", pen_style="dash")
@@ -354,6 +408,26 @@ class DebugWindow(QWidget):
         self.w2.add_scan("samx", "samx", "bpm3a", "bpm3a", pen_style="solid")
         self.w2.add_scan("samx", "samx", "bpm4d", "bpm4d", pen_style="dot")
         self.w2.add_curve(x=[1, 2, 3, 4, 5], y=[5, 4, 3, 2, 1], color="red", pen_style="dashdot")
+
+        # curves for w3
+        self.w3.add_scan("samx", "samx", "bpm4i", "bpm4i", pen_style="dash")
+        self.w3.add_curve(
+            x=[1, 2, 3, 4, 5],
+            y=[1, 2, 3, 4, 5],
+            label="curve-custom",
+            color="blue",
+            pen_style="dashdot",
+        )
+
+        # curves for w4
+        self.w4.add_scan("samx", "samx", "bpm4i", "bpm4i", pen_style="dash")
+        self.w4.add_curve(
+            x=[1, 2, 3, 4, 5],
+            y=[1, 2, 3, 4, 5],
+            label="curve-custom",
+            color="blue",
+            pen_style="dashdot",
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

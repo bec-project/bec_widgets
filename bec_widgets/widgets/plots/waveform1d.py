@@ -217,6 +217,52 @@ class BECWaveform1D(BECPlotBase):
 
         self.addLegend()
 
+        self.apply_config()
+
+    # # TODO decide if to use class methods or not
+    # wid = BECWaveform1D.from_config()
+    #
+    # @classmethod
+    # def from_config(
+    #     cls,
+    #     parent: Optional[QWidget],
+    #     config: Waveform1DConfig,
+    #     client=None,
+    #     gui_id: Optional[str] = None,
+    #     replot_last_scan: bool = False,
+    # ):
+    #     """
+    #     Class method to create an instance of BECWaveform1D from a configuration object.
+    #
+    #     Args:
+    #         parent: The parent widget.
+    #         config: Configuration object for the Waveform1D widget.
+    #         client: Client for communication with backend services.
+    #         gui_id: Optional unique identifier for the GUI component.
+    #
+    #     Returns:
+    #         An instance of BECWaveform1D configured according to the provided config.
+    #     """
+    #     # Initialize the widget with the provided config
+    #     widget = cls(parent=parent, config=config, client=client, gui_id=gui_id)
+    #     widget.apply_axis_config()
+    #
+    #     # Reconstruct curves based on the config
+    #     for curve_id, curve_config in config.curves.items():
+    #         widget.add_curve_by_config(curve_config)
+    #     if replot_last_scan:
+    #         widget.update_scan_curve_history(-1)
+    #
+    #     return widget
+
+    # TODO check the functionality of config generator
+    def apply_config(self, replot_last_scan: bool = False):
+        self.apply_axis_config()
+        for curve_id, curve_config in self.config.curves.items():
+            self.add_curve_by_config(curve_config)
+        if replot_last_scan:
+            self.update_scan_curve_history(-1)
+
     def add_curve_by_config(self, curve_config: CurveConfig | dict):
         """
         Add a curve to the plot widget by its configuration.
@@ -269,7 +315,7 @@ class BECWaveform1D(BECPlotBase):
         color: Optional[str] = None,
         label: Optional[str] = None,
         **kwargs,
-    ):
+    ):  # add_scan_curve
         # Check if curve already exists
         curve_source = "scan_segment"
         label = label or f"{y_name}-{y_entry}"
@@ -282,7 +328,7 @@ class BECWaveform1D(BECPlotBase):
         color = (
             color
             or Colors.golden_angle_color(
-                colormap=self.config.color_palette, num=len(self.curves) + 1
+                colormap=self.config.color_palette, num=len(self.curves) + 1, format="HEX"
             )[-1]
         )
 
@@ -486,8 +532,10 @@ class BECWaveform1D(BECPlotBase):
             raise ValueError("Only one of scanID or scan_index can be provided.")
 
         if scan_index is not None:
+            self.scanID = self.queue.scan_storage.storage[scan_index].scanID
             data = self.queue.scan_storage.storage[scan_index].data
         elif scanID is not None:
+            self.scanID = scanID
             data = self.queue.scan_storage.find_scan_by_ID(self.scanID).data
 
         self._update_scan_curves(data)

@@ -26,7 +26,7 @@ class WidgetConfig(ConnectionConfig):
 
     # Coordinates in the figure
     row: int = Field(0, description="The row coordinate in the figure.")
-    column: int = Field(0, description="The column coordinate in the figure.")
+    col: int = Field(0, description="The column coordinate in the figure.")
 
     # Appearance settings
     axis: AxisConfig = Field(
