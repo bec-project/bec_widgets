@@ -8,6 +8,7 @@ from typing import Literal, Optional
 
 import numpy as np
 import pyqtgraph as pg
+import qdarktheme
 from pydantic import Field
 from pyqtgraph.Qt import uic
 from qtpy.QtWidgets import QApplication, QWidget
@@ -80,7 +81,7 @@ class WidgetHandler:
 
 
 class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
-    USER_ACCESS = ["add_plot", "remove", "change_layout"]
+    USER_ACCESS = ["add_plot", "remove", "change_layout", "change_theme"]
 
     def __init__(
         self,
@@ -103,6 +104,16 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
         # Container to keep track of the grid
         self.grid = []
+
+    def change_theme(self, theme: Literal["dark", "light"]) -> None:
+        """
+        Change the theme of the figure widget.
+        Args:
+            theme(Literal["dark","light"]): The theme to set for the figure widget.
+        """
+        qdarktheme.setup_theme(theme)
+        self.setBackground("k" if theme == "dark" else "w")
+        self.config.theme = theme
 
     def add_plot(
         self, widget_id: str = None, row: int = None, col: int = None, config=None, **axis_kwargs

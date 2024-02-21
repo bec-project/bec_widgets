@@ -108,11 +108,12 @@ class BECWaveform1D(RPCBase):
     def add_curve_scan(
         self,
         x_name: "str",
-        x_entry: "str",
         y_name: "str",
-        y_entry: "str",
+        x_entry: "Optional[str]" = None,
+        y_entry: "Optional[str]" = None,
         color: "Optional[str]" = None,
         label: "Optional[str]" = None,
+        validate_bec: "bool" = True,
         **kwargs
     ) -> "BECCurve":
         """
@@ -253,6 +254,14 @@ class BECFigure(RPCBase, BECFigureClientMixin):
         Args:
             max_columns (Optional[int]): The new maximum number of columns in the figure.
             max_rows (Optional[int]): The new maximum number of rows in the figure.
+        """
+
+    @rpc_call
+    def change_theme(self, theme: "Literal['dark', 'light']") -> "None":
+        """
+        Change the theme of the figure widget.
+        Args:
+            theme(Literal["dark","light"]): The theme to set for the figure widget.
         """
 
 
