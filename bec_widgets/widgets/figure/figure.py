@@ -1,6 +1,6 @@
+# pylint: disable = no-name-in-module,missing-module-docstring
 from __future__ import annotations
 
-# pylint: disable = no-name-in-module,missing-module-docstring
 import itertools
 import os
 import sys
