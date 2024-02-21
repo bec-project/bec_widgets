@@ -11,7 +11,6 @@ class BECWidgetsCLIServer:
     WIDGETS = [BECWaveform1D, BECFigure]
 
     def __init__(self, gui_id: str = None) -> None:
-
         self.dispatcher = BECDispatcher()
         self.client = self.dispatcher.client
         self.client.start()
@@ -19,25 +18,22 @@ class BECWidgetsCLIServer:
         self.fig = BECFigure(gui_id=self.gui_id)
         print(f"Server started with gui_id {self.gui_id}")
 
-        self._rpc_thread = self.client.connector.consumer(
-            topics=MessageEndpoints.gui_instructions(self.gui_id),
-            cb=self._rpc_update_handler,
-            parent=self,
+        self.dispatcher.connect_slot(
+            self.on_rpc_update, MessageEndpoints.gui_instructions(self.gui_id)
         )
-        self._rpc_thread.start()
         self.fig.start()
 
     @staticmethod
     def _rpc_update_handler(msg, parent):
         parent.on_rpc_update(msg.value)
 
-    def on_rpc_update(self, msg: messages.GUIInstructionMessage):
+    def on_rpc_update(self, msg: dict, metadata: dict):
         try:
-            method = msg.action
-            args = msg.parameter.get("args", [])
-            kwargs = msg.parameter.get("kwargs", {})
-            request_id = msg.metadata.get("request_id")
-            obj = self.get_object_from_config(msg.parameter)
+            method = msg["action"]
+            args = msg["parameter"].get("args", [])
+            kwargs = msg["parameter"].get("kwargs", {})
+            request_id = metadata.get("request_id")
+            obj = self.get_object_from_config(msg["parameter"])
             res = self.run_rpc(obj, method, args, kwargs)
             self.send_response(request_id, True, {"result": res})
         except Exception as e:
