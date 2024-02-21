@@ -207,6 +207,15 @@ class BECWaveform1D(RPCBase):
             CurveConfig|dict: Configuration of the curve.
         """
 
+    @rpc_call
+    def apply_config(self, config: "dict | WidgetConfig", replot_last_scan: "bool" = False):
+        """
+        Apply the configuration to the 1D waveform widget.
+        Args:
+            config(dict|WidgetConfig): Configuration settings.
+            replot_last_scan(bool, optional): If True, replot the last scan. Defaults to False.
+        """
+
 
 class BECFigure(RPCBase, BECFigureClientMixin):
     @rpc_call

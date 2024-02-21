@@ -432,7 +432,7 @@ class DebugWindow(QWidget):
         # self.con_w1 =
         # console push
         self.console.kernel_manager.kernel.shell.push(
-            {"fig": self.figure, "w1": self.w1, "w2": self.w2}
+            {"fig": self.figure, "w1": self.w1, "w2": self.w2, "c1": self.c1, "w5": self.w5}
         )
 
     def _init_ui(self):
@@ -450,10 +450,10 @@ class DebugWindow(QWidget):
         self.console.set_default_style("linux")
 
     def _init_figure(self):
-        self.figure.add_widget(widget_type="Waveform1D", row=0, col=0)  # , title="Plot 1")
-        self.figure.add_widget(widget_type="Waveform1D", row=1, col=0)  # , title="Plot 2")
-        self.figure.add_widget(widget_type="Waveform1D", row=0, col=1)  # , title="Plot 3")
-        self.figure.add_widget(widget_type="Waveform1D", row=1, col=1)  # , title="Plot 4")
+        self.figure.add_widget(widget_type="Waveform1D", row=0, col=0, title="Widget 1")
+        self.figure.add_widget(widget_type="Waveform1D", row=1, col=0, title="Widget 2")
+        self.figure.add_widget(widget_type="Waveform1D", row=0, col=1, title="Widget 3")
+        self.figure.add_widget(widget_type="Waveform1D", row=1, col=1, title="Widget 4")
 
         self.w1 = self.figure[0, 0]
         self.w2 = self.figure[1, 0]
@@ -469,6 +469,7 @@ class DebugWindow(QWidget):
             color="blue",
             pen_style="dashdot",
         )
+        self.c1 = self.w1.get_config()
 
         # curves for w2
         self.w2.add_curve_scan("samx", "bpm3a", pen_style="solid")
@@ -496,6 +497,11 @@ class DebugWindow(QWidget):
             color="blue",
             pen_style="dashdot",
         )
+
+        self.w1.remove()
+
+        self.figure.add_plot(row=0, col=1, title="Widget 5")
+        self.w5 = self.figure[0, 1]
 
 
 if __name__ == "__main__":  # pragma: no cover

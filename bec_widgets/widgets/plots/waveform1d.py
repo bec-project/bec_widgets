@@ -5,7 +5,7 @@ from typing import Literal, Optional, Any
 
 import numpy as np
 import pyqtgraph as pg
-from pydantic import Field, BaseModel, field_validator
+from pydantic import Field, BaseModel, field_validator, ValidationError
 from pyqtgraph import mkBrush
 from qtpy import QtCore
 from qtpy.QtCore import Signal as pyqtSignal
@@ -213,6 +213,7 @@ class BECWaveform1D(BECPlotBase):
         "curves_data",
         "get_curve",
         "get_curve_config",
+        "apply_config",
     ]
     scan_signal_update = pyqtSignal()
 
@@ -247,16 +248,49 @@ class BECWaveform1D(BECPlotBase):
         self.entry_validator = EntryValidator(self.dev)
 
         self.addLegend()
+        self.apply_config(self.config)
 
-        self.apply_config()
-
+    # TODO check config assigning
     # TODO check the functionality of config generator
-    def apply_config(self, replot_last_scan: bool = False):
+    def apply_config(self, config: dict | WidgetConfig, replot_last_scan: bool = False):
+        """
+        Apply the configuration to the 1D waveform widget.
+        Args:
+            config(dict|WidgetConfig): Configuration settings.
+            replot_last_scan(bool, optional): If True, replot the last scan. Defaults to False.
+        """
+        if isinstance(config, dict):
+            try:
+                config = Waveform1DConfig(**config)
+            except ValidationError as e:
+                print(f"Validation error when applying config to BECWaveform1D: {e}")
+                return
+
+        self.config = config
+        self.clear()
+
         self.apply_axis_config()
+        # Reset curves
+        self.curves_data = defaultdict(dict)
+        self.curves = []
         for curve_id, curve_config in self.config.curves.items():
             self.add_curve_by_config(curve_config)
         if replot_last_scan:
-            self.scan_history(scanID=-1)
+            self.scan_history(scan_index=-1)
+
+    def change_gui_id(self, new_gui_id: str):
+        """
+        Change the GUI ID of the waveform widget and update the parent_id in all associated curves.
+
+        Args:
+            new_gui_id (str): The new GUI ID to be set for the waveform widget.
+        """
+        # Update the gui_id in the waveform widget itself
+        self.gui_id = new_gui_id
+        self.config.gui_id = new_gui_id
+
+        for curve_id, curve in self.curves_data.items():
+            curve.config.parent_id = new_gui_id
 
     def add_curve_by_config(self, curve_config: CurveConfig | dict) -> BECCurve:
         """
@@ -447,7 +481,6 @@ class BECWaveform1D(BECPlotBase):
         # Create curve by config
         curve_config = CurveConfig(
             widget_class="BECCurve",
-            # parent_id=self.config.parent_id,
             parent_id=self.gui_id,
             label=label,
             color=color,
@@ -573,7 +606,9 @@ class BECWaveform1D(BECPlotBase):
 
         if current_scanID != self.scanID:
             self.scanID = current_scanID
-            self.scan_segment_data = self.queue.scan_storage.find_scan_by_ID(self.scanID)
+            self.scan_segment_data = self.queue.scan_storage.find_scan_by_ID(
+                self.scanID
+            )  # TODO do scan access through BECFigure
 
         self.scan_signal_update.emit()
 
@@ -619,7 +654,7 @@ class BECWaveform1D(BECPlotBase):
 
         if scan_index is not None:
             self.scanID = self.queue.scan_storage.storage[scan_index].scanID
-            data = self.queue.scan_storage.storage[scan_index].data
+            data = self.queue.scan_storage.find_scan_by_ID(self.scanID).data
         elif scanID is not None:
             self.scanID = scanID
             data = self.queue.scan_storage.find_scan_by_ID(self.scanID).data
