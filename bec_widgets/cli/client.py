@@ -4,9 +4,108 @@ from bec_widgets.cli.client_utils import rpc_call, RPCBase, BECFigureClientMixin
 from typing import Literal, Optional, overload
 
 
+class BECPlotBase(RPCBase):
+    @rpc_call
+    def set(self, **kwargs) -> "None":
+        """
+        Set the properties of the plot widget.
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+        Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+        """
+
+    @rpc_call
+    def set_title(self, title: "str"):
+        """
+        Set the title of the plot widget.
+        Args:
+            title(str): Title of the plot widget.
+        """
+
+    @rpc_call
+    def set_x_label(self, label: "str"):
+        """
+        Set the label of the x-axis.
+        Args:
+            label(str): Label of the x-axis.
+        """
+
+    @rpc_call
+    def set_y_label(self, label: "str"):
+        """
+        Set the label of the y-axis.
+        Args:
+            label(str): Label of the y-axis.
+        """
+
+    @rpc_call
+    def set_x_scale(self, scale: "Literal['linear', 'log']" = "linear"):
+        """
+        Set the scale of the x-axis.
+        Args:
+            scale(Literal["linear", "log"]): Scale of the x-axis.
+        """
+
+    @rpc_call
+    def set_y_scale(self, scale: "Literal['linear', 'log']" = "linear"):
+        """
+        Set the scale of the y-axis.
+        Args:
+            scale(Literal["linear", "log"]): Scale of the y-axis.
+        """
+
+    @rpc_call
+    def set_x_lim(self, x_lim: "tuple") -> "None":
+        """
+        Set the limits of the x-axis.
+        Args:
+            x_lim(tuple): Limits of the x-axis.
+        """
+
+    @rpc_call
+    def set_y_lim(self, y_lim: "tuple") -> "None":
+        """
+        Set the limits of the y-axis.
+        Args:
+            y_lim(tuple): Limits of the y-axis.
+        """
+
+    @rpc_call
+    def set_grid(self, x: "bool" = False, y: "bool" = False):
+        """
+        Set the grid of the plot widget.
+        Args:
+            x(bool): Show grid on the x-axis.
+            y(bool): Show grid on the y-axis.
+        """
+
+    @rpc_call
+    def plot_data(self, data_x: "list | np.ndarray", data_y: "list | np.ndarray", **kwargs):
+        """
+        Plot custom data on the plot widget. These data are not saved in config.
+        Args:
+            data_x(list|np.ndarray): x-axis data
+            data_y(list|np.ndarray): y-axis data
+            **kwargs: Keyword arguments for the plot.
+        """
+
+    @rpc_call
+    def remove(self):
+        """
+        Remove the plot widget from the figure.
+        """
+
+
 class BECWaveform1D(RPCBase):
     @rpc_call
-    def add_scan(
+    def add_curve_scan(
         self,
         x_name: "str",
         x_entry: "str",
@@ -15,22 +114,42 @@ class BECWaveform1D(RPCBase):
         color: "Optional[str]" = None,
         label: "Optional[str]" = None,
         **kwargs
-    ):
+    ) -> "BECCurve":
         """
-        None
+        Add a curve to the plot widget from the scan segment.
+        Args:
+            x_name(str): Name of the x signal.
+            x_entry(str): Entry of the x signal.
+            y_name(str): Name of the y signal.
+            y_entry(str): Entry of the y signal.
+            color(str, optional): Color of the curve. Defaults to None.
+            label(str, optional): Label of the curve. Defaults to None.
+            **kwargs: Additional keyword arguments for the curve configuration.
+
+        Returns:
+            BECCurve: The curve object.
         """
 
     @rpc_call
-    def add_curve(
+    def add_curve_custom(
         self,
         x: "list | np.ndarray",
         y: "list | np.ndarray",
         label: "str" = None,
         color: "str" = None,
         **kwargs
-    ):
+    ) -> "BECCurve":
         """
-        None
+        Add a custom data curve to the plot widget.
+        Args:
+            x(list|np.ndarray): X data of the curve.
+            y(list|np.ndarray): Y data of the curve.
+            label(str, optional): Label of the curve. Defaults to None.
+            color(str, optional): Color of the curve. Defaults to None.
+            **kwargs: Additional keyword arguments for the curve configuration.
+
+        Returns:
+            BECCurve: The curve object.
         """
 
     @rpc_call
@@ -42,7 +161,7 @@ class BECWaveform1D(RPCBase):
         """
 
     @rpc_call
-    def update_scan_curve_history(self, scanID: "str" = None, scan_index: "int" = None):
+    def scan_history(self, scan_index: "int" = None, scanID: "str" = None):
         """
         Update the scan curves with the data from the scan storage.
         Provide only one of scanID or scan_index.
@@ -67,6 +186,26 @@ class BECWaveform1D(RPCBase):
             dict: Dictionary of curves data.
         """
 
+    @rpc_call
+    def get_curve(self, identifier) -> "BECCurve":
+        """
+        Get the curve by its index or ID.
+        Args:
+            identifier(int|str): Identifier of the curve. Can be either an integer (index) or a string (curve_id).
+        Returns:
+            BECCurve: The curve object.
+        """
+
+    @rpc_call
+    def get_curve_config(self, curve_id: "str", dict_output: "bool" = True) -> "CurveConfig | dict":
+        """
+        Get the configuration of a curve by its ID.
+        Args:
+            curve_id(str): ID of the curve.
+        Returns:
+            CurveConfig|dict: Configuration of the curve.
+        """
+
 
 class BECFigure(RPCBase, BECFigureClientMixin):
     @rpc_call
@@ -79,7 +218,13 @@ class BECFigure(RPCBase, BECFigureClientMixin):
         **axis_kwargs
     ) -> "BECWaveform1D":
         """
-        None
+        Add a Waveform1D plot to the figure at the specified position.
+        Args:
+            widget_id(str): The unique identifier of the widget. If not provided, a unique ID will be generated.
+            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
+            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
+            config(dict): Additional configuration for the widget.
+            **axis_kwargs(dict): Additional axis properties to set on the widget after creation.
         """
 
     @rpc_call
@@ -97,4 +242,87 @@ class BECFigure(RPCBase, BECFigureClientMixin):
             col(int): The column coordinate of the widget to remove.
             widget_id(str): The unique identifier of the widget to remove.
             coordinates(tuple[int, int], optional): The coordinates of the widget to remove.
+        """
+
+    @rpc_call
+    def change_layout(self, max_columns=None, max_rows=None):
+        """
+        Reshuffle the layout of the figure to adjust to a new number of max_columns or max_rows.
+        If both max_columns and max_rows are provided, max_rows is ignored.
+
+        Args:
+            max_columns (Optional[int]): The new maximum number of columns in the figure.
+            max_rows (Optional[int]): The new maximum number of rows in the figure.
+        """
+
+
+class BECCurve(RPCBase):
+    @rpc_call
+    def set(self, **kwargs):
+        """
+        Set the properties of the curve.
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+        Possible properties:
+            - color: str
+            - symbol: str
+            - symbol_color: str
+            - symbol_size: int
+            - pen_width: int
+            - pen_style: Literal["solid", "dash", "dot", "dashdot"]
+        """
+
+    @rpc_call
+    def set_data(self, x, y):
+        """
+        None
+        """
+
+    @rpc_call
+    def set_color(self, color: "str", symbol_color: "Optional[str]" = None):
+        """
+        Change the color of the curve.
+        Args:
+            color(str): Color of the curve.
+            symbol_color(str, optional): Color of the symbol. Defaults to None.
+        """
+
+    @rpc_call
+    def set_symbol(self, symbol: "str"):
+        """
+        Change the symbol of the curve.
+        Args:
+            symbol(str): Symbol of the curve.
+        """
+
+    @rpc_call
+    def set_symbol_color(self, symbol_color: "str"):
+        """
+        Change the symbol color of the curve.
+        Args:
+            symbol_color(str): Color of the symbol.
+        """
+
+    @rpc_call
+    def set_symbol_size(self, symbol_size: "int"):
+        """
+        Change the symbol size of the curve.
+        Args:
+            symbol_size(int): Size of the symbol.
+        """
+
+    @rpc_call
+    def set_pen_width(self, pen_width: "int"):
+        """
+        Change the pen width of the curve.
+        Args:
+            pen_width(int): Width of the pen.
+        """
+
+    @rpc_call
+    def set_pen_style(self, pen_style: "Literal['solid', 'dash', 'dot', 'dashdot']"):
+        """
+        Change the pen style of the curve.
+        Args:
+            pen_style(Literal["solid", "dash", "dot", "dashdot"]): Style of the pen.
         """

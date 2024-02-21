@@ -93,9 +93,15 @@ class BECConnector:
 
         self.config = config
 
-    def get_config(self):
-        return self.config
-
-
-# connector = BECConnector()
-# print(connector.config)
+    def get_config(self, dict_output: bool = True) -> dict | BaseModel:
+        """
+        Get the configuration of the widget.
+        Args:
+            dict_output(bool): If True, return the configuration as a dictionary. If False, return the configuration as a pydantic model.
+        Returns:
+            dict: The configuration of the plot widget.
+        """
+        if dict_output:
+            return self.config.model_dump()
+        else:
+            return self.config

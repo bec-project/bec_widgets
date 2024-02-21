@@ -11,3 +11,5 @@ from .motor_control import (
     MotorThread,
     MotorCoordinateTable,
 )
+from .figure import FigureConfig, BECFigure
+from .plots import BECWaveform1D, BECCurve, BECPlotBase

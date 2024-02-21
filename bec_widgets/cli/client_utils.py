@@ -88,7 +88,6 @@ class BECFigureClientMixin:
 
 
 class RPCBase:
-
     def __init__(self, gui_id: str = None, config: dict = None, **kwargs) -> None:
         self._client = BECDispatcher().client
         self._config = config if config is not None else {}
@@ -116,7 +115,7 @@ class RPCBase:
             metadata={"request_id": request_id},
         )
         print(f"RPCBase: {rpc_msg}")
-        receiver = self._config.get("parent_figure_id", self._gui_id)
+        receiver = self._config.get("parent_id", self._gui_id)
         self._client.producer.send(MessageEndpoints.gui_instructions(receiver), rpc_msg)
 
         if not wait_for_rpc_response:

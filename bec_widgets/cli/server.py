@@ -4,11 +4,11 @@ from bec_lib import MessageEndpoints, messages
 
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.widgets.figure import BECFigure
-from bec_widgets.widgets.plots import BECPlotBase, BECWaveform1D
+from bec_widgets.widgets.plots import BECPlotBase, BECWaveform1D, BECCurve
 
 
 class BECWidgetsCLIServer:
-    WIDGETS = [BECWaveform1D, BECFigure]
+    WIDGETS = [BECWaveform1D, BECFigure, BECCurve]
 
     def __init__(self, gui_id: str = None) -> None:
         self.dispatcher = BECDispatcher()
@@ -82,3 +82,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     server = BECWidgetsCLIServer(gui_id=args.id)
+    # server = BECWidgetsCLIServer(gui_id="test")

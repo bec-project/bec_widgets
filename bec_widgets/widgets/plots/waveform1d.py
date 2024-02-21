@@ -14,8 +14,7 @@ from qtpy.QtWidgets import QWidget
 
 from bec_lib import MessageEndpoints
 from bec_lib.scan_data import ScanData
-from bec_lib.utils import user_access
-from bec_widgets.utils import Colors
+from bec_widgets.utils import Colors, ConnectionConfig, BECConnector
 from bec_widgets.widgets.plots import BECPlotBase, WidgetConfig
 
 
@@ -37,7 +36,8 @@ class Signal(BaseModel):
     y: SignalData
 
 
-class CurveConfig(BaseModel):
+class CurveConfig(ConnectionConfig):
+    parent_id: Optional[str] = Field(None, description="The parent plot of the curve.")
     label: Optional[str] = Field(None, description="The label of the curve.")
     color: Optional[Any] = Field(None, description="The color of the curve.")
     symbol: Optional[str] = Field("o", description="The symbol of the curve.")
@@ -62,17 +62,35 @@ class Waveform1DConfig(WidgetConfig):
     )
 
 
-class BECCurve(pg.PlotDataItem):  # TODO decide what will be accessible from the parent
+class BECCurve(BECConnector, pg.PlotDataItem):
+    USER_ACCESS = [
+        "set",
+        "set_data",
+        "set_color",
+        "set_symbol",
+        "set_symbol_color",
+        "set_symbol_size",
+        "set_pen_width",
+        "set_pen_style",
+    ]
+
     def __init__(
         self,
         name: Optional[str] = None,
         config: Optional[CurveConfig] = None,
+        gui_id: Optional[str] = None,
         **kwargs,
     ):
-        super().__init__(name=name, **kwargs)
         if config is None:
             config = CurveConfig(label=name, widget_class=self.__class__.__name__)
-        self.config = config
+            self.config = config
+        else:
+            self.config = config
+            # config.widget_class = self.__class__.__name__
+        super().__init__(config=config, gui_id=gui_id)
+        pg.PlotDataItem.__init__(self, name=name, **kwargs)
+
+        # self.config = config
 
         self.apply_config()
 
@@ -188,6 +206,16 @@ class BECCurve(pg.PlotDataItem):  # TODO decide what will be accessible from the
 
 
 class BECWaveform1D(BECPlotBase):
+    USER_ACCESS = [
+        "add_curve_scan",
+        "add_curve_custom",
+        "remove_curve",
+        "scan_history",
+        "curves",
+        "curves_data",
+        "get_curve",
+        "get_curve_config",
+    ]
     scan_signal_update = pyqtSignal()
 
     def __init__(
@@ -207,6 +235,7 @@ class BECWaveform1D(BECPlotBase):
         self.curves_data = defaultdict(dict)
         self.scanID = None
 
+        # Scan segment update proxy
         self.proxy_update_plot = pg.SignalProxy(
             self.scan_signal_update, rateLimit=25, slot=self._update_scan_segment_plot
         )
@@ -221,75 +250,44 @@ class BECWaveform1D(BECPlotBase):
 
         self.apply_config()
 
-    # # TODO decide if to use class methods or not
-    # wid = BECWaveform1D.from_config()
-    #
-    # @classmethod
-    # def from_config(
-    #     cls,
-    #     parent: Optional[QWidget],
-    #     config: Waveform1DConfig,
-    #     client=None,
-    #     gui_id: Optional[str] = None,
-    #     replot_last_scan: bool = False,
-    # ):
-    #     """
-    #     Class method to create an instance of BECWaveform1D from a configuration object.
-    #
-    #     Args:
-    #         parent: The parent widget.
-    #         config: Configuration object for the Waveform1D widget.
-    #         client: Client for communication with backend services.
-    #         gui_id: Optional unique identifier for the GUI component.
-    #
-    #     Returns:
-    #         An instance of BECWaveform1D configured according to the provided config.
-    #     """
-    #     # Initialize the widget with the provided config
-    #     widget = cls(parent=parent, config=config, client=client, gui_id=gui_id)
-    #     widget.apply_axis_config()
-    #
-    #     # Reconstruct curves based on the config
-    #     for curve_id, curve_config in config.curves.items():
-    #         widget.add_curve_by_config(curve_config)
-    #     if replot_last_scan:
-    #         widget.update_scan_curve_history(-1)
-    #
-    #     return widget
-
     # TODO check the functionality of config generator
     def apply_config(self, replot_last_scan: bool = False):
         self.apply_axis_config()
         for curve_id, curve_config in self.config.curves.items():
             self.add_curve_by_config(curve_config)
         if replot_last_scan:
-            self.update_scan_curve_history(-1)
+            self.scan_history(scanID=-1)
 
-    def add_curve_by_config(self, curve_config: CurveConfig | dict):
+    def add_curve_by_config(self, curve_config: CurveConfig | dict) -> BECCurve:
         """
         Add a curve to the plot widget by its configuration.
         Args:
             curve_config(CurveConfig|dict): Configuration of the curve to be added.
+        Returns:
+            BECCurve: The curve object.
         """
         if isinstance(curve_config, dict):
             curve_config = CurveConfig(**curve_config)
-        self._add_curve_object(
+        curve = self._add_curve_object(
             name=curve_config.label, source=curve_config.source, config=curve_config
         )
+        return curve
 
-    def get_curve_config(self, curve_id: str) -> CurveConfig:
+    def get_curve_config(self, curve_id: str, dict_output: bool = True) -> CurveConfig | dict:
         """
         Get the configuration of a curve by its ID.
         Args:
             curve_id(str): ID of the curve.
         Returns:
-            CurveConfig: Configuration of the curve.
+            CurveConfig|dict: Configuration of the curve.
         """
         for source, curves in self.curves_data.items():
             if curve_id in curves:
-                return curves[curve_id].config
+                if dict_output:
+                    return curves[curve_id].config.model_dump()
+                else:
+                    return curves[curve_id].config
 
-    @user_access
     def curves(self) -> list:  # TODO discuss if it should be marked as @property for RPC
         """
         Get the curves of the plot widget as a list
@@ -298,7 +296,6 @@ class BECWaveform1D(BECPlotBase):
         """
         return self.curves
 
-    @user_access
     def curves_data(self) -> dict:  # TODO discuss if it should be marked as @property for RPC
         """
         Get the curves data of the plot widget as a dictionary
@@ -307,8 +304,24 @@ class BECWaveform1D(BECPlotBase):
         """
         return self.curves_data
 
-    @user_access
-    def add_scan(
+    def get_curve(self, identifier) -> BECCurve:
+        """
+        Get the curve by its index or ID.
+        Args:
+            identifier(int|str): Identifier of the curve. Can be either an integer (index) or a string (curve_id).
+        Returns:
+            BECCurve: The curve object.
+        """
+        if isinstance(identifier, int):
+            return self.curves[identifier]
+        elif isinstance(identifier, str):
+            return self.curves_data[identifier]
+        else:
+            raise ValueError(
+                "Each identifier must be either an integer (index) or a string (curve_id)."
+            )
+
+    def add_curve_scan(
         self,
         x_name: str,
         x_entry: str,
@@ -317,7 +330,21 @@ class BECWaveform1D(BECPlotBase):
         color: Optional[str] = None,
         label: Optional[str] = None,
         **kwargs,
-    ):  # add_scan_curve
+    ) -> BECCurve:
+        """
+        Add a curve to the plot widget from the scan segment.
+        Args:
+            x_name(str): Name of the x signal.
+            x_entry(str): Entry of the x signal.
+            y_name(str): Name of the y signal.
+            y_entry(str): Entry of the y signal.
+            color(str, optional): Color of the curve. Defaults to None.
+            label(str, optional): Label of the curve. Defaults to None.
+            **kwargs: Additional keyword arguments for the curve configuration.
+
+        Returns:
+            BECCurve: The curve object.
+        """
         # Check if curve already exists
         curve_source = "scan_segment"
         label = label or f"{y_name}-{y_entry}"
@@ -336,6 +363,9 @@ class BECWaveform1D(BECPlotBase):
 
         # Create curve by config
         curve_config = CurveConfig(
+            widget_class="BECCurve",
+            # parent_id=self.config.parent_id,
+            parent_id=self.gui_id,
             label=label,
             color=color,
             source=curve_source,
@@ -346,17 +376,29 @@ class BECWaveform1D(BECPlotBase):
             ),
             **kwargs,
         )
-        self._add_curve_object(name=label, source=curve_source, config=curve_config)
+        curve = self._add_curve_object(name=label, source=curve_source, config=curve_config)
+        return curve
 
-    @user_access
-    def add_curve(
+    def add_curve_custom(
         self,
         x: list | np.ndarray,
         y: list | np.ndarray,
         label: str = None,
         color: str = None,
         **kwargs,
-    ):
+    ) -> BECCurve:
+        """
+        Add a custom data curve to the plot widget.
+        Args:
+            x(list|np.ndarray): X data of the curve.
+            y(list|np.ndarray): Y data of the curve.
+            label(str, optional): Label of the curve. Defaults to None.
+            color(str, optional): Color of the curve. Defaults to None.
+            **kwargs: Additional keyword arguments for the curve configuration.
+
+        Returns:
+            BECCurve: The curve object.
+        """
         curve_source = "custom"
         curve_id = label or f"Curve {len(self.curves) + 1}"
 
@@ -369,21 +411,24 @@ class BECWaveform1D(BECPlotBase):
         color = (
             color
             or Colors.golden_angle_color(
-                colormap=self.config.color_palette, num=len(self.curves) + 1
+                colormap=self.config.color_palette, num=len(self.curves) + 1, format="HEX"
             )[-1]
         )
 
         # Create curve by config
         curve_config = CurveConfig(
+            widget_class="BECCurve",
+            parent_id=self.gui_id,
             label=curve_id,
             color=color,
             source=curve_source,
             **kwargs,
         )
 
-        self._add_curve_object(name=curve_id, source=curve_source, config=curve_config, data=(x, y))
-
-        # self.crosshair = Crosshair(self, precision=3)
+        curve = self._add_curve_object(
+            name=curve_id, source=curve_source, config=curve_config, data=(x, y)
+        )
+        return curve
 
     def _add_curve_object(
         self,
@@ -391,7 +436,7 @@ class BECWaveform1D(BECPlotBase):
         source: str,
         config: CurveConfig,
         data: tuple[list | np.ndarray, list | np.ndarray] = None,
-    ):
+    ) -> BECCurve:
         """
         Add a curve object to the plot widget.
         Args:
@@ -399,6 +444,8 @@ class BECWaveform1D(BECPlotBase):
             source(str): Source of the curve.
             config(CurveConfig): Configuration of the curve.
             data(tuple[list|np.ndarray,list|np.ndarray], optional): Data (x,y) to be plotted. Defaults to None.
+        Returns:
+            BECCurve: The curve object.
         """
         curve = BECCurve(config=config, name=name)
         self.curves_data[source][name] = curve
@@ -406,6 +453,7 @@ class BECWaveform1D(BECPlotBase):
         self.config.curves[name] = curve.config
         if data is not None:
             curve.setData(data[0], data[1])
+        return curve
 
     def _check_curve_id(self, val: Any, dict_to_check: dict) -> bool:
         """
@@ -490,7 +538,6 @@ class BECWaveform1D(BECPlotBase):
             return
 
         if current_scanID != self.scanID:
-            # self.clear() #TODO check if this is the right way to clear the plot
             self.scanID = current_scanID
             self.scan_segment_data = self.queue.scan_storage.find_scan_by_ID(self.scanID)
 
@@ -521,8 +568,11 @@ class BECWaveform1D(BECPlotBase):
 
             curve.setData(data_x, data_y)
 
-    @user_access
-    def update_scan_curve_history(self, scanID: str = None, scan_index: int = None):
+    def scan_history(
+        self,
+        scan_index: int = None,
+        scanID: str = None,
+    ):
         """
         Update the scan curves with the data from the scan storage.
         Provide only one of scanID or scan_index.

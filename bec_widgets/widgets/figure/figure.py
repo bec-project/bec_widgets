@@ -3,19 +3,15 @@ from __future__ import annotations
 
 import itertools
 import os
-import sys
-from typing import Literal, Optional, overload
 from collections import defaultdict
-from dataclasses import dataclass
 from typing import Literal, Optional
 
 import numpy as np
 import pyqtgraph as pg
-from bec_lib.utils import user_access
-from qtpy.QtWidgets import QVBoxLayout, QMainWindow
 from pydantic import Field
 from pyqtgraph.Qt import uic
 from qtpy.QtWidgets import QApplication, QWidget
+from qtpy.QtWidgets import QVBoxLayout, QMainWindow
 
 from bec_widgets.utils import BECConnector, BECDispatcher, ConnectionConfig
 from bec_widgets.widgets.plots import BECPlotBase, BECWaveform1D, Waveform1DConfig, WidgetConfig
@@ -46,7 +42,7 @@ class WidgetHandler:
         widget_type: str,
         widget_id: str,
         parent_figure,
-        parent_figure_id: str,
+        parent_id: str,
         config: dict = None,
         **axis_kwargs,
     ) -> BECPlotBase:
@@ -56,7 +52,7 @@ class WidgetHandler:
         Args:
             widget_type (str): The type of the widget to create.
             widget_id (str): Unique identifier for the widget.
-            parent_figure_id (str): Identifier of the parent figure.
+            parent_id (str): Identifier of the parent figure.
             config (dict, optional): Additional configuration for the widget.
             **axis_kwargs: Additional axis properties to set on the widget after creation.
 
@@ -70,7 +66,7 @@ class WidgetHandler:
         widget_class, config_class = entry
         widget_config_dict = {
             "widget_class": widget_class.__name__,
-            "parent_figure_id": parent_figure_id,
+            "parent_id": parent_id,
             "gui_id": widget_id,
             **(config if config is not None else {}),
         }
@@ -84,7 +80,7 @@ class WidgetHandler:
 
 
 class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
-    USER_ACCESS = ["add_widget", "remove"]
+    USER_ACCESS = ["add_plot", "remove", "change_layout"]
 
     def __init__(
         self,
@@ -98,95 +94,36 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         else:
             self.config = config
         super().__init__(client=client, config=config, gui_id=gui_id)
-        pg.GraphicsLayoutWidget.__init__(self, parent)  # in case of inheritance
+        pg.GraphicsLayoutWidget.__init__(self, parent)
 
         self.widget_handler = WidgetHandler()
+
+        # Widget container to reference widgets by 'widget_id'
         self.widgets = defaultdict(dict)
 
+        # Container to keep track of the grid
         self.grid = []
 
-    def change_grid(self, widget_id: str, row: int, col: int):
+    def add_plot(
+        self, widget_id: str = None, row: int = None, col: int = None, config=None, **axis_kwargs
+    ) -> BECWaveform1D:
         """
-        Change the grid to reflect the new position of the widget.
+        Add a Waveform1D plot to the figure at the specified position.
         Args:
-            widget_id(str): The unique identifier of the widget.
-            row(int): The new row coordinate of the widget in the figure.
-            col(int): The new column coordinate of the widget in the figure.
+            widget_id(str): The unique identifier of the widget. If not provided, a unique ID will be generated.
+            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
+            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
+            config(dict): Additional configuration for the widget.
+            **axis_kwargs(dict): Additional axis properties to set on the widget after creation.
         """
-        while len(self.grid) <= row:
-            self.grid.append([])
-        row = self.grid[row]
-        while len(row) <= col:
-            row.append(None)
-        row[col] = widget_id
-
-    def reindex_grid(self):
-        """Reindex the grid to remove empty rows and columns."""
-        print(f"old grid: {self.grid}")
-        new_grid = []
-        for row in self.grid:
-            new_row = [widget for widget in row if widget is not None]
-            if new_row:
-                new_grid.append(new_row)
-        #
-        # Update the config of each object to reflect its new position
-        for row_idx, row in enumerate(new_grid):
-            for col_idx, widget in enumerate(row):
-                self.widgets[widget].config.row, self.widgets[widget].config.col = row_idx, col_idx
-
-        self.grid = new_grid
-        self.replot_layout()
-
-    def replot_layout(self):
-        """Replot the layout based on the current grid configuration."""
-        self.clear()
-        for row_idx, row in enumerate(self.grid):
-            for col_idx, widget in enumerate(row):
-                self.addItem(self.widgets[widget], row=row_idx, col=col_idx)
-
-    @overload
-    def add_widget(
-        self,
-        widget_type: Literal["Waveform1D"] = "Waveform1D",
-        widget_id: str = ...,
-        row: int = ...,
-        col: int = ...,
-        config: dict = ...,
-        **axis_kwargs,
-    ) -> BECWaveform1D: ...
-
-    @overload
-    def add_widget(
-        self,
-        widget_type: Literal["PlotBase"] = "PlotBase",
-        widget_id: str = ...,
-        row: int = ...,
-        col: int = ...,
-        config: dict = ...,
-        **axis_kwargs,
-    ) -> BECPlotBase: ...
-
-    # @overload
-    # def add_widget(
-    #     self,
-    #     widget_type: Literal["Waveform1D"] = "Waveform1D",
-    #     widget_id: str = None,
-    #     row: int = None,
-    #     col: int = None,
-    #     config: dict = None,
-    #     **axis_kwargs,
-    # ) -> BECWaveform1D: ...
-
-    # @overload
-    # def add_widget(
-    #     self,
-    #     widget_type: Literal["PlotBase"] = "PlotBase",
-    #     widget_id: str = None,
-    #     row: int = None,
-    #     col: int = None,
-    #     config: dict = None,
-    #     **axis_kwargs,
-    # ) -> BECPlotBase: ...
+        return self.add_widget(
+            widget_type="Waveform1D",
+            widget_id=widget_id,
+            row=row,
+            col=col,
+            config=config,
+            **axis_kwargs,
+        )
 
     def add_widget(
         self,
@@ -216,7 +153,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             widget_type=widget_type,
             widget_id=widget_id,
             parent_figure=self,
-            parent_figure_id=self.gui_id,
+            parent_id=self.gui_id,
             config=config,
             **axis_kwargs,
         )
@@ -239,21 +176,17 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             # Add widget to the figure
             self.addItem(widget, row=row, col=col)
 
-        #
         # TODO decide if needed
         # Update num_columns and num_rows based on the added widget
         self.config.num_rows = max(self.config.num_rows, row + 1)
         self.config.num_columns = max(self.config.num_columns, col + 1)
-
-        # By default, set the title of the widget to its unique identifier #TODO will be removed after debugging
-        widget.set_title(f"{widget_id}")
 
         # Saving config for future referencing
         self.config.widgets[widget_id] = widget.config
         self.widgets[widget_id] = widget
 
         # Reflect the grid coordinates
-        self.change_grid(widget_id, row, col)
+        self._change_grid(widget_id, row, col)
 
         return widget
 
@@ -308,7 +241,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             widget = self.widgets.pop(widget_id)
             self.removeItem(widget)
             self.grid[widget.config.row][widget.config.col] = None
-            self.reindex_grid()
+            self._reindex_grid()
             if widget_id in self.config.widgets:
                 self.config.widgets.pop(widget_id)
             print(f"Removed widget {widget_id}.")
@@ -358,7 +291,85 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             if widget_id not in existing_ids:
                 return widget_id
 
+    def _change_grid(self, widget_id: str, row: int, col: int):
+        """
+        Change the grid to reflect the new position of the widget.
+        Args:
+            widget_id(str): The unique identifier of the widget.
+            row(int): The new row coordinate of the widget in the figure.
+            col(int): The new column coordinate of the widget in the figure.
+        """
+        while len(self.grid) <= row:
+            self.grid.append([])
+        row = self.grid[row]
+        while len(row) <= col:
+            row.append(None)
+        row[col] = widget_id
+
+    def _reindex_grid(self):
+        """Reindex the grid to remove empty rows and columns."""
+        print(f"old grid: {self.grid}")
+        new_grid = []
+        for row in self.grid:
+            new_row = [widget for widget in row if widget is not None]
+            if new_row:
+                new_grid.append(new_row)
+        #
+        # Update the config of each object to reflect its new position
+        for row_idx, row in enumerate(new_grid):
+            for col_idx, widget in enumerate(row):
+                self.widgets[widget].config.row, self.widgets[widget].config.col = row_idx, col_idx
+
+        self.grid = new_grid
+        self._replot_layout()
+
+    def _replot_layout(self):
+        """Replot the layout based on the current grid configuration."""
+        self.clear()
+        for row_idx, row in enumerate(self.grid):
+            for col_idx, widget in enumerate(row):
+                self.addItem(self.widgets[widget], row=row_idx, col=col_idx)
+
+    def change_layout(self, max_columns=None, max_rows=None):
+        """
+        Reshuffle the layout of the figure to adjust to a new number of max_columns or max_rows.
+        If both max_columns and max_rows are provided, max_rows is ignored.
+
+        Args:
+            max_columns (Optional[int]): The new maximum number of columns in the figure.
+            max_rows (Optional[int]): The new maximum number of rows in the figure.
+        """
+        # Calculate total number of widgets
+        total_widgets = len(self.widgets)
+
+        if max_columns:
+            # Calculate the required number of rows based on max_columns
+            required_rows = (total_widgets + max_columns - 1) // max_columns
+            new_grid = [[None for _ in range(max_columns)] for _ in range(required_rows)]
+        elif max_rows:
+            # Calculate the required number of columns based on max_rows
+            required_columns = (total_widgets + max_rows - 1) // max_rows
+            new_grid = [[None for _ in range(required_columns)] for _ in range(max_rows)]
+        else:
+            # If neither max_columns nor max_rows is specified, just return without changing the layout
+            return
+
+        # Populate the new grid with widgets' IDs
+        current_idx = 0
+        for widget_id, widget in self.widgets.items():
+            row = current_idx // len(new_grid[0])
+            col = current_idx % len(new_grid[0])
+            new_grid[row][col] = widget_id
+            current_idx += 1
+
+        # Update widgets' positions and replot them according to the new grid
+        self.grid = new_grid
+        self._reindex_grid()  # This method should be updated to handle reshuffling correctly
+        self._replot_layout()  # Assumes this method re-adds widgets to the layout based on self.grid
+
     def start(self):
+        import sys
+
         app = QApplication(sys.argv)
         win = QMainWindow()
         win.setCentralWidget(self)
@@ -439,8 +450,8 @@ class DebugWindow(QWidget):
         self.w4 = self.figure[1, 1]
 
         # curves for w1
-        self.w1.add_scan("samx", "samx", "bpm4i", "bpm4i", pen_style="dash")
-        self.w1.add_curve(
+        self.w1.add_curve_scan("samx", "samx", "bpm4i", "bpm4i", pen_style="dash")
+        self.w1.add_curve_custom(
             x=[1, 2, 3, 4, 5],
             y=[1, 2, 3, 4, 5],
             label="curve-custom",
@@ -449,13 +460,15 @@ class DebugWindow(QWidget):
         )
 
         # curves for w2
-        self.w2.add_scan("samx", "samx", "bpm3a", "bpm3a", pen_style="solid")
-        self.w2.add_scan("samx", "samx", "bpm4d", "bpm4d", pen_style="dot")
-        self.w2.add_curve(x=[1, 2, 3, 4, 5], y=[5, 4, 3, 2, 1], color="red", pen_style="dashdot")
+        self.w2.add_curve_scan("samx", "samx", "bpm3a", "bpm3a", pen_style="solid")
+        self.w2.add_curve_scan("samx", "samx", "bpm4d", "bpm4d", pen_style="dot")
+        self.w2.add_curve_custom(
+            x=[1, 2, 3, 4, 5], y=[5, 4, 3, 2, 1], color="red", pen_style="dashdot"
+        )
 
         # curves for w3
-        self.w3.add_scan("samx", "samx", "bpm4i", "bpm4i", pen_style="dash")
-        self.w3.add_curve(
+        self.w3.add_curve_scan("samx", "samx", "bpm4i", "bpm4i", pen_style="dash")
+        self.w3.add_curve_custom(
             x=[1, 2, 3, 4, 5],
             y=[1, 2, 3, 4, 5],
             label="curve-custom",
@@ -464,8 +477,8 @@ class DebugWindow(QWidget):
         )
 
         # curves for w4
-        self.w4.add_scan("samx", "samx", "bpm4i", "bpm4i", pen_style="dash")
-        self.w4.add_curve(
+        self.w4.add_curve_scan("samx", "samx", "bpm4i", "bpm4i", pen_style="dash")
+        self.w4.add_curve_custom(
             x=[1, 2, 3, 4, 5],
             y=[1, 2, 3, 4, 5],
             label="curve-custom",
