@@ -450,7 +450,7 @@ class DebugWindow(QWidget):
         self.w4 = self.figure[1, 1]
 
         # curves for w1
-        self.w1.add_curve_scan("samx", "samx", "bpm4i", "bpm4i", pen_style="dash")
+        self.w1.add_curve_scan("samx", "bpm4i", pen_style="dash")
         self.w1.add_curve_custom(
             x=[1, 2, 3, 4, 5],
             y=[1, 2, 3, 4, 5],
@@ -460,14 +460,14 @@ class DebugWindow(QWidget):
         )
 
         # curves for w2
-        self.w2.add_curve_scan("samx", "samx", "bpm3a", "bpm3a", pen_style="solid")
-        self.w2.add_curve_scan("samx", "samx", "bpm4d", "bpm4d", pen_style="dot")
+        self.w2.add_curve_scan("samx", "bpm3a", pen_style="solid")
+        self.w2.add_curve_scan("samx", "bpm4d", pen_style="dot")
         self.w2.add_curve_custom(
             x=[1, 2, 3, 4, 5], y=[5, 4, 3, 2, 1], color="red", pen_style="dashdot"
         )
 
         # curves for w3
-        self.w3.add_curve_scan("samx", "samx", "bpm4i", "bpm4i", pen_style="dash")
+        self.w3.add_curve_scan("samx", "bpm4i", pen_style="dash")
         self.w3.add_curve_custom(
             x=[1, 2, 3, 4, 5],
             y=[1, 2, 3, 4, 5],
@@ -477,7 +477,7 @@ class DebugWindow(QWidget):
         )
 
         # curves for w4
-        self.w4.add_curve_scan("samx", "samx", "bpm4i", "bpm4i", pen_style="dash")
+        self.w4.add_curve_scan("samx", "bpm4i", pen_style="dash")
         self.w4.add_curve_custom(
             x=[1, 2, 3, 4, 5],
             y=[1, 2, 3, 4, 5],

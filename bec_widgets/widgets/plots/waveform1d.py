@@ -5,7 +5,7 @@ from typing import Literal, Optional, Any
 
 import numpy as np
 import pyqtgraph as pg
-from pydantic import Field, BaseModel
+from pydantic import Field, BaseModel, field_validator
 from pyqtgraph import mkBrush
 from qtpy import QtCore
 from qtpy.QtCore import Signal as pyqtSignal
@@ -14,7 +14,7 @@ from qtpy.QtWidgets import QWidget
 
 from bec_lib import MessageEndpoints
 from bec_lib.scan_data import ScanData
-from bec_widgets.utils import Colors, ConnectionConfig, BECConnector
+from bec_widgets.utils import Colors, ConnectionConfig, BECConnector, EntryValidator
 from bec_widgets.widgets.plots import BECPlotBase, WidgetConfig
 
 
@@ -89,8 +89,6 @@ class BECCurve(BECConnector, pg.PlotDataItem):
             # config.widget_class = self.__class__.__name__
         super().__init__(config=config, gui_id=gui_id)
         pg.PlotDataItem.__init__(self, name=name, **kwargs)
-
-        # self.config = config
 
         self.apply_config()
 
@@ -246,6 +244,8 @@ class BECWaveform1D(BECPlotBase):
         # Connect dispatcher signals
         self.bec_dispatcher.connect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
 
+        self.entry_validator = EntryValidator(self.dev)
+
         self.addLegend()
 
         self.apply_config()
@@ -320,64 +320,6 @@ class BECWaveform1D(BECPlotBase):
             raise ValueError(
                 "Each identifier must be either an integer (index) or a string (curve_id)."
             )
-
-    def add_curve_scan(
-        self,
-        x_name: str,
-        x_entry: str,
-        y_name: str,
-        y_entry: str,
-        color: Optional[str] = None,
-        label: Optional[str] = None,
-        **kwargs,
-    ) -> BECCurve:
-        """
-        Add a curve to the plot widget from the scan segment.
-        Args:
-            x_name(str): Name of the x signal.
-            x_entry(str): Entry of the x signal.
-            y_name(str): Name of the y signal.
-            y_entry(str): Entry of the y signal.
-            color(str, optional): Color of the curve. Defaults to None.
-            label(str, optional): Label of the curve. Defaults to None.
-            **kwargs: Additional keyword arguments for the curve configuration.
-
-        Returns:
-            BECCurve: The curve object.
-        """
-        # Check if curve already exists
-        curve_source = "scan_segment"
-        label = label or f"{y_name}-{y_entry}"
-
-        curve_exits = self._check_curve_id(label, self.curves_data)
-        if curve_exits:
-            raise ValueError(f"Curve with ID '{label}' already exists in widget '{self.gui_id}'.")
-            return
-
-        color = (
-            color
-            or Colors.golden_angle_color(
-                colormap=self.config.color_palette, num=len(self.curves) + 1, format="HEX"
-            )[-1]
-        )
-
-        # Create curve by config
-        curve_config = CurveConfig(
-            widget_class="BECCurve",
-            # parent_id=self.config.parent_id,
-            parent_id=self.gui_id,
-            label=label,
-            color=color,
-            source=curve_source,
-            signals=Signal(
-                source=curve_source,
-                x=SignalData(name=x_name, entry=x_entry),
-                y=SignalData(name=y_name, entry=y_entry),
-            ),
-            **kwargs,
-        )
-        curve = self._add_curve_object(name=label, source=curve_source, config=curve_config)
-        return curve
 
     def add_curve_custom(
         self,
@@ -454,6 +396,98 @@ class BECWaveform1D(BECPlotBase):
         if data is not None:
             curve.setData(data[0], data[1])
         return curve
+
+    def add_curve_scan(
+        self,
+        x_name: str,
+        y_name: str,
+        x_entry: Optional[str] = None,
+        y_entry: Optional[str] = None,
+        color: Optional[str] = None,
+        label: Optional[str] = None,
+        validate_bec: bool = True,
+        **kwargs,
+    ) -> BECCurve:
+        """
+        Add a curve to the plot widget from the scan segment.
+        Args:
+            x_name(str): Name of the x signal.
+            x_entry(str): Entry of the x signal.
+            y_name(str): Name of the y signal.
+            y_entry(str): Entry of the y signal.
+            color(str, optional): Color of the curve. Defaults to None.
+            label(str, optional): Label of the curve. Defaults to None.
+            **kwargs: Additional keyword arguments for the curve configuration.
+
+        Returns:
+            BECCurve: The curve object.
+        """
+        # Check if curve already exists
+        curve_source = "scan_segment"
+
+        # Get entry if not provided and validate
+        x_entry, y_entry = self._validate_signal_entries(
+            x_name, y_name, x_entry, y_entry, validate_bec
+        )
+
+        label = label or f"{y_name}-{y_entry}"
+
+        curve_exits = self._check_curve_id(label, self.curves_data)
+        if curve_exits:
+            raise ValueError(f"Curve with ID '{label}' already exists in widget '{self.gui_id}'.")
+            return
+
+        color = (
+            color
+            or Colors.golden_angle_color(
+                colormap=self.config.color_palette, num=len(self.curves) + 1, format="HEX"
+            )[-1]
+        )
+
+        # Create curve by config
+        curve_config = CurveConfig(
+            widget_class="BECCurve",
+            # parent_id=self.config.parent_id,
+            parent_id=self.gui_id,
+            label=label,
+            color=color,
+            source=curve_source,
+            signals=Signal(
+                source=curve_source,
+                x=SignalData(name=x_name, entry=x_entry),
+                y=SignalData(name=y_name, entry=y_entry),
+            ),
+            **kwargs,
+        )
+        curve = self._add_curve_object(name=label, source=curve_source, config=curve_config)
+        return curve
+
+    def _validate_signal_entries(
+        self,
+        x_name: str,
+        y_name: str,
+        x_entry: str | None,
+        y_entry: str | None,
+        validate_bec: bool = True,
+    ) -> tuple[str, str]:
+        """
+        Validate the signal name and entry.
+        Args:
+            x_name(str): Name of the x signal.
+            y_name(str): Name of the y signal.
+            x_entry(str|None): Entry of the x signal.
+            y_entry(str|None): Entry of the y signal.
+            validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
+        Returns:
+            tuple[str,str]: Validated x and y entries.
+        """
+        if validate_bec:
+            x_entry = self.entry_validator.validate_signal(x_name, x_entry)
+            y_entry = self.entry_validator.validate_signal(y_name, y_entry)
+        else:
+            x_entry = x_name if x_entry is None else x_entry
+            y_entry = y_name if y_entry is None else y_entry
+        return x_entry, y_entry
 
     def _check_curve_id(self, val: Any, dict_to_check: dict) -> bool:
         """
