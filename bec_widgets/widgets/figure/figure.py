@@ -72,7 +72,9 @@ class WidgetHandler:
             **(config if config is not None else {}),
         }
         widget_config = config_class(**widget_config_dict)
-        widget = widget_class(config=widget_config, parent_figure=parent_figure)
+        widget = widget_class(
+            config=widget_config, parent_figure=parent_figure, client=parent_figure.client
+        )
 
         if axis_kwargs:
             widget.set(**axis_kwargs)
@@ -250,6 +252,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         """
         if widget_id in self.widgets:
             widget = self.widgets.pop(widget_id)
+            widget.cleanup()
             self.removeItem(widget)
             self.grid[widget.config.row][widget.config.col] = None
             self._reindex_grid()
@@ -396,7 +399,6 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 ##################################################
 
 from qtconsole.inprocess import QtInProcessKernelManager
-import matplotlib.pyplot as plt
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 
 
@@ -409,7 +411,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
         self.kernel_client = self.kernel_manager.client()
         self.kernel_client.start_channels()
 
-        self.kernel_manager.kernel.shell.push({"np": np, "pg": pg, "plt": plt})
+        self.kernel_manager.kernel.shell.push({"np": np, "pg": pg})
 
     def shutdown_kernel(self):
         self.kernel_client.stop_channels()
@@ -429,7 +431,6 @@ class DebugWindow(QWidget):
 
         self.splitter.setSizes([200, 100])
 
-        # self.con_w1 =
         # console push
         self.console.kernel_manager.kernel.shell.push(
             {"fig": self.figure, "w1": self.w1, "w2": self.w2, "c1": self.c1, "w5": self.w5}
@@ -497,11 +498,6 @@ class DebugWindow(QWidget):
             color="blue",
             pen_style="dashdot",
         )
-
-        self.w1.remove()
-
-        self.figure.add_plot(row=0, col=1, title="Widget 5")
-        self.w5 = self.figure[0, 1]
 
 
 if __name__ == "__main__":  # pragma: no cover

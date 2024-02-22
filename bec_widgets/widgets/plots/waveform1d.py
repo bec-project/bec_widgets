@@ -660,3 +660,7 @@ class BECWaveform1D(BECPlotBase):
             data = self.queue.scan_storage.find_scan_by_ID(self.scanID).data
 
         self._update_scan_curves(data)
+
+    def cleanup(self):
+        """Cleanup the widget connection from BECDispatcher."""
+        self.bec_dispatcher.disconnect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
