@@ -433,7 +433,7 @@ class DebugWindow(QWidget):
 
         # console push
         self.console.kernel_manager.kernel.shell.push(
-            {"fig": self.figure, "w1": self.w1, "w2": self.w2, "c1": self.c1, "w5": self.w5}
+            {"fig": self.figure, "w1": self.w1, "w2": self.w2}
         )
 
     def _init_ui(self):
