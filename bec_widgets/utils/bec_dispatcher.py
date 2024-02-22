@@ -87,8 +87,13 @@ class _BECDispatcher(QObject):
         return _Connection(consumer)
 
     def _do_disconnect_slot(self, topic, slot):
+        print(f"Disconnecting {slot} from {topic}")
         connection = self._connections[topic]
-        connection.signal.disconnect(slot)
+        try:
+            connection.signal.disconnect(slot)
+        except TypeError:
+            print(f"Could not disconnect slot:'{slot}' from topic:'{topic}'")
+            print("Continue to remove slot:'{slot}' from 'connection.slots'.")
         connection.slots.remove(slot)
         if not connection.slots:
             print(f"{connection.consumer} is shutting down")
