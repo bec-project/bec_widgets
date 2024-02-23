@@ -88,9 +88,11 @@ class BECCurve(BECConnector, pg.PlotDataItem):
             self.config = config
             # config.widget_class = self.__class__.__name__
         super().__init__(config=config, gui_id=gui_id)
-        pg.PlotDataItem.__init__(self, name=name, **kwargs)
+        pg.PlotDataItem.__init__(self, name=name)
 
         self.apply_config()
+        if kwargs:
+            self.set(**kwargs)
 
     def apply_config(self):
         pen_style_map = {
