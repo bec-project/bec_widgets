@@ -22,7 +22,7 @@ class FigureConfig(ConnectionConfig):
     """Configuration for BECFigure. Inheriting from ConnectionConfig widget_class and gui_id"""
 
     theme: Literal["dark", "light"] = Field("dark", description="The theme of the figure widget.")
-    num_columns: int = Field(1, description="The number of columns in the figure widget.")
+    num_cols: int = Field(1, description="The number of columns in the figure widget.")
     num_rows: int = Field(1, description="The number of rows in the figure widget.")
     widgets: dict[str, WidgetConfig] = Field(
         {}, description="The list of widgets to be added to the figure widget."
@@ -95,6 +95,8 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         if config is None:
             config = FigureConfig(widget_class=self.__class__.__name__)
         else:
+            if isinstance(config, dict):
+                config = FigureConfig(**config)
             self.config = config
         super().__init__(client=client, config=config, gui_id=gui_id)
         pg.GraphicsLayoutWidget.__init__(self, parent)
@@ -160,7 +162,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         if not widget_id:
             widget_id = self._generate_unique_widget_id()
         if widget_id in self.widgets:
-            raise ValueError(f"Widget with ID {widget_id} already exists.")
+            raise ValueError(f"Widget with ID '{widget_id}' already exists.")
 
         widget = self.widget_handler.create_widget(
             widget_type=widget_type,
@@ -189,10 +191,9 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             # Add widget to the figure
             self.addItem(widget, row=row, col=col)
 
-        # TODO decide if needed
-        # Update num_columns and num_rows based on the added widget
+        # Update num_cols and num_rows based on the added widget
         self.config.num_rows = max(self.config.num_rows, row + 1)
-        self.config.num_columns = max(self.config.num_columns, col + 1)
+        self.config.num_cols = max(self.config.num_cols, col + 1)
 
         # Saving config for future referencing
         self.config.widgets[widget_id] = widget.config
@@ -237,12 +238,8 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         widget = self._get_widget_by_coordinates(row, col)
         if widget:
             widget_id = widget.config.gui_id
-            if widget_id and widget_id in self.widgets:
+            if widget_id in self.widgets:
                 self._remove_by_id(widget_id)
-            else:
-                raise ValueError(f"No widget found at coordinates ({row}, {col}).")
-        else:
-            raise ValueError(f"No widget found at coordinates ({row}, {col}).")
 
     def _remove_by_id(self, widget_id: str) -> None:
         """
@@ -260,7 +257,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
                 self.config.widgets.pop(widget_id)
             print(f"Removed widget {widget_id}.")
         else:
-            raise ValueError(f"Widget with ID {widget_id} does not exist.")
+            raise ValueError(f"Widget with ID '{widget_id}' does not exist.")
 
     def __getitem__(self, key: tuple | str):
         if isinstance(key, tuple) and len(key) == 2:
@@ -287,7 +284,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         """
         widget = self.getItem(row, col)
         if widget is None:
-            raise KeyError(f"No widget at coordinates ({row}, {col})")
+            raise ValueError(f"No widget at coordinates ({row}, {col})")
         return widget
 
     def _find_next_empty_position(self):
@@ -376,6 +373,9 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             new_grid[row][col] = widget_id
             current_idx += 1
 
+        self.config.num_rows = row
+        self.config.num_cols = col
+
         # Update widgets' positions and replot them according to the new grid
         self.grid = new_grid
         self._reindex_grid()  # This method should be updated to handle reshuffling correctly
@@ -402,7 +402,7 @@ from qtconsole.inprocess import QtInProcessKernelManager
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 
 
-class JupyterConsoleWidget(RichJupyterWidget):
+class JupyterConsoleWidget(RichJupyterWidget):  # pragma: no cover:
     def __init__(self):
         super().__init__()
 
@@ -418,7 +418,7 @@ class JupyterConsoleWidget(RichJupyterWidget):
         self.kernel_manager.shutdown_kernel()
 
 
-class DebugWindow(QWidget):
+class DebugWindow(QWidget):  # pragma: no cover:
     """Debug window for BEC widgets"""
 
     def __init__(self, parent=None):
