@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.40.1 (2024-02-23)
+
+### Fix
+
+* **utils/bec_dispatcher:** _do_disconnect_slot will shutdown consumer of slots/signals which were already disconnected ([`feca7a3`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/feca7a3dcde6d0befa415db64fc8f9bbf0c06e52))
+
 ## v0.40.0 (2024-02-16)
 
 ### Feature
