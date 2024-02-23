@@ -59,6 +59,7 @@ class BECConnector:
             gui_id(str): GUI ID
         """
         self.config.gui_id = gui_id
+        self.gui_id = gui_id
 
     def get_obj_by_id(self, obj_id: str):
         if obj_id == self.gui_id:

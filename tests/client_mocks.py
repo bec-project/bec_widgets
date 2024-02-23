@@ -49,7 +49,17 @@ def get_mocked_device(device_name: str):
 @pytest.fixture(scope="function")
 def mocked_client():
     # Create a dictionary of mocked devices
-    device_names = ["samx", "gauss_bpm", "gauss_adc1", "gauss_adc2", "gauss_adc3", "bpm4i"]
+    device_names = [
+        "samx",
+        "samy",
+        "gauss_bpm",
+        "gauss_adc1",
+        "gauss_adc2",
+        "gauss_adc3",
+        "bpm4i",
+        "bpm3a",
+        "bpm3i",
+    ]
     mocked_devices = {name: get_mocked_device(name) for name in device_names}
 
     # Create a MagicMock object
