@@ -62,19 +62,33 @@ class BECPlotBase(RPCBase):
         """
 
     @rpc_call
-    def set_x_lim(self, x_lim: "tuple") -> "None":
+    def set_x_lim(self, *args) -> "None":
         """
-        Set the limits of the x-axis.
+        Set the limits of the x-axis. This method can accept either two separate arguments
+        for the minimum and maximum x-axis values, or a single tuple containing both limits.
+
+        Usage:
+            set_x_lim(x_min, x_max)
+            set_x_lim((x_min, x_max))
+
         Args:
-            x_lim(tuple): Limits of the x-axis.
+            *args: A variable number of arguments. Can be two integers (x_min and x_max)
+                   or a single tuple with two integers.
         """
 
     @rpc_call
-    def set_y_lim(self, y_lim: "tuple") -> "None":
+    def set_y_lim(self, *args) -> "None":
         """
-        Set the limits of the y-axis.
+        Set the limits of the y-axis. This method can accept either two separate arguments
+        for the minimum and maximum y-axis values, or a single tuple containing both limits.
+
+        Usage:
+            set_y_lim(y_min, y_max)
+            set_y_lim((y_min, y_max))
+
         Args:
-            y_lim(tuple): Limits of the y-axis.
+            *args: A variable number of arguments. Can be two integers (y_min and y_max)
+                   or a single tuple with two integers.
         """
 
     @rpc_call
@@ -271,6 +285,12 @@ class BECFigure(RPCBase, BECFigureClientMixin):
         Change the theme of the figure widget.
         Args:
             theme(Literal["dark","light"]): The theme to set for the figure widget.
+        """
+
+    @rpc_call
+    def clear_all(self):
+        """
+        Clear all widgets from the figure and reset to default state
         """
 
 

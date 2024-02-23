@@ -32,7 +32,14 @@ if __name__ == "__main__":
             "pyqtdarktheme",
         ],
         extras_require={
-            "dev": ["pytest", "pytest-random-order", "coverage", "pytest-qt", "black"],
+            "dev": [
+                "pytest",
+                "pytest-random-order",
+                "pytest-timeout",
+                "coverage",
+                "pytest-qt",
+                "black",
+            ],
             "pyqt5": ["PyQt5>=5.9"],
             "pyqt6": ["PyQt6>=6.0"],
         },

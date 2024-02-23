@@ -83,7 +83,7 @@ class WidgetHandler:
 
 
 class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
-    USER_ACCESS = ["add_plot", "remove", "change_layout", "change_theme"]
+    USER_ACCESS = ["add_plot", "remove", "change_layout", "change_theme", "clear_all"]
 
     def __init__(
         self,
@@ -380,6 +380,16 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         self.grid = new_grid
         self._reindex_grid()  # This method should be updated to handle reshuffling correctly
         self._replot_layout()  # Assumes this method re-adds widgets to the layout based on self.grid
+
+    def clear_all(self):
+        """Clear all widgets from the figure and reset to default state"""
+        self.clear()
+        self.widgets = defaultdict(dict)
+        self.grid = []
+        theme = self.config.theme
+        self.config = FigureConfig(
+            widget_class=self.__class__.__name__, gui_id=self.gui_id, theme=theme
+        )
 
     def start(self):
         import sys

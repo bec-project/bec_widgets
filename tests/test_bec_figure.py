@@ -1,4 +1,4 @@
-# pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
+# pylint: disable=missing-function-docstring, missing-module-docstring, unused-import
 import os
 
 import numpy as np
@@ -212,3 +212,15 @@ def test_change_layout(bec_figure):
     assert bec_figure[0, 1] == w2
     assert bec_figure[0, 2] == w3
     assert bec_figure[0, 3] == w4
+
+
+def test_clear_all(bec_figure):
+    bec_figure.add_plot(widget_id="test_waveform_1", row=0, col=0)
+    bec_figure.add_plot(widget_id="test_waveform_2", row=0, col=1)
+    bec_figure.add_plot(widget_id="test_waveform_3", row=1, col=0)
+    bec_figure.add_plot(widget_id="test_waveform_4", row=1, col=1)
+
+    bec_figure.clear_all()
+
+    assert len(bec_figure.widgets) == 0
+    assert np.shape(bec_figure.grid) == (0,)
