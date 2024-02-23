@@ -157,23 +157,51 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         self.setLogMode(y=(scale == "log"))
         self.config.axis.y_scale = scale
 
-    def set_x_lim(self, x_lim: tuple) -> None:
+    def set_x_lim(self, *args) -> None:
         """
-        Set the limits of the x-axis.
-        Args:
-            x_lim(tuple): Limits of the x-axis.
-        """
-        self.setXRange(x_lim[0], x_lim[1])
-        self.config.axis.x_lim = x_lim
+        Set the limits of the x-axis. This method can accept either two separate arguments
+        for the minimum and maximum x-axis values, or a single tuple containing both limits.
 
-    def set_y_lim(self, y_lim: tuple) -> None:
-        """
-        Set the limits of the y-axis.
+        Usage:
+            set_x_lim(x_min, x_max)
+            set_x_lim((x_min, x_max))
+
         Args:
-            y_lim(tuple): Limits of the y-axis.
+            *args: A variable number of arguments. Can be two integers (x_min and x_max)
+                   or a single tuple with two integers.
         """
-        self.setYRange(y_lim[0], y_lim[1])
-        self.config.axis.y_lim = y_lim
+        if len(args) == 1 and isinstance(args[0], tuple):
+            x_min, x_max = args[0]
+        elif len(args) == 2:
+            x_min, x_max = args
+        else:
+            raise ValueError("set_x_lim expects either two separate arguments or a single tuple")
+
+        self.setXRange(x_min, x_max)
+        self.config.axis.x_lim = (x_min, x_max)
+
+    def set_y_lim(self, *args) -> None:
+        """
+        Set the limits of the y-axis. This method can accept either two separate arguments
+        for the minimum and maximum y-axis values, or a single tuple containing both limits.
+
+        Usage:
+            set_y_lim(y_min, y_max)
+            set_y_lim((y_min, y_max))
+
+        Args:
+            *args: A variable number of arguments. Can be two integers (y_min and y_max)
+                   or a single tuple with two integers.
+        """
+        if len(args) == 1 and isinstance(args[0], tuple):
+            y_min, y_max = args[0]
+        elif len(args) == 2:
+            y_min, y_max = args
+        else:
+            raise ValueError("set_y_lim expects either two separate arguments or a single tuple")
+
+        self.setYRange(y_min, y_max)
+        self.config.axis.y_lim = (y_min, y_max)
 
     def set_grid(self, x: bool = False, y: bool = False):
         """
