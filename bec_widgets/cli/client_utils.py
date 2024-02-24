@@ -88,12 +88,25 @@ class BECFigureClientMixin:
 
 
 class RPCBase:
-    def __init__(self, gui_id: str = None, config: dict = None, **kwargs) -> None:
+    def __init__(self, gui_id: str = None, config: dict = None, parent=None, **kwargs) -> None:
         self._client = BECDispatcher().client
         self._config = config if config is not None else {}
         self._gui_id = gui_id if gui_id is not None else str(uuid.uuid4())
+        self._parent = parent
         super().__init__(**kwargs)
         print(f"RPCBase: {self._gui_id}")
+
+    @property
+    def _root(self):
+        """
+        Get the root widget. This is the BECFigure widget that holds
+        the anchor gui_id.
+        """
+        parent = self
+        # pylint: disable=protected-access
+        while not parent._parent is None:
+            parent = parent._parent
+        return parent
 
     def _run_rpc(self, method, *args, wait_for_rpc_response=True, **kwargs):
         """
@@ -115,7 +128,8 @@ class RPCBase:
             metadata={"request_id": request_id},
         )
         print(f"RPCBase: {rpc_msg}")
-        receiver = self._config.get("parent_id", self._gui_id)
+        # pylint: disable=protected-access
+        receiver = self._root._gui_id
         self._client.producer.send(MessageEndpoints.gui_instructions(receiver), rpc_msg)
 
         if not wait_for_rpc_response:
@@ -133,7 +147,7 @@ class RPCBase:
 
         cls = getattr(client, cls)
         print(msg_result)
-        return cls(**msg_result)
+        return cls(parent=self, **msg_result)
 
     def _wait_for_response(self, request_id):
         """
