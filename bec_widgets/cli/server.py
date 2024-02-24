@@ -3,8 +3,9 @@ import inspect
 from bec_lib import MessageEndpoints, messages
 
 from bec_widgets.utils import BECDispatcher
+from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.widgets.figure import BECFigure
-from bec_widgets.widgets.plots import BECPlotBase, BECWaveform1D, BECCurve
+from bec_widgets.widgets.plots import BECCurve, BECPlotBase, BECWaveform1D
 
 
 class BECWidgetsCLIServer:
@@ -49,11 +50,23 @@ class BECWidgetsCLIServer:
 
     def get_object_from_config(self, config: dict):
         gui_id = config.get("gui_id")
+        # check if the object is the figure
         if gui_id == self.fig.gui_id:
             return self.fig
+        # check if the object is a widget
         if gui_id in self.fig.widgets:
             obj = self.fig.widgets[config["gui_id"]]
             return obj
+        if self.fig.widgets:
+            for widget in self.fig.widgets.values():
+                if isinstance(widget, BECWaveform1D):
+                    for curve in widget.curves:
+                        if curve.gui_id == gui_id:
+                            return curve
+                raise NotImplementedError(
+                    f"gui_id lookup for widget of type {widget.__class__.__name__} not implemented"
+                )
+
         raise ValueError(f"Object with gui_id {gui_id} not found")
 
     def run_rpc(self, obj, method, args, kwargs):
@@ -64,7 +77,7 @@ class BECWidgetsCLIServer:
             res = method_obj(*args, **kwargs)
         else:
             res = method_obj()
-        if isinstance(res, BECPlotBase):
+        if isinstance(res, BECConnector):
             res = {
                 "gui_id": res.gui_id,
                 "widget_class": res.__class__.__name__,
@@ -81,5 +94,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    server = BECWidgetsCLIServer(gui_id=args.id)
-    # server = BECWidgetsCLIServer(gui_id="test")
+    # server = BECWidgetsCLIServer(gui_id=args.id)
+    server = BECWidgetsCLIServer(gui_id="test")
