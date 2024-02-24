@@ -44,18 +44,26 @@ class {class_name}(RPCBase, BECFigureClientMixin):"""
 class {class_name}(RPCBase):"""
         for method in cls.USER_ACCESS:
             obj = getattr(cls, method)
-            sig = str(inspect.signature(obj))
-            doc = inspect.getdoc(obj)
-            overloads = typing.get_overloads(obj)
-            for overload in overloads:
-                sig_overload = str(inspect.signature(overload))
-                self.content += f"""
+            if isinstance(obj, property):
+                self.content += """
+    @property
+    @rpc_call"""
+                sig = str(inspect.signature(obj.fget))
+                doc = inspect.getdoc(obj.fget)
+            else:
+                sig = str(inspect.signature(obj))
+                doc = inspect.getdoc(obj)
+                overloads = typing.get_overloads(obj)
+                for overload in overloads:
+                    sig_overload = str(inspect.signature(overload))
+                    self.content += f"""
     @overload
     def {method}{str(sig_overload)}: ...
     """
 
+                self.content += """
+    @rpc_call"""
             self.content += f"""
-    @rpc_call
     def {method}{str(sig)}:
         \"\"\"
 {doc}
@@ -75,8 +83,9 @@ class {class_name}(RPCBase):"""
 
 if __name__ == "__main__":
     import os
+
     from bec_widgets.widgets.figure import BECFigure
-    from bec_widgets.widgets.plots import BECWaveform1D, BECPlotBase  # ,BECCurve
+    from bec_widgets.widgets.plots import BECPlotBase, BECWaveform1D  # ,BECCurve
     from bec_widgets.widgets.plots.waveform1d import BECCurve
 
     current_path = os.path.dirname(__file__)

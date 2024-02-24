@@ -141,6 +141,11 @@ class RPCBase:
         msg_result = response.content["message"].get("result")
         if not msg_result:
             return None
+        if isinstance(msg_result, list):
+            return [self._create_widget_from_msg_result(res) for res in msg_result]
+        return self._create_widget_from_msg_result(msg_result)
+
+    def _create_widget_from_msg_result(self, msg_result):
         cls = msg_result.pop("widget_class", None)
         if not cls:
             return msg_result

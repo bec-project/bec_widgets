@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Literal, Optional, Any
+from typing import Any, Literal, Optional
 
 import numpy as np
 import pyqtgraph as pg
@@ -72,7 +72,6 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         "set_symbol_size",
         "set_pen_width",
         "set_pen_style",
-        "get_data",
     ]
 
     def __init__(
@@ -205,15 +204,6 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         self.config.pen_style = pen_style
         self.apply_config()
 
-    def get_data(self) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Get the data of the curve.
-        Returns:
-            tuple[np.ndarray,np.ndarray]: X and Y data of the curve.
-        """
-        x_data, y_data = self.getData()
-        return x_data, y_data
-
 
 class BECWaveform1D(BECPlotBase):
     USER_ACCESS = [
@@ -221,12 +211,11 @@ class BECWaveform1D(BECPlotBase):
         "add_curve_custom",
         "remove_curve",
         "scan_history",
-        "get_curves",
-        "get_curves_data",
+        "curves",
+        "curves_data",
         "get_curve",
         "get_curve_config",
         "apply_config",
-        "get_all_data",
     ]
     scan_signal_update = pyqtSignal()
 
@@ -302,7 +291,7 @@ class BECWaveform1D(BECPlotBase):
         self.gui_id = new_gui_id
         self.config.gui_id = new_gui_id
 
-        for curve in self.curves:
+        for curve_id, curve in self.curves_data.items():
             curve.config.parent_id = new_gui_id
 
     def add_curve_by_config(self, curve_config: CurveConfig | dict) -> BECCurve:
@@ -335,21 +324,6 @@ class BECWaveform1D(BECPlotBase):
                 else:
                     return curves[curve_id].config
 
-    def get_curves(self) -> list:  # TODO discuss if it should be marked as @property for RPC
-        """
-        Get the curves of the plot widget as a list
-        Returns:
-            list: List of curves.
-        """
-        return self.curves
-
-    def get_curves_data(self) -> dict:  # TODO discuss if it should be marked as @property for RPC
-        """
-        Get the curves data of the plot widget as a dictionary
-        Returns:
-            dict: Dictionary of curves data.
-        """
-        return self.curves_data
 
     def get_curve(self, identifier) -> BECCurve:
         """
@@ -650,11 +624,7 @@ class BECWaveform1D(BECPlotBase):
 
             curve.setData(data_x, data_y)
 
-    def scan_history(
-        self,
-        scan_index: int = None,
-        scanID: str = None,
-    ):
+    def scan_history(self, scan_index: int = None, scanID: str = None):
         """
         Update the scan curves with the data from the scan storage.
         Provide only one of scanID or scan_index.

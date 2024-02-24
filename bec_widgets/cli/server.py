@@ -72,18 +72,29 @@ class BECWidgetsCLIServer:
     def run_rpc(self, obj, method, args, kwargs):
         method_obj = getattr(obj, method)
         # check if the method accepts args and kwargs
-        sig = inspect.signature(method_obj)
-        if sig.parameters:
-            res = method_obj(*args, **kwargs)
+        if not callable(method_obj):
+            res = method_obj
         else:
-            res = method_obj()
-        if isinstance(res, BECConnector):
-            res = {
-                "gui_id": res.gui_id,
-                "widget_class": res.__class__.__name__,
-                "config": res.config.model_dump(),
-            }
+            sig = inspect.signature(method_obj)
+            if sig.parameters:
+                res = method_obj(*args, **kwargs)
+            else:
+                res = method_obj()
+
+        if isinstance(res, list):
+            res = [self.serialize_object(obj) for obj in res]
+        else:
+            res = self.serialize_object(res)
         return res
+
+    def serialize_object(self, obj):
+        if isinstance(obj, BECConnector):
+            return {
+                "gui_id": obj.gui_id,
+                "widget_class": obj.__class__.__name__,
+                "config": obj.config.model_dump(),
+            }
+        return obj
 
 
 if __name__ == "__main__":
@@ -94,5 +105,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # server = BECWidgetsCLIServer(gui_id=args.id)
-    server = BECWidgetsCLIServer(gui_id="test")
+    server = BECWidgetsCLIServer(gui_id=args.id)
+    # server = BECWidgetsCLIServer(gui_id="test")
