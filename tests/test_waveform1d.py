@@ -106,7 +106,7 @@ def test_create_waveform1D_by_config(bec_figure):
     w1_config_output = w1.get_config()
 
     assert w1_config_input == w1_config_output
-    assert w1.titleLabel.text == "Widget 1"
+    assert w1.plot_item.titleLabel.text == "Widget 1"
     assert w1.config.axis.title == "Widget 1"
 
 
@@ -185,7 +185,7 @@ def test_remove_curve(bec_figure):
     w1.remove_curve(0)
     w1.remove_curve("bpm3a-bpm3a")
 
-    assert len(w1.curves) == 0
+    assert len(w1.plot_item.curves) == 0
     assert w1.curves_data["scan_segment"] == {}
 
     with pytest.raises(ValueError) as excinfo:

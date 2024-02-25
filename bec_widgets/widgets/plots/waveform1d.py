@@ -260,7 +260,7 @@ class BECWaveform1D(BECPlotBase):
 
         self.entry_validator = EntryValidator(self.dev)
 
-        self.addLegend()
+        self.add_legend()
         self.apply_config(self.config)
 
     # TODO check config assigning
@@ -268,7 +268,7 @@ class BECWaveform1D(BECPlotBase):
     def find_widget_by_id(
         self, item_id: str
     ):  # TODO implement this on level of BECConnector and all other widgets
-        for curve in self.curves:
+        for curve in self.plot_item.curves:
             if curve.gui_id == item_id:
                 return curve
 
@@ -287,12 +287,12 @@ class BECWaveform1D(BECPlotBase):
                 return
 
         self.config = config
-        self.clear()
+        self.plot_item.clear()  # TODO not sure if on the plot or layout level
 
         self.apply_axis_config()
         # Reset curves
         self._curves_data = defaultdict(dict)
-        self._curves = []
+        self._curves = self.plot_item.curves
         for curve_id, curve_config in self.config.curves.items():
             self.add_curve_by_config(curve_config)
         if replot_last_scan:
@@ -377,7 +377,7 @@ class BECWaveform1D(BECPlotBase):
             BECCurve: The curve object.
         """
         if isinstance(identifier, int):
-            return self.curves[identifier]
+            return self.plot_item.curves[identifier]
         elif isinstance(identifier, str):
             for source_type, curves in self.curves_data.items():
                 if identifier in curves:
@@ -407,7 +407,7 @@ class BECWaveform1D(BECPlotBase):
             BECCurve: The curve object.
         """
         curve_source = "custom"
-        curve_id = label or f"Curve {len(self.curves) + 1}"
+        curve_id = label or f"Curve {len(self.plot_item.curves) + 1}"
 
         curve_exits = self._check_curve_id(curve_id, self.curves_data)
         if curve_exits:
@@ -418,7 +418,7 @@ class BECWaveform1D(BECPlotBase):
         color = (
             color
             or Colors.golden_angle_color(
-                colormap=self.config.color_palette, num=len(self.curves) + 1, format="HEX"
+                colormap=self.config.color_palette, num=len(self.plot_item.curves) + 1, format="HEX"
             )[-1]
         )
 
@@ -456,7 +456,7 @@ class BECWaveform1D(BECPlotBase):
         """
         curve = BECCurve(config=config, name=name)
         self.curves_data[source][name] = curve
-        self.addItem(curve)
+        self.plot_item.addItem(curve)
         self.config.curves[name] = curve.config
         if data is not None:
             curve.setData(data[0], data[1])
@@ -504,7 +504,7 @@ class BECWaveform1D(BECPlotBase):
         color = (
             color
             or Colors.golden_angle_color(
-                colormap=self.config.color_palette, num=len(self.curves) + 1, format="HEX"
+                colormap=self.config.color_palette, num=len(self.plot_item.curves) + 1, format="HEX"
             )[-1]
         )
 
@@ -595,10 +595,10 @@ class BECWaveform1D(BECPlotBase):
         for source, curves in self.curves_data.items():
             if curve_id in curves:
                 curve = curves.pop(curve_id)
-                self.removeItem(curve)
+                self.plot_item.removeItem(curve)
                 del self.config.curves[curve_id]
-                if curve in self.curves:
-                    self.curves.remove(curve)
+                if curve in self.plot_item.curves:
+                    self.plot_item.curves.remove(curve)
                 return
         raise KeyError(f"Curve with ID '{curve_id}' not found.")
 
@@ -608,10 +608,10 @@ class BECWaveform1D(BECPlotBase):
         Args:
             N(int): Order of the curve to be removed.
         """
-        if N < len(self.curves):
-            curve = self.curves[N]
+        if N < len(self.plot_item.curves):
+            curve = self.plot_item.curves[N]
             curve_id = curve.name()  # Assuming curve's name is used as its ID
-            self.removeItem(curve)
+            self.plot_item.removeItem(curve)
             del self.config.curves[curve_id]
             # Remove from self.curve_data
             for source, curves in self.curves_data.items():
@@ -709,7 +709,7 @@ class BECWaveform1D(BECPlotBase):
                 )
                 output = "dict"
 
-        for curve in self.curves:
+        for curve in self.plot_item.curves:
             x_data, y_data = curve.get_data()
             if x_data is not None or y_data is not None:
                 if output == "dict":
@@ -719,9 +719,9 @@ class BECWaveform1D(BECPlotBase):
 
         if output == "pandas" and pd is not None:
             combined_data = pd.concat(
-                [data[curve.name()] for curve in self.curves],
+                [data[curve.name()] for curve in self.plot_item.curves],
                 axis=1,
-                keys=[curve.name() for curve in self.curves],
+                keys=[curve.name() for curve in self.plot_item.curves],
             )
             return combined_data
         return data

@@ -15,7 +15,14 @@ from qtpy.QtWidgets import QApplication, QWidget
 from qtpy.QtWidgets import QVBoxLayout, QMainWindow
 
 from bec_widgets.utils import BECConnector, BECDispatcher, ConnectionConfig
-from bec_widgets.widgets.plots import BECPlotBase, BECWaveform1D, Waveform1DConfig, WidgetConfig
+from bec_widgets.widgets.plots import (
+    BECPlotBase,
+    BECWaveform1D,
+    Waveform1DConfig,
+    WidgetConfig,
+    BECImageShow,
+)
+from bec_widgets.widgets.plots.image import BECImageShowWithHistogram
 
 
 class FigureConfig(ConnectionConfig):
@@ -36,6 +43,7 @@ class WidgetHandler:
         self.widget_factory = {
             "PlotBase": (BECPlotBase, WidgetConfig),
             "Waveform1D": (BECWaveform1D, Waveform1DConfig),
+            "ImShow": (BECImageShow, WidgetConfig),
         }
 
     def create_widget(
@@ -140,9 +148,21 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             **axis_kwargs,
         )
 
+    def add_image(
+        self, widget_id: str = None, row: int = None, col: int = None, config=None, **axis_kwargs
+    ) -> BECImageShow:
+        return self.add_widget(
+            widget_type="ImShow",
+            widget_id=widget_id,
+            row=row,
+            col=col,
+            config=config,
+            **axis_kwargs,
+        )
+
     def add_widget(
         self,
-        widget_type: Literal["PlotBase", "Waveform1D"] = "PlotBase",
+        widget_type: Literal["PlotBase", "Waveform1D", "ImShow"] = "PlotBase",
         widget_id: str = None,
         row: int = None,
         col: int = None,
@@ -401,6 +421,16 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
         sys.exit(app.exec_())
 
+    def add_image_with_histogram(self, image_data, widget_id=None, row=None, col=None):
+        # Create the custom image show widget
+        image_widget = BECImageShowWithHistogram()
+
+        # Set the image data
+        image_widget.setImage(image_data)
+
+        # Add the widget to BECFigure
+        self.addItem(image_widget, row=row, col=col)
+
 
 ##################################################
 ##################################################
@@ -443,7 +473,7 @@ class DebugWindow(QWidget):  # pragma: no cover:
 
         # console push
         self.console.kernel_manager.kernel.shell.push(
-            {"fig": self.figure, "w1": self.w1, "w2": self.w2}
+            {"fig": self.figure, "w1": self.w1, "w2": self.w2, "w3": self.w3, "w4": self.w4}
         )
 
     def _init_ui(self):
@@ -454,6 +484,7 @@ class DebugWindow(QWidget):  # pragma: no cover:
 
         # add stuff to figure
         self._init_figure()
+        # self.add_debug_histo()
 
         self.console_layout = QVBoxLayout(self.widget_console)
         self.console = JupyterConsoleWidget()
@@ -465,6 +496,7 @@ class DebugWindow(QWidget):  # pragma: no cover:
         self.figure.add_widget(widget_type="Waveform1D", row=1, col=0, title="Widget 2")
         self.figure.add_widget(widget_type="Waveform1D", row=0, col=1, title="Widget 3")
         self.figure.add_widget(widget_type="Waveform1D", row=1, col=1, title="Widget 4")
+        # self.figure.add_image(title="Image", row=1, col=1)
 
         self.w1 = self.figure[0, 0]
         self.w2 = self.figure[1, 0]
@@ -500,14 +532,18 @@ class DebugWindow(QWidget):  # pragma: no cover:
         )
 
         # curves for w4
-        self.w4.add_curve_scan("samx", "bpm4i", pen_style="dash")
-        self.w4.add_curve_custom(
-            x=[1, 2, 3, 4, 5],
-            y=[1, 2, 3, 4, 5],
-            label="curve-custom",
-            color="blue",
-            pen_style="dashdot",
-        )
+        # self.w4.add_curve_scan("samx", "bpm4i", pen_style="dash")
+        # self.w4.add_curve_custom(
+        #     x=[1, 2, 3, 4, 5],
+        #     y=[1, 2, 3, 4, 5],
+        #     label="curve-custom",
+        #     color="blue",
+        #     pen_style="dashdot",
+        # )
+
+    def add_debug_histo(self):
+        image_data = np.random.normal(loc=100, scale=50, size=(100, 100))  # Example image data
+        self.figure.add_image_with_histogram(image_data, row=2, col=0)
 
 
 if __name__ == "__main__":  # pragma: no cover

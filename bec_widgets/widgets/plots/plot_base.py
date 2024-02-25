@@ -36,7 +36,7 @@ class WidgetConfig(ConnectionConfig):
     )
 
 
-class BECPlotBase(BECConnector, pg.PlotItem):
+class BECPlotBase(BECConnector, pg.GraphicsLayout):
     USER_ACCESS = [
         "set",
         "set_title",
@@ -47,7 +47,8 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         "set_x_lim",
         "set_y_lim",
         "set_grid",
-        "plot_data",
+        "lock_aspect_ratio",
+        "plot",
         "remove",
     ]
 
@@ -62,9 +63,10 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         if config is None:
             config = WidgetConfig(widget_class=self.__class__.__name__)
         super().__init__(client=client, config=config, gui_id=gui_id)
-        pg.PlotItem.__init__(self, parent)
+        pg.GraphicsLayout.__init__(self, parent)
 
         self.figure = parent_figure
+        self.plot_item = self.addPlot()
 
         self.add_legend()
 
@@ -118,7 +120,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         Args:
             title(str): Title of the plot widget.
         """
-        self.setTitle(title)
+        self.plot_item.setTitle(title)
         self.config.axis.title = title
 
     def set_x_label(self, label: str):
@@ -127,7 +129,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         Args:
             label(str): Label of the x-axis.
         """
-        self.setLabel("bottom", label)
+        self.plot_item.setLabel("bottom", label)
         self.config.axis.x_label = label
 
     def set_y_label(self, label: str):
@@ -136,7 +138,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         Args:
             label(str): Label of the y-axis.
         """
-        self.setLabel("left", label)
+        self.plot_item.setLabel("left", label)
         self.config.axis.y_label = label
 
     def set_x_scale(self, scale: Literal["linear", "log"] = "linear"):
@@ -145,7 +147,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         Args:
             scale(Literal["linear", "log"]): Scale of the x-axis.
         """
-        self.setLogMode(x=(scale == "log"))
+        self.plot_item.setLogMode(x=(scale == "log"))
         self.config.axis.x_scale = scale
 
     def set_y_scale(self, scale: Literal["linear", "log"] = "linear"):
@@ -154,7 +156,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         Args:
             scale(Literal["linear", "log"]): Scale of the y-axis.
         """
-        self.setLogMode(y=(scale == "log"))
+        self.plot_item.setLogMode(y=(scale == "log"))
         self.config.axis.y_scale = scale
 
     def set_x_lim(self, *args) -> None:
@@ -177,7 +179,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         else:
             raise ValueError("set_x_lim expects either two separate arguments or a single tuple")
 
-        self.setXRange(x_min, x_max)
+        self.plot_item.setXRange(x_min, x_max)
         self.config.axis.x_lim = (x_min, x_max)
 
     def set_y_lim(self, *args) -> None:
@@ -200,7 +202,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         else:
             raise ValueError("set_y_lim expects either two separate arguments or a single tuple")
 
-        self.setYRange(y_min, y_max)
+        self.plot_item.setYRange(y_min, y_max)
         self.config.axis.y_lim = (y_min, y_max)
 
     def set_grid(self, x: bool = False, y: bool = False):
@@ -210,14 +212,23 @@ class BECPlotBase(BECConnector, pg.PlotItem):
             x(bool): Show grid on the x-axis.
             y(bool): Show grid on the y-axis.
         """
-        self.showGrid(x, y)
+        self.plot_item.showGrid(x, y)
         self.config.axis.x_grid = x
         self.config.axis.y_grid = y
 
     def add_legend(self):
-        self.addLegend()
+        """Add legend to the plot"""
+        self.plot_item.addLegend()
 
-    def plot_data(self, data_x: list | np.ndarray, data_y: list | np.ndarray, **kwargs):
+    def lock_aspect_ratio(self, lock):
+        """
+        Lock aspect ratio.
+        Args:
+            lock(bool): True to lock, False to unlock.
+        """
+        self.plot_item.setAspectLocked(lock)
+
+    def plot(self, data_x: list | np.ndarray, data_y: list | np.ndarray, **kwargs):
         """
         Plot custom data on the plot widget. These data are not saved in config.
         Args:
@@ -227,7 +238,7 @@ class BECPlotBase(BECConnector, pg.PlotItem):
         """
         # TODO very basic so far, add more options
         # TODO decide name of the method
-        self.plot(data_x, data_y, **kwargs)
+        self.plot_item.plot(data_x, data_y, **kwargs)
 
     def remove(self):
         """Remove the plot widget from the figure."""
