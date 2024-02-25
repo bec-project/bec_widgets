@@ -17,6 +17,11 @@ from bec_lib.scan_data import ScanData
 from bec_widgets.utils import Colors, ConnectionConfig, BECConnector, EntryValidator
 from bec_widgets.widgets.plots import BECPlotBase, WidgetConfig
 
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
+
 
 class SignalData(BaseModel):
     """The data configuration of a signal in the 1D waveform widget for x and y axis."""
@@ -72,6 +77,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         "set_symbol_size",
         "set_pen_width",
         "set_pen_style",
+        "get_data",
     ]
 
     def __init__(
@@ -204,6 +210,15 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         self.config.pen_style = pen_style
         self.apply_config()
 
+    def get_data(self) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Get the data of the curve.
+        Returns:
+            tuple[np.ndarray,np.ndarray]: X and Y data of the curve.
+        """
+        x_data, y_data = self.getData()
+        return x_data, y_data
+
 
 class BECWaveform1D(BECPlotBase):
     USER_ACCESS = [
@@ -216,6 +231,7 @@ class BECWaveform1D(BECPlotBase):
         "get_curve",
         "get_curve_config",
         "apply_config",
+        "get_all_data",
     ]
     scan_signal_update = pyqtSignal()
 
@@ -662,6 +678,44 @@ class BECWaveform1D(BECPlotBase):
             data = self.queue.scan_storage.find_scan_by_ID(self.scanID).data
 
         self._update_scan_curves(data)
+
+    def get_all_data(self, output: Literal["dict", "pandas"] = "dict") -> dict | pd.DataFrame:
+        """
+        Extract all curve data into a dictionary or a pandas DataFrame.
+        Args:
+            output (Literal["dict", "pandas"]): Format of the output data.
+        Returns:
+            dict | pd.DataFrame: Data of all curves in the specified format.
+        """
+
+        data = {}
+        try:
+            import pandas as pd
+        except ImportError:
+            pd = None
+            if output == "pandas":
+                print(
+                    "Pandas is not installed. "
+                    "Please install pandas using 'pip install pandas'."
+                    "Output will be dictionary instead."
+                )
+                output = "dict"
+
+        for curve in self.curves:
+            x_data, y_data = curve.get_data()
+            if output == "dict":
+                data[curve.name()] = {"x": x_data.tolist(), "y": y_data.tolist()}
+            elif output == "pandas" and pd is not None:
+                data[curve.name()] = pd.DataFrame({"x": x_data, "y": y_data})
+
+        if output == "pandas" and pd is not None:
+            combined_data = pd.concat(
+                [data[curve.name()] for curve in self.curves],
+                axis=1,
+                keys=[curve.name() for curve in self.curves],
+            )
+            return combined_data
+        return data
 
     def cleanup(self):
         """Cleanup the widget connection from BECDispatcher."""
