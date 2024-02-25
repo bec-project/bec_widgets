@@ -226,8 +226,8 @@ class BECWaveform1D(BECPlotBase):
         "add_curve_custom",
         "remove_curve",
         "scan_history",
-        "curves",
-        "curves_data",
+        "get_curves",
+        "get_curves_data",
         "get_curve",
         "get_curve_config",
         "apply_config",
@@ -307,7 +307,7 @@ class BECWaveform1D(BECPlotBase):
         self.gui_id = new_gui_id
         self.config.gui_id = new_gui_id
 
-        for curve_id, curve in self.curves_data.items():
+        for curve in self.curves:
             curve.config.parent_id = new_gui_id
 
     def add_curve_by_config(self, curve_config: CurveConfig | dict) -> BECCurve:
@@ -340,7 +340,7 @@ class BECWaveform1D(BECPlotBase):
                 else:
                     return curves[curve_id].config
 
-    def curves(self) -> list:  # TODO discuss if it should be marked as @property for RPC
+    def get_curves(self) -> list:  # TODO discuss if it should be marked as @property for RPC
         """
         Get the curves of the plot widget as a list
         Returns:
@@ -348,7 +348,7 @@ class BECWaveform1D(BECPlotBase):
         """
         return self.curves
 
-    def curves_data(self) -> dict:  # TODO discuss if it should be marked as @property for RPC
+    def get_curves_data(self) -> dict:  # TODO discuss if it should be marked as @property for RPC
         """
         Get the curves data of the plot widget as a dictionary
         Returns:
@@ -367,11 +367,12 @@ class BECWaveform1D(BECPlotBase):
         if isinstance(identifier, int):
             return self.curves[identifier]
         elif isinstance(identifier, str):
-            return self.curves_data[identifier]
+            for source_type, curves in self.curves_data.items():
+                if identifier in curves:
+                    return curves[identifier]
+            raise ValueError(f"Curve with ID '{identifier}' not found.")
         else:
-            raise ValueError(
-                "Each identifier must be either an integer (index) or a string (curve_id)."
-            )
+            raise ValueError("Identifier must be either an integer (index) or a string (curve_id).")
 
     def add_curve_custom(
         self,
@@ -487,7 +488,6 @@ class BECWaveform1D(BECPlotBase):
         curve_exits = self._check_curve_id(label, self.curves_data)
         if curve_exits:
             raise ValueError(f"Curve with ID '{label}' already exists in widget '{self.gui_id}'.")
-            return
 
         color = (
             color
