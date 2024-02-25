@@ -5,7 +5,7 @@ from typing import Literal, Optional, Any
 
 import numpy as np
 import pyqtgraph as pg
-from pydantic import Field, BaseModel, field_validator, ValidationError
+from pydantic import Field, BaseModel, ValidationError
 from pyqtgraph import mkBrush
 from qtpy import QtCore
 from qtpy.QtCore import Signal as pyqtSignal
@@ -16,11 +16,6 @@ from bec_lib import MessageEndpoints
 from bec_lib.scan_data import ScanData
 from bec_widgets.utils import Colors, ConnectionConfig, BECConnector, EntryValidator
 from bec_widgets.widgets.plots import BECPlotBase, WidgetConfig
-
-try:
-    import pandas as pd
-except ImportError:
-    pd = None
 
 
 class SignalData(BaseModel):
@@ -703,10 +698,11 @@ class BECWaveform1D(BECPlotBase):
 
         for curve in self.curves:
             x_data, y_data = curve.get_data()
-            if output == "dict":
-                data[curve.name()] = {"x": x_data.tolist(), "y": y_data.tolist()}
-            elif output == "pandas" and pd is not None:
-                data[curve.name()] = pd.DataFrame({"x": x_data, "y": y_data})
+            if x_data is not None or y_data is not None:
+                if output == "dict":
+                    data[curve.name()] = {"x": x_data.tolist(), "y": y_data.tolist()}
+                elif output == "pandas" and pd is not None:
+                    data[curve.name()] = pd.DataFrame({"x": x_data, "y": y_data})
 
         if output == "pandas" and pd is not None:
             combined_data = pd.concat(
