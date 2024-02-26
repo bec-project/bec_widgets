@@ -88,12 +88,12 @@ class BECFigureClientMixin:
 
 
 class RPCBase:
-    def __init__(self, gui_id: str = None, config: dict = None, parent=None, **kwargs) -> None:
+    def __init__(self, gui_id: str = None, config: dict = None, parent=None) -> None:
         self._client = BECDispatcher().client
         self._config = config if config is not None else {}
         self._gui_id = gui_id if gui_id is not None else str(uuid.uuid4())
         self._parent = parent
-        super().__init__(**kwargs)
+        super().__init__()
         print(f"RPCBase: {self._gui_id}")
 
     @property
@@ -139,20 +139,25 @@ class RPCBase:
         if not response.content["accepted"]:
             raise ValueError(response.content["message"]["error"])
         msg_result = response.content["message"].get("result")
-        if not msg_result:
-            return None
-        if isinstance(msg_result, list):
-            return [self._create_widget_from_msg_result(res) for res in msg_result]
         return self._create_widget_from_msg_result(msg_result)
 
     def _create_widget_from_msg_result(self, msg_result):
-        cls = msg_result.pop("widget_class", None)
-        if not cls:
-            return msg_result
+        if msg_result is None:
+            return None
+        if isinstance(msg_result, list):
+            return [self._create_widget_from_msg_result(res) for res in msg_result]
+        if isinstance(msg_result, dict):
+            if "__rpc__" not in msg_result:
+                return msg_result
+            cls = msg_result.pop("widget_class", None)
 
-        cls = getattr(client, cls)
-        print(msg_result)
-        return cls(parent=self, **msg_result)
+            if not cls:
+                return msg_result
+
+            cls = getattr(client, cls)
+            print(msg_result)
+            return cls(parent=self, **msg_result)
+        return msg_result
 
     def _wait_for_response(self, request_id):
         """

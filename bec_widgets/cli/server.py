@@ -95,6 +95,7 @@ class BECWidgetsCLIServer:
                 "gui_id": obj.gui_id,
                 "widget_class": obj.__class__.__name__,
                 "config": obj.config.model_dump(),
+                "__rpc__": True,
             }
         return obj
 
