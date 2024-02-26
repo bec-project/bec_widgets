@@ -106,13 +106,13 @@ class {class_name}(RPCBase):"""
 if __name__ == "__main__":  # pragma: no cover
     import os
 
-    # Assuming ClientGenerator is defined in this script or imported correctly
     from bec_widgets.widgets.figure import BECFigure
-    from bec_widgets.widgets.plots import BECPlotBase, BECWaveform1D, BECCurve
+    from bec_widgets.widgets.plots import BECPlotBase, BECWaveform1D, BECImageShow  # ,BECCurve
+    from bec_widgets.widgets.plots.waveform1d import BECCurve
 
     current_path = os.path.dirname(__file__)
     client_path = os.path.join(current_path, "client.py")
-    clss = [BECPlotBase, BECWaveform1D, BECFigure, BECCurve]
+    clss = [BECPlotBase, BECWaveform1D, BECFigure, BECCurve, BECImageShow]
     generator = ClientGenerator()
     generator.generate_client(clss)
     generator.write(client_path)

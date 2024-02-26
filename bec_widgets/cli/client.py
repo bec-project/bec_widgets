@@ -272,6 +272,78 @@ class BECFigure(RPCBase, BECFigureClientMixin):
         """
 
     @rpc_call
+    def add_image(
+        self,
+        widget_id: "str" = None,
+        row: "int" = None,
+        col: "int" = None,
+        config=None,
+        color_map: "str" = "magma",
+        color_bar: "Literal['simple', 'full']" = "full",
+        vrange: "tuple[float, float]" = None,
+        **axis_kwargs
+    ) -> "BECImageShow":
+        """
+        None
+        """
+
+    @rpc_call
+    def plot(
+        self,
+        x_name: "str" = None,
+        y_name: "str" = None,
+        x_entry: "str" = None,
+        y_entry: "str" = None,
+        x: "list | np.ndarray" = None,
+        y: "list | np.ndarray" = None,
+        color: "Optional[str]" = None,
+        label: "Optional[str]" = None,
+        validate: "bool" = True,
+        **axis_kwargs
+    ) -> "BECWaveform1D":
+        """
+        Add a 1D waveform plot to the figure.
+        Args:
+            x_name(str): The name of the device for the x-axis.
+            y_name(str): The name of the device for the y-axis.
+            x_entry(str): The name of the entry for the x-axis.
+            y_entry(str): The name of the entry for the y-axis.
+            x(list | np.ndarray): Custom x data to plot.
+            y(list | np.ndarray): Custom y data to plot.
+            color(str): The color of the curve.
+            label(str): The label of the curve.
+            validate(bool): If True, validate the device names and entries.
+            **axis_kwargs: Additional axis properties to set on the widget after creation.
+
+        Returns:
+            BECWaveform1D: The waveform plot widget.
+        """
+
+    @rpc_call
+    def image(
+        self,
+        monitor: "str" = None,
+        color_bar: "Literal['simple', 'full']" = "full",
+        color_map: "str" = "magma",
+        data: "np.ndarray" = None,
+        vrange: "tuple[float, float]" = None,
+        **axis_kwargs
+    ) -> "BECImageShow":
+        """
+        Add an image to the figure.
+        Args:
+            monitor(str): The name of the monitor to display.
+            color_bar(Literal["simple","full"]): The type of color bar to display.
+            color_map(str): The color map to use for the image.
+            data(np.ndarray): Custom data to display.
+            vrange(tuple[float, float]): The range of values to display.
+            **axis_kwargs: Additional axis properties to set on the widget after creation.
+
+        Returns:
+            BECImageShow: The image widget.
+        """
+
+    @rpc_call
     def remove(
         self,
         row: "int" = None,
@@ -391,4 +463,75 @@ class BECCurve(RPCBase):
         Get the data of the curve.
         Returns:
             tuple[np.ndarray,np.ndarray]: X and Y data of the curve.
+        """
+
+
+class BECImageShow(RPCBase):
+    @rpc_call
+    def set_vrange(self, vmin: "float", vmax: "float"):
+        """
+        None
+        """
+
+    @rpc_call
+    def set_monitor(self, monitor: "str" = None) -> "None":
+        """
+        Set/update monitor device.
+        Args:
+            monitor(str): Name of the monitor.
+        """
+
+    @rpc_call
+    def set_color_map(self, cmap: "str" = "magma"):
+        """
+        None
+        """
+
+    @rpc_call
+    def set_image(self, data: "np.ndarray"):
+        """
+        Set the image to be displayed.
+        Args:
+            data(np.ndarray): The image to be displayed.
+        """
+
+    @rpc_call
+    def set_processing(
+        self,
+        fft: "bool" = False,
+        log: "bool" = False,
+        rotation: "int" = None,
+        transpose: "bool" = False,
+    ):
+        """
+        Set the processing of the monitor data.
+        Args:
+            fft(bool): Whether to perform FFT on the monitor data.
+            log(bool): Whether to perform log on the monitor data.
+            rotation(int): The rotation angle of the monitor data before displaying.
+            transpose(bool): Whether to transpose the monitor data before displaying.
+        """
+
+    @rpc_call
+    def enable_fft(self, enable: "bool" = True):
+        """
+        None
+        """
+
+    @rpc_call
+    def enable_log(self, enable: "bool" = True):
+        """
+        None
+        """
+
+    @rpc_call
+    def rotate(self, angle: "int"):
+        """
+        None
+        """
+
+    @rpc_call
+    def transpose(self):
+        """
+        None
         """

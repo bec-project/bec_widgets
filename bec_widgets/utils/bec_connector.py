@@ -38,6 +38,7 @@ class BECConnector:
 
         if config:
             self.config = config
+            self.config.widget_class = self.__class__.__name__
         else:
             print(
                 f"No initial config found for {self.__class__.__name__}.\n"

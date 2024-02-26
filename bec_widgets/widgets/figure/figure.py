@@ -4,7 +4,7 @@ from __future__ import annotations
 import itertools
 import os
 from collections import defaultdict
-from typing import Literal, Optional
+from typing import Literal, Optional, Type
 
 import numpy as np
 import pyqtgraph as pg
@@ -22,7 +22,7 @@ from bec_widgets.widgets.plots import (
     WidgetConfig,
     BECImageShow,
 )
-from bec_widgets.widgets.plots.image import BECImageShowWithHistogram
+from bec_widgets.widgets.plots.image import ImageConfig
 
 
 class FigureConfig(ConnectionConfig):
@@ -43,7 +43,7 @@ class WidgetHandler:
         self.widget_factory = {
             "PlotBase": (BECPlotBase, WidgetConfig),
             "Waveform1D": (BECWaveform1D, Waveform1DConfig),
-            "ImShow": (BECImageShow, WidgetConfig),
+            "ImShow": (BECImageShow, ImageConfig),
         }
 
     def create_widget(
@@ -73,6 +73,8 @@ class WidgetHandler:
             raise ValueError(f"Unsupported widget type: {widget_type}")
 
         widget_class, config_class = entry
+        if config is not None and isinstance(config, config_class):
+            config = config.model_dump()
         widget_config_dict = {
             "widget_class": widget_class.__name__,
             "parent_id": parent_id,
@@ -91,7 +93,16 @@ class WidgetHandler:
 
 
 class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
-    USER_ACCESS = ["add_plot", "remove", "change_layout", "change_theme", "clear_all"]
+    USER_ACCESS = [
+        "add_plot",
+        "add_image",
+        "plot",
+        "image",
+        "remove",
+        "change_layout",
+        "change_theme",
+        "clear_all",
+    ]
 
     def __init__(
         self,
@@ -148,9 +159,127 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             **axis_kwargs,
         )
 
-    def add_image(
-        self, widget_id: str = None, row: int = None, col: int = None, config=None, **axis_kwargs
+    def plot(
+        self,
+        x_name: str = None,
+        y_name: str = None,
+        x_entry: str = None,
+        y_entry: str = None,
+        x: list | np.ndarray = None,
+        y: list | np.ndarray = None,
+        color: Optional[str] = None,
+        label: Optional[str] = None,
+        validate: bool = True,
+        **axis_kwargs,
+    ) -> BECWaveform1D:
+        """
+        Add a 1D waveform plot to the figure.
+        Args:
+            x_name(str): The name of the device for the x-axis.
+            y_name(str): The name of the device for the y-axis.
+            x_entry(str): The name of the entry for the x-axis.
+            y_entry(str): The name of the entry for the y-axis.
+            x(list | np.ndarray): Custom x data to plot.
+            y(list | np.ndarray): Custom y data to plot.
+            color(str): The color of the curve.
+            label(str): The label of the curve.
+            validate(bool): If True, validate the device names and entries.
+            **axis_kwargs: Additional axis properties to set on the widget after creation.
+
+        Returns:
+            BECWaveform1D: The waveform plot widget.
+        """
+        waveform = self._find_first_widget_by_class(BECWaveform1D, can_fail=True)
+        if waveform is not None:
+            if axis_kwargs:
+                waveform.set(**axis_kwargs)
+        else:
+            waveform = self.add_plot(**axis_kwargs)
+
+        # User wants to add scan curve
+        if x_name is not None and y_name is not None and x is None and y is None:
+            waveform.add_curve_scan(
+                x_name=x_name,
+                y_name=y_name,
+                x_entry=x_entry,
+                y_entry=y_entry,
+                validate=validate,
+                color=color,
+                label=label,
+            )
+        # User wants to add custom curve
+        elif x is not None and y is not None and x_name is None and y_name is None:
+            waveform.add_curve_custom(
+                x=x,
+                y=y,
+                color=color,
+                label=label,
+            )
+        else:
+            raise ValueError(
+                "Invalid input. Provide either device names (x_name, y_name) or custom data."
+            )
+        return waveform
+
+    def image(
+        self,
+        monitor: str = None,
+        color_bar: Literal["simple", "full"] = "full",
+        color_map: str = "magma",
+        data: np.ndarray = None,
+        vrange: tuple[float, float] = None,
+        **axis_kwargs,
     ) -> BECImageShow:
+        """
+        Add an image to the figure.
+        Args:
+            monitor(str): The name of the monitor to display.
+            color_bar(Literal["simple","full"]): The type of color bar to display.
+            color_map(str): The color map to use for the image.
+            data(np.ndarray): Custom data to display.
+            vrange(tuple[float, float]): The range of values to display.
+            **axis_kwargs: Additional axis properties to set on the widget after creation.
+
+        Returns:
+            BECImageShow: The image widget.
+        """
+        image = self._find_first_widget_by_class(BECImageShow, can_fail=True)
+        if image is not None:
+            if axis_kwargs:
+                image.set(**axis_kwargs)
+        else:
+            image = self.add_image(color_bar=color_bar, **axis_kwargs)
+
+        # Setting appearance
+        if vrange is not None:
+            image.set_vrange(vmin=vrange[0], vmax=vrange[1])
+        if color_map is not None:
+            image.set_color_map(color_map)
+
+        # Setting data
+        if monitor is not None and data is None:
+            image.set_monitor(monitor)
+        elif data is not None and monitor is None:
+            image.set_image(data)
+        else:
+            raise ValueError("Invalid input. Provide either monitor name or custom data.")
+
+        return image
+
+    def add_image(
+        self,
+        widget_id: str = None,
+        row: int = None,
+        col: int = None,
+        config=None,
+        color_map: str = "magma",
+        color_bar: Literal["simple", "full"] = "full",
+        vrange: tuple[float, float] = None,
+        **axis_kwargs,
+    ) -> BECImageShow:
+        if config is None:
+            # config = ImageConfig(color_map=color_map, color_bar=color_bar, vrange=vrange)
+            config = ImageConfig(color_map=color_map, color_bar=color_bar, vrange=vrange)
         return self.add_widget(
             widget_type="ImShow",
             widget_id=widget_id,
@@ -247,6 +376,25 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             self._remove_by_coordinates(*coordinates)
         else:
             raise ValueError("Must provide either widget_id or coordinates for removal.")
+
+    def _find_first_widget_by_class(
+        self, widget_class: Type[BECPlotBase], can_fail: bool = True
+    ) -> BECPlotBase | None:
+        """
+        Find the first widget of a given class in the figure.
+        Args:
+            widget_class(Type[BECPlotBase]): The class of the widget to find.
+            can_fail(bool): If True, the method will return None if no widget is found. If False, it will raise an error.
+        Returns:
+            BECPlotBase: The widget of the given class.
+        """
+        for widget_id, widget in self.widgets.items():
+            if isinstance(widget, widget_class):
+                return widget
+        if can_fail:
+            return None
+        else:
+            raise ValueError(f"No widget of class {widget_class} found.")
 
     def _remove_by_coordinates(self, row: int, col: int) -> None:
         """
@@ -421,16 +569,6 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
         sys.exit(app.exec_())
 
-    def add_image_with_histogram(self, image_data, widget_id=None, row=None, col=None):
-        # Create the custom image show widget
-        image_widget = BECImageShowWithHistogram()
-
-        # Set the image data
-        image_widget.setImage(image_data)
-
-        # Add the widget to BECFigure
-        self.addItem(image_widget, row=row, col=col)
-
 
 ##################################################
 ##################################################
@@ -493,14 +631,15 @@ class DebugWindow(QWidget):  # pragma: no cover:
 
     def _init_figure(self):
         self.figure.add_widget(widget_type="Waveform1D", row=0, col=0, title="Widget 1")
-        self.figure.add_widget(widget_type="Waveform1D", row=1, col=0, title="Widget 2")
-        self.figure.add_widget(widget_type="Waveform1D", row=0, col=1, title="Widget 3")
-        self.figure.add_widget(widget_type="Waveform1D", row=1, col=1, title="Widget 4")
-        # self.figure.add_image(title="Image", row=1, col=1)
+        self.figure.add_widget(widget_type="Waveform1D", row=0, col=1, title="Widget 2")
+        self.figure.add_image(
+            title="Image", row=1, col=0, color_map="viridis", color_bar="simple", vrange=(0, 100)
+        )
+        self.figure.add_image(title="Image", row=1, col=1, vrange=(0, 100))
 
         self.w1 = self.figure[0, 0]
-        self.w2 = self.figure[1, 0]
-        self.w3 = self.figure[0, 1]
+        self.w2 = self.figure[0, 1]
+        self.w3 = self.figure[1, 0]
         self.w4 = self.figure[1, 1]
 
         # curves for w1
@@ -522,14 +661,14 @@ class DebugWindow(QWidget):  # pragma: no cover:
         )
 
         # curves for w3
-        self.w3.add_curve_scan("samx", "bpm4i", pen_style="dash")
-        self.w3.add_curve_custom(
-            x=[1, 2, 3, 4, 5],
-            y=[1, 2, 3, 4, 5],
-            label="curve-custom",
-            color="blue",
-            pen_style="dashdot",
-        )
+        # self.w3.add_curve_scan("samx", "bpm4i", pen_style="dash")
+        # self.w3.add_curve_custom(
+        #     x=[1, 2, 3, 4, 5],
+        #     y=[1, 2, 3, 4, 5],
+        #     label="curve-custom",
+        #     color="blue",
+        #     pen_style="dashdot",
+        # )
 
         # curves for w4
         # self.w4.add_curve_scan("samx", "bpm4i", pen_style="dash")
@@ -540,6 +679,14 @@ class DebugWindow(QWidget):  # pragma: no cover:
         #     color="blue",
         #     pen_style="dashdot",
         # )
+
+        # Image setting for w3
+        self.w3.set_monitor("eiger")
+        # self.w3.add_color_bar("simple")
+
+        # Image setting for w4
+        self.w4.set_monitor("eiger")
+        # self.w4.add_color_bar("full")
 
     def add_debug_histo(self):
         image_data = np.random.normal(loc=100, scale=50, size=(100, 100))  # Example image data
