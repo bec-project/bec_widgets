@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.41.1 (2024-02-26)
+
+### Fix
+
+* **bec_dispatcher:** Handle redis connection errors more gracefully ([`a2ed2eb`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/a2ed2ebe00c623eb183b03f8182ffd672fbf9e1e))
+* **bec_dispatcher:** Adapt code to redis connector refactoring ([`8127fc2`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/8127fc2960bebd3e862dbe55ac9401af4a6dccb6))
+
 ## v0.41.0 (2024-02-26)
 
 ### Feature
