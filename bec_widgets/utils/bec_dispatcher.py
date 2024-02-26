@@ -6,9 +6,10 @@ import os
 from collections.abc import Callable
 from typing import Union
 
+import redis
 from bec_lib import BECClient, ServiceConfig
-from bec_lib.connector import ConnectorBase
-from qtpy.QtCore import QObject, Signal as pyqtSignal
+from qtpy.QtCore import QObject
+from qtpy.QtCore import Signal as pyqtSignal
 
 # Adding a new pyqt signal requires a class factory, as they must be part of the class definition
 # and cannot be dynamically added as class attributes after the class has been defined.
@@ -41,7 +42,10 @@ class _BECDispatcher(QObject):
         if bec_config is None and os.path.isfile("bec_config.yaml"):
             bec_config = "bec_config.yaml"
 
-        self.client.initialize(config=ServiceConfig(config_path=bec_config))
+        try:
+            self.client.initialize(config=ServiceConfig(config_path=bec_config))
+        except redis.exceptions.ConnectionError as e:
+            print(f"Failed to initialize BECClient: {e}")
         self._connections = {}
 
     def connect_slot(
@@ -78,7 +82,10 @@ class _BECDispatcher(QObject):
                 if set(topics).intersection(connection_key):
                     connection.signal.emit(msg.content, msg.metadata)
 
-        self.client.connector.register(topics=topics, cb=cb)
+        try:
+            self.client.connector.register(topics=topics, cb=cb)
+        except redis.exceptions.ConnectionError:
+            print("Could not connect to Redis, skipping registration of topics.")
 
         return _Connection(cb)
 
