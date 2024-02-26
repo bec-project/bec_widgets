@@ -150,6 +150,7 @@ class RPCBase:
             if "__rpc__" not in msg_result:
                 return msg_result
             cls = msg_result.pop("widget_class", None)
+            msg_result.pop("__rpc__", None)
 
             if not cls:
                 return msg_result
