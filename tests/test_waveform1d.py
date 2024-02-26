@@ -140,8 +140,9 @@ def test_getting_curve(bec_figure):
             y=SignalData(name="bpm4i", entry="bpm4i", unit=None, modifier=None),
         ),
     )
-    assert w1.get_curves()[0].config == c1_expected_config
-    assert w1.get_curves_data()["scan_segment"]["bpm4i-bpm4i"].config == c1_expected_config
+
+    assert w1.curves[0].config == c1_expected_config
+    assert w1.curves_data["scan_segment"]["bpm4i-bpm4i"].config == c1_expected_config
     assert w1.get_curve(0).config == c1_expected_config
     assert w1.get_curve("bpm4i-bpm4i").config == c1_expected_config
     assert c1.get_config(False) == c1_expected_config

@@ -5,14 +5,14 @@ from bec_lib import MessageEndpoints, messages
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.widgets.figure import BECFigure
-from bec_widgets.widgets.plots import BECCurve, BECPlotBase, BECWaveform1D
+from bec_widgets.widgets.plots import BECCurve, BECWaveform1D
 
 
 class BECWidgetsCLIServer:
     WIDGETS = [BECWaveform1D, BECFigure, BECCurve]
 
-    def __init__(self, gui_id: str = None) -> None:
-        self.dispatcher = BECDispatcher()
+    def __init__(self, gui_id: str = None, dispatcher: BECDispatcher = None) -> None:
+        self.dispatcher = BECDispatcher() if dispatcher is None else dispatcher
         self.client = self.dispatcher.client
         self.client.start()
         self.gui_id = gui_id
@@ -22,6 +22,9 @@ class BECWidgetsCLIServer:
         self.dispatcher.connect_slot(
             self.on_rpc_update, MessageEndpoints.gui_instructions(self.gui_id)
         )
+
+    def start(self):
+        """Start the figure window."""
         self.fig.start()
 
     @staticmethod
@@ -59,10 +62,9 @@ class BECWidgetsCLIServer:
             return obj
         if self.fig.widgets:
             for widget in self.fig.widgets.values():
-                if isinstance(widget, BECWaveform1D):
-                    for curve in widget.curves:
-                        if curve.gui_id == gui_id:
-                            return curve
+                item = widget.find_widget_by_id(gui_id)
+                if item:
+                    return item
                 raise NotImplementedError(
                     f"gui_id lookup for widget of type {widget.__class__.__name__} not implemented"
                 )
@@ -107,3 +109,4 @@ if __name__ == "__main__":
 
     server = BECWidgetsCLIServer(gui_id=args.id)
     # server = BECWidgetsCLIServer(gui_id="test")
+    server.start()

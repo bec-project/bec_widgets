@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any, Literal, Optional
+from typing import Literal, Optional, Any
 
 import numpy as np
 import pyqtgraph as pg
@@ -72,6 +72,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         "set_symbol_size",
         "set_pen_width",
         "set_pen_style",
+        "get_data",
     ]
 
     def __init__(
@@ -204,6 +205,15 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         self.config.pen_style = pen_style
         self.apply_config()
 
+    def get_data(self) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Get the data of the curve.
+        Returns:
+            tuple[np.ndarray,np.ndarray]: X and Y data of the curve.
+        """
+        x_data, y_data = self.getData()
+        return x_data, y_data
+
 
 class BECWaveform1D(BECPlotBase):
     USER_ACCESS = [
@@ -216,6 +226,7 @@ class BECWaveform1D(BECPlotBase):
         "get_curve",
         "get_curve_config",
         "apply_config",
+        "get_all_data",
     ]
     scan_signal_update = pyqtSignal()
 
@@ -254,6 +265,13 @@ class BECWaveform1D(BECPlotBase):
 
     # TODO check config assigning
     # TODO check the functionality of config generator
+    def find_widget_by_id(
+        self, item_id: str
+    ):  # TODO implement this on level of BECConnector and all other widgets
+        for curve in self.curves:
+            if curve.gui_id == item_id:
+                return curve
+
     def apply_config(self, config: dict | WidgetConfig, replot_last_scan: bool = False):
         """
         Apply the configuration to the 1D waveform widget.
@@ -273,8 +291,8 @@ class BECWaveform1D(BECPlotBase):
 
         self.apply_axis_config()
         # Reset curves
-        self.curves_data = defaultdict(dict)
-        self.curves = []
+        self._curves_data = defaultdict(dict)
+        self._curves = []
         for curve_id, curve_config in self.config.curves.items():
             self.add_curve_by_config(curve_config)
         if replot_last_scan:
@@ -291,7 +309,7 @@ class BECWaveform1D(BECPlotBase):
         self.gui_id = new_gui_id
         self.config.gui_id = new_gui_id
 
-        for curve_id, curve in self.curves_data.items():
+        for curve in self.curves:
             curve.config.parent_id = new_gui_id
 
     def add_curve_by_config(self, curve_config: CurveConfig | dict) -> BECCurve:
@@ -324,6 +342,31 @@ class BECWaveform1D(BECPlotBase):
                 else:
                     return curves[curve_id].config
 
+    @property
+    def curves(self) -> list[BECCurve]:  # TODO discuss if it should be marked as @property for RPC
+        """
+        Get the curves of the plot widget as a list
+        Returns:
+            list: List of curves.
+        """
+        return self._curves
+
+    @curves.setter
+    def curves(self, value: list[BECCurve]):
+        self._curves = value
+
+    @property
+    def curves_data(self) -> dict:  # TODO discuss if it should be marked as @property for RPC
+        """
+        Get the curves data of the plot widget as a dictionary
+        Returns:
+            dict: Dictionary of curves data.
+        """
+        return self._curves_data
+
+    @curves_data.setter
+    def curves_data(self, value: dict):
+        self._curves_data = value
 
     def get_curve(self, identifier) -> BECCurve:
         """
