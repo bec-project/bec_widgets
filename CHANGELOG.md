@@ -2,6 +2,45 @@
 
 <!--next-version-placeholder-->
 
+## v0.41.0 (2024-02-26)
+
+### Feature
+
+* **widgets/waveform1d:** Data can be exported from rendered curve ([`5fc8047`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/5fc8047c8ff971cdc2807d02743eae56d288f4d7))
+* **widgets/figure:** Clear_all method for BECFigure ([`0363fd5`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/0363fd5194320a7ea868ef883f8022ea464d0298))
+* **widgets/Waveform1D:** Waveform1D can be fully constructed by config ([`9a5c86e`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/9a5c86ea35178b9cab270fc35e668dd22f3ec8da))
+* **widgets/figure.py:** Dark/light theme changer ([`08534a4`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/08534a4739ec8e85d82a00ab639411dd0198e9d8))
+* **utils/entry_validator:** Possibility to validate add_scan_curve with current BEC session ([`1db77b9`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/1db77b969bcf9b38716ae3d38bf4695b2b8c1f37))
+* **cli:** Added cli interface, rebased ([`a61bf36`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/a61bf36df5d54ad44f78479c2474c4e38e68ed26))
+* Curve can be modified after adding to the plot ([`684592a`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/684592ae37e9dd5328a96018c78ca242e10395b2))
+* Waveform1d.py curves can be removed by identifier by order(int) or by curve_id(str) ([`f0ed243`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/f0ed243c9197b7d1aab0d99a15e9ba175708ec90))
+* Waveform1d.py curves can be stylised; access scan history by index or scanID ([`cba3863`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/cba3863e5a9ac1187ea643be67db6cfc36b44ee2))
+* Start method for BECFigure, jupyter console .ui added to git ([`1d26b23`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/1d26b2322147d9ea5a6a245e1648c00986f80881))
+* Added @user_access from bec_lib.utils ([`b827e9e`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/b827e9eaa77f8b64433bb7a54e40ab5ccd86f4b6))
+* Plot can be removed from BECFigure ([`60d150a`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/60d150a41193aa7659285cf3612965f1a3c57244))
+* Figure.py create widget factory ([`c781b1b`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/c781b1b4e4121c4ec6fc8871a4cdf6f494913138))
+* Waveform1d.py draft ([`565e475`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/565e475ace72ccc103d71ea98af1dcaf04f37861))
+* Rpc decorator to add methods to USER_ACCESS ([`b676877`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/b6768772424a3ad5ee7e271de19131f8065eef09))
+* BECFigure and BECPlotBase created ([`9ef331c`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/9ef331c272b88f725de9b8497fdf906056c0738b))
+* BECConnector -> mixin class for all BEC Widget to hook them to BEC client ([`91447a2`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/91447a2d6234de1e8f2bac792e822bfda556abba))
+
+### Fix
+
+* **cli/client_utils:** "__rpc__" pop from msg_results ([`ebb36f6`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ebb36f62ddc1c5013435f9e7727648b977b6b732))
+* **tests:** BECDispatcher fixture putted back ([`644f103`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/644f1031f6ff27064111565b0882cb8b2544aa2f))
+* **cli/rpc:** Rpc client can return any type of object + config dict of the widgets ([`fd711b4`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/fd711b475f268fbdb59739da0a428f0355b25bac))
+* **cli/rpc:** Server access children widget.find_widget_by_id(gui_id) ([`57132a4`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/57132a472165c55bf99e1994d09f5fe3586c24da))
+* **cli:** Fixed property access, rebased ([`f71dc5c`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/f71dc5c5abdd6b8b585cb9b502b11ef513d7813e))
+* **rpc_server:** Fixed gui_id lookup ([`4630d78`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/4630d78fc28109da7daf53e49dd3cdb9b8084941))
+* **cli:** Fixed rpc construction of nested widgets ([`da640e8`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/da640e888d575b536fdd5d7adbf1df3eda802219))
+* **plots/waveform1d:** Pandas import clean up, export curves with none skipped ([`35cd4fd`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/35cd4fd6f176ba670fad5d9fec44b305094280d6))
+* **widgets/plots:** Added placeholder for cleanup method to BECPlotBase ([`24c7737`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/24c77376b232c3846a1d6be360ec46acc077b48d))
+* **widget/figure:** Add cleanup method to disconnect all slots before removing Waveform1D from layout ([`a28b9c8`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/a28b9c8981d1058e4dc4146463f16c53413e8db9))
+* **rpc:** Added annotations to pass py3.9 tests ([`c6bdf0b`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/c6bdf0b6a5b12c054863b101a3944efc366686cb))
+* **rpc:** Connection to on_rpc_update done through bec_dispatcher ([`1c2fb8b`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/1c2fb8b972d4cb28cead11989461aea010c4571d))
+* After removing plot from BECFigure, the coordinates are correctly resigned ([`d678a85`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/d678a85957c13c1fda2b52692c0d3b9b7ff40834))
+* Removed DI references, fixed set when adding plot by fig ([`7c15d75`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/7c15d750117aec9e75111853074630a44dca87ae))
+
 ## v0.40.1 (2024-02-23)
 
 ### Fix
