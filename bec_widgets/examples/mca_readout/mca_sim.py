@@ -2,7 +2,6 @@ from bec_lib import messages, MessageEndpoints, RedisConnector
 import time
 
 connector = RedisConnector("localhost:6379")
-producer = connector.producer()
 metadata = {}
 
 scanID = "ScanID1"
@@ -20,9 +19,7 @@ for ii in range(20):
         metadata=metadata,
     ).dumps()
 
-    # producer.send(topic=MessageEndpoints.device_status(device="mca"), msg=msg)
-
-    producer.xadd(
+    connector.xadd(
         topic=MessageEndpoints.device_async_readback(
             scanID=scanID, device="mca"
         ),  # scanID will be different for each scan
