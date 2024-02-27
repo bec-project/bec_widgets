@@ -41,7 +41,7 @@ class StreamPlot(QtWidgets.QWidget):
         uic.loadUi(os.path.join(current_path, "line_plot.ui"), self)
 
         self._idle_time = 100
-        self.producer = RedisConnector(["localhost:6379"]).producer()
+        self.connector = RedisConnector(["localhost:6379"])
 
         self.y_value_list = y_value_list
         self.previous_y_value_list = None
@@ -215,7 +215,7 @@ class StreamPlot(QtWidgets.QWidget):
             ]
         }
         msg = messages.DeviceMessage(signals=return_dict).dumps()
-        self.producer.set_and_publish("px_stream/gui_event", msg=msg)
+        self.connector.set_and_publish("px_stream/gui_event", msg=msg)
         self.roi_signal.emit(region)
 
     def init_table(self):
@@ -271,7 +271,7 @@ class StreamPlot(QtWidgets.QWidget):
                 time.sleep(0.1)
                 continue
             endpoint = f"px_stream/projection_{self._current_proj}/data"
-            msgs = self.client.producer.lrange(topic=endpoint, start=-1, end=-1)
+            msgs = self.client.connector.lrange(topic=endpoint, start=-1, end=-1)
             data = msgs
             if not data:
                 continue
@@ -296,7 +296,7 @@ class StreamPlot(QtWidgets.QWidget):
     def new_proj(self, content: dict, _metadata: dict):
         proj_nr = content["signals"]["proj_nr"]
         endpoint = f"px_stream/projection_{proj_nr}/metadata"
-        msg_raw = self.client.producer.get(topic=endpoint)
+        msg_raw = self.client.connector.get(topic=endpoint)
         msg = messages.DeviceMessage.loads(msg_raw)
         self._current_q = msg.content["signals"]["q"]
         self._current_norm = msg.content["signals"]["norm_sum"]
