@@ -6,7 +6,7 @@
 
 Before installing BEC Widgets, please ensure the following requirements are met:
 
-1. **Python Version:** BEC Widgets requires Python version 3.9 or higher. Verify your Python version to ensure compatibility.
+1. **Python Version:** BEC Widgets requires Python version 3.10 or higher. Verify your Python version to ensure compatibility.
 2. **BEC Installation:** BEC Widgets works in conjunction with BEC. While BEC is a dependency and will be installed automatically, you can find more information about BEC and its installation process in the [BEC documentation](https://beamline-experiment-control.readthedocs.io/en/latest/).
 
 **Standard Installation**
