@@ -35,7 +35,7 @@ class _BECDispatcher(QObject):
 
     def __init__(self, bec_config=None):
         super().__init__()
-        self.client = BECClient()
+        self.client = BECClient(forced=True)  # make a new instance
 
         # TODO: this is a workaround for now to provide service config within qtdesigner, but is
         # it possible to provide config via a cli arg?

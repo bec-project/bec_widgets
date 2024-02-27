@@ -5,6 +5,7 @@ import uuid
 
 from functools import wraps
 
+from qtpy.QtCore import QCoreApplication
 
 import bec_widgets.cli.client as client
 from bec_lib import MessageEndpoints, messages
@@ -170,4 +171,5 @@ class RPCBase:
             response = self._client.connector.get(
                 MessageEndpoints.gui_instruction_response(request_id)
             )
+            QCoreApplication.processEvents()  # keep UI responsive (and execute signals/slots)
         return response
