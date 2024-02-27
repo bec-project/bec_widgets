@@ -80,6 +80,8 @@ class _BECDispatcher(QObject):
             msg = msg.value
             for connection_key, connection in self._connections.items():
                 if set(topics).intersection(connection_key):
+                    if isinstance(msg, list):
+                        msg = msg[0]
                     connection.signal.emit(msg.content, msg.metadata)
 
         try:
