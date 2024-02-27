@@ -21,7 +21,6 @@ from bec_widgets.widgets.plots import BECPlotBase, WidgetConfig
 class SignalData(BaseModel):
     """The data configuration of a signal in the 1D waveform widget for x and y axis."""
 
-    # TODO add validator on name and entry
     name: str
     entry: str
     unit: Optional[str] = None  # todo implement later
@@ -31,7 +30,7 @@ class SignalData(BaseModel):
 class Signal(BaseModel):
     """The configuration of a signal in the 1D waveform widget."""
 
-    source: str  # TODO add validator on the source type
+    source: str
     x: SignalData
     y: SignalData
 
@@ -263,11 +262,15 @@ class BECWaveform1D(BECPlotBase):
         self.add_legend()
         self.apply_config(self.config)
 
-    # TODO check config assigning
-    # TODO check the functionality of config generator
-    def find_widget_by_id(
-        self, item_id: str
-    ):  # TODO implement this on level of BECConnector and all other widgets
+    def find_widget_by_id(self, item_id: str) -> BECCurve:
+        """
+        Find the curve by its ID.
+        Args:
+            item_id(str): ID of the curve.
+
+        Returns:
+            BECCurve: The curve object.
+        """
         for curve in self.plot_item.curves:
             if curve.gui_id == item_id:
                 return curve

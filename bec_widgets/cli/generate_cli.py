@@ -109,10 +109,11 @@ if __name__ == "__main__":  # pragma: no cover
     from bec_widgets.widgets.figure import BECFigure
     from bec_widgets.widgets.plots import BECPlotBase, BECWaveform1D, BECImageShow  # ,BECCurve
     from bec_widgets.widgets.plots.waveform1d import BECCurve
+    from bec_widgets.utils import BECConnector
 
     current_path = os.path.dirname(__file__)
     client_path = os.path.join(current_path, "client.py")
-    clss = [BECPlotBase, BECWaveform1D, BECFigure, BECCurve, BECImageShow]
+    clss = [BECPlotBase, BECWaveform1D, BECFigure, BECCurve, BECImageShow, BECConnector]
     generator = ClientGenerator()
     generator.generate_client(clss)
     generator.write(client_path)

@@ -31,6 +31,8 @@ class ConnectionConfig(BaseModel):
 class BECConnector:
     """Connection mixin class for all BEC widgets, to handle BEC client and device manager"""
 
+    USER_ACCESS = ["get_config"]
+
     def __init__(self, client=None, config: ConnectionConfig = None, gui_id: str = None):
         # BEC related connections
         self.bec_dispatcher = BECDispatcher()

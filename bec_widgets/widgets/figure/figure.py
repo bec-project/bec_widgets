@@ -13,6 +13,7 @@ from pydantic import Field
 from pyqtgraph.Qt import uic
 from qtpy.QtWidgets import QApplication, QWidget
 from qtpy.QtWidgets import QVBoxLayout, QMainWindow
+from qtpy.QtCore import Signal as pyqtSignal
 
 from bec_widgets.utils import BECConnector, BECDispatcher, ConnectionConfig
 from bec_widgets.widgets.plots import (
@@ -102,7 +103,10 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         "change_layout",
         "change_theme",
         "clear_all",
+        "get_config",
     ]
+
+    clean_signal = pyqtSignal()
 
     def __init__(
         self,
@@ -127,16 +131,6 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
         # Container to keep track of the grid
         self.grid = []
-
-    def change_theme(self, theme: Literal["dark", "light"]) -> None:
-        """
-        Change the theme of the figure widget.
-        Args:
-            theme(Literal["dark","light"]): The theme to set for the figure widget.
-        """
-        qdarktheme.setup_theme(theme)
-        self.setBackground("k" if theme == "dark" else "w")
-        self.config.theme = theme
 
     def add_plot(
         self, widget_id: str = None, row: int = None, col: int = None, config=None, **axis_kwargs
@@ -250,21 +244,24 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         else:
             image = self.add_image(color_bar=color_bar, **axis_kwargs)
 
-        # Setting appearance
-        if vrange is not None:
-            image.set_vrange(vmin=vrange[0], vmax=vrange[1])
-        if color_map is not None:
-            image.set_color_map(color_map)
-
-        # Setting data
+        # Setting data #TODO check logic if monitor or data are already created
         if monitor is not None and data is None:
-            image.set_monitor(monitor)
+            image.add_monitor_image(
+                monitor=monitor, color_map=color_map, vrange=vrange, color_bar=color_bar
+            )
         elif data is not None and monitor is None:
-            image.set_image(data)
+            image.add_custom_image(
+                name="custom", data=data, color_map=color_map, vrange=vrange, color_bar=color_bar
+            )
+        elif data is None and monitor is None:
+            # Setting appearance
+            if vrange is not None:
+                image.set_vrange(vmin=vrange[0], vmax=vrange[1])
+            if color_map is not None:
+                image.set_color_map(color_map)
+            return image
         else:
             raise ValueError("Invalid input. Provide either monitor name or custom data.")
-
-        return image
 
     def add_image(
         self,
@@ -272,14 +269,21 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         row: int = None,
         col: int = None,
         config=None,
-        color_map: str = "magma",
+        color_map: str = "magma",  # TODO fix passing additional kwargs
         color_bar: Literal["simple", "full"] = "full",
         vrange: tuple[float, float] = None,
         **axis_kwargs,
     ) -> BECImageShow:
         if config is None:
-            # config = ImageConfig(color_map=color_map, color_bar=color_bar, vrange=vrange)
-            config = ImageConfig(color_map=color_map, color_bar=color_bar, vrange=vrange)
+            widget_id = self._generate_unique_widget_id()
+            config = ImageConfig(
+                widget_class="BECImageShow",
+                gui_id=widget_id,
+                parent_id=self.gui_id,
+                color_map=color_map,
+                color_bar=color_bar,
+                vrange=vrange,
+            )
         return self.add_widget(
             widget_type="ImShow",
             widget_id=widget_id,
@@ -376,6 +380,16 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             self._remove_by_coordinates(*coordinates)
         else:
             raise ValueError("Must provide either widget_id or coordinates for removal.")
+
+    def change_theme(self, theme: Literal["dark", "light"]) -> None:
+        """
+        Change the theme of the figure widget.
+        Args:
+            theme(Literal["dark","light"]): The theme to set for the figure widget.
+        """
+        qdarktheme.setup_theme(theme)
+        self.setBackground("k" if theme == "dark" else "w")
+        self.config.theme = theme
 
     def _find_first_widget_by_class(
         self, widget_class: Type[BECPlotBase], can_fail: bool = True
@@ -561,16 +575,17 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             widget_class=self.__class__.__name__, gui_id=self.gui_id, theme=theme
         )
 
-    def cleanup(self):
-        """Cleanup the figure widget."""
-        self.clear_all()
-        self.close()
+    # def cleanup(self):
+    #     """Cleanup the figure widget."""
+    #     self.clear_all()
+    #     self.clean_signal.emit()
 
     def start(self):
         import sys
 
         app = QApplication(sys.argv)
-        win = BECFigureMainWindow(bec_figure=self)
+        win = QMainWindow()
+        win.setCentralWidget(self)
         win.show()
 
         sys.exit(app.exec_())
@@ -583,9 +598,18 @@ class BECFigureMainWindow(QMainWindow):
         self.figure = bec_figure
         self.setCentralWidget(self.figure)
 
+        self.figure.clean_signal.connect(self.confirm_close)
+
+        self.safe_close = False
+
+    def confirm_close(self):
+        self.safe_close = True
+
     def closeEvent(self, event):
         self.figure.cleanup()
-        super().closeEvent(event)
+        if self.safe_close == True:
+            print("Safe close")
+            event.accept()
 
 
 ##################################################
@@ -627,15 +651,17 @@ class DebugWindow(QWidget):  # pragma: no cover:
         self._init_ui()
 
         self.splitter.setSizes([200, 100])
+        self.safe_close = False
+        # self.figure.clean_signal.connect(self.confirm_close)
 
         # console push
         self.console.kernel_manager.kernel.shell.push(
             {
                 "fig": self.figure,
-                "w1": self.w1,
-                "w2": self.w2,
-                "w3": self.w3,
-                "w4": self.w4,
+                # "w1": self.w1,
+                # "w2": self.w2,
+                # "w3": self.w3,
+                # "w4": self.w4,
                 "bec": self.figure.client,
                 "scans": self.figure.client.scans,
                 "dev": self.figure.client.device_manager.devices,
@@ -649,7 +675,7 @@ class DebugWindow(QWidget):  # pragma: no cover:
         self.glw_1_layout.addWidget(self.figure)  # Add BECDeviceMonitor to the layout
 
         # add stuff to figure
-        self._init_figure()
+        # self._init_figure()
 
         self.console_layout = QVBoxLayout(self.widget_console)
         self.console = JupyterConsoleWidget()
@@ -708,19 +734,20 @@ class DebugWindow(QWidget):  # pragma: no cover:
         # )
 
         # Image setting for w3
-        self.w3.set_monitor("eiger")
-        # self.w3.add_color_bar("simple")
+
+        self.w3.add_monitor_image("eiger", vrange=(0, 100), color_bar="full")
 
         # Image setting for w4
+        self.w4.add_monitor_image("eiger", vrange=(0, 100), color_map="viridis")
 
-        self.w4.set_monitor("eiger")
-
-    # self.w4.add_color_bar("full")
-
-    def closeEvent(self, event):
-        self.figure.cleanup()
-        self.close()
-        super().closeEvent(event)
+    # def confirm_close(self):
+    #     self.safe_close = True
+    #
+    # def closeEvent(self, event):
+    #     self.figure.cleanup()
+    #     if self.safe_close == True:
+    #         print("Safe close")
+    #         event.accept()
 
 
 if __name__ == "__main__":  # pragma: no cover

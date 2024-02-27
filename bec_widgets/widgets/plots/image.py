@@ -1,23 +1,22 @@
 from __future__ import annotations
 
-import time
-from typing import Literal, Optional
+from collections import defaultdict
+from typing import Literal, Optional, Any
 
 import numpy as np
 import pyqtgraph as pg
 from pydantic import Field, BaseModel
-from qtpy.QtCore import QThread
+from qtpy.QtCore import QThread, QObject
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QWidget
 
-from bec_lib import MessageEndpoints, RedisConnector
-from bec_widgets.utils import ConnectionConfig, BECConnector, BECDispatcher
+from bec_lib import MessageEndpoints
+from bec_widgets.utils import ConnectionConfig, BECConnector
 from bec_widgets.widgets.plots import BECPlotBase, WidgetConfig
 
 
-class MonitorConfig(BaseModel):
-    monitor: Optional[str] = Field(None, description="The name of the monitor.")
+class PostProcessingConfig(BaseModel):
     fft: Optional[bool] = Field(False, description="Whether to perform FFT on the monitor data.")
     log: Optional[bool] = Field(False, description="Whether to perform log on the monitor data.")
     center_of_mass: Optional[bool] = Field(
@@ -30,43 +29,38 @@ class MonitorConfig(BaseModel):
         None, description="The rotation angle of the monitor data before displaying."
     )
 
-    # TODO Decide if usefully to include port and host
-    host: Optional[str] = Field(None, description="The host of the monitor.")
-    port: Optional[int] = Field(None, description="The port of the monitor.")
-
 
 class ImageItemConfig(ConnectionConfig):
-    # color_map: Optional[str] = Field("magma", description="The color map of the image.")
-    source: Optional[str] = Field(None, description="The source of the curve.")
-    signals: MonitorConfig = Field(
-        default_factory=MonitorConfig, description="The configuration of the monitor."
+    monitor: Optional[str] = Field(None, description="The name of the monitor.")
+    color_map: Optional[str] = Field("magma", description="The color map of the image.")
+    downsample: Optional[bool] = Field(True, description="Whether to downsample the image.")
+    opacity: Optional[float] = Field(1.0, description="The opacity of the image.")
+    vrange: Optional[tuple[int, int]] = Field(
+        None, description="The range of the color bar. If None, the range is automatically set."
+    )
+    color_bar: Optional[Literal["simple", "full"]] = Field(
+        "simple", description="The type of the color bar."
+    )
+    post_processing: PostProcessingConfig = Field(
+        default_factory=PostProcessingConfig, description="The post processing of the image."
     )
 
 
 class ImageConfig(WidgetConfig):
-    color_map: Optional[str] = Field("magma", description="The color map of the image.")
-    color_bar: Optional[Literal["simple", "full"]] = Field(
-        "simple", description="The type of the color bar."
-    )
-    vrange: Optional[tuple[int, int]] = Field(
-        None, description="The range of the color bar. If None, the range is automatically set."
-    )
     images: dict[str, ImageItemConfig] = Field(
         {},
-        description="The configuration of the images. The key is the name of the image.",
+        description="The configuration of the images. The key is the name of the image (source).",
     )
-    # TODO Decide if implement or not
-    # x_transpose_axis:
-    # y_transpose_axis:
 
 
 class BECImageItem(BECConnector, pg.ImageItem):  # TODO decide how complex it should be
-    USER_ACCESS = []
+    USER_ACCESS = ["set", "set_color_map", "set_auto_downsample", "set_monitor", "set_vrange"]
 
     def __init__(
         self,
         config: Optional[ImageItemConfig] = None,
         gui_id: Optional[str] = None,
+        parent_image: Optional[BECImageItem] = None,
         **kwargs,
     ):
         if config is None:
@@ -74,109 +68,85 @@ class BECImageItem(BECConnector, pg.ImageItem):  # TODO decide how complex it sh
             self.config = config
         else:
             self.config = config
-            # config.widget_class = self.__class__.__name__
         super().__init__(config=config, gui_id=gui_id)
         pg.ImageItem.__init__(self)
 
+        self.parent_image = parent_image
+        self.colorbar_bar = None
+
+        self._add_color_bar(
+            self.config.color_bar, self.config.vrange
+        )  # TODO can also support None to not have any colorbar
         self.apply_config()
         if kwargs:
             self.set(**kwargs)
 
     def apply_config(self):
-        ...
-        # self.set_color_map(self.config.color_map)
+        self.set_color_map(self.config.color_map)
+        self.set_auto_downsample(self.config.downsample)
+        if self.config.vrange is not None:
+            self.set_vrange(vrange=self.config.vrange)
+        # self.set_color_bar(self.config.color_bar)
 
     def set(self, **kwargs):
-        pass
+        method_map = {
+            "downsample": self.set_auto_downsample,
+            "color_map": self.set_color_map,
+            "monitor": self.set_monitor,
+            "vrange": self.set_vrange,
+        }
+        for key, value in kwargs.items():
+            if key in method_map:
+                method_map[key](value)
+            else:
+                print(f"Warning: '{key}' is not a recognized property.")
 
     def set_color_map(self, cmap: str = "magma"):
+        """
+        Set the color map of the image.
+        Args:
+            cmap(str): The color map of the image.
+        """
         self.setColorMap(cmap)
-        # self.config.color_map = cmap
+        self.config.color_map = cmap
 
+    def set_auto_downsample(self, auto: bool = True):
+        """
+        Set the auto downsample of the image.
+        Args:
+            auto(bool): Whether to downsample the image.
+        """
+        self.setAutoDownsample(auto)
+        self.config.downsample = auto
 
-class BECImageShow(BECPlotBase):
-    USER_ACCESS = [
-        "set_vrange",
-        "set_monitor",
-        "set_color_map",
-        "set_image",
-        "set_processing",
-        "enable_fft",
-        "enable_log",
-        "rotate",
-        "transpose",
-    ]
-
-    def __init__(
-        self,
-        parent: Optional[QWidget] = None,
-        parent_figure=None,
-        config: Optional[WidgetConfig] = None,
-        client=None,
-        gui_id: Optional[str] = None,
-        monitor: Optional[str] = None,
-    ):
-        if config is None:
-            config = ImageConfig(widget_class=self.__class__.__name__)
-        super().__init__(
-            parent=parent, parent_figure=parent_figure, config=config, client=client, gui_id=gui_id
-        )
-
-        # Items to be added to the plot
-        self.image = None
-        self.color_bar = None
-
-        # Args to pass
-        self.monitor = monitor
-        self.scanID = None
-
-        # init image and image thread
-        self._init_image()
-        self._init_image_thread(monitor=self.monitor)
-
-        # Dispatcher
-        self.bec_dispatcher.connect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
-
-    def find_widget_by_id(self, item_id: str):
-        if self.image.gui_id == item_id:
-            return self.image
-
-    def apply_config(self):  # TODO implement
-        ...
-
-    def _init_image(self):
-        self.image = BECImageItem()
-        self.plot_item.addItem(self.image)
-        self.config.images["device_monitor"] = self.image.config
-
-        # customising ImageItem
-        self._add_color_bar(style=self.config.color_bar, vrange=self.config.vrange)
-        self.set_color_map(cmap=self.config.color_map)
-
-    def _init_image_thread(self, monitor: str = None):
-        self.monitor = monitor
-        self.image.config.signals.monitor = monitor
-        self.image_thread = ImageThread(client=self.client, monitor=monitor)
-        self.image_thread.config = self.image.config.signals
-        self.proxy_update_plot = pg.SignalProxy(
-            self.image_thread.image_updated, rateLimit=25, slot=self.on_image_update
-        )
-        # self.image_thread.start()
+    def set_monitor(self, monitor: str):
+        """
+        Set the monitor of the image.
+        Args:
+            monitor(str): The name of the monitor.
+        """
+        self.config.monitor = monitor
 
     def _add_color_bar(
-        self, style: Literal["simple,full"] = "simple", vrange: tuple[int, int] = (0, 100)
+        self, color_bar_style: str = "simple", vrange: Optional[tuple[int, int]] = None
     ):
-        if style == "simple":
+        """
+        Add color bar to the layout.
+        Args:
+            style(Literal["simple,full"]): The style of the color bar.
+            vrange(tuple[int,int]): The range of the color bar.
+        """
+        if color_bar_style == "simple":
             self.color_bar = pg.ColorBarItem(colorMap=self.config.color_map)
             if vrange is not None:
                 self.color_bar.setLevels(low=vrange[0], high=vrange[1])
-            self.color_bar.setImageItem(self.image)
-            self.addItem(self.color_bar, row=0, col=1)
+            self.color_bar.setImageItem(self)
+            self.parent_image.addItem(self.color_bar)  # , row=0, col=1)
             self.config.color_bar = "simple"
-        elif style == "full":
+        elif color_bar_style == "full":
             # Setting histogram
             self.color_bar = pg.HistogramLUTItem()
-            self.color_bar.setImageItem(self.image)
+            self.color_bar.setImageItem(self)
             self.color_bar.gradient.loadPreset(self.config.color_map)
             if vrange is not None:
                 self.color_bar.setLevels(min=vrange[0], max=vrange[1])
@@ -185,19 +155,24 @@ class BECImageShow(BECPlotBase):
                 )
 
             # Adding histogram to the layout
-            self.addItem(self.color_bar, row=0, col=1)
+            self.parent_image.addItem(self.color_bar)  # , row=0, col=1)
 
             # save settings
             self.config.color_bar = "full"
         else:
             raise ValueError("style should be 'simple' or 'full'")
 
-    # def color_bar_switch(self, style: Literal["simple,full"] = "simple"): #TODO check if possible
-    #     if style == "simple" and self.config.color_bar == "full":
-    #         self.color_bar.remove()
-
-    def set_vrange(self, vmin: float, vmax: float):
-        self.image.setLevels([vmin, vmax])
+    def set_vrange(self, vmin: float = None, vmax: float = None, vrange: tuple[int, int] = None):
+        """
+        Set the range of the color bar.
+        Args:
+            vmin(float): Minimum value of the color bar.
+            vmax(float): Maximum value of the color bar.
+        """
+        if vrange is not None:
+            vmin, vmax = vrange
+        self.setLevels([vmin, vmax])
+        self.config.vrange = (vmin, vmax)
         if self.color_bar is not None:
             if self.config.color_bar == "simple":
                 self.color_bar.setLevels(low=vmin, high=vmax)
@@ -205,213 +180,226 @@ class BECImageShow(BECPlotBase):
                 self.color_bar.setLevels(min=vmin, max=vmax)
                 self.color_bar.setHistogramRange(vmin - 0.1 * vmin, vmax + 0.1 * vmax)
 
-    def set_monitor(self, monitor: str = None) -> None:
-        """
-        Set/update monitor device.
-        Args:
-            monitor(str): Name of the monitor.
-        """
-        self.image_thread.set_monitor(monitor)
-        self.image.config.signals.monitor = monitor
 
-    def set_color_map(self, cmap: str = "magma"):
-        self.image.set_color_map(cmap)
-        if self.color_bar is not None:
-            if self.config.color_bar == "simple":
-                self.color_bar.setColorMap(cmap)
-            elif self.config.color_bar == "full":
-                self.color_bar.gradient.loadPreset(cmap)
-
-    # def set_zmq(self, address: str = None):  # TODO to be implemented
-    #     ...
-
-    def set_processing(
-        self, fft: bool = False, log: bool = False, rotation: int = None, transpose: bool = False
-    ):
-        """
-        Set the processing of the monitor data.
-        Args:
-            fft(bool): Whether to perform FFT on the monitor data.
-            log(bool): Whether to perform log on the monitor data.
-            rotation(int): The rotation angle of the monitor data before displaying.
-            transpose(bool): Whether to transpose the monitor data before displaying.
-        """
-        self.image.config.signals.fft = fft
-        self.image.config.signals.log = log
-        self.image.config.signals.rotation = rotation
-        self.image.config.signals.transpose = transpose
-        self.image_thread.update_config(self.image.config.signals)
-
-    def enable_fft(self, enable: bool = True):  # TODO enable processing of already taken images
-        self.image.config.signals.fft = enable
-        self.image_thread.update_config(self.image.config.signals)
-
-    def enable_log(self, enable: bool = True):
-        self.image.config.signals.log = enable
-        self.image_thread.update_config(self.image.config.signals)
-
-    def rotate(self, angle: int):  # TODO fine tune, can be byt any angle not just by 90deg?
-        self.image.config.signals.rotation = angle
-        self.image_thread.update_config(self.image.config.signals)
-
-    def transpose(self):  # TODO do enable or not?
-        self.image.config.signals.transpose = not self.image.config.signals.transpose
-        self.image_thread.update_config(self.image.config.signals)
-
-    # def enable_center_of_mass(self, enable: bool = True): #TODO check and enable
-    #     self.image.config.signals.center_of_mass = enable
-    #     self.image_thread.update_config(self.image.config.signals)
-
-    @pyqtSlot(np.ndarray)
-    def on_image_update(self, image):
-        # print(f"Image updated: {image.shape}")
-        print(f"Image updated")
-        self.image.updateImage(image[0])
-
-    @pyqtSlot(dict, dict)
-    def on_scan_segment(self, msg, metadata):
-        """
-        Serves as a trigger to image acquisition.
-        Update the scanID and start the image thread if the scanID is different from the current one.
-        Args:
-            msg(dict): The content of the message.
-            metadata(dict): The metadata of the message.
-        """
-        current_scanID = msg.get("scanID", None)
-        if current_scanID is None:
-            return
-
-        if current_scanID != self.scanID:
-            self.scanID = current_scanID
-            self.image_thread.start()
-
-        max_points = metadata.get("num_points", None)
-        current_point = msg.get("point_id") + 1
-
-        print(f"Current point: {current_point} out of {max_points}")
-
-        if current_point == max_points:
-            if self.image_thread.isRunning():
-                self.image_thread.stop()
-                print("image thread done")
-
-    def set_image(self, data: np.ndarray):
-        """
-        Set the image to be displayed.
-        Args:
-            data(np.ndarray): The image to be displayed.
-        """
-        self.imageItem.setImage(data)
-        if self.image_thread.isRunning():
-            self.image_thread.stop()
-
-    def cleanup(self):  # TODO test
-        self.image_thread.stop()
-        self.image_thread.wait()
-        print("ImageThread stopped")
-
-
-class ImageThread(QThread):
-    image_updated = pyqtSignal(np.ndarray)
+class BECImageShow(BECPlotBase):
+    USER_ACCESS = ["add_monitor_image", "add_custom_image", "set_vrange", "set_color_map"]
 
     def __init__(
         self,
-        parent=None,
+        parent: Optional[QWidget] = None,
+        parent_figure=None,
+        config: Optional[ImageConfig] = None,
         client=None,
-        monitor: str = None,
-        monitor_config: MonitorConfig = None,
-        host: str = None,
-        port: int | str = None,
+        gui_id: Optional[str] = None,
     ):
-        super().__init__(parent=parent)
+        if config is None:
+            config = ImageConfig(widget_class=self.__class__.__name__)
+        super().__init__(
+            parent=parent, parent_figure=parent_figure, config=config, client=client, gui_id=gui_id
+        )
 
-        bec_dispatcher = BECDispatcher()
-        self.client = bec_dispatcher.client if client is None else client
-        self.dev = self.client.device_manager.devices
-        self.scans = self.client.scans
-        self.queue = self.client.queue
+        self.images = defaultdict(dict)
 
-        # Monitor Device
-        self.monitor = monitor
-        self.config = monitor_config
-
-        # Connection
-        self.host = host
-        self.port = str(port)
-        if self.host is None:
-            self.host = self.client.connector.host
-            self.port = self.client.connector.port
-        self.connector = RedisConnector(f"{self.host}:{self.port}")
-
-        self.running = False
-        if self.monitor is not None:
-            self.set_monitor(self.monitor)
-
-    def update_config(self, config: MonitorConfig | dict):  # TODO include monitor update in config?
+    def find_widget_by_id(self, item_id: str) -> BECImageItem:
         """
-        Update the monitor configuration.
+        Find the widget by its gui_id.
         Args:
-            config(MonitorConfig|dict): The new monitor configuration.
-        """
-        if isinstance(config, dict):
-            config = MonitorConfig(**config)
-        self.config = config
+            item_id(str): The gui_id of the widget.
 
-    def set_monitor(self, monitor: str = None) -> None:  # TODO check monitor update with the config
+        Returns:
+            BECImageItem: The widget with the given gui_id.
         """
-        Set/update monitor device.
+        for source, images in self.images.items():
+            for key, value in images.items():
+                if key == item_id and isinstance(value, BECImageItem):
+                    return value
+                elif isinstance(value, dict):
+                    result = self.find_widget_by_id(item_id)
+                    if result is not None:
+                        return result
+
+    def change_gui_id(self, new_gui_id: str):
+        """
+        Change the GUI ID of the image widget and update the parent_id in all associated curves.
+
         Args:
-            monitor(str): Name of the monitor.
+            new_gui_id (str): The new GUI ID to be set for the image widget.
         """
-        self.monitor = monitor
-        print(f"Stream consumer started for device: {monitor}")
+        # Update the gui_id in the waveform widget itself
+        self.gui_id = new_gui_id
+        self.config.gui_id = new_gui_id
 
-    def process_FFT(self, data: np.ndarray) -> np.ndarray:  # TODO check functionality
-        return np.abs(np.fft.fftshift(np.fft.fft2(data)))
+        for source, images in self.images.items():
+            for id, image_item in images.items():
+                image_item.config.parent_id = new_gui_id
 
-    def rotation(self, data: np.ndarray, angle: int) -> np.ndarray:
-        return np.rot90(data, k=angle, axes=(0, 1))
+    def add_monitor_image(
+        self,
+        monitor: str,
+        color_map: Optional[str] = "magma",
+        color_bar: Optional[Literal["simple", "full"]] = "simple",
+        downsample: Optional[bool] = True,
+        opacity: Optional[float] = 1.0,
+        vrange: Optional[tuple[int, int]] = None,
+        # post_processing: Optional[PostProcessingConfig] = None,
+        **kwargs,
+    ) -> BECImageItem:
+        image_source = "device_monitor"
 
-    def transpose(self, data: np.ndarray) -> np.ndarray:
-        return np.transpose(data)
-
-    def log(self, data: np.ndarray) -> np.ndarray:
-        return np.log10(np.abs(data))
-
-    # def center_of_mass(self, data: np.ndarray) -> tuple:  # TODO check functionality
-    #     return np.unravel_index(np.argmax(data), data.shape)
-
-    def post_processing(self, data: np.ndarray) -> np.ndarray:
-        if self.config.fft:
-            data = self.process_FFT(data)
-        if self.config.rotation is not None:
-            data = self.rotation(data, self.config.rotation)
-        if self.config.transpose:
-            data = self.transpose(data)
-        if self.config.log:
-            data = self.log(data)
-        return data
-
-    def run(self):
-        self.running = True
-        self.get_image()
-
-    def get_image(self):
-        if self.monitor is None:
-            return
-        while self.running:
-            data = self.connector.get_last(
-                topic=MessageEndpoints.device_monitor(device=self.monitor)
+        image_exits = self._check_image_id(monitor, self.images)
+        if image_exits:
+            raise ValueError(
+                f"Monitor with ID '{monitor}' already exists in widget '{self.gui_id}'."
             )
-            if data is not None:
-                data = data.content["data"]
 
-                data = self.post_processing(data)
+        image_config = ImageItemConfig(
+            widget_class="BECImageItem",
+            parent_id=self.gui_id,
+            color_map=color_map,
+            color_bar=color_bar,
+            downsample=downsample,
+            opacity=opacity,
+            vrange=vrange,
+            # post_processing=post_processing,
+            **kwargs,
+        )
 
-                self.image_updated.emit(data)
-                print("ImageThread is running")
+        image = self._add_image_object(source=image_source, name=monitor, config=image_config)
+        self._connect_device_monitor(monitor)
+        return image
 
-            time.sleep(0.01)
+    def add_custom_image(
+        self,
+        name: str,
+        data: Optional[np.ndarray] = None,
+        color_map: Optional[str] = "magma",
+        color_bar: Optional[Literal["simple", "full"]] = "simple",
+        downsample: Optional[bool] = True,
+        opacity: Optional[float] = 1.0,
+        vrange: Optional[tuple[int, int]] = None,
+        # post_processing: Optional[PostProcessingConfig] = None,
+        **kwargs,
+    ):
+        image_source = "device_monitor"
 
-    def stop(self):
-        self.running = False
+        image_exits = self._check_curve_id(name, self.images)
+        if image_exits:
+            raise ValueError(f"Monitor with ID '{name}' already exists in widget '{self.gui_id}'.")
+
+        image_config = ImageItemConfig(
+            widget_class="BECImageItem",
+            parent_id=self.gui_id,
+            monitor=name,
+            color_map=color_map,
+            color_bar=color_bar,
+            downsample=downsample,
+            opacity=opacity,
+            vrange=vrange,
+            # post_processing=post_processing,
+            **kwargs,
+        )
+
+        image = self._add_image_object(source=image_source, config=image_config, data=data)
+        return image
+
+    def set_vrange(self, vmin: float, vmax: float, name: str = None):
+        """
+        Set the range of the color bar.
+        If name is not specified, then set vrange for all images.
+        Args:
+            vmin(float): Minimum value of the color bar.
+            vmax(float): Maximum value of the color bar.
+            name(str): The name of the image.
+        """
+        if name is None:
+            for source, images in self.images.items():
+                for id, image in images.items():
+                    image.set_vrange(vmin, vmax)
+        else:
+            image = self.find_widget_by_id(name)
+            image.set_vrange(vmin, vmax)
+
+    def set_color_map(self, cmap: str, name: str = None):
+        """
+        Set the color map of the image.
+        If name is not specified, then set color map for all images.
+        Args:
+            cmap(str): The color map of the image.
+            name(str): The name of the image.
+        """
+        if name is None:
+            for source, images in self.images.items():
+                for id, image in images.items():
+                    image.set_color_map(cmap)
+        else:
+            image = self.find_widget_by_id(name)
+            image.set_color_map(cmap)
+
+    @pyqtSlot(dict)
+    def on_image_update(self, msg: dict):
+        data = msg["data"]
+        device = msg["device"]
+        # TODO postprocessing
+        image_to_update = self.images["device_monitor"][device]
+        image_to_update.updateImage(data)
+
+    def _connect_device_monitor(self, monitor: str):
+        """
+        Connect to the device monitor.
+        Args:
+            monitor(str): The name of the monitor.
+        """
+        image_item = self.find_widget_by_id(monitor)
+        try:
+            previous_monitor = image_item.config.monitor
+        except AttributeError:
+            previous_monitor = None
+        if previous_monitor != monitor:
+            if previous_monitor:
+                self.bec_dispatcher.disconnect_slot(
+                    self.on_image_update, MessageEndpoints.device_monitor(previous_monitor)
+                )
+            if monitor:
+                self.bec_dispatcher.connect_slot(
+                    self.on_image_update, MessageEndpoints.device_monitor(monitor)
+                )
+                image_item.set_monitor(monitor)
+
+    def _add_image_object(
+        self, source: str, name: str, config: ImageItemConfig, data=None
+    ) -> BECImageItem:  # TODO fix types
+        image = BECImageItem(config=config, parent_image=self)
+        self.plot_item.addItem(image)
+        self.images[source][name] = image
+        self.config.images[name] = config
+        if data is not None:
+            image.setImage(data)
+        return image
+
+    def _check_image_id(self, val: Any, dict_to_check: dict) -> bool:
+        """
+        Check if val is in the values of the dict_to_check or in the values of the nested dictionaries.
+        Args:
+            val(Any): Value to check.
+            dict_to_check(dict): Dictionary to check.
+
+        Returns:
+            bool: True if val is in the values of the dict_to_check or in the values of the nested dictionaries, False otherwise.
+        """
+        if val in dict_to_check.keys():
+            return True
+        for key in dict_to_check:
+            if isinstance(dict_to_check[key], dict):
+                if self._check_image_id(val, dict_to_check[key]):
+                    return True
+        return False
+
+    def cleanup(self):
+        """
+        Clean up the widget.
+        """
+        print(f"Cleaning up {self.gui_id}")
+        for monitor in self.images["device_monitor"]:
+            self.bec_dispatcher.disconnect_slot(
+                self.on_image_update, MessageEndpoints.device_monitor(monitor)
+            )

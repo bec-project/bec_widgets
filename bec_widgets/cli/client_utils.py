@@ -2,11 +2,13 @@ import importlib
 import select
 import subprocess
 import uuid
+
 from functools import wraps
 
-from bec_lib import MessageEndpoints, messages
+from qtpy.QtCore import QCoreApplication
 
 import bec_widgets.cli.client as client
+from bec_lib import MessageEndpoints, messages
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 
@@ -104,7 +106,7 @@ class RPCBase:
         """
         parent = self
         # pylint: disable=protected-access
-        while not parent._parent is None:
+        while parent._parent is not None:
             parent = parent._parent
         return parent
 
@@ -130,7 +132,7 @@ class RPCBase:
         print(f"RPCBase: {rpc_msg}")
         # pylint: disable=protected-access
         receiver = self._root._gui_id
-        self._client.producer.send(MessageEndpoints.gui_instructions(receiver), rpc_msg)
+        self._client.connector.send(MessageEndpoints.gui_instructions(receiver), rpc_msg)
 
         if not wait_for_rpc_response:
             return None
@@ -166,7 +168,8 @@ class RPCBase:
         """
         response = None
         while response is None:
-            response = self._client.producer.get(
+            response = self._client.connector.get(
                 MessageEndpoints.gui_instruction_response(request_id)
             )
+            QCoreApplication.processEvents()  # keep UI responsive (and execute signals/slots)
         return response

@@ -27,25 +27,22 @@ class BECWidgetsCLIServer:
         """Start the figure window."""
         self.fig.start()
 
-    @staticmethod
-    def _rpc_update_handler(msg, parent):
-        parent.on_rpc_update(msg.value)
-
     def on_rpc_update(self, msg: dict, metadata: dict):
+        request_id = metadata.get("request_id")
         try:
             method = msg["action"]
             args = msg["parameter"].get("args", [])
             kwargs = msg["parameter"].get("kwargs", {})
-            request_id = metadata.get("request_id")
             obj = self.get_object_from_config(msg["parameter"])
             res = self.run_rpc(obj, method, args, kwargs)
-            self.send_response(request_id, True, {"result": res})
         except Exception as e:
             print(e)
             self.send_response(request_id, False, {"error": str(e)})
+        else:
+            self.send_response(request_id, True, {"result": res})
 
     def send_response(self, request_id: str, accepted: bool, msg: dict):
-        self.client.producer.set(
+        self.client.connector.set(
             MessageEndpoints.gui_instruction_response(request_id),
             messages.RequestResponseMessage(accepted=accepted, message=msg),
             expire=60,

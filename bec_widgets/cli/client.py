@@ -385,6 +385,16 @@ class BECFigure(RPCBase, BECFigureClientMixin):
         Clear all widgets from the figure and reset to default state
         """
 
+    @rpc_call
+    def get_config(self, dict_output: "bool" = True) -> "dict | BaseModel":
+        """
+        Get the configuration of the widget.
+        Args:
+            dict_output(bool): If True, return the configuration as a dictionary. If False, return the configuration as a pydantic model.
+        Returns:
+            dict: The configuration of the plot widget.
+        """
+
 
 class BECCurve(RPCBase):
     @rpc_call
@@ -468,70 +478,65 @@ class BECCurve(RPCBase):
 
 class BECImageShow(RPCBase):
     @rpc_call
-    def set_vrange(self, vmin: "float", vmax: "float"):
-        """
-        None
-        """
-
-    @rpc_call
-    def set_monitor(self, monitor: "str" = None) -> "None":
-        """
-        Set/update monitor device.
-        Args:
-            monitor(str): Name of the monitor.
-        """
-
-    @rpc_call
-    def set_color_map(self, cmap: "str" = "magma"):
-        """
-        None
-        """
-
-    @rpc_call
-    def set_image(self, data: "np.ndarray"):
-        """
-        Set the image to be displayed.
-        Args:
-            data(np.ndarray): The image to be displayed.
-        """
-
-    @rpc_call
-    def set_processing(
+    def add_monitor_image(
         self,
-        fft: "bool" = False,
-        log: "bool" = False,
-        rotation: "int" = None,
-        transpose: "bool" = False,
+        monitor: "str",
+        color_map: "Optional[str]" = "magma",
+        color_bar: "Optional[Literal['simple', 'full']]" = "simple",
+        downsample: "Optional[bool]" = True,
+        opacity: "Optional[float]" = 1.0,
+        vrange: "Optional[tuple[int, int]]" = None,
+        **kwargs
+    ) -> "BECImageItem":
+        """
+        None
+        """
+
+    @rpc_call
+    def add_custom_image(
+        self,
+        name: "str",
+        data: "Optional[np.ndarray]" = None,
+        color_map: "Optional[str]" = "magma",
+        color_bar: "Optional[Literal['simple', 'full']]" = "simple",
+        downsample: "Optional[bool]" = True,
+        opacity: "Optional[float]" = 1.0,
+        vrange: "Optional[tuple[int, int]]" = None,
+        **kwargs
     ):
         """
-        Set the processing of the monitor data.
+        None
+        """
+
+    @rpc_call
+    def set_vrange(self, vmin: "float", vmax: "float", name: "str" = None):
+        """
+        Set the range of the color bar.
+        If name is not specified, then set vrange for all images.
         Args:
-            fft(bool): Whether to perform FFT on the monitor data.
-            log(bool): Whether to perform log on the monitor data.
-            rotation(int): The rotation angle of the monitor data before displaying.
-            transpose(bool): Whether to transpose the monitor data before displaying.
+            vmin(float): Minimum value of the color bar.
+            vmax(float): Maximum value of the color bar.
+            name(str): The name of the image.
         """
 
     @rpc_call
-    def enable_fft(self, enable: "bool" = True):
+    def set_color_map(self, cmap: "str", name: "str" = None):
         """
-        None
-        """
-
-    @rpc_call
-    def enable_log(self, enable: "bool" = True):
-        """
-        None
+        Set the color map of the image.
+        If name is not specified, then set color map for all images.
+        Args:
+            cmap(str): The color map of the image.
+            name(str): The name of the image.
         """
 
-    @rpc_call
-    def rotate(self, angle: "int"):
-        """
-        None
-        """
 
+class BECConnector(RPCBase):
     @rpc_call
-    def transpose(self):
+    def get_config(self, dict_output: "bool" = True) -> "dict | BaseModel":
         """
-        None
+        Get the configuration of the widget.
+        Args:
+            dict_output(bool): If True, return the configuration as a dictionary. If False, return the configuration as a pydantic model.
+        Returns:
+            dict: The configuration of the plot widget.
         """
