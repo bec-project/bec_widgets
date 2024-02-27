@@ -217,7 +217,6 @@ class MotorMap(pg.GraphicsLayoutWidget):
         bec_dispatcher.connect_slot(
             self.on_device_readback,
             endpoints,
-            single_callback_for_all_topics=True,
         )
 
     def _add_limits_to_plot_data(self):

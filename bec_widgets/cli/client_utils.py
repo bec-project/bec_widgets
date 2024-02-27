@@ -154,6 +154,7 @@ class BECFigureClientMixin:
         self._run_rpc("close", (), wait_for_rpc_response=False)
         self._process.kill()
         self._process = None
+        self._client.shutdown()
 
     def _start_plot_process(self) -> None:
         """
