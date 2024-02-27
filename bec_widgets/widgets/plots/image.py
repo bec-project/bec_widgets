@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from typing import Literal, Optional
 
 import numpy as np
@@ -127,10 +128,14 @@ class BECImageShow(BECPlotBase):
 
         # Args to pass
         self.monitor = monitor
+        self.scanID = None
 
         # init image and image thread
         self._init_image()
         self._init_image_thread(monitor=self.monitor)
+
+        # Dispatcher
+        self.bec_dispatcher.connect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
 
     def find_widget_by_id(self, item_id: str):
         if self.image.gui_id == item_id:
@@ -156,6 +161,7 @@ class BECImageShow(BECPlotBase):
         self.proxy_update_plot = pg.SignalProxy(
             self.image_thread.image_updated, rateLimit=25, slot=self.on_image_update
         )
+        # self.image_thread.start()
 
     def _add_color_bar(
         self, style: Literal["simple,full"] = "simple", vrange: tuple[int, int] = (0, 100)
@@ -258,7 +264,36 @@ class BECImageShow(BECPlotBase):
 
     @pyqtSlot(np.ndarray)
     def on_image_update(self, image):
+        # print(f"Image updated: {image.shape}")
+        print(f"Image updated")
         self.image.updateImage(image[0])
+
+    @pyqtSlot(dict, dict)
+    def on_scan_segment(self, msg, metadata):
+        """
+        Serves as a trigger to image acquisition.
+        Update the scanID and start the image thread if the scanID is different from the current one.
+        Args:
+            msg(dict): The content of the message.
+            metadata(dict): The metadata of the message.
+        """
+        current_scanID = msg.get("scanID", None)
+        if current_scanID is None:
+            return
+
+        if current_scanID != self.scanID:
+            self.scanID = current_scanID
+            self.image_thread.start()
+
+        max_points = metadata.get("num_points", None)
+        current_point = msg.get("point_id") + 1
+
+        print(f"Current point: {current_point} out of {max_points}")
+
+        if current_point == max_points:
+            if self.image_thread.isRunning():
+                self.image_thread.stop()
+                print("image thread done")
 
     def set_image(self, data: np.ndarray):
         """
@@ -267,16 +302,13 @@ class BECImageShow(BECPlotBase):
             data(np.ndarray): The image to be displayed.
         """
         self.imageItem.setImage(data)
-        self.image_thread.set_monitor(None)
+        if self.image_thread.isRunning():
+            self.image_thread.stop()
 
     def cleanup(self):  # TODO test
-        self.image_thread.quit()
+        self.image_thread.stop()
         self.image_thread.wait()
-        self.image_thread.deleteLater()
-        self.image_thread = None
-        self.image.remove()
-        self.color_bar.remove()
-        super().cleanup()
+        print("ImageThread stopped")
 
 
 class ImageThread(QThread):
@@ -311,9 +343,9 @@ class ImageThread(QThread):
             self.port = self.client.connector.port
         self.connector = RedisConnector(f"{self.host}:{self.port}")
 
-        self.stream_consumer = None
+        self.running = False
         if self.monitor is not None:
-            self.connect_stream_consumer(self.monitor)
+            self.set_monitor(self.monitor)
 
     def update_config(self, config: MonitorConfig | dict):  # TODO include monitor update in config?
         """
@@ -332,29 +364,7 @@ class ImageThread(QThread):
             monitor(str): Name of the monitor.
         """
         self.monitor = monitor
-        if self.monitor is not None:
-            self.connect_stream_consumer(self.monitor)
-        elif monitor is None:
-            self.stream_consumer.shutdown()
-
-    def connect_stream_consumer(self, device):
-        """
-        Connect to the stream consumer for the device.
-        Args:
-            device(str): Name of the device.
-        """
-        if self.stream_consumer is not None:
-            self.stream_consumer.shutdown()
-
-        self.stream_consumer = self.connector.stream_consumer(
-            topics=MessageEndpoints.device_monitor(device=device),
-            cb=self._streamer_cb,
-            parent=self,
-        )
-
-        self.stream_consumer.start()
-
-        print(f"Stream consumer started for device: {device}")
+        print(f"Stream consumer started for device: {monitor}")
 
     def process_FFT(self, data: np.ndarray) -> np.ndarray:  # TODO check functionality
         return np.abs(np.fft.fftshift(np.fft.fft2(data)))
@@ -382,13 +392,26 @@ class ImageThread(QThread):
             data = self.log(data)
         return data
 
-    @staticmethod
-    def _streamer_cb(msg, *, parent, **_kwargs) -> None:
-        msg_device = msg.value
-        metadata = msg_device.metadata
+    def run(self):
+        self.running = True
+        self.get_image()
 
-        data = msg_device.content["data"]
+    def get_image(self):
+        if self.monitor is None:
+            return
+        while self.running:
+            data = self.connector.get_last(
+                topic=MessageEndpoints.device_monitor(device=self.monitor)
+            )
+            if data is not None:
+                data = data.content["data"]
 
-        data = parent.post_processing(data)
+                data = self.post_processing(data)
 
-        parent.image_updated.emit(data)
+                self.image_updated.emit(data)
+                print("ImageThread is running")
+
+            time.sleep(0.01)
+
+    def stop(self):
+        self.running = False

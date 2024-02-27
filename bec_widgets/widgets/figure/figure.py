@@ -551,6 +551,8 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
     def clear_all(self):
         """Clear all widgets from the figure and reset to default state"""
+        for widget in self.widgets.values():
+            widget.cleanup()
         self.clear()
         self.widgets = defaultdict(dict)
         self.grid = []
@@ -559,15 +561,31 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             widget_class=self.__class__.__name__, gui_id=self.gui_id, theme=theme
         )
 
+    def cleanup(self):
+        """Cleanup the figure widget."""
+        self.clear_all()
+        self.close()
+
     def start(self):
         import sys
 
         app = QApplication(sys.argv)
-        win = QMainWindow()
-        win.setCentralWidget(self)
+        win = BECFigureMainWindow(bec_figure=self)
         win.show()
 
         sys.exit(app.exec_())
+
+
+class BECFigureMainWindow(QMainWindow):
+    def __init__(self, parent=None, bec_figure=None):
+        super().__init__(parent)
+
+        self.figure = bec_figure
+        self.setCentralWidget(self.figure)
+
+    def closeEvent(self, event):
+        self.figure.cleanup()
+        super().closeEvent(event)
 
 
 ##################################################
@@ -590,6 +608,7 @@ class JupyterConsoleWidget(RichJupyterWidget):  # pragma: no cover:
         self.kernel_client.start_channels()
 
         self.kernel_manager.kernel.shell.push({"np": np, "pg": pg})
+        # self.set_console_font_size(70)
 
     def shutdown_kernel(self):
         self.kernel_client.stop_channels()
@@ -611,18 +630,26 @@ class DebugWindow(QWidget):  # pragma: no cover:
 
         # console push
         self.console.kernel_manager.kernel.shell.push(
-            {"fig": self.figure, "w1": self.w1, "w2": self.w2, "w3": self.w3, "w4": self.w4}
+            {
+                "fig": self.figure,
+                "w1": self.w1,
+                "w2": self.w2,
+                "w3": self.w3,
+                "w4": self.w4,
+                "bec": self.figure.client,
+                "scans": self.figure.client.scans,
+                "dev": self.figure.client.device_manager.devices,
+            }
         )
 
     def _init_ui(self):
         # Plotting window
         self.glw_1_layout = QVBoxLayout(self.glw)  # Create a new QVBoxLayout
-        self.figure = BECFigure(parent=self)  # Create a new BECDeviceMonitor
+        self.figure = BECFigure(parent=self, gui_id="remote")  # Create a new BECDeviceMonitor
         self.glw_1_layout.addWidget(self.figure)  # Add BECDeviceMonitor to the layout
 
         # add stuff to figure
         self._init_figure()
-        # self.add_debug_histo()
 
         self.console_layout = QVBoxLayout(self.widget_console)
         self.console = JupyterConsoleWidget()
@@ -685,12 +712,15 @@ class DebugWindow(QWidget):  # pragma: no cover:
         # self.w3.add_color_bar("simple")
 
         # Image setting for w4
-        self.w4.set_monitor("eiger")
-        # self.w4.add_color_bar("full")
 
-    def add_debug_histo(self):
-        image_data = np.random.normal(loc=100, scale=50, size=(100, 100))  # Example image data
-        self.figure.add_image_with_histogram(image_data, row=2, col=0)
+        self.w4.set_monitor("eiger")
+
+    # self.w4.add_color_bar("full")
+
+    def closeEvent(self, event):
+        self.figure.cleanup()
+        self.close()
+        super().closeEvent(event)
 
 
 if __name__ == "__main__":  # pragma: no cover
