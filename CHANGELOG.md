@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.41.2 (2024-02-28)
+
+### Fix
+
+* **utils/bec_dispatcher:** Msg is unp[acked from dict before accessing .content ([`bb1f066`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/bb1f066c3c5e5076a8906e309030cfb47a6cad12))
+
 ## v0.41.1 (2024-02-26)
 
 ### Fix
