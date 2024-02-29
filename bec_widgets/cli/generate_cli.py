@@ -1,5 +1,7 @@
+# pylint: disable=missing-module-docstring
 import inspect
 import typing
+import black
 
 
 class ClientGenerator:
@@ -71,22 +73,28 @@ class {class_name}(RPCBase):"""
 
     def write(self, file_name: str):
         """
-        Write the content to a file.
+        Write the content to a file, automatically formatted with black.
 
         Args:
             file_name(str): The name of the file to write to.
         """
+        # Combine header and content, then format with black
+        full_content = self.header + "\n" + self.content
+        try:
+            formatted_content = black.format_str(full_content, mode=black.FileMode(line_length=100))
+        except black.NothingChanged:
+            formatted_content = full_content
+
         with open(file_name, "w", encoding="utf-8") as file:
-            file.write(self.header)
-            file.write(self.content)
+            file.write(formatted_content)
 
 
 if __name__ == "__main__":
     import os
 
+    # Assuming ClientGenerator is defined in this script or imported correctly
     from bec_widgets.widgets.figure import BECFigure
-    from bec_widgets.widgets.plots import BECPlotBase, BECWaveform1D  # ,BECCurve
-    from bec_widgets.widgets.plots.waveform1d import BECCurve
+    from bec_widgets.widgets.plots import BECPlotBase, BECWaveform1D, BECCurve
 
     current_path = os.path.dirname(__file__)
     client_path = os.path.join(current_path, "client.py")

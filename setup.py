@@ -30,6 +30,7 @@ if __name__ == "__main__":
             "zmq",
             "h5py",
             "pyqtdarktheme",
+            "black",
         ],
         extras_require={
             "dev": [
