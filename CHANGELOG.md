@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.41.3 (2024-03-01)
+
+### Fix
+
+* **cli/generate_cli:** Typing.get_overloads are only used if the python version is higher than 3.11 ([`f386563`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/f386563aa162eaca9202af16574860bf3eb5a092))
+* **cli/generate_cli:** Added automatic black formatting; added black as a dependency ([`d89f596`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/d89f596a5d0f0674b1ef3268a9cfee5e32b64ba5))
+
 ## v0.41.2 (2024-02-28)
 
 ### Fix
