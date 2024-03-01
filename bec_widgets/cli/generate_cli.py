@@ -1,8 +1,21 @@
 # pylint: disable=missing-module-docstring
 from __future__ import annotations
 import inspect
-import typing
 import black
+import sys
+
+
+if sys.version_info >= (3, 11):
+    from typing import get_overloads
+else:
+    print(
+        "Python version is less than 3.11, using dummy function for get_overloads. "
+        "If you want to use the real function 'typing.get_overloads()', please use Python 3.11 or later."
+    )
+
+    def get_overloads(obj):
+        # Dummy function for Python versions before 3.11
+        return []
 
 
 class ClientGenerator:
@@ -56,7 +69,7 @@ class {class_name}(RPCBase):"""
             else:
                 sig = str(inspect.signature(obj))
                 doc = inspect.getdoc(obj)
-                overloads = typing.get_overloads(obj)
+                overloads = get_overloads(obj)
                 for overload in overloads:
                     sig_overload = str(inspect.signature(overload))
                     self.content += f"""
