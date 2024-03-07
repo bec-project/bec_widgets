@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.42.0 (2024-03-07)
+
+### Feature
+
+* **utils/bec_dispatcher:** BECDispatcher can register redis stream ([`4c0a7bb`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/4c0a7bbec7abafc7d04a8aaf10dabd7e668fa908))
+
 ## v0.41.4 (2024-03-07)
 
 ### Fix
