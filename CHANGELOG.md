@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.41.4 (2024-03-07)
+
+### Fix
+
+* **utils/bec_dispatcher:** BECDispatcher can accept new EndpointInfo dataclass. ([`c319dac`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/c319dacb24e64930af258a81484feeadcb1bc341))
+
 ## v0.41.3 (2024-03-01)
 
 ### Fix
