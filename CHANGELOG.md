@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.42.1 (2024-03-10)
+
+### Fix
+
+* **various:** Repo cleanup, removed - [plot_app, one_plot, scan_plot, scan2d_plot, crosshair_example, qtplugins], tests adjusted ([`f3b3c2f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/f3b3c2f526d66687b3cc596a5877921953dd0803))
+
 ## v0.42.0 (2024-03-07)
 
 ### Feature
