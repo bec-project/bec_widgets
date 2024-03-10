@@ -103,7 +103,7 @@ class {class_name}(RPCBase):"""
             file.write(formatted_content)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import os
 
     # Assuming ClientGenerator is defined in this script or imported correctly
