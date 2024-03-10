@@ -1,4 +1,5 @@
 # pylint: disable = no-name-in-module,missing-module-docstring
+import threading
 import time
 
 import pyqtgraph as pg
@@ -266,6 +267,49 @@ CONFIG_REDIS = {
 }
 
 
+def list_active_threads():
+    num_threads = threading.enumerate()
+    for thread in num_threads:
+        print(f"Thread Name: {thread.name},(ID: {thread.ident}), Alive: {thread.is_alive()}")
+    print(f"Total number of threads: {len(num_threads)}")
+
+
+class ThreadTracker:
+    def __init__(self, exclude_names=None):
+        self.exclude_names = exclude_names if exclude_names else []
+        self.initial_threads = self._capture_threads()
+
+    def _capture_threads(self):
+        return set(
+            th
+            for th in threading.enumerate()
+            if not any(ex_name in th.name for ex_name in self.exclude_names)
+            and th is not threading.main_thread()
+        )
+
+    def _thread_info(self, threads):
+        return ", \n".join(f"{th.name}(ID: {th.ident})" for th in threads)
+
+    def check_unfinished_threads(self):
+        current_threads = self._capture_threads()
+        additional_threads = current_threads - self.initial_threads
+        closed_threads = self.initial_threads - current_threads
+        if additional_threads:
+            raise Exception(
+                f"###### Initial threads ######:\n {self._thread_info(self.initial_threads)}\n"
+                f"###### Current threads ######:\n {self._thread_info(current_threads)}\n"
+                f"###### Closed threads ######:\n {self._thread_info(closed_threads)}\n"
+                f"###### Unfinished threads ######:\n {self._thread_info(additional_threads)}"
+            )
+        else:
+            print(
+                "All threads properly closed.\n"
+                f"###### Initial threads ######:\n {self._thread_info(self.initial_threads)}\n"
+                f"###### Current threads ######:\n {self._thread_info(current_threads)}\n"
+                f"###### Closed threads ######:\n {self._thread_info(closed_threads)}"
+            )
+
+
 class BECMonitor(pg.GraphicsLayoutWidget):
     update_signal = pyqtSignal()
 
@@ -282,8 +326,8 @@ class BECMonitor(pg.GraphicsLayoutWidget):
 
         # Client and device manager from BEC
         self.plot_data = None
-        bec_dispatcher = BECDispatcher()
-        self.client = bec_dispatcher.client if client is None else client
+        self.bec_dispatcher = BECDispatcher()
+        self.client = self.bec_dispatcher.client if client is None else client
         self.dev = self.client.device_manager.devices
         self.queue = self.client.queue
 
@@ -294,12 +338,16 @@ class BECMonitor(pg.GraphicsLayoutWidget):
             self.gui_id = self.__class__.__name__ + str(time.time())
 
         # Connect slots dispatcher
-        bec_dispatcher.connect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
-        bec_dispatcher.connect_slot(self.on_config_update, MessageEndpoints.gui_config(self.gui_id))
-        bec_dispatcher.connect_slot(
+        self.bec_dispatcher.connect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
+        self.bec_dispatcher.connect_slot(
+            self.on_config_update, MessageEndpoints.gui_config(self.gui_id)
+        )
+        self.bec_dispatcher.connect_slot(
             self.on_instruction, MessageEndpoints.gui_instructions(self.gui_id)
         )
-        bec_dispatcher.connect_slot(self.on_data_from_redis, MessageEndpoints.gui_data(self.gui_id))
+        self.bec_dispatcher.connect_slot(
+            self.on_data_from_redis, MessageEndpoints.gui_data(self.gui_id)
+        )
 
         # Current configuration
         self.config = config
@@ -816,6 +864,35 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         self.update_plot(source_type="redis")
         print(f"database after: {self.database}")
 
+    def closeEvent(self, event):
+        self.bec_dispatcher.disconnect_all()
+        if not hasattr(self, "thread_tracker"):
+            self.thread_tracker = ThreadTracker(exclude_names=["loguru"])
+        try:
+            self.thread_tracker.check_unfinished_threads()
+            print("Active threads at application close:")
+            list_active_threads()
+        except Exception as e:
+            print(e)
+        finally:
+            event.accept()
+        # self.bec_dispatcher.disconnect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
+        # self.bec_dispatcher.disconnect_slot(
+        #     self.on_config_update, MessageEndpoints.gui_config(self.gui_id)
+        # )
+        # self.bec_dispatcher.disconnect_slot(
+        #     self.on_instruction, MessageEndpoints.gui_instructions(self.gui_id)
+        # )
+        # self.bec_dispatcher.disconnect_slot(
+        #     self.on_data_from_redis, MessageEndpoints.gui_data(self.gui_id)
+        # )
+        # self.bec_dispatcher.disconnect_all()
+        # print("dispatcher done, now waiting")
+        # time.sleep(1)
+        # print("app will close now")
+        #
+        # super().closeEvent(event)
+
 
 if __name__ == "__main__":  # pragma: no cover
     import argparse
@@ -852,4 +929,4 @@ if __name__ == "__main__":  # pragma: no cover
     #     "y": {"y_default_tag": {"data": [1, 2, 3]}},
     # }
     # monitor.on_data_from_redis({"data": redis_data})
-    sys.exit(app.exec())
+    sys.exit(app.exec_())
