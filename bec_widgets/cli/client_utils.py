@@ -132,7 +132,8 @@ class RPCBase:
         print(f"RPCBase: {rpc_msg}")
         # pylint: disable=protected-access
         receiver = self._root._gui_id
-        self._client.connector.send(MessageEndpoints.gui_instructions(receiver), rpc_msg)
+        # self._client.connector.send(MessageEndpoints.gui_instructions(receiver), rpc_msg)
+        self._client.connector.set_and_publish(MessageEndpoints.gui_instructions(receiver), rpc_msg)
 
         if not wait_for_rpc_response:
             return None

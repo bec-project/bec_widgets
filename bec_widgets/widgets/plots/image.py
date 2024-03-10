@@ -53,7 +53,7 @@ class ImageConfig(WidgetConfig):
     )
 
 
-class BECImageItem(BECConnector, pg.ImageItem):  # TODO decide how complex it should be
+class BECImageItem(BECConnector, pg.ImageItem):
     USER_ACCESS = ["set", "set_color_map", "set_auto_downsample", "set_monitor", "set_vrange"]
 
     def __init__(

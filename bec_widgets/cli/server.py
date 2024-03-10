@@ -42,7 +42,7 @@ class BECWidgetsCLIServer:
             self.send_response(request_id, True, {"result": res})
 
     def send_response(self, request_id: str, accepted: bool, msg: dict):
-        self.client.connector.set(
+        self.client.connector.set_and_publish(
             MessageEndpoints.gui_instruction_response(request_id),
             messages.RequestResponseMessage(accepted=accepted, message=msg),
             expire=60,

@@ -540,3 +540,46 @@ class BECConnector(RPCBase):
         Returns:
             dict: The configuration of the plot widget.
         """
+
+
+class BECImageItem(RPCBase):
+    @rpc_call
+    def set(self, **kwargs):
+        """
+        None
+        """
+
+    @rpc_call
+    def set_color_map(self, cmap: "str" = "magma"):
+        """
+        Set the color map of the image.
+        Args:
+            cmap(str): The color map of the image.
+        """
+
+    @rpc_call
+    def set_auto_downsample(self, auto: "bool" = True):
+        """
+        Set the auto downsample of the image.
+        Args:
+            auto(bool): Whether to downsample the image.
+        """
+
+    @rpc_call
+    def set_monitor(self, monitor: "str"):
+        """
+        Set the monitor of the image.
+        Args:
+            monitor(str): The name of the monitor.
+        """
+
+    @rpc_call
+    def set_vrange(
+        self, vmin: "float" = None, vmax: "float" = None, vrange: "tuple[int, int]" = None
+    ):
+        """
+        Set the range of the color bar.
+        Args:
+            vmin(float): Minimum value of the color bar.
+            vmax(float): Maximum value of the color bar.
+        """
