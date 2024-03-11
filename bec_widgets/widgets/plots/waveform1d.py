@@ -46,9 +46,7 @@ class CurveConfig(ConnectionConfig):
     pen_style: Optional[Literal["solid", "dash", "dot", "dashdot"]] = Field(
         "solid", description="The style of the pen of the curve."
     )
-    source: Optional[str] = Field(
-        None, description="The source of the curve."
-    )  # TODO here on or curve??
+    source: Optional[str] = Field(None, description="The source of the curve.")
     signals: Optional[Signal] = Field(None, description="The signal of the curve.")
 
 

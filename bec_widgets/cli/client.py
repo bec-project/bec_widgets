@@ -478,6 +478,45 @@ class BECCurve(RPCBase):
 
 class BECImageShow(RPCBase):
     @rpc_call
+    def add_image_by_config(self, config: "ImageItemConfig | dict") -> "BECImageItem":
+        """
+        Add an image to the widget by configuration.
+        Args:
+            config(ImageItemConfig|dict): The configuration of the image.
+
+        Returns:
+            BECImageItem: The image object.
+        """
+
+    @rpc_call
+    def get_image_config(self, image_id, dict_output: "bool" = True) -> "ImageItemConfig | dict":
+        """
+        Get the configuration of the image.
+        Args:
+            image_id(str): The ID of the image.
+            dict_output(bool): Whether to return the configuration as a dictionary. Defaults to True.
+
+        Returns:
+            ImageItemConfig|dict: The configuration of the image.
+        """
+
+    @rpc_call
+    def get_image_list(self) -> "list[BECImageItem]":
+        """
+        Get the list of images.
+        Returns:
+            list[BECImageItem]: The list of images.
+        """
+
+    @rpc_call
+    def get_image_dict(self) -> "dict[str, dict[str, BECImageItem]]":
+        """
+        Get all images.
+        Returns:
+            dict[str, dict[str, BECImageItem]]: The dictionary of images.
+        """
+
+    @rpc_call
     def add_monitor_image(
         self,
         monitor: "str",

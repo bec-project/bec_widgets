@@ -259,9 +259,9 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
                 image.set_vrange(vmin=vrange[0], vmax=vrange[1])
             if color_map is not None:
                 image.set_color_map(color_map)
-            return image
         else:
             raise ValueError("Invalid input. Provide either monitor name or custom data.")
+        return image
 
     def add_image(
         self,
@@ -658,10 +658,10 @@ class DebugWindow(QWidget):  # pragma: no cover:
         self.console.kernel_manager.kernel.shell.push(
             {
                 "fig": self.figure,
-                # "w1": self.w1,
-                # "w2": self.w2,
-                # "w3": self.w3,
-                # "w4": self.w4,
+                "w1": self.w1,
+                "w2": self.w2,
+                "w3": self.w3,
+                "w4": self.w4,
                 "bec": self.figure.client,
                 "scans": self.figure.client.scans,
                 "dev": self.figure.client.device_manager.devices,
@@ -675,7 +675,7 @@ class DebugWindow(QWidget):  # pragma: no cover:
         self.glw_1_layout.addWidget(self.figure)  # Add BECDeviceMonitor to the layout
 
         # add stuff to figure
-        # self._init_figure()
+        self._init_figure()
 
         self.console_layout = QVBoxLayout(self.widget_console)
         self.console = JupyterConsoleWidget()

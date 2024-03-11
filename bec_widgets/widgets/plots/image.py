@@ -5,7 +5,7 @@ from typing import Literal, Optional, Any
 
 import numpy as np
 import pyqtgraph as pg
-from pydantic import Field, BaseModel
+from pydantic import Field, BaseModel, ValidationError
 from qtpy.QtCore import QThread, QObject
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtCore import Slot as pyqtSlot
@@ -32,6 +32,7 @@ class PostProcessingConfig(BaseModel):
 
 class ImageItemConfig(ConnectionConfig):
     monitor: Optional[str] = Field(None, description="The name of the monitor.")
+    source: Optional[str] = Field(None, description="The source of the curve.")
     color_map: Optional[str] = Field("magma", description="The color map of the image.")
     downsample: Optional[bool] = Field(True, description="Whether to downsample the image.")
     opacity: Optional[float] = Field(1.0, description="The opacity of the image.")
@@ -54,7 +55,13 @@ class ImageConfig(WidgetConfig):
 
 
 class BECImageItem(BECConnector, pg.ImageItem):
-    USER_ACCESS = ["set", "set_color_map", "set_auto_downsample", "set_monitor", "set_vrange"]
+    USER_ACCESS = [
+        "set",
+        "set_color_map",
+        "set_auto_downsample",
+        "set_monitor",
+        "set_vrange",
+    ]
 
     def __init__(
         self,
@@ -108,6 +115,11 @@ class BECImageItem(BECConnector, pg.ImageItem):
             cmap(str): The color map of the image.
         """
         self.setColorMap(cmap)
+        if self.color_bar is not None:
+            if self.config.color_bar == "simple":
+                self.color_bar.setColorMap(cmap)
+            elif self.config.color_bar == "full":
+                self.color_bar.gradient.loadPreset(cmap)
         self.config.color_map = cmap
 
     def set_auto_downsample(self, auto: bool = True):
@@ -182,7 +194,16 @@ class BECImageItem(BECConnector, pg.ImageItem):
 
 
 class BECImageShow(BECPlotBase):
-    USER_ACCESS = ["add_monitor_image", "add_custom_image", "set_vrange", "set_color_map"]
+    USER_ACCESS = [
+        "add_image_by_config",
+        "get_image_config",
+        "get_image_list",
+        "get_image_dict",
+        "add_monitor_image",
+        "add_custom_image",
+        "set_vrange",
+        "set_color_map",
+    ]
 
     def __init__(
         self,
@@ -198,7 +219,8 @@ class BECImageShow(BECPlotBase):
             parent=parent, parent_figure=parent_figure, config=config, client=client, gui_id=gui_id
         )
 
-        self.images = defaultdict(dict)
+        self._images = defaultdict(dict)
+        self.apply_config(self.config)
 
     def find_widget_by_id(self, item_id: str) -> BECImageItem:
         """
@@ -209,7 +231,7 @@ class BECImageShow(BECPlotBase):
         Returns:
             BECImageItem: The widget with the given gui_id.
         """
-        for source, images in self.images.items():
+        for source, images in self._images.items():
             for key, value in images.items():
                 if key == item_id and isinstance(value, BECImageItem):
                     return value
@@ -218,6 +240,27 @@ class BECImageShow(BECPlotBase):
                     if result is not None:
                         return result
 
+    def apply_config(self, config: dict | WidgetConfig):
+        """
+        Apply the configuration to the 1D waveform widget.
+        Args:
+            config(dict|WidgetConfig): Configuration settings.
+            replot_last_scan(bool, optional): If True, replot the last scan. Defaults to False.
+        """
+        if isinstance(config, dict):
+            try:
+                config = ImageConfig(**config)
+            except ValidationError as e:
+                print(f"Validation error when applying config to BECImageShow: {e}")
+                return
+        self.config = config
+        self.plot_item.clear()
+
+        self.apply_axis_config()
+        self._images = defaultdict(dict)
+
+        # TODO extend by adding image by config
+
     def change_gui_id(self, new_gui_id: str):
         """
         Change the GUI ID of the image widget and update the parent_id in all associated curves.
@@ -225,13 +268,65 @@ class BECImageShow(BECPlotBase):
         Args:
             new_gui_id (str): The new GUI ID to be set for the image widget.
         """
-        # Update the gui_id in the waveform widget itself
         self.gui_id = new_gui_id
         self.config.gui_id = new_gui_id
 
-        for source, images in self.images.items():
+        for source, images in self._images.items():
             for id, image_item in images.items():
                 image_item.config.parent_id = new_gui_id
+
+    def add_image_by_config(self, config: ImageItemConfig | dict) -> BECImageItem:
+        """
+        Add an image to the widget by configuration.
+        Args:
+            config(ImageItemConfig|dict): The configuration of the image.
+
+        Returns:
+            BECImageItem: The image object.
+        """
+        if isinstance(config, dict):
+            config = ImageItemConfig(**config)
+        name = config.monitor if config.monitor is not None else config.gui_id
+        image = self._add_image_object(source=config.source, name=name, config=config)
+        return image
+
+    def get_image_config(self, image_id, dict_output: bool = True) -> ImageItemConfig | dict:
+        """
+        Get the configuration of the image.
+        Args:
+            image_id(str): The ID of the image.
+            dict_output(bool): Whether to return the configuration as a dictionary. Defaults to True.
+
+        Returns:
+            ImageItemConfig|dict: The configuration of the image.
+        """
+        for source, images in self._images.items():
+            for id, image in images.items():
+                if id == image_id:
+                    if dict_output:
+                        return image.config.dict()
+                    else:
+                        return image.config  # TODO check if this works
+
+    def get_image_list(self) -> list[BECImageItem]:
+        """
+        Get the list of images.
+        Returns:
+            list[BECImageItem]: The list of images.
+        """
+        images = []
+        for source, images_dict in self._images.items():
+            for id, image in images_dict.items():
+                images.append(image)
+        return images
+
+    def get_image_dict(self) -> dict[str, dict[str, BECImageItem]]:
+        """
+        Get all images.
+        Returns:
+            dict[str, dict[str, BECImageItem]]: The dictionary of images.
+        """
+        return self._images
 
     def add_monitor_image(
         self,
@@ -246,7 +341,7 @@ class BECImageShow(BECPlotBase):
     ) -> BECImageItem:
         image_source = "device_monitor"
 
-        image_exits = self._check_image_id(monitor, self.images)
+        image_exits = self._check_image_id(monitor, self._images)
         if image_exits:
             raise ValueError(
                 f"Monitor with ID '{monitor}' already exists in widget '{self.gui_id}'."
@@ -282,7 +377,7 @@ class BECImageShow(BECPlotBase):
     ):
         image_source = "device_monitor"
 
-        image_exits = self._check_curve_id(name, self.images)
+        image_exits = self._check_curve_id(name, self._images)
         if image_exits:
             raise ValueError(f"Monitor with ID '{name}' already exists in widget '{self.gui_id}'.")
 
@@ -312,7 +407,7 @@ class BECImageShow(BECPlotBase):
             name(str): The name of the image.
         """
         if name is None:
-            for source, images in self.images.items():
+            for source, images in self._images.items():
                 for id, image in images.items():
                     image.set_vrange(vmin, vmax)
         else:
@@ -328,7 +423,7 @@ class BECImageShow(BECPlotBase):
             name(str): The name of the image.
         """
         if name is None:
-            for source, images in self.images.items():
+            for source, images in self._images.items():
                 for id, image in images.items():
                     image.set_color_map(cmap)
         else:
@@ -340,7 +435,7 @@ class BECImageShow(BECPlotBase):
         data = msg["data"]
         device = msg["device"]
         # TODO postprocessing
-        image_to_update = self.images["device_monitor"][device]
+        image_to_update = self._images["device_monitor"][device]
         image_to_update.updateImage(data)
 
     def _connect_device_monitor(self, monitor: str):
@@ -370,7 +465,7 @@ class BECImageShow(BECPlotBase):
     ) -> BECImageItem:  # TODO fix types
         image = BECImageItem(config=config, parent_image=self)
         self.plot_item.addItem(image)
-        self.images[source][name] = image
+        self._images[source][name] = image
         self.config.images[name] = config
         if data is not None:
             image.setImage(data)
@@ -399,7 +494,7 @@ class BECImageShow(BECPlotBase):
         Clean up the widget.
         """
         print(f"Cleaning up {self.gui_id}")
-        for monitor in self.images["device_monitor"]:
+        for monitor in self._images["device_monitor"]:
             self.bec_dispatcher.disconnect_slot(
                 self.on_image_update, MessageEndpoints.device_monitor(monitor)
             )
