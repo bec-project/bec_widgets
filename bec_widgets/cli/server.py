@@ -62,9 +62,9 @@ class BECWidgetsCLIServer:
                 item = widget.find_widget_by_id(gui_id)
                 if item:
                     return item
-                raise NotImplementedError(
-                    f"gui_id lookup for widget of type {widget.__class__.__name__} not implemented"
-                )
+            # raise NotImplementedError(
+            #     f"gui_id lookup for widget of type {widget.__class__.__name__} not implemented"
+            # )
 
         raise ValueError(f"Object with gui_id {gui_id} not found")
 
@@ -94,7 +94,7 @@ class BECWidgetsCLIServer:
                 "config": obj.config.model_dump(),
                 "__rpc__": True,
             }
-        return obj
+        return obpyj
 
 
 if __name__ == "__main__":  # pragma: no cover

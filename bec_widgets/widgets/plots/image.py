@@ -31,6 +31,7 @@ class ProcessingConfig(BaseModel):
 
 
 class ImageItemConfig(ConnectionConfig):
+    parent_id: Optional[str] = Field(None, description="The parent plot of the image.")
     monitor: Optional[str] = Field(None, description="The name of the monitor.")
     source: Optional[str] = Field(None, description="The source of the curve.")
     color_map: Optional[str] = Field("magma", description="The color map of the image.")
@@ -42,6 +43,7 @@ class ImageItemConfig(ConnectionConfig):
     color_bar: Optional[Literal["simple", "full"]] = Field(
         "simple", description="The type of the color bar."
     )
+    autorange: Optional[bool] = Field(True, description="Whether to autorange the color bar.")
     processing: ProcessingConfig = Field(
         default_factory=ProcessingConfig, description="The post processing of the image."
     )
@@ -57,6 +59,12 @@ class ImageConfig(WidgetConfig):
 class BECImageItem(BECConnector, pg.ImageItem):
     USER_ACCESS = [
         "set",
+        "set_fft",
+        "set_log",
+        "set_rotation",
+        "set_transpose",
+        "set_opacity",
+        "set_autorange",
         "set_color_map",
         "set_auto_downsample",
         "set_monitor",
@@ -89,13 +97,30 @@ class BECImageItem(BECConnector, pg.ImageItem):
             self.set(**kwargs)
 
     def apply_config(self):
+        """
+        Apply current configuration.
+        """
         self.set_color_map(self.config.color_map)
         self.set_auto_downsample(self.config.downsample)
         if self.config.vrange is not None:
             self.set_vrange(vrange=self.config.vrange)
-        # self.set_color_bar(self.config.color_bar)
 
     def set(self, **kwargs):
+        """
+        Set the properties of the image.
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+        Possible properties:
+            - downsample
+            - color_map
+            - monitor
+            - opacity
+            - vrange
+            - fft
+            - log
+            - rot
+            - transpose
+        """
         method_map = {
             "downsample": self.set_auto_downsample,
             "color_map": self.set_color_map,
@@ -114,22 +139,57 @@ class BECImageItem(BECConnector, pg.ImageItem):
                 print(f"Warning: '{key}' is not a recognized property.")
 
     def set_fft(self, enable: bool = False):
+        """
+        Set the FFT of the image.
+        Args:
+            enable(bool): Whether to perform FFT on the monitor data.
+        """
         self.config.processing.fft = enable
 
     def set_log(self, enable: bool = False):
+        """
+        Set the log of the image.
+        Args:
+            enable(bool): Whether to perform log on the monitor data.
+        """
         self.config.processing.log = enable
         if enable and self.color_bar and self.config.color_bar == "full":
             self.color_bar.autoHistogramRange()
 
     def set_rotation(self, deg_90: int = 0):
+        """
+        Set the rotation of the image.
+        Args:
+            deg_90(int): The rotation angle of the monitor data before displaying.
+        """
         self.config.processing.rotation = deg_90
 
     def set_transpose(self, enable: bool = False):
+        """
+        Set the transpose of the image.
+        Args:
+            enable(bool): Whether to transpose the image.
+        """
         self.config.processing.transpose = enable
 
     def set_opacity(self, opacity: float = 1.0):
+        """
+        Set the opacity of the image.
+        Args:
+            opacity(float): The opacity of the image.
+        """
         self.setOpacity(opacity)
         self.config.opacity = opacity
+
+    def set_autorange(self, autorange: bool = True):
+        """
+        Set the autorange of the color bar.
+        Args:
+            autorange(bool): Whether to autorange the color bar.
+        """
+        self.config.autorange = autorange
+        if self.color_bar is not None:
+            self.color_bar.autoHistogramRange()
 
     def set_color_map(self, cmap: str = "magma"):
         """
@@ -173,6 +233,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
             vmin, vmax = vrange
         self.setLevels([vmin, vmax])
         self.config.vrange = (vmin, vmax)
+        self.config.autorange = False
         if self.color_bar is not None:
             if self.config.color_bar == "simple":
                 self.color_bar.setLevels(low=vmin, high=vmax)
@@ -214,24 +275,6 @@ class BECImageItem(BECConnector, pg.ImageItem):
             self.config.color_bar = "full"
         else:
             raise ValueError("style should be 'simple' or 'full'")
-
-    def _update_color_bar_for_log(self):
-        """
-        Update the color bar to reflect a logarithmic scale.
-        """
-        ...
-        # if self.config.vrange:
-        #     vmin, vmax = self.config.vrange
-        #     offset = 1e-6
-        #     vmin_log, vmax_log = np.log10(vmin + offset), np.log10(vmax + offset)
-        #     if self.config.color_bar == "simple":
-        #         self.color_bar.setLevels(low=vmin_log, high=vmax_log)
-        #     elif self.config.color_bar == "full":
-        #         self.color_bar.setImageItem(self)
-        #         self.color_bar.setLevels(min=vmin_log, max=vmax_log)
-        #         self.color_bar.setHistogramRange(
-        #             vmin_log - 0.1 * vmin_log, vmax_log + 0.1 * vmax_log
-        #         )
 
 
 class BECImageShow(BECPlotBase):
@@ -290,11 +333,25 @@ class BECImageShow(BECPlotBase):
             BECImageItem: The widget with the given gui_id.
         """
         for source, images in self._images.items():
+            for monitor, image_item in images.items():
+                if image_item.gui_id == item_id:
+                    return image_item
+
+    def find_image_by_monitor(self, item_id: str) -> BECImageItem:
+        """
+        Find the widget by its gui_id.
+        Args:
+            item_id(str): The gui_id of the widget.
+
+        Returns:
+            BECImageItem: The widget with the given gui_id.
+        """
+        for source, images in self._images.items():
             for key, value in images.items():
                 if key == item_id and isinstance(value, BECImageItem):
                     return value
                 elif isinstance(value, dict):
-                    result = self.find_widget_by_id(item_id)
+                    result = self.find_image_by_monitor(item_id)
                     if result is not None:
                         return result
 
@@ -344,6 +401,7 @@ class BECImageShow(BECPlotBase):
         """
         if isinstance(config, dict):
             config = ImageItemConfig(**config)
+            config.parent_id = self.gui_id
         name = config.monitor if config.monitor is not None else config.gui_id
         image = self._add_image_object(source=config.source, name=name, config=config)
         return image
@@ -468,7 +526,7 @@ class BECImageShow(BECPlotBase):
             image_id (str, optional): The ID of the specific image to apply the setting to. If None, applies to all images.
         """
         if image_id:
-            image = self.find_widget_by_id(image_id)
+            image = self.find_image_by_monitor(image_id)
             if image:
                 getattr(image, setting_method_name)(*args, **kwargs)
         else:
@@ -610,7 +668,7 @@ class BECImageShow(BECPlotBase):
             data(np.ndarray): The data to be updated.
         """
         image_to_update = self._images["device_monitor"][device]
-        image_to_update.updateImage(data)
+        image_to_update.updateImage(data, autoLevels=image_to_update.config.autorange)
 
     def _connect_device_monitor(self, monitor: str):
         """
@@ -618,7 +676,7 @@ class BECImageShow(BECPlotBase):
         Args:
             monitor(str): The name of the monitor.
         """
-        image_item = self.find_widget_by_id(monitor)
+        image_item = self.find_image_by_monitor(monitor)
         try:
             previous_monitor = image_item.config.monitor
         except AttributeError:
@@ -637,6 +695,7 @@ class BECImageShow(BECPlotBase):
     def _add_image_object(
         self, source: str, name: str, config: ImageItemConfig, data=None
     ) -> BECImageItem:  # TODO fix types
+        config.parent_id = self.gui_id
         image = BECImageItem(config=config, parent_image=self)
         self.plot_item.addItem(image)
         self._images[source][name] = image
@@ -668,13 +727,13 @@ class BECImageShow(BECPlotBase):
         Clean up the widget.
         """
         print(f"Cleaning up {self.gui_id}")
-        for monitor in self._images["device_monitor"]:
-            self.bec_dispatcher.disconnect_slot(
-                self.on_image_update, MessageEndpoints.device_monitor(monitor)
-            )
-        if self.thread.isRunning():
-            self.thread.quit()
-            self.thread.wait()
+        # for monitor in self._images["device_monitor"]:
+        #     self.bec_dispatcher.disconnect_slot(
+        #         self.on_image_update, MessageEndpoints.device_monitor(monitor)
+        #     )
+        # if self.thread is not None and self.thread.isRunning():
+        #     self.thread.quit()
+        #     self.thread.wait()
 
 
 class ImageProcessor:

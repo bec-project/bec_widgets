@@ -555,7 +555,7 @@ class BECImageShow(RPCBase):
         Args:
             vmin(float): Minimum value of the color bar.
             vmax(float): Maximum value of the color bar.
-            name(str): The name of the image.
+            name(str): The name of the image. If None, apply to all images.
         """
 
     @rpc_call
@@ -565,7 +565,7 @@ class BECImageShow(RPCBase):
         If name is not specified, then set color map for all images.
         Args:
             cmap(str): The color map of the image.
-            name(str): The name of the image.
+            name(str): The name of the image. If None, apply to all images.
         """
 
 
@@ -585,7 +585,67 @@ class BECImageItem(RPCBase):
     @rpc_call
     def set(self, **kwargs):
         """
-        None
+        Set the properties of the image.
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+        Possible properties:
+            - downsample
+            - color_map
+            - monitor
+            - opacity
+            - vrange
+            - fft
+            - log
+            - rot
+            - transpose
+        """
+
+    @rpc_call
+    def set_fft(self, enable: "bool" = False):
+        """
+        Set the FFT of the image.
+        Args:
+            enable(bool): Whether to perform FFT on the monitor data.
+        """
+
+    @rpc_call
+    def set_log(self, enable: "bool" = False):
+        """
+        Set the log of the image.
+        Args:
+            enable(bool): Whether to perform log on the monitor data.
+        """
+
+    @rpc_call
+    def set_rotation(self, deg_90: "int" = 0):
+        """
+        Set the rotation of the image.
+        Args:
+            deg_90(int): The rotation angle of the monitor data before displaying.
+        """
+
+    @rpc_call
+    def set_transpose(self, enable: "bool" = False):
+        """
+        Set the transpose of the image.
+        Args:
+            enable(bool): Whether to transpose the image.
+        """
+
+    @rpc_call
+    def set_opacity(self, opacity: "float" = 1.0):
+        """
+        Set the opacity of the image.
+        Args:
+            opacity(float): The opacity of the image.
+        """
+
+    @rpc_call
+    def set_autorange(self, autorange: "bool" = True):
+        """
+        Set the autorange of the color bar.
+        Args:
+            autorange(bool): Whether to autorange the color bar.
         """
 
     @rpc_call
