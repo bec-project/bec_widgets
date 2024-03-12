@@ -219,7 +219,7 @@ class BECWaveform1D(BECPlotBase):
         "remove_curve",
         "scan_history",
         "curves",
-        "curves_data",
+        # "curves_data",
         "get_curve",
         "get_curve_config",
         "apply_config",
@@ -241,7 +241,7 @@ class BECWaveform1D(BECPlotBase):
             parent=parent, parent_figure=parent_figure, config=config, client=client, gui_id=gui_id
         )
 
-        self.curves_data = defaultdict(dict)
+        self._curves_data = defaultdict(dict)
         self.scanID = None
 
         # Scan segment update proxy
@@ -336,7 +336,7 @@ class BECWaveform1D(BECPlotBase):
         Returns:
             CurveConfig|dict: Configuration of the curve.
         """
-        for source, curves in self.curves_data.items():
+        for source, curves in self._curves_data.items():
             if curve_id in curves:
                 if dict_output:
                     return curves[curve_id].config.model_dump()
@@ -344,7 +344,7 @@ class BECWaveform1D(BECPlotBase):
                     return curves[curve_id].config
 
     @property
-    def curves(self) -> list[BECCurve]:  # TODO discuss if it should be marked as @property for RPC
+    def curves(self) -> list[BECCurve]:
         """
         Get the curves of the plot widget as a list
         Returns:
@@ -357,7 +357,7 @@ class BECWaveform1D(BECPlotBase):
         self._curves = value
 
     @property
-    def curves_data(self) -> dict:  # TODO discuss if it should be marked as @property for RPC
+    def curves_data(self) -> dict[str, dict[str, BECCurve]]:
         """
         Get the curves data of the plot widget as a dictionary
         Returns:
@@ -366,7 +366,7 @@ class BECWaveform1D(BECPlotBase):
         return self._curves_data
 
     @curves_data.setter
-    def curves_data(self, value: dict):
+    def curves_data(self, value: dict[str, dict[str, BECCurve]]):
         self._curves_data = value
 
     def get_curve(self, identifier) -> BECCurve:
@@ -380,7 +380,7 @@ class BECWaveform1D(BECPlotBase):
         if isinstance(identifier, int):
             return self.plot_item.curves[identifier]
         elif isinstance(identifier, str):
-            for source_type, curves in self.curves_data.items():
+            for source_type, curves in self._curves_data.items():
                 if identifier in curves:
                     return curves[identifier]
             raise ValueError(f"Curve with ID '{identifier}' not found.")
@@ -410,7 +410,7 @@ class BECWaveform1D(BECPlotBase):
         curve_source = "custom"
         curve_id = label or f"Curve {len(self.plot_item.curves) + 1}"
 
-        curve_exits = self._check_curve_id(curve_id, self.curves_data)
+        curve_exits = self._check_curve_id(curve_id, self._curves_data)
         if curve_exits:
             raise ValueError(
                 f"Curve with ID '{curve_id}' already exists in widget '{self.gui_id}'."
@@ -456,7 +456,7 @@ class BECWaveform1D(BECPlotBase):
             BECCurve: The curve object.
         """
         curve = BECCurve(config=config, name=name)
-        self.curves_data[source][name] = curve
+        self._curves_data[source][name] = curve
         self.plot_item.addItem(curve)
         self.config.curves[name] = curve.config
         if data is not None:
@@ -498,7 +498,7 @@ class BECWaveform1D(BECPlotBase):
 
         label = label or f"{y_name}-{y_entry}"
 
-        curve_exits = self._check_curve_id(label, self.curves_data)
+        curve_exits = self._check_curve_id(label, self._curves_data)
         if curve_exits:
             raise ValueError(f"Curve with ID '{label}' already exists in widget '{self.gui_id}'.")
 
@@ -593,7 +593,7 @@ class BECWaveform1D(BECPlotBase):
         Args:
             curve_id(str): ID of the curve to be removed.
         """
-        for source, curves in self.curves_data.items():
+        for source, curves in self._curves_data.items():
             if curve_id in curves:
                 curve = curves.pop(curve_id)
                 self.plot_item.removeItem(curve)
@@ -615,7 +615,7 @@ class BECWaveform1D(BECPlotBase):
             self.plot_item.removeItem(curve)
             del self.config.curves[curve_id]
             # Remove from self.curve_data
-            for source, curves in self.curves_data.items():
+            for source, curves in self._curves_data.items():
                 if curve_id in curves:
                     del curves[curve_id]
                     break
@@ -654,7 +654,7 @@ class BECWaveform1D(BECPlotBase):
         Args:
             data(ScanData): Data from the scan segment.
         """
-        for curve_id, curve in self.curves_data["scan_segment"].items():
+        for curve_id, curve in self._curves_data["scan_segment"].items():
             x_name = curve.config.signals.x.name
             x_entry = curve.config.signals.x.entry
             y_name = curve.config.signals.y.name

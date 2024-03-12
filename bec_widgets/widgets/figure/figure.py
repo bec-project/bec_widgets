@@ -607,7 +607,7 @@ class BECFigureMainWindow(QMainWindow):
 
     def closeEvent(self, event):
         self.figure.cleanup()
-        self.figure.client.shutdown()
+        # self.figure.client.shutdown()
         if self.safe_close == True:
             print("Safe close")
             event.accept()

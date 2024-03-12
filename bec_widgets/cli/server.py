@@ -94,7 +94,7 @@ class BECWidgetsCLIServer:
                 "config": obj.config.model_dump(),
                 "__rpc__": True,
             }
-        return obpyj
+        return obj
 
 
 if __name__ == "__main__":  # pragma: no cover

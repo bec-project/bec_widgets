@@ -202,15 +202,6 @@ class BECWaveform1D(RPCBase):
             list: List of curves.
         """
 
-    @property
-    @rpc_call
-    def curves_data(self) -> "dict":
-        """
-        Get the curves data of the plot widget as a dictionary
-        Returns:
-            dict: Dictionary of curves data.
-        """
-
     @rpc_call
     def get_curve(self, identifier) -> "BECCurve":
         """
