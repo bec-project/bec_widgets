@@ -17,7 +17,7 @@ class BECWidgetsCLIServer:
         self.client.start()
         self.gui_id = gui_id
         self.fig = BECFigure(gui_id=self.gui_id)
-        print(f"Server started with gui_id {self.gui_id}")
+        # print(f"Server started with gui_id {self.gui_id}")
 
         self.dispatcher.connect_slot(
             self.on_rpc_update, MessageEndpoints.gui_instructions(self.gui_id)
@@ -62,9 +62,6 @@ class BECWidgetsCLIServer:
                 item = widget.find_widget_by_id(gui_id)
                 if item:
                     return item
-            # raise NotImplementedError(
-            #     f"gui_id lookup for widget of type {widget.__class__.__name__} not implemented"
-            # )
 
         raise ValueError(f"Object with gui_id {gui_id} not found")
 

@@ -96,7 +96,7 @@ class RPCBase:
         self._gui_id = gui_id if gui_id is not None else str(uuid.uuid4())
         self._parent = parent
         super().__init__()
-        print(f"RPCBase: {self._gui_id}")
+        # print(f"RPCBase: {self._gui_id}")
 
     @property
     def _root(self):
@@ -129,7 +129,7 @@ class RPCBase:
             parameter={"args": args, "kwargs": kwargs, "gui_id": self._gui_id},
             metadata={"request_id": request_id},
         )
-        print(f"RPCBase: {rpc_msg}")
+        # print(f"RPCBase: {rpc_msg}")
         # pylint: disable=protected-access
         receiver = self._root._gui_id
         self._client.connector.set_and_publish(MessageEndpoints.gui_instructions(receiver), rpc_msg)
@@ -158,7 +158,7 @@ class RPCBase:
                 return msg_result
 
             cls = getattr(client, cls)
-            print(msg_result)
+            # print(msg_result)
             return cls(parent=self, **msg_result)
         return msg_result
 
