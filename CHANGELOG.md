@@ -2,6 +2,21 @@
 
 <!--next-version-placeholder-->
 
+## v0.43.0 (2024-03-14)
+
+### Feature
+
+* **plots/image:** Image processor can run in threaded or non-threaded version ([`4865b10`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/4865b10ced6b321974e7b4b4db12786fe21fd916))
+* **plots/image:** Change stream processor to QThread with connector.get_last; cleanup method for BECFigure to kill all threads if App is closed during acquisition ([`7ffedd9`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/7ffedd9cebb382fc22f24a6b0b46823db6378d89))
+* **plots/image:** Basic image visualisation, getting data are based on stream_connector (deprecated) ([`9ad0055`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/9ad0055336dba50886504a616db6f9f63b23beb3))
+
+### Fix
+
+* **plots/waveform1d:** Curves_data access disabled ([`598479b`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/598479bb555a6cd077d5a137052d91314e5af6b7))
+* **cli:** Find_widget_by_id for BECImageShow changed to be compatible with RPC logic ([`4ef6ae9`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/4ef6ae90f2afd5e2442465c11ce5165517cd4218))
+* **plots/image:** Access pattern for ImageItems in BECImageShow ([`3362fab`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/3362fabed7ccd611b35f524c1970aeefbf3a9faf))
+* **cli:** Fix cli connector.send to set_and_publish for gui_instruction_response ([`4076698`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/407669853097b40e6fba7d43da001f083140ad74))
+
 ## v0.42.1 (2024-03-10)
 
 ### Fix
