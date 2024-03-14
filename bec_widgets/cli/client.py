@@ -262,7 +262,15 @@ class BECFigure(RPCBase, BECFigureClientMixin):
     @rpc_call
     def add_plot(
         self,
-        widget_id: "str" = None,
+        x_name: "str" = None,
+        y_name: "str" = None,
+        x_entry: "str" = None,
+        y_entry: "str" = None,
+        x: "list | np.ndarray" = None,
+        y: "list | np.ndarray" = None,
+        color: "Optional[str]" = None,
+        label: "Optional[str]" = None,
+        validate: "bool" = True,
         row: "int" = None,
         col: "int" = None,
         config=None,
@@ -281,17 +289,31 @@ class BECFigure(RPCBase, BECFigureClientMixin):
     @rpc_call
     def add_image(
         self,
-        widget_id: "str" = None,
+        monitor: "str" = None,
+        color_bar: "Literal['simple', 'full']" = "full",
+        color_map: "str" = "magma",
+        data: "np.ndarray" = None,
+        vrange: "tuple[float, float]" = None,
         row: "int" = None,
         col: "int" = None,
         config=None,
-        color_map: "str" = "magma",
-        color_bar: "Literal['simple', 'full']" = "full",
-        vrange: "tuple[float, float]" = None,
         **axis_kwargs
     ) -> "BECImageShow":
         """
-        None
+        Add an image to the figure at the specified position.
+        Args:
+            monitor(str): The name of the monitor to display.
+            color_bar(Literal["simple","full"]): The type of color bar to display.
+            color_map(str): The color map to use for the image.
+            data(np.ndarray): Custom data to display.
+            vrange(tuple[float, float]): The range of values to display.
+            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
+            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
+            config(dict): Additional configuration for the widget.
+            **axis_kwargs:
+
+        Returns:
+            BECImageShow: The image widget.
         """
 
     @rpc_call
@@ -309,7 +331,7 @@ class BECFigure(RPCBase, BECFigureClientMixin):
         **axis_kwargs
     ) -> "BECWaveform1D":
         """
-        Add a 1D waveform plot to the figure.
+        Add a 1D waveform plot to the figure. Always access the first waveform widget in the figure.
         Args:
             x_name(str): The name of the device for the x-axis.
             y_name(str): The name of the device for the y-axis.
@@ -337,7 +359,7 @@ class BECFigure(RPCBase, BECFigureClientMixin):
         **axis_kwargs
     ) -> "BECImageShow":
         """
-        Add an image to the figure.
+        Add an image to the figure. Always access the first image widget in the figure.
         Args:
             monitor(str): The name of the monitor to display.
             color_bar(Literal["simple","full"]): The type of color bar to display.

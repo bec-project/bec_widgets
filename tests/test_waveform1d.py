@@ -10,7 +10,7 @@ from .test_bec_figure import bec_figure
 
 
 def test_adding_curve_to_waveform(bec_figure):
-    w1 = bec_figure.add_plot(widget_id="test_waveform")
+    w1 = bec_figure.add_plot()
 
     # adding curve which is in bec - only names
     c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i")
@@ -38,7 +38,7 @@ def test_adding_curve_to_waveform(bec_figure):
 
 
 def test_adding_curve_with_same_id(bec_figure):
-    w1 = bec_figure.add_plot(widget_id="test_waveform")
+    w1 = bec_figure.add_plot()
     c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i", gui_id="test_curve")
 
     with pytest.raises(ValueError) as excinfo:
@@ -101,7 +101,7 @@ def test_create_waveform1D_by_config(bec_figure):
         },
     }
 
-    w1 = bec_figure.add_plot(widget_id="test_waveform", config=w1_config_input)
+    w1 = bec_figure.add_plot(config=w1_config_input)
 
     w1_config_output = w1.get_config()
 
@@ -111,7 +111,7 @@ def test_create_waveform1D_by_config(bec_figure):
 
 
 def test_change_gui_id(bec_figure):
-    w1 = bec_figure.add_plot(widget_id="test_waveform")
+    w1 = bec_figure.add_plot()
     c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i")
     w1.change_gui_id("new_id")
 
@@ -120,12 +120,12 @@ def test_change_gui_id(bec_figure):
 
 
 def test_getting_curve(bec_figure):
-    w1 = bec_figure.add_plot(widget_id="test_waveform")
+    w1 = bec_figure.add_plot()
     c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i", gui_id="test_curve")
     c1_expected_config = CurveConfig(
         widget_class="BECCurve",
         gui_id="test_curve",
-        parent_id="test_waveform",
+        parent_id="widget_1",
         label="bpm4i-bpm4i",
         color="#cc4778",
         symbol="o",
@@ -142,7 +142,7 @@ def test_getting_curve(bec_figure):
     )
 
     assert w1.curves[0].config == c1_expected_config
-    assert w1.curves_data["scan_segment"]["bpm4i-bpm4i"].config == c1_expected_config
+    assert w1._curves_data["scan_segment"]["bpm4i-bpm4i"].config == c1_expected_config
     assert w1.get_curve(0).config == c1_expected_config
     assert w1.get_curve("bpm4i-bpm4i").config == c1_expected_config
     assert c1.get_config(False) == c1_expected_config
@@ -150,7 +150,7 @@ def test_getting_curve(bec_figure):
 
 
 def test_getting_curve_errors(bec_figure):
-    w1 = bec_figure.add_plot(widget_id="test_waveform")
+    w1 = bec_figure.add_plot()
     c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i", gui_id="test_curve")
 
     with pytest.raises(ValueError) as excinfo:
@@ -167,18 +167,18 @@ def test_getting_curve_errors(bec_figure):
 
 
 def test_add_curve(bec_figure):
-    w1 = bec_figure.add_plot(widget_id="test_waveform")
+    w1 = bec_figure.add_plot()
 
     c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i")
 
     assert len(w1.curves) == 1
-    assert w1.curves_data["scan_segment"] == {"bpm4i-bpm4i": c1}
+    assert w1._curves_data["scan_segment"] == {"bpm4i-bpm4i": c1}
     assert c1.config.label == "bpm4i-bpm4i"
     assert c1.config.source == "scan_segment"
 
 
 def test_remove_curve(bec_figure):
-    w1 = bec_figure.add_plot(widget_id="test_waveform")
+    w1 = bec_figure.add_plot()
 
     w1.add_curve_scan(x_name="samx", y_name="bpm4i")
     w1.add_curve_scan(x_name="samx", y_name="bpm3a")
@@ -186,7 +186,7 @@ def test_remove_curve(bec_figure):
     w1.remove_curve("bpm3a-bpm3a")
 
     assert len(w1.plot_item.curves) == 0
-    assert w1.curves_data["scan_segment"] == {}
+    assert w1._curves_data["scan_segment"] == {}
 
     with pytest.raises(ValueError) as excinfo:
         w1.remove_curve(1.2)
@@ -196,7 +196,7 @@ def test_remove_curve(bec_figure):
 
 
 def test_change_curve_appearance_methods(bec_figure, qtbot):
-    w1 = bec_figure.add_plot(widget_id="test_waveform")
+    w1 = bec_figure.add_plot()
 
     c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i")
 
@@ -223,7 +223,7 @@ def test_change_curve_appearance_methods(bec_figure, qtbot):
 
 
 def test_change_curve_appearance_args(bec_figure):
-    w1 = bec_figure.add_plot(widget_id="test_waveform")
+    w1 = bec_figure.add_plot()
 
     c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i")
 
@@ -251,7 +251,7 @@ def test_change_curve_appearance_args(bec_figure):
 
 
 def test_set_custom_curve_data(bec_figure, qtbot):
-    w1 = bec_figure.add_plot(widget_id="test_waveform")
+    w1 = bec_figure.add_plot()
 
     c1 = w1.add_curve_custom(
         x=[1, 2, 3],
@@ -287,7 +287,7 @@ def test_set_custom_curve_data(bec_figure, qtbot):
 
 
 def test_get_all_data(bec_figure):
-    w1 = bec_figure.add_plot(widget_id="test_waveform")
+    w1 = bec_figure.add_plot()
 
     c1 = w1.add_curve_custom(
         x=[1, 2, 3],
@@ -322,7 +322,7 @@ def test_get_all_data(bec_figure):
 
 
 def test_curve_add_by_config(bec_figure):
-    w1 = bec_figure.add_plot(widget_id="test_waveform")
+    w1 = bec_figure.add_plot()
 
     c1_config_input = {
         "widget_class": "BECCurve",
@@ -353,7 +353,7 @@ def test_curve_add_by_config(bec_figure):
 
 
 def test_scan_update(bec_figure, qtbot):
-    w1 = bec_figure.add_plot(widget_id="test_waveform")
+    w1 = bec_figure.add_plot()
 
     c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i")
 
@@ -387,7 +387,7 @@ def test_scan_update(bec_figure, qtbot):
 
 
 def test_scan_history_with_val_access(bec_figure, qtbot):
-    w1 = bec_figure.add_plot(widget_id="test_waveform_history_val")
+    w1 = bec_figure.add_plot()
 
     c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i")
 

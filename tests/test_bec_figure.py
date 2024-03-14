@@ -40,33 +40,33 @@ def test_bec_figure_add_remove_plot(bec_figure):
 
     # Adding 3 widgets -  2 WaveformBase and 1 PlotBase
     w0 = bec_figure.add_plot()
-    w1 = bec_figure.add_plot(widget_id="test_waveform")
-    w2 = bec_figure.add_widget(widget_id="test_plot", widget_type="PlotBase")
+    w1 = bec_figure.add_plot()
+    w2 = bec_figure.add_widget(widget_type="PlotBase")
 
     # Check if the widgets were added
     assert len(bec_figure._widgets) == initial_count + 3
     assert "widget_1" in bec_figure._widgets
-    assert "test_plot" in bec_figure._widgets
-    assert "test_waveform" in bec_figure._widgets
+    assert "widget_2" in bec_figure._widgets
+    assert "widget_3" in bec_figure._widgets
     assert bec_figure._widgets["widget_1"].config.widget_class == "BECWaveform1D"
-    assert bec_figure._widgets["test_plot"].config.widget_class == "BECPlotBase"
-    assert bec_figure._widgets["test_waveform"].config.widget_class == "BECWaveform1D"
+    assert bec_figure._widgets["widget_2"].config.widget_class == "BECWaveform1D"
+    assert bec_figure._widgets["widget_3"].config.widget_class == "BECPlotBase"
 
     # Check accessing positions by the grid in figure
     assert bec_figure[0, 0] == w0
     assert bec_figure[1, 0] == w1
     assert bec_figure[2, 0] == w2
 
-    # Removing 1 widget - PlotBase
-    bec_figure.remove(widget_id="test_plot")
+    # Removing 1 widget
+    bec_figure.remove(widget_id="widget_1")
     assert len(bec_figure._widgets) == initial_count + 2
-    assert "test_plot" not in bec_figure._widgets
-    assert "test_waveform" in bec_figure._widgets
-    assert bec_figure._widgets["test_waveform"].config.widget_class == "BECWaveform1D"
+    assert "widget_1" not in bec_figure._widgets
+    assert "widget_3" in bec_figure._widgets
+    assert bec_figure._widgets["widget_2"].config.widget_class == "BECWaveform1D"
 
 
 def test_access_widgets_access_errors(bec_figure):
-    bec_figure.add_plot(widget_id="test_waveform_1", row=0, col=0)
+    bec_figure.add_plot(row=0, col=0)
 
     # access widget by non-existent coordinates
     with pytest.raises(ValueError) as excinfo:
@@ -88,26 +88,18 @@ def test_access_widgets_access_errors(bec_figure):
 
 
 def test_add_plot_to_occupied_position(bec_figure):
-    bec_figure.add_plot(widget_id="test_waveform_1", row=0, col=0)
+    bec_figure.add_plot(row=0, col=0)
 
     with pytest.raises(ValueError) as excinfo:
-        bec_figure.add_plot(widget_id="test_waveform_2", row=0, col=0)
+        bec_figure.add_plot(row=0, col=0)
         assert "Position at row 0 and column 0 is already occupied." in str(excinfo.value)
 
 
-def test_add_plot_to_occupied_id(bec_figure):
-    bec_figure.add_plot(widget_id="test_waveform", row=0, col=0)
-
-    with pytest.raises(ValueError) as excinfo:
-        bec_figure.add_plot(widget_id="test_waveform", row=0, col=1)
-        assert "Widget with ID 'test_waveform' already exists" in str(excinfo.value)
-
-
 def test_remove_plots(bec_figure):
-    w1 = bec_figure.add_plot(widget_id="test_waveform_1", row=0, col=0)
-    w2 = bec_figure.add_plot(widget_id="test_waveform_2", row=0, col=1)
-    w3 = bec_figure.add_plot(widget_id="test_waveform_3", row=1, col=0)
-    w4 = bec_figure.add_plot(widget_id="test_waveform_4", row=1, col=1)
+    w1 = bec_figure.add_plot(row=0, col=0)
+    w2 = bec_figure.add_plot(row=0, col=1)
+    w3 = bec_figure.add_plot(row=1, col=0)
+    w4 = bec_figure.add_plot(row=1, col=1)
 
     assert bec_figure[0, 0] == w1
     assert bec_figure[0, 1] == w2
@@ -116,47 +108,47 @@ def test_remove_plots(bec_figure):
 
     # remove by coordinates
     bec_figure[0, 0].remove()
-    assert "test_waveform_1" not in bec_figure._widgets
+    assert "widget_1" not in bec_figure._widgets
 
     # remove by widget_id
-    bec_figure.remove(widget_id="test_waveform_2")
-    assert "test_waveform_2" not in bec_figure._widgets
+    bec_figure.remove(widget_id="widget_2")
+    assert "widget_2" not in bec_figure._widgets
 
     # remove by widget object
     w3.remove()
-    assert "test_waveform_3" not in bec_figure._widgets
+    assert "widget_3" not in bec_figure._widgets
 
     # check the remaining widget 4
     assert bec_figure[0, 0] == w4
-    assert bec_figure["test_waveform_4"] == w4
-    assert "test_waveform_4" in bec_figure._widgets
+    assert bec_figure["widget_4"] == w4
+    assert "widget_4" in bec_figure._widgets
     assert len(bec_figure._widgets) == 1
 
 
 def test_remove_plots_by_coordinates_ints(bec_figure):
-    w1 = bec_figure.add_plot(widget_id="test_waveform_1", row=0, col=0)
-    w2 = bec_figure.add_plot(widget_id="test_waveform_2", row=0, col=1)
+    w1 = bec_figure.add_plot(row=0, col=0)
+    w2 = bec_figure.add_plot(row=0, col=1)
 
     bec_figure.remove(0, 0)
-    assert "test_waveform_1" not in bec_figure._widgets
-    assert "test_waveform_2" in bec_figure._widgets
+    assert "widget_1" not in bec_figure._widgets
+    assert "widget_2" in bec_figure._widgets
     assert bec_figure[0, 0] == w2
     assert len(bec_figure._widgets) == 1
 
 
 def test_remove_plots_by_coordinates_tuple(bec_figure):
-    w1 = bec_figure.add_plot(widget_id="test_waveform_1", row=0, col=0)
-    w2 = bec_figure.add_plot(widget_id="test_waveform_2", row=0, col=1)
+    w1 = bec_figure.add_plot(row=0, col=0)
+    w2 = bec_figure.add_plot(row=0, col=1)
 
     bec_figure.remove(coordinates=(0, 0))
-    assert "test_waveform_1" not in bec_figure._widgets
-    assert "test_waveform_2" in bec_figure._widgets
+    assert "widget_1" not in bec_figure._widgets
+    assert "widget_2" in bec_figure._widgets
     assert bec_figure[0, 0] == w2
     assert len(bec_figure._widgets) == 1
 
 
 def test_remove_plot_by_id_error(bec_figure):
-    bec_figure.add_plot(widget_id="test_waveform_1", row=0, col=0)
+    bec_figure.add_plot(row=0, col=0)
 
     with pytest.raises(ValueError) as excinfo:
         bec_figure.remove(widget_id="non_existent_widget")
@@ -164,7 +156,7 @@ def test_remove_plot_by_id_error(bec_figure):
 
 
 def test_remove_plot_by_coordinates_error(bec_figure):
-    bec_figure.add_plot(widget_id="test_waveform_1", row=0, col=0)
+    bec_figure.add_plot(row=0, col=0)
 
     with pytest.raises(ValueError) as excinfo:
         bec_figure.remove(0, 1)
@@ -172,7 +164,7 @@ def test_remove_plot_by_coordinates_error(bec_figure):
 
 
 def test_remove_plot_by_providing_nothing(bec_figure):
-    bec_figure.add_plot(widget_id="test_waveform_1", row=0, col=0)
+    bec_figure.add_plot(row=0, col=0)
 
     with pytest.raises(ValueError) as excinfo:
         bec_figure.remove()
@@ -192,10 +184,10 @@ def test_remove_plot_by_providing_nothing(bec_figure):
 
 
 def test_change_layout(bec_figure):
-    w1 = bec_figure.add_plot(widget_id="test_waveform_1", row=0, col=0)
-    w2 = bec_figure.add_plot(widget_id="test_waveform_2", row=0, col=1)
-    w3 = bec_figure.add_plot(widget_id="test_waveform_3", row=1, col=0)
-    w4 = bec_figure.add_plot(widget_id="test_waveform_4", row=1, col=1)
+    w1 = bec_figure.add_plot(row=0, col=0)
+    w2 = bec_figure.add_plot(row=0, col=1)
+    w3 = bec_figure.add_plot(row=1, col=0)
+    w4 = bec_figure.add_plot(row=1, col=1)
 
     bec_figure.change_layout(max_columns=1)
 
@@ -215,10 +207,10 @@ def test_change_layout(bec_figure):
 
 
 def test_clear_all(bec_figure):
-    bec_figure.add_plot(widget_id="test_waveform_1", row=0, col=0)
-    bec_figure.add_plot(widget_id="test_waveform_2", row=0, col=1)
-    bec_figure.add_plot(widget_id="test_waveform_3", row=1, col=0)
-    bec_figure.add_plot(widget_id="test_waveform_4", row=1, col=1)
+    bec_figure.add_plot(row=0, col=0)
+    bec_figure.add_plot(row=0, col=1)
+    bec_figure.add_plot(row=1, col=0)
+    bec_figure.add_plot(row=1, col=1)
 
     bec_figure.clear_all()
 

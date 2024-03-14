@@ -157,7 +157,20 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         self._widgets = value
 
     def add_plot(
-        self, widget_id: str = None, row: int = None, col: int = None, config=None, **axis_kwargs
+        self,
+        x_name: str = None,
+        y_name: str = None,
+        x_entry: str = None,
+        y_entry: str = None,
+        x: list | np.ndarray = None,
+        y: list | np.ndarray = None,
+        color: Optional[str] = None,
+        label: Optional[str] = None,
+        validate: bool = True,
+        row: int = None,
+        col: int = None,
+        config=None,
+        **axis_kwargs,
     ) -> BECWaveform1D:
         """
         Add a Waveform1D plot to the figure at the specified position.
@@ -168,7 +181,8 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             config(dict): Additional configuration for the widget.
             **axis_kwargs(dict): Additional axis properties to set on the widget after creation.
         """
-        return self.add_widget(
+        widget_id = self._generate_unique_widget_id()
+        waveform = self.add_widget(
             widget_type="Waveform1D",
             widget_id=widget_id,
             row=row,
@@ -176,6 +190,30 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             config=config,
             **axis_kwargs,
         )
+
+        # TODO remove repetition from .plot method
+
+        # User wants to add scan curve
+        if x_name is not None and y_name is not None and x is None and y is None:
+            waveform.add_curve_scan(
+                x_name=x_name,
+                y_name=y_name,
+                x_entry=x_entry,
+                y_entry=y_entry,
+                validate=validate,
+                color=color,
+                label=label,
+            )
+            # User wants to add custom curve
+        elif x is not None and y is not None and x_name is None and y_name is None:
+            waveform.add_curve_custom(
+                x=x,
+                y=y,
+                color=color,
+                label=label,
+            )
+
+        return waveform
 
     def plot(
         self,
@@ -191,7 +229,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         **axis_kwargs,
     ) -> BECWaveform1D:
         """
-        Add a 1D waveform plot to the figure.
+        Add a 1D waveform plot to the figure. Always access the first waveform widget in the figure.
         Args:
             x_name(str): The name of the device for the x-axis.
             y_name(str): The name of the device for the y-axis.
@@ -249,7 +287,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         **axis_kwargs,
     ) -> BECImageShow:
         """
-        Add an image to the figure.
+        Add an image to the figure. Always access the first image widget in the figure.
         Args:
             monitor(str): The name of the monitor to display.
             color_bar(Literal["simple","full"]): The type of color bar to display.
@@ -289,17 +327,35 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
     def add_image(
         self,
-        widget_id: str = None,
+        monitor: str = None,
+        color_bar: Literal["simple", "full"] = "full",
+        color_map: str = "magma",
+        data: np.ndarray = None,
+        vrange: tuple[float, float] = None,
         row: int = None,
         col: int = None,
         config=None,
-        color_map: str = "magma",  # TODO fix passing additional kwargs
-        color_bar: Literal["simple", "full"] = "full",
-        vrange: tuple[float, float] = None,
         **axis_kwargs,
     ) -> BECImageShow:
+        """
+        Add an image to the figure at the specified position.
+        Args:
+            monitor(str): The name of the monitor to display.
+            color_bar(Literal["simple","full"]): The type of color bar to display.
+            color_map(str): The color map to use for the image.
+            data(np.ndarray): Custom data to display.
+            vrange(tuple[float, float]): The range of values to display.
+            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
+            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
+            config(dict): Additional configuration for the widget.
+            **axis_kwargs:
+
+        Returns:
+            BECImageShow: The image widget.
+        """
+
+        widget_id = self._generate_unique_widget_id()
         if config is None:
-            widget_id = self._generate_unique_widget_id()
             config = ImageConfig(
                 widget_class="BECImageShow",
                 gui_id=widget_id,
@@ -308,7 +364,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
                 color_bar=color_bar,
                 vrange=vrange,
             )
-        return self.add_widget(
+        image = self.add_widget(
             widget_type="ImShow",
             widget_id=widget_id,
             row=row,
@@ -316,6 +372,23 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             config=config,
             **axis_kwargs,
         )
+        # TODO remove repetition from .image method
+        if monitor is not None and data is None:
+            image.add_monitor_image(
+                monitor=monitor, color_map=color_map, vrange=vrange, color_bar=color_bar
+            )
+        elif data is not None and monitor is None:
+            image.add_custom_image(
+                name="custom", data=data, color_map=color_map, vrange=vrange, color_bar=color_bar
+            )
+        elif data is None and monitor is None:
+            # Setting appearance
+            if vrange is not None:
+                image.set_vrange(vmin=vrange[0], vmax=vrange[1])
+            if color_map is not None:
+                image.set_color_map(color_map)
+
+        return image
 
     def add_widget(
         self,
