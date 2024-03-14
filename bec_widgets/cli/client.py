@@ -243,6 +243,22 @@ class BECWaveform1D(RPCBase):
 
 
 class BECFigure(RPCBase, BECFigureClientMixin):
+    @property
+    @rpc_call
+    def axes(self) -> "list[BECPlotBase]":
+        """
+        Access all widget in BECFigure as a list
+        Returns:
+            list[BECPlotBase]: List of all widgets in the figure.
+        """
+
+    @property
+    @rpc_call
+    def widgets(self) -> "dict":
+        """
+        None
+        """
+
     @rpc_call
     def add_plot(
         self,

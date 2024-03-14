@@ -54,11 +54,11 @@ class BECWidgetsCLIServer:
         if gui_id == self.fig.gui_id:
             return self.fig
         # check if the object is a widget
-        if gui_id in self.fig.widgets:
-            obj = self.fig.widgets[config["gui_id"]]
+        if gui_id in self.fig._widgets:
+            obj = self.fig._widgets[config["gui_id"]]
             return obj
-        if self.fig.widgets:
-            for widget in self.fig.widgets.values():
+        if self.fig._widgets:
+            for widget in self.fig._widgets.values():
                 item = widget.find_widget_by_id(gui_id)
                 if item:
                     return item
@@ -79,6 +79,8 @@ class BECWidgetsCLIServer:
 
         if isinstance(res, list):
             res = [self.serialize_object(obj) for obj in res]
+        elif isinstance(res, dict):
+            res = {key: self.serialize_object(val) for key, val in res.items()}
         else:
             res = self.serialize_object(res)
         return res

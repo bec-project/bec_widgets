@@ -219,7 +219,6 @@ class BECWaveform1D(BECPlotBase):
         "remove_curve",
         "scan_history",
         "curves",
-        # "curves_data",
         "get_curve",
         "get_curve_config",
         "apply_config",
@@ -355,19 +354,6 @@ class BECWaveform1D(BECPlotBase):
     @curves.setter
     def curves(self, value: list[BECCurve]):
         self._curves = value
-
-    @property
-    def curves_data(self) -> dict[str, dict[str, BECCurve]]:
-        """
-        Get the curves data of the plot widget as a dictionary
-        Returns:
-            dict: Dictionary of curves data.
-        """
-        return self._curves_data
-
-    @curves_data.setter
-    def curves_data(self, value: dict[str, dict[str, BECCurve]]):
-        self._curves_data = value
 
     def get_curve(self, identifier) -> BECCurve:
         """

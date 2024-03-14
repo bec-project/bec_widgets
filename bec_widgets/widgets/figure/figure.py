@@ -95,6 +95,8 @@ class WidgetHandler:
 
 class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     USER_ACCESS = [
+        "axes",
+        "widgets",
         "add_plot",
         "add_image",
         "plot",
@@ -127,10 +129,32 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         self.widget_handler = WidgetHandler()
 
         # Widget container to reference widgets by 'widget_id'
-        self.widgets = defaultdict(dict)
+        self._widgets = defaultdict(dict)
 
         # Container to keep track of the grid
         self.grid = []
+
+    @property
+    def axes(self) -> list[BECPlotBase]:
+        """
+        Access all widget in BECFigure as a list
+        Returns:
+            list[BECPlotBase]: List of all widgets in the figure.
+        """
+        axes = [value for value in self._widgets.values() if isinstance(value, BECPlotBase)]
+        return axes
+
+    @axes.setter
+    def axes(self, value: list[BECPlotBase]):
+        self._axes = value
+
+    @property
+    def widgets(self) -> dict:
+        return self._widgets
+
+    @widgets.setter
+    def widgets(self, value: dict):
+        self._widgets = value
 
     def add_plot(
         self, widget_id: str = None, row: int = None, col: int = None, config=None, **axis_kwargs
@@ -314,7 +338,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         """
         if not widget_id:
             widget_id = self._generate_unique_widget_id()
-        if widget_id in self.widgets:
+        if widget_id in self._widgets:
             raise ValueError(f"Widget with ID '{widget_id}' already exists.")
 
         widget = self.widget_handler.create_widget(
@@ -350,7 +374,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
         # Saving config for future referencing
         self.config.widgets[widget_id] = widget.config
-        self.widgets[widget_id] = widget
+        self._widgets[widget_id] = widget
 
         # Reflect the grid coordinates
         self._change_grid(widget_id, row, col)
@@ -402,7 +426,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         Returns:
             BECPlotBase: The widget of the given class.
         """
-        for widget_id, widget in self.widgets.items():
+        for widget_id, widget in self._widgets.items():
             if isinstance(widget, widget_class):
                 return widget
         if can_fail:
@@ -420,7 +444,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         widget = self._get_widget_by_coordinates(row, col)
         if widget:
             widget_id = widget.config.gui_id
-            if widget_id in self.widgets:
+            if widget_id in self._widgets:
                 self._remove_by_id(widget_id)
 
     def _remove_by_id(self, widget_id: str) -> None:
@@ -429,8 +453,8 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         Args:
             widget_id(str): The unique identifier of the widget to remove.
         """
-        if widget_id in self.widgets:
-            widget = self.widgets.pop(widget_id)
+        if widget_id in self._widgets:
+            widget = self._widgets.pop(widget_id)
             widget.cleanup()
             self.removeItem(widget)
             self.grid[widget.config.row][widget.config.col] = None
@@ -445,10 +469,10 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         if isinstance(key, tuple) and len(key) == 2:
             return self._get_widget_by_coordinates(*key)
         elif isinstance(key, str):
-            widget = self.widgets.get(key)
+            widget = self._widgets.get(key)
             if widget is None:
                 raise KeyError(f"No widget with ID {key}")
-            return self.widgets.get(key)
+            return self._widgets.get(key)
         else:
             raise TypeError(
                 "Key must be a string (widget id) or a tuple of two integers (grid coordinates)"
@@ -478,7 +502,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
     def _generate_unique_widget_id(self):
         """Generate a unique widget ID."""
-        existing_ids = set(self.widgets.keys())
+        existing_ids = set(self._widgets.keys())
         for i in itertools.count(1):
             widget_id = f"widget_{i}"
             if widget_id not in existing_ids:
@@ -511,7 +535,10 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         # Update the config of each object to reflect its new position
         for row_idx, row in enumerate(new_grid):
             for col_idx, widget in enumerate(row):
-                self.widgets[widget].config.row, self.widgets[widget].config.col = row_idx, col_idx
+                self._widgets[widget].config.row, self._widgets[widget].config.col = (
+                    row_idx,
+                    col_idx,
+                )
 
         self.grid = new_grid
         self._replot_layout()
@@ -521,7 +548,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         self.clear()
         for row_idx, row in enumerate(self.grid):
             for col_idx, widget in enumerate(row):
-                self.addItem(self.widgets[widget], row=row_idx, col=col_idx)
+                self.addItem(self._widgets[widget], row=row_idx, col=col_idx)
 
     def change_layout(self, max_columns=None, max_rows=None):
         """
@@ -533,7 +560,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             max_rows (Optional[int]): The new maximum number of rows in the figure.
         """
         # Calculate total number of widgets
-        total_widgets = len(self.widgets)
+        total_widgets = len(self._widgets)
 
         if max_columns:
             # Calculate the required number of rows based on max_columns
@@ -549,7 +576,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
         # Populate the new grid with widgets' IDs
         current_idx = 0
-        for widget_id, widget in self.widgets.items():
+        for widget_id, widget in self._widgets.items():
             row = current_idx // len(new_grid[0])
             col = current_idx % len(new_grid[0])
             new_grid[row][col] = widget_id
@@ -565,10 +592,10 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
     def clear_all(self):
         """Clear all widgets from the figure and reset to default state"""
-        for widget in self.widgets.values():
+        for widget in self._widgets.values():
             widget.cleanup()
         self.clear()
-        self.widgets = defaultdict(dict)
+        self._widgets = defaultdict(dict)
         self.grid = []
         theme = self.config.theme
         self.config = FigureConfig(

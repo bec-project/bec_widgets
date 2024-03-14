@@ -98,6 +98,11 @@ class RPCBase:
         super().__init__()
         # print(f"RPCBase: {self._gui_id}")
 
+    def __repr__(self):
+        type_ = type(self)
+        qualname = type_.__qualname__
+        return f"<{qualname} object at {hex(id(self))}>"
+
     @property
     def _root(self):
         """
@@ -150,7 +155,9 @@ class RPCBase:
             return [self._create_widget_from_msg_result(res) for res in msg_result]
         if isinstance(msg_result, dict):
             if "__rpc__" not in msg_result:
-                return msg_result
+                return {
+                    key: self._create_widget_from_msg_result(val) for key, val in msg_result.items()
+                }
             cls = msg_result.pop("widget_class", None)
             msg_result.pop("__rpc__", None)
 

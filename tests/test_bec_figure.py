@@ -36,7 +36,7 @@ def test_bec_figure_init_with_config(mocked_client):
 
 
 def test_bec_figure_add_remove_plot(bec_figure):
-    initial_count = len(bec_figure.widgets)
+    initial_count = len(bec_figure._widgets)
 
     # Adding 3 widgets -  2 WaveformBase and 1 PlotBase
     w0 = bec_figure.add_plot()
@@ -44,13 +44,13 @@ def test_bec_figure_add_remove_plot(bec_figure):
     w2 = bec_figure.add_widget(widget_id="test_plot", widget_type="PlotBase")
 
     # Check if the widgets were added
-    assert len(bec_figure.widgets) == initial_count + 3
-    assert "widget_1" in bec_figure.widgets
-    assert "test_plot" in bec_figure.widgets
-    assert "test_waveform" in bec_figure.widgets
-    assert bec_figure.widgets["widget_1"].config.widget_class == "BECWaveform1D"
-    assert bec_figure.widgets["test_plot"].config.widget_class == "BECPlotBase"
-    assert bec_figure.widgets["test_waveform"].config.widget_class == "BECWaveform1D"
+    assert len(bec_figure._widgets) == initial_count + 3
+    assert "widget_1" in bec_figure._widgets
+    assert "test_plot" in bec_figure._widgets
+    assert "test_waveform" in bec_figure._widgets
+    assert bec_figure._widgets["widget_1"].config.widget_class == "BECWaveform1D"
+    assert bec_figure._widgets["test_plot"].config.widget_class == "BECPlotBase"
+    assert bec_figure._widgets["test_waveform"].config.widget_class == "BECWaveform1D"
 
     # Check accessing positions by the grid in figure
     assert bec_figure[0, 0] == w0
@@ -59,10 +59,10 @@ def test_bec_figure_add_remove_plot(bec_figure):
 
     # Removing 1 widget - PlotBase
     bec_figure.remove(widget_id="test_plot")
-    assert len(bec_figure.widgets) == initial_count + 2
-    assert "test_plot" not in bec_figure.widgets
-    assert "test_waveform" in bec_figure.widgets
-    assert bec_figure.widgets["test_waveform"].config.widget_class == "BECWaveform1D"
+    assert len(bec_figure._widgets) == initial_count + 2
+    assert "test_plot" not in bec_figure._widgets
+    assert "test_waveform" in bec_figure._widgets
+    assert bec_figure._widgets["test_waveform"].config.widget_class == "BECWaveform1D"
 
 
 def test_access_widgets_access_errors(bec_figure):
@@ -116,21 +116,21 @@ def test_remove_plots(bec_figure):
 
     # remove by coordinates
     bec_figure[0, 0].remove()
-    assert "test_waveform_1" not in bec_figure.widgets
+    assert "test_waveform_1" not in bec_figure._widgets
 
     # remove by widget_id
     bec_figure.remove(widget_id="test_waveform_2")
-    assert "test_waveform_2" not in bec_figure.widgets
+    assert "test_waveform_2" not in bec_figure._widgets
 
     # remove by widget object
     w3.remove()
-    assert "test_waveform_3" not in bec_figure.widgets
+    assert "test_waveform_3" not in bec_figure._widgets
 
     # check the remaining widget 4
     assert bec_figure[0, 0] == w4
     assert bec_figure["test_waveform_4"] == w4
-    assert "test_waveform_4" in bec_figure.widgets
-    assert len(bec_figure.widgets) == 1
+    assert "test_waveform_4" in bec_figure._widgets
+    assert len(bec_figure._widgets) == 1
 
 
 def test_remove_plots_by_coordinates_ints(bec_figure):
@@ -138,10 +138,10 @@ def test_remove_plots_by_coordinates_ints(bec_figure):
     w2 = bec_figure.add_plot(widget_id="test_waveform_2", row=0, col=1)
 
     bec_figure.remove(0, 0)
-    assert "test_waveform_1" not in bec_figure.widgets
-    assert "test_waveform_2" in bec_figure.widgets
+    assert "test_waveform_1" not in bec_figure._widgets
+    assert "test_waveform_2" in bec_figure._widgets
     assert bec_figure[0, 0] == w2
-    assert len(bec_figure.widgets) == 1
+    assert len(bec_figure._widgets) == 1
 
 
 def test_remove_plots_by_coordinates_tuple(bec_figure):
@@ -149,10 +149,10 @@ def test_remove_plots_by_coordinates_tuple(bec_figure):
     w2 = bec_figure.add_plot(widget_id="test_waveform_2", row=0, col=1)
 
     bec_figure.remove(coordinates=(0, 0))
-    assert "test_waveform_1" not in bec_figure.widgets
-    assert "test_waveform_2" in bec_figure.widgets
+    assert "test_waveform_1" not in bec_figure._widgets
+    assert "test_waveform_2" in bec_figure._widgets
     assert bec_figure[0, 0] == w2
-    assert len(bec_figure.widgets) == 1
+    assert len(bec_figure._widgets) == 1
 
 
 def test_remove_plot_by_id_error(bec_figure):
@@ -222,5 +222,5 @@ def test_clear_all(bec_figure):
 
     bec_figure.clear_all()
 
-    assert len(bec_figure.widgets) == 0
+    assert len(bec_figure._widgets) == 0
     assert np.shape(bec_figure.grid) == (0,)
