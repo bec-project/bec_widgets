@@ -1,15 +1,21 @@
+from __future__ import annotations
+
 import importlib
 import select
 import subprocess
 import uuid
-
 from functools import wraps
+from typing import TYPE_CHECKING
 
+from bec_lib import MessageEndpoints, messages
+from bec_lib.connector import MessageObject
 from qtpy.QtCore import QCoreApplication
 
 import bec_widgets.cli.client as client
-from bec_lib import MessageEndpoints, messages
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
+
+if TYPE_CHECKING:
+    from bec_widgets.cli.client import BECFigure
 
 
 def rpc_call(func):
@@ -30,10 +36,58 @@ def rpc_call(func):
     return wrapper
 
 
+def update_script(figure: BECFigure, msg):
+    """
+    Update the script with the given data.
+    """
+    info = msg.info
+    status = msg.status
+    scan_id = msg.scanID
+    scan_number = info.get("scan_number", 0)
+    scan_name = info.get("scan_name", "Unknown")
+    scan_report_devices = info.get("scan_report_devices", [])
+
+    if scan_name == "line_scan" and scan_report_devices:
+        dev_x = scan_report_devices[0]
+        dev_y = figure._selected_device
+        figure.clear_all()
+        plt = figure.plot(dev_x, dev_y, label=f"Scan {scan_number}")
+    elif scan_name == "grid_scan" and scan_report_devices:
+        print(f"Scan {scan_number} is running")
+        dev_x = scan_report_devices[0]
+        dev_y = scan_report_devices[1]
+        figure.clear_all()
+        plt = figure.plot(dev_x, dev_y, label=f"Scan {scan_number}")
+    elif scan_report_devices:
+        dev_x = scan_report_devices[0]
+        dev_y = figure._selected_device
+        figure.clear_all()
+        plt = figure.plot(dev_x, dev_y, label=f"Scan {scan_number}")
+
+
 class BECFigureClientMixin:
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._process = None
+        self.update_script = update_script
+        self._target_endpoint = MessageEndpoints.scan_status()
+        self._selected_device = "bpm4i"
+
+    def _start_update_script(self) -> None:
+        self._client.connector.register(
+            self._target_endpoint, cb=self._handle_msg_update, parent=self
+        )
+
+    @staticmethod
+    def _handle_msg_update(msg: MessageObject, parent: BECFigureClientMixin) -> None:
+        if parent.update_script is not None:
+            # pylint: disable=protected-access
+            parent._update_script_msg_parser(msg.value)
+
+    def _update_script_msg_parser(self, msg: messages.BECMessage) -> None:
+        if isinstance(msg, messages.ScanStatusMessage):
+            if msg.status == "open":
+                self.update_script(self, msg)
 
     def show(self) -> None:
         """
@@ -49,6 +103,7 @@ class BECFigureClientMixin:
         if self._process is None:
             return
         self._run_rpc("close", (), wait_for_rpc_response=False)
+        self._process.wait()
         self._process.kill()
         self._process = None
 
@@ -56,6 +111,7 @@ class BECFigureClientMixin:
         """
         Start the plot in a new process.
         """
+        self._start_update_script()
         # pylint: disable=subprocess-run-check
         monitor_module = importlib.import_module("bec_widgets.cli.server")
         monitor_path = monitor_module.__file__
@@ -86,7 +142,7 @@ class BECFigureClientMixin:
         return "".join(stderr_output)
 
     def __del__(self) -> None:
-        self.close()
+        self._process.kill()
 
 
 class RPCBase:
