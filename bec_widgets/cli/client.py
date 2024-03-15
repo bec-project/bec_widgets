@@ -737,6 +737,107 @@ class BECImageShow(RPCBase):
         """
 
     @rpc_call
+    def set_autorange(self, enable: "bool" = False, name: "str" = None):
+        """
+        Set the autoscale of the image.
+        Args:
+            enable(bool): Whether to autoscale the color bar.
+            name(str): The name of the image. If None, apply to all images.
+        """
+
+    @rpc_call
+    def set_monitor(self, monitor: "str", name: "str" = None):
+        """
+        Set the monitor of the image.
+        If name is not specified, then set monitor for all images.
+        Args:
+            monitor(str): The name of the monitor.
+            name(str): The name of the image. If None, apply to all images.
+        """
+
+    @rpc_call
+    def set_processing(self, name: "str" = None, **kwargs):
+        """
+        Set the post processing of the image.
+        If name is not specified, then set post processing for all images.
+        Args:
+            name(str): The name of the image. If None, apply to all images.
+            **kwargs: Keyword arguments for the properties to be set.
+        Possible properties:
+            - fft: bool
+            - log: bool
+            - rot: int
+            - transpose: bool
+        """
+
+    @rpc_call
+    def set_image_properties(self, name: "str" = None, **kwargs):
+        """
+        Set the properties of the image.
+        Args:
+            name(str): The name of the image. If None, apply to all images.
+            **kwargs: Keyword arguments for the properties to be set.
+        Possible properties:
+            - downsample: bool
+            - color_map: str
+            - monitor: str
+            - opacity: float
+            - vrange: tuple[int,int]
+            - fft: bool
+            - log: bool
+            - rot: int
+            - transpose: bool
+        """
+
+    @rpc_call
+    def set_fft(self, enable: "bool" = False, name: "str" = None):
+        """
+        Set the FFT of the image.
+        If name is not specified, then set FFT for all images.
+        Args:
+            enable(bool): Whether to perform FFT on the monitor data.
+            name(str): The name of the image. If None, apply to all images.
+        """
+
+    @rpc_call
+    def set_log(self, enable: "bool" = False, name: "str" = None):
+        """
+        Set the log of the image.
+        If name is not specified, then set log for all images.
+        Args:
+            enable(bool): Whether to perform log on the monitor data.
+            name(str): The name of the image. If None, apply to all images.
+        """
+
+    @rpc_call
+    def set_rotation(self, deg_90: "int" = 0, name: "str" = None):
+        """
+        Set the rotation of the image.
+        If name is not specified, then set rotation for all images.
+        Args:
+            deg_90(int): The rotation angle of the monitor data before displaying.
+            name(str): The name of the image. If None, apply to all images.
+        """
+
+    @rpc_call
+    def set_transpose(self, enable: "bool" = False, name: "str" = None):
+        """
+        Set the transpose of the image.
+        If name is not specified, then set transpose for all images.
+        Args:
+            enable(bool): Whether to transpose the monitor data before displaying.
+            name(str): The name of the image. If None, apply to all images.
+        """
+
+    @rpc_call
+    def toggle_threading(self, use_threading: "bool"):
+        """
+        Toggle threading for the widgets postprocessing and updating.
+        Args:
+            use_threading(bool): Whether to use threading.
+        """
+
+    @rpc_call
     def get_config(self, dict_output: "bool" = True) -> "dict | BaseModel":
         """
         Get the configuration of the widget.
@@ -938,7 +1039,7 @@ class BECImageItem(RPCBase):
         """
 
     @rpc_call
-    def set_autorange(self, autorange: "bool" = True):
+    def set_autorange(self, autorange: "bool" = False):
         """
         Set the autorange of the color bar.
         Args:

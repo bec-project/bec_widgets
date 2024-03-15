@@ -182,7 +182,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
         self.setOpacity(opacity)
         self.config.opacity = opacity
 
-    def set_autorange(self, autorange: bool = True):
+    def set_autorange(self, autorange: bool = False):
         """
         Set the autorange of the color bar.
         Args:
@@ -288,6 +288,15 @@ class BECImageShow(BECPlotBase):
         "add_custom_image",
         "set_vrange",
         "set_color_map",
+        "set_autorange",
+        "set_monitor",
+        "set_processing",
+        "set_image_properties",
+        "set_fft",
+        "set_log",
+        "set_rotation",
+        "set_transpose",
+        "toggle_threading",
         "get_config",
         "set",
         "set_title",
@@ -568,6 +577,25 @@ class BECImageShow(BECPlotBase):
             name(str): The name of the image. If None, apply to all images.
         """
         self.apply_setting_to_images("set_color_map", args=[cmap], kwargs={}, image_id=name)
+
+    def set_autorange(self, enable: bool = False, name: str = None):
+        """
+        Set the autoscale of the image.
+        Args:
+            enable(bool): Whether to autoscale the color bar.
+            name(str): The name of the image. If None, apply to all images.
+        """
+        self.apply_setting_to_images("set_autorange", args=[enable], kwargs={}, image_id=name)
+
+    def set_monitor(self, monitor: str, name: str = None):
+        """
+        Set the monitor of the image.
+        If name is not specified, then set monitor for all images.
+        Args:
+            monitor(str): The name of the monitor.
+            name(str): The name of the image. If None, apply to all images.
+        """
+        self.apply_setting_to_images("set_monitor", args=[monitor], kwargs={}, image_id=name)
 
     def set_processing(self, name: str = None, **kwargs):
         """
