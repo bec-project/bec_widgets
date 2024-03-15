@@ -69,6 +69,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
         "set_auto_downsample",
         "set_monitor",
         "set_vrange",
+        "get_config",
     ]
 
     def __init__(
@@ -287,6 +288,19 @@ class BECImageShow(BECPlotBase):
         "add_custom_image",
         "set_vrange",
         "set_color_map",
+        "get_config",
+        "set",
+        "set_title",
+        "set_x_label",
+        "set_y_label",
+        "set_x_scale",
+        "set_y_scale",
+        "set_x_lim",
+        "set_y_lim",
+        "set_grid",
+        "lock_aspect_ratio",
+        "plot",
+        "remove",
     ]
 
     def __init__(

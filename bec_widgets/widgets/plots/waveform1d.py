@@ -223,6 +223,19 @@ class BECWaveform1D(BECPlotBase):
         "get_curve_config",
         "apply_config",
         "get_all_data",
+        "get_config",
+        "set",
+        "set_title",
+        "set_x_label",
+        "set_y_label",
+        "set_x_scale",
+        "set_y_scale",
+        "set_x_lim",
+        "set_y_lim",
+        "set_grid",
+        "lock_aspect_ratio",
+        "plot",
+        "remove",
     ]
     scan_signal_update = pyqtSignal()
 

@@ -6,6 +6,16 @@ from typing import Literal, Optional, overload
 
 class BECPlotBase(RPCBase):
     @rpc_call
+    def get_config(self, dict_output: "bool" = True) -> "dict | BaseModel":
+        """
+        Get the configuration of the widget.
+        Args:
+            dict_output(bool): If True, return the configuration as a dictionary. If False, return the configuration as a pydantic model.
+        Returns:
+            dict: The configuration of the plot widget.
+        """
+
+    @rpc_call
     def set(self, **kwargs) -> "None":
         """
         Set the properties of the plot widget.
@@ -239,6 +249,135 @@ class BECWaveform1D(RPCBase):
             output (Literal["dict", "pandas"]): Format of the output data.
         Returns:
             dict | pd.DataFrame: Data of all curves in the specified format.
+        """
+
+    @rpc_call
+    def get_config(self, dict_output: "bool" = True) -> "dict | BaseModel":
+        """
+        Get the configuration of the widget.
+        Args:
+            dict_output(bool): If True, return the configuration as a dictionary. If False, return the configuration as a pydantic model.
+        Returns:
+            dict: The configuration of the plot widget.
+        """
+
+    @rpc_call
+    def set(self, **kwargs) -> "None":
+        """
+        Set the properties of the plot widget.
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+        Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+        """
+
+    @rpc_call
+    def set_title(self, title: "str"):
+        """
+        Set the title of the plot widget.
+        Args:
+            title(str): Title of the plot widget.
+        """
+
+    @rpc_call
+    def set_x_label(self, label: "str"):
+        """
+        Set the label of the x-axis.
+        Args:
+            label(str): Label of the x-axis.
+        """
+
+    @rpc_call
+    def set_y_label(self, label: "str"):
+        """
+        Set the label of the y-axis.
+        Args:
+            label(str): Label of the y-axis.
+        """
+
+    @rpc_call
+    def set_x_scale(self, scale: "Literal['linear', 'log']" = "linear"):
+        """
+        Set the scale of the x-axis.
+        Args:
+            scale(Literal["linear", "log"]): Scale of the x-axis.
+        """
+
+    @rpc_call
+    def set_y_scale(self, scale: "Literal['linear', 'log']" = "linear"):
+        """
+        Set the scale of the y-axis.
+        Args:
+            scale(Literal["linear", "log"]): Scale of the y-axis.
+        """
+
+    @rpc_call
+    def set_x_lim(self, *args) -> "None":
+        """
+        Set the limits of the x-axis. This method can accept either two separate arguments
+        for the minimum and maximum x-axis values, or a single tuple containing both limits.
+
+        Usage:
+            set_x_lim(x_min, x_max)
+            set_x_lim((x_min, x_max))
+
+        Args:
+            *args: A variable number of arguments. Can be two integers (x_min and x_max)
+                   or a single tuple with two integers.
+        """
+
+    @rpc_call
+    def set_y_lim(self, *args) -> "None":
+        """
+        Set the limits of the y-axis. This method can accept either two separate arguments
+        for the minimum and maximum y-axis values, or a single tuple containing both limits.
+
+        Usage:
+            set_y_lim(y_min, y_max)
+            set_y_lim((y_min, y_max))
+
+        Args:
+            *args: A variable number of arguments. Can be two integers (y_min and y_max)
+                   or a single tuple with two integers.
+        """
+
+    @rpc_call
+    def set_grid(self, x: "bool" = False, y: "bool" = False):
+        """
+        Set the grid of the plot widget.
+        Args:
+            x(bool): Show grid on the x-axis.
+            y(bool): Show grid on the y-axis.
+        """
+
+    @rpc_call
+    def lock_aspect_ratio(self, lock):
+        """
+        Lock aspect ratio.
+        Args:
+            lock(bool): True to lock, False to unlock.
+        """
+
+    @rpc_call
+    def plot(self, data_x: "list | np.ndarray", data_y: "list | np.ndarray", **kwargs):
+        """
+        Plot custom data on the plot widget. These data are not saved in config.
+        Args:
+            data_x(list|np.ndarray): x-axis data
+            data_y(list|np.ndarray): y-axis data
+            **kwargs: Keyword arguments for the plot.
+        """
+
+    @rpc_call
+    def remove(self):
+        """
+        Remove the plot widget from the figure.
         """
 
 
@@ -597,6 +736,135 @@ class BECImageShow(RPCBase):
             name(str): The name of the image. If None, apply to all images.
         """
 
+    @rpc_call
+    def get_config(self, dict_output: "bool" = True) -> "dict | BaseModel":
+        """
+        Get the configuration of the widget.
+        Args:
+            dict_output(bool): If True, return the configuration as a dictionary. If False, return the configuration as a pydantic model.
+        Returns:
+            dict: The configuration of the plot widget.
+        """
+
+    @rpc_call
+    def set(self, **kwargs) -> "None":
+        """
+        Set the properties of the plot widget.
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+        Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+        """
+
+    @rpc_call
+    def set_title(self, title: "str"):
+        """
+        Set the title of the plot widget.
+        Args:
+            title(str): Title of the plot widget.
+        """
+
+    @rpc_call
+    def set_x_label(self, label: "str"):
+        """
+        Set the label of the x-axis.
+        Args:
+            label(str): Label of the x-axis.
+        """
+
+    @rpc_call
+    def set_y_label(self, label: "str"):
+        """
+        Set the label of the y-axis.
+        Args:
+            label(str): Label of the y-axis.
+        """
+
+    @rpc_call
+    def set_x_scale(self, scale: "Literal['linear', 'log']" = "linear"):
+        """
+        Set the scale of the x-axis.
+        Args:
+            scale(Literal["linear", "log"]): Scale of the x-axis.
+        """
+
+    @rpc_call
+    def set_y_scale(self, scale: "Literal['linear', 'log']" = "linear"):
+        """
+        Set the scale of the y-axis.
+        Args:
+            scale(Literal["linear", "log"]): Scale of the y-axis.
+        """
+
+    @rpc_call
+    def set_x_lim(self, *args) -> "None":
+        """
+        Set the limits of the x-axis. This method can accept either two separate arguments
+        for the minimum and maximum x-axis values, or a single tuple containing both limits.
+
+        Usage:
+            set_x_lim(x_min, x_max)
+            set_x_lim((x_min, x_max))
+
+        Args:
+            *args: A variable number of arguments. Can be two integers (x_min and x_max)
+                   or a single tuple with two integers.
+        """
+
+    @rpc_call
+    def set_y_lim(self, *args) -> "None":
+        """
+        Set the limits of the y-axis. This method can accept either two separate arguments
+        for the minimum and maximum y-axis values, or a single tuple containing both limits.
+
+        Usage:
+            set_y_lim(y_min, y_max)
+            set_y_lim((y_min, y_max))
+
+        Args:
+            *args: A variable number of arguments. Can be two integers (y_min and y_max)
+                   or a single tuple with two integers.
+        """
+
+    @rpc_call
+    def set_grid(self, x: "bool" = False, y: "bool" = False):
+        """
+        Set the grid of the plot widget.
+        Args:
+            x(bool): Show grid on the x-axis.
+            y(bool): Show grid on the y-axis.
+        """
+
+    @rpc_call
+    def lock_aspect_ratio(self, lock):
+        """
+        Lock aspect ratio.
+        Args:
+            lock(bool): True to lock, False to unlock.
+        """
+
+    @rpc_call
+    def plot(self, data_x: "list | np.ndarray", data_y: "list | np.ndarray", **kwargs):
+        """
+        Plot custom data on the plot widget. These data are not saved in config.
+        Args:
+            data_x(list|np.ndarray): x-axis data
+            data_y(list|np.ndarray): y-axis data
+            **kwargs: Keyword arguments for the plot.
+        """
+
+    @rpc_call
+    def remove(self):
+        """
+        Remove the plot widget from the figure.
+        """
+
 
 class BECConnector(RPCBase):
     @rpc_call
@@ -710,4 +978,14 @@ class BECImageItem(RPCBase):
         Args:
             vmin(float): Minimum value of the color bar.
             vmax(float): Maximum value of the color bar.
+        """
+
+    @rpc_call
+    def get_config(self, dict_output: "bool" = True) -> "dict | BaseModel":
+        """
+        Get the configuration of the widget.
+        Args:
+            dict_output(bool): If True, return the configuration as a dictionary. If False, return the configuration as a pydantic model.
+        Returns:
+            dict: The configuration of the plot widget.
         """
