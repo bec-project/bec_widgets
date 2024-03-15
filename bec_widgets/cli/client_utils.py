@@ -51,18 +51,21 @@ def update_script(figure: BECFigure, msg):
         dev_x = scan_report_devices[0]
         dev_y = figure._selected_device
         figure.clear_all()
-        plt = figure.plot(dev_x, dev_y, label=f"Scan {scan_number}")
+        plt = figure.plot(dev_x, dev_y)
+        plt.set(title=f"Scan {scan_number}", x_label=dev_x, y_label=dev_y)
     elif scan_name == "grid_scan" and scan_report_devices:
         print(f"Scan {scan_number} is running")
         dev_x = scan_report_devices[0]
         dev_y = scan_report_devices[1]
         figure.clear_all()
         plt = figure.plot(dev_x, dev_y, label=f"Scan {scan_number}")
+        plt.set(title=f"Scan {scan_number}", x_label=dev_x, y_label=dev_y)
     elif scan_report_devices:
         dev_x = scan_report_devices[0]
         dev_y = figure._selected_device
         figure.clear_all()
         plt = figure.plot(dev_x, dev_y, label=f"Scan {scan_number}")
+        plt.set(title=f"Scan {scan_number}", x_label=dev_x, y_label=dev_y)
 
 
 class BECFigureClientMixin:
@@ -103,7 +106,6 @@ class BECFigureClientMixin:
         if self._process is None:
             return
         self._run_rpc("close", (), wait_for_rpc_response=False)
-        self._process.wait()
         self._process.kill()
         self._process = None
 
@@ -140,9 +142,6 @@ class BECFigureClientMixin:
                 break
             stderr_output.append(line.decode("utf-8"))
         return "".join(stderr_output)
-
-    def __del__(self) -> None:
-        self._process.kill()
 
 
 class RPCBase:
