@@ -2,6 +2,14 @@
 
 <!--next-version-placeholder-->
 
+## v0.43.1 (2024-03-15)
+
+### Fix
+
+* **plots/image:** Same access pattern for image and image_item for setting up parameters, autorange of z scale disabled by default ([`b8d4e69`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/b8d4e697ac2a5929a1374ce1778046efc3f8187a))
+* **widget/various:** Corrected USER_ACCESS methods for children widgets to include inherited methods to RPC ([`4664661`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/4664661cfb4e8bd4a6adb71f2050b25d0b4f3d36))
+* **widgets/figure:** Added widgets can be accessed as a list (fig.axes) or as a dictionary (fig.widgets) ([`fcf918c`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/fcf918c48862d069b9fe69cbba7dbecbe7429790))
+
 ## v0.43.0 (2024-03-14)
 
 ### Feature
