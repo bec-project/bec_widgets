@@ -98,6 +98,10 @@ class BECWidgetsCLIServer:
 
 if __name__ == "__main__":  # pragma: no cover
     import argparse
+    import sys
+    from qtpy.QtWidgets import QApplication
+
+    app = QApplication(sys.argv)
 
     parser = argparse.ArgumentParser(description="BEC Widgets CLI Server")
     parser.add_argument("--id", type=str, help="The id of the server")
@@ -107,3 +111,4 @@ if __name__ == "__main__":  # pragma: no cover
     server = BECWidgetsCLIServer(gui_id=args.id)
     # server = BECWidgetsCLIServer(gui_id="test")
     server.start()
+    sys.exit(app.exec())
