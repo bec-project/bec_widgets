@@ -45,6 +45,9 @@ class MotorControlWidget(QWidget):
         self.motor_thread = motor_thread
         self.config = config
 
+        self.motor_x = None
+        self.motor_y = None
+
         if not self.client:
             bec_dispatcher = BECDispatcher()
             self.client = bec_dispatcher.client

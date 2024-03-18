@@ -242,19 +242,19 @@ if __name__ == "__main__":  # pragma: no cover
     qdarktheme.setup_theme("auto")
 
     if args.variant == "app":
-        window = MotorControlApp(client=client, config=CONFIG_DEFAULT)
+        window = MotorControlApp(client=client)  # , config=CONFIG_DEFAULT)
     elif args.variant == "map":
-        window = MotorControlMap(client=client, config=CONFIG_DEFAULT)
+        window = MotorControlMap(client=client)  # , config=CONFIG_DEFAULT)
     elif args.variant == "panel":
-        window = MotorControlPanel(client=client, config=CONFIG_DEFAULT)
+        window = MotorControlPanel(client=client)  # , config=CONFIG_DEFAULT)
     elif args.variant == "panel_abs":
-        window = MotorControlPanelAbsolute(client=client, config=CONFIG_DEFAULT)
+        window = MotorControlPanelAbsolute(client=client)  # , config=CONFIG_DEFAULT)
     elif args.variant == "panel_rel":
-        window = MotorControlPanelRelative(client=client, config=CONFIG_DEFAULT)
+        window = MotorControlPanelRelative(client=client)  # , config=CONFIG_DEFAULT)
     else:
         print("Please specify a valid variant to run. Use -h for help.")
         print("Running the full application by default.")
-        window = MotorControlApp(client=client, config=CONFIG_DEFAULT)
+        window = MotorControlApp(client=client)  # , config=CONFIG_DEFAULT)
 
     window.show()
     sys.exit(app.exec())
