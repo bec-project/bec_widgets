@@ -2,6 +2,17 @@
 
 <!--next-version-placeholder-->
 
+## v0.44.0 (2024-03-18)
+
+### Feature
+
+* **cli:** Added update script to BECFigure ([`9049e0d`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/9049e0d27fe9a3860e21ffc3b350eb69e567b71c))
+
+### Fix
+
+* **cli:** Removed hard-coded signal ([`203ae09`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/203ae0960688608fb609a742a23e5994bfe9805c))
+* **cli:** Fixed cleanup procedure ([`2d39c5e`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/2d39c5e4d18bbb66a5f3340fce7f8944dd4ba19f))
+
 ## v0.43.2 (2024-03-18)
 
 ### Fix
