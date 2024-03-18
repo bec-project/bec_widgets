@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.43.2 (2024-03-18)
+
+### Fix
+
+* **cli/server:** Added QApplications to enter separate QT event loop ensuring that QT objects are not deleted ([`d0f9bf1`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/d0f9bf17339296a60301e5e6ffe602db369c6c7c))
+
 ## v0.43.1 (2024-03-15)
 
 ### Fix
