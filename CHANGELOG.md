@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.44.1 (2024-03-19)
+
+### Fix
+
+* **examples/motor_compilation:** Motor_control_compilations.py do not have any hardcoded config anymore ([`14f901f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/14f901f1bea2ba7b79903c4743e37384e11533d3))
+
 ## v0.44.0 (2024-03-18)
 
 ### Feature
