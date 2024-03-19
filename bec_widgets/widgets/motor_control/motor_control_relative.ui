@@ -167,8 +167,8 @@
          <widget class="QToolButton" name="toolButton_up">
           <property name="minimumSize">
            <size>
-            <width>26</width>
-            <height>26</height>
+            <width>50</width>
+            <height>50</height>
            </size>
           </property>
           <property name="text">
@@ -196,8 +196,8 @@
          <widget class="QToolButton" name="toolButton_down">
           <property name="minimumSize">
            <size>
-            <width>26</width>
-            <height>26</height>
+            <width>50</width>
+            <height>50</height>
            </size>
           </property>
           <property name="text">
@@ -212,8 +212,8 @@
          <widget class="QToolButton" name="toolButton_left">
           <property name="minimumSize">
            <size>
-            <width>26</width>
-            <height>26</height>
+            <width>50</width>
+            <height>50</height>
            </size>
           </property>
           <property name="text">
@@ -241,8 +241,8 @@
          <widget class="QToolButton" name="toolButton_right">
           <property name="minimumSize">
            <size>
-            <width>26</width>
-            <height>26</height>
+            <width>50</width>
+            <height>50</height>
            </size>
           </property>
           <property name="text">

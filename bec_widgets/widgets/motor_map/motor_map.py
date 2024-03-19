@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import time
+from collections import defaultdict
 from typing import Any, Union
 
 import numpy as np
@@ -34,15 +35,6 @@ CONFIG_DEFAULT = {
             "signals": {
                 "x": [{"name": "samx", "entry": "samx"}],
                 "y": [{"name": "samy", "entry": "samy"}],
-            },
-        },
-        {
-            "plot_name": "Motor Map 2 ",
-            "x_label": "Motor X",
-            "y_label": "Motor Y",
-            "signals": {
-                "x": [{"name": "aptrx", "entry": "aptrx"}],
-                "y": [{"name": "aptry", "entry": "aptry"}],
             },
         },
     ],
@@ -99,6 +91,7 @@ class MotorMap(pg.GraphicsLayoutWidget):
         # Init UI with config
         if self.config is None:
             print("No initial config found for MotorMap. Using default config.")
+            self.config = CONFIG_DEFAULT  # defaultdict(dict)
         else:
             self.on_config_update(self.config)
 
@@ -131,6 +124,19 @@ class MotorMap(pg.GraphicsLayoutWidget):
             motor_y(str): Motor name for the Y axis.
             subplot(int): Subplot number.
         """
+        if self.plot_data is None:
+            self.plot_data = (
+                {
+                    "plot_name": "Motor Map",
+                    "x_label": "Motor X",
+                    "y_label": "Motor Y",
+                    "signals": {
+                        "x": [{"name": motor_x, "entry": motor_x}],
+                        "y": [{"name": motor_y, "entry": motor_y}],
+                    },
+                },
+            )
+
         if subplot >= len(self.plot_data):
             print(f"Invalid subplot index: {subplot}. Available subplots: {len(self.plot_data)}")
             return

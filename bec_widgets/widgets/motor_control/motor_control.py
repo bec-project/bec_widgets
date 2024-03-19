@@ -1,5 +1,6 @@
 # pylint: disable = no-name-in-module,missing-module-docstring
 import os
+from collections import defaultdict
 from enum import Enum
 
 from qtpy import uic
@@ -59,6 +60,7 @@ class MotorControlWidget(QWidget):
 
         if self.config is None:
             print(f"No initial config found for {self.__class__.__name__}")
+            self.config = defaultdict(dict)
             self._init_ui()
         else:
             self.on_config_update(self.config)
