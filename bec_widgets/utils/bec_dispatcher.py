@@ -35,19 +35,11 @@ class _Connection:
 class _BECDispatcher(QObject):
     """Utility class to keep track of slots connected to a particular redis connector"""
 
-    def __init__(self, bec_config=None):
+    def __init__(self, client=None):
         super().__init__()
-        self.client = BECClient()
+        self.client = BECClient() if client is None else client
+        self.client.start()
 
-        # TODO: this is a workaround for now to provide service config within qtdesigner, but is
-        # it possible to provide config via a cli arg?
-        if bec_config is None and os.path.isfile("bec_config.yaml"):
-            bec_config = "bec_config.yaml"
-
-        try:
-            self.client.initialize(config=ServiceConfig(config_path=bec_config))
-        except redis.exceptions.ConnectionError as e:
-            print(f"Failed to initialize BECClient: {e}")
         self._connections = {}
 
     def connect_slot(
@@ -186,8 +178,8 @@ def BECDispatcher():
     global _bec_dispatcher
     if _bec_dispatcher is None:
         parser = argparse.ArgumentParser()
-        parser.add_argument("--bec-config", default=None)
+        parser.add_argument("--bec-client", default=None)
         args, _ = parser.parse_known_args()
 
-        _bec_dispatcher = _BECDispatcher(args.bec_config)
+        _bec_dispatcher = _BECDispatcher(args.bec_client)
     return _bec_dispatcher
