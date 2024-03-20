@@ -38,7 +38,10 @@ class _BECDispatcher(QObject):
     def __init__(self, client=None):
         super().__init__()
         self.client = BECClient() if client is None else client
-        self.client.start()
+        try:
+            self.client.start()
+        except redis.exceptions.ConnectionError:
+            print("Could not connect to Redis, skipping start of BECClient.")
 
         self._connections = {}
 
