@@ -1,11 +1,13 @@
 import inspect
+import threading
+import time
 
 from bec_lib import MessageEndpoints, messages
 
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.widgets.figure import BECFigure
-from bec_widgets.widgets.plots import BECCurve, BECWaveform1D, BECImageShow
+from bec_widgets.widgets.plots import BECCurve, BECImageShow, BECWaveform1D
 
 
 class BECWidgetsCLIServer:
@@ -18,10 +20,12 @@ class BECWidgetsCLIServer:
         self.gui_id = gui_id
         self.fig = BECFigure(gui_id=self.gui_id)
         # print(f"Server started with gui_id {self.gui_id}")
-
+        self._shutdown_event = threading.Event()
         self.dispatcher.connect_slot(
             self.on_rpc_update, MessageEndpoints.gui_instructions(self.gui_id)
         )
+        self._heartbeat = threading.Thread(target=self.start_heartbeat, daemon=True)
+        self._heartbeat.start()
 
     def start(self):
         """Start the figure window."""
@@ -95,10 +99,20 @@ class BECWidgetsCLIServer:
             }
         return obj
 
+    def start_heartbeat(self):
+        while not self._shutdown_event.is_set():
+            self.client.connector.set(
+                MessageEndpoints.gui_heartbeat(self.gui_id),
+                messages.StatusMessage(name=self.gui_id, status=1, info={}),
+                expire=10,
+            )
+            time.sleep(3)
+
 
 if __name__ == "__main__":  # pragma: no cover
     import argparse
     import sys
+
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)

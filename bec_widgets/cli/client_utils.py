@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib
 import select
 import subprocess
+import time
 import uuid
 from functools import wraps
 from typing import TYPE_CHECKING
@@ -32,6 +33,8 @@ def rpc_call(func):
 
     @wraps(func)
     def wrapper(self, *args, **kwargs):
+        if not self.gui_is_alive():
+            raise RuntimeError("GUI is not alive")
         return self._run_rpc(func.__name__, *args, **kwargs)
 
     return wrapper
@@ -135,6 +138,9 @@ class BECFigureClientMixin:
         """
         if self._process is None or self._process.poll() is not None:
             self._start_plot_process()
+        while not self.gui_is_alive():
+            print("Waiting for GUI to start...")
+            time.sleep(0.5)
 
     def close(self) -> None:
         """
@@ -266,9 +272,16 @@ class RPCBase:
         Wait for the response from the server.
         """
         response = None
-        while response is None:
+        while response is None and self.gui_is_alive():
             response = self._client.connector.get(
                 MessageEndpoints.gui_instruction_response(request_id)
             )
             QCoreApplication.processEvents()  # keep UI responsive (and execute signals/slots)
         return response
+
+    def gui_is_alive(self):
+        """
+        Check if the GUI is alive.
+        """
+        heart = self._client.connector.get(MessageEndpoints.gui_heartbeat(self._root._gui_id))
+        return heart is not None
