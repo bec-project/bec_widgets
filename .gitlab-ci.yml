@@ -5,6 +5,8 @@ image: $CI_DOCKER_REGISTRY/python:3.10
 #commands to run in the Docker container before starting each job.
 variables:
   DOCKER_TLS_CERTDIR: ""
+  BEC_CORE_BRANCH: "master"
+  OPHYD_DEVICES_BRANCH: "master"
 
 include:
   - template: Security/Secret-Detection.gitlab-ci.yml
@@ -77,9 +79,13 @@ tests:
   variables:
       QT_QPA_PLATFORM: "offscreen"
   script:
+    - git clone --branch $BEC_CORE_BRANCH https://gitlab.psi.ch/bec/bec.git
+    - git clone --branch $OPHYD_DEVICES_BRANCH https://gitlab.psi.ch/bec/ophyd_devices.git
+    - export OHPYD_DEVICES_PATH=$PWD/ophyd_devices
     - apt-get update
     - apt-get install -y libgl1-mesa-glx libegl1-mesa x11-utils libxkbcommon-x11-0 libdbus-1-3
-    - pip install .[dev]
+    - pip install -e ./bec/bec_lib[dev]
+    - pip install -e .[dev]
     - coverage run --source=./bec_widgets -m pytest -v --junitxml=report.xml --random-order --full-trace ./tests
     - coverage report
     - coverage xml
