@@ -129,6 +129,8 @@ class BECFigureClientMixin:
 
     def _update_script_msg_parser(self, msg: messages.BECMessage) -> None:
         if isinstance(msg, messages.ScanStatusMessage):
+            if not self.gui_is_alive():
+                return
             if msg.status == "open":
                 self.update_script(self, msg)
 
