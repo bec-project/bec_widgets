@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.44.2 (2024-03-20)
+
+### Fix
+
+* **utils/bec_dispatcher:** Try/except to start client, to avoid crash when redis is not running ([`9ccd4ea`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/9ccd4ea235be4c4332045b7a7f09d6cc6291f7ff))
+* **utils/bec_dispatcher:** Bec_dispatcher adjusted to the new BECClient; dropped support to inject bec_config.yaml, instead BECClient can be passed as arg ([`86416d5`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/86416d50cb850b42d312fe17fc46f0b4743dc940))
+
 ## v0.44.1 (2024-03-19)
 
 ### Fix
