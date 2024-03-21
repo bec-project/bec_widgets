@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.44.3 (2024-03-21)
+
+### Fix
+
+* **cli:** Don't call user script if gui is not alive ([`a92aead`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/a92aead7698fa98d6f7f582d030845d0b940ea2d))
+* **cli:** Added gui heartbeat ([`882cf55`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/882cf55fc5266a2cfb610702e834badff3ad0428))
+
 ## v0.44.2 (2024-03-20)
 
 ### Fix
