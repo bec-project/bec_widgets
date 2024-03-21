@@ -27,10 +27,6 @@ class BECWidgetsCLIServer:
         self._heartbeat = threading.Thread(target=self.start_heartbeat, daemon=True)
         self._heartbeat.start()
 
-    def start(self):
-        """Start the figure window."""
-        self.fig.start()
-
     def on_rpc_update(self, msg: dict, metadata: dict):
         request_id = metadata.get("request_id")
         try:
@@ -114,8 +110,11 @@ if __name__ == "__main__":  # pragma: no cover
     import sys
 
     from qtpy.QtWidgets import QApplication
+    from qtpy.QtWidgets import QMainWindow
 
     app = QApplication(sys.argv)
+    app.setApplicationName("BEC Figure")
+    win = QMainWindow()
 
     parser = argparse.ArgumentParser(description="BEC Widgets CLI Server")
     parser.add_argument("--id", type=str, help="The id of the server")
@@ -124,5 +123,9 @@ if __name__ == "__main__":  # pragma: no cover
 
     server = BECWidgetsCLIServer(gui_id=args.id)
     # server = BECWidgetsCLIServer(gui_id="test")
-    server.start()
+
+    fig = server.fig
+    win.setCentralWidget(fig)
+    win.show()
+
     sys.exit(app.exec())

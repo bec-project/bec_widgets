@@ -675,43 +675,6 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             widget_class=self.__class__.__name__, gui_id=self.gui_id, theme=theme
         )
 
-    # def cleanup(self):
-    #     """Cleanup the figure widget."""
-    #     self.clear_all()
-    #     self.clean_signal.emit()
-
-    def start(self):
-        import sys
-
-        app = QApplication(sys.argv)
-        win = QMainWindow()
-        win.setCentralWidget(self)
-        win.show()
-
-        sys.exit(app.exec_())
-
-
-class BECFigureMainWindow(QMainWindow):
-    def __init__(self, parent=None, bec_figure=None):
-        super().__init__(parent)
-
-        self.figure = bec_figure
-        self.setCentralWidget(self.figure)
-
-        self.figure.clean_signal.connect(self.confirm_close)
-
-        self.safe_close = False
-
-    def confirm_close(self):
-        self.safe_close = True
-
-    def closeEvent(self, event):
-        self.figure.cleanup()
-        # self.figure.client.shutdown()
-        if self.safe_close == True:
-            print("Safe close")
-            event.accept()
-
 
 ##################################################
 ##################################################
