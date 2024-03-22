@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.44.4 (2024-03-22)
+
+### Fix
+
+* **cli/server:** Thread heartbeat replaced with QTimer ([`e6b0657`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/e6b065767c8605aaef6ed6032ba893d3900b552c))
+* **cli/server:** Removed BECFigure.start(), the QApplication event loop is started by server.py ([`f3a96de`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/f3a96dedd7ba49f9a1b713f6a5565f2b3dbb141e))
+
 ## v0.44.3 (2024-03-21)
 
 ### Fix
