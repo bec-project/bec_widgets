@@ -8,12 +8,12 @@ import uuid
 from functools import wraps
 from typing import TYPE_CHECKING
 
-from bec_lib import MessageEndpoints, messages
-from bec_lib.connector import MessageObject
-from bec_lib.device import DeviceBase
 from qtpy.QtCore import QCoreApplication
 
 import bec_widgets.cli.client as client
+from bec_lib import MessageEndpoints, messages
+from bec_lib.connector import MessageObject
+from bec_lib.device import DeviceBase
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 if TYPE_CHECKING:
@@ -142,7 +142,7 @@ class BECFigureClientMixin:
             self._start_plot_process()
         while not self.gui_is_alive():
             print("Waiting for GUI to start...")
-            time.sleep(0.5)
+            time.sleep(1)
 
     def close(self) -> None:
         """

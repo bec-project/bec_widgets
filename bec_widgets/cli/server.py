@@ -1,9 +1,8 @@
 import inspect
-import threading
-import time
+
+from qtpy.QtCore import QTimer
 
 from bec_lib import MessageEndpoints, messages
-
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.widgets.figure import BECFigure
@@ -19,13 +18,16 @@ class BECWidgetsCLIServer:
         self.client.start()
         self.gui_id = gui_id
         self.fig = BECFigure(gui_id=self.gui_id)
-        # print(f"Server started with gui_id {self.gui_id}")
-        self._shutdown_event = threading.Event()
+
         self.dispatcher.connect_slot(
             self.on_rpc_update, MessageEndpoints.gui_instructions(self.gui_id)
         )
-        self._heartbeat = threading.Thread(target=self.start_heartbeat, daemon=True)
-        self._heartbeat.start()
+
+        # Setup QTimer for heartbeat
+        self._shutdown_event = False
+        self._heartbeat_timer = QTimer()
+        self._heartbeat_timer.timeout.connect(self.emit_heartbeat)
+        self._heartbeat_timer.start(1000)  # Emit heartbeat every 1 seconds
 
     def on_rpc_update(self, msg: dict, metadata: dict):
         request_id = metadata.get("request_id")
@@ -95,14 +97,18 @@ class BECWidgetsCLIServer:
             }
         return obj
 
-    def start_heartbeat(self):
-        while not self._shutdown_event.is_set():
+    def emit_heartbeat(self):
+        if self._shutdown_event is False:
             self.client.connector.set(
                 MessageEndpoints.gui_heartbeat(self.gui_id),
                 messages.StatusMessage(name=self.gui_id, status=1, info={}),
                 expire=10,
             )
-            time.sleep(3)
+        print("Heartbeat emitted")
+
+    def shutdown(self):
+        self._shutdown_event = True
+        self._heartbeat_timer.stop()
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -128,4 +134,5 @@ if __name__ == "__main__":  # pragma: no cover
     win.setCentralWidget(fig)
     win.show()
 
+    app.aboutToQuit.connect(server.shutdown)
     sys.exit(app.exec())
