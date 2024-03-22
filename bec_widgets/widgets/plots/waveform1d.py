@@ -1,20 +1,20 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Literal, Optional, Any
+from typing import Any, Literal, Optional
 
 import numpy as np
 import pyqtgraph as pg
-from pydantic import Field, BaseModel, ValidationError
+from bec_lib import MessageEndpoints
+from bec_lib.scan_data import ScanData
+from pydantic import BaseModel, Field, ValidationError
 from pyqtgraph import mkBrush
 from qtpy import QtCore
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QWidget
 
-from bec_lib import MessageEndpoints
-from bec_lib.scan_data import ScanData
-from bec_widgets.utils import Colors, ConnectionConfig, BECConnector, EntryValidator
+from bec_widgets.utils import BECConnector, Colors, ConnectionConfig, EntryValidator
 from bec_widgets.widgets.plots import BECPlotBase, WidgetConfig
 
 
@@ -254,7 +254,7 @@ class BECWaveform1D(BECPlotBase):
         )
 
         self._curves_data = defaultdict(dict)
-        self.scanID = None
+        self.scan_id = None
 
         # Scan segment update proxy
         self.proxy_update_plot = pg.SignalProxy(
@@ -630,14 +630,14 @@ class BECWaveform1D(BECPlotBase):
             msg (dict): Message received with scan data.
             metadata (dict): Metadata of the scan.
         """
-        current_scanID = msg.get("scanID", None)
-        if current_scanID is None:
+        current_scan_id = msg.get("scan_id", None)
+        if current_scan_id is None:
             return
 
-        if current_scanID != self.scanID:
-            self.scanID = current_scanID
+        if current_scan_id != self.scan_id:
+            self.scan_id = current_scan_id
             self.scan_segment_data = self.queue.scan_storage.find_scan_by_ID(
-                self.scanID
+                self.scan_id
             )  # TODO do scan access through BECFigure
 
         self.scan_signal_update.emit()
@@ -667,23 +667,23 @@ class BECWaveform1D(BECPlotBase):
 
             curve.setData(data_x, data_y)
 
-    def scan_history(self, scan_index: int = None, scanID: str = None):
+    def scan_history(self, scan_index: int = None, scan_id: str = None):
         """
         Update the scan curves with the data from the scan storage.
-        Provide only one of scanID or scan_index.
+        Provide only one of scan_id or scan_index.
         Args:
-            scanID(str, optional): ScanID of the scan to be updated. Defaults to None.
+            scan_id(str, optional): ScanID of the scan to be updated. Defaults to None.
             scan_index(int, optional): Index of the scan to be updated. Defaults to None.
         """
-        if scan_index is not None and scanID is not None:
-            raise ValueError("Only one of scanID or scan_index can be provided.")
+        if scan_index is not None and scan_id is not None:
+            raise ValueError("Only one of scan_id or scan_index can be provided.")
 
         if scan_index is not None:
-            self.scanID = self.queue.scan_storage.storage[scan_index].scanID
-            data = self.queue.scan_storage.find_scan_by_ID(self.scanID).data
-        elif scanID is not None:
-            self.scanID = scanID
-            data = self.queue.scan_storage.find_scan_by_ID(self.scanID).data
+            self.scan_id = self.queue.scan_storage.storage[scan_index].scan_id
+            data = self.queue.scan_storage.find_scan_by_ID(self.scan_id).data
+        elif scan_id is not None:
+            self.scan_id = scan_id
+            data = self.queue.scan_storage.find_scan_by_ID(self.scan_id).data
 
         self._update_scan_curves(data)
 

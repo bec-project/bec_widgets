@@ -1,17 +1,14 @@
 # pylint: disable=missing-module-docstring, missing-function-docstring
 from collections import defaultdict
+from unittest.mock import MagicMock
 
 import pytest
-from unittest.mock import MagicMock
 from qtpy import QtGui
 
 from bec_widgets.widgets import BECMonitor2DScatter
 
 CONFIG_DEFAULT = {
-    "plot_settings": {
-        "colormap": "CET-L4",
-        "num_columns": 1,
-    },
+    "plot_settings": {"colormap": "CET-L4", "num_columns": 1},
     "waveform2D": [
         {
             "plot_name": "Waveform 2D Scatter (1)",
@@ -37,10 +34,7 @@ CONFIG_DEFAULT = {
 }
 
 CONFIG_ONE_PLOT = {
-    "plot_settings": {
-        "colormap": "CET-L4",
-        "num_columns": 1,
-    },
+    "plot_settings": {"colormap": "CET-L4", "num_columns": 1},
     "waveform2D": [
         {
             "plot_name": "Waveform 2D Scatter (1)",
@@ -51,7 +45,7 @@ CONFIG_ONE_PLOT = {
                 "y": [{"name": "aptry", "entry": "aptry"}],
                 "z": [{"name": "gauss_bpm", "entry": "gauss_bpm"}],
             },
-        },
+        }
     ],
 }
 
@@ -65,13 +59,7 @@ def monitor_2Dscatter(qtbot):
     yield widget
 
 
-@pytest.mark.parametrize(
-    "config, number_of_plots",
-    [
-        (CONFIG_DEFAULT, 2),
-        (CONFIG_ONE_PLOT, 1),
-    ],
-)
+@pytest.mark.parametrize("config, number_of_plots", [(CONFIG_DEFAULT, 2), (CONFIG_ONE_PLOT, 1)])
 def test_initialization(monitor_2Dscatter, config, number_of_plots):
     config_load = config
     monitor_2Dscatter.on_config_update(config_load)
@@ -81,13 +69,7 @@ def test_initialization(monitor_2Dscatter, config, number_of_plots):
     assert len(monitor_2Dscatter.plot_data) == number_of_plots
 
 
-@pytest.mark.parametrize(
-    "config ",
-    [
-        (CONFIG_DEFAULT),
-        (CONFIG_ONE_PLOT),
-    ],
-)
+@pytest.mark.parametrize("config ", [(CONFIG_DEFAULT), (CONFIG_ONE_PLOT)])
 def test_database_initialization(monitor_2Dscatter, config):
     monitor_2Dscatter.on_config_update(config)
     # Check if the database is a defaultdict
@@ -108,13 +90,7 @@ def test_database_initialization(monitor_2Dscatter, config):
                 assert isinstance(monitor_2Dscatter.database[plot_name][axis][signal_name], list)
 
 
-@pytest.mark.parametrize(
-    "config ",
-    [
-        (CONFIG_DEFAULT),
-        (CONFIG_ONE_PLOT),
-    ],
-)
+@pytest.mark.parametrize("config ", [(CONFIG_DEFAULT), (CONFIG_ONE_PLOT)])
 def test_ui_initialization(monitor_2Dscatter, config):
     monitor_2Dscatter.on_config_update(config)
     assert len(monitor_2Dscatter.plots) == len(config["waveform2D"])
@@ -133,7 +109,7 @@ def simulate_scan_data(monitor, x_value, y_value, z_value):
             "samy": {"samy": {"value": y_value}},
             "gauss_bpm": {"gauss_bpm": {"value": z_value}},
         },
-        "scanID": 1,
+        "scan_id": 1,
     }
     monitor.on_scan_segment(msg, {})
 

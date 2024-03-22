@@ -883,7 +883,7 @@
          </column>
          <column>
           <property name="text">
-           <string>scanID</string>
+           <string>scan_id</string>
           </property>
          </column>
          <column>

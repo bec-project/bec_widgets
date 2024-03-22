@@ -1,6 +1,6 @@
-from typing import Optional, Union, Literal
+from typing import Literal, Optional, Union
 
-from pydantic import BaseModel, Field, field_validator, model_validator, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 
 
@@ -92,12 +92,12 @@ class SourceHistoryValidator(BaseModel):
     """History source validator
     Attributes:
         type (str): type of source - history
-        scanID (str): Scan ID for history source.
+        scan_id (str): Scan ID for history source.
         signals (list): Signal for the source.
     """
 
     type: Literal["history"]
-    scanID: str  # TODO can be validated if it is a valid scanID
+    scan_id: str  # TODO can be validated if it is a valid scan_id
     signals: AxisSignal
 
 
@@ -131,12 +131,12 @@ class Source(BaseModel):  # TODO decide if it should stay for general Source val
     General source validation, includes all Optional arguments of all other sources.
     Attributes:
         type (list): type of source (scan_segment, history)
-        scanID (Optional[str]): Scan ID for history source.
+        scan_id (Optional[str]): Scan ID for history source.
         signals (Optional[AxisSignal]): Signal for the source.
     """
 
     type: Literal["scan_segment", "history", "redis"]
-    scanID: Optional[str] = None
+    scan_id: Optional[str] = None
     signals: Optional[dict] = None
 
 

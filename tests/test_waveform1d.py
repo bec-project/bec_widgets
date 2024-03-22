@@ -4,7 +4,8 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
-from bec_widgets.widgets.plots.waveform1d import SignalData, Signal, CurveConfig
+from bec_widgets.widgets.plots.waveform1d import CurveConfig, Signal, SignalData
+
 from .client_mocks import mocked_client
 from .test_bec_figure import bec_figure
 
@@ -365,7 +366,7 @@ def test_scan_update(bec_figure, qtbot):
             "gauss_adc1": {"gauss_adc1": {"value": 8}},
             "gauss_adc2": {"gauss_adc2": {"value": 9}},
         },
-        "scanID": 1,
+        "scan_id": 1,
     }
     # Mock scan_storage.find_scan_by_ID
     mock_scan_data_waveform = MagicMock()
@@ -400,8 +401,8 @@ def test_scan_history_with_val_access(bec_figure, qtbot):
     mock_scan_storage.find_scan_by_ID.return_value = MagicMock(data=mock_scan_data)
     w1.queue.scan_storage = mock_scan_storage
 
-    fake_scanID = "fake_scanID"
-    w1.scan_history(scanID=fake_scanID)
+    fake_scan_id = "fake_scan_id"
+    w1.scan_history(scan_id=fake_scan_id)
 
     qtbot.wait(500)
 

@@ -1,9 +1,9 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 import os
-import yaml
+from unittest.mock import MagicMock
 
 import pytest
-from unittest.mock import MagicMock
+import yaml
 
 from bec_widgets.widgets import BECMonitor
 
@@ -126,12 +126,7 @@ def test_on_config_update(monitor, config_initial, config_update):
 @pytest.mark.parametrize(
     "config_name, expected_num_columns, expected_plot_names, expected_coordinates",
     [
-        (
-            "config_device",
-            1,
-            ["BPM4i plots vs samx", "Gauss plots vs samx"],
-            [(0, 0), (1, 0)],
-        ),
+        ("config_device", 1, ["BPM4i plots vs samx", "Gauss plots vs samx"], [(0, 0), (1, 0)]),
         (
             "config_scan",
             3,
@@ -186,7 +181,7 @@ msg_1 = {
         "gauss_adc1": {"gauss_adc1": {"value": 8}},
         "gauss_adc2": {"gauss_adc2": {"value": 9}},
     },
-    "scanID": 1,
+    "scan_id": 1,
 }
 metadata_grid = {"scan_name": "grid_scan"}
 metadata_line = {"scan_name": "line_scan"}
@@ -195,7 +190,7 @@ metadata_line = {"scan_name": "line_scan"}
 @pytest.mark.parametrize(
     "config_name, msg, metadata, expected_data",
     [
-        # case: msg does not have 'scanID'
+        # case: msg does not have 'scan_id'
         (
             "config_device",
             {"data": {}},

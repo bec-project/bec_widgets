@@ -1,11 +1,12 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 import pytest
 from pydantic import ValidationError
+
 from bec_widgets.validation.monitor_config_validator import (
-    MonitorConfigValidator,
-    Signal,
     AxisSignal,
+    MonitorConfigValidator,
     PlotConfig,
+    Signal,
 )
 
 from .test_bec_monitor import mocked_client
@@ -84,7 +85,7 @@ def test_plot_config_no_source_type_provided(setup_devices):
 def test_plot_config_history_source_type(setup_devices):
     history_source = {
         "type": "history",
-        "scanID": "valid_scan_id",
+        "scan_id": "valid_scan_id",
         "signals": {"x": [{"name": "samx"}], "y": [{"name": "samx"}]},
     }
 
@@ -92,7 +93,7 @@ def test_plot_config_history_source_type(setup_devices):
 
     assert len(plot_config.sources) == 1
     assert plot_config.sources[0].type == "history"
-    assert plot_config.sources[0].scanID == "valid_scan_id"
+    assert plot_config.sources[0].scan_id == "valid_scan_id"
 
 
 def test_plot_config_redis_source_type(setup_devices):

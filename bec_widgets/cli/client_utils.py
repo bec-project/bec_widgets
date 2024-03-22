@@ -8,12 +8,12 @@ import uuid
 from functools import wraps
 from typing import TYPE_CHECKING
 
-from qtpy.QtCore import QCoreApplication
-
-import bec_widgets.cli.client as client
 from bec_lib import MessageEndpoints, messages
 from bec_lib.connector import MessageObject
 from bec_lib.device import DeviceBase
+from qtpy.QtCore import QCoreApplication
+
+import bec_widgets.cli.client as client
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 if TYPE_CHECKING:
@@ -59,7 +59,7 @@ def update_script(figure: BECFigure, msg):
     """
     info = msg.info
     status = msg.status
-    scan_id = msg.scanID
+    scan_id = msg.scan_id
     scan_number = info.get("scan_number", 0)
     scan_name = info.get("scan_name", "Unknown")
     scan_report_devices = info.get("scan_report_devices", [])

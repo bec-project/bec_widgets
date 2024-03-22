@@ -4,20 +4,16 @@ from collections import defaultdict
 
 import numpy as np
 import pyqtgraph as pg
+from bec_lib import MessageEndpoints
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtCore import Slot as pyqtSlot
-from qtpy.QtWidgets import QApplication
-from qtpy.QtWidgets import QVBoxLayout, QWidget
+from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
-from bec_lib import MessageEndpoints
 from bec_widgets.utils import yaml_dialog
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 CONFIG_DEFAULT = {
-    "plot_settings": {
-        "colormap": "CET-L4",
-        "num_columns": 1,
-    },
+    "plot_settings": {"colormap": "CET-L4", "num_columns": 1},
     "waveform2D": [
         {
             "plot_name": "Waveform 2D Scatter (1)",
@@ -97,7 +93,7 @@ class BECMonitor2DScatter(QWidget):
         self.plots = None
         self.curves_data = None
         self.grid_coordinates = None
-        self.scanID = None
+        self.scan_id = None
 
         # Connect the update signal to the update plot method
         self.proxy_update_plot = pg.SignalProxy(
@@ -275,15 +271,15 @@ class BECMonitor2DScatter(QWidget):
         """
 
         # TODO check if this is correct
-        current_scanID = msg.get("scanID", None)
-        if current_scanID is None:
+        current_scan_id = msg.get("scan_id", None)
+        if current_scan_id is None:
             return
 
-        if current_scanID != self.scanID:
-            self.scanID = current_scanID
-            self.scan_data = self.queue.scan_storage.find_scan_by_ID(self.scanID)
+        if current_scan_id != self.scan_id:
+            self.scan_id = current_scan_id
+            self.scan_data = self.queue.scan_storage.find_scan_by_ID(self.scan_id)
             if not self.scan_data:
-                print(f"No data found for scanID: {self.scanID}")  # TODO better error
+                print(f"No data found for scan_id: {self.scan_id}")  # TODO better error
                 return
             self.flush()
 
@@ -373,10 +369,6 @@ if __name__ == "__main__":  # pragma: no cover
     client = BECDispatcher().client
     client.start()
     app = QApplication(sys.argv)
-    monitor = BECMonitor2DScatter(
-        config=config,
-        gui_id=args.id,
-        skip_validation=True,
-    )
+    monitor = BECMonitor2DScatter(config=config, gui_id=args.id, skip_validation=True)
     monitor.show()
     sys.exit(app.exec())

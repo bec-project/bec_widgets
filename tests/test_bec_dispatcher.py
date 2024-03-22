@@ -2,11 +2,10 @@
 from unittest.mock import Mock
 
 import pytest
-from bec_lib.messages import ScanMessage
 from bec_lib.connector import MessageObject
+from bec_lib.messages import ScanMessage
 
-
-msg = MessageObject(topic="", value=ScanMessage(point_id=0, scanID=0, data={}))
+msg = MessageObject(topic="", value=ScanMessage(point_id=0, scan_id=0, data={}))
 
 
 @pytest.fixture(name="consumer")
@@ -206,7 +205,7 @@ def test_connect_one_slot_multiple_topics_single_callback(bec_dispatcher, consum
     # Simulate messages being published on each topic
     for topic in topics:
         msg_with_topic = MessageObject(
-            topic=topic, value=ScanMessage(point_id=0, scanID=0, data={})
+            topic=topic, value=ScanMessage(point_id=0, scan_id=0, data={})
         )
         consumer.register.call_args.kwargs["cb"](msg_with_topic)
 

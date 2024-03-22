@@ -1,19 +1,15 @@
 # import simulation_progress as SP
 import numpy as np
 import pyqtgraph as pg
-from qtpy.QtCore import Signal as pyqtSignal, Slot as pyqtSlot
-from qtpy.QtWidgets import (
-    QApplication,
-    QVBoxLayout,
-    QWidget,
-)
-
 from bec_lib import MessageEndpoints, messages
+from qtpy.QtCore import Signal as pyqtSignal
+from qtpy.QtCore import Slot as pyqtSlot
+from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 
 class StreamApp(QWidget):
     update_signal = pyqtSignal()
-    new_scanID = pyqtSignal(str)
+    new_scan_id = pyqtSignal(str)
 
     def __init__(self, device, sub_device):
         super().__init__()
@@ -23,7 +19,7 @@ class StreamApp(QWidget):
         self.setWindowTitle("MCA readout")
 
         self.data = None
-        self.scanID = None
+        self.scan_id = None
         self.stream_consumer = None
 
         self.device = device
@@ -33,7 +29,7 @@ class StreamApp(QWidget):
 
         # self.start_device_consumer(self.device)  # for simulation
 
-        self.new_scanID.connect(self.create_new_stream_consumer)
+        self.new_scan_id.connect(self.create_new_stream_consumer)
         self.update_signal.connect(self.plot_new)
 
     def init_ui(self):
@@ -64,17 +60,17 @@ class StreamApp(QWidget):
         # self.glw.addItem(self.hist)
 
     @pyqtSlot(str)
-    def create_new_stream_consumer(self, scanID: str):
-        print(f"Creating new stream consumer for scanID: {scanID}")
+    def create_new_stream_consumer(self, scan_id: str):
+        print(f"Creating new stream consumer for scan_id: {scan_id}")
 
-        self.connect_stream_consumer(scanID, self.device)
+        self.connect_stream_consumer(scan_id, self.device)
 
-    def connect_stream_consumer(self, scanID, device):
+    def connect_stream_consumer(self, scan_id, device):
         if self.stream_consumer is not None:
             self.stream_consumer.shutdown()
 
         self.stream_consumer = connector.stream_consumer(
-            topics=MessageEndpoints.device_async_readback(scanID=scanID, device=device),
+            topics=MessageEndpoints.device_async_readback(scan_id=scan_id, device=device),
             cb=self._streamer_cb,
             parent=self,
         )
@@ -125,24 +121,25 @@ class StreamApp(QWidget):
 
         msgDEV = msg.value
 
-        current_scanID = msgDEV.content["scanID"]
+        current_scan_id = msgDEV.content["scan_id"]
 
-        if parent.scanID is None:
-            parent.scanID = current_scanID
-            parent.new_scanID.emit(current_scanID)
-            print(f"New scanID: {current_scanID}")
+        if parent.scan_id is None:
+            parent.scan_id = current_scan_id
+            parent.new_scan_id.emit(current_scan_id)
+            print(f"New scan_id: {current_scan_id}")
 
-        if current_scanID != parent.scanID:
-            parent.scanID = current_scanID
+        if current_scan_id != parent.scan_id:
+            parent.scan_id = current_scan_id
             # parent.data = None
             # parent.imageItem.clear()
-            parent.new_scanID.emit(current_scanID)
+            parent.new_scan_id.emit(current_scan_id)
 
-            print(f"New scanID: {current_scanID}")
+            print(f"New scan_id: {current_scan_id}")
 
 
 if __name__ == "__main__":
     import argparse
+
     from bec_lib import RedisConnector
 
     parser = argparse.ArgumentParser(description="Stream App.")

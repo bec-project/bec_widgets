@@ -11,8 +11,8 @@ from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QApplication, QMessageBox
 
 from bec_widgets.utils import Colors, Crosshair, yaml_dialog
-from bec_widgets.validation import MonitorConfigValidator
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
+from bec_widgets.validation import MonitorConfigValidator
 
 # just for demonstration purposes if script run directly
 CONFIG_SCAN_MODE = {
@@ -59,10 +59,7 @@ CONFIG_SCAN_MODE = {
                 "sources": [
                     {
                         "type": "scan_segment",
-                        "signals": {
-                            "x": [{"name": "samy"}],
-                            "y": [{"name": "bpm4i"}],
-                        },
+                        "signals": {"x": [{"name": "samy"}], "y": [{"name": "bpm4i"}]},
                     }
                 ],
             },
@@ -137,7 +134,7 @@ CONFIG_WRONG = {
                 },
                 {
                     "type": "history",
-                    "scanID": "<scanID>",
+                    "scan_id": "<scan_id>",
                     "signals": {
                         "x": [{"name": "samy"}],
                         "y": [{"name": "bpm4i", "entry": "bpm4i"}],
@@ -170,11 +167,8 @@ CONFIG_WRONG = {
                 {
                     "signals": {
                         "x": [{"name": "samx", "entry": "samx"}],
-                        "y": [
-                            {"name": "samx"},
-                            {"name": "samy", "entry": "samx"},
-                        ],
-                    },
+                        "y": [{"name": "samx"}, {"name": "samy", "entry": "samx"}],
+                    }
                 }
             ],
         },
@@ -315,7 +309,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         self.plots = None
         self.curves_data = None
         self.grid_coordinates = None
-        self.scanID = None
+        self.scan_id = None
 
         # TODO make colors accessible to users
         self.user_colors = {}  # key: (plot_name, y_name, y_entry), value: color
@@ -352,7 +346,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
         # Initialize the UI
         self._init_ui(self.plot_settings["num_columns"])
 
-        if self.scanID is not None:
+        if self.scan_id is not None:
             self.replot_last_scan()
 
     def _init_database(self, plot_data_config: dict, source_type_to_init=None) -> dict:
@@ -729,11 +723,11 @@ class BECMonitor(pg.GraphicsLayoutWidget):
             msg (dict): Message received with scan data.
             metadata (dict): Metadata of the scan.
         """
-        current_scanID = msg.get("scanID", None)
-        if current_scanID is None:
+        current_scan_id = msg.get("scan_id", None)
+        if current_scan_id is None:
             return
 
-        if current_scanID != self.scanID:
+        if current_scan_id != self.scan_id:
             if self.scan_types is False:
                 self.plot_data = self.plot_data_config
             elif self.scan_types is True:
@@ -753,10 +747,10 @@ class BECMonitor(pg.GraphicsLayoutWidget):
                 # Init UI
                 self._init_ui(self.plot_settings["num_columns"])
 
-            self.scanID = current_scanID
-            self.scan_data = self.queue.scan_storage.find_scan_by_ID(self.scanID)
+            self.scan_id = current_scan_id
+            self.scan_data = self.queue.scan_storage.find_scan_by_ID(self.scan_id)
             if not self.scan_data:
-                print(f"No data found for scanID: {self.scanID}")  # TODO better error
+                print(f"No data found for scan_id: {self.scan_id}")  # TODO better error
                 return
             self.flush(source_type_to_flush="scan_segment")
 
@@ -766,7 +760,7 @@ class BECMonitor(pg.GraphicsLayoutWidget):
 
     def scan_segment_update(self):
         """
-        Update the database with data from scan storage based on the provided scanID.
+        Update the database with data from scan storage based on the provided scan_id.
         """
         scan_data = self.scan_data.data
         for device_name, device_entries in self.database.get("scan_segment", {}).items():
@@ -840,11 +834,7 @@ if __name__ == "__main__":  # pragma: no cover
     client = BECDispatcher().client
     client.start()
     app = QApplication(sys.argv)
-    monitor = BECMonitor(
-        config=config,
-        gui_id=args.id,
-        skip_validation=False,
-    )
+    monitor = BECMonitor(config=config, gui_id=args.id, skip_validation=False)
     monitor.show()
     # just to test redis data
     # redis_data = {
