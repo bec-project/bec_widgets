@@ -13,7 +13,8 @@ from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils import BECConnector, ConnectionConfig
-from bec_widgets.widgets.plots import BECPlotBase, WidgetConfig
+
+from .plot_base import BECPlotBase, WidgetConfig
 
 
 class ProcessingConfig(BaseModel):

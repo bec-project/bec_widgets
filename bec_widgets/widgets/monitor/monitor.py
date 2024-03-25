@@ -13,6 +13,7 @@ from qtpy.QtWidgets import QApplication, QMessageBox
 from bec_widgets.utils import Colors, Crosshair, yaml_dialog
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 from bec_widgets.validation import MonitorConfigValidator
+from bec_widgets.widgets.monitor.config_dialog import ConfigDialog
 
 # just for demonstration purposes if script run directly
 CONFIG_SCAN_MODE = {
@@ -596,7 +597,6 @@ class BECMonitor(pg.GraphicsLayoutWidget):
 
     def show_config_dialog(self):
         """Show the configuration dialog."""
-        from bec_widgets.widgets import ConfigDialog
 
         dialog = ConfigDialog(
             client=self.client, default_config=self.config, skip_validation=self.skip_validation

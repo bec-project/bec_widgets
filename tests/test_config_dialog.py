@@ -6,7 +6,7 @@ import pytest
 import yaml
 from qtpy.QtWidgets import QTableWidgetItem, QTabWidget
 
-from bec_widgets.widgets import ConfigDialog
+from bec_widgets.widgets.monitor.config_dialog import ConfigDialog
 
 
 def load_test_config(config_name):

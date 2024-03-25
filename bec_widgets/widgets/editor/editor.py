@@ -12,7 +12,7 @@ from qtpy.QtCore import Qt, QThread, Signal
 from qtpy.QtGui import QColor, QFont
 from qtpy.QtWidgets import QApplication, QFileDialog, QSplitter, QTextEdit, QVBoxLayout, QWidget
 
-from bec_widgets.widgets import ModularToolBar
+from bec_widgets.widgets.toolbar import ModularToolBar
 
 
 class AutoCompleter(QThread):
