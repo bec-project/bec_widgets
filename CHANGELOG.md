@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.44.5 (2024-03-25)
+
+### Fix
+
+* Circular imports ([`c5826f8`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/c5826f8887ed44d15d05c8ed0e337080b3146c5a))
+
 ## v0.44.4 (2024-03-22)
 
 ### Fix
