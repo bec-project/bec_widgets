@@ -2,25 +2,26 @@
 import os
 from enum import Enum
 
-from qtpy import uic
-from qtpy.QtCore import QThread, Slot as pyqtSlot
-from qtpy.QtCore import Signal as pyqtSignal, Qt
-from qtpy.QtGui import QKeySequence, QDoubleValidator
-from qtpy.QtWidgets import QMessageBox
-from qtpy.QtWidgets import (
-    QComboBox,
-    QWidget,
-    QDoubleSpinBox,
-    QShortcut,
-    QTableWidget,
-    QPushButton,
-    QTableWidgetItem,
-    QCheckBox,
-    QLineEdit,
-)
-
 from bec_lib.alarm_handler import AlarmBase
 from bec_lib.device import Positioner
+from qtpy import uic
+from qtpy.QtCore import Qt, QThread
+from qtpy.QtCore import Signal as pyqtSignal
+from qtpy.QtCore import Slot as pyqtSlot
+from qtpy.QtGui import QDoubleValidator, QKeySequence
+from qtpy.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDoubleSpinBox,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QShortcut,
+    QTableWidget,
+    QTableWidgetItem,
+    QWidget,
+)
+
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 CONFIG_DEFAULT = {

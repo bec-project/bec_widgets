@@ -1,28 +1,28 @@
 import msgpack
+from bec_lib import MessageEndpoints
 from qtpy.QtWidgets import (
     QApplication,
-    QWidget,
-    QComboBox,
-    QPushButton,
-    QVBoxLayout,
-    QGroupBox,
-    QLabel,
-    QLineEdit,
-    QDoubleSpinBox,
-    QSpinBox,
     QCheckBox,
+    QComboBox,
+    QDoubleSpinBox,
     QFrame,
-    QHBoxLayout,
-    QLayout,
     QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLayout,
+    QLineEdit,
+    QPushButton,
+    QSpinBox,
     QTableWidget,
     QTableWidgetItem,
-    QHeaderView,
+    QVBoxLayout,
+    QWidget,
 )
 
-from bec_lib import MessageEndpoints
-from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
+from bec_widgets.utils.widget_io import WidgetIO
 
 
 class ScanArgType:

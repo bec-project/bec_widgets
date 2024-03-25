@@ -1,1 +1,1 @@
-from .figure import FigureConfig, BECFigure
+from .figure import BECFigure, FigureConfig

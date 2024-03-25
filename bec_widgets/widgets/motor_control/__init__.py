@@ -1,7 +1,7 @@
 from .motor_control import (
-    MotorControlRelative,
     MotorControlAbsolute,
+    MotorControlRelative,
     MotorControlSelection,
-    MotorThread,
     MotorCoordinateTable,
+    MotorThread,
 )

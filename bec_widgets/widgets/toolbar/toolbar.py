@@ -1,11 +1,9 @@
 from abc import ABC, abstractmethod
 
 # pylint: disable=no-name-in-module
-from qtpy.QtCore import QSize
-from qtpy.QtWidgets import QToolBar, QStyle, QApplication
-from qtpy.QtCore import QTimer
+from qtpy.QtCore import QSize, QTimer
 from qtpy.QtGui import QAction
-from qtpy.QtWidgets import QWidget
+from qtpy.QtWidgets import QApplication, QStyle, QToolBar, QWidget
 
 
 class ToolBarAction(ABC):

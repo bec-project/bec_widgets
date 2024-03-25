@@ -1,7 +1,8 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 
 class FakeDevice:

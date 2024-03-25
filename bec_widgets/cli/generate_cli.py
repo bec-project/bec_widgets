@@ -1,9 +1,10 @@
 # pylint: disable=missing-module-docstring
 from __future__ import annotations
+
 import inspect
-import black
 import sys
 
+import black
 
 if sys.version_info >= (3, 11):
     from typing import get_overloads
@@ -106,11 +107,11 @@ class {class_name}(RPCBase):"""
 if __name__ == "__main__":  # pragma: no cover
     import os
 
-    from bec_widgets.widgets.figure import BECFigure
-    from bec_widgets.widgets.plots import BECPlotBase, BECWaveform1D, BECImageShow
-    from bec_widgets.widgets.plots.waveform1d import BECCurve
-    from bec_widgets.widgets.plots.image import BECImageItem
     from bec_widgets.utils import BECConnector
+    from bec_widgets.widgets.figure import BECFigure
+    from bec_widgets.widgets.plots import BECImageShow, BECPlotBase, BECWaveform1D
+    from bec_widgets.widgets.plots.image import BECImageItem
+    from bec_widgets.widgets.plots.waveform1d import BECCurve
 
     current_path = os.path.dirname(__file__)
     client_path = os.path.join(current_path, "client.py")

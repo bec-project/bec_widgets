@@ -1,22 +1,17 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 
 import qdarktheme
-from qtpy.QtWidgets import QApplication
-from qtpy.QtWidgets import QVBoxLayout
-from qtpy.QtWidgets import (
-    QWidget,
-    QSplitter,
-)
 from qtpy.QtCore import Qt
+from qtpy.QtWidgets import QApplication, QSplitter, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 from bec_widgets.widgets import (
     MotorControlAbsolute,
     MotorControlRelative,
     MotorControlSelection,
-    MotorThread,
-    MotorMap,
     MotorCoordinateTable,
+    MotorMap,
+    MotorThread,
 )
 
 CONFIG_DEFAULT = {

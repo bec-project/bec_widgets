@@ -1,23 +1,22 @@
 import os
 
+from pydantic import ValidationError
 from qtpy import uic
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtWidgets import (
     QApplication,
-    QWidget,
-    QVBoxLayout,
-    QTableWidget,
-    QTabWidget,
-    QTableWidgetItem,
     QLineEdit,
+    QMessageBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
 )
 
+from bec_widgets.utils.bec_dispatcher import BECDispatcher
 from bec_widgets.utils.yaml_dialog import load_yaml, save_yaml
 from bec_widgets.validation import MonitorConfigValidator
-from pydantic import ValidationError
-from qtpy.QtWidgets import QApplication, QMessageBox
-from bec_widgets.utils.bec_dispatcher import BECDispatcher
-
 
 current_path = os.path.dirname(__file__)
 Ui_Form, BaseClass = uic.loadUiType(os.path.join(current_path, "config_dialog.ui"))

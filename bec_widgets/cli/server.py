@@ -1,8 +1,8 @@
 import inspect
 
+from bec_lib import MessageEndpoints, messages
 from qtpy.QtCore import QTimer
 
-from bec_lib import MessageEndpoints, messages
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.widgets.figure import BECFigure
@@ -115,8 +115,7 @@ if __name__ == "__main__":  # pragma: no cover
     import argparse
     import sys
 
-    from qtpy.QtWidgets import QApplication
-    from qtpy.QtWidgets import QMainWindow
+    from qtpy.QtWidgets import QApplication, QMainWindow
 
     app = QApplication(sys.argv)
     app.setApplicationName("BEC Figure")

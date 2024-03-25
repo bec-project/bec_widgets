@@ -1,10 +1,12 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 import json
 from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pyqtgraph as pg
 import pytest
 import zmq
+
 from bec_widgets.examples.eiger_plot.eiger_plot import EigerPlot
 
 

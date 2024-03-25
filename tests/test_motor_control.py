@@ -1,16 +1,9 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
-from unittest.mock import patch
-from bec_lib.device import Positioner
-import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
-from bec_widgets.widgets import (
-    MotorControlSelection,
-    MotorControlAbsolute,
-    MotorControlRelative,
-    MotorThread,
-    MotorCoordinateTable,
-)
+import pytest
+from bec_lib.device import Positioner
+
 from bec_widgets.examples import (
     MotorControlApp,
     MotorControlMap,
@@ -18,8 +11,14 @@ from bec_widgets.examples import (
     MotorControlPanelAbsolute,
     MotorControlPanelRelative,
 )
+from bec_widgets.widgets import (
+    MotorControlAbsolute,
+    MotorControlRelative,
+    MotorControlSelection,
+    MotorCoordinateTable,
+    MotorThread,
+)
 from bec_widgets.widgets.motor_control.motor_control import MotorActions
-
 
 CONFIG_DEFAULT = {
     "motor_control": {

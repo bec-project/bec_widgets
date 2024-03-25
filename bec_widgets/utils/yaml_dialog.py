@@ -1,6 +1,7 @@
 # pylint: disable=no-name-in-module
 
 from typing import Union
+
 import yaml
 from qtpy.QtWidgets import QFileDialog
 

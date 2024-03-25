@@ -23,7 +23,8 @@ formatter:
   stage: Formatter
   needs: []
   script:
-    - pip install black
+    - pip install black isort
+    - isort --check --diff --line-length=100 --profile=black --multi-line=3 --trailing-comma ./
     - black --check --diff --color --line-length=100 ./
 pylint:
   stage: Formatter

@@ -2,9 +2,10 @@
 import os
 import tempfile
 from unittest.mock import patch
+
 import pytest
 import yaml
-from qtpy.QtWidgets import QWidget, QVBoxLayout, QPushButton
+from qtpy.QtWidgets import QPushButton, QVBoxLayout, QWidget
 
 from bec_widgets.utils.yaml_dialog import load_yaml, save_yaml
 

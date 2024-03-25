@@ -2,8 +2,8 @@ from .motor_movement import (
     MotorControlApp,
     MotorControlMap,
     MotorControlPanel,
-    MotorControlPanelRelative,
     MotorControlPanelAbsolute,
+    MotorControlPanelRelative,
     MotorCoordinateTable,
     MotorThread,
 )

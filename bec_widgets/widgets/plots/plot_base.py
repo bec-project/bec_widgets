@@ -4,7 +4,6 @@ from typing import Literal, Optional
 
 import numpy as np
 import pyqtgraph as pg
-
 from pydantic import BaseModel, Field
 from qtpy.QtWidgets import QWidget
 

@@ -1,5 +1,6 @@
 # pylint: disable=missing-function-docstring, missing-module-docstring, unused-import
 import pytest
+
 from .client_mocks import mocked_client
 from .test_bec_figure import bec_figure
 

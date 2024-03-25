@@ -3,16 +3,16 @@ from abc import ABC, abstractmethod
 
 from qtpy.QtWidgets import (
     QApplication,
-    QWidget,
-    QLineEdit,
+    QCheckBox,
     QComboBox,
-    QTableWidget,
-    QSpinBox,
     QDoubleSpinBox,
+    QLabel,
+    QLineEdit,
+    QSpinBox,
+    QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
-    QCheckBox,
-    QLabel,
+    QWidget,
 )
 
 

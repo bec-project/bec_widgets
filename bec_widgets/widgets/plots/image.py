@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Literal, Optional, Any
+from typing import Any, Literal, Optional
 
 import numpy as np
 import pyqtgraph as pg
-from pydantic import Field, BaseModel, ValidationError
-from qtpy.QtCore import QThread, QObject
+from bec_lib import MessageEndpoints
+from pydantic import BaseModel, Field, ValidationError
+from qtpy.QtCore import QObject, QThread
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QWidget
 
-from bec_lib import MessageEndpoints
-from bec_widgets.utils import ConnectionConfig, BECConnector
+from bec_widgets.utils import BECConnector, ConnectionConfig
 from bec_widgets.widgets.plots import BECPlotBase, WidgetConfig
 
 

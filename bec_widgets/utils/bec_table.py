@@ -1,5 +1,5 @@
-from qtpy.QtWidgets import QTableWidget
 from qtpy.QtCore import Qt
+from qtpy.QtWidgets import QTableWidget
 
 
 class BECTable(QTableWidget):

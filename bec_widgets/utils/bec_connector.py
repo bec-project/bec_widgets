@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import time
-from typing import Type, Optional
+from typing import Optional, Type
 
 from pydantic import BaseModel, Field, field_validator
 from qtpy.QtCore import Slot as pyqtSlot

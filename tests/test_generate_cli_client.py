@@ -1,7 +1,9 @@
-import pytest
-from bec_widgets.cli.generate_cli import ClientGenerator
 from textwrap import dedent
+
 import black
+import pytest
+
+from bec_widgets.cli.generate_cli import ClientGenerator
 
 
 # Mock classes to test the generator

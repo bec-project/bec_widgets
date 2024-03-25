@@ -8,10 +8,9 @@ from typing import Union
 
 import redis
 from bec_lib import BECClient, ServiceConfig
+from bec_lib.endpoints import EndpointInfo
 from qtpy.QtCore import QObject
 from qtpy.QtCore import Signal as pyqtSignal
-
-from bec_lib.endpoints import EndpointInfo
 
 # Adding a new pyqt signal requires a class factory, as they must be part of the class definition
 # and cannot be dynamically added as class attributes after the class has been defined.

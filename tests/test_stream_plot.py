@@ -1,11 +1,11 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
+import threading
 from unittest import mock
 
 import numpy as np
 import pytest
-from bec_lib import messages, RedisConnector
+from bec_lib import RedisConnector, messages
 from pytestqt import qtbot
-import threading
 
 from bec_widgets.examples.stream_plot.stream_plot import StreamPlot
 

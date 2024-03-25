@@ -6,20 +6,11 @@ import h5py
 import numpy as np
 import pyqtgraph as pg
 import zmq
+from pyqtgraph.Qt import uic
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtGui import QKeySequence
-from qtpy.QtWidgets import (
-    QWidget,
-    QFileDialog,
-    QShortcut,
-    QDialog,
-    QVBoxLayout,
-    QLabel,
-    QFrame,
-)
-from pyqtgraph.Qt import uic
-
+from qtpy.QtWidgets import QDialog, QFileDialog, QFrame, QLabel, QShortcut, QVBoxLayout, QWidget
 
 # from scipy.stats import multivariate_normal
 
@@ -307,6 +298,7 @@ class EigerPlot(QWidget):
 
 if __name__ == "__main__":
     import sys
+
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)

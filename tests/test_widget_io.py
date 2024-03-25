@@ -1,13 +1,6 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 import pytest
-from qtpy.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QLineEdit,
-    QComboBox,
-    QTableWidget,
-    QSpinBox,
-)
+from qtpy.QtWidgets import QComboBox, QLineEdit, QSpinBox, QTableWidget, QVBoxLayout, QWidget
 
 from bec_widgets.utils.widget_io import WidgetHierarchy
 

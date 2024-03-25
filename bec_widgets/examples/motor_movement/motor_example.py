@@ -5,28 +5,27 @@ from functools import partial
 
 import numpy as np
 import pyqtgraph as pg
+from bec_lib import MessageEndpoints, messages
+from pyqtgraph.Qt import QtCore, QtWidgets, uic
 from qtpy import QtGui
-from qtpy.QtCore import QThread, Slot as pyqtSlot
-from qtpy.QtCore import Signal as pyqtSignal, Qt
-from qtpy.QtGui import QDoubleValidator
-from qtpy.QtGui import QKeySequence
+from qtpy.QtCore import Qt, QThread
+from qtpy.QtCore import Signal as pyqtSignal
+from qtpy.QtCore import Slot as pyqtSlot
+from qtpy.QtGui import QDoubleValidator, QKeySequence
 from qtpy.QtWidgets import (
     QApplication,
-    QWidget,
-    QFileDialog,
     QDialog,
-    QVBoxLayout,
-    QLabel,
-    QPushButton,
+    QFileDialog,
     QFrame,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QShortcut,
+    QVBoxLayout,
+    QWidget,
 )
-from qtpy.QtWidgets import QMessageBox
-from qtpy.QtWidgets import QShortcut
-from pyqtgraph.Qt import QtWidgets, uic, QtCore
 
-from bec_lib import MessageEndpoints, messages
 from bec_widgets.utils import DoubleValidationDelegate
-
 
 # TODO - General features
 #  - put motor status (moving, stopped, etc)
@@ -1306,9 +1305,9 @@ class MotorControl(QThread):
 
 
 if __name__ == "__main__":
-    import yaml
     import argparse
 
+    import yaml
     from bec_lib import BECClient, ServiceConfig
 
     parser = argparse.ArgumentParser(description="Motor App")

@@ -1,5 +1,5 @@
 # pylint: disable= missing-module-docstring
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 __version__ = "0.44.4"
 
@@ -40,6 +40,7 @@ if __name__ == "__main__":
                 "coverage",
                 "pytest-qt",
                 "black",
+                "isort",
             ],
             "pyqt5": ["PyQt5>=5.9"],
             "pyqt6": ["PyQt6>=6.0"],

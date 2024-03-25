@@ -6,8 +6,8 @@ from unittest.mock import MagicMock
 import pytest
 from qtpy.QtWidgets import QLineEdit
 
-from bec_widgets.widgets import ScanControl
 from bec_widgets.utils.widget_io import WidgetIO
+from bec_widgets.widgets import ScanControl
 
 from .test_msgs.available_scans_message import available_scans_message
 

@@ -1,8 +1,8 @@
-from .crosshair import Crosshair
-from .colors import Colors
-from .validator_delegate import DoubleValidationDelegate
-from .bec_table import BECTable
 from .bec_connector import BECConnector, ConnectionConfig
 from .bec_dispatcher import BECDispatcher
-from .rpc_decorator import rpc_public, register_rpc_methods
+from .bec_table import BECTable
+from .colors import Colors
+from .crosshair import Crosshair
 from .entry_validator import EntryValidator
+from .rpc_decorator import register_rpc_methods, rpc_public
+from .validator_delegate import DoubleValidationDelegate

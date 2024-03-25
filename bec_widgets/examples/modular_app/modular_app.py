@@ -1,7 +1,7 @@
 import os
 
 from qtpy import uic
-from qtpy.QtWidgets import QMainWindow, QApplication
+from qtpy.QtWidgets import QApplication, QMainWindow
 
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 from bec_widgets.widgets import BECMonitor

@@ -7,14 +7,13 @@ from typing import Any, Union
 import numpy as np
 import pyqtgraph as pg
 from bec_lib import MessageEndpoints
-from qtpy import QtCore
-from qtpy import QtGui
+from qtpy import QtCore, QtGui
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QApplication
 
-from bec_widgets.utils.yaml_dialog import load_yaml
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
+from bec_widgets.utils.yaml_dialog import load_yaml
 
 CONFIG_DEFAULT = {
     "plot_settings": {

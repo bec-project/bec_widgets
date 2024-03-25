@@ -2,13 +2,11 @@
 
 import os
 import tempfile
-from unittest.mock import MagicMock
-from unittest.mock import patch, mock_open
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
-
-from qtpy.QtWidgets import QTextEdit
 from qtpy.Qsci import QsciScintilla
+from qtpy.QtWidgets import QTextEdit
 
 from bec_widgets.widgets.editor.editor import AutoCompleter, BECEditor
 

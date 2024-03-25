@@ -2,10 +2,9 @@
 import os
 from unittest.mock import MagicMock
 
-import yaml
-
 import pytest
-from qtpy.QtWidgets import QTabWidget, QTableWidgetItem
+import yaml
+from qtpy.QtWidgets import QTableWidgetItem, QTabWidget
 
 from bec_widgets.widgets import ConfigDialog
 

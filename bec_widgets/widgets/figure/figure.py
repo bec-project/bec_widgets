@@ -11,17 +11,16 @@ import pyqtgraph as pg
 import qdarktheme
 from pydantic import Field
 from pyqtgraph.Qt import uic
-from qtpy.QtWidgets import QApplication, QWidget
-from qtpy.QtWidgets import QVBoxLayout, QMainWindow
 from qtpy.QtCore import Signal as pyqtSignal
+from qtpy.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 
 from bec_widgets.utils import BECConnector, BECDispatcher, ConnectionConfig
 from bec_widgets.widgets.plots import (
+    BECImageShow,
     BECPlotBase,
     BECWaveform1D,
     Waveform1DConfig,
     WidgetConfig,
-    BECImageShow,
 )
 from bec_widgets.widgets.plots.image import ImageConfig
 

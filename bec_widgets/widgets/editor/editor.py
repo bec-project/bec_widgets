@@ -3,22 +3,14 @@ import subprocess
 import qdarktheme
 from jedi import Script
 from jedi.api import Completion
-
-# pylint: disable=no-name-in-module
-from qtpy.Qsci import QsciScintilla, QsciLexerPython, QsciAPIs
-from qtpy.QtCore import Qt
-from qtpy.QtCore import Signal, QThread
-from qtpy.QtGui import QColor, QFont
-from qtpy.QtWidgets import (
-    QApplication,
-    QFileDialog,
-    QTextEdit,
-    QVBoxLayout,
-    QWidget,
-)
-from qtpy.QtWidgets import QSplitter
 from qtconsole.manager import QtKernelManager
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
+
+# pylint: disable=no-name-in-module
+from qtpy.Qsci import QsciAPIs, QsciLexerPython, QsciScintilla
+from qtpy.QtCore import Qt, QThread, Signal
+from qtpy.QtGui import QColor, QFont
+from qtpy.QtWidgets import QApplication, QFileDialog, QSplitter, QTextEdit, QVBoxLayout, QWidget
 
 from bec_widgets.widgets import ModularToolBar
 

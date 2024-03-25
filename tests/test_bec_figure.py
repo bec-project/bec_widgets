@@ -1,12 +1,13 @@
 # pylint: disable=missing-function-docstring, missing-module-docstring, unused-import
 import os
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
-from unittest.mock import MagicMock
+
+from bec_widgets.widgets import BECFigure
 
 from .client_mocks import mocked_client
-from bec_widgets.widgets import BECFigure
 
 
 @pytest.fixture

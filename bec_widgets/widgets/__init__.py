@@ -1,15 +1,15 @@
-from .monitor import BECMonitor, ConfigDialog
-from .motor_map import MotorMap
-from .scan_control import ScanControl
-from .toolbar import ModularToolBar
 from .editor import BECEditor
+from .figure import BECFigure, FigureConfig
+from .monitor import BECMonitor, ConfigDialog
 from .monitor_scatter_2D import BECMonitor2DScatter
 from .motor_control import (
-    MotorControlRelative,
     MotorControlAbsolute,
+    MotorControlRelative,
     MotorControlSelection,
-    MotorThread,
     MotorCoordinateTable,
+    MotorThread,
 )
-from .figure import FigureConfig, BECFigure
-from .plots import BECWaveform1D, BECCurve, BECPlotBase
+from .motor_map import MotorMap
+from .plots import BECCurve, BECPlotBase, BECWaveform1D
+from .scan_control import ScanControl
+from .toolbar import ModularToolBar

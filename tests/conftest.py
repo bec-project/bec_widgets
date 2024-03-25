@@ -1,7 +1,8 @@
-import pytest
 import threading
 
+import pytest
 from bec_lib.bec_service import BECService
+
 from bec_widgets.utils import bec_dispatcher as bec_dispatcher_module
 
 
