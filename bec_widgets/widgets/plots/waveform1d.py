@@ -15,7 +15,7 @@ from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils import BECConnector, Colors, ConnectionConfig, EntryValidator
-from bec_widgets.widgets.plots import BECPlotBase, WidgetConfig
+from bec_widgets.widgets.plots.plot_base import BECPlotBase, WidgetConfig
 
 
 class SignalData(BaseModel):
@@ -25,13 +25,14 @@ class SignalData(BaseModel):
     entry: str
     unit: Optional[str] = None  # todo implement later
     modifier: Optional[str] = None  # todo implement later
+    limits: Optional[list[float]] = None  # todo implement later
 
 
 class Signal(BaseModel):
     """The configuration of a signal in the 1D waveform widget."""
 
     source: str
-    x: SignalData
+    x: SignalData  # TODO maybe add metadata for config gui later
     y: SignalData
 
 

@@ -10,5 +10,5 @@ from .motor_control import (
     MotorThread,
 )
 from .motor_map import MotorMap
-from .plots import BECCurve, BECPlotBase, BECWaveform1D
+from .plots import BECCurve, BECMotorMap, BECWaveform1D
 from .scan_control import ScanControl
