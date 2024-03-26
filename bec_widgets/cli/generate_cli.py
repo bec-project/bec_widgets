@@ -109,7 +109,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     from bec_widgets.utils import BECConnector
     from bec_widgets.widgets.figure import BECFigure
-    from bec_widgets.widgets.plots import BECImageShow, BECPlotBase, BECWaveform1D
+    from bec_widgets.widgets.plots import BECImageShow, BECMotorMap, BECPlotBase, BECWaveform1D
     from bec_widgets.widgets.plots.image import BECImageItem
     from bec_widgets.widgets.plots.waveform1d import BECCurve
 
@@ -123,6 +123,7 @@ if __name__ == "__main__":  # pragma: no cover
         BECImageShow,
         BECConnector,
         BECImageItem,
+        BECMotorMap,
     ]
     generator = ClientGenerator()
     generator.generate_client(clss)

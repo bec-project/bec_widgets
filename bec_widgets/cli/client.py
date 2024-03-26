@@ -450,10 +450,33 @@ class BECFigure(RPCBase, BECFigureClientMixin):
             row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
             col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
             config(dict): Additional configuration for the widget.
-            **axis_kwargs:
+            **axis_kwargs: Additional axis properties to set on the widget after creation.
 
         Returns:
             BECImageShow: The image widget.
+        """
+
+    @rpc_call
+    def add_motor_map(
+        self,
+        motor_x: "str" = None,
+        motor_y: "str" = None,
+        row: "int" = None,
+        col: "int" = None,
+        config=None,
+        **axis_kwargs
+    ) -> "BECMotorMap":
+        """
+        Args:
+            motor_x(str): The name of the motor for the X axis.
+            motor_y(str): The name of the motor for the Y axis.
+            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
+            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
+            config(dict): Additional configuration for the widget.
+            **axis_kwargs:
+
+        Returns:
+            BECMotorMap: The motor map widget.
         """
 
     @rpc_call
@@ -510,6 +533,21 @@ class BECFigure(RPCBase, BECFigureClientMixin):
 
         Returns:
             BECImageShow: The image widget.
+        """
+
+    @rpc_call
+    def motor_map(
+        self, motor_x: "str" = None, motor_y: "str" = None, **axis_kwargs
+    ) -> "BECMotorMap":
+        """
+        Add a motor map to the figure. Always access the first motor map widget in the figure.
+        Args:
+            motor_x(str): The name of the motor for the X axis.
+            motor_y(str): The name of the motor for the Y axis.
+            **axis_kwargs: Additional axis properties to set on the widget after creation.
+
+        Returns:
+            BECMotorMap: The motor map widget.
         """
 
     @rpc_call
@@ -1090,4 +1128,65 @@ class BECImageItem(RPCBase):
             dict_output(bool): If True, return the configuration as a dictionary. If False, return the configuration as a pydantic model.
         Returns:
             dict: The configuration of the plot widget.
+        """
+
+
+class BECMotorMap(RPCBase):
+    @rpc_call
+    def change_motors(
+        self,
+        motor_x: "str",
+        motor_y: "str",
+        motor_x_entry: "str" = None,
+        motor_y_entry: "str" = None,
+        validate_bec: "bool" = True,
+    ) -> "None":
+        """
+        Change the active motors for the plot.
+        Args:
+            motor_x(str): Motor name for the X axis.
+            motor_y(str): Motor name for the Y axis.
+            motor_x_entry(str): Motor entry for the X axis.
+            motor_y_entry(str): Motor entry for the Y axis.
+            validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
+        """
+
+    @rpc_call
+    def set_max_points(self, max_points: "int") -> "None":
+        """
+        Set the maximum number of points to display.
+        Args:
+            max_points(int): Maximum number of points to display.
+        """
+
+    @rpc_call
+    def set_precision(self, precision: "int") -> "None":
+        """
+        Set the decimal precision of the motor position.
+        Args:
+            precision(int): Decimal precision of the motor position.
+        """
+
+    @rpc_call
+    def set_num_dim_points(self, num_dim_points: "int") -> "None":
+        """
+        Set the number of dim points for the motor map.
+        Args:
+            num_dim_points(int): Number of dim points.
+        """
+
+    @rpc_call
+    def set_background_value(self, background_value: "int") -> "None":
+        """
+        Set the background value of the motor map.
+        Args:
+            background_value(int): Background value of the motor map.
+        """
+
+    @rpc_call
+    def set_scatter_size(self, scatter_size: "int") -> "None":
+        """
+        Set the scatter size of the motor map plot.
+        Args:
+            scatter_size(int): Size of the scatter points.
         """

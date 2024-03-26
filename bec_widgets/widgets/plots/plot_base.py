@@ -66,7 +66,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         pg.GraphicsLayout.__init__(self, parent)
 
         self.figure = parent_figure
-        self.plot_item = self.addPlot()
+        self.plot_item = self.addPlot(row=0, col=0)
 
         self.add_legend()
 

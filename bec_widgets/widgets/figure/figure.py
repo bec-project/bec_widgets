@@ -17,12 +17,14 @@ from qtpy.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 from bec_widgets.utils import BECConnector, BECDispatcher, ConnectionConfig
 from bec_widgets.widgets.plots import (
     BECImageShow,
+    BECMotorMap,
     BECPlotBase,
     BECWaveform1D,
     Waveform1DConfig,
     WidgetConfig,
 )
 from bec_widgets.widgets.plots.image import ImageConfig
+from bec_widgets.widgets.plots.motor_map import MotorMapConfig
 
 
 class FigureConfig(ConnectionConfig):
@@ -44,6 +46,7 @@ class WidgetHandler:
             "PlotBase": (BECPlotBase, WidgetConfig),
             "Waveform1D": (BECWaveform1D, Waveform1DConfig),
             "ImShow": (BECImageShow, ImageConfig),
+            "MotorMap": (BECMotorMap, MotorMapConfig),
         }
 
     def create_widget(
@@ -98,8 +101,10 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         "widgets",
         "add_plot",
         "add_image",
+        "add_motor_map",
         "plot",
         "image",
+        "motor_map",
         "remove",
         "change_layout",
         "change_theme",
@@ -347,7 +352,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
             col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
             config(dict): Additional configuration for the widget.
-            **axis_kwargs:
+            **axis_kwargs: Additional axis properties to set on the widget after creation.
 
         Returns:
             BECImageShow: The image widget.
@@ -388,6 +393,72 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
                 image.set_color_map(color_map)
 
         return image
+
+    def motor_map(self, motor_x: str = None, motor_y: str = None, **axis_kwargs) -> BECMotorMap:
+        """
+        Add a motor map to the figure. Always access the first motor map widget in the figure.
+        Args:
+            motor_x(str): The name of the motor for the X axis.
+            motor_y(str): The name of the motor for the Y axis.
+            **axis_kwargs: Additional axis properties to set on the widget after creation.
+
+        Returns:
+            BECMotorMap: The motor map widget.
+        """
+        motor_map = self._find_first_widget_by_class(BECMotorMap, can_fail=True)
+        if motor_map is not None:
+            if axis_kwargs:
+                motor_map.set(**axis_kwargs)
+        else:
+            motor_map = self.add_motor_map(**axis_kwargs)
+
+        if motor_x is not None and motor_y is not None:
+            motor_map.change_motors(motor_x, motor_y)
+
+        return motor_map
+
+    def add_motor_map(
+        self,
+        motor_x: str = None,
+        motor_y: str = None,
+        row: int = None,
+        col: int = None,
+        config=None,
+        **axis_kwargs,
+    ) -> BECMotorMap:
+        """
+
+        Args:
+            motor_x(str): The name of the motor for the X axis.
+            motor_y(str): The name of the motor for the Y axis.
+            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
+            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
+            config(dict): Additional configuration for the widget.
+            **axis_kwargs:
+
+        Returns:
+            BECMotorMap: The motor map widget.
+        """
+        widget_id = self._generate_unique_widget_id()
+        if config is None:
+            config = MotorMapConfig(
+                widget_class="BECMotorMap",
+                gui_id=widget_id,
+                parent_id=self.gui_id,
+            )
+        motor_map = self.add_widget(
+            widget_type="MotorMap",
+            widget_id=widget_id,
+            row=row,
+            col=col,
+            config=config,
+            **axis_kwargs,
+        )
+
+        if motor_x is not None and motor_y is not None:
+            motor_map.change_motors(motor_x, motor_y)
+
+        return motor_map
 
     def add_widget(
         self,

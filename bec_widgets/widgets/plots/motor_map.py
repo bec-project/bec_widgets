@@ -1,20 +1,18 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any, Literal, Optional, Union
+from typing import Optional, Union
 
 import numpy as np
 import pyqtgraph as pg
 from bec_lib import MessageEndpoints
-from bec_lib.scan_data import ScanData
-from pydantic import BaseModel, Field, ValidationError
-from pyqtgraph import mkBrush
+from pydantic import Field
 from qtpy import QtCore, QtGui
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.utils import BECConnector, Colors, ConnectionConfig, EntryValidator
+from bec_widgets.utils import EntryValidator
 from bec_widgets.widgets.plots.plot_base import BECPlotBase, WidgetConfig
 from bec_widgets.widgets.plots.waveform1d import Signal, SignalData
 
@@ -23,7 +21,7 @@ class MotorMapConfig(WidgetConfig):
     signals: Optional[Signal] = Field(None, description="Signals of the motor map")
     color_map: Optional[str] = Field(
         "Greys", description="Color scheme of the motor position gradient."
-    )
+    )  # TODO decide if useful for anything, or just keep GREYS always
     scatter_size: Optional[int] = Field(5, description="Size of the scatter points.")
     max_points: Optional[int] = Field(1000, description="Maximum number of points to display.")
     num_dim_points: Optional[int] = Field(
@@ -37,7 +35,14 @@ class MotorMapConfig(WidgetConfig):
 
 
 class BECMotorMap(BECPlotBase):
-    USER_ACCESS = []
+    USER_ACCESS = [
+        "change_motors",
+        "set_max_points",
+        "set_precision",
+        "set_num_dim_points",
+        "set_background_value",
+        "set_scatter_size",
+    ]
 
     # QT Signals
     update_signal = pyqtSignal()
@@ -220,6 +225,9 @@ class BECMotorMap(BECPlotBase):
         self.plot_components["scatter"].setData([initial_position_x], [initial_position_y])
         self._add_coordinantes_crosshair(initial_position_x, initial_position_y)
 
+        # Set default labels for the plot
+        self.set(x_label=f"Motor X ({self.motor_x})", y_label=f"Motor Y ({self.motor_y})")
+
     def _add_coordinantes_crosshair(self, x: float, y: float) -> None:
         """
         Add crosshair to the plot to highlight the current position.
@@ -399,11 +407,11 @@ class BECMotorMap(BECPlotBase):
         self.update_signal.emit()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import sys
 
     import pyqtgraph as pg
-    from qtpy.QtWidgets import QApplication, QMainWindow
+    from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
     glw = pg.GraphicsLayoutWidget()
