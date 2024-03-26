@@ -2,6 +2,17 @@
 
 <!--next-version-placeholder-->
 
+## v0.45.0 (2024-03-26)
+
+### Feature
+
+* **plots/bec_figure:** Motor Map integrated to BECFigure ([`b8519e8`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/b8519e8770f8ffc46a1255c18119fc7978ff1d39))
+* **plots/bec_motor_map:** BECMotorMap build on BECPlotBase ([`0f69c34`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/0f69c346cd24b7afcd23f444525a170e062b0368))
+
+### Documentation
+
+* Added api reference; closes #123 ([`88014d2`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/88014d24c1c272a6deea7436a6fa058bdb06fb57))
+
 ## v0.44.5 (2024-03-25)
 
 ### Fix
