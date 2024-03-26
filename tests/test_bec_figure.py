@@ -5,7 +5,8 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
-from bec_widgets.widgets import BECFigure
+from bec_widgets.widgets import BECFigure, BECMotorMap, BECWaveform1D
+from bec_widgets.widgets.plots import BECImageShow
 
 from .client_mocks import mocked_client
 
@@ -64,6 +65,16 @@ def test_bec_figure_add_remove_plot(bec_figure):
     assert "widget_1" not in bec_figure._widgets
     assert "widget_3" in bec_figure._widgets
     assert bec_figure._widgets["widget_2"].config.widget_class == "BECWaveform1D"
+
+
+def test_add_different_types_of_widgets(bec_figure):
+    plt = bec_figure.plot("samx", "bpm4i")
+    im = bec_figure.image("eiger")
+    motor_map = bec_figure.motor_map("samx", "samy")
+
+    assert plt.__class__ == BECWaveform1D
+    assert im.__class__ == BECImageShow
+    assert motor_map.__class__ == BECMotorMap
 
 
 def test_access_widgets_access_errors(bec_figure):
