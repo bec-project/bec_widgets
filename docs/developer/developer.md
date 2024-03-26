@@ -1,6 +1,14 @@
 (developer)=
 # Development
 
+```{toctree}
+---
+maxdepth: 1
+hidden: true
+---
+reference/
+```
+
 To contribute to the development of BEC Widgets, start by setting up the development environment:
 
 1. **Clone the Repository**: 
@@ -14,3 +22,5 @@ Installing the package in editable mode allows you to make changes to the code a
 ```bash
 pip install -e .[dev]
 ```
+
+
