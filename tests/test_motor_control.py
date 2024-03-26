@@ -2,7 +2,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from bec_lib.device import Positioner
+from bec_lib.devicemanager import DeviceContainer
 
 from bec_widgets.examples import (
     MotorControlApp,
@@ -19,6 +19,8 @@ from bec_widgets.widgets import (
     MotorThread,
 )
 from bec_widgets.widgets.motor_control.motor_control import MotorActions
+
+from .client_mocks import mocked_client
 
 CONFIG_DEFAULT = {
     "motor_control": {
@@ -52,81 +54,6 @@ CONFIG_DEFAULT = {
     ],
 }
 
-#######################################################
-# Client and devices fixture
-#######################################################
-
-
-class FakeDevice:
-    """Fake minimal positioner class for testing."""
-
-    def __init__(self, name, enabled=True, limits=None, read_value=1.0):
-        super().__init__()
-        self.name = name
-        self.enabled = enabled
-        self.read_value = read_value
-        self.limits = limits or (-100, 100)  # Default limits if not provided
-
-    def read(self):
-        """Simulates reading the current position of the device."""
-        return {self.name: {"value": self.read_value}}
-
-    def move(self, value, relative=False):
-        """Simulates moving the device to a new position."""
-        if relative:
-            self.read_value += value
-        else:
-            self.read_value = value
-        # Respect the limits
-        self.read_value = max(min(self.read_value, self.limits[1]), self.limits[0])
-
-    @property
-    def readback(self):
-        return MagicMock(get=MagicMock(return_value=self.read_value))
-
-    def describe(self):
-        """Describes the device."""
-        return {self.name: {"source": self.name, "dtype": "number", "shape": []}}
-
-
-@pytest.fixture
-def mocked_client():
-    client = MagicMock()
-
-    # Setup the fake devices
-    motors = {
-        "samx": FakeDevice("samx", limits=[-10, 10], read_value=2.0),
-        "samy": FakeDevice("samy", limits=[-5, 5], read_value=3.0),
-        "aptrx": FakeDevice("aptrx", read_value=4.0),
-        "aptry": FakeDevice("aptry", read_value=5.0),
-    }
-
-    client.device_manager.devices = MagicMock()
-    client.device_manager.devices.__getitem__.side_effect = lambda x: motors.get(x, FakeDevice(x))
-    client.device_manager.devices.enabled_devices = list(motors.values())
-
-    # Mock the scans.mv method
-    def mock_mv(*args, relative=False):
-        # Extracting motor and value pairs
-        for i in range(0, len(args), 2):
-            motor = args[i]
-            value = args[i + 1]
-            motor.move(value, relative=relative)
-        return MagicMock(wait=MagicMock())  # Simulate wait method of the move status object
-
-    client.scans = MagicMock(mv=mock_mv)
-
-    # Ensure isinstance check for Positioner passes
-    original_isinstance = isinstance
-
-    def isinstance_mock(obj, class_info):
-        if class_info == Positioner:
-            return True
-        return original_isinstance(obj, class_info)
-
-    with patch("builtins.isinstance", new=isinstance_mock):
-        yield client
-
 
 #######################################################
 # Motor Thread
@@ -140,7 +67,7 @@ def motor_thread(mocked_client):
 def test_motor_thread_initialization(mocked_client):
     motor_thread = MotorThread(client=mocked_client)
     assert motor_thread.client == mocked_client
-    assert isinstance(motor_thread.dev, MagicMock)
+    assert isinstance(motor_thread.dev, DeviceContainer)
 
 
 def test_get_all_motors_names(mocked_client):
@@ -175,12 +102,16 @@ def test_move_motor_absolute_by_run(mocked_client):
 
 def test_move_motor_relative_by_run(mocked_client):
     motor_thread = MotorThread(client=mocked_client)
+
+    initial_value = motor_thread.dev["samx"].read()["samx"]["value"]
+    move_value = 2.0
+    expected_value = initial_value + move_value
     motor_thread.motor = "samx"
-    motor_thread.value = 2.0
+    motor_thread.value = move_value
     motor_thread.action = MotorActions.MOVE_RELATIVE
     motor_thread.run()
 
-    assert mocked_client.device_manager.devices["samx"].read_value == 4.0
+    assert mocked_client.device_manager.devices["samx"].read_value == expected_value
 
 
 def test_motor_thread_move_absolute(motor_thread):
@@ -291,8 +222,12 @@ def test_absolute_initialization(motor_absolute_widget):
 
 
 def test_absolute_save_current_coordinates(motor_absolute_widget):
-    motor_absolute_widget.client.device_manager["samx"].set_value(2.0)
-    motor_absolute_widget.client.device_manager["samy"].set_value(3.0)
+    motor_x_value = motor_absolute_widget.client.device_manager.devices["samx"].read()["samx"][
+        "value"
+    ]
+    motor_y_value = motor_absolute_widget.client.device_manager.devices["samy"].read()["samy"][
+        "value"
+    ]
     motor_absolute_widget.change_motors("samx", "samy")
 
     emitted_coordinates = []
@@ -305,8 +240,7 @@ def test_absolute_save_current_coordinates(motor_absolute_widget):
     # Trigger saving current coordinates
     motor_absolute_widget.pushButton_save.click()
 
-    # Default position of samx and samy are 2.0 and 3.0 respectively
-    assert emitted_coordinates == [(2.0, 3.0)]
+    assert emitted_coordinates == [(motor_x_value, motor_y_value)]
 
 
 def test_absolute_set_absolute_coordinates(motor_absolute_widget):

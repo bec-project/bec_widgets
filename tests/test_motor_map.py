@@ -5,6 +5,8 @@ import pytest
 
 from bec_widgets.widgets import MotorMap
 
+from .client_mocks import mocked_client
+
 CONFIG_DEFAULT = {
     "plot_settings": {
         "colormap": "Greys",
@@ -61,68 +63,6 @@ CONFIG_ONE_DEVICE = {
 }
 
 
-class FakeDevice:
-    """Fake minimal positioner class for testing."""
-
-    def __init__(self, name, enabled=True, limits=None, read_value=1.0):
-        self.name = name
-        self.enabled = enabled
-        self.signals = {self.name: {"value": 1.0}}
-        self.description = {self.name: {"source": self.name}}
-        self.limits = limits if limits is not None else [0, 0]
-        self.read_value = read_value
-
-    def set_read_value(self, value):
-        self.read_value = value
-
-    def read(self):
-        return {self.name: {"value": self.read_value}}
-
-    def set_limits(self, limits):
-        self.limits = limits
-
-    def __contains__(self, item):
-        return item == self.name
-
-    @property
-    def _hints(self):
-        return [self.name]
-
-    def set_value(self, fake_value: float = 1.0) -> None:
-        """
-        Setup fake value for device readout
-        Args:
-            fake_value(float): Desired fake value
-        """
-        self.signals[self.name]["value"] = fake_value
-
-    def describe(self) -> dict:
-        """
-        Get the description of the device
-        Returns:
-            dict: Description of the device
-        """
-        return self.description
-
-
-@pytest.fixture
-def mocked_client():
-    client = MagicMock()
-
-    # Mocking specific motors with their limits
-    motors = {
-        "samx": FakeDevice("samx", limits=[-10, 10], read_value=2.0),
-        "samy": FakeDevice("samy", limits=[-5, 5], read_value=3.0),
-        "aptrx": FakeDevice("aptrx", read_value=4.0),
-        "aptry": FakeDevice("aptry", read_value=5.0),
-    }
-
-    client.device_manager.devices = MagicMock()
-    client.device_manager.devices.__getitem__.side_effect = lambda x: motors.get(x, FakeDevice(x))
-
-    return client
-
-
 @pytest.fixture(scope="function")
 def motor_map(qtbot, mocked_client):
     widget = MotorMap(client=mocked_client)
@@ -144,12 +84,15 @@ def test_motor_limits_initialization(motor_map):
 
 def test_motor_initial_position(motor_map):
     motor_map.precision = 2
+
+    motor_map_dev = motor_map.client.device_manager.devices
+
     # Example test to check if motor initial positions are correctly initialized
     expected_positions = {
-        ("samx", "samx"): 2.0,
-        ("samy", "samy"): 3.0,
-        ("aptrx", "aptrx"): 4.0,
-        ("aptry", "aptry"): 5.0,
+        ("samx", "samx"): motor_map_dev["samx"].read()["samx"]["value"],
+        ("samy", "samy"): motor_map_dev["samy"].read()["samy"]["value"],
+        ("aptrx", "aptrx"): motor_map_dev["aptrx"].read()["aptrx"]["value"],
+        ("aptry", "aptry"): motor_map_dev["aptry"].read()["aptry"]["value"],
     }
     for (motor_name, entry), expected_position in expected_positions.items():
         actual_position = motor_map._get_motor_init_position(motor_name, entry)

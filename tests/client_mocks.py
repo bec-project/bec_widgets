@@ -1,8 +1,9 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
-
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
+from bec_lib.device import Positioner
+from bec_lib.devicemanager import DeviceContainer
 
 
 class FakeDevice:
@@ -12,7 +13,7 @@ class FakeDevice:
         self.name = name
         self.enabled = enabled
         self.signals = {self.name: {"value": 1.0}}
-        self.description = {self.name: {"source": self.name}}
+        self.description = {self.name: {"source": self.name, "dtype": "number", "shape": []}}
 
     def __contains__(self, item):
         return item == self.name
@@ -38,41 +39,85 @@ class FakeDevice:
         return self.description
 
 
-def get_mocked_device(device_name: str):
-    """
-    Helper function to mock the devices
-    Args:
-        device_name(str): Name of the device to mock
-    """
-    return FakeDevice(name=device_name, enabled=True)
+class FakePositioner(FakeDevice):
+    def __init__(self, name, enabled=True, limits=None, read_value=1.0):
+        super().__init__(name, enabled)
+        self.limits = limits if limits is not None else [0, 0]
+        self.read_value = read_value
+
+    def set_read_value(self, value):
+        self.read_value = value
+
+    def read(self):
+        return {self.name: {"value": self.read_value}}
+
+    def set_limits(self, limits):
+        self.limits = limits
+
+    def move(self, value, relative=False):
+        """Simulates moving the device to a new position."""
+        if relative:
+            self.read_value += value
+        else:
+            self.read_value = value
+        # Respect the limits
+        self.read_value = max(min(self.read_value, self.limits[1]), self.limits[0])
+
+    @property
+    def readback(self):
+        return MagicMock(get=MagicMock(return_value=self.read_value))
+
+
+class DMMock:
+    def __init__(self):
+        self.devices = DeviceContainer()
+
+    def add_devives(self, devices: list):
+        for device in devices:
+            self.devices[device.name] = device
+
+
+DEVICES = [
+    FakePositioner("samx", limits=[-10, 10], read_value=2.0),
+    FakePositioner("samy", limits=[-5, 5], read_value=3.0),
+    FakePositioner("aptrx", limits=None, read_value=4.0),
+    FakePositioner("aptry", limits=None, read_value=5.0),
+    FakeDevice("gauss_bpm"),
+    FakeDevice("gauss_adc1"),
+    FakeDevice("gauss_adc2"),
+    FakeDevice("gauss_adc3"),
+    FakeDevice("bpm4i"),
+    FakeDevice("bpm3a"),
+    FakeDevice("bpm3i"),
+]
 
 
 @pytest.fixture(scope="function")
 def mocked_client():
-    # Create a dictionary of mocked devices
-    device_names = [
-        "samx",
-        "samy",
-        "gauss_bpm",
-        "gauss_adc1",
-        "gauss_adc2",
-        "gauss_adc3",
-        "bpm4i",
-        "bpm3a",
-        "bpm3i",
-    ]
-    mocked_devices = {name: get_mocked_device(name) for name in device_names}
-
     # Create a MagicMock object
     client = MagicMock()
 
     # Mock the device_manager.devices attribute
-    client.device_manager.devices = MagicMock()
-    client.device_manager.devices.__getitem__.side_effect = lambda x: mocked_devices.get(x)
-    client.device_manager.devices.__contains__.side_effect = lambda x: x in mocked_devices
+    client.device_manager = DMMock()
+    client.device_manager.add_devives(DEVICES)
 
-    # Set each device as an attribute of the mock
-    for name, device in mocked_devices.items():
-        setattr(client.device_manager.devices, name, device)
+    def mock_mv(*args, relative=False):
+        # Extracting motor and value pairs
+        for i in range(0, len(args), 2):
+            motor = args[i]
+            value = args[i + 1]
+            motor.move(value, relative=relative)
+        return MagicMock(wait=MagicMock())
 
-    return client
+    client.scans = MagicMock(mv=mock_mv)
+
+    # Ensure isinstance check for Positioner passes
+    original_isinstance = isinstance
+
+    def isinstance_mock(obj, class_info):
+        if class_info == Positioner and isinstance(obj, FakePositioner):
+            return True
+        return original_isinstance(obj, class_info)
+
+    with patch("builtins.isinstance", new=isinstance_mock):
+        yield client
