@@ -6,11 +6,11 @@ from qtpy.QtCore import QTimer
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.widgets.figure import BECFigure
-from bec_widgets.widgets.plots import BECCurve, BECImageShow, BECWaveform1D
+from bec_widgets.widgets.plots import BECCurve, BECImageShow, BECWaveform
 
 
 class BECWidgetsCLIServer:
-    WIDGETS = [BECWaveform1D, BECFigure, BECCurve, BECImageShow]
+    WIDGETS = [BECWaveform, BECFigure, BECCurve, BECImageShow]
 
     def __init__(self, gui_id: str = None, dispatcher: BECDispatcher = None) -> None:
         self.dispatcher = BECDispatcher() if dispatcher is None else dispatcher

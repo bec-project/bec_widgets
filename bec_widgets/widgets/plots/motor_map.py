@@ -14,7 +14,7 @@ from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils import EntryValidator
 from bec_widgets.widgets.plots.plot_base import BECPlotBase, WidgetConfig
-from bec_widgets.widgets.plots.waveform1d import Signal, SignalData
+from bec_widgets.widgets.plots.waveform import Signal, SignalData
 
 
 class MotorMapConfig(WidgetConfig):

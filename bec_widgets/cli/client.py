@@ -142,9 +142,12 @@ class BECWaveform1D(RPCBase):
         self,
         x_name: "str",
         y_name: "str",
+        z_name: "Optional[str]" = None,
         x_entry: "Optional[str]" = None,
         y_entry: "Optional[str]" = None,
+        z_entry: "Optional[str]" = None,
         color: "Optional[str]" = None,
+        color_map_z: "Optional[str]" = "plasma",
         label: "Optional[str]" = None,
         validate_bec: "bool" = True,
         **kwargs
@@ -156,7 +159,10 @@ class BECWaveform1D(RPCBase):
             x_entry(str): Entry of the x signal.
             y_name(str): Name of the y signal.
             y_entry(str): Entry of the y signal.
+            z_name(str): Name of the z signal.
+            z_entry(str): Entry of the z signal.
             color(str, optional): Color of the curve. Defaults to None.
+            color_map_z(str): The color map to use for the z-axis.
             label(str, optional): Label of the curve. Defaults to None.
             **kwargs: Additional keyword arguments for the curve configuration.
 
@@ -404,11 +410,14 @@ class BECFigure(RPCBase, BECFigureClientMixin):
         self,
         x_name: "str" = None,
         y_name: "str" = None,
+        z_name: "str" = None,
         x_entry: "str" = None,
         y_entry: "str" = None,
+        z_entry: "str" = None,
         x: "list | np.ndarray" = None,
         y: "list | np.ndarray" = None,
         color: "Optional[str]" = None,
+        color_map_z: "Optional[str]" = "plasma",
         label: "Optional[str]" = None,
         validate: "bool" = True,
         row: "int" = None,
@@ -484,11 +493,14 @@ class BECFigure(RPCBase, BECFigureClientMixin):
         self,
         x_name: "str" = None,
         y_name: "str" = None,
+        z_name: "str" = None,
         x_entry: "str" = None,
         y_entry: "str" = None,
+        z_entry: "str" = None,
         x: "list | np.ndarray" = None,
         y: "list | np.ndarray" = None,
         color: "Optional[str]" = None,
+        color_map_z: "Optional[str]" = "plasma",
         label: "Optional[str]" = None,
         validate: "bool" = True,
         **axis_kwargs
@@ -498,11 +510,14 @@ class BECFigure(RPCBase, BECFigureClientMixin):
         Args:
             x_name(str): The name of the device for the x-axis.
             y_name(str): The name of the device for the y-axis.
+            z_name(str): The name of the device for the z-axis.
             x_entry(str): The name of the entry for the x-axis.
             y_entry(str): The name of the entry for the y-axis.
+            z_entry(str): The name of the entry for the z-axis.
             x(list | np.ndarray): Custom x data to plot.
             y(list | np.ndarray): Custom y data to plot.
             color(str): The color of the curve.
+            color_map_z(str): The color map to use for the z-axis.
             label(str): The label of the curve.
             validate(bool): If True, validate the device names and entries.
             **axis_kwargs: Additional axis properties to set on the widget after creation.
@@ -632,6 +647,14 @@ class BECCurve(RPCBase):
         Args:
             color(str): Color of the curve.
             symbol_color(str, optional): Color of the symbol. Defaults to None.
+        """
+
+    @rpc_call
+    def set_colormap(self, colormap: "str"):
+        """
+        Set the colormap for the scatter plot z gradient.
+        Args:
+            colormap(str): Colormap for the scatter plot.
         """
 
     @rpc_call

@@ -19,7 +19,7 @@ from bec_widgets.widgets.plots import (
     BECImageShow,
     BECMotorMap,
     BECPlotBase,
-    BECWaveform1D,
+    BECWaveform,
     Waveform1DConfig,
     WidgetConfig,
 )
@@ -44,7 +44,7 @@ class WidgetHandler:
     def __init__(self):
         self.widget_factory = {
             "PlotBase": (BECPlotBase, WidgetConfig),
-            "Waveform1D": (BECWaveform1D, Waveform1DConfig),
+            "Waveform1D": (BECWaveform, Waveform1DConfig),
             "ImShow": (BECImageShow, ImageConfig),
             "MotorMap": (BECMotorMap, MotorMapConfig),
         }
@@ -164,18 +164,21 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         self,
         x_name: str = None,
         y_name: str = None,
+        z_name: str = None,
         x_entry: str = None,
         y_entry: str = None,
+        z_entry: str = None,
         x: list | np.ndarray = None,
         y: list | np.ndarray = None,
         color: Optional[str] = None,
+        color_map_z: Optional[str] = "plasma",
         label: Optional[str] = None,
         validate: bool = True,
         row: int = None,
         col: int = None,
         config=None,
         **axis_kwargs,
-    ) -> BECWaveform1D:
+    ) -> BECWaveform:
         """
         Add a Waveform1D plot to the figure at the specified position.
         Args:
@@ -197,8 +200,8 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
         # TODO remove repetition from .plot method
 
-        # User wants to add scan curve
-        if x_name is not None and y_name is not None and x is None and y is None:
+        # User wants to add scan curve -> 1D Waveform
+        if x_name is not None and y_name is not None and z_name is None and x is None and y is None:
             waveform.add_curve_scan(
                 x_name=x_name,
                 y_name=y_name,
@@ -208,7 +211,27 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
                 color=color,
                 label=label,
             )
-            # User wants to add custom curve
+        # User wants to add scan curve -> 2D Waveform Scatter
+        if (
+            x_name is not None
+            and y_name is not None
+            and z_name is not None
+            and x is None
+            and y is None
+        ):
+            waveform.add_curve_scan(
+                x_name=x_name,
+                y_name=y_name,
+                z_name=z_name,
+                x_entry=x_entry,
+                y_entry=y_entry,
+                z_entry=z_entry,
+                color=color,
+                color_map=color_map_z,
+                label=label,
+                validate=validate,
+            )
+        # User wants to add custom curve
         elif x is not None and y is not None and x_name is None and y_name is None:
             waveform.add_curve_custom(
                 x=x,
@@ -223,52 +246,81 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         self,
         x_name: str = None,
         y_name: str = None,
+        z_name: str = None,
         x_entry: str = None,
         y_entry: str = None,
+        z_entry: str = None,
         x: list | np.ndarray = None,
         y: list | np.ndarray = None,
         color: Optional[str] = None,
+        color_map_z: Optional[str] = "plasma",
         label: Optional[str] = None,
         validate: bool = True,
         **axis_kwargs,
-    ) -> BECWaveform1D:
+    ) -> BECWaveform:
         """
         Add a 1D waveform plot to the figure. Always access the first waveform widget in the figure.
         Args:
             x_name(str): The name of the device for the x-axis.
             y_name(str): The name of the device for the y-axis.
+            z_name(str): The name of the device for the z-axis.
             x_entry(str): The name of the entry for the x-axis.
             y_entry(str): The name of the entry for the y-axis.
+            z_entry(str): The name of the entry for the z-axis.
             x(list | np.ndarray): Custom x data to plot.
             y(list | np.ndarray): Custom y data to plot.
             color(str): The color of the curve.
+            color_map_z(str): The color map to use for the z-axis.
             label(str): The label of the curve.
             validate(bool): If True, validate the device names and entries.
             **axis_kwargs: Additional axis properties to set on the widget after creation.
 
         Returns:
-            BECWaveform1D: The waveform plot widget.
+            BECWaveform: The waveform plot widget.
         """
-        waveform = self._find_first_widget_by_class(BECWaveform1D, can_fail=True)
+        waveform = self._find_first_widget_by_class(BECWaveform, can_fail=True)
         if waveform is not None:
             if axis_kwargs:
                 waveform.set(**axis_kwargs)
         else:
             waveform = self.add_plot(**axis_kwargs)
 
-        # User wants to add scan curve
-        if x_name is not None and y_name is not None and x is None and y is None:
+        # User wants to add scan curve -> 1D Waveform
+        if x_name is not None and y_name is not None and z_name is None and x is None and y is None:
             waveform.add_curve_scan(
                 x_name=x_name,
                 y_name=y_name,
                 x_entry=x_entry,
                 y_entry=y_entry,
-                validate=validate,
                 color=color,
+                color_map_z="plasma",
                 label=label,
+                validate=validate,
+            )
+        # User wants to add scan curve -> 2D Waveform Scatter
+        elif (
+            x_name is not None
+            and y_name is not None
+            and z_name is not None
+            and x is None
+            and y is None
+        ):
+            waveform.add_curve_scan(
+                x_name=x_name,
+                y_name=y_name,
+                z_name=z_name,
+                x_entry=x_entry,
+                y_entry=y_entry,
+                z_entry=z_entry,
+                color=color,
+                color_map=color_map_z,
+                label=label,
+                validate=validate,
             )
         # User wants to add custom curve
-        elif x is not None and y is not None and x_name is None and y_name is None:
+        elif (
+            x is not None and y is not None and x_name is None and y_name is None and z_name is None
+        ):
             waveform.add_curve_custom(
                 x=x,
                 y=y,
@@ -817,7 +869,8 @@ class DebugWindow(QWidget):  # pragma: no cover:
         self.console.set_default_style("linux")
 
     def _init_figure(self):
-        self.figure.add_widget(widget_type="Waveform1D", row=0, col=0, title="Widget 1")
+        # self.figure.add_widget(widget_type="Waveform1D", row=0, col=0, title="Widget 1")
+        self.figure.plot("samx", "bpm4d")
         self.figure.add_widget(widget_type="Waveform1D", row=0, col=1, title="Widget 2")
         self.figure.add_image(
             title="Image", row=1, col=0, color_map="viridis", color_bar="simple", vrange=(0, 100)
@@ -830,14 +883,16 @@ class DebugWindow(QWidget):  # pragma: no cover:
         self.w4 = self.figure[1, 1]
 
         # curves for w1
-        self.w1.add_curve_scan("samx", "bpm4i", pen_style="dash")
-        self.w1.add_curve_custom(
-            x=[1, 2, 3, 4, 5],
-            y=[1, 2, 3, 4, 5],
-            label="curve-custom",
-            color="blue",
-            pen_style="dashdot",
-        )
+        self.w1.add_curve_scan("samx", "samy", "bpm4i", pen_style="dash")
+        self.w1.add_curve_scan("samx", "samy", "bpm3a", pen_style="dash")
+
+        # self.w1.add_curve_custom(
+        #     x=[1, 2, 3, 4, 5],
+        #     y=[1, 2, 3, 4, 5],
+        #     label="curve-custom",
+        #     color="blue",
+        #     pen_style="dashdot",
+        # )
         self.c1 = self.w1.get_config()
 
         # curves for w2

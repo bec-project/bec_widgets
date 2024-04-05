@@ -34,6 +34,7 @@ class Signal(BaseModel):
     source: str
     x: SignalData  # TODO maybe add metadata for config gui later
     y: SignalData
+    z: Optional[SignalData] = None
 
 
 class CurveConfig(ConnectionConfig):
@@ -49,12 +50,13 @@ class CurveConfig(ConnectionConfig):
     )
     source: Optional[str] = Field(None, description="The source of the curve.")
     signals: Optional[Signal] = Field(None, description="The signal of the curve.")
+    colormap: Optional[str] = Field("plasma", description="The colormap of the curves z gradient.")
 
 
 class Waveform1DConfig(WidgetConfig):
     color_palette: Literal["plasma", "viridis", "inferno", "magma"] = Field(
         "plasma", description="The color palette of the figure widget."
-    )
+    )  # TODO can be extended to all colormaps from current pyqtgraph session
     curves: dict[str, CurveConfig] = Field(
         {}, description="The list of curves to be added to the 1D waveform widget."
     )
@@ -65,6 +67,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         "set",
         "set_data",
         "set_color",
+        "set_colormap",
         "set_symbol",
         "set_symbol_color",
         "set_symbol_size",
@@ -135,6 +138,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         # Mapping of keywords to setter methods
         method_map = {
             "color": self.set_color,
+            "colormap": self.set_colormap,
             "symbol": self.set_symbol,
             "symbol_color": self.set_symbol_color,
             "symbol_size": self.set_symbol_size,
@@ -203,6 +207,14 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         self.config.pen_style = pen_style
         self.apply_config()
 
+    def set_colormap(self, colormap: str):
+        """
+        Set the colormap for the scatter plot z gradient.
+        Args:
+            colormap(str): Colormap for the scatter plot.
+        """
+        self.config.colormap = colormap
+
     def get_data(self) -> tuple[np.ndarray, np.ndarray]:
         """
         Get the data of the curve.
@@ -213,7 +225,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         return x_data, y_data
 
 
-class BECWaveform1D(BECPlotBase):
+class BECWaveform(BECPlotBase):
     USER_ACCESS = [
         "add_curve_scan",
         "add_curve_custom",
@@ -467,9 +479,12 @@ class BECWaveform1D(BECPlotBase):
         self,
         x_name: str,
         y_name: str,
+        z_name: Optional[str] = None,
         x_entry: Optional[str] = None,
         y_entry: Optional[str] = None,
+        z_entry: Optional[str] = None,
         color: Optional[str] = None,
+        color_map_z: Optional[str] = "plasma",
         label: Optional[str] = None,
         validate_bec: bool = True,
         **kwargs,
@@ -481,7 +496,10 @@ class BECWaveform1D(BECPlotBase):
             x_entry(str): Entry of the x signal.
             y_name(str): Name of the y signal.
             y_entry(str): Entry of the y signal.
+            z_name(str): Name of the z signal.
+            z_entry(str): Entry of the z signal.
             color(str, optional): Color of the curve. Defaults to None.
+            color_map_z(str): The color map to use for the z-axis.
             label(str, optional): Label of the curve. Defaults to None.
             **kwargs: Additional keyword arguments for the curve configuration.
 
@@ -492,11 +510,14 @@ class BECWaveform1D(BECPlotBase):
         curve_source = "scan_segment"
 
         # Get entry if not provided and validate
-        x_entry, y_entry = self._validate_signal_entries(
-            x_name, y_name, x_entry, y_entry, validate_bec
+        x_entry, y_entry, z_entry = self._validate_signal_entries(
+            x_name, y_name, z_name, x_entry, y_entry, z_entry, validate_bec
         )
 
-        label = label or f"{y_name}-{y_entry}"
+        if z_name is not None and z_entry is not None:
+            label = label or f"{z_name}-{z_entry}"
+        else:
+            label = label or f"{y_name}-{y_entry}"
 
         curve_exits = self._check_curve_id(label, self._curves_data)
         if curve_exits:
@@ -515,11 +536,13 @@ class BECWaveform1D(BECPlotBase):
             parent_id=self.gui_id,
             label=label,
             color=color,
+            color_map=color_map_z,
             source=curve_source,
             signals=Signal(
                 source=curve_source,
                 x=SignalData(name=x_name, entry=x_entry),
                 y=SignalData(name=y_name, entry=y_entry),
+                z=SignalData(name=z_name, entry=z_entry) if z_name else None,
             ),
             **kwargs,
         )
@@ -530,28 +553,35 @@ class BECWaveform1D(BECPlotBase):
         self,
         x_name: str,
         y_name: str,
+        z_name: str | None,
         x_entry: str | None,
         y_entry: str | None,
+        z_entry: str | None,
         validate_bec: bool = True,
-    ) -> tuple[str, str]:
+    ) -> tuple[str, str, str | None]:
         """
         Validate the signal name and entry.
         Args:
             x_name(str): Name of the x signal.
             y_name(str): Name of the y signal.
+            z_name(str): Name of the z signal.
             x_entry(str|None): Entry of the x signal.
             y_entry(str|None): Entry of the y signal.
+            z_entry(str|None): Entry of the z signal.
             validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
         Returns:
-            tuple[str,str]: Validated x and y entries.
+            tuple[str,str,str|None]: Validated x, y, z entries.
         """
         if validate_bec:
             x_entry = self.entry_validator.validate_signal(x_name, x_entry)
             y_entry = self.entry_validator.validate_signal(y_name, y_entry)
+            if z_name:
+                z_entry = self.entry_validator.validate_signal(z_name, z_entry)
         else:
             x_entry = x_name if x_entry is None else x_entry
             y_entry = y_name if y_entry is None else y_entry
-        return x_entry, y_entry
+            z_entry = z_name if z_entry is None else z_entry
+        return x_entry, y_entry, z_entry
 
     def _check_curve_id(self, val: Any, dict_to_check: dict) -> bool:
         """
@@ -654,19 +684,54 @@ class BECWaveform1D(BECPlotBase):
         Args:
             data(ScanData): Data from the scan segment.
         """
+        data_x = None
+        data_y = None
+        data_z = None
         for curve_id, curve in self._curves_data["scan_segment"].items():
             x_name = curve.config.signals.x.name
             x_entry = curve.config.signals.x.entry
             y_name = curve.config.signals.y.name
             y_entry = curve.config.signals.y.entry
+            if curve.config.signals.z:
+                z_name = curve.config.signals.z.name
+                z_entry = curve.config.signals.z.entry
 
             try:
                 data_x = data[x_name][x_entry].val
                 data_y = data[y_name][y_entry].val
+                if curve.config.signals.z:
+                    data_z = data[z_name][z_entry].val
+                    color_z = self._make_z_gradient(
+                        data_z, curve.config.colormap
+                    )  # TODO decide how to implement custom gradient
             except TypeError:
                 continue
 
-            curve.setData(data_x, data_y)
+            if data_z is not None and color_z is not None:
+                curve.setData(x=data_x, y=data_y, symbolBrush=color_z)
+            else:
+                curve.setData(data_x, data_y)
+
+    def _make_z_gradient(self, data_z: list | np.ndarray, colormap: str) -> list | None:
+        """
+        Make a gradient color for the z values.
+        Args:
+            data_z(list|np.ndarray): Z values.
+            colormap(str): Colormap for the gradient color.
+
+        Returns:
+            list: List of colors for the z values.
+        """
+        # Normalize z_values for color mapping
+        z_min, z_max = np.min(data_z), np.max(data_z)
+
+        if z_max != z_min:  # Ensure that there is a range in the z values
+            z_values_norm = (data_z - z_min) / (z_max - z_min)
+            colormap = pg.colormap.get(colormap)  # using colormap from global settings
+            colors = [colormap.map(z, mode="qcolor") for z in z_values_norm]
+            return colors
+        else:
+            return None
 
     def scan_history(self, scan_index: int = None, scan_id: str = None):
         """

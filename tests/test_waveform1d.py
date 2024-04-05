@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
-from bec_widgets.widgets.plots.waveform1d import CurveConfig, Signal, SignalData
+from bec_widgets.widgets.plots.waveform import CurveConfig, Signal, SignalData
 
 from .client_mocks import mocked_client
 from .test_bec_figure import bec_figure
@@ -49,7 +49,7 @@ def test_adding_curve_with_same_id(bec_figure):
 
 def test_create_waveform1D_by_config(bec_figure):
     w1_config_input = {
-        "widget_class": "BECWaveform1D",
+        "widget_class": "BECWaveform",
         "gui_id": "widget_1",
         "parent_id": "BECFigure_1708689320.788527",
         "row": 0,
@@ -73,6 +73,7 @@ def test_create_waveform1D_by_config(bec_figure):
                 "parent_id": "widget_1",
                 "label": "bpm4i-bpm4i",
                 "color": "#cc4778",
+                "colormap": "plasma",
                 "symbol": "o",
                 "symbol_color": None,
                 "symbol_size": 5,
@@ -95,6 +96,7 @@ def test_create_waveform1D_by_config(bec_figure):
                         "modifier": None,
                         "limits": None,
                     },
+                    "z": None,
                 },
             },
             "curve-custom": {
@@ -103,6 +105,7 @@ def test_create_waveform1D_by_config(bec_figure):
                 "parent_id": "widget_1",
                 "label": "curve-custom",
                 "color": "blue",
+                "colormap": "plasma",
                 "symbol": "o",
                 "symbol_color": None,
                 "symbol_size": 5,
@@ -232,6 +235,7 @@ def test_change_curve_appearance_methods(bec_figure, qtbot):
         "source": "scan_segment",
         "x": {"name": "samx", "entry": "samx", "unit": None, "modifier": None, "limits": None},
         "y": {"name": "bpm4i", "entry": "bpm4i", "unit": None, "modifier": None, "limits": None},
+        "z": None,
     }
 
 
@@ -260,6 +264,7 @@ def test_change_curve_appearance_args(bec_figure):
         "source": "scan_segment",
         "x": {"name": "samx", "entry": "samx", "unit": None, "modifier": None, "limits": None},
         "y": {"name": "bpm4i", "entry": "bpm4i", "unit": None, "modifier": None, "limits": None},
+        "z": None,
     }
 
 
@@ -343,6 +348,7 @@ def test_curve_add_by_config(bec_figure):
         "parent_id": "widget_1",
         "label": "bpm4i-bpm4i",
         "color": "#cc4778",
+        "colormap": "plasma",
         "symbol": "o",
         "symbol_color": None,
         "symbol_size": 5,
@@ -359,6 +365,7 @@ def test_curve_add_by_config(bec_figure):
                 "modifier": None,
                 "limits": None,
             },
+            "z": None,
         },
     }
 
@@ -428,3 +435,43 @@ def test_scan_history_with_val_access(bec_figure, qtbot):
 
     assert np.array_equal(x_data, [1, 2, 3])
     assert np.array_equal(y_data, [4, 5, 6])
+
+
+def test_scatter_2d_update(bec_figure, qtbot):
+    w1 = bec_figure.add_plot()
+
+    c1 = w1.add_curve_scan(x_name="samx", y_name="samx", z_name="bpm4i")
+
+    msg = {
+        "data": {
+            "samx": {"samx": {"value": [1, 2, 3]}},
+            "samy": {"samy": {"value": [4, 5, 6]}},
+            "bpm4i": {"bpm4i": {"value": [1, 3, 2]}},
+        },
+        "scan_id": 1,
+    }
+    msg_metadata = {"scan_name": "line_scan"}
+
+    mock_scan_data = MagicMock()
+    mock_scan_data.data = {
+        device_name: {
+            entry: MagicMock(val=msg["data"][device_name][entry]["value"])
+            for entry in msg["data"][device_name]
+        }
+        for device_name in msg["data"]
+    }
+
+    w1.queue.scan_storage.find_scan_by_ID.return_value = mock_scan_data
+
+    w1.on_scan_segment(msg, msg_metadata)
+    qtbot.wait(500)
+
+    data = c1.get_data()
+    expected_x_y_data = ([1, 2, 3], [1, 2, 3])
+    expected_z_colors = w1._make_z_gradient([1, 3, 2], "plasma")
+
+    scatter_points = c1.scatter.points()
+    colors = [point.brush().color() for point in scatter_points]
+
+    assert np.array_equal(data, expected_x_y_data)
+    assert colors == expected_z_colors

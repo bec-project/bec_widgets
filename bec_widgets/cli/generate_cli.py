@@ -109,15 +109,15 @@ if __name__ == "__main__":  # pragma: no cover
 
     from bec_widgets.utils import BECConnector
     from bec_widgets.widgets.figure import BECFigure
-    from bec_widgets.widgets.plots import BECImageShow, BECMotorMap, BECPlotBase, BECWaveform1D
+    from bec_widgets.widgets.plots import BECImageShow, BECMotorMap, BECPlotBase, BECWaveform
     from bec_widgets.widgets.plots.image import BECImageItem
-    from bec_widgets.widgets.plots.waveform1d import BECCurve
+    from bec_widgets.widgets.plots.waveform import BECCurve
 
     current_path = os.path.dirname(__file__)
     client_path = os.path.join(current_path, "client.py")
     clss = [
         BECPlotBase,
-        BECWaveform1D,
+        BECWaveform,
         BECFigure,
         BECCurve,
         BECImageShow,

@@ -22,7 +22,7 @@ CONFIG_DEFAULT = {
             "signals": {
                 "x": [{"name": "samx", "entry": "samx"}],
                 "y": [{"name": "samy", "entry": "samy"}],
-                "z": [{"name": "gauss_bpm", "entry": "gauss_bpm"}],
+                "z": [{"name": "bpm4i", "entry": "bpm4i"}],
             },
         },
         {
