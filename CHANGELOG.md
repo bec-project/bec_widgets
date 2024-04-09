@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.46.0 (2024-04-09)
+
+### Feature
+
+* **plot/waveform1d:** BECWaveform1D can show z data of scatter coded to different detector like BECMonitor2DScatter; BECWaveform1D name changed to BECWaveform ([`3d399ba`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/3d399ba1f5d85bc67964febcf8921355f9f1c285))
+
 ## v0.45.0 (2024-03-26)
 
 ### Feature
