@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import importlib
+import os
 import select
 import subprocess
+import sys
+import threading
 import time
 import uuid
-
 from functools import wraps
 from typing import TYPE_CHECKING
 
@@ -100,6 +102,7 @@ class BECFigureClientMixin:
         self.update_script = update_script
         self._target_endpoint = MessageEndpoints.scan_status()
         self._selected_device = None
+        self.stderr_output = []
 
     @property
     def selected_device(self):
@@ -152,7 +155,8 @@ class BECFigureClientMixin:
         if self._process is None:
             return
         self._run_rpc("close", (), wait_for_rpc_response=False)
-        self._process.kill()
+        self._process.terminate()
+        self._process_output_processing_thread.join()
         self._process = None
         self._client.shutdown()
 
@@ -165,10 +169,12 @@ class BECFigureClientMixin:
         monitor_module = importlib.import_module("bec_widgets.cli.server")
         monitor_path = monitor_module.__file__
 
-        command = f"python {monitor_path} --id {self._gui_id}"
+        command = [sys.executable, "-u", monitor_path, "--id", self._gui_id]
         self._process = subprocess.Popen(
-            command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
+        self._process_output_processing_thread = threading.Thread(target=self._get_output)
+        self._process_output_processing_thread.start()
 
     def print_log(self) -> None:
         """
@@ -176,19 +182,22 @@ class BECFigureClientMixin:
         """
         if self._process is None:
             return
-        print(self._get_stderr_output())
+        print("".join(self.stderr_output))
+        # Flush list
+        self.stderr_output.clear()
 
-    def _get_stderr_output(self) -> str:
-        stderr_output = []
-        while self._process.poll() is not None:
-            readylist, _, _ = select.select([self._process.stderr], [], [], 0.1)
-            if not readylist:
-                break
-            line = self._process.stderr.readline()
-            if not line:
-                break
-            stderr_output.append(line.decode("utf-8"))
-        return "".join(stderr_output)
+    def _get_output(self) -> str:
+        os.set_blocking(self._process.stdout.fileno(), False)
+        os.set_blocking(self._process.stderr.fileno(), False)
+        while self._process.poll() is None:
+            readylist, _, _ = select.select([self._process.stdout, self._process.stderr], [], [], 1)
+            if self._process.stdout in readylist:
+                # print("*"*10, self._process.stdout.read(1024), flush=True, end="")
+                self._process.stdout.read(1024)
+            if self._process.stderr in readylist:
+                # print("!"*10, self._process.stderr.read(1024), flush=True, end="", file=sys.stderr)
+                print(self._process.stderr.read(1024), flush=True, end="", file=sys.stderr)
+                self.stderr_output.append(self._process.stderr.read(1024))
 
 
 class RPCBase:
