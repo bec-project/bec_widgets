@@ -1,7 +1,6 @@
 from .editor import BECEditor
 from .figure import BECFigure, FigureConfig
 from .monitor import BECMonitor
-from .monitor_scatter_2D import BECMonitor2DScatter
 from .motor_control import (
     MotorControlAbsolute,
     MotorControlRelative,
