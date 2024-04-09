@@ -228,3 +228,16 @@ def test_clear_all(bec_figure):
 
     assert len(bec_figure._widgets) == 0
     assert np.shape(bec_figure.grid) == (0,)
+
+
+def test_shortcuts(bec_figure):
+    plt = bec_figure.plot("samx", "bpm4i")
+    im = bec_figure.image("eiger")
+    motor_map = bec_figure.motor_map("samx", "samy")
+
+    assert plt.config.widget_class == "BECWaveform"
+    assert plt.__class__ == BECWaveform
+    assert im.config.widget_class == "BECImageShow"
+    assert im.__class__ == BECImageShow
+    assert motor_map.config.widget_class == "BECMotorMap"
+    assert motor_map.__class__ == BECMotorMap
