@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.46.1 (2024-04-10)
+
+### Fix
+
+* **rpc/client:** Correct name for RPC class BECWaveform (instead of BECWaveform1D) ([`cf29035`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/cf29035e283e55efa547cbac88e8b622190dfc4d))
+
 ## v0.46.0 (2024-04-09)
 
 ### Feature
