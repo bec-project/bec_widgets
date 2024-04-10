@@ -285,6 +285,7 @@ class BECImageShow(BECPlotBase):
         "get_image_config",
         "get_image_list",
         "get_image_dict",
+        "get_config",
         "add_monitor_image",
         "add_custom_image",
         "set_vrange",

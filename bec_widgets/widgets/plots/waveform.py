@@ -74,6 +74,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         "set_pen_width",
         "set_pen_style",
         "get_data",
+        "get_config",
     ]
 
     def __init__(

@@ -705,6 +705,16 @@ class BECCurve(RPCBase):
             tuple[np.ndarray,np.ndarray]: X and Y data of the curve.
         """
 
+    @rpc_call
+    def get_config(self, dict_output: "bool" = True) -> "dict | BaseModel":
+        """
+        Get the configuration of the widget.
+        Args:
+            dict_output(bool): If True, return the configuration as a dictionary. If False, return the configuration as a pydantic model.
+        Returns:
+            dict: The configuration of the plot widget.
+        """
+
 
 class BECImageShow(RPCBase):
     @rpc_call
@@ -744,6 +754,16 @@ class BECImageShow(RPCBase):
         Get all images.
         Returns:
             dict[str, dict[str, BECImageItem]]: The dictionary of images.
+        """
+
+    @rpc_call
+    def get_config(self, dict_output: "bool" = True) -> "dict | BaseModel":
+        """
+        Get the configuration of the widget.
+        Args:
+            dict_output(bool): If True, return the configuration as a dictionary. If False, return the configuration as a pydantic model.
+        Returns:
+            dict: The configuration of the plot widget.
         """
 
     @rpc_call
@@ -1172,6 +1192,16 @@ class BECMotorMap(RPCBase):
             motor_x_entry(str): Motor entry for the X axis.
             motor_y_entry(str): Motor entry for the Y axis.
             validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
+        """
+
+    @rpc_call
+    def get_config(self, dict_output: "bool" = True) -> "dict | BaseModel":
+        """
+        Get the configuration of the widget.
+        Args:
+            dict_output(bool): If True, return the configuration as a dictionary. If False, return the configuration as a pydantic model.
+        Returns:
+            dict: The configuration of the plot widget.
         """
 
     @rpc_call
