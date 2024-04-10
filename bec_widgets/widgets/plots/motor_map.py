@@ -186,9 +186,7 @@ class BECMotorMap(BECPlotBase):
             MessageEndpoints.device_readback(self.motor_y),
         ]
 
-        self.bec_dispatcher.connect_slot(
-            self.on_device_readback, endpoints, single_callback_for_all_topics=True
-        )
+        self.bec_dispatcher.connect_slot(self.on_device_readback, endpoints)
 
     def _make_motor_map(self):
         """
