@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.46.2 (2024-04-10)
+
+### Fix
+
+* **widget/plots:** Added "get_config" to all children of `BECConnector` to USER_ACCESS ([`ee617b7`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ee617b73a2fcad8194394182fcecb0dd4f583a8e))
+
 ## v0.46.1 (2024-04-10)
 
 ### Fix
