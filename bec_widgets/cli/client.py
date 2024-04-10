@@ -136,7 +136,7 @@ class BECPlotBase(RPCBase):
         """
 
 
-class BECWaveform1D(RPCBase):
+class BECWaveform(RPCBase):
     @rpc_call
     def add_curve_scan(
         self,
@@ -424,7 +424,7 @@ class BECFigure(RPCBase, BECFigureClientMixin):
         col: "int" = None,
         config=None,
         **axis_kwargs
-    ) -> "BECWaveform1D":
+    ) -> "BECWaveform":
         """
         Add a Waveform1D plot to the figure at the specified position.
         Args:
@@ -504,7 +504,7 @@ class BECFigure(RPCBase, BECFigureClientMixin):
         label: "Optional[str]" = None,
         validate: "bool" = True,
         **axis_kwargs
-    ) -> "BECWaveform1D":
+    ) -> "BECWaveform":
         """
         Add a 1D waveform plot to the figure. Always access the first waveform widget in the figure.
         Args:
@@ -523,7 +523,7 @@ class BECFigure(RPCBase, BECFigureClientMixin):
             **axis_kwargs: Additional axis properties to set on the widget after creation.
 
         Returns:
-            BECWaveform1D: The waveform plot widget.
+            BECWaveform: The waveform plot widget.
         """
 
     @rpc_call
