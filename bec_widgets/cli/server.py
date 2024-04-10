@@ -12,9 +12,9 @@ from bec_widgets.widgets.plots import BECCurve, BECImageShow, BECWaveform
 class BECWidgetsCLIServer:
     WIDGETS = [BECWaveform, BECFigure, BECCurve, BECImageShow]
 
-    def __init__(self, gui_id: str = None, dispatcher: BECDispatcher = None) -> None:
+    def __init__(self, gui_id: str = None, dispatcher: BECDispatcher = None, client=None) -> None:
         self.dispatcher = BECDispatcher() if dispatcher is None else dispatcher
-        self.client = self.dispatcher.client
+        self.client = self.dispatcher.client if client is None else client
         self.client.start()
         self.gui_id = gui_id
         self.fig = BECFigure(gui_id=self.gui_id)
