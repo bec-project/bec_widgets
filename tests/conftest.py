@@ -33,4 +33,4 @@ def bec_dispatcher(threads_check):
     # clean BEC client
     bec_dispatcher.client.shutdown()
     # reinitialize singleton for next test
-    bec_dispatcher_module._bec_dispatcher = None
+    bec_dispatcher_module.BECDispatcher.reset_singleton()
