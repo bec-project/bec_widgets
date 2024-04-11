@@ -1,7 +1,7 @@
 # pylint: disable= missing-module-docstring
 from setuptools import find_packages, setup
 
-__version__ = "0.46.2"
+__version__ = "0.46.3"
 
 # Default to PyQt6 if no other Qt binding is installed
 QT_DEPENDENCY = "PyQt6>=6.0"

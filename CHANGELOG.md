@@ -2,6 +2,15 @@
 
 <!--next-version-placeholder-->
 
+## v0.46.3 (2024-04-11)
+
+### Fix
+
+* **test_fake_redis:** TestMessage fixed to pydantic BaseModel ([`0b86a00`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/0b86a0009d9366b710294a3ab55cb9f4894472c0))
+* **plots/motor_map:** Removed single callback flag for connecting device_readback motors ([`49327a8`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/49327a8dbde270c67bc0ce7c757fd4a3eae118b4))
+* **cli/client_utils:** Print_log is buffered; add output processing thread ([`285bf01`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/285bf0164b6deb91678f03ab2a190680b6d83a02))
+* Producer->connector ([`9def373`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/9def3734afb361ac2d5cc933661766cdc440e09d))
+
 ## v0.46.2 (2024-04-10)
 
 ### Fix
