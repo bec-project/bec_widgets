@@ -96,7 +96,6 @@ class BECDispatcher:
         except redis.exceptions.ConnectionError:
             print("Could not connect to Redis, skipping start of BECClient.")
 
-
         self._initialized = True
 
     @classmethod

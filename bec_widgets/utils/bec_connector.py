@@ -35,7 +35,7 @@ class BECConnector:
 
     def __init__(self, client=None, config: ConnectionConfig = None, gui_id: str = None):
         # BEC related connections
-        self.bec_dispatcher = BECDispatcher()
+        self.bec_dispatcher = BECDispatcher(client=client)
         self.client = self.bec_dispatcher.client if client is None else client
 
         if config:

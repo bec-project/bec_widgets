@@ -16,7 +16,8 @@ def bec_figure(qtbot, mocked_client):
     widget = BECFigure(client=mocked_client)
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
-    return widget
+    yield widget
+    widget.close()
 
 
 def test_bec_figure_init(bec_figure):

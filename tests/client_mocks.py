@@ -1,7 +1,9 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 from unittest.mock import MagicMock, patch
 
+import fakeredis
 import pytest
+from bec_lib import BECClient, RedisConnector
 from bec_lib.device import Positioner
 from bec_lib.devicemanager import DeviceContainer
 
@@ -92,12 +94,24 @@ DEVICES = [
 ]
 
 
+def fake_redis_server(host, port):
+    redis = fakeredis.FakeRedis()
+    return redis
+
+
 @pytest.fixture(scope="function")
-def mocked_client():
+def mocked_client(bec_dispatcher):
+    connector = RedisConnector("localhost:1", redis_cls=fake_redis_server)
     # Create a MagicMock object
-    client = MagicMock()
+    client = MagicMock()  # TODO change to real BECClient
+
+    # Shutdown the original client
+    bec_dispatcher.client.shutdown()
+    # Mock the connector attribute
+    bec_dispatcher.client = client
 
     # Mock the device_manager.devices attribute
+    client.connector = connector
     client.device_manager = DMMock()
     client.device_manager.add_devives(DEVICES)
 
@@ -121,3 +135,4 @@ def mocked_client():
 
     with patch("builtins.isinstance", new=isinstance_mock):
         yield client
+    connector.shutdown()  # TODO change to real BECClient
