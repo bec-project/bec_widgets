@@ -5,7 +5,7 @@ image: $CI_DOCKER_REGISTRY/python:3.10
 #commands to run in the Docker container before starting each job.
 variables:
   DOCKER_TLS_CERTDIR: ""
-  BEC_CORE_BRANCH: "master"
+  BEC_CORE_BRANCH: "main"
   OPHYD_DEVICES_BRANCH: "master"
 
 include:
