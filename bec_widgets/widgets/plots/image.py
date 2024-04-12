@@ -283,7 +283,6 @@ class BECImageShow(BECPlotBase):
     USER_ACCESS = [
         "add_image_by_config",
         "get_image_config",
-        "get_image_list",
         "get_image_dict",
         "get_config",
         "add_monitor_image",
@@ -312,6 +311,7 @@ class BECImageShow(BECPlotBase):
         "lock_aspect_ratio",
         "plot",
         "remove",
+        "images",
     ]
 
     def __init__(
@@ -449,7 +449,8 @@ class BECImageShow(BECPlotBase):
                     else:
                         return image.config  # TODO check if this works
 
-    def get_image_list(self) -> list[BECImageItem]:
+    @property
+    def images(self) -> list[BECImageItem]:
         """
         Get the list of images.
         Returns:
@@ -460,6 +461,16 @@ class BECImageShow(BECPlotBase):
             for id, image in images_dict.items():
                 images.append(image)
         return images
+
+    @images.setter
+    def images(self, value: dict[str, dict[str, BECImageItem]]):
+        """
+        Set the images from a dictionary.
+
+        Args:
+            value (dict[str, dict[str, BECImageItem]]): The images to set, organized by source and id.
+        """
+        self._images = value
 
     def get_image_dict(self) -> dict[str, dict[str, BECImageItem]]:
         """
