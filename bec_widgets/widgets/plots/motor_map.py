@@ -36,8 +36,8 @@ class MotorMapConfig(WidgetConfig):
 
 class BECMotorMap(BECPlotBase):
     USER_ACCESS = [
+        "config_dict",
         "change_motors",
-        "get_config",
         "set_max_points",
         "set_precision",
         "set_num_dim_points",

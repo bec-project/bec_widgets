@@ -97,6 +97,7 @@ class WidgetHandler:
 
 class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     USER_ACCESS = [
+        "config_dict",
         "axes",
         "widgets",
         "add_plot",
@@ -109,7 +110,6 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         "change_layout",
         "change_theme",
         "clear_all",
-        "get_config",
     ]
 
     clean_signal = pyqtSignal()

@@ -59,6 +59,7 @@ class ImageConfig(WidgetConfig):
 
 class BECImageItem(BECConnector, pg.ImageItem):
     USER_ACCESS = [
+        "config_dict",
         "set",
         "set_fft",
         "set_log",
@@ -70,7 +71,6 @@ class BECImageItem(BECConnector, pg.ImageItem):
         "set_auto_downsample",
         "set_monitor",
         "set_vrange",
-        "get_config",
     ]
 
     def __init__(
@@ -281,10 +281,10 @@ class BECImageItem(BECConnector, pg.ImageItem):
 
 class BECImageShow(BECPlotBase):
     USER_ACCESS = [
+        "config_dict",
         "add_image_by_config",
         "get_image_config",
         "get_image_dict",
-        "get_config",
         "add_monitor_image",
         "add_custom_image",
         "set_vrange",
@@ -298,7 +298,6 @@ class BECImageShow(BECPlotBase):
         "set_rotation",
         "set_transpose",
         "toggle_threading",
-        "get_config",
         "set",
         "set_title",
         "set_x_label",

@@ -64,6 +64,7 @@ class Waveform1DConfig(WidgetConfig):
 
 class BECCurve(BECConnector, pg.PlotDataItem):
     USER_ACCESS = [
+        "config_dict",
         "set",
         "set_data",
         "set_color",
@@ -74,7 +75,6 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         "set_pen_width",
         "set_pen_style",
         "get_data",
-        "get_config",
     ]
 
     def __init__(
@@ -228,6 +228,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
 
 class BECWaveform(BECPlotBase):
     USER_ACCESS = [
+        "config_dict",
         "add_curve_scan",
         "add_curve_custom",
         "remove_curve",
@@ -237,7 +238,6 @@ class BECWaveform(BECPlotBase):
         "get_curve_config",
         "apply_config",
         "get_all_data",
-        "get_config",
         "set",
         "set_title",
         "set_x_label",

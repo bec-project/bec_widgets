@@ -31,7 +31,7 @@ class ConnectionConfig(BaseModel):
 class BECConnector:
     """Connection mixin class for all BEC widgets, to handle BEC client and device manager"""
 
-    USER_ACCESS = ["get_config"]
+    USER_ACCESS = ["config_dict"]
 
     def __init__(self, client=None, config: ConnectionConfig = None, gui_id: str = None):
         # BEC related connections
@@ -53,6 +53,24 @@ class BECConnector:
             self.gui_id = gui_id
         else:
             self.gui_id = self.config.gui_id
+
+    @property
+    def config_dict(self) -> dict:
+        """
+        Get the configuration of the widget.
+        Returns:
+            dict: The configuration of the widget.
+        """
+        return self.config.model_dump()
+
+    @config_dict.setter
+    def config_dict(self, config: BaseModel) -> None:
+        """
+        Get the configuration of the widget.
+        Returns:
+            dict: The configuration of the widget.
+        """
+        self.config = config
 
     @pyqtSlot(str)
     def set_gui_id(self, gui_id: str) -> None:

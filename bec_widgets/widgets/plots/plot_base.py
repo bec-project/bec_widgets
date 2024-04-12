@@ -37,7 +37,7 @@ class WidgetConfig(ConnectionConfig):
 
 class BECPlotBase(BECConnector, pg.GraphicsLayout):
     USER_ACCESS = [
-        "get_config",
+        "config_dict",
         "set",
         "set_title",
         "set_x_label",
