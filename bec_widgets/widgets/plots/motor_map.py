@@ -43,6 +43,7 @@ class BECMotorMap(BECPlotBase):
         "set_num_dim_points",
         "set_background_value",
         "set_scatter_size",
+        "get_data",
     ]
 
     # QT Signals
@@ -127,6 +128,18 @@ class BECMotorMap(BECPlotBase):
 
         # Redraw the motor map
         self._make_motor_map()
+
+    def get_data(self) -> dict:
+        """
+        Get the data of the motor map.
+        Returns:
+            dict: Data of the motor map.
+        """
+        data = {
+            "x": self.database_buffer["x"],
+            "y": self.database_buffer["y"],
+        }
+        return data
 
     # TODO setup all visual properties
     def set_max_points(self, max_points: int) -> None:
