@@ -88,6 +88,7 @@ tests:
     - apt-get install -y libgl1-mesa-glx libegl1-mesa x11-utils libxkbcommon-x11-0 libdbus-1-3
     - pip install -e ./bec/bec_lib[dev]
     - pip install -e .[dev]
+    - cd ./test/unit_tests/
     - coverage run --source=./bec_widgets -m pytest -v --junitxml=report.xml --random-order --full-trace ./tests
     - coverage report
     - coverage xml
@@ -151,8 +152,7 @@ end-2-end-conda:
     - cd ../
     - pip install -e .[dev]
     - cd ./tests/end-2-end
-    - redis-server --daemonize yes
-    - pytest --start-servers
+    - pytest --start-servers --flush-redis --random-order
 
   artifacts:
     when: on_failure

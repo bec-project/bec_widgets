@@ -1,6 +1,4 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
-import os
-import pickle
 from unittest.mock import MagicMock
 
 import pytest
@@ -9,7 +7,7 @@ from qtpy.QtWidgets import QLineEdit
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets import ScanControl
 
-from .test_msgs.available_scans_message import available_scans_message
+from tests.unit_tests.test_msgs.available_scans_message import available_scans_message
 
 
 class FakePositioner:

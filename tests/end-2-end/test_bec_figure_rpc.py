@@ -7,14 +7,17 @@ from bec_widgets.widgets.plots.waveform import Signal, SignalData
 
 
 @pytest.fixture
-def rpc_server(qtbot, bec_client_lib):
+def rpc_server(qtbot, bec_client_lib, threads_check):
     dispatcher = BECDispatcher(client=bec_client_lib)  # Has to init singleton with fixture client
     server = BECWidgetsCLIServer(gui_id="id_test")
     qtbot.addWidget(server.fig)
     qtbot.waitExposed(server.fig)
     qtbot.wait(1000)  # 1s long to wait until gui is ready
     yield server
+    dispatcher.disconnect_all()
     server.client.shutdown()
+    server.shutdown()
+    dispatcher.reset_singleton()
 
 
 def test_rpc_waveform1d_custom_curve(rpc_server, qtbot):
@@ -31,7 +34,7 @@ def test_rpc_waveform1d_custom_curve(rpc_server, qtbot):
     assert len(fig_server.widgets["widget_1"].curves) == 1
 
 
-def test_rpc_plotting_shortcuts(rpc_server, qtbot):
+def test_rpc_plotting_shortcuts_operation(rpc_server, qtbot):
     fig = BECFigure(rpc_server.gui_id)
     fig_server = rpc_server.fig
 
@@ -48,13 +51,12 @@ def test_rpc_plotting_shortcuts(rpc_server, qtbot):
     assert motor_map.__class__.__name__ == "BECMotorMap"
     assert motor_map.__class__ == BECMotorMap
 
-    # # check if the correct devices are set
-    # plt_curve_config = plt.curves[0].get_config()
-    # assert plt_curve_config["signals"] == {
-    #     "source": "scan_segment",
-    #     "x": {"name": "samx", "entry": "samx", "unit": None, "modifier": None, "limits": None},
-    #     "y": {"name": "bpm4i", "entry": "bpm4i", "unit": None, "modifier": None, "limits": None},
-    #     "z": None,
-    # }
-    #
-    # im_config = im.get_config()
+    # check if the correct devices are set
+    assert plt.config_dict["curves"]["bpm4i-bpm4i"]["signals"] == {
+        "source": "scan_segment",
+        "x": {"name": "samx", "entry": "samx", "unit": None, "modifier": None, "limits": None},
+        "y": {"name": "bpm4i", "entry": "bpm4i", "unit": None, "modifier": None, "limits": None},
+        "z": None,
+    }
+
+    assert im.config_dict["images"]["eiger"]["monitor"] == "eiger"

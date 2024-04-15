@@ -82,8 +82,9 @@ class BECDispatcher:
             return
 
         self._slots = collections.defaultdict(set)
+        self.client = client
 
-        if client is None:
+        if self.client is None:
             self.client = BECClient(connector_cls=QtRedisConnector, forced=True)
         else:
             if self.client.started:
