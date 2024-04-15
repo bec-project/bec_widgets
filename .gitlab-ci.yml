@@ -16,6 +16,7 @@ include:
 stages:
   - Formatter
   - test
+  - AdditionalTests
   - Deploy
 
 formatter:
@@ -99,7 +100,7 @@ tests:
 
 #tests-3.10-pyqt5: #todo enable when we decide what qt distributions we want to support
 #  extends: "tests"
-#  stage: test
+#  stage: AdditionalTests
 #  image: $CI_DOCKER_REGISTRY/python:3.10
 #  script:
 #    - apt-get update
@@ -109,11 +110,13 @@ tests:
 
 tests-3.11:
   extends: "tests"
+  stage: AdditionalTests
   image: $CI_DOCKER_REGISTRY/python:3.11
   allow_failure: true
 
 tests-3.12:
   extends: "tests"
+  stage: AdditionalTests
   image: $CI_DOCKER_REGISTRY/python:3.12
   allow_failure: true
 
