@@ -847,7 +847,6 @@ class DebugWindow(QWidget):  # pragma: no cover:
                 "w1": self.w1,
                 "w2": self.w2,
                 "w3": self.w3,
-                "w4": self.w4,
                 "bec": self.figure.client,
                 "scans": self.figure.client.scans,
                 "dev": self.figure.client.device_manager.devices,
@@ -869,74 +868,20 @@ class DebugWindow(QWidget):  # pragma: no cover:
         self.console.set_default_style("linux")
 
     def _init_figure(self):
-        # self.figure.add_widget(widget_type="Waveform1D", row=0, col=0, title="Widget 1")
         self.figure.plot("samx", "bpm4d")
-        self.figure.add_widget(widget_type="Waveform1D", row=0, col=1, title="Widget 2")
-        self.figure.add_image(
-            title="Image", row=1, col=0, color_map="viridis", color_bar="simple", vrange=(0, 100)
-        )
-        self.figure.add_image(title="Image", row=1, col=1, vrange=(0, 100))
+        self.figure.motor_map("samx", "samy")
+        self.figure.image("eiger", color_map="viridis", vrange=(0, 100))
+
+        self.figure.change_layout(2, 2)
 
         self.w1 = self.figure[0, 0]
         self.w2 = self.figure[0, 1]
         self.w3 = self.figure[1, 0]
-        self.w4 = self.figure[1, 1]
 
         # curves for w1
         self.w1.add_curve_scan("samx", "samy", "bpm4i", pen_style="dash")
         self.w1.add_curve_scan("samx", "samy", "bpm3a", pen_style="dash")
-
-        # self.w1.add_curve_custom(
-        #     x=[1, 2, 3, 4, 5],
-        #     y=[1, 2, 3, 4, 5],
-        #     label="curve-custom",
-        #     color="blue",
-        #     pen_style="dashdot",
-        # )
         self.c1 = self.w1.get_config()
-
-        # curves for w2
-        self.w2.add_curve_scan("samx", "bpm3a", pen_style="solid")
-        self.w2.add_curve_scan("samx", "bpm4d", pen_style="dot")
-        self.w2.add_curve_custom(
-            x=[1, 2, 3, 4, 5], y=[5, 4, 3, 2, 1], color="red", pen_style="dashdot"
-        )
-
-        # curves for w3
-        # self.w3.add_curve_scan("samx", "bpm4i", pen_style="dash")
-        # self.w3.add_curve_custom(
-        #     x=[1, 2, 3, 4, 5],
-        #     y=[1, 2, 3, 4, 5],
-        #     label="curve-custom",
-        #     color="blue",
-        #     pen_style="dashdot",
-        # )
-
-        # curves for w4
-        # self.w4.add_curve_scan("samx", "bpm4i", pen_style="dash")
-        # self.w4.add_curve_custom(
-        #     x=[1, 2, 3, 4, 5],
-        #     y=[1, 2, 3, 4, 5],
-        #     label="curve-custom",
-        #     color="blue",
-        #     pen_style="dashdot",
-        # )
-
-        # Image setting for w3
-
-        self.w3.add_monitor_image("eiger", vrange=(0, 100), color_bar="full")
-
-        # Image setting for w4
-        self.w4.add_monitor_image("eiger", vrange=(0, 100), color_map="viridis")
-
-    # def confirm_close(self):
-    #     self.safe_close = True
-    #
-    # def closeEvent(self, event):
-    #     self.figure.cleanup()
-    #     if self.safe_close == True:
-    #         print("Safe close")
-    #         event.accept()
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -71,6 +71,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
         "set_auto_downsample",
         "set_monitor",
         "set_vrange",
+        "get_data",
     ]
 
     def __init__(
@@ -242,6 +243,14 @@ class BECImageItem(BECConnector, pg.ImageItem):
             elif self.config.color_bar == "full":
                 self.color_bar.setLevels(min=vmin, max=vmax)
                 self.color_bar.setHistogramRange(vmin - 0.1 * vmin, vmax + 0.1 * vmax)
+
+    def get_data(self) -> np.ndarray:
+        """
+        Get the data of the image.
+        Returns:
+            np.ndarray: The data of the image.
+        """
+        return self.image
 
     def _add_color_bar(
         self, color_bar_style: str = "simple", vrange: Optional[tuple[int, int]] = None

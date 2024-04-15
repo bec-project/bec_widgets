@@ -1157,6 +1157,14 @@ class BECImageItem(RPCBase):
             vmax(float): Maximum value of the color bar.
         """
 
+    @rpc_call
+    def get_data(self) -> "np.ndarray":
+        """
+        Get the data of the image.
+        Returns:
+            np.ndarray: The data of the image.
+        """
+
 
 class BECMotorMap(RPCBase):
     @property
