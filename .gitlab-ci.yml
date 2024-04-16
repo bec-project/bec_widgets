@@ -191,6 +191,7 @@ semver:
       semantic-release publish -v DEBUG
       -D version_variable=./setup.py:__version__
       -D hvcs=gitlab
+      -D branch=main
 
   allow_failure: false
   rules:
