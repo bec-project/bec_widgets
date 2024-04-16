@@ -11,3 +11,4 @@ from .motor_control import (
 from .motor_map import MotorMap
 from .plots import BECCurve, BECMotorMap, BECWaveform
 from .scan_control import ScanControl
+from .dock import BECDockArea, BECDock

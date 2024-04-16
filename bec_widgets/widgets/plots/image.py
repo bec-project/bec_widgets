@@ -358,7 +358,7 @@ class BECImageShow(BECPlotBase):
 
         thread.start()
 
-    def find_widget_by_id(self, item_id: str) -> BECImageItem:
+    def find_widget_by_id(self, item_id: str) -> BECImageItem:  # todo can be done in mixin
         """
         Find the widget by its gui_id.
         Args:
@@ -719,10 +719,8 @@ class BECImageShow(BECPlotBase):
         processing_config = image_to_update.config.processing
         self.processor.set_config(processing_config)
         if self.use_threading:
-            print("using threaded version")
             self._create_thread_worker(device, data)
         else:
-            print("using NON-threaded version")
             data = self.processor.process_image(data)
             self.update_image(device, data)
 
