@@ -147,7 +147,7 @@ end-2-end-conda:
     - source ./bin/install_bec_dev.sh -t
 
     - pip install -e ./bec_lib[dev]
-    - pip install -e ./bec_client[dev]
+    - pip install -e ./bec_ipython_client[dev]
     - cd ../
     - pip install -e .[dev]
     - cd ./tests/end-2-end
