@@ -2,6 +2,15 @@
 
 <!--next-version-placeholder-->
 
+## v0.46.4 (2024-04-16)
+
+### Fix
+
+* Renaming of bec_client to bec_ipython_client ([`4da625e`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/4da625e4398bdd937c2b788592f15f7530148292))
+* **plots/motor_map:** User can get data as dict from BECMotorMap ([`c12f2ce`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/c12f2cee80b13137a2b70e2d121a079e20d124e2))
+* **plots/image:** User can get data as np.ndarray from BECImageItem ([`c2c583f`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/c2c583fce6f28981990c504dd065705124e40e44))
+* **rpc/server:** Server can accept client or dispatcher ([`ecdf0f1`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ecdf0f122b628ee378b80793d498cedafe50fbf8))
+
 ## v0.46.3 (2024-04-11)
 
 ### Fix
