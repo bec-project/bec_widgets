@@ -787,8 +787,8 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
     def clear_all(self):
         """Clear all widgets from the figure and reset to default state"""
-        for widget in self._widgets.values():
-            widget.cleanup()
+        # for widget in self._widgets.values():
+        #     widget.cleanup()
         self.clear()
         self._widgets = defaultdict(dict)
         self.grid = []
