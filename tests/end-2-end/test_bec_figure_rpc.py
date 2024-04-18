@@ -42,9 +42,10 @@ def test_rpc_plotting_shortcuts_init_configs(rpc_server, qtbot):
     plt = fig.plot("samx", "bpm4i")
     im = fig.image("eiger")
     motor_map = fig.motor_map("samx", "samy")
+    plt_z = fig.add_plot("samx", "samy", "bpm4i")
 
     # Checking if classes are correctly initialised
-    assert len(fig_server.widgets) == 3
+    assert len(fig_server.widgets) == 4
     assert plt.__class__.__name__ == "BECWaveform"
     assert plt.__class__ == BECWaveform
     assert im.__class__.__name__ == "BECImageShow"
@@ -80,6 +81,13 @@ def test_rpc_plotting_shortcuts_init_configs(rpc_server, qtbot):
             "limits": [-50.0, 50.0],
         },
         "z": None,
+    }
+    # plot with z scatter
+    assert plt_z.config_dict["curves"]["bpm4i-bpm4i"]["signals"] == {
+        "source": "scan_segment",
+        "x": {"name": "samx", "entry": "samx", "unit": None, "modifier": None, "limits": None},
+        "y": {"name": "samy", "entry": "samy", "unit": None, "modifier": None, "limits": None},
+        "z": {"name": "bpm4i", "entry": "bpm4i", "unit": None, "modifier": None, "limits": None},
     }
 
 
