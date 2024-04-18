@@ -82,8 +82,9 @@ def update_script(figure: BECFigure, msg):
         print(f"Scan {scan_number} is running")
         dev_x = scan_report_devices[0]
         dev_y = scan_report_devices[1]
+        dev_z = get_selected_device(monitored_devices, figure.selected_device)
         figure.clear_all()
-        plt = figure.plot(dev_x, dev_y, label=f"Scan {scan_number}")
+        plt = figure.plot(dev_x, dev_y, dev_z, label=f"Scan {scan_number}")
         plt.set(title=f"Scan {scan_number}", x_label=dev_x, y_label=dev_y)
     elif scan_report_devices:
         dev_x = scan_report_devices[0]
