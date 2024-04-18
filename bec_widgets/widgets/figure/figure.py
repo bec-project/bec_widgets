@@ -227,7 +227,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
                 y_entry=y_entry,
                 z_entry=z_entry,
                 color=color,
-                color_map=color_map_z,
+                color_map_z=color_map_z,
                 label=label,
                 validate=validate,
             )
@@ -313,7 +313,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
                 y_entry=y_entry,
                 z_entry=z_entry,
                 color=color,
-                color_map=color_map_z,
+                color_map_z=color_map_z,
                 label=label,
                 validate=validate,
             )
