@@ -12,7 +12,7 @@ from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.utils import BECConnector, ConnectionConfig
+from bec_widgets.utils import BECConnector, ConnectionConfig, EntryValidator
 
 from .plot_base import BECPlotBase, WidgetConfig
 
@@ -335,7 +335,9 @@ class BECImageShow(BECPlotBase):
         super().__init__(
             parent=parent, parent_figure=parent_figure, config=config, client=client, gui_id=gui_id
         )
-
+        # Get bec shortcuts dev, scans, queue, scan_storage, dap
+        self.get_bec_shortcuts()
+        self.entry_validator = EntryValidator(self.dev)
         self._images = defaultdict(dict)
         self.apply_config(self.config)
         self.processor = ImageProcessor()
@@ -506,6 +508,8 @@ class BECImageShow(BECPlotBase):
             raise ValueError(
                 f"Monitor with ID '{monitor}' already exists in widget '{self.gui_id}'."
             )
+
+        monitor = self.entry_validator.validate_monitor(monitor)
 
         image_config = ImageItemConfig(
             widget_class="BECImageItem",
@@ -784,6 +788,22 @@ class BECImageShow(BECPlotBase):
                 if self._check_image_id(val, dict_to_check[key]):
                     return True
         return False
+
+    def _validate_monitor(self, monitor: str, validate_bec: bool = True):
+        """
+        Validate the monitor name.
+        Args:
+            monitor(str): The name of the monitor.
+            validate_bec(bool): Whether to validate the monitor name with BEC.
+
+        Returns:
+            bool: True if the monitor name is valid, False otherwise.
+        """
+        if not monitor or monitor == "":
+            return False
+        if validate_bec:
+            return monitor in self.dev
+        return True
 
     def cleanup(self):
         """

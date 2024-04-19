@@ -91,6 +91,7 @@ DEVICES = [
     FakeDevice("bpm4i"),
     FakeDevice("bpm3a"),
     FakeDevice("bpm3i"),
+    FakeDevice("eiger"),
 ]
 
 
