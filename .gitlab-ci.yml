@@ -6,7 +6,7 @@ image: $CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX/python:3.10
 variables:
   DOCKER_TLS_CERTDIR: ""
   BEC_CORE_BRANCH: "main"
-  OPHYD_DEVICES_BRANCH: "master"
+  OPHYD_DEVICES_BRANCH: "main"
 
 workflow:
   rules:
