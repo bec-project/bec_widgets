@@ -36,6 +36,17 @@ def rpc_call(func):
 
     @wraps(func)
     def wrapper(self, *args, **kwargs):
+        # we could rely on a strict type check here, but this is more flexible
+        # moreover, it would anyway crash for objects...
+        out = []
+        for arg in args:
+            if hasattr(arg, "name"):
+                arg = arg.name
+            out.append(arg)
+        args = tuple(out)
+        for key, val in kwargs.items():
+            if hasattr(val, "name"):
+                kwargs[key] = val.name
         if not self.gui_is_alive():
             raise RuntimeError("GUI is not alive")
         return self._run_rpc(func.__name__, *args, **kwargs)
