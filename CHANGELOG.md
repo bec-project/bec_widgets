@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.46.6 (2024-04-19)
+
+### Fix
+
+* **cli:** Fixed support for devices as cli input ([`1111610`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/1111610f3206c5c46db6b4bd1e8827f1a4cd9e3f))
+
 ## v0.46.5 (2024-04-19)
 
 ### Fix
