@@ -2,6 +2,13 @@
 
 <!--next-version-placeholder-->
 
+## v0.46.5 (2024-04-19)
+
+### Fix
+
+* **widgets/figure:** Individual cleanup disabled, making stuck rpc ([`ff52100`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ff52100e234debdfb5ccc0869352cfafde52ac93))
+* **plots/waveform:** Colormap is correctly passed from BECFigure ([`026c079`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/026c0792bee25723013fffe57ccff10d9b652913))
+
 ## v0.46.4 (2024-04-16)
 
 ### Fix
