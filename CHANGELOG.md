@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.46.7 (2024-04-21)
+
+### Fix
+
+* **plot/image:** Monitors are now validated with current bec session ([`67a99a1`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/67a99a1a19c261f9a1f09635f274cd9fbfe53639))
+
 ## v0.46.6 (2024-04-19)
 
 ### Fix
