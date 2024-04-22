@@ -20,8 +20,8 @@ from bec_widgets.widgets.plots import (
     BECMotorMap,
     BECPlotBase,
     BECWaveform,
-    Waveform1DConfig,
     SubplotConfig,
+    Waveform1DConfig,
 )
 from bec_widgets.widgets.plots.image import ImageConfig
 from bec_widgets.widgets.plots.motor_map import MotorMapConfig
@@ -110,6 +110,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         "change_layout",
         "change_theme",
         "clear_all",
+        "containers",
     ]
 
     clean_signal = pyqtSignal()
@@ -158,6 +159,14 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
     @widgets.setter
     def widgets(self, value: dict):
+        self._widgets = value
+
+    @property
+    def containers(self) -> dict:
+        return self._widgets
+
+    @containers.setter
+    def containers(self, value: dict):
         self._widgets = value
 
     def add_plot(

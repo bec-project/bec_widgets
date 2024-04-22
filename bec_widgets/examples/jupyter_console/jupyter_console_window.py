@@ -5,13 +5,13 @@ import pyqtgraph as pg
 from PyQt6.QtCore import QSize
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QMainWindow
-from pyqtgraph.Qt import uic, QtWidgets
+from pyqtgraph.Qt import QtWidgets, uic
 from qtconsole.inprocess import QtInProcessKernelManager
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 from bec_widgets.utils import BECDispatcher
-from bec_widgets.widgets import BECFigure, BECDockArea
+from bec_widgets.widgets import BECDockArea, BECFigure
 
 
 class JupyterConsoleWidget(RichJupyterWidget):  # pragma: no cover:

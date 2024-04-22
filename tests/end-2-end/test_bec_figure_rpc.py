@@ -11,8 +11,8 @@ from bec_widgets.utils import BECDispatcher
 def rpc_server(qtbot, bec_client_lib, threads_check):
     dispatcher = BECDispatcher(client=bec_client_lib)  # Has to init singleton with fixture client
     server = BECWidgetsCLIServer(gui_id="id_test")
-    qtbot.addWidget(server.fig)
-    qtbot.waitExposed(server.fig)
+    qtbot.addWidget(server.gui)
+    qtbot.waitExposed(server.gui)
     qtbot.wait(1000)  # 1s long to wait until gui is ready
     yield server
     dispatcher.disconnect_all()
@@ -23,7 +23,7 @@ def rpc_server(qtbot, bec_client_lib, threads_check):
 
 def test_rpc_waveform1d_custom_curve(rpc_server, qtbot):
     fig = BECFigure(rpc_server.gui_id)
-    fig_server = rpc_server.fig
+    fig_server = rpc_server.gui
 
     ax = fig.add_plot()
     curve = ax.add_curve_custom([1, 2, 3], [1, 2, 3])
@@ -37,7 +37,7 @@ def test_rpc_waveform1d_custom_curve(rpc_server, qtbot):
 
 def test_rpc_plotting_shortcuts_init_configs(rpc_server, qtbot):
     fig = BECFigure(rpc_server.gui_id)
-    fig_server = rpc_server.fig
+    fig_server = rpc_server.gui
 
     plt = fig.plot("samx", "bpm4i")
     im = fig.image("eiger")
@@ -151,7 +151,7 @@ def test_rpc_image(rpc_server, qtbot):
 
 def test_rpc_motor_map(rpc_server, qtbot):
     fig = BECFigure(rpc_server.gui_id)
-    fig_server = rpc_server.fig
+    fig_server = rpc_server.gui
 
     motor_map = fig.motor_map("samx", "samy")
 

@@ -248,11 +248,11 @@ class BECWaveform(RPCBase):
         """
 
     @rpc_call
-    def apply_config(self, config: "dict | WidgetConfig", replot_last_scan: "bool" = False):
+    def apply_config(self, config: "dict | SubplotConfig", replot_last_scan: "bool" = False):
         """
         Apply the configuration to the 1D waveform widget.
         Args:
-            config(dict|WidgetConfig): Configuration settings.
+            config(dict|SubplotConfig): Configuration settings.
             replot_last_scan(bool, optional): If True, replot the last scan. Defaults to False.
         """
 
@@ -612,6 +612,13 @@ class BECFigure(RPCBase, BECFigureClientMixin):
     def clear_all(self):
         """
         Clear all widgets from the figure and reset to default state
+        """
+
+    @property
+    @rpc_call
+    def containers(self) -> "dict":
+        """
+        None
         """
 
 
