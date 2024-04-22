@@ -1,14 +1,11 @@
-import itertools
-import warnings
 from collections import defaultdict
 from typing import Optional, Literal
 
 import pyqtgraph as pg
-from PyQt6.QtWidgets import QWidget
+from qtpy.QtWidgets import QWidget
 from pydantic import Field
-from pyqtgraph import QtWidgets
 from pyqtgraph.dockarea.DockArea import DockArea, Dock
-from bec_widgets.utils import BECConnector, ConnectionConfig
+from bec_widgets.utils import BECConnector, ConnectionConfig, WidgetContainerUtils
 from bec_widgets.widgets import BECWaveform, BECFigure, BECMotorMap
 from bec_widgets.widgets.plots import BECImageShow
 
@@ -53,31 +50,15 @@ class BECDock(BECConnector, Dock):
 
         self.parent_dock_area = parent_dock_area
 
-        self.sigClosed.connect(self._remove_from_dock_area)  # TODO test if it works
+        self.sigClosed.connect(self._remove_from_dock_area)
 
     def _remove_from_dock_area(self):
         """Remove this dock from the DockArea it lives inside."""
-        self.parent_dock_area.docks.pop(self.name())  # TODO test if works
-
-    # def close(self):
-    #     """Remove this dock from the DockArea it lives inside."""
-    #     if self._container is None:
-    #         warnings.warn(
-    #             f"Cannot close dock {self} because it is not open.", RuntimeWarning, stacklevel=2
-    #         )
-    #         return
-    #
-    #     self.setParent(None)
-    #     QtWidgets.QLabel.close(self.label)
-    #     self.label.setParent(None)
-    #     self._container.apoptose()
-    #     self._container = None
-    #     self.sigClosed.emit(self)
-    #     # TODO add remove from dict from DockArea
+        self.parent_dock_area.docks.pop(self.name())
 
 
 class BECDockArea(BECConnector, DockArea):
-    USER_ACCESS = []
+    USER_ACCESS = ["figure", "plot", "image", "motor_map", "add_dock", "remove_dock_by_id", "clear"]
 
     def __init__(
         self,
@@ -95,8 +76,7 @@ class BECDockArea(BECConnector, DockArea):
         super().__init__(client=client, config=config, gui_id=gui_id)
         DockArea.__init__(self, parent=parent)
 
-        self._docks = defaultdict(dict)  # TODO check how is the pyqtgraph .docks implemented
-        self._last_state = None  # TOOD not sure if this will ever work
+        self._last_state = None  # TODO not sure if this will ever work
 
     def figure(self, name: str = None) -> BECFigure:
         figure = BECFigure(gui_id="remote")
@@ -134,11 +114,13 @@ class BECDockArea(BECConnector, DockArea):
         name: str = None,
         widget: QWidget = None,
         position: Literal["bottom", "top", "left", "right", "above", "below"] = None,
-        relative_to: Optional[BECDock] = None,
+        relative_to: Optional[BECDock] = None,  # TODO implement relative_to
         prefix: str = "dock",
     ) -> BECDock:
         if name is None:
-            name = self._generate_unique_dock_id(prefix)
+            name = WidgetContainerUtils.generate_unique_widget_id(
+                container=self.docks, prefix=prefix
+            )
 
         if name in set(self.docks.keys()):
             raise ValueError(f"Dock with name {name} already exists.")
@@ -157,17 +139,9 @@ class BECDockArea(BECConnector, DockArea):
 
         return dock
 
-    def _generate_unique_dock_id(
-        self, prefix: str = "widget"
-    ):  # TODO can be taken directly from BECFigure or made some mixin from it
-        """Generate a unique dock id."""
-        existing_ids = set(self.docks.keys())
-        for i in itertools.count(1):
-            dock_id = f"{prefix}_{i}"
-            if dock_id not in existing_ids:
-                return dock_id
-
-    def _remove_dock_by_id(self, dock_id: str):
-        ...
-        # TODO implement
-        # self.removeDock(self.docks[dock_id])
+    def remove_dock_by_id(self, dock_id: str):
+        if dock_id in self.docks:
+            dock_to_remove = self.docks[dock_id]
+            dock_to_remove.close()
+        else:
+            raise ValueError(f"Dock with id {dock_id} does not exist.")
