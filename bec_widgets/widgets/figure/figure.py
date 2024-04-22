@@ -14,7 +14,7 @@ from pyqtgraph.Qt import uic
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 
-from bec_widgets.utils import BECConnector, BECDispatcher, ConnectionConfig
+from bec_widgets.utils import BECConnector, BECDispatcher, ConnectionConfig, WidgetContainerUtils
 from bec_widgets.widgets.plots import (
     BECImageShow,
     BECMotorMap,
@@ -188,7 +188,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             config(dict): Additional configuration for the widget.
             **axis_kwargs(dict): Additional axis properties to set on the widget after creation.
         """
-        widget_id = self._generate_unique_widget_id()
+        widget_id = WidgetContainerUtils.generate_unique_widget_id(self._widgets)
         waveform = self.add_widget(
             widget_type="Waveform1D",
             widget_id=widget_id,
@@ -278,7 +278,9 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         Returns:
             BECWaveform: The waveform plot widget.
         """
-        waveform = self._find_first_widget_by_class(BECWaveform, can_fail=True)
+        waveform = WidgetContainerUtils.find_first_widget_by_class(
+            self._widgets, BECWaveform, can_fail=True
+        )
         if waveform is not None:
             if axis_kwargs:
                 waveform.set(**axis_kwargs)
@@ -355,7 +357,9 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         Returns:
             BECImageShow: The image widget.
         """
-        image = self._find_first_widget_by_class(BECImageShow, can_fail=True)
+        image = WidgetContainerUtils.find_first_widget_by_class(
+            self._widgets, BECImageShow, can_fail=True
+        )
         if image is not None:
             if axis_kwargs:
                 image.set(**axis_kwargs)
@@ -410,7 +414,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             BECImageShow: The image widget.
         """
 
-        widget_id = self._generate_unique_widget_id()
+        widget_id = WidgetContainerUtils.generate_unique_widget_id(self._widgets)
         if config is None:
             config = ImageConfig(
                 widget_class="BECImageShow",
@@ -457,7 +461,9 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         Returns:
             BECMotorMap: The motor map widget.
         """
-        motor_map = self._find_first_widget_by_class(BECMotorMap, can_fail=True)
+        motor_map = WidgetContainerUtils.find_first_widget_by_class(
+            self._widgets, BECMotorMap, can_fail=True
+        )
         if motor_map is not None:
             if axis_kwargs:
                 motor_map.set(**axis_kwargs)
@@ -491,7 +497,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         Returns:
             BECMotorMap: The motor map widget.
         """
-        widget_id = self._generate_unique_widget_id()
+        widget_id = WidgetContainerUtils.generate_unique_widget_id(self._widgets)
         if config is None:
             config = MotorMapConfig(
                 widget_class="BECMotorMap",
@@ -532,7 +538,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             **axis_kwargs(dict): Additional axis properties to set on the widget after creation.
         """
         if not widget_id:
-            widget_id = self._generate_unique_widget_id()
+            widget_id = WidgetContainerUtils.generate_unique_widget_id(self._widgets)
         if widget_id in self._widgets:
             raise ValueError(f"Widget with ID '{widget_id}' already exists.")
 
@@ -610,25 +616,6 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         self.setBackground("k" if theme == "dark" else "w")
         self.config.theme = theme
 
-    def _find_first_widget_by_class(
-        self, widget_class: Type[BECPlotBase], can_fail: bool = True
-    ) -> BECPlotBase | None:
-        """
-        Find the first widget of a given class in the figure.
-        Args:
-            widget_class(Type[BECPlotBase]): The class of the widget to find.
-            can_fail(bool): If True, the method will return None if no widget is found. If False, it will raise an error.
-        Returns:
-            BECPlotBase: The widget of the given class.
-        """
-        for widget_id, widget in self._widgets.items():
-            if isinstance(widget, widget_class):
-                return widget
-        if can_fail:
-            return None
-        else:
-            raise ValueError(f"No widget of class {widget_class} found.")
-
     def _remove_by_coordinates(self, row: int, col: int) -> None:
         """
         Remove a widget from the figure by its coordinates.
@@ -694,14 +681,6 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         while self.getItem(row, col):
             row += 1
         return row, col
-
-    def _generate_unique_widget_id(self):
-        """Generate a unique widget ID."""
-        existing_ids = set(self._widgets.keys())
-        for i in itertools.count(1):
-            widget_id = f"widget_{i}"
-            if widget_id not in existing_ids:
-                return widget_id
 
     def _change_grid(self, widget_id: str, row: int, col: int):
         """
