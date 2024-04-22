@@ -13,11 +13,11 @@ from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils import EntryValidator
-from bec_widgets.widgets.plots.plot_base import BECPlotBase, WidgetConfig
+from bec_widgets.widgets.plots.plot_base import BECPlotBase, SubplotConfig
 from bec_widgets.widgets.plots.waveform import Signal, SignalData
 
 
-class MotorMapConfig(WidgetConfig):
+class MotorMapConfig(SubplotConfig):
     signals: Optional[Signal] = Field(None, description="Signals of the motor map")
     color_map: Optional[str] = Field(
         "Greys", description="Color scheme of the motor position gradient."

@@ -14,7 +14,7 @@ from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils import BECConnector, ConnectionConfig, EntryValidator
 
-from .plot_base import BECPlotBase, WidgetConfig
+from .plot_base import BECPlotBase, SubplotConfig
 
 
 class ProcessingConfig(BaseModel):
@@ -50,7 +50,7 @@ class ImageItemConfig(ConnectionConfig):
     )
 
 
-class ImageConfig(WidgetConfig):
+class ImageConfig(SubplotConfig):
     images: dict[str, ImageItemConfig] = Field(
         {},
         description="The configuration of the images. The key is the name of the image (source).",
@@ -390,11 +390,11 @@ class BECImageShow(BECPlotBase):
                     if result is not None:
                         return result
 
-    def apply_config(self, config: dict | WidgetConfig):
+    def apply_config(self, config: dict | SubplotConfig):
         """
         Apply the configuration to the 1D waveform widget.
         Args:
-            config(dict|WidgetConfig): Configuration settings.
+            config(dict|SubplotConfig): Configuration settings.
             replot_last_scan(bool, optional): If True, replot the last scan. Defaults to False.
         """
         if isinstance(config, dict):

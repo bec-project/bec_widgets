@@ -22,7 +22,7 @@ class AxisConfig(BaseModel):
     y_grid: bool = Field(False, description="Show grid on the y-axis.")
 
 
-class WidgetConfig(ConnectionConfig):
+class SubplotConfig(ConnectionConfig):
     parent_id: Optional[str] = Field(None, description="The parent figure of the plot.")
 
     # Coordinates in the figure
@@ -56,12 +56,12 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         self,
         parent: Optional[QWidget] = None,  # TODO decide if needed for this class
         parent_figure=None,
-        config: Optional[WidgetConfig] = None,
+        config: Optional[SubplotConfig] = None,
         client=None,
         gui_id: Optional[str] = None,
     ):
         if config is None:
-            config = WidgetConfig(widget_class=self.__class__.__name__)
+            config = SubplotConfig(widget_class=self.__class__.__name__)
         super().__init__(client=client, config=config, gui_id=gui_id)
         pg.GraphicsLayout.__init__(self, parent)
 
