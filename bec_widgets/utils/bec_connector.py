@@ -127,3 +127,7 @@ class BECConnector:
             return self.config.model_dump()
         else:
             return self.config
+
+    def closeEvent(self, event):
+        self.client.shutdown()
+        super().closeEvent(event)

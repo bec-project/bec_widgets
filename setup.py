@@ -48,5 +48,11 @@ if __name__ == "__main__":
         version=__version__,
         packages=find_packages(),
         include_package_data=True,
-        package_data={"": ["*.ui", "*.yaml"]},
+        package_data={
+            "": [
+                "*.ui",
+                "*.yaml",
+                "*.png",
+            ]
+        },
     )

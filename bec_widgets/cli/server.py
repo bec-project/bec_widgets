@@ -1,4 +1,6 @@
 import inspect
+import threading
+import time
 
 from bec_lib import MessageEndpoints, messages
 from qtpy.QtCore import QTimer
@@ -109,17 +111,25 @@ class BECWidgetsCLIServer:
     def shutdown(self):
         self._shutdown_event = True
         self._heartbeat_timer.stop()
+        self.client.shutdown()
 
 
 if __name__ == "__main__":  # pragma: no cover
     import argparse
     import sys
 
+    from qtpy.QtCore import QSize
+    from qtpy.QtGui import QIcon
     from qtpy.QtWidgets import QApplication, QMainWindow
 
     app = QApplication(sys.argv)
     app.setApplicationName("BEC Figure")
+    icon = QIcon()
+    icon.addFile("bec_widgets_icon.png", size=QSize(48, 48))
+    app.setWindowIcon(icon)
+
     win = QMainWindow()
+    win.setWindowTitle("BEC Widgets")
 
     parser = argparse.ArgumentParser(description="BEC Widgets CLI Server")
     parser.add_argument("--id", type=str, help="The id of the server")

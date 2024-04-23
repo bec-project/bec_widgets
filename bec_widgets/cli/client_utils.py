@@ -121,7 +121,10 @@ class BECFigureClientMixin:
         """
         if self._process is None:
             return
-        self._run_rpc("close", (), wait_for_rpc_response=False)
+        if self.gui_is_alive():
+            self._run_rpc("close", (), wait_for_rpc_response=True)
+        else:
+            self._run_rpc("close", (), wait_for_rpc_response=False)
         self._process.terminate()
         self._process_output_processing_thread.join()
         self._process = None
@@ -212,7 +215,7 @@ class RPCBase:
             parameter={"args": args, "kwargs": kwargs, "gui_id": self._gui_id},
             metadata={"request_id": request_id},
         )
-        # print(f"RPCBase: {rpc_msg}")
+
         # pylint: disable=protected-access
         receiver = self._root._gui_id
         self._client.connector.set_and_publish(MessageEndpoints.gui_instructions(receiver), rpc_msg)
