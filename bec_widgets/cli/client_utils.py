@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import importlib.metadata as imd
 import os
 import select
 import subprocess
@@ -17,6 +18,7 @@ from bec_lib.device import DeviceBase
 from qtpy.QtCore import QCoreApplication
 
 import bec_widgets.cli.client as client
+from bec_widgets.cli.auto_updates import AutoUpdates
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 if TYPE_CHECKING:
@@ -54,67 +56,21 @@ def rpc_call(func):
     return wrapper
 
 
-def get_selected_device(monitored_devices, selected_device):
-    """
-    Get the selected device for the plot. If no device is selected, the first
-    device in the monitored devices list is selected.
-    """
-    if selected_device:
-        return selected_device
-    if len(monitored_devices) > 0:
-        sel_device = monitored_devices[0]
-        return sel_device
-    return None
-
-
-def update_script(figure: BECFigure, msg):
-    """
-    Update the script with the given data.
-    """
-    info = msg.info
-    status = msg.status
-    scan_id = msg.scan_id
-    scan_number = info.get("scan_number", 0)
-    scan_name = info.get("scan_name", "Unknown")
-    scan_report_devices = info.get("scan_report_devices", [])
-    monitored_devices = info.get("readout_priority", {}).get("monitored", [])
-    monitored_devices = [dev for dev in monitored_devices if dev not in scan_report_devices]
-
-    if scan_name == "line_scan" and scan_report_devices:
-        dev_x = scan_report_devices[0]
-        dev_y = get_selected_device(monitored_devices, figure.selected_device)
-        print(f"Selected device: {dev_y}")
-        if not dev_y:
-            return
-        figure.clear_all()
-        plt = figure.plot(dev_x, dev_y)
-        plt.set(title=f"Scan {scan_number}", x_label=dev_x, y_label=dev_y)
-    elif scan_name == "grid_scan" and scan_report_devices:
-        print(f"Scan {scan_number} is running")
-        dev_x = scan_report_devices[0]
-        dev_y = scan_report_devices[1]
-        dev_z = get_selected_device(monitored_devices, figure.selected_device)
-        figure.clear_all()
-        plt = figure.plot(dev_x, dev_y, dev_z, label=f"Scan {scan_number}")
-        plt.set(title=f"Scan {scan_number}", x_label=dev_x, y_label=dev_y)
-    elif scan_report_devices:
-        dev_x = scan_report_devices[0]
-        dev_y = get_selected_device(monitored_devices, figure.selected_device)
-        if not dev_y:
-            return
-        figure.clear_all()
-        plt = figure.plot(dev_x, dev_y, label=f"Scan {scan_number}")
-        plt.set(title=f"Scan {scan_number}", x_label=dev_x, y_label=dev_y)
-
-
 class BECFigureClientMixin:
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._process = None
-        self.update_script = update_script
+        self.update_script = self._get_update_script()
         self._target_endpoint = MessageEndpoints.scan_status()
         self._selected_device = None
         self.stderr_output = []
+
+    def _get_update_script(self) -> AutoUpdates:
+        eps = imd.entry_points(group="bec.widgets.auto_updates")
+        for ep in eps:
+            if ep.name == "plugin_widgets_update":
+                return ep.load()(figure=self)
+        return None
 
     @property
     def selected_device(self):
@@ -147,8 +103,7 @@ class BECFigureClientMixin:
         if isinstance(msg, messages.ScanStatusMessage):
             if not self.gui_is_alive():
                 return
-            if msg.status == "open":
-                self.update_script(self, msg)
+            self.update_script.run(msg)
 
     def show(self) -> None:
         """
