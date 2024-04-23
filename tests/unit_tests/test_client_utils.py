@@ -17,8 +17,8 @@ def cli_figure():
 
 def test_rpc_call_plot(cli_figure):
     fig, mock_rpc_call = cli_figure
-    fig.plot("samx", "bpm4i")
-    mock_rpc_call.assert_called_with("plot", "samx", "bpm4i")
+    fig.plot(x_name="samx", y_name="bpm4i")
+    mock_rpc_call.assert_called_with("plot", x_name="samx", y_name="bpm4i")
 
 
 def test_rpc_call_accepts_device_as_input(cli_figure):

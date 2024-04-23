@@ -150,7 +150,7 @@ def test_spiral_bar(rpc_server_dock):
     dock = BECDockArea(rpc_server_dock.gui_id)
     dock_server = rpc_server_dock.gui
 
-    d0 = dock.add_dock("dock_0")
+    d0 = dock.add_dock(name="dock_0")
 
     bar = d0.add_widget_bec("SpiralProgressBar")
     assert bar.__class__.__name__ == "SpiralProgressBar"

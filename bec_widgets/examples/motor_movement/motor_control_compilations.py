@@ -151,7 +151,7 @@ class MotorControlPanel(QWidget):
         self.selection_widget.selected_motors_signal.connect(self.absolute_widget.change_motors)
 
         # Set the window to a fixed size based on its contents
-        self.layout().setSizeConstraint(layout.SetFixedSize)
+        # self.layout().setSizeConstraint(layout.SetFixedSize)
 
 
 class MotorControlPanelAbsolute(QWidget):
@@ -178,9 +178,6 @@ class MotorControlPanelAbsolute(QWidget):
         # Connecting signals and slots
         self.selection_widget.selected_motors_signal.connect(self.absolute_widget.change_motors)
 
-        # Set the window to a fixed size based on its contents
-        self.layout().setSizeConstraint(layout.SetFixedSize)
-
 
 class MotorControlPanelRelative(QWidget):
     def __init__(self, parent=None, client=None, config=None):
@@ -205,9 +202,6 @@ class MotorControlPanelRelative(QWidget):
 
         # Connecting signals and slots
         self.selection_widget.selected_motors_signal.connect(self.relative_widget.change_motors)
-
-        # Set the window to a fixed size based on its contents
-        self.layout().setSizeConstraint(layout.SetFixedSize)
 
 
 if __name__ == "__main__":  # pragma: no cover

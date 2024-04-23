@@ -44,8 +44,8 @@ def test_mouse_moved_signals(qtbot):
     # Create a slot that will store the emitted values as tuples
     emitted_values_1D = []
 
-    def slot(x, y_values):
-        emitted_values_1D.append((x, y_values))
+    def slot(coordinates):
+        emitted_values_1D.append(coordinates)
 
     # Connect the signal to the custom slot
     crosshair.coordinatesChanged1D.connect(slot)
@@ -59,7 +59,7 @@ def test_mouse_moved_signals(qtbot):
     crosshair.mouse_moved(event_mock)
 
     # Assert the expected behavior
-    assert emitted_values_1D == [(2.0, [5.0])]
+    assert emitted_values_1D == [(2, [5])]
 
 
 def test_mouse_moved_signals_outside(qtbot):
@@ -106,8 +106,8 @@ def test_mouse_moved_signals_2D(qtbot):
     # Create a slot that will store the emitted values as tuples
     emitted_values_2D = []
 
-    def slot(x, y):
-        emitted_values_2D.append((x, y))
+    def slot(coordinates):
+        emitted_values_2D.append(coordinates)
 
     # Connect the signal to the custom slot
     crosshair.coordinatesChanged2D.connect(slot)

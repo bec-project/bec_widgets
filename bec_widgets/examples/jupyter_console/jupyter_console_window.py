@@ -2,7 +2,7 @@ import os
 
 import numpy as np
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtWidgets, uic
+from pyqtgraph.Qt import QtWidgets
 from qtconsole.inprocess import QtInProcessKernelManager
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtpy.QtCore import QSize
@@ -10,7 +10,7 @@ from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 from bec_widgets.cli.rpc_register import RPCRegister
-from bec_widgets.utils import BECDispatcher
+from bec_widgets.utils import BECDispatcher, UILoader
 from bec_widgets.widgets import BECFigure
 from bec_widgets.widgets.dock.dock_area import BECDockArea
 from bec_widgets.widgets.spiral_progress_bar.spiral_progress_bar import SpiralProgressBar
@@ -40,11 +40,11 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         super().__init__(parent)
 
         current_path = os.path.dirname(__file__)
-        uic.loadUi(os.path.join(current_path, "jupyter_console_window.ui"), self)
+        self.ui = UILoader().load_ui(os.path.join(current_path, "jupyter_console_window.ui"), self)
 
         self._init_ui()
 
-        self.splitter.setSizes([200, 100])
+        self.ui.splitter.setSizes([200, 100])
         self.safe_close = False
         # self.figure.clean_signal.connect(self.confirm_close)
 
@@ -75,11 +75,11 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
 
     def _init_ui(self):
         # Plotting window
-        self.glw_1_layout = QVBoxLayout(self.glw)  # Create a new QVBoxLayout
+        self.glw_1_layout = QVBoxLayout(self.ui.glw)  # Create a new QVBoxLayout
         self.figure = BECFigure(parent=self, gui_id="remote")  # Create a new BECDeviceMonitor
         self.glw_1_layout.addWidget(self.figure)  # Add BECDeviceMonitor to the layout
 
-        self.dock_layout = QVBoxLayout(self.dock_placeholder)
+        self.dock_layout = QVBoxLayout(self.ui.dock_placeholder)
         self.dock = BECDockArea(gui_id="remote")
         self.dock_layout.addWidget(self.dock)
 
@@ -89,7 +89,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         # init dock for testing
         self._init_dock()
 
-        self.console_layout = QVBoxLayout(self.widget_console)
+        self.console_layout = QVBoxLayout(self.ui.widget_console)
         self.console = JupyterConsoleWidget()
         self.console_layout.addWidget(self.console)
         self.console.set_default_style("linux")
