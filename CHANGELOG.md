@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.47.0 (2024-04-23)
+
+### Feature
+
+* **utils/thread_checker:** Util class to check the thread leakage for closeEvent in qt ([`71cb80d`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/71cb80d544c5f4ef499379a431ce0c17907c7ce8))
+
 ## v0.46.7 (2024-04-21)
 
 ### Fix
