@@ -9,18 +9,17 @@ from bec_lib import messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.redis_connector import RedisConnector
 from pyqtgraph import mkBrush, mkPen
-from pyqtgraph.Qt import QtCore, QtWidgets, uic
-from pyqtgraph.Qt.QtCore import pyqtSignal
-from qtpy.QtCore import Slot as pyqtSlot
-from qtpy.QtWidgets import QTableWidgetItem
+from pyqtgraph.Qt import QtCore, QtWidgets
+from qtpy.QtCore import Signal, Slot
+from qtpy.QtWidgets import QTableWidgetItem, QVBoxLayout
 
-from bec_widgets.utils import Colors, Crosshair
+from bec_widgets.utils import Colors, Crosshair, UILoader
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 
 class StreamPlot(QtWidgets.QWidget):
-    update_signal = pyqtSignal()
-    roi_signal = pyqtSignal(tuple)
+    update_signal = Signal()
+    roi_signal = Signal(tuple)
 
     def __init__(self, name="", y_value_list=["gauss_bpm"], client=None, parent=None) -> None:
         """
@@ -39,7 +38,7 @@ class StreamPlot(QtWidgets.QWidget):
         pg.setConfigOption("background", "w")
         pg.setConfigOption("foreground", "k")
         current_path = os.path.dirname(__file__)
-        uic.loadUi(os.path.join(current_path, "line_plot.ui"), self)
+        self.ui = UILoader().load_ui(os.path.join(current_path, "line_plot.ui"), self)
 
         self._idle_time = 100
         self.connector = RedisConnector(["localhost:6379"])
@@ -82,6 +81,9 @@ class StreamPlot(QtWidgets.QWidget):
 
         # LabelItem for ROI
         self.label_plot = pg.LabelItem(justify="center")
+        self.glw_plot_layout = QVBoxLayout(self.ui.glw_plot_placeholder)
+        self.glw_plot = pg.GraphicsLayoutWidget()
+        self.glw_plot_layout.addWidget(self.glw_plot)
         self.glw_plot.addItem(self.label_plot)
         self.label_plot.setText("ROI region")
 
@@ -112,6 +114,9 @@ class StreamPlot(QtWidgets.QWidget):
 
         # Label for coordinates moved
         self.label_image_moved = pg.LabelItem(justify="center")
+        self.glw_image_layout = QVBoxLayout(self.ui.glw_image_placeholder)
+        self.glw_image = pg.GraphicsLayoutWidget()
+        self.glw_plot_layout.addWidget(self.glw_image)
         self.glw_image.addItem(self.label_image_moved)
         self.label_image_moved.setText("Actual coordinates (X, Y)")
 
@@ -221,10 +226,10 @@ class StreamPlot(QtWidgets.QWidget):
 
     def init_table(self):
         # Init number of rows in table according to n of devices
-        self.cursor_table.setRowCount(len(self.y_value_list))
+        self.ui.cursor_table.setRowCount(len(self.y_value_list))
         # self.table.setHorizontalHeaderLabels(["(X, Y) - Moved", "(X, Y) - Clicked"]) #TODO can be dynamic
-        self.cursor_table.setVerticalHeaderLabels(self.y_value_list)
-        self.cursor_table.resizeColumnsToContents()
+        self.ui.cursor_table.setVerticalHeaderLabels(self.y_value_list)
+        self.ui.cursor_table.resizeColumnsToContents()
 
     def update_table(self, table_widget, x, y_values):
         for i, y in enumerate(y_values):
@@ -287,13 +292,13 @@ class StreamPlot(QtWidgets.QWidget):
 
             self.update_signal.emit()
 
-    @pyqtSlot(dict, dict)
+    @Slot(dict, dict)
     def on_dap_update(self, data: dict, metadata: dict):
         flipped_data = self.flip_even_rows(data["data"]["z"])
 
         self.img.setImage(flipped_data)
 
-    @pyqtSlot(dict, dict)
+    @Slot(dict, dict)
     def new_proj(self, content: dict, _metadata: dict):
         proj_nr = content["signals"]["proj_nr"]
         endpoint = f"px_stream/projection_{proj_nr}/metadata"

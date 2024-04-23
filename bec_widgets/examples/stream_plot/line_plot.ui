@@ -29,10 +29,10 @@
       <property name="orientation">
        <enum>Qt::Vertical</enum>
       </property>
-      <widget class="GraphicsLayoutWidget" name="glw_plot"/>
-      <widget class="GraphicsLayoutWidget" name="glw_image"/>
+      <widget class="QWidget" name="glw_plot_placeholder" native="true"/>
+      <widget class="QWidget" name="glw_image_placeholder" native="true"/>
      </widget>
-     <widget class="QWidget" name="">
+     <widget class="QWidget" name="layoutWidget">
       <layout class="QVBoxLayout" name="verticalLayout" stretch="1,1,1,15">
        <item>
         <widget class="QPushButton" name="pushButton_generate">
@@ -143,13 +143,6 @@
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>GraphicsLayoutWidget</class>
-   <extends>QGraphicsView</extends>
-   <header>pyqtgraph.h</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>
