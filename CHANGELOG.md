@@ -2,6 +2,16 @@
 
 <!--next-version-placeholder-->
 
+## v0.49.0 (2024-04-24)
+
+### Feature
+
+* **rpc/client_utils:** Timeout for rpc response ([`6500a00`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/6500a00682a2a7ca535a138bd9496ed8470856a8))
+
+### Fix
+
+* **rpc/client_utils:** Close clean up policy for BECFigure ([`9602085`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/9602085f82cbc983f89b5bfe48bf35f08438fa87))
+
 ## v0.48.0 (2024-04-24)
 
 ### Feature
