@@ -170,6 +170,15 @@ class BECFigureClientMixin:
                 self.stderr_output.append(self._process.stderr.read(1024))
 
 
+class RPCResponseTimeoutError(Exception):
+    """Exception raised when an RPC response is not received within the expected time."""
+
+    def __init__(self, request_id, timeout):
+        super().__init__(
+            f"RPC response not received within {timeout} seconds for request ID {request_id}"
+        )
+
+
 class RPCBase:
     def __init__(self, gui_id: str = None, config: dict = None, parent=None) -> None:
         self._client = BECDispatcher().client
@@ -250,16 +259,28 @@ class RPCBase:
             return cls(parent=self, **msg_result)
         return msg_result
 
-    def _wait_for_response(self, request_id):
+    def _wait_for_response(self, request_id: str, timeout: int = 5):
         """
         Wait for the response from the server.
+        Args:
+            request_id(str): The request ID.
+            timeout(int): The timeout in seconds.
+
+        Returns:
+            The response from the server.
         """
+        start_time = time.time()
         response = None
-        while response is None and self.gui_is_alive():
+
+        while response is None and self.gui_is_alive() and (time.time() - start_time) < timeout:
             response = self._client.connector.get(
                 MessageEndpoints.gui_instruction_response(request_id)
             )
             QCoreApplication.processEvents()  # keep UI responsive (and execute signals/slots)
+            time.sleep(0.1)
+        if response is None and (time.time() - start_time) >= timeout:
+            raise RPCResponseTimeoutError(request_id, timeout)
+
         return response
 
     def gui_is_alive(self):
