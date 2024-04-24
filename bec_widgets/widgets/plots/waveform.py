@@ -64,6 +64,8 @@ class Waveform1DConfig(WidgetConfig):
 
 class BECCurve(BECConnector, pg.PlotDataItem):
     USER_ACCESS = [
+        "remove",
+        "rpc_id",
         "config_dict",
         "set",
         "set_data",
@@ -82,6 +84,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         name: Optional[str] = None,
         config: Optional[CurveConfig] = None,
         gui_id: Optional[str] = None,
+        parent_item: Optional[pg.PlotItem] = None,
         **kwargs,
     ):
         if config is None:
@@ -93,6 +96,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         super().__init__(config=config, gui_id=gui_id)
         pg.PlotDataItem.__init__(self, name=name)
 
+        self.parent_item = parent_item
         self.apply_config()
         if kwargs:
             self.set(**kwargs)
@@ -225,9 +229,19 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         x_data, y_data = self.getData()
         return x_data, y_data
 
+    def cleanup(self):
+        """Cleanup the curve."""
+        self.rpc_register.remove_rpc(self)
+
+    def remove(self):
+        """Remove the curve from the plot."""
+        self.cleanup()
+        self.parent_item.removeItem(self)
+
 
 class BECWaveform(BECPlotBase):
     USER_ACCESS = [
+        "rpc_id",
         "config_dict",
         "add_curve_scan",
         "add_curve_custom",
@@ -455,7 +469,7 @@ class BECWaveform(BECPlotBase):
         Returns:
             BECCurve: The curve object.
         """
-        curve = BECCurve(config=config, name=name)
+        curve = BECCurve(config=config, name=name, parent_item=self.plot_item)
         self._curves_data[source][name] = curve
         self.plot_item.addItem(curve)
         self.config.curves[name] = curve.config
@@ -783,3 +797,6 @@ class BECWaveform(BECPlotBase):
     def cleanup(self):
         """Cleanup the widget connection from BECDispatcher."""
         self.bec_dispatcher.disconnect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
+        for curve in self.curves:
+            curve.cleanup()
+        self.rpc_register.remove_rpc(self)

@@ -59,6 +59,7 @@ class ImageConfig(WidgetConfig):
 
 class BECImageItem(BECConnector, pg.ImageItem):
     USER_ACCESS = [
+        "rpc_id",
         "config_dict",
         "set",
         "set_fft",
@@ -290,6 +291,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
 
 class BECImageShow(BECPlotBase):
     USER_ACCESS = [
+        "rpc_id",
         "config_dict",
         "add_image_by_config",
         "get_image_config",

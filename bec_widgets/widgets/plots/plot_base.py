@@ -243,6 +243,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
     def remove(self):
         """Remove the plot widget from the figure."""
         if self.figure is not None:
+            self.cleanup()
             self.figure.remove(widget_id=self.gui_id)
 
     def cleanup(self):

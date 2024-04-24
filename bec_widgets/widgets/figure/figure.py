@@ -97,6 +97,7 @@ class WidgetHandler:
 
 class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     USER_ACCESS = [
+        "rpc_id",
         "config_dict",
         "axes",
         "widgets",
@@ -110,6 +111,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         "change_layout",
         "change_theme",
         "clear_all",
+        "get_all_rpc",
     ]
 
     clean_signal = pyqtSignal()
@@ -137,6 +139,19 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
         # Container to keep track of the grid
         self.grid = []
+
+    def __getitem__(self, key: tuple | str):
+        if isinstance(key, tuple) and len(key) == 2:
+            return self._get_widget_by_coordinates(*key)
+        elif isinstance(key, str):
+            widget = self._widgets.get(key)
+            if widget is None:
+                raise KeyError(f"No widget with ID {key}")
+            return self._widgets.get(key)
+        else:
+            raise TypeError(
+                "Key must be a string (widget id) or a tuple of two integers (grid coordinates)"
+            )
 
     @property
     def axes(self) -> list[BECPlotBase]:
@@ -646,19 +661,6 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             print(f"Removed widget {widget_id}.")
         else:
             raise ValueError(f"Widget with ID '{widget_id}' does not exist.")
-
-    def __getitem__(self, key: tuple | str):
-        if isinstance(key, tuple) and len(key) == 2:
-            return self._get_widget_by_coordinates(*key)
-        elif isinstance(key, str):
-            widget = self._widgets.get(key)
-            if widget is None:
-                raise KeyError(f"No widget with ID {key}")
-            return self._widgets.get(key)
-        else:
-            raise TypeError(
-                "Key must be a string (widget id) or a tuple of two integers (grid coordinates)"
-            )
 
     def _get_widget_by_coordinates(self, row: int, col: int) -> BECPlotBase:
         """
