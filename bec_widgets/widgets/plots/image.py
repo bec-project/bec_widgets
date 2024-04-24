@@ -358,20 +358,6 @@ class BECImageShow(BECPlotBase):
 
         thread.start()
 
-    def find_widget_by_id(self, item_id: str) -> BECImageItem:
-        """
-        Find the widget by its gui_id.
-        Args:
-            item_id(str): The gui_id of the widget.
-
-        Returns:
-            BECImageItem: The widget with the given gui_id.
-        """
-        for source, images in self._images.items():
-            for monitor, image_item in images.items():
-                if image_item.gui_id == item_id:
-                    return image_item
-
     def find_image_by_monitor(self, item_id: str) -> BECImageItem:
         """
         Find the widget by its gui_id.
@@ -719,10 +705,8 @@ class BECImageShow(BECPlotBase):
         processing_config = image_to_update.config.processing
         self.processor.set_config(processing_config)
         if self.use_threading:
-            print("using threaded version")
             self._create_thread_worker(device, data)
         else:
-            print("using NON-threaded version")
             data = self.processor.process_image(data)
             self.update_image(device, data)
 
@@ -809,7 +793,6 @@ class BECImageShow(BECPlotBase):
         """
         Clean up the widget.
         """
-        print(f"Cleaning up {self.gui_id}")
         # for monitor in self._images["device_monitor"]:
         #     self.bec_dispatcher.disconnect_slot(
         #         self.on_image_update, MessageEndpoints.device_monitor(monitor)

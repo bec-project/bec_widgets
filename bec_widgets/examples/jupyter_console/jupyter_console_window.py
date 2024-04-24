@@ -7,6 +7,7 @@ from qtconsole.inprocess import QtInProcessKernelManager
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
+from bec_widgets.cli.rpc_register import RPCRegister
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.widgets import BECFigure
 
@@ -43,10 +44,14 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.safe_close = False
         # self.figure.clean_signal.connect(self.confirm_close)
 
+        self.register = RPCRegister()
+        self.register.add_rpc(self.figure)
+        print("Registered objects:", dict(self.register.list_all_connections()))
         # console push
         self.console.kernel_manager.kernel.shell.push(
             {
                 "fig": self.figure,
+                "register": self.register,
                 "w1": self.w1,
                 "w2": self.w2,
                 "w3": self.w3,

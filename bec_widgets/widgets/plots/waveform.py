@@ -286,19 +286,6 @@ class BECWaveform(BECPlotBase):
         self.add_legend()
         self.apply_config(self.config)
 
-    def find_widget_by_id(self, item_id: str) -> BECCurve:
-        """
-        Find the curve by its ID.
-        Args:
-            item_id(str): ID of the curve.
-
-        Returns:
-            BECCurve: The curve object.
-        """
-        for curve in self.plot_item.curves:
-            if curve.gui_id == item_id:
-                return curve
-
     def apply_config(self, config: dict | WidgetConfig, replot_last_scan: bool = False):
         """
         Apply the configuration to the 1D waveform widget.

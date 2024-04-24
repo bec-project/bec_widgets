@@ -5,6 +5,7 @@ import time
 from bec_lib import MessageEndpoints, messages
 from qtpy.QtCore import QTimer
 
+from bec_widgets.cli.rpc_register import RPCRegister
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.widgets.figure import BECFigure
@@ -20,6 +21,8 @@ class BECWidgetsCLIServer:
         self.client.start()
         self.gui_id = gui_id
         self.fig = BECFigure(gui_id=self.gui_id)
+        self.rpc_register = RPCRegister()
+        self.rpc_register.add_rpc(self.fig)
 
         self.dispatcher.connect_slot(
             self.on_rpc_update, MessageEndpoints.gui_instructions(self.gui_id)
@@ -54,20 +57,10 @@ class BECWidgetsCLIServer:
 
     def get_object_from_config(self, config: dict):
         gui_id = config.get("gui_id")
-        # check if the object is the figure
-        if gui_id == self.fig.gui_id:
-            return self.fig
-        # check if the object is a widget
-        if gui_id in self.fig._widgets:
-            obj = self.fig._widgets[config["gui_id"]]
-            return obj
-        if self.fig._widgets:
-            for widget in self.fig._widgets.values():
-                item = widget.find_widget_by_id(gui_id)
-                if item:
-                    return item
-
-        raise ValueError(f"Object with gui_id {gui_id} not found")
+        obj = self.rpc_register.get_rpc_by_id(gui_id)
+        if obj is None:
+            raise ValueError(f"Object with gui_id {gui_id} not found")
+        return obj
 
     def run_rpc(self, obj, method, args, kwargs):
         method_obj = getattr(obj, method)
@@ -106,7 +99,6 @@ class BECWidgetsCLIServer:
                 messages.StatusMessage(name=self.gui_id, status=1, info={}),
                 expire=10,
             )
-        print("Heartbeat emitted")
 
     def shutdown(self):
         self._shutdown_event = True

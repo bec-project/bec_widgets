@@ -7,6 +7,7 @@ from typing import Optional, Type
 from pydantic import BaseModel, Field, field_validator
 from qtpy.QtCore import Slot as pyqtSlot
 
+from bec_widgets.cli.rpc_register import RPCRegister
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 
@@ -31,7 +32,7 @@ class ConnectionConfig(BaseModel):
 class BECConnector:
     """Connection mixin class for all BEC widgets, to handle BEC client and device manager"""
 
-    USER_ACCESS = ["config_dict"]
+    USER_ACCESS = ["config_dict", "get_all_rpc"]
 
     def __init__(self, client=None, config: ConnectionConfig = None, gui_id: str = None):
         # BEC related connections
@@ -53,6 +54,25 @@ class BECConnector:
             self.gui_id = gui_id
         else:
             self.gui_id = self.config.gui_id
+
+        # register widget to rpc register
+        self.rpc_register = RPCRegister()
+        self.rpc_register.add_rpc(self)
+
+    def get_all_rpc(self) -> dict:
+        """Get all registered RPC objects."""
+        all_connections = self.rpc_register.list_all_connections()
+        return dict(all_connections)
+
+    @property
+    def rpc_id(self) -> str:
+        """Get the RPC ID of the widget."""
+        return self.gui_id
+
+    @rpc_id.setter
+    def rpc_id(self, rpc_id: str) -> None:
+        """Set the RPC ID of the widget."""
+        self.gui_id = rpc_id
 
     @property
     def config_dict(self) -> dict:
