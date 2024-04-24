@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.48.0 (2024-04-24)
+
+### Feature
+
+* **cli:** Added auto updates plugin support ([`6238693`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/6238693ffb44b47a56b969bc4129f2af7a2c04fe))
+
 ## v0.47.0 (2024-04-23)
 
 ### Feature
