@@ -157,17 +157,24 @@ class BECFigureClientMixin:
         self.stderr_output.clear()
 
     def _get_output(self) -> str:
-        os.set_blocking(self._process.stdout.fileno(), False)
-        os.set_blocking(self._process.stderr.fileno(), False)
-        while self._process.poll() is None:
-            readylist, _, _ = select.select([self._process.stdout, self._process.stderr], [], [], 1)
-            if self._process.stdout in readylist:
-                # print("*"*10, self._process.stdout.read(1024), flush=True, end="")
-                self._process.stdout.read(1024)
-            if self._process.stderr in readylist:
-                # print("!"*10, self._process.stderr.read(1024), flush=True, end="", file=sys.stderr)
-                print(self._process.stderr.read(1024), flush=True, end="", file=sys.stderr)
-                self.stderr_output.append(self._process.stderr.read(1024))
+        try:
+            os.set_blocking(self._process.stdout.fileno(), False)
+            os.set_blocking(self._process.stderr.fileno(), False)
+            while self._process.poll() is None:
+                readylist, _, _ = select.select(
+                    [self._process.stdout, self._process.stderr], [], [], 1
+                )
+                if self._process.stdout in readylist:
+                    output = self._process.stdout.read(1024)
+                    if output:
+                        print(output, end="")
+                if self._process.stderr in readylist:
+                    error_output = self._process.stderr.read(1024)
+                    if error_output:
+                        print(error_output, end="", file=sys.stderr)
+                        self.stderr_output.append(error_output)
+        except Exception as e:
+            print(f"Error reading process output: {str(e)}")
 
 
 class RPCResponseTimeoutError(Exception):

@@ -658,7 +658,6 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             self._reindex_grid()
             if widget_id in self.config.widgets:
                 self.config.widgets.pop(widget_id)
-            print(f"Removed widget {widget_id}.")
         else:
             raise ValueError(f"Widget with ID '{widget_id}' does not exist.")
 
@@ -701,7 +700,6 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
     def _reindex_grid(self):
         """Reindex the grid to remove empty rows and columns."""
-        print(f"old grid: {self.grid}")
         new_grid = []
         for row in self.grid:
             new_row = [widget for widget in row if widget is not None]

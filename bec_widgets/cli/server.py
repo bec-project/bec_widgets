@@ -37,10 +37,10 @@ class BECWidgetsCLIServer:
     def on_rpc_update(self, msg: dict, metadata: dict):
         request_id = metadata.get("request_id")
         try:
+            obj = self.get_object_from_config(msg["parameter"])
             method = msg["action"]
             args = msg["parameter"].get("args", [])
             kwargs = msg["parameter"].get("kwargs", {})
-            obj = self.get_object_from_config(msg["parameter"])
             res = self.run_rpc(obj, method, args, kwargs)
         except Exception as e:
             print(e)
