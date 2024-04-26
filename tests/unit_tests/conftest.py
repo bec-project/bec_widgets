@@ -1,6 +1,13 @@
 import pytest
 
+from bec_widgets.cli.rpc_register import RPCRegister
 from bec_widgets.utils import bec_dispatcher as bec_dispatcher_module
+
+
+@pytest.fixture(autouse=True)
+def rpc_register():
+    yield RPCRegister()
+    RPCRegister.reset_singleton()
 
 
 @pytest.fixture(autouse=True)
