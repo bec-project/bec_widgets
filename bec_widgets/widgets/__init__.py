@@ -1,4 +1,3 @@
-from .editor import BECEditor
 from .figure import BECFigure, FigureConfig
 from .monitor import BECMonitor
 from .motor_control import (
