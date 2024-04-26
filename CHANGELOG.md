@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.49.1 (2024-04-26)
+
+### Fix
+
+* **widgets/editor:** Qscintilla editor removed ([`ab85374`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/ab8537483da6c87cb9a0b0f01706208c964f292d))
+
 ## v0.49.0 (2024-04-24)
 
 ### Feature
