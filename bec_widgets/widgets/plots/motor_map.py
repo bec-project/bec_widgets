@@ -182,14 +182,18 @@ class BECMotorMap(BECPlotBase):
         """
         self.config.scatter_size = scatter_size
 
-    def _connect_motor_to_slots(self):
-        """Connect motors to slots."""
+    def _disconnect_current_motors(self):
+        """Disconnect the current motors from the slots."""
         if self.motor_x is not None and self.motor_y is not None:
-            old_endpoints = [
+            endpoints = [
                 MessageEndpoints.device_readback(self.motor_x),
                 MessageEndpoints.device_readback(self.motor_y),
             ]
-            self.bec_dispatcher.disconnect_slot(self.on_device_readback, old_endpoints)
+            self.bec_dispatcher.disconnect_slot(self.on_device_readback, endpoints)
+
+    def _connect_motor_to_slots(self):
+        """Connect motors to slots."""
+        self._disconnect_current_motors()
 
         self.motor_x = self.config.signals.x.name
         self.motor_y = self.config.signals.y.name
@@ -418,18 +422,7 @@ class BECMotorMap(BECPlotBase):
 
         self.update_signal.emit()
 
-
-if __name__ == "__main__":  # pragma: no cover
-    import sys
-
-    import pyqtgraph as pg
-    from qtpy.QtWidgets import QApplication
-
-    app = QApplication(sys.argv)
-    glw = pg.GraphicsLayoutWidget()
-    motor_map = BECMotorMap()
-    motor_map.change_motors("samx", "samy")
-    glw.addItem(motor_map)
-    widget = glw
-    widget.show()
-    sys.exit(app.exec_())
+    def cleanup(self):
+        """Cleanup the widget."""
+        self._disconnect_current_motors()
+        self.rpc_register.remove_rpc(self)
