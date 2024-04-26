@@ -112,6 +112,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         "change_theme",
         "clear_all",
         "get_all_rpc",
+        "widget_list",
     ]
 
     clean_signal = pyqtSignal()
@@ -142,7 +143,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
     def __getitem__(self, key: tuple | str):
         if isinstance(key, tuple) and len(key) == 2:
-            return self._get_widget_by_coordinates(*key)
+            return self.axes(*key)
         elif isinstance(key, str):
             widget = self._widgets.get(key)
             if widget is None:
@@ -154,7 +155,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             )
 
     @property
-    def axes(self) -> list[BECPlotBase]:
+    def widget_list(self) -> list[BECPlotBase]:
         """
         Access all widget in BECFigure as a list
         Returns:
@@ -163,8 +164,8 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         axes = [value for value in self._widgets.values() if isinstance(value, BECPlotBase)]
         return axes
 
-    @axes.setter
-    def axes(self, value: list[BECPlotBase]):
+    @widget_list.setter
+    def widget_list(self, value: list[BECPlotBase]):
         self._axes = value
 
     @property
@@ -638,7 +639,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             row(int): The row coordinate of the widget to remove.
             col(int): The column coordinate of the widget to remove.
         """
-        widget = self._get_widget_by_coordinates(row, col)
+        widget = self.axes(row, col)
         if widget:
             widget_id = widget.config.gui_id
             if widget_id in self._widgets:
@@ -661,7 +662,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         else:
             raise ValueError(f"Widget with ID '{widget_id}' does not exist.")
 
-    def _get_widget_by_coordinates(self, row: int, col: int) -> BECPlotBase:
+    def axes(self, row: int, col: int) -> BECPlotBase:
         """
         Get widget by its coordinates in the figure.
         Args:

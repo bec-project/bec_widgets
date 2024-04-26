@@ -410,13 +410,16 @@ class BECFigure(RPCBase, BECFigureClientMixin):
             dict: The configuration of the widget.
         """
 
-    @property
     @rpc_call
-    def axes(self) -> "list[BECPlotBase]":
+    def axes(self, row: "int", col: "int") -> "BECPlotBase":
         """
-        Access all widget in BECFigure as a list
+        Get widget by its coordinates in the figure.
+        Args:
+            row(int): the row coordinate
+            col(int): the column coordinate
+
         Returns:
-            list[BECPlotBase]: List of all widgets in the figure.
+            BECPlotBase: the widget at the given coordinates
         """
 
     @property
@@ -632,6 +635,15 @@ class BECFigure(RPCBase, BECFigureClientMixin):
     def get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
+        """
+
+    @property
+    @rpc_call
+    def widget_list(self) -> "list[BECPlotBase]":
+        """
+        Access all widget in BECFigure as a list
+        Returns:
+            list[BECPlotBase]: List of all widgets in the figure.
         """
 
 
