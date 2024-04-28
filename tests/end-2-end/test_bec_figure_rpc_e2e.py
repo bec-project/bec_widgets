@@ -3,22 +3,6 @@ import pytest
 from bec_lib import MessageEndpoints
 
 from bec_widgets.cli.client import BECFigure, BECImageShow, BECMotorMap, BECWaveform
-from bec_widgets.cli.server import BECWidgetsCLIServer
-from bec_widgets.utils import BECDispatcher
-
-
-@pytest.fixture
-def rpc_server(qtbot, bec_client_lib, threads_check):
-    dispatcher = BECDispatcher(client=bec_client_lib)  # Has to init singleton with fixture client
-    server = BECWidgetsCLIServer(gui_id="id_test")
-    qtbot.addWidget(server.fig)
-    qtbot.waitExposed(server.fig)
-    qtbot.wait(1000)  # 1s long to wait until gui is ready
-    yield server
-    dispatcher.disconnect_all()
-    server.client.shutdown()
-    server.shutdown()
-    dispatcher.reset_singleton()
 
 
 def test_rpc_waveform1d_custom_curve(rpc_server, qtbot):
