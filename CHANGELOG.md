@@ -2,6 +2,20 @@
 
 <!--next-version-placeholder-->
 
+## v0.50.0 (2024-04-29)
+
+### Feature
+
+* **plots:** Universal cleanup and remove also for children items ([`381d713`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/381d713837bb9217c58ba1d8b89691aa35c9f5ec))
+* **rpc/rpc_register:** Singleton rpc register for all rpc connections for session ([`a898e7e`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/a898e7e4f14e9ae854703dddbd1eb8c50cb640ff))
+
+### Fix
+
+* **widgets/figure:** Access pattern changed for getting widgets by coordinates for rpc ([`13c018a`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/13c018a79704a7497c140df57179d294e43ecffa))
+* **plots:** Cleanup policy reviewed for children items ([`8f20a0b`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/8f20a0b3b1b5dd117b36b45645717190b9ee9cbf))
+* **rpc/client_utils:** Getoutput more transparent + error handling ([`6b6a6b2`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/6b6a6b2249f24d3d02bd5fcd7ef1c63ed794c304))
+* **rpc_register:** Thread lock for listign all connections ([`2ca3267`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/2ca32675ec3f00137e2140259db51f6e5aa7bb71))
+
 ## v0.49.1 (2024-04-26)
 
 ### Fix
