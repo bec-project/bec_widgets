@@ -15,8 +15,10 @@ from bec_widgets.widgets.plots import BECCurve, BECImageShow, BECWaveform
 class BECWidgetsCLIServer:
     WIDGETS = [BECWaveform, BECFigure, BECCurve, BECImageShow]
 
-    def __init__(self, gui_id: str = None, dispatcher: BECDispatcher = None, client=None) -> None:
-        self.dispatcher = BECDispatcher() if dispatcher is None else dispatcher
+    def __init__(
+        self, gui_id: str = None, dispatcher: BECDispatcher = None, client=None, config=None
+    ) -> None:
+        self.dispatcher = BECDispatcher(config=config) if dispatcher is None else dispatcher
         self.client = self.dispatcher.client if client is None else client
         self.client.start()
         self.gui_id = gui_id
@@ -32,7 +34,7 @@ class BECWidgetsCLIServer:
         self._shutdown_event = False
         self._heartbeat_timer = QTimer()
         self._heartbeat_timer.timeout.connect(self.emit_heartbeat)
-        self._heartbeat_timer.start(1000)  # Emit heartbeat every 1 seconds
+        self._heartbeat_timer.start(200)  # Emit heartbeat every 1 seconds
 
     def on_rpc_update(self, msg: dict, metadata: dict):
         request_id = metadata.get("request_id")
@@ -125,11 +127,12 @@ if __name__ == "__main__":  # pragma: no cover
 
     parser = argparse.ArgumentParser(description="BEC Widgets CLI Server")
     parser.add_argument("--id", type=str, help="The id of the server")
+    parser.add_argument("--config", type=str, help="Config to connect to redis.")
 
     args = parser.parse_args()
 
-    server = BECWidgetsCLIServer(gui_id=args.id)
-    # server = BECWidgetsCLIServer(gui_id="test")
+    server = BECWidgetsCLIServer(gui_id=args.id, config=args.config)
+    # server = BECWidgetsCLIServer(gui_id="test",config="awi-bec-dev-01:6379")
 
     fig = server.fig
     win.setCentralWidget(fig)

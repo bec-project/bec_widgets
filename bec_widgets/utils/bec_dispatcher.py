@@ -6,7 +6,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Union
 
 import redis
-from bec_lib import BECClient
+from bec_lib import BECClient, ServiceConfig
 from bec_lib.redis_connector import MessageObject, RedisConnector
 from qtpy.QtCore import QObject
 from qtpy.QtCore import Signal as pyqtSignal
@@ -71,13 +71,13 @@ class BECDispatcher:
     _instance = None
     _initialized = False
 
-    def __new__(cls, client=None, *args, **kwargs):
+    def __new__(cls, client=None, config: str = None, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super(BECDispatcher, cls).__new__(cls)
             cls._initialized = False
         return cls._instance
 
-    def __init__(self, client=None):
+    def __init__(self, client=None, config: str = None):
         if self._initialized:
             return
 
@@ -85,7 +85,14 @@ class BECDispatcher:
         self.client = client
 
         if self.client is None:
-            self.client = BECClient(connector_cls=QtRedisConnector, forced=True)
+            if config is not None:
+                host, port = config.split(":")
+                redis_config = {"host": host, "port": port}
+                self.client = BECClient(
+                    config=ServiceConfig(redis=redis_config), connector_cls=QtRedisConnector
+                )  # , forced=True)
+            else:
+                self.client = BECClient(connector_cls=QtRedisConnector)  # , forced=True)
         else:
             if self.client.started:
                 # have to reinitialize client to use proper connector

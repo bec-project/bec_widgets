@@ -12,7 +12,7 @@ import uuid
 from functools import wraps
 from typing import TYPE_CHECKING
 
-from bec_lib import MessageEndpoints, messages
+from bec_lib import MessageEndpoints, ServiceConfig, messages
 from bec_lib.connector import MessageObject
 from bec_lib.device import DeviceBase
 from qtpy.QtCore import QCoreApplication
@@ -136,10 +136,11 @@ class BECFigureClientMixin:
         """
         self._start_update_script()
         # pylint: disable=subprocess-run-check
+        config = self._client._service_config.redis
         monitor_module = importlib.import_module("bec_widgets.cli.server")
         monitor_path = monitor_module.__file__
 
-        command = [sys.executable, "-u", monitor_path, "--id", self._gui_id]
+        command = [sys.executable, "-u", monitor_path, "--id", self._gui_id, "--config", config]
         self._process = subprocess.Popen(
             command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
