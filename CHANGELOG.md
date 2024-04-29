@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.50.1 (2024-04-29)
+
+### Fix
+
+* **cli:** BECFigure takes the port to connect to redis from the current BECClient, supporting plugins ([`57cb136`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/57cb136a098e87a452414bf44e627edb562f6799))
+
 ## v0.50.0 (2024-04-29)
 
 ### Feature
