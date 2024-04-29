@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 __version__ = "0.50.2"
 
 # Default to PyQt6 if no other Qt binding is installed
-QT_DEPENDENCY = "PyQt6<=6.6.3"
+QT_DEPENDENCY = "PyQt6>=6.7"
 
 # pylint: disable=unused-import
 try:
@@ -19,7 +19,6 @@ if __name__ == "__main__":
         install_requires=[
             "pydantic",
             "qtconsole",
-            "PyQt6-Qt6<=6.6.3",
             QT_DEPENDENCY,
             "jedi",
             "qtpy",
@@ -41,7 +40,7 @@ if __name__ == "__main__":
                 "isort",
             ],
             "pyqt5": ["PyQt5>=5.9"],
-            "pyqt6": ["PyQt6<=6.6.3"],
+            "pyqt6": ["PyQt6<=6.7"],
         },
         version=__version__,
         packages=find_packages(),
