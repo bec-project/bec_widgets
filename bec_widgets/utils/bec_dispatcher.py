@@ -129,7 +129,15 @@ class BECDispatcher:
         self._slots[slot].update(set(topics_str))
 
     def disconnect_slot(self, slot: Callable, topics: Union[str, list]):
-        self.client.connector.unregister(topics, cb=slot)
+        # find the right slot to disconnect from ;
+        # slot callbacks are wrapped in QtThreadSafeCallback objects,
+        # but the slot we receive here is the original callable
+        for connected_slot in self._slots:
+            if connected_slot.cb == slot:
+                break
+        else:
+            return
+        self.client.connector.unregister(topics, cb=connected_slot)
         topics_str, _ = self.client.connector._convert_endpointinfo(topics)
         self._slots[slot].difference_update(set(topics_str))
         if not self._slots[slot]:
