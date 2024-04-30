@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.50.2 (2024-04-30)
+
+### Fix
+
+* 'disconnect_slot' has to be symmetric with 'connect_slot' regarding QtThreadSafeCallback ([`0dfcaa4`](https://gitlab.psi.ch/bec/bec-widgets/-/commit/0dfcaa4b708948af0a40ec7cf34d03ff1e96ffac))
+
 ## v0.50.1 (2024-04-29)
 
 ### Fix
