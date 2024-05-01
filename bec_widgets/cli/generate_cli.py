@@ -108,6 +108,7 @@ if __name__ == "__main__":  # pragma: no cover
     import os
 
     from bec_widgets.utils import BECConnector
+    from bec_widgets.widgets.dock import BECDock, BECDockArea
     from bec_widgets.widgets.figure import BECFigure
     from bec_widgets.widgets.plots import BECImageShow, BECMotorMap, BECPlotBase, BECWaveform
     from bec_widgets.widgets.plots.image import BECImageItem
@@ -124,6 +125,8 @@ if __name__ == "__main__":  # pragma: no cover
         BECConnector,
         BECImageItem,
         BECMotorMap,
+        BECDock,
+        BECDockArea,
     ]
     generator = ClientGenerator()
     generator.generate_client(clss)

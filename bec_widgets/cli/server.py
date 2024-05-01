@@ -1,6 +1,7 @@
 import inspect
 import threading
 import time
+from typing import Literal
 
 from bec_lib import MessageEndpoints, messages
 from qtpy.QtCore import QTimer
@@ -8,6 +9,7 @@ from qtpy.QtCore import QTimer
 from bec_widgets.cli.rpc_register import RPCRegister
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
+from bec_widgets.widgets.dock.dock_area import BECDockArea
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.plots import BECCurve, BECImageShow, BECWaveform
 
@@ -16,15 +18,20 @@ class BECWidgetsCLIServer:
     WIDGETS = [BECWaveform, BECFigure, BECCurve, BECImageShow]
 
     def __init__(
-        self, gui_id: str = None, dispatcher: BECDispatcher = None, client=None, config=None
+        self,
+        gui_id: str = None,
+        dispatcher: BECDispatcher = None,
+        client=None,
+        config=None,
+        gui_class: BECFigure | BECDockArea = BECFigure,
     ) -> None:
         self.dispatcher = BECDispatcher(config=config) if dispatcher is None else dispatcher
         self.client = self.dispatcher.client if client is None else client
         self.client.start()
         self.gui_id = gui_id
-        self.fig = BECFigure(gui_id=self.gui_id)
+        self.gui = gui_class(gui_id=self.gui_id)
         self.rpc_register = RPCRegister()
-        self.rpc_register.add_rpc(self.fig)
+        self.rpc_register.add_rpc(self.gui)
 
         self.dispatcher.connect_slot(
             self.on_rpc_update, MessageEndpoints.gui_instructions(self.gui_id)
@@ -127,14 +134,30 @@ if __name__ == "__main__":  # pragma: no cover
 
     parser = argparse.ArgumentParser(description="BEC Widgets CLI Server")
     parser.add_argument("--id", type=str, help="The id of the server")
+    parser.add_argument(
+        "--gui_class",
+        type=str,
+        help="Name of the gui class to be rendered. Possible values: \n- BECFigure\n- BECDockArea",
+    )
     parser.add_argument("--config", type=str, help="Config to connect to redis.")
 
     args = parser.parse_args()
 
-    server = BECWidgetsCLIServer(gui_id=args.id, config=args.config)
-    # server = BECWidgetsCLIServer(gui_id="test",config="awi-bec-dev-01:6379")
+    if args.gui_class == "BECFigure":
+        gui_class = BECFigure
+    elif args.gui_class == "BECDockArea":
+        gui_class = BECDockArea
+    else:
+        print(
+            "Please specify a valid gui_class to run. Use -h for help."
+            "\n Starting with default gui_class BECFigure."
+        )
+        gui_class = BECFigure
 
-    fig = server.fig
+    server = BECWidgetsCLIServer(gui_id=args.id, config=args.config, gui_class=gui_class)
+    # server = BECWidgetsCLIServer(gui_id="test", config=args.config, gui_class=gui_class)
+
+    fig = server.gui
     win.setCentralWidget(fig)
     win.show()
 

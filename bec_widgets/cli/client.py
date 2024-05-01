@@ -255,11 +255,11 @@ class BECWaveform(RPCBase):
         """
 
     @rpc_call
-    def apply_config(self, config: "dict | WidgetConfig", replot_last_scan: "bool" = False):
+    def apply_config(self, config: "dict | SubplotConfig", replot_last_scan: "bool" = False):
         """
         Apply the configuration to the 1D waveform widget.
         Args:
-            config(dict|WidgetConfig): Configuration settings.
+            config(dict|SubplotConfig): Configuration settings.
             replot_last_scan(bool, optional): If True, replot the last scan. Defaults to False.
         """
 
@@ -1306,4 +1306,71 @@ class BECMotorMap(RPCBase):
         Get the data of the motor map.
         Returns:
             dict: Data of the motor map.
+        """
+
+
+class BECDock(RPCBase):
+    @rpc_call
+    def add_widget(self, widget: "QWidget", row=None, col=0, rowspan=1, colspan=1):
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def widget_list(self) -> "list":
+        """
+        None
+        """
+
+
+class BECDockArea(RPCBase):
+    @rpc_call
+    def add_dock(
+        self,
+        name: "str" = None,
+        position: "Literal['bottom', 'top', 'left', 'right', 'above', 'below']" = None,
+        relative_to: "Optional[BECDock]" = None,
+        prefix: "str" = "dock",
+        widget: "QWidget" = None,
+        row: "int" = None,
+        col: "int" = None,
+        rowspan: "int" = 1,
+        colspan: "int" = 1,
+    ) -> "BECDock":
+        """
+        Add a dock to the dock area. Dock has QGridLayout as layout manager by default.
+
+        Args:
+            name(str): The name of the dock to be displayed and for further references. Has to be unique.
+            position(Literal["bottom", "top", "left", "right", "above", "below"]): The position of the dock.
+            relative_to(BECDock): The dock to which the new dock should be added relative to.
+            prefix(str): The prefix for the dock name if no name is provided.
+            widget(QWidget): The widget to be added to the dock.
+            row(int): The row of the added widget.
+            col(int): The column of the added widget.
+            rowspan(int): The rowspan of the added widget.
+            colspan(int): The colspan of the added widget.
+
+        Returns:
+            BECDock: The created dock.
+        """
+
+    @rpc_call
+    def remove_dock_by_id(self, dock_id: "str"):
+        """
+        None
+        """
+
+    @rpc_call
+    def clear_all(self):
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def dock_dict(self) -> "dict":
+        """
+        None
         """
