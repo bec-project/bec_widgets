@@ -6,7 +6,7 @@ from pydantic import Field
 from pyqtgraph.dockarea import Dock
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.utils import BECConnector, ConnectionConfig
+from bec_widgets.utils import BECConnector, ConnectionConfig, GridLayoutManager
 
 
 class DockConfig(ConnectionConfig):
@@ -47,7 +47,11 @@ class BECDock(BECConnector, Dock):
 
         self.parent_dock_area = parent_dock_area
 
+        # Signals
         self.sigClosed.connect(self._remove_from_dock_area)
+
+        # Layout Manager
+        self.layout_manager = GridLayoutManager(self.layout)
 
     @property
     def widget_list(self) -> list:
@@ -57,7 +61,24 @@ class BECDock(BECConnector, Dock):
     def widget_list(self, value: list):
         self.widgets = value
 
-    def add_widget(self, widget: QWidget, row=None, col=0, rowspan=1, colspan=1):
+    def get_widgets_positions(self):
+        return self.layout_manager.get_widgets_positions()
+
+    def add_widget(
+        self,
+        widget: QWidget,
+        row=None,
+        col=0,
+        rowspan=1,
+        colspan=1,
+        shift: Literal["down", "up", "left", "right"] = "down",
+    ):
+        if row is None:
+            row = self.layout.rowCount()
+
+        if self.layout_manager.is_position_occupied(row, col):
+            self.layout_manager.shift_widgets(shift, start_row=row)
+
         self.addWidget(widget, row=row, col=col, rowspan=rowspan, colspan=colspan)
 
     def _remove_from_dock_area(self):
