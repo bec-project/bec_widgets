@@ -15,7 +15,7 @@ from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils import BECConnector, Colors, ConnectionConfig, EntryValidator
-from bec_widgets.widgets.plots.plot_base import BECPlotBase, WidgetConfig
+from bec_widgets.widgets.plots.plot_base import BECPlotBase, SubplotConfig
 
 
 class SignalData(BaseModel):
@@ -53,7 +53,7 @@ class CurveConfig(ConnectionConfig):
     colormap: Optional[str] = Field("plasma", description="The colormap of the curves z gradient.")
 
 
-class Waveform1DConfig(WidgetConfig):
+class Waveform1DConfig(SubplotConfig):
     color_palette: Literal["plasma", "viridis", "inferno", "magma"] = Field(
         "plasma", description="The color palette of the figure widget."
     )  # TODO can be extended to all colormaps from current pyqtgraph session
@@ -300,11 +300,11 @@ class BECWaveform(BECPlotBase):
         self.add_legend()
         self.apply_config(self.config)
 
-    def apply_config(self, config: dict | WidgetConfig, replot_last_scan: bool = False):
+    def apply_config(self, config: dict | SubplotConfig, replot_last_scan: bool = False):
         """
         Apply the configuration to the 1D waveform widget.
         Args:
-            config(dict|WidgetConfig): Configuration settings.
+            config(dict|SubplotConfig): Configuration settings.
             replot_last_scan(bool, optional): If True, replot the last scan. Defaults to False.
         """
         if isinstance(config, dict):
