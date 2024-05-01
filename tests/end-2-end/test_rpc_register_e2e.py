@@ -18,9 +18,9 @@ def find_deepest_value(d: dict):
     return d
 
 
-def test_rpc_register_list_connections(rpc_server, rpc_register, qtbot):
-    fig = BECFigure(rpc_server.gui_id)
-    fig_server = rpc_server.fig
+def test_rpc_register_list_connections(rpc_server_figure, rpc_register, qtbot):
+    fig = BECFigure(rpc_server_figure.gui_id)
+    fig_server = rpc_server_figure.gui
 
     plt = fig.plot("samx", "bpm4i")
     im = fig.image("eiger")

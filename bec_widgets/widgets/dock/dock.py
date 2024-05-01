@@ -1,12 +1,17 @@
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, Literal, Optional
 
 from pydantic import Field
 from pyqtgraph.dockarea import Dock
-from qtpy.QtWidgets import QWidget
 
+from bec_widgets.cli.rpc_wigdet_handler import RPCWidgetHandler
 from bec_widgets.utils import BECConnector, ConnectionConfig, GridLayoutManager
+
+if TYPE_CHECKING:
+    from qtpy.QtWidgets import QWidget
+
+    from bec_widgets.widgets import BECDockArea
 
 
 class DockConfig(ConnectionConfig):
@@ -20,18 +25,30 @@ class DockConfig(ConnectionConfig):
 
 
 class BECDock(BECConnector, Dock):
-    USER_ACCESS = ["add_widget", "widget_list"]
+    USER_ACCESS = [
+        "rpc_id",
+        "widget_list",
+        "show_title_bar",
+        "hide_title_bar",
+        "get_widgets_positions",
+        "set_title",
+        "add_widget_bec",
+        "list_eligible_widgets",
+        "move_widget",
+        "remove_widget",
+        "remove",
+        "attach",
+        "detach",
+    ]
 
     def __init__(
         self,
-        parent: Optional[QWidget] = None,
-        parent_dock_area: Optional["BECDockArea"] = None,
-        config: Optional[
-            DockConfig
-        ] = None,  # TODO ATM connection config -> will be changed when I will know what I want to use there
-        name: Optional[str] = None,
+        parent: QWidget | None = None,
+        parent_dock_area: BECDockArea | None = None,
+        config: DockConfig | None = None,
+        name: str | None = None,
         client=None,
-        gui_id: Optional[str] = None,
+        gui_id: str | None = None,
         **kwargs,
     ) -> None:
         if config is None:
@@ -47,22 +64,123 @@ class BECDock(BECConnector, Dock):
 
         self.parent_dock_area = parent_dock_area
 
-        # Signals
-        self.sigClosed.connect(self._remove_from_dock_area)
-
         # Layout Manager
         self.layout_manager = GridLayoutManager(self.layout)
 
+    def dropEvent(self, event):
+        source = event.source()
+        old_area = source.area
+        self.setOrientation("horizontal", force=True)
+        super().dropEvent(event)
+        if old_area in self.parent_dock_area.tempAreas and old_area != self.parent_dock_area:
+            self.parent_dock_area.removeTempArea(old_area)
+
+    def float(self):
+        """
+        Float the dock.
+        Overwrites the default pyqtgraph dock float.
+        """
+
+        # need to check if the dock is temporary and if it is the only dock in the area
+        # fixes bug in pyqtgraph detaching
+        if self.area.temporary == True and len(self.area.docks) <= 1:
+            return
+        elif self.area.temporary == True and len(self.area.docks) > 1:
+            self.area.docks.pop(self.name(), None)
+            super().float()
+        else:
+            super().float()
+
     @property
     def widget_list(self) -> list:
+        """
+        Get the widgets in the dock.
+
+        Returns:
+            widgets(list): The widgets in the dock.
+        """
         return self.widgets
 
     @widget_list.setter
     def widget_list(self, value: list):
         self.widgets = value
 
-    def get_widgets_positions(self):
+    def hide_title_bar(self):
+        """
+        Hide the title bar of the dock.
+        """
+        # self.hideTitleBar() #TODO pyqtgraph looks bugged ATM, doing my implementation
+        self.label.hide()
+        self.labelHidden = True
+
+    def show_title_bar(self):
+        """
+        Hide the title bar of the dock.
+        """
+        # self.showTitleBar() #TODO pyqtgraph looks bugged ATM, doing my implementation
+        self.label.show()
+        self.labelHidden = False
+
+    def set_title(self, title: str):
+        """
+        Set the title of the dock.
+
+        Args:
+            title(str): The title of the dock.
+        """
+        self.parent_dock_area.docks[title] = self.parent_dock_area.docks.pop(self.name())
+        self.setTitle(title)
+
+    def get_widgets_positions(self) -> dict:
+        """
+        Get the positions of the widgets in the dock.
+
+        Returns:
+            dict: The positions of the widgets in the dock as dict -> {(row, col, rowspan, colspan):widget}
+        """
         return self.layout_manager.get_widgets_positions()
+
+    def list_eligible_widgets(
+        self,
+    ) -> list:  # TODO can be moved to some util mixin like container class for rpc widgets
+        """
+        List all widgets that can be added to the dock.
+
+        Returns:
+            list: The list of eligible widgets.
+        """
+        return list(RPCWidgetHandler.widget_classes.keys())
+
+    def add_widget_bec(
+        self,
+        widget_type: str,
+        row=None,
+        col=0,
+        rowspan=1,
+        colspan=1,
+        shift: Literal["down", "up", "left", "right"] = "down",
+    ):
+        """
+        Add a widget to the dock.
+
+        Args:
+            widget_type(str): The widget to add. Only BEC RPC widgets from RPCWidgetHandler are allowed.
+            row(int): The row to add the widget to. If None, the widget will be added to the next available row.
+            col(int): The column to add the widget to.
+            rowspan(int): The number of rows the widget should span.
+            colspan(int): The number of columns the widget should span.
+            shift(Literal["down", "up", "left", "right"]): The direction to shift the widgets if the position is occupied.
+        """
+        if row is None:
+            row = self.layout.rowCount()
+
+        if self.layout_manager.is_position_occupied(row, col):
+            self.layout_manager.shift_widgets(shift, start_row=row)
+
+        widget = RPCWidgetHandler.create_widget(widget_type)
+        self.addWidget(widget, row=row, col=col, rowspan=rowspan, colspan=colspan)
+
+        return widget
 
     def add_widget(
         self,
@@ -73,6 +191,17 @@ class BECDock(BECConnector, Dock):
         colspan=1,
         shift: Literal["down", "up", "left", "right"] = "down",
     ):
+        """
+        Add a widget to the dock.
+
+        Args:
+            widget(QWidget): The widget to add.
+            row(int): The row to add the widget to. If None, the widget will be added to the next available row.
+            col(int): The column to add the widget to.
+            rowspan(int): The number of rows the widget should span.
+            colspan(int): The number of columns the widget should span.
+            shift(Literal["down", "up", "left", "right"]): The direction to shift the widgets if the position is occupied.
+        """
         if row is None:
             row = self.layout.rowCount()
 
@@ -81,6 +210,60 @@ class BECDock(BECConnector, Dock):
 
         self.addWidget(widget, row=row, col=col, rowspan=rowspan, colspan=colspan)
 
-    def _remove_from_dock_area(self):
-        """Remove this dock from the DockArea it lives inside."""
-        self.parent_dock_area.docks.pop(self.name())
+    def move_widget(self, widget: QWidget, new_row: int, new_col: int):
+        """
+        Move a widget to a new position in the layout.
+
+        Args:
+            widget(QWidget): The widget to move.
+            new_row(int): The new row to move the widget to.
+            new_col(int): The new column to move the widget to.
+        """
+        self.layout_manager.move_widget(widget, new_row, new_col)
+
+    def attach(self):
+        """
+        Attach the dock to the parent dock area.
+        """
+        self.parent_dock_area.removeTempArea(self.area)
+
+    def detach(self):
+        """
+        Detach the dock from the parent dock area.
+        """
+        self.float()
+
+    def remove_widget(self, widget_rpc_id: str):
+        """
+        Remove a widget from the dock.
+
+        Args:
+            widget_rpc_id(str): The ID of the widget to remove.
+        """
+        widget = self.rpc_register.get_rpc_by_id(widget_rpc_id)
+        self.layout.removeWidget(widget)
+        widget.close()
+
+    def remove(self):
+        """
+        Remove the dock from the parent dock area.
+        """
+        # self.cleanup()
+        self.parent_dock_area.remove_dock(self.name())
+
+    def cleanup(self):
+        """
+        Clean up the dock, including all its widgets.
+        """
+        for widget in self.widgets:
+            if hasattr(widget, "cleanup"):
+                widget.cleanup()
+        super().cleanup()
+
+    def close(self):
+        """
+        Close the dock area and cleanup.
+        Has to be implemented to overwrite pyqtgraph event accept in Container close.
+        """
+        self.cleanup()
+        super().close()

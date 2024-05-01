@@ -22,7 +22,7 @@ from bec_widgets.cli.auto_updates import AutoUpdates
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 if TYPE_CHECKING:
-    from bec_widgets.cli.client import BECFigure
+    from bec_widgets.cli.client import BECDockArea, BECFigure
 
 
 def rpc_call(func):
@@ -56,7 +56,7 @@ def rpc_call(func):
     return wrapper
 
 
-class BECFigureClientMixin:
+class BECGuiClientMixin:
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._process = None
@@ -94,7 +94,7 @@ class BECFigureClientMixin:
         )
 
     @staticmethod
-    def _handle_msg_update(msg: MessageObject, parent: BECFigureClientMixin) -> None:
+    def _handle_msg_update(msg: MessageObject, parent: BECGuiClientMixin) -> None:
         if parent.update_script is not None:
             # pylint: disable=protected-access
             parent._update_script_msg_parser(msg.value)
@@ -139,8 +139,19 @@ class BECFigureClientMixin:
         config = self._client._service_config.redis
         monitor_module = importlib.import_module("bec_widgets.cli.server")
         monitor_path = monitor_module.__file__
+        gui_class = self.__class__.__name__
 
-        command = [sys.executable, "-u", monitor_path, "--id", self._gui_id, "--config", config]
+        command = [
+            sys.executable,
+            "-u",
+            monitor_path,
+            "--id",
+            self._gui_id,
+            "--config",
+            config,
+            "--gui_class",
+            gui_class,
+        ]
         self._process = subprocess.Popen(
             command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )

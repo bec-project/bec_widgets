@@ -1,6 +1,4 @@
 # pylint: disable=missing-function-docstring, missing-module-docstring, unused-import
-import os
-from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -48,12 +46,12 @@ def test_bec_figure_add_remove_plot(bec_figure):
 
     # Check if the widgets were added
     assert len(bec_figure._widgets) == initial_count + 3
-    assert "widget_1" in bec_figure._widgets
-    assert "widget_2" in bec_figure._widgets
-    assert "widget_3" in bec_figure._widgets
-    assert bec_figure._widgets["widget_1"].config.widget_class == "BECWaveform"
-    assert bec_figure._widgets["widget_2"].config.widget_class == "BECWaveform"
-    assert bec_figure._widgets["widget_3"].config.widget_class == "BECPlotBase"
+    assert w0.gui_id in bec_figure._widgets
+    assert w1.gui_id in bec_figure._widgets
+    assert w2.gui_id in bec_figure._widgets
+    assert bec_figure._widgets[w0.gui_id].config.widget_class == "BECWaveform"
+    assert bec_figure._widgets[w1.gui_id].config.widget_class == "BECWaveform"
+    assert bec_figure._widgets[w2.gui_id].config.widget_class == "BECPlotBase"
 
     # Check accessing positions by the grid in figure
     assert bec_figure[0, 0] == w0
@@ -61,11 +59,11 @@ def test_bec_figure_add_remove_plot(bec_figure):
     assert bec_figure[2, 0] == w2
 
     # Removing 1 widget
-    bec_figure.remove(widget_id="widget_1")
+    bec_figure.remove(widget_id=w0.gui_id)
     assert len(bec_figure._widgets) == initial_count + 2
-    assert "widget_1" not in bec_figure._widgets
-    assert "widget_3" in bec_figure._widgets
-    assert bec_figure._widgets["widget_2"].config.widget_class == "BECWaveform"
+    assert w0.gui_id not in bec_figure._widgets
+    assert w2.gui_id in bec_figure._widgets
+    assert bec_figure._widgets[w1.gui_id].config.widget_class == "BECWaveform"
 
 
 def test_add_different_types_of_widgets(bec_figure):
@@ -121,20 +119,20 @@ def test_remove_plots(bec_figure):
 
     # remove by coordinates
     bec_figure[0, 0].remove()
-    assert "widget_1" not in bec_figure._widgets
+    assert w1.gui_id not in bec_figure._widgets
 
     # remove by widget_id
-    bec_figure.remove(widget_id="widget_2")
-    assert "widget_2" not in bec_figure._widgets
+    bec_figure.remove(widget_id=w2.gui_id)
+    assert w2.gui_id not in bec_figure._widgets
 
     # remove by widget object
     w3.remove()
-    assert "widget_3" not in bec_figure._widgets
+    assert w3.gui_id not in bec_figure._widgets
 
     # check the remaining widget 4
     assert bec_figure[0, 0] == w4
-    assert bec_figure["widget_4"] == w4
-    assert "widget_4" in bec_figure._widgets
+    assert bec_figure[w4.gui_id] == w4
+    assert w4.gui_id in bec_figure._widgets
     assert len(bec_figure._widgets) == 1
 
 
@@ -143,8 +141,8 @@ def test_remove_plots_by_coordinates_ints(bec_figure):
     w2 = bec_figure.add_plot(row=0, col=1)
 
     bec_figure.remove(0, 0)
-    assert "widget_1" not in bec_figure._widgets
-    assert "widget_2" in bec_figure._widgets
+    assert w1.gui_id not in bec_figure._widgets
+    assert w2.gui_id in bec_figure._widgets
     assert bec_figure[0, 0] == w2
     assert len(bec_figure._widgets) == 1
 
@@ -154,8 +152,8 @@ def test_remove_plots_by_coordinates_tuple(bec_figure):
     w2 = bec_figure.add_plot(row=0, col=1)
 
     bec_figure.remove(coordinates=(0, 0))
-    assert "widget_1" not in bec_figure._widgets
-    assert "widget_2" in bec_figure._widgets
+    assert w1.gui_id not in bec_figure._widgets
+    assert w2.gui_id in bec_figure._widgets
     assert bec_figure[0, 0] == w2
     assert len(bec_figure._widgets) == 1
 

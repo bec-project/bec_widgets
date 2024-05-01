@@ -229,14 +229,10 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         x_data, y_data = self.getData()
         return x_data, y_data
 
-    def cleanup(self):
-        """Cleanup the curve."""
-        self.rpc_register.remove_rpc(self)
-
     def remove(self):
         """Remove the curve from the plot."""
-        self.cleanup()
         self.parent_item.removeItem(self)
+        self.cleanup()
 
 
 class BECWaveform(BECPlotBase):
@@ -799,4 +795,4 @@ class BECWaveform(BECPlotBase):
         self.bec_dispatcher.disconnect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
         for curve in self.curves:
             curve.cleanup()
-        self.rpc_register.remove_rpc(self)
+        super().cleanup()

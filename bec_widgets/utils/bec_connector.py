@@ -148,6 +148,14 @@ class BECConnector:
         else:
             return self.config
 
-    def closeEvent(self, event):
-        self.client.shutdown()
-        super().closeEvent(event)
+    def cleanup(self):
+        """Cleanup the widget."""
+        self.rpc_register.remove_rpc(self)
+        all_connections = self.rpc_register.list_all_connections()
+        if len(all_connections) == 0:
+            print("No more connections. Shutting down GUI BEC client.")
+            self.client.shutdown()
+
+    # def closeEvent(self, event):
+    #     self.cleanup()
+    #     super().closeEvent(event)

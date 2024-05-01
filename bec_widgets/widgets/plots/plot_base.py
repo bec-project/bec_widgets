@@ -248,3 +248,4 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
 
     def cleanup(self):
         """Cleanup the plot widget."""
+        super().cleanup()

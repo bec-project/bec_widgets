@@ -288,10 +288,6 @@ class BECImageItem(BECConnector, pg.ImageItem):
         else:
             raise ValueError("style should be 'simple' or 'full'")
 
-    def cleanup(self):
-        """Clean up widget."""
-        self.rpc_register.remove_rpc(self)
-
 
 class BECImageShow(BECPlotBase):
     USER_ACCESS = [
@@ -806,7 +802,7 @@ class BECImageShow(BECPlotBase):
         for image in self.images:
             image.cleanup()
 
-        self.rpc_register.remove_rpc(self)
+        super().cleanup()
 
 
 class ImageProcessor:

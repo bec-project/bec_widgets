@@ -3,27 +3,11 @@ import pytest
 from bec_lib import MessageEndpoints
 
 from bec_widgets.cli.client import BECFigure, BECImageShow, BECMotorMap, BECWaveform
-from bec_widgets.cli.server import BECWidgetsCLIServer
-from bec_widgets.utils import BECDispatcher
 
 
-@pytest.fixture
-def rpc_server(qtbot, bec_client_lib, threads_check):
-    dispatcher = BECDispatcher(client=bec_client_lib)  # Has to init singleton with fixture client
-    server = BECWidgetsCLIServer(gui_id="id_test")
-    qtbot.addWidget(server.gui)
-    qtbot.waitExposed(server.gui)
-    qtbot.wait(1000)  # 1s long to wait until gui is ready
-    yield server
-    dispatcher.disconnect_all()
-    server.client.shutdown()
-    server.shutdown()
-    dispatcher.reset_singleton()
-
-
-def test_rpc_waveform1d_custom_curve(rpc_server, qtbot):
-    fig = BECFigure(rpc_server.gui_id)
-    fig_server = rpc_server.gui
+def test_rpc_waveform1d_custom_curve(rpc_server_figure, qtbot):
+    fig = BECFigure(rpc_server_figure.gui_id)
+    fig_server = rpc_server_figure.gui
 
     ax = fig.add_plot()
     curve = ax.add_curve_custom([1, 2, 3], [1, 2, 3])
@@ -32,12 +16,12 @@ def test_rpc_waveform1d_custom_curve(rpc_server, qtbot):
     curve.set_color("blue")
 
     assert len(fig_server.widgets) == 1
-    assert len(fig_server.widgets["widget_1"].curves) == 1
+    assert len(fig_server.widgets[ax.rpc_id].curves) == 1
 
 
-def test_rpc_plotting_shortcuts_init_configs(rpc_server, qtbot):
-    fig = BECFigure(rpc_server.gui_id)
-    fig_server = rpc_server.gui
+def test_rpc_plotting_shortcuts_init_configs(rpc_server_figure, qtbot):
+    fig = BECFigure(rpc_server_figure.gui_id)
+    fig_server = rpc_server_figure.gui
 
     plt = fig.plot("samx", "bpm4i")
     im = fig.image("eiger")
@@ -91,15 +75,15 @@ def test_rpc_plotting_shortcuts_init_configs(rpc_server, qtbot):
     }
 
 
-def test_rpc_waveform_scan(rpc_server, qtbot):
-    fig = BECFigure(rpc_server.gui_id)
+def test_rpc_waveform_scan(rpc_server_figure, qtbot):
+    fig = BECFigure(rpc_server_figure.gui_id)
 
     # add 3 different curves to track
     plt = fig.plot("samx", "bpm4i")
     fig.plot("samx", "bpm3a")
     fig.plot("samx", "bpm4d")
 
-    client = rpc_server.client
+    client = rpc_server_figure.client
     dev = client.device_manager.devices
     scans = client.scans
     queue = client.queue
@@ -124,12 +108,12 @@ def test_rpc_waveform_scan(rpc_server, qtbot):
     assert plt_data["bpm4d-bpm4d"]["y"] == last_scan_data["bpm4d"]["bpm4d"].val
 
 
-def test_rpc_image(rpc_server, qtbot):
-    fig = BECFigure(rpc_server.gui_id)
+def test_rpc_image(rpc_server_figure, qtbot):
+    fig = BECFigure(rpc_server_figure.gui_id)
 
     im = fig.image("eiger")
 
-    client = rpc_server.client
+    client = rpc_server_figure.client
     dev = client.device_manager.devices
     scans = client.scans
 
@@ -149,13 +133,13 @@ def test_rpc_image(rpc_server, qtbot):
     np.testing.assert_equal(last_image_device, last_image_plot)
 
 
-def test_rpc_motor_map(rpc_server, qtbot):
-    fig = BECFigure(rpc_server.gui_id)
-    fig_server = rpc_server.gui
+def test_rpc_motor_map(rpc_server_figure, qtbot):
+    fig = BECFigure(rpc_server_figure.gui_id)
+    fig_server = rpc_server_figure.gui
 
     motor_map = fig.motor_map("samx", "samy")
 
-    client = rpc_server.client
+    client = rpc_server_figure.client
     dev = client.device_manager.devices
     scans = client.scans
 

@@ -1,20 +1,18 @@
 # pylint: disable = no-name-in-module,missing-module-docstring
 from __future__ import annotations
 
-import itertools
-import os
+import uuid
 from collections import defaultdict
-from typing import Literal, Optional, Type
+from typing import Literal, Optional
 
 import numpy as np
 import pyqtgraph as pg
 import qdarktheme
 from pydantic import Field
-from pyqtgraph.Qt import uic
 from qtpy.QtCore import Signal as pyqtSignal
-from qtpy.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QWidget
 
-from bec_widgets.utils import BECConnector, BECDispatcher, ConnectionConfig, WidgetContainerUtils
+from bec_widgets.utils import BECConnector, ConnectionConfig, WidgetContainerUtils
 from bec_widgets.widgets.plots import (
     BECImageShow,
     BECMotorMap,
@@ -166,14 +164,29 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
     @widget_list.setter
     def widget_list(self, value: list[BECPlotBase]):
+        """
+        Access all widget in BECFigure as a list
+        Returns:
+            list[BECPlotBase]: List of all widgets in the figure.
+        """
         self._axes = value
 
     @property
     def widgets(self) -> dict:
+        """
+        All widgets within the figure with gui ids as keys.
+        Returns:
+            dict: All widgets within the figure.
+        """
         return self._widgets
 
     @widgets.setter
     def widgets(self, value: dict):
+        """
+        All widgets within the figure with gui ids as keys.
+        Returns:
+            dict: All widgets within the figure.
+        """
         self._widgets = value
 
     def add_plot(
@@ -204,7 +217,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             config(dict): Additional configuration for the widget.
             **axis_kwargs(dict): Additional axis properties to set on the widget after creation.
         """
-        widget_id = WidgetContainerUtils.generate_unique_widget_id(self._widgets)
+        widget_id = str(uuid.uuid4())
         waveform = self.add_widget(
             widget_type="Waveform1D",
             widget_id=widget_id,
@@ -430,7 +443,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             BECImageShow: The image widget.
         """
 
-        widget_id = WidgetContainerUtils.generate_unique_widget_id(self._widgets)
+        widget_id = str(uuid.uuid4())
         if config is None:
             config = ImageConfig(
                 widget_class="BECImageShow",
@@ -513,7 +526,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         Returns:
             BECMotorMap: The motor map widget.
         """
-        widget_id = WidgetContainerUtils.generate_unique_widget_id(self._widgets)
+        widget_id = str(uuid.uuid4())
         if config is None:
             config = MotorMapConfig(
                 widget_class="BECMotorMap",
@@ -554,7 +567,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             **axis_kwargs(dict): Additional axis properties to set on the widget after creation.
         """
         if not widget_id:
-            widget_id = WidgetContainerUtils.generate_unique_widget_id(self._widgets)
+            widget_id = str(uuid.uuid4())
         if widget_id in self._widgets:
             raise ValueError(f"Widget with ID '{widget_id}' already exists.")
 
@@ -767,12 +780,16 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
     def clear_all(self):
         """Clear all widgets from the figure and reset to default state"""
-        for widget in self._widgets.values():
-            widget.cleanup()
-        self.clear()
+        for widget in list(self._widgets.values()):
+            widget.remove()
+        # self.clear()
         self._widgets = defaultdict(dict)
         self.grid = []
         theme = self.config.theme
         self.config = FigureConfig(
             widget_class=self.__class__.__name__, gui_id=self.gui_id, theme=theme
         )
+
+    def cleanup(self):
+        self.clear_all()
+        super().cleanup()

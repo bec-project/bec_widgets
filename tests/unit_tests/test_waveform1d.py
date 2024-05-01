@@ -141,7 +141,7 @@ def test_getting_curve(bec_figure):
     c1_expected_config = CurveConfig(
         widget_class="BECCurve",
         gui_id="test_curve",
-        parent_id="widget_1",
+        parent_id=w1.gui_id,
         label="bpm4i-bpm4i",
         color="#cc4778",
         symbol="o",

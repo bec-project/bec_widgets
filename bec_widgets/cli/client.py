@@ -2,7 +2,7 @@
 
 from typing import Literal, Optional, overload
 
-from bec_widgets.cli.client_utils import BECFigureClientMixin, RPCBase, rpc_call
+from bec_widgets.cli.client_utils import BECGuiClientMixin, RPCBase, rpc_call
 
 
 class BECPlotBase(RPCBase):
@@ -393,7 +393,7 @@ class BECWaveform(RPCBase):
         """
 
 
-class BECFigure(RPCBase, BECFigureClientMixin):
+class BECFigure(RPCBase):
     @property
     @rpc_call
     def rpc_id(self) -> "str":
@@ -426,7 +426,9 @@ class BECFigure(RPCBase, BECFigureClientMixin):
     @rpc_call
     def widgets(self) -> "dict":
         """
-        None
+        All widgets within the figure with gui ids as keys.
+        Returns:
+            dict: All widgets within the figure.
         """
 
     @rpc_call
@@ -1310,31 +1312,160 @@ class BECMotorMap(RPCBase):
 
 
 class BECDock(RPCBase):
-    @rpc_call
-    def add_widget(self, widget: "QWidget", row=None, col=0, rowspan=1, colspan=1):
-        """
-        None
-        """
-
     @property
     @rpc_call
     def widget_list(self) -> "list":
         """
+        Get the widgets in the dock.
+        Returns:
+            widgets(list): The widgets in the dock.
+        """
+
+    @rpc_call
+    def show_title_bar(self):
+        """
+        Hide the title bar of the dock.
+        """
+
+    @rpc_call
+    def hide_title_bar(self):
+        """
+        Hide the title bar of the dock.
+        """
+
+    @rpc_call
+    def get_widgets_positions(self) -> "dict":
+        """
+        Get the positions of the widgets in the dock.
+
+        Returns:
+            dict: The positions of the widgets in the dock as dict -> {(row, col, rowspan, colspan):widget}
+        """
+
+    @rpc_call
+    def set_title(self, title: "str"):
+        """
+        Set the title of the dock.
+
+        Args:
+            title(str): The title of the dock.
+        """
+
+    @rpc_call
+    def add_widget_bec(
+        self,
+        widget_type: "str",
+        row=None,
+        col=0,
+        rowspan=1,
+        colspan=1,
+        shift: "Literal['down', 'up', 'left', 'right']" = "down",
+    ):
+        """
+        Add a widget to the dock.
+        Args:
+            widget_type(str): The widget to add. Only BEC RPC widgets from RPCWidgetHandler are allowed.
+            row(int): The row to add the widget to. If None, the widget will be added to the next available row.
+            col(int): The column to add the widget to.
+            rowspan(int): The number of rows the widget should span.
+            colspan(int): The number of columns the widget should span.
+            shift(Literal["down", "up", "left", "right"]): The direction to shift the widgets if the position is occupied.
+        """
+
+    @rpc_call
+    def list_eligible_widgets(self) -> "list":
+        """
+        List all widgets that can be added to the dock.
+        Returns:
+            list: The list of eligible widgets.
+        """
+
+    @rpc_call
+    def move_widget(self, widget: "QWidget", new_row: "int", new_col: "int"):
+        """
+        Move a widget to a new position in the layout.
+        Args:
+            widget(QWidget): The widget to move.
+            new_row(int): The new row to move the widget to.
+            new_col(int): The new column to move the widget to.
+        """
+
+    @rpc_call
+    def remove_widget(self, widget: "QWidget"):
+        """
+        Remove a widget from the dock.
+        Args:
+            widget(QWidget): The widget to remove.
+        """
+
+    @rpc_call
+    def remove(self):
+        """
+        Remove the dock from the parent dock area.
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
         None
         """
 
 
-class BECDockArea(RPCBase):
+class BECDockArea(RPCBase, BECGuiClientMixin):
+    @property
+    @rpc_call
+    def panels(self) -> "dict":
+        """
+        Get the docks in the dock area.
+        Returns:
+            dock_dict(dict): The docks in the dock area.
+        """
+
+    @rpc_call
+    def save_state(self) -> "dict":
+        """
+        Save the state of the dock area.
+        Returns:
+            dict: The state of the dock area.
+        """
+
+    @rpc_call
+    def remove_dock(self, name: "str"):
+        """
+        Remove a dock by name and ensure it is properly closed and cleaned up.
+        Args:
+            name(str): The name of the dock to remove.
+        """
+
+    @rpc_call
+    def restore_state(
+        self, state: "dict" = None, missing: "Literal['ignore', 'error']" = "ignore", extra="bottom"
+    ):
+        """
+        Restore the state of the dock area. If no state is provided, the last state is restored.
+        Args:
+            state(dict): The state to restore.
+            missing(Literal['ignore','error']): What to do if a dock is missing.
+            extra(str): Extra docks that are in the dockarea but that are not mentioned in state will be added to the bottom of the dockarea, unless otherwise specified by the extra argument.
+        """
+
     @rpc_call
     def add_dock(
         self,
         name: "str" = None,
         position: "Literal['bottom', 'top', 'left', 'right', 'above', 'below']" = None,
         relative_to: "Optional[BECDock]" = None,
+        closable: "bool" = False,
         prefix: "str" = "dock",
         widget: "QWidget" = None,
         row: "int" = None,
-        col: "int" = None,
+        col: "int" = 0,
         rowspan: "int" = 1,
         colspan: "int" = 1,
     ) -> "BECDock":
@@ -1345,32 +1476,42 @@ class BECDockArea(RPCBase):
             name(str): The name of the dock to be displayed and for further references. Has to be unique.
             position(Literal["bottom", "top", "left", "right", "above", "below"]): The position of the dock.
             relative_to(BECDock): The dock to which the new dock should be added relative to.
+            closable(bool): Whether the dock is closable.
             prefix(str): The prefix for the dock name if no name is provided.
             widget(QWidget): The widget to be added to the dock.
             row(int): The row of the added widget.
             col(int): The column of the added widget.
             rowspan(int): The rowspan of the added widget.
             colspan(int): The colspan of the added widget.
-
         Returns:
             BECDock: The created dock.
         """
 
     @rpc_call
-    def remove_dock_by_id(self, dock_id: "str"):
-        """
-        None
-        """
-
-    @rpc_call
     def clear_all(self):
         """
-        None
+        Close all docks and remove all temp areas.
         """
 
-    @property
     @rpc_call
-    def dock_dict(self) -> "dict":
+    def detach_dock(self, dock_name: "str") -> "BECDock":
         """
-        None
+        Undock a dock from the dock area.
+        Args:
+            dock(BECDock): The dock to undock.
+
+        Returns:
+            BECDock: The undocked dock.
+        """
+
+    @rpc_call
+    def attach_all(self):
+        """
+        Return all floating docks to the dock area.
+        """
+
+    @rpc_call
+    def get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
         """

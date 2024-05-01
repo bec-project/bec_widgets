@@ -1,7 +1,7 @@
 import inspect
 import threading
 import time
-from typing import Literal
+from typing import Literal, Union
 
 from bec_lib import MessageEndpoints, messages
 from qtpy.QtCore import QTimer
@@ -23,7 +23,7 @@ class BECWidgetsCLIServer:
         dispatcher: BECDispatcher = None,
         client=None,
         config=None,
-        gui_class: BECFigure | BECDockArea = BECFigure,
+        gui_class: Union["BECFigure", "BECDockArea"] = BECFigure,
     ) -> None:
         self.dispatcher = BECDispatcher(config=config) if dispatcher is None else dispatcher
         self.client = self.dispatcher.client if client is None else client
@@ -109,7 +109,7 @@ class BECWidgetsCLIServer:
                 expire=10,
             )
 
-    def shutdown(self):
+    def shutdown(self):  # TODO not sure if needed when cleanup is done at level of BECConnector
         self._shutdown_event = True
         self._heartbeat_timer.stop()
         self.client.shutdown()
@@ -117,6 +117,7 @@ class BECWidgetsCLIServer:
 
 if __name__ == "__main__":  # pragma: no cover
     import argparse
+    import os
     import sys
 
     from qtpy.QtCore import QSize
@@ -125,8 +126,9 @@ if __name__ == "__main__":  # pragma: no cover
 
     app = QApplication(sys.argv)
     app.setApplicationName("BEC Figure")
+    current_path = os.path.dirname(__file__)
     icon = QIcon()
-    icon.addFile("bec_widgets_icon.png", size=QSize(48, 48))
+    icon.addFile(os.path.join(current_path, "bec_widgets_icon.png"), size=QSize(48, 48))
     app.setWindowIcon(icon)
 
     win = QMainWindow()
@@ -155,10 +157,10 @@ if __name__ == "__main__":  # pragma: no cover
         gui_class = BECFigure
 
     server = BECWidgetsCLIServer(gui_id=args.id, config=args.config, gui_class=gui_class)
-    # server = BECWidgetsCLIServer(gui_id="test", config=args.config, gui_class=gui_class)
 
-    fig = server.gui
-    win.setCentralWidget(fig)
+    gui = server.gui
+    win.setCentralWidget(gui)
+    win.resize(800, 600)
     win.show()
 
     app.aboutToQuit.connect(server.shutdown)

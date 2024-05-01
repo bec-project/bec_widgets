@@ -49,7 +49,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
 
         self.register = RPCRegister()
         self.register.add_rpc(self.figure)
-        print("Registered objects:", dict(self.register.list_all_connections()))
+
         # console push
         self.console.kernel_manager.kernel.shell.push(
             {
@@ -62,6 +62,9 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                 "d1": self.d1,
                 "d2": self.d2,
                 "d3": self.d3,
+                "b2a": self.button_2_a,
+                "b2b": self.button_2_b,
+                "b2c": self.button_2_c,
                 "bec": self.figure.client,
                 "scans": self.figure.client.scans,
                 "dev": self.figure.client.device_manager.devices,
@@ -107,6 +110,9 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
 
     def _init_dock(self):
         self.button_1 = QtWidgets.QPushButton("Button 1 ")
+        self.button_2_a = QtWidgets.QPushButton("Button to be added at place 0,0 in d3")
+        self.button_2_b = QtWidgets.QPushButton("button after without postions specified")
+        self.button_2_c = QtWidgets.QPushButton("button super late")
         self.button_3 = QtWidgets.QPushButton("Button above Figure ")
         self.label_1 = QtWidgets.QLabel("some scan info label with useful information")
 
@@ -122,6 +128,15 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.d3.add_widget(self.label_3)
         self.d3.add_widget(self.button_3)
         self.d3.add_widget(self.fig_dock3)
+
+        self.dock.save_state()
+
+    def closeEvent(self, event):
+        """Override to handle things when main window is closed."""
+        self.dock.cleanup()
+        self.figure.clear_all()
+        self.figure.client.shutdown()
+        super().closeEvent(event)
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -140,4 +155,5 @@ if __name__ == "__main__":  # pragma: no cover
     win = JupyterConsoleWindow()
     win.show()
 
+    app.aboutToQuit.connect(win.close)
     sys.exit(app.exec_())
