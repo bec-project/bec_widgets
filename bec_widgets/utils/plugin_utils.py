@@ -1,0 +1,40 @@
+import inspect
+
+from bec_lib.plugin_helper import _get_available_plugins
+
+from bec_widgets.utils import BECConnector
+
+
+def get_plugin_widgets() -> dict[str, BECConnector]:
+    """
+    Get all available widgets from the plugin directory. Widgets are classes that inherit from BECConnector.
+    The plugins are provided through python plugins and specified in the respective pyproject.toml file using
+    the following key:
+
+        [project.entry-points."bec.widgets.user_widgets"]
+        plugin_widgets = "path.to.plugin.module"
+
+    e.g.
+        [project.entry-points."bec.widgets.user_widgets"]
+        plugin_widgets = "pxiii_bec.bec_widgets.widgets"
+
+        assuming that the widgets module for the package pxiii_bec is located at pxiii_bec/bec_widgets/widgets and
+        contains the widgets to be loaded within the pxiii_bec/bec_widgets/widgets/__init__.py file.
+
+    Returns:
+        dict[str, BECConnector]: A dictionary of widget names and their respective classes.
+    """
+    modules = _get_available_plugins("bec.widgets.user_widgets")
+    loaded_plugins = {}
+    print(modules)
+    for module in modules:
+        mods = inspect.getmembers(module, predicate=_filter_plugins)
+        for name, mod_cls in mods:
+            if name in loaded_plugins:
+                print(f"Duplicated widgets plugin {name}.")
+            loaded_plugins[name] = mod_cls
+    return loaded_plugins
+
+
+def _filter_plugins(obj):
+    return inspect.isclass(obj) and issubclass(obj, BECConnector)
