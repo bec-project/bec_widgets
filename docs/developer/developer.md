@@ -13,8 +13,8 @@ To contribute to the development of BEC Widgets, start by setting up the develop
 
 1. **Clone the Repository**: 
 ```bash
-git clone https://gitlab.psi.ch/bec/bec-widgets
-cd bec-widgets
+git clone https://gitlab.psi.ch/bec/bec_widgets
+cd bec_widgets
 ```
 2. **Install in Editable Mode**:
 

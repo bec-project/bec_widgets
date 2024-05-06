@@ -6,14 +6,14 @@ BEC Widgets is a GUI framework designed for interaction with [BEC (Beamline Expe
 Use the package manager [pip](https://pip.pypa.io/en/stable/) to install BEC Widgets:
 
 ```bash
-pip install bec-widgets
+pip install bec_widgets
 ```
 
 For development purposes, you can clone the repository and install the package locally in editable mode:
 
 ```bash
 git clone https://gitlab.psi.ch/bec/bec-widgets
-cd bec-widgets
+cd bec_widgets
 pip install -e .[dev]
 ```
 
@@ -22,12 +22,12 @@ BEC Widgets currently supports both PyQt5 and PyQt6. By default, PyQt6 is instal
 To select a specific Python Qt distribution, install the package with an additional tag:
 
 ```bash
-pip install bec-widgets[pyqt6]
+pip install bec_widgets[pyqt6]
 ```
 or 
 
 ```bash
-pip install bec-widgets[pyqt5]
+pip install bec_widgets[pyqt5]
 ```
 ## Documentation
 
