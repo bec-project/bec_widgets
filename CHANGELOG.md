@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.51.0 (2024-05-07)
+
+### Feature
+
+* **utils:** Added plugin helper to find and load ([`5ece269`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5ece269adb0e9b0c2a468f1dfbaa6212e86d3561))
+
 ## v0.50.2 (2024-04-30)
 
 ### Fix
