@@ -5,7 +5,8 @@ import time
 import numpy as np
 import pyqtgraph
 import pyqtgraph as pg
-from bec_lib import MessageEndpoints, messages
+from bec_lib import messages
+from bec_lib.endpoints import MessageEndpoints
 from bec_lib.redis_connector import RedisConnector
 from pyqtgraph import mkBrush, mkPen
 from pyqtgraph.Qt import QtCore, QtWidgets, uic

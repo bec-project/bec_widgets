@@ -5,7 +5,7 @@ from typing import Any, Literal, Optional
 
 import numpy as np
 import pyqtgraph as pg
-from bec_lib import MessageEndpoints
+from bec_lib.endpoints import MessageEndpoints
 from pydantic import BaseModel, Field, ValidationError
 from qtpy.QtCore import QObject, QThread
 from qtpy.QtCore import Signal as pyqtSignal

@@ -6,7 +6,7 @@ from typing import Any, Union
 
 import numpy as np
 import pyqtgraph as pg
-from bec_lib import MessageEndpoints
+from bec_lib.endpoints import MessageEndpoints
 from qtpy import QtCore, QtGui
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtCore import Slot as pyqtSlot

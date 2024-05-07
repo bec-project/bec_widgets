@@ -6,8 +6,9 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Union
 
 import redis
-from bec_lib import BECClient, ServiceConfig
+from bec_lib.client import BECClient
 from bec_lib.redis_connector import MessageObject, RedisConnector
+from bec_lib.service_config import ServiceConfig
 from qtpy.QtCore import QObject
 from qtpy.QtCore import Signal as pyqtSignal
 

@@ -4,7 +4,8 @@ from unittest import mock
 
 import numpy as np
 import pytest
-from bec_lib import RedisConnector, messages
+from bec_lib import messages
+from bec_lib.redis_connector import RedisConnector
 from pytestqt import qtbot
 
 from bec_widgets.examples.stream_plot.stream_plot import StreamPlot

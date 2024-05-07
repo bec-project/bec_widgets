@@ -2,7 +2,7 @@
 import time
 
 import pyqtgraph as pg
-from bec_lib import MessageEndpoints
+from bec_lib.endpoints import MessageEndpoints
 from pydantic import ValidationError
 from pyqtgraph import mkBrush, mkPen
 from qtpy import QtCore

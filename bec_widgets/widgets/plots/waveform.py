@@ -5,7 +5,7 @@ from typing import Any, Literal, Optional
 
 import numpy as np
 import pyqtgraph as pg
-from bec_lib import MessageEndpoints
+from bec_lib.endpoints import MessageEndpoints
 from bec_lib.scan_data import ScanData
 from pydantic import BaseModel, Field, ValidationError
 from pyqtgraph import mkBrush

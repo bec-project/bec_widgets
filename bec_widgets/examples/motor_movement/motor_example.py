@@ -5,7 +5,8 @@ from functools import partial
 
 import numpy as np
 import pyqtgraph as pg
-from bec_lib import MessageEndpoints, messages
+from bec_lib import messages
+from bec_lib.endpoints import MessageEndpoints
 from pyqtgraph.Qt import QtCore, QtWidgets, uic
 from qtpy import QtGui
 from qtpy.QtCore import Qt, QThread

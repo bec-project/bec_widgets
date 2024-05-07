@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from bec_lib import MessageEndpoints
+from bec_lib.endpoints import MessageEndpoints
 
 from bec_widgets.cli.client import BECFigure, BECImageShow, BECMotorMap, BECWaveform
 

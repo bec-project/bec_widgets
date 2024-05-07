@@ -3,9 +3,10 @@ from unittest.mock import MagicMock, patch
 
 import fakeredis
 import pytest
-from bec_lib import BECClient, RedisConnector
+from bec_lib.client import BECClient
 from bec_lib.device import Positioner
 from bec_lib.devicemanager import DeviceContainer
+from bec_lib.redis_connector import RedisConnector
 
 
 class FakeDevice:

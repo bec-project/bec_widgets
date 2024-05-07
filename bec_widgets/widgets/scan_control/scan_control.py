@@ -1,5 +1,4 @@
-import msgpack
-from bec_lib import MessageEndpoints
+from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,

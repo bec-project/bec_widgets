@@ -3,7 +3,8 @@ import threading
 import time
 from typing import Literal, Union
 
-from bec_lib import MessageEndpoints, messages
+from bec_lib import messages
+from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import QTimer
 
 from bec_widgets.cli.rpc_register import RPCRegister

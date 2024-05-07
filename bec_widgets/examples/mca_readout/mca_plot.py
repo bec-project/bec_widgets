@@ -1,7 +1,8 @@
 # import simulation_progress as SP
 import numpy as np
 import pyqtgraph as pg
-from bec_lib import MessageEndpoints, messages
+from bec_lib import messages
+from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
@@ -140,7 +141,7 @@ class StreamApp(QWidget):
 if __name__ == "__main__":
     import argparse
 
-    from bec_lib import RedisConnector
+    from bec_lib.redis_connector import RedisConnector
 
     parser = argparse.ArgumentParser(description="Stream App.")
     parser.add_argument("--port", type=str, default="pc15543:6379", help="Port for RedisConnector")
