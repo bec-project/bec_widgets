@@ -2,6 +2,17 @@
 
 <!--next-version-placeholder-->
 
+## v0.52.0 (2024-05-07)
+
+### Feature
+
+* **utils/layout_manager:** Added GridLayoutManager to extend functionalities of native QGridLayout ([`fcd6ef0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fcd6ef0975dc872f69c9d6fb2b8a1ad04a423aae))
+* **widget/dock:** BECDock and BECDock area for dockable windows ([`d8ff8af`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d8ff8afcd474660a6069bbdab05f10a65f221727))
+
+### Fix
+
+* **widgets/dock:** BECDockArea close overwrites the default pyqtgraph Container close + minor improvements ([`ceae979`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ceae979f375ecc33c5c97148f197655c1ca57b6c))
+
 ## v0.51.0 (2024-05-07)
 
 ### Feature
