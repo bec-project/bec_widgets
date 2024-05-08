@@ -13,6 +13,7 @@ from bec_widgets.cli.rpc_register import RPCRegister
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.widgets import BECFigure
 from bec_widgets.widgets.dock.dock_area import BECDockArea
+from bec_widgets.widgets.spiral_progress_bar.spiral_progress_bar import SpiralProgressBar
 
 
 class JupyterConsoleWidget(RichJupyterWidget):  # pragma: no cover:
@@ -62,6 +63,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                 "d1": self.d1,
                 "d2": self.d2,
                 "d3": self.d3,
+                "bar": self.bar,
                 "b2a": self.button_2_a,
                 "b2b": self.button_2_b,
                 "b2c": self.button_2_c,
@@ -114,14 +116,14 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.button_2_b = QtWidgets.QPushButton("button after without postions specified")
         self.button_2_c = QtWidgets.QPushButton("button super late")
         self.button_3 = QtWidgets.QPushButton("Button above Figure ")
-        self.label_1 = QtWidgets.QLabel("some scan info label with useful information")
+        self.bar = SpiralProgressBar()
 
         self.label_2 = QtWidgets.QLabel("label which is added separately")
         self.label_3 = QtWidgets.QLabel("Label above figure")
 
         self.d1 = self.dock.add_dock(widget=self.button_1, position="left")
         self.d1.addWidget(self.label_2)
-        self.d2 = self.dock.add_dock(widget=self.label_1, position="right")
+        self.d2 = self.dock.add_dock(widget=self.bar, position="right")
         self.d3 = self.dock.add_dock(name="figure")
         self.fig_dock3 = BECFigure()
         self.fig_dock3.plot(x_name="samx", y_name="bpm4d")

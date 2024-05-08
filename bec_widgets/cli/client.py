@@ -1630,3 +1630,255 @@ class BECDockArea(RPCBase, BECGuiClientMixin):
         """
         Get all registered RPC objects.
         """
+
+
+class SpiralProgressBar(RPCBase):
+    @rpc_call
+    def get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
+        """
+
+    @property
+    @rpc_call
+    def rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
+        """
+
+    @property
+    @rpc_call
+    def config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @property
+    @rpc_call
+    def rings(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def update_config(self, config: "SpiralProgressBarConfig | dict"):
+        """
+        Update the configuration of the widget.
+
+        Args:
+            config(SpiralProgressBarConfig|dict): Configuration to update.
+        """
+
+    @rpc_call
+    def add_ring(self, **kwargs) -> "Ring":
+        """
+        Add a new progress bar.
+
+        Args:
+            **kwargs: Keyword arguments for the new progress bar.
+
+        Returns:
+            Ring: Ring object.
+        """
+
+    @rpc_call
+    def remove_ring(self, index: "int"):
+        """
+        Remove a progress bar by index.
+
+        Args:
+            index(int): Index of the progress bar to remove.
+        """
+
+    @rpc_call
+    def set_precision(self, precision: "int", bar_index: "int" = None):
+        """
+        Set the precision for the progress bars. If bar_index is not provide, the precision will be set for all progress bars.
+
+        Args:
+            precision(int): Precision for the progress bars.
+            bar_index(int): Index of the progress bar to set the precision for. If provided, only a single precision can be set.
+        """
+
+    @rpc_call
+    def set_min_max_values(
+        self,
+        min_values: "int | float | list[int | float]",
+        max_values: "int | float | list[int | float]",
+    ):
+        """
+        Set the minimum and maximum values for the progress bars.
+
+        Args:
+            min_values(int|float | list[float]): Minimum value(s) for the progress bars. If multiple progress bars are displayed, provide a list of minimum values for each progress bar.
+            max_values(int|float | list[float]): Maximum value(s) for the progress bars. If multiple progress bars are displayed, provide a list of maximum values for each progress bar.
+        """
+
+    @rpc_call
+    def set_number_of_bars(self, num_bars: "int"):
+        """
+        Set the number of progress bars to display.
+
+        Args:
+            num_bars(int): Number of progress bars to display.
+        """
+
+    @rpc_call
+    def set_value(self, values: "int | list", ring_index: "int" = None):
+        """
+        Set the values for the progress bars.
+
+        Args:
+            values(int | tuple): Value(s) for the progress bars. If multiple progress bars are displayed, provide a tuple of values for each progress bar.
+            ring_index(int): Index of the progress bar to set the value for. If provided, only a single value can be set.
+
+        Examples:
+            >>> SpiralProgressBar.set_value(50)
+            >>> SpiralProgressBar.set_value([30, 40, 50]) # (outer, middle, inner)
+            >>> SpiralProgressBar.set_value(60, bar_index=1) # Set the value for the middle progress bar.
+        """
+
+    @rpc_call
+    def set_colors_from_map(self, colormap, color_format: "Literal['RGB', 'HEX']" = "RGB"):
+        """
+        Set the colors for the progress bars from a colormap.
+
+        Args:
+            colormap(str): Name of the colormap.
+            color_format(Literal["RGB","HEX"]): Format of the returned colors ('RGB', 'HEX').
+        """
+
+    @rpc_call
+    def set_colors_directly(
+        self, colors: "list[str | tuple] | str | tuple", bar_index: "int" = None
+    ):
+        """
+        Set the colors for the progress bars directly.
+
+        Args:
+            colors(list[str | tuple] | str | tuple): Color(s) for the progress bars. If multiple progress bars are displayed, provide a list of colors for each progress bar.
+            bar_index(int): Index of the progress bar to set the color for. If provided, only a single color can be set.
+        """
+
+    @rpc_call
+    def set_line_widths(self, widths: "int | list[int]", bar_index: "int" = None):
+        """
+        Set the line widths for the progress bars.
+
+        Args:
+            widths(int | list[int]): Line width(s) for the progress bars. If multiple progress bars are displayed, provide a list of line widths for each progress bar.
+            bar_index(int): Index of the progress bar to set the line width for. If provided, only a single line width can be set.
+        """
+
+    @rpc_call
+    def set_gap(self, gap: "int"):
+        """
+        Set the gap between the progress bars.
+
+        Args:
+            gap(int): Gap between the progress bars.
+        """
+
+    @rpc_call
+    def set_diameter(self, diameter: "int"):
+        """
+        Set the diameter of the widget.
+
+        Args:
+            diameter(int): Diameter of the widget.
+        """
+
+    @rpc_call
+    def reset_diameter(self):
+        """
+        Reset the fixed size of the widget.
+        """
+
+    @rpc_call
+    def enable_auto_updates(self, enable: "bool" = True):
+        """
+        Enable or disable updates based on scan status. Overrides manual updates.
+        The behaviour of the whole progress bar widget will be driven by the scan queue status.
+
+        Args:
+            enable(bool): True or False.
+
+        Returns:
+            bool: True if scan segment updates are enabled.
+        """
+
+
+class Ring(RPCBase):
+    @rpc_call
+    def get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
+        """
+
+    @property
+    @rpc_call
+    def rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
+        """
+
+    @property
+    @rpc_call
+    def config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def set_value(self, value: "int | float"):
+        """
+        None
+        """
+
+    @rpc_call
+    def set_color(self, color: "str | tuple"):
+        """
+        None
+        """
+
+    @rpc_call
+    def set_background(self, color: "str | tuple"):
+        """
+        None
+        """
+
+    @rpc_call
+    def set_line_width(self, width: "int"):
+        """
+        None
+        """
+
+    @rpc_call
+    def set_min_max_values(self, min_value: "int", max_value: "int"):
+        """
+        None
+        """
+
+    @rpc_call
+    def set_start_angle(self, start_angle: "int"):
+        """
+        None
+        """
+
+    @rpc_call
+    def set_connections(self, slot: "str", endpoint: "str | EndpointInfo"):
+        """
+        None
+        """
+
+    @rpc_call
+    def reset_connection(self):
+        """
+        None
+        """

@@ -3,6 +3,7 @@ import pytest
 from bec_lib.endpoints import MessageEndpoints
 
 from bec_widgets.cli.client import BECDockArea, BECFigure, BECImageShow, BECMotorMap, BECWaveform
+from bec_widgets.utils import Colors
 
 
 def test_rpc_add_dock_with_figure_e2e(rpc_server_dock, qtbot):
@@ -143,3 +144,83 @@ def test_dock_manipulations_e2e(rpc_server_dock, qtbot):
 
     assert len(dock_server.docks) == 0
     assert len(dock_server.tempAreas) == 0
+
+
+def test_spiral_bar(rpc_server_dock):
+    dock = BECDockArea(rpc_server_dock.gui_id)
+    dock_server = rpc_server_dock.gui
+
+    d0 = dock.add_dock("dock_0")
+
+    bar = d0.add_widget_bec("SpiralProgressBar")
+    assert bar.__class__.__name__ == "SpiralProgressBar"
+
+    bar.set_number_of_bars(5)
+    bar.set_colors_from_map("viridis")
+    bar.set_value([10, 20, 30, 40, 50])
+
+    bar_server = dock_server.docks["dock_0"].widgets[0]
+
+    expected_colors = Colors.golden_angle_color("viridis", 5, "RGB")
+    bar_colors = [ring.color.getRgb() for ring in bar_server.rings]
+    bar_values = [ring.value for ring in bar_server.rings]
+    assert bar_values == [10, 20, 30, 40, 50]
+    assert bar_colors == expected_colors
+
+
+def test_spiral_bar_scan_update(rpc_server_dock, qtbot):
+    dock = BECDockArea(rpc_server_dock.gui_id)
+    dock_server = rpc_server_dock.gui
+
+    d0 = dock.add_dock("dock_0")
+
+    d0.add_widget_bec("SpiralProgressBar")
+
+    client = rpc_server_dock.client
+    dev = client.device_manager.devices
+    scans = client.scans
+
+    status = scans.line_scan(dev.samx, -5, 5, steps=10, exp_time=0.05, relative=False)
+
+    while not status.status == "COMPLETED":
+        qtbot.wait(200)
+
+    qtbot.wait(200)
+    bar_server = dock_server.docks["dock_0"].widgets[0]
+    assert bar_server.config.num_bars == 1
+    np.testing.assert_allclose(bar_server.rings[0].value, 10, atol=0.1)
+    np.testing.assert_allclose(bar_server.rings[0].config.min_value, 0, atol=0.1)
+    np.testing.assert_allclose(bar_server.rings[0].config.max_value, 10, atol=0.1)
+
+    status = scans.grid_scan(dev.samx, -5, 5, 4, dev.samy, -10, 10, 4, relative=True, exp_time=0.1)
+
+    while not status.status == "COMPLETED":
+        qtbot.wait(200)
+
+    qtbot.wait(200)
+    assert bar_server.config.num_bars == 1
+    np.testing.assert_allclose(bar_server.rings[0].value, 16, atol=0.1)
+    np.testing.assert_allclose(bar_server.rings[0].config.min_value, 0, atol=0.1)
+    np.testing.assert_allclose(bar_server.rings[0].config.max_value, 16, atol=0.1)
+
+    init_samx = dev.samx.read()["samx"]["value"]
+    init_samy = dev.samy.read()["samy"]["value"]
+    final_samx = init_samx + 5
+    final_samy = init_samy + 10
+
+    dev.samx.velocity.put(5)
+    dev.samy.velocity.put(5)
+
+    status = scans.umv(dev.samx, 5, dev.samy, 10, relative=True)
+
+    while not status.status == "COMPLETED":
+        qtbot.wait(200)
+
+    qtbot.wait(200)
+    assert bar_server.config.num_bars == 2
+    np.testing.assert_allclose(bar_server.rings[0].value, final_samx, atol=0.1)
+    np.testing.assert_allclose(bar_server.rings[1].value, final_samy, atol=0.1)
+    np.testing.assert_allclose(bar_server.rings[0].config.min_value, init_samx, atol=0.1)
+    np.testing.assert_allclose(bar_server.rings[1].config.min_value, init_samy, atol=0.1)
+    np.testing.assert_allclose(bar_server.rings[0].config.max_value, final_samx, atol=0.1)
+    np.testing.assert_allclose(bar_server.rings[1].config.max_value, final_samy, atol=0.1)

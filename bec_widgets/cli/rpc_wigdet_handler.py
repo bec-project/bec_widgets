@@ -1,11 +1,12 @@
 from bec_widgets.utils import BECConnector
 from bec_widgets.widgets.figure import BECFigure
+from bec_widgets.widgets.spiral_progress_bar.spiral_progress_bar import SpiralProgressBar
 
 
 class RPCWidgetHandler:
     """Handler class for creating widgets from RPC messages."""
 
-    widget_classes = {"BECFigure": BECFigure}
+    widget_classes = {"BECFigure": BECFigure, "SpiralProgressBar": SpiralProgressBar}
 
     @staticmethod
     def create_widget(widget_type, **kwargs) -> BECConnector:
