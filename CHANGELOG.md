@@ -2,6 +2,12 @@
 
 <!--next-version-placeholder-->
 
+## v0.52.1 (2024-05-08)
+
+### Fix
+
+* **docstrings:** Docstrings formating fixed for sphinx to properly format readdocs ([`7f2f7cd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7f2f7cd07a14876617cd83cedde8c281fdc52c3a))
+
 ## v0.52.0 (2024-05-07)
 
 ### Feature
