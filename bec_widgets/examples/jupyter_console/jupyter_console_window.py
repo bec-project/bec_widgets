@@ -12,6 +12,7 @@ from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 from bec_widgets.cli.rpc_register import RPCRegister
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.widgets import BECFigure
+from bec_widgets.widgets.circular_progress_bar.spiral_progress_bar import SpiralProgressBar
 from bec_widgets.widgets.dock.dock_area import BECDockArea
 from bec_widgets.widgets.spiral_progress_bar.spiral_progress_bar import SpiralProgressBar
 
