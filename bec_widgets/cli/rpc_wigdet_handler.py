@@ -13,6 +13,7 @@ class RPCWidgetHandler:
     def create_widget(widget_type, **kwargs) -> BECConnector:
         """
         Create a widget from an RPC message.
+
         Args:
             widget_type(str): The type of the widget.
             **kwargs: The keyword arguments for the widget.

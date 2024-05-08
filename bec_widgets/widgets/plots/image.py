@@ -112,8 +112,10 @@ class BECImageItem(BECConnector, pg.ImageItem):
     def set(self, **kwargs):
         """
         Set the properties of the image.
+
         Args:
             **kwargs: Keyword arguments for the properties to be set.
+
         Possible properties:
             - downsample
             - color_map
@@ -145,6 +147,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
     def set_fft(self, enable: bool = False):
         """
         Set the FFT of the image.
+
         Args:
             enable(bool): Whether to perform FFT on the monitor data.
         """
@@ -153,6 +156,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
     def set_log(self, enable: bool = False):
         """
         Set the log of the image.
+
         Args:
             enable(bool): Whether to perform log on the monitor data.
         """
@@ -163,6 +167,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
     def set_rotation(self, deg_90: int = 0):
         """
         Set the rotation of the image.
+
         Args:
             deg_90(int): The rotation angle of the monitor data before displaying.
         """
@@ -171,6 +176,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
     def set_transpose(self, enable: bool = False):
         """
         Set the transpose of the image.
+
         Args:
             enable(bool): Whether to transpose the image.
         """
@@ -179,6 +185,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
     def set_opacity(self, opacity: float = 1.0):
         """
         Set the opacity of the image.
+
         Args:
             opacity(float): The opacity of the image.
         """
@@ -188,6 +195,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
     def set_autorange(self, autorange: bool = False):
         """
         Set the autorange of the color bar.
+
         Args:
             autorange(bool): Whether to autorange the color bar.
         """
@@ -198,6 +206,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
     def set_color_map(self, cmap: str = "magma"):
         """
         Set the color map of the image.
+
         Args:
             cmap(str): The color map of the image.
         """
@@ -212,6 +221,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
     def set_auto_downsample(self, auto: bool = True):
         """
         Set the auto downsample of the image.
+
         Args:
             auto(bool): Whether to downsample the image.
         """
@@ -221,6 +231,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
     def set_monitor(self, monitor: str):
         """
         Set the monitor of the image.
+
         Args:
             monitor(str): The name of the monitor.
         """
@@ -229,6 +240,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
     def set_vrange(self, vmin: float = None, vmax: float = None, vrange: tuple[int, int] = None):
         """
         Set the range of the color bar.
+
         Args:
             vmin(float): Minimum value of the color bar.
             vmax(float): Maximum value of the color bar.
@@ -258,6 +270,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
     ):
         """
         Add color bar to the layout.
+
         Args:
             style(Literal["simple,full"]): The style of the color bar.
             vrange(tuple[int,int]): The range of the color bar.
@@ -363,6 +376,7 @@ class BECImageShow(BECPlotBase):
     def find_image_by_monitor(self, item_id: str) -> BECImageItem:
         """
         Find the widget by its gui_id.
+
         Args:
             item_id(str): The gui_id of the widget.
 
@@ -381,6 +395,7 @@ class BECImageShow(BECPlotBase):
     def apply_config(self, config: dict | SubplotConfig):
         """
         Apply the configuration to the 1D waveform widget.
+
         Args:
             config(dict|SubplotConfig): Configuration settings.
             replot_last_scan(bool, optional): If True, replot the last scan. Defaults to False.
@@ -416,6 +431,7 @@ class BECImageShow(BECPlotBase):
     def add_image_by_config(self, config: ImageItemConfig | dict) -> BECImageItem:
         """
         Add an image to the widget by configuration.
+
         Args:
             config(ImageItemConfig|dict): The configuration of the image.
 
@@ -432,6 +448,7 @@ class BECImageShow(BECPlotBase):
     def get_image_config(self, image_id, dict_output: bool = True) -> ImageItemConfig | dict:
         """
         Get the configuration of the image.
+
         Args:
             image_id(str): The ID of the image.
             dict_output(bool): Whether to return the configuration as a dictionary. Defaults to True.
@@ -473,6 +490,7 @@ class BECImageShow(BECPlotBase):
     def get_image_dict(self) -> dict[str, dict[str, BECImageItem]]:
         """
         Get all images.
+
         Returns:
             dict[str, dict[str, BECImageItem]]: The dictionary of images.
         """
@@ -574,6 +592,7 @@ class BECImageShow(BECPlotBase):
         """
         Set the range of the color bar.
         If name is not specified, then set vrange for all images.
+
         Args:
             vmin(float): Minimum value of the color bar.
             vmax(float): Maximum value of the color bar.
@@ -585,6 +604,7 @@ class BECImageShow(BECPlotBase):
         """
         Set the color map of the image.
         If name is not specified, then set color map for all images.
+
         Args:
             cmap(str): The color map of the image.
             name(str): The name of the image. If None, apply to all images.
@@ -594,6 +614,7 @@ class BECImageShow(BECPlotBase):
     def set_autorange(self, enable: bool = False, name: str = None):
         """
         Set the autoscale of the image.
+
         Args:
             enable(bool): Whether to autoscale the color bar.
             name(str): The name of the image. If None, apply to all images.
@@ -604,6 +625,7 @@ class BECImageShow(BECPlotBase):
         """
         Set the monitor of the image.
         If name is not specified, then set monitor for all images.
+
         Args:
             monitor(str): The name of the monitor.
             name(str): The name of the image. If None, apply to all images.
@@ -614,6 +636,7 @@ class BECImageShow(BECPlotBase):
         """
         Set the post processing of the image.
         If name is not specified, then set post processing for all images.
+
         Args:
             name(str): The name of the image. If None, apply to all images.
             **kwargs: Keyword arguments for the properties to be set.
@@ -628,6 +651,7 @@ class BECImageShow(BECPlotBase):
     def set_image_properties(self, name: str = None, **kwargs):
         """
         Set the properties of the image.
+
         Args:
             name(str): The name of the image. If None, apply to all images.
             **kwargs: Keyword arguments for the properties to be set.
@@ -648,6 +672,7 @@ class BECImageShow(BECPlotBase):
         """
         Set the FFT of the image.
         If name is not specified, then set FFT for all images.
+
         Args:
             enable(bool): Whether to perform FFT on the monitor data.
             name(str): The name of the image. If None, apply to all images.
@@ -658,6 +683,7 @@ class BECImageShow(BECPlotBase):
         """
         Set the log of the image.
         If name is not specified, then set log for all images.
+
         Args:
             enable(bool): Whether to perform log on the monitor data.
             name(str): The name of the image. If None, apply to all images.
@@ -668,6 +694,7 @@ class BECImageShow(BECPlotBase):
         """
         Set the rotation of the image.
         If name is not specified, then set rotation for all images.
+
         Args:
             deg_90(int): The rotation angle of the monitor data before displaying.
             name(str): The name of the image. If None, apply to all images.
@@ -678,6 +705,7 @@ class BECImageShow(BECPlotBase):
         """
         Set the transpose of the image.
         If name is not specified, then set transpose for all images.
+
         Args:
             enable(bool): Whether to transpose the monitor data before displaying.
             name(str): The name of the image. If None, apply to all images.
@@ -687,6 +715,7 @@ class BECImageShow(BECPlotBase):
     def toggle_threading(self, use_threading: bool):
         """
         Toggle threading for the widgets postprocessing and updating.
+
         Args:
             use_threading(bool): Whether to use threading.
         """
@@ -698,6 +727,7 @@ class BECImageShow(BECPlotBase):
     def on_image_update(self, msg: dict):
         """
         Update the image of the device monitor from bec.
+
         Args:
             msg(dict): The message from bec.
         """
@@ -716,6 +746,7 @@ class BECImageShow(BECPlotBase):
     def update_image(self, device: str, data: np.ndarray):
         """
         Update the image of the device monitor.
+
         Args:
             device(str): The name of the device.
             data(np.ndarray): The data to be updated.
@@ -726,6 +757,7 @@ class BECImageShow(BECPlotBase):
     def _connect_device_monitor(self, monitor: str):
         """
         Connect to the device monitor.
+
         Args:
             monitor(str): The name of the monitor.
         """
@@ -760,6 +792,7 @@ class BECImageShow(BECPlotBase):
     def _check_image_id(self, val: Any, dict_to_check: dict) -> bool:
         """
         Check if val is in the values of the dict_to_check or in the values of the nested dictionaries.
+
         Args:
             val(Any): Value to check.
             dict_to_check(dict): Dictionary to check.
@@ -778,6 +811,7 @@ class BECImageShow(BECPlotBase):
     def _validate_monitor(self, monitor: str, validate_bec: bool = True):
         """
         Validate the monitor name.
+
         Args:
             monitor(str): The name of the monitor.
             validate_bec(bool): Whether to validate the monitor name with BEC.
@@ -818,6 +852,7 @@ class ImageProcessor:
     def set_config(self, config: ProcessingConfig):
         """
         Set the configuration of the processor.
+
         Args:
             config(ProcessingConfig): The configuration of the processor.
         """
@@ -826,6 +861,7 @@ class ImageProcessor:
     def FFT(self, data: np.ndarray) -> np.ndarray:
         """
         Perform FFT on the data.
+
         Args:
             data(np.ndarray): The data to be processed.
 
@@ -837,6 +873,7 @@ class ImageProcessor:
     def rotation(self, data: np.ndarray, rotate_90: int) -> np.ndarray:
         """
         Rotate the data by 90 degrees n times.
+
         Args:
             data(np.ndarray): The data to be processed.
             rotate_90(int): The number of 90 degree rotations.
@@ -849,6 +886,7 @@ class ImageProcessor:
     def transpose(self, data: np.ndarray) -> np.ndarray:
         """
         Transpose the data.
+
         Args:
             data(np.ndarray): The data to be processed.
 
@@ -860,6 +898,7 @@ class ImageProcessor:
     def log(self, data: np.ndarray) -> np.ndarray:
         """
         Perform log on the data.
+
         Args:
             data(np.ndarray): The data to be processed.
 
@@ -878,6 +917,7 @@ class ImageProcessor:
     def process_image(self, data: np.ndarray) -> np.ndarray:
         """
         Process the data according to the configuration.
+
         Args:
             data(np.ndarray): The data to be processed.
 
@@ -914,6 +954,7 @@ class ProcessorWorker(QObject):
     def process_image(self, device: str, image: np.ndarray):
         """
         Process the image data.
+
         Args:
             device(str): The name of the device.
             image(np.ndarray): The image data.

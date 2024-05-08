@@ -114,6 +114,7 @@ class WidgetIO:
     def get_value(widget, ignore_errors=False):
         """
         Retrieve value from the widget instance.
+
         Args:
             widget: Widget instance.
             ignore_errors(bool, optional): Whether to ignore if no handler is found.
@@ -129,6 +130,7 @@ class WidgetIO:
     def set_value(widget, value, ignore_errors=False):
         """
         Set a value on the widget instance.
+
         Args:
             widget: Widget instance.
             value: Value to set.
@@ -155,6 +157,7 @@ class WidgetHierarchy:
     ) -> None:
         """
         Print the widget hierarchy to the console.
+
         Args:
             widget: Widget to print the hierarchy of
             indent(int, optional): Level of indentation.
@@ -196,6 +199,7 @@ class WidgetHierarchy:
     ) -> dict:
         """
         Export the widget hierarchy to a dictionary.
+
         Args:
             widget: Widget to print the hierarchy of.
             config(dict,optional): Dictionary to export the hierarchy to.
@@ -245,6 +249,7 @@ class WidgetHierarchy:
     def import_config_from_dict(widget, config: dict, set_values: bool = False) -> None:
         """
         Import the widget hierarchy from a dictionary.
+
         Args:
             widget: Widget to import the hierarchy to.
             config:

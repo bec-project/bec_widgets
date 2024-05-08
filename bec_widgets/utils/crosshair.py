@@ -17,6 +17,7 @@ class Crosshair(QObject):
     def __init__(self, plot_item: pg.PlotItem, precision: int = None, parent=None):
         """
         Crosshair for 1D and 2D plots.
+
         Args:
             plot_item (pyqtgraph.PlotItem): The plot item to which the crosshair will be attached.
             precision (int, optional): Number of decimal places to round the coordinates to. Defaults to None.

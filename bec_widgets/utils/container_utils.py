@@ -10,6 +10,7 @@ class WidgetContainerUtils:
     def generate_unique_widget_id(container: dict, prefix: str = "widget") -> str:
         """
         Generate a unique widget ID.
+
         Args:
             container(dict): The container of widgets.
             prefix(str): The prefix of the widget ID.
@@ -29,10 +30,12 @@ class WidgetContainerUtils:
     ) -> QWidget | None:
         """
         Find the first widget of a given class in the figure.
+
         Args:
             container(dict): The container of widgets.
             widget_class(Type): The class of the widget to find.
             can_fail(bool): If True, the method will return None if no widget is found. If False, it will raise an error.
+
         Returns:
             widget: The widget of the given class.
         """

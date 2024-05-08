@@ -41,6 +41,7 @@ from typing import Literal, Optional, overload"""
     def generate_content_for_class(self, cls):
         """
         Generate the content for the class.
+
         Args:
             cls: The class for which to generate the content.
         """

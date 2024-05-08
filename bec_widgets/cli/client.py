@@ -11,6 +11,7 @@ class BECPlotBase(RPCBase):
     def config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
+
         Returns:
             dict: The configuration of the widget.
         """
@@ -19,8 +20,10 @@ class BECPlotBase(RPCBase):
     def set(self, **kwargs) -> "None":
         """
         Set the properties of the plot widget.
+
         Args:
             **kwargs: Keyword arguments for the properties to be set.
+
         Possible properties:
             - title: str
             - x_label: str
@@ -35,6 +38,7 @@ class BECPlotBase(RPCBase):
     def set_title(self, title: "str"):
         """
         Set the title of the plot widget.
+
         Args:
             title(str): Title of the plot widget.
         """
@@ -43,6 +47,7 @@ class BECPlotBase(RPCBase):
     def set_x_label(self, label: "str"):
         """
         Set the label of the x-axis.
+
         Args:
             label(str): Label of the x-axis.
         """
@@ -51,6 +56,7 @@ class BECPlotBase(RPCBase):
     def set_y_label(self, label: "str"):
         """
         Set the label of the y-axis.
+
         Args:
             label(str): Label of the y-axis.
         """
@@ -59,6 +65,7 @@ class BECPlotBase(RPCBase):
     def set_x_scale(self, scale: "Literal['linear', 'log']" = "linear"):
         """
         Set the scale of the x-axis.
+
         Args:
             scale(Literal["linear", "log"]): Scale of the x-axis.
         """
@@ -67,6 +74,7 @@ class BECPlotBase(RPCBase):
     def set_y_scale(self, scale: "Literal['linear', 'log']" = "linear"):
         """
         Set the scale of the y-axis.
+
         Args:
             scale(Literal["linear", "log"]): Scale of the y-axis.
         """
@@ -105,6 +113,7 @@ class BECPlotBase(RPCBase):
     def set_grid(self, x: "bool" = False, y: "bool" = False):
         """
         Set the grid of the plot widget.
+
         Args:
             x(bool): Show grid on the x-axis.
             y(bool): Show grid on the y-axis.
@@ -114,6 +123,7 @@ class BECPlotBase(RPCBase):
     def lock_aspect_ratio(self, lock):
         """
         Lock aspect ratio.
+
         Args:
             lock(bool): True to lock, False to unlock.
         """
@@ -122,6 +132,7 @@ class BECPlotBase(RPCBase):
     def plot(self, data_x: "list | np.ndarray", data_y: "list | np.ndarray", **kwargs):
         """
         Plot custom data on the plot widget. These data are not saved in config.
+
         Args:
             data_x(list|np.ndarray): x-axis data
             data_y(list|np.ndarray): y-axis data
@@ -148,6 +159,7 @@ class BECWaveform(RPCBase):
     def config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
+
         Returns:
             dict: The configuration of the widget.
         """
@@ -169,6 +181,7 @@ class BECWaveform(RPCBase):
     ) -> "BECCurve":
         """
         Add a curve to the plot widget from the scan segment.
+
         Args:
             x_name(str): Name of the x signal.
             x_entry(str): Entry of the x signal.
@@ -196,6 +209,7 @@ class BECWaveform(RPCBase):
     ) -> "BECCurve":
         """
         Add a custom data curve to the plot widget.
+
         Args:
             x(list|np.ndarray): X data of the curve.
             y(list|np.ndarray): Y data of the curve.
@@ -211,6 +225,7 @@ class BECWaveform(RPCBase):
     def remove_curve(self, *identifiers):
         """
         Remove a curve from the plot widget.
+
         Args:
             *identifiers: Identifier of the curve to be removed. Can be either an integer (index) or a string (curve_id).
         """
@@ -220,6 +235,7 @@ class BECWaveform(RPCBase):
         """
         Update the scan curves with the data from the scan storage.
         Provide only one of scan_id or scan_index.
+
         Args:
             scan_id(str, optional): ScanID of the scan to be updated. Defaults to None.
             scan_index(int, optional): Index of the scan to be updated. Defaults to None.
@@ -238,8 +254,10 @@ class BECWaveform(RPCBase):
     def get_curve(self, identifier) -> "BECCurve":
         """
         Get the curve by its index or ID.
+
         Args:
             identifier(int|str): Identifier of the curve. Can be either an integer (index) or a string (curve_id).
+
         Returns:
             BECCurve: The curve object.
         """
@@ -248,8 +266,10 @@ class BECWaveform(RPCBase):
     def get_curve_config(self, curve_id: "str", dict_output: "bool" = True) -> "CurveConfig | dict":
         """
         Get the configuration of a curve by its ID.
+
         Args:
             curve_id(str): ID of the curve.
+
         Returns:
             CurveConfig|dict: Configuration of the curve.
         """
@@ -258,6 +278,7 @@ class BECWaveform(RPCBase):
     def apply_config(self, config: "dict | SubplotConfig", replot_last_scan: "bool" = False):
         """
         Apply the configuration to the 1D waveform widget.
+
         Args:
             config(dict|SubplotConfig): Configuration settings.
             replot_last_scan(bool, optional): If True, replot the last scan. Defaults to False.
@@ -267,8 +288,10 @@ class BECWaveform(RPCBase):
     def get_all_data(self, output: "Literal['dict', 'pandas']" = "dict") -> "dict | pd.DataFrame":
         """
         Extract all curve data into a dictionary or a pandas DataFrame.
+
         Args:
             output (Literal["dict", "pandas"]): Format of the output data.
+
         Returns:
             dict | pd.DataFrame: Data of all curves in the specified format.
         """
@@ -277,8 +300,10 @@ class BECWaveform(RPCBase):
     def set(self, **kwargs) -> "None":
         """
         Set the properties of the plot widget.
+
         Args:
             **kwargs: Keyword arguments for the properties to be set.
+
         Possible properties:
             - title: str
             - x_label: str
@@ -293,6 +318,7 @@ class BECWaveform(RPCBase):
     def set_title(self, title: "str"):
         """
         Set the title of the plot widget.
+
         Args:
             title(str): Title of the plot widget.
         """
@@ -301,6 +327,7 @@ class BECWaveform(RPCBase):
     def set_x_label(self, label: "str"):
         """
         Set the label of the x-axis.
+
         Args:
             label(str): Label of the x-axis.
         """
@@ -309,6 +336,7 @@ class BECWaveform(RPCBase):
     def set_y_label(self, label: "str"):
         """
         Set the label of the y-axis.
+
         Args:
             label(str): Label of the y-axis.
         """
@@ -317,6 +345,7 @@ class BECWaveform(RPCBase):
     def set_x_scale(self, scale: "Literal['linear', 'log']" = "linear"):
         """
         Set the scale of the x-axis.
+
         Args:
             scale(Literal["linear", "log"]): Scale of the x-axis.
         """
@@ -325,6 +354,7 @@ class BECWaveform(RPCBase):
     def set_y_scale(self, scale: "Literal['linear', 'log']" = "linear"):
         """
         Set the scale of the y-axis.
+
         Args:
             scale(Literal["linear", "log"]): Scale of the y-axis.
         """
@@ -363,6 +393,7 @@ class BECWaveform(RPCBase):
     def set_grid(self, x: "bool" = False, y: "bool" = False):
         """
         Set the grid of the plot widget.
+
         Args:
             x(bool): Show grid on the x-axis.
             y(bool): Show grid on the y-axis.
@@ -372,6 +403,7 @@ class BECWaveform(RPCBase):
     def lock_aspect_ratio(self, lock):
         """
         Lock aspect ratio.
+
         Args:
             lock(bool): True to lock, False to unlock.
         """
@@ -380,6 +412,7 @@ class BECWaveform(RPCBase):
     def plot(self, data_x: "list | np.ndarray", data_y: "list | np.ndarray", **kwargs):
         """
         Plot custom data on the plot widget. These data are not saved in config.
+
         Args:
             data_x(list|np.ndarray): x-axis data
             data_y(list|np.ndarray): y-axis data
@@ -406,6 +439,7 @@ class BECFigure(RPCBase):
     def config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
+
         Returns:
             dict: The configuration of the widget.
         """
@@ -414,6 +448,7 @@ class BECFigure(RPCBase):
     def axes(self, row: "int", col: "int") -> "BECPlotBase":
         """
         Get widget by its coordinates in the figure.
+
         Args:
             row(int): the row coordinate
             col(int): the column coordinate
@@ -453,6 +488,7 @@ class BECFigure(RPCBase):
     ) -> "BECWaveform":
         """
         Add a Waveform1D plot to the figure at the specified position.
+
         Args:
             widget_id(str): The unique identifier of the widget. If not provided, a unique ID will be generated.
             row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
@@ -476,6 +512,7 @@ class BECFigure(RPCBase):
     ) -> "BECImageShow":
         """
         Add an image to the figure at the specified position.
+
         Args:
             monitor(str): The name of the monitor to display.
             color_bar(Literal["simple","full"]): The type of color bar to display.
@@ -533,6 +570,7 @@ class BECFigure(RPCBase):
     ) -> "BECWaveform":
         """
         Add a 1D waveform plot to the figure. Always access the first waveform widget in the figure.
+
         Args:
             x_name(str): The name of the device for the x-axis.
             y_name(str): The name of the device for the y-axis.
@@ -564,6 +602,7 @@ class BECFigure(RPCBase):
     ) -> "BECImageShow":
         """
         Add an image to the figure. Always access the first image widget in the figure.
+
         Args:
             monitor(str): The name of the monitor to display.
             color_bar(Literal["simple","full"]): The type of color bar to display.
@@ -582,6 +621,7 @@ class BECFigure(RPCBase):
     ) -> "BECMotorMap":
         """
         Add a motor map to the figure. Always access the first motor map widget in the figure.
+
         Args:
             motor_x(str): The name of the motor for the X axis.
             motor_y(str): The name of the motor for the Y axis.
@@ -601,6 +641,7 @@ class BECFigure(RPCBase):
     ) -> "None":
         """
         Remove a widget from the figure. Can be removed by its unique identifier or by its coordinates.
+
         Args:
             row(int): The row coordinate of the widget to remove.
             col(int): The column coordinate of the widget to remove.
@@ -623,6 +664,7 @@ class BECFigure(RPCBase):
     def change_theme(self, theme: "Literal['dark', 'light']") -> "None":
         """
         Change the theme of the figure widget.
+
         Args:
             theme(Literal["dark","light"]): The theme to set for the figure widget.
         """
@@ -668,6 +710,7 @@ class BECCurve(RPCBase):
     def config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
+
         Returns:
             dict: The configuration of the widget.
         """
@@ -676,8 +719,10 @@ class BECCurve(RPCBase):
     def set(self, **kwargs):
         """
         Set the properties of the curve.
+
         Args:
             **kwargs: Keyword arguments for the properties to be set.
+
         Possible properties:
             - color: str
             - symbol: str
@@ -697,6 +742,7 @@ class BECCurve(RPCBase):
     def set_color(self, color: "str", symbol_color: "Optional[str]" = None):
         """
         Change the color of the curve.
+
         Args:
             color(str): Color of the curve.
             symbol_color(str, optional): Color of the symbol. Defaults to None.
@@ -706,6 +752,7 @@ class BECCurve(RPCBase):
     def set_colormap(self, colormap: "str"):
         """
         Set the colormap for the scatter plot z gradient.
+
         Args:
             colormap(str): Colormap for the scatter plot.
         """
@@ -714,6 +761,7 @@ class BECCurve(RPCBase):
     def set_symbol(self, symbol: "str"):
         """
         Change the symbol of the curve.
+
         Args:
             symbol(str): Symbol of the curve.
         """
@@ -722,6 +770,7 @@ class BECCurve(RPCBase):
     def set_symbol_color(self, symbol_color: "str"):
         """
         Change the symbol color of the curve.
+
         Args:
             symbol_color(str): Color of the symbol.
         """
@@ -730,6 +779,7 @@ class BECCurve(RPCBase):
     def set_symbol_size(self, symbol_size: "int"):
         """
         Change the symbol size of the curve.
+
         Args:
             symbol_size(int): Size of the symbol.
         """
@@ -738,6 +788,7 @@ class BECCurve(RPCBase):
     def set_pen_width(self, pen_width: "int"):
         """
         Change the pen width of the curve.
+
         Args:
             pen_width(int): Width of the pen.
         """
@@ -746,6 +797,7 @@ class BECCurve(RPCBase):
     def set_pen_style(self, pen_style: "Literal['solid', 'dash', 'dot', 'dashdot']"):
         """
         Change the pen style of the curve.
+
         Args:
             pen_style(Literal["solid", "dash", "dot", "dashdot"]): Style of the pen.
         """
@@ -772,6 +824,7 @@ class BECImageShow(RPCBase):
     def config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
+
         Returns:
             dict: The configuration of the widget.
         """
@@ -780,6 +833,7 @@ class BECImageShow(RPCBase):
     def add_image_by_config(self, config: "ImageItemConfig | dict") -> "BECImageItem":
         """
         Add an image to the widget by configuration.
+
         Args:
             config(ImageItemConfig|dict): The configuration of the image.
 
@@ -791,6 +845,7 @@ class BECImageShow(RPCBase):
     def get_image_config(self, image_id, dict_output: "bool" = True) -> "ImageItemConfig | dict":
         """
         Get the configuration of the image.
+
         Args:
             image_id(str): The ID of the image.
             dict_output(bool): Whether to return the configuration as a dictionary. Defaults to True.
@@ -803,6 +858,7 @@ class BECImageShow(RPCBase):
     def get_image_dict(self) -> "dict[str, dict[str, BECImageItem]]":
         """
         Get all images.
+
         Returns:
             dict[str, dict[str, BECImageItem]]: The dictionary of images.
         """
@@ -843,6 +899,7 @@ class BECImageShow(RPCBase):
         """
         Set the range of the color bar.
         If name is not specified, then set vrange for all images.
+
         Args:
             vmin(float): Minimum value of the color bar.
             vmax(float): Maximum value of the color bar.
@@ -854,6 +911,7 @@ class BECImageShow(RPCBase):
         """
         Set the color map of the image.
         If name is not specified, then set color map for all images.
+
         Args:
             cmap(str): The color map of the image.
             name(str): The name of the image. If None, apply to all images.
@@ -863,6 +921,7 @@ class BECImageShow(RPCBase):
     def set_autorange(self, enable: "bool" = False, name: "str" = None):
         """
         Set the autoscale of the image.
+
         Args:
             enable(bool): Whether to autoscale the color bar.
             name(str): The name of the image. If None, apply to all images.
@@ -873,6 +932,7 @@ class BECImageShow(RPCBase):
         """
         Set the monitor of the image.
         If name is not specified, then set monitor for all images.
+
         Args:
             monitor(str): The name of the monitor.
             name(str): The name of the image. If None, apply to all images.
@@ -883,6 +943,7 @@ class BECImageShow(RPCBase):
         """
         Set the post processing of the image.
         If name is not specified, then set post processing for all images.
+
         Args:
             name(str): The name of the image. If None, apply to all images.
             **kwargs: Keyword arguments for the properties to be set.
@@ -897,6 +958,7 @@ class BECImageShow(RPCBase):
     def set_image_properties(self, name: "str" = None, **kwargs):
         """
         Set the properties of the image.
+
         Args:
             name(str): The name of the image. If None, apply to all images.
             **kwargs: Keyword arguments for the properties to be set.
@@ -917,6 +979,7 @@ class BECImageShow(RPCBase):
         """
         Set the FFT of the image.
         If name is not specified, then set FFT for all images.
+
         Args:
             enable(bool): Whether to perform FFT on the monitor data.
             name(str): The name of the image. If None, apply to all images.
@@ -927,6 +990,7 @@ class BECImageShow(RPCBase):
         """
         Set the log of the image.
         If name is not specified, then set log for all images.
+
         Args:
             enable(bool): Whether to perform log on the monitor data.
             name(str): The name of the image. If None, apply to all images.
@@ -937,6 +1001,7 @@ class BECImageShow(RPCBase):
         """
         Set the rotation of the image.
         If name is not specified, then set rotation for all images.
+
         Args:
             deg_90(int): The rotation angle of the monitor data before displaying.
             name(str): The name of the image. If None, apply to all images.
@@ -947,6 +1012,7 @@ class BECImageShow(RPCBase):
         """
         Set the transpose of the image.
         If name is not specified, then set transpose for all images.
+
         Args:
             enable(bool): Whether to transpose the monitor data before displaying.
             name(str): The name of the image. If None, apply to all images.
@@ -956,6 +1022,7 @@ class BECImageShow(RPCBase):
     def toggle_threading(self, use_threading: "bool"):
         """
         Toggle threading for the widgets postprocessing and updating.
+
         Args:
             use_threading(bool): Whether to use threading.
         """
@@ -964,8 +1031,10 @@ class BECImageShow(RPCBase):
     def set(self, **kwargs) -> "None":
         """
         Set the properties of the plot widget.
+
         Args:
             **kwargs: Keyword arguments for the properties to be set.
+
         Possible properties:
             - title: str
             - x_label: str
@@ -980,6 +1049,7 @@ class BECImageShow(RPCBase):
     def set_title(self, title: "str"):
         """
         Set the title of the plot widget.
+
         Args:
             title(str): Title of the plot widget.
         """
@@ -988,6 +1058,7 @@ class BECImageShow(RPCBase):
     def set_x_label(self, label: "str"):
         """
         Set the label of the x-axis.
+
         Args:
             label(str): Label of the x-axis.
         """
@@ -996,6 +1067,7 @@ class BECImageShow(RPCBase):
     def set_y_label(self, label: "str"):
         """
         Set the label of the y-axis.
+
         Args:
             label(str): Label of the y-axis.
         """
@@ -1004,6 +1076,7 @@ class BECImageShow(RPCBase):
     def set_x_scale(self, scale: "Literal['linear', 'log']" = "linear"):
         """
         Set the scale of the x-axis.
+
         Args:
             scale(Literal["linear", "log"]): Scale of the x-axis.
         """
@@ -1012,6 +1085,7 @@ class BECImageShow(RPCBase):
     def set_y_scale(self, scale: "Literal['linear', 'log']" = "linear"):
         """
         Set the scale of the y-axis.
+
         Args:
             scale(Literal["linear", "log"]): Scale of the y-axis.
         """
@@ -1050,6 +1124,7 @@ class BECImageShow(RPCBase):
     def set_grid(self, x: "bool" = False, y: "bool" = False):
         """
         Set the grid of the plot widget.
+
         Args:
             x(bool): Show grid on the x-axis.
             y(bool): Show grid on the y-axis.
@@ -1059,6 +1134,7 @@ class BECImageShow(RPCBase):
     def lock_aspect_ratio(self, lock):
         """
         Lock aspect ratio.
+
         Args:
             lock(bool): True to lock, False to unlock.
         """
@@ -1067,6 +1143,7 @@ class BECImageShow(RPCBase):
     def plot(self, data_x: "list | np.ndarray", data_y: "list | np.ndarray", **kwargs):
         """
         Plot custom data on the plot widget. These data are not saved in config.
+
         Args:
             data_x(list|np.ndarray): x-axis data
             data_y(list|np.ndarray): y-axis data
@@ -1095,6 +1172,7 @@ class BECConnector(RPCBase):
     def config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
+
         Returns:
             dict: The configuration of the widget.
         """
@@ -1119,6 +1197,7 @@ class BECImageItem(RPCBase):
     def config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
+
         Returns:
             dict: The configuration of the widget.
         """
@@ -1127,8 +1206,10 @@ class BECImageItem(RPCBase):
     def set(self, **kwargs):
         """
         Set the properties of the image.
+
         Args:
             **kwargs: Keyword arguments for the properties to be set.
+
         Possible properties:
             - downsample
             - color_map
@@ -1145,6 +1226,7 @@ class BECImageItem(RPCBase):
     def set_fft(self, enable: "bool" = False):
         """
         Set the FFT of the image.
+
         Args:
             enable(bool): Whether to perform FFT on the monitor data.
         """
@@ -1153,6 +1235,7 @@ class BECImageItem(RPCBase):
     def set_log(self, enable: "bool" = False):
         """
         Set the log of the image.
+
         Args:
             enable(bool): Whether to perform log on the monitor data.
         """
@@ -1161,6 +1244,7 @@ class BECImageItem(RPCBase):
     def set_rotation(self, deg_90: "int" = 0):
         """
         Set the rotation of the image.
+
         Args:
             deg_90(int): The rotation angle of the monitor data before displaying.
         """
@@ -1169,6 +1253,7 @@ class BECImageItem(RPCBase):
     def set_transpose(self, enable: "bool" = False):
         """
         Set the transpose of the image.
+
         Args:
             enable(bool): Whether to transpose the image.
         """
@@ -1177,6 +1262,7 @@ class BECImageItem(RPCBase):
     def set_opacity(self, opacity: "float" = 1.0):
         """
         Set the opacity of the image.
+
         Args:
             opacity(float): The opacity of the image.
         """
@@ -1185,6 +1271,7 @@ class BECImageItem(RPCBase):
     def set_autorange(self, autorange: "bool" = False):
         """
         Set the autorange of the color bar.
+
         Args:
             autorange(bool): Whether to autorange the color bar.
         """
@@ -1193,6 +1280,7 @@ class BECImageItem(RPCBase):
     def set_color_map(self, cmap: "str" = "magma"):
         """
         Set the color map of the image.
+
         Args:
             cmap(str): The color map of the image.
         """
@@ -1201,6 +1289,7 @@ class BECImageItem(RPCBase):
     def set_auto_downsample(self, auto: "bool" = True):
         """
         Set the auto downsample of the image.
+
         Args:
             auto(bool): Whether to downsample the image.
         """
@@ -1209,6 +1298,7 @@ class BECImageItem(RPCBase):
     def set_monitor(self, monitor: "str"):
         """
         Set the monitor of the image.
+
         Args:
             monitor(str): The name of the monitor.
         """
@@ -1219,6 +1309,7 @@ class BECImageItem(RPCBase):
     ):
         """
         Set the range of the color bar.
+
         Args:
             vmin(float): Minimum value of the color bar.
             vmax(float): Maximum value of the color bar.
@@ -1239,6 +1330,7 @@ class BECMotorMap(RPCBase):
     def config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
+
         Returns:
             dict: The configuration of the widget.
         """
@@ -1254,6 +1346,7 @@ class BECMotorMap(RPCBase):
     ) -> "None":
         """
         Change the active motors for the plot.
+
         Args:
             motor_x(str): Motor name for the X axis.
             motor_y(str): Motor name for the Y axis.
@@ -1266,6 +1359,7 @@ class BECMotorMap(RPCBase):
     def set_max_points(self, max_points: "int") -> "None":
         """
         Set the maximum number of points to display.
+
         Args:
             max_points(int): Maximum number of points to display.
         """
@@ -1274,6 +1368,7 @@ class BECMotorMap(RPCBase):
     def set_precision(self, precision: "int") -> "None":
         """
         Set the decimal precision of the motor position.
+
         Args:
             precision(int): Decimal precision of the motor position.
         """
@@ -1282,6 +1377,7 @@ class BECMotorMap(RPCBase):
     def set_num_dim_points(self, num_dim_points: "int") -> "None":
         """
         Set the number of dim points for the motor map.
+
         Args:
             num_dim_points(int): Number of dim points.
         """
@@ -1290,6 +1386,7 @@ class BECMotorMap(RPCBase):
     def set_background_value(self, background_value: "int") -> "None":
         """
         Set the background value of the motor map.
+
         Args:
             background_value(int): Background value of the motor map.
         """
@@ -1298,6 +1395,7 @@ class BECMotorMap(RPCBase):
     def set_scatter_size(self, scatter_size: "int") -> "None":
         """
         Set the scatter size of the motor map plot.
+
         Args:
             scatter_size(int): Size of the scatter points.
         """
@@ -1314,9 +1412,17 @@ class BECMotorMap(RPCBase):
 class BECDock(RPCBase):
     @property
     @rpc_call
+    def rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
+        """
+
+    @property
+    @rpc_call
     def widget_list(self) -> "list":
         """
         Get the widgets in the dock.
+
         Returns:
             widgets(list): The widgets in the dock.
         """
@@ -1363,6 +1469,7 @@ class BECDock(RPCBase):
     ):
         """
         Add a widget to the dock.
+
         Args:
             widget_type(str): The widget to add. Only BEC RPC widgets from RPCWidgetHandler are allowed.
             row(int): The row to add the widget to. If None, the widget will be added to the next available row.
@@ -1376,6 +1483,7 @@ class BECDock(RPCBase):
     def list_eligible_widgets(self) -> "list":
         """
         List all widgets that can be added to the dock.
+
         Returns:
             list: The list of eligible widgets.
         """
@@ -1384,6 +1492,7 @@ class BECDock(RPCBase):
     def move_widget(self, widget: "QWidget", new_row: "int", new_col: "int"):
         """
         Move a widget to a new position in the layout.
+
         Args:
             widget(QWidget): The widget to move.
             new_row(int): The new row to move the widget to.
@@ -1391,11 +1500,12 @@ class BECDock(RPCBase):
         """
 
     @rpc_call
-    def remove_widget(self, widget: "QWidget"):
+    def remove_widget(self, widget_rpc_id: "str"):
         """
         Remove a widget from the dock.
+
         Args:
-            widget(QWidget): The widget to remove.
+            widget_rpc_id(str): The ID of the widget to remove.
         """
 
     @rpc_call
@@ -1407,13 +1517,13 @@ class BECDock(RPCBase):
     @rpc_call
     def attach(self):
         """
-        None
+        Attach the dock to the parent dock area.
         """
 
     @rpc_call
     def detach(self):
         """
-        None
+        Detach the dock from the parent dock area.
         """
 
 
@@ -1431,6 +1541,7 @@ class BECDockArea(RPCBase, BECGuiClientMixin):
     def save_state(self) -> "dict":
         """
         Save the state of the dock area.
+
         Returns:
             dict: The state of the dock area.
         """
@@ -1439,6 +1550,7 @@ class BECDockArea(RPCBase, BECGuiClientMixin):
     def remove_dock(self, name: "str"):
         """
         Remove a dock by name and ensure it is properly closed and cleaned up.
+
         Args:
             name(str): The name of the dock to remove.
         """
@@ -1449,6 +1561,7 @@ class BECDockArea(RPCBase, BECGuiClientMixin):
     ):
         """
         Restore the state of the dock area. If no state is provided, the last state is restored.
+
         Args:
             state(dict): The state to restore.
             missing(Literal['ignore','error']): What to do if a dock is missing.
@@ -1460,10 +1573,10 @@ class BECDockArea(RPCBase, BECGuiClientMixin):
         self,
         name: "str" = None,
         position: "Literal['bottom', 'top', 'left', 'right', 'above', 'below']" = None,
-        relative_to: "Optional[BECDock]" = None,
+        relative_to: "BECDock | None" = None,
         closable: "bool" = False,
         prefix: "str" = "dock",
-        widget: "QWidget" = None,
+        widget: "str | QWidget | None" = None,
         row: "int" = None,
         col: "int" = 0,
         rowspan: "int" = 1,
@@ -1478,11 +1591,12 @@ class BECDockArea(RPCBase, BECGuiClientMixin):
             relative_to(BECDock): The dock to which the new dock should be added relative to.
             closable(bool): Whether the dock is closable.
             prefix(str): The prefix for the dock name if no name is provided.
-            widget(QWidget): The widget to be added to the dock.
+            widget(str|QWidget|None): The widget to be added to the dock. While using RPC, only BEC RPC widgets from RPCWidgetHandler are allowed.
             row(int): The row of the added widget.
             col(int): The column of the added widget.
             rowspan(int): The rowspan of the added widget.
             colspan(int): The colspan of the added widget.
+
         Returns:
             BECDock: The created dock.
         """
@@ -1497,8 +1611,9 @@ class BECDockArea(RPCBase, BECGuiClientMixin):
     def detach_dock(self, dock_name: "str") -> "BECDock":
         """
         Undock a dock from the dock area.
+
         Args:
-            dock(BECDock): The dock to undock.
+            dock_name(str): The dock to undock.
 
         Returns:
             BECDock: The undocked dock.

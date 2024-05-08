@@ -109,6 +109,7 @@ class ScanControl(QWidget):
     def add_horizontal_separator(self, layout) -> None:
         """
         Adds a horizontal separator to the given layout
+
         Args:
             layout: Layout to add the separator to
         """
@@ -142,6 +143,7 @@ class ScanControl(QWidget):
     def add_labels_to_layout(self, labels: list, grid_layout: QGridLayout) -> None:
         """
         Adds labels to the given grid layout as a separate row.
+
         Args:
             labels (list): List of label names to add.
             grid_layout (QGridLayout): The grid layout to which labels will be added.
@@ -157,6 +159,7 @@ class ScanControl(QWidget):
     ) -> None:  # TODO could be moved to BECTable
         """
         Adds labels to the given table widget as a header row.
+
         Args:
             labels(list): List of label names to add.
             table(QTableWidget): The table widget to which labels will be added.
@@ -166,7 +169,8 @@ class ScanControl(QWidget):
 
     def generate_args_input_fields(self, scan_info: dict) -> None:
         """
-        Generates input fields for args
+        Generates input fields for args.
+
         Args:
             scan_info(dict): Scan signature dictionary from BEC.
         """
@@ -188,6 +192,7 @@ class ScanControl(QWidget):
     def generate_kwargs_input_fields(self, scan_info: dict) -> None:
         """
         Generates input fields for kwargs
+
         Args:
             scan_info(dict): Scan signature dictionary from BEC.
         """
@@ -213,12 +218,13 @@ class ScanControl(QWidget):
     def generate_widgets_from_signature(self, items: list, signature: dict = None) -> list:
         """
         Generates widgets from the given list of items.
+
         Args:
             items(list): List of items to create widgets for.
             signature(dict, optional): Scan signature dictionary from BEC.
 
         Returns:
-
+            list: List of widgets created from the given items.
         """
         widgets = []  # Initialize an empty list to hold the widgets
 
@@ -333,6 +339,7 @@ class ScanControl(QWidget):
     def clear_and_delete_layout(self, layout: QLayout):
         """
         Clears and deletes the given layout and all its child widgets.
+
         Args:
             layout(QLayout): Layout to clear and delete
         """
@@ -383,6 +390,7 @@ class ScanControl(QWidget):
     def extract_args_from_table(self, table: QTableWidget) -> list:
         """
         Extracts the arguments from the given table widget.
+
         Args:
             table(QTableWidget): Table widget from which to extract the arguments
         """

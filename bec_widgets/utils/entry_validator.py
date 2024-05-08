@@ -5,6 +5,7 @@ class EntryValidator:
     def validate_signal(self, name: str, entry: str = None) -> str:
         """
         Validate a signal entry for a given device. If the entry is not provided, the first signal entry will be used from the device hints.
+
         Args:
             name(str): Device name
             entry(str): Signal entry
@@ -28,6 +29,7 @@ class EntryValidator:
     def validate_monitor(self, monitor: str) -> str:
         """
         Validate a monitor entry for a given device.
+
         Args:
             monitor(str): Monitor entry
 

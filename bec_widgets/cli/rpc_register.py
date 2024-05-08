@@ -28,6 +28,7 @@ class RPCRegister:
     def add_rpc(self, rpc: QObject):
         """
         Add an RPC object to the register.
+
         Args:
             rpc(QObject): The RPC object to be added to the register.
         """
@@ -38,6 +39,7 @@ class RPCRegister:
     def remove_rpc(self, rpc: str):
         """
         Remove an RPC object from the register.
+
         Args:
             rpc(str): The RPC object to be removed from the register.
         """
@@ -48,6 +50,7 @@ class RPCRegister:
     def get_rpc_by_id(self, gui_id: str) -> QObject:
         """
         Get an RPC object by its ID.
+
         Args:
             gui_id(str): The ID of the RPC object to be retrieved.
 
@@ -60,6 +63,7 @@ class RPCRegister:
     def list_all_connections(self) -> dict:
         """
         List all the registered RPC objects.
+
         Returns:
             dict: A dictionary containing all the registered RPC objects.
         """

@@ -281,6 +281,7 @@ class RPCBase:
     def _wait_for_response(self, request_id: str, timeout: int = 5):
         """
         Wait for the response from the server.
+
         Args:
             request_id(str): The request ID.
             timeout(int): The timeout in seconds.

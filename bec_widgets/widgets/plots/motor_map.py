@@ -102,6 +102,7 @@ class BECMotorMap(BECPlotBase):
     ) -> None:
         """
         Change the active motors for the plot.
+
         Args:
             motor_x(str): Motor name for the X axis.
             motor_y(str): Motor name for the Y axis.
@@ -145,6 +146,7 @@ class BECMotorMap(BECPlotBase):
     def set_max_points(self, max_points: int) -> None:
         """
         Set the maximum number of points to display.
+
         Args:
             max_points(int): Maximum number of points to display.
         """
@@ -153,6 +155,7 @@ class BECMotorMap(BECPlotBase):
     def set_precision(self, precision: int) -> None:
         """
         Set the decimal precision of the motor position.
+
         Args:
             precision(int): Decimal precision of the motor position.
         """
@@ -161,6 +164,7 @@ class BECMotorMap(BECPlotBase):
     def set_num_dim_points(self, num_dim_points: int) -> None:
         """
         Set the number of dim points for the motor map.
+
         Args:
             num_dim_points(int): Number of dim points.
         """
@@ -169,6 +173,7 @@ class BECMotorMap(BECPlotBase):
     def set_background_value(self, background_value: int) -> None:
         """
         Set the background value of the motor map.
+
         Args:
             background_value(int): Background value of the motor map.
         """
@@ -177,6 +182,7 @@ class BECMotorMap(BECPlotBase):
     def set_scatter_size(self, scatter_size: int) -> None:
         """
         Set the scatter size of the motor map plot.
+
         Args:
             scatter_size(int): Size of the scatter points.
         """
@@ -247,6 +253,7 @@ class BECMotorMap(BECPlotBase):
     def _add_coordinantes_crosshair(self, x: float, y: float) -> None:
         """
         Add crosshair to the plot to highlight the current position.
+
         Args:
             x(float): X coordinate.
             y(float): Y coordinate.
@@ -274,6 +281,7 @@ class BECMotorMap(BECPlotBase):
     def _make_limit_map(self, limits_x: list, limits_y: list) -> pg.ImageItem:
         """
         Create a limit map for the motor map plot.
+
         Args:
             limits_x(list): Motor limits for the x axis.
             limits_y(list): Motor limits for the y axis.
@@ -303,10 +311,12 @@ class BECMotorMap(BECPlotBase):
     def _get_motor_init_position(self, name: str, entry: str, precision: int) -> float:
         """
         Get the motor initial position from the config.
+
         Args:
             name(str): Motor name.
             entry(str): Motor entry.
             precision(int): Decimal precision of the motor position.
+
         Returns:
             float: Motor initial position.
         """
@@ -323,12 +333,14 @@ class BECMotorMap(BECPlotBase):
     ) -> tuple[str, str]:
         """
         Validate the signal name and entry.
+
         Args:
             x_name(str): Name of the x signal.
             y_name(str): Name of the y signal.
             x_entry(str|None): Entry of the x signal.
             y_entry(str|None): Entry of the y signal.
             validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
+
         Returns:
             tuple[str,str]: Validated x and y entries.
         """
@@ -343,6 +355,7 @@ class BECMotorMap(BECPlotBase):
     def _get_motor_limit(self, motor: str) -> Union[list | None]:  # TODO check if works correctly
         """
         Get the motor limit from the config.
+
         Args:
             motor(str): Motor name.
 
@@ -404,6 +417,7 @@ class BECMotorMap(BECPlotBase):
     def on_device_readback(self, msg: dict) -> None:
         """
         Update the motor map plot with the new motor position.
+
         Args:
             msg(dict): Message from the device readback.
         """

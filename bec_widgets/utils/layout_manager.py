@@ -21,6 +21,7 @@ class GridLayoutManager:
     def is_position_occupied(self, row: int, col: int) -> bool:
         """
         Check if the position in the layout is occupied by a widget.
+
         Args:
             row(int): The row to check.
             col(int): The column to check.
@@ -42,6 +43,7 @@ class GridLayoutManager:
     ):
         """
         Shift widgets in the layout in the specified direction starting from the specified position.
+
         Args:
             direction(str): The direction to shift the widgets. Can be "down", "up", "left", or "right".
             start_row(int): The row to start shifting from. Default is 0.
@@ -63,6 +65,7 @@ class GridLayoutManager:
     def move_widget(self, widget: QWidget, new_row: int, new_col: int):
         """
         Move a widget to a new position in the layout.
+
         Args:
             widget(QWidget): The widget to move.
             new_row(int): The new row to move the widget to.
@@ -82,6 +85,7 @@ class GridLayoutManager:
     ):
         """
         Add a widget to the layout at the specified position.
+
         Args:
             widget(QWidget): The widget to add.
             row(int): The row to add the widget to. If None, the widget will be added to the next available row.

@@ -8,6 +8,7 @@ class BECTable(QTableWidget):
     def keyPressEvent(self, event) -> None:
         """
         Delete selected rows with backspace or delete key
+
         Args:
             event: keyPressEvent
         """

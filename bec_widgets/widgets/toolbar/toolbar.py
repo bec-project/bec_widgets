@@ -82,6 +82,7 @@ class RunScriptAction:
 
 class ModularToolBar(QToolBar):
     """Modular toolbar with optional automatic initialization.
+
     Args:
         parent (QWidget, optional): The parent widget of the toolbar. Defaults to None.
         auto_init (bool, optional): If True, automatically populates the toolbar based on the parent widget.

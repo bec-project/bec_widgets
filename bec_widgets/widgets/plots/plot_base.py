@@ -73,8 +73,10 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
     def set(self, **kwargs) -> None:
         """
         Set the properties of the plot widget.
+
         Args:
             **kwargs: Keyword arguments for the properties to be set.
+
         Possible properties:
             - title: str
             - x_label: str
@@ -117,6 +119,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
     def set_title(self, title: str):
         """
         Set the title of the plot widget.
+
         Args:
             title(str): Title of the plot widget.
         """
@@ -126,6 +129,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
     def set_x_label(self, label: str):
         """
         Set the label of the x-axis.
+
         Args:
             label(str): Label of the x-axis.
         """
@@ -135,6 +139,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
     def set_y_label(self, label: str):
         """
         Set the label of the y-axis.
+
         Args:
             label(str): Label of the y-axis.
         """
@@ -144,6 +149,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
     def set_x_scale(self, scale: Literal["linear", "log"] = "linear"):
         """
         Set the scale of the x-axis.
+
         Args:
             scale(Literal["linear", "log"]): Scale of the x-axis.
         """
@@ -153,6 +159,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
     def set_y_scale(self, scale: Literal["linear", "log"] = "linear"):
         """
         Set the scale of the y-axis.
+
         Args:
             scale(Literal["linear", "log"]): Scale of the y-axis.
         """
@@ -208,6 +215,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
     def set_grid(self, x: bool = False, y: bool = False):
         """
         Set the grid of the plot widget.
+
         Args:
             x(bool): Show grid on the x-axis.
             y(bool): Show grid on the y-axis.
@@ -223,6 +231,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
     def lock_aspect_ratio(self, lock):
         """
         Lock aspect ratio.
+
         Args:
             lock(bool): True to lock, False to unlock.
         """
@@ -231,6 +240,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
     def plot(self, data_x: list | np.ndarray, data_y: list | np.ndarray, **kwargs):
         """
         Plot custom data on the plot widget. These data are not saved in config.
+
         Args:
             data_x(list|np.ndarray): x-axis data
             data_y(list|np.ndarray): y-axis data

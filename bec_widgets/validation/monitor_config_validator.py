@@ -8,7 +8,7 @@ class Signal(BaseModel):
     """
     Represents a signal in a plot configuration.
 
-    Attributes:
+    Args:
         name (str): The name of the signal.
         entry (Optional[str]): The entry point of the signal, optional.
     """
@@ -21,6 +21,7 @@ class Signal(BaseModel):
     def validate_fields(cls, values):
         """Validate the fields of the model.
         First validate the 'name' field, then validate the 'entry' field.
+
         Args:
             values (dict): The values to be validated."""
         devices = MonitorConfigValidator.devices

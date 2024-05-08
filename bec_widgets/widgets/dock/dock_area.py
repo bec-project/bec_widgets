@@ -77,6 +77,7 @@ class BECDockArea(BECConnector, DockArea):
     ):
         """
         Restore the state of the dock area. If no state is provided, the last state is restored.
+
         Args:
             state(dict): The state to restore.
             missing(Literal['ignore','error']): What to do if a dock is missing.
@@ -89,6 +90,7 @@ class BECDockArea(BECConnector, DockArea):
     def save_state(self) -> dict:
         """
         Save the state of the dock area.
+
         Returns:
             dict: The state of the dock area.
         """
@@ -98,6 +100,7 @@ class BECDockArea(BECConnector, DockArea):
     def remove_dock(self, name: str):
         """
         Remove a dock by name and ensure it is properly closed and cleaned up.
+
         Args:
             name(str): The name of the dock to remove.
         """
@@ -138,6 +141,7 @@ class BECDockArea(BECConnector, DockArea):
             col(int): The column of the added widget.
             rowspan(int): The rowspan of the added widget.
             colspan(int): The colspan of the added widget.
+
         Returns:
             BECDock: The created dock.
         """
@@ -178,6 +182,7 @@ class BECDockArea(BECConnector, DockArea):
     def detach_dock(self, dock_name: str) -> BECDock:
         """
         Undock a dock from the dock area.
+
         Args:
             dock_name(str): The dock to undock.
 

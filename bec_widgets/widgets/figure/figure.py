@@ -210,6 +210,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     ) -> BECWaveform:
         """
         Add a Waveform1D plot to the figure at the specified position.
+
         Args:
             widget_id(str): The unique identifier of the widget. If not provided, a unique ID will be generated.
             row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
@@ -289,6 +290,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     ) -> BECWaveform:
         """
         Add a 1D waveform plot to the figure. Always access the first waveform widget in the figure.
+
         Args:
             x_name(str): The name of the device for the x-axis.
             y_name(str): The name of the device for the y-axis.
@@ -375,6 +377,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     ) -> BECImageShow:
         """
         Add an image to the figure. Always access the first image widget in the figure.
+
         Args:
             monitor(str): The name of the monitor to display.
             color_bar(Literal["simple","full"]): The type of color bar to display.
@@ -428,6 +431,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     ) -> BECImageShow:
         """
         Add an image to the figure at the specified position.
+
         Args:
             monitor(str): The name of the monitor to display.
             color_bar(Literal["simple","full"]): The type of color bar to display.
@@ -482,6 +486,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     def motor_map(self, motor_x: str = None, motor_y: str = None, **axis_kwargs) -> BECMotorMap:
         """
         Add a motor map to the figure. Always access the first motor map widget in the figure.
+
         Args:
             motor_x(str): The name of the motor for the X axis.
             motor_y(str): The name of the motor for the Y axis.
@@ -558,6 +563,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     ) -> BECPlotBase:
         """
         Add a widget to the figure at the specified position.
+
         Args:
             widget_type(Literal["PlotBase","Waveform1D"]): The type of the widget to add.
             widget_id(str): The unique identifier of the widget. If not provided, a unique ID will be generated.
@@ -620,6 +626,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     ) -> None:
         """
         Remove a widget from the figure. Can be removed by its unique identifier or by its coordinates.
+
         Args:
             row(int): The row coordinate of the widget to remove.
             col(int): The column coordinate of the widget to remove.
@@ -638,6 +645,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     def change_theme(self, theme: Literal["dark", "light"]) -> None:
         """
         Change the theme of the figure widget.
+
         Args:
             theme(Literal["dark","light"]): The theme to set for the figure widget.
         """
@@ -648,6 +656,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     def _remove_by_coordinates(self, row: int, col: int) -> None:
         """
         Remove a widget from the figure by its coordinates.
+
         Args:
             row(int): The row coordinate of the widget to remove.
             col(int): The column coordinate of the widget to remove.
@@ -661,6 +670,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     def _remove_by_id(self, widget_id: str) -> None:
         """
         Remove a widget from the figure by its unique identifier.
+
         Args:
             widget_id(str): The unique identifier of the widget to remove.
         """
@@ -678,6 +688,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     def axes(self, row: int, col: int) -> BECPlotBase:
         """
         Get widget by its coordinates in the figure.
+
         Args:
             row(int): the row coordinate
             col(int): the column coordinate
@@ -700,6 +711,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     def _change_grid(self, widget_id: str, row: int, col: int):
         """
         Change the grid to reflect the new position of the widget.
+
         Args:
             widget_id(str): The unique identifier of the widget.
             row(int): The new row coordinate of the widget in the figure.

@@ -9,6 +9,7 @@ from qtpy.QtWidgets import QFileDialog
 def load_yaml(instance) -> Union[dict, None]:
     """
     Load YAML file from disk.
+
     Args:
         instance: Instance of the calling widget.
 
@@ -40,6 +41,7 @@ def load_yaml(instance) -> Union[dict, None]:
 def save_yaml(instance, config: dict) -> None:
     """
     Save YAML file to disk.
+
     Args:
         instance: Instance of the calling widget.
         config: Configuration data to be saved.

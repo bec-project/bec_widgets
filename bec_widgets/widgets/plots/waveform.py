@@ -129,8 +129,10 @@ class BECCurve(BECConnector, pg.PlotDataItem):
     def set(self, **kwargs):
         """
         Set the properties of the curve.
+
         Args:
             **kwargs: Keyword arguments for the properties to be set.
+
         Possible properties:
             - color: str
             - symbol: str
@@ -159,6 +161,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
     def set_color(self, color: str, symbol_color: Optional[str] = None):
         """
         Change the color of the curve.
+
         Args:
             color(str): Color of the curve.
             symbol_color(str, optional): Color of the symbol. Defaults to None.
@@ -170,6 +173,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
     def set_symbol(self, symbol: str):
         """
         Change the symbol of the curve.
+
         Args:
             symbol(str): Symbol of the curve.
         """
@@ -179,6 +183,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
     def set_symbol_color(self, symbol_color: str):
         """
         Change the symbol color of the curve.
+
         Args:
             symbol_color(str): Color of the symbol.
         """
@@ -188,6 +193,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
     def set_symbol_size(self, symbol_size: int):
         """
         Change the symbol size of the curve.
+
         Args:
             symbol_size(int): Size of the symbol.
         """
@@ -197,6 +203,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
     def set_pen_width(self, pen_width: int):
         """
         Change the pen width of the curve.
+
         Args:
             pen_width(int): Width of the pen.
         """
@@ -206,6 +213,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
     def set_pen_style(self, pen_style: Literal["solid", "dash", "dot", "dashdot"]):
         """
         Change the pen style of the curve.
+
         Args:
             pen_style(Literal["solid", "dash", "dot", "dashdot"]): Style of the pen.
         """
@@ -215,6 +223,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
     def set_colormap(self, colormap: str):
         """
         Set the colormap for the scatter plot z gradient.
+
         Args:
             colormap(str): Colormap for the scatter plot.
         """
@@ -299,6 +308,7 @@ class BECWaveform(BECPlotBase):
     def apply_config(self, config: dict | SubplotConfig, replot_last_scan: bool = False):
         """
         Apply the configuration to the 1D waveform widget.
+
         Args:
             config(dict|SubplotConfig): Configuration settings.
             replot_last_scan(bool, optional): If True, replot the last scan. Defaults to False.
@@ -339,8 +349,10 @@ class BECWaveform(BECPlotBase):
     def add_curve_by_config(self, curve_config: CurveConfig | dict) -> BECCurve:
         """
         Add a curve to the plot widget by its configuration.
+
         Args:
             curve_config(CurveConfig|dict): Configuration of the curve to be added.
+
         Returns:
             BECCurve: The curve object.
         """
@@ -354,8 +366,10 @@ class BECWaveform(BECPlotBase):
     def get_curve_config(self, curve_id: str, dict_output: bool = True) -> CurveConfig | dict:
         """
         Get the configuration of a curve by its ID.
+
         Args:
             curve_id(str): ID of the curve.
+
         Returns:
             CurveConfig|dict: Configuration of the curve.
         """
@@ -382,8 +396,10 @@ class BECWaveform(BECPlotBase):
     def get_curve(self, identifier) -> BECCurve:
         """
         Get the curve by its index or ID.
+
         Args:
             identifier(int|str): Identifier of the curve. Can be either an integer (index) or a string (curve_id).
+
         Returns:
             BECCurve: The curve object.
         """
@@ -407,6 +423,7 @@ class BECWaveform(BECPlotBase):
     ) -> BECCurve:
         """
         Add a custom data curve to the plot widget.
+
         Args:
             x(list|np.ndarray): X data of the curve.
             y(list|np.ndarray): Y data of the curve.
@@ -457,11 +474,13 @@ class BECWaveform(BECPlotBase):
     ) -> BECCurve:
         """
         Add a curve object to the plot widget.
+
         Args:
             name(str): ID of the curve.
             source(str): Source of the curve.
             config(CurveConfig): Configuration of the curve.
             data(tuple[list|np.ndarray,list|np.ndarray], optional): Data (x,y) to be plotted. Defaults to None.
+
         Returns:
             BECCurve: The curve object.
         """
@@ -489,6 +508,7 @@ class BECWaveform(BECPlotBase):
     ) -> BECCurve:
         """
         Add a curve to the plot widget from the scan segment.
+
         Args:
             x_name(str): Name of the x signal.
             x_entry(str): Entry of the x signal.
@@ -559,6 +579,7 @@ class BECWaveform(BECPlotBase):
     ) -> tuple[str, str, str | None]:
         """
         Validate the signal name and entry.
+
         Args:
             x_name(str): Name of the x signal.
             y_name(str): Name of the y signal.
@@ -567,6 +588,7 @@ class BECWaveform(BECPlotBase):
             y_entry(str|None): Entry of the y signal.
             z_entry(str|None): Entry of the z signal.
             validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
+
         Returns:
             tuple[str,str,str|None]: Validated x, y, z entries.
         """
@@ -584,6 +606,7 @@ class BECWaveform(BECPlotBase):
     def _check_curve_id(self, val: Any, dict_to_check: dict) -> bool:
         """
         Check if val is in the values of the dict_to_check or in the values of the nested dictionaries.
+
         Args:
             val(Any): Value to check.
             dict_to_check(dict): Dictionary to check.
@@ -602,6 +625,7 @@ class BECWaveform(BECPlotBase):
     def remove_curve(self, *identifiers):
         """
         Remove a curve from the plot widget.
+
         Args:
             *identifiers: Identifier of the curve to be removed. Can be either an integer (index) or a string (curve_id).
         """
@@ -618,6 +642,7 @@ class BECWaveform(BECPlotBase):
     def _remove_curve_by_id(self, curve_id):
         """
         Remove a curve by its ID from the plot widget.
+
         Args:
             curve_id(str): ID of the curve to be removed.
         """
@@ -634,6 +659,7 @@ class BECWaveform(BECPlotBase):
     def _remove_curve_by_order(self, N):
         """
         Remove a curve by its order from the plot widget.
+
         Args:
             N(int): Order of the curve to be removed.
         """
@@ -679,6 +705,7 @@ class BECWaveform(BECPlotBase):
     def _update_scan_curves(self, data: ScanData):
         """
         Update the scan curves with the data from the scan segment.
+
         Args:
             data(ScanData): Data from the scan segment.
         """
@@ -713,6 +740,7 @@ class BECWaveform(BECPlotBase):
     def _make_z_gradient(self, data_z: list | np.ndarray, colormap: str) -> list | None:
         """
         Make a gradient color for the z values.
+
         Args:
             data_z(list|np.ndarray): Z values.
             colormap(str): Colormap for the gradient color.
@@ -735,6 +763,7 @@ class BECWaveform(BECPlotBase):
         """
         Update the scan curves with the data from the scan storage.
         Provide only one of scan_id or scan_index.
+
         Args:
             scan_id(str, optional): ScanID of the scan to be updated. Defaults to None.
             scan_index(int, optional): Index of the scan to be updated. Defaults to None.
@@ -754,8 +783,10 @@ class BECWaveform(BECPlotBase):
     def get_all_data(self, output: Literal["dict", "pandas"] = "dict") -> dict | pd.DataFrame:
         """
         Extract all curve data into a dictionary or a pandas DataFrame.
+
         Args:
             output (Literal["dict", "pandas"]): Format of the output data.
+
         Returns:
             dict | pd.DataFrame: Data of all curves in the specified format.
         """

@@ -78,6 +78,7 @@ class BECConnector:
     def config_dict(self) -> dict:
         """
         Get the configuration of the widget.
+
         Returns:
             dict: The configuration of the widget.
         """
@@ -87,6 +88,7 @@ class BECConnector:
     def config_dict(self, config: BaseModel) -> None:
         """
         Get the configuration of the widget.
+
         Returns:
             dict: The configuration of the widget.
         """
@@ -96,6 +98,7 @@ class BECConnector:
     def set_gui_id(self, gui_id: str) -> None:
         """
         Set the GUI ID for the widget.
+
         Args:
             gui_id(str): GUI ID
         """
@@ -116,6 +119,7 @@ class BECConnector:
 
     def update_client(self, client) -> None:
         """Update the client and device manager from BEC and create object for BEC shortcuts.
+
         Args:
             client: BEC client
         """
@@ -126,6 +130,7 @@ class BECConnector:
     def on_config_update(self, config: ConnectionConfig | dict) -> None:
         """
         Update the configuration for the widget.
+
         Args:
             config(ConnectionConfig): Configuration settings.
         """
@@ -138,8 +143,10 @@ class BECConnector:
     def get_config(self, dict_output: bool = True) -> dict | BaseModel:
         """
         Get the configuration of the widget.
+
         Args:
             dict_output(bool): If True, return the configuration as a dictionary. If False, return the configuration as a pydantic model.
+
         Returns:
             dict: The configuration of the plot widget.
         """
