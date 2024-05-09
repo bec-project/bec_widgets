@@ -18,7 +18,7 @@ author = "Paul Scherrer Institute"
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-current_path = pathlib.Path(__file__).parent.parent.parent.resolve()
+current_path = pathlib.Path(__file__).parent.parent.resolve()
 version_path = f"{current_path}/pyproject.toml"
 
 
