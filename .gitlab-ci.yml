@@ -42,8 +42,8 @@ formatter:
   needs: []
   script:
     - pip install black isort
-    - isort --check --diff --line-length=100 --profile=black --multi-line=3 --trailing-comma ./
-    - black --check --diff --color --line-length=100 ./
+    - isort --check --diff ./
+    - black --check --diff --color ./
   rules:
     - if: $CI_PROJECT_PATH == "bec/bec_widgets"
 
