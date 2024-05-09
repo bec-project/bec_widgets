@@ -197,16 +197,15 @@ semver:
     - git fetch --tags
     - git tag
 
-    # build
-    - pip install python-semantic-release==7.* wheel
+    # build and publish package
+    - pip install python-semantic-release==9.* wheel build twine
     - export GL_TOKEN=$CI_UPDATES
-    - export REPOSITORY_USERNAME=__token__
-    - export REPOSITORY_PASSWORD=$CI_PYPI_TOKEN
-    - >
-      semantic-release publish -v DEBUG
-      -D version_variable=./setup.py:__version__
-      -D hvcs=gitlab
-      -D branch=main
+    - semantic-release -vv version
+    
+    # check if any artifacts were created
+    - if [ ! -d dist ]; then echo No release will be made; exit 0; fi
+    - twine upload dist/* -u __token__ -p $CI_PYPI_TOKEN --skip-existing
+    - semantic-release publish
 
   allow_failure: false
   rules:
