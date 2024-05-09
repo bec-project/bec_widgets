@@ -2,6 +2,17 @@
 
 
 
+## v0.53.1 (2024-05-09)
+
+### Ci
+
+* ci: fixed rtd pages url ([`8ff3610`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8ff36105d1e637c429915b4bfc2852d54a3c6f19))
+
+### Fix
+
+* fix: docs config ([`0f6a5e5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0f6a5e5fa9530969c98a9266c9ca7b89a378ff70))
+
+
 ## v0.53.0 (2024-05-09)
 
 ### Ci
@@ -160,17 +171,6 @@
 
 ## v0.46.6 (2024-04-19)
 
-### Ci
-
-* ci: changed ophyd default branch to main ([`81484e8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/81484e8160a4a09907313ed747c27ab3b6cbfdc4))
-
 ### Fix
 
 * fix(cli): fixed support for devices as cli input ([`1111610`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1111610f3206c5c46db6b4bd1e8827f1a4cd9e3f))
-
-
-## v0.46.5 (2024-04-19)
-
-### Test
-
-* test(rpc/bec_figure): test_rpc_plotting_shortcuts_init_configs extended by testing scatter z gradient for BECWaveform through RPC ([`a156803`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a1568033899bbcdbd457e697d6c8d478df26ba54))
