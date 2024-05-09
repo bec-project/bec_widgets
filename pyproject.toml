@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bec_widgets"
+version = "0.52.1"
+description = "BEC Widgets"
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "pydantic",
+    "qtconsole",
+    "jedi",
+    "qtpy",
+    "pyqtgraph",
+    "bec_lib",
+    "zmq",
+    "h5py",
+    "pyqtdarktheme",
+    "black",
+]
+
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-random-order",
+    "pytest-timeout",
+    "coverage",
+    "pytest-qt",
+    "isort",
+    "fakeredis",
+]
+pyqt5 = ["PyQt5>=5.9"]
+pyqt6 = ["PyQt6>=6.7"]
+
+[project.urls]
+"Bug Tracker" = "https://gitlab.psi.ch/bec/bec_widgets/issues"
+Homepage = "https://gitlab.psi.ch/bec/bec_widgets"
+
+[tool.hatch.build.targets.wheel]
+include = ["*"]
+
+[tool.black]
+line-length = 100
+skip-magic-trailing-comma = true
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
