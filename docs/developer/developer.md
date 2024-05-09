@@ -20,7 +20,7 @@ cd bec_widgets
 
 Installing the package in editable mode allows you to make changes to the code and test them in real-time.
 ```bash
-pip install -e .[dev]
+pip install -e .[dev,pyqt6]
 ```
 
 

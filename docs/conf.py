@@ -9,6 +9,8 @@
 import os
 import pathlib
 
+import tomli
+
 project = "BEC Widgets"
 copyright = "2023, Paul Scherrer Institute"
 author = "Paul Scherrer Institute"
@@ -16,18 +18,15 @@ author = "Paul Scherrer Institute"
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-current_path = pathlib.Path(__file__).parent.parent.resolve()
+current_path = pathlib.Path(__file__).parent.parent.parent.resolve()
+version_path = f"{current_path}/pyproject.toml"
 
 
 def get_version():
     """load the version from the version file"""
-    version_file = os.path.join(current_path, "setup.py")
-    with open(version_file, "r", encoding="utf-8") as file:
-        res = file.readline()
-        while not res.startswith("__version__"):
-            res = file.readline()
-        version = res.split("=")[1]
-    return version.strip().strip('"')
+    with open(version_path, "r", encoding="utf-8") as file:
+        res = tomli.loads(file.read())
+    return res["project"]["version"]
 
 
 release = get_version()
