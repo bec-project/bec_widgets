@@ -70,10 +70,7 @@ class BECDockArea(BECConnector, DockArea):
         self.docks = WeakValueDictionary(value)
 
     def restore_state(
-        self,
-        state: dict = None,
-        missing: Literal["ignore", "error"] = "ignore",
-        extra="bottom",
+        self, state: dict = None, missing: Literal["ignore", "error"] = "ignore", extra="bottom"
     ):
         """
         Restore the state of the dock area. If no state is provided, the last state is restored.

@@ -26,11 +26,7 @@ def test_bec_figure_init(bec_figure):
 
 
 def test_bec_figure_init_with_config(mocked_client):
-    config = {
-        "widget_class": "BECFigure",
-        "gui_id": "test_gui_id",
-        "theme": "dark",
-    }
+    config = {"widget_class": "BECFigure", "gui_id": "test_gui_id", "theme": "dark"}
     widget = BECFigure(client=mocked_client, config=config)
     assert widget.config.gui_id == "test_gui_id"
     assert widget.config.theme == "dark"

@@ -136,10 +136,7 @@ class BECMotorMap(BECPlotBase):
         Returns:
             dict: Data of the motor map.
         """
-        data = {
-            "x": self.database_buffer["x"],
-            "y": self.database_buffer["y"],
-        }
+        data = {"x": self.database_buffer["x"], "y": self.database_buffer["y"]}
         return data
 
     # TODO setup all visual properties
@@ -391,11 +388,7 @@ class BECMotorMap(BECPlotBase):
 
         # Update the scatter plot
         self.plot_components["scatter"].setData(
-            x=x,
-            y=y,
-            brush=brushes,
-            pen=None,
-            size=scatter_size,
+            x=x, y=y, brush=brushes, pen=None, size=scatter_size
         )
 
         # Get last know position for crosshair

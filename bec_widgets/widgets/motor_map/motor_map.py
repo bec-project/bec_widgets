@@ -214,10 +214,7 @@ class MotorMap(pg.GraphicsLayoutWidget):
             endpoints.append(MessageEndpoints.device_readback(motor))
 
         # Connect all topics to a single slot
-        bec_dispatcher.connect_slot(
-            self.on_device_readback,
-            endpoints,
-        )
+        bec_dispatcher.connect_slot(self.on_device_readback, endpoints)
 
     def _add_limits_to_plot_data(self):
         """
@@ -491,11 +488,7 @@ class MotorMap(pg.GraphicsLayoutWidget):
 
                 # Update the scatter plot
                 self.curves_data[plot_name]["pos"].setData(
-                    x=motor_x_data,
-                    y=motor_y_data,
-                    brush=brushes,
-                    pen=None,
-                    size=self.scatter_size,
+                    x=motor_x_data, y=motor_y_data, brush=brushes, pen=None, size=self.scatter_size
                 )
 
                 # Get last know position for crosshair
@@ -595,11 +588,7 @@ if __name__ == "__main__":  # pragma: no cover
     client = BECDispatcher().client
     client.start()
     app = QApplication(sys.argv)
-    motor_map = MotorMap(
-        config=config,
-        gui_id=args.id,
-        skip_validation=True,
-    )
+    motor_map = MotorMap(config=config, gui_id=args.id, skip_validation=True)
     motor_map.show()
 
     sys.exit(app.exec())

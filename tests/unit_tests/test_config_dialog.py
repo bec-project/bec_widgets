@@ -43,11 +43,7 @@ def test_load_config(config_dialog, config_name):
 
 @pytest.mark.parametrize(
     "config_name, scan_mode",
-    [
-        ("config_device", False),
-        ("config_scan", True),
-        ("config_device_no_entry", False),
-    ],
+    [("config_device", False), ("config_scan", True), ("config_device_no_entry", False)],
 )
 def test_initialization(config_dialog, config_name, scan_mode):
     config = load_test_config(config_name)

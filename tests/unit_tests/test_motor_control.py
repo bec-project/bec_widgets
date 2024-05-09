@@ -50,7 +50,7 @@ CONFIG_DEFAULT = {
                 "x": [{"name": "samx", "entry": "samx"}],
                 "y": [{"name": "samy", "entry": "samy"}],
             },
-        },
+        }
     ],
 }
 

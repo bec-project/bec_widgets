@@ -79,7 +79,4 @@ html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]
 html_css_files = ["css/custom.css"]
 html_logo = "_static/bec.png"
-html_theme_options = {
-    "show_nav_level": 1,
-    "navbar_align": "content",
-}
+html_theme_options = {"show_nav_level": 1, "navbar_align": "content"}

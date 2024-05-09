@@ -113,10 +113,7 @@ CONFIG_SCAN_MODE = {
                 "sources": [
                     {
                         "type": "scan_segment",
-                        "signals": {
-                            "x": [{"name": "samy"}],
-                            "y": [{"name": "gauss_adc2"}],
-                        },
+                        "signals": {"x": [{"name": "samy"}], "y": [{"name": "gauss_adc2"}]},
                     }
                 ],
             },
@@ -172,12 +169,7 @@ CONFIG_SCAN_MODE = {
 class ConfigDialog(QWidget, Ui_Form):
     config_updated = pyqtSignal(dict)
 
-    def __init__(
-        self,
-        client=None,
-        default_config=None,
-        skip_validation: bool = False,
-    ):
+    def __init__(self, client=None, default_config=None, skip_validation: bool = False):
         super(ConfigDialog, self).__init__()
         self.setupUi(self)
 
@@ -386,15 +378,7 @@ class ConfigDialog(QWidget, Ui_Form):
             "plot_name": self.safe_text(ui.lineEdit_plot_title),
             "x_label": self.safe_text(ui.lineEdit_x_label),
             "y_label": self.safe_text(ui.lineEdit_y_label),
-            "sources": [
-                {
-                    "type": "scan_segment",
-                    "signals": {
-                        "x": x_signals,
-                        "y": y_signals,
-                    },
-                }
-            ],
+            "sources": [{"type": "scan_segment", "signals": {"x": x_signals, "y": y_signals}}],
         }
 
         return plot_data

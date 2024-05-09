@@ -58,7 +58,7 @@ CONFIG_ONE_DEVICE = {
                 "x": [{"name": "samx", "entry": "samx"}],
                 "y": [{"name": "samy", "entry": "samy"}],
             },
-        },
+        }
     ],
 }
 
@@ -73,10 +73,7 @@ def motor_map(qtbot, mocked_client):
 
 def test_motor_limits_initialization(motor_map):
     # Example test to check if motor limits are correctly initialized
-    expected_limits = {
-        "samx": [-10, 10],
-        "samy": [-5, 5],
-    }
+    expected_limits = {"samx": [-10, 10], "samy": [-5, 5]}
     for motor_name, expected_limit in expected_limits.items():
         actual_limit = motor_map._get_motor_limit(motor_name)
         assert actual_limit == expected_limit
@@ -99,13 +96,7 @@ def test_motor_initial_position(motor_map):
         assert actual_position == expected_position
 
 
-@pytest.mark.parametrize(
-    "config, number_of_plots",
-    [
-        (CONFIG_DEFAULT, 2),
-        (CONFIG_ONE_DEVICE, 1),
-    ],
-)
+@pytest.mark.parametrize("config, number_of_plots", [(CONFIG_DEFAULT, 2), (CONFIG_ONE_DEVICE, 1)])
 def test_initialization(motor_map, config, number_of_plots):
     config_load = config
     motor_map.on_config_update(config_load)
@@ -131,16 +122,10 @@ def test_motor_movement_updates_position_and_database(motor_map):
     motor_map.on_device_readback({"signals": {"samx": {"value": new_position_samx}}})
 
     # Verify database update for 'samx'
-    assert motor_map.database["samx"]["samx"] == [
-        initial_position_samx,
-        new_position_samx,
-    ]
+    assert motor_map.database["samx"]["samx"] == [initial_position_samx, new_position_samx]
 
     # Verify 'samy' retains its last known position
-    assert motor_map.database["samy"]["samy"] == [
-        initial_position_samy,
-        initial_position_samy,
-    ]
+    assert motor_map.database["samy"]["samy"] == [initial_position_samy, initial_position_samy]
 
 
 def test_scatter_plot_rendering(motor_map):

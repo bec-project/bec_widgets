@@ -5,9 +5,7 @@ from bec_widgets.widgets.figure import BECFigure
 class RPCWidgetHandler:
     """Handler class for creating widgets from RPC messages."""
 
-    widget_classes = {
-        "BECFigure": BECFigure,
-    }
+    widget_classes = {"BECFigure": BECFigure}
 
     @staticmethod
     def create_widget(widget_type, **kwargs) -> BECConnector:

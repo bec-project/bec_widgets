@@ -177,7 +177,7 @@ class BECWaveform(RPCBase):
         color_map_z: "Optional[str]" = "plasma",
         label: "Optional[str]" = None,
         validate_bec: "bool" = True,
-        **kwargs
+        **kwargs,
     ) -> "BECCurve":
         """
         Add a curve to the plot widget from the scan segment.
@@ -205,7 +205,7 @@ class BECWaveform(RPCBase):
         y: "list | np.ndarray",
         label: "str" = None,
         color: "str" = None,
-        **kwargs
+        **kwargs,
     ) -> "BECCurve":
         """
         Add a custom data curve to the plot widget.
@@ -484,7 +484,7 @@ class BECFigure(RPCBase):
         row: "int" = None,
         col: "int" = None,
         config=None,
-        **axis_kwargs
+        **axis_kwargs,
     ) -> "BECWaveform":
         """
         Add a Waveform1D plot to the figure at the specified position.
@@ -508,7 +508,7 @@ class BECFigure(RPCBase):
         row: "int" = None,
         col: "int" = None,
         config=None,
-        **axis_kwargs
+        **axis_kwargs,
     ) -> "BECImageShow":
         """
         Add an image to the figure at the specified position.
@@ -536,7 +536,7 @@ class BECFigure(RPCBase):
         row: "int" = None,
         col: "int" = None,
         config=None,
-        **axis_kwargs
+        **axis_kwargs,
     ) -> "BECMotorMap":
         """
         Args:
@@ -566,7 +566,7 @@ class BECFigure(RPCBase):
         color_map_z: "Optional[str]" = "plasma",
         label: "Optional[str]" = None,
         validate: "bool" = True,
-        **axis_kwargs
+        **axis_kwargs,
     ) -> "BECWaveform":
         """
         Add a 1D waveform plot to the figure. Always access the first waveform widget in the figure.
@@ -598,7 +598,7 @@ class BECFigure(RPCBase):
         color_map: "str" = "magma",
         data: "np.ndarray" = None,
         vrange: "tuple[float, float]" = None,
-        **axis_kwargs
+        **axis_kwargs,
     ) -> "BECImageShow":
         """
         Add an image to the figure. Always access the first image widget in the figure.
@@ -872,7 +872,7 @@ class BECImageShow(RPCBase):
         downsample: "Optional[bool]" = True,
         opacity: "Optional[float]" = 1.0,
         vrange: "Optional[tuple[int, int]]" = None,
-        **kwargs
+        **kwargs,
     ) -> "BECImageItem":
         """
         None
@@ -888,7 +888,7 @@ class BECImageShow(RPCBase):
         downsample: "Optional[bool]" = True,
         opacity: "Optional[float]" = 1.0,
         vrange: "Optional[tuple[int, int]]" = None,
-        **kwargs
+        **kwargs,
     ):
         """
         None

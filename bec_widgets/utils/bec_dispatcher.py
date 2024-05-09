@@ -112,9 +112,7 @@ class BECDispatcher:
         cls._initialized = False
 
     def connect_slot(
-        self,
-        slot: Callable,
-        topics: Union[EndpointInfo, str, list[Union[EndpointInfo, str]]],
+        self, slot: Callable, topics: Union[EndpointInfo, str, list[Union[EndpointInfo, str]]]
     ) -> None:
         """Connect widget's pyqt slot, so that it is called on new pub/sub topic message.
 

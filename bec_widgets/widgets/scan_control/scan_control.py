@@ -438,9 +438,7 @@ if __name__ == "__main__":  # pragma: no cover
     client.start()
 
     app = QApplication([])
-    scan_control = ScanControl(
-        client=client,
-    )  # allowed_scans=["line_scan", "grid_scan"])
+    scan_control = ScanControl(client=client)  # allowed_scans=["line_scan", "grid_scan"])
 
     window = scan_control
     window.show()

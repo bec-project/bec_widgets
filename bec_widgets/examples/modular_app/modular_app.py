@@ -106,10 +106,7 @@ CONFIG_SCAN_MODE = {
                 "sources": [
                     {
                         "type": "scan_segment",
-                        "signals": {
-                            "x": [{"name": "samy"}],
-                            "y": [{"name": "gauss_adc2"}],
-                        },
+                        "signals": {"x": [{"name": "samy"}], "y": [{"name": "gauss_adc2"}]},
                     }
                 ],
             },

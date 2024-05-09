@@ -41,14 +41,7 @@ def send_msg_event():
 
 
 @pytest.mark.parametrize(
-    "topics_msg_list",
-    [
-        (
-            ("topic1", dummy_msg),
-            ("topic2", dummy_msg),
-            ("topic3", dummy_msg),
-        )
-    ],
+    "topics_msg_list", [(("topic1", dummy_msg), ("topic2", dummy_msg), ("topic3", dummy_msg))]
 )
 def test_dispatcher_disconnect_all(bec_dispatcher_w_connector, qtbot, send_msg_event):
     bec_dispatcher = bec_dispatcher_w_connector
@@ -70,15 +63,7 @@ def test_dispatcher_disconnect_all(bec_dispatcher_w_connector, qtbot, send_msg_e
     assert len(bec_dispatcher.client.connector._topics_cb) == 0
 
 
-@pytest.mark.parametrize(
-    "topics_msg_list",
-    [
-        (
-            ("topic1", dummy_msg),
-            ("topic2", dummy_msg),
-        )
-    ],
-)
+@pytest.mark.parametrize("topics_msg_list", [(("topic1", dummy_msg), ("topic2", dummy_msg))])
 def test_dispatcher_disconnect_one(bec_dispatcher_w_connector, qtbot, send_msg_event):
     # test for BEC issue #276
     bec_dispatcher = bec_dispatcher_w_connector
@@ -115,15 +100,7 @@ def test_dispatcher_2_cb_same_topic(bec_dispatcher_w_connector, qtbot, send_msg_
     cb2.assert_called_once()
 
 
-@pytest.mark.parametrize(
-    "topics_msg_list",
-    [
-        (
-            ("topic1", dummy_msg),
-            ("topic2", dummy_msg),
-        )
-    ],
-)
+@pytest.mark.parametrize("topics_msg_list", [(("topic1", dummy_msg), ("topic2", dummy_msg))])
 def test_dispatcher_2_topic_same_cb(bec_dispatcher_w_connector, qtbot, send_msg_event):
     # test for BEC issue #276
     bec_dispatcher = bec_dispatcher_w_connector

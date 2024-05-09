@@ -1068,10 +1068,7 @@ class MotorApp(QWidget):
 
         # PyQtGraph Controls
         layout.addWidget(QLabel("Graph Window Controls:"))
-        graph_controls = [
-            ("Left Drag", "Pan the view"),
-            ("Right Drag or Scroll", "Zoom in/out"),
-        ]
+        graph_controls = [("Left Drag", "Pan the view"), ("Right Drag or Scroll", "Zoom in/out")]
         for action, description in graph_controls:
             layout.addWidget(QLabel(f"{action} - {description}"))
 
@@ -1111,10 +1108,7 @@ class MotorControl(QThread):
     motors_selected = pyqtSignal(object, object)  # Signal to emit when the motors are selected
     # progress_updated = pyqtSignal(int)  #TODO  Signal to emit progress percentage
 
-    def __init__(
-        self,
-        parent=None,
-    ):
+    def __init__(self, parent=None):
         super().__init__(parent)
 
         self.action = None
@@ -1131,10 +1125,7 @@ class MotorControl(QThread):
         self.motor_x_name = motor_x_name
         self.motor_y_name = motor_y_name
 
-        self.motor_x, self.motor_y = (
-            dev[self.motor_x_name],
-            dev[self.motor_y_name],
-        )
+        self.motor_x, self.motor_y = (dev[self.motor_x_name], dev[self.motor_y_name])
 
         (self.current_x, self.current_y) = self.get_coordinates()
 

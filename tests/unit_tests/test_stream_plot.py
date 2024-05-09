@@ -85,12 +85,7 @@ def test_1d_plotting_data(qtbot, stream_app):
 def test_flip_even_rows(qtbot, stream_app):
     # Create a numpy array with some known data
     original_array = np.array(
-        [
-            [1, 2, 3, 4, 5],
-            [6, 7, 8, 9, 10],
-            [11, 12, 13, 14, 15],
-            [16, 17, 18, 19, 20],
-        ]
+        [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10], [11, 12, 13, 14, 15], [16, 17, 18, 19, 20]]
     )
 
     # Call flip_even_rows on the original array
@@ -98,12 +93,7 @@ def test_flip_even_rows(qtbot, stream_app):
 
     # Expected array flipped along the rows with even indices
     expected_array = np.array(
-        [
-            [1, 2, 3, 4, 5],
-            [10, 9, 8, 7, 6],
-            [11, 12, 13, 14, 15],
-            [20, 19, 18, 17, 16],
-        ]
+        [[1, 2, 3, 4, 5], [10, 9, 8, 7, 6], [11, 12, 13, 14, 15], [20, 19, 18, 17, 16]]
     )
 
     # Check that flip_even_rows returned the expected result

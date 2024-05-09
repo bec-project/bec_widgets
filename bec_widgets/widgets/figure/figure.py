@@ -263,12 +263,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             )
         # User wants to add custom curve
         elif x is not None and y is not None and x_name is None and y_name is None:
-            waveform.add_curve_custom(
-                x=x,
-                y=y,
-                color=color,
-                label=label,
-            )
+            waveform.add_curve_custom(x=x, y=y, color=color, label=label)
 
         return waveform
 
@@ -354,12 +349,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         elif (
             x is not None and y is not None and x_name is None and y_name is None and z_name is None
         ):
-            waveform.add_curve_custom(
-                x=x,
-                y=y,
-                color=color,
-                label=label,
-            )
+            waveform.add_curve_custom(x=x, y=y, color=color, label=label)
         else:
             raise ValueError(
                 "Invalid input. Provide either device names (x_name, y_name) or custom data."
@@ -534,9 +524,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         widget_id = str(uuid.uuid4())
         if config is None:
             config = MotorMapConfig(
-                widget_class="BECMotorMap",
-                gui_id=widget_id,
-                parent_id=self.gui_id,
+                widget_class="BECMotorMap", gui_id=widget_id, parent_id=self.gui_id
             )
         motor_map = self.add_widget(
             widget_type="MotorMap",

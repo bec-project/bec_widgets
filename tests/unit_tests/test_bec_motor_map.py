@@ -29,10 +29,7 @@ def test_motor_map_change_motors(bec_motor_map):
 
 
 def test_motor_map_get_limits(bec_motor_map):
-    expected_limits = {
-        "samx": [-10, 10],
-        "samy": [-5, 5],
-    }
+    expected_limits = {"samx": [-10, 10], "samy": [-5, 5]}
 
     for motor_name, expected_limit in expected_limits.items():
         actual_limit = bec_motor_map._get_motor_limit(motor_name)
