@@ -3,8 +3,8 @@ import threading
 import time
 from typing import Literal, Union
 
-from bec_lib import messages
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.utils.import_utils import lazy_import
 from qtpy.QtCore import QTimer
 
 from bec_widgets.cli.rpc_register import RPCRegister
@@ -13,6 +13,8 @@ from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.widgets.dock.dock_area import BECDockArea
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.plots import BECCurve, BECImageShow, BECWaveform
+
+messages = lazy_import("bec_lib.messages")
 
 
 class BECWidgetsCLIServer:

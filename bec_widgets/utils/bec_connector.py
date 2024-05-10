@@ -4,11 +4,13 @@ from __future__ import annotations
 import time
 from typing import Optional, Type
 
+from bec_lib.utils.import_utils import lazy_import, lazy_import_from
 from pydantic import BaseModel, Field, field_validator
 from qtpy.QtCore import Slot as pyqtSlot
 
 from bec_widgets.cli.rpc_register import RPCRegister
-from bec_widgets.utils.bec_dispatcher import BECDispatcher
+
+BECDispatcher = lazy_import_from("bec_widgets.utils.bec_dispatcher", ("BECDispatcher",))
 
 
 class ConnectionConfig(BaseModel):

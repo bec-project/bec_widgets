@@ -12,7 +12,6 @@ import uuid
 from functools import wraps
 from typing import TYPE_CHECKING
 
-from bec_lib import messages
 from bec_lib.device import DeviceBase
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.service_config import ServiceConfig
@@ -20,11 +19,14 @@ from bec_lib.utils.import_utils import lazy_import, lazy_import_from
 from qtpy.QtCore import QCoreApplication
 
 import bec_widgets.cli.client as client
-from bec_widgets.cli.auto_updates import AutoUpdates
-from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 if TYPE_CHECKING:
     from bec_widgets.cli.client import BECDockArea, BECFigure
+
+messages = lazy_import("bec_lib.messages")
+# from bec_lib.connector import MessageObject
+MessageObject = lazy_import_from("bec_lib.connector", ("MessageObject",))
+BECDispatcher = lazy_import_from("bec_widgets.utils.bec_dispatcher", ("BECDispatcher",))
 
 
 def rpc_call(func):
