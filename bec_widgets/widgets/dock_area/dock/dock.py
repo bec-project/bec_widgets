@@ -3,18 +3,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal, Optional
 from weakref import WeakValueDictionary
 
-from PyQt6.QtWidgets import QHBoxLayout, QVBoxLayout, QGridLayout
-from PyQt6.QtCore import Qt
 from pydantic import Field
-from pyqtgraph.dockarea import Dock
-
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QGridLayout, QHBoxLayout, QVBoxLayout
+from qtpy.QtWidgets import QDockWidget, QSizePolicy
 
 from bec_widgets.cli.rpc_wigdet_handler import RPCWidgetHandler
-from bec_widgets.utils import BECConnector, ConnectionConfig, GridLayoutManager
-from qtpy.QtWidgets import QWidget, QMainWindow, QDockWidget, QSizePolicy
+from bec_widgets.utils import BECConnector, ConnectionConfig
 
 if TYPE_CHECKING:
     from qtpy.QtWidgets import QWidget
+
     from bec_widgets.widgets.dock_area.dock_area import BECDockAreaAlt
 
 

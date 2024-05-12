@@ -1,19 +1,13 @@
 from __future__ import annotations
 
-import sys
-from typing import Literal, Optional
+from typing import Literal
 from weakref import WeakValueDictionary
 
-import qdarktheme
-from PyQt6.QtWidgets import QApplication, QVBoxLayout
 from pydantic import Field
-from pyqtgraph.dockarea.DockArea import DockArea
 from qtpy.QtCore import Qt
-from qtpy.QtGui import QPainter, QPaintEvent
-from qtpy.QtWidgets import QWidget, QMainWindow, QDockWidget
+from qtpy.QtWidgets import QMainWindow, QWidget
 
 from bec_widgets.utils import BECConnector, ConnectionConfig, WidgetContainerUtils
-from bec_widgets.widgets import BECFigure
 from bec_widgets.widgets.dock_area.dock.dock import BECDockAlt, DockConfig
 
 

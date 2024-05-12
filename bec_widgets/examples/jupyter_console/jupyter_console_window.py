@@ -2,6 +2,8 @@ import os
 
 import numpy as np
 import pyqtgraph as pg
+import qdarktheme
+from PyQt6.QtWidgets import QPushButton, QTextEdit
 from pyqtgraph.Qt import QtWidgets, uic
 from qtconsole.inprocess import QtInProcessKernelManager
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
@@ -13,6 +15,7 @@ from bec_widgets.cli.rpc_register import RPCRegister
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.widgets import BECFigure
 from bec_widgets.widgets.dock.dock_area import BECDockArea
+from bec_widgets.widgets.dock_area.dock_area import BECDockAreaAlt
 from bec_widgets.widgets.spiral_progress_bar.spiral_progress_bar import SpiralProgressBar
 
 
@@ -95,7 +98,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.console.set_default_style("linux")
 
     def _init_figure(self):
-        self.figure.plot(x_name="samx", y_name="bpm4d")
+        self.figure.plot("samx", "bpm4d")
         self.figure.motor_map("samx", "samy")
         self.figure.image("eiger", color_map="viridis", vrange=(0, 100))
 
@@ -111,27 +114,39 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.c1 = self.w1.get_config()
 
     def _init_dock(self):
-        self.button_1 = QtWidgets.QPushButton("Button 1 ")
-        self.button_2_a = QtWidgets.QPushButton("Button to be added at place 0,0 in d3")
-        self.button_2_b = QtWidgets.QPushButton("button after without postions specified")
-        self.button_2_c = QtWidgets.QPushButton("button super late")
-        self.button_3 = QtWidgets.QPushButton("Button above Figure ")
-        self.bar = SpiralProgressBar()
 
-        self.label_2 = QtWidgets.QLabel("label which is added separately")
-        self.label_3 = QtWidgets.QLabel("Label above figure")
+        self.d0 = self.dock.add_dock(name="dock_0")
+        self.fig0 = self.d0.add_widget_bec("BECFigure")
+        self.fig0.image("eiger", vrange=(0, 100))
 
-        self.d1 = self.dock.add_dock(widget=self.button_1, position="left")
-        self.d1.addWidget(self.label_2)
-        self.d2 = self.dock.add_dock(widget=self.bar, position="right")
-        self.d3 = self.dock.add_dock(name="figure")
-        self.fig_dock3 = BECFigure()
-        self.fig_dock3.plot(x_name="samx", y_name="bpm4d")
-        self.d3.add_widget(self.label_3)
-        self.d3.add_widget(self.button_3)
-        self.d3.add_widget(self.fig_dock3)
+        self.d1 = self.dock.add_dock(name="dock_1", position="right")
+        self.fig1 = self.d1.add_widget_bec("BECFigure")
+        self.fig1.plot("samx", "bpm4i")
+        self.fig1.plot("samx", "bpm3a")
+
+        self.d2 = self.dock.add_dock(name="dock_2", position="bottom")
+        self.fi2 = self.d2.add_widget_bec("BECFigure", row=0, col=0)
+        self.fi2.motor_map("samx", "samy")
+        self.bar2 = self.d2.add_widget_bec("SpiralProgressBar", row=0, col=1)
+        self.bar2.set_diameter(200)
 
         self.dock.save_state()
+
+    def ini_dock_alt(self):
+        self.d0_alt = self.dock_alt.add_dock(title="dock_0", layout="grid", position="top")
+        self.fig0_alt = self.d0_alt.add_widget_bec("BECFigure")
+        self.fig0_alt.image("eiger", vrange=(0, 100))
+
+        self.d1_alt = self.dock_alt.add_dock(title="dock_1", layout="grid", position="top")
+        self.fig1_alt = self.d1_alt.add_widget_bec("BECFigure")
+        self.fig1_alt.plot("samx", "bpm4i")
+        self.fig1_alt.plot("samx", "bpm3a")
+
+        self.d2_alt = self.dock_alt.add_dock(title="dock_2", layout="grid", position="bottom")
+        self.fi2_alt = self.d2_alt.add_widget_bec("BECFigure", row=0, col=0)
+        self.fi2_alt.motor_map("samx", "samy")
+        self.bar2_alt = self.d2_alt.add_widget_bec("SpiralProgressBar", row=0, col=1)
+        self.bar2_alt.set_diameter(200)
 
     def closeEvent(self, event):
         """Override to handle things when main window is closed."""
@@ -144,10 +159,6 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
 if __name__ == "__main__":  # pragma: no cover
     import sys
 
-    import bec_widgets
-
-    module_path = os.path.dirname(bec_widgets.__file__)
-
     bec_dispatcher = BECDispatcher()
     client = bec_dispatcher.client
     client.start()
@@ -155,8 +166,9 @@ if __name__ == "__main__":  # pragma: no cover
     app = QApplication(sys.argv)
     app.setApplicationName("Jupyter Console")
     app.setApplicationDisplayName("Jupyter Console")
+    qdarktheme.setup_theme("auto")
     icon = QIcon()
-    icon.addFile(os.path.join(module_path, "assets", "terminal_icon.png"), size=QSize(48, 48))
+    icon.addFile("terminal_icon.png", size=QSize(48, 48))
     app.setWindowIcon(icon)
     win = JupyterConsoleWindow()
     win.show()
