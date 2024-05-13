@@ -7,7 +7,7 @@ variables:
   DOCKER_TLS_CERTDIR: ""
   BEC_CORE_BRANCH: "main"
   OPHYD_DEVICES_BRANCH: "main"
-  CHILD_PIPELINE_BRANCH: "main"
+  CHILD_PIPELINE_BRANCH: $CI_DEFAULT_BRANCH
 
 workflow:
   rules:
@@ -34,6 +34,7 @@ stages:
 
 before_script:
   - if [[ "$CI_PROJECT_PATH" != "bec/bec_widgets" ]]; then 
+    echo -e "\033[35;1m Using branch $CHILD_PIPELINE_BRANCH of BEC Widgets \033[0;m";
     test -d bec_widgets || git clone --branch $CHILD_PIPELINE_BRANCH https://gitlab.psi.ch/bec/bec_widgets.git; cd bec_widgets;
     fi
 
