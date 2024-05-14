@@ -25,5 +25,5 @@ def test_rpc_call_accepts_device_as_input(cli_figure):
     dev1 = FakeDevice("samx")
     dev2 = FakeDevice("bpm4i")
     fig, mock_rpc_call = cli_figure
-    fig.plot(dev1, dev2)
-    mock_rpc_call.assert_called_with("plot", "samx", "bpm4i")
+    fig.plot(x_name=dev1, y_name=dev2)
+    mock_rpc_call.assert_called_with("plot", x_name="samx", y_name="bpm4i")

@@ -17,9 +17,12 @@ from bec_lib.utils.import_utils import isinstance_based_on_class_name, lazy_impo
 from qtpy.QtCore import QCoreApplication
 
 import bec_widgets.cli.client as client
+from bec_widgets.cli.auto_updates import AutoUpdates
 
 if TYPE_CHECKING:
     from bec_lib.device import DeviceBase
+
+    from bec_widgets.cli.client import BECDockArea, BECFigure
 
 messages = lazy_import("bec_lib.messages")
 # from bec_lib.connector import MessageObject
@@ -62,16 +65,19 @@ class BECGuiClientMixin:
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._process = None
-        self.update_script = self._get_update_script()
+        self.auto_updates = self._get_update_script()
         self._target_endpoint = MessageEndpoints.scan_status()
         self._selected_device = None
         self.stderr_output = []
 
-    def _get_update_script(self) -> AutoUpdates:
+    def _get_update_script(self) -> AutoUpdates | None:
         eps = imd.entry_points(group="bec.widgets.auto_updates")
         for ep in eps:
             if ep.name == "plugin_widgets_update":
-                return ep.load()(figure=self)
+                try:
+                    return ep.load()(gui=self)
+                except Exception as e:
+                    print(f"Error loading auto update script from plugin: {str(e)}")
         return None
 
     @property
@@ -97,7 +103,7 @@ class BECGuiClientMixin:
 
     @staticmethod
     def _handle_msg_update(msg: MessageObject, parent: BECGuiClientMixin) -> None:
-        if parent.update_script is not None:
+        if parent.auto_updates is not None:
             # pylint: disable=protected-access
             parent._update_script_msg_parser(msg.value)
 
@@ -105,7 +111,7 @@ class BECGuiClientMixin:
         if isinstance(msg, messages.ScanStatusMessage):
             if not self.gui_is_alive():
                 return
-            self.update_script.run(msg)
+            self.auto_updates.run(msg)
 
     def show(self) -> None:
         """

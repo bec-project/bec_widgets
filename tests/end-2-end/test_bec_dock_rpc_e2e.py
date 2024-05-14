@@ -1,9 +1,23 @@
 import numpy as np
 import pytest
+from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
 
+from bec_widgets.cli.auto_updates import AutoUpdates
 from bec_widgets.cli.client import BECDockArea, BECFigure, BECImageShow, BECMotorMap, BECWaveform
 from bec_widgets.utils import Colors
+
+
+@pytest.fixture(name="bec_client")
+def cli_bec_client(rpc_server_dock):
+    """
+    Fixture to create a BECClient instance that is independent of the GUI.
+    """
+    # pylint: disable=protected-access
+    cli_client = BECClient(forced=True, config=rpc_server_dock.client._service_config)
+    cli_client.start()
+    yield cli_client
+    cli_client.shutdown()
 
 
 def test_rpc_add_dock_with_figure_e2e(rpc_server_dock, qtbot):
@@ -224,3 +238,57 @@ def test_spiral_bar_scan_update(rpc_server_dock, qtbot):
     np.testing.assert_allclose(bar_server.rings[1].config.min_value, init_samy, atol=0.1)
     np.testing.assert_allclose(bar_server.rings[0].config.max_value, final_samx, atol=0.1)
     np.testing.assert_allclose(bar_server.rings[1].config.max_value, final_samy, atol=0.1)
+
+
+def test_auto_update(rpc_server_dock, bec_client, qtbot):
+    dock = BECDockArea(rpc_server_dock.gui_id)
+    dock._client = bec_client
+
+    AutoUpdates.enabled = True
+    AutoUpdates.create_default_dock = True
+    dock.auto_updates = AutoUpdates(gui=dock)
+    dock.auto_updates.start_default_dock()
+    dock.selected_device = "bpm4i"
+
+    # we need to start the update script manually; normally this is done when the GUI is started
+    dock._start_update_script()
+
+    client = bec_client
+    dev = client.device_manager.devices
+    scans = client.scans
+    queue = client.queue
+
+    status = scans.line_scan(dev.samx, -5, 5, steps=10, exp_time=0.05, relative=False)
+
+    # wait for scan to finish
+    while not status.status == "COMPLETED":
+        qtbot.wait(200)
+
+    last_scan_data = queue.scan_storage.storage[-1].data
+
+    # get data from curves
+    plt = dock.auto_updates.get_default_figure()
+    widgets = plt.widget_list
+    plt_data = widgets[0].get_all_data()
+
+    # check plotted data
+    assert plt_data["bpm4i-bpm4i"]["x"] == last_scan_data["samx"]["samx"].val
+    assert plt_data["bpm4i-bpm4i"]["y"] == last_scan_data["bpm4i"]["bpm4i"].val
+
+    status = scans.grid_scan(
+        dev.samx, -10, 10, 5, dev.samy, -5, 5, 5, exp_time=0.05, relative=False
+    )
+
+    # wait for scan to finish
+    while not status.status == "COMPLETED":
+        qtbot.wait(200)
+
+    plt = dock.auto_updates.get_default_figure()
+    widgets = plt.widget_list
+    plt_data = widgets[0].get_all_data()
+
+    last_scan_data = queue.scan_storage.storage[-1].data
+
+    # check plotted data
+    assert plt_data[f"Scan {status.scan.scan_number}"]["x"] == last_scan_data["samx"]["samx"].val
+    assert plt_data[f"Scan {status.scan.scan_number}"]["y"] == last_scan_data["samy"]["samy"].val

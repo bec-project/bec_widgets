@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
-    from .client import BECFigure
+    from .client import BECDockArea, BECFigure
 
 
 class ScanInfo(BaseModel):
@@ -18,9 +18,20 @@ class ScanInfo(BaseModel):
 
 
 class AutoUpdates:
-    def __init__(self, figure: BECFigure, enabled: bool = True):
-        self.enabled = enabled
-        self.figure = figure
+    create_default_dock: bool = False
+    enabled: bool = False
+    dock_name: str = None
+
+    def __init__(self, gui: BECDockArea):
+        self.gui = gui
+
+    def start_default_dock(self):
+        """
+        Create a default dock for the auto updates.
+        """
+        dock = self.gui.add_dock("default_figure")
+        dock.add_widget_bec("BECFigure")
+        self.dock_name = "default_figure"
 
     @staticmethod
     def get_scan_info(msg) -> ScanInfo:
@@ -43,6 +54,18 @@ class AutoUpdates:
             monitored_devices=monitored_devices,
             status=status,
         )
+
+    def get_default_figure(self) -> BECFigure | None:
+        """
+        Get the default figure from the GUI.
+        """
+        dock = self.gui.panels.get(self.dock_name, [])
+        if not dock:
+            return None
+        widgets = dock.widget_list
+        if not widgets:
+            return None
+        return widgets[0]
 
     def run(self, msg):
         """
@@ -86,33 +109,42 @@ class AutoUpdates:
         """
         Simple line scan.
         """
+        fig = self.get_default_figure()
+        if not fig:
+            return
         dev_x = info.scan_report_devices[0]
-        dev_y = self.get_selected_device(info.monitored_devices, self.figure.selected_device)
+        dev_y = self.get_selected_device(info.monitored_devices, self.gui.selected_device)
         if not dev_y:
             return
-        self.figure.clear_all()
-        plt = self.figure.plot(dev_x, dev_y)
+        fig.clear_all()
+        plt = fig.plot(x_name=dev_x, y_name=dev_y)
         plt.set(title=f"Scan {info.scan_number}", x_label=dev_x, y_label=dev_y)
 
     def simple_grid_scan(self, info: ScanInfo) -> None:
         """
         Simple grid scan.
         """
+        fig = self.get_default_figure()
+        if not fig:
+            return
         dev_x = info.scan_report_devices[0]
         dev_y = info.scan_report_devices[1]
-        dev_z = self.get_selected_device(info.monitored_devices, self.figure.selected_device)
-        self.figure.clear_all()
-        plt = self.figure.plot(dev_x, dev_y, dev_z, label=f"Scan {info.scan_number}")
+        dev_z = self.get_selected_device(info.monitored_devices, self.gui.selected_device)
+        fig.clear_all()
+        plt = fig.plot(x_name=dev_x, y_name=dev_y, z_name=dev_z, label=f"Scan {info.scan_number}")
         plt.set(title=f"Scan {info.scan_number}", x_label=dev_x, y_label=dev_y)
 
     def best_effort(self, info: ScanInfo) -> None:
         """
         Best effort scan.
         """
+        fig = self.get_default_figure()
+        if not fig:
+            return
         dev_x = info.scan_report_devices[0]
-        dev_y = self.get_selected_device(info.monitored_devices, self.figure.selected_device)
+        dev_y = self.get_selected_device(info.monitored_devices, self.gui.selected_device)
         if not dev_y:
             return
-        self.figure.clear_all()
-        plt = self.figure.plot(dev_x, dev_y, label=f"Scan {info.scan_number}")
+        fig.clear_all()
+        plt = fig.plot(x_name=dev_x, y_name=dev_y, label=f"Scan {info.scan_number}")
         plt.set(title=f"Scan {info.scan_number}", x_label=dev_x, y_label=dev_y)
