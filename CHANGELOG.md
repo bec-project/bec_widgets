@@ -2,6 +2,21 @@
 
 
 
+## v0.53.2 (2024-05-15)
+
+### Ci
+
+* ci: added echo to highlight the current branch ([`0490e80`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0490e80c48563e4fb486bce903b3ce1f08863e83))
+
+### Fix
+
+* fix: check device class without importing to speed up initial import time ([`9f8fbdd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9f8fbdd5fc13cf2be10eacb41e10cf742864cd92))
+
+* fix: speed up initial import times using lazy import (from bec_lib) ([`d1e6cd3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d1e6cd388c6c9f345f52d6096d8a75a1fa7e6934))
+
+* fix: adapt to bec_lib changes (no more submodules in `__init__.py`) ([`5d09a13`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5d09a13d8820a8bdb900733c97593b723a2fce1d))
+
+
 ## v0.53.1 (2024-05-09)
 
 ### Ci
@@ -156,21 +171,3 @@
 ### Feature
 
 * feat(utils/thread_checker): util class to check the thread leakage for closeEvent in qt ([`71cb80d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/71cb80d544c5f4ef499379a431ce0c17907c7ce8))
-
-### Refactor
-
-* refactor(utils/container_utils): part of the logic regarding locating widgets moved from BECFigure to utility class ([`77ff796`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/77ff7962cc91bce15d1c91b67b75b66fbea612c3))
-
-
-## v0.46.7 (2024-04-21)
-
-### Fix
-
-* fix(plot/image): monitors are now validated with current bec session ([`67a99a1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/67a99a1a19c261f9a1f09635f274cd9fbfe53639))
-
-
-## v0.46.6 (2024-04-19)
-
-### Fix
-
-* fix(cli): fixed support for devices as cli input ([`1111610`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1111610f3206c5c46db6b4bd1e8827f1a4cd9e3f))
