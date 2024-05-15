@@ -302,7 +302,6 @@ class RPCBase:
                 MessageEndpoints.gui_instruction_response(request_id)
             )
             QCoreApplication.processEvents()  # keep UI responsive (and execute signals/slots)
-            time.sleep(0.1)
         if response is None and (time.time() - start_time) >= timeout:
             raise RPCResponseTimeoutError(request_id, timeout)
 
