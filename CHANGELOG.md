@@ -2,6 +2,13 @@
 
 
 
+## v0.53.3 (2024-05-16)
+
+### Fix
+
+* fix: removed apparently unnecessary sleep while waiting for an rpc response ([`7d64cac`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7d64cac6610b39d3553ff650354f78ead8ee6b55))
+
+
 ## v0.53.2 (2024-05-15)
 
 ### Ci
@@ -164,10 +171,3 @@
 ### Feature
 
 * feat(cli): added auto updates plugin support ([`6238693`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6238693ffb44b47a56b969bc4129f2af7a2c04fe))
-
-
-## v0.47.0 (2024-04-23)
-
-### Feature
-
-* feat(utils/thread_checker): util class to check the thread leakage for closeEvent in qt ([`71cb80d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/71cb80d544c5f4ef499379a431ce0c17907c7ce8))
