@@ -1,8 +1,7 @@
 import pytest
 
-from bec_widgets.widgets import BECMotorMap
-from bec_widgets.widgets.plots.motor_map import MotorMapConfig
-from bec_widgets.widgets.plots.waveform import Signal, SignalData
+from bec_widgets.widgets.figure.plots.motor_map.motor_map import BECMotorMap, MotorMapConfig
+from bec_widgets.widgets.figure.plots.waveform.waveform_curve import SignalData
 
 from .client_mocks import mocked_client
 

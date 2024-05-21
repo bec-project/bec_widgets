@@ -13,7 +13,6 @@ from functools import wraps
 from typing import TYPE_CHECKING
 
 from bec_lib.endpoints import MessageEndpoints
-from bec_lib.service_config import ServiceConfig
 from bec_lib.utils.import_utils import isinstance_based_on_class_name, lazy_import, lazy_import_from
 from qtpy.QtCore import QCoreApplication
 
@@ -21,8 +20,6 @@ import bec_widgets.cli.client as client
 
 if TYPE_CHECKING:
     from bec_lib.device import DeviceBase
-
-    from bec_widgets.cli.client import BECDockArea, BECFigure
 
 messages = lazy_import("bec_lib.messages")
 # from bec_lib.connector import MessageObject

@@ -109,11 +109,13 @@ if __name__ == "__main__":  # pragma: no cover
     import os
 
     from bec_widgets.utils import BECConnector
-    from bec_widgets.widgets.dock import BECDock, BECDockArea
-    from bec_widgets.widgets.figure import BECFigure
-    from bec_widgets.widgets.plots import BECImageShow, BECMotorMap, BECPlotBase, BECWaveform
-    from bec_widgets.widgets.plots.image import BECImageItem
-    from bec_widgets.widgets.plots.waveform import BECCurve
+    from bec_widgets.widgets import BECDock, BECDockArea, BECFigure
+    from bec_widgets.widgets.figure.plots.image.image import BECImageShow
+    from bec_widgets.widgets.figure.plots.image.image_item import BECImageItem
+    from bec_widgets.widgets.figure.plots.motor_map.motor_map import BECMotorMap
+    from bec_widgets.widgets.figure.plots.plot_base import BECPlotBase
+    from bec_widgets.widgets.figure.plots.waveform.waveform import BECWaveform
+    from bec_widgets.widgets.figure.plots.waveform.waveform_curve import BECCurve
 
     current_path = os.path.dirname(__file__)
     client_path = os.path.join(current_path, "client.py")

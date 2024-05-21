@@ -13,16 +13,10 @@ from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils import BECConnector, ConnectionConfig, WidgetContainerUtils
-from bec_widgets.widgets.plots import (
-    BECImageShow,
-    BECMotorMap,
-    BECPlotBase,
-    BECWaveform,
-    SubplotConfig,
-    Waveform1DConfig,
-)
-from bec_widgets.widgets.plots.image import ImageConfig
-from bec_widgets.widgets.plots.motor_map import MotorMapConfig
+from bec_widgets.widgets.figure.plots.image.image import BECImageShow, ImageConfig
+from bec_widgets.widgets.figure.plots.motor_map.motor_map import BECMotorMap, MotorMapConfig
+from bec_widgets.widgets.figure.plots.plot_base import BECPlotBase, SubplotConfig
+from bec_widgets.widgets.figure.plots.waveform.waveform import BECWaveform, Waveform1DConfig
 
 
 class FigureConfig(ConnectionConfig):

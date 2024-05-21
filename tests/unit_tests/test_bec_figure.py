@@ -3,8 +3,10 @@
 import numpy as np
 import pytest
 
-from bec_widgets.widgets import BECFigure, BECMotorMap, BECWaveform
-from bec_widgets.widgets.plots import BECImageShow
+from bec_widgets.widgets import BECFigure
+from bec_widgets.widgets.figure.plots.image.image import BECImageShow
+from bec_widgets.widgets.figure.plots.motor_map.motor_map import BECMotorMap
+from bec_widgets.widgets.figure.plots.waveform.waveform import BECWaveform
 
 from .client_mocks import mocked_client
 

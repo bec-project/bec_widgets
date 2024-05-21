@@ -1,7 +1,5 @@
 import inspect
-import threading
-import time
-from typing import Literal, Union
+from typing import Union
 
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.utils.import_utils import lazy_import
@@ -12,13 +10,11 @@ from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.widgets.dock.dock_area import BECDockArea
 from bec_widgets.widgets.figure import BECFigure
-from bec_widgets.widgets.plots import BECCurve, BECImageShow, BECWaveform
 
 messages = lazy_import("bec_lib.messages")
 
 
 class BECWidgetsCLIServer:
-    WIDGETS = [BECWaveform, BECFigure, BECCurve, BECImageShow]
 
     def __init__(
         self,
@@ -127,11 +123,13 @@ if __name__ == "__main__":  # pragma: no cover
     from qtpy.QtGui import QIcon
     from qtpy.QtWidgets import QApplication, QMainWindow
 
+    import bec_widgets
+
     app = QApplication(sys.argv)
     app.setApplicationName("BEC Figure")
-    current_path = os.path.dirname(__file__)
+    module_path = os.path.dirname(bec_widgets.__file__)
     icon = QIcon()
-    icon.addFile(os.path.join(current_path, "bec_widgets_icon.png"), size=QSize(48, 48))
+    icon.addFile(os.path.join(module_path, "assets", "bec_widgets_icon.png"), size=QSize(48, 48))
     app.setWindowIcon(icon)
 
     win = QMainWindow()

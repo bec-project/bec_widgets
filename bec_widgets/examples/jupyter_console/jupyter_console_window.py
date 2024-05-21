@@ -142,6 +142,10 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
 if __name__ == "__main__":  # pragma: no cover
     import sys
 
+    import bec_widgets
+
+    module_path = os.path.dirname(bec_widgets.__file__)
+
     bec_dispatcher = BECDispatcher()
     client = bec_dispatcher.client
     client.start()
@@ -150,7 +154,7 @@ if __name__ == "__main__":  # pragma: no cover
     app.setApplicationName("Jupyter Console")
     app.setApplicationDisplayName("Jupyter Console")
     icon = QIcon()
-    icon.addFile("terminal_icon.png", size=QSize(48, 48))
+    icon.addFile(os.path.join(module_path, "assets", "terminal_icon.png"), size=QSize(48, 48))
     app.setWindowIcon(icon)
     win = JupyterConsoleWindow()
     win.show()

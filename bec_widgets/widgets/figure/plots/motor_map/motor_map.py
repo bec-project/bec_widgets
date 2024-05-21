@@ -13,8 +13,8 @@ from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils import EntryValidator
-from bec_widgets.widgets.plots.plot_base import BECPlotBase, SubplotConfig
-from bec_widgets.widgets.plots.waveform import Signal, SignalData
+from bec_widgets.widgets.figure.plots.plot_base import BECPlotBase, SubplotConfig
+from bec_widgets.widgets.figure.plots.waveform.waveform import Signal, SignalData
 
 
 class MotorMapConfig(SubplotConfig):

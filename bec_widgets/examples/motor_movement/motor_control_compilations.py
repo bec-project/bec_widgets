@@ -5,14 +5,15 @@ from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication, QSplitter, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
-from bec_widgets.widgets import (
+from bec_widgets.widgets.motor_control.motor_control import MotorThread
+from bec_widgets.widgets.motor_control.motor_table.motor_table import MotorCoordinateTable
+from bec_widgets.widgets.motor_control.movement_absolute.movement_absolute import (
     MotorControlAbsolute,
-    MotorControlRelative,
-    MotorControlSelection,
-    MotorCoordinateTable,
-    # MotorMap,
-    MotorThread,
 )
+from bec_widgets.widgets.motor_control.movement_relative.movement_relative import (
+    MotorControlRelative,
+)
+from bec_widgets.widgets.motor_control.selection.selection import MotorControlSelection
 
 CONFIG_DEFAULT = {
     "motor_control": {
