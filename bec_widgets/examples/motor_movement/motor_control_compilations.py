@@ -10,7 +10,7 @@ from bec_widgets.widgets import (
     MotorControlRelative,
     MotorControlSelection,
     MotorCoordinateTable,
-    MotorMap,
+    # MotorMap,
     MotorThread,
 )
 
@@ -58,13 +58,13 @@ class MotorControlApp(QWidget):
         # Widgets
         self.motor_control_panel = MotorControlPanel(client=self.client, config=self.config)
         # Create MotorMap
-        self.motion_map = MotorMap(client=self.client, config=self.config)
+        # self.motion_map = MotorMap(client=self.client, config=self.config)
         # Create MotorCoordinateTable
         self.motor_table = MotorCoordinateTable(client=self.client, config=self.config)
 
         # Create the splitter and add MotorMap and MotorControlPanel
         splitter = QSplitter(Qt.Horizontal)
-        splitter.addWidget(self.motion_map)
+        # splitter.addWidget(self.motion_map)
         splitter.addWidget(self.motor_control_panel)
         splitter.addWidget(self.motor_table)
 
@@ -74,9 +74,9 @@ class MotorControlApp(QWidget):
         self.setLayout(layout)
 
         # Connecting signals and slots
-        self.motor_control_panel.selection_widget.selected_motors_signal.connect(
-            lambda x, y: self.motion_map.change_motors(x, y, 0)
-        )
+        # self.motor_control_panel.selection_widget.selected_motors_signal.connect(
+        #     lambda x, y: self.motion_map.change_motors(x, y, 0)
+        # )
         self.motor_control_panel.absolute_widget.coordinates_signal.connect(
             self.motor_table.add_coordinate
         )
@@ -87,7 +87,7 @@ class MotorControlApp(QWidget):
             self.motor_control_panel.absolute_widget.set_precision
         )
 
-        self.motor_table.plot_coordinates_signal.connect(self.motion_map.plot_saved_coordinates)
+        # self.motor_table.plot_coordinates_signal.connect(self.motion_map.plot_saved_coordinates)
 
 
 class MotorControlMap(QWidget):
@@ -101,11 +101,11 @@ class MotorControlMap(QWidget):
         # Widgets
         self.motor_control_panel = MotorControlPanel(client=self.client, config=self.config)
         # Create MotorMap
-        self.motion_map = MotorMap(client=self.client, config=self.config)
+        # self.motion_map = MotorMap(client=self.client, config=self.config)
 
         # Create the splitter and add MotorMap and MotorControlPanel
         splitter = QSplitter(Qt.Horizontal)
-        splitter.addWidget(self.motion_map)
+        # splitter.addWidget(self.motion_map)
         splitter.addWidget(self.motor_control_panel)
 
         # Set the main layout
@@ -114,9 +114,9 @@ class MotorControlMap(QWidget):
         self.setLayout(layout)
 
         # Connecting signals and slots
-        self.motor_control_panel.selection_widget.selected_motors_signal.connect(
-            lambda x, y: self.motion_map.change_motors(x, y, 0)
-        )
+        # self.motor_control_panel.selection_widget.selected_motors_signal.connect(
+        #     lambda x, y: self.motion_map.change_motors(x, y, 0)
+        # )
 
 
 class MotorControlPanel(QWidget):
