@@ -12,22 +12,22 @@ from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 from bec_widgets.utils import BECDispatcher, UILoader
 from bec_widgets.widgets import BECFigure
 from bec_widgets.widgets.dock.dock_area import BECDockArea
+from bec_widgets.widgets.jupyter_console.jupyter_console import BECJupyterConsole
 
-
-class JupyterConsoleWidget(RichJupyterWidget):  # pragma: no cover:
-    def __init__(self):
-        super().__init__()
-
-        self.kernel_manager = QtInProcessKernelManager()
-        self.kernel_manager.start_kernel(show_banner=False)
-        self.kernel_client = self.kernel_manager.client()
-        self.kernel_client.start_channels()
-
-        self.kernel_manager.kernel.shell.push({"np": np, "pg": pg})
-
-    def shutdown_kernel(self):
-        self.kernel_client.stop_channels()
-        self.kernel_manager.shutdown_kernel()
+# class JupyterConsoleWidget(RichJupyterWidget):  # pragma: no cover:
+#     def __init__(self):
+#         super().__init__()
+#
+#         self.kernel_manager = QtInProcessKernelManager()
+#         self.kernel_manager.start_kernel(show_banner=False)
+#         self.kernel_client = self.kernel_manager.client()
+#         self.kernel_client.start_channels()
+#
+#         self.kernel_manager.kernel.shell.push({"np": np, "pg": pg})
+#
+#     def shutdown_kernel(self):
+#         self.kernel_client.stop_channels()
+#         self.kernel_manager.shutdown_kernel()
 
 
 class JupyterConsoleWindow(QWidget):  # pragma: no cover:
@@ -45,25 +45,25 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.safe_close = False
 
         # console push
-        self.console.kernel_manager.kernel.shell.push(
-            {
-                "fig": self.figure,
-                "dock": self.dock,
-                "w1": self.w1,
-                "w2": self.w2,
-                "w3": self.w3,
-                "d0": self.d0,
-                "d1": self.d1,
-                "d2": self.d2,
-                "fig0": self.fig0,
-                "fig1": self.fig1,
-                "fig2": self.fig2,
-                "bar": self.bar,
-                "bec": self.figure.client,
-                "scans": self.figure.client.scans,
-                "dev": self.figure.client.device_manager.devices,
-            }
-        )
+        if self.console.inprocess is True:
+            self.console.kernel_manager.kernel.shell.push(
+                {
+                    "np": np,
+                    "pg": pg,
+                    "fig": self.figure,
+                    "dock": self.dock,
+                    "w1": self.w1,
+                    "w2": self.w2,
+                    "w3": self.w3,
+                    "d0": self.d0,
+                    "d1": self.d1,
+                    "d2": self.d2,
+                    "fig0": self.fig0,
+                    "fig1": self.fig1,
+                    "fig2": self.fig2,
+                    "bar": self.bar,
+                }
+            )
 
     def _init_ui(self):
         # Plotting window
@@ -82,9 +82,8 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self._init_dock()
 
         self.console_layout = QVBoxLayout(self.ui.widget_console)
-        self.console = JupyterConsoleWidget()
+        self.console = BECJupyterConsole(inprocess=True)
         self.console_layout.addWidget(self.console)
-        self.console.set_default_style("linux")
 
     def _init_figure(self):
         self.figure.plot(x_name="samx", y_name="bpm4d")
@@ -144,7 +143,7 @@ if __name__ == "__main__":  # pragma: no cover
     app = QApplication(sys.argv)
     app.setApplicationName("Jupyter Console")
     app.setApplicationDisplayName("Jupyter Console")
-    qdarktheme.setup_theme("auto")
+    # qdarktheme.setup_theme("auto")
     icon = QIcon()
     icon.addFile(os.path.join(module_path, "assets", "terminal_icon.png"), size=QSize(48, 48))
     app.setWindowIcon(icon)
