@@ -23,7 +23,7 @@ def test_rpc_plotting_shortcuts_init_configs(rpc_server_figure, qtbot):
     fig = BECFigure(rpc_server_figure.gui_id)
     fig_server = rpc_server_figure.gui
 
-    plt = fig.plot("samx", "bpm4i")
+    plt = fig.plot(x_name="samx", y_name="bpm4i")
     im = fig.image("eiger")
     motor_map = fig.motor_map("samx", "samy")
     plt_z = fig.add_plot("samx", "samy", "bpm4i")
@@ -79,9 +79,9 @@ def test_rpc_waveform_scan(rpc_server_figure, qtbot):
     fig = BECFigure(rpc_server_figure.gui_id)
 
     # add 3 different curves to track
-    plt = fig.plot("samx", "bpm4i")
-    fig.plot("samx", "bpm3a")
-    fig.plot("samx", "bpm4d")
+    plt = fig.plot(x_name="samx", y_name="bpm4i")
+    fig.plot(x_name="samx", y_name="bpm3a")
+    fig.plot(x_name="samx", y_name="bpm4d")
 
     client = rpc_server_figure.client
     dev = client.device_manager.devices

@@ -11,6 +11,7 @@ import qdarktheme
 from pydantic import Field
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtWidgets import QWidget
+from typeguard import typechecked
 
 from bec_widgets.utils import BECConnector, ConnectionConfig, WidgetContainerUtils
 from bec_widgets.widgets.figure.plots.image.image import BECImageShow, ImageConfig
@@ -261,19 +262,20 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
         return waveform
 
+    @typechecked
     def plot(
         self,
-        x_name: str = None,
-        y_name: str = None,
-        z_name: str = None,
-        x_entry: str = None,
-        y_entry: str = None,
-        z_entry: str = None,
-        x: list | np.ndarray = None,
-        y: list | np.ndarray = None,
-        color: Optional[str] = None,
-        color_map_z: Optional[str] = "plasma",
-        label: Optional[str] = None,
+        x: list | np.ndarray | None = None,
+        y: list | np.ndarray | None = None,
+        x_name: str | None = None,
+        y_name: str | None = None,
+        z_name: str | None = None,
+        x_entry: str | None = None,
+        y_entry: str | None = None,
+        z_entry: str | None = None,
+        color: str | None = None,
+        color_map_z: str | None = "plasma",
+        label: str | None = None,
         validate: bool = True,
         **axis_kwargs,
     ) -> BECWaveform:
@@ -281,14 +283,14 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         Add a 1D waveform plot to the figure. Always access the first waveform widget in the figure.
 
         Args:
+            x(list | np.ndarray): Custom x data to plot.
+            y(list | np.ndarray): Custom y data to plot.
             x_name(str): The name of the device for the x-axis.
             y_name(str): The name of the device for the y-axis.
             z_name(str): The name of the device for the z-axis.
             x_entry(str): The name of the entry for the x-axis.
             y_entry(str): The name of the entry for the y-axis.
             z_entry(str): The name of the entry for the z-axis.
-            x(list | np.ndarray): Custom x data to plot.
-            y(list | np.ndarray): Custom y data to plot.
             color(str): The color of the curve.
             color_map_z(str): The color map to use for the z-axis.
             label(str): The label of the curve.
@@ -306,6 +308,27 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
                 waveform.set(**axis_kwargs)
         else:
             waveform = self.add_plot(**axis_kwargs)
+
+        if x is not None and y is None:
+            if isinstance(x, np.ndarray):
+                if x.ndim == 1:
+                    y = np.arange(x.size)
+                    waveform.add_curve_custom(x=np.arange(x.size), y=x, color=color, label=label)
+                    return waveform
+                if x.ndim == 2:
+                    waveform.add_curve_custom(x=x[:, 0], y=x[:, 1], color=color, label=label)
+                    return waveform
+            elif isinstance(x, list):
+                y = np.arange(len(x))
+                waveform.add_curve_custom(x=np.arange(len(x)), y=x, color=color, label=label)
+                return waveform
+            else:
+                raise ValueError(
+                    "Invalid input. Provide either device names (x_name, y_name) or custom data."
+                )
+        if x is not None and y is not None:
+            waveform.add_curve_custom(x=x, y=y, color=color, label=label)
+            return waveform
 
         # User wants to add scan curve -> 1D Waveform
         if x_name is not None and y_name is not None and z_name is None and x is None and y is None:

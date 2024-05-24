@@ -93,7 +93,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.console.set_default_style("linux")
 
     def _init_figure(self):
-        self.figure.plot("samx", "bpm4d")
+        self.figure.plot(x_name="samx", y_name="bpm4d")
         self.figure.motor_map("samx", "samy")
         self.figure.image("eiger", color_map="viridis", vrange=(0, 100))
 
@@ -124,7 +124,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.d2 = self.dock.add_dock(widget=self.label_1, position="right")
         self.d3 = self.dock.add_dock(name="figure")
         self.fig_dock3 = BECFigure()
-        self.fig_dock3.plot("samx", "bpm4d")
+        self.fig_dock3.plot(x_name="samx", y_name="bpm4d")
         self.d3.add_widget(self.label_3)
         self.d3.add_widget(self.button_3)
         self.d3.add_widget(self.fig_dock3)

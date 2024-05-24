@@ -554,17 +554,17 @@ class BECFigure(RPCBase):
     @rpc_call
     def plot(
         self,
-        x_name: "str" = None,
-        y_name: "str" = None,
-        z_name: "str" = None,
-        x_entry: "str" = None,
-        y_entry: "str" = None,
-        z_entry: "str" = None,
-        x: "list | np.ndarray" = None,
-        y: "list | np.ndarray" = None,
-        color: "Optional[str]" = None,
-        color_map_z: "Optional[str]" = "plasma",
-        label: "Optional[str]" = None,
+        x: "list | np.ndarray | None" = None,
+        y: "list | np.ndarray | None" = None,
+        x_name: "str | None" = None,
+        y_name: "str | None" = None,
+        z_name: "str | None" = None,
+        x_entry: "str | None" = None,
+        y_entry: "str | None" = None,
+        z_entry: "str | None" = None,
+        color: "str | None" = None,
+        color_map_z: "str | None" = "plasma",
+        label: "str | None" = None,
         validate: "bool" = True,
         **axis_kwargs,
     ) -> "BECWaveform":
@@ -572,14 +572,14 @@ class BECFigure(RPCBase):
         Add a 1D waveform plot to the figure. Always access the first waveform widget in the figure.
 
         Args:
+            x(list | np.ndarray): Custom x data to plot.
+            y(list | np.ndarray): Custom y data to plot.
             x_name(str): The name of the device for the x-axis.
             y_name(str): The name of the device for the y-axis.
             z_name(str): The name of the device for the z-axis.
             x_entry(str): The name of the entry for the x-axis.
             y_entry(str): The name of the entry for the y-axis.
             z_entry(str): The name of the entry for the z-axis.
-            x(list | np.ndarray): Custom x data to plot.
-            y(list | np.ndarray): Custom y data to plot.
             color(str): The color of the curve.
             color_map_z(str): The color map to use for the z-axis.
             label(str): The label of the curve.

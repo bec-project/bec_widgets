@@ -304,6 +304,18 @@ def test_set_custom_curve_data(bec_figure, qtbot):
     assert np.array_equal(y_new, [7, 8, 9])
 
 
+def test_custom_data_2D_array(bec_figure, qtbot):
+
+    data = np.random.rand(10, 2)
+
+    plt = bec_figure.plot(data)
+
+    x, y = plt.curves[0].get_data()
+
+    assert np.array_equal(x, data[:, 0])
+    assert np.array_equal(y, data[:, 1])
+
+
 def test_get_all_data(bec_figure):
     w1 = bec_figure.add_plot()
 

@@ -22,7 +22,7 @@ def test_rpc_register_list_connections(rpc_server_figure, rpc_register, qtbot):
     fig = BECFigure(rpc_server_figure.gui_id)
     fig_server = rpc_server_figure.gui
 
-    plt = fig.plot("samx", "bpm4i")
+    plt = fig.plot(x_name="samx", y_name="bpm4i")
     im = fig.image("eiger")
     motor_map = fig.motor_map("samx", "samy")
     plt_z = fig.add_plot("samx", "samy", "bpm4i")

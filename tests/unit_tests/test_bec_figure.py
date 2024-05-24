@@ -65,7 +65,7 @@ def test_bec_figure_add_remove_plot(bec_figure):
 
 
 def test_add_different_types_of_widgets(bec_figure):
-    plt = bec_figure.plot("samx", "bpm4i")
+    plt = bec_figure.plot(x_name="samx", y_name="bpm4i")
     im = bec_figure.image("eiger")
     motor_map = bec_figure.motor_map("samx", "samy")
 
@@ -228,7 +228,7 @@ def test_clear_all(bec_figure):
 
 
 def test_shortcuts(bec_figure):
-    plt = bec_figure.plot("samx", "bpm4i")
+    plt = bec_figure.plot(x_name="samx", y_name="bpm4i")
     im = bec_figure.image("eiger")
     motor_map = bec_figure.motor_map("samx", "samy")
 

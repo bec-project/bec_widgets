@@ -59,7 +59,7 @@ def test_bec_dock_area_add_remove_dock(bec_dock_area, qtbot):
 def test_add_remove_bec_figure_to_dock(bec_dock_area):
     d0 = bec_dock_area.add_dock()
     fig = d0.add_widget_bec("BECFigure")
-    plt = fig.plot("samx", "bpm4i")
+    plt = fig.plot(x_name="samx", y_name="bpm4i")
     im = fig.image("eiger")
     mm = fig.motor_map("samx", "samy")
 

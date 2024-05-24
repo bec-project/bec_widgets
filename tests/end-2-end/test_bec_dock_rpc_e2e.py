@@ -38,7 +38,7 @@ def test_rpc_add_dock_with_figure_e2e(rpc_server_dock, qtbot):
     assert fig2.__class__ == BECFigure
 
     mm = fig0.motor_map("samx", "samy")
-    plt = fig1.plot("samx", "bpm4i")
+    plt = fig1.plot(x_name="samx", y_name="bpm4i")
     im = fig2.image("eiger")
 
     assert mm.__class__.__name__ == "BECMotorMap"
