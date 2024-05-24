@@ -2,6 +2,13 @@
 
 
 
+## v0.55.0 (2024-05-24)
+
+### Feature
+
+* feat(widgets/progressbar): SpiralProgressBar added with rpc interface ([`76bd0d3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/76bd0d339ac9ae9e8a3baa0d0d4e951ec1d09670))
+
+
 ## v0.54.0 (2024-05-24)
 
 ### Build
@@ -162,11 +169,3 @@
 
 
 ## v0.49.1 (2024-04-26)
-
-### Build
-
-* build(pyqt6): fixing PyQt6-Qt6 package to 6.6.3 ([`a222298`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a22229849cbb57c15e4c1bae02d7e52e672f8c4c))
-
-### Fix
-
-* fix(widgets/editor): qscintilla editor removed ([`ab85374`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ab8537483da6c87cb9a0b0f01706208c964f292d))
