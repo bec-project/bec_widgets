@@ -2,6 +2,23 @@
 
 
 
+## v0.54.0 (2024-05-24)
+
+### Build
+
+* build: added pyqt6 as sphinx build dependency ([`a47a8ec`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a47a8ec413934cf7fce8d5b7a5913371d4b3b4a5))
+
+### Feature
+
+* feat(figure): changes to support direct plot functionality ([`fc4d0f3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fc4d0f3bb2a7c2fca9c326d86eb68b305bcd548b))
+
+### Refactor
+
+* refactor(reconstruction): repository structure is changed to separate assets needed for each widget ([`3455c60`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3455c602361d3b5cc3ff9190f9d2870474becf8a))
+
+* refactor(clean-up): 1st generation widgets are removed ([`edc25fb`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/edc25fbf9d5a0321e5f0a80b492b6337df807849))
+
+
 ## v0.53.3 (2024-05-16)
 
 ### Fix
@@ -153,21 +170,3 @@
 ### Fix
 
 * fix(widgets/editor): qscintilla editor removed ([`ab85374`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ab8537483da6c87cb9a0b0f01706208c964f292d))
-
-
-## v0.49.0 (2024-04-24)
-
-### Feature
-
-* feat(rpc/client_utils): timeout for rpc response ([`6500a00`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6500a00682a2a7ca535a138bd9496ed8470856a8))
-
-### Fix
-
-* fix(rpc/client_utils): close clean up policy for BECFigure ([`9602085`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9602085f82cbc983f89b5bfe48bf35f08438fa87))
-
-
-## v0.48.0 (2024-04-24)
-
-### Feature
-
-* feat(cli): added auto updates plugin support ([`6238693`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6238693ffb44b47a56b969bc4129f2af7a2c04fe))
