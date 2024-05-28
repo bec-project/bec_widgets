@@ -8,13 +8,13 @@ from qtpy.QtCore import Signal as pyqtSignal
 
 class Crosshair(QObject):
     # Signal for 1D plot
-    coordinatesChanged1D = pyqtSignal(float, list)
-    coordinatesClicked1D = pyqtSignal(float, list)
+    coordinatesChanged1D = pyqtSignal(tuple)
+    coordinatesClicked1D = pyqtSignal(tuple)
     # Signal for 2D plot
-    coordinatesChanged2D = pyqtSignal(float, float)
-    coordinatesClicked2D = pyqtSignal(float, float)
+    coordinatesChanged2D = pyqtSignal(tuple)
+    coordinatesClicked2D = pyqtSignal(tuple)
 
-    def __init__(self, plot_item: pg.PlotItem, precision: int = None, parent=None):
+    def __init__(self, plot_item: pg.PlotItem, precision: int = 3, parent=None):
         """
         Crosshair for 1D and 2D plots.
 
@@ -174,10 +174,11 @@ class Crosshair(QObject):
                 if isinstance(item, pg.PlotDataItem):
                     if x is None or all(v is None for v in y_values):
                         return
-                    self.coordinatesChanged1D.emit(
+                    coordinance_to_emit = (
                         round(x, self.precision),
                         [round(y_val, self.precision) for y_val in y_values],
                     )
+                    self.coordinatesChanged1D.emit(coordinance_to_emit)
                     for i, y_val in enumerate(y_values):
                         self.marker_moved_1d[i].setData(
                             [x if not self.is_log_x else np.log10(x)],
@@ -186,7 +187,8 @@ class Crosshair(QObject):
                 elif isinstance(item, pg.ImageItem):
                     if x is None or y_values is None:
                         return
-                    self.coordinatesChanged2D.emit(x, y_values)
+                    coordinance_to_emit = (x, y_values)
+                    self.coordinatesChanged2D.emit(coordinance_to_emit)
 
     def mouse_clicked(self, event):
         """Handles the mouse clicked event, updating the crosshair position and emitting signals.
@@ -209,10 +211,11 @@ class Crosshair(QObject):
                 if isinstance(item, pg.PlotDataItem):
                     if x is None or all(v is None for v in y_values):
                         return
-                    self.coordinatesClicked1D.emit(
+                    coordinate_to_emit = (
                         round(x, self.precision),
                         [round(y_val, self.precision) for y_val in y_values],
                     )
+                    self.coordinatesClicked1D.emit(coordinate_to_emit)
                     for i, y_val in enumerate(y_values):
                         for marker in self.marker_clicked_1d[i]:
                             marker.setData(
@@ -222,7 +225,8 @@ class Crosshair(QObject):
                 elif isinstance(item, pg.ImageItem):
                     if x is None or y_values is None:
                         return
-                    self.coordinatesClicked2D.emit(x, y_values)
+                    coordinate_to_emit = (x, y_values)
+                    self.coordinatesClicked2D.emit(coordinate_to_emit)
                     self.marker_2d.setPos([x, y_values])
 
     def check_log(self):
