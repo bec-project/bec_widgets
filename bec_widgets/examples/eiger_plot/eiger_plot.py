@@ -6,11 +6,12 @@ import h5py
 import numpy as np
 import pyqtgraph as pg
 import zmq
-from pyqtgraph.Qt import uic
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtGui import QKeySequence
 from qtpy.QtWidgets import QDialog, QFileDialog, QFrame, QLabel, QShortcut, QVBoxLayout, QWidget
+
+from bec_widgets.utils import UILoader
 
 # from scipy.stats import multivariate_normal
 
@@ -23,7 +24,7 @@ class EigerPlot(QWidget):
         # pg.setConfigOptions(background="w", foreground="k", antialias=True)
 
         current_path = os.path.dirname(__file__)
-        uic.loadUi(os.path.join(current_path, "eiger_plot.ui"), self)
+        self.ui = UILoader().load_ui(os.path.join(current_path, "eiger_plot.ui"), self)
 
         # Set widow name
         self.setWindowTitle("Eiger Plot")
@@ -60,19 +61,22 @@ class EigerPlot(QWidget):
         self.update_hist()
 
         # Adding Items to Graphical Layout
+        self.glw_layout = QVBoxLayout(self.ui.glw_placeholder)
+        self.glw = pg.GraphicsLayoutWidget()
+        self.glw_layout.addWidget(self.glw)
         self.glw.addItem(self.plot_item)
         self.glw.addItem(self.hist)
 
     def hook_signals(self):
         # Buttons
         # self.pushButton_test.clicked.connect(self.start_sim_stream)
-        self.pushButton_mask.clicked.connect(self.load_mask_dialog)
-        self.pushButton_delete_mask.clicked.connect(self.delete_mask)
-        self.pushButton_help.clicked.connect(self.show_help_dialog)
+        self.ui.pushButton_mask.clicked.connect(self.load_mask_dialog)
+        self.ui.pushButton_delete_mask.clicked.connect(self.delete_mask)
+        self.ui.pushButton_help.clicked.connect(self.show_help_dialog)
 
         # SpinBoxes
-        self.doubleSpinBox_hist_min.valueChanged.connect(self.update_hist)
-        self.doubleSpinBox_hist_max.valueChanged.connect(self.update_hist)
+        self.ui.doubleSpinBox_hist_min.valueChanged.connect(self.update_hist)
+        self.ui.doubleSpinBox_hist_max.valueChanged.connect(self.update_hist)
 
         # Signal/Slots
         self.update_signal.connect(self.on_image_update)
@@ -81,47 +85,47 @@ class EigerPlot(QWidget):
         # Key bindings for rotation
         rotate_plus = QShortcut(QKeySequence("Ctrl+A"), self)
         rotate_minus = QShortcut(QKeySequence("Ctrl+Z"), self)
-        self.comboBox_rotation.setToolTip("Increase rotation: Ctrl+A\nDecrease rotation: Ctrl+Z")
-        self.checkBox_transpose.setToolTip("Toggle transpose: Ctrl+T")
+        self.ui.comboBox_rotation.setToolTip("Increase rotation: Ctrl+A\nDecrease rotation: Ctrl+Z")
+        self.ui.checkBox_transpose.setToolTip("Toggle transpose: Ctrl+T")
 
-        max_index = self.comboBox_rotation.count() - 1  # Maximum valid index
+        max_index = self.ui.comboBox_rotation.count() - 1  # Maximum valid index
 
         rotate_plus.activated.connect(
-            lambda: self.comboBox_rotation.setCurrentIndex(
-                min(self.comboBox_rotation.currentIndex() + 1, max_index)
+            lambda: self.ui.comboBox_rotation.setCurrentIndex(
+                min(self.ui.comboBox_rotation.currentIndex() + 1, max_index)
             )
         )
 
         rotate_minus.activated.connect(
-            lambda: self.comboBox_rotation.setCurrentIndex(
-                max(self.comboBox_rotation.currentIndex() - 1, 0)
+            lambda: self.ui.comboBox_rotation.setCurrentIndex(
+                max(self.ui.comboBox_rotation.currentIndex() - 1, 0)
             )
         )
 
         # Key bindings for transpose
         transpose = QShortcut(QKeySequence("Ctrl+T"), self)
-        transpose.activated.connect(self.checkBox_transpose.toggle)
+        transpose.activated.connect(self.ui.checkBox_transpose.toggle)
 
         FFT = QShortcut(QKeySequence("Ctrl+F"), self)
-        FFT.activated.connect(self.checkBox_FFT.toggle)
-        self.checkBox_FFT.setToolTip("Toggle FFT: Ctrl+F")
+        FFT.activated.connect(self.ui.checkBox_FFT.toggle)
+        self.ui.checkBox_FFT.setToolTip("Toggle FFT: Ctrl+F")
 
         log = QShortcut(QKeySequence("Ctrl+L"), self)
-        log.activated.connect(self.checkBox_log.toggle)
-        self.checkBox_log.setToolTip("Toggle log: Ctrl+L")
+        log.activated.connect(self.ui.checkBox_log.toggle)
+        self.ui.checkBox_log.setToolTip("Toggle log: Ctrl+L")
 
         mask = QShortcut(QKeySequence("Ctrl+M"), self)
-        mask.activated.connect(self.pushButton_mask.click)
-        self.pushButton_mask.setToolTip("Load mask: Ctrl+M")
+        mask.activated.connect(self.ui.pushButton_mask.click)
+        self.ui.pushButton_mask.setToolTip("Load mask: Ctrl+M")
 
         delete_mask = QShortcut(QKeySequence("Ctrl+D"), self)
-        delete_mask.activated.connect(self.pushButton_delete_mask.click)
-        self.pushButton_delete_mask.setToolTip("Delete mask: Ctrl+D")
+        delete_mask.activated.connect(self.ui.pushButton_delete_mask.click)
+        self.ui.pushButton_delete_mask.setToolTip("Delete mask: Ctrl+D")
 
     def update_hist(self):
         self.hist_levels = [
-            self.doubleSpinBox_hist_min.value(),
-            self.doubleSpinBox_hist_max.value(),
+            self.ui.doubleSpinBox_hist_min.value(),
+            self.ui.doubleSpinBox_hist_max.value(),
         ]
         self.hist.setLevels(min=self.hist_levels[0], max=self.hist_levels[1])
         self.hist.setHistogramRange(
@@ -160,16 +164,18 @@ class EigerPlot(QWidget):
             # self.image = np.ma.masked_array(self.image, mask=self.mask) #TODO test if np works
             self.image = self.image * (1 - self.mask) + 1
 
-        if self.checkBox_FFT.isChecked():
+        if self.ui.checkBox_FFT.isChecked():
             self.image = np.abs(np.fft.fftshift(np.fft.fft2(self.image)))
 
-        if self.comboBox_rotation.currentIndex() > 0:  # rotate
-            self.image = np.rot90(self.image, k=self.comboBox_rotation.currentIndex(), axes=(0, 1))
+        if self.ui.comboBox_rotation.currentIndex() > 0:  # rotate
+            self.image = np.rot90(
+                self.image, k=self.ui.comboBox_rotation.currentIndex(), axes=(0, 1)
+            )
 
-        if self.checkBox_transpose.isChecked():  # transpose
+        if self.ui.checkBox_transpose.isChecked():  # transpose
             self.image = np.transpose(self.image)
 
-        if self.checkBox_log.isChecked():
+        if self.ui.checkBox_log.isChecked():
             self.image = np.log10(self.image)
 
         self.imageItem.setImage(self.image, autoLevels=False)

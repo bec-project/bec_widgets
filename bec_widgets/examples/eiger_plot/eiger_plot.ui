@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2">
+  <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,4">
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
@@ -191,17 +191,10 @@
     </layout>
    </item>
    <item>
-    <widget class="GraphicsLayoutWidget" name="glw"/>
+    <widget class="QWidget" name="glw_placeholder" native="true"/>
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>GraphicsLayoutWidget</class>
-   <extends>QGraphicsView</extends>
-   <header>pyqtgraph.h</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>
