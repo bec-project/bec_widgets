@@ -2,6 +2,31 @@
 
 
 
+## v0.56.0 (2024-05-29)
+
+### Build
+
+* build: added pyside6 as dependency ([`db301b1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/db301b1be27bba76c8bb21fbff93cb4902b592a5))
+
+### Ci
+
+* ci: added tests for pyside6, pyqt6 and pyqt5, default test and e2e is python 3.11 and pyqt6 ([`855be35`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/855be3551a1372bcbebba6f8930903f99202bbca))
+
+### Documentation
+
+* docs(examples): example apps section deleted ([`ad208a5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ad208a5ef8495c45a8b83a4850ba9a1041b42717))
+
+### Feature
+
+* feat(utils/ui_loader): universal ui loader for pyside/pyqt ([`0fea8d6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0fea8d606574fa99dda3b117da5d5209c251f694))
+
+### Fix
+
+* fix(examples): outdated examples removed (mca_plot.py, stream_plot.py, motor_example.py) ([`ddc9510`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ddc9510c2ba8dadf291809eeb5b135a105259492))
+
+* fix: compatibility adjustment to .ui loading and tests for PySide6 ([`07b99d9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/07b99d91a57a645cddd76294f48d78773e4c9ea5))
+
+
 ## v0.55.0 (2024-05-24)
 
 ### Feature
@@ -145,27 +170,14 @@
 
 ## v0.50.0 (2024-04-29)
 
-### Feature
-
-* feat(plots): universal cleanup and remove also for children items ([`381d713`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/381d713837bb9217c58ba1d8b89691aa35c9f5ec))
-
-* feat(rpc/rpc_register): singleton rpc register for all rpc connections for session ([`a898e7e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a898e7e4f14e9ae854703dddbd1eb8c50cb640ff))
-
 ### Fix
 
 * fix(widgets/figure): access pattern changed for getting widgets by coordinates for rpc ([`13c018a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/13c018a79704a7497c140df57179d294e43ecffa))
 
 * fix(plots): cleanup policy reviewed for children items ([`8f20a0b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8f20a0b3b1b5dd117b36b45645717190b9ee9cbf))
 
-* fix(rpc/client_utils): getoutput more transparent + error handling ([`6b6a6b2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6b6a6b2249f24d3d02bd5fcd7ef1c63ed794c304))
-
-* fix(rpc_register): thread lock for listign all connections ([`2ca3267`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2ca32675ec3f00137e2140259db51f6e5aa7bb71))
-
 ### Test
 
 * test(cli/rpc_register): e2e RPCRegister ([`4f261be`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4f261be4c7cfe54501443d031f9266f4f838f6e2))
 
 * test(cli/rpc_register): rpc_register tests added ([`40eb75f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/40eb75f85a4d99d498b086a37e799276a9d2ac3f))
-
-
-## v0.49.1 (2024-04-26)
