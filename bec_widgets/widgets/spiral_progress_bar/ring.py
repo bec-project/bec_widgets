@@ -115,7 +115,8 @@ class Ring(BECConnector):
 
     def set_value(self, value: int | float):
         self.config.value = round(
-            max(self.config.min_value, min(self.config.max_value, value)), self.config.precision
+            float(max(self.config.min_value, min(self.config.max_value, value))),
+            self.config.precision,
         )
 
     def set_color(self, color: str | tuple):

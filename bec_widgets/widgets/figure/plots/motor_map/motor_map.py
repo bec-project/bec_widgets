@@ -317,7 +317,7 @@ class BECMotorMap(BECPlotBase):
         Returns:
             float: Motor initial position.
         """
-        init_position = round(self.dev[name].read()[entry]["value"], precision)
+        init_position = round(float(self.dev[name].read()[entry]["value"]), precision)
         return init_position
 
     def _validate_signal_entries(
@@ -403,7 +403,7 @@ class BECMotorMap(BECPlotBase):
         # Update plot title
         precision = self.config.precision
         self.set_title(
-            f"Motor position: ({round(current_x,precision)}, {round(current_y,precision)})"
+            f"Motor position: ({round(float(current_x),precision)}, {round(float(current_y),precision)})"
         )
 
     @pyqtSlot(dict)

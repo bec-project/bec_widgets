@@ -577,7 +577,6 @@ class BECWaveform(BECPlotBase):
         Returns:
             dict | pd.DataFrame: Data of all curves in the specified format.
         """
-
         data = {}
         try:
             import pandas as pd
