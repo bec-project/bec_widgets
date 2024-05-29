@@ -1589,6 +1589,10 @@ class BECDockArea(RPCBase, BECGuiClientMixin):
         """
 
     @rpc_call
+    def get_docks_repr(self):
+        """Return dict, list and text representation of docks"""
+
+    @rpc_call
     def add_dock(
         self,
         name: "str" = None,

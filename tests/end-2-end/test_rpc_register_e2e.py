@@ -3,40 +3,30 @@ import pytest
 from bec_widgets.cli.client import BECFigure, BECImageShow, BECMotorMap, BECWaveform
 
 
-def find_deepest_value(d: dict):
-    """
-    Recursively find the deepest value in a dictionary
-    Args:
-        d(dict): Dictionary to search
-
-    Returns:
-        The deepest value in the dictionary.
-    """
-    if isinstance(d, dict):
-        if d:
-            return find_deepest_value(next(iter(d.values())))
-    return d
-
-
-def test_rpc_register_list_connections(rpc_server_figure, rpc_register, qtbot):
-    fig = BECFigure(rpc_server_figure.gui_id)
-    fig_server = rpc_server_figure.gui
+def test_rpc_register_list_connections(rpc_server_figure):
+    fig = BECFigure(rpc_server_figure)
 
     plt = fig.plot(x_name="samx", y_name="bpm4i")
     im = fig.image("eiger")
     motor_map = fig.motor_map("samx", "samy")
     plt_z = fig.add_plot("samx", "samy", "bpm4i")
 
-    all_connections = rpc_register.list_all_connections()
+    # keep only class names from objects, since objects on server and client are different
+    # so the best we can do is to compare types (rpc register is unit-tested elsewhere)
+    all_connections = {obj_id: type(obj).__name__ for obj_id, obj in fig.get_all_rpc().items()}
 
-    # Construct dict of all rpc items manually
-    all_subwidgets_expected = dict(fig_server.widgets)
-    curve_1D = find_deepest_value(fig_server.widgets[plt.rpc_id]._curves_data)
-    curve_2D = find_deepest_value(fig_server.widgets[plt_z.rpc_id]._curves_data)
-    curves_expected = {curve_1D.rpc_id: curve_1D, curve_2D.rpc_id: curve_2D}
-    fig_expected = {fig.rpc_id: fig_server}
+    all_subwidgets_expected = {wid: type(widget).__name__ for wid, widget in fig.widgets.items()}
+    curve_1D = fig.widgets[plt.rpc_id]
+    curve_2D = fig.widgets[plt_z.rpc_id]
+    curves_expected = {
+        curve_1D.rpc_id: type(curve_1D).__name__,
+        curve_2D.rpc_id: type(curve_2D).__name__,
+    }
+    curves_expected.update({curve._gui_id: type(curve).__name__ for curve in curve_1D.curves})
+    curves_expected.update({curve._gui_id: type(curve).__name__ for curve in curve_2D.curves})
+    fig_expected = {fig.rpc_id: type(fig).__name__}
     image_item_expected = {
-        fig_server.widgets[im.rpc_id].images[0].rpc_id: fig_server.widgets[im.rpc_id].images[0]
+        fig.widgets[im.rpc_id].images[0].rpc_id: type(fig.widgets[im.rpc_id].images[0]).__name__
     }
 
     all_connections_expected = {

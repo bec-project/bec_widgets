@@ -5,9 +5,8 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_widgets.cli.client import BECFigure, BECImageShow, BECMotorMap, BECWaveform
 
 
-def test_rpc_waveform1d_custom_curve(rpc_server_figure, qtbot):
-    fig = BECFigure(rpc_server_figure.gui_id)
-    fig_server = rpc_server_figure.gui
+def test_rpc_waveform1d_custom_curve(rpc_server_figure):
+    fig = BECFigure(rpc_server_figure)
 
     ax = fig.add_plot()
     curve = ax.add_curve_custom([1, 2, 3], [1, 2, 3])
@@ -15,13 +14,12 @@ def test_rpc_waveform1d_custom_curve(rpc_server_figure, qtbot):
     curve = ax.curves[0]
     curve.set_color("blue")
 
-    assert len(fig_server.widgets) == 1
-    assert len(fig_server.widgets[ax.rpc_id].curves) == 1
+    assert len(fig.widgets) == 1
+    assert len(fig.widgets[ax.rpc_id].curves) == 1
 
 
 def test_rpc_plotting_shortcuts_init_configs(rpc_server_figure, qtbot):
-    fig = BECFigure(rpc_server_figure.gui_id)
-    fig_server = rpc_server_figure.gui
+    fig = BECFigure(rpc_server_figure)
 
     plt = fig.plot(x_name="samx", y_name="bpm4i")
     im = fig.image("eiger")
@@ -29,7 +27,7 @@ def test_rpc_plotting_shortcuts_init_configs(rpc_server_figure, qtbot):
     plt_z = fig.add_plot("samx", "samy", "bpm4i")
 
     # Checking if classes are correctly initialised
-    assert len(fig_server.widgets) == 4
+    assert len(fig.widgets) == 4
     assert plt.__class__.__name__ == "BECWaveform"
     assert plt.__class__ == BECWaveform
     assert im.__class__.__name__ == "BECImageShow"
@@ -75,24 +73,21 @@ def test_rpc_plotting_shortcuts_init_configs(rpc_server_figure, qtbot):
     }
 
 
-def test_rpc_waveform_scan(rpc_server_figure, qtbot):
-    fig = BECFigure(rpc_server_figure.gui_id)
+def test_rpc_waveform_scan(rpc_server_figure, bec_client_lib):
+    fig = BECFigure(rpc_server_figure)
 
     # add 3 different curves to track
     plt = fig.plot(x_name="samx", y_name="bpm4i")
     fig.plot(x_name="samx", y_name="bpm3a")
     fig.plot(x_name="samx", y_name="bpm4d")
 
-    client = rpc_server_figure.client
+    client = bec_client_lib
     dev = client.device_manager.devices
     scans = client.scans
     queue = client.queue
 
     status = scans.line_scan(dev.samx, -5, 5, steps=10, exp_time=0.05, relative=False)
-
-    # wait for scan to finish
-    while not status.status == "COMPLETED":
-        qtbot.wait(200)
+    status.wait()
 
     last_scan_data = queue.scan_storage.storage[-1].data
 
@@ -108,38 +103,33 @@ def test_rpc_waveform_scan(rpc_server_figure, qtbot):
     assert plt_data["bpm4d-bpm4d"]["y"] == last_scan_data["bpm4d"]["bpm4d"].val
 
 
-def test_rpc_image(rpc_server_figure, qtbot):
-    fig = BECFigure(rpc_server_figure.gui_id)
+def test_rpc_image(rpc_server_figure, bec_client_lib):
+    fig = BECFigure(rpc_server_figure)
 
     im = fig.image("eiger")
 
-    client = rpc_server_figure.client
+    client = bec_client_lib
     dev = client.device_manager.devices
     scans = client.scans
 
     status = scans.line_scan(dev.samx, -5, 5, steps=10, exp_time=0.05, relative=False)
-
-    # wait for scan to finish
-    while not status.status == "COMPLETED":
-        qtbot.wait(200)
+    status.wait()
 
     last_image_device = client.connector.get_last(MessageEndpoints.device_monitor("eiger"))[
         "data"
     ].data
-    qtbot.wait(500)
     last_image_plot = im.images[0].get_data()
 
     # check plotted data
     np.testing.assert_equal(last_image_device, last_image_plot)
 
 
-def test_rpc_motor_map(rpc_server_figure, qtbot):
-    fig = BECFigure(rpc_server_figure.gui_id)
-    fig_server = rpc_server_figure.gui
+def test_rpc_motor_map(rpc_server_figure, bec_client_lib):
+    fig = BECFigure(rpc_server_figure)
 
     motor_map = fig.motor_map("samx", "samy")
 
-    client = rpc_server_figure.client
+    client = bec_client_lib
     dev = client.device_manager.devices
     scans = client.scans
 
@@ -147,10 +137,8 @@ def test_rpc_motor_map(rpc_server_figure, qtbot):
     initial_pos_y = dev.samy.read()["samy"]["value"]
 
     status = scans.mv(dev.samx, 1, dev.samy, 2, relative=True)
+    status.wait()
 
-    # wait for scan to finish
-    while not status.status == "COMPLETED":
-        qtbot.wait(200)
     final_pos_x = dev.samx.read()["samx"]["value"]
     final_pos_y = dev.samy.read()["samy"]["value"]
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import collections
 from typing import Literal, Optional
 from weakref import WeakValueDictionary
 
@@ -68,9 +69,17 @@ class BECDockArea(BECConnector, DockArea):
         """
         return dict(self.docks)
 
+    def get_docks_repr(self) -> dict:
+        docks_repr = {
+            "docks": collections.defaultdict(dict),
+            "tempAreas": list(map(str, self.tempAreas)),
+        }
+        for dock_name, dock in self.panels.items():
+            docks_repr["docks"][dock_name]["widgets"] = list(map(str, dock.widgets))
+        return docks_repr
+
     @panels.setter
     def panels(self, value: dict):
-
         self.docks = WeakValueDictionary(value)
 
     def restore_state(

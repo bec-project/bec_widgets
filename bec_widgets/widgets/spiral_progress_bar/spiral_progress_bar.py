@@ -136,6 +136,16 @@ class SpiralProgressBar(BECConnector, QWidget):
     def rings(self, value):
         self._rings = value
 
+    def __str__(self):
+        return (
+            "Spiral progress bar\n"
+            "-------------------\n"
+            f"  Num bars: {self.config.num_bars}\n"
+            f"Bar colors: {[ring.color.getRgb() for ring in self.rings]}\n"
+            f"Bar values: [{', '.join('%.3f' % ring.value for ring in self.rings)}]\n"
+            f"Bar config: {' | '.join('%d: config min=%.3f, max=%.3f' % (i, ring.config.min_value, ring.config.max_value) for i, ring in enumerate(self.rings))}\n"
+        )
+
     def update_config(self, config: SpiralProgressBarConfig | dict):
         """
         Update the configuration of the widget.
