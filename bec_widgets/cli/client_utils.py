@@ -61,10 +61,54 @@ def rpc_call(func):
     return wrapper
 
 
+def _get_output(process) -> None:
+    try:
+        os.set_blocking(process.stdout.fileno(), False)
+        os.set_blocking(process.stderr.fileno(), False)
+        while process.poll() is None:
+            readylist, _, _ = select.select([process.stdout, process.stderr], [], [], 1)
+            if process.stdout in readylist:
+                output = process.stdout.read(1024)
+                if output:
+                    print(output, end="")
+            if process.stderr in readylist:
+                error_output = process.stderr.read(1024)
+                if error_output:
+                    print(error_output, end="", file=sys.stderr)
+    except Exception as e:
+        print(f"Error reading process output: {str(e)}")
+
+
+def _start_plot_process(gui_id, gui_class, config) -> None:
+    """
+    Start the plot in a new process.
+    """
+    # pylint: disable=subprocess-run-check
+    monitor_module = importlib.import_module("bec_widgets.cli.server")
+    monitor_path = monitor_module.__file__
+
+    command = [
+        sys.executable,
+        "-u",
+        monitor_path,
+        "--id",
+        gui_id,
+        "--config",
+        config,
+        "--gui_class",
+        gui_class.__name__,
+    ]
+    process = subprocess.Popen(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process_output_processing_thread = threading.Thread(target=_get_output, args=(process,))
+    process_output_processing_thread.start()
+    return process, process_output_processing_thread
+
+
 class BECGuiClientMixin:
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._process = None
+        self._process_output_processing_thread = None
         self.auto_updates = self._get_update_script()
         self._target_endpoint = MessageEndpoints.scan_status()
         self._selected_device = None
@@ -118,7 +162,10 @@ class BECGuiClientMixin:
         Show the figure.
         """
         if self._process is None or self._process.poll() is not None:
-            self._start_plot_process()
+            self._start_update_script()
+            self._process, self._process_output_processing_thread = _start_plot_process(
+                self._gui_id, self.__class__, self._client._service_config.redis
+            )
         while not self.gui_is_alive():
             print("Waiting for GUI to start...")
             time.sleep(1)
@@ -138,34 +185,6 @@ class BECGuiClientMixin:
         self._process = None
         self._client.shutdown()
 
-    def _start_plot_process(self) -> None:
-        """
-        Start the plot in a new process.
-        """
-        self._start_update_script()
-        # pylint: disable=subprocess-run-check
-        config = self._client._service_config.redis
-        monitor_module = importlib.import_module("bec_widgets.cli.server")
-        monitor_path = monitor_module.__file__
-        gui_class = self.__class__.__name__
-
-        command = [
-            sys.executable,
-            "-u",
-            monitor_path,
-            "--id",
-            self._gui_id,
-            "--config",
-            config,
-            "--gui_class",
-            gui_class,
-        ]
-        self._process = subprocess.Popen(
-            command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
-        self._process_output_processing_thread = threading.Thread(target=self._get_output)
-        self._process_output_processing_thread.start()
-
     def print_log(self) -> None:
         """
         Print the log of the plot process.
@@ -175,26 +194,6 @@ class BECGuiClientMixin:
         print("".join(self.stderr_output))
         # Flush list
         self.stderr_output.clear()
-
-    def _get_output(self) -> str:
-        try:
-            os.set_blocking(self._process.stdout.fileno(), False)
-            os.set_blocking(self._process.stderr.fileno(), False)
-            while self._process.poll() is None:
-                readylist, _, _ = select.select(
-                    [self._process.stdout, self._process.stderr], [], [], 1
-                )
-                if self._process.stdout in readylist:
-                    output = self._process.stdout.read(1024)
-                    if output:
-                        print(output, end="")
-                if self._process.stderr in readylist:
-                    error_output = self._process.stderr.read(1024)
-                    if error_output:
-                        print(error_output, end="", file=sys.stderr)
-                        self.stderr_output.append(error_output)
-        except Exception as e:
-            print(f"Error reading process output: {str(e)}")
 
 
 class RPCResponseTimeoutError(Exception):
