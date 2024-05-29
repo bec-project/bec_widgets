@@ -1,0 +1,4 @@
+{
+    "files": ["selection.py", "motor_selection_launch.py", "registertictactoe.py", "tictactoeplugin.py",
+    "tictactoetaskmenu.py"]
+}
