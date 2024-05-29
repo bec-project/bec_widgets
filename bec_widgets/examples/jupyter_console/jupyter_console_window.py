@@ -2,18 +2,16 @@ import os
 
 import numpy as np
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtWidgets
+import qdarktheme
 from qtconsole.inprocess import QtInProcessKernelManager
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
-from bec_widgets.cli.rpc_register import RPCRegister
 from bec_widgets.utils import BECDispatcher, UILoader
 from bec_widgets.widgets import BECFigure
 from bec_widgets.widgets.dock.dock_area import BECDockArea
-from bec_widgets.widgets.spiral_progress_bar.spiral_progress_bar import SpiralProgressBar
 
 
 class JupyterConsoleWidget(RichJupyterWidget):  # pragma: no cover:
@@ -26,7 +24,6 @@ class JupyterConsoleWidget(RichJupyterWidget):  # pragma: no cover:
         self.kernel_client.start_channels()
 
         self.kernel_manager.kernel.shell.push({"np": np, "pg": pg})
-        # self.set_console_font_size(70)
 
     def shutdown_kernel(self):
         self.kernel_client.stop_channels()
@@ -46,27 +43,22 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
 
         self.ui.splitter.setSizes([200, 100])
         self.safe_close = False
-        # self.figure.clean_signal.connect(self.confirm_close)
-
-        self.register = RPCRegister()
-        self.register.add_rpc(self.figure)
 
         # console push
         self.console.kernel_manager.kernel.shell.push(
             {
                 "fig": self.figure,
-                "register": self.register,
                 "dock": self.dock,
                 "w1": self.w1,
                 "w2": self.w2,
                 "w3": self.w3,
+                "d0": self.d0,
                 "d1": self.d1,
                 "d2": self.d2,
-                "d3": self.d3,
+                "fig0": self.fig0,
+                "fig1": self.fig1,
+                "fig2": self.fig2,
                 "bar": self.bar,
-                "b2a": self.button_2_a,
-                "b2b": self.button_2_b,
-                "b2c": self.button_2_c,
                 "bec": self.figure.client,
                 "scans": self.figure.client.scans,
                 "dev": self.figure.client.device_manager.devices,
@@ -111,25 +103,22 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.c1 = self.w1.get_config()
 
     def _init_dock(self):
-        self.button_1 = QtWidgets.QPushButton("Button 1 ")
-        self.button_2_a = QtWidgets.QPushButton("Button to be added at place 0,0 in d3")
-        self.button_2_b = QtWidgets.QPushButton("button after without postions specified")
-        self.button_2_c = QtWidgets.QPushButton("button super late")
-        self.button_3 = QtWidgets.QPushButton("Button above Figure ")
-        self.bar = SpiralProgressBar()
 
-        self.label_2 = QtWidgets.QLabel("label which is added separately")
-        self.label_3 = QtWidgets.QLabel("Label above figure")
+        self.d0 = self.dock.add_dock(name="dock_0")
+        self.fig0 = self.d0.add_widget_bec("BECFigure")
+        self.fig0.image("eiger", vrange=(0, 100))
 
-        self.d1 = self.dock.add_dock(widget=self.button_1, position="left")
-        self.d1.addWidget(self.label_2)
-        self.d2 = self.dock.add_dock(widget=self.bar, position="right")
-        self.d3 = self.dock.add_dock(name="figure")
-        self.fig_dock3 = BECFigure()
-        self.fig_dock3.plot(x_name="samx", y_name="bpm4d")
-        self.d3.add_widget(self.label_3)
-        self.d3.add_widget(self.button_3)
-        self.d3.add_widget(self.fig_dock3)
+        self.d1 = self.dock.add_dock(name="dock_1", position="right")
+        self.fig1 = self.d1.add_widget_bec("BECFigure")
+        self.fig1.plot(x_name="samx", y_name="bpm4i")
+        self.fig1.plot(x_name="samx", y_name="bpm3a")
+
+        self.d2 = self.dock.add_dock(name="dock_2", position="bottom")
+        self.fig2 = self.d2.add_widget_bec("BECFigure", row=0, col=0)
+        self.fig2.motor_map(x_name="samx", y_name="samy")
+        self.fig2.plot(x_name="samx", y_name="bpm4i")
+        self.bar = self.d2.add_widget_bec("SpiralProgressBar", row=0, col=1)
+        self.bar.set_diameter(200)
 
         self.dock.save_state()
 
@@ -155,6 +144,7 @@ if __name__ == "__main__":  # pragma: no cover
     app = QApplication(sys.argv)
     app.setApplicationName("Jupyter Console")
     app.setApplicationDisplayName("Jupyter Console")
+    qdarktheme.setup_theme("auto")
     icon = QIcon()
     icon.addFile(os.path.join(module_path, "assets", "terminal_icon.png"), size=QSize(48, 48))
     app.setWindowIcon(icon)
