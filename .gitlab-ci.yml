@@ -273,7 +273,7 @@ end-2-end-conda:
     - cd ../
     - pip install -e .[dev,pyqt6]
     - cd ./tests/end-2-end
-    - pytest --start-servers --flush-redis --random-order
+    - pytest -v --start-servers --flush-redis --random-order
 
   artifacts:
     when: on_failure
