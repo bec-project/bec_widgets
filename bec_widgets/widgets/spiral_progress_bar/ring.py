@@ -54,8 +54,8 @@ class RingConfig(ConnectionConfig):
         description="Start position for the progress bars in degrees. Default is 90 degrees - corespons to "
         "the top of the ring.",
     )
-    min_value: int | None = Field(0, description="Minimum value for the progress bars.")
-    max_value: int | None = Field(100, description="Maximum value for the progress bars.")
+    min_value: int | float | None = Field(0, description="Minimum value for the progress bars.")
+    max_value: int | float | None = Field(100, description="Maximum value for the progress bars.")
     precision: int | None = Field(3, description="Precision for the progress bars.")
     update_behaviour: Literal["manual", "auto"] | None = Field(
         "auto", description="Update behaviour for the progress bars."
