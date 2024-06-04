@@ -14,7 +14,7 @@ Before installing BEC Widgets, please ensure the following requirements are met:
 Install BEC Widgets using the pip package manager. Open your terminal and execute:
 
 ```bash
-pip install bec_widgets
+pip install bec_widgets PyQt6
 ```
 
 This command installs BEC Widgets along with its dependencies, including the default PyQt6.

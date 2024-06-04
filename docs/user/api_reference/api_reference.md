@@ -1,10 +1,11 @@
-## API Reference
+(user.api_reference)=
+# User API Reference
 
 ```{eval-rst}
 .. autosummary::
    :toctree: _autosummary
    :template: custom-module-template.rst
-   :recursive:
 
-   bec_widgets
+    bec_widgets.cli.client
+
 ```

@@ -64,6 +64,7 @@ add_module_names = False  # Remove namespaces from class/method signatures
 autodoc_inherit_docstrings = True  # If no docstring, inherit from base class
 set_type_checking_flag = True  # Enable 'expensive' imports for sphinx_autodoc_typehints
 autoclass_content = "both"  # Include both class docstring and __init__
+autodoc_mock_imports = ["pyqtgraph"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -76,6 +77,5 @@ language = "Python"
 
 html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]
-html_css_files = ["css/custom.css"]
-html_logo = "_static/bec.png"
-html_theme_options = {"show_nav_level": 1, "navbar_align": "content"}
+html_css_files = ["custom.css"]
+html_logo = "../bec_widgets/assets/bec_widgets_icon.png"

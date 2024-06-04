@@ -1,14 +1,6 @@
 (developer)=
 # Development
 
-```{toctree}
----
-maxdepth: 1
-hidden: true
----
-reference/
-```
-
 To contribute to the development of BEC Widgets, start by setting up the development environment:
 
 1. **Clone the Repository**: 

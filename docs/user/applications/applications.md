@@ -1,4 +1,4 @@
-(user.apps)=
+(user.applications)=
 # Applications
 
 **Coming soon**

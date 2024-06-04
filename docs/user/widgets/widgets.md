@@ -15,7 +15,7 @@ BEC Widgets includes a variety of visualization widgets designed to cater to div
 - Customizable visual elements such as line color and style.
 
 **Example of Use:**
-![Waveform 1D](./widgets/w1D.gif)
+![Waveform 1D](./w1D.gif)
 ### 2D Scatter Plot
 
 **Purpose:** The 2D scatter plot widget is designed for more complex data visualization. It employs a false color map to represent a third dimension (z-axis), making it an ideal tool for visualizing multidimensional data sets.
@@ -27,7 +27,7 @@ BEC Widgets includes a variety of visualization widgets designed to cater to div
 - Tools for selecting and inspecting specific data points.
 
 **Example of Use:**
-![Waveform 1D](./widgets/scatter_2D.gif)
+![Waveform 1D](./scatter_2D.gif)
 ### Motor Position Map
 
 **Purpose:** A specialized component derived from the Motor Alignment Tool. It's focused on tracking and visualizing the position of motors, crucial for precise alignment and movement tracking during scans.
@@ -38,4 +38,4 @@ BEC Widgets includes a variety of visualization widgets designed to cater to div
 - Ability to record and recall specific motor positions for repetitive tasks.
 
 **Example of Use:**
-![Waveform 1D](./widgets/motor.gif)
+![Waveform 1D](./motor.gif)

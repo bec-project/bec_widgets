@@ -1,39 +1,70 @@
 # BEC Widgets documentation
 
+A flexible and extensible framework for building graphical user interfaces in Python, optimized for use in the BEC environment.
+
 <br><br>
 
-````{grid} 3
+<br><br>
+
+````{grid} 2
 :gutter: 5
 
-```{grid-item-card}  Introduction
+```{grid-item-card}
 :link: introduction
 :link-type: ref
+:img-top: /assets/index_getting_started.svg
+:text-align: center
 
-General information.
+## Introduction
+
+General information about BEC Widgets.
 ```
 
-```{grid-item-card}  User
+```{grid-item-card}
 :link: user
 :link-type: ref
+:img-top:  /assets/index_user_guide.svg
+:text-align: center
 
-Information for users.
+## User guide
+
+Information for users of BEC Widgets.
 ```
 
-```{grid-item-card}  Developer
+```{grid-item-card} 
 :link: developer
 :link-type: ref
+:img-top: /assets/index_contribute.svg
+:text-align: center
 
-Information for developers.
+## Developer guide
+
+Information for developers of BEC Widgets. 
 ```
+
+```{grid-item-card} 
+:link: api_reference
+:link-type: ref
+:img-top: /assets/index_api.svg
+:text-align: center
+
+## API reference
+
+Comprehensive reference of all BEC Widget classes, functions, and methods.
+```
+
 ````
 
 
 ```{toctree}
 ---
 numbered: true
-maxdepth: 1
+maxdepth: 2
+hidden: true
 ---
 
 introduction/introduction
 user/user
 developer/developer
+api_reference/api_reference
+```
