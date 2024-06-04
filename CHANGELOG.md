@@ -2,6 +2,15 @@
 
 
 
+## v0.56.1 (2024-06-04)
+
+### Fix
+
+* fix(spiral_progress_bar/rings): config min/max values added check for floats ([`9d615c9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9d615c915c8f7cc2ea8f1dc17993b98fe462c682))
+
+* fix(spiral_progress_bar): Endpoint is always stored as a string in the RingConnection Config ([`d253991`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d2539918b296559e1d684344e179775a2423daa9))
+
+
 ## v0.56.0 (2024-05-29)
 
 ### Build
@@ -166,18 +175,3 @@
 ### Fix
 
 * fix(cli): BECFigure takes the port to connect to redis from the current BECClient, supporting plugins ([`57cb136`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/57cb136a098e87a452414bf44e627edb562f6799))
-
-
-## v0.50.0 (2024-04-29)
-
-### Fix
-
-* fix(widgets/figure): access pattern changed for getting widgets by coordinates for rpc ([`13c018a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/13c018a79704a7497c140df57179d294e43ecffa))
-
-* fix(plots): cleanup policy reviewed for children items ([`8f20a0b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8f20a0b3b1b5dd117b36b45645717190b9ee9cbf))
-
-### Test
-
-* test(cli/rpc_register): e2e RPCRegister ([`4f261be`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4f261be4c7cfe54501443d031f9266f4f838f6e2))
-
-* test(cli/rpc_register): rpc_register tests added ([`40eb75f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/40eb75f85a4d99d498b086a37e799276a9d2ac3f))
