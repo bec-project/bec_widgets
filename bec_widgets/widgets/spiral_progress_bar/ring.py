@@ -17,16 +17,16 @@ class RingConnections(BaseModel):
     @field_validator("endpoint")
     def validate_endpoint(cls, v, values):
         slot = values.data["slot"]
-        endpoint = v.endpoint if isinstance(v, EndpointInfo) else v
+        v = v.endpoint if isinstance(v, EndpointInfo) else v
         if slot == "on_scan_progress":
-            if endpoint != "scans/scan_progress":
+            if v != "scans/scan_progress":
                 raise PydanticCustomError(
                     "unsupported endpoint",
                     "For slot 'on_scan_progress', endpoint must be MessageEndpoint.scan_progress or 'scans/scan_progress'.",
                     {"wrong_value": v},
                 )
         elif slot == "on_device_readback":
-            if not endpoint.startswith("internal/devices/readback/"):
+            if not v.startswith("internal/devices/readback/"):
                 raise PydanticCustomError(
                     "unsupported endpoint",
                     "For slot 'on_device_readback', endpoint must be MessageEndpoint.device_readback(device) or 'internal/devices/readback/{device}'.",
