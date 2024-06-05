@@ -23,17 +23,18 @@ def test_rpc_add_dock_with_figure_e2e(bec_client_lib, rpc_server_dock):
     d1 = dock.add_dock("dock_1")
     d2 = dock.add_dock("dock_2")
 
-    assert len(dock.get_docks_repr()["docks"]) == 3
+    dock_config = dock.config_dict
+    assert len(dock_config["docks"]) == 3
     # Add 3 figures with some widgets
     fig0 = d0.add_widget("BECFigure")
     fig1 = d1.add_widget("BECFigure")
     fig2 = d2.add_widget("BECFigure")
 
-    docks = dock.get_docks_repr()["docks"]
-    assert len(docks) == 3
-    assert len(docks["dock_0"]["widgets"]) == 1
-    assert len(docks["dock_1"]["widgets"]) == 1
-    assert len(docks["dock_2"]["widgets"]) == 1
+    dock_config = dock.config_dict
+    assert len(dock_config["docks"]) == 3
+    assert len(dock_config["docks"]["dock_0"]["widgets"]) == 1
+    assert len(dock_config["docks"]["dock_1"]["widgets"]) == 1
+    assert len(dock_config["docks"]["dock_2"]["widgets"]) == 1
 
     assert fig1.__class__.__name__ == "BECFigure"
     assert fig1.__class__ == BECFigure
@@ -123,30 +124,31 @@ def test_dock_manipulations_e2e(rpc_server_dock):
     d0 = dock.add_dock("dock_0")
     d1 = dock.add_dock("dock_1")
     d2 = dock.add_dock("dock_2")
-    assert len(dock.get_docks_repr()["docks"]) == 3
+    dock_config = dock.config_dict
+    assert len(dock_config["docks"]) == 3
 
     d0.detach()
     dock.detach_dock("dock_2")
-    docks_repr = dock.get_docks_repr()
-    assert len(docks_repr["docks"]) == 3
-    assert len(docks_repr["tempAreas"]) == 2
+    dock_config = dock.config_dict
+    assert len(dock_config["docks"]) == 3
+    assert len(dock.temp_areas) == 2
 
     d0.attach()
-    docks_repr = dock.get_docks_repr()
-    assert len(docks_repr["docks"]) == 3
-    assert len(docks_repr["tempAreas"]) == 1
+    dock_config = dock.config_dict
+    assert len(dock_config["docks"]) == 3
+    assert len(dock.temp_areas) == 1
 
     d2.remove()
-    docks_repr = dock.get_docks_repr()
-    assert len(docks_repr["docks"]) == 2
+    dock_config = dock.config_dict
+    assert len(dock_config["docks"]) == 2
 
-    assert ["dock_0", "dock_1"] == list(docks_repr["docks"])
+    assert ["dock_0", "dock_1"] == list(dock_config["docks"])
 
     dock.clear_all()
 
-    docks_repr = dock.get_docks_repr()
-    assert len(docks_repr["docks"]) == 0
-    assert len(docks_repr["tempAreas"]) == 0
+    dock_config = dock.config_dict
+    assert len(dock_config["docks"]) == 0
+    assert len(dock.temp_areas) == 0
 
 
 def test_spiral_bar(rpc_server_dock):

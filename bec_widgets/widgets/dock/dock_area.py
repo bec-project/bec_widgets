@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import collections
 from typing import Literal, Optional
 from weakref import WeakValueDictionary
 
@@ -34,6 +33,7 @@ class BECDockArea(BECConnector, DockArea):
         "detach_dock",
         "attach_all",
         "get_all_rpc",
+        "temp_areas",
     ]
 
     def __init__(
@@ -69,18 +69,23 @@ class BECDockArea(BECConnector, DockArea):
         """
         return dict(self.docks)
 
-    def get_docks_repr(self) -> dict:
-        docks_repr = {
-            "docks": collections.defaultdict(dict),
-            "tempAreas": list(map(str, self.tempAreas)),
-        }
-        for dock_name, dock in self.panels.items():
-            docks_repr["docks"][dock_name]["widgets"] = list(map(str, dock.widgets))
-        return docks_repr
-
     @panels.setter
     def panels(self, value: dict):
         self.docks = WeakValueDictionary(value)
+
+    @property
+    def temp_areas(self) -> list:
+        """
+        Get the temporary areas in the dock area.
+
+        Returns:
+            list: The temporary areas in the dock area.
+        """
+        return list(map(str, self.tempAreas))
+
+    @temp_areas.setter
+    def temp_areas(self, value: list):
+        self.tempAreas = list(map(str, value))
 
     def restore_state(
         self, state: dict = None, missing: Literal["ignore", "error"] = "ignore", extra="bottom"
@@ -116,6 +121,7 @@ class BECDockArea(BECConnector, DockArea):
             name(str): The name of the dock to remove.
         """
         dock = self.docks.pop(name, None)
+        self.config.docks.pop(name, None)
         if dock:
             dock.close()
             if len(self.docks) <= 1:
@@ -199,7 +205,7 @@ class BECDockArea(BECConnector, DockArea):
             BECDock: The undocked dock.
         """
         dock = self.docks[dock_name]
-        self.floatDock(dock)
+        dock.detach()
         return dock
 
     def attach_all(self):
