@@ -1890,7 +1890,7 @@ class Ring(RPCBase):
         """
 
     @rpc_call
-    def set_min_max_values(self, min_value: "int", max_value: "int"):
+    def set_min_max_values(self, min_value: "int | float", max_value: "int | float"):
         """
         None
         """

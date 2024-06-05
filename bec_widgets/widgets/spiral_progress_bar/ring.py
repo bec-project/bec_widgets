@@ -49,7 +49,7 @@ class RingConfig(ConnectionConfig):
         description="Background color for the progress bars. Can be tuple (R, G, B, A) or string HEX Code.",
     )
     index: int | None = Field(0, description="Index of the progress bar. 0 is outer ring.")
-    line_width: int | None = Field(5, description="Line widths for the progress bars.")
+    line_width: int | None = Field(10, description="Line widths for the progress bars.")
     start_position: int | None = Field(
         90,
         description="Start position for the progress bars in degrees. Default is 90 degrees - corespons to "

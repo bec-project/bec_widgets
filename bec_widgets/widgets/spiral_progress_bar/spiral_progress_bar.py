@@ -118,7 +118,7 @@ class SpiralProgressBar(BECConnector, QWidget):
 
         # For updating bar behaviour
         self._auto_updates = True
-        self._rings = []
+        self._rings = None
 
         if num_bars is not None:
             self.config.num_bars = max(
@@ -211,6 +211,7 @@ class SpiralProgressBar(BECConnector, QWidget):
         self._reindex_rings()
         if self.config.color_map:
             self.set_colors_from_map(self.config.color_map)
+        del ring
         self.update()
 
     def _reindex_rings(self):
@@ -269,9 +270,30 @@ class SpiralProgressBar(BECConnector, QWidget):
         num_bars = max(
             self.config.min_number_of_bars, min(num_bars, self.config.max_number_of_bars)
         )
-        if num_bars != self.config.num_bars:
-            self.config.num_bars = num_bars
-            self.initialize_bars()
+        current_num_bars = self.config.num_bars
+
+        if num_bars > current_num_bars:
+            for i in range(current_num_bars, num_bars):
+                new_ring_config = RingConfig(
+                    widget_class="Ring", index=i, start_positions=90 * 16, directions=-1
+                )
+                self.config.rings.append(new_ring_config)
+                new_ring = Ring(parent_progress_widget=self, config=new_ring_config)
+                self._rings.append(new_ring)
+
+        elif num_bars < current_num_bars:
+            for i in range(current_num_bars - 1, num_bars - 1, -1):
+                self.remove_ring(i)
+
+        self.config.num_bars = num_bars
+
+        if self.config.color_map:
+            self.set_colors_from_map(self.config.color_map)
+
+        base_line_width = self._rings[0].config.line_width
+        self.set_line_widths(base_line_width)
+
+        self.update()
 
     def set_value(self, values: int | list, ring_index: int = None):
         """
