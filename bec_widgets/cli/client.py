@@ -1468,20 +1468,20 @@ class BECDock(RPCBase):
         """
 
     @rpc_call
-    def add_widget_bec(
+    def add_widget(
         self,
-        widget_type: "str",
+        widget: "BECConnector | str",
         row=None,
         col=0,
         rowspan=1,
         colspan=1,
         shift: "Literal['down', 'up', 'left', 'right']" = "down",
-    ):
+    ) -> "BECConnector":
         """
         Add a widget to the dock.
 
         Args:
-            widget_type(str): The widget to add. Only BEC RPC widgets from RPCWidgetHandler are allowed.
+            widget(QWidget): The widget to add.
             row(int): The row to add the widget to. If None, the widget will be added to the next available row.
             col(int): The column to add the widget to.
             rowspan(int): The number of rows the widget should span.

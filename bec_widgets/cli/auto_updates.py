@@ -30,7 +30,7 @@ class AutoUpdates:
         Create a default dock for the auto updates.
         """
         dock = self.gui.add_dock("default_figure")
-        dock.add_widget_bec("BECFigure")
+        dock.add_widget("BECFigure")
         self.dock_name = "default_figure"
 
     @staticmethod
