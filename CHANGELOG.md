@@ -2,6 +2,17 @@
 
 
 
+## v0.57.0 (2024-06-05)
+
+### Documentation
+
+* docs: extend user documentation for BEC Widgets ([`4160f3d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4160f3d6d7ec1122785b5e3fdfc4afe67a95e9a1))
+
+### Feature
+
+* feat(widgets/console): BECJupyterConsole added ([`8c03034`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8c03034acf6b3ed1e346ebf1b785d41068513cc5))
+
+
 ## v0.56.3 (2024-06-05)
 
 ### Ci
@@ -153,10 +164,6 @@
 
 ## v0.52.0 (2024-05-07)
 
-### Ci
-
-* ci: fixed support for child pipelines ([`e65c7f3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e65c7f3be895ada407bd358edf67d569d2cab08e))
-
 ### Feature
 
 * feat(utils/layout_manager): added GridLayoutManager to extend functionalities of native QGridLayout ([`fcd6ef0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fcd6ef0975dc872f69c9d6fb2b8a1ad04a423aae))
@@ -166,10 +173,3 @@
 ### Fix
 
 * fix(widgets/dock): BECDockArea close overwrites the default pyqtgraph Container close + minor improvements ([`ceae979`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ceae979f375ecc33c5c97148f197655c1ca57b6c))
-
-### Refactor
-
-* refactor(widget/plots): WidgetConfig changed to SubplotConfig ([`03fa1f2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/03fa1f26d0fa6b58ed05556fb2438d1e62f6c107))
-
-
-## v0.51.0 (2024-05-07)
