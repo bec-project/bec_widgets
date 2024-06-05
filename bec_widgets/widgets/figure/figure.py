@@ -26,7 +26,7 @@ class FigureConfig(ConnectionConfig):
     theme: Literal["dark", "light"] = Field("dark", description="The theme of the figure widget.")
     num_cols: int = Field(1, description="The number of columns in the figure widget.")
     num_rows: int = Field(1, description="The number of rows in the figure widget.")
-    widgets: dict[str, SubplotConfig] = Field(
+    widgets: dict[str, Waveform1DConfig | ImageConfig | MotorMapConfig | SubplotConfig] = Field(
         {}, description="The list of widgets to be added to the figure widget."
     )
 
