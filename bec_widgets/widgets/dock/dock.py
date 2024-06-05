@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Optional, Any
+from typing import TYPE_CHECKING, Any, Literal, Optional
 
 from pydantic import Field
 from pyqtgraph.dockarea import Dock

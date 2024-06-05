@@ -163,7 +163,7 @@ def test_spiral_bar(rpc_server_dock):
 
     expected_colors = Colors.golden_angle_color("viridis", 5, "RGB")
     bar_colors = [ring.color.getRgb() for ring in bar_server.rings]
-    bar_values = [ring.value for ring in bar_server.rings]
+    bar_values = [ring.config.value for ring in bar_server.rings]
     assert bar_values == [10, 20, 30, 40, 50]
     assert bar_colors == expected_colors
 
@@ -188,7 +188,7 @@ def test_spiral_bar_scan_update(rpc_server_dock, qtbot):
     qtbot.wait(200)
     bar_server = dock_server.docks["dock_0"].widgets[0]
     assert bar_server.config.num_bars == 1
-    np.testing.assert_allclose(bar_server.rings[0].value, 10, atol=0.1)
+    np.testing.assert_allclose(bar_server.rings[0].config.value, 10, atol=0.1)
     np.testing.assert_allclose(bar_server.rings[0].config.min_value, 0, atol=0.1)
     np.testing.assert_allclose(bar_server.rings[0].config.max_value, 10, atol=0.1)
 
@@ -199,7 +199,7 @@ def test_spiral_bar_scan_update(rpc_server_dock, qtbot):
 
     qtbot.wait(200)
     assert bar_server.config.num_bars == 1
-    np.testing.assert_allclose(bar_server.rings[0].value, 16, atol=0.1)
+    np.testing.assert_allclose(bar_server.rings[0].config.value, 16, atol=0.1)
     np.testing.assert_allclose(bar_server.rings[0].config.min_value, 0, atol=0.1)
     np.testing.assert_allclose(bar_server.rings[0].config.max_value, 16, atol=0.1)
 
@@ -218,8 +218,8 @@ def test_spiral_bar_scan_update(rpc_server_dock, qtbot):
 
     qtbot.wait(200)
     assert bar_server.config.num_bars == 2
-    np.testing.assert_allclose(bar_server.rings[0].value, final_samx, atol=0.1)
-    np.testing.assert_allclose(bar_server.rings[1].value, final_samy, atol=0.1)
+    np.testing.assert_allclose(bar_server.rings[0].config.value, final_samx, atol=0.1)
+    np.testing.assert_allclose(bar_server.rings[1].config.value, final_samy, atol=0.1)
     np.testing.assert_allclose(bar_server.rings[0].config.min_value, init_samx, atol=0.1)
     np.testing.assert_allclose(bar_server.rings[1].config.min_value, init_samy, atol=0.1)
     np.testing.assert_allclose(bar_server.rings[0].config.max_value, final_samx, atol=0.1)

@@ -36,6 +36,7 @@ class RingConnections(BaseModel):
 
 
 class RingConfig(ConnectionConfig):
+    value: int | float | None = Field(0, description="Value for the progress bars.")
     direction: int | None = Field(
         -1, description="Direction of the progress bars. -1 for clockwise, 1 for counter-clockwise."
     )
@@ -102,7 +103,6 @@ class Ring(BECConnector):
         self.background_color = None
         self.start_position = None
         self.config = config
-        self.value = 0
         self.RID = None
         self._init_config_params()
 
@@ -114,7 +114,7 @@ class Ring(BECConnector):
             self.set_connections(self.config.connections.slot, self.config.connections.endpoint)
 
     def set_value(self, value: int | float):
-        self.value = round(
+        self.config.value = round(
             max(self.config.min_value, min(self.config.max_value, value)), self.config.precision
         )
 

@@ -145,12 +145,12 @@ def test_bar_set_value(spiral_progress_bar):
     assert len(spiral_progress_bar.rings) == 5
 
     spiral_progress_bar.set_value([10, 20, 30, 40, 50])
-    ring_values = [ring.value for ring in spiral_progress_bar.rings]
+    ring_values = [ring.config.value for ring in spiral_progress_bar.rings]
     assert ring_values == [10, 20, 30, 40, 50]
 
     # update just one bar
     spiral_progress_bar.set_value(90, 1)
-    ring_values = [ring.value for ring in spiral_progress_bar.rings]
+    ring_values = [ring.config.value for ring in spiral_progress_bar.rings]
     assert ring_values == [10, 90, 30, 40, 50]
 
 
@@ -166,7 +166,7 @@ def test_bar_set_precision(spiral_progress_bar):
     assert ring_precision == [2, 2, 2]
 
     spiral_progress_bar.set_value([10.1234, 20.1234, 30.1234])
-    ring_values = [ring.value for ring in spiral_progress_bar.rings]
+    ring_values = [ring.config.value for ring in spiral_progress_bar.rings]
     assert ring_values == [10.12, 20.12, 30.12]
 
     spiral_progress_bar.set_precision(4, 1)
@@ -174,7 +174,7 @@ def test_bar_set_precision(spiral_progress_bar):
     assert ring_precision == [2, 4, 2]
 
     spiral_progress_bar.set_value([10.1234, 20.1234, 30.1234])
-    ring_values = [ring.value for ring in spiral_progress_bar.rings]
+    ring_values = [ring.config.value for ring in spiral_progress_bar.rings]
     assert ring_values == [10.12, 20.1234, 30.12]
 
 
@@ -189,7 +189,7 @@ def test_set_min_max_value(spiral_progress_bar):
     assert ring_max_values == [10, 10]
 
     spiral_progress_bar.set_value([5, 15])
-    ring_values = [ring.value for ring in spiral_progress_bar.rings]
+    ring_values = [ring.config.value for ring in spiral_progress_bar.rings]
     assert ring_values == [5, 10]
 
 

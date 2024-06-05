@@ -115,7 +115,6 @@ class SpiralProgressBar(BECConnector, QWidget):
         self.entry_validator = EntryValidator(self.dev)
 
         self.RID = None
-        self.values = None
 
         # For updating bar behaviour
         self._auto_updates = True
@@ -544,7 +543,7 @@ class SpiralProgressBar(BECConnector, QWidget):
             pen = QtGui.QPen(ring.color, ring.config.line_width, QtCore.Qt.SolidLine)
             pen.setCapStyle(QtCore.Qt.RoundCap)
             painter.setPen(pen)
-            proportion = (ring.value - ring.config.min_value) / (
+            proportion = (ring.config.value - ring.config.min_value) / (
                 (ring.config.max_value - ring.config.min_value) + 1e-3
             )
             angle = int(proportion * 360 * 16 * ring.config.direction)
