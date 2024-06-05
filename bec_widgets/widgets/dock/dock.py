@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import TYPE_CHECKING, Literal, Optional, Any
 
 from pydantic import Field
 from pyqtgraph.dockarea import Dock
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 class DockConfig(ConnectionConfig):
-    widgets: dict[str, ConnectionConfig] = Field({}, description="The widgets in the dock.")
+    widgets: dict[str, Any] = Field({}, description="The widgets in the dock.")
     position: Literal["bottom", "top", "left", "right", "above", "below"] = Field(
         "bottom", description="The position of the dock."
     )
@@ -26,6 +26,7 @@ class DockConfig(ConnectionConfig):
 
 class BECDock(BECConnector, Dock):
     USER_ACCESS = [
+        "config_dict",
         "rpc_id",
         "widget_list",
         "show_title_bar",
@@ -179,6 +180,7 @@ class BECDock(BECConnector, Dock):
 
         widget = RPCWidgetHandler.create_widget(widget_type)
         self.addWidget(widget, row=row, col=col, rowspan=rowspan, colspan=colspan)
+        self.config.widgets[widget.gui_id] = widget.config
 
         return widget
 
@@ -209,6 +211,7 @@ class BECDock(BECConnector, Dock):
             self.layout_manager.shift_widgets(shift, start_row=row)
 
         self.addWidget(widget, row=row, col=col, rowspan=rowspan, colspan=colspan)
+        self.config.widgets[widget.gui_id] = widget.config
 
     def move_widget(self, widget: QWidget, new_row: int, new_col: int):
         """
@@ -242,6 +245,7 @@ class BECDock(BECConnector, Dock):
         """
         widget = self.rpc_register.get_rpc_by_id(widget_rpc_id)
         self.layout.removeWidget(widget)
+        self.config.widgets.pop(widget_rpc_id, None)
         widget.close()
 
     def remove(self):

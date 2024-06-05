@@ -1411,6 +1411,16 @@ class BECMotorMap(RPCBase):
 class BECDock(RPCBase):
     @property
     @rpc_call
+    def config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @property
+    @rpc_call
     def rpc_id(self) -> "str":
         """
         Get the RPC ID of the widget.
