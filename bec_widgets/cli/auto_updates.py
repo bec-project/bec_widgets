@@ -15,6 +15,7 @@ class ScanInfo(BaseModel):
     scan_report_devices: list
     monitored_devices: list
     status: str
+    model_config: dict = {"validate_assignment": True}
 
 
 class AutoUpdates:

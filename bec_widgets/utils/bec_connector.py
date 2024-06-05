@@ -20,6 +20,7 @@ class ConnectionConfig(BaseModel):
     gui_id: Optional[str] = Field(
         default=None, validate_default=True, description="The GUI ID of the widget."
     )
+    model_config: dict = {"validate_assignment": True}
 
     @field_validator("gui_id")
     def generate_gui_id(cls, v, values):

@@ -13,6 +13,7 @@ from bec_widgets.utils import BECConnector, ConnectionConfig
 class RingConnections(BaseModel):
     slot: Literal["on_scan_progress", "on_device_readback"] = None
     endpoint: EndpointInfo | str = None
+    model_config: dict = {"validate_assignment": True}
 
     @field_validator("endpoint")
     def validate_endpoint(cls, v, values):

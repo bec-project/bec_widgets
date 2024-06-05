@@ -20,6 +20,7 @@ class AxisConfig(BaseModel):
     y_lim: Optional[tuple] = Field(None, description="The limits of the y-axis.")
     x_grid: bool = Field(False, description="Show grid on the x-axis.")
     y_grid: bool = Field(False, description="Show grid on the y-axis.")
+    model_config: dict = {"validate_assignment": True}
 
 
 class SubplotConfig(ConnectionConfig):

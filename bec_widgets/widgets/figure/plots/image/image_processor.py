@@ -19,6 +19,7 @@ class ProcessingConfig(BaseModel):
     rotation: Optional[int] = Field(
         None, description="The rotation angle of the monitor data before displaying."
     )
+    model_config: dict = {"validate_assignment": True}
 
 
 class ImageProcessor:

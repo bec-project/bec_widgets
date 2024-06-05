@@ -17,6 +17,7 @@ class SignalData(BaseModel):
     unit: Optional[str] = None  # todo implement later
     modifier: Optional[str] = None  # todo implement later
     limits: Optional[list[float]] = None  # todo implement later
+    model_config: dict = {"validate_assignment": True}
 
 
 class Signal(BaseModel):
@@ -26,6 +27,7 @@ class Signal(BaseModel):
     x: SignalData  # TODO maybe add metadata for config gui later
     y: SignalData
     z: Optional[SignalData] = None
+    model_config: dict = {"validate_assignment": True}
 
 
 class CurveConfig(ConnectionConfig):
