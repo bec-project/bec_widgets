@@ -16,10 +16,14 @@ from .dock import BECDock, DockConfig
 
 class DockAreaConfig(ConnectionConfig):
     docks: dict[str, DockConfig] = Field({}, description="The docks in the dock area.")
+    docks_state: Optional[dict] = Field(
+        None, description="The state of the docks in the dock area."
+    )
 
 
 class BECDockArea(BECConnector, DockArea):
     USER_ACCESS = [
+        "config_dict",
         "panels",
         "save_state",
         "remove_dock",
@@ -81,7 +85,7 @@ class BECDockArea(BECConnector, DockArea):
             extra(str): Extra docks that are in the dockarea but that are not mentioned in state will be added to the bottom of the dockarea, unless otherwise specified by the extra argument.
         """
         if state is None:
-            state = self._last_state
+            state = self.config.docks_state
         self.restoreState(state, missing=missing, extra=extra)
 
     def save_state(self) -> dict:
@@ -91,8 +95,9 @@ class BECDockArea(BECConnector, DockArea):
         Returns:
             dict: The state of the dock area.
         """
-        self._last_state = self.saveState()
-        return self._last_state
+        last_state = self.saveState()
+        self.config.docks_state = last_state
+        return last_state
 
     def remove_dock(self, name: str):
         """
