@@ -2,6 +2,23 @@
 
 
 
+## v0.56.2 (2024-06-05)
+
+### Documentation
+
+* docs: restructured docs layout ([`3c9181d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3c9181d93d68faa4efb3b91c486ca9ca935975a0))
+
+### Fix
+
+* fix(bar): ring saves current value in config ([`9648e3e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9648e3ea96a4109be6be694d855151ed6d3ad661))
+
+* fix(dock): dock saves configs of all children widgets ([`4be756a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4be756a8676421c3a3451458995232407295df84))
+
+* fix(dock_area): save/restore state is saved in config ([`46face0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/46face0ee59122f04cb383da685a6658beeeb389))
+
+* fix(figure): added correct types of configs to subplot widgets ([`6f3b1ea`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6f3b1ea985c18929b9bab54239eeb600f03b274a))
+
+
 ## v0.56.1 (2024-06-04)
 
 ### Fix
@@ -150,10 +167,6 @@
 
 * build(cli): changed repo name to bec_widgets ([`799ea55`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/799ea554de9a7f3720d100be4886a63f02c6a390))
 
-* build(setup): fakeredis added to dev env ([`df32350`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/df323504fea024a97304d96c2e39e61450714069))
-
-* build(setup): PyQt6 version is set to 6.7 ([`0ab8aa3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0ab8aa3a2fe51b5c38b25fca44c1c422bb42478d))
-
 ### Ci
 
 * ci: added rule for parent-child pipelines ([`e085125`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e0851250eecb85503db929d37f75d2ba366308a6))
@@ -161,17 +174,3 @@
 ### Feature
 
 * feat(utils): added plugin helper to find and load ([`5ece269`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5ece269adb0e9b0c2a468f1dfbaa6212e86d3561))
-
-
-## v0.50.2 (2024-04-30)
-
-### Fix
-
-* fix: &#39;disconnect_slot&#39; has to be symmetric with &#39;connect_slot&#39; regarding QtThreadSafeCallback ([`0dfcaa4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0dfcaa4b708948af0a40ec7cf34d03ff1e96ffac))
-
-
-## v0.50.1 (2024-04-29)
-
-### Fix
-
-* fix(cli): BECFigure takes the port to connect to redis from the current BECClient, supporting plugins ([`57cb136`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/57cb136a098e87a452414bf44e627edb562f6799))
