@@ -130,7 +130,7 @@ class Ring(BECConnector):
     def set_line_width(self, width: int):
         self.config.line_width = width
 
-    def set_min_max_values(self, min_value: int, max_value: int):
+    def set_min_max_values(self, min_value: int | float, max_value: int | float):
         self.config.min_value = min_value
         self.config.max_value = max_value
 
