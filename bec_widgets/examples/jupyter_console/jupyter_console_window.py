@@ -104,19 +104,19 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
     def _init_dock(self):
 
         self.d0 = self.dock.add_dock(name="dock_0")
-        self.fig0 = self.d0.add_widget_bec("BECFigure")
+        self.fig0 = self.d0.add_widget("BECFigure")
         self.fig0.image("eiger", vrange=(0, 100))
 
         self.d1 = self.dock.add_dock(name="dock_1", position="right")
-        self.fig1 = self.d1.add_widget_bec("BECFigure")
+        self.fig1 = self.d1.add_widget("BECFigure")
         self.fig1.plot(x_name="samx", y_name="bpm4i")
         self.fig1.plot(x_name="samx", y_name="bpm3a")
 
         self.d2 = self.dock.add_dock(name="dock_2", position="bottom")
-        self.fig2 = self.d2.add_widget_bec("BECFigure", row=0, col=0)
+        self.fig2 = self.d2.add_widget("BECFigure", row=0, col=0)
         self.fig2.motor_map(x_name="samx", y_name="samy")
         self.fig2.plot(x_name="samx", y_name="bpm4i")
-        self.bar = self.d2.add_widget_bec("SpiralProgressBar", row=0, col=1)
+        self.bar = self.d2.add_widget("SpiralProgressBar", row=0, col=1)
         self.bar.set_diameter(200)
 
         self.dock.save_state()

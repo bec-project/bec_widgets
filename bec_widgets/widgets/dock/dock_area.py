@@ -171,9 +171,7 @@ class BECDockArea(BECConnector, DockArea):
                 dock.show_title_bar()
 
         if widget is not None and isinstance(widget, str):
-            dock.add_widget_bec(
-                widget_type=widget, row=row, col=col, rowspan=rowspan, colspan=colspan
-            )
+            dock.add_widget(widget=widget, row=row, col=col, rowspan=rowspan, colspan=colspan)
         elif widget is not None and isinstance(widget, QWidget):
             dock.addWidget(widget, row=row, col=col, rowspan=rowspan, colspan=colspan)
         if self._instructions_visible:

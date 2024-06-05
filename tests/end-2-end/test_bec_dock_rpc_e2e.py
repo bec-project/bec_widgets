@@ -38,9 +38,9 @@ def test_rpc_add_dock_with_figure_e2e(rpc_server_dock, qtbot):
     assert len(dock_server.docks) == 3
 
     # Add 3 figures with some widgets
-    fig0 = d0.add_widget_bec("BECFigure")
-    fig1 = d1.add_widget_bec("BECFigure")
-    fig2 = d2.add_widget_bec("BECFigure")
+    fig0 = d0.add_widget("BECFigure")
+    fig1 = d1.add_widget("BECFigure")
+    fig2 = d2.add_widget("BECFigure")
 
     assert len(dock_server.docks) == 3
     assert len(dock_server.docks["dock_0"].widgets) == 1
@@ -166,7 +166,7 @@ def test_spiral_bar(rpc_server_dock):
 
     d0 = dock.add_dock(name="dock_0")
 
-    bar = d0.add_widget_bec("SpiralProgressBar")
+    bar = d0.add_widget("SpiralProgressBar")
     assert bar.__class__.__name__ == "SpiralProgressBar"
 
     bar.set_number_of_bars(5)
@@ -188,7 +188,7 @@ def test_spiral_bar_scan_update(rpc_server_dock, qtbot):
 
     d0 = dock.add_dock("dock_0")
 
-    d0.add_widget_bec("SpiralProgressBar")
+    d0.add_widget("SpiralProgressBar")
 
     client = rpc_server_dock.client
     dev = client.device_manager.devices
