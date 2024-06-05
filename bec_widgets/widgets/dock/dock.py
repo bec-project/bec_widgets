@@ -131,6 +131,7 @@ class BECDock(BECConnector, Dock):
         """
         self.parent_dock_area.docks[title] = self.parent_dock_area.docks.pop(self.name())
         self.setTitle(title)
+        self._name = title
 
     def get_widgets_positions(self) -> dict:
         """
