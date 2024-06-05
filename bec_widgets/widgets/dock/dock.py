@@ -93,7 +93,7 @@ class BECDock(BECConnector, Dock):
             super().float()
 
     @property
-    def widget_list(self) -> list:
+    def widget_list(self) -> list[BECConnector]:
         """
         Get the widgets in the dock.
 
@@ -103,7 +103,7 @@ class BECDock(BECConnector, Dock):
         return self.widgets
 
     @widget_list.setter
-    def widget_list(self, value: list):
+    def widget_list(self, value: list[BECConnector]):
         self.widgets = value
 
     def hide_title_bar(self):

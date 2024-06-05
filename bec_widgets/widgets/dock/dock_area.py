@@ -61,7 +61,7 @@ class BECDockArea(BECConnector, DockArea):
             painter.drawText(self.rect(), Qt.AlignCenter, "Add docks using 'add_dock' method")
 
     @property
-    def panels(self) -> dict:
+    def panels(self) -> dict[str, BECDock]:
         """
         Get the docks in the dock area.
         Returns:
@@ -70,7 +70,7 @@ class BECDockArea(BECConnector, DockArea):
         return dict(self.docks)
 
     @panels.setter
-    def panels(self, value: dict):
+    def panels(self, value: dict[str, BECDock]):
         self.docks = WeakValueDictionary(value)
 
     @property
