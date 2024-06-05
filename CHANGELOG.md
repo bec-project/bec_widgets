@@ -2,6 +2,17 @@
 
 
 
+## v0.56.3 (2024-06-05)
+
+### Ci
+
+* ci: increased verbosity for e2e tests ([`4af1abe`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4af1abe4e15b62d2f7e70bf987a1a7d8694ef4d5))
+
+### Fix
+
+* fix: fixed support for auto updates ([`131f49d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/131f49da8ea65af4d44b50e81c1acfc29cd92093))
+
+
 ## v0.56.2 (2024-06-05)
 
 ### Documentation
@@ -162,15 +173,3 @@
 
 
 ## v0.51.0 (2024-05-07)
-
-### Build
-
-* build(cli): changed repo name to bec_widgets ([`799ea55`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/799ea554de9a7f3720d100be4886a63f02c6a390))
-
-### Ci
-
-* ci: added rule for parent-child pipelines ([`e085125`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e0851250eecb85503db929d37f75d2ba366308a6))
-
-### Feature
-
-* feat(utils): added plugin helper to find and load ([`5ece269`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5ece269adb0e9b0c2a468f1dfbaa6212e86d3561))
