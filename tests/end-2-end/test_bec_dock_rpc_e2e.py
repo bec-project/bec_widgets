@@ -225,9 +225,8 @@ def test_spiral_bar_scan_update(bec_client_lib, rpc_server_dock):
     assert bar_config["rings"][1]["max_value"] == final_samy
 
 
-def test_auto_update(rpc_server_dock, bec_client, qtbot):
-    dock = BECDockArea(rpc_server_dock.gui_id)
-    dock._client = bec_client
+def test_auto_update(bec_client_lib, rpc_server_dock):
+    dock = BECDockArea(rpc_server_dock)
 
     AutoUpdates.enabled = True
     AutoUpdates.create_default_dock = True
@@ -238,16 +237,13 @@ def test_auto_update(rpc_server_dock, bec_client, qtbot):
     # we need to start the update script manually; normally this is done when the GUI is started
     dock._start_update_script()
 
-    client = bec_client
+    client = bec_client_lib
     dev = client.device_manager.devices
     scans = client.scans
     queue = client.queue
 
     status = scans.line_scan(dev.samx, -5, 5, steps=10, exp_time=0.05, relative=False)
-
-    # wait for scan to finish
-    while not status.status == "COMPLETED":
-        qtbot.wait(200)
+    status.wait()
 
     last_scan_data = queue.scan_storage.storage[-1].data
 
@@ -263,10 +259,7 @@ def test_auto_update(rpc_server_dock, bec_client, qtbot):
     status = scans.grid_scan(
         dev.samx, -10, 10, 5, dev.samy, -5, 5, 5, exp_time=0.05, relative=False
     )
-
-    # wait for scan to finish
-    while not status.status == "COMPLETED":
-        qtbot.wait(200)
+    status.wait()
 
     plt = dock.auto_updates.get_default_figure()
     widgets = plt.widget_list
