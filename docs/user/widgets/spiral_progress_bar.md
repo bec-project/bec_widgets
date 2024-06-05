@@ -15,7 +15,7 @@
 The following code snipped demonstrates how to create a 2D scatter plot using BEC Widgets within BEC.
 ```python
 # adds a new dock with a spiral progress bar
-progress = gui.add_dock().add_widget_bec("SpiralProgressBar")
+progress = gui.add_dock().add_widget("SpiralProgressBar")
 # customize the size of the ring
-progress.set_line_widfth(20)
+progress.set_line_width(20)
 ```

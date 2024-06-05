@@ -20,7 +20,7 @@ In the following, we describe 4 different type of widgets thaat are available in
 The following code snipped demonstrates how to create a 1D waveform plot using BEC Widgets within BEC. More details about BEC Widgets in BEC can be found in the getting started section within the [introduction to the command line.](user.command_line_introduction)
 ```python
 # adds a new dock, a new BECFigure and a BECWaveForm to the dock
-plt = gui.add_dock().add_widget_bec('BECFigure').plot('samx', 'bpm4i')
+plt = gui.add_dock().add_widget('BECFigure').plot('samx', 'bpm4i')
 # add a second curve to the same plot 
 plt.add_curve_scan('samx', 'bpm3i')
 plt.set_title("Gauss plots vs. samx")
@@ -53,7 +53,7 @@ dev.bpm3i.sim.select_sim_model("StepModel")
 The following code snipped demonstrates how to create a 2D scatter plot using BEC Widgets within BEC.
 ```python
 # adds a new dock, a new BECFigure and a BECWaveForm to the dock
-plt = gui.add_dock().add_widget_bec('BECFigure').add_plot('samx', 'samy', 'bpm4i')
+plt = gui.add_dock().add_widget('BECFigure').add_plot('samx', 'samy', 'bpm4i')
 ```
 
 (user.widgets.motor_map)=
@@ -72,7 +72,7 @@ plt = gui.add_dock().add_widget_bec('BECFigure').add_plot('samx', 'samy', 'bpm4i
 The following code snipped demonstrates how to create a motor map using BEC Widgets within BEC.
 ```python
 # add a motor map to the gui
-mot_map = gui.add_dock().add_widget_bec('BECFigure').motor_map('samx', 'samy')
+mot_map = gui.add_dock().add_widget('BECFigure').motor_map('samx', 'samy')
 # change the number of points displayed
 ```
 
@@ -91,7 +91,7 @@ mot_map = gui.add_dock().add_widget_bec('BECFigure').motor_map('samx', 'samy')
 The following code snipped demonstrates how to create a motor map using BEC Widgets within BEC.
 ```python
 # add a camera view for the eiger camera to the gui
-cam_widget = gui.add_dock().add_widget_bec('BECFigure').image('eiger')
+cam_widget = gui.add_dock().add_widget('BECFigure').image('eiger')
 # set the title of the camera view
 cam_widget.set_title("Camera Image Eiger")
 # change the color map range, e.g. from 0 to 100, per default it is autoscaling
