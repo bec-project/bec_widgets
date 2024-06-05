@@ -163,12 +163,14 @@ def test_spiral_bar(rpc_server_dock):
     bar.set_colors_from_map("viridis")
     bar.set_value([10, 20, 30, 40, 50])
 
-    docks_repr = dock.get_docks_repr()
-    bar_repr = docks_repr["docks"]["dock_0"]["widgets"][0]
+    bar_config = bar.config_dict
 
-    expected_colors = Colors.golden_angle_color("viridis", 5, "RGB")
-    assert f"Bar colors: {expected_colors}" in bar_repr
-    assert f"Bar values: [10.000, 20.000, 30.000, 40.000, 50.000]" in bar_repr
+    expected_colors = [list(color) for color in Colors.golden_angle_color("viridis", 5, "RGB")]
+    bar_colors = [ring.config_dict["color"] for ring in bar.rings]
+    bar_values = [ring.config_dict["value"] for ring in bar.rings]
+    assert bar_config["num_bars"] == 5
+    assert bar_values == [10, 20, 30, 40, 50]
+    assert bar_colors == expected_colors
 
 
 def test_spiral_bar_scan_update(bec_client_lib, rpc_server_dock):
@@ -176,7 +178,7 @@ def test_spiral_bar_scan_update(bec_client_lib, rpc_server_dock):
 
     d0 = dock.add_dock("dock_0")
 
-    d0.add_widget("SpiralProgressBar")
+    bar = d0.add_widget("SpiralProgressBar")
 
     client = bec_client_lib
     dev = client.device_manager.devices
@@ -187,18 +189,20 @@ def test_spiral_bar_scan_update(bec_client_lib, rpc_server_dock):
     status = scans.line_scan(dev.samx, -5, 5, steps=10, exp_time=0.05, relative=False)
     status.wait()
 
-    bar_repr = dock.get_docks_repr()["docks"]["dock_0"]["widgets"][0]
-    assert "Num bars: 1" in bar_repr
-    assert "Bar values: [10.000]" in bar_repr
-    assert "0: config min=0.000, max=10.000" in bar_repr
+    bar_config = bar.config_dict
+    assert bar_config["num_bars"] == 1
+    assert bar_config["rings"][0]["value"] == 10
+    assert bar_config["rings"][0]["min_value"] == 0
+    assert bar_config["rings"][0]["max_value"] == 10
 
     status = scans.grid_scan(dev.samx, -5, 5, 4, dev.samy, -10, 10, 4, relative=True, exp_time=0.1)
     status.wait()
 
-    bar_repr = dock.get_docks_repr()["docks"]["dock_0"]["widgets"][0]
-    assert "Num bars: 1" in bar_repr
-    assert "Bar values: [16.000]" in bar_repr
-    assert "0: config min=0.000, max=16.000" in bar_repr
+    bar_config = bar.config_dict
+    assert bar_config["num_bars"] == 1
+    assert bar_config["rings"][0]["value"] == 16
+    assert bar_config["rings"][0]["min_value"] == 0
+    assert bar_config["rings"][0]["max_value"] == 16
 
     init_samx = dev.samx.read()["samx"]["value"]
     init_samy = dev.samy.read()["samy"]["value"]
@@ -211,13 +215,14 @@ def test_spiral_bar_scan_update(bec_client_lib, rpc_server_dock):
     status = scans.umv(dev.samx, 5, dev.samy, 10, relative=True)
     status.wait()
 
-    bar_repr = dock.get_docks_repr()["docks"]["dock_0"]["widgets"][0]
-    assert "Num bars: 2" in bar_repr
-    assert f"Bar values: [{'%.3f' % final_samx}, {'%.3f' % final_samy}]" in bar_repr
-    assert (
-        f"0: config min={'%.3f' % init_samx}, max={'%.3f' % final_samx} | 1: config min={'%.3f' % init_samy}, max={'%.3f' % final_samy}"
-        in bar_repr
-    )
+    bar_config = bar.config_dict
+    assert bar_config["num_bars"] == 2
+    assert bar_config["rings"][0]["value"] == final_samx
+    assert bar_config["rings"][1]["value"] == final_samy
+    assert bar_config["rings"][0]["min_value"] == init_samx
+    assert bar_config["rings"][0]["max_value"] == final_samx
+    assert bar_config["rings"][1]["min_value"] == init_samy
+    assert bar_config["rings"][1]["max_value"] == final_samy
 
 
 def test_auto_update(rpc_server_dock, bec_client, qtbot):
