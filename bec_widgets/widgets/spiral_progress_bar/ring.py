@@ -77,7 +77,7 @@ class Ring(BECConnector):
         "set_line_width",
         "set_min_max_values",
         "set_start_angle",
-        "set_connections",
+        "set_update",
         "reset_connection",
     ]
 
@@ -146,6 +146,25 @@ class Ring(BECConnector):
         elif isinstance(color, tuple):
             converted_color = QtGui.QColor(*color)
         return converted_color
+
+    def set_update(self, mode: Literal["manual", "scan", "device"], device: str = None):
+        """
+        Set the update mode for the ring widget
+
+        Args:
+            mode(str): Update mode for the ring widget. Can be "manual", "scan" or "device"
+            device(str): Device name for the device readback mode, only used when mode is "device"
+        """
+        if mode == "manual":
+            self.bec_dispatcher.disconnect_slot(
+                getattr(self, self.config.connections.slot), self.config.connections.endpoint
+            )
+            self.config.connections.slot = None
+            self.config.connections.endpoint = None
+        elif mode == "scan":
+            self.set_connections("on_scan_progress", "scans/scan_progress")
+        elif mode == "device":
+            self.set_connections("on_device_readback", f"internal/devices/readback/{device}")
 
     def set_connections(self, slot: str, endpoint: str | EndpointInfo):
         if self.config.connections.endpoint == endpoint and self.config.connections.slot == slot:

@@ -1902,9 +1902,13 @@ class Ring(RPCBase):
         """
 
     @rpc_call
-    def set_connections(self, slot: "str", endpoint: "str | EndpointInfo"):
+    def set_update(self, mode: "Literal['manual', 'scan', 'device']", device: "str" = None):
         """
-        None
+        Set the update mode for the ring widget
+
+        Args:
+            mode(str): Update mode for the ring widget. Can be "manual", "scan" or "device"
+            device(str): Device name for the device readback mode, only used when mode is "device"
         """
 
     @rpc_call
