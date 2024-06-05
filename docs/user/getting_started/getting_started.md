@@ -8,5 +8,6 @@ maxdepth: 2
 hidden: true
 ---
 
-getting_started/installation
+installation/
+command_line_introduction/
 ```
