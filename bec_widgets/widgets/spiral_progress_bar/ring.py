@@ -166,6 +166,8 @@ class Ring(BECConnector):
         elif mode == "device":
             self.set_connections("on_device_readback", f"internal/devices/readback/{device}")
 
+        self.parent_progress_widget.enable_auto_updates(False)
+
     def set_connections(self, slot: str, endpoint: str | EndpointInfo):
         if self.config.connections.endpoint == endpoint and self.config.connections.slot == slot:
             return

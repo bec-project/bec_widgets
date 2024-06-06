@@ -23,7 +23,7 @@ class SpiralProgressBarConfig(ConnectionConfig):
         10, description="Maximum number of progress bars to display."
     )
     num_bars: int | None = Field(1, description="Number of progress bars to display.")
-    gap: int | None = Field(10, description="Gap between progress bars.")
+    gap: int | None = Field(20, description="Gap between progress bars.")
     auto_updates: bool | None = Field(
         True, description="Enable or disable updates based on scan queue status."
     )
@@ -186,13 +186,22 @@ class SpiralProgressBar(BECConnector, QWidget):
             Ring: Ring object.
         """
         if self.config.num_bars < self.config.max_number_of_bars:
-            ring = Ring(parent_progress_widget=self, **kwargs)
-            ring.config.index = self.config.num_bars
+            ring_index = self.config.num_bars
+            ring_config = RingConfig(
+                widget_class="Ring",
+                index=ring_index,
+                start_positions=90 * 16,
+                directions=-1,
+                **kwargs,
+            )
+            ring = Ring(parent_progress_widget=self, config=ring_config)
             self.config.num_bars += 1
             self._rings.append(ring)
             self.config.rings.append(ring.config)
             if self.config.color_map:
                 self.set_colors_from_map(self.config.color_map)
+            base_line_width = self._rings[ring.config.index].config.line_width
+            self.set_line_widths(base_line_width, ring.config.index)
             self.update()
             return ring
 
@@ -465,8 +474,6 @@ class SpiralProgressBar(BECConnector, QWidget):
                 if report_instructions:
                     instruction_type = list(report_instructions[0].keys())[0]
                     if instruction_type == "scan_progress":
-                        if self.config.num_bars != 1:
-                            self.set_number_of_bars(1)
                         self._hook_scan_progress(ring_index=0)
                     elif instruction_type == "readback":
                         devices = report_instructions[0].get("readback").get("devices")
