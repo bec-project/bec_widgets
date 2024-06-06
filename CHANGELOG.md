@@ -2,6 +2,13 @@
 
 
 
+## v0.57.6 (2024-06-06)
+
+### Fix
+
+* fix(bar): docstrings extended ([`edb1775`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/edb1775967c3ff0723d0edad2b764f1ffc832b7c))
+
+
 ## v0.57.5 (2024-06-06)
 
 ### Documentation
@@ -145,15 +152,8 @@
 
 * docs(examples): example apps section deleted ([`ad208a5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ad208a5ef8495c45a8b83a4850ba9a1041b42717))
 
-### Feature
-
-* feat(utils/ui_loader): universal ui loader for pyside/pyqt ([`0fea8d6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0fea8d606574fa99dda3b117da5d5209c251f694))
-
 ### Fix
 
 * fix(examples): outdated examples removed (mca_plot.py, stream_plot.py, motor_example.py) ([`ddc9510`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ddc9510c2ba8dadf291809eeb5b135a105259492))
 
 * fix: compatibility adjustment to .ui loading and tests for PySide6 ([`07b99d9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/07b99d91a57a645cddd76294f48d78773e4c9ea5))
-
-
-## v0.55.0 (2024-05-24)
