@@ -48,7 +48,6 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         "set_y_lim",
         "set_grid",
         "lock_aspect_ratio",
-        "plot",
         "remove",
     ]
 
@@ -236,19 +235,6 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
             lock(bool): True to lock, False to unlock.
         """
         self.plot_item.setAspectLocked(lock)
-
-    def plot(self, data_x: list | np.ndarray, data_y: list | np.ndarray, **kwargs):
-        """
-        Plot custom data on the plot widget. These data are not saved in config.
-
-        Args:
-            data_x(list|np.ndarray): x-axis data
-            data_y(list|np.ndarray): y-axis data
-            **kwargs: Keyword arguments for the plot.
-        """
-        # TODO very basic so far, add more options
-        # TODO decide name of the method
-        self.plot_item.plot(data_x, data_y, **kwargs)
 
     def remove(self):
         """Remove the plot widget from the figure."""

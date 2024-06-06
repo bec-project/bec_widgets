@@ -252,33 +252,6 @@ class BECWaveform(BECPlotBase):
         )
         return curve
 
-    def _add_curve_object(
-        self,
-        name: str,
-        source: str,
-        config: CurveConfig,
-        data: tuple[list | np.ndarray, list | np.ndarray] = None,
-    ) -> BECCurve:
-        """
-        Add a curve object to the plot widget.
-
-        Args:
-            name(str): ID of the curve.
-            source(str): Source of the curve.
-            config(CurveConfig): Configuration of the curve.
-            data(tuple[list|np.ndarray,list|np.ndarray], optional): Data (x,y) to be plotted. Defaults to None.
-
-        Returns:
-            BECCurve: The curve object.
-        """
-        curve = BECCurve(config=config, name=name, parent_item=self.plot_item)
-        self._curves_data[source][name] = curve
-        self.plot_item.addItem(curve)
-        self.config.curves[name] = curve.config
-        if data is not None:
-            curve.setData(data[0], data[1])
-        return curve
-
     def add_curve_scan(
         self,
         x_name: str,
@@ -352,6 +325,33 @@ class BECWaveform(BECPlotBase):
             **kwargs,
         )
         curve = self._add_curve_object(name=label, source=curve_source, config=curve_config)
+        return curve
+
+    def _add_curve_object(
+        self,
+        name: str,
+        source: str,
+        config: CurveConfig,
+        data: tuple[list | np.ndarray, list | np.ndarray] = None,
+    ) -> BECCurve:
+        """
+        Add a curve object to the plot widget.
+
+        Args:
+            name(str): ID of the curve.
+            source(str): Source of the curve.
+            config(CurveConfig): Configuration of the curve.
+            data(tuple[list|np.ndarray,list|np.ndarray], optional): Data (x,y) to be plotted. Defaults to None.
+
+        Returns:
+            BECCurve: The curve object.
+        """
+        curve = BECCurve(config=config, name=name, parent_item=self.plot_item)
+        self._curves_data[source][name] = curve
+        self.plot_item.addItem(curve)
+        self.config.curves[name] = curve.config
+        if data is not None:
+            curve.setData(data[0], data[1])
         return curve
 
     def _validate_signal_entries(

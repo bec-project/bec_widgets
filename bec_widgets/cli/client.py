@@ -129,17 +129,6 @@ class BECPlotBase(RPCBase):
         """
 
     @rpc_call
-    def plot(self, data_x: "list | np.ndarray", data_y: "list | np.ndarray", **kwargs):
-        """
-        Plot custom data on the plot widget. These data are not saved in config.
-
-        Args:
-            data_x(list|np.ndarray): x-axis data
-            data_y(list|np.ndarray): y-axis data
-            **kwargs: Keyword arguments for the plot.
-        """
-
-    @rpc_call
     def remove(self):
         """
         Remove the plot widget from the figure.
@@ -1137,17 +1126,6 @@ class BECImageShow(RPCBase):
 
         Args:
             lock(bool): True to lock, False to unlock.
-        """
-
-    @rpc_call
-    def plot(self, data_x: "list | np.ndarray", data_y: "list | np.ndarray", **kwargs):
-        """
-        Plot custom data on the plot widget. These data are not saved in config.
-
-        Args:
-            data_x(list|np.ndarray): x-axis data
-            data_y(list|np.ndarray): y-axis data
-            **kwargs: Keyword arguments for the plot.
         """
 
     @rpc_call
