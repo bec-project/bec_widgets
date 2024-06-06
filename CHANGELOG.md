@@ -2,6 +2,25 @@
 
 
 
+## v0.57.2 (2024-06-06)
+
+### Fix
+
+* fix(test/e2e): autoupdate e2e rewritten ([`e1af5ca`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e1af5ca60f0616835f9f41d84412f29dc298c644))
+
+* fix(test/e2e): spiral_progress_bar e2e tests rewritten to use config_dict ([`7fb31fc`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7fb31fc4d762ff4ca839971b3092a084186f81b8))
+
+* fix(test/e2e): dockarea and dock e2e tests changed to check asserts against config_dict ([`5c6ba65`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5c6ba65469863ea1e6fc5abdc742650e20eba9b9))
+
+* fix: rpc_server_dock fixture now spawns the server process ([`cd9fc46`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cd9fc46ff8a947242c8c28adcd73d7de60b11c44))
+
+* fix: accept scalars or numpy arrays of 1 element ([`2a88e17`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2a88e17b23436c55d25b7d3449e4af3a7689661c))
+
+### Refactor
+
+* refactor: move _get_output and _start_plot_process at the module level ([`69f4371`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/69f4371007c66aee6b7521a6803054025adf8c92))
+
+
 ## v0.57.1 (2024-06-06)
 
 ### Documentation
@@ -146,30 +165,3 @@
 
 
 ## v0.53.0 (2024-05-09)
-
-### Ci
-
-* ci: use formatter config of toml file ([`5cc816d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5cc816d0af73e20c648e044a027c589704ab1625))
-
-### Documentation
-
-* docs: update install instructions ([`57ee735`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/57ee735e5c2436d45a285507cdc939daa20e8e8f))
-
-### Feature
-
-* feat: moved to pyproject.toml; closes #162 ([`c86ce30`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c86ce302a964d71ee631f0817609ab5aa0e3ab0f))
-
-### Fix
-
-* fix: fixed semver job and upgraded to v9 ([`32e1a9d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/32e1a9d8472eb1c25d30697d407a8ffecd04e75d))
-
-### Refactor
-
-* refactor: applied formatter ([`4117fd7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4117fd7b5b2090ff4fb7ad9e0d92cc87cd13ed5f))
-
-
-## v0.52.1 (2024-05-08)
-
-### Fix
-
-* fix(docstrings): docstrings formating fixed for sphinx to properly format readdocs ([`7f2f7cd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7f2f7cd07a14876617cd83cedde8c281fdc52c3a))
