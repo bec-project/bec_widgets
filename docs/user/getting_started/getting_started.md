@@ -9,5 +9,5 @@ hidden: true
 ---
 
 installation/
-command_line_introduction/
+quick_start/
 ```

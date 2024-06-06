@@ -1,33 +1,52 @@
 (user.command_line_introduction)=
-# Command Line Introduction
-In order to use BEC Widgets as a plotting tool for BEC, it needs to be [installed](#user.installation) in the same python environment as the BECIpythonClient. If that is the case, it will automatically launch a GUI and assign the control of the GUI to the `gui` object in the client. The GUI backend will also be automatically connect to the BEC server, giving access to all information on the server and allowing the user to visualize the data in real-time.
+# Quick start
+In order to use BEC Widgets as a plotting tool for BEC, it needs to be [installed](#user.installation) in the same Python environment as the BEC IPython client (please refer to the [BEC documentation](https://bec.readthedocs.io/en/latest/user/command_line_interface.html#start-up) for more details). Upon startup, the client will automatically launch a GUI and store it as a `bec.gui` object in the client. The GUI backend will also be automatically connect to the BEC server, giving access to all information on the server and allowing the user to visualize the data in real-time.
 
 ## BECDockArea
-The `gui` object represents the top level of hierarchy in BEC Widgets. It is a [`BECDockArea`](/api_reference/_autosummary/bec_widgets.cli.client.BECDockArea) based on the [pyqtgraph.dockarea](https://pyqtgraph.readthedocs.io/en/latest/api_reference/dockarea.html). The GUI can be further composed of multiple [`BECDock`](/api_reference/_autosummary/bec_widgets.cli.client.BECDock)s that can be detached and attached to the main area. These docks allow users to freely arrange and customize the widgets they add to the gui, giving them the necessary freedom to design the user interface they desire.
+The `bec.gui` object is your entry point to BEC Widgets. It is a [`BECDockArea`](/api_reference/_autosummary/bec_widgets.cli.client.BECDockArea) instance that can be composed of multiple [`BECDock`](/api_reference/_autosummary/bec_widgets.cli.client.BECDock)s that can be attached / detached to the main area. These docks allow users to freely arrange and customize the widgets they add to the gui, providing a flexible and customizable interface to visualize data. 
 
 ## Widgets
-Widgets are the building blocks of the BEC Widgets framework. They are the visual components that allow users to interact with the data and control the behavior of the application. Each dock can contain multiple widgets, although we recommend using a direct mapping of a single widget to a dock. We currently support two type of widgets:
-- [`BECFigure`](/api_reference/_autosummary/bec_widgets.cli.client.BECFigure): A widget that can be used to visualize data from BEC. It is automatically connected to the BEC server and can be used to plot data from BEC.
-- [`SpiralProgressBar`](/api_reference/_autosummary/bec_widgets.cli.client.SpiralProgressBar): A custom widget that can be used to show progress in a spiral shape.
+Widgets are the building blocks of the BEC Widgets framework. They are the visual components that allow users to interact with the data and control the behavior of the application. Each dock can contain multiple widgets, albeit we recommend for most use cases a single widget per dock. BEC Widgets provides a set of core widgets (cf. [widgets](#user.widgets)). More widgets can be added by the users, and we invite you to explore the [developer documentation](developer.widgets) to learn how to create custom widgets.
+For the introduction given here, we will focus on the `BECFigure` widget, as it is the most commonly used widget for visualizing data from BEC. The same access pattern can be used for all other widgets.
 
 **BECFigure**
-The [`BECFigure`](/api_reference/_autosummary/bec_widgets.cli.client.BECFigure) widget is one of the core widgets developed for BEC and designed to be flexible and can be used to visualize different types of data. It can be used to visualize [1D Waveform](user.widgets.waveform_1d), [2D Scatter Plot](user.widgets.scatter_2d), [Motor Position Map](user.widgets.motor_map) and 2D image data. As mentioned before, starting the BECIPythonClient will automatically launch a `gui` with a single dock area and a BECFigure widget attached to it. This widget is accessible via the `fig` object from the client directly. We also provide two methods [`plot()`](/api_reference/_autosummary/bec_widgets.cli.client.BECFigure.rst#bec_widgets.cli.client.BECFigure.plot), [`image()`](/api_reference/_autosummary/bec_widgets.cli.client.BECFigure.rst#bec_widgets.cli.client.BECFigure.image) and [`motor_map()`](/api_reference/_autosummary/bec_widgets.cli.client.BECFigure.rst#bec_widgets.cli.client.BECFigure.motor_map) as shortcuts to add a plot, image or motor map to the BECFigure.
+
+The [`BECFigure`](/api_reference/_autosummary/bec_widgets.cli.client.BECFigure) widget is one of the core widgets developed for BEC and can be used to visualize different plot types, such as [1D waveforms](user.widgets.waveform_1d), [2D scatter plots](user.widgets.scatter_2d), [position maps](user.widgets.motor_map) and 2D images. 
+If BEC Widgets is installed, the default behaviour of BEC is to automatically add a BECFigure Widget to the existing GUI instance. This widget is directly accessible via the `fig` object from the client. Moreover, a best-effort attempt is made to automatically determine the best plot type based on the currently performed scan. This behaviour can be changed or disabled by the user. For more details, please refer to the [auto update](user.auto_update) section.
+
+<!-- We also provide two methods [`plot()`](/api_reference/_autosummary/bec_widgets.cli.client.BECFigure.rst#bec_widgets.cli.client.BECFigure.plot), [`image()`](/api_reference/_autosummary/bec_widgets.cli.client.BECFigure.rst#bec_widgets.cli.client.BECFigure.image) and [`motor_map()`](/api_reference/_autosummary/bec_widgets.cli.client.BECFigure.rst#bec_widgets.cli.client.BECFigure.motor_map) as shortcuts to add a plot, image or motor map to the BECFigure. -->
 
 **Waveform Plot** 
+
  The [`BECWaveForm`](/api_reference/_autosummary/bec_widgets.cli.client.BECWaveform) is a widget that can be used to visualize 1D waveform data, i.e. to plot data of a monitor against a motor position. The method [`plot()`](/api_reference/_autosummary/bec_widgets.cli.client.BECFigure.rst#bec_widgets.cli.client.BECFigure.plot) of BECFigure adds a BECWaveForm widget to the figure, and returns the plot object. 
 
 ```python
-plt = fig.add_plot('samx', 'bpm4i')
+plt = fig.plot(x_name='samx', y_name='bpm4i')
 ```
-Here, we assign the plot to the object `plt`. We can now use this object to further customize the plot, e.g. changing the title ([`set_title()`](/api_reference/_autosummary/bec_widgets.cli.client.BECWaveform.rst#bec_widgets.cli.client.BECWaveform.set_title)), axis labels ([`set_x_label()`](/api_reference/_autosummary/bec_widgets.cli.client.BECWaveform.rst#bec_widgets.cli.client.BECWaveform.set_x_label)) or limits ([`set_x_lim()`](/api_reference/_autosummary/bec_widgets.cli.client.BECWaveform.rst#bec_widgets.cli.client.BECWaveform.set_x_lim)). We invite you to explore the API of the BECWaveForm in the [documentation](user.widgets.waveform_1d) or directly in the command line.
+Here, we create a new plot with a subscription to the devices `samx` and `bpm4i` and assign the plot to the object `plt`. We can now use this object to further customize the plot, e.g. changing the title ([`set_title()`](/api_reference/_autosummary/bec_widgets.cli.client.BECWaveform.rst#bec_widgets.cli.client.BECWaveform.set_title)), axis labels ([`set_x_label()`](/api_reference/_autosummary/bec_widgets.cli.client.BECWaveform.rst#bec_widgets.cli.client.BECWaveform.set_x_label)) or limits ([`set_x_lim()`](/api_reference/_autosummary/bec_widgets.cli.client.BECWaveform.rst#bec_widgets.cli.client.BECWaveform.set_x_lim)). We invite you to explore the API of the BECWaveForm in the [documentation](user.widgets.waveform_1d) or directly in the command line.
+
+To plot custom data, i.e. data that is not directly available through a scan in BEC, we can use the same method, but provide the data directly to the plot. 
+
+```python
+plt = fig.plot([1,2,3,4], [1,4,9,16])
+# or 
+plt = fig.plot(x=[1,2,3,4], y=[1,4,9,16])
+# or 
+plt = fig.plot(x=np.array([1,2,3,4]), y=np.array([1,4,9,16]))
+# or 
+plt = fig.plot(np.random.rand(10,2))
+```
 
 **Scatter Plot**
+
 The [`BECWaveForm`](/api_reference/_autosummary/bec_widgets.cli.client.BECWaveForm) widget can also be used to visualize 2D scatter plots. More details on setting up the scatter plot are available in the widget documentation of the [scatter plot](user.widgets.scatter_2d).
 
 **Motor Map**
+
 The [`BECMotorMap`](/api_reference/_autosummary/bec_widgets.cli.client.BECMotorMap) widget can be used to visualize the position of motors. It's focused on tracking and visualizing the position of motors, crucial for precise alignment and movement tracking during scans. More details on setting up the motor map are available in the widget documentation of the [motor map](user.widgets.motor_map).
 
 **Image Plot**
+
 The [`BECImageItem`](/api_reference/_autosummary/bec_widgets.cli.client.BECImageItem) widget can be used to visualize 2D image data for example a camera. More details on setting up the image plot are available in the widget documentation of the [image plot](user.widgets.image)
 
 ### Useful Commands
@@ -43,11 +62,11 @@ gui.panels # returns a dictionary of all docks in the gui
 gui.add_dock() # adds a new dock to the gui
 
 dock = gui.panels['dock_2']
-dock.add_widget_bec('BECFigure') # adds a new widget of BECFigure to the dock
+dock.add_widget('BECFigure') # adds a new widget of BECFigure to the dock
 dock.widget_list # returns a list of all widgets in the dock
 
 figure = dock.widget_list[0] # assigns the created BECFigure to figure
-plt = figure.add_plot('samx', 'bpm4i') # adds a BECWaveForm plot to the figure
+plt = figure.plot(x_name='samx', y_name='bpm4i') # adds a BECWaveForm plot to the figure
 plt.curves # returns a list of all curves in the plot
 ```
 
@@ -58,7 +77,7 @@ The example given above introduces BEC Widgets with its different components, an
 Let's assume BEC was just started and the `gui` object is available in the client. A single dock is already attached together with a BEC Figure. Let's add the 1D waveform to this dock, change the color of the line to white and add the title *1D Waveform* to the plot.
 
 ```python
-plt = fig.add_plot('samx', 'bpm4i')
+plt = fig.plot(x_name='samx', y_name='bpm4i')
 plt.curves[0].set_color(color="white")
 plt.set_title('1D Waveform')
 ```
