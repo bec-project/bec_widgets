@@ -464,6 +464,13 @@ class SpiralProgressBar(BECConnector, QWidget):
 
     @Slot(dict, dict)
     def on_scan_queue_status(self, msg, meta):
+        """
+        Slot to handle scan queue status messages. Decides what update to perform based on the scan queue status.
+
+        Args:
+            msg(dict): Message from the BEC.
+            meta(dict): Metadata from the BEC.
+        """
         primary_queue = msg.get("queue").get("primary")
         info = primary_queue.get("info", None)
 
@@ -490,6 +497,12 @@ class SpiralProgressBar(BECConnector, QWidget):
                     #     print("hook device_progress")
 
     def _hook_scan_progress(self, ring_index: int = None):
+        """
+        Hook the scan progress to the progress bars.
+
+        Args:
+            ring_index(int): Index of the progress bar to hook the scan progress to.
+        """
         if ring_index is not None:
             ring = self._find_ring_by_index(ring_index)
         else:
@@ -501,6 +514,15 @@ class SpiralProgressBar(BECConnector, QWidget):
             ring.set_connections("on_scan_progress", MessageEndpoints.scan_progress())
 
     def _hook_readback(self, bar_index: int, device: str, min: float | int, max: float | int):
+        """
+        Hook the readback values to the progress bars.
+
+        Args:
+            bar_index(int): Index of the progress bar to hook the readback values to.
+            device(str): Device to readback values from.
+            min(float|int): Minimum value for the progress bar.
+            max(float|int): Maximum value for the progress bar.
+        """
         ring = self._find_ring_by_index(bar_index)
         ring.set_min_max_values(min, max)
         endpoint = MessageEndpoints.device_readback(device)

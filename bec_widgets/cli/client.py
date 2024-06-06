@@ -1861,43 +1861,66 @@ class Ring(RPCBase):
     @rpc_call
     def set_value(self, value: "int | float"):
         """
-        None
+        Set the value for the ring widget
+
+        Args:
+            value(int | float): Value for the ring widget
         """
 
     @rpc_call
     def set_color(self, color: "str | tuple"):
         """
-        None
+        Set the color for the ring widget
+
+        Args:
+            color(str | tuple): Color for the ring widget. Can be HEX code or tuple (R, G, B, A).
         """
 
     @rpc_call
     def set_background(self, color: "str | tuple"):
         """
-        None
+        Set the background color for the ring widget
+
+        Args:
+            color(str | tuple): Background color for the ring widget. Can be HEX code or tuple (R, G, B, A).
         """
 
     @rpc_call
     def set_line_width(self, width: "int"):
         """
-        None
+        Set the line width for the ring widget
+
+        Args:
+            width(int): Line width for the ring widget
         """
 
     @rpc_call
     def set_min_max_values(self, min_value: "int | float", max_value: "int | float"):
         """
-        None
+        Set the min and max values for the ring widget.
+
+        Args:
+            min_value(int | float): Minimum value for the ring widget
+            max_value(int | float): Maximum value for the ring widget
         """
 
     @rpc_call
     def set_start_angle(self, start_angle: "int"):
         """
-        None
+        Set the start angle for the ring widget
+
+        Args:
+            start_angle(int): Start angle for the ring widget in degrees
         """
 
     @rpc_call
     def set_update(self, mode: "Literal['manual', 'scan', 'device']", device: "str" = None):
         """
-        Set the update mode for the ring widget
+        Set the update mode for the ring widget.
+        Modes:
+        - "manual": Manual update mode, the value is set by the user.
+        - "scan": Update mode for the scan progress. The value is updated by the current scan progress.
+        - "device": Update mode for the device readback. The value is updated by the device readback. Take into account that user has to set the device name and limits.
 
         Args:
             mode(str): Update mode for the ring widget. Can be "manual", "scan" or "device"
@@ -1907,5 +1930,5 @@ class Ring(RPCBase):
     @rpc_call
     def reset_connection(self):
         """
-        None
+        Reset the connections for the ring widget. Disconnect the current slot and endpoint.
         """
