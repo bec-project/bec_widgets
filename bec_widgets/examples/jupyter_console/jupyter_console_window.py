@@ -97,14 +97,16 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.w3 = self.figure[1, 0]
 
         # curves for w1
-        self.w1.add_curve_scan("samx", "samy", "bpm4i", pen_style="dash")
-        self.w1.add_curve_scan("samx", "samy", "bpm3a", pen_style="dash")
+        self.w1.plot(x_name="samx", y_name="samy", z_name="bpm4i")
+        self.w1.plot(x_name="samx", y_name="samy", z_name="bpm3a")
         self.c1 = self.w1.get_config()
 
     def _init_dock(self):
 
         self.d0 = self.dock.add_dock(name="dock_0")
         self.fig0 = self.d0.add_widget("BECFigure")
+        data = np.random.rand(10, 2)
+        self.fig0.plot(data, label="2d Data")
         self.fig0.image("eiger", vrange=(0, 100))
 
         self.d1 = self.dock.add_dock(name="dock_1", position="right")
@@ -114,7 +116,6 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
 
         self.d2 = self.dock.add_dock(name="dock_2", position="bottom")
         self.fig2 = self.d2.add_widget("BECFigure", row=0, col=0)
-        self.fig2.motor_map(x_name="samx", y_name="samy")
         self.fig2.plot(x_name="samx", y_name="bpm4i")
         self.bar = self.d2.add_widget("SpiralProgressBar", row=0, col=1)
         self.bar.set_diameter(200)

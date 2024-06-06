@@ -462,14 +462,14 @@ class BECFigure(RPCBase):
     @rpc_call
     def add_plot(
         self,
+        x: "list | np.ndarray" = None,
+        y: "list | np.ndarray" = None,
         x_name: "str" = None,
         y_name: "str" = None,
         z_name: "str" = None,
         x_entry: "str" = None,
         y_entry: "str" = None,
         z_entry: "str" = None,
-        x: "list | np.ndarray" = None,
-        y: "list | np.ndarray" = None,
         color: "Optional[str]" = None,
         color_map_z: "Optional[str]" = "plasma",
         label: "Optional[str]" = None,
@@ -483,7 +483,18 @@ class BECFigure(RPCBase):
         Add a Waveform1D plot to the figure at the specified position.
 
         Args:
-            widget_id(str): The unique identifier of the widget. If not provided, a unique ID will be generated.
+            x(list | np.ndarray): Custom x data to plot.
+            y(list | np.ndarray): Custom y data to plot.
+            x_name(str): The name of the device for the x-axis.
+            y_name(str): The name of the device for the y-axis.
+            z_name(str): The name of the device for the z-axis.
+            x_entry(str): The name of the entry for the x-axis.
+            y_entry(str): The name of the entry for the y-axis.
+            z_entry(str): The name of the entry for the z-axis.
+            color(str): The color of the curve.
+            color_map_z(str): The color map to use for the z-axis.
+            label(str): The label of the curve.
+            validate(bool): If True, validate the device names and entries.
             row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
             col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
             config(dict): Additional configuration for the widget.

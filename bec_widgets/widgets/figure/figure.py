@@ -184,8 +184,9 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         """
         self._widgets = value
 
-    def add_plot(
+    def _init_waveform(
         self,
+        waveform,
         x_name: str = None,
         y_name: str = None,
         z_name: str = None,
@@ -198,33 +199,45 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         color_map_z: Optional[str] = "plasma",
         label: Optional[str] = None,
         validate: bool = True,
-        row: int = None,
-        col: int = None,
-        config=None,
-        **axis_kwargs,
-    ) -> BECWaveform:
+    ):
         """
-        Add a Waveform1D plot to the figure at the specified position.
+        Configure the waveform based on the provided parameters.
 
         Args:
-            widget_id(str): The unique identifier of the widget. If not provided, a unique ID will be generated.
-            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
-            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
-            config(dict): Additional configuration for the widget.
-            **axis_kwargs(dict): Additional axis properties to set on the widget after creation.
+            waveform (BECWaveform): The waveform to configure.
+            x (list | np.ndarray): Custom x data to plot.
+            y (list | np.ndarray): Custom y data to plot.
+            x_name (str): The name of the device for the x-axis.
+            y_name (str): The name of the device for the y-axis.
+            z_name (str): The name of the device for the z-axis.
+            x_entry (str): The name of the entry for the x-axis.
+            y_entry (str): The name of the entry for the y-axis.
+            z_entry (str): The name of the entry for the z-axis.
+            color (str): The color of the curve.
+            color_map_z (str): The color map to use for the z-axis.
+            label (str): The label of the curve.
+            validate (bool): If True, validate the device names and entries.
         """
-        widget_id = str(uuid.uuid4())
-        waveform = self.add_widget(
-            widget_type="Waveform1D",
-            widget_id=widget_id,
-            row=row,
-            col=col,
-            config=config,
-            **axis_kwargs,
-        )
-
-        # TODO remove repetition from .plot method
-
+        if x is not None and y is None:
+            if isinstance(x, np.ndarray):
+                if x.ndim == 1:
+                    y = np.arange(x.size)
+                    waveform.add_curve_custom(x=np.arange(x.size), y=x, color=color, label=label)
+                    return waveform
+                if x.ndim == 2:
+                    waveform.add_curve_custom(x=x[:, 0], y=x[:, 1], color=color, label=label)
+                    return waveform
+            elif isinstance(x, list):
+                y = np.arange(len(x))
+                waveform.add_curve_custom(x=np.arange(len(x)), y=x, color=color, label=label)
+                return waveform
+            else:
+                raise ValueError(
+                    "Invalid input. Provide either device names (x_name, y_name) or custom data."
+                )
+        if x is not None and y is not None:
+            waveform.add_curve_custom(x=x, y=y, color=color, label=label)
+            return waveform
         # User wants to add scan curve -> 1D Waveform
         if x_name is not None and y_name is not None and z_name is None and x is None and y is None:
             waveform.add_curve_scan(
@@ -260,6 +273,73 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         elif x is not None and y is not None and x_name is None and y_name is None:
             waveform.add_curve_custom(x=x, y=y, color=color, label=label)
 
+        return waveform
+
+    def add_plot(
+        self,
+        x: list | np.ndarray = None,
+        y: list | np.ndarray = None,
+        x_name: str = None,
+        y_name: str = None,
+        z_name: str = None,
+        x_entry: str = None,
+        y_entry: str = None,
+        z_entry: str = None,
+        color: Optional[str] = None,
+        color_map_z: Optional[str] = "plasma",
+        label: Optional[str] = None,
+        validate: bool = True,
+        row: int = None,
+        col: int = None,
+        config=None,
+        **axis_kwargs,
+    ) -> BECWaveform:
+        """
+        Add a Waveform1D plot to the figure at the specified position.
+
+        Args:
+            x(list | np.ndarray): Custom x data to plot.
+            y(list | np.ndarray): Custom y data to plot.
+            x_name(str): The name of the device for the x-axis.
+            y_name(str): The name of the device for the y-axis.
+            z_name(str): The name of the device for the z-axis.
+            x_entry(str): The name of the entry for the x-axis.
+            y_entry(str): The name of the entry for the y-axis.
+            z_entry(str): The name of the entry for the z-axis.
+            color(str): The color of the curve.
+            color_map_z(str): The color map to use for the z-axis.
+            label(str): The label of the curve.
+            validate(bool): If True, validate the device names and entries.
+            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
+            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
+            config(dict): Additional configuration for the widget.
+            **axis_kwargs(dict): Additional axis properties to set on the widget after creation.
+        """
+        widget_id = str(uuid.uuid4())
+        waveform = self.add_widget(
+            widget_type="Waveform1D",
+            widget_id=widget_id,
+            row=row,
+            col=col,
+            config=config,
+            **axis_kwargs,
+        )
+
+        waveform = self._init_waveform(
+            waveform=waveform,
+            x=x,
+            y=y,
+            x_name=x_name,
+            y_name=y_name,
+            z_name=z_name,
+            x_entry=x_entry,
+            y_entry=y_entry,
+            z_entry=z_entry,
+            color=color,
+            color_map_z=color_map_z,
+            label=label,
+            validate=validate,
+        )
         return waveform
 
     @typechecked
@@ -309,69 +389,60 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         else:
             waveform = self.add_plot(**axis_kwargs)
 
-        if x is not None and y is None:
-            if isinstance(x, np.ndarray):
-                if x.ndim == 1:
-                    y = np.arange(x.size)
-                    waveform.add_curve_custom(x=np.arange(x.size), y=x, color=color, label=label)
-                    return waveform
-                if x.ndim == 2:
-                    waveform.add_curve_custom(x=x[:, 0], y=x[:, 1], color=color, label=label)
-                    return waveform
-            elif isinstance(x, list):
-                y = np.arange(len(x))
-                waveform.add_curve_custom(x=np.arange(len(x)), y=x, color=color, label=label)
-                return waveform
-            else:
-                raise ValueError(
-                    "Invalid input. Provide either device names (x_name, y_name) or custom data."
-                )
-        if x is not None and y is not None:
-            waveform.add_curve_custom(x=x, y=y, color=color, label=label)
-            return waveform
-
-        # User wants to add scan curve -> 1D Waveform
-        if x_name is not None and y_name is not None and z_name is None and x is None and y is None:
-            waveform.add_curve_scan(
-                x_name=x_name,
-                y_name=y_name,
-                x_entry=x_entry,
-                y_entry=y_entry,
-                color=color,
-                color_map_z="plasma",
-                label=label,
-                validate=validate,
-            )
-        # User wants to add scan curve -> 2D Waveform Scatter
-        elif (
-            x_name is not None
-            and y_name is not None
-            and z_name is not None
-            and x is None
-            and y is None
-        ):
-            waveform.add_curve_scan(
-                x_name=x_name,
-                y_name=y_name,
-                z_name=z_name,
-                x_entry=x_entry,
-                y_entry=y_entry,
-                z_entry=z_entry,
-                color=color,
-                color_map_z=color_map_z,
-                label=label,
-                validate=validate,
-            )
-        # User wants to add custom curve
-        elif (
-            x is not None and y is not None and x_name is None and y_name is None and z_name is None
-        ):
-            waveform.add_curve_custom(x=x, y=y, color=color, label=label)
-        else:
-            raise ValueError(
-                "Invalid input. Provide either device names (x_name, y_name) or custom data."
-            )
+        waveform = self._init_waveform(
+            waveform=waveform,
+            x=x,
+            y=y,
+            x_name=x_name,
+            y_name=y_name,
+            z_name=z_name,
+            x_entry=x_entry,
+            y_entry=y_entry,
+            z_entry=z_entry,
+            color=color,
+            color_map_z=color_map_z,
+            label=label,
+            validate=validate,
+        )
+        # TODO remove repetition from .plot method
         return waveform
+
+    def _init_image(
+        self,
+        image,
+        monitor: str = None,
+        color_bar: Literal["simple", "full"] = "full",
+        color_map: str = "magma",
+        data: np.ndarray = None,
+        vrange: tuple[float, float] = None,
+    ) -> BECImageShow:
+        """
+        Configure the image based on the provided parameters.
+
+        Args:
+            image (BECImageShow): The image to configure.
+            monitor (str): The name of the monitor to display.
+            color_bar (Literal["simple","full"]): The type of color bar to display.
+            color_map (str): The color map to use for the image.
+            data (np.ndarray): Custom data to display.
+        """
+        if monitor is not None and data is None:
+            image.add_monitor_image(
+                monitor=monitor, color_map=color_map, vrange=vrange, color_bar=color_bar
+            )
+        elif data is not None and monitor is None:
+            image.add_custom_image(
+                name="custom", data=data, color_map=color_map, vrange=vrange, color_bar=color_bar
+            )
+        elif data is None and monitor is None:
+            # Setting appearance
+            if vrange is not None:
+                image.set_vrange(vmin=vrange[0], vmax=vrange[1])
+            if color_map is not None:
+                image.set_color_map(color_map)
+        else:
+            raise ValueError("Invalid input. Provide either monitor name or custom data.")
+        return image
 
     def image(
         self,
@@ -405,23 +476,14 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         else:
             image = self.add_image(color_bar=color_bar, **axis_kwargs)
 
-        # Setting data #TODO check logic if monitor or data are already created
-        if monitor is not None and data is None:
-            image.add_monitor_image(
-                monitor=monitor, color_map=color_map, vrange=vrange, color_bar=color_bar
-            )
-        elif data is not None and monitor is None:
-            image.add_custom_image(
-                name="custom", data=data, color_map=color_map, vrange=vrange, color_bar=color_bar
-            )
-        elif data is None and monitor is None:
-            # Setting appearance
-            if vrange is not None:
-                image.set_vrange(vmin=vrange[0], vmax=vrange[1])
-            if color_map is not None:
-                image.set_color_map(color_map)
-        else:
-            raise ValueError("Invalid input. Provide either monitor name or custom data.")
+        image = self._init_image(
+            image=image,
+            monitor=monitor,
+            color_bar=color_bar,
+            color_map=color_map,
+            data=data,
+            vrange=vrange,
+        )
         return image
 
     def add_image(
@@ -472,22 +534,14 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             config=config,
             **axis_kwargs,
         )
-        # TODO remove repetition from .image method
-        if monitor is not None and data is None:
-            image.add_monitor_image(
-                monitor=monitor, color_map=color_map, vrange=vrange, color_bar=color_bar
-            )
-        elif data is not None and monitor is None:
-            image.add_custom_image(
-                name="custom", data=data, color_map=color_map, vrange=vrange, color_bar=color_bar
-            )
-        elif data is None and monitor is None:
-            # Setting appearance
-            if vrange is not None:
-                image.set_vrange(vmin=vrange[0], vmax=vrange[1])
-            if color_map is not None:
-                image.set_color_map(color_map)
-
+        image = self._init_image(
+            image=image,
+            monitor=monitor,
+            color_bar=color_bar,
+            color_map=color_map,
+            data=data,
+            vrange=vrange,
+        )
         return image
 
     def motor_map(self, motor_x: str = None, motor_y: str = None, **axis_kwargs) -> BECMotorMap:
