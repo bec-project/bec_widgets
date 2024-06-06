@@ -117,6 +117,7 @@ if __name__ == "__main__":  # pragma: no cover
     from bec_widgets.widgets.figure.plots.waveform.waveform import BECWaveform
     from bec_widgets.widgets.figure.plots.waveform.waveform_curve import BECCurve
     from bec_widgets.widgets.spiral_progress_bar.ring import Ring
+    from bec_widgets.widgets.website.website import WebsiteWidget
 
     current_path = os.path.dirname(__file__)
     client_path = os.path.join(current_path, "client.py")
@@ -133,6 +134,7 @@ if __name__ == "__main__":  # pragma: no cover
         BECDockArea,
         SpiralProgressBar,
         Ring,
+        WebsiteWidget,
     ]
     generator = ClientGenerator()
     generator.generate_client(clss)

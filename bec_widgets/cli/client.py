@@ -1932,3 +1932,79 @@ class Ring(RPCBase):
         """
         Reset the connections for the ring widget. Disconnect the current slot and endpoint.
         """
+
+
+class WebsiteWidget(RPCBase):
+    @rpc_call
+    def set_url(self, url: str) -> None:
+        """
+        Set the url of the website widget
+
+        Args:
+            url (str): The url to set
+        """
+
+    @rpc_call
+    def get_url(self) -> str:
+        """
+        Get the current url of the website widget
+
+        Returns:
+            str: The current url
+        """
+
+    @rpc_call
+    def reload(self):
+        """
+        Reload the website
+        """
+
+    @rpc_call
+    def back(self):
+        """
+        Go back in the history
+        """
+
+    @rpc_call
+    def forward(self):
+        """
+        Go forward in the history
+        """
+
+
+class WebsiteWidget(RPCBase):
+    @rpc_call
+    def set_url(self, url: str) -> None:
+        """
+        Set the url of the website widget
+
+        Args:
+            url (str): The url to set
+        """
+
+    @rpc_call
+    def get_url(self) -> str:
+        """
+        Get the current url of the website widget
+
+        Returns:
+            str: The current url
+        """
+
+    @rpc_call
+    def reload(self):
+        """
+        Reload the website
+        """
+
+    @rpc_call
+    def back(self):
+        """
+        Go back in the history
+        """
+
+    @rpc_call
+    def forward(self):
+        """
+        Go forward in the history
+        """
