@@ -2,6 +2,15 @@
 
 
 
+## v0.57.4 (2024-06-06)
+
+### Fix
+
+* fix(docks): set_title do update dock internal _name now ([`15cbc21`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/15cbc21e5bb3cf85f5822d44a2b3665b5aa2f346))
+
+* fix(docks): docks widget_list adn dockarea panels return values fixed ([`ffae5ee`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ffae5ee54e6b43da660131092452adff195ba4fb))
+
+
 ## v0.57.3 (2024-06-06)
 
 ### Documentation
@@ -150,12 +159,3 @@
 ### Refactor
 
 * refactor(reconstruction): repository structure is changed to separate assets needed for each widget ([`3455c60`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3455c602361d3b5cc3ff9190f9d2870474becf8a))
-
-* refactor(clean-up): 1st generation widgets are removed ([`edc25fb`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/edc25fbf9d5a0321e5f0a80b492b6337df807849))
-
-
-## v0.53.3 (2024-05-16)
-
-### Fix
-
-* fix: removed apparently unnecessary sleep while waiting for an rpc response ([`7d64cac`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7d64cac6610b39d3553ff650354f78ead8ee6b55))
