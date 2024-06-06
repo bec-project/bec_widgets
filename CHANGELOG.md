@@ -2,6 +2,23 @@
 
 
 
+## v0.57.5 (2024-06-06)
+
+### Documentation
+
+* docs(figure): docs adjusted to be compatible with new signature ([`c037b87`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c037b87675af91b26e8c7c60e76622d4ed4cf5d5))
+
+### Fix
+
+* fix(waveform): added .plot method with the same signature as BECFigure.plot ([`8479caf`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8479caf53a7325788ca264e5bd9aee01f1d4c5a0))
+
+* fix(plot_base): .plot removed from plot_base.py, because there is no use case for it ([`82e2c89`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/82e2c898d2e26f786b2d481f85c647472675e75b))
+
+### Refactor
+
+* refactor(figure): logic for .add_image and .image consolidated; logic for .add_plot and .plot consolidated ([`52bc322`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/52bc322b2b8d3ef92ff3480e61bddaf32464f976))
+
+
 ## v0.57.4 (2024-06-06)
 
 ### Fix
@@ -140,22 +157,3 @@
 
 
 ## v0.55.0 (2024-05-24)
-
-### Feature
-
-* feat(widgets/progressbar): SpiralProgressBar added with rpc interface ([`76bd0d3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/76bd0d339ac9ae9e8a3baa0d0d4e951ec1d09670))
-
-
-## v0.54.0 (2024-05-24)
-
-### Build
-
-* build: added pyqt6 as sphinx build dependency ([`a47a8ec`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a47a8ec413934cf7fce8d5b7a5913371d4b3b4a5))
-
-### Feature
-
-* feat(figure): changes to support direct plot functionality ([`fc4d0f3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fc4d0f3bb2a7c2fca9c326d86eb68b305bcd548b))
-
-### Refactor
-
-* refactor(reconstruction): repository structure is changed to separate assets needed for each widget ([`3455c60`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3455c602361d3b5cc3ff9190f9d2870474becf8a))
