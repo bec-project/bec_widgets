@@ -22,7 +22,7 @@ The following code snipped demonstrates how to create a 1D waveform plot using B
 # adds a new dock, a new BECFigure and a BECWaveForm to the dock
 plt = gui.add_dock().add_widget('BECFigure').plot('samx', 'bpm4i')
 # add a second curve to the same plot 
-plt.add_curve_scan('samx', 'bpm3i')
+plt.plot(x_name='samx', y_name='bpm3i')
 plt.set_title("Gauss plots vs. samx")
 plt.set_x_label("Motor X")
 plt.set_y_label("Gauss Signal (A.U.")
@@ -53,7 +53,7 @@ dev.bpm3i.sim.select_sim_model("StepModel")
 The following code snipped demonstrates how to create a 2D scatter plot using BEC Widgets within BEC.
 ```python
 # adds a new dock, a new BECFigure and a BECWaveForm to the dock
-plt = gui.add_dock().add_widget('BECFigure').add_plot('samx', 'samy', 'bpm4i')
+plt = gui.add_dock().add_widget('BECFigure').add_plot(x_name='samx', y_name='samy', z_name='bpm4i')
 ```
 
 (user.widgets.motor_map)=
