@@ -35,8 +35,7 @@ class BECWaveform(BECPlotBase):
     USER_ACCESS = [
         "rpc_id",
         "config_dict",
-        "add_curve_scan",
-        "add_curve_custom",
+        "plot",
         "remove_curve",
         "scan_history",
         "curves",
@@ -199,6 +198,57 @@ class BECWaveform(BECPlotBase):
             raise ValueError(f"Curve with ID '{identifier}' not found.")
         else:
             raise ValueError("Identifier must be either an integer (index) or a string (curve_id).")
+
+    def plot(
+        self,
+        x: list | np.ndarray | None = None,
+        y: list | np.ndarray | None = None,
+        x_name: str | None = None,
+        y_name: str | None = None,
+        z_name: str | None = None,
+        x_entry: str | None = None,
+        y_entry: str | None = None,
+        z_entry: str | None = None,
+        color: str | None = None,
+        color_map_z: str | None = "plasma",
+        label: str | None = None,
+        validate: bool = True,
+    ) -> BECCurve:
+        """
+        Plot a curve to the plot widget.
+        Args:
+            x(list | np.ndarray): Custom x data to plot.
+            y(list | np.ndarray): Custom y data to plot.
+            x_name(str): The name of the device for the x-axis.
+            y_name(str): The name of the device for the y-axis.
+            z_name(str): The name of the device for the z-axis.
+            x_entry(str): The name of the entry for the x-axis.
+            y_entry(str): The name of the entry for the y-axis.
+            z_entry(str): The name of the entry for the z-axis.
+            color(str): The color of the curve.
+            color_map_z(str): The color map to use for the z-axis.
+            label(str): The label of the curve.
+            validate(bool): If True, validate the device names and entries.
+
+        Returns:
+            BECCurve: The curve object.
+        """
+
+        if x is not None and y is not None:
+            return self.add_curve_custom(x=x, y=y, label=label, color=color)
+        else:
+            return self.add_curve_scan(
+                x_name=x_name,
+                y_name=y_name,
+                z_name=z_name,
+                x_entry=x_entry,
+                y_entry=y_entry,
+                z_entry=z_entry,
+                color=color,
+                color_map_z=color_map_z,
+                label=label,
+                validate_bec=validate,
+            )
 
     def add_curve_custom(
         self,

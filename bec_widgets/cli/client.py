@@ -154,57 +154,36 @@ class BECWaveform(RPCBase):
         """
 
     @rpc_call
-    def add_curve_scan(
+    def plot(
         self,
-        x_name: "str",
-        y_name: "str",
-        z_name: "Optional[str]" = None,
-        x_entry: "Optional[str]" = None,
-        y_entry: "Optional[str]" = None,
-        z_entry: "Optional[str]" = None,
-        color: "Optional[str]" = None,
-        color_map_z: "Optional[str]" = "plasma",
-        label: "Optional[str]" = None,
-        validate_bec: "bool" = True,
-        **kwargs,
+        x: "list | np.ndarray | None" = None,
+        y: "list | np.ndarray | None" = None,
+        x_name: "str | None" = None,
+        y_name: "str | None" = None,
+        z_name: "str | None" = None,
+        x_entry: "str | None" = None,
+        y_entry: "str | None" = None,
+        z_entry: "str | None" = None,
+        color: "str | None" = None,
+        color_map_z: "str | None" = "plasma",
+        label: "str | None" = None,
+        validate: "bool" = True,
     ) -> "BECCurve":
         """
-        Add a curve to the plot widget from the scan segment.
-
+        Plot a curve to the plot widget.
         Args:
-            x_name(str): Name of the x signal.
-            x_entry(str): Entry of the x signal.
-            y_name(str): Name of the y signal.
-            y_entry(str): Entry of the y signal.
-            z_name(str): Name of the z signal.
-            z_entry(str): Entry of the z signal.
-            color(str, optional): Color of the curve. Defaults to None.
+            x(list | np.ndarray): Custom x data to plot.
+            y(list | np.ndarray): Custom y data to plot.
+            x_name(str): The name of the device for the x-axis.
+            y_name(str): The name of the device for the y-axis.
+            z_name(str): The name of the device for the z-axis.
+            x_entry(str): The name of the entry for the x-axis.
+            y_entry(str): The name of the entry for the y-axis.
+            z_entry(str): The name of the entry for the z-axis.
+            color(str): The color of the curve.
             color_map_z(str): The color map to use for the z-axis.
-            label(str, optional): Label of the curve. Defaults to None.
-            **kwargs: Additional keyword arguments for the curve configuration.
-
-        Returns:
-            BECCurve: The curve object.
-        """
-
-    @rpc_call
-    def add_curve_custom(
-        self,
-        x: "list | np.ndarray",
-        y: "list | np.ndarray",
-        label: "str" = None,
-        color: "str" = None,
-        **kwargs,
-    ) -> "BECCurve":
-        """
-        Add a custom data curve to the plot widget.
-
-        Args:
-            x(list|np.ndarray): X data of the curve.
-            y(list|np.ndarray): Y data of the curve.
-            label(str, optional): Label of the curve. Defaults to None.
-            color(str, optional): Color of the curve. Defaults to None.
-            **kwargs: Additional keyword arguments for the curve configuration.
+            label(str): The label of the curve.
+            validate(bool): If True, validate the device names and entries.
 
         Returns:
             BECCurve: The curve object.
@@ -398,14 +377,39 @@ class BECWaveform(RPCBase):
         """
 
     @rpc_call
-    def plot(self, data_x: "list | np.ndarray", data_y: "list | np.ndarray", **kwargs):
+    def plot(
+        self,
+        x: "list | np.ndarray | None" = None,
+        y: "list | np.ndarray | None" = None,
+        x_name: "str | None" = None,
+        y_name: "str | None" = None,
+        z_name: "str | None" = None,
+        x_entry: "str | None" = None,
+        y_entry: "str | None" = None,
+        z_entry: "str | None" = None,
+        color: "str | None" = None,
+        color_map_z: "str | None" = "plasma",
+        label: "str | None" = None,
+        validate: "bool" = True,
+    ) -> "BECCurve":
         """
-        Plot custom data on the plot widget. These data are not saved in config.
-
+        Plot a curve to the plot widget.
         Args:
-            data_x(list|np.ndarray): x-axis data
-            data_y(list|np.ndarray): y-axis data
-            **kwargs: Keyword arguments for the plot.
+            x(list | np.ndarray): Custom x data to plot.
+            y(list | np.ndarray): Custom y data to plot.
+            x_name(str): The name of the device for the x-axis.
+            y_name(str): The name of the device for the y-axis.
+            z_name(str): The name of the device for the z-axis.
+            x_entry(str): The name of the entry for the x-axis.
+            y_entry(str): The name of the entry for the y-axis.
+            z_entry(str): The name of the entry for the z-axis.
+            color(str): The color of the curve.
+            color_map_z(str): The color map to use for the z-axis.
+            label(str): The label of the curve.
+            validate(bool): If True, validate the device names and entries.
+
+        Returns:
+            BECCurve: The curve object.
         """
 
     @rpc_call
