@@ -3,6 +3,10 @@
 [`BECFigure`](/api_reference/_autosummary/bec_widgets.cli.client.BECFigure) is a widget that provides a graphical user interface for creating and managing plots. It is a versatile tool that allows users to create a wide range of plots, from simple 1D waveforms to complex 2D scatter plots. BECFigure is designed to be user-friendly and interactive, enabling users to customize plots and visualize data in real-time.
 In the following, we describe 4 different type of widgets thaat are available in BECFigure. 
 
+**Schema of the BECFigure**
+
+![BECFigure.png](BECFigure.png)
+
 (user.widgets.waveform_1d)=
 ## [1D Waveform Widget](/api_reference/_autosummary/bec_widgets.cli.client.BECWaveform)
 

@@ -5,6 +5,10 @@ In order to use BEC Widgets as a plotting tool for BEC, it needs to be [installe
 ## BECDockArea
 The `bec.gui` object is your entry point to BEC Widgets. It is a [`BECDockArea`](/api_reference/_autosummary/bec_widgets.cli.client.BECDockArea) instance that can be composed of multiple [`BECDock`](/api_reference/_autosummary/bec_widgets.cli.client.BECDock)s that can be attached / detached to the main area. These docks allow users to freely arrange and customize the widgets they add to the gui, providing a flexible and customizable interface to visualize data. 
 
+**Schema of the BECDockArea**
+
+![BECDockArea.png](BECDockArea.png)
+
 ## Widgets
 Widgets are the building blocks of the BEC Widgets framework. They are the visual components that allow users to interact with the data and control the behavior of the application. Each dock can contain multiple widgets, albeit we recommend for most use cases a single widget per dock. BEC Widgets provides a set of core widgets (cf. [widgets](#user.widgets)). More widgets can be added by the users, and we invite you to explore the [developer documentation](developer.widgets) to learn how to create custom widgets.
 For the introduction given here, we will focus on the `BECFigure` widget, as it is the most commonly used widget for visualizing data from BEC. The same access pattern can be used for all other widgets.
