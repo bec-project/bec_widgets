@@ -2,6 +2,19 @@
 
 
 
+## v0.57.1 (2024-06-06)
+
+### Documentation
+
+* docs: docs refactored from add_widget_bec to add_widget ([`c3f4845`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c3f4845b4f95005ff737fed5542600b0b9a9cc2b))
+
+### Fix
+
+* fix: tests references to add_widget_bec refactored ([`f51b25f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f51b25f0af4ab8b0a75ee48a40bfbb079c16e9d1))
+
+* fix(dock): add_widget and add_widget_bec consolidated ([`8ae323f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8ae323f5c3c0d9d0f202d31d5e8374a272a26be2))
+
+
 ## v0.57.0 (2024-06-05)
 
 ### Documentation
@@ -160,16 +173,3 @@
 ### Fix
 
 * fix(docstrings): docstrings formating fixed for sphinx to properly format readdocs ([`7f2f7cd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7f2f7cd07a14876617cd83cedde8c281fdc52c3a))
-
-
-## v0.52.0 (2024-05-07)
-
-### Feature
-
-* feat(utils/layout_manager): added GridLayoutManager to extend functionalities of native QGridLayout ([`fcd6ef0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fcd6ef0975dc872f69c9d6fb2b8a1ad04a423aae))
-
-* feat(widget/dock): BECDock and BECDock area for dockable windows ([`d8ff8af`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d8ff8afcd474660a6069bbdab05f10a65f221727))
-
-### Fix
-
-* fix(widgets/dock): BECDockArea close overwrites the default pyqtgraph Container close + minor improvements ([`ceae979`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ceae979f375ecc33c5c97148f197655c1ca57b6c))
