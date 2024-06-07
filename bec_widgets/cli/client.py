@@ -753,7 +753,7 @@ class BECCurve(RPCBase):
         """
 
     @rpc_call
-    def set_colormap(self, colormap: "str"):
+    def set_colormap_z(self, colormap: "str"):
         """
         Set the colormap for the scatter plot z gradient.
 

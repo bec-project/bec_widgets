@@ -364,7 +364,7 @@ class BECWaveform(BECPlotBase):
             parent_id=self.gui_id,
             label=label,
             color=color,
-            color_map=color_map_z,
+            color_map_z=color_map_z,
             source=curve_source,
             signals=Signal(
                 source=curve_source,
@@ -564,7 +564,7 @@ class BECWaveform(BECPlotBase):
                 if curve.config.signals.z:
                     data_z = data[z_name][z_entry].val
                     color_z = self._make_z_gradient(
-                        data_z, curve.config.colormap
+                        data_z, curve.config.color_map_z
                     )  # TODO decide how to implement custom gradient
             except TypeError:
                 continue

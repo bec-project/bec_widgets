@@ -86,9 +86,10 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.console_layout.addWidget(self.console)
 
     def _init_figure(self):
-        self.figure.plot(x_name="samx", y_name="bpm4d")
+        self.figure.plot(x_name="samx", y_name="samy", z_name="bpm4i", color_map_z="cividis")
         self.figure.motor_map("samx", "samy")
         self.figure.image("eiger", color_map="viridis", vrange=(0, 100))
+        self.figure.add_plot(x_name="samx", y_name="samy", z_name="bpm4i", color_map_z="magma")
 
         self.figure.change_layout(2, 2)
 
@@ -97,8 +98,6 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.w3 = self.figure[1, 0]
 
         # curves for w1
-        self.w1.plot(x_name="samx", y_name="samy", z_name="bpm4i")
-        self.w1.plot(x_name="samx", y_name="samy", z_name="bpm3a")
         self.c1 = self.w1.get_config()
 
     def _init_dock(self):

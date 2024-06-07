@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import Any, Literal, Optional
 
 import pyqtgraph as pg
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+from pydantic_core import PydanticCustomError
 from qtpy import QtCore
 
 from bec_widgets.utils import BECConnector, ConnectionConfig
@@ -43,7 +44,22 @@ class CurveConfig(ConnectionConfig):
     )
     source: Optional[str] = Field(None, description="The source of the curve.")
     signals: Optional[Signal] = Field(None, description="The signal of the curve.")
-    colormap: Optional[str] = Field("plasma", description="The colormap of the curves z gradient.")
+    color_map_z: Optional[str] = Field(
+        "plasma", description="The colormap of the curves z gradient.", validate_default=True
+    )
+    model_config: dict = {"validate_assignment": True}
+
+    @field_validator("color_map_z")
+    def validate_color_map(cls, v, values):
+        if v is not None and v != "":
+            available_colormaps = pg.colormap.listMaps()
+            if v not in available_colormaps:
+                raise PydanticCustomError(
+                    "unsupported colormap",
+                    f"Colormap '{v}' not found in the current installation of pyqtgraph. Choose on the following: {available_colormaps}.",
+                    {"wrong_value": v},
+                )
+        return v
 
 
 class BECCurve(BECConnector, pg.PlotDataItem):
@@ -54,7 +70,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         "set",
         "set_data",
         "set_color",
-        "set_colormap",
+        "set_colormap_z",
         "set_symbol",
         "set_symbol_color",
         "set_symbol_size",
@@ -130,7 +146,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         # Mapping of keywords to setter methods
         method_map = {
             "color": self.set_color,
-            "colormap": self.set_colormap,
+            "color_map_z": self.set_color_map_z,
             "symbol": self.set_symbol,
             "symbol_color": self.set_symbol_color,
             "symbol_size": self.set_symbol_size,
@@ -205,14 +221,15 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         self.config.pen_style = pen_style
         self.apply_config()
 
-    def set_colormap(self, colormap: str):
+    def set_color_map_z(self, colormap: str):
         """
         Set the colormap for the scatter plot z gradient.
 
         Args:
             colormap(str): Colormap for the scatter plot.
         """
-        self.config.colormap = colormap
+        self.config.color_map_z = colormap
+        self.apply_config()
 
     def get_data(self) -> tuple[np.ndarray, np.ndarray]:
         """
