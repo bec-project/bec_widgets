@@ -15,7 +15,9 @@ from bec_widgets.widgets.spiral_progress_bar.ring import Ring, RingConfig
 
 
 class SpiralProgressBarConfig(ConnectionConfig):
-    color_map: str | None = Field("magma", description="Color scheme for the progress bars.")
+    color_map: Optional[str] = Field(
+        "magma", description="Color scheme for the progress bars.", validate_default=True
+    )
     min_number_of_bars: int | None = Field(
         1, description="Minimum number of progress bars to display."
     )
@@ -359,7 +361,6 @@ class SpiralProgressBar(BECConnector, QWidget):
             colors = self._adjust_list_to_bars(colors)
             for ring, color in zip(self._rings, colors):
                 ring.set_color(color)
-            self.config.color_map = None
         self.update()
 
     def set_line_widths(self, widths: int | list[int], bar_index: int = None):
