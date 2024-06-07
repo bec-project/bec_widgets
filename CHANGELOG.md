@@ -2,6 +2,17 @@
 
 
 
+## v0.57.7 (2024-06-07)
+
+### Documentation
+
+* docs: added schema of BECDockArea and BECFigure ([`828067f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/828067f486a905eb4678538df58e2bdd6c770de1))
+
+### Fix
+
+* fix: add model_config to pydantic models to allow runtime checks after creation ([`ca5e8d2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ca5e8d2fbbffbf221cc5472710fef81a33ee29d6))
+
+
 ## v0.57.6 (2024-06-06)
 
 ### Fix
@@ -140,14 +151,6 @@
 
 ## v0.56.0 (2024-05-29)
 
-### Build
-
-* build: added pyside6 as dependency ([`db301b1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/db301b1be27bba76c8bb21fbff93cb4902b592a5))
-
-### Ci
-
-* ci: added tests for pyside6, pyqt6 and pyqt5, default test and e2e is python 3.11 and pyqt6 ([`855be35`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/855be3551a1372bcbebba6f8930903f99202bbca))
-
 ### Documentation
 
 * docs(examples): example apps section deleted ([`ad208a5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ad208a5ef8495c45a8b83a4850ba9a1041b42717))
@@ -155,5 +158,3 @@
 ### Fix
 
 * fix(examples): outdated examples removed (mca_plot.py, stream_plot.py, motor_example.py) ([`ddc9510`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ddc9510c2ba8dadf291809eeb5b135a105259492))
-
-* fix: compatibility adjustment to .ui loading and tests for PySide6 ([`07b99d9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/07b99d91a57a645cddd76294f48d78773e4c9ea5))
