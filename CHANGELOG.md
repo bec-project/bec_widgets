@@ -2,6 +2,13 @@
 
 
 
+## v0.58.1 (2024-06-07)
+
+### Fix
+
+* fix(dock): new dock can be detached upon creation ([`02a2608`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/02a26086c4540127a11c235cba30afc4fd712007))
+
+
 ## v0.58.0 (2024-06-07)
 
 ### Feature
@@ -151,7 +158,3 @@
 * fix(bar): ring saves current value in config ([`9648e3e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9648e3ea96a4109be6be694d855151ed6d3ad661))
 
 * fix(dock): dock saves configs of all children widgets ([`4be756a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4be756a8676421c3a3451458995232407295df84))
-
-* fix(dock_area): save/restore state is saved in config ([`46face0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/46face0ee59122f04cb383da685a6658beeeb389))
-
-* fix(figure): added correct types of configs to subplot widgets ([`6f3b1ea`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6f3b1ea985c18929b9bab54239eeb600f03b274a))
