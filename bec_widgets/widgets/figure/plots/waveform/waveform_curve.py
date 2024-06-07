@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Literal, Optional
+from typing import TYPE_CHECKING, Any, Literal, Optional
 
 import pyqtgraph as pg
 from pydantic import BaseModel, Field, field_validator
@@ -8,6 +8,9 @@ from pydantic_core import PydanticCustomError
 from qtpy import QtCore
 
 from bec_widgets.utils import BECConnector, ConnectionConfig
+
+if TYPE_CHECKING:
+    from bec_widgets.widgets.figure.plots.waveform import BECWaveform1D
 
 
 class SignalData(BaseModel):
@@ -84,7 +87,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         name: Optional[str] = None,
         config: Optional[CurveConfig] = None,
         gui_id: Optional[str] = None,
-        parent_item: Optional[pg.PlotItem] = None,
+        parent_item: Optional[BECWaveform1D] = None,
         **kwargs,
     ):
         if config is None:
@@ -230,6 +233,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         """
         self.config.color_map_z = colormap
         self.apply_config()
+        self.parent_item.scan_history(-1)
 
     def get_data(self) -> tuple[np.ndarray, np.ndarray]:
         """

@@ -396,7 +396,7 @@ class BECWaveform(BECPlotBase):
         Returns:
             BECCurve: The curve object.
         """
-        curve = BECCurve(config=config, name=name, parent_item=self.plot_item)
+        curve = BECCurve(config=config, name=name, parent_item=self)
         self._curves_data[source][name] = curve
         self.plot_item.addItem(curve)
         self.config.curves[name] = curve.config
