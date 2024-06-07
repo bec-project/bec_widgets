@@ -250,7 +250,7 @@ class Colors:
                 if not 0 <= value <= 255:
                     raise PydanticCustomError(
                         "unsupported color",
-                        f"The color values must be between 0 and 255. Provide color {color}.",
+                        f"The color values must be between 0 and 255 in RGBA format (R,G,B,A)",
                         {"wrong_value": color},
                     )
             return color
