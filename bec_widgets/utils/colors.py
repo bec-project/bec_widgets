@@ -1,11 +1,14 @@
+import re
 from typing import Literal
 
 import numpy as np
 import pyqtgraph as pg
+from pydantic_core import PydanticCustomError
 from qtpy.QtGui import QColor
 
 
 class Colors:
+
     @staticmethod
     def golden_ratio(num: int) -> list:
         """Calculate the golden ratio for a given number of angles.
@@ -63,3 +66,211 @@ class Colors:
             else:
                 raise ValueError("Unsupported format. Please choose 'RGB', 'HEX', or 'QColor'.")
         return colors
+
+    @staticmethod
+    def validate_color(color: tuple | str) -> tuple | str:
+        """
+        Validate the color input if it is HEX or RGBA compatible. Can be used in any pydantic model as a field validator.
+
+        Args:
+            color(tuple|str): The color to be validated. Can be a tuple of RGBA values or a HEX string.
+
+        Returns:
+            tuple|str: The validated color.
+        """
+        CSS_COLOR_NAMES = {
+            "aliceblue",
+            "antiquewhite",
+            "aqua",
+            "aquamarine",
+            "azure",
+            "beige",
+            "bisque",
+            "black",
+            "blanchedalmond",
+            "blue",
+            "blueviolet",
+            "brown",
+            "burlywood",
+            "cadetblue",
+            "chartreuse",
+            "chocolate",
+            "coral",
+            "cornflowerblue",
+            "cornsilk",
+            "crimson",
+            "cyan",
+            "darkblue",
+            "darkcyan",
+            "darkgoldenrod",
+            "darkgray",
+            "darkgreen",
+            "darkgrey",
+            "darkkhaki",
+            "darkmagenta",
+            "darkolivegreen",
+            "darkorange",
+            "darkorchid",
+            "darkred",
+            "darksalmon",
+            "darkseagreen",
+            "darkslateblue",
+            "darkslategray",
+            "darkslategrey",
+            "darkturquoise",
+            "darkviolet",
+            "deeppink",
+            "deepskyblue",
+            "dimgray",
+            "dimgrey",
+            "dodgerblue",
+            "firebrick",
+            "floralwhite",
+            "forestgreen",
+            "fuchsia",
+            "gainsboro",
+            "ghostwhite",
+            "gold",
+            "goldenrod",
+            "gray",
+            "green",
+            "greenyellow",
+            "grey",
+            "honeydew",
+            "hotpink",
+            "indianred",
+            "indigo",
+            "ivory",
+            "khaki",
+            "lavender",
+            "lavenderblush",
+            "lawngreen",
+            "lemonchiffon",
+            "lightblue",
+            "lightcoral",
+            "lightcyan",
+            "lightgoldenrodyellow",
+            "lightgray",
+            "lightgreen",
+            "lightgrey",
+            "lightpink",
+            "lightsalmon",
+            "lightseagreen",
+            "lightskyblue",
+            "lightslategray",
+            "lightslategrey",
+            "lightsteelblue",
+            "lightyellow",
+            "lime",
+            "limegreen",
+            "linen",
+            "magenta",
+            "maroon",
+            "mediumaquamarine",
+            "mediumblue",
+            "mediumorchid",
+            "mediumpurple",
+            "mediumseagreen",
+            "mediumslateblue",
+            "mediumspringgreen",
+            "mediumturquoise",
+            "mediumvioletred",
+            "midnightblue",
+            "mintcream",
+            "mistyrose",
+            "moccasin",
+            "navajowhite",
+            "navy",
+            "oldlace",
+            "olive",
+            "olivedrab",
+            "orange",
+            "orangered",
+            "orchid",
+            "palegoldenrod",
+            "palegreen",
+            "paleturquoise",
+            "palevioletred",
+            "papayawhip",
+            "peachpuff",
+            "peru",
+            "pink",
+            "plum",
+            "powderblue",
+            "purple",
+            "red",
+            "rosybrown",
+            "royalblue",
+            "saddlebrown",
+            "salmon",
+            "sandybrown",
+            "seagreen",
+            "seashell",
+            "sienna",
+            "silver",
+            "skyblue",
+            "slateblue",
+            "slategray",
+            "slategrey",
+            "snow",
+            "springgreen",
+            "steelblue",
+            "tan",
+            "teal",
+            "thistle",
+            "tomato",
+            "turquoise",
+            "violet",
+            "wheat",
+            "white",
+            "whitesmoke",
+            "yellow",
+            "yellowgreen",
+        }
+        if isinstance(color, str):
+            hex_pattern = re.compile(r"^#(?:[0-9a-fA-F]{3}){1,2}$")
+            if hex_pattern.match(color):
+                return color
+            elif color.lower() in CSS_COLOR_NAMES:
+                return color
+            else:
+                raise PydanticCustomError(
+                    "unsupported color",
+                    "The color must be a valid HEX string or CSS Color.",
+                    {"wrong_value": color},
+                )
+        elif isinstance(color, tuple):
+            if len(color) != 4:
+                raise PydanticCustomError(
+                    "unsupported color",
+                    "The color must be a tuple of 4 elements (R, G, B, A).",
+                    {"wrong_value": color},
+                )
+            for value in color:
+                if not 0 <= value <= 255:
+                    raise PydanticCustomError(
+                        "unsupported color",
+                        f"The color values must be between 0 and 255. Provide color {color}.",
+                        {"wrong_value": color},
+                    )
+            return color
+
+    @staticmethod
+    def validate_color_map(color_map: str) -> str:
+        """
+        Validate the colormap input if it is supported by pyqtgraph. Can be used in any pydantic model as a field validator. If validation fails it prints all available colormaps from pyqtgraph instance.
+
+        Args:
+            color_map(str): The colormap to be validated.
+
+        Returns:
+            str: The validated colormap.
+        """
+        available_colormaps = pg.colormap.listMaps()
+        if color_map not in available_colormaps:
+            raise PydanticCustomError(
+                "unsupported colormap",
+                f"Colormap '{color_map}' not found in the current installation of pyqtgraph. Choose on the following: {available_colormaps}.",
+                {"wrong_value": color_map},
+            )
+        return color_map

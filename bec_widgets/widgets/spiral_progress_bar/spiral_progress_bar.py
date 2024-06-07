@@ -59,16 +59,7 @@ class SpiralProgressBarConfig(ConnectionConfig):
                 )
         return v
 
-    @field_validator("color_map")
-    def validate_color_map(cls, v, values):
-        if v is not None and v != "":
-            if v not in pg.colormap.listMaps():
-                raise PydanticCustomError(
-                    "unsupported colormap",
-                    f"Colormap '{v}' not found in the current installation of pyqtgraph",
-                    {"wrong_value": v},
-                )
-        return v
+    _validate_colormap = field_validator("color_map")(Colors.validate_color_map)
 
 
 class SpiralProgressBar(BECConnector, QWidget):

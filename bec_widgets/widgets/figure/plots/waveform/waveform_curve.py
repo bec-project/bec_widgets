@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 from pydantic_core import PydanticCustomError
 from qtpy import QtCore
 
-from bec_widgets.utils import BECConnector, ConnectionConfig
+from bec_widgets.utils import BECConnector, ConnectionConfig, Colors
 
 if TYPE_CHECKING:
     from bec_widgets.widgets.figure.plots.waveform import BECWaveform1D
@@ -37,9 +37,11 @@ class Signal(BaseModel):
 class CurveConfig(ConnectionConfig):
     parent_id: Optional[str] = Field(None, description="The parent plot of the curve.")
     label: Optional[str] = Field(None, description="The label of the curve.")
-    color: Optional[Any] = Field(None, description="The color of the curve.")
+    color: Optional[str | tuple] = Field(None, description="The color of the curve.")
     symbol: Optional[str] = Field("o", description="The symbol of the curve.")
-    symbol_color: Optional[str] = Field(None, description="The color of the symbol of the curve.")
+    symbol_color: Optional[str | tuple] = Field(
+        None, description="The color of the symbol of the curve."
+    )
     symbol_size: Optional[int] = Field(5, description="The size of the symbol of the curve.")
     pen_width: Optional[int] = Field(2, description="The width of the pen of the curve.")
     pen_style: Optional[Literal["solid", "dash", "dot", "dashdot"]] = Field(
@@ -50,19 +52,12 @@ class CurveConfig(ConnectionConfig):
     color_map_z: Optional[str] = Field(
         "plasma", description="The colormap of the curves z gradient.", validate_default=True
     )
+
     model_config: dict = {"validate_assignment": True}
 
-    @field_validator("color_map_z")
-    def validate_color_map(cls, v, values):
-        if v is not None and v != "":
-            available_colormaps = pg.colormap.listMaps()
-            if v not in available_colormaps:
-                raise PydanticCustomError(
-                    "unsupported colormap",
-                    f"Colormap '{v}' not found in the current installation of pyqtgraph. Choose on the following: {available_colormaps}.",
-                    {"wrong_value": v},
-                )
-        return v
+    _validate_color_map_z = field_validator("color_map_z")(Colors.validate_color_map)
+    _validate_color = field_validator("color")(Colors.validate_color)
+    _validate_symbol_color = field_validator("symbol_color")(Colors.validate_color)
 
 
 class BECCurve(BECConnector, pg.PlotDataItem):
