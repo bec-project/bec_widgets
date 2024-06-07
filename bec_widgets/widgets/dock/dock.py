@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal, Optional
 
+from qtpy.QtCore import QSize
 from pydantic import Field
 from pyqtgraph.dockarea import Dock, DockLabel
 from qtpy import QtCore, QtGui
@@ -9,6 +10,7 @@ from qtpy import QtCore, QtGui
 from bec_widgets.cli.rpc_wigdet_handler import widget_handler
 from bec_widgets.utils import ConnectionConfig, GridLayoutManager
 from bec_widgets.utils.bec_widget import BECWidget
+
 
 if TYPE_CHECKING:
     from qtpy.QtWidgets import QWidget
@@ -116,6 +118,7 @@ class BECDock(BECWidget, Dock):
         "remove",
         "attach",
         "detach",
+        "close",
     ]
 
     def __init__(
@@ -126,6 +129,7 @@ class BECDock(BECWidget, Dock):
         name: str | None = None,
         client=None,
         gui_id: str | None = None,
+        temp: bool = False,
         closable: bool = True,
         **kwargs,
     ) -> None:
@@ -146,6 +150,8 @@ class BECDock(BECWidget, Dock):
 
         # Layout Manager
         self.layout_manager = GridLayoutManager(self.layout)
+
+        self.temp = temp
 
     def dropEvent(self, event):
         source = event.source()
@@ -171,6 +177,23 @@ class BECDock(BECWidget, Dock):
             super().float()
         else:
             super().float()
+
+        if self.temp:
+            self.make_dock_temporary()
+
+    def make_dock_temporary(self):
+        """
+        Make the dock temporary.
+        """
+        from bec_widgets.widgets import BECDockArea
+
+        self.orig_area.docks.pop(self.name(), None)
+        self.orig_area = BECDockArea()
+        self.area = self.orig_area
+        self.area.docks[self.name()] = self
+        self.config.parent_dock_area = self.area.gui_id
+        self.area.temporary = False
+        self.hide_title_bar()
 
     @property
     def widget_list(self) -> list[BECWidget]:
@@ -333,3 +356,7 @@ class BECDock(BECWidget, Dock):
         self.cleanup()
         super().close()
         self.parent_dock_area.dock_area.docks.pop(self.name(), None)
+
+        if self.temp:
+            self.area.deleteLater()
+            self.deleteLater()

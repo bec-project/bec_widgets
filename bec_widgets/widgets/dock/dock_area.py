@@ -278,6 +278,7 @@ class BECDockArea(BECWidget, QWidget):
         name: str = None,
         position: Literal["bottom", "top", "left", "right", "above", "below"] = None,
         relative_to: BECDock | None = None,
+        temp: bool = False,
         closable: bool = True,
         floating: bool = False,
         prefix: str = "dock",
@@ -294,6 +295,7 @@ class BECDockArea(BECWidget, QWidget):
             name(str): The name of the dock to be displayed and for further references. Has to be unique.
             position(Literal["bottom", "top", "left", "right", "above", "below"]): The position of the dock.
             relative_to(BECDock): The dock to which the new dock should be added relative to.
+            temp(bool): Whether the dock is temporary. Upon closing the dock is not returned to the parent dock area.
             closable(bool): Whether the dock is closable.
             floating(bool): Whether the dock is detached after creating.
             prefix(str): The prefix for the dock name if no name is provided.
@@ -317,7 +319,7 @@ class BECDockArea(BECWidget, QWidget):
         if position is None:
             position = "bottom"
 
-        dock = BECDock(name=name, parent_dock_area=self, closable=closable)
+        dock = BECDock(name=name, parent_dock_area=self, closable=closable, temp=temp)
         dock.config.position = position
         self.config.docks[name] = dock.config
 
@@ -338,9 +340,15 @@ class BECDockArea(BECWidget, QWidget):
         ):  # TODO still decide how initial instructions should be handled
             self._instructions_visible = False
             self.update()
-        if floating:
+        if floating or temp:
             dock.detach()
+        print("dock added")
         return dock
+
+    # def add_temp_dock(self):
+    #     area = BECDockArea()
+    #     area.show()
+    #     area.add_dock("dock1", widget="BECFigure")
 
     def detach_dock(self, dock_name: str) -> BECDock:
         """
@@ -402,6 +410,10 @@ class BECDockArea(BECWidget, QWidget):
         self.cleanup()
         super().close()
 
+    def closeEvent(self, event):
+        print("close event called")
+        self.cleanup()
+        super().closeEvent(event)
 
 if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
