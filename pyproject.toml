@@ -38,7 +38,7 @@ dev = [
     "fakeredis",
 ]
 pyqt5 = ["PyQt5>=5.9"]
-pyqt6 = ["PyQt6>=6.7"]
+pyqt6 = ["PyQt6>=6.7", "PyQt6-WebEngine>=6.7"]
 pyside6 = ["PySide6>=6.7"]
 
 [project.urls]
