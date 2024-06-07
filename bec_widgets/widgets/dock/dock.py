@@ -153,38 +153,6 @@ class BECDock(BECConnector, Dock):
         """
         return list(RPCWidgetHandler.widget_classes.keys())
 
-    # def add_widget_bec(
-    #     self,
-    #     widget_type: str,
-    #     row=None,
-    #     col=0,
-    #     rowspan=1,
-    #     colspan=1,
-    #     shift: Literal["down", "up", "left", "right"] = "down",
-    # ):
-    #     """
-    #     Add a widget to the dock.
-    #
-    #     Args:
-    #         widget_type(str): The widget to add. Only BEC RPC widgets from RPCWidgetHandler are allowed.
-    #         row(int): The row to add the widget to. If None, the widget will be added to the next available row.
-    #         col(int): The column to add the widget to.
-    #         rowspan(int): The number of rows the widget should span.
-    #         colspan(int): The number of columns the widget should span.
-    #         shift(Literal["down", "up", "left", "right"]): The direction to shift the widgets if the position is occupied.
-    #     """
-    #     if row is None:
-    #         row = self.layout.rowCount()
-    #
-    #     if self.layout_manager.is_position_occupied(row, col):
-    #         self.layout_manager.shift_widgets(shift, start_row=row)
-    #
-    #     widget = RPCWidgetHandler.create_widget(widget_type)
-    #     self.addWidget(widget, row=row, col=col, rowspan=rowspan, colspan=colspan)
-    #     self.config.widgets[widget.gui_id] = widget.config
-    #
-    #     return widget
-
     def add_widget(
         self,
         widget: BECConnector | str,

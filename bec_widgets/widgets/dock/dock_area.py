@@ -137,6 +137,7 @@ class BECDockArea(BECConnector, DockArea):
         position: Literal["bottom", "top", "left", "right", "above", "below"] = None,
         relative_to: BECDock | None = None,
         closable: bool = False,
+        floating: bool = False,
         prefix: str = "dock",
         widget: str | QWidget | None = None,
         row: int = None,
@@ -152,6 +153,7 @@ class BECDockArea(BECConnector, DockArea):
             position(Literal["bottom", "top", "left", "right", "above", "below"]): The position of the dock.
             relative_to(BECDock): The dock to which the new dock should be added relative to.
             closable(bool): Whether the dock is closable.
+            floating(bool): Whether the dock is detached after creating.
             prefix(str): The prefix for the dock name if no name is provided.
             widget(str|QWidget|None): The widget to be added to the dock. While using RPC, only BEC RPC widgets from RPCWidgetHandler are allowed.
             row(int): The row of the added widget.
@@ -192,6 +194,8 @@ class BECDockArea(BECConnector, DockArea):
         if self._instructions_visible:
             self._instructions_visible = False
             self.update()
+        if floating:
+            dock.detach()
         return dock
 
     def detach_dock(self, dock_name: str) -> BECDock:
