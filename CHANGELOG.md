@@ -2,6 +2,13 @@
 
 
 
+## v0.59.1 (2024-06-07)
+
+### Fix
+
+* fix(curve): set_color_map_z typo fixed in user access ([`e7838b0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e7838b0f2fc23b0a232ed7d68fbd7f3493a91b9e))
+
+
 ## v0.59.0 (2024-06-07)
 
 ### Build
@@ -151,11 +158,3 @@
 
 
 ## v0.57.0 (2024-06-05)
-
-### Documentation
-
-* docs: extend user documentation for BEC Widgets ([`4160f3d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4160f3d6d7ec1122785b5e3fdfc4afe67a95e9a1))
-
-### Feature
-
-* feat(widgets/console): BECJupyterConsole added ([`8c03034`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8c03034acf6b3ed1e346ebf1b785d41068513cc5))
