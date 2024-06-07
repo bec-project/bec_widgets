@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 from pydantic_core import PydanticCustomError
 from qtpy import QtCore
 
-from bec_widgets.utils import BECConnector, ConnectionConfig, Colors
+from bec_widgets.utils import BECConnector, Colors, ConnectionConfig
 
 if TYPE_CHECKING:
     from bec_widgets.widgets.figure.plots.waveform import BECWaveform1D
