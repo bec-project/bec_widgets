@@ -2,6 +2,27 @@
 
 
 
+## v0.58.0 (2024-06-07)
+
+### Feature
+
+* feat(utils.colors): general color validators ([`3094632`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/30946321348abc349fb4003dc39d0232dc19606c))
+
+### Fix
+
+* fix: bar colormap dynamic setting ([`67fd5e8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/67fd5e8581f60fe64027ac57f1f12cefa4d28343))
+
+* fix: formatting isort ([`bf699ec`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bf699ec1fbe2aacd31854e84fb0438c336840fcf))
+
+* fix(curve): 2D scatter updated if color_map_z is changed ([`6985ff0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6985ff0fcef9791b53198206ec8cbccd1d65ef99))
+
+* fix(curve): color_map_z setting works ([`33f7be4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/33f7be42c512402dab3fdd9781a8234e3ec5f4ba))
+
+### Test
+
+* test(color): validation tests added ([`c0ddece`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c0ddeceeeabacbf33019a8f24b18821926dc17ac))
+
+
 ## v0.57.7 (2024-06-07)
 
 ### Documentation
@@ -125,10 +146,6 @@
 
 ## v0.56.2 (2024-06-05)
 
-### Documentation
-
-* docs: restructured docs layout ([`3c9181d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3c9181d93d68faa4efb3b91c486ca9ca935975a0))
-
 ### Fix
 
 * fix(bar): ring saves current value in config ([`9648e3e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9648e3ea96a4109be6be694d855151ed6d3ad661))
@@ -138,23 +155,3 @@
 * fix(dock_area): save/restore state is saved in config ([`46face0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/46face0ee59122f04cb383da685a6658beeeb389))
 
 * fix(figure): added correct types of configs to subplot widgets ([`6f3b1ea`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6f3b1ea985c18929b9bab54239eeb600f03b274a))
-
-
-## v0.56.1 (2024-06-04)
-
-### Fix
-
-* fix(spiral_progress_bar/rings): config min/max values added check for floats ([`9d615c9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9d615c915c8f7cc2ea8f1dc17993b98fe462c682))
-
-* fix(spiral_progress_bar): Endpoint is always stored as a string in the RingConnection Config ([`d253991`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d2539918b296559e1d684344e179775a2423daa9))
-
-
-## v0.56.0 (2024-05-29)
-
-### Documentation
-
-* docs(examples): example apps section deleted ([`ad208a5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ad208a5ef8495c45a8b83a4850ba9a1041b42717))
-
-### Fix
-
-* fix(examples): outdated examples removed (mca_plot.py, stream_plot.py, motor_example.py) ([`ddc9510`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ddc9510c2ba8dadf291809eeb5b135a105259492))
