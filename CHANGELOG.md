@@ -2,6 +2,27 @@
 
 
 
+## v0.59.0 (2024-06-07)
+
+### Build
+
+* build: added webengine dependency ([`d56c549`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d56c5493cd28f379d04a79d90b01c73b0760da1b))
+
+### Ci
+
+* ci: merged additional tests to parallel matrix job ([`178fe4d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/178fe4d2da3a959f7cd90e7ea0f47314dc1ef4ed))
+
+* ci: added webengine dependencies ([`2d79ef8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2d79ef8fe5e52c61f4a78782770377cd6b41958b))
+
+### Documentation
+
+* docs: added website docs ([`cf6e5a4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cf6e5a40fc8320e9898a446a5bf14b77e94ef013))
+
+### Feature
+
+* feat(widget): added simple website widget with rpc ([`64abd67`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/64abd67b9b416bff9c89880b248d6e8639aa1e70))
+
+
 ## v0.58.1 (2024-06-07)
 
 ### Fix
@@ -138,23 +159,3 @@
 ### Feature
 
 * feat(widgets/console): BECJupyterConsole added ([`8c03034`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8c03034acf6b3ed1e346ebf1b785d41068513cc5))
-
-
-## v0.56.3 (2024-06-05)
-
-### Ci
-
-* ci: increased verbosity for e2e tests ([`4af1abe`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4af1abe4e15b62d2f7e70bf987a1a7d8694ef4d5))
-
-### Fix
-
-* fix: fixed support for auto updates ([`131f49d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/131f49da8ea65af4d44b50e81c1acfc29cd92093))
-
-
-## v0.56.2 (2024-06-05)
-
-### Fix
-
-* fix(bar): ring saves current value in config ([`9648e3e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9648e3ea96a4109be6be694d855151ed6d3ad661))
-
-* fix(dock): dock saves configs of all children widgets ([`4be756a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4be756a8676421c3a3451458995232407295df84))
