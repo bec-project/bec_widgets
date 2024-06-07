@@ -753,7 +753,7 @@ class BECCurve(RPCBase):
         """
 
     @rpc_call
-    def set_colormap_z(self, colormap: "str"):
+    def set_color_map_z(self, colormap: "str"):
         """
         Set the colormap for the scatter plot z gradient.
 
@@ -1588,6 +1588,7 @@ class BECDockArea(RPCBase, BECGuiClientMixin):
         position: "Literal['bottom', 'top', 'left', 'right', 'above', 'below']" = None,
         relative_to: "BECDock | None" = None,
         closable: "bool" = False,
+        floating: "bool" = False,
         prefix: "str" = "dock",
         widget: "str | QWidget | None" = None,
         row: "int" = None,
@@ -1603,6 +1604,7 @@ class BECDockArea(RPCBase, BECGuiClientMixin):
             position(Literal["bottom", "top", "left", "right", "above", "below"]): The position of the dock.
             relative_to(BECDock): The dock to which the new dock should be added relative to.
             closable(bool): Whether the dock is closable.
+            floating(bool): Whether the dock is detached after creating.
             prefix(str): The prefix for the dock name if no name is provided.
             widget(str|QWidget|None): The widget to be added to the dock. While using RPC, only BEC RPC widgets from RPCWidgetHandler are allowed.
             row(int): The row of the added widget.

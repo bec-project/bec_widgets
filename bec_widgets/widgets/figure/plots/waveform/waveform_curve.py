@@ -68,7 +68,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         "set",
         "set_data",
         "set_color",
-        "set_colormap_z",
+        "set_color_map_z",
         "set_symbol",
         "set_symbol_color",
         "set_symbol_size",
