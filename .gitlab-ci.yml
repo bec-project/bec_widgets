@@ -89,6 +89,7 @@ pylint-check:
     - apt-get update
     - apt-get install -y bc
   script:
+    - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
     # Identify changed Python files
     - if [ "$CI_PIPELINE_SOURCE" == "merge_request_event" ]; then
         TARGET_BRANCH_COMMIT_SHA=$(git rev-parse origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME);
