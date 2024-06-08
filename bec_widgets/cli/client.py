@@ -20,24 +20,6 @@ class Widgets(str, enum.Enum):
     WebsiteWidget = "WebsiteWidget"
 
 
-class BECConnector(RPCBase):
-    @property
-    @rpc_call
-    def config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @rpc_call
-    def get_all_rpc(self) -> "dict":
-        """
-        Get all registered RPC objects.
-        """
-
-
 class BECCurve(RPCBase):
     @rpc_call
     def remove(self):

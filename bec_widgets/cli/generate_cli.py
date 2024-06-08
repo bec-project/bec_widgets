@@ -198,7 +198,6 @@ def main():
         client_path = os.path.join(current_path, "client.py")
 
         rpc_classes = ClientGenerator.get_rpc_classes("bec_widgets")
-        rpc_classes["connector_classes"].append(BECConnector)  # Not sure if this is necessary
         rpc_classes["connector_classes"].sort(key=lambda x: x.__name__)
 
         generator = ClientGenerator()
