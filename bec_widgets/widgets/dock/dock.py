@@ -63,8 +63,6 @@ class BECDock(BECConnector, Dock):
         super().__init__(client=client, config=config, gui_id=gui_id)
         Dock.__init__(self, name=name, **kwargs)
 
-        self.parent_dock_area = parent_dock_area
-
         # Layout Manager
         self.layout_manager = GridLayoutManager(self.layout)
 
@@ -73,8 +71,8 @@ class BECDock(BECConnector, Dock):
         old_area = source.area
         self.setOrientation("horizontal", force=True)
         super().dropEvent(event)
-        if old_area in self.parent_dock_area.tempAreas and old_area != self.parent_dock_area:
-            self.parent_dock_area.removeTempArea(old_area)
+        if old_area in self.orig_area.tempAreas and old_area != self.orig_area:
+            self.orig_area.removeTempArea(old_area)
 
     def float(self):
         """
@@ -129,7 +127,7 @@ class BECDock(BECConnector, Dock):
         Args:
             title(str): The title of the dock.
         """
-        self.parent_dock_area.docks[title] = self.parent_dock_area.docks.pop(self.name())
+        self.orig_area.docks[title] = self.orig_area.docks.pop(self.name())
         self.setTitle(title)
         self._name = title
 
@@ -206,7 +204,7 @@ class BECDock(BECConnector, Dock):
         """
         Attach the dock to the parent dock area.
         """
-        self.parent_dock_area.removeTempArea(self.area)
+        self.orig_area.removeTempArea(self.area)
 
     def detach(self):
         """
@@ -231,7 +229,7 @@ class BECDock(BECConnector, Dock):
         Remove the dock from the parent dock area.
         """
         # self.cleanup()
-        self.parent_dock_area.remove_dock(self.name())
+        self.orig_area.remove_dock(self.name())
 
     def cleanup(self):
         """
