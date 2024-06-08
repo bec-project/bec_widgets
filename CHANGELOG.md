@@ -2,6 +2,49 @@
 
 
 
+## v0.60.0 (2024-06-08)
+
+### Ci
+
+* ci: added git fetch for target branch ([`fc4f4f8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fc4f4f81ad1be99cf5112f2188a46c5bed2679ee))
+
+* ci: fixed pylint-check ([`6b1d582`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6b1d5827d6599f06a3acd316060a8d25f0686d54))
+
+* ci: cleanup ([`11173b9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/11173b9c0a7dc4b36e35962042e5b86407da49f1))
+
+### Feature
+
+* feat: added isort to bw-generate-cli ([`f0391f5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f0391f59c9eb0a51b693fccfe2e399e869d35dda))
+
+* feat: added entry point for bw-generate-cli ([`1c7f491`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1c7f4912ce5998e666276969bf4af8656d619a91))
+
+* feat(cli): auto-discover rpc-enabled widgets ([`df1be10`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/df1be10057a5e85a3f35bef1c1b27366b6727276))
+
+### Fix
+
+* fix: removed BECConnector from rpc client interface ([`6428e38`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6428e38ab94c15a2c904e75cc6404bb6d0394e04))
+
+* fix: added bec_ipython_client as dependency; needed for jupyter widget ([`006a089`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/006a0894b85cba3b2773737ed6fe3e92c81cdee0))
+
+* fix(BECFigure): removed duplicated user access for plot ([`954c576`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/954c576131f7deac669ddf9f51eeb1d41b6f92b7))
+
+* fix(bec_connector): field validator should be a classmethod ([`867720a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/867720a897b6713bd0df9af71ffdd11a6a380f7d))
+
+### Refactor
+
+* refactor: minor cleanup ([`3adf6cf`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3adf6cfd586355c8b8ce7fdc9722f868e22287c5))
+
+* refactor: disabled pylint for auto-gen client ([`b15816c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b15816ca9fd3e4ae87cca5fcfe029b4dfca570ca))
+
+* refactor(isort): added bec_widgets as known first party package ([`9c5a471`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9c5a471234ed2928e4527b079436db2a807c5f6f))
+
+* refactor(dock): parent_dock_area changed to orig_area (native for pyqtgraph) ([`2b40602`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2b40602bdc593ece0447ec926c2100414bd5cf67))
+
+### Test
+
+* test: added missing pylint statement to header ([`f662985`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f6629852ebc2b4ee239fa560cc310a5ae2627cf7))
+
+
 ## v0.59.1 (2024-06-07)
 
 ### Fix
@@ -108,12 +151,6 @@
 
 * docs(bar): docs updated ([`4be0d14`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4be0d14b7445c2322c2aef86257db168a841265c))
 
-* docs: fixed syntax of add_widget ([`a951ebf`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a951ebf1be6c086d094aa8abef5e0dfd1b3b8558))
-
-* docs: added auto update; closes #206 ([`32da803`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/32da803df9f7259842c43e85ba9a0ce29a266d06))
-
-* docs: cleanup ([`07d60cf`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/07d60cf7355d2edadb3c5ef8b86607d74b360455))
-
 ### Fix
 
 * fix(ring): automatic updates are disabled uf user specify updates manually with .set_update; &#39;scan_progres&#39; do not reset number of rings ([`e883dba`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e883dbad814dbcc0a19c341041c6d836e58a5918))
@@ -121,40 +158,3 @@
 * fix(ring): enable_auto_updates(True) do not reset properties of already setup bars ([`a2abad3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a2abad344f4c0039516eb60a825afb6822c5b19a))
 
 * fix(ring): set_min_max accepts floats ([`d44b1cf`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d44b1cf8b107cf02deedd9154b77d01c7f9ed05d))
-
-* fix(ring): set_update changed to Literals, no need to specify endpoint manually ([`c5b6499`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c5b6499e41eb1495bf260436ca3e1b036182c360))
-
-
-## v0.57.2 (2024-06-06)
-
-### Fix
-
-* fix(test/e2e): autoupdate e2e rewritten ([`e1af5ca`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e1af5ca60f0616835f9f41d84412f29dc298c644))
-
-* fix(test/e2e): spiral_progress_bar e2e tests rewritten to use config_dict ([`7fb31fc`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7fb31fc4d762ff4ca839971b3092a084186f81b8))
-
-* fix(test/e2e): dockarea and dock e2e tests changed to check asserts against config_dict ([`5c6ba65`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5c6ba65469863ea1e6fc5abdc742650e20eba9b9))
-
-* fix: rpc_server_dock fixture now spawns the server process ([`cd9fc46`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cd9fc46ff8a947242c8c28adcd73d7de60b11c44))
-
-* fix: accept scalars or numpy arrays of 1 element ([`2a88e17`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2a88e17b23436c55d25b7d3449e4af3a7689661c))
-
-### Refactor
-
-* refactor: move _get_output and _start_plot_process at the module level ([`69f4371`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/69f4371007c66aee6b7521a6803054025adf8c92))
-
-
-## v0.57.1 (2024-06-06)
-
-### Documentation
-
-* docs: docs refactored from add_widget_bec to add_widget ([`c3f4845`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c3f4845b4f95005ff737fed5542600b0b9a9cc2b))
-
-### Fix
-
-* fix: tests references to add_widget_bec refactored ([`f51b25f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f51b25f0af4ab8b0a75ee48a40bfbb079c16e9d1))
-
-* fix(dock): add_widget and add_widget_bec consolidated ([`8ae323f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8ae323f5c3c0d9d0f202d31d5e8374a272a26be2))
-
-
-## v0.57.0 (2024-06-05)
