@@ -1,1 +1,1 @@
-from .client import BECDockArea, BECFigure
+from .client import *
