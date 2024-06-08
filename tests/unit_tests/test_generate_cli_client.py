@@ -5,6 +5,8 @@ import isort
 
 from bec_widgets.cli.generate_cli import ClientGenerator
 
+# pylint: disable=missing-function-docstring
+
 
 # Mock classes to test the generator
 class MockBECWaveform1D:
@@ -24,11 +26,9 @@ class MockBECFigure:
 
     def add_plot(self, plot_id: str):
         """Add a plot to the figure."""
-        pass
 
     def remove_plot(self, plot_id: str):
         """Remove a plot from the figure."""
-        pass
 
 
 def test_client_generator_with_black_formatting():
