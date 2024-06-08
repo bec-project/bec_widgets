@@ -91,16 +91,18 @@ pylint-check:
   script:
     # Identify changed Python files
     - if [ "$CI_PIPELINE_SOURCE" == "merge_request_event" ]; then
-        TARGET_BRANCH_COMMIT_SHA=$(git rev-parse $CI_MERGE_REQUEST_TARGET_BRANCH_NAME);
-        CHANGED_FILES=$(git diff --name-only $SOURCE_BRANCH_COMMIT_SHA $TARGET_BRANCH_COMMIT_SHA | grep '\.py$' || true);
+        TARGET_BRANCH_COMMIT_SHA=$(git rev-parse origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME);
+        CHANGED_FILES=$(git diff --name-only $TARGET_BRANCH_COMMIT_SHA HEAD | grep '\.py$' || true);
       else
         CHANGED_FILES=$(git diff --name-only $CI_COMMIT_BEFORE_SHA $CI_COMMIT_SHA | grep '\.py$' || true);
       fi
     - if [ -z "$CHANGED_FILES" ]; then echo "No Python files changed."; exit 0; fi
 
+    - echo "Changed Python files:"
+      - $CHANGED_FILES
     # Run pylint only on changed files
     - mkdir ./pylint
-    - pylint $CHANGED_FILES --output-format=text . | tee ./pylint/pylint_changed_files.log || pylint-exit $?
+    - pylint $CHANGED_FILES --output-format=text | tee ./pylint/pylint_changed_files.log || pylint-exit $?
     - PYLINT_SCORE=$(sed -n 's/^Your code has been rated at \([-0-9.]*\)\/.*/\1/p' ./pylint/pylint_changed_files.log)
     - echo "Pylint score is $PYLINT_SCORE"
 
