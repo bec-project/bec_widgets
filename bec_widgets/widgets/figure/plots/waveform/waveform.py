@@ -53,7 +53,6 @@ class BECWaveform(BECPlotBase):
         "set_y_lim",
         "set_grid",
         "lock_aspect_ratio",
-        "plot",
         "remove",
     ]
     scan_signal_update = pyqtSignal()
