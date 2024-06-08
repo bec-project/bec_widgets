@@ -22,8 +22,10 @@ else:
         "If you want to use the real function 'typing.get_overloads()', please use Python 3.11 or later."
     )
 
-    def get_overloads(obj):
-        # Dummy function for Python versions before 3.11
+    def get_overloads(_obj):
+        """
+        Dummy function for Python versions before 3.11.
+        """
         return []
 
 
@@ -33,7 +35,9 @@ class ClientGenerator:
 import enum
 from typing import Literal, Optional, overload
 
-from bec_widgets.cli.client_utils import RPCBase, rpc_call, BECGuiClientMixin"""
+from bec_widgets.cli.client_utils import RPCBase, rpc_call, BECGuiClientMixin
+
+# pylint: skip-file"""
 
         self.content = ""
 
@@ -73,11 +77,6 @@ class Widgets(str, enum.Enum):
         """
 
         class_name = cls.__name__
-        module = cls.__module__
-
-        # Generate the header
-        #         self.header += f"""
-        # from {module} import {class_name}"""
 
         # Generate the content
         if cls.__name__ == "BECDockArea":

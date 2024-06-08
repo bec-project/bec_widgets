@@ -5,6 +5,8 @@ from typing import Literal, Optional, overload
 
 from bec_widgets.cli.client_utils import BECGuiClientMixin, RPCBase, rpc_call
 
+# pylint: skip-file
+
 
 class Widgets(str, enum.Enum):
     """
