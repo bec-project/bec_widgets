@@ -34,7 +34,17 @@ stages:
 .install-qt-webengine-deps: &install-qt-webengine-deps
     - apt-get -y install libnss3 libxdamage1 libasound2 libatomic1 libxcursor1
     - export QTWEBENGINE_DISABLE_SANDBOX=1
-    
+
+.clone-repos: &clone-repos
+    - git clone --branch $BEC_CORE_BRANCH https://gitlab.psi.ch/bec/bec.git
+    - git clone --branch $OPHYD_DEVICES_BRANCH https://gitlab.psi.ch/bec/ophyd_devices.git
+    - export OHPYD_DEVICES_PATH=$PWD/ophyd_devices
+  
+.install-os-packages: &install-os-packages
+    - apt-get update
+    - apt-get install -y libgl1-mesa-glx libegl1-mesa x11-utils libxkbcommon-x11-0 libdbus-1-3
+    - *install-qt-webengine-deps
+
 before_script:
   - if [[ "$CI_PROJECT_PATH" != "bec/bec_widgets" ]]; then 
     echo -e "\033[35;1m Using branch $CHILD_PIPELINE_BRANCH of BEC Widgets \033[0;m";
@@ -109,12 +119,8 @@ tests:
   variables:
       QT_QPA_PLATFORM: "offscreen"
   script:
-    - git clone --branch $BEC_CORE_BRANCH https://gitlab.psi.ch/bec/bec.git
-    - git clone --branch $OPHYD_DEVICES_BRANCH https://gitlab.psi.ch/bec/ophyd_devices.git
-    - export OHPYD_DEVICES_PATH=$PWD/ophyd_devices
-    - apt-get update
-    - apt-get install -y libgl1-mesa-glx libegl1-mesa x11-utils libxkbcommon-x11-0 libdbus-1-3
-    - *install-qt-webengine-deps
+    - *clone-repos
+    - *install-os-packages
     - pip install -e ./bec/bec_lib[dev]
     - pip install -e .[dev,pyqt6]
     - coverage run --source=./bec_widgets -m pytest -v --junitxml=report.xml --random-order --full-trace ./tests/unit_tests
@@ -148,12 +154,8 @@ test-matrix:
       QT_PCKG: ""
   image: $CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX/python:$PYTHON_VERSION
   script:
-    - git clone --branch $BEC_CORE_BRANCH https://gitlab.psi.ch/bec/bec.git
-    - git clone --branch $OPHYD_DEVICES_BRANCH https://gitlab.psi.ch/bec/ophyd_devices.git
-    - export OHPYD_DEVICES_PATH=$PWD/ophyd_devices
-    - apt-get update
-    - apt-get install -y libgl1-mesa-glx libegl1-mesa x11-utils libxkbcommon-x11-0 libdbus-1-3
-    - *install-qt-webengine-deps
+    - *clone-repos
+    - *install-os-packages
     - pip install -e ./bec/bec_lib[dev]
     - pip install -e .[dev,$QT_PCKG]
     - pytest -v --junitxml=report.xml --random-order ./tests/unit_tests
@@ -167,9 +169,8 @@ end-2-end-conda:
   variables:
     QT_QPA_PLATFORM: "offscreen"
   script:
-    - apt-get update
-    - apt-get install -y libgl1-mesa-glx libegl1-mesa x11-utils libxkbcommon-x11-0 libdbus-1-3
-    - *install-qt-webengine-deps
+    - *clone-repos
+    - *install-os-packages
     - conda config --prepend channels conda-forge
     - conda config --set channel_priority strict
     - conda config --set always_yes yes --set changeps1 no
@@ -177,10 +178,6 @@ end-2-end-conda:
     - conda init bash
     - source ~/.bashrc
     - conda activate test-environment
-
-    - git clone --branch $BEC_CORE_BRANCH https://gitlab.psi.ch/bec/bec.git
-    - git clone --branch $OPHYD_DEVICES_BRANCH https://gitlab.psi.ch/bec/ophyd_devices.git
-    - export OHPYD_DEVICES_PATH=$PWD/ophyd_devices
 
     - cd ./bec
     - source ./bin/install_bec_dev.sh -t
