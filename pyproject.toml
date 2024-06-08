@@ -19,6 +19,7 @@ dependencies = [
     "qtpy",
     "pyqtgraph",
     "bec_lib",
+    "bec_ipython_client", # needed for jupyter widget
     "zmq",
     "h5py",
     "pyqtdarktheme",
