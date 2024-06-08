@@ -23,7 +23,8 @@ dependencies = [
     "zmq",
     "h5py",
     "pyqtdarktheme",
-    "black",
+    "black",              # needed for bw-generate-cli
+    "isort",              # needed for bw-generate-cli
 ]
 
 
@@ -35,7 +36,6 @@ dev = [
     "pytest-xvfb",
     "coverage",
     "pytest-qt",
-    "isort",
     "fakeredis",
 ]
 pyqt5 = ["PyQt5>=5.9", "PyQtWebEngine>=5.9"]

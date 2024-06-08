@@ -9,6 +9,7 @@ import sys
 from typing import Literal
 
 import black
+import isort
 from qtpy.QtWidgets import QGraphicsWidget, QWidget
 
 from bec_widgets.utils import BECConnector
@@ -32,7 +33,7 @@ class ClientGenerator:
 import enum
 from typing import Literal, Optional, overload
 
-from bec_widgets.cli.client_utils import BECGuiClientMixin, RPCBase, rpc_call"""
+from bec_widgets.cli.client_utils import RPCBase, rpc_call, BECGuiClientMixin"""
 
         self.content = ""
 
@@ -125,6 +126,15 @@ class {class_name}(RPCBase):"""
             formatted_content = black.format_str(full_content, mode=black.FileMode(line_length=100))
         except black.NothingChanged:
             formatted_content = full_content
+
+        isort.Config(
+            profile="black",
+            line_length=100,
+            multi_line_output=3,
+            include_trailing_comma=True,
+            known_first_party=["bec_widgets"],
+        )
+        formatted_content = isort.code(formatted_content)
 
         with open(file_name, "w", encoding="utf-8") as file:
             file.write(formatted_content)

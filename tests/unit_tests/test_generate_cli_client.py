@@ -1,6 +1,7 @@
 from textwrap import dedent
 
 import black
+import isort
 
 from bec_widgets.cli.generate_cli import ClientGenerator
 
@@ -91,6 +92,8 @@ def test_client_generator_with_black_formatting():
     generated_output_formatted = black.format_str(
         generator.header + "\n" + generator.content, mode=black.FileMode(line_length=100)
     )
+
+    generated_output_formatted = isort.code(generated_output_formatted)
 
     assert expected_output_formatted == generated_output_formatted
 
