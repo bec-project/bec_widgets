@@ -45,6 +45,9 @@ pyside6 = ["PySide6>=6.7"]
 "Bug Tracker" = "https://gitlab.psi.ch/bec/bec_widgets/issues"
 Homepage = "https://gitlab.psi.ch/bec/bec_widgets"
 
+[project.scripts]
+bw-generate-cli = "bec_widgets.cli.generate_cli:main"
+
 [tool.hatch.build.targets.wheel]
 include = ["*"]
 
