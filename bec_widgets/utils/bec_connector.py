@@ -23,6 +23,7 @@ class ConnectionConfig(BaseModel):
     model_config: dict = {"validate_assignment": True}
 
     @field_validator("gui_id")
+    @classmethod
     def generate_gui_id(cls, v, values):
         """Generate a GUI ID if none is provided."""
         if v is None:
