@@ -119,9 +119,17 @@ class ScanControl(QWidget):
 
     def populate_scans(self):
         """Populates the scan selection combo box with available scans"""
-        self.available_scans = self.client.producer.get(MessageEndpoints.available_scans()).resource
+        self.available_scans = self.client.connector.get(
+            MessageEndpoints.available_scans()
+        ).resource
         if self.allowed_scans is None:
-            allowed_scans = self.available_scans.keys()
+            supported_scans = ["ScanBase", "SyncFlyScanBase", "AsyncFlyScanBase"]
+            allowed_scans = [
+                scan_name
+                for scan_name, scan_info in self.available_scans.items()
+                if scan_info["base_class"] in supported_scans
+            ]
+
         else:
             allowed_scans = self.allowed_scans
         # TODO check parent class is ScanBase -> filter out the scans not relevant for GUI
@@ -149,7 +157,7 @@ class ScanControl(QWidget):
         """
         row_index = grid_layout.rowCount()  # Get the next available row
         for column_index, label_name in enumerate(labels):
-            label = QLabel(label_name.capitalize(), self.scan_control_group)
+            label = QLabel(label_name["name"].capitalize(), self.scan_control_group)
             # Add the label to the grid layout at the calculated row and current column
             grid_layout.addWidget(label, row_index, column_index)
 
@@ -204,39 +212,41 @@ class ScanControl(QWidget):
         signature = scan_info.get("signature", [])
 
         # Extract kwargs from the converted signature
-        kwargs = [param["name"] for param in signature if param["kind"] == "KEYWORD_ONLY"]
+        parameters = [param for param in signature if param["annotation"] != "_empty"]
 
         # Add labels
-        self.add_labels_to_layout(kwargs, self.kwargs_layout)
+        self.add_labels_to_layout(parameters, self.kwargs_layout)
 
         # Add widgets
-        widgets = self.generate_widgets_from_signature(kwargs, signature)
+        widgets = self.generate_widgets_from_signature(parameters)
 
         self.add_widgets_row_to_layout(self.kwargs_layout, widgets)
 
-    def generate_widgets_from_signature(self, items: list, signature: dict = None) -> list:
+    def generate_widgets_from_signature(self, parameters: list) -> list:
         """
         Generates widgets from the given list of items.
 
         Args:
-            items(list): List of items to create widgets for.
-            signature(dict, optional): Scan signature dictionary from BEC.
+            parameters(list): List of items to create widgets for.
 
         Returns:
             list: List of widgets created from the given items.
         """
         widgets = []  # Initialize an empty list to hold the widgets
 
-        for item in items:
-            if signature:
-                # If a signature is provided, extract type and name from it
-                kwarg_info = next((info for info in signature if info["name"] == item), None)
-                if kwarg_info:
-                    item_type = kwarg_info.get("annotation", "_empty")
-                    item_name = item
-            else:
-                # If no signature is provided, assume the item is a tuple of (name, type)
+        item_default = None
+        item_type = "_empty"
+        item_name = "name"
+        for item in parameters:
+            if isinstance(item, dict):
+                item_type = item.get("annotation", "_empty")
+                item_name = item
+                item_default = item.get("default", 0)
+                item_default = item_default if item_default is not None else 0
+            elif isinstance(item, tuple):
                 item_name, item_type = item
+            else:
+                raise ValueError(f"Unsupported item type '{type(item)}' for parameter '{item}'")
 
             widget_class = self.WIDGET_HANDLER.get(item_type, None)
             if widget_class is None:
@@ -249,7 +259,9 @@ class ScanControl(QWidget):
             # set high default range for spin boxes #TODO can be linked to motor/device limits from BEC
             if isinstance(widget, (QSpinBox, QDoubleSpinBox)):
                 widget.setRange(-9999, 9999)
-                widget.setValue(0)
+            if item_default is not None:
+                WidgetIO.set_value(widget, item_default)
+
             # Add the widget to the list
             widgets.append(widget)
 
@@ -398,16 +410,17 @@ class ScanControl(QWidget):
             row_args = []
             for column in range(table.columnCount()):
                 widget = table.cellWidget(row, column)
-                if widget:
-                    if isinstance(widget, QLineEdit):  # special case for QLineEdit for Devices
-                        value = widget.text().lower()
-                        if value in self.dev:
-                            value = getattr(self.dev, value)
-                        else:
-                            raise ValueError(f"The device '{value}' is not recognized.")
+                if not widget:
+                    continue
+                if isinstance(widget, QLineEdit):  # special case for QLineEdit for Devices
+                    value = widget.text().lower()
+                    if value in self.dev:
+                        value = getattr(self.dev, value)
                     else:
-                        value = WidgetIO.get_value(widget)
-                    row_args.append(value)
+                        raise ValueError(f"The device '{value}' is not recognized.")
+                else:
+                    value = WidgetIO.get_value(widget)
+                row_args.append(value)
             args.extend(row_args)
         return args
 
@@ -426,6 +439,7 @@ class ScanControl(QWidget):
 
         # Execute the scan
         scan_function = getattr(self.scans, self.comboBox_scan_selection.currentText())
+        print(f"called with args: {args} and kwargs: {kwargs}")
         if callable(scan_function):
             scan_function(*args, **kwargs)
 
@@ -437,7 +451,7 @@ if __name__ == "__main__":  # pragma: no cover
     client.start()
 
     app = QApplication([])
-    scan_control = ScanControl(client=client)  # allowed_scans=["line_scan", "grid_scan"])
+    scan_control = ScanControl(client=client, allowed_scans=["line_scan", "grid_scan"])
 
     window = scan_control
     window.show()
