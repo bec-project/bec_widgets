@@ -118,7 +118,7 @@ class AutoUpdates:
         if not dev_y:
             return
         fig.clear_all()
-        plt = fig.plot(x_name=dev_x, y_name=dev_y)
+        plt = fig.plot(x_name=dev_x, y_name=dev_y, label=f"Scan {info.scan_number} - {dev_y}")
         plt.set(title=f"Scan {info.scan_number}", x_label=dev_x, y_label=dev_y)
 
     def simple_grid_scan(self, info: ScanInfo) -> None:
@@ -132,7 +132,9 @@ class AutoUpdates:
         dev_y = info.scan_report_devices[1]
         dev_z = self.get_selected_device(info.monitored_devices, self.gui.selected_device)
         fig.clear_all()
-        plt = fig.plot(x_name=dev_x, y_name=dev_y, z_name=dev_z, label=f"Scan {info.scan_number}")
+        plt = fig.plot(
+            x_name=dev_x, y_name=dev_y, z_name=dev_z, label=f"Scan {info.scan_number} - {dev_z}"
+        )
         plt.set(title=f"Scan {info.scan_number}", x_label=dev_x, y_label=dev_y)
 
     def best_effort(self, info: ScanInfo) -> None:
@@ -147,5 +149,5 @@ class AutoUpdates:
         if not dev_y:
             return
         fig.clear_all()
-        plt = fig.plot(x_name=dev_x, y_name=dev_y, label=f"Scan {info.scan_number}")
+        plt = fig.plot(x_name=dev_x, y_name=dev_y, label=f"Scan {info.scan_number} - {dev_y}")
         plt.set(title=f"Scan {info.scan_number}", x_label=dev_x, y_label=dev_y)

@@ -253,8 +253,14 @@ def test_auto_update(bec_client_lib, rpc_server_dock):
     plt_data = widgets[0].get_all_data()
 
     # check plotted data
-    assert plt_data["bpm4i-bpm4i"]["x"] == last_scan_data["samx"]["samx"].val
-    assert plt_data["bpm4i-bpm4i"]["y"] == last_scan_data["bpm4i"]["bpm4i"].val
+    assert (
+        plt_data[f"Scan {status.scan.scan_number} - bpm4i"]["x"]
+        == last_scan_data["samx"]["samx"].val
+    )
+    assert (
+        plt_data[f"Scan {status.scan.scan_number} - bpm4i"]["y"]
+        == last_scan_data["bpm4i"]["bpm4i"].val
+    )
 
     status = scans.grid_scan(
         dev.samx, -10, 10, 5, dev.samy, -5, 5, 5, exp_time=0.05, relative=False
@@ -268,5 +274,11 @@ def test_auto_update(bec_client_lib, rpc_server_dock):
     last_scan_data = queue.scan_storage.storage[-1].data
 
     # check plotted data
-    assert plt_data[f"Scan {status.scan.scan_number}"]["x"] == last_scan_data["samx"]["samx"].val
-    assert plt_data[f"Scan {status.scan.scan_number}"]["y"] == last_scan_data["samy"]["samy"].val
+    assert (
+        plt_data[f"Scan {status.scan.scan_number} - {dock.selected_device}"]["x"]
+        == last_scan_data["samx"]["samx"].val
+    )
+    assert (
+        plt_data[f"Scan {status.scan.scan_number} - {dock.selected_device}"]["y"]
+        == last_scan_data["samy"]["samy"].val
+    )
