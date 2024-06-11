@@ -11,6 +11,7 @@ hidden: false
 bec_figure/
 spiral_progress_bar/
 website/
+buttons/
 ```
 
 
