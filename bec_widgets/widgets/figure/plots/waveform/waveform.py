@@ -54,6 +54,7 @@ class BECWaveform(BECPlotBase):
         "set_grid",
         "lock_aspect_ratio",
         "remove",
+        "set_legend_label_size",
     ]
     scan_signal_update = pyqtSignal()
 
@@ -401,6 +402,7 @@ class BECWaveform(BECPlotBase):
         self.config.curves[name] = curve.config
         if data is not None:
             curve.setData(data[0], data[1])
+        self.set_legend_label_size()
         return curve
 
     def _validate_signal_entries(

@@ -1044,33 +1044,37 @@ class BECImageShow(RPCBase):
             - y_scale: Literal["linear", "log"]
             - x_lim: tuple
             - y_lim: tuple
+            - legend_label_size: int
         """
 
     @rpc_call
-    def set_title(self, title: "str"):
+    def set_title(self, title: "str", size: "int" = None):
         """
         Set the title of the plot widget.
 
         Args:
             title(str): Title of the plot widget.
+            size(int): Font size of the title.
         """
 
     @rpc_call
-    def set_x_label(self, label: "str"):
+    def set_x_label(self, label: "str", size: "int" = None):
         """
         Set the label of the x-axis.
 
         Args:
             label(str): Label of the x-axis.
+            size(int): Font size of the label.
         """
 
     @rpc_call
-    def set_y_label(self, label: "str"):
+    def set_y_label(self, label: "str", size: "int" = None):
         """
         Set the label of the y-axis.
 
         Args:
             label(str): Label of the y-axis.
+            size(int): Font size of the label.
         """
 
     @rpc_call
@@ -1268,33 +1272,37 @@ class BECPlotBase(RPCBase):
             - y_scale: Literal["linear", "log"]
             - x_lim: tuple
             - y_lim: tuple
+            - legend_label_size: int
         """
 
     @rpc_call
-    def set_title(self, title: "str"):
+    def set_title(self, title: "str", size: "int" = None):
         """
         Set the title of the plot widget.
 
         Args:
             title(str): Title of the plot widget.
+            size(int): Font size of the title.
         """
 
     @rpc_call
-    def set_x_label(self, label: "str"):
+    def set_x_label(self, label: "str", size: "int" = None):
         """
         Set the label of the x-axis.
 
         Args:
             label(str): Label of the x-axis.
+            size(int): Font size of the label.
         """
 
     @rpc_call
-    def set_y_label(self, label: "str"):
+    def set_y_label(self, label: "str", size: "int" = None):
         """
         Set the label of the y-axis.
 
         Args:
             label(str): Label of the y-axis.
+            size(int): Font size of the label.
         """
 
     @rpc_call
@@ -1368,6 +1376,15 @@ class BECPlotBase(RPCBase):
     def remove(self):
         """
         Remove the plot widget from the figure.
+        """
+
+    @rpc_call
+    def set_legend_label_size(self, size: "int" = None):
+        """
+        Set the font size of the legend.
+
+        Args:
+            size(int): Font size of the legend.
         """
 
 
@@ -1516,33 +1533,37 @@ class BECWaveform(RPCBase):
             - y_scale: Literal["linear", "log"]
             - x_lim: tuple
             - y_lim: tuple
+            - legend_label_size: int
         """
 
     @rpc_call
-    def set_title(self, title: "str"):
+    def set_title(self, title: "str", size: "int" = None):
         """
         Set the title of the plot widget.
 
         Args:
             title(str): Title of the plot widget.
+            size(int): Font size of the title.
         """
 
     @rpc_call
-    def set_x_label(self, label: "str"):
+    def set_x_label(self, label: "str", size: "int" = None):
         """
         Set the label of the x-axis.
 
         Args:
             label(str): Label of the x-axis.
+            size(int): Font size of the label.
         """
 
     @rpc_call
-    def set_y_label(self, label: "str"):
+    def set_y_label(self, label: "str", size: "int" = None):
         """
         Set the label of the y-axis.
 
         Args:
             label(str): Label of the y-axis.
+            size(int): Font size of the label.
         """
 
     @rpc_call
@@ -1616,6 +1637,15 @@ class BECWaveform(RPCBase):
     def remove(self):
         """
         Remove the plot widget from the figure.
+        """
+
+    @rpc_call
+    def set_legend_label_size(self, size: "int" = None):
+        """
+        Set the font size of the legend.
+
+        Args:
+            size(int): Font size of the legend.
         """
 
 

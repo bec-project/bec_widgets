@@ -711,6 +711,12 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         qdarktheme.setup_theme(theme)
         self.setBackground("k" if theme == "dark" else "w")
         self.config.theme = theme
+        for plot in self.widget_list:
+            plot.set_x_label(plot.plot_item.getAxis("bottom").label.toPlainText())
+            plot.set_y_label(plot.plot_item.getAxis("left").label.toPlainText())
+            if plot.plot_item.titleLabel.text:
+                plot.set_title(plot.plot_item.titleLabel.text)
+            plot.set_legend_label_size()
 
     def _remove_by_coordinates(self, row: int, col: int) -> None:
         """

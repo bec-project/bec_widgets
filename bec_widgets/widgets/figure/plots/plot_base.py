@@ -5,6 +5,8 @@ from typing import Literal, Optional
 import numpy as np
 import pyqtgraph as pg
 from pydantic import BaseModel, Field
+from qtpy import QT_VERSION
+from qtpy.QtGui import QFont, QFontDatabase, QFontInfo
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils import BECConnector, ConnectionConfig
@@ -12,8 +14,14 @@ from bec_widgets.utils import BECConnector, ConnectionConfig
 
 class AxisConfig(BaseModel):
     title: Optional[str] = Field(None, description="The title of the axes.")
+    title_size: Optional[int] = Field(None, description="The font size of the title.")
     x_label: Optional[str] = Field(None, description="The label for the x-axis.")
+    x_label_size: Optional[int] = Field(None, description="The font size of the x-axis label.")
     y_label: Optional[str] = Field(None, description="The label for the y-axis.")
+    y_label_size: Optional[int] = Field(None, description="The font size of the y-axis label.")
+    legend_label_size: Optional[int] = Field(
+        None, description="The font size of the legend labels."
+    )
     x_scale: Literal["linear", "log"] = Field("linear", description="The scale of the x-axis.")
     y_scale: Literal["linear", "log"] = Field("linear", description="The scale of the y-axis.")
     x_lim: Optional[tuple] = Field(None, description="The limits of the x-axis.")
@@ -50,6 +58,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         "set_grid",
         "lock_aspect_ratio",
         "remove",
+        "set_legend_label_size",
     ]
 
     def __init__(
@@ -85,6 +94,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
             - y_scale: Literal["linear", "log"]
             - x_lim: tuple
             - y_lim: tuple
+            - legend_label_size: int
         """
         # Mapping of keywords to setter methods
         method_map = {
@@ -95,6 +105,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
             "y_scale": self.set_y_scale,
             "x_lim": self.set_x_lim,
             "y_lim": self.set_y_lim,
+            "legend_label_size": self.set_legend_label_size,
         }
         for key, value in kwargs.items():
             if key in method_map:
@@ -116,34 +127,85 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
 
         self.set(**{k: v for k, v in config_mappings.items() if v is not None})
 
-    def set_title(self, title: str):
+    def set_legend_label_size(self, size: int = None):
+        """
+        Set the font size of the legend.
+
+        Args:
+            size(int): Font size of the legend.
+        """
+        if not self.plot_item.legend:
+            return
+        if self.config.axis.legend_label_size or size:
+            if size:
+                self.config.axis.legend_label_size = size
+            style = {
+                "color": self.get_text_color(),
+                "size": f"{self.config.axis.legend_label_size}pt",
+            }
+        else:
+            style = {}
+        for item in self.plot_item.legend.items:
+            for single_item in item:
+                if isinstance(single_item, pg.graphicsItems.LabelItem.LabelItem):
+                    single_item.setText(single_item.text, **style)
+
+    def get_text_color(self):
+        return "#FFF" if self.figure.config.theme == "dark" else "#000"
+
+    def set_title(self, title: str, size: int = None):
         """
         Set the title of the plot widget.
 
         Args:
             title(str): Title of the plot widget.
+            size(int): Font size of the title.
         """
-        self.plot_item.setTitle(title)
+        if self.config.axis.title_size or size:
+            if size:
+                self.config.axis.title_size = size
+            style = {"color": self.get_text_color(), "size": f"{self.config.axis.title_size}pt"}
+        else:
+            style = {}
+        self.plot_item.setTitle(title, **style)
         self.config.axis.title = title
 
-    def set_x_label(self, label: str):
+    def set_x_label(self, label: str, size: int = None):
         """
         Set the label of the x-axis.
 
         Args:
             label(str): Label of the x-axis.
+            size(int): Font size of the label.
         """
-        self.plot_item.setLabel("bottom", label)
+        if self.config.axis.x_label_size or size:
+            if size:
+                self.config.axis.x_label_size = size
+            style = {
+                "color": self.get_text_color(),
+                "font-size": f"{self.config.axis.x_label_size}pt",
+            }
+        else:
+            style = {}
+        self.plot_item.setLabel("bottom", label, **style)
         self.config.axis.x_label = label
 
-    def set_y_label(self, label: str):
+    def set_y_label(self, label: str, size: int = None):
         """
         Set the label of the y-axis.
 
         Args:
             label(str): Label of the y-axis.
+            size(int): Font size of the label.
         """
-        self.plot_item.setLabel("left", label)
+        if self.config.axis.y_label_size or size:
+            if size:
+                self.config.axis.y_label_size = size
+            color = self.get_text_color()
+            style = {"color": color, "font-size": f"{self.config.axis.y_label_size}pt"}
+        else:
+            style = {}
+        self.plot_item.setLabel("left", label, **style)
         self.config.axis.y_label = label
 
     def set_x_scale(self, scale: Literal["linear", "log"] = "linear"):
