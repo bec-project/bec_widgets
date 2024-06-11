@@ -1,5 +1,5 @@
 # pylint: disable=missing-function-docstring, missing-module-docstring, unused-import
-from unittest.mock import MagicMock
+from unittest import mock
 
 import numpy as np
 import pytest
@@ -56,8 +56,12 @@ def test_create_waveform1D_by_config(bec_figure):
         "col": 0,
         "axis": {
             "title": "Widget 1",
+            "title_size": None,
             "x_label": None,
+            "x_label_size": None,
             "y_label": None,
+            "y_label_size": None,
+            "legend_label_size": None,
             "x_scale": "linear",
             "y_scale": "linear",
             "x_lim": (1, 10),
@@ -191,6 +195,19 @@ def test_add_curve(bec_figure):
     assert w1._curves_data["scan_segment"] == {"bpm4i-bpm4i": c1}
     assert c1.config.label == "bpm4i-bpm4i"
     assert c1.config.source == "scan_segment"
+
+
+def test_change_legend_font_size(bec_figure):
+    plot = bec_figure.add_plot()
+
+    w1 = plot.add_curve_scan(x_name="samx", y_name="bpm4i")
+    my_func = plot.plot_item.legend.items[0][1]
+    with mock.patch.object(my_func, "setText") as mock_set_text:
+        plot.set_legend_label_size(16)
+        assert plot.config.axis.legend_label_size == 16
+        assert mock_set_text.call_count == 1
+        style = {"color": plot.get_text_color(), "size": "16pt"}
+        assert mock_set_text.call_args == mock.call(my_func.text, **style)
 
 
 def test_remove_curve(bec_figure):
@@ -406,10 +423,10 @@ def test_scan_update(bec_figure, qtbot):
         "scan_id": 1,
     }
     # Mock scan_storage.find_scan_by_ID
-    mock_scan_data_waveform = MagicMock()
+    mock_scan_data_waveform = mock.MagicMock()
     mock_scan_data_waveform.data = {
         device_name: {
-            entry: MagicMock(val=[msg_waveform["data"][device_name][entry]["value"]])
+            entry: mock.MagicMock(val=[msg_waveform["data"][device_name][entry]["value"]])
             for entry in msg_waveform["data"][device_name]
         }
         for device_name in msg_waveform["data"]
@@ -430,12 +447,12 @@ def test_scan_history_with_val_access(bec_figure, qtbot):
     c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i")
 
     mock_scan_data = {
-        "samx": {"samx": MagicMock(val=np.array([1, 2, 3]))},  # Use MagicMock for .val
-        "bpm4i": {"bpm4i": MagicMock(val=np.array([4, 5, 6]))},  # Use MagicMock for .val
+        "samx": {"samx": mock.MagicMock(val=np.array([1, 2, 3]))},  # Use mock.MagicMock for .val
+        "bpm4i": {"bpm4i": mock.MagicMock(val=np.array([4, 5, 6]))},  # Use mock.MagicMock for .val
     }
 
-    mock_scan_storage = MagicMock()
-    mock_scan_storage.find_scan_by_ID.return_value = MagicMock(data=mock_scan_data)
+    mock_scan_storage = mock.MagicMock()
+    mock_scan_storage.find_scan_by_ID.return_value = mock.MagicMock(data=mock_scan_data)
     w1.queue.scan_storage = mock_scan_storage
 
     fake_scan_id = "fake_scan_id"
@@ -464,10 +481,10 @@ def test_scatter_2d_update(bec_figure, qtbot):
     }
     msg_metadata = {"scan_name": "line_scan"}
 
-    mock_scan_data = MagicMock()
+    mock_scan_data = mock.MagicMock()
     mock_scan_data.data = {
         device_name: {
-            entry: MagicMock(val=msg["data"][device_name][entry]["value"])
+            entry: mock.MagicMock(val=msg["data"][device_name][entry]["value"])
             for entry in msg["data"][device_name]
         }
         for device_name in msg["data"]
