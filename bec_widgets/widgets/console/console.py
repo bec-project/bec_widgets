@@ -4,12 +4,17 @@ import platform
 import sys
 
 import termqt
-from qtpy.QtCore import QSocketNotifier, Qt, pyqtRemoveInputHook
+from qtpy.QtCore import QSocketNotifier, Qt
 from qtpy.QtGui import QFont
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QScrollBar, QWidget
 from termqt import Terminal
 
-pyqtRemoveInputHook()
+try:
+    from qtpy.QtCore import pyqtRemoveInputHook
+
+    pyqtRemoveInputHook()
+except ImportError:
+    pass
 
 if platform.system() in ["Linux", "Darwin"]:
     terminal_cmd = os.environ["SHELL"]

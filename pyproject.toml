@@ -25,6 +25,7 @@ dependencies = [
     "pyqtdarktheme",
     "black",              # needed for bw-generate-cli
     "isort",              # needed for bw-generate-cli
+    "termqt @ git+ssh://git@github.com:TerryGeng/termqt.git"
 ]
 
 
@@ -36,6 +37,7 @@ dev = [
     "pytest-xvfb",
     "coverage",
     "pytest-qt",
+    "isort",
     "fakeredis",
 ]
 pyqt5 = ["PyQt5>=5.9", "PyQtWebEngine>=5.9"]
