@@ -2,6 +2,17 @@
 
 
 
+## v0.61.0 (2024-06-12)
+
+### Feature
+
+* feat(widgets/stop_button): General stop button added ([`61ba08d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/61ba08d0b8df9f48f5c54c7c2b4e6d395206e7e6))
+
+### Refactor
+
+* refactor: improve labe of auto_update script ([`40b5688`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/40b568815893cd41af3531bb2e647ca1e2e315f4))
+
+
 ## v0.60.0 (2024-06-08)
 
 ### Ci
@@ -150,11 +161,3 @@
 ### Documentation
 
 * docs(bar): docs updated ([`4be0d14`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4be0d14b7445c2322c2aef86257db168a841265c))
-
-### Fix
-
-* fix(ring): automatic updates are disabled uf user specify updates manually with .set_update; &#39;scan_progres&#39; do not reset number of rings ([`e883dba`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e883dbad814dbcc0a19c341041c6d836e58a5918))
-
-* fix(ring): enable_auto_updates(True) do not reset properties of already setup bars ([`a2abad3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a2abad344f4c0039516eb60a825afb6822c5b19a))
-
-* fix(ring): set_min_max accepts floats ([`d44b1cf`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d44b1cf8b107cf02deedd9154b77d01c7f9ed05d))
