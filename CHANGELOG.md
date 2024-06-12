@@ -2,6 +2,17 @@
 
 
 
+## v0.62.0 (2024-06-12)
+
+### Feature
+
+* feat: implement non-polling, interruptible waiting of gui instruction response with timeout ([`abc6caa`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/abc6caa2d0b6141dfbe1f3d025f78ae14deddcb3))
+
+### Unknown
+
+* doc: add documentation about creating custom GUI applications embedding BEC Widgets ([`17a0068`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/17a00687579f5efab1990cd83862ec0e78198633))
+
+
 ## v0.61.0 (2024-06-12)
 
 ### Feature
@@ -152,12 +163,3 @@
 ### Fix
 
 * fix(docks): set_title do update dock internal _name now ([`15cbc21`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/15cbc21e5bb3cf85f5822d44a2b3665b5aa2f346))
-
-* fix(docks): docks widget_list adn dockarea panels return values fixed ([`ffae5ee`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ffae5ee54e6b43da660131092452adff195ba4fb))
-
-
-## v0.57.3 (2024-06-06)
-
-### Documentation
-
-* docs(bar): docs updated ([`4be0d14`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4be0d14b7445c2322c2aef86257db168a841265c))
