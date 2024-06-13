@@ -174,16 +174,11 @@ class BECGuiClientMixin:
         """
         Close the figure.
         """
-        if self._process is None:
-            return
-        if self.gui_is_alive():
-            self._run_rpc("close", (), wait_for_rpc_response=True)
-        else:
-            self._run_rpc("close", (), wait_for_rpc_response=False)
-        self._process.terminate()
-        self._process_output_processing_thread.join()
-        self._process = None
         self._client.shutdown()
+        if self._process:
+            self._process.terminate()
+            self._process_output_processing_thread.join()
+            self._process = None
 
     def print_log(self) -> None:
         """
