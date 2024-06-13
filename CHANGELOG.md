@@ -2,6 +2,31 @@
 
 
 
+## v0.63.0 (2024-06-13)
+
+### Documentation
+
+* docs: add documentation ([`bc709c4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bc709c4184c985d4e721f9ea7d1b3dad5e9153a7))
+
+### Feature
+
+* feat: add textbox widget ([`d9d4e3c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d9d4e3c9bf73ab2a5629c2867b50fc91e69489ec))
+
+### Refactor
+
+* refactor: add pydantic config, add change_theme ([`6b8432f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6b8432f5b20a71175a3537b5f6832b76e3b67d73))
+
+### Test
+
+* test: add test for text box ([`b49462a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b49462abeb186e56bac79d2ef0b0add1ef28a1a5))
+
+### Unknown
+
+* Revert &#34;feat: implement non-polling, interruptible waiting of gui instruction response with timeout&#34;
+
+This reverts commit abc6caa2d0b6141dfbe1f3d025f78ae14deddcb3 ([`fe04dd8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fe04dd80e59a0e74f7fdea603e0642707ecc7c2a))
+
+
 ## v0.62.0 (2024-06-12)
 
 ### Feature
@@ -142,24 +167,3 @@
 
 
 ## v0.57.5 (2024-06-06)
-
-### Documentation
-
-* docs(figure): docs adjusted to be compatible with new signature ([`c037b87`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c037b87675af91b26e8c7c60e76622d4ed4cf5d5))
-
-### Fix
-
-* fix(waveform): added .plot method with the same signature as BECFigure.plot ([`8479caf`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8479caf53a7325788ca264e5bd9aee01f1d4c5a0))
-
-* fix(plot_base): .plot removed from plot_base.py, because there is no use case for it ([`82e2c89`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/82e2c898d2e26f786b2d481f85c647472675e75b))
-
-### Refactor
-
-* refactor(figure): logic for .add_image and .image consolidated; logic for .add_plot and .plot consolidated ([`52bc322`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/52bc322b2b8d3ef92ff3480e61bddaf32464f976))
-
-
-## v0.57.4 (2024-06-06)
-
-### Fix
-
-* fix(docks): set_title do update dock internal _name now ([`15cbc21`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/15cbc21e5bb3cf85f5822d44a2b3665b5aa2f346))
