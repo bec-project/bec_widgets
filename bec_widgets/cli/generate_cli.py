@@ -83,6 +83,9 @@ class {class_name}(RPCBase, BECGuiClientMixin):"""
         else:
             self.content += f"""
 class {class_name}(RPCBase):"""
+        if not cls.USER_ACCESS:
+            self.content += """...
+    """
         for method in cls.USER_ACCESS:
             obj = getattr(cls, method)
             if isinstance(obj, property):
