@@ -17,6 +17,7 @@ class Widgets(str, enum.Enum):
     BECDockArea = "BECDockArea"
     BECFigure = "BECFigure"
     SpiralProgressBar = "SpiralProgressBar"
+    TextBox = "TextBox"
     WebsiteWidget = "WebsiteWidget"
 
 
@@ -1894,6 +1895,48 @@ class SpiralProgressBar(RPCBase):
 
         Returns:
             bool: True if scan segment updates are enabled.
+        """
+
+
+class StopButton(RPCBase):
+    @property
+    @rpc_call
+    def config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
+        """
+
+
+class TextBox(RPCBase):
+    @rpc_call
+    def set_color(self, background_color: str, font_color: str) -> None:
+        """
+        Set the background color of the Widget.
+
+        Args:
+            background_color (str): The color to set the background in HEX.
+            font_color (str): The color to set the font in HEX.
+        """
+
+    @rpc_call
+    def set_text(self, text: str) -> None:
+        """
+        Set the text of the Widget
+        """
+
+    @rpc_call
+    def set_font_size(self, size: int) -> None:
+        """
+        Set the font size of the text in the Widget.
         """
 
 

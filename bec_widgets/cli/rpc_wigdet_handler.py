@@ -1,6 +1,7 @@
 from bec_widgets.utils import BECConnector
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.spiral_progress_bar.spiral_progress_bar import SpiralProgressBar
+from bec_widgets.widgets.text_box.text_box import TextBox
 from bec_widgets.widgets.website.website import WebsiteWidget
 
 
@@ -11,6 +12,7 @@ class RPCWidgetHandler:
         "BECFigure": BECFigure,
         "SpiralProgressBar": SpiralProgressBar,
         "Website": WebsiteWidget,
+        "TextBox": TextBox,
     }
 
     @staticmethod
