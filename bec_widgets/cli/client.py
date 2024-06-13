@@ -19,6 +19,7 @@ class Widgets(str, enum.Enum):
     BECFigure = "BECFigure"
     SpiralProgressBar = "SpiralProgressBar"
     TextBox = "TextBox"
+    VSCodeEditor = "VSCodeEditor"
     WebsiteWidget = "WebsiteWidget"
 
 
@@ -2047,6 +2048,9 @@ class TextBox(RPCBase):
         Args:
             size (int): The font size to set.
         """
+
+
+class VSCodeEditor(RPCBase): ...
 
 
 class WebsiteWidget(RPCBase):

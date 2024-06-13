@@ -1,8 +1,17 @@
-from qtpy.QtCore import QUrl
+from qtpy.QtCore import QUrl, qInstallMessageHandler
 from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import QApplication
 
 from bec_widgets.utils import BECConnector
+
+
+def suppress_qt_messages(type_, context, msg):
+    if context.category in ["js", "default"]:
+        return
+    print(msg)
+
+
+qInstallMessageHandler(suppress_qt_messages)
 
 
 class WebsiteWidget(BECConnector, QWebEngineView):
