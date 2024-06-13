@@ -48,6 +48,7 @@ Homepage = "https://gitlab.psi.ch/bec/bec_widgets"
 
 [project.scripts]
 bw-generate-cli = "bec_widgets.cli.generate_cli:main"
+bec-gui-server = "bec_widgets.cli.server:main"
 
 [tool.hatch.build.targets.wheel]
 include = ["*"]

@@ -114,7 +114,7 @@ class BECWidgetsCLIServer:
         self.client.shutdown()
 
 
-if __name__ == "__main__":  # pragma: no cover
+def main():
     import argparse
     import os
     import sys
@@ -166,3 +166,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     app.aboutToQuit.connect(server.shutdown)
     sys.exit(app.exec())
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()

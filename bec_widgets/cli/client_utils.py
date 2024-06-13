@@ -86,13 +86,8 @@ def _start_plot_process(gui_id, gui_class, config) -> None:
     Start the plot in a new process.
     """
     # pylint: disable=subprocess-run-check
-    monitor_module = importlib.import_module("bec_widgets.cli.server")
-    monitor_path = monitor_module.__file__
-
     command = [
-        sys.executable,
-        "-u",
-        monitor_path,
+        "bec-gui-server",
         "--id",
         gui_id,
         "--config",
@@ -100,7 +95,11 @@ def _start_plot_process(gui_id, gui_class, config) -> None:
         "--gui_class",
         gui_class.__name__,
     ]
-    process = subprocess.Popen(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    env_dict = os.environ.copy()
+    env_dict["PYTHONUNBUFFERED"] = "1"
+    process = subprocess.Popen(
+        command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env_dict
+    )
     process_output_processing_thread = threading.Thread(target=_get_output, args=(process,))
     process_output_processing_thread.start()
     return process, process_output_processing_thread
