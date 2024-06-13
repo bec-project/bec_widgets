@@ -2,6 +2,16 @@
 
 
 
+## v0.63.1 (2024-06-13)
+
+### Fix
+
+* fix: just terminate the remote process in close() instead of communicating
+
+The proper finalization sequence will be executed by the remote process
+on SIGTERM ([`9263f8e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9263f8ef5c17ae7a007a1a564baf787b39061756))
+
+
 ## v0.63.0 (2024-06-13)
 
 ### Documentation
@@ -160,10 +170,3 @@ This reverts commit abc6caa2d0b6141dfbe1f3d025f78ae14deddcb3 ([`fe04dd8`](https:
 
 
 ## v0.57.6 (2024-06-06)
-
-### Fix
-
-* fix(bar): docstrings extended ([`edb1775`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/edb1775967c3ff0723d0edad2b764f1ffc832b7c))
-
-
-## v0.57.5 (2024-06-06)
