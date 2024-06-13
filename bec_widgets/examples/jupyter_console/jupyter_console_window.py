@@ -136,17 +136,18 @@ if __name__ == "__main__":  # pragma: no cover
 
     module_path = os.path.dirname(bec_widgets.__file__)
 
+    app = QApplication(sys.argv)
+    app.setApplicationName("Jupyter Console")
+    app.setApplicationDisplayName("Jupyter Console")
+    qdarktheme.setup_theme("auto")
+    icon = QIcon()
+    icon.addFile(os.path.join(module_path, "assets", "terminal_icon.png"), size=QSize(48, 48))
+    app.setWindowIcon(icon)
+
     bec_dispatcher = BECDispatcher()
     client = bec_dispatcher.client
     client.start()
 
-    app = QApplication(sys.argv)
-    app.setApplicationName("Jupyter Console")
-    app.setApplicationDisplayName("Jupyter Console")
-    # qdarktheme.setup_theme("auto")
-    icon = QIcon()
-    icon.addFile(os.path.join(module_path, "assets", "terminal_icon.png"), size=QSize(48, 48))
-    app.setWindowIcon(icon)
     win = JupyterConsoleWindow()
     win.show()
 

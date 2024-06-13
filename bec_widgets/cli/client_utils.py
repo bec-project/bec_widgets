@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.utils.import_utils import isinstance_based_on_class_name, lazy_import, lazy_import_from
-from qtpy.QtCore import QCoreApplication
+from qtpy.QtCore import QEventLoop, QSocketNotifier, QTimer
 
 import bec_widgets.cli.client as client
 from bec_widgets.cli.auto_updates import AutoUpdates
@@ -23,6 +23,8 @@ if TYPE_CHECKING:
     from bec_lib.device import DeviceBase
 
     from bec_widgets.cli.client import BECDockArea, BECFigure
+
+from bec_lib.serialization import MsgpackSerialization
 
 messages = lazy_import("bec_lib.messages")
 # from bec_lib.connector import MessageObject
@@ -200,6 +202,48 @@ class RPCResponseTimeoutError(Exception):
         )
 
 
+class QtRedisMessageWaiter:
+    def __init__(self, redis_connector, message_to_wait):
+        self.ev_loop = QEventLoop()
+        self.response = None
+        self.connector = redis_connector
+        self.message_to_wait = message_to_wait
+        self.pubsub = redis_connector._redis_conn.pubsub()
+        self.pubsub.subscribe(self.message_to_wait.endpoint)
+        fd = self.pubsub.connection._sock.fileno()
+        self.notifier = QSocketNotifier(fd, QSocketNotifier.Read)
+        self.notifier.activated.connect(self._pubsub_readable)
+
+    def _msg_received(self, msg_obj):
+        self.response = msg_obj.value
+        self.ev_loop.quit()
+
+    def wait(self, timeout=1):
+        timer = QTimer()
+        timer.singleShot(timeout * 1000, self.ev_loop.quit)
+        self.ev_loop.exec_()
+        timer.stop()
+        self.notifier.setEnabled(False)
+        self.pubsub.close()
+        return self.response
+
+    def _pubsub_readable(self, fd):
+        while True:
+            msg = self.pubsub.get_message()
+            if msg:
+                if msg["type"] == "subscribe":
+                    # get_message buffers, so we may already have the answer
+                    # let's check...
+                    continue
+                else:
+                    break
+            else:
+                return
+        channel = msg["channel"].decode()
+        msg = MessageObject(topic=channel, value=MsgpackSerialization.loads(msg["data"]))
+        self.connector._execute_callback(self._msg_received, msg, {})
+
+
 class RPCBase:
     def __init__(self, gui_id: str = None, config: dict = None, parent=None) -> None:
         self._client = BECDispatcher().client
@@ -226,7 +270,7 @@ class RPCBase:
             parent = parent._parent
         return parent
 
-    def _run_rpc(self, method, *args, wait_for_rpc_response=True, **kwargs):
+    def _run_rpc(self, method, *args, wait_for_rpc_response=True, timeout=3, **kwargs):
         """
         Run the RPC call.
 
@@ -248,16 +292,24 @@ class RPCBase:
 
         # pylint: disable=protected-access
         receiver = self._root._gui_id
+        if wait_for_rpc_response:
+            redis_msg = QtRedisMessageWaiter(
+                self._client.connector, MessageEndpoints.gui_instruction_response(request_id)
+            )
+
         self._client.connector.set_and_publish(MessageEndpoints.gui_instructions(receiver), rpc_msg)
 
-        if not wait_for_rpc_response:
-            return None
-        response = self._wait_for_response(request_id)
-        # get class name
-        if not response.content["accepted"]:
-            raise ValueError(response.content["message"]["error"])
-        msg_result = response.content["message"].get("result")
-        return self._create_widget_from_msg_result(msg_result)
+        if wait_for_rpc_response:
+            response = redis_msg.wait(timeout)
+
+            if response is None:
+                raise RPCResponseTimeoutError(request_id, timeout)
+
+            # get class name
+            if not response.accepted:
+                raise ValueError(response.message["error"])
+            msg_result = response.message.get("result")
+            return self._create_widget_from_msg_result(msg_result)
 
     def _create_widget_from_msg_result(self, msg_result):
         if msg_result is None:
@@ -279,30 +331,6 @@ class RPCBase:
             # print(msg_result)
             return cls(parent=self, **msg_result)
         return msg_result
-
-    def _wait_for_response(self, request_id: str, timeout: int = 5):
-        """
-        Wait for the response from the server.
-
-        Args:
-            request_id(str): The request ID.
-            timeout(int): The timeout in seconds.
-
-        Returns:
-            The response from the server.
-        """
-        start_time = time.time()
-        response = None
-
-        while response is None and self.gui_is_alive() and (time.time() - start_time) < timeout:
-            response = self._client.connector.get(
-                MessageEndpoints.gui_instruction_response(request_id)
-            )
-            QCoreApplication.processEvents()  # keep UI responsive (and execute signals/slots)
-        if response is None and (time.time() - start_time) >= timeout:
-            raise RPCResponseTimeoutError(request_id, timeout)
-
-        return response
 
     def gui_is_alive(self):
         """
