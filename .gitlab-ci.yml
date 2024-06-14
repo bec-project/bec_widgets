@@ -22,6 +22,13 @@ workflow:
 
 include:
   - template: Security/Secret-Detection.gitlab-ci.yml
+  - project: "bec/awi_utils"
+    file: "/templates/check-packages-job.yml"
+    inputs:
+      stage: test
+      path: "."
+      pytest_args: "-v --random-order tests/"
+      exclude_packages: ""
 
 # different stages in the pipeline
 stages:
@@ -32,21 +39,21 @@ stages:
   - Deploy
 
 .install-qt-webengine-deps: &install-qt-webengine-deps
-    - apt-get -y install libnss3 libxdamage1 libasound2 libatomic1 libxcursor1
-    - export QTWEBENGINE_DISABLE_SANDBOX=1
+  - apt-get -y install libnss3 libxdamage1 libasound2 libatomic1 libxcursor1
+  - export QTWEBENGINE_DISABLE_SANDBOX=1
 
 .clone-repos: &clone-repos
-    - git clone --branch $BEC_CORE_BRANCH https://gitlab.psi.ch/bec/bec.git
-    - git clone --branch $OPHYD_DEVICES_BRANCH https://gitlab.psi.ch/bec/ophyd_devices.git
-    - export OHPYD_DEVICES_PATH=$PWD/ophyd_devices
-  
+  - git clone --branch $BEC_CORE_BRANCH https://gitlab.psi.ch/bec/bec.git
+  - git clone --branch $OPHYD_DEVICES_BRANCH https://gitlab.psi.ch/bec/ophyd_devices.git
+  - export OHPYD_DEVICES_PATH=$PWD/ophyd_devices
+
 .install-os-packages: &install-os-packages
-    - apt-get update
-    - apt-get install -y libgl1-mesa-glx libegl1-mesa x11-utils libxkbcommon-x11-0 libdbus-1-3
-    - *install-qt-webengine-deps
+  - apt-get update
+  - apt-get install -y libgl1-mesa-glx libegl1-mesa x11-utils libxkbcommon-x11-0 libdbus-1-3
+  - *install-qt-webengine-deps
 
 before_script:
-  - if [[ "$CI_PROJECT_PATH" != "bec/bec_widgets" ]]; then 
+  - if [[ "$CI_PROJECT_PATH" != "bec/bec_widgets" ]]; then
     echo -e "\033[35;1m Using branch $CHILD_PIPELINE_BRANCH of BEC Widgets \033[0;m";
     test -d bec_widgets || git clone --branch $CHILD_PIPELINE_BRANCH https://gitlab.psi.ch/bec/bec_widgets.git; cd bec_widgets;
     fi
@@ -92,10 +99,10 @@ pylint-check:
     - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME
     # Identify changed Python files
     - if [ "$CI_PIPELINE_SOURCE" == "merge_request_event" ]; then
-        TARGET_BRANCH_COMMIT_SHA=$(git rev-parse origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME);
-        CHANGED_FILES=$(git diff --name-only $TARGET_BRANCH_COMMIT_SHA HEAD | grep '\.py$' || true);
+      TARGET_BRANCH_COMMIT_SHA=$(git rev-parse origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME);
+      CHANGED_FILES=$(git diff --name-only $TARGET_BRANCH_COMMIT_SHA HEAD | grep '\.py$' || true);
       else
-        CHANGED_FILES=$(git diff --name-only $CI_COMMIT_BEFORE_SHA $CI_COMMIT_SHA | grep '\.py$' || true);
+      CHANGED_FILES=$(git diff --name-only $CI_COMMIT_BEFORE_SHA $CI_COMMIT_SHA | grep '\.py$' || true);
       fi
     - if [ -z "$CHANGED_FILES" ]; then echo "No Python files changed."; exit 0; fi
 
@@ -120,7 +127,7 @@ tests:
   stage: test
   needs: []
   variables:
-      QT_QPA_PLATFORM: "offscreen"
+    QT_QPA_PLATFORM: "offscreen"
   script:
     - *clone-repos
     - *install-os-packages
@@ -141,21 +148,21 @@ tests:
 test-matrix:
   parallel:
     matrix:
-      - PYTHON_VERSION: 
-        - "3.10"
-        - "3.11"
-        - "3.12"
-        QT_PCKG: 
-        - "pyside6"
-        - "pyqt5"
-        - "pyqt6"
+      - PYTHON_VERSION:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+        QT_PCKG:
+          - "pyside6"
+          - "pyqt5"
+          - "pyqt6"
 
   stage: AdditionalTests
   needs: []
   variables:
-      QT_QPA_PLATFORM: "offscreen"
-      PYTHON_VERSION: ""
-      QT_PCKG: ""
+    QT_QPA_PLATFORM: "offscreen"
+    PYTHON_VERSION: ""
+    QT_PCKG: ""
   image: $CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX/python:$PYTHON_VERSION
   script:
     - *clone-repos
@@ -226,7 +233,7 @@ semver:
     - pip install python-semantic-release==9.* wheel build twine
     - export GL_TOKEN=$CI_UPDATES
     - semantic-release -vv version
-    
+
     # check if any artifacts were created
     - if [ ! -d dist ]; then echo No release will be made; exit 0; fi
     - twine upload dist/* -u __token__ -p $CI_PYPI_TOKEN --skip-existing
@@ -242,7 +249,7 @@ pages:
   variables:
     TARGET_BRANCH: $CI_COMMIT_REF_NAME
   rules:
-    - if: '$CI_COMMIT_TAG != null'
+    - if: "$CI_COMMIT_TAG != null"
       variables:
         TARGET_BRANCH: $CI_COMMIT_TAG
     - if: '$CI_COMMIT_REF_NAME == "main" && $CI_PROJECT_PATH == "bec/bec_widgets"'
