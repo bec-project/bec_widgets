@@ -2,6 +2,21 @@
 
 
 
+## v0.63.2 (2024-06-14)
+
+### Fix
+
+* fix: do not import &#34;server&#34; in client, prevents from having trouble with QApplication creation order
+
+Like with QtWebEngine ([`6f96498`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6f96498de66358b89f3a2035627eed2e02dde5a1))
+
+### Unknown
+
+* Reapply &#34;feat: implement non-polling, interruptible waiting of gui instruction response with timeout&#34;
+
+This reverts commit fe04dd80e59a0e74f7fdea603e0642707ecc7c2a. ([`836b6e6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/836b6e64f694916d6b6f909dedf11a4a6d2c86a4))
+
+
 ## v0.63.1 (2024-06-13)
 
 ### Fix
@@ -159,14 +174,3 @@ This reverts commit abc6caa2d0b6141dfbe1f3d025f78ae14deddcb3 ([`fe04dd8`](https:
 
 
 ## v0.57.7 (2024-06-07)
-
-### Documentation
-
-* docs: added schema of BECDockArea and BECFigure ([`828067f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/828067f486a905eb4678538df58e2bdd6c770de1))
-
-### Fix
-
-* fix: add model_config to pydantic models to allow runtime checks after creation ([`ca5e8d2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ca5e8d2fbbffbf221cc5472710fef81a33ee29d6))
-
-
-## v0.57.6 (2024-06-06)
