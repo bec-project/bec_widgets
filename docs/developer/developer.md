@@ -1,18 +1,46 @@
 (developer)=
-# Development
+# Developer 
 
-To contribute to the development of BEC Widgets, start by setting up the development environment:
+Welcome to the BEC Widgets developer guide! This section is intended for developers who want to contribute to the development of BEC Widgets.
 
-1. **Clone the Repository**: 
-```bash
-git clone https://gitlab.psi.ch/bec/bec_widgets
-cd bec_widgets
+```{toctree}
+---
+maxdepth: 2
+hidden: true
+---
+
+getting_started/getting_started.md
+widgets/widgets.md
+api_reference/api_reference.md
 ```
-2. **Install in Editable Mode**:
 
-Installing the package in editable mode allows you to make changes to the code and test them in real-time.
-```bash
-pip install -e .[dev,pyqt6]
+
+***
+
+````{grid} 2
+:gutter: 5
+
+```{grid-item-card}
+:link: user.getting_started
+:link-type: ref
+:img-top: /assets/rocket_launch_48dp.svg
+:text-align: center
+
+## Getting Started
+
+Learn how to install BEC Widgets and get started with the framework.
 ```
+
+```{grid-item-card}
+:link: user.widgets
+:link-type: ref
+:img-top: /assets/apps_48dp.svg
+:text-align: center
+
+## Widgets
+
+Learn about the building blocks of larger applications: widgets.
+```
+````
 
 

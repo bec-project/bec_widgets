@@ -9,7 +9,7 @@ Before installing BEC Widgets, please ensure the following requirements are met:
 
 **Standard Installation**
 
-To install BEC Widgets using the pip package manager, execute the following command in your terminal for getting the default PyQT6 version in your python environment:
+To install BEC Widgets using the pip package manager, execute the following command in your terminal for getting the default PyQT6 version into your python environment for BEC:
 
 
 ```bash

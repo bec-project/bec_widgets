@@ -1,5 +1,5 @@
 (user.widgets.text_box)=
-# [Text Box Widget](/api_reference/_autosummary/bec_widgets.cli.client.TextBoxWidget)
+# [Text Box Widget](/api_reference/_autosummary/bec_widgets.cli.client.TextBox)
 **Purpose:**
 
 The Text Box Widget is a widget that allows you to display text within the BEC GUI. The widget can be used to display plain text or HTML text.
