@@ -21,7 +21,7 @@ api_reference/api_reference.md
 :gutter: 5
 
 ```{grid-item-card}
-:link: user.getting_started
+:link: developer.getting_started
 :link-type: ref
 :img-top: /assets/rocket_launch_48dp.svg
 :text-align: center
@@ -32,7 +32,7 @@ Learn how to install BEC Widgets and get started with the framework.
 ```
 
 ```{grid-item-card}
-:link: user.widgets
+:link: developer.widgets
 :link-type: ref
 :img-top: /assets/apps_48dp.svg
 :text-align: center
