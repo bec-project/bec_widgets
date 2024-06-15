@@ -1,5 +1,6 @@
 from bec_widgets.utils import BECConnector
 from bec_widgets.widgets.figure import BECFigure
+from bec_widgets.widgets.round_status_indicator.round_status_indicator import RoundStatusIndicator
 from bec_widgets.widgets.spiral_progress_bar.spiral_progress_bar import SpiralProgressBar
 from bec_widgets.widgets.text_box.text_box import TextBox
 from bec_widgets.widgets.website.website import WebsiteWidget
@@ -13,6 +14,7 @@ class RPCWidgetHandler:
         "SpiralProgressBar": SpiralProgressBar,
         "Website": WebsiteWidget,
         "TextBox": TextBox,
+        "RoundStatusIndicator": RoundStatusIndicator,
     }
 
     @staticmethod

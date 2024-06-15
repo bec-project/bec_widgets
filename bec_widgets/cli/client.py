@@ -16,6 +16,7 @@ class Widgets(str, enum.Enum):
     BECDock = "BECDock"
     BECDockArea = "BECDockArea"
     BECFigure = "BECFigure"
+    RoundStatusIndicator = "RoundStatusIndicator"
     SpiralProgressBar = "SpiralProgressBar"
     TextBox = "TextBox"
     WebsiteWidget = "WebsiteWidget"
@@ -1719,6 +1720,17 @@ class Ring(RPCBase):
         """
 
 
+class RoundStatusIndicator(RPCBase):
+    @rpc_call
+    def set_state(self, state: Literal["success", "failure", "warning"]) -> None:
+        """
+        Set the state of the indicator.
+
+        Args:
+            state (str): The state of the indicator. Can be "success", "failure", or "warning"
+        """
+
+
 class SpiralProgressBar(RPCBase):
     @rpc_call
     def get_all_rpc(self) -> "dict":
@@ -1920,7 +1932,7 @@ class TextBox(RPCBase):
     @rpc_call
     def set_color(self, background_color: str, font_color: str) -> None:
         """
-        Set the background color of the Widget.
+        Set the background color of the widget.
 
         Args:
             background_color (str): The color to set the background in HEX.
@@ -1930,13 +1942,19 @@ class TextBox(RPCBase):
     @rpc_call
     def set_text(self, text: str) -> None:
         """
-        Set the text of the Widget
+        Set the text of the widget.
+
+        Args:
+            text (str): The text to set.
         """
 
     @rpc_call
     def set_font_size(self, size: int) -> None:
         """
-        Set the font size of the text in the Widget.
+        Set the font size of the text in the widget.
+
+        Args:
+            size (int): The font size to set.
         """
 
 
