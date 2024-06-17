@@ -2,16 +2,20 @@ import inspect
 from typing import Union
 
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.logger import bec_logger
+from bec_lib.service_config import ServiceConfig
 from bec_lib.utils.import_utils import lazy_import
 from qtpy.QtCore import QTimer
 
 from bec_widgets.cli.rpc_register import RPCRegister
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
+from bec_widgets.utils.bec_dispatcher import QtRedisConnector
 from bec_widgets.widgets.dock.dock_area import BECDockArea
 from bec_widgets.widgets.figure import BECFigure
 
 messages = lazy_import("bec_lib.messages")
+logger = bec_logger.logger
 
 
 class BECWidgetsCLIServer:
@@ -157,6 +161,13 @@ def main():
         )
         gui_class = BECFigure
 
+    service_config = ServiceConfig(args.config)
+    bec_logger.configure(
+        service_config.redis,
+        QtRedisConnector,
+        service_name="BECWidgetsCLIServer",
+        service_config=service_config.service_config,
+    )
     server = BECWidgetsCLIServer(gui_id=args.id, config=args.config, gui_class=gui_class)
 
     gui = server.gui

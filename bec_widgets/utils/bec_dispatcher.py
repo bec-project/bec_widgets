@@ -79,7 +79,7 @@ class BECDispatcher:
             cls._initialized = False
         return cls._instance
 
-    def __init__(self, client=None, config: str = None):
+    def __init__(self, client=None, config: str | ServiceConfig = None):
         if self._initialized:
             return
 
@@ -91,10 +91,11 @@ class BECDispatcher:
 
         if self.client is None:
             if config is not None:
-                host, port = config.split(":")
-                redis_config = {"host": host, "port": port}
+                if not isinstance(config, ServiceConfig):
+                    # config is supposed to be a path
+                    config = ServiceConfig(config)
                 self.client = BECClient(
-                    config=ServiceConfig(redis=redis_config), connector_cls=QtRedisConnector
+                    config=config, connector_cls=QtRedisConnector
                 )  # , forced=True)
             else:
                 self.client = BECClient(connector_cls=QtRedisConnector)  # , forced=True)

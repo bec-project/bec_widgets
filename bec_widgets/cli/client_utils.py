@@ -86,15 +86,10 @@ def _start_plot_process(gui_id, gui_class, config) -> None:
     Start the plot in a new process.
     """
     # pylint: disable=subprocess-run-check
-    command = [
-        "bec-gui-server",
-        "--id",
-        gui_id,
-        "--config",
-        config,
-        "--gui_class",
-        gui_class.__name__,
-    ]
+    command = ["bec-gui-server", "--id", gui_id, "--gui_class", gui_class.__name__]
+    if config:
+        command.extend(["--config", config])
+
     env_dict = os.environ.copy()
     env_dict["PYTHONUNBUFFERED"] = "1"
     process = subprocess.Popen(
@@ -165,7 +160,7 @@ class BECGuiClientMixin:
         if self._process is None or self._process.poll() is not None:
             self._start_update_script()
             self._process, self._process_output_processing_thread = _start_plot_process(
-                self._gui_id, self.__class__, self._client._service_config.redis
+                self._gui_id, self.__class__, self._client._service_config.config_path
             )
         while not self.gui_is_alive():
             print("Waiting for GUI to start...")
