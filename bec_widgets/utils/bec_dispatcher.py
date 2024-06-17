@@ -66,6 +66,11 @@ class QtRedisConnector(RedisConnector):
             cb(msg.content, msg.metadata)
 
 
+class BECClientWithoutLoggerInit(BECClient):
+    def _initialize_logger(self):
+        return
+
+
 class BECDispatcher:
     """Utility class to keep track of slots connected to a particular redis connector"""
 
@@ -94,11 +99,13 @@ class BECDispatcher:
                 if not isinstance(config, ServiceConfig):
                     # config is supposed to be a path
                     config = ServiceConfig(config)
-                self.client = BECClient(
+                self.client = BECClientWithoutLoggerInit(
                     config=config, connector_cls=QtRedisConnector
                 )  # , forced=True)
             else:
-                self.client = BECClient(connector_cls=QtRedisConnector)  # , forced=True)
+                self.client = BECClientWithoutLoggerInit(
+                    connector_cls=QtRedisConnector
+                )  # , forced=True)
         else:
             if self.client.started:
                 # have to reinitialize client to use proper connector
