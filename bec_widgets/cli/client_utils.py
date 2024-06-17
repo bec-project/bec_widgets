@@ -93,7 +93,12 @@ def _start_plot_process(gui_id, gui_class, config) -> None:
     env_dict = os.environ.copy()
     env_dict["PYTHONUNBUFFERED"] = "1"
     process = subprocess.Popen(
-        command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env_dict
+        command,
+        text=True,
+        start_new_session=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env_dict,
     )
     process_output_processing_thread = threading.Thread(target=_get_output, args=(process,))
     process_output_processing_thread.start()

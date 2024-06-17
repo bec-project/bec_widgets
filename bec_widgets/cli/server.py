@@ -1,4 +1,5 @@
 import inspect
+import signal
 import sys
 from contextlib import redirect_stderr, redirect_stdout
 from typing import Union
@@ -199,6 +200,13 @@ def main():
             win.show()
 
             app.aboutToQuit.connect(server.shutdown)
+
+            def sigint_handler(*args):
+                # display message, for people to let it terminate gracefully
+                print("Caught SIGINT, exiting")
+                app.quit()
+
+            signal.signal(signal.SIGINT, sigint_handler)
 
             sys.exit(app.exec())
 
