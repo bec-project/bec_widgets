@@ -13,6 +13,7 @@ from functools import wraps
 from typing import TYPE_CHECKING
 
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import isinstance_based_on_class_name, lazy_import, lazy_import_from
 from qtpy.QtCore import QEventLoop, QSocketNotifier, QTimer
 
@@ -30,6 +31,8 @@ messages = lazy_import("bec_lib.messages")
 # from bec_lib.connector import MessageObject
 MessageObject = lazy_import_from("bec_lib.connector", ("MessageObject",))
 BECDispatcher = lazy_import_from("bec_widgets.utils.bec_dispatcher", ("BECDispatcher",))
+
+logger = bec_logger.logger
 
 
 def rpc_call(func):
@@ -63,27 +66,34 @@ def rpc_call(func):
     return wrapper
 
 
-def _get_output(process) -> None:
+def _get_output(process, logger) -> None:
+    log_func = {process.stdout: logger.debug, process.stderr: logger.error}
+    stream_buffer = {process.stdout: [], process.stderr: []}
     try:
         os.set_blocking(process.stdout.fileno(), False)
         os.set_blocking(process.stderr.fileno(), False)
         while process.poll() is None:
             readylist, _, _ = select.select([process.stdout, process.stderr], [], [], 1)
-            if process.stdout in readylist:
-                output = process.stdout.read(1024)
+            for stream in (process.stdout, process.stderr):
+                buf = stream_buffer[stream]
+                if stream in readylist:
+                    buf.append(stream.read(4096))
+                output, _, remaining = "".join(buf).rpartition("\n")
                 if output:
-                    print(output, end="")
-            if process.stderr in readylist:
-                error_output = process.stderr.read(1024)
-                if error_output:
-                    print(error_output, end="", file=sys.stderr)
+                    log_func[stream](output)
+                    buf.clear()
+                    buf.append(remaining)
     except Exception as e:
         print(f"Error reading process output: {str(e)}")
 
 
-def _start_plot_process(gui_id, gui_class, config) -> None:
+def _start_plot_process(gui_id, gui_class, config, logger=None) -> None:
     """
     Start the plot in a new process.
+
+    Logger must be a logger object with "debug" and "error" functions,
+    or it can be left to "None" as default. None means output from the
+    process will not be captured.
     """
     # pylint: disable=subprocess-run-check
     command = ["bec-gui-server", "--id", gui_id, "--gui_class", gui_class.__name__]
@@ -92,16 +102,28 @@ def _start_plot_process(gui_id, gui_class, config) -> None:
 
     env_dict = os.environ.copy()
     env_dict["PYTHONUNBUFFERED"] = "1"
+    if logger is None:
+        stdout_redirect = subprocess.DEVNULL
+        stderr_redirect = subprocess.DEVNULL
+    else:
+        stdout_redirect = subprocess.PIPE
+        stderr_redirect = subprocess.PIPE
+
     process = subprocess.Popen(
         command,
         text=True,
         start_new_session=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=stdout_redirect,
+        stderr=stderr_redirect,
         env=env_dict,
     )
-    process_output_processing_thread = threading.Thread(target=_get_output, args=(process,))
-    process_output_processing_thread.start()
+    if logger is None:
+        process_output_processing_thread = None
+    else:
+        process_output_processing_thread = threading.Thread(
+            target=_get_output, args=(process, logger)
+        )
+        process_output_processing_thread.start()
     return process, process_output_processing_thread
 
 
@@ -113,7 +135,6 @@ class BECGuiClientMixin:
         self.auto_updates = self._get_update_script()
         self._target_endpoint = MessageEndpoints.scan_status()
         self._selected_device = None
-        self.stderr_output = []
 
     def _get_update_script(self) -> AutoUpdates | None:
         eps = imd.entry_points(group="bec.widgets.auto_updates")
@@ -185,18 +206,9 @@ class BECGuiClientMixin:
         self._client.shutdown()
         if self._process:
             self._process.terminate()
-            self._process_output_processing_thread.join()
+            if self._process_output_processing_thread:
+                self._process_output_processing_thread.join()
             self._process = None
-
-    def print_log(self) -> None:
-        """
-        Print the log of the plot process.
-        """
-        if self._process is None:
-            return
-        print("".join(self.stderr_output))
-        # Flush list
-        self.stderr_output.clear()
 
 
 class RPCResponseTimeoutError(Exception):

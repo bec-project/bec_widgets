@@ -29,9 +29,7 @@ def gui_id():
 @contextmanager
 def plot_server(gui_id, klass, client_lib):
     dispatcher = BECDispatcher(client=client_lib)  # Has to init singleton with fixture client
-    process, output_thread = _start_plot_process(
-        gui_id, klass, client_lib._client._service_config.config_path
-    )
+    process, _ = _start_plot_process(gui_id, klass, client_lib._client._service_config.config_path)
     try:
         while client_lib._client.connector.get(MessageEndpoints.gui_heartbeat(gui_id)) is None:
             time.sleep(0.3)
@@ -39,7 +37,6 @@ def plot_server(gui_id, klass, client_lib):
     finally:
         process.terminate()
         process.wait()
-        output_thread.join()
         dispatcher.disconnect_all()
         dispatcher.reset_singleton()
 
