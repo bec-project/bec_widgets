@@ -1,4 +1,6 @@
 import inspect
+import sys
+from contextlib import redirect_stderr, redirect_stdout
 from typing import Union
 
 from bec_lib.endpoints import MessageEndpoints
@@ -118,6 +120,23 @@ class BECWidgetsCLIServer:
         self.client.shutdown()
 
 
+class SimpleFileLikeFromLogOutputFunc:
+    def __init__(self, log_func):
+        self._log_func = log_func
+
+    def write(self, buffer):
+        for line in buffer.rstrip().splitlines():
+            line = line.rstrip()
+            if line:
+                self._log_func(line)
+
+    def flush(self):
+        return
+
+    def close(self):
+        return
+
+
 def main():
     import argparse
     import os
@@ -129,16 +148,6 @@ def main():
 
     import bec_widgets
 
-    app = QApplication(sys.argv)
-    app.setApplicationName("BEC Figure")
-    module_path = os.path.dirname(bec_widgets.__file__)
-    icon = QIcon()
-    icon.addFile(os.path.join(module_path, "assets", "bec_widgets_icon.png"), size=QSize(48, 48))
-    app.setWindowIcon(icon)
-
-    win = QMainWindow()
-    win.setWindowTitle("BEC Widgets")
-
     parser = argparse.ArgumentParser(description="BEC Widgets CLI Server")
     parser.add_argument("--id", type=str, help="The id of the server")
     parser.add_argument(
@@ -146,7 +155,7 @@ def main():
         type=str,
         help="Name of the gui class to be rendered. Possible values: \n- BECFigure\n- BECDockArea",
     )
-    parser.add_argument("--config", type=str, help="Config to connect to redis.")
+    parser.add_argument("--config", type=str, help="Config file")
 
     args = parser.parse_args()
 
@@ -161,22 +170,37 @@ def main():
         )
         gui_class = BECFigure
 
-    service_config = ServiceConfig(args.config)
-    bec_logger.configure(
-        service_config.redis,
-        QtRedisConnector,
-        service_name="BECWidgetsCLIServer",
-        service_config=service_config.service_config,
-    )
-    server = BECWidgetsCLIServer(gui_id=args.id, config=args.config, gui_class=gui_class)
+    with redirect_stdout(SimpleFileLikeFromLogOutputFunc(logger.debug)):
+        with redirect_stderr(SimpleFileLikeFromLogOutputFunc(logger.error)):
+            app = QApplication(sys.argv)
+            app.setApplicationName("BEC Figure")
+            module_path = os.path.dirname(bec_widgets.__file__)
+            icon = QIcon()
+            icon.addFile(
+                os.path.join(module_path, "assets", "bec_widgets_icon.png"), size=QSize(48, 48)
+            )
+            app.setWindowIcon(icon)
 
-    gui = server.gui
-    win.setCentralWidget(gui)
-    win.resize(800, 600)
-    win.show()
+            win = QMainWindow()
+            win.setWindowTitle("BEC Widgets")
 
-    app.aboutToQuit.connect(server.shutdown)
-    sys.exit(app.exec())
+            service_config = ServiceConfig(args.config)
+            bec_logger.configure(
+                service_config.redis,
+                QtRedisConnector,
+                service_name="BECWidgetsCLIServer",
+                service_config=service_config.service_config,
+            )
+            server = BECWidgetsCLIServer(gui_id=args.id, config=service_config, gui_class=gui_class)
+
+            gui = server.gui
+            win.setCentralWidget(gui)
+            win.resize(800, 600)
+            win.show()
+
+            app.aboutToQuit.connect(server.shutdown)
+
+            sys.exit(app.exec())
 
 
 if __name__ == "__main__":  # pragma: no cover
