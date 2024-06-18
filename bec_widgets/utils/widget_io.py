@@ -119,7 +119,7 @@ class WidgetIO:
             widget: Widget instance.
             ignore_errors(bool, optional): Whether to ignore if no handler is found.
         """
-        handler_class = WidgetIO._handlers.get(type(widget))
+        handler_class = WidgetIO._find_handler(widget)
         if handler_class:
             return handler_class().get_value(widget)  # Instantiate the handler
         if not ignore_errors:
@@ -136,11 +136,27 @@ class WidgetIO:
             value: Value to set.
             ignore_errors(bool, optional): Whether to ignore if no handler is found.
         """
-        handler_class = WidgetIO._handlers.get(type(widget))
+        handler_class = WidgetIO._find_handler(widget)
         if handler_class:
             handler_class().set_value(widget, value)  # Instantiate the handler
         elif not ignore_errors:
             raise ValueError(f"No handler for widget type: {type(widget)}")
+
+    @staticmethod
+    def _find_handler(widget):
+        """
+        Find the appropriate handler for the widget by checking its base classes.
+
+        Args:
+            widget: Widget instance.
+
+        Returns:
+            handler_class: The handler class if found, otherwise None.
+        """
+        for base in type(widget).__mro__:
+            if base in WidgetIO._handlers:
+                return WidgetIO._handlers[base]
+        return None
 
 
 ################## for exporting and importing widget hierarchies ##################
