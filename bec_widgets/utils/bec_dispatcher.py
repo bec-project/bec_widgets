@@ -115,6 +115,9 @@ class BECDispatcher:
     def reset_singleton(cls):
         cls._instance = None
         cls._initialized = False
+        if cls.qapp:
+            cls.qapp.exit()
+            cls.qapp = None
 
     def connect_slot(
         self, slot: Callable, topics: Union[EndpointInfo, str, list[Union[EndpointInfo, str]]]
