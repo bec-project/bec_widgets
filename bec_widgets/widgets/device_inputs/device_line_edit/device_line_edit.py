@@ -9,37 +9,42 @@ if TYPE_CHECKING:
 
 
 class DeviceLineEdit(DeviceInputBase, QLineEdit):
+    """
+    Line edit widget for device input with autocomplete for device names.
+
+    Args:
+        parent: Parent widget.
+        client: BEC client object.
+        config: Device input configuration.
+        gui_id: GUI ID.
+        device_filter: Device filter, name of the device class.
+        default_device: Default device name.
+        arg_name: Argument name, can be used for the other widgets which has to call some other function in bec using correct argument names.
+    """
+
     def __init__(
         self,
         parent=None,
         client=None,
         config: DeviceInputConfig = None,
         gui_id: str | None = None,
-        device_filter: str | list[str] = None,
-        default_device: str = None,
+        device_filter: str | list[str] | None = None,
+        default_device: str | None = None,
+        arg_name: str | None = None,
     ):
         QLineEdit.__init__(self, parent=parent)
-        DeviceInputBase.__init__(
-            self,
-            client=client,
-            config=config,
-            gui_id=gui_id,
-            device_filter=device_filter,
-            default_device=default_device,
-        )
+        DeviceInputBase.__init__(self, client=client, config=config, gui_id=gui_id)
 
         self.completer = QCompleter(self)
         self.setCompleter(self.completer)
-
         self.populate_completer()
-        self._set_defaults()
 
-    def _set_defaults(self):
-        """Set the default device and device filter."""
-        if self.config.default_device is not None:
-            self.set_default_device(self.config.default_device)
-        if self.config.device_filter is not None:
-            self.set_device_filter(self.config.device_filter)
+        if arg_name is not None:
+            self.config.arg_name = arg_name
+        if device_filter is not None:
+            self.set_device_filter(device_filter)
+        if default_device is not None:
+            self.set_default_device(default_device)
 
     def set_device_filter(self, device_filter: str | list[str]):
         """

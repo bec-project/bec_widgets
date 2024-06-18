@@ -47,6 +47,7 @@ class FakePositioner(FakeDevice):
         super().__init__(name, enabled)
         self.limits = limits if limits is not None else [0, 0]
         self.read_value = read_value
+        self.name = name
 
     def set_read_value(self, value):
         self.read_value = value

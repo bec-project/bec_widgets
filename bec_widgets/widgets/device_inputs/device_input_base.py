@@ -6,6 +6,7 @@ from bec_widgets.utils import BECConnector, ConnectionConfig
 class DeviceInputConfig(ConnectionConfig):
     device_filter: str | list[str] | None = None
     default_device: str | None = None
+    arg_name: str | None = None
 
 
 class DeviceInputBase(BECConnector):
@@ -14,15 +15,7 @@ class DeviceInputBase(BECConnector):
     on the current text of the widget.
     """
 
-    def __init__(
-        self,
-        parent=None,
-        client=None,
-        config=None,
-        gui_id=None,
-        device_filter: str = None,
-        default_device: str = None,
-    ):
+    def __init__(self, client=None, config=None, gui_id=None):
         if config is None:
             config = DeviceInputConfig(widget_class=self.__class__.__name__)
         else:
@@ -32,10 +25,6 @@ class DeviceInputBase(BECConnector):
         super().__init__(client=client, config=config, gui_id=gui_id)
 
         self.get_bec_shortcuts()
-        if device_filter is not None:
-            self.set_device_filter(device_filter)
-        if default_device is not None:
-            self.set_default_device(default_device)
         self._devices = []
 
     @property
@@ -75,8 +64,7 @@ class DeviceInputBase(BECConnector):
         Args:
             default_device(str): Default device name.
         """
-        if default_device not in self.get_device_list(self.config.device_filter):
-            raise ValueError(f"Default device {default_device} is not in the device list.")
+        self.validate_device(default_device)
         self.config.default_device = default_device
 
     def get_device_list(self, filter: str | list[str] | None = None) -> list[str]:
@@ -128,5 +116,5 @@ class DeviceInputBase(BECConnector):
         Args:
             device(str): Device to validate.
         """
-        if device not in self.get_device_list():
+        if device not in self.get_device_list(self.config.device_filter):
             raise ValueError(f"Device {device} is not valid.")
