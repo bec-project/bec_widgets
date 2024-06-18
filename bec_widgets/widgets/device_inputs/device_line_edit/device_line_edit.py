@@ -18,7 +18,7 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
         config: Device input configuration.
         gui_id: GUI ID.
         device_filter: Device filter, name of the device class.
-        default_device: Default device name.
+        default: Default device name.
         arg_name: Argument name, can be used for the other widgets which has to call some other function in bec using correct argument names.
     """
 
@@ -29,7 +29,7 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
         config: DeviceInputConfig = None,
         gui_id: str | None = None,
         device_filter: str | list[str] | None = None,
-        default_device: str | None = None,
+        default: str | None = None,
         arg_name: str | None = None,
     ):
         QLineEdit.__init__(self, parent=parent)
@@ -41,10 +41,11 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
 
         if arg_name is not None:
             self.config.arg_name = arg_name
+            self.arg_name = arg_name
         if device_filter is not None:
             self.set_device_filter(device_filter)
-        if default_device is not None:
-            self.set_default_device(default_device)
+        if default is not None:
+            self.set_default_device(default)
 
     def set_device_filter(self, device_filter: str | list[str]):
         """

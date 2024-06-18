@@ -21,7 +21,7 @@ def device_input_combobox_with_config(qtbot, mocked_client):
         "widget_class": "DeviceComboBox",
         "gui_id": "test_gui_id",
         "device_filter": "FakePositioner",
-        "default_device": "samx",
+        "default": "samx",
         "arg_name": "test_arg_name",
     }
     widget = DeviceComboBox(client=mocked_client, config=config)
@@ -37,7 +37,7 @@ def device_input_combobox_with_kwargs(qtbot, mocked_client):
         client=mocked_client,
         gui_id="test_gui_id",
         device_filter="FakePositioner",
-        default_device="samx",
+        default="samx",
         arg_name="test_arg_name",
     )
     qtbot.addWidget(widget)
@@ -52,7 +52,7 @@ def test_device_input_combobox_init(device_input_combobox):
     assert isinstance(device_input_combobox, DeviceComboBox)
     assert device_input_combobox.config.widget_class == "DeviceComboBox"
     assert device_input_combobox.config.device_filter is None
-    assert device_input_combobox.config.default_device is None
+    assert device_input_combobox.config.default is None
     assert device_input_combobox.devices == [
         "samx",
         "samy",
@@ -72,14 +72,14 @@ def test_device_input_combobox_init(device_input_combobox):
 def test_device_input_combobox_init_with_config(device_input_combobox_with_config):
     assert device_input_combobox_with_config.config.gui_id == "test_gui_id"
     assert device_input_combobox_with_config.config.device_filter == "FakePositioner"
-    assert device_input_combobox_with_config.config.default_device == "samx"
+    assert device_input_combobox_with_config.config.default == "samx"
     assert device_input_combobox_with_config.config.arg_name == "test_arg_name"
 
 
 def test_device_input_combobox_init_with_kwargs(device_input_combobox_with_kwargs):
     assert device_input_combobox_with_kwargs.config.gui_id == "test_gui_id"
     assert device_input_combobox_with_kwargs.config.device_filter == "FakePositioner"
-    assert device_input_combobox_with_kwargs.config.default_device == "samx"
+    assert device_input_combobox_with_kwargs.config.default == "samx"
     assert device_input_combobox_with_kwargs.config.arg_name == "test_arg_name"
 
 
@@ -106,7 +106,7 @@ def device_input_line_edit_with_config(qtbot, mocked_client):
         "widget_class": "DeviceLineEdit",
         "gui_id": "test_gui_id",
         "device_filter": "FakePositioner",
-        "default_device": "samx",
+        "default": "samx",
         "arg_name": "test_arg_name",
     }
     widget = DeviceLineEdit(client=mocked_client, config=config)
@@ -122,7 +122,7 @@ def device_input_line_edit_with_kwargs(qtbot, mocked_client):
         client=mocked_client,
         gui_id="test_gui_id",
         device_filter="FakePositioner",
-        default_device="samx",
+        default="samx",
         arg_name="test_arg_name",
     )
     qtbot.addWidget(widget)
@@ -137,7 +137,7 @@ def test_device_input_line_edit_init(device_input_line_edit):
     assert isinstance(device_input_line_edit, DeviceLineEdit)
     assert device_input_line_edit.config.widget_class == "DeviceLineEdit"
     assert device_input_line_edit.config.device_filter is None
-    assert device_input_line_edit.config.default_device is None
+    assert device_input_line_edit.config.default is None
     assert device_input_line_edit.devices == [
         "samx",
         "samy",
@@ -157,14 +157,14 @@ def test_device_input_line_edit_init(device_input_line_edit):
 def test_device_input_line_edit_init_with_config(device_input_line_edit_with_config):
     assert device_input_line_edit_with_config.config.gui_id == "test_gui_id"
     assert device_input_line_edit_with_config.config.device_filter == "FakePositioner"
-    assert device_input_line_edit_with_config.config.default_device == "samx"
+    assert device_input_line_edit_with_config.config.default == "samx"
     assert device_input_line_edit_with_config.config.arg_name == "test_arg_name"
 
 
 def test_device_input_line_edit_init_with_kwargs(device_input_line_edit_with_kwargs):
     assert device_input_line_edit_with_kwargs.config.gui_id == "test_gui_id"
     assert device_input_line_edit_with_kwargs.config.device_filter == "FakePositioner"
-    assert device_input_line_edit_with_kwargs.config.default_device == "samx"
+    assert device_input_line_edit_with_kwargs.config.default == "samx"
     assert device_input_line_edit_with_kwargs.config.arg_name == "test_arg_name"
 
 

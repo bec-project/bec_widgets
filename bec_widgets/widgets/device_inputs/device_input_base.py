@@ -5,7 +5,7 @@ from bec_widgets.utils import BECConnector, ConnectionConfig
 
 class DeviceInputConfig(ConnectionConfig):
     device_filter: str | list[str] | None = None
-    default_device: str | None = None
+    default: str | None = None
     arg_name: str | None = None
 
 
@@ -65,7 +65,7 @@ class DeviceInputBase(BECConnector):
             default_device(str): Default device name.
         """
         self.validate_device(default_device)
-        self.config.default_device = default_device
+        self.config.default = default_device
 
     def get_device_list(self, filter: str | list[str] | None = None) -> list[str]:
         """
