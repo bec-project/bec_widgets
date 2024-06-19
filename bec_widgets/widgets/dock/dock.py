@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Literal, Optional
 from pydantic import Field
 from pyqtgraph.dockarea import Dock
 
-from bec_widgets.cli.rpc_wigdet_handler import RPCWidgetHandler
+from bec_widgets.cli.rpc_wigdet_handler import widget_handler
 from bec_widgets.utils import BECConnector, ConnectionConfig, GridLayoutManager
 
 if TYPE_CHECKING:
@@ -149,7 +149,7 @@ class BECDock(BECConnector, Dock):
         Returns:
             list: The list of eligible widgets.
         """
-        return list(RPCWidgetHandler.widget_classes.keys())
+        return list(widget_handler.widget_classes.keys())
 
     def add_widget(
         self,
@@ -178,7 +178,7 @@ class BECDock(BECConnector, Dock):
             self.layout_manager.shift_widgets(shift, start_row=row)
 
         if isinstance(widget, str):
-            widget = RPCWidgetHandler.create_widget(widget)
+            widget = widget_handler.create_widget(widget)
         else:
             widget = widget
 

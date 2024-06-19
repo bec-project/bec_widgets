@@ -1,22 +1,37 @@
 from bec_widgets.utils import BECConnector
-from bec_widgets.widgets.figure import BECFigure
-from bec_widgets.widgets.spiral_progress_bar.spiral_progress_bar import SpiralProgressBar
-from bec_widgets.widgets.text_box.text_box import TextBox
-from bec_widgets.widgets.website.website import WebsiteWidget
 
 
 class RPCWidgetHandler:
     """Handler class for creating widgets from RPC messages."""
 
-    widget_classes = {
-        "BECFigure": BECFigure,
-        "SpiralProgressBar": SpiralProgressBar,
-        "Website": WebsiteWidget,
-        "TextBox": TextBox,
-    }
+    def __init__(self):
+        self._widget_classes = None
 
-    @staticmethod
-    def create_widget(widget_type, **kwargs) -> BECConnector:
+    @property
+    def widget_classes(self):
+        """
+        Get the available widget classes.
+
+        Returns:
+            dict: The available widget classes.
+        """
+        if self._widget_classes is None:
+            self.update_available_widgets()
+        return self._widget_classes
+
+    def update_available_widgets(self):
+        """
+        Update the available widgets.
+
+        Returns:
+            None
+        """
+        from bec_widgets.utils.plugin_utils import get_rpc_classes
+
+        clss = get_rpc_classes("bec_widgets")
+        self._widget_classes = {cls.__name__: cls for cls in clss["top_level_classes"]}
+
+    def create_widget(self, widget_type, **kwargs) -> BECConnector:
         """
         Create a widget from an RPC message.
 
@@ -27,7 +42,12 @@ class RPCWidgetHandler:
         Returns:
             widget(BECConnector): The created widget.
         """
-        widget_class = RPCWidgetHandler.widget_classes.get(widget_type)
+        if self._widget_classes is None:
+            self.update_available_widgets()
+        widget_class = self._widget_classes.get(widget_type)
         if widget_class:
             return widget_class(**kwargs)
         raise ValueError(f"Unknown widget type: {widget_type}")
+
+
+widget_handler = RPCWidgetHandler()
