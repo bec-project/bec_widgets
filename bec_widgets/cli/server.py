@@ -40,7 +40,7 @@ class BECWidgetsCLIServer:
         self._shutdown_event = False
         self._heartbeat_timer = QTimer()
         self._heartbeat_timer.timeout.connect(self.emit_heartbeat)
-        self._heartbeat_timer.start(200)  # Emit heartbeat every 1 seconds
+        self._heartbeat_timer.start(200)
 
     def on_rpc_update(self, msg: dict, metadata: dict):
         request_id = metadata.get("request_id")
@@ -105,7 +105,7 @@ class BECWidgetsCLIServer:
             self.client.connector.set(
                 MessageEndpoints.gui_heartbeat(self.gui_id),
                 messages.StatusMessage(name=self.gui_id, status=1, info={}),
-                expire=10,
+                expire=1,
             )
 
     def shutdown(self):  # TODO not sure if needed when cleanup is done at level of BECConnector
