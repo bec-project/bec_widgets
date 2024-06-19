@@ -201,13 +201,12 @@ def test_change_legend_font_size(bec_figure):
     plot = bec_figure.add_plot()
 
     w1 = plot.add_curve_scan(x_name="samx", y_name="bpm4i")
-    my_func = plot.plot_item.legend.items[0][1]
-    with mock.patch.object(my_func, "setText") as mock_set_text:
-        plot.set_legend_label_size(16)
-        assert plot.config.axis.legend_label_size == 16
-        assert mock_set_text.call_count == 1
-        style = {"color": plot.get_text_color(), "size": "16pt"}
-        assert mock_set_text.call_args == mock.call(my_func.text, **style)
+    my_func = plot.plot_item.legend
+    with mock.patch.object(my_func, "setScale") as mock_set_scale:
+        plot.set_legend_label_size(18)
+        assert plot.config.axis.legend_label_size == 18
+        assert mock_set_scale.call_count == 1
+        assert mock_set_scale.call_args == mock.call(2)
 
 
 def test_remove_curve(bec_figure):

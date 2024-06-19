@@ -139,16 +139,10 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         if self.config.axis.legend_label_size or size:
             if size:
                 self.config.axis.legend_label_size = size
-            style = {
-                "color": self.get_text_color(),
-                "size": f"{self.config.axis.legend_label_size}pt",
-            }
-        else:
-            style = {}
-        for item in self.plot_item.legend.items:
-            for single_item in item:
-                if isinstance(single_item, pg.graphicsItems.LabelItem.LabelItem):
-                    single_item.setText(single_item.text, **style)
+                scale = (
+                    size / 9
+                )  # 9 is the default font size of the legend, so we always scale it against 9
+                self.plot_item.legend.setScale(scale)
 
     def get_text_color(self):
         return "#FFF" if self.figure.config.theme == "dark" else "#000"
