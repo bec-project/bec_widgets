@@ -1,6 +1,28 @@
 # CHANGELOG
 
+## v0.64.0 (2024-06-19)
 
+### Ci
+
+* ci: add job optional dependency check ([`27426ce`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/27426ce7a52b4cbad7f3bef114d6efe6ad73bd7f))
+
+### Documentation
+
+* docs: fix links in developer section ([`9e16f2f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9e16f2faf9c59a5d36ae878512c5a910cca31e69))
+
+* docs: refactor developer section, add widget tutorial ([`2a36d93`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2a36d9364f242bf42e4cda4b50e6f46aa3833bbd))
+
+### Feature
+
+* feat: add option to change size of the fonts ([`ea805d1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ea805d1362fc084d3b703b6f81b0180072f0825d))
+
+### Fix
+
+* fix(plot_base): font size is set with setScale which is scaling the whole legend window ([`5d66720`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5d6672069ea1cbceb62104f66c127e4e3c23e4a4))
+
+### Test
+
+* test: add tests ([`140ad83`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/140ad83380808928edf7953e23c762ab72a0a1e9))
 
 ## v0.63.2 (2024-06-14)
 
@@ -16,7 +38,6 @@ Like with QtWebEngine ([`6f96498`](https://gitlab.psi.ch/bec/bec_widgets/-/commi
 
 This reverts commit fe04dd80e59a0e74f7fdea603e0642707ecc7c2a. ([`836b6e6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/836b6e64f694916d6b6f909dedf11a4a6d2c86a4))
 
-
 ## v0.63.1 (2024-06-13)
 
 ### Fix
@@ -25,7 +46,6 @@ This reverts commit fe04dd80e59a0e74f7fdea603e0642707ecc7c2a. ([`836b6e6`](https
 
 The proper finalization sequence will be executed by the remote process
 on SIGTERM ([`9263f8e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9263f8ef5c17ae7a007a1a564baf787b39061756))
-
 
 ## v0.63.0 (2024-06-13)
 
@@ -51,7 +71,6 @@ on SIGTERM ([`9263f8e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9263f8ef5
 
 This reverts commit abc6caa2d0b6141dfbe1f3d025f78ae14deddcb3 ([`fe04dd8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fe04dd80e59a0e74f7fdea603e0642707ecc7c2a))
 
-
 ## v0.62.0 (2024-06-12)
 
 ### Feature
@@ -62,7 +81,6 @@ This reverts commit abc6caa2d0b6141dfbe1f3d025f78ae14deddcb3 ([`fe04dd8`](https:
 
 * doc: add documentation about creating custom GUI applications embedding BEC Widgets ([`17a0068`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/17a00687579f5efab1990cd83862ec0e78198633))
 
-
 ## v0.61.0 (2024-06-12)
 
 ### Feature
@@ -72,7 +90,6 @@ This reverts commit abc6caa2d0b6141dfbe1f3d025f78ae14deddcb3 ([`fe04dd8`](https:
 ### Refactor
 
 * refactor: improve labe of auto_update script ([`40b5688`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/40b568815893cd41af3531bb2e647ca1e2e315f4))
-
 
 ## v0.60.0 (2024-06-08)
 
@@ -116,13 +133,11 @@ This reverts commit abc6caa2d0b6141dfbe1f3d025f78ae14deddcb3 ([`fe04dd8`](https:
 
 * test: added missing pylint statement to header ([`f662985`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f6629852ebc2b4ee239fa560cc310a5ae2627cf7))
 
-
 ## v0.59.1 (2024-06-07)
 
 ### Fix
 
 * fix(curve): set_color_map_z typo fixed in user access ([`e7838b0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e7838b0f2fc23b0a232ed7d68fbd7f3493a91b9e))
-
 
 ## v0.59.0 (2024-06-07)
 
@@ -144,33 +159,10 @@ This reverts commit abc6caa2d0b6141dfbe1f3d025f78ae14deddcb3 ([`fe04dd8`](https:
 
 * feat(widget): added simple website widget with rpc ([`64abd67`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/64abd67b9b416bff9c89880b248d6e8639aa1e70))
 
-
 ## v0.58.1 (2024-06-07)
 
 ### Fix
 
 * fix(dock): new dock can be detached upon creation ([`02a2608`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/02a26086c4540127a11c235cba30afc4fd712007))
 
-
 ## v0.58.0 (2024-06-07)
-
-### Feature
-
-* feat(utils.colors): general color validators ([`3094632`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/30946321348abc349fb4003dc39d0232dc19606c))
-
-### Fix
-
-* fix: bar colormap dynamic setting ([`67fd5e8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/67fd5e8581f60fe64027ac57f1f12cefa4d28343))
-
-* fix: formatting isort ([`bf699ec`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bf699ec1fbe2aacd31854e84fb0438c336840fcf))
-
-* fix(curve): 2D scatter updated if color_map_z is changed ([`6985ff0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6985ff0fcef9791b53198206ec8cbccd1d65ef99))
-
-* fix(curve): color_map_z setting works ([`33f7be4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/33f7be42c512402dab3fdd9781a8234e3ec5f4ba))
-
-### Test
-
-* test(color): validation tests added ([`c0ddece`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c0ddeceeeabacbf33019a8f24b18821926dc17ac))
-
-
-## v0.57.7 (2024-06-07)
