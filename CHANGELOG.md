@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v0.64.1 (2024-06-19)
+
+### Fix
+
+* fix(widgets): removed widget module import of sub widgets ([`216511b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/216511b951ff0e15b6d7c70133095f3ac45c23f4))
+
+### Refactor
+
+* refactor(utils): moved get_rpc_widgets to plugin_utils ([`6dabbf8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6dabbf874fbbdde89c34a7885bf95aa9c895a28b))
+
+### Test
+
+* test: moved rpc_classes test ([`b3575eb`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b3575eb06852b456cde915dfda281a3e778e3aeb))
+
 ## v0.64.0 (2024-06-19)
 
 ### Ci
@@ -154,15 +168,3 @@ This reverts commit abc6caa2d0b6141dfbe1f3d025f78ae14deddcb3 ([`fe04dd8`](https:
 ### Documentation
 
 * docs: added website docs ([`cf6e5a4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cf6e5a40fc8320e9898a446a5bf14b77e94ef013))
-
-### Feature
-
-* feat(widget): added simple website widget with rpc ([`64abd67`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/64abd67b9b416bff9c89880b248d6e8639aa1e70))
-
-## v0.58.1 (2024-06-07)
-
-### Fix
-
-* fix(dock): new dock can be detached upon creation ([`02a2608`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/02a26086c4540127a11c235cba30afc4fd712007))
-
-## v0.58.0 (2024-06-07)
