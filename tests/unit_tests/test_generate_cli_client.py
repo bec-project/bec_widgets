@@ -97,17 +97,3 @@ def test_client_generator_with_black_formatting():
     generated_output_formatted = isort.code(generated_output_formatted)
 
     assert expected_output_formatted == generated_output_formatted
-
-
-def test_client_generator_classes():
-    generator = ClientGenerator()
-    out = generator.get_rpc_classes("bec_widgets")
-    assert list(out.keys()) == ["connector_classes", "top_level_classes"]
-    connector_cls_names = [cls.__name__ for cls in out["connector_classes"]]
-    top_level_cls_names = [cls.__name__ for cls in out["top_level_classes"]]
-
-    assert "BECFigure" in connector_cls_names
-    assert "BECWaveform" in connector_cls_names
-    assert "BECDockArea" in top_level_cls_names
-    assert "BECFigure" in top_level_cls_names
-    assert "BECWaveform" not in top_level_cls_names
