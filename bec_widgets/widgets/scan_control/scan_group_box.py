@@ -12,7 +12,7 @@ from qtpy.QtWidgets import (
 from qtpy.QtWidgets import QGroupBox
 
 from bec_widgets.utils.widget_io import WidgetIO
-from bec_widgets.widgets import DeviceLineEdit
+from bec_widgets.widgets.device_inputs import DeviceLineEdit
 
 
 class ScanArgType:

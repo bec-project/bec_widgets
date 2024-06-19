@@ -12,7 +12,7 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils import BECConnector
-from bec_widgets.widgets import StopButton
+from bec_widgets.widgets.buttons.stop_button.stop_button import StopButton
 from bec_widgets.widgets.scan_control.scan_group_box import ScanGroupBox
 
 
@@ -97,7 +97,7 @@ class ScanControl(BECConnector, QWidget):
             allowed_scans = [
                 scan_name
                 for scan_name, scan_info in self.available_scans.items()
-                if scan_info["base_class"] in supported_scans
+                if scan_info["base_class"] in supported_scans and len(scan_info["gui_config"]) > 0
             ]
 
         else:
@@ -190,7 +190,7 @@ class ScanControl(BECConnector, QWidget):
 # Application example
 if __name__ == "__main__":  # pragma: no cover
     app = QApplication([])
-    scan_control = ScanControl(allowed_scans=["fermat_scan", "round_scan", "line_scan"])
+    scan_control = ScanControl()
 
     qdarktheme.setup_theme("auto")
     window = scan_control
