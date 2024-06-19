@@ -1,6 +1,6 @@
 from typing import Literal
 
-from PyQt6.QtWidgets import (
+from qtpy.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
