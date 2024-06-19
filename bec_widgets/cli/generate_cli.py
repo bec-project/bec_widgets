@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import importlib
 import inspect
 import os
 import sys
@@ -10,9 +9,8 @@ from typing import Literal
 
 import black
 import isort
-from qtpy.QtWidgets import QGraphicsWidget, QWidget
 
-from bec_widgets.utils import BECConnector
+from bec_widgets.utils.plugin_utils import get_rpc_classes
 
 if sys.version_info >= (3, 11):
     from typing import get_overloads
@@ -138,50 +136,6 @@ class {class_name}(RPCBase):"""
         with open(file_name, "w", encoding="utf-8") as file:
             file.write(formatted_content)
 
-    @staticmethod
-    def get_rpc_classes(
-        repo_name: str,
-    ) -> dict[Literal["connector_classes", "top_level_classes"], list[type]]:
-        """
-        Get all RPC-enabled classes in the specified repository.
-
-        Args:
-            repo_name(str): The name of the repository.
-
-        Returns:
-            dict: A dictionary with keys "connector_classes" and "top_level_classes" and values as lists of classes.
-        """
-        connector_classes = []
-        top_level_classes = []
-        anchor_module = importlib.import_module(f"{repo_name}.widgets")
-        directory = os.path.dirname(anchor_module.__file__)
-        for root, _, files in sorted(os.walk(directory)):
-            for file in files:
-                if not file.endswith(".py") or file.startswith("__"):
-                    continue
-
-                path = os.path.join(root, file)
-                subs = os.path.dirname(os.path.relpath(path, directory)).split("/")
-                if len(subs) == 1 and not subs[0]:
-                    module_name = file.split(".")[0]
-                else:
-                    module_name = ".".join(subs + [file.split(".")[0]])
-
-                module = importlib.import_module(f"{repo_name}.widgets.{module_name}")
-
-                for name in dir(module):
-                    obj = getattr(module, name)
-                    if not hasattr(obj, "__module__") or obj.__module__ != module.__name__:
-                        continue
-                    if isinstance(obj, type) and issubclass(obj, BECConnector):
-                        connector_classes.append(obj)
-                        if len(subs) == 1 and (
-                            issubclass(obj, QWidget) or issubclass(obj, QGraphicsWidget)
-                        ):
-                            top_level_classes.append(obj)
-
-        return {"connector_classes": connector_classes, "top_level_classes": top_level_classes}
-
 
 def main():
     """
@@ -197,7 +151,7 @@ def main():
         current_path = os.path.dirname(__file__)
         client_path = os.path.join(current_path, "client.py")
 
-        rpc_classes = ClientGenerator.get_rpc_classes("bec_widgets")
+        rpc_classes = get_rpc_classes("bec_widgets")
         rpc_classes["connector_classes"].sort(key=lambda x: x.__name__)
 
         generator = ClientGenerator()
