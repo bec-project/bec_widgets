@@ -48,7 +48,7 @@ users to interact. BEC Widgets must be placed in the window:
 
 ```
 from qtpy.QWidgets import QMainWindow
-from bec_widgets.widgets import BECFigure
+from bec_widgets.widgets.figure import BECFigure
 
 window = QMainWindow()
 bec_figure = BECFigure(gui_id="my_gui_app_id")
@@ -78,7 +78,7 @@ Final example:
 ```
 import sys
 from qtpy.QtWidgets import QMainWindow, QApplication
-from bec_widgets.widgets import BECFigure
+from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 # creation of the Qt application

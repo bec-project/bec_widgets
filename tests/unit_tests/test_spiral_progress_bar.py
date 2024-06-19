@@ -5,7 +5,7 @@ from bec_lib.endpoints import MessageEndpoints
 from pydantic import ValidationError
 
 from bec_widgets.utils import Colors
-from bec_widgets.widgets import SpiralProgressBar
+from bec_widgets.widgets.spiral_progress_bar import SpiralProgressBar
 from bec_widgets.widgets.spiral_progress_bar.ring import RingConfig, RingConnections
 from bec_widgets.widgets.spiral_progress_bar.spiral_progress_bar import SpiralProgressBarConfig
 

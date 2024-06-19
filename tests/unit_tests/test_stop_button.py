@@ -2,7 +2,7 @@
 
 import pytest
 
-from bec_widgets.widgets import StopButton
+from bec_widgets.widgets.buttons import StopButton
 
 from .client_mocks import mocked_client
 

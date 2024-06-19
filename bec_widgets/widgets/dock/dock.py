@@ -11,7 +11,7 @@ from bec_widgets.utils import BECConnector, ConnectionConfig, GridLayoutManager
 if TYPE_CHECKING:
     from qtpy.QtWidgets import QWidget
 
-    from bec_widgets.widgets import BECDockArea
+    from bec_widgets.widgets.dock import BECDockArea
 
 
 class DockConfig(ConnectionConfig):

@@ -10,8 +10,8 @@ from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 from bec_widgets.utils import BECDispatcher, UILoader
-from bec_widgets.widgets import BECFigure
 from bec_widgets.widgets.dock.dock_area import BECDockArea
+from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.jupyter_console.jupyter_console import BECJupyterConsole
 
 # class JupyterConsoleWidget(RichJupyterWidget):  # pragma: no cover:

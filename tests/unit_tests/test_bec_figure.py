@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from bec_widgets.widgets import BECFigure
+from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.figure.plots.image.image import BECImageShow
 from bec_widgets.widgets.figure.plots.motor_map.motor_map import BECMotorMap
 from bec_widgets.widgets.figure.plots.waveform.waveform import BECWaveform

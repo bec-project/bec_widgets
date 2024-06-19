@@ -24,7 +24,7 @@ a `StopButton` within a GUI layout:
 
 ```python
 from qtpy.QtWidgets import QWidget, QVBoxLayout
-from bec_widgets.widgets import StopButton
+from bec_widgets.widgets.buttons import StopButton
 
 
 class MyGui(QWidget):

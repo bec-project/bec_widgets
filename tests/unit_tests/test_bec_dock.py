@@ -2,7 +2,7 @@
 
 import pytest
 
-from bec_widgets.widgets import BECDock, BECDockArea
+from bec_widgets.widgets.dock import BECDock, BECDockArea
 
 from .client_mocks import mocked_client
 
