@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.66.0 (2024-06-20)
+
+### Feature
+
+* feat(rpc): discover widgets automatically ([`ef25f56`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ef25f5638032f931ceb292540ada618508bb2aed))
+
 ## v0.65.2 (2024-06-20)
 
 ### Fix
@@ -150,10 +156,6 @@ This reverts commit abc6caa2d0b6141dfbe1f3d025f78ae14deddcb3 ([`fe04dd8`](https:
 ### Feature
 
 * feat: added isort to bw-generate-cli ([`f0391f5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f0391f59c9eb0a51b693fccfe2e399e869d35dda))
-
-* feat: added entry point for bw-generate-cli ([`1c7f491`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1c7f4912ce5998e666276969bf4af8656d619a91))
-
-* feat(cli): auto-discover rpc-enabled widgets ([`df1be10`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/df1be10057a5e85a3f35bef1c1b27366b6727276))
 
 ### Fix
 
