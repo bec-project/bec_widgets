@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.65.2 (2024-06-20)
+
+### Fix
+
+* fix(pyqt): webengine must be imported before qcoreapplication ([`cbbd23a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cbbd23aa33095141e4c265719d176c4aa8c25996))
+
 ## v0.65.1 (2024-06-20)
 
 ### Fix
@@ -154,10 +160,6 @@ This reverts commit abc6caa2d0b6141dfbe1f3d025f78ae14deddcb3 ([`fe04dd8`](https:
 * fix: removed BECConnector from rpc client interface ([`6428e38`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6428e38ab94c15a2c904e75cc6404bb6d0394e04))
 
 * fix: added bec_ipython_client as dependency; needed for jupyter widget ([`006a089`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/006a0894b85cba3b2773737ed6fe3e92c81cdee0))
-
-* fix(BECFigure): removed duplicated user access for plot ([`954c576`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/954c576131f7deac669ddf9f51eeb1d41b6f92b7))
-
-* fix(bec_connector): field validator should be a classmethod ([`867720a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/867720a897b6713bd0df9af71ffdd11a6a380f7d))
 
 ### Refactor
 
