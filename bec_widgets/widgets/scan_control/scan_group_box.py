@@ -105,7 +105,12 @@ class ScanGroupBox(QGroupBox):
         self.add_input_labels(self.inputs, 0)
 
         # Widgets
-        self.add_input_widgets(self.inputs, 1)
+        if self.box_type == "args":
+            min_bundle = self.config.get("min", 1)
+            for i in range(1, min_bundle + 1):
+                self.add_input_widgets(self.inputs, i)
+        else:
+            self.add_input_widgets(self.inputs, 1)
 
     def add_input_labels(self, group_inputs: dict, row: int) -> None:
         """
