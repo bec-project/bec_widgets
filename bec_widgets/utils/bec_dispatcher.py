@@ -9,7 +9,7 @@ import redis
 from bec_lib.client import BECClient
 from bec_lib.redis_connector import MessageObject, RedisConnector
 from bec_lib.service_config import ServiceConfig
-from qtpy.QtCore import QCoreApplication, QObject
+from qtpy.QtCore import PYQT5, PYQT6, PYSIDE2, PYSIDE6, QCoreApplication, QObject
 from qtpy.QtCore import Signal as pyqtSignal
 
 if TYPE_CHECKING:
@@ -115,9 +115,16 @@ class BECDispatcher:
     def reset_singleton(cls):
         cls._instance = None
         cls._initialized = False
-        if cls.qapp:
+
+        if not cls.qapp:
+            return
+
+        # shutdown QCoreApp if it exists
+        if PYQT5 or PYQT6:
             cls.qapp.exit()
-            cls.qapp = None
+        elif PYSIDE2 or PYSIDE6:
+            cls.qapp.shutdown()
+        cls.qapp = None
 
     def connect_slot(
         self, slot: Callable, topics: Union[EndpointInfo, str, list[Union[EndpointInfo, str]]]
