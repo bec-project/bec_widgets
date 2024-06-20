@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## v0.65.0 (2024-06-20)
+
+### Feature
+
+* feat(device_input): DeviceLineEdit with QCompleter added ([`50e41ff`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/50e41ff26160ec26d77feb6d519e4dad902a9b9b))
+
+* feat(device_combobox): DeviceInputBase and DeviceComboBox added ([`430b282`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/430b282039806e3fbc6cf98e958861a065760620))
+
+### Fix
+
+* fix(device_input_base): bug with setting config and overwriting default device and filter ([`d79f7e9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d79f7e9ccde03dc77819ca556c79736d30f7821a))
+
+### Test
+
+* test(device_input): tests added ([`1a0a98a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1a0a98a45367db414bed813bbd346b3e1ae8d550))
+
 ## v0.64.2 (2024-06-19)
 
 ### Fix
@@ -152,17 +168,3 @@ This reverts commit abc6caa2d0b6141dfbe1f3d025f78ae14deddcb3 ([`fe04dd8`](https:
 ### Test
 
 * test: added missing pylint statement to header ([`f662985`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f6629852ebc2b4ee239fa560cc310a5ae2627cf7))
-
-## v0.59.1 (2024-06-07)
-
-### Fix
-
-* fix(curve): set_color_map_z typo fixed in user access ([`e7838b0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e7838b0f2fc23b0a232ed7d68fbd7f3493a91b9e))
-
-## v0.59.0 (2024-06-07)
-
-### Ci
-
-* ci: merged additional tests to parallel matrix job ([`178fe4d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/178fe4d2da3a959f7cd90e7ea0f47314dc1ef4ed))
-
-* ci: added webengine dependencies ([`2d79ef8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2d79ef8fe5e52c61f4a78782770377cd6b41958b))
