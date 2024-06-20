@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.65.1 (2024-06-20)
+
+### Fix
+
+* fix: prevent segfault by closing the QCoreApplication, if any ([`fa344a5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fa344a5799b07a2d8ace63cc7010b69bc4ed6f1d))
+
 ## v0.65.0 (2024-06-20)
 
 ### Feature
@@ -135,8 +141,6 @@ This reverts commit abc6caa2d0b6141dfbe1f3d025f78ae14deddcb3 ([`fe04dd8`](https:
 
 * ci: fixed pylint-check ([`6b1d582`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6b1d5827d6599f06a3acd316060a8d25f0686d54))
 
-* ci: cleanup ([`11173b9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/11173b9c0a7dc4b36e35962042e5b86407da49f1))
-
 ### Feature
 
 * feat: added isort to bw-generate-cli ([`f0391f5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f0391f59c9eb0a51b693fccfe2e399e869d35dda))
@@ -162,8 +166,6 @@ This reverts commit abc6caa2d0b6141dfbe1f3d025f78ae14deddcb3 ([`fe04dd8`](https:
 * refactor: disabled pylint for auto-gen client ([`b15816c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b15816ca9fd3e4ae87cca5fcfe029b4dfca570ca))
 
 * refactor(isort): added bec_widgets as known first party package ([`9c5a471`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9c5a471234ed2928e4527b079436db2a807c5f6f))
-
-* refactor(dock): parent_dock_area changed to orig_area (native for pyqtgraph) ([`2b40602`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2b40602bdc593ece0447ec926c2100414bd5cf67))
 
 ### Test
 
