@@ -2,14 +2,12 @@
 from unittest.mock import MagicMock
 
 import pytest
-
 from bec_lib.messages import AvailableResourceMessage
+
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.scan_control import ScanControl
 
-
 from .client_mocks import mocked_client
-
 
 available_scans_message = AvailableResourceMessage(
     resource={

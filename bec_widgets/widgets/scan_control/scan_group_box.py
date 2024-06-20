@@ -5,11 +5,11 @@ from qtpy.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
     QGridLayout,
+    QGroupBox,
     QLabel,
     QLineEdit,
     QSpinBox,
 )
-from qtpy.QtWidgets import QGroupBox
 
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.device_inputs import DeviceLineEdit
@@ -170,8 +170,8 @@ class ScanGroupBox(QGroupBox):
         if self.box_type != "args":
             return
         arg_min = self.config.get("min", None)
-        row = self.layout.rowCount()
-        if arg_min is not None and row <= arg_min + 1:
+        row = self.count_arg_rows()
+        if arg_min is not None and row <= arg_min:
             return
 
         for widget in self.widgets[-len(self.inputs) :]:
@@ -183,10 +183,8 @@ class ScanGroupBox(QGroupBox):
         Returns the parameters from the widgets in the scan control layout formated to run scan from BEC.
         """
         if self.box_type == "args":
-            print(self._get_arg_parameterts())
             return self._get_arg_parameterts()
         elif self.box_type == "kwargs":
-            print(self._get_kwarg_parameters())
             return self._get_kwarg_parameters()
 
     def _get_arg_parameterts(self):
@@ -211,3 +209,15 @@ class ScanGroupBox(QGroupBox):
                 value = WidgetIO.get_value(widget)
             kwargs[widget.arg_name] = value
         return kwargs
+
+    def count_arg_rows(self):
+        widget_rows = 0
+        for row in range(self.layout.rowCount()):
+            for col in range(self.layout.columnCount()):
+                item = self.layout.itemAtPosition(row, col)
+                if item is not None:
+                    widget = item.widget()
+                    if widget is not None:
+                        if isinstance(widget, DeviceLineEdit):
+                            widget_rows += 1
+        return widget_rows

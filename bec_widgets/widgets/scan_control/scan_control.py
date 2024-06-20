@@ -121,7 +121,7 @@ class ScanControl(BECConnector, QWidget):
         if len(self.arg_group["arg_inputs"]) > 0:
             self.button_add_bundle.setEnabled(True)
             self.button_remove_bundle.setEnabled(True)
-            self.add_arg_group(self.arg_group)  # TODO here class method for arg box
+            self.add_arg_group(self.arg_group)
         if len(self.kwarg_groups) > 0:
             self.add_kwargs_boxes(self.kwarg_groups)
 
