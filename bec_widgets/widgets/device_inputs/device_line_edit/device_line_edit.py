@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
-from qtpy.QtWidgets import QCompleter, QLineEdit
+from qtpy.QtCore import QSize
+from qtpy.QtWidgets import QCompleter, QLineEdit, QSizePolicy
 
 from bec_widgets.widgets.device_inputs.device_input_base import DeviceInputBase, DeviceInputConfig
 
@@ -46,6 +47,9 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
             self.set_device_filter(device_filter)
         if default is not None:
             self.set_default_device(default)
+
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.setMinimumSize(QSize(100, 0))
 
     def set_device_filter(self, device_filter: str | list[str]):
         """
