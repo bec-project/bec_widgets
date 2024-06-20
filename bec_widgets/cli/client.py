@@ -13,6 +13,7 @@ class Widgets(str, enum.Enum):
     Enum for the available widgets.
     """
 
+    BECStatusBox = "BECStatusBox"
     BECDock = "BECDock"
     BECDockArea = "BECDockArea"
     BECFigure = "BECFigure"
@@ -1388,6 +1389,24 @@ class BECPlotBase(RPCBase):
         """
 
 
+class BECStatusBox(RPCBase):
+    @property
+    @rpc_call
+    def config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
+        """
+
+
 class BECWaveform(RPCBase):
     @property
     @rpc_call
@@ -1646,6 +1665,60 @@ class BECWaveform(RPCBase):
 
         Args:
             size(int): Font size of the legend.
+        """
+
+
+class DeviceComboBox(RPCBase):
+    @property
+    @rpc_call
+    def config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
+        """
+
+
+class DeviceInputBase(RPCBase):
+    @property
+    @rpc_call
+    def config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
+        """
+
+
+class DeviceLineEdit(RPCBase):
+    @property
+    @rpc_call
+    def config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
         """
 
 
@@ -1950,7 +2023,7 @@ class TextBox(RPCBase):
     @rpc_call
     def set_color(self, background_color: str, font_color: str) -> None:
         """
-        Set the background color of the Widget.
+        Set the background color of the widget.
 
         Args:
             background_color (str): The color to set the background in HEX.
@@ -1960,13 +2033,19 @@ class TextBox(RPCBase):
     @rpc_call
     def set_text(self, text: str) -> None:
         """
-        Set the text of the Widget
+        Set the text of the widget.
+
+        Args:
+            text (str): The text to set.
         """
 
     @rpc_call
     def set_font_size(self, size: int) -> None:
         """
-        Set the font size of the text in the Widget.
+        Set the font size of the text in the widget.
+
+        Args:
+            size (int): The font size to set.
         """
 
 

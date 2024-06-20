@@ -13,13 +13,13 @@ To install BEC Widgets using the pip package manager, execute the following comm
 
 
 ```bash
-pip install bec_widgets[pyqt6]
+pip install 'bec_widgets[pyqt6]'
 ```
 
 In case you want to use PyQt5, you can install it by using the following command:
 
 ```bash
-pip install bec_widgets[pyqt5]
+pip install 'bec_widgets[pyqt5]'
 ```
 
 **Troubleshooting**
