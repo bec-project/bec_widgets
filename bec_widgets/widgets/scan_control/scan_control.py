@@ -161,6 +161,7 @@ class ScanControl(BECConnector, QWidget):
         """Clears the scan control layout from GuiGroups and ArgGroups boxes."""
         if self.arg_box is not None:
             self.layout.removeWidget(self.arg_box)
+            self.arg_box.deleteLater()
             self.arg_box = None
         if self.kwarg_boxes != []:
             self.remove_kwarg_boxes()
