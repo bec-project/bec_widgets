@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## v0.68.0 (2024-06-21)
+
+### Feature
+
+* feat: properly handle SIGINT (ctrl-c) in BEC GUI server -&gt; calls qapplication.quit() ([`3644f34`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3644f344da2df674bc0d5740c376a86b9d0dfe95))
+
+* feat: bec-gui-server: redirect stdout and stderr (if any) as proper debug and error log entries ([`d1266a1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d1266a1ce148ff89557a039e3a182a87a3948f49))
+
+* feat: add logger for BEC GUI server ([`630616e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/630616ec729f60aa0b4d17a9e0379f9c6198eb96))
+
+### Fix
+
+* fix: ignore GUI server output (any output will go to log file)
+
+If a logger is given to log `_start_log_process`, the server stdout and
+stderr streams will be redirected as log entries with levels DEBUG or ERROR
+in their parent process ([`ce37416`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ce374163cab87a92847409051739777bc505a77b))
+
+* fix: do not create &#39;BECClient&#39; logger when instantiating BECDispatcher ([`f7d0b07`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f7d0b0768ace42a33e2556bb33611d4f02e5a6d9))
+
 ## v0.67.0 (2024-06-21)
 
 ### Documentation
@@ -155,26 +175,6 @@ This reverts commit abc6caa2d0b6141dfbe1f3d025f78ae14deddcb3 ([`fe04dd8`](https:
 
 ## v0.62.0 (2024-06-12)
 
-### Feature
-
-* feat: implement non-polling, interruptible waiting of gui instruction response with timeout ([`abc6caa`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/abc6caa2d0b6141dfbe1f3d025f78ae14deddcb3))
-
 ### Unknown
 
 * doc: add documentation about creating custom GUI applications embedding BEC Widgets ([`17a0068`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/17a00687579f5efab1990cd83862ec0e78198633))
-
-## v0.61.0 (2024-06-12)
-
-### Feature
-
-* feat(widgets/stop_button): General stop button added ([`61ba08d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/61ba08d0b8df9f48f5c54c7c2b4e6d395206e7e6))
-
-### Refactor
-
-* refactor: improve labe of auto_update script ([`40b5688`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/40b568815893cd41af3531bb2e647ca1e2e315f4))
-
-## v0.60.0 (2024-06-08)
-
-### Fix
-
-* fix: removed BECConnector from rpc client interface ([`6428e38`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6428e38ab94c15a2c904e75cc6404bb6d0394e04))
