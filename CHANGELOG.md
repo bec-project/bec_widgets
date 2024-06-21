@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.69.0 (2024-06-21)
+
+### Feature
+
+* feat(widgets): added vscode widget ([`48ae950`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/48ae950d57b454307ce409e2511f7b7adf3cfc6b))
+
+### Fix
+
+* fix(generate_cli): fixed rpc generate for classes without user access; closes #226 ([`925c893`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/925c893f3ff4337fc8b4d237c8ffc19a597b0996))
+
 ## v0.68.0 (2024-06-21)
 
 ### Feature
@@ -166,15 +176,3 @@ on SIGTERM ([`9263f8e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9263f8ef5
 ### Test
 
 * test: add test for text box ([`b49462a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b49462abeb186e56bac79d2ef0b0add1ef28a1a5))
-
-### Unknown
-
-* Revert &#34;feat: implement non-polling, interruptible waiting of gui instruction response with timeout&#34;
-
-This reverts commit abc6caa2d0b6141dfbe1f3d025f78ae14deddcb3 ([`fe04dd8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fe04dd80e59a0e74f7fdea603e0642707ecc7c2a))
-
-## v0.62.0 (2024-06-12)
-
-### Unknown
-
-* doc: add documentation about creating custom GUI applications embedding BEC Widgets ([`17a0068`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/17a00687579f5efab1990cd83862ec0e78198633))
