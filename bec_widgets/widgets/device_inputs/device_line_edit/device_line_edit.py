@@ -89,14 +89,3 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
         if device_obj is None:
             raise ValueError(f"Device {device_name} is not found.")
         return device_obj
-
-
-if __name__ == "__main__":  # pragma: no cover
-    import sys
-
-    from qtpy.QtWidgets import QApplication
-
-    app = QApplication(sys.argv)
-    w = DeviceLineEdit(default_device="samx")
-    w.show()
-    sys.exit(app.exec_())

@@ -3,20 +3,27 @@ import sys
 import sysconfig
 from pathlib import Path
 
-from PySide6.scripts.pyside_tool import (
-    _extend_path_var,
-    init_virtual_env,
-    is_pyenv_python,
-    is_virtual_env,
-    qt_tool_wrapper,
-    ui_tool_binary,
-)
+from qtpy import PYSIDE6
+
+if PYSIDE6:
+    from PySide6.scripts.pyside_tool import (
+        _extend_path_var,
+        init_virtual_env,
+        is_pyenv_python,
+        is_virtual_env,
+        qt_tool_wrapper,
+        ui_tool_binary,
+    )
 
 import bec_widgets
 
 
 def patch_designer():  # pragma: no cover
-    # init_virtual_env()
+    if not PYSIDE6:
+        print("PYSIDE6 is not available in the environment. Cannot patch designer.")
+        return
+
+    init_virtual_env()
 
     major_version = sys.version_info[0]
     minor_version = sys.version_info[1]
@@ -66,7 +73,9 @@ def set_plugin_environment_variable(plugin_paths):
 
 # Patch the designer function
 def main():  # pragma: no cover
-
+    if not PYSIDE6:
+        print("PYSIDE6 is not available in the environment. Exiting...")
+        return
     base_dir = Path(os.path.dirname(bec_widgets.__file__)).resolve()
     plugin_paths = find_plugin_paths(base_dir)
     set_plugin_environment_variable(plugin_paths)

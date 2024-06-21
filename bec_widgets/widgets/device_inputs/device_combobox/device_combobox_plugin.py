@@ -1,9 +1,10 @@
 # Copyright (C) 2022 The Qt Company Ltd.
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
-from device_combobox import DeviceComboBox
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 from qtpy.QtGui import QIcon
+
+from bec_widgets.widgets.device_inputs import DeviceComboBox
 
 DOM_XML = """
 <ui language='c++'>

@@ -1,12 +1,17 @@
-# Copyright (C) 2022 The Qt Company Ltd.
-# SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
+def main():  # pragma: no cover
+    from qtpy import PYSIDE6
 
-from device_line_edit import DeviceLineEdit
-from device_line_edit_plugin import DeviceLineEditPlugin
-from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
+    if not PYSIDE6:
+        print("PYSIDE6 is not available in the environment. Cannot patch designer.")
+        return
+    from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
 
-# Set PYSIDE_DESIGNER_PLUGINS to point to this directory and load the plugin
+    from bec_widgets.widgets.device_inputs.device_line_edit.device_line_edit_plugin import (
+        DeviceLineEditPlugin,
+    )
+
+    QPyDesignerCustomWidgetCollection.addCustomWidget(DeviceLineEditPlugin())
 
 
 if __name__ == "__main__":  # pragma: no cover
-    QPyDesignerCustomWidgetCollection.addCustomWidget(DeviceLineEditPlugin())
+    main()

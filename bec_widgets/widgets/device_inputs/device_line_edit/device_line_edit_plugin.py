@@ -1,9 +1,10 @@
 # Copyright (C) 2022 The Qt Company Ltd.
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
-from device_line_edit import DeviceLineEdit
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 from qtpy.QtGui import QIcon
+
+from bec_widgets.widgets.device_inputs import DeviceLineEdit
 
 DOM_XML = """
 <ui language='c++'>
