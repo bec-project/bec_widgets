@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## v0.70.0 (2024-06-21)
+
+### Documentation
+
+* docs: fix typo in link ([`fdf11d8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fdf11d8147750e379af9b17792761a267b49ae53))
+
+### Feature
+
+* feat(bec-designer): automatic plugin discovery ([`4639eee`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4639eee0b975ebd7a946e0e290449f5b88c372eb))
+
+* feat(device_line_edit): plugin added to bec-designer ([`b4b27ae`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b4b27aea3d8c08fa3d5d5514c69dbde32721d1dc))
+
+* feat(device_combobox): plugin added to bec-designer ([`e483b28`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e483b282db20a81182b87938ea172654092419b5))
+
+* feat: added entry point for bec-designer ([`36391db`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/36391db60735d57b371211791ddf8d3d00cebcf1))
+
+* feat(utils/bec-designer): added startup script to launched QtDesigner compatible with conda environments ([`5362334`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5362334ff3b07fc83653323a084a4b6946bade96))
+
+### Fix
+
+* fix(bec-desiger+plugins): imports fixed, PYSIDE6 check to not enable run plugins with pyqt6 ([`50b3422`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/50b3422528d46d74317e8c903b6286e868ab7fe0))
+
 ## v0.69.0 (2024-06-21)
 
 ### Feature
@@ -143,36 +165,3 @@ in their parent process ([`ce37416`](https://gitlab.psi.ch/bec/bec_widgets/-/com
 * fix: do not import &#34;server&#34; in client, prevents from having trouble with QApplication creation order
 
 Like with QtWebEngine ([`6f96498`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6f96498de66358b89f3a2035627eed2e02dde5a1))
-
-### Unknown
-
-* Reapply &#34;feat: implement non-polling, interruptible waiting of gui instruction response with timeout&#34;
-
-This reverts commit fe04dd80e59a0e74f7fdea603e0642707ecc7c2a. ([`836b6e6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/836b6e64f694916d6b6f909dedf11a4a6d2c86a4))
-
-## v0.63.1 (2024-06-13)
-
-### Fix
-
-* fix: just terminate the remote process in close() instead of communicating
-
-The proper finalization sequence will be executed by the remote process
-on SIGTERM ([`9263f8e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9263f8ef5c17ae7a007a1a564baf787b39061756))
-
-## v0.63.0 (2024-06-13)
-
-### Documentation
-
-* docs: add documentation ([`bc709c4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bc709c4184c985d4e721f9ea7d1b3dad5e9153a7))
-
-### Feature
-
-* feat: add textbox widget ([`d9d4e3c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d9d4e3c9bf73ab2a5629c2867b50fc91e69489ec))
-
-### Refactor
-
-* refactor: add pydantic config, add change_theme ([`6b8432f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6b8432f5b20a71175a3537b5f6832b76e3b67d73))
-
-### Test
-
-* test: add test for text box ([`b49462a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b49462abeb186e56bac79d2ef0b0add1ef28a1a5))
