@@ -3,7 +3,6 @@
 
 from device_line_edit import DeviceLineEdit
 from device_line_edit_plugin import DeviceLineEditPlugin
-
 from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
 
 # Set PYSIDE_DESIGNER_PLUGINS to point to this directory and load the plugin

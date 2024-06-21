@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
 from device_combobox import DeviceComboBox
-
 from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
 
 from bec_widgets.widgets.device_inputs.device_combobox.device_combobox_plugin import (

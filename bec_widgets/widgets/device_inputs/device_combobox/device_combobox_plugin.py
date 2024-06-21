@@ -2,10 +2,8 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
 from device_combobox import DeviceComboBox
-
-from qtpy.QtGui import QIcon
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
-
+from qtpy.QtGui import QIcon
 
 DOM_XML = """
 <ui language='c++'>
