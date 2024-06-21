@@ -118,3 +118,6 @@ class DeviceInputBase(BECConnector):
         """
         if device not in self.get_device_list(self.config.device_filter):
             raise ValueError(f"Device {device} is not valid.")
+
+    def cleanup(self):
+        super().cleanup()

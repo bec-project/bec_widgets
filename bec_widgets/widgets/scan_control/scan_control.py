@@ -184,8 +184,21 @@ class ScanControl(BECConnector, QWidget):
         if callable(scan_function):
             scan_function(*args, **kwargs)
 
-    def close(self):
-        super().close()
+    def cleanup(self):
+        self.button_stop_scan.cleanup()
+        if self.arg_box:
+            for widget in self.arg_box.widgets:
+                if hasattr(widget, "cleanup"):
+                    widget.cleanup()
+        for kwarg_box in self.kwarg_boxes:
+            for widget in kwarg_box.widgets:
+                if hasattr(widget, "cleanup"):
+                    widget.cleanup()
+        super().cleanup()
+
+    def closeEvent(self, event):
+        self.cleanup()
+        QWidget().closeEvent(event)
 
 
 # Application example

@@ -17,6 +17,7 @@ class Widgets(str, enum.Enum):
     BECDock = "BECDock"
     BECDockArea = "BECDockArea"
     BECFigure = "BECFigure"
+    ScanControl = "ScanControl"
     SpiralProgressBar = "SpiralProgressBar"
     TextBox = "TextBox"
     VSCodeEditor = "VSCodeEditor"
@@ -1820,6 +1821,24 @@ class Ring(RPCBase):
     def reset_connection(self):
         """
         Reset the connections for the ring widget. Disconnect the current slot and endpoint.
+        """
+
+
+class ScanControl(RPCBase):
+    @property
+    @rpc_call
+    def config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
         """
 
 

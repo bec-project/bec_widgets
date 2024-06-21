@@ -94,3 +94,11 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
         if device_obj is None:
             raise ValueError(f"Device {device_name} is not found.")
         return device_obj
+
+    def cleanup(self):
+        """Cleanup the widget."""
+        super().cleanup()
+
+    def closeEvent(self, event):
+        super().cleanup()
+        QLineEdit().closeEvent(event)

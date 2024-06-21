@@ -82,3 +82,11 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         if device_obj is None:
             raise ValueError(f"Device {device_name} is not found.")
         return device_obj
+
+    def cleanup(self):
+        """Cleanup the widget."""
+        super().cleanup()
+
+    def closeEvent(self, event):
+        super().cleanup()
+        QComboBox().closeEvent(event)
