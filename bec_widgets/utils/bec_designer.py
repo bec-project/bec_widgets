@@ -16,7 +16,7 @@ from PySide6.scripts.pyside_tool import (
 
 
 def patch_designer():  # pragma: no cover
-    init_virtual_env()
+    # init_virtual_env()
 
     major_version = sys.version_info[0]
     minor_version = sys.version_info[1]
@@ -43,8 +43,11 @@ def patch_designer():  # pragma: no cover
 # Patch the designer function
 def main():  # pragma: no cover
     os.environ["PYSIDE_DESIGNER_PLUGINS"] = os.path.join(
-        os.path.dirname(bec_widgets.__file__), "examples/plugin_example_pyside"
+        os.path.dirname(bec_widgets.__file__), "widgets/device_inputs/device_combobox"
     )
+    # os.environ["PYSIDE_DESIGNER_PLUGINS"] = os.path.join(
+    #     os.path.dirname(bec_widgets.__file__), "widgets/motor_control/selection"
+    # )
     patch_designer()
 
 
