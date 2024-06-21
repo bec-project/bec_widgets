@@ -8,5 +8,4 @@ maxdepth: 2
 hidden: false
 ---
 
-how_to_develop_a_widget/
 ```

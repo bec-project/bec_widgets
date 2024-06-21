@@ -65,7 +65,7 @@ class BECServiceStatusMixin(QObject):
 
     Args:
         client (BECClient): The client object to connect to the BEC server.
-    ß"""
+    """
 
     services_update = Signal(dict, dict)
 
@@ -83,7 +83,7 @@ class BECServiceStatusMixin(QObject):
         self.services_update.emit(self.client._services_info, self.client._services_metric)
 
 
-class BECStatusBox(BECConnector, QWidget):
+class BECStatusBox(BECConnector, QTreeWidget):
     """A widget to display the status of different BEC services.
     This widget automatically updates the status of all running BEC services, and displays their status.
     Information about the individual services is collapsible, and double clicking on
@@ -116,34 +116,31 @@ class BECStatusBox(BECConnector, QWidget):
             if isinstance(config, dict):
                 config = BECStatusBoxConfig(**config)
         super().__init__(client=client, config=config, gui_id=gui_id)
-        QWidget.__init__(self, parent=parent)
+        QTreeWidget.__init__(self, parent=parent)
 
         self.service_name = service_name
         self.config = config
 
         self.bec_service_info_container = {}
         self.tree_items = {}
-        self.layout = None
-        self.tree_widget = None
         self.tree_top_item = None
         self.bec_service_status = BECServiceStatusMixin(client=self.client)
 
         self.init_ui()
         self.bec_service_status.services_update.connect(self.update_service_status)
         self.bec_core_state.connect(self.update_top_item_status)
+        self.itemDoubleClicked.connect(self.on_tree_item_double_clicked)
 
     def init_ui(self) -> None:
         """Initialize the UI for the status box, and add QTreeWidget as the basis for the status box."""
-        self.layout = QVBoxLayout()
-        self.init_tree_widget()
+        self.init_ui_tree_widget()
         top_label = self._create_status_widget(self.service_name, status=BECStatus.IDLE)
         self.tree_top_item = QTreeWidgetItem()
         self.tree_top_item.setExpanded(True)
         self.tree_top_item.setDisabled(True)
-        self.tree_widget.addTopLevelItem(self.tree_top_item)
-        self.tree_widget.setItemWidget(self.tree_top_item, 0, top_label)
+        self.addTopLevelItem(self.tree_top_item)
+        self.setItemWidget(self.tree_top_item, 0, top_label)
         self.service_update.connect(top_label.update_config)
-        self.setLayout(self.layout)
 
     def _create_status_widget(
         self, service_name: str, status=BECStatus, info: dict = None, metrics: dict = None
@@ -183,7 +180,7 @@ class BECStatusBox(BECConnector, QWidget):
             status (BECStatus): The state of the core services.
         """
         self.bec_service_info_container[self.service_name].status = status
-        self.service_update.emit(self.bec_service_info_container[self.service_name].dict())
+        self.service_update.emit(self.bec_service_info_container[self.service_name].model_dump())
 
     def _update_bec_service_container(
         self, service_name: str, status: BECStatus, info: dict, metrics: dict = None
@@ -228,7 +225,7 @@ class BECStatusBox(BECConnector, QWidget):
                 self._update_bec_service_container(
                     service_name=service_name, status=msg.status, info=msg.info, metrics=metrics
                 )
-                self.service_update.emit(self.bec_service_info_container[service_name].dict())
+                self.service_update.emit(self.bec_service_info_container[service_name].model_dump())
                 continue
 
             item_widget = self._create_status_widget(
@@ -238,7 +235,7 @@ class BECStatusBox(BECConnector, QWidget):
             item.setDisabled(True)
             self.service_update.connect(item_widget.update_config)
             self.tree_top_item.addChild(item)
-            self.tree_widget.setItemWidget(item, 0, item_widget)
+            self.setItemWidget(item, 0, item_widget)
             self.tree_items.update({service_name: (item, item_widget)})
 
         self.check_redundant_tree_items(checked)
@@ -271,7 +268,7 @@ class BECStatusBox(BECConnector, QWidget):
                 )
 
             if service_name in self.tree_items:
-                self.service_update.emit(self.bec_service_info_container[service_name].dict())
+                self.service_update.emit(self.bec_service_info_container[service_name].model_dump())
                 continue
             self.add_tree_item(service_name, msg.status, msg.info, metrics)
 
@@ -306,14 +303,13 @@ class BECStatusBox(BECConnector, QWidget):
         item = QTreeWidgetItem()
         self.service_update.connect(item_widget.update_config)
         self.tree_top_item.addChild(item)
-        self.tree_widget.setItemWidget(item, 0, item_widget)
+        self.setItemWidget(item, 0, item_widget)
         self.tree_items.update({service_name: (item, item_widget)})
 
-    def init_tree_widget(self) -> None:
+    def init_ui_tree_widget(self) -> None:
         """Initialise the tree widget for the status box."""
-        self.tree_widget = QTreeWidget()
-        self.tree_widget.setHeaderHidden(True)
-        self.tree_widget.setStyleSheet(
+        self.setHeaderHidden(True)
+        self.setStyleSheet(
             "QTreeWidget::item:!selected "
             "{ "
             "border: 1px solid gainsboro; "
@@ -322,8 +318,6 @@ class BECStatusBox(BECConnector, QWidget):
             "}"
             "QTreeWidget::item:selected {}"
         )
-        self.tree_widget.itemDoubleClicked.connect(self.on_tree_item_double_clicked)
-        self.layout.addWidget(self.tree_widget)
 
     @Slot(QTreeWidgetItem, int)
     def on_tree_item_double_clicked(self, item: QTreeWidgetItem, column: int) -> None:
@@ -336,6 +330,10 @@ class BECStatusBox(BECConnector, QWidget):
         for _, (tree_item, status_widget) in self.tree_items.items():
             if tree_item == item:
                 status_widget.show_popup()
+
+    def closeEvent(self, event):
+        super().cleanup()
+        QTreeWidget().closeEvent(event)
 
 
 def main():

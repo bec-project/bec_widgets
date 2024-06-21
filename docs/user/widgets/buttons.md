@@ -1,5 +1,4 @@
 (user.widgets.buttons)=
-
 # Buttons Widgets
 
 This section consolidates various custom buttons used within the BEC GUIs, facilitating the integration of these

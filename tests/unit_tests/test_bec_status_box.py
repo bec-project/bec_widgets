@@ -29,8 +29,8 @@ def test_status_box_init(qtbot, mocked_client):
         widget = BECStatusBox(parent=None, service_name=name, client=mocked_client)
         qtbot.addWidget(widget)
         qtbot.waitExposed(widget)
-        assert widget.tree_widget.headerItem().DontShowIndicator.value == 1
-        assert widget.tree_widget.children()[0].children()[0].config.service_name == name
+        assert widget.headerItem().DontShowIndicator.value == 1
+        assert widget.children()[0].children()[0].config.service_name == name
 
 
 def test_update_top_item(qtbot, mocked_client):
@@ -83,9 +83,9 @@ def test_add_tree_item(status_box):
     status = BECStatus.IDLE
     info = {"test": "test"}
     metrics = {"metric": "test_metric"}
-    assert len(status_box.tree_widget.children()[0].children()) == 1
+    assert len(status_box.children()[0].children()) == 1
     status_box.add_tree_item(name, status, info, metrics)
-    assert len(status_box.tree_widget.children()[0].children()) == 2
+    assert len(status_box.children()[0].children()) == 2
     assert name in status_box.tree_items
 
 
@@ -148,5 +148,5 @@ def test_double_click_item(status_box):
     status_box.add_tree_item(name, status, info, metrics)
     item, status_item = status_box.tree_items[name]
     with mock.patch.object(status_item, "show_popup") as mock_show_popup:
-        status_box.tree_widget.itemDoubleClicked.emit(item, 0)
+        status_box.itemDoubleClicked.emit(item, 0)
         assert mock_show_popup.call_count == 1

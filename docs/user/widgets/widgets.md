@@ -13,6 +13,8 @@ spiral_progress_bar/
 website/
 buttons/
 text_box/
+bec_status_box/
+
 ```
 
 
