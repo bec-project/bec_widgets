@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.71.1 (2024-06-23)
+
+### Fix
+
+* fix: don&#39;t print exception if the auto-update module cannot be found in plugins ([`860517a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/860517a3211075d1f6e2af7fa6a567b9e0cd77f3))
+
 ## v0.71.0 (2024-06-23)
 
 ### Feature
@@ -141,14 +147,6 @@ in their parent process ([`ce37416`](https://gitlab.psi.ch/bec/bec_widgets/-/com
 * fix: prevent segfault by closing the QCoreApplication, if any ([`fa344a5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fa344a5799b07a2d8ace63cc7010b69bc4ed6f1d))
 
 ## v0.65.0 (2024-06-20)
-
-### Feature
-
-* feat(device_input): DeviceLineEdit with QCompleter added ([`50e41ff`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/50e41ff26160ec26d77feb6d519e4dad902a9b9b))
-
-### Fix
-
-* fix(device_input_base): bug with setting config and overwriting default device and filter ([`d79f7e9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d79f7e9ccde03dc77819ca556c79736d30f7821a))
 
 ### Test
 
