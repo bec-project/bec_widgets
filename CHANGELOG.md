@@ -1,5 +1,47 @@
 # CHANGELOG
 
+## v0.71.0 (2024-06-23)
+
+### Feature
+
+* feat(scan_group_box): scan box for args and kwargs separated from ScanControlGUI code ([`d8cf441`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d8cf44134c30063e586771f9068947fef7a306d1))
+
+### Fix
+
+* fix(cleanup): cleanup added to device_input widgets and scan_control ([`8badb6a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8badb6adc1d003dbf0b2b1a800c34821f3fc9aa3))
+
+* fix(scan_group_box): added row counter based on widgets ([`37682e7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/37682e7b8a6ede38308880d285e41a948d6fe831))
+
+* fix(scan_control): added default min limit for args bundle if specified ([`ec4574e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ec4574ed5c2c85ea6fbbe2b98f162a8e1220653b))
+
+* fix(scan_control): argbox delete later added to prevent overlapping gui if scan changed ([`7ce3a83`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7ce3a83c58cb69c2bf7cb7f4eaba7e6a2ca6c546))
+
+* fix(scan_control): only scans with defined gui_config are allowed ([`6dff187`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6dff1879c4178df0f8ebfd35101acdebb028d572))
+
+* fix(WidgetIO): find handlers within base classes ([`ca85638`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ca856384f380dabf28d43f1cd48511af784c035b))
+
+* fix(scan_control): adapted widget to scan BEC gui config ([`8b822e0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8b822e0fa8e28f080b9a4bf81948a7280a4c07bf))
+
+* fix(scan_control): scan_control.py combatible with the newest BEC versions, test disabled ([`67d398c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/67d398caf74e08ab25a70cc5d85a5f0c2de8212d))
+
+### Refactor
+
+* refactor(device_line_edit): renamed default_device to default ([`4e2c9df`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4e2c9df6a4979d935285fd7eba17fd7fd455a35c))
+
+### Test
+
+* test(scan_control): tests added ([`56e74a0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/56e74a0e7da72d18e89bc30d1896dbf9ef97cd6b))
+
+### Unknown
+
+* test(scan_control):e2e tests added ([`83001a0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/83001a0d8267e1320549b07032857dcf46ecd293))
+
+* doc(scan_control): docs added ([`1b7921a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1b7921a7f2e3bcc846219a2a7aa0de0fd27bb8fe))
+
+* fix(device_line_edit):SizePolicy fixed for 100 horizontal ([`21d20e0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/21d20e0fc78e9a3853abe802733388cce119ce20))
+
+* tests WIP ([`c09644b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c09644b29ddb291c91dc58bcd6ebf02ff45cab36))
+
 ## v0.70.0 (2024-06-21)
 
 ### Documentation
@@ -104,8 +146,6 @@ in their parent process ([`ce37416`](https://gitlab.psi.ch/bec/bec_widgets/-/com
 
 * feat(device_input): DeviceLineEdit with QCompleter added ([`50e41ff`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/50e41ff26160ec26d77feb6d519e4dad902a9b9b))
 
-* feat(device_combobox): DeviceInputBase and DeviceComboBox added ([`430b282`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/430b282039806e3fbc6cf98e958861a065760620))
-
 ### Fix
 
 * fix(device_input_base): bug with setting config and overwriting default device and filter ([`d79f7e9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d79f7e9ccde03dc77819ca556c79736d30f7821a))
@@ -113,55 +153,3 @@ in their parent process ([`ce37416`](https://gitlab.psi.ch/bec/bec_widgets/-/com
 ### Test
 
 * test(device_input): tests added ([`1a0a98a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1a0a98a45367db414bed813bbd346b3e1ae8d550))
-
-## v0.64.2 (2024-06-19)
-
-### Fix
-
-* fix(client_utils): added close rpc command to shutdown of gui from bec_ipython_client ([`e5a7d47`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e5a7d47b21cbf066f740f1d11d7c9ea7c70f3080))
-
-## v0.64.1 (2024-06-19)
-
-### Fix
-
-* fix(widgets): removed widget module import of sub widgets ([`216511b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/216511b951ff0e15b6d7c70133095f3ac45c23f4))
-
-### Refactor
-
-* refactor(utils): moved get_rpc_widgets to plugin_utils ([`6dabbf8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6dabbf874fbbdde89c34a7885bf95aa9c895a28b))
-
-### Test
-
-* test: moved rpc_classes test ([`b3575eb`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b3575eb06852b456cde915dfda281a3e778e3aeb))
-
-## v0.64.0 (2024-06-19)
-
-### Ci
-
-* ci: add job optional dependency check ([`27426ce`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/27426ce7a52b4cbad7f3bef114d6efe6ad73bd7f))
-
-### Documentation
-
-* docs: fix links in developer section ([`9e16f2f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9e16f2faf9c59a5d36ae878512c5a910cca31e69))
-
-* docs: refactor developer section, add widget tutorial ([`2a36d93`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2a36d9364f242bf42e4cda4b50e6f46aa3833bbd))
-
-### Feature
-
-* feat: add option to change size of the fonts ([`ea805d1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ea805d1362fc084d3b703b6f81b0180072f0825d))
-
-### Fix
-
-* fix(plot_base): font size is set with setScale which is scaling the whole legend window ([`5d66720`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5d6672069ea1cbceb62104f66c127e4e3c23e4a4))
-
-### Test
-
-* test: add tests ([`140ad83`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/140ad83380808928edf7953e23c762ab72a0a1e9))
-
-## v0.63.2 (2024-06-14)
-
-### Fix
-
-* fix: do not import &#34;server&#34; in client, prevents from having trouble with QApplication creation order
-
-Like with QtWebEngine ([`6f96498`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6f96498de66358b89f3a2035627eed2e02dde5a1))
