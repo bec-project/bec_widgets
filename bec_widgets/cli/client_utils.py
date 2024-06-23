@@ -141,6 +141,10 @@ class BECGuiClientMixin:
         for ep in eps:
             if ep.name == "plugin_widgets_update":
                 try:
+                    spec = importlib.util.find_spec(ep.module)
+                    # if the module is not found, we skip it
+                    if spec is None:
+                        continue
                     return ep.load()(gui=self)
                 except Exception as e:
                     print(f"Error loading auto update script from plugin: {str(e)}")
