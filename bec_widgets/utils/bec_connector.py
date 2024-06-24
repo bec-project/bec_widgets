@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import time
-from typing import Optional, Type
+from typing import Optional
 
-from bec_lib.utils.import_utils import lazy_import, lazy_import_from
+from bec_lib.utils.import_utils import lazy_import_from
 from pydantic import BaseModel, Field, field_validator
+from qtpy.QtCore import QObject, QRunnable, QThreadPool, Signal
 from qtpy.QtCore import Slot as pyqtSlot
 
 from bec_widgets.cli.rpc_register import RPCRegister
@@ -31,6 +32,31 @@ class ConnectionConfig(BaseModel):
             v = f"{widget_class}_{str(time.time())}"
             return v
         return v
+
+
+class WorkerSignals(QObject):
+    progress = Signal(dict)
+    completed = Signal()
+
+
+class Worker(QRunnable):
+    """
+    Worker class to run a function in a separate thread.
+    """
+
+    def __init__(self, func, *args, **kwargs):
+        super().__init__()
+        self.signals = WorkerSignals()
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+
+    def run(self):
+        """
+        Run the specified function in the thread.
+        """
+        self.func(*self.args, **self.kwargs)
+        self.signals.completed.emit()
 
 
 class BECConnector:
@@ -62,6 +88,43 @@ class BECConnector:
         # register widget to rpc register
         self.rpc_register = RPCRegister()
         self.rpc_register.add_rpc(self)
+
+        self._thread_pool = QThreadPool.globalInstance()
+
+    def submit_task(self, fn, *args, on_complete: pyqtSlot = None, **kwargs) -> Worker:
+        """
+        Submit a task to run in a separate thread. The task will run the specified
+        function with the provided arguments and emit the completed signal when done.
+
+        Use this method if you want to wait for a task to complete without blocking the
+        main thread.
+
+        Args:
+            fn: Function to run in a separate thread.
+            *args: Arguments for the function.
+            on_complete: Slot to run when the task is complete.
+            **kwargs: Keyword arguments for the function.
+
+        Returns:
+            worker: The worker object that will run the task.
+
+        Examples:
+            >>> def my_function(a, b):
+            >>>     print(a + b)
+            >>> self.submit_task(my_function, 1, 2)
+
+            >>> def my_function(a, b):
+            >>>     print(a + b)
+            >>> def on_complete():
+            >>>     print("Task complete")
+            >>> self.submit_task(my_function, 1, 2, on_complete=on_complete)
+
+        """
+        worker = Worker(fn, *args, **kwargs)
+        if on_complete:
+            worker.signals.completed.connect(on_complete)
+        self._thread_pool.start(worker)
+        return worker
 
     def get_all_rpc(self) -> dict:
         """Get all registered RPC objects."""
