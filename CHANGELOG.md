@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.72.1 (2024-06-24)
+
+### Fix
+
+* fix: renamed spiral progress bar to ring progress bar; closes #235 ([`e5c0087`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e5c0087c9aed831edbe1c172746325a772a3bafa))
+
+### Test
+
+* test: bugfix to prohibit leackage of mock ([`4348ed1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4348ed1bb2182da6bdecaf372d6db85279e60af8))
+
 ## v0.72.0 (2024-06-24)
 
 ### Feature
@@ -143,11 +153,3 @@ in their parent process ([`ce37416`](https://gitlab.psi.ch/bec/bec_widgets/-/com
 ### Feature
 
 * feat(rpc): discover widgets automatically ([`ef25f56`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ef25f5638032f931ceb292540ada618508bb2aed))
-
-## v0.65.2 (2024-06-20)
-
-### Fix
-
-* fix(pyqt): webengine must be imported before qcoreapplication ([`cbbd23a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cbbd23aa33095141e4c265719d176c4aa8c25996))
-
-## v0.65.1 (2024-06-20)
