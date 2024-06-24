@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from bec_lib.endpoints import EndpointInfo
+from bec_lib.endpoints import EndpointInfo, MessageEndpoints
 from pydantic import BaseModel, Field, field_validator
 from pydantic_core import PydanticCustomError
 from qtpy import QtGui
@@ -21,14 +21,14 @@ class ProgressbarConnections(BaseModel):
         slot = values.data["slot"]
         v = v.endpoint if isinstance(v, EndpointInfo) else v
         if slot == "on_scan_progress":
-            if v != "scans/scan_progress":
+            if v != MessageEndpoints.scan_progress().endpoint:
                 raise PydanticCustomError(
                     "unsupported endpoint",
                     "For slot 'on_scan_progress', endpoint must be MessageEndpoint.scan_progress or 'scans/scan_progress'.",
                     {"wrong_value": v},
                 )
         elif slot == "on_device_readback":
-            if not v.startswith("internal/devices/readback/"):
+            if not v.startswith(MessageEndpoints.device_readback("").endpoint):
                 raise PydanticCustomError(
                     "unsupported endpoint",
                     "For slot 'on_device_readback', endpoint must be MessageEndpoint.device_readback(device) or 'internal/devices/readback/{device}'.",
