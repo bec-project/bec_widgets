@@ -31,6 +31,7 @@ class Signal(BaseModel):
     x: SignalData  # TODO maybe add metadata for config gui later
     y: SignalData
     z: Optional[SignalData] = None
+    dap: Optional[str] = None
     model_config: dict = {"validate_assignment": True}
 
 
@@ -63,6 +64,7 @@ class CurveConfig(ConnectionConfig):
 class BECCurve(BECConnector, pg.PlotDataItem):
     USER_ACCESS = [
         "remove",
+        "dap_params",
         "rpc_id",
         "config_dict",
         "set",
@@ -75,6 +77,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         "set_pen_width",
         "set_pen_style",
         "get_data",
+        "dap_params",
     ]
 
     def __init__(
@@ -96,6 +99,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
 
         self.parent_item = parent_item
         self.apply_config()
+        self.dap_params = None
         if kwargs:
             self.set(**kwargs)
 
@@ -118,6 +122,14 @@ class BECCurve(BECConnector, pg.PlotDataItem):
             self.setSymbolBrush(brush)
             self.setSymbolSize(self.config.symbol_size)
             self.setSymbol(self.config.symbol)
+
+    @property
+    def dap_params(self):
+        return self._dap_params
+
+    @dap_params.setter
+    def dap_params(self, value):
+        self._dap_params = value
 
     def set_data(self, x, y):
         if self.config.source == "custom":
@@ -241,5 +253,6 @@ class BECCurve(BECConnector, pg.PlotDataItem):
 
     def remove(self):
         """Remove the curve from the plot."""
-        self.parent_item.removeItem(self)
+        # self.parent_item.removeItem(self)
+        self.parent_item.remove_curve(self.name())
         self.cleanup()

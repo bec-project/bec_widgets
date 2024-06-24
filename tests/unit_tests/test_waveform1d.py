@@ -85,6 +85,7 @@ def test_create_waveform1D_by_config(bec_figure):
                 "pen_style": "dash",
                 "source": "scan_segment",
                 "signals": {
+                    "dap": None,
                     "source": "scan_segment",
                     "x": {
                         "name": "samx",
@@ -248,6 +249,7 @@ def test_change_curve_appearance_methods(bec_figure, qtbot):
     assert c1.config.pen_style == "dashdot"
     assert c1.config.source == "scan_segment"
     assert c1.config.signals.model_dump() == {
+        "dap": None,
         "source": "scan_segment",
         "x": {"name": "samx", "entry": "samx", "unit": None, "modifier": None, "limits": None},
         "y": {"name": "bpm4i", "entry": "bpm4i", "unit": None, "modifier": None, "limits": None},
@@ -277,6 +279,7 @@ def test_change_curve_appearance_args(bec_figure):
     assert c1.config.pen_style == "dashdot"
     assert c1.config.source == "scan_segment"
     assert c1.config.signals.model_dump() == {
+        "dap": None,
         "source": "scan_segment",
         "x": {"name": "samx", "entry": "samx", "unit": None, "modifier": None, "limits": None},
         "y": {"name": "bpm4i", "entry": "bpm4i", "unit": None, "modifier": None, "limits": None},
@@ -384,6 +387,7 @@ def test_curve_add_by_config(bec_figure):
         "pen_style": "dash",
         "source": "scan_segment",
         "signals": {
+            "dap": None,
             "source": "scan_segment",
             "x": {"name": "samx", "entry": "samx", "unit": None, "modifier": None, "limits": None},
             "y": {

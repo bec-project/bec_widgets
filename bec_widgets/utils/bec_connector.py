@@ -228,6 +228,7 @@ class BECConnector:
         all_connections = self.rpc_register.list_all_connections()
         if len(all_connections) == 0:
             print("No more connections. Shutting down GUI BEC client.")
+            self.bec_dispatcher.disconnect_all()
             self.client.shutdown()
 
     # def closeEvent(self, event):

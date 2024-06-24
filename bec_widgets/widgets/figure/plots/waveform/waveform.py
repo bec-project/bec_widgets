@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import time
 from collections import defaultdict
 from typing import Any, Literal, Optional
 
 import numpy as np
 import pyqtgraph as pg
+from bec_lib import messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.scan_data import ScanData
 from pydantic import Field, ValidationError
@@ -36,6 +38,8 @@ class BECWaveform(BECPlotBase):
         "rpc_id",
         "config_dict",
         "plot",
+        "add_dap",
+        "get_dap_params",
         "remove_curve",
         "scan_history",
         "curves",
@@ -57,6 +61,7 @@ class BECWaveform(BECPlotBase):
         "set_legend_label_size",
     ]
     scan_signal_update = pyqtSignal()
+    dap_params_update = pyqtSignal(dict)
 
     def __init__(
         self,
@@ -73,6 +78,7 @@ class BECWaveform(BECPlotBase):
         )
 
         self._curves_data = defaultdict(dict)
+        self.old_scan_id = None
         self.scan_id = None
 
         # Scan segment update proxy
@@ -80,6 +86,9 @@ class BECWaveform(BECPlotBase):
             self.scan_signal_update, rateLimit=25, slot=self._update_scan_segment_plot
         )
 
+        self.proxy_update_dap = pg.SignalProxy(
+            self.scan_signal_update, rateLimit=25, slot=self.refresh_dap
+        )
         # Get bec shortcuts dev, scans, queue, scan_storage, dap
         self.get_bec_shortcuts()
 
@@ -213,6 +222,7 @@ class BECWaveform(BECPlotBase):
         color_map_z: str | None = "plasma",
         label: str | None = None,
         validate: bool = True,
+        dap: str | None = None,  # TODO add dap custom curve wrapper
     ) -> BECCurve:
         """
         Plot a curve to the plot widget.
@@ -229,6 +239,7 @@ class BECWaveform(BECPlotBase):
             color_map_z(str): The color map to use for the z-axis.
             label(str): The label of the curve.
             validate(bool): If True, validate the device names and entries.
+            dap(str): The dap model to use for the curve. If not specified, none will be added.
 
         Returns:
             BECCurve: The curve object.
@@ -237,6 +248,8 @@ class BECWaveform(BECPlotBase):
         if x is not None and y is not None:
             return self.add_curve_custom(x=x, y=y, label=label, color=color)
         else:
+            if dap:
+                self.add_dap(x_name=x_name, y_name=y_name, dap=dap)
             return self.add_curve_scan(
                 x_name=x_name,
                 y_name=y_name,
@@ -256,6 +269,7 @@ class BECWaveform(BECPlotBase):
         y: list | np.ndarray,
         label: str = None,
         color: str = None,
+        curve_source: str = "custom",
         **kwargs,
     ) -> BECCurve:
         """
@@ -266,12 +280,13 @@ class BECWaveform(BECPlotBase):
             y(list|np.ndarray): Y data of the curve.
             label(str, optional): Label of the curve. Defaults to None.
             color(str, optional): Color of the curve. Defaults to None.
+            curve_source(str, optional): Tag for source of the curve. Defaults to "custom".
             **kwargs: Additional keyword arguments for the curve configuration.
 
         Returns:
             BECCurve: The curve object.
         """
-        curve_source = "custom"
+        curve_source = curve_source
         curve_id = label or f"Curve {len(self.plot_item.curves) + 1}"
 
         curve_exits = self._check_curve_id(curve_id, self._curves_data)
@@ -314,10 +329,12 @@ class BECWaveform(BECPlotBase):
         color_map_z: Optional[str] = "plasma",
         label: Optional[str] = None,
         validate_bec: bool = True,
+        source: str = "scan_segment",
+        dap: Optional[str] = None,
         **kwargs,
     ) -> BECCurve:
         """
-        Add a curve to the plot widget from the scan segment.
+        Add a curve to the plot widget from the scan segment. #TODO adapt docs to DAP
 
         Args:
             x_name(str): Name of the x signal.
@@ -335,7 +352,7 @@ class BECWaveform(BECPlotBase):
             BECCurve: The curve object.
         """
         # Check if curve already exists
-        curve_source = "scan_segment"
+        curve_source = source
 
         # Get entry if not provided and validate
         x_entry, y_entry, z_entry = self._validate_signal_entries(
@@ -371,11 +388,73 @@ class BECWaveform(BECPlotBase):
                 x=SignalData(name=x_name, entry=x_entry),
                 y=SignalData(name=y_name, entry=y_entry),
                 z=SignalData(name=z_name, entry=z_entry) if z_name else None,
+                dap=dap,
             ),
             **kwargs,
         )
         curve = self._add_curve_object(name=label, source=curve_source, config=curve_config)
         return curve
+
+    def add_dap(
+        self,
+        x_name: str,
+        y_name: str,
+        x_entry: Optional[str] = None,
+        y_entry: Optional[str] = None,
+        color: Optional[str] = None,
+        dap: str = "GaussianModel",
+        **kwargs,
+    ) -> BECCurve:
+        """
+        Add LMFIT dap model curve to the plot widget.
+
+        Args:
+            x_name(str): Name of the x signal.
+            x_entry(str): Entry of the x signal.
+            y_name(str): Name of the y signal.
+            y_entry(str): Entry of the y signal.
+            color(str, optional): Color of the curve. Defaults to None.
+            color_map_z(str): The color map to use for the z-axis.
+            label(str, optional): Label of the curve. Defaults to None.
+            dap(str): The dap model to use for the curve.
+            **kwargs: Additional keyword arguments for the curve configuration.
+
+        Returns:
+            BECCurve: The curve object.
+        """
+        x_entry, y_entry, _ = self._validate_signal_entries(
+            x_name, y_name, None, x_entry, y_entry, None
+        )
+        label = f"{y_name}-{y_entry}-{dap}"
+        curve = self.add_curve_scan(
+            x_name=x_name,
+            y_name=y_name,
+            x_entry=x_entry,
+            y_entry=y_entry,
+            color=color,
+            label=label,
+            source="DAP",
+            dap=dap,
+            pen_style="dash",
+            symbol="star",
+            **kwargs,
+        )
+
+        self.setup_dap(self.old_scan_id, self.scan_id)
+        self.refresh_dap()
+        return curve
+
+    def get_dap_params(self) -> dict:
+        """
+        Get the DAP parameters of all DAP curves.
+
+        Returns:
+            dict: DAP parameters of all DAP curves.
+        """
+        params = {}
+        for curve_id, curve in self._curves_data["DAP"].items():
+            params[curve_id] = curve.dap_params
+        return params
 
     def _add_curve_object(
         self,
@@ -528,12 +607,74 @@ class BECWaveform(BECPlotBase):
             return
 
         if current_scan_id != self.scan_id:
+            self.old_scan_id = self.scan_id
             self.scan_id = current_scan_id
             self.scan_segment_data = self.queue.scan_storage.find_scan_by_ID(
                 self.scan_id
             )  # TODO do scan access through BECFigure
+            self.setup_dap(self.old_scan_id, self.scan_id)
 
         self.scan_signal_update.emit()
+
+    def setup_dap(self, old_scan_id, new_scan_id):
+        """
+        Setup DAP for the new scan.
+
+        Args:
+            old_scan_id(str): old_scan_id, used to disconnect the previous dispatcher connection.
+            new_scan_id(str): new_scan_id, used to connect the new dispatcher connection.
+
+        """
+        self.bec_dispatcher.disconnect_slot(
+            self.update_dap, MessageEndpoints.dap_response(old_scan_id)
+        )
+        if len(self._curves_data["DAP"]) > 0:
+            self.bec_dispatcher.connect_slot(
+                self.update_dap, MessageEndpoints.dap_response(new_scan_id)
+            )
+
+    def refresh_dap(self):
+        """
+        Refresh the DAP curves with the latest data from the DAP model MessageEndpoints.dap_response().
+        """
+        for curve_id, curve in self._curves_data["DAP"].items():
+            x_name = curve.config.signals.x.name
+            y_name = curve.config.signals.y.name
+            x_entry = curve.config.signals.x.entry
+            y_entry = curve.config.signals.y.entry
+            model_name = curve.config.signals.dap
+            model = getattr(self.dap, model_name)
+
+            msg = messages.DAPRequestMessage(
+                dap_cls="LmfitService1D",
+                dap_type="on_demand",
+                config={
+                    "args": [self.scan_id, x_name, x_entry, y_name, y_entry],
+                    "kwargs": {},
+                    "class_args": model._plugin_info["class_args"],
+                    "class_kwargs": model._plugin_info["class_kwargs"],
+                },
+                metadata={"RID": self.scan_id},
+            )
+            self.client.connector.set_and_publish(MessageEndpoints.dap_request(), msg)
+
+    @pyqtSlot(dict, dict)
+    def update_dap(self, msg, metadata):
+        self.msg = msg
+        scan_id, x_name, x_entry, y_name, y_entry = msg["dap_request"].content["config"]["args"]
+        model = msg["dap_request"].content["config"]["class_kwargs"]["model"]
+
+        curve_id_request = f"{y_name}-{y_entry}-{model}"
+
+        for curve_id, curve in self._curves_data["DAP"].items():
+            if curve_id == curve_id_request:
+                if msg["data"] is not None:
+                    x = msg["data"][0]["x"]
+                    y = msg["data"][0]["y"]
+                    curve.setData(x, y)
+                    curve.dap_params = msg["data"][1]["fit_parameters"]
+                    self.dap_params_update.emit(curve.dap_params)
+                break
 
     def _update_scan_segment_plot(self):
         """Update the plot with the data from the scan segment."""
@@ -609,13 +750,17 @@ class BECWaveform(BECPlotBase):
         if scan_index is not None and scan_id is not None:
             raise ValueError("Only one of scan_id or scan_index can be provided.")
 
+        # Reset DAP connector
+        self.bec_dispatcher.disconnect_slot(
+            self.update_dap, MessageEndpoints.dap_response(self.scan_id)
+        )
         if scan_index is not None:
             self.scan_id = self.queue.scan_storage.storage[scan_index].scan_id
-            data = self.queue.scan_storage.find_scan_by_ID(self.scan_id).data
         elif scan_id is not None:
             self.scan_id = scan_id
-            data = self.queue.scan_storage.find_scan_by_ID(self.scan_id).data
 
+        self.setup_dap(self.old_scan_id, self.scan_id)
+        data = self.queue.scan_storage.find_scan_by_ID(self.scan_id).data
         self._update_scan_curves(data)
 
     def get_all_data(self, output: Literal["dict", "pandas"] = "dict") -> dict | pd.DataFrame:
@@ -661,6 +806,9 @@ class BECWaveform(BECPlotBase):
     def cleanup(self):
         """Cleanup the widget connection from BECDispatcher."""
         self.bec_dispatcher.disconnect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
+        self.bec_dispatcher.disconnect_slot(
+            self.update_dap, MessageEndpoints.dap_response(self.scan_id)
+        )
         for curve in self.curves:
             curve.cleanup()
         super().cleanup()

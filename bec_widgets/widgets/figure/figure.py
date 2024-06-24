@@ -195,10 +195,11 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         z_entry: str = None,
         x: list | np.ndarray = None,
         y: list | np.ndarray = None,
-        color: Optional[str] = None,
-        color_map_z: Optional[str] = "plasma",
-        label: Optional[str] = None,
+        color: str | None = None,
+        color_map_z: str | None = "plasma",
+        label: str | None = None,
         validate: bool = True,
+        dap: str | None = None,
     ):
         """
         Configure the waveform based on the provided parameters.
@@ -217,6 +218,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             color_map_z (str): The color map to use for the z-axis.
             label (str): The label of the curve.
             validate (bool): If True, validate the device names and entries.
+            dap (str): The DAP model to use for the curve.
         """
         if x is not None and y is None:
             if isinstance(x, np.ndarray):
@@ -240,7 +242,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             return waveform
         # User wants to add scan curve -> 1D Waveform
         if x_name is not None and y_name is not None and z_name is None and x is None and y is None:
-            waveform.add_curve_scan(
+            waveform.plot(
                 x_name=x_name,
                 y_name=y_name,
                 x_entry=x_entry,
@@ -248,6 +250,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
                 validate=validate,
                 color=color,
                 label=label,
+                dap=dap,
             )
         # User wants to add scan curve -> 2D Waveform Scatter
         if (
@@ -257,7 +260,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             and x is None
             and y is None
         ):
-            waveform.add_curve_scan(
+            waveform.plot(
                 x_name=x_name,
                 y_name=y_name,
                 z_name=z_name,
@@ -268,6 +271,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
                 color_map_z=color_map_z,
                 label=label,
                 validate=validate,
+                dap=dap,
             )
         # User wants to add custom curve
         elif x is not None and y is not None and x_name is None and y_name is None:
@@ -292,6 +296,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         row: int = None,
         col: int = None,
         config=None,
+        dap: str | None = None,
         **axis_kwargs,
     ) -> BECWaveform:
         """
@@ -339,6 +344,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             color_map_z=color_map_z,
             label=label,
             validate=validate,
+            dap=dap,
         )
         return waveform
 
@@ -357,6 +363,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         color_map_z: str | None = "plasma",
         label: str | None = None,
         validate: bool = True,
+        dap: str | None = None,
         **axis_kwargs,
     ) -> BECWaveform:
         """
@@ -375,6 +382,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             color_map_z(str): The color map to use for the z-axis.
             label(str): The label of the curve.
             validate(bool): If True, validate the device names and entries.
+            dap(str): The DAP model to use for the curve.
             **axis_kwargs: Additional axis properties to set on the widget after creation.
 
         Returns:
@@ -403,6 +411,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             color_map_z=color_map_z,
             label=label,
             validate=validate,
+            dap=dap,
         )
         # TODO remove repetition from .plot method
         return waveform

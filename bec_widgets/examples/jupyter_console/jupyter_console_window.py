@@ -14,21 +14,6 @@ from bec_widgets.widgets.dock.dock_area import BECDockArea
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.jupyter_console.jupyter_console import BECJupyterConsole
 
-# class JupyterConsoleWidget(RichJupyterWidget):  # pragma: no cover:
-#     def __init__(self):
-#         super().__init__()
-#
-#         self.kernel_manager = QtInProcessKernelManager()
-#         self.kernel_manager.start_kernel(show_banner=False)
-#         self.kernel_client = self.kernel_manager.client()
-#         self.kernel_client.start_channels()
-#
-#         self.kernel_manager.kernel.shell.push({"np": np, "pg": pg})
-#
-#     def shutdown_kernel(self):
-#         self.kernel_client.stop_channels()
-#         self.kernel_manager.shutdown_kernel()
-
 
 class JupyterConsoleWindow(QWidget):  # pragma: no cover:
     """A widget that contains a Jupyter console linked to BEC Widgets with full API access (contains Qt and pyqtgraph API)."""
@@ -61,6 +46,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "fig0": self.fig0,
                     "fig1": self.fig1,
                     "fig2": self.fig2,
+                    "plt": self.plt,
                     "bar": self.bar,
                 }
             )
@@ -115,7 +101,8 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
 
         self.d2 = self.dock.add_dock(name="dock_2", position="bottom")
         self.fig2 = self.d2.add_widget("BECFigure", row=0, col=0)
-        self.fig2.plot(x_name="samx", y_name="bpm4i")
+        self.plt = self.fig2.plot(x_name="samx", y_name="bpm3a")
+        self.plt.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
         self.bar = self.d2.add_widget("RingProgressBar", row=0, col=1)
         self.bar.set_diameter(200)
 

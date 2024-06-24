@@ -33,6 +33,13 @@ class BECCurve(RPCBase):
 
     @property
     @rpc_call
+    def dap_params(self):
+        """
+        None
+        """
+
+    @property
+    @rpc_call
     def rpc_id(self) -> "str":
         """
         Get the RPC ID of the widget.
@@ -141,6 +148,13 @@ class BECCurve(RPCBase):
         Get the data of the curve.
         Returns:
             tuple[np.ndarray,np.ndarray]: X and Y data of the curve.
+        """
+
+    @property
+    @rpc_call
+    def dap_params(self):
+        """
+        None
         """
 
 
@@ -457,6 +471,7 @@ class BECFigure(RPCBase):
         row: "int" = None,
         col: "int" = None,
         config=None,
+        dap: "str | None" = None,
         **axis_kwargs,
     ) -> "BECWaveform":
         """
@@ -550,6 +565,7 @@ class BECFigure(RPCBase):
         color_map_z: "str | None" = "plasma",
         label: "str | None" = None,
         validate: "bool" = True,
+        dap: "str | None" = None,
         **axis_kwargs,
     ) -> "BECWaveform":
         """
@@ -568,6 +584,7 @@ class BECFigure(RPCBase):
             color_map_z(str): The color map to use for the z-axis.
             label(str): The label of the curve.
             validate(bool): If True, validate the device names and entries.
+            dap(str): The DAP model to use for the curve.
             **axis_kwargs: Additional axis properties to set on the widget after creation.
 
         Returns:
@@ -1467,6 +1484,7 @@ class BECWaveform(RPCBase):
         color_map_z: "str | None" = "plasma",
         label: "str | None" = None,
         validate: "bool" = True,
+        dap: "str | None" = None,
     ) -> "BECCurve":
         """
         Plot a curve to the plot widget.
@@ -1483,9 +1501,48 @@ class BECWaveform(RPCBase):
             color_map_z(str): The color map to use for the z-axis.
             label(str): The label of the curve.
             validate(bool): If True, validate the device names and entries.
+            dap(str): The dap model to use for the curve. If not specified, none will be added.
 
         Returns:
             BECCurve: The curve object.
+        """
+
+    @rpc_call
+    def add_dap(
+        self,
+        x_name: "str",
+        y_name: "str",
+        x_entry: "Optional[str]" = None,
+        y_entry: "Optional[str]" = None,
+        color: "Optional[str]" = None,
+        dap: "str" = "GaussianModel",
+        **kwargs,
+    ) -> "BECCurve":
+        """
+        Add LMFIT dap model curve to the plot widget.
+
+        Args:
+            x_name(str): Name of the x signal.
+            x_entry(str): Entry of the x signal.
+            y_name(str): Name of the y signal.
+            y_entry(str): Entry of the y signal.
+            color(str, optional): Color of the curve. Defaults to None.
+            color_map_z(str): The color map to use for the z-axis.
+            label(str, optional): Label of the curve. Defaults to None.
+            dap(str): The dap model to use for the curve.
+            **kwargs: Additional keyword arguments for the curve configuration.
+
+        Returns:
+            BECCurve: The curve object.
+        """
+
+    @rpc_call
+    def get_dap_params(self) -> "dict":
+        """
+        Get the DAP parameters of all DAP curves.
+
+        Returns:
+            dict: DAP parameters of all DAP curves.
         """
 
     @rpc_call
