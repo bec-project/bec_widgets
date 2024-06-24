@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.72.0 (2024-06-24)
+
+### Feature
+
+* feat(connector): added threadpool wrapper ([`4ca1efe`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4ca1efeeb8955604069f7b98374c7f82e1a8da67))
+
+### Unknown
+
+* tests(status_box_test): temporary disabled tests for status_box due to high rate of failures ([`aa7ce2e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/aa7ce2ea27bb9564d4f5104bbff30725b8656453))
+
 ## v0.71.1 (2024-06-23)
 
 ### Fix
@@ -141,13 +151,3 @@ in their parent process ([`ce37416`](https://gitlab.psi.ch/bec/bec_widgets/-/com
 * fix(pyqt): webengine must be imported before qcoreapplication ([`cbbd23a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cbbd23aa33095141e4c265719d176c4aa8c25996))
 
 ## v0.65.1 (2024-06-20)
-
-### Fix
-
-* fix: prevent segfault by closing the QCoreApplication, if any ([`fa344a5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fa344a5799b07a2d8ace63cc7010b69bc4ed6f1d))
-
-## v0.65.0 (2024-06-20)
-
-### Test
-
-* test(device_input): tests added ([`1a0a98a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1a0a98a45367db414bed813bbd346b3e1ae8d550))
