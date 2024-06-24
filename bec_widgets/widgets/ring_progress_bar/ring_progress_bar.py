@@ -11,10 +11,10 @@ from qtpy.QtCore import QSize, Slot
 from qtpy.QtWidgets import QSizePolicy, QWidget
 
 from bec_widgets.utils import BECConnector, Colors, ConnectionConfig, EntryValidator
-from bec_widgets.widgets.spiral_progress_bar.ring import Ring, RingConfig
+from bec_widgets.widgets.ring_progress_bar.ring import Ring, RingConfig
 
 
-class SpiralProgressBarConfig(ConnectionConfig):
+class RingProgressBarConfig(ConnectionConfig):
     color_map: Optional[str] = Field(
         "magma", description="Color scheme for the progress bars.", validate_default=True
     )
@@ -32,6 +32,7 @@ class SpiralProgressBarConfig(ConnectionConfig):
     rings: list[RingConfig] | None = Field([], description="List of ring configurations.")
 
     @field_validator("num_bars")
+    @classmethod
     def validate_num_bars(cls, v, values):
         min_number_of_bars = values.data.get("min_number_of_bars", None)
         max_number_of_bars = values.data.get("max_number_of_bars", None)
@@ -43,6 +44,7 @@ class SpiralProgressBarConfig(ConnectionConfig):
             return v
 
     @field_validator("rings")
+    @classmethod
     def validate_rings(cls, v, values):
         if v is not None and v is not []:
             num_bars = values.data.get("num_bars", None)
@@ -64,7 +66,7 @@ class SpiralProgressBarConfig(ConnectionConfig):
     _validate_colormap = field_validator("color_map")(Colors.validate_color_map)
 
 
-class SpiralProgressBar(BECConnector, QWidget):
+class RingProgressBar(BECConnector, QWidget):
     USER_ACCESS = [
         "get_all_rpc",
         "rpc_id",
@@ -89,17 +91,17 @@ class SpiralProgressBar(BECConnector, QWidget):
     def __init__(
         self,
         parent=None,
-        config: SpiralProgressBarConfig | dict | None = None,
+        config: RingProgressBarConfig | dict | None = None,
         client=None,
         gui_id: str | None = None,
         num_bars: int | None = None,
     ):
         if config is None:
-            config = SpiralProgressBarConfig(widget_class=self.__class__.__name__)
+            config = RingProgressBarConfig(widget_class=self.__class__.__name__)
             self.config = config
         else:
             if isinstance(config, dict):
-                config = SpiralProgressBarConfig(**config, widget_class=self.__class__.__name__)
+                config = RingProgressBarConfig(**config, widget_class=self.__class__.__name__)
             self.config = config
         super().__init__(client=client, config=config, gui_id=gui_id)
         QWidget.__init__(self, parent=None)
@@ -129,7 +131,7 @@ class SpiralProgressBar(BECConnector, QWidget):
     def rings(self, value):
         self._rings = value
 
-    def update_config(self, config: SpiralProgressBarConfig | dict):
+    def update_config(self, config: RingProgressBarConfig | dict):
         """
         Update the configuration of the widget.
 
@@ -137,7 +139,7 @@ class SpiralProgressBar(BECConnector, QWidget):
             config(SpiralProgressBarConfig|dict): Configuration to update.
         """
         if isinstance(config, dict):
-            config = SpiralProgressBarConfig(**config, widget_class=self.__class__.__name__)
+            config = RingProgressBarConfig(**config, widget_class=self.__class__.__name__)
         self.config = config
         self.clear_all()
 

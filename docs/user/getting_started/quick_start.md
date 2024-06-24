@@ -97,11 +97,11 @@ Note, we chain commands here which is possible since the `add_dock` and `add_wid
 cam_widget.set_title("Camera Image Eiger")
 cam_widget.set_vrange(vmin=0, vmax=100)
 ```
-As a final step, we can now add also a SpiralProgressBar to a new dock, and perform a grid_scan with the motors *samx* and *samy*.
+As a final step, we can now add also a RingProgressBar to a new dock, and perform a grid_scan with the motors *samx* and *samy*.
 As you see in the example below, all docks are arranged below each other. This is the default behavior of the `add_dock` method. However, the docks can be freely arranged by drag and drop as desired by the user. We invite you to explore this by yourself following the example in the video, and build your custom GUI with BEC Widgets.
 
 ```python
-prog_bar = gui.add_dock(name="prog_dock").add_widget('SpiralProgressBar')
+prog_bar = gui.add_dock(name="prog_dock").add_widget('RingProgressBar')
 prog_bar.set_line_widths(15)
 scans.grid_scan(dev.samy, -2, 2, 10, dev.samx, -5, 5, 10, exp_time=0.1, relative=False)
 ```

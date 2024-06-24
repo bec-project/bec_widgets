@@ -151,13 +151,13 @@ def test_dock_manipulations_e2e(rpc_server_dock):
     assert len(dock.temp_areas) == 0
 
 
-def test_spiral_bar(rpc_server_dock):
+def test_ring_bar(rpc_server_dock):
     dock = BECDockArea(rpc_server_dock)
 
     d0 = dock.add_dock(name="dock_0")
 
-    bar = d0.add_widget("SpiralProgressBar")
-    assert bar.__class__.__name__ == "SpiralProgressBar"
+    bar = d0.add_widget("RingProgressBar")
+    assert bar.__class__.__name__ == "RingProgressBar"
 
     bar.set_number_of_bars(5)
     bar.set_colors_from_map("viridis")
@@ -173,12 +173,12 @@ def test_spiral_bar(rpc_server_dock):
     assert bar_colors == expected_colors
 
 
-def test_spiral_bar_scan_update(bec_client_lib, rpc_server_dock):
+def test_ring_bar_scan_update(bec_client_lib, rpc_server_dock):
     dock = BECDockArea(rpc_server_dock)
 
     d0 = dock.add_dock("dock_0")
 
-    bar = d0.add_widget("SpiralProgressBar")
+    bar = d0.add_widget("RingProgressBar")
 
     client = bec_client_lib
     dev = client.device_manager.devices

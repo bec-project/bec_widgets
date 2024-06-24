@@ -116,7 +116,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.d2 = self.dock.add_dock(name="dock_2", position="bottom")
         self.fig2 = self.d2.add_widget("BECFigure", row=0, col=0)
         self.fig2.plot(x_name="samx", y_name="bpm4i")
-        self.bar = self.d2.add_widget("SpiralProgressBar", row=0, col=1)
+        self.bar = self.d2.add_widget("RingProgressBar", row=0, col=1)
         self.bar.set_diameter(200)
 
         self.dock.save_state()

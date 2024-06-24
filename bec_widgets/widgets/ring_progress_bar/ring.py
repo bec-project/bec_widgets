@@ -10,12 +10,13 @@ from qtpy import QtGui
 from bec_widgets.utils import BECConnector, ConnectionConfig
 
 
-class RingConnections(BaseModel):
+class ProgressbarConnections(BaseModel):
     slot: Literal["on_scan_progress", "on_device_readback"] = None
     endpoint: EndpointInfo | str = None
     model_config: dict = {"validate_assignment": True}
 
     @field_validator("endpoint")
+    @classmethod
     def validate_endpoint(cls, v, values):
         slot = values.data["slot"]
         v = v.endpoint if isinstance(v, EndpointInfo) else v
@@ -36,7 +37,7 @@ class RingConnections(BaseModel):
         return v
 
 
-class RingConfig(ConnectionConfig):
+class ProgressbarConfig(ConnectionConfig):
     value: int | float | None = Field(0, description="Value for the progress bars.")
     direction: int | None = Field(
         -1, description="Direction of the progress bars. -1 for clockwise, 1 for counter-clockwise."
@@ -62,8 +63,17 @@ class RingConfig(ConnectionConfig):
     update_behaviour: Literal["manual", "auto"] | None = Field(
         "auto", description="Update behaviour for the progress bars."
     )
-    connections: RingConnections | None = Field(
-        default_factory=RingConnections, description="Connections for the progress bars."
+    connections: ProgressbarConnections | None = Field(
+        default_factory=ProgressbarConnections, description="Connections for the progress bars."
+    )
+
+
+class RingConfig(ProgressbarConfig):
+    index: int | None = Field(0, description="Index of the progress bar. 0 is outer ring.")
+    start_position: int | None = Field(
+        90,
+        description="Start position for the progress bars in degrees. Default is 90 degrees - corespons to "
+        "the top of the ring.",
     )
 
 
@@ -230,7 +240,7 @@ class Ring(BECConnector):
             self.bec_dispatcher.disconnect_slot(
                 self.config.connections.slot, self.config.connections.endpoint
             )
-            self.config.connections = RingConnections(slot=slot, endpoint=endpoint)
+            self.config.connections = ProgressbarConnections(slot=slot, endpoint=endpoint)
             self.bec_dispatcher.connect_slot(getattr(self, slot), endpoint)
 
     def reset_connection(self):
@@ -240,7 +250,7 @@ class Ring(BECConnector):
         self.bec_dispatcher.disconnect_slot(
             self.config.connections.slot, self.config.connections.endpoint
         )
-        self.config.connections = RingConnections()
+        self.config.connections = ProgressbarConnections()
 
     def on_scan_progress(self, msg, meta):
         """

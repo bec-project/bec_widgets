@@ -17,8 +17,8 @@ class Widgets(str, enum.Enum):
     BECDock = "BECDock"
     BECDockArea = "BECDockArea"
     BECFigure = "BECFigure"
+    RingProgressBar = "RingProgressBar"
     ScanControl = "ScanControl"
-    SpiralProgressBar = "SpiralProgressBar"
     TextBox = "TextBox"
     VSCodeEditor = "VSCodeEditor"
     WebsiteWidget = "WebsiteWidget"
@@ -1824,25 +1824,7 @@ class Ring(RPCBase):
         """
 
 
-class ScanControl(RPCBase):
-    @property
-    @rpc_call
-    def config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @rpc_call
-    def get_all_rpc(self) -> "dict":
-        """
-        Get all registered RPC objects.
-        """
-
-
-class SpiralProgressBar(RPCBase):
+class RingProgressBar(RPCBase):
     @rpc_call
     def get_all_rpc(self) -> "dict":
         """
@@ -1874,7 +1856,7 @@ class SpiralProgressBar(RPCBase):
         """
 
     @rpc_call
-    def update_config(self, config: "SpiralProgressBarConfig | dict"):
+    def update_config(self, config: "RingProgressBarConfig | dict"):
         """
         Update the configuration of the widget.
 
@@ -2018,6 +2000,24 @@ class SpiralProgressBar(RPCBase):
 
         Returns:
             bool: True if scan segment updates are enabled.
+        """
+
+
+class ScanControl(RPCBase):
+    @property
+    @rpc_call
+    def config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
         """
 
 
