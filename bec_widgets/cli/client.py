@@ -711,6 +711,7 @@ class BECImageItem(RPCBase):
             - log
             - rot
             - transpose
+            - autorange_mode
         """
 
     @rpc_call
@@ -768,6 +769,15 @@ class BECImageItem(RPCBase):
         """
 
     @rpc_call
+    def set_autorange_mode(self, mode: "Literal['max', 'mean']" = "mean"):
+        """
+        Set the autorange mode to scale the vrange of the color bar. Choose between min/max or mean +/- std.
+
+        Args:
+            mode(Literal["max","mean"]): Max for min/max or mean for mean +/- std.
+        """
+
+    @rpc_call
     def set_color_map(self, cmap: "str" = "magma"):
         """
         Set the color map of the image.
@@ -796,7 +806,11 @@ class BECImageItem(RPCBase):
 
     @rpc_call
     def set_vrange(
-        self, vmin: "float" = None, vmax: "float" = None, vrange: "tuple[int, int]" = None
+        self,
+        vmin: "float" = None,
+        vmax: "float" = None,
+        vrange: "tuple[float, float]" = None,
+        change_autorange: "bool" = True,
     ):
         """
         Set the range of the color bar.
@@ -928,6 +942,17 @@ class BECImageShow(RPCBase):
 
         Args:
             enable(bool): Whether to autoscale the color bar.
+            name(str): The name of the image. If None, apply to all images.
+        """
+
+    @rpc_call
+    def set_autorange_mode(self, mode: "Literal['max', 'mean']", name: "str" = None):
+        """
+        Set the autoscale mode of the image, that decides how the vrange of the color bar is scaled.
+        Choose betwen 'max' -> min/max of the data, 'mean' -> mean +/- fudge_factor*std of the data (fudge_factor~2).
+
+        Args:
+            mode(str): The autoscale mode of the image.
             name(str): The name of the image. If None, apply to all images.
         """
 

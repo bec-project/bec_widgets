@@ -1,10 +1,21 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Optional
 
 import numpy as np
 from pydantic import BaseModel, Field
 from qtpy.QtCore import QObject, Signal, Slot
+
+
+@dataclass
+class ImageStats:
+    """Container to store stats of an image."""
+
+    maximum: float
+    minimum: float
+    mean: float
+    std: float
 
 
 class ProcessingConfig(BaseModel):
@@ -20,6 +31,10 @@ class ProcessingConfig(BaseModel):
         None, description="The rotation angle of the monitor data before displaying."
     )
     model_config: dict = {"validate_assignment": True}
+    stats: ImageStats = Field(
+        ImageStats(maximum=0, minimum=0, mean=0, std=0),
+        description="The statistics of the image data.",
+    )
 
 
 class ImageProcessor:
@@ -97,6 +112,18 @@ class ImageProcessor:
     # def center_of_mass(self, data: np.ndarray) -> tuple:  # TODO check functionality
     #     return np.unravel_index(np.argmax(data), data.shape)
 
+    def update_image_stats(self, data: np.ndarray) -> None:
+        """Get the statistics of the image data.
+
+        Args:
+            data(np.ndarray): The image data.
+
+        """
+        self.config.stats.maximum = np.max(data)
+        self.config.stats.minimum = np.min(data)
+        self.config.stats.mean = np.mean(data)
+        self.config.stats.std = np.std(data)
+
     def process_image(self, data: np.ndarray) -> np.ndarray:
         """
         Process the data according to the configuration.
@@ -115,6 +142,7 @@ class ImageProcessor:
             data = self.transpose(data)
         if self.config.log:
             data = self.log(data)
+        self.update_image_stats(data)
         return data
 
 
@@ -124,6 +152,7 @@ class ProcessorWorker(QObject):
     """
 
     processed = Signal(str, np.ndarray)
+    stats = Signal(str, ImageStats)
     stopRequested = Signal()
     finished = Signal()
 
@@ -147,6 +176,7 @@ class ProcessorWorker(QObject):
         self._isRunning = False
         if not self._isRunning:
             self.processed.emit(device, processed_image)
+            self.stats.emit(self.processor.config.stats)
             self.finished.emit()
 
     def stop(self):

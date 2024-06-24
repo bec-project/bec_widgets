@@ -12,7 +12,11 @@ from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils import EntryValidator
 from bec_widgets.widgets.figure.plots.image.image_item import BECImageItem, ImageItemConfig
-from bec_widgets.widgets.figure.plots.image.image_processor import ImageProcessor, ProcessorWorker
+from bec_widgets.widgets.figure.plots.image.image_processor import (
+    ImageProcessor,
+    ImageStats,
+    ProcessorWorker,
+)
 from bec_widgets.widgets.figure.plots.plot_base import BECPlotBase, SubplotConfig
 
 
@@ -35,6 +39,7 @@ class BECImageShow(BECPlotBase):
         "set_vrange",
         "set_color_map",
         "set_autorange",
+        "set_autorange_mode",
         "set_monitor",
         "set_processing",
         "set_image_properties",
@@ -86,6 +91,7 @@ class BECImageShow(BECPlotBase):
         # Connect signals and slots
         thread.started.connect(lambda: worker.process_image(device, image))
         worker.processed.connect(self.update_image)
+        worker.stats.connect(self.update_vrange)
         worker.finished.connect(thread.quit)
         worker.finished.connect(thread.wait)
         worker.finished.connect(worker.deleteLater)
@@ -341,6 +347,17 @@ class BECImageShow(BECPlotBase):
         """
         self.apply_setting_to_images("set_autorange", args=[enable], kwargs={}, image_id=name)
 
+    def set_autorange_mode(self, mode: Literal["max", "mean"], name: str = None):
+        """
+        Set the autoscale mode of the image, that decides how the vrange of the color bar is scaled.
+        Choose betwen 'max' -> min/max of the data, 'mean' -> mean +/- fudge_factor*std of the data (fudge_factor~2).
+
+        Args:
+            mode(str): The autoscale mode of the image.
+            name(str): The name of the image. If None, apply to all images.
+        """
+        self.apply_setting_to_images("set_autorange_mode", args=[mode], kwargs={}, image_id=name)
+
     def set_monitor(self, monitor: str, name: str = None):
         """
         Set the monitor of the image.
@@ -461,6 +478,7 @@ class BECImageShow(BECPlotBase):
         else:
             data = self.processor.process_image(data)
             self.update_image(device, data)
+            self.update_vrange(device, self.processor.config.stats)
 
     @pyqtSlot(str, np.ndarray)
     def update_image(self, device: str, data: np.ndarray):
@@ -473,6 +491,18 @@ class BECImageShow(BECPlotBase):
         """
         image_to_update = self._images["device_monitor"][device]
         image_to_update.updateImage(data, autoLevels=image_to_update.config.autorange)
+
+    @pyqtSlot(str, ImageStats)
+    def update_vrange(self, device: str, stats: ImageStats):
+        """
+        Update the scaling of the image.
+
+        Args:
+            stats(ImageStats): The statistics of the image.
+        """
+        image_to_update = self._images["device_monitor"][device]
+        if image_to_update.config.autorange:
+            image_to_update.auto_update_vrange(stats)
 
     def _connect_device_monitor(self, monitor: str):
         """

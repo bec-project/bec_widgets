@@ -7,7 +7,7 @@ import pyqtgraph as pg
 from pydantic import Field
 
 from bec_widgets.utils import BECConnector, ConnectionConfig
-from bec_widgets.widgets.figure.plots.image.image_processor import ProcessingConfig
+from bec_widgets.widgets.figure.plots.image.image_processor import ImageStats, ProcessingConfig
 
 if TYPE_CHECKING:
     from bec_widgets.widgets.figure.plots.image.image import BECImageShow
@@ -20,13 +20,16 @@ class ImageItemConfig(ConnectionConfig):
     color_map: Optional[str] = Field("magma", description="The color map of the image.")
     downsample: Optional[bool] = Field(True, description="Whether to downsample the image.")
     opacity: Optional[float] = Field(1.0, description="The opacity of the image.")
-    vrange: Optional[tuple[int, int]] = Field(
+    vrange: Optional[tuple[float, float]] = Field(
         None, description="The range of the color bar. If None, the range is automatically set."
     )
     color_bar: Optional[Literal["simple", "full"]] = Field(
         "simple", description="The type of the color bar."
     )
     autorange: Optional[bool] = Field(True, description="Whether to autorange the color bar.")
+    autorange_mode: Optional[Literal["max", "mean"]] = Field(
+        "mean", description="Whether to use the mean of the image for autoscaling."
+    )
     processing: ProcessingConfig = Field(
         default_factory=ProcessingConfig, description="The post processing of the image."
     )
@@ -43,6 +46,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
         "set_transpose",
         "set_opacity",
         "set_autorange",
+        "set_autorange_mode",
         "set_color_map",
         "set_auto_downsample",
         "set_monitor",
@@ -101,6 +105,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
             - log
             - rot
             - transpose
+            - autorange_mode
         """
         method_map = {
             "downsample": self.set_auto_downsample,
@@ -112,6 +117,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
             "log": self.set_log,
             "rot": self.set_rotation,
             "transpose": self.set_transpose,
+            "autorange_mode": self.set_autorange_mode,
         }
         for key, value in kwargs.items():
             if key in method_map:
@@ -175,8 +181,17 @@ class BECImageItem(BECConnector, pg.ImageItem):
             autorange(bool): Whether to autorange the color bar.
         """
         self.config.autorange = autorange
-        if self.color_bar is not None:
+        if self.color_bar and autorange:
             self.color_bar.autoHistogramRange()
+
+    def set_autorange_mode(self, mode: Literal["max", "mean"] = "mean"):
+        """
+        Set the autorange mode to scale the vrange of the color bar. Choose between min/max or mean +/- std.
+
+        Args:
+            mode(Literal["max","mean"]): Max for min/max or mean for mean +/- std.
+        """
+        self.config.autorange_mode = mode
 
     def set_color_map(self, cmap: str = "magma"):
         """
@@ -212,7 +227,29 @@ class BECImageItem(BECConnector, pg.ImageItem):
         """
         self.config.monitor = monitor
 
-    def set_vrange(self, vmin: float = None, vmax: float = None, vrange: tuple[int, int] = None):
+    def auto_update_vrange(self, stats: ImageStats) -> None:
+        """Auto update of the vrange base on the stats of the image.
+
+        Args:
+            stats(ImageStats): The stats of the image.
+        """
+        fumble_factor = 2
+        if self.config.autorange_mode == "mean":
+            vmin = max(stats.mean - fumble_factor * stats.std, 0)
+            vmax = stats.mean + fumble_factor * stats.std
+            self.set_vrange(vmin, vmax, change_autorange=False)
+            return
+        if self.config.autorange_mode == "max":
+            self.set_vrange(max(stats.minimum, 0), stats.maximum, change_autorange=False)
+            return
+
+    def set_vrange(
+        self,
+        vmin: float = None,
+        vmax: float = None,
+        vrange: tuple[float, float] = None,
+        change_autorange: bool = True,
+    ):
         """
         Set the range of the color bar.
 
@@ -224,11 +261,13 @@ class BECImageItem(BECConnector, pg.ImageItem):
             vmin, vmax = vrange
         self.setLevels([vmin, vmax])
         self.config.vrange = (vmin, vmax)
-        self.config.autorange = False
+        if change_autorange:
+            self.config.autorange = False
         if self.color_bar is not None:
             if self.config.color_bar == "simple":
                 self.color_bar.setLevels(low=vmin, high=vmax)
             elif self.config.color_bar == "full":
+                # pylint: disable=unexpected-keyword-arg
                 self.color_bar.setLevels(min=vmin, max=vmax)
                 self.color_bar.setHistogramRange(vmin - 0.1 * vmin, vmax + 0.1 * vmax)
 
