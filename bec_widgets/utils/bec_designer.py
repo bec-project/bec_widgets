@@ -1,4 +1,7 @@
+import importlib.metadata
+import json
 import os
+import site
 import sys
 import sysconfig
 from pathlib import Path
@@ -9,13 +12,53 @@ if PYSIDE6:
     from PySide6.scripts.pyside_tool import (
         _extend_path_var,
         init_virtual_env,
+        qt_tool_wrapper,
         is_pyenv_python,
         is_virtual_env,
-        qt_tool_wrapper,
         ui_tool_binary,
     )
 
 import bec_widgets
+
+
+def list_editable_packages() -> list[tuple[str, str]]:
+    """
+    List all editable packages in the environment.
+
+    Returns:
+        list[tuple[str, str]]: A list of tuples containing the package name and the path to the package.
+    """
+
+    editable_packages = set()
+
+    # Get site-packages directories
+    site_packages = site.getsitepackages()
+    if hasattr(site, "getusersitepackages"):
+        site_packages.append(site.getusersitepackages())
+
+    for dist in importlib.metadata.distributions():
+        location = dist.locate_file("").resolve()
+        is_editable = all(not str(location).startswith(site_pkg) for site_pkg in site_packages)
+
+        if is_editable:
+            editable_packages.add(str(location))
+
+    for packages in site_packages:
+        # all dist-info directories in site-packages that contain a direct_url.json file
+        dist_info_dirs = Path(packages).rglob("*.dist-info")
+        for dist_info_dir in dist_info_dirs:
+            direct_url = dist_info_dir / "direct_url.json"
+            if not direct_url.exists():
+                continue
+            # load the json file and get the path to the package
+            with open(direct_url, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                path = data.get("url", "")
+                if path.startswith("file://"):
+                    path = path[7:]
+                    editable_packages.add(path)
+
+    return editable_packages
 
 
 def patch_designer():  # pragma: no cover
@@ -40,6 +83,12 @@ def patch_designer():  # pragma: no cover
         library_name = f"libpython{major_version}.{minor_version}.dylib"
         lib_path = str(Path(sysconfig.get_config_var("LIBDIR")) / library_name)
         os.environ["DYLD_INSERT_LIBRARIES"] = lib_path
+
+        if is_pyenv_python() or is_virtual_env():
+            # append all editable packages to the PYTHONPATH
+            editable_packages = list_editable_packages()
+            for pckg in editable_packages:
+                _extend_path_var("PYTHONPATH", pckg, True)
     elif sys.platform == "win32":
         if is_virtual_env():
             _extend_path_var("PATH", os.fspath(Path(sys._base_executable).parent), True)
