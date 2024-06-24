@@ -11,7 +11,7 @@ import qdarktheme
 from bec_lib.utils.import_utils import lazy_import_from
 from pydantic import BaseModel, Field, field_validator
 from qtpy.QtCore import QObject, QTimer, Signal, Slot
-from qtpy.QtWidgets import QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QTreeWidget, QTreeWidgetItem
 
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
 from bec_widgets.widgets.bec_status_box.status_item import StatusItem
@@ -108,6 +108,7 @@ class BECStatusBox(BECConnector, QTreeWidget):
         service_name: str = "BEC Server",
         client: BECClient = None,
         config: BECStatusBoxConfig | dict = None,
+        bec_service_status_mixin: BECServiceStatusMixin = None,
         gui_id: str = None,
     ):
         if config is None:
@@ -124,7 +125,10 @@ class BECStatusBox(BECConnector, QTreeWidget):
         self.bec_service_info_container = {}
         self.tree_items = {}
         self.tree_top_item = None
-        self.bec_service_status = BECServiceStatusMixin(client=self.client)
+
+        if not bec_service_status_mixin:
+            bec_service_status_mixin = BECServiceStatusMixin(client=self.client)
+        self.bec_service_status = bec_service_status_mixin
 
         self.init_ui()
         self.bec_service_status.services_update.connect(self.update_service_status)
