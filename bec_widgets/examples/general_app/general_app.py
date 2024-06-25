@@ -37,6 +37,8 @@ class CustomMainWindow(QMainWindow):
         super(CustomMainWindow, self).__init__(parent)
         self.load_ui(ui_file)
 
+        self.resize(1280, 720)
+
     def load_ui(self, ui_file):
         loader = CustomUiLoader(self)
         ui_file = QFile(ui_file)

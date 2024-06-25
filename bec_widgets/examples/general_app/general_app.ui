@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+    <class>MainWindow</class>
+    <widget class="QMainWindow" name="MainWindow">
+        <property name="geometry">
+            <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>1312</width>
+                <height>1012</height>
+            </rect>
+        </property>
+        <property name="windowTitle">
+            <string>MainWindow</string>
+        </property>
+        <widget class="QWidget" name="centralwidget">
+            <layout class="QVBoxLayout" name="verticalLayout_3">
+                <item>
+                    <widget class="QTabWidget" name="central_tab">
+                        <property name="currentIndex">
+                            <number>0</number>
+                        </property>
+                        <widget class="QWidget" name="vscode">
+                            <attribute name="icon">
+                                <iconset theme="QIcon::ThemeIcon::Computer"/>
+                            </attribute>
+                            <attribute name="title">
+                                <string>Visual Studio Code</string>
+                            </attribute>
+                            <layout class="QVBoxLayout" name="verticalLayout_2">
+                                <item>
+                                    <widget class="VSCodeEditor" name="vscode"/>
+                                </item>
+                            </layout>
+                        </widget>
+                        <widget class="QWidget" name="tab_2">
+                            <attribute name="title">
+                                <string>Tab 2</string>
+                            </attribute>
+                        </widget>
+                    </widget>
+                </item>
+            </layout>
+        </widget>
+        <widget class="QMenuBar" name="menubar">
+            <property name="geometry">
+                <rect>
+                    <x>0</x>
+                    <y>0</y>
+                    <width>1312</width>
+                    <height>24</height>
+                </rect>
+            </property>
+            <widget class="QMenu" name="menuHelp">
+                <property name="title">
+                    <string>Help</string>
+                </property>
+                <addaction name="actionBEC_Docs"/>
+                <addaction name="actionBEC_Widgets_Docs"/>
+                <addaction name="actionBug_Report"/>
+            </widget>
+            <addaction name="menuHelp"/>
+        </widget>
+        <widget class="QStatusBar" name="statusbar"/>
+        <widget class="QDockWidget" name="dock_status">
+            <property name="windowIcon">
+                <iconset theme="QIcon::ThemeIcon::Computer"/>
+            </property>
+            <property name="features">
+                <set>
+                    QDockWidget::DockWidgetFeature::DockWidgetClosable|QDockWidget::DockWidgetFeature::DockWidgetFloatable|QDockWidget::DockWidgetFeature::DockWidgetMovable
+                </set>
+            </property>
+            <property name="windowTitle">
+                <string>BEC Status</string>
+            </property>
+            <attribute name="dockWidgetArea">
+                <number>2</number>
+            </attribute>
+            <widget class="QWidget" name="dockWidgetContents">
+                <layout class="QVBoxLayout" name="verticalLayout">
+                    <item>
+                        <widget class="BECStatusBox" name="bec_status_box">
+                            <column>
+                                <property name="text">
+                                    <string notr="true">1</string>
+                                </property>
+                            </column>
+                            <item>
+                                <property name="flags">
+                                    <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                                </property>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                            </item>
+                            <item>
+                                <property name="flags">
+                                    <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                                </property>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                            </item>
+                        </widget>
+                    </item>
+                </layout>
+            </widget>
+        </widget>
+        <widget class="QDockWidget" name="dock_scan_control">
+            <property name="windowTitle">
+                <string>Scan Control</string>
+            </property>
+            <attribute name="dockWidgetArea">
+                <number>2</number>
+            </attribute>
+            <widget class="QWidget" name="dockWidgetContents_2">
+                <layout class="QVBoxLayout" name="verticalLayout_4">
+                    <item>
+                        <widget class="ScanControl" name="scan_control"/>
+                    </item>
+                </layout>
+            </widget>
+        </widget>
+        <action name="actionBEC_Docs">
+            <property name="icon">
+                <iconset theme="QIcon::ThemeIcon::DialogQuestion"/>
+            </property>
+            <property name="text">
+                <string>BEC Docs</string>
+            </property>
+        </action>
+        <action name="actionBEC_Widgets_Docs">
+            <property name="icon">
+                <iconset theme="QIcon::ThemeIcon::DialogQuestion"/>
+            </property>
+            <property name="text">
+                <string>BEC Widgets Docs</string>
+            </property>
+        </action>
+        <action name="actionBug_Report">
+            <property name="icon">
+                <iconset theme="QIcon::ThemeIcon::DialogError"/>
+            </property>
+            <property name="text">
+                <string>Bug Report</string>
+            </property>
+        </action>
+    </widget>
+    <customwidgets>
+        <customwidget>
+            <class>ScanControl</class>
+            <extends>QWidget</extends>
+            <header>scan_control</header>
+        </customwidget>
+        <customwidget>
+            <class>VSCodeEditor</class>
+            <extends>QWebEngineView</extends>
+            <header>vscode</header>
+        </customwidget>
+        <customwidget>
+            <class>BECStatusBox</class>
+            <extends>QTreeWidget</extends>
+            <header>bec_status_box</header>
+        </customwidget>
+        <customwidget>
+            <class>QWebEngineView</class>
+            <extends></extends>
+            <header location="global">QtWebEngineWidgets/QWebEngineView</header>
+        </customwidget>
+    </customwidgets>
+    <resources/>
+    <connections/>
+</ui>
