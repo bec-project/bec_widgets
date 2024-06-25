@@ -203,10 +203,6 @@ class BECGuiClientMixin:
         if self._process is None:
             return
 
-        self._run_rpc("close", (), wait_for_rpc_response=False)
-        while self.gui_is_alive():
-            time.sleep(0.2)
-
         self._client.shutdown()
         if self._process:
             self._process.terminate()
