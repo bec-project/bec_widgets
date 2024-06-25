@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import pytest
 from bec_lib.endpoints import MessageEndpoints
@@ -38,6 +40,7 @@ def test_rpc_plotting_shortcuts_init_configs(rpc_server_figure, qtbot):
     # check if the correct devices are set
     # plot
     assert plt.config_dict["curves"]["bpm4i-bpm4i"]["signals"] == {
+        "dap": None,
         "source": "scan_segment",
         "x": {"name": "samx", "entry": "samx", "unit": None, "modifier": None, "limits": None},
         "y": {"name": "bpm4i", "entry": "bpm4i", "unit": None, "modifier": None, "limits": None},
@@ -47,6 +50,7 @@ def test_rpc_plotting_shortcuts_init_configs(rpc_server_figure, qtbot):
     assert im.config_dict["images"]["eiger"]["monitor"] == "eiger"
     # motor map
     assert motor_map.config_dict["signals"] == {
+        "dap": None,
         "source": "device_readback",
         "x": {
             "name": "samx",
@@ -66,6 +70,7 @@ def test_rpc_plotting_shortcuts_init_configs(rpc_server_figure, qtbot):
     }
     # plot with z scatter
     assert plt_z.config_dict["curves"]["bpm4i-bpm4i"]["signals"] == {
+        "dap": None,
         "source": "scan_segment",
         "x": {"name": "samx", "entry": "samx", "unit": None, "modifier": None, "limits": None},
         "y": {"name": "samy", "entry": "samy", "unit": None, "modifier": None, "limits": None},
@@ -151,3 +156,32 @@ def test_rpc_motor_map(rpc_server_figure, bec_client_lib):
     np.testing.assert_equal(
         [motor_map_data["x"][-1], motor_map_data["y"][-1]], [final_pos_x, final_pos_y]
     )
+
+
+def test_dap_rpc(rpc_server_figure, bec_client_lib):
+
+    fig = BECFigure(rpc_server_figure)
+    plt = fig.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
+
+    client = bec_client_lib
+    dev = client.device_manager.devices
+    scans = client.scans
+
+    dev.bpm4i.sim.sim_select_model("GaussianModel")
+    params = dev.bpm4i.sim.sim_params
+    params.update(
+        {"noise": "uniform", "noise_multiplier": 10, "center": 5, "sigma": 1, "amplitude": 200}
+    )
+    dev.bpm4i.sim.sim_params = params
+    time.sleep(1)
+
+    res = scans.line_scan(dev.samx, 0, 8, steps=50, relative=False)
+    res.wait()
+
+    time.sleep(2)
+
+    dap_curve = plt.get_curve("bpm4i-bpm4i-GaussianModel")
+    fit_params = dap_curve.dap_params
+    print(fit_params)
+
+    assert np.isclose(fit_params["center"], 5, atol=0.5)

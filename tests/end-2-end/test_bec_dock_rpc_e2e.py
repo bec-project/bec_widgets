@@ -53,6 +53,7 @@ def test_rpc_add_dock_with_figure_e2e(bec_client_lib, rpc_server_dock):
     assert im.__class__ == BECImageShow
 
     assert mm.config_dict["signals"] == {
+        "dap": None,
         "source": "device_readback",
         "x": {
             "name": "samx",
@@ -71,6 +72,7 @@ def test_rpc_add_dock_with_figure_e2e(bec_client_lib, rpc_server_dock):
         "z": None,
     }
     assert plt.config_dict["curves"]["bpm4i-bpm4i"]["signals"] == {
+        "dap": None,
         "source": "scan_segment",
         "x": {"name": "samx", "entry": "samx", "unit": None, "modifier": None, "limits": None},
         "y": {"name": "bpm4i", "entry": "bpm4i", "unit": None, "modifier": None, "limits": None},
