@@ -60,7 +60,7 @@ class VSCodeEditor(WebsiteWidget):
         """
         Cleanup the VSCode editor.
         """
-        if not self.process:
+        if not self.process or self.process.poll() is not None:
             return
         os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
         self.process.wait()
