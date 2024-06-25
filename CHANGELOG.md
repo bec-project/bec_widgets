@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.73.0 (2024-06-25)
+
+### Feature
+
+* feat: add new default scaling of image_item ([`df812ea`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/df812eaad5989f2930dde41d87491868505af946))
+
+### Test
+
+* test: add test for imageitem ([`88ecd05`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/88ecd05b95974938ef1efff40e81854baf004cb4))
+
 ## v0.72.2 (2024-06-25)
 
 ### Fix
@@ -143,13 +153,3 @@ in their parent process ([`ce37416`](https://gitlab.psi.ch/bec/bec_widgets/-/com
 ### Test
 
 * test: add test suite for bec_status_box and status_item ([`5d4ca81`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5d4ca816cdedec4c88aba9eb326f85392504ea1c))
-
-### Unknown
-
-* Update file requirements.txt ([`505a5ec`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/505a5ec8334ff4422913b3a7b79d39bcb42ad535))
-
-## v0.66.1 (2024-06-20)
-
-### Fix
-
-* fix: fixed shutdown for pyside ([`2718bc6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2718bc624731301756df524d0d5beef6cb1c1430))
