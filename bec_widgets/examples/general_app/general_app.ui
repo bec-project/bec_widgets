@@ -55,9 +55,9 @@
                 <property name="title">
                     <string>Help</string>
                 </property>
-                <addaction name="actionBEC_Docs"/>
-                <addaction name="actionBEC_Widgets_Docs"/>
-                <addaction name="actionBug_Report"/>
+                <addaction name="action_BEC_docs"/>
+                <addaction name="action_BEC_widgets_docs"/>
+                <addaction name="action_bug_report"/>
             </widget>
             <addaction name="menuHelp"/>
         </widget>
@@ -90,6 +90,83 @@
                                 <property name="flags">
                                     <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
                                 </property>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
+                            </item>
+                            <item>
+                                <property name="flags">
+                                    <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
+                                </property>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
                                 <item>
                                     <property name="flags">
                                         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
@@ -230,7 +307,7 @@
                 </layout>
             </widget>
         </widget>
-        <action name="actionBEC_Docs">
+        <action name="action_BEC_docs">
             <property name="icon">
                 <iconset theme="QIcon::ThemeIcon::DialogQuestion"/>
             </property>
@@ -238,7 +315,7 @@
                 <string>BEC Docs</string>
             </property>
         </action>
-        <action name="actionBEC_Widgets_Docs">
+        <action name="action_BEC_widgets_docs">
             <property name="icon">
                 <iconset theme="QIcon::ThemeIcon::DialogQuestion"/>
             </property>
@@ -246,7 +323,7 @@
                 <string>BEC Widgets Docs</string>
             </property>
         </action>
-        <action name="actionBug_Report">
+        <action name="action_bug_report">
             <property name="icon">
                 <iconset theme="QIcon::ThemeIcon::DialogError"/>
             </property>
