@@ -13,6 +13,9 @@
         <property name="windowTitle">
             <string>MainWindow</string>
         </property>
+        <property name="tabShape">
+            <enum>QTabWidget::TabShape::Rounded</enum>
+        </property>
         <widget class="QWidget" name="centralwidget">
             <layout class="QVBoxLayout" name="verticalLayout_3">
                 <item>
@@ -90,12 +93,6 @@
                                 <property name="flags">
                                     <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
                                 </property>
-                                <item>
-                                    <property name="flags">
-                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
-                                        </set>
-                                    </property>
-                                </item>
                                 <item>
                                     <property name="flags">
                                         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
