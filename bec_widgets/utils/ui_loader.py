@@ -1,5 +1,35 @@
-from qtpy import QT_VERSION
+from qtpy import QT_VERSION, PYSIDE6, PYQT6
 from qtpy.QtCore import QFile, QIODevice
+
+
+if PYSIDE6:
+    from PySide6.QtUiTools import QUiLoader
+    from bec_widgets.examples.plugin_example_pyside.tictactoe import TicTacToe
+    from bec_widgets.widgets.bec_status_box.bec_status_box import BECStatusBox
+    from bec_widgets.widgets.device_inputs import DeviceComboBox, DeviceLineEdit
+    from bec_widgets.widgets.vscode.vscode import VSCodeEditor
+    from bec_widgets.widgets.scan_control import ScanControl
+
+    class CustomUiLoader(QUiLoader):
+        def __init__(self, baseinstance):
+            super(CustomUiLoader, self).__init__(baseinstance)
+            self.custom_widgets = {
+                "TicTacToe": TicTacToe,
+                "VSCodeEditor": VSCodeEditor,
+                "BECStatusBox": BECStatusBox,
+                "DeviceLineEdit": DeviceLineEdit,
+                "DeviceComboBox": DeviceComboBox,
+                "ScanControl": ScanControl,
+            }
+
+            self.baseinstance = baseinstance
+
+        def createWidget(self, class_name, parent=None, name=""):
+            if class_name in self.custom_widgets:
+                widget = self.custom_widgets[class_name](parent)
+                widget.setObjectName(name)
+                return widget
+            return super(CustomUiLoader, self).createWidget(class_name, parent, name)
 
 
 class UILoader:
@@ -14,14 +44,14 @@ class UILoader:
             self.loader = uic.loadUi
         elif QT_VERSION.startswith("6"):
             # PyQt6 or PySide6
-            try:
-                from PySide6.QtUiTools import QUiLoader
-
+            if PYSIDE6:
                 self.loader = self.load_ui_pyside6
-            except ImportError:
+            elif PYQT6:
                 from PyQt6.uic import loadUi
 
                 self.loader = loadUi
+            else:
+                raise ImportError("No compatible Qt bindings found.")
 
     def load_ui_pyside6(self, ui_file, parent=None):
         """
@@ -33,9 +63,8 @@ class UILoader:
         Returns:
             QWidget: The loaded widget.
         """
-        from PySide6.QtUiTools import QUiLoader
 
-        loader = QUiLoader(parent)
+        loader = CustomUiLoader(parent)
         file = QFile(ui_file)
         if not file.open(QIODevice.ReadOnly):
             raise IOError(f"Cannot open file: {ui_file}")
