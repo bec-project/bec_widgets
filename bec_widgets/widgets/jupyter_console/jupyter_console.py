@@ -2,16 +2,16 @@ from bec_ipython_client.main import BECIPythonClient
 from qtconsole.inprocess import QtInProcessKernelManager
 from qtconsole.manager import QtKernelManager
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
-from qtpy.QtWidgets import QApplication, QMainWindow
+from qtpy.QtWidgets import QApplication
 
 
 class BECJupyterConsole(RichJupyterWidget):  # pragma: no cover:
-    def __init__(self, inprocess: bool = False):
-        super().__init__()
+    def __init__(self, parent=None, inprocess=True):
+        super().__init__(parent=parent)
 
-        self.inprocess = None
+        self.inprocess = inprocess
 
-        self.kernel_manager, self.kernel_client = self._init_kernel(inprocess=inprocess)
+        self.kernel_manager, self.kernel_client = self._init_kernel(inprocess=self.inprocess)
         self.set_default_style("linux")
         self._init_bec()
 
@@ -61,12 +61,10 @@ class BECJupyterConsole(RichJupyterWidget):  # pragma: no cover:
         self.kernel_manager.shutdown_kernel()
 
 
-if __name__ == "__main__":  # pragma: no cover
-    import sys
-
-    app = QApplication(sys.argv)
-    win = QMainWindow()
-    win.setCentralWidget(BECJupyterConsole(True))
-    win.show()
-
-    sys.exit(app.exec_())
+# if __name__ == "__main__":  # pragma: no cover
+#     import sys
+#
+#     app = QApplication(sys.argv)
+#     win = BECJupyterConsole(inprocess=True)
+#     win.show()
+#     sys.exit(app.exec_())
