@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import inspect
 import signal
 import sys
@@ -29,7 +31,7 @@ class BECWidgetsCLIServer:
         dispatcher: BECDispatcher = None,
         client=None,
         config=None,
-        gui_class: Union["BECFigure", "BECDockArea"] = BECFigure,
+        gui_class: Union[BECFigure, BECDockArea] = BECFigure,
     ) -> None:
         self.dispatcher = BECDispatcher(config=config) if dispatcher is None else dispatcher
         self.client = self.dispatcher.client if client is None else client
@@ -118,6 +120,7 @@ class BECWidgetsCLIServer:
     def shutdown(self):  # TODO not sure if needed when cleanup is done at level of BECConnector
         self._shutdown_event = True
         self._heartbeat_timer.stop()
+        self.gui.close()
         self.client.shutdown()
 
 
@@ -207,6 +210,7 @@ def main():
                 app.quit()
 
             signal.signal(signal.SIGINT, sigint_handler)
+            signal.signal(signal.SIGTERM, sigint_handler)
 
             sys.exit(app.exec())
 

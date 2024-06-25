@@ -72,6 +72,13 @@ class VSCodeEditor(WebsiteWidget):
         self.cleanup_vscode()
         return super().cleanup()
 
+    def close(self):
+        """
+        Close the widget.
+        """
+        self.cleanup_vscode()
+        return super().close()
+
 
 if __name__ == "__main__":  # pragma: no cover
     import sys

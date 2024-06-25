@@ -208,6 +208,7 @@ class BECGuiClientMixin:
             self._process.terminate()
             if self._process_output_processing_thread:
                 self._process_output_processing_thread.join()
+            self._process.wait()
             self._process = None
 
 
