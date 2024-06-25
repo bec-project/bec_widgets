@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v0.74.0 (2024-06-25)
+
+### Documentation
+
+* docs(becfigure): docs added ([`a51b15d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a51b15da3f5e83e0c897a0342bdb05b9c677a179))
+
+### Feature
+
+* feat(waveform1d): dap LMFit model can be added to plot ([`1866ba6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1866ba66c8e3526661beb13fff3e13af6a0ae562))
+
+### Test
+
+* test(waveform1d): dap e2e test added ([`7271b42`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7271b422f98ef9264970d708811c414b69a644db))
+
 ## v0.73.2 (2024-06-25)
 
 ### Fix
@@ -133,19 +147,3 @@
 * fix(generate_cli): fixed rpc generate for classes without user access; closes #226 ([`925c893`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/925c893f3ff4337fc8b4d237c8ffc19a597b0996))
 
 ## v0.68.0 (2024-06-21)
-
-### Feature
-
-* feat: properly handle SIGINT (ctrl-c) in BEC GUI server -&gt; calls qapplication.quit() ([`3644f34`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3644f344da2df674bc0d5740c376a86b9d0dfe95))
-
-* feat: bec-gui-server: redirect stdout and stderr (if any) as proper debug and error log entries ([`d1266a1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d1266a1ce148ff89557a039e3a182a87a3948f49))
-
-### Fix
-
-* fix: ignore GUI server output (any output will go to log file)
-
-If a logger is given to log `_start_log_process`, the server stdout and
-stderr streams will be redirected as log entries with levels DEBUG or ERROR
-in their parent process ([`ce37416`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ce374163cab87a92847409051739777bc505a77b))
-
-* fix: do not create &#39;BECClient&#39; logger when instantiating BECDispatcher ([`f7d0b07`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f7d0b0768ace42a33e2556bb33611d4f02e5a6d9))
