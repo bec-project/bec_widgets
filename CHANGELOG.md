@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.73.2 (2024-06-25)
+
+### Fix
+
+* fix(vscode): only run terminate if the process is still alive ([`7120f3e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7120f3e93b054b788f15e2d5bcd688e3c140c1ce))
+
+* fix(rpc): trigger shutdown of server when gui is terminated ([`acc1318`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/acc13183e28030e3ca9af21bb081e1eed081622b))
+
+* fix(rpc): remove of calling &#34;close&#34; and waiting for gui_is_alive ([`f75fc19`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f75fc19c5b10022763252917ca473f404a25165a))
+
 ## v0.73.1 (2024-06-25)
 
 ### Fix
@@ -130,8 +140,6 @@
 
 * feat: bec-gui-server: redirect stdout and stderr (if any) as proper debug and error log entries ([`d1266a1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d1266a1ce148ff89557a039e3a182a87a3948f49))
 
-* feat: add logger for BEC GUI server ([`630616e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/630616ec729f60aa0b4d17a9e0379f9c6198eb96))
-
 ### Fix
 
 * fix: ignore GUI server output (any output will go to log file)
@@ -141,13 +149,3 @@ stderr streams will be redirected as log entries with levels DEBUG or ERROR
 in their parent process ([`ce37416`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ce374163cab87a92847409051739777bc505a77b))
 
 * fix: do not create &#39;BECClient&#39; logger when instantiating BECDispatcher ([`f7d0b07`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f7d0b0768ace42a33e2556bb33611d4f02e5a6d9))
-
-## v0.67.0 (2024-06-21)
-
-### Documentation
-
-* docs: add widget to documentation ([`6fa1c06`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6fa1c06053131dabd084bb3cf13c853b5d3ce833))
-
-### Refactor
-
-* refactor: Change inheritance to QTreeWidget from QWidget ([`d2f2b20`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d2f2b206bb0eab60b8a9b0d0ac60a6b7887fa6fb))

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bec_widgets"
-version = "0.73.1"
+version = "0.73.2"
 description = "BEC Widgets"
 requires-python = ">=3.10"
 classifiers = [
