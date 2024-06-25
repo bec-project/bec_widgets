@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.72.2 (2024-06-25)
+
+### Fix
+
+* fix(designer): fixed designer for pyenv and venv; closes #237 ([`e631fc1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e631fc15d8707b73d58cb64316e115a7e43961ea))
+
 ## v0.72.1 (2024-06-24)
 
 ### Fix
@@ -147,9 +153,3 @@ in their parent process ([`ce37416`](https://gitlab.psi.ch/bec/bec_widgets/-/com
 ### Fix
 
 * fix: fixed shutdown for pyside ([`2718bc6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2718bc624731301756df524d0d5beef6cb1c1430))
-
-## v0.66.0 (2024-06-20)
-
-### Feature
-
-* feat(rpc): discover widgets automatically ([`ef25f56`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ef25f5638032f931ceb292540ada618508bb2aed))
