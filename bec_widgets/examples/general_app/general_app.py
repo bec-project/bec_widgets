@@ -1,27 +1,14 @@
 import os
 import sys
-import webbrowser
 
 import qdarktheme
+from PySide6.QtWidgets import QStyle
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QApplication, QMainWindow
 
+from bec_widgets.examples.general_app.web_links import BECWebLinksMixin
 from bec_widgets.utils.ui_loader import UILoader
-
-
-class BECWebLinksMixin:
-    @staticmethod
-    def open_bec_docs():
-        webbrowser.open("https://beamline-experiment-control.readthedocs.io/en/latest/")
-
-    @staticmethod
-    def open_bec_widgets_docs():
-        webbrowser.open("https://bec.readthedocs.io/projects/bec-widgets/en/latest/")
-
-    @staticmethod
-    def open_bec_bug_report():
-        webbrowser.open("https://gitlab.psi.ch/groups/bec/-/issues/")
 
 
 class BECGeneralApp(QMainWindow):
@@ -35,17 +22,35 @@ class BECGeneralApp(QMainWindow):
         self.ini_ui()
 
     def ini_ui(self):
-        self._hook_menubar()
+        self._setup_icons()
+        self._hook_menubar_docs()
 
     def load_ui(self, ui_file):
         loader = UILoader(self)
         self.ui = loader.loader(ui_file)
         self.setCentralWidget(self.ui)
 
-    def _hook_menubar(self):
+    def _hook_menubar_docs(self):
+        # BEC Docs
         self.ui.action_BEC_docs.triggered.connect(BECWebLinksMixin.open_bec_docs)
+        # BEC Widgets Docs
         self.ui.action_BEC_widgets_docs.triggered.connect(BECWebLinksMixin.open_bec_widgets_docs)
+        # Bug report
         self.ui.action_bug_report.triggered.connect(BECWebLinksMixin.open_bec_bug_report)
+
+    def change_theme(self, theme):
+        qdarktheme.setup_theme(theme)
+
+    def _setup_icons(self):
+        help_icon = QApplication.style().standardIcon(QStyle.SP_MessageBoxQuestion)
+        bug_icon = QApplication.style().standardIcon(QStyle.SP_MessageBoxInformation)
+        computer_icon = QIcon.fromTheme("computer")
+
+        self.ui.action_BEC_docs.setIcon(help_icon)
+        self.ui.action_BEC_widgets_docs.setIcon(help_icon)
+        self.ui.action_bug_report.setIcon(bug_icon)
+
+        self.ui.central_tab.setTabIcon(0, computer_icon)  # Set icon for the first tab
 
 
 def main():  # pragma: no cover
