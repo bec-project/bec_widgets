@@ -1,0 +1,15 @@
+def main():  # pragma: no cover
+    from qtpy import PYSIDE6
+
+    if not PYSIDE6:
+        print("PYSIDE6 is not available in the environment. Cannot patch designer.")
+        return
+    from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
+
+    {plugin_import}
+
+    QPyDesignerCustomWidgetCollection.addCustomWidget({plugin_name_pascal}Plugin())
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()

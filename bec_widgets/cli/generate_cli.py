@@ -10,6 +10,7 @@ from typing import Literal
 import black
 import isort
 
+from bec_widgets.utils.generate_designer_plugin import DesignerPluginGenerator
 from bec_widgets.utils.plugin_utils import get_rpc_classes
 
 if sys.version_info >= (3, 11):
@@ -160,6 +161,26 @@ def main():
         generator = ClientGenerator()
         generator.generate_client(rpc_classes)
         generator.write(client_path)
+
+        for cls in rpc_classes["top_level_classes"]:
+            plugin = DesignerPluginGenerator(cls)
+            if not hasattr(plugin, "info"):
+                continue
+
+            # if the class directory already has a register, plugin and pyproject file, skip
+            if os.path.exists(
+                os.path.join(plugin.info.base_path, f"register_{plugin.info.plugin_name_snake}.py")
+            ):
+                continue
+            if os.path.exists(
+                os.path.join(plugin.info.base_path, f"{plugin.info.plugin_name_snake}_plugin.py")
+            ):
+                continue
+            if os.path.exists(
+                os.path.join(plugin.info.base_path, f"{plugin.info.plugin_name_snake}.pyproject")
+            ):
+                continue
+            plugin.run()
 
 
 if __name__ == "__main__":  # pragma: no cover
