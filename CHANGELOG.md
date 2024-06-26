@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## v0.74.1 (2024-06-26)
+
+### Build
+
+* build: added missing pytest-bec-e2e dependency; closes #219 ([`56fdae4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/56fdae42757bdb9fa301c1e425a77e98b6eaf92b))
+
+* build: fixed dependency ranges; closes #135 ([`e6a06c9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e6a06c9f43e0ad6bbfcfa550a2f580d2a27aff66))
+
+### Chore
+
+* chore: sorted dependencies alphabetically ([`21c807f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/21c807f35831fdd1ef2e488ab90edae4719f0cb7))
+
+### Documentation
+
+* docs: fixed doc string ([`f979a63`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f979a63d3d1a008f80e500510909750878ff4303))
+
+### Fix
+
+* fix(rings): rings properties updated right after setting ([`c8b7367`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c8b7367815b095f8e4aa8b819481efb701f2e542))
+
+* fix(motor_map): motor map can be removed from BECFigure with .remove() ([`6b25abf`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6b25abff70280271e2eeb70450553c05d4b7c99c))
+
+### Test
+
+* test(bec_figure): tests for removing widgets with rpc e2e ([`a268caa`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a268caaa30711fcc7ece542d24578d74cbf65c77))
+
 ## v0.74.0 (2024-06-25)
 
 ### Documentation
@@ -116,34 +142,12 @@
 
 ## v0.70.0 (2024-06-21)
 
-### Documentation
-
-* docs: fix typo in link ([`fdf11d8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fdf11d8147750e379af9b17792761a267b49ae53))
-
 ### Feature
 
 * feat(bec-designer): automatic plugin discovery ([`4639eee`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4639eee0b975ebd7a946e0e290449f5b88c372eb))
 
 * feat(device_line_edit): plugin added to bec-designer ([`b4b27ae`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b4b27aea3d8c08fa3d5d5514c69dbde32721d1dc))
 
-* feat(device_combobox): plugin added to bec-designer ([`e483b28`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e483b282db20a81182b87938ea172654092419b5))
-
-* feat: added entry point for bec-designer ([`36391db`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/36391db60735d57b371211791ddf8d3d00cebcf1))
-
-* feat(utils/bec-designer): added startup script to launched QtDesigner compatible with conda environments ([`5362334`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5362334ff3b07fc83653323a084a4b6946bade96))
-
 ### Fix
 
 * fix(bec-desiger+plugins): imports fixed, PYSIDE6 check to not enable run plugins with pyqt6 ([`50b3422`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/50b3422528d46d74317e8c903b6286e868ab7fe0))
-
-## v0.69.0 (2024-06-21)
-
-### Feature
-
-* feat(widgets): added vscode widget ([`48ae950`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/48ae950d57b454307ce409e2511f7b7adf3cfc6b))
-
-### Fix
-
-* fix(generate_cli): fixed rpc generate for classes without user access; closes #226 ([`925c893`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/925c893f3ff4337fc8b4d237c8ffc19a597b0996))
-
-## v0.68.0 (2024-06-21)
