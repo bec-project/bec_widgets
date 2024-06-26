@@ -13,6 +13,7 @@ class Widgets(str, enum.Enum):
     Enum for the available widgets.
     """
 
+    BECQueue = "BECQueue"
     BECStatusBox = "BECStatusBox"
     BECDock = "BECDock"
     BECDockArea = "BECDockArea"
@@ -1443,6 +1444,24 @@ class BECPlotBase(RPCBase):
 
         Args:
             size(int): Font size of the legend.
+        """
+
+
+class BECQueue(RPCBase):
+    @property
+    @rpc_call
+    def config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
         """
 
 
