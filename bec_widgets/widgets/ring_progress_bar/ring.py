@@ -135,6 +135,7 @@ class Ring(BECConnector):
             float(max(self.config.min_value, min(self.config.max_value, value))),
             self.config.precision,
         )
+        self.parent_progress_widget.update()
 
     def set_color(self, color: str | tuple):
         """
@@ -145,6 +146,7 @@ class Ring(BECConnector):
         """
         self.config.color = color
         self.color = self.convert_color(color)
+        self.parent_progress_widget.update()
 
     def set_background(self, color: str | tuple):
         """
@@ -155,6 +157,7 @@ class Ring(BECConnector):
         """
         self.config.background_color = color
         self.color = self.convert_color(color)
+        self.parent_progress_widget.update()
 
     def set_line_width(self, width: int):
         """
@@ -164,6 +167,7 @@ class Ring(BECConnector):
             width(int): Line width for the ring widget
         """
         self.config.line_width = width
+        self.parent_progress_widget.update()
 
     def set_min_max_values(self, min_value: int | float, max_value: int | float):
         """
@@ -175,6 +179,7 @@ class Ring(BECConnector):
         """
         self.config.min_value = min_value
         self.config.max_value = max_value
+        self.parent_progress_widget.update()
 
     def set_start_angle(self, start_angle: int):
         """
@@ -185,6 +190,7 @@ class Ring(BECConnector):
         """
         self.config.start_position = start_angle
         self.start_position = start_angle * 16
+        self.parent_progress_widget.update()
 
     @staticmethod
     def convert_color(color):
