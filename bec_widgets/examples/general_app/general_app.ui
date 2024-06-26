@@ -65,25 +65,32 @@
             <addaction name="menuHelp"/>
         </widget>
         <widget class="QStatusBar" name="statusbar"/>
-        <widget class="QDockWidget" name="dock_status">
-            <property name="windowIcon">
-                <iconset theme="QIcon::ThemeIcon::Computer"/>
-            </property>
-            <property name="features">
-                <set>
-                    QDockWidget::DockWidgetFeature::DockWidgetClosable|QDockWidget::DockWidgetFeature::DockWidgetFloatable|QDockWidget::DockWidgetFeature::DockWidgetMovable
-                </set>
-            </property>
+        <widget class="QDockWidget" name="dock_scan_control">
             <property name="windowTitle">
-                <string>BEC Status</string>
+                <string>Scan Control</string>
             </property>
             <attribute name="dockWidgetArea">
                 <number>2</number>
             </attribute>
-            <widget class="QWidget" name="dockWidgetContents">
-                <layout class="QVBoxLayout" name="verticalLayout">
+            <widget class="QWidget" name="dockWidgetContents_2">
+                <layout class="QVBoxLayout" name="verticalLayout_4">
                     <item>
-                        <widget class="BECStatusBox" name="bec_status_box">
+                        <widget class="ScanControl" name="scan_control"/>
+                    </item>
+                </layout>
+            </widget>
+        </widget>
+        <widget class="QDockWidget" name="dock_status_2">
+            <property name="windowTitle">
+                <string>BEC Service Status</string>
+            </property>
+            <attribute name="dockWidgetArea">
+                <number>2</number>
+            </attribute>
+            <widget class="QWidget" name="dockWidgetContents_3">
+                <layout class="QVBoxLayout" name="verticalLayout_5">
+                    <item>
+                        <widget class="BECStatusBox" name="bec_status_box_2">
                             <column>
                                 <property name="text">
                                     <string notr="true">1</string>
@@ -218,11 +225,23 @@
                                         </set>
                                     </property>
                                 </item>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
                             </item>
                             <item>
                                 <property name="flags">
                                     <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable</set>
                                 </property>
+                                <item>
+                                    <property name="flags">
+                                        <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
+                                        </set>
+                                    </property>
+                                </item>
                                 <item>
                                     <property name="flags">
                                         <set>ItemIsSelectable|ItemIsDragEnabled|ItemIsDropEnabled|ItemIsUserCheckable
@@ -289,17 +308,25 @@
                 </layout>
             </widget>
         </widget>
-        <widget class="QDockWidget" name="dock_scan_control">
+        <widget class="QDockWidget" name="dock_queue">
             <property name="windowTitle">
-                <string>Scan Control</string>
+                <string>Scan Queue</string>
             </property>
             <attribute name="dockWidgetArea">
                 <number>2</number>
             </attribute>
-            <widget class="QWidget" name="dockWidgetContents_2">
-                <layout class="QVBoxLayout" name="verticalLayout_4">
+            <widget class="QWidget" name="dockWidgetContents_4">
+                <layout class="QVBoxLayout" name="verticalLayout_6">
                     <item>
-                        <widget class="ScanControl" name="scan_control"/>
+                        <widget class="BECQueue" name="bec_queue">
+                            <row/>
+                            <column/>
+                            <column/>
+                            <column/>
+                            <item row="0" column="0"/>
+                            <item row="0" column="1"/>
+                            <item row="0" column="2"/>
+                        </widget>
                     </item>
                 </layout>
             </widget>
@@ -330,6 +357,11 @@
         </action>
     </widget>
     <customwidgets>
+        <customwidget>
+            <class>BECQueue</class>
+            <extends>QTableWidget</extends>
+            <header>bec_queue</header>
+        </customwidget>
         <customwidget>
             <class>ScanControl</class>
             <extends>QWidget</extends>

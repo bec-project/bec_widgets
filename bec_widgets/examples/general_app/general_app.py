@@ -2,6 +2,7 @@ import os
 import sys
 import webbrowser
 
+import qdarktheme
 from qtpy.QtWidgets import QApplication, QMainWindow
 
 from bec_widgets.utils.ui_loader import UILoader
@@ -55,6 +56,7 @@ def main():  # pragma: no cover
         return
 
     app = QApplication(sys.argv)
+    qdarktheme.setup_theme("dark")
     main_window = BECGeneralApp()
     main_window.show()
     sys.exit(app.exec_())
