@@ -185,3 +185,26 @@ def test_dap_rpc(rpc_server_figure, bec_client_lib):
     print(fit_params)
 
     assert np.isclose(fit_params["center"], 5, atol=0.5)
+
+
+def test_removing_subplots(rpc_server_figure, bec_client_lib):
+    fig = BECFigure(rpc_server_figure)
+    plt = fig.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
+    im = fig.image(monitor="eiger")
+    mm = fig.motor_map(motor_x="samx", motor_y="samy")
+
+    assert len(fig.widget_list) == 3
+
+    # removing curves
+    assert len(plt.curves) == 2
+    plt.curves[0].remove()
+    assert len(plt.curves) == 1
+    plt.remove_curve("bpm4i-bpm4i")
+    assert len(plt.curves) == 0
+
+    # removing all subplots from figure
+    plt.remove()
+    im.remove()
+    mm.remove()
+
+    assert len(fig.widget_list) == 0
