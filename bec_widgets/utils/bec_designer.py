@@ -21,12 +21,12 @@ if PYSIDE6:
 import bec_widgets
 
 
-def list_editable_packages() -> list[tuple[str, str]]:
+def list_editable_packages() -> set[str]:
     """
     List all editable packages in the environment.
 
     Returns:
-        list[tuple[str, str]]: A list of tuples containing the package name and the path to the package.
+        set: A set of paths to editable packages.
     """
 
     editable_packages = set()
