@@ -1208,6 +1208,13 @@ class BECImageShow(RPCBase):
 class BECMotorMap(RPCBase):
     @property
     @rpc_call
+    def rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
+        """
+
+    @property
+    @rpc_call
     def config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
@@ -1287,6 +1294,12 @@ class BECMotorMap(RPCBase):
         Get the data of the motor map.
         Returns:
             dict: Data of the motor map.
+        """
+
+    @rpc_call
+    def remove(self):
+        """
+        Remove the plot widget from the figure.
         """
 
 

@@ -36,6 +36,7 @@ class MotorMapConfig(SubplotConfig):
 
 class BECMotorMap(BECPlotBase):
     USER_ACCESS = [
+        "rpc_id",
         "config_dict",
         "change_motors",
         "set_max_points",
@@ -44,6 +45,7 @@ class BECMotorMap(BECPlotBase):
         "set_background_value",
         "set_scatter_size",
         "get_data",
+        "remove",
     ]
 
     # QT Signals
