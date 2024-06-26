@@ -3,6 +3,8 @@ import sys
 import webbrowser
 
 import qdarktheme
+from qtpy.QtCore import QSize
+from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QApplication, QMainWindow
 
 from bec_widgets.utils.ui_loader import UILoader
@@ -54,8 +56,13 @@ def main():  # pragma: no cover
             "PYSIDE6 is not available in the environment. UI files with BEC custom widgets are runnable only with PySide6."
         )
         return
+    import bec_widgets
 
+    module_path = os.path.dirname(bec_widgets.__file__)
     app = QApplication(sys.argv)
+    icon = QIcon()
+    icon.addFile(os.path.join(module_path, "assets", "BEC-Dark.png"), size=QSize(48, 48))
+    app.setWindowIcon(icon)
     qdarktheme.setup_theme("dark")
     main_window = BECGeneralApp()
     main_window.show()
