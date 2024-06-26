@@ -1,10 +1,10 @@
+import os
 import sys
+import webbrowser
 
 from qtpy.QtWidgets import QApplication, QMainWindow
 
-import webbrowser
-
-from bec_widgets.utils import UILoader
+from bec_widgets.utils.ui_loader import UILoader
 
 
 class BECWebLinksMixin:
@@ -24,7 +24,8 @@ class BECWebLinksMixin:
 class BECGeneralApp(QMainWindow):
     def __init__(self, parent=None):
         super(BECGeneralApp, self).__init__(parent)
-        self.load_ui("general_app.ui")
+        ui_file_path = os.path.join(os.path.dirname(__file__), "general_app.ui")
+        self.load_ui(ui_file_path)
 
         self.resize(1280, 720)
 

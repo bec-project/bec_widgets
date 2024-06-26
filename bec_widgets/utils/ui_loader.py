@@ -1,26 +1,21 @@
-from qtpy import QT_VERSION, PYSIDE6, PYQT6
+from qtpy import PYQT6, PYSIDE6, QT_VERSION
 from qtpy.QtCore import QFile, QIODevice
-
 
 if PYSIDE6:
     from PySide6.QtUiTools import QUiLoader
+
     from bec_widgets.examples.plugin_example_pyside.tictactoe import TicTacToe
-    from bec_widgets.widgets.bec_status_box.bec_status_box import BECStatusBox
-    from bec_widgets.widgets.device_inputs import DeviceComboBox, DeviceLineEdit
-    from bec_widgets.widgets.vscode.vscode import VSCodeEditor
-    from bec_widgets.widgets.scan_control import ScanControl
+    from bec_widgets.utils.plugin_utils import get_rpc_classes
 
     class CustomUiLoader(QUiLoader):
         def __init__(self, baseinstance):
-            super(CustomUiLoader, self).__init__(baseinstance)
-            self.custom_widgets = {
-                "TicTacToe": TicTacToe,
-                "VSCodeEditor": VSCodeEditor,
-                "BECStatusBox": BECStatusBox,
-                "DeviceLineEdit": DeviceLineEdit,
-                "DeviceComboBox": DeviceComboBox,
-                "ScanControl": ScanControl,
-            }
+            super().__init__(baseinstance)
+            widgets = get_rpc_classes("bec_widgets").get("top_level_classes", [])
+
+            # remove this line once the plugin is not needed anymore
+            widgets.append(TicTacToe)
+
+            self.custom_widgets = {widget.__name__: widget for widget in widgets}
 
             self.baseinstance = baseinstance
 
@@ -29,7 +24,7 @@ if PYSIDE6:
                 widget = self.custom_widgets[class_name](parent)
                 widget.setObjectName(name)
                 return widget
-            return super(CustomUiLoader, self).createWidget(class_name, parent, name)
+            return super().createWidget(class_name, parent, name)
 
 
 class UILoader:

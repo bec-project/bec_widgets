@@ -16,7 +16,7 @@ from qtpy.QtWidgets import (
     QTableWidgetItem,
 )
 
-from bec_widgets.utils import UILoader
+from bec_widgets.utils.ui_loader import UILoader
 from bec_widgets.widgets.motor_control.motor_control import MotorControlWidget
 
 

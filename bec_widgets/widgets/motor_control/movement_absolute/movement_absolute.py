@@ -5,7 +5,7 @@ from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.utils import UILoader
+from bec_widgets.utils.ui_loader import UILoader
 from bec_widgets.widgets.motor_control.motor_control import MotorControlErrors, MotorControlWidget
 
 

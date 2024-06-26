@@ -7,7 +7,7 @@ from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtGui import QKeySequence
 from qtpy.QtWidgets import QDoubleSpinBox, QShortcut, QWidget
 
-from bec_widgets.utils import UILoader
+from bec_widgets.utils.ui_loader import UILoader
 from bec_widgets.widgets.motor_control.motor_control import MotorControlWidget
 
 

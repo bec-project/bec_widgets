@@ -9,5 +9,4 @@ from .crosshair import Crosshair
 from .entry_validator import EntryValidator
 from .layout_manager import GridLayoutManager
 from .rpc_decorator import register_rpc_methods, rpc_public
-from .ui_loader import UILoader
 from .validator_delegate import DoubleValidationDelegate
