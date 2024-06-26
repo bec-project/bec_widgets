@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from bec_lib.devicemanager import DeviceContainer
+
 from bec_widgets.examples.motor_movement.motor_control_compilations import (
     MotorControlApp,
     MotorControlMap,
@@ -10,7 +11,6 @@ from bec_widgets.examples.motor_movement.motor_control_compilations import (
     MotorControlPanelAbsolute,
     MotorControlPanelRelative,
 )
-
 from bec_widgets.widgets.motor_control.motor_control import MotorActions, MotorThread
 from bec_widgets.widgets.motor_control.motor_table.motor_table import MotorCoordinateTable
 from bec_widgets.widgets.motor_control.movement_absolute.movement_absolute import (

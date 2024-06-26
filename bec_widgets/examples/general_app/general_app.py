@@ -2,7 +2,8 @@ import os
 import sys
 
 import qdarktheme
-from PySide6.QtWidgets import QStyle
+from qtpy.QtGui import QActionGroup
+from qtpy.QtWidgets import QStyle
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QApplication, QMainWindow
@@ -24,6 +25,7 @@ class BECGeneralApp(QMainWindow):
     def ini_ui(self):
         self._setup_icons()
         self._hook_menubar_docs()
+        self._hook_theme_bar()
 
     def load_ui(self, ui_file):
         loader = UILoader(self)
@@ -50,7 +52,24 @@ class BECGeneralApp(QMainWindow):
         self.ui.action_BEC_widgets_docs.setIcon(help_icon)
         self.ui.action_bug_report.setIcon(bug_icon)
 
-        self.ui.central_tab.setTabIcon(0, computer_icon)  # Set icon for the first tab
+        self.ui.central_tab.setTabIcon(0, computer_icon)
+
+    def _hook_theme_bar(self):
+        # Make actions checkable
+        self.ui.action_light.setCheckable(True)
+        self.ui.action_dark.setCheckable(True)
+
+        # Create an action group to make sure only one can be checked at a time
+        theme_group = QActionGroup(self)
+        theme_group.addAction(self.ui.action_light)
+        theme_group.addAction(self.ui.action_dark)
+        theme_group.setExclusive(True)
+
+        # Connect the actions to the theme change method
+        self.ui.action_light.triggered.connect(lambda: self.change_theme("light"))
+        self.ui.action_dark.triggered.connect(lambda: self.change_theme("dark"))
+
+        self.ui.action_dark.trigger()
 
 
 def main():  # pragma: no cover
@@ -68,7 +87,6 @@ def main():  # pragma: no cover
     icon = QIcon()
     icon.addFile(os.path.join(module_path, "assets", "BEC-Dark.png"), size=QSize(48, 48))
     app.setWindowIcon(icon)
-    qdarktheme.setup_theme("dark")
     main_window = BECGeneralApp()
     main_window.show()
     sys.exit(app.exec_())
