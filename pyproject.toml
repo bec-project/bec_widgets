@@ -13,28 +13,28 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "pydantic~=2.0",
-    "qtconsole~=5.5, >=5.5.1",  # needed for jupyter console
-    "qtpy~=2.4",
-    "pyqtgraph~=0.13",
-    "bec_lib~=2.16",
     "bec_ipython_client~=2.16", # needed for jupyter console
-    "pyqtdarktheme~=2.1",
+    "bec_lib~=2.16",
     "black~=24.0",              # needed for bw-generate-cli
     "isort~=5.13, >=5.13.2",    # needed for bw-generate-cli
+    "pydantic~=2.0",
+    "pyqtgraph~=0.13",
+    "pyqtdarktheme~=2.1",
+    "qtconsole~=5.5, >=5.5.1",  # needed for jupyter console
+    "qtpy~=2.4",
 ]
 
 
 [project.optional-dependencies]
 dev = [
-    "pytest~=8.0",
+    "coverage~=7.0",
+    "fakeredis~=2.23, >=2.23.2",
+    "pytest-bec-e2e~=2.16",
+    "pytest-qt~=4.4",
     "pytest-random-order~=1.1",
     "pytest-timeout~=2.2",
     "pytest-xvfb~=3.0",
-    "coverage~=7.0",
-    "pytest-qt~=4.4",
-    "fakeredis~=2.23, >=2.23.2",
-    "pytest-bec-e2e~=2.16",
+    "pytest~=8.0",
 ]
 pyqt5 = ["PyQt5>=5.9", "PyQtWebEngine>=5.9"]
 pyqt6 = ["PyQt6>=6.7", "PyQt6-WebEngine>=6.7"]
