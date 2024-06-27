@@ -2,16 +2,11 @@
 The widget is bound to be used with the BECStatusBox widget."""
 
 import enum
-import sys
 from datetime import datetime
 
-import qdarktheme
 from bec_lib.utils.import_utils import lazy_import_from
-from pydantic import Field
 from qtpy.QtCore import Qt, Slot
 from qtpy.QtWidgets import QDialog, QHBoxLayout, QLabel, QStyle, QVBoxLayout, QWidget
-
-from bec_widgets.utils.bec_connector import ConnectionConfig
 
 # TODO : Put normal imports back when Pydantic gets faster
 BECStatus = lazy_import_from("bec_lib.messages", ("BECStatus",))
@@ -27,39 +22,29 @@ class IconsEnum(enum.Enum):
     NOTCONNECTED = "SP_TitleBarContextHelpButton"
 
 
-class StatusWidgetConfig(ConnectionConfig):
-    """Configuration class for the status item widget."""
-
-    service_name: str
-    status: str
-    info: dict
-    metrics: dict | None
-    icon_size: tuple = Field(default=(24, 24), description="The size of the icon in the widget.")
-    font_size: int = Field(16, description="The font size of the text in the widget.")
-
-
 class StatusItem(QWidget):
     """A widget to display the status of a service.
 
     Args:
         parent: The parent widget.
-        config (dict): The configuration for the service.
+        config (dict): The configuration for the service, must be a BECServiceInfoContainer.
     """
 
-    def __init__(self, parent=None, config: dict = None):
-        if config is None:
-            config = StatusWidgetConfig(widget_class=self.__class__.__name__)
-        else:
-            if isinstance(config, dict):
-                config = StatusWidgetConfig(**config)
-            self.config = config
+    def __init__(self, parent: QWidget = None, config=None):
         QWidget.__init__(self, parent=parent)
+        if config is None:
+            # needed because we need parent to be the first argument for QT Designer
+            raise ValueError(
+                "Please initialize the StatusItem with a BECServiceInfoContainer for config, received None."
+            )
+        self.config = config
         self.parent = parent
         self.layout = None
-        self.config = config
-        self._popup_label_ref = {}
         self._label = None
         self._icon = None
+        self.icon_size = (24, 24)
+
+        self._popup_label_ref = {}
         self.init_ui()
 
     def init_ui(self) -> None:
@@ -74,23 +59,21 @@ class StatusItem(QWidget):
         self.update_ui()
 
     @Slot(dict)
-    def update_config(self, config: dict) -> None:
-        """Update the configuration of the status item widget.
-        This method is invoked from the parent widget.
-        The UI values are later updated based on the new configuration.
+    def update_config(self, config) -> None:
+        """Update the config of the status item widget.
 
         Args:
-            config (dict): Config updates from parent widget.
+            config (dict): Config updates from parent widget, must be a BECServiceInfoContainer.
         """
-        if config["service_name"] != self.config.service_name:
+        if self.config is None or config.service_name != self.config.service_name:
             return
-        self.config.status = config["status"]
-        self.config.info = config["info"]
-        self.config.metrics = config["metrics"]
+        self.config = config
         self.update_ui()
 
     def update_ui(self) -> None:
         """Update the UI of the labels, and popup dialog."""
+        if self.config is None:
+            return
         self.set_text()
         self.set_status()
         self._set_popup_text()
@@ -99,8 +82,8 @@ class StatusItem(QWidget):
         """Set the text of the QLabel basae on the config."""
         service = self.config.service_name
         status = self.config.status
-        if "BECClient" in service.split("/"):
-            service = service.split("/")[0] + "/..." + service.split("/")[1][-4:]
+        if len(service.split("/")) > 1 and service.split("/")[0].startswith("BEC"):
+            service = service.split("/", maxsplit=1)[0] + "/..." + service.split("/")[1][-4:]
         if status == "NOTCONNECTED":
             status = "NOT CONNECTED"
         text = f"{service} is {status}"
@@ -110,7 +93,7 @@ class StatusItem(QWidget):
         """Set the status icon for the status item widget."""
         icon_name = IconsEnum[self.config.status].value
         icon = self.style().standardIcon(getattr(QStyle.StandardPixmap, icon_name))
-        self._icon.setPixmap(icon.pixmap(*self.config.icon_size))
+        self._icon.setPixmap(icon.pixmap(*self.icon_size))
         self._icon.setAlignment(Qt.AlignmentFlag.AlignRight)
 
     def show_popup(self) -> None:
@@ -153,19 +136,3 @@ class StatusItem(QWidget):
     def _cleanup_popup_label(self) -> None:
         """Cleanup the popup label."""
         self._popup_label_ref.clear()
-
-
-def main():
-    """Run the status item widget."""
-    # pylint: disable=import-outside-toplevel
-    from qtpy.QtWidgets import QApplication
-
-    app = QApplication(sys.argv)
-    qdarktheme.setup_theme("auto")
-    main_window = StatusItem()
-    main_window.show()
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    main()
