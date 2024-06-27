@@ -364,6 +364,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         label: str | None = None,
         validate: bool = True,
         dap: str | None = None,
+        config: dict | None = None,  # TODO make logic more transparent
         **axis_kwargs,
     ) -> BECWaveform:
         """
@@ -383,11 +384,16 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             label(str): The label of the curve.
             validate(bool): If True, validate the device names and entries.
             dap(str): The DAP model to use for the curve.
+            config(dict): Recreates the whole BECWaveform widget from provided configuration.
             **axis_kwargs: Additional axis properties to set on the widget after creation.
 
         Returns:
             BECWaveform: The waveform plot widget.
         """
+        if config is not None:
+            waveform = self.add_plot(config=config, **axis_kwargs)
+            return waveform
+
         waveform = WidgetContainerUtils.find_first_widget_by_class(
             self._widgets, BECWaveform, can_fail=True
         )
@@ -756,6 +762,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             self._reindex_grid()
             if widget_id in self.config.widgets:
                 self.config.widgets.pop(widget_id)
+            widget.deleteLater()
         else:
             raise ValueError(f"Widget with ID '{widget_id}' does not exist.")
 
