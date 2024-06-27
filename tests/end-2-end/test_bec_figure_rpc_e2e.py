@@ -10,7 +10,7 @@ from bec_widgets.cli.client import BECFigure, BECImageShow, BECMotorMap, BECWave
 def test_rpc_waveform1d_custom_curve(rpc_server_figure):
     fig = BECFigure(rpc_server_figure)
 
-    ax = fig.add_plot()
+    ax = fig.plot()
     curve = ax.plot(x=[1, 2, 3], y=[1, 2, 3])
     curve.set_color("red")
     curve = ax.curves[0]
@@ -26,7 +26,7 @@ def test_rpc_plotting_shortcuts_init_configs(rpc_server_figure, qtbot):
     plt = fig.plot(x_name="samx", y_name="bpm4i")
     im = fig.image("eiger")
     motor_map = fig.motor_map("samx", "samy")
-    plt_z = fig.add_plot(x_name="samx", y_name="samy", z_name="bpm4i")
+    plt_z = fig.plot(x_name="samx", y_name="samy", z_name="bpm4i", new=True)
 
     # Checking if classes are correctly initialised
     assert len(fig.widgets) == 4

@@ -455,103 +455,6 @@ class BECFigure(RPCBase):
         """
 
     @rpc_call
-    def add_plot(
-        self,
-        x: "list | np.ndarray" = None,
-        y: "list | np.ndarray" = None,
-        x_name: "str" = None,
-        y_name: "str" = None,
-        z_name: "str" = None,
-        x_entry: "str" = None,
-        y_entry: "str" = None,
-        z_entry: "str" = None,
-        color: "Optional[str]" = None,
-        color_map_z: "Optional[str]" = "plasma",
-        label: "Optional[str]" = None,
-        validate: "bool" = True,
-        row: "int" = None,
-        col: "int" = None,
-        config=None,
-        dap: "str | None" = None,
-        **axis_kwargs,
-    ) -> "BECWaveform":
-        """
-        Add a Waveform1D plot to the figure at the specified position.
-
-        Args:
-            x(list | np.ndarray): Custom x data to plot.
-            y(list | np.ndarray): Custom y data to plot.
-            x_name(str): The name of the device for the x-axis.
-            y_name(str): The name of the device for the y-axis.
-            z_name(str): The name of the device for the z-axis.
-            x_entry(str): The name of the entry for the x-axis.
-            y_entry(str): The name of the entry for the y-axis.
-            z_entry(str): The name of the entry for the z-axis.
-            color(str): The color of the curve.
-            color_map_z(str): The color map to use for the z-axis.
-            label(str): The label of the curve.
-            validate(bool): If True, validate the device names and entries.
-            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
-            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
-            config(dict): Additional configuration for the widget.
-            **axis_kwargs(dict): Additional axis properties to set on the widget after creation.
-        """
-
-    @rpc_call
-    def add_image(
-        self,
-        monitor: "str" = None,
-        color_bar: "Literal['simple', 'full']" = "full",
-        color_map: "str" = "magma",
-        data: "np.ndarray" = None,
-        vrange: "tuple[float, float]" = None,
-        row: "int" = None,
-        col: "int" = None,
-        config=None,
-        **axis_kwargs,
-    ) -> "BECImageShow":
-        """
-        Add an image to the figure at the specified position.
-
-        Args:
-            monitor(str): The name of the monitor to display.
-            color_bar(Literal["simple","full"]): The type of color bar to display.
-            color_map(str): The color map to use for the image.
-            data(np.ndarray): Custom data to display.
-            vrange(tuple[float, float]): The range of values to display.
-            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
-            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
-            config(dict): Additional configuration for the widget.
-            **axis_kwargs: Additional axis properties to set on the widget after creation.
-
-        Returns:
-            BECImageShow: The image widget.
-        """
-
-    @rpc_call
-    def add_motor_map(
-        self,
-        motor_x: "str" = None,
-        motor_y: "str" = None,
-        row: "int" = None,
-        col: "int" = None,
-        config=None,
-        **axis_kwargs,
-    ) -> "BECMotorMap":
-        """
-        Args:
-            motor_x(str): The name of the motor for the X axis.
-            motor_y(str): The name of the motor for the Y axis.
-            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
-            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
-            config(dict): Additional configuration for the widget.
-            **axis_kwargs:
-
-        Returns:
-            BECMotorMap: The motor map widget.
-        """
-
-    @rpc_call
     def plot(
         self,
         x: "list | np.ndarray | None" = None,
@@ -566,7 +469,11 @@ class BECFigure(RPCBase):
         color_map_z: "str | None" = "plasma",
         label: "str | None" = None,
         validate: "bool" = True,
+        new: "bool" = False,
+        row: "int | None" = None,
+        col: "int | None" = None,
         dap: "str | None" = None,
+        config: "dict | None" = None,
         **axis_kwargs,
     ) -> "BECWaveform":
         """
@@ -585,7 +492,11 @@ class BECFigure(RPCBase):
             color_map_z(str): The color map to use for the z-axis.
             label(str): The label of the curve.
             validate(bool): If True, validate the device names and entries.
+            new(bool): If True, create a new plot instead of using the first plot.
+            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
+            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
             dap(str): The DAP model to use for the curve.
+            config(dict): Recreates the whole BECWaveform widget from provided configuration.
             **axis_kwargs: Additional axis properties to set on the widget after creation.
 
         Returns:
@@ -600,6 +511,10 @@ class BECFigure(RPCBase):
         color_map: "str" = "magma",
         data: "np.ndarray" = None,
         vrange: "tuple[float, float]" = None,
+        new: "bool" = False,
+        row: "int | None" = None,
+        col: "int | None" = None,
+        config: "dict | None" = None,
         **axis_kwargs,
     ) -> "BECImageShow":
         """
@@ -611,6 +526,10 @@ class BECFigure(RPCBase):
             color_map(str): The color map to use for the image.
             data(np.ndarray): Custom data to display.
             vrange(tuple[float, float]): The range of values to display.
+            new(bool): If True, create a new plot instead of using the first plot.
+            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
+            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
+            config(dict): Recreates the whole BECImageShow widget from provided configuration.
             **axis_kwargs: Additional axis properties to set on the widget after creation.
 
         Returns:

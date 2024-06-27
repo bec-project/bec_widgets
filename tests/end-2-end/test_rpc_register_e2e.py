@@ -9,7 +9,7 @@ def test_rpc_register_list_connections(rpc_server_figure):
     plt = fig.plot(x_name="samx", y_name="bpm4i")
     im = fig.image("eiger")
     motor_map = fig.motor_map("samx", "samy")
-    plt_z = fig.add_plot(x_name="samx", y_name="samy", z_name="bpm4i")
+    plt_z = fig.plot(x_name="samx", y_name="samy", z_name="bpm4i", new=True)
 
     # keep only class names from objects, since objects on server and client are different
     # so the best we can do is to compare types (rpc register is unit-tested elsewhere)
