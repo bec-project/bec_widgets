@@ -1,10 +1,10 @@
 import inspect
 import os
 import re
-from unittest import mock
 
 from qtpy.QtCore import QObject
-from qtpy.QtWidgets import QWidget
+
+EXCLUDED_PLUGINS = ["BECConnector", "BECDockArea", "BECDock"]
 
 
 class DesignerPluginInfo:
@@ -45,7 +45,13 @@ class DesignerPluginInfo:
 
 class DesignerPluginGenerator:
     def __init__(self, widget: type):
+        self._excluded = False
         self.widget = widget
+        if widget.__name__ in EXCLUDED_PLUGINS:
+
+            self._excluded = True
+            return
+
         self.info = DesignerPluginInfo(widget)
 
         self.templates = {}
@@ -54,6 +60,9 @@ class DesignerPluginGenerator:
         )
 
     def run(self):
+        if self._excluded:
+            print(f"Plugin {self.widget.__name__} is excluded from generation.")
+            return
         self._check_class_validity()
         self._load_templates()
         self._write_templates()
@@ -132,7 +141,7 @@ class DesignerPluginGenerator:
 
 if __name__ == "__main__":
     # from bec_widgets.widgets.bec_queue.bec_queue import BECQueue
-    from bec_widgets.widgets.ring_progress_bar.ring_progress_bar import RingProgressBar
+    from bec_widgets.widgets.dock import BECDockArea
 
-    generator = DesignerPluginGenerator(RingProgressBar)
+    generator = DesignerPluginGenerator(BECDockArea)
     generator.run()
