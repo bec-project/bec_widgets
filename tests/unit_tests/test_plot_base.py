@@ -9,14 +9,14 @@ from .test_bec_figure import bec_figure
 
 
 def test_init_plot_base(bec_figure):
-    plot_base = bec_figure.add_widget(widget_type="PlotBase", widget_id="test_plot")
+    plot_base = bec_figure.add_widget(widget_type="BECPlotBase", widget_id="test_plot")
     assert plot_base is not None
     assert plot_base.config.widget_class == "BECPlotBase"
     assert plot_base.config.gui_id == "test_plot"
 
 
 def test_plot_base_axes_by_separate_methods(bec_figure):
-    plot_base = bec_figure.add_widget(widget_type="PlotBase", widget_id="test_plot")
+    plot_base = bec_figure.add_widget(widget_type="BECPlotBase", widget_id="test_plot")
 
     plot_base.set_title("Test Title")
     plot_base.set_x_label("Test x Label")
@@ -66,7 +66,7 @@ def test_plot_base_axes_by_separate_methods(bec_figure):
 
 
 def test_plot_base_axes_added_by_kwargs(bec_figure):
-    plot_base = bec_figure.add_widget(widget_type="PlotBase", widget_id="test_plot")
+    plot_base = bec_figure.add_widget(widget_type="BECPlotBase", widget_id="test_plot")
 
     plot_base.set(
         title="Test Title",

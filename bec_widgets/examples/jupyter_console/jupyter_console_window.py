@@ -40,6 +40,10 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "w1": self.w1,
                     "w2": self.w2,
                     "w3": self.w3,
+                    "w1_c": self.w1_c,
+                    "w2_c": self.w2_c,
+                    "w3_c": self.w3_c,
+                    "w4": self.w4,
                     "d0": self.d0,
                     "d1": self.d1,
                     "d2": self.d2,
@@ -75,13 +79,31 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.figure.plot(x_name="samx", y_name="samy", z_name="bpm4i", color_map_z="cividis")
         self.figure.motor_map("samx", "samy")
         self.figure.image("eiger", color_map="viridis", vrange=(0, 100))
-        self.figure.add_plot(x_name="samx", y_name="samy", z_name="bpm4i", color_map_z="magma")
+        self.figure.plot(
+            x_name="samx", y_name="samy", z_name="bpm4i", color_map_z="magma", new=True
+        )
 
         self.figure.change_layout(2, 2)
 
         self.w1 = self.figure[0, 0]
         self.w2 = self.figure[0, 1]
         self.w3 = self.figure[1, 0]
+        self.w4 = self.figure[1, 1]
+
+        # Plot Customisation
+        self.w1.set_title("Waveform 1")
+        self.w1.set_x_label("Motor Position (samx)")
+        self.w1.set_y_label("Intensity A.U.")
+
+        # Image Customisation
+        self.w3.set_title("Eiger Image")
+        self.w3.set_x_label("X")
+        self.w3.set_y_label("Y")
+
+        # Configs to try to pass
+        self.w1_c = self.w1.config_dict
+        self.w2_c = self.w2.config_dict
+        self.w3_c = self.w3.config_dict
 
         # curves for w1
         self.c1 = self.w1.get_config()

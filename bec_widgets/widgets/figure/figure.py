@@ -36,10 +36,10 @@ class WidgetHandler:
 
     def __init__(self):
         self.widget_factory = {
-            "PlotBase": (BECPlotBase, SubplotConfig),
-            "Waveform1D": (BECWaveform, Waveform1DConfig),
-            "ImShow": (BECImageShow, ImageConfig),
-            "MotorMap": (BECMotorMap, MotorMapConfig),
+            "BECPlotBase": (BECPlotBase, SubplotConfig),
+            "BECWaveform": (BECWaveform, Waveform1DConfig),
+            "BECImageShow": (BECImageShow, ImageConfig),
+            "BECMotorMap": (BECMotorMap, MotorMapConfig),
         }
 
     def create_widget(
@@ -94,9 +94,6 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         "config_dict",
         "axes",
         "widgets",
-        "add_plot",
-        "add_image",
-        "add_motor_map",
         "plot",
         "image",
         "motor_map",
@@ -107,6 +104,12 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         "get_all_rpc",
         "widget_list",
     ]
+    subplot_map = {
+        "PlotBase": BECPlotBase,
+        "BECWaveform": BECWaveform,
+        "BECImageShow": BECImageShow,
+        "BECMotorMap": BECMotorMap,
+    }
 
     clean_signal = pyqtSignal()
 
@@ -200,7 +203,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         label: str | None = None,
         validate: bool = True,
         dap: str | None = None,
-    ):
+    ) -> BECWaveform:
         """
         Configure the waveform based on the provided parameters.
 
@@ -279,75 +282,6 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
         return waveform
 
-    def add_plot(
-        self,
-        x: list | np.ndarray = None,
-        y: list | np.ndarray = None,
-        x_name: str = None,
-        y_name: str = None,
-        z_name: str = None,
-        x_entry: str = None,
-        y_entry: str = None,
-        z_entry: str = None,
-        color: Optional[str] = None,
-        color_map_z: Optional[str] = "plasma",
-        label: Optional[str] = None,
-        validate: bool = True,
-        row: int = None,
-        col: int = None,
-        config=None,
-        dap: str | None = None,
-        **axis_kwargs,
-    ) -> BECWaveform:
-        """
-        Add a Waveform1D plot to the figure at the specified position.
-
-        Args:
-            x(list | np.ndarray): Custom x data to plot.
-            y(list | np.ndarray): Custom y data to plot.
-            x_name(str): The name of the device for the x-axis.
-            y_name(str): The name of the device for the y-axis.
-            z_name(str): The name of the device for the z-axis.
-            x_entry(str): The name of the entry for the x-axis.
-            y_entry(str): The name of the entry for the y-axis.
-            z_entry(str): The name of the entry for the z-axis.
-            color(str): The color of the curve.
-            color_map_z(str): The color map to use for the z-axis.
-            label(str): The label of the curve.
-            validate(bool): If True, validate the device names and entries.
-            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
-            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
-            config(dict): Additional configuration for the widget.
-            **axis_kwargs(dict): Additional axis properties to set on the widget after creation.
-        """
-        widget_id = str(uuid.uuid4())
-        waveform = self.add_widget(
-            widget_type="Waveform1D",
-            widget_id=widget_id,
-            row=row,
-            col=col,
-            config=config,
-            **axis_kwargs,
-        )
-
-        waveform = self._init_waveform(
-            waveform=waveform,
-            x=x,
-            y=y,
-            x_name=x_name,
-            y_name=y_name,
-            z_name=z_name,
-            x_entry=x_entry,
-            y_entry=y_entry,
-            z_entry=z_entry,
-            color=color,
-            color_map_z=color_map_z,
-            label=label,
-            validate=validate,
-            dap=dap,
-        )
-        return waveform
-
     @typechecked
     def plot(
         self,
@@ -363,6 +297,9 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         color_map_z: str | None = "plasma",
         label: str | None = None,
         validate: bool = True,
+        new: bool = False,
+        row: int | None = None,
+        col: int | None = None,
         dap: str | None = None,
         config: dict | None = None,  # TODO make logic more transparent
         **axis_kwargs,
@@ -383,6 +320,9 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             color_map_z(str): The color map to use for the z-axis.
             label(str): The label of the curve.
             validate(bool): If True, validate the device names and entries.
+            new(bool): If True, create a new plot instead of using the first plot.
+            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
+            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
             dap(str): The DAP model to use for the curve.
             config(dict): Recreates the whole BECWaveform widget from provided configuration.
             **axis_kwargs: Additional axis properties to set on the widget after creation.
@@ -390,19 +330,13 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         Returns:
             BECWaveform: The waveform plot widget.
         """
+        waveform = self.subplot_factory(
+            widget_type="BECWaveform", config=config, row=row, col=col, new=new, **axis_kwargs
+        )
         if config is not None:
-            waveform = self.add_plot(config=config, **axis_kwargs)
             return waveform
 
-        waveform = WidgetContainerUtils.find_first_widget_by_class(
-            self._widgets, BECWaveform, can_fail=True
-        )
-        if waveform is not None:
-            if axis_kwargs:
-                waveform.set(**axis_kwargs)
-        else:
-            waveform = self.add_plot(**axis_kwargs)
-
+        # Passing args to init_waveform
         waveform = self._init_waveform(
             waveform=waveform,
             x=x,
@@ -419,7 +353,6 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             validate=validate,
             dap=dap,
         )
-        # TODO remove repetition from .plot method
         return waveform
 
     def _init_image(
@@ -466,6 +399,10 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         color_map: str = "magma",
         data: np.ndarray = None,
         vrange: tuple[float, float] = None,
+        new: bool = False,
+        row: int | None = None,
+        col: int | None = None,
+        config: dict | None = None,
         **axis_kwargs,
     ) -> BECImageShow:
         """
@@ -477,78 +414,22 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             color_map(str): The color map to use for the image.
             data(np.ndarray): Custom data to display.
             vrange(tuple[float, float]): The range of values to display.
-            **axis_kwargs: Additional axis properties to set on the widget after creation.
-
-        Returns:
-            BECImageShow: The image widget.
-        """
-        image = WidgetContainerUtils.find_first_widget_by_class(
-            self._widgets, BECImageShow, can_fail=True
-        )
-        if image is not None:
-            if axis_kwargs:
-                image.set(**axis_kwargs)
-        else:
-            image = self.add_image(color_bar=color_bar, **axis_kwargs)
-
-        image = self._init_image(
-            image=image,
-            monitor=monitor,
-            color_bar=color_bar,
-            color_map=color_map,
-            data=data,
-            vrange=vrange,
-        )
-        return image
-
-    def add_image(
-        self,
-        monitor: str = None,
-        color_bar: Literal["simple", "full"] = "full",
-        color_map: str = "magma",
-        data: np.ndarray = None,
-        vrange: tuple[float, float] = None,
-        row: int = None,
-        col: int = None,
-        config=None,
-        **axis_kwargs,
-    ) -> BECImageShow:
-        """
-        Add an image to the figure at the specified position.
-
-        Args:
-            monitor(str): The name of the monitor to display.
-            color_bar(Literal["simple","full"]): The type of color bar to display.
-            color_map(str): The color map to use for the image.
-            data(np.ndarray): Custom data to display.
-            vrange(tuple[float, float]): The range of values to display.
+            new(bool): If True, create a new plot instead of using the first plot.
             row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
             col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
-            config(dict): Additional configuration for the widget.
+            config(dict): Recreates the whole BECImageShow widget from provided configuration.
             **axis_kwargs: Additional axis properties to set on the widget after creation.
 
         Returns:
             BECImageShow: The image widget.
         """
 
-        widget_id = str(uuid.uuid4())
-        if config is None:
-            config = ImageConfig(
-                widget_class="BECImageShow",
-                gui_id=widget_id,
-                parent_id=self.gui_id,
-                color_map=color_map,
-                color_bar=color_bar,
-                vrange=vrange,
-            )
-        image = self.add_widget(
-            widget_type="ImShow",
-            widget_id=widget_id,
-            row=row,
-            col=col,
-            config=config,
-            **axis_kwargs,
+        image = self.subplot_factory(
+            widget_type="BECImageShow", config=config, row=row, col=col, new=new, **axis_kwargs
         )
+        if config is not None:
+            return image
+
         image = self._init_image(
             image=image,
             monitor=monitor,
@@ -559,76 +440,100 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         )
         return image
 
-    def motor_map(self, motor_x: str = None, motor_y: str = None, **axis_kwargs) -> BECMotorMap:
+    def motor_map(
+        self,
+        motor_x: str = None,
+        motor_y: str = None,
+        new: bool = False,
+        row: int | None = None,
+        col: int | None = None,
+        config: dict | None = None,
+        **axis_kwargs,
+    ) -> BECMotorMap:
         """
         Add a motor map to the figure. Always access the first motor map widget in the figure.
 
         Args:
             motor_x(str): The name of the motor for the X axis.
             motor_y(str): The name of the motor for the Y axis.
+            new(bool): If True, create a new plot instead of using the first plot.
+            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
+            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
+            config(dict): Recreates the whole BECImageShow widget from provided configuration.
             **axis_kwargs: Additional axis properties to set on the widget after creation.
 
         Returns:
             BECMotorMap: The motor map widget.
         """
-        motor_map = WidgetContainerUtils.find_first_widget_by_class(
-            self._widgets, BECMotorMap, can_fail=True
+        motor_map = self.subplot_factory(
+            widget_type="BECMotorMap", config=config, row=row, col=col, new=new, **axis_kwargs
         )
-        if motor_map is not None:
-            if axis_kwargs:
-                motor_map.set(**axis_kwargs)
-        else:
-            motor_map = self.add_motor_map(**axis_kwargs)
+        if config is not None:
+            return motor_map
 
         if motor_x is not None and motor_y is not None:
             motor_map.change_motors(motor_x, motor_y)
 
         return motor_map
 
-    def add_motor_map(
+    def subplot_factory(
         self,
-        motor_x: str = None,
-        motor_y: str = None,
+        widget_type: Literal[
+            "BECPlotBase", "BECWaveform", "BECImageShow", "BECMotorMap"
+        ] = "BECPlotBase",
         row: int = None,
         col: int = None,
         config=None,
+        new: bool = False,
         **axis_kwargs,
-    ) -> BECMotorMap:
-        """
-
-        Args:
-            motor_x(str): The name of the motor for the X axis.
-            motor_y(str): The name of the motor for the Y axis.
-            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
-            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
-            config(dict): Additional configuration for the widget.
-            **axis_kwargs:
-
-        Returns:
-            BECMotorMap: The motor map widget.
-        """
-        widget_id = str(uuid.uuid4())
-        if config is None:
-            config = MotorMapConfig(
-                widget_class="BECMotorMap", gui_id=widget_id, parent_id=self.gui_id
+    ) -> BECPlotBase:
+        # Case 1 - config provided, new plot, possible to define coordinates
+        if config is not None:
+            widget_cls = config["widget_class"]
+            if widget_cls != widget_type:
+                raise ValueError(
+                    f"Widget type '{widget_type}' does not match the provided configuration ({widget_cls})."
+                )
+            widget = self.add_widget(
+                widget_type=widget_type, config=config, row=row, col=col, **axis_kwargs
             )
-        motor_map = self.add_widget(
-            widget_type="MotorMap",
-            widget_id=widget_id,
-            row=row,
-            col=col,
-            config=config,
-            **axis_kwargs,
-        )
+            return widget
 
-        if motor_x is not None and motor_y is not None:
-            motor_map.change_motors(motor_x, motor_y)
+        # Case 2 - find first plot or create first plot if no plot available, no config provided, no coordinates
+        if new is False and (row is None or col is None):
+            widget = WidgetContainerUtils.find_first_widget_by_class(
+                self._widgets, self.subplot_map[widget_type], can_fail=True
+            )
+            if widget is not None:
+                if axis_kwargs:
+                    widget.set(**axis_kwargs)
+            else:
+                widget = self.add_widget(widget_type=widget_type, **axis_kwargs)
+            return widget
 
-        return motor_map
+        # Case 3 - modifying existing plot wit coordinates provided
+        elif new is False and (row is not None and col is not None):
+            try:
+                widget = self.axes(row, col)
+            except ValueError:
+                widget = None
+            if widget is not None:
+                if axis_kwargs:
+                    widget.set(**axis_kwargs)
+            else:
+                widget = self.add_widget(widget_type=widget_type, row=row, col=col, **axis_kwargs)
+            return widget
+
+        # Case 4 - no previous plot or new plot, no config provided, possible to define coordinates
+        else:
+            widget = self.add_widget(widget_type=widget_type, row=row, col=col, **axis_kwargs)
+            return widget
 
     def add_widget(
         self,
-        widget_type: Literal["PlotBase", "Waveform1D", "ImShow"] = "PlotBase",
+        widget_type: Literal[
+            "BECPlotBase", "BECWaveform", "BECImageShow", "BECMotorMap"
+        ] = "BECPlotBase",
         widget_id: str = None,
         row: int = None,
         col: int = None,
@@ -659,6 +564,9 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             config=config,
             **axis_kwargs,
         )
+        # has to be changed manually to ensure unique id, if config is copied from existing widget, the id could be
+        # used otherwise multiple times
+        widget.set_gui_id(widget_id)
 
         # Check if position is occupied
         if row is not None and col is not None:

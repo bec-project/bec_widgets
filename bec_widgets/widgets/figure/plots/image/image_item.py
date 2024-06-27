@@ -78,6 +78,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
         self.apply_config()
         if kwargs:
             self.set(**kwargs)
+        self.connected = False
 
     def apply_config(self):
         """

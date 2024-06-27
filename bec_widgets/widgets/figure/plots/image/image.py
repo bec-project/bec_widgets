@@ -138,7 +138,8 @@ class BECImageShow(BECPlotBase):
         self.apply_axis_config()
         self._images = defaultdict(dict)
 
-        # TODO extend by adding image by config
+        for image_id, image_config in config.images.items():
+            self.add_image_by_config(image_config)
 
     def change_gui_id(self, new_gui_id: str):
         """
@@ -241,7 +242,7 @@ class BECImageShow(BECPlotBase):
                 f"Monitor with ID '{monitor}' already exists in widget '{self.gui_id}'."
             )
 
-        monitor = self.entry_validator.validate_monitor(monitor)
+        # monitor = self.entry_validator.validate_monitor(monitor)
 
         image_config = ImageItemConfig(
             widget_class="BECImageItem",
@@ -251,12 +252,13 @@ class BECImageShow(BECPlotBase):
             downsample=downsample,
             opacity=opacity,
             vrange=vrange,
+            source=image_source,
+            monitor=monitor,
             # post_processing=post_processing,
             **kwargs,
         )
 
         image = self._add_image_object(source=image_source, name=monitor, config=image_config)
-        self._connect_device_monitor(monitor)
         return image
 
     def add_custom_image(
@@ -290,7 +292,9 @@ class BECImageShow(BECPlotBase):
             **kwargs,
         )
 
-        image = self._add_image_object(source=image_source, config=image_config, data=data)
+        image = self._add_image_object(
+            source=image_source, name=name, config=image_config, data=data
+        )
         return image
 
     def apply_setting_to_images(
@@ -516,16 +520,18 @@ class BECImageShow(BECPlotBase):
             previous_monitor = image_item.config.monitor
         except AttributeError:
             previous_monitor = None
-        if previous_monitor != monitor:
-            if previous_monitor:
-                self.bec_dispatcher.disconnect_slot(
-                    self.on_image_update, MessageEndpoints.device_monitor(previous_monitor)
-                )
-            if monitor:
-                self.bec_dispatcher.connect_slot(
-                    self.on_image_update, MessageEndpoints.device_monitor(monitor)
-                )
-                image_item.set_monitor(monitor)
+        if previous_monitor and image_item.connected is True:
+            self.bec_dispatcher.disconnect_slot(
+                self.on_image_update, MessageEndpoints.device_monitor(previous_monitor)
+            )
+            image_item.connected = False
+        if monitor and image_item.connected is False:
+            self.entry_validator.validate_monitor(monitor)
+            self.bec_dispatcher.connect_slot(
+                self.on_image_update, MessageEndpoints.device_monitor(monitor)
+            )
+            image_item.set_monitor(monitor)
+            image_item.connected = True
 
     def _add_image_object(
         self, source: str, name: str, config: ImageItemConfig, data=None
@@ -534,6 +540,8 @@ class BECImageShow(BECPlotBase):
         image = BECImageItem(config=config, parent_image=self)
         self.plot_item.addItem(image)
         self._images[source][name] = image
+        if source == "device_monitor":
+            self._connect_device_monitor(config.monitor)
         self.config.images[name] = config
         if data is not None:
             image.setImage(data)
@@ -557,23 +565,6 @@ class BECImageShow(BECPlotBase):
                 if self._check_image_id(val, dict_to_check[key]):
                     return True
         return False
-
-    def _validate_monitor(self, monitor: str, validate_bec: bool = True):
-        """
-        Validate the monitor name.
-
-        Args:
-            monitor(str): The name of the monitor.
-            validate_bec(bool): Whether to validate the monitor name with BEC.
-
-        Returns:
-            bool: True if the monitor name is valid, False otherwise.
-        """
-        if not monitor or monitor == "":
-            return False
-        if validate_bec:
-            return monitor in self.dev
-        return True
 
     def cleanup(self):
         """
