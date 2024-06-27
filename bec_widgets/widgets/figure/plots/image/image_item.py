@@ -20,7 +20,7 @@ class ImageItemConfig(ConnectionConfig):
     color_map: Optional[str] = Field("magma", description="The color map of the image.")
     downsample: Optional[bool] = Field(True, description="Whether to downsample the image.")
     opacity: Optional[float] = Field(1.0, description="The opacity of the image.")
-    vrange: Optional[tuple[float, float]] = Field(
+    vrange: Optional[tuple[float | int, float | int]] = Field(
         None, description="The range of the color bar. If None, the range is automatically set."
     )
     color_bar: Optional[Literal["simple", "full"]] = Field(
