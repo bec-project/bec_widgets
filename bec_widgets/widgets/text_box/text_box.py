@@ -31,7 +31,7 @@ class TextBox(BECConnector, QTextEdit):
 
     USER_ACCESS = ["set_color", "set_text", "set_font_size"]
 
-    def __init__(self, text: str = "", parent=None, client=None, config=None, gui_id=None):
+    def __init__(self, parent=None, text: str = "", client=None, config=None, gui_id=None):
         if config is None:
             config = TextBoxConfig(widget_class=self.__class__.__name__)
         else:

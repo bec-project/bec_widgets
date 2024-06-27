@@ -21,7 +21,7 @@ class WebsiteWidget(BECConnector, QWebEngineView):
 
     USER_ACCESS = ["set_url", "get_url", "reload", "back", "forward"]
 
-    def __init__(self, url: str = None, parent=None, config=None, client=None, gui_id=None):
+    def __init__(self, parent=None, url: str = None, config=None, client=None, gui_id=None):
         super().__init__(client=client, config=config, gui_id=gui_id)
         QWebEngineView.__init__(self, parent=parent)
         self.set_url(url)
