@@ -227,7 +227,7 @@ class BECImageShow(BECPlotBase):
         self,
         monitor: str,
         color_map: Optional[str] = "magma",
-        color_bar: Optional[Literal["simple", "full"]] = "simple",
+        color_bar: Optional[Literal["simple", "full"]] = "full",
         downsample: Optional[bool] = True,
         opacity: Optional[float] = 1.0,
         vrange: Optional[tuple[int, int]] = None,
@@ -266,16 +266,17 @@ class BECImageShow(BECPlotBase):
         name: str,
         data: Optional[np.ndarray] = None,
         color_map: Optional[str] = "magma",
-        color_bar: Optional[Literal["simple", "full"]] = "simple",
+        color_bar: Optional[Literal["simple", "full"]] = "full",
         downsample: Optional[bool] = True,
         opacity: Optional[float] = 1.0,
         vrange: Optional[tuple[int, int]] = None,
         # post_processing: Optional[PostProcessingConfig] = None,
         **kwargs,
     ):
-        image_source = "device_monitor"
+        image_source = "custom"
+        # image_source = "device_monitor"
 
-        image_exits = self._check_curve_id(name, self._images)
+        image_exits = self._check_image_id(name, self._images)
         if image_exits:
             raise ValueError(f"Monitor with ID '{name}' already exists in widget '{self.gui_id}'.")
 
