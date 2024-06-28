@@ -84,6 +84,7 @@ class DMMock:
 DEVICES = [
     FakePositioner("samx", limits=[-10, 10], read_value=2.0),
     FakePositioner("samy", limits=[-5, 5], read_value=3.0),
+    FakePositioner("samz", limits=[-8, 8], read_value=4.0),
     FakePositioner("aptrx", limits=None, read_value=4.0),
     FakePositioner("aptry", limits=None, read_value=5.0),
     FakeDevice("gauss_bpm"),

@@ -1,100 +1,106 @@
+import numpy as np
 import pytest
 
 from bec_widgets.widgets.figure.plots.motor_map.motor_map import BECMotorMap, MotorMapConfig
 from bec_widgets.widgets.figure.plots.waveform.waveform_curve import SignalData
 
 from .client_mocks import mocked_client
+from .test_bec_figure import bec_figure
 
 
-@pytest.fixture(scope="function")
-def bec_motor_map(qtbot, mocked_client):
-    widget = BECMotorMap(client=mocked_client, gui_id="BECMotorMap_test")
-    # qtbot.addWidget(widget)
-    # qtbot.waitExposed(widget)
-    yield widget
+def test_motor_map_init(bec_figure):
+    default_config = MotorMapConfig(widget_class="BECMotorMap")
+
+    mm = bec_figure.motor_map(config=default_config.model_dump())
+    default_config.gui_id = mm.gui_id
+
+    assert mm.config == default_config
 
 
-def test_motor_map_init(bec_motor_map):
-    default_config = MotorMapConfig(widget_class="BECMotorMap", gui_id="BECMotorMap_test")
+def test_motor_map_change_motors(bec_figure):
+    mm = bec_figure.motor_map("samx", "samy")
 
-    assert bec_motor_map.config == default_config
+    assert mm.motor_x == "samx"
+    assert mm.motor_y == "samy"
+    assert mm.config.signals.x == SignalData(name="samx", entry="samx", limits=[-10, 10])
+    assert mm.config.signals.y == SignalData(name="samy", entry="samy", limits=[-5, 5])
+
+    mm.change_motors("samx", "samz")
+
+    assert mm.config.signals.x == SignalData(name="samx", entry="samx", limits=[-10, 10])
+    assert mm.config.signals.y == SignalData(name="samz", entry="samz", limits=[-8, 8])
 
 
-def test_motor_map_change_motors(bec_motor_map):
-    bec_motor_map.change_motors("samx", "samy")
-
-    assert bec_motor_map.config.signals.x == SignalData(name="samx", entry="samx", limits=[-10, 10])
-    assert bec_motor_map.config.signals.y == SignalData(name="samy", entry="samy", limits=[-5, 5])
-
-
-def test_motor_map_get_limits(bec_motor_map):
+def test_motor_map_get_limits(bec_figure):
+    mm = bec_figure.motor_map("samx", "samy")
     expected_limits = {"samx": [-10, 10], "samy": [-5, 5]}
 
     for motor_name, expected_limit in expected_limits.items():
-        actual_limit = bec_motor_map._get_motor_limit(motor_name)
+        actual_limit = mm._get_motor_limit(motor_name)
         assert actual_limit == expected_limit
 
 
-def test_motor_map_get_init_position(bec_motor_map):
-    bec_motor_map.set_precision(2)
+def test_motor_map_get_init_position(bec_figure):
+    mm = bec_figure.motor_map("samx", "samy")
+    mm.set_precision(2)
 
-    motor_map_dev = bec_motor_map.client.device_manager.devices
+    motor_map_dev = mm.client.device_manager.devices
 
     expected_positions = {
         ("samx", "samx"): motor_map_dev["samx"].read()["samx"]["value"],
         ("samy", "samy"): motor_map_dev["samy"].read()["samy"]["value"],
-        ("aptrx", "aptrx"): motor_map_dev["aptrx"].read()["aptrx"]["value"],
-        ("aptry", "aptry"): motor_map_dev["aptry"].read()["aptry"]["value"],
     }
 
     for (motor_name, entry), expected_position in expected_positions.items():
-        actual_position = bec_motor_map._get_motor_init_position(motor_name, entry, 2)
+        actual_position = mm._get_motor_init_position(motor_name, entry, 2)
         assert actual_position == expected_position
 
 
-def test_motor_movement_updates_position_and_database(bec_motor_map):
-    motor_map_dev = bec_motor_map.client.device_manager.devices
+def test_motor_movement_updates_position_and_database(bec_figure):
+    mm = bec_figure.motor_map("samx", "samy")
+    motor_map_dev = mm.client.device_manager.devices
 
     init_positions = {
         "samx": [motor_map_dev["samx"].read()["samx"]["value"]],
         "samy": [motor_map_dev["samy"].read()["samy"]["value"]],
     }
 
-    bec_motor_map.change_motors("samx", "samy")
+    mm.change_motors("samx", "samy")
 
-    assert bec_motor_map.database_buffer["x"] == init_positions["samx"]
-    assert bec_motor_map.database_buffer["y"] == init_positions["samy"]
+    assert mm.database_buffer["x"] == init_positions["samx"]
+    assert mm.database_buffer["y"] == init_positions["samy"]
 
     # Simulate motor movement for 'samx' only
     new_position_samx = 4.0
-    bec_motor_map.on_device_readback({"signals": {"samx": {"value": new_position_samx}}})
+    mm.on_device_readback({"signals": {"samx": {"value": new_position_samx}}})
 
     init_positions["samx"].append(new_position_samx)
     init_positions["samy"].append(init_positions["samy"][-1])
     # Verify database update for 'samx'
-    assert bec_motor_map.database_buffer["x"] == init_positions["samx"]
+    assert mm.database_buffer["x"] == init_positions["samx"]
 
     # Verify 'samy' retains its last known position
-    assert bec_motor_map.database_buffer["y"] == init_positions["samy"]
+    assert mm.database_buffer["y"] == init_positions["samy"]
 
 
-def test_scatter_plot_rendering(bec_motor_map):
-    motor_map_dev = bec_motor_map.client.device_manager.devices
+def test_scatter_plot_rendering(bec_figure):
+    mm = bec_figure.motor_map("samx", "samy")
+    motor_map_dev = mm.client.device_manager.devices
 
     init_positions = {
         "samx": [motor_map_dev["samx"].read()["samx"]["value"]],
         "samy": [motor_map_dev["samy"].read()["samy"]["value"]],
     }
 
-    bec_motor_map.change_motors("samx", "samy")
+    mm.change_motors("samx", "samy")
 
     # Simulate motor movement for 'samx' only
     new_position_samx = 4.0
-    bec_motor_map.on_device_readback({"signals": {"samx": {"value": new_position_samx}}})
-    bec_motor_map._update_plot()
+    mm.on_device_readback({"signals": {"samx": {"value": new_position_samx}}})
+    mm._update_plot()
 
     # Get the scatter plot item
-    scatter_plot_item = bec_motor_map.plot_components["scatter"]
+    scatter_plot_item = mm.plot_components["scatter"]
 
     # Check the scatter plot item properties
     assert len(scatter_plot_item.data) > 0, "Scatter plot data is empty"
@@ -106,16 +112,148 @@ def test_scatter_plot_rendering(bec_motor_map):
     ), "Scatter plot Y data should retain last known position"
 
 
-def test_plot_visualization_consistency(bec_motor_map):
-    bec_motor_map.change_motors("samx", "samy")
+def test_plot_visualization_consistency(bec_figure):
+    mm = bec_figure.motor_map("samx", "samy")
+    mm.change_motors("samx", "samy")
     # Simulate updating the plot with new data
-    bec_motor_map.on_device_readback({"signals": {"samx": {"value": 5}}})
-    bec_motor_map.on_device_readback({"signals": {"samy": {"value": 9}}})
-    bec_motor_map._update_plot()
+    mm.on_device_readback({"signals": {"samx": {"value": 5}}})
+    mm.on_device_readback({"signals": {"samy": {"value": 9}}})
+    mm._update_plot()
 
-    scatter_plot_item = bec_motor_map.plot_components["scatter"]
+    scatter_plot_item = mm.plot_components["scatter"]
 
     # Check if the scatter plot reflects the new data correctly
     assert (
         scatter_plot_item.data["x"][-1] == 5 and scatter_plot_item.data["y"][-1] == 9
     ), "Plot not updated correctly with new data"
+
+
+def test_change_background_value(bec_figure, qtbot):
+    mm = bec_figure.motor_map("samx", "samy")
+
+    assert mm.config.background_value == 25
+    assert np.all(mm.plot_components["limit_map"].image == 25.0)
+
+    mm.set_background_value(50)
+    qtbot.wait(200)
+
+    assert mm.config.background_value == 50
+    assert np.all(mm.plot_components["limit_map"].image == 50.0)
+
+
+def test_motor_map_init_from_config(bec_figure):
+    config = {
+        "widget_class": "BECMotorMap",
+        "gui_id": "mm_id",
+        "parent_id": bec_figure.gui_id,
+        "row": 0,
+        "col": 0,
+        "axis": {
+            "title": "Motor position: (-0.0, 0.0)",
+            "title_size": None,
+            "x_label": "Motor X (samx)",
+            "x_label_size": None,
+            "y_label": "Motor Y (samy)",
+            "y_label_size": None,
+            "legend_label_size": None,
+            "x_scale": "linear",
+            "y_scale": "linear",
+            "x_lim": None,
+            "y_lim": None,
+            "x_grid": True,
+            "y_grid": True,
+        },
+        "signals": {
+            "source": "device_readback",
+            "x": {
+                "name": "samx",
+                "entry": "samx",
+                "unit": None,
+                "modifier": None,
+                "limits": [-10.0, 10.0],
+            },
+            "y": {
+                "name": "samy",
+                "entry": "samy",
+                "unit": None,
+                "modifier": None,
+                "limits": [-5.0, 5.0],
+            },
+            "z": None,
+            "dap": None,
+        },
+        "color": (255, 255, 255, 255),
+        "scatter_size": 5,
+        "max_points": 50,
+        "num_dim_points": 10,
+        "precision": 5,
+        "background_value": 50,
+    }
+    mm = bec_figure.motor_map(config=config)
+    config["gui_id"] = mm.gui_id
+
+    assert mm.config_dict == config
+
+
+def test_motor_map_set_scatter_size(bec_figure, qtbot):
+    mm = bec_figure.motor_map("samx", "samy")
+
+    assert mm.config.scatter_size == 5
+    assert mm.plot_components["scatter"].opts["size"] == 5
+
+    mm.set_scatter_size(10)
+    qtbot.wait(200)
+
+    assert mm.config.scatter_size == 10
+    assert mm.plot_components["scatter"].opts["size"] == 10
+
+
+def test_motor_map_change_precision(bec_figure):
+    mm = bec_figure.motor_map("samx", "samy")
+
+    assert mm.config.precision == 2
+    mm.set_precision(10)
+    assert mm.config.precision == 10
+
+
+def test_motor_map_set_color(bec_figure, qtbot):
+    mm = bec_figure.motor_map("samx", "samy")
+
+    assert mm.config.color == (255, 255, 255, 255)
+
+    mm.set_color((0, 0, 0, 255))
+    qtbot.wait(200)
+    assert mm.config.color == (0, 0, 0, 255)
+
+
+def test_motor_map_get_data_max_points(bec_figure, qtbot):
+    mm = bec_figure.motor_map("samx", "samy")
+    motor_map_dev = mm.client.device_manager.devices
+
+    init_positions = {
+        "samx": [motor_map_dev["samx"].read()["samx"]["value"]],
+        "samy": [motor_map_dev["samy"].read()["samy"]["value"]],
+    }
+    mm.on_device_readback({"signals": {"samx": {"value": 5.0}}})
+    mm.on_device_readback({"signals": {"samy": {"value": 9.0}}})
+    mm.on_device_readback({"signals": {"samx": {"value": 6.0}}})
+    mm.on_device_readback({"signals": {"samy": {"value": 7.0}}})
+
+    expected_x = [init_positions["samx"][-1], 5.0, 5.0, 6.0, 6.0]
+    expected_y = [init_positions["samy"][-1], init_positions["samy"][-1], 9.0, 9.0, 7.0]
+    get_data = mm.get_data()
+
+    assert mm.database_buffer["x"] == expected_x
+    assert mm.database_buffer["y"] == expected_y
+    assert get_data["x"] == expected_x
+    assert get_data["y"] == expected_y
+
+    mm.set_max_points(3)
+    qtbot.wait(200)
+    get_data = mm.get_data()
+    assert len(get_data["x"]) == 3
+    assert len(get_data["y"]) == 3
+    assert get_data["x"] == expected_x[-3:]
+    assert get_data["y"] == expected_y[-3:]
+    assert mm.database_buffer["x"] == expected_x[-3:]
+    assert mm.database_buffer["y"] == expected_y[-3:]

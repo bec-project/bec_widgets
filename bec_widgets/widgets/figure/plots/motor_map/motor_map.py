@@ -6,22 +6,23 @@ from typing import Optional, Union
 import numpy as np
 import pyqtgraph as pg
 from bec_lib.endpoints import MessageEndpoints
-from pydantic import Field
+from pydantic import Field, ValidationError, field_validator
+from pydantic_core import PydanticCustomError
 from qtpy import QtCore, QtGui
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.utils import EntryValidator
+from bec_widgets.utils import Colors, EntryValidator
 from bec_widgets.widgets.figure.plots.plot_base import BECPlotBase, SubplotConfig
 from bec_widgets.widgets.figure.plots.waveform.waveform import Signal, SignalData
 
 
 class MotorMapConfig(SubplotConfig):
     signals: Optional[Signal] = Field(None, description="Signals of the motor map")
-    color_map: Optional[str] = Field(
-        "Greys", description="Color scheme of the motor position gradient."
-    )  # TODO decide if useful for anything, or just keep GREYS always
+    color: Optional[str | tuple] = Field(
+        (255, 255, 255, 255), description="The color of the last point of current position."
+    )
     scatter_size: Optional[int] = Field(5, description="Size of the scatter points.")
     max_points: Optional[int] = Field(1000, description="Maximum number of points to display.")
     num_dim_points: Optional[int] = Field(
@@ -30,8 +31,23 @@ class MotorMapConfig(SubplotConfig):
     )
     precision: Optional[int] = Field(2, description="Decimal precision of the motor position.")
     background_value: Optional[int] = Field(
-        25, description="Background value of the motor map."
-    )  # TODO can be percentage from 255 calculated
+        25, description="Background value of the motor map. Has to be between 0 and 255."
+    )
+
+    model_config: dict = {"validate_assignment": True}
+
+    _validate_color = field_validator("color")(Colors.validate_color)
+
+    # @field_validator("color")
+    # def convert_to_rgba(cls, value):
+
+    @field_validator("background_value")
+    def validate_background_value(cls, value):
+        if not 0 <= value <= 255:
+            raise PydanticCustomError(
+                "wrong_value", f"'{value}' hs to be between 0 and 255.", {"wrong_value": value}
+            )
+        return value
 
 
 class BECMotorMap(BECPlotBase):
@@ -69,29 +85,43 @@ class BECMotorMap(BECPlotBase):
         self.get_bec_shortcuts()
         self.entry_validator = EntryValidator(self.dev)
 
+        # connect update signal to update plot
+        self.proxy_update_plot = pg.SignalProxy(
+            self.update_signal, rateLimit=25, slot=self._update_plot
+        )
+        self.apply_config(self.config)
+
+    def apply_config(self, config: dict | MotorMapConfig):
+        """
+        Apply the config to the motor map.
+
+        Args:
+            config(dict|MotorMapConfig): Config to be applied.
+        """
+        if isinstance(config, dict):
+            try:
+                config = MotorMapConfig(**config)
+            except ValidationError as e:
+                print(f"Error in applying config: {e}")
+                return
+
+        self.config = config
+        self.plot_item.clear()
+
         self.motor_x = None
         self.motor_y = None
         self.database_buffer = {"x": [], "y": []}
         self.plot_components = defaultdict(dict)  # container for plot components
 
-        # connect update signal to update plot
-        self.proxy_update_plot = pg.SignalProxy(
-            self.update_signal, rateLimit=25, slot=self._update_plot
-        )
+        self.apply_axis_config()
 
-    # TODO decide if needed to implement, maybe there will be no children widgets for motormap for now...
-    # def find_widget_by_id(self, item_id: str) -> BECCurve:
-    #     """
-    #     Find the curve by its ID.
-    #     Args:
-    #         item_id(str): ID of the curve.
-    #
-    #     Returns:
-    #         BECCurve: The curve object.
-    #     """
-    #     for curve in self.plot_item.curves:
-    #         if curve.gui_id == item_id:
-    #             return curve
+        if self.config.signals is not None:
+            self.change_motors(
+                motor_x=self.config.signals.x.name,
+                motor_y=self.config.signals.y.name,
+                motor_x_entry=self.config.signals.x.entry,
+                motor_y_entry=self.config.signals.y.entry,
+            )
 
     @pyqtSlot(str, str, str, str, bool)
     def change_motors(
@@ -129,6 +159,8 @@ class BECMotorMap(BECPlotBase):
         # reconnect the signals
         self._connect_motor_to_slots()
 
+        self.database_buffer = {"x": [], "y": []}
+
         # Redraw the motor map
         self._make_motor_map()
 
@@ -141,7 +173,19 @@ class BECMotorMap(BECPlotBase):
         data = {"x": self.database_buffer["x"], "y": self.database_buffer["y"]}
         return data
 
-    # TODO setup all visual properties
+    def set_color(self, color: [str | tuple]):
+        """
+        Set color of the motor trace.
+
+        Args:
+            color(str|tuple): Color of the motor trace. Can be HEX(str) or RGBA(tuple).
+        """
+        if isinstance(color, str):
+            color = Colors.validate_color(color)
+            color = Colors.hex_to_rgba(color, 255)
+        self.config.color = color
+        self.update_signal.emit()
+
     def set_max_points(self, max_points: int) -> None:
         """
         Set the maximum number of points to display.
@@ -150,6 +194,7 @@ class BECMotorMap(BECPlotBase):
             max_points(int): Maximum number of points to display.
         """
         self.config.max_points = max_points
+        self.update_signal.emit()
 
     def set_precision(self, precision: int) -> None:
         """
@@ -159,6 +204,7 @@ class BECMotorMap(BECPlotBase):
             precision(int): Decimal precision of the motor position.
         """
         self.config.precision = precision
+        self.update_signal.emit()
 
     def set_num_dim_points(self, num_dim_points: int) -> None:
         """
@@ -168,6 +214,7 @@ class BECMotorMap(BECPlotBase):
             num_dim_points(int): Number of dim points.
         """
         self.config.num_dim_points = num_dim_points
+        self.update_signal.emit()
 
     def set_background_value(self, background_value: int) -> None:
         """
@@ -177,6 +224,7 @@ class BECMotorMap(BECPlotBase):
             background_value(int): Background value of the motor map.
         """
         self.config.background_value = background_value
+        self._swap_limit_map()
 
     def set_scatter_size(self, scatter_size: int) -> None:
         """
@@ -186,6 +234,7 @@ class BECMotorMap(BECPlotBase):
             scatter_size(int): Size of the scatter points.
         """
         self.config.scatter_size = scatter_size
+        self.update_signal.emit()
 
     def _disconnect_current_motors(self):
         """Disconnect the current motors from the slots."""
@@ -209,6 +258,15 @@ class BECMotorMap(BECPlotBase):
         ]
 
         self.bec_dispatcher.connect_slot(self.on_device_readback, endpoints)
+
+    def _swap_limit_map(self):
+        """Swap the limit map."""
+        self.plot_item.removeItem(self.plot_components["limit_map"])
+        self.plot_components["limit_map"] = self._make_limit_map(
+            self.config.signals.x.limits, self.config.signals.y.limits
+        )
+        self.plot_components["limit_map"].setZValue(-1)
+        self.plot_item.addItem(self.plot_components["limit_map"])
 
     def _make_motor_map(self):
         """
@@ -248,6 +306,8 @@ class BECMotorMap(BECPlotBase):
 
         # Set default labels for the plot
         self.set(x_label=f"Motor X ({self.motor_x})", y_label=f"Motor Y ({self.motor_y})")
+
+        self.update_signal.emit()
 
     def _add_coordinantes_crosshair(self, x: float, y: float) -> None:
         """
@@ -373,19 +433,31 @@ class BECMotorMap(BECPlotBase):
 
     def _update_plot(self):
         """Update the motor map plot."""
+        # If the number of points exceeds max_points, delete the oldest points
+        if len(self.database_buffer["x"]) > self.config.max_points:
+            self.database_buffer["x"] = self.database_buffer["x"][-self.config.max_points :]
+            self.database_buffer["y"] = self.database_buffer["y"][-self.config.max_points :]
+
         x = self.database_buffer["x"]
         y = self.database_buffer["y"]
 
         # Setup gradient brush for history
         brushes = [pg.mkBrush(50, 50, 50, 255)] * len(x)
 
+        # RGB color
+        r, g, b, a = self.config.color
+
         # Calculate the decrement step based on self.num_dim_points
         num_dim_points = self.config.num_dim_points
         decrement_step = (255 - 50) / num_dim_points
+
         for i in range(1, min(num_dim_points + 1, len(x) + 1)):
             brightness = max(60, 255 - decrement_step * (i - 1))
-            brushes[-i] = pg.mkBrush(brightness, brightness, brightness, 255)
-        brushes[-1] = pg.mkBrush(255, 255, 255, 255)  # Newest point is always full brightness
+            dim_r = int(r * (brightness / 255))
+            dim_g = int(g * (brightness / 255))
+            dim_b = int(b * (brightness / 255))
+            brushes[-i] = pg.mkBrush(dim_r, dim_g, dim_b, a)
+        brushes[-1] = pg.mkBrush(r, g, b, a)  # Newest point is always full brightness
         scatter_size = self.config.scatter_size
 
         # Update the scatter plot

@@ -58,7 +58,7 @@ def test_device_input_base_set_default_device_error(device_input_base):
 
 def test_device_input_base_get_device_list(device_input_base):
     devices = device_input_base.get_device_list("FakePositioner")
-    assert devices == ["samx", "samy", "aptrx", "aptry"]
+    assert devices == ["samx", "samy", "samz", "aptrx", "aptry"]
 
 
 def test_device_input_base_get_filters(device_input_base):

@@ -56,6 +56,7 @@ def test_device_input_combobox_init(device_input_combobox):
     assert device_input_combobox.devices == [
         "samx",
         "samy",
+        "samz",
         "aptrx",
         "aptry",
         "gauss_bpm",
@@ -141,6 +142,7 @@ def test_device_input_line_edit_init(device_input_line_edit):
     assert device_input_line_edit.devices == [
         "samx",
         "samy",
+        "samz",
         "aptrx",
         "aptry",
         "gauss_bpm",

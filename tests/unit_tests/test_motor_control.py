@@ -74,7 +74,7 @@ def test_motor_thread_initialization(mocked_client):
 def test_get_all_motors_names(mocked_client):
     motor_thread = MotorThread(client=mocked_client)
     motor_names = motor_thread.get_all_motors_names()
-    expected_names = ["samx", "samy", "aptrx", "aptry"]
+    expected_names = ["samx", "samy", "samz", "aptrx", "aptry"]
     assert sorted(motor_names) == sorted(expected_names)
     assert all(name in motor_names for name in expected_names)
     assert len(motor_names) == len(expected_names)  # Ensure only these motors are returned
@@ -155,11 +155,12 @@ def motor_selection_widget(qtbot, mocked_client, motor_thread):
 
 
 def test_initialization_and_population(motor_selection_widget):
-    assert motor_selection_widget.comboBox_motor_x.count() == 4
+    assert motor_selection_widget.comboBox_motor_x.count() == 5
     assert motor_selection_widget.comboBox_motor_x.itemText(0) == "samx"
     assert motor_selection_widget.comboBox_motor_y.itemText(1) == "samy"
-    assert motor_selection_widget.comboBox_motor_x.itemText(2) == "aptrx"
-    assert motor_selection_widget.comboBox_motor_y.itemText(3) == "aptry"
+    assert motor_selection_widget.comboBox_motor_y.itemText(2) == "samz"
+    assert motor_selection_widget.comboBox_motor_x.itemText(3) == "aptrx"
+    assert motor_selection_widget.comboBox_motor_y.itemText(4) == "aptry"
 
 
 def test_selection_and_signal_emission(motor_selection_widget):
