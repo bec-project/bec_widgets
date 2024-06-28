@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v0.76.0 (2024-06-28)
+
+### Feature
+
+* feat(designer): added support for creating designer plugins automatically ([`c1dd0ee`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c1dd0ee1906dba1f2e2ae9ce40a84d55c26a1cce))
+
+### Fix
+
+* fix: fixed qwidget inheritance for ring progress bar ([`0610d2f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0610d2f9f027f8659e7149f2dfbb316ff30e337d))
+
+### Unknown
+
+* fix:parent set as first kwarg TextBox and WebsiteWidget ([`a45c407`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a45c4075684b93bfdcee03e5a416b84f61d3bc6f))
+
 ## v0.75.0 (2024-06-26)
 
 ### Feature
@@ -128,14 +142,6 @@
 
 * fix(WidgetIO): find handlers within base classes ([`ca85638`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ca856384f380dabf28d43f1cd48511af784c035b))
 
-* fix(scan_control): adapted widget to scan BEC gui config ([`8b822e0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8b822e0fa8e28f080b9a4bf81948a7280a4c07bf))
-
-* fix(scan_control): scan_control.py combatible with the newest BEC versions, test disabled ([`67d398c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/67d398caf74e08ab25a70cc5d85a5f0c2de8212d))
-
-### Refactor
-
-* refactor(device_line_edit): renamed default_device to default ([`4e2c9df`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4e2c9df6a4979d935285fd7eba17fd7fd455a35c))
-
 ### Test
 
 * test(scan_control): tests added ([`56e74a0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/56e74a0e7da72d18e89bc30d1896dbf9ef97cd6b))
@@ -149,5 +155,3 @@
 * fix(device_line_edit):SizePolicy fixed for 100 horizontal ([`21d20e0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/21d20e0fc78e9a3853abe802733388cce119ce20))
 
 * tests WIP ([`c09644b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c09644b29ddb291c91dc58bcd6ebf02ff45cab36))
-
-## v0.70.0 (2024-06-21)
