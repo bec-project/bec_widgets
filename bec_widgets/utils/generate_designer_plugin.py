@@ -47,12 +47,11 @@ class DesignerPluginGenerator:
     def __init__(self, widget: type):
         self._excluded = False
         self.widget = widget
+        self.info = DesignerPluginInfo(widget)
         if widget.__name__ in EXCLUDED_PLUGINS:
 
             self._excluded = True
             return
-
-        self.info = DesignerPluginInfo(widget)
 
         self.templates = {}
         self.template_path = os.path.join(
@@ -75,7 +74,7 @@ class DesignerPluginGenerator:
 
         # Check if the widget class has parent as the first argument. This is a strict requirement of Qt!
         signature = list(inspect.signature(self.widget.__init__).parameters.values())
-        if signature[1].name != "parent":
+        if len(signature) == 1 or signature[1].name != "parent":
             raise ValueError(
                 f"Widget class {self.widget.__name__} must have parent as the first argument."
             )
@@ -89,20 +88,22 @@ class DesignerPluginGenerator:
         # Check if the widget class calls the super constructor with parent argument
         init_source = inspect.getsource(self.widget.__init__)
         cls_init_found = (
-            bool(init_source.find(f"{base_cls[0].__name__}.__init__(self, parent=parent"))
-            or bool(init_source.find(f"{base_cls[0].__name__}.__init__(self, parent)"))
-            or bool(init_source.find(f"{base_cls[0].__name__}.__init__(self, parent,"))
+            bool(init_source.find(f"{base_cls[0].__name__}.__init__(self, parent=parent") > 0)
+            or bool(init_source.find(f"{base_cls[0].__name__}.__init__(self, parent)") > 0)
+            or bool(init_source.find(f"{base_cls[0].__name__}.__init__(self, parent,") > 0)
         )
         super_init_found = (
-            bool(init_source.find(f"super({self.widget.__name__}, self).__init__(parent=parent"))
-            or bool(init_source.find(f"super({self.widget.__name__}, self).__init__(parent,"))
-            or bool(init_source.find(f"super({self.widget.__name__}, self).__init__(parent)"))
+            bool(
+                init_source.find(f"super({base_cls[0].__name__}, self).__init__(parent=parent") > 0
+            )
+            or bool(init_source.find(f"super({base_cls[0].__name__}, self).__init__(parent,") > 0)
+            or bool(init_source.find(f"super({base_cls[0].__name__}, self).__init__(parent)") > 0)
         )
-        if issubclass(self.widget.__bases__[0], QObject) and super_init_found == -1:
+        if issubclass(self.widget.__bases__[0], QObject) and not super_init_found:
             super_init_found = (
-                bool(init_source.find("super().__init__(parent=parent"))
-                or bool(init_source.find("super().__init__(parent,"))
-                or bool(init_source.find("super().__init__(parent)"))
+                bool(init_source.find("super().__init__(parent=parent") > 0)
+                or bool(init_source.find("super().__init__(parent,") > 0)
+                or bool(init_source.find("super().__init__(parent)") > 0)
             )
 
         if not cls_init_found and not super_init_found:
@@ -139,7 +140,7 @@ class DesignerPluginGenerator:
                 self.templates[file.split(".")[0]] = f.read()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     # from bec_widgets.widgets.bec_queue.bec_queue import BECQueue
     from bec_widgets.widgets.dock import BECDockArea
 
