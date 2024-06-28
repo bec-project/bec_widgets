@@ -58,3 +58,18 @@ def test_color_validation_RGBA():
     assert "The color values must be between 0 and 255 in RGBA format (R,G,B,A)" in str(
         excinfo.value
     )
+
+
+def test_hex_to_rgba():
+    assert Colors.hex_to_rgba("#FF5733") == (255, 87, 51, 255)
+    assert Colors.hex_to_rgba("#FF573380") == (255, 87, 51, 128)
+    assert Colors.hex_to_rgba("#FF5733", 128) == (255, 87, 51, 128)
+
+    with pytest.raises(ValueError):
+        Colors.hex_to_rgba("#FF573")
+
+
+def test_rgba_to_hex():
+    assert Colors.rgba_to_hex(255, 87, 51, 255) == "#FF5733FF"
+    assert Colors.rgba_to_hex(255, 87, 51, 128) == "#FF573380"
+    assert Colors.rgba_to_hex(255, 87, 51) == "#FF5733FF"

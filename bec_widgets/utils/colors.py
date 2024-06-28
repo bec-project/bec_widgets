@@ -68,6 +68,44 @@ class Colors:
         return colors
 
     @staticmethod
+    def hex_to_rgba(hex_color: str, alpha=255) -> tuple:
+        """
+        Convert HEX color to RGBA.
+
+        Args:
+            hex_color(str): HEX color string.
+            alpha(int): Alpha value (0-255). Default is 255 (opaque).
+
+        Returns:
+            tuple: RGBA color tuple (r, g, b, a).
+        """
+        hex_color = hex_color.lstrip("#")
+        if len(hex_color) == 6:
+            r, g, b = tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
+        elif len(hex_color) == 8:
+            r, g, b, a = tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4, 6))
+            return (r, g, b, a)
+        else:
+            raise ValueError("HEX color must be 6 or 8 characters long.")
+        return (r, g, b, alpha)
+
+    @staticmethod
+    def rgba_to_hex(r: int, g: int, b: int, a: int = 255) -> str:
+        """
+        Convert RGBA color to HEX.
+
+        Args:
+            r(int): Red value (0-255).
+            g(int): Green value (0-255).
+            b(int): Blue value (0-255).
+            a(int): Alpha value (0-255). Default is 255 (opaque).
+
+        Returns:
+            hec_color(str): HEX color string.
+        """
+        return "#{:02X}{:02X}{:02X}{:02X}".format(r, g, b, a)
+
+    @staticmethod
     def validate_color(color: tuple | str) -> tuple | str:
         """
         Validate the color input if it is HEX or RGBA compatible. Can be used in any pydantic model as a field validator.
