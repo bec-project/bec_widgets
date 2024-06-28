@@ -60,6 +60,7 @@ class BECImageShow(BECPlotBase):
         "lock_aspect_ratio",
         "remove",
         "images",
+        "apply_config",
     ]
 
     def __init__(

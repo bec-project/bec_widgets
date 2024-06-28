@@ -538,7 +538,14 @@ class BECFigure(RPCBase):
 
     @rpc_call
     def motor_map(
-        self, motor_x: "str" = None, motor_y: "str" = None, **axis_kwargs
+        self,
+        motor_x: "str" = None,
+        motor_y: "str" = None,
+        new: "bool" = False,
+        row: "int | None" = None,
+        col: "int | None" = None,
+        config: "dict | None" = None,
+        **axis_kwargs,
     ) -> "BECMotorMap":
         """
         Add a motor map to the figure. Always access the first motor map widget in the figure.
@@ -546,6 +553,10 @@ class BECFigure(RPCBase):
         Args:
             motor_x(str): The name of the motor for the X axis.
             motor_y(str): The name of the motor for the Y axis.
+            new(bool): If True, create a new plot instead of using the first plot.
+            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
+            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
+            config(dict): Recreates the whole BECImageShow widget from provided configuration.
             **axis_kwargs: Additional axis properties to set on the widget after creation.
 
         Returns:
@@ -609,6 +620,12 @@ class BECFigure(RPCBase):
         Access all widget in BECFigure as a list
         Returns:
             list[BECPlotBase]: List of all widgets in the figure.
+        """
+
+    @rpc_call
+    def apply_config(self, config: "dict | FigureConfig"):
+        """
+        None
         """
 
 
@@ -823,7 +840,7 @@ class BECImageShow(RPCBase):
         self,
         monitor: "str",
         color_map: "Optional[str]" = "magma",
-        color_bar: "Optional[Literal['simple', 'full']]" = "simple",
+        color_bar: "Optional[Literal['simple', 'full']]" = "full",
         downsample: "Optional[bool]" = True,
         opacity: "Optional[float]" = 1.0,
         vrange: "Optional[tuple[int, int]]" = None,
@@ -839,7 +856,7 @@ class BECImageShow(RPCBase):
         name: "str",
         data: "Optional[np.ndarray]" = None,
         color_map: "Optional[str]" = "magma",
-        color_bar: "Optional[Literal['simple', 'full']]" = "simple",
+        color_bar: "Optional[Literal['simple', 'full']]" = "full",
         downsample: "Optional[bool]" = True,
         opacity: "Optional[float]" = 1.0,
         vrange: "Optional[tuple[int, int]]" = None,
@@ -1124,6 +1141,16 @@ class BECImageShow(RPCBase):
             list[BECImageItem]: The list of images.
         """
 
+    @rpc_call
+    def apply_config(self, config: "dict | SubplotConfig"):
+        """
+        Apply the configuration to the 1D waveform widget.
+
+        Args:
+            config(dict|SubplotConfig): Configuration settings.
+            replot_last_scan(bool, optional): If True, replot the last scan. Defaults to False.
+        """
+
 
 class BECMotorMap(RPCBase):
     @property
@@ -1220,6 +1247,15 @@ class BECMotorMap(RPCBase):
     def remove(self):
         """
         Remove the plot widget from the figure.
+        """
+
+    @rpc_call
+    def apply_config(self, config: "dict | MotorMapConfig"):
+        """
+        Apply the config to the motor map.
+
+        Args:
+            config(dict|MotorMapConfig): Config to be applied.
         """
 
 
@@ -1700,6 +1736,16 @@ class BECWaveform(RPCBase):
 
         Args:
             size(int): Font size of the legend.
+        """
+
+    @rpc_call
+    def apply_config(self, config: "dict | SubplotConfig", replot_last_scan: "bool" = False):
+        """
+        Apply the configuration to the 1D waveform widget.
+
+        Args:
+            config(dict|SubplotConfig): Configuration settings.
+            replot_last_scan(bool, optional): If True, replot the last scan. Defaults to False.
         """
 
 

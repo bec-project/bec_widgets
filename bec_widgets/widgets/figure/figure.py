@@ -8,7 +8,7 @@ from typing import Literal, Optional
 import numpy as np
 import pyqtgraph as pg
 import qdarktheme
-from pydantic import Field
+from pydantic import Field, ValidationError, field_validator
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtWidgets import QWidget
 from typeguard import typechecked
@@ -29,6 +29,26 @@ class FigureConfig(ConnectionConfig):
     widgets: dict[str, Waveform1DConfig | ImageConfig | MotorMapConfig | SubplotConfig] = Field(
         {}, description="The list of widgets to be added to the figure widget."
     )
+
+    @field_validator("widgets", mode="before")
+    @classmethod
+    def validate_widgets(cls, v):
+        """Validate the widgets configuration."""
+        widget_class_map = {
+            "BECWaveform": Waveform1DConfig,
+            "BECImageShow": ImageConfig,
+            "BECMotorMap": MotorMapConfig,
+        }
+        validated_widgets = {}
+        for key, widget_config in v.items():
+            if "widget_class" not in widget_config:
+                raise ValueError(f"Widget config for {key} does not contain 'widget_class'.")
+            widget_class = widget_config["widget_class"]
+            if widget_class not in widget_class_map:
+                raise ValueError(f"Unknown widget_class '{widget_class}' for widget '{key}'.")
+            config_class = widget_class_map[widget_class]
+            validated_widgets[key] = config_class(**widget_config)
+        return validated_widgets
 
 
 class WidgetHandler:
@@ -103,6 +123,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         "clear_all",
         "get_all_rpc",
         "widget_list",
+        "apply_config",
     ]
     subplot_map = {
         "PlotBase": BECPlotBase,
@@ -110,6 +131,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         "BECImageShow": BECImageShow,
         "BECMotorMap": BECMotorMap,
     }
+    widget_method_map = {"BECWaveform": "plot", "BECImageShow": "image", "BECMotorMap": "motor_map"}
 
     clean_signal = pyqtSignal()
 
@@ -125,8 +147,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         else:
             if isinstance(config, dict):
                 config = FigureConfig(**config)
-            self.config = config
-        super().__init__(client=client, config=config, gui_id=gui_id)
+        super().__init__(client=client, gui_id=gui_id)
         pg.GraphicsLayoutWidget.__init__(self, parent)
 
         self.widget_handler = WidgetHandler()
@@ -136,6 +157,8 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
 
         # Container to keep track of the grid
         self.grid = []
+        # Create config and apply it
+        self.apply_config(config)
 
     def __getitem__(self, key: tuple | str):
         if isinstance(key, tuple) and len(key) == 2:
@@ -148,6 +171,24 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         else:
             raise TypeError(
                 "Key must be a string (widget id) or a tuple of two integers (grid coordinates)"
+            )
+
+    def apply_config(self, config: dict | FigureConfig):
+        if isinstance(config, dict):
+            try:
+                config = FigureConfig(**config)
+            except ValidationError as e:
+                print(f"Error in applying config: {e}")
+                return
+        self.config = config
+        self.change_theme(self.config.theme)
+
+        # widget_config has to be reset for not have each widget config twice when added to the figure
+        widget_configs = [config for config in self.config.widgets.values()]
+        self.config.widgets = {}
+        for widget_config in widget_configs:
+            getattr(self, self.widget_method_map[widget_config.widget_class])(
+                config=widget_config.model_dump(), row=widget_config.row, col=widget_config.col
             )
 
     @property

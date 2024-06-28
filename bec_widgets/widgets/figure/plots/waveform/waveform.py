@@ -59,6 +59,7 @@ class BECWaveform(BECPlotBase):
         "lock_aspect_ratio",
         "remove",
         "set_legend_label_size",
+        "apply_config",
     ]
     scan_signal_update = pyqtSignal()
     dap_params_update = pyqtSignal(dict)

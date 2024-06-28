@@ -62,6 +62,7 @@ class BECMotorMap(BECPlotBase):
         "set_scatter_size",
         "get_data",
         "remove",
+        "apply_config",
     ]
 
     # QT Signals
