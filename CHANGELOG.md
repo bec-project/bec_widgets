@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.76.1 (2024-06-29)
+
+### Fix
+
+* fix(plugins): fixes and tests for auto-gen plugins ([`c42511d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c42511dd44cc13577e108a6cef3166376e594f54))
+
 ## v0.76.0 (2024-06-28)
 
 ### Feature
@@ -124,10 +130,6 @@
 
 ## v0.71.0 (2024-06-23)
 
-### Feature
-
-* feat(scan_group_box): scan box for args and kwargs separated from ScanControlGUI code ([`d8cf441`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d8cf44134c30063e586771f9068947fef7a306d1))
-
 ### Fix
 
 * fix(cleanup): cleanup added to device_input widgets and scan_control ([`8badb6a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8badb6adc1d003dbf0b2b1a800c34821f3fc9aa3))
@@ -139,8 +141,6 @@
 * fix(scan_control): argbox delete later added to prevent overlapping gui if scan changed ([`7ce3a83`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7ce3a83c58cb69c2bf7cb7f4eaba7e6a2ca6c546))
 
 * fix(scan_control): only scans with defined gui_config are allowed ([`6dff187`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6dff1879c4178df0f8ebfd35101acdebb028d572))
-
-* fix(WidgetIO): find handlers within base classes ([`ca85638`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ca856384f380dabf28d43f1cd48511af784c035b))
 
 ### Test
 
