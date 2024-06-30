@@ -703,14 +703,15 @@ class BECWaveform(BECPlotBase):
                 data_y = data[y_name][y_entry].val
                 if curve.config.signals.z:
                     data_z = data[z_name][z_entry].val
-                    color_z = self._make_z_gradient(
-                        data_z, curve.config.color_map_z
-                    )  # TODO decide how to implement custom gradient
+                    color_z = self._make_z_gradient(data_z, curve.config.color_map_z)
             except TypeError:
                 continue
 
             if data_z is not None and color_z is not None:
-                curve.setData(x=data_x, y=data_y, symbolBrush=color_z)
+                try:
+                    curve.setData(x=data_x, y=data_y, symbolBrush=color_z)
+                except:
+                    return
             else:
                 curve.setData(data_x, data_y)
 
