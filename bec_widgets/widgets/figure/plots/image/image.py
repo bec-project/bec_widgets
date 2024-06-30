@@ -5,7 +5,7 @@ from typing import Any, Literal, Optional
 
 import numpy as np
 from bec_lib.endpoints import MessageEndpoints
-from pydantic import Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 from qtpy.QtCore import QThread
 from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QWidget
@@ -319,6 +319,7 @@ class BECImageShow(BECPlotBase):
             for source, images in self._images.items():
                 for _, image in images.items():
                     getattr(image, setting_method_name)(*args, **kwargs)
+        self.refresh_image()
 
     def set_vrange(self, vmin: float, vmax: float, name: str = None):
         """
@@ -466,6 +467,27 @@ class BECImageShow(BECPlotBase):
         if self.use_threading is False and self.thread.isRunning():
             self.cleanup()
 
+    def process_image(self, device: str, image: BECImageItem, data: np.ndarray):
+        """
+        Process the image data.
+
+        Args:
+            device(str): The name of the device - image_id of image.
+            image(np.ndarray): The image data to be processed.
+            data(np.ndarray): The image data to be processed.
+
+        Returns:
+            np.ndarray: The processed image data.
+        """
+        processing_config = image.config.processing
+        self.processor.set_config(processing_config)
+        if self.use_threading:
+            self._create_thread_worker(device, data)
+        else:
+            data = self.processor.process_image(data)
+            self.update_image(device, data)
+            self.update_vrange(device, self.processor.config.stats)
+
     @pyqtSlot(dict)
     def on_image_update(self, msg: dict):
         """
@@ -476,15 +498,8 @@ class BECImageShow(BECPlotBase):
         """
         data = msg["data"]
         device = msg["device"]
-        image_to_update = self._images["device_monitor"][device]
-        processing_config = image_to_update.config.processing
-        self.processor.set_config(processing_config)
-        if self.use_threading:
-            self._create_thread_worker(device, data)
-        else:
-            data = self.processor.process_image(data)
-            self.update_image(device, data)
-            self.update_vrange(device, self.processor.config.stats)
+        image = self._images["device_monitor"][device]
+        self.process_image(device, image, data)
 
     @pyqtSlot(str, np.ndarray)
     def update_image(self, device: str, data: np.ndarray):
@@ -509,6 +524,15 @@ class BECImageShow(BECPlotBase):
         image_to_update = self._images["device_monitor"][device]
         if image_to_update.config.autorange:
             image_to_update.auto_update_vrange(stats)
+
+    def refresh_image(self):
+        """
+        Refresh the image.
+        """
+        for source, images in self._images.items():
+            for image_id, image in images.items():
+                data = image.get_data()
+                self.process_image(image_id, image, data)
 
     def _connect_device_monitor(self, monitor: str):
         """
