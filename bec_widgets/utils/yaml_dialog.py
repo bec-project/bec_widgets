@@ -6,7 +6,7 @@ import yaml
 from qtpy.QtWidgets import QFileDialog
 
 
-def load_yaml(instance) -> Union[dict, None]:
+def load_yaml_gui(instance) -> Union[dict, None]:
     """
     Load YAML file from disk.
 
@@ -20,12 +20,25 @@ def load_yaml(instance) -> Union[dict, None]:
     file_path, _ = QFileDialog.getOpenFileName(
         instance, "Load Settings", "", "YAML Files (*.yaml *.yml);;All Files (*)", options=options
     )
+    config = load_yaml(file_path)
+    return config
 
+
+def load_yaml(file_path: str) -> Union[dict, None]:
+    """
+    Load YAML file from disk.
+
+    Args:
+        file_path(str): Path to the YAML file.
+
+    Returns:
+        dict: Configuration data loaded from the YAML file.
+    """
     if not file_path:
         return None
     try:
         with open(file_path, "r") as file:
-            config = yaml.safe_load(file)
+            config = yaml.load(file, Loader=yaml.FullLoader)
         return config
 
     except FileNotFoundError:
@@ -38,7 +51,7 @@ def load_yaml(instance) -> Union[dict, None]:
         print(f"An error occurred while loading the settings from {file_path}: {e}")
 
 
-def save_yaml(instance, config: dict) -> None:
+def save_yaml_gui(instance, config: dict) -> None:
     """
     Save YAML file to disk.
 
@@ -51,6 +64,17 @@ def save_yaml(instance, config: dict) -> None:
         instance, "Save Settings", "", "YAML Files (*.yaml *.yml);;All Files (*)", options=options
     )
 
+    save_yaml(file_path, config)
+
+
+def save_yaml(file_path: str, config: dict) -> None:
+    """
+    Save YAML file to disk.
+
+    Args:
+        file_path(str): Path to the YAML file.
+        config(dict): Configuration data to be saved.
+    """
     if not file_path:
         return
     try:

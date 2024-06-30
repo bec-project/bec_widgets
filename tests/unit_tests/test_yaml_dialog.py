@@ -7,7 +7,7 @@ import pytest
 import yaml
 from qtpy.QtWidgets import QPushButton, QVBoxLayout, QWidget
 
-from bec_widgets.utils.yaml_dialog import load_yaml, save_yaml
+from bec_widgets.utils.yaml_dialog import load_yaml_gui, save_yaml_gui
 
 
 @pytest.fixture(scope="function")
@@ -33,7 +33,7 @@ def test_load_yaml(qtbot, example_widget):
         temp_file.write(b"name: test\nvalue: 42")
 
     def load_yaml_wrapper():
-        config = load_yaml(example_widget)
+        config = load_yaml_gui(example_widget)
         if config:
             example_widget.config.update(config)
 
@@ -49,7 +49,7 @@ def test_load_yaml(qtbot, example_widget):
 
 def test_load_yaml_file_not_found(qtbot, example_widget, capsys):
     def load_yaml_wrapper():
-        config = load_yaml(example_widget)
+        config = load_yaml_gui(example_widget)
         if config:
             example_widget.config.update(config)
 
@@ -76,7 +76,7 @@ def test_load_yaml_general_exception(qtbot, example_widget, capsys, monkeypatch)
     monkeypatch.setattr("builtins.open", mock_open)
 
     def load_yaml_wrapper():
-        config = load_yaml(example_widget)
+        config = load_yaml_gui(example_widget)
         if config:
             example_widget.config.update(config)
 
@@ -96,7 +96,7 @@ def test_load_yaml_permission_error(qtbot, example_widget, monkeypatch, capsys):
     os.chmod(temp_file_path, 0o000)  # Remove permissions
 
     def load_yaml_wrapper():
-        config = load_yaml(example_widget)
+        config = load_yaml_gui(example_widget)
         if config:
             example_widget.config.update(config)
 
@@ -120,7 +120,7 @@ def test_load_yaml_invalid_yaml(qtbot, example_widget, capsys):
         temp_file.write(b"\tinvalid_yaml: [unbalanced_brackets: ]")
 
     def load_yaml_wrapper():
-        config = load_yaml(example_widget)
+        config = load_yaml_gui(example_widget)
         if config:
             example_widget.config.update(config)
 
@@ -147,7 +147,7 @@ def test_save_yaml(qtbot, example_widget):
     example_widget.saved_config = {"name": "test", "value": 42}
 
     def save_yaml_wrapper():
-        save_yaml(example_widget, example_widget.saved_config)
+        save_yaml_gui(example_widget, example_widget.saved_config)
 
     example_widget.export_button.clicked.connect(save_yaml_wrapper)
 

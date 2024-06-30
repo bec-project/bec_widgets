@@ -47,9 +47,6 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "d0": self.d0,
                     "d1": self.d1,
                     "d2": self.d2,
-                    "fig0": self.fig0,
-                    "fig1": self.fig1,
-                    "fig2": self.fig2,
                     "plt": self.plt,
                     "bar": self.bar,
                 }
@@ -107,6 +104,8 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
 
         # curves for w1
         self.c1 = self.w1.get_config()
+
+        self.fig_c = self.figure.config_dict
 
     def _init_dock(self):
 

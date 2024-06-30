@@ -1,15 +1,19 @@
 # pylint: disable = no-name-in-module,missing-module-docstring
 from __future__ import annotations
 
+import os
 import time
+import uuid
 from typing import Optional
 
+import yaml
 from bec_lib.utils.import_utils import lazy_import_from
 from pydantic import BaseModel, Field, field_validator
 from qtpy.QtCore import QObject, QRunnable, QThreadPool, Signal
 from qtpy.QtCore import Slot as pyqtSlot
 
 from bec_widgets.cli.rpc_register import RPCRegister
+from bec_widgets.utils.yaml_dialog import load_yaml, load_yaml_gui, save_yaml, save_yaml_gui
 
 BECDispatcher = lazy_import_from("bec_widgets.utils.bec_dispatcher", ("BECDispatcher",))
 
@@ -160,6 +164,60 @@ class BECConnector:
             dict: The configuration of the widget.
         """
         self.config = config
+
+    def apply_config(self, config: dict, generate_new_id: bool = True) -> None:
+        """
+        Apply the configuration to the widget.
+
+        Args:
+            config(dict): Configuration settings.
+            generate_new_id(bool): If True, generate a new GUI ID for the widget.
+        """
+        self.config = ConnectionConfig(**config)
+        if generate_new_id is True:
+            gui_id = str(uuid.uuid4())
+            self.rpc_register.remove_rpc(self)
+            self.set_gui_id(gui_id)
+            self.rpc_register.add_rpc(self)
+        else:
+            self.gui_id = self.config.gui_id
+
+    def load_config(self, path: str | None = None, gui: bool = False):
+        """
+        Load the configuration of the widget from YAML.
+
+        Args:
+            path(str): Path to the configuration file for non-GUI dialog mode.
+            gui(bool): If True, use the GUI dialog to load the configuration file.
+        """
+        if gui is True:
+            config = load_yaml_gui(self)
+        else:
+            config = load_yaml(path)
+
+        if config is not None:
+            if config.get("widget_class") != self.__class__.__name__:
+                raise ValueError(
+                    f"Configuration file is not for {self.__class__.__name__}. Got configuration for {config.get('widget_class')}."
+                )
+            self.apply_config(config)
+
+    def save_config(self, path: str | None = None, gui: bool = False):
+        """
+        Save the configuration of the widget to YAML.
+
+        Args:
+            path(str): Path to save the configuration file for non-GUI dialog mode.
+            gui(bool): If True, use the GUI dialog to save the configuration file.
+        """
+        if gui is True:
+            save_yaml_gui(self, self.config_dict)
+        else:
+            if path is None:
+                path = os.getcwd()
+            file_path = os.path.join(path, f"{self.__class__.__name__}_config.yaml")
+
+            save_yaml(file_path, self.config_dict)
 
     @pyqtSlot(str)
     def set_gui_id(self, gui_id: str) -> None:

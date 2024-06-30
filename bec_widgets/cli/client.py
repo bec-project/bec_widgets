@@ -622,12 +622,6 @@ class BECFigure(RPCBase):
             list[BECPlotBase]: List of all widgets in the figure.
         """
 
-    @rpc_call
-    def apply_config(self, config: "dict | FigureConfig"):
-        """
-        None
-        """
-
 
 class BECImageItem(RPCBase):
     @property

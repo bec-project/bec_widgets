@@ -123,7 +123,9 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         "clear_all",
         "get_all_rpc",
         "widget_list",
-        "apply_config",
+        # "apply_config",
+        # "save_config",
+        # "load_config",
     ]
     subplot_map = {
         "PlotBase": BECPlotBase,
@@ -173,7 +175,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
                 "Key must be a string (widget id) or a tuple of two integers (grid coordinates)"
             )
 
-    def apply_config(self, config: dict | FigureConfig):
+    def apply_config(self, config: dict | FigureConfig):  # ,generate_new_id: bool = False):
         if isinstance(config, dict):
             try:
                 config = FigureConfig(**config)
