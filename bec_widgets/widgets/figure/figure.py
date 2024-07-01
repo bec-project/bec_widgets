@@ -555,7 +555,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             return widget
 
         # Case 3 - modifying existing plot wit coordinates provided
-        elif new is False and (row is not None and col is not None):
+        if new is False and (row is not None and col is not None):
             try:
                 widget = self.axes(row, col)
             except ValueError:
@@ -568,9 +568,8 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             return widget
 
         # Case 4 - no previous plot or new plot, no config provided, possible to define coordinates
-        else:
-            widget = self.add_widget(widget_type=widget_type, row=row, col=col, **axis_kwargs)
-            return widget
+        widget = self.add_widget(widget_type=widget_type, row=row, col=col, **axis_kwargs)
+        return widget
 
     def add_widget(
         self,
