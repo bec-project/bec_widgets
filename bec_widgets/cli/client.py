@@ -41,14 +41,14 @@ class BECCurve(RPCBase):
 
     @property
     @rpc_call
-    def rpc_id(self) -> "str":
+    def _rpc_id(self) -> "str":
         """
         Get the RPC ID of the widget.
         """
 
     @property
     @rpc_call
-    def config_dict(self) -> "dict":
+    def _config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
 
@@ -162,7 +162,7 @@ class BECCurve(RPCBase):
 class BECDock(RPCBase):
     @property
     @rpc_call
-    def config_dict(self) -> "dict":
+    def _config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
 
@@ -172,7 +172,7 @@ class BECDock(RPCBase):
 
     @property
     @rpc_call
-    def rpc_id(self) -> "str":
+    def _rpc_id(self) -> "str":
         """
         Get the RPC ID of the widget.
         """
@@ -290,7 +290,7 @@ class BECDock(RPCBase):
 class BECDockArea(RPCBase, BECGuiClientMixin):
     @property
     @rpc_call
-    def config_dict(self) -> "dict":
+    def _config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
 
@@ -398,7 +398,7 @@ class BECDockArea(RPCBase, BECGuiClientMixin):
         """
 
     @rpc_call
-    def get_all_rpc(self) -> "dict":
+    def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
         """
@@ -417,19 +417,25 @@ class BECDockArea(RPCBase, BECGuiClientMixin):
 class BECFigure(RPCBase):
     @property
     @rpc_call
-    def rpc_id(self) -> "str":
+    def _rpc_id(self) -> "str":
         """
         Get the RPC ID of the widget.
         """
 
     @property
     @rpc_call
-    def config_dict(self) -> "dict":
+    def _config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
 
         Returns:
             dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def _get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
         """
 
     @rpc_call
@@ -607,12 +613,6 @@ class BECFigure(RPCBase):
         Clear all widgets from the figure and reset to default state
         """
 
-    @rpc_call
-    def get_all_rpc(self) -> "dict":
-        """
-        Get all registered RPC objects.
-        """
-
     @property
     @rpc_call
     def widget_list(self) -> "list[BECPlotBase]":
@@ -626,14 +626,14 @@ class BECFigure(RPCBase):
 class BECImageItem(RPCBase):
     @property
     @rpc_call
-    def rpc_id(self) -> "str":
+    def _rpc_id(self) -> "str":
         """
         Get the RPC ID of the widget.
         """
 
     @property
     @rpc_call
-    def config_dict(self) -> "dict":
+    def _config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
 
@@ -780,14 +780,14 @@ class BECImageItem(RPCBase):
 class BECImageShow(RPCBase):
     @property
     @rpc_call
-    def rpc_id(self) -> "str":
+    def _rpc_id(self) -> "str":
         """
         Get the RPC ID of the widget.
         """
 
     @property
     @rpc_call
-    def config_dict(self) -> "dict":
+    def _config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
 
@@ -805,28 +805,6 @@ class BECImageShow(RPCBase):
 
         Returns:
             BECImageItem: The image object.
-        """
-
-    @rpc_call
-    def get_image_config(self, image_id, dict_output: "bool" = True) -> "ImageItemConfig | dict":
-        """
-        Get the configuration of the image.
-
-        Args:
-            image_id(str): The ID of the image.
-            dict_output(bool): Whether to return the configuration as a dictionary. Defaults to True.
-
-        Returns:
-            ImageItemConfig|dict: The configuration of the image.
-        """
-
-    @rpc_call
-    def get_image_dict(self) -> "dict[str, dict[str, BECImageItem]]":
-        """
-        Get all images.
-
-        Returns:
-            dict[str, dict[str, BECImageItem]]: The dictionary of images.
         """
 
     @rpc_call
@@ -996,15 +974,6 @@ class BECImageShow(RPCBase):
         """
 
     @rpc_call
-    def toggle_threading(self, use_threading: "bool"):
-        """
-        Toggle threading for the widgets postprocessing and updating.
-
-        Args:
-            use_threading(bool): Whether to use threading.
-        """
-
-    @rpc_call
     def set(self, **kwargs) -> "None":
         """
         Set the properties of the plot widget.
@@ -1135,28 +1104,18 @@ class BECImageShow(RPCBase):
             list[BECImageItem]: The list of images.
         """
 
-    @rpc_call
-    def apply_config(self, config: "dict | SubplotConfig"):
-        """
-        Apply the configuration to the 1D waveform widget.
-
-        Args:
-            config(dict|SubplotConfig): Configuration settings.
-            replot_last_scan(bool, optional): If True, replot the last scan. Defaults to False.
-        """
-
 
 class BECMotorMap(RPCBase):
     @property
     @rpc_call
-    def rpc_id(self) -> "str":
+    def _rpc_id(self) -> "str":
         """
         Get the RPC ID of the widget.
         """
 
     @property
     @rpc_call
-    def config_dict(self) -> "dict":
+    def _config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
 
@@ -1243,20 +1202,11 @@ class BECMotorMap(RPCBase):
         Remove the plot widget from the figure.
         """
 
-    @rpc_call
-    def apply_config(self, config: "dict | MotorMapConfig"):
-        """
-        Apply the config to the motor map.
-
-        Args:
-            config(dict|MotorMapConfig): Config to be applied.
-        """
-
 
 class BECPlotBase(RPCBase):
     @property
     @rpc_call
-    def config_dict(self) -> "dict":
+    def _config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
 
@@ -1399,7 +1349,7 @@ class BECPlotBase(RPCBase):
 class BECQueue(RPCBase):
     @property
     @rpc_call
-    def config_dict(self) -> "dict":
+    def _config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
 
@@ -1408,7 +1358,7 @@ class BECQueue(RPCBase):
         """
 
     @rpc_call
-    def get_all_rpc(self) -> "dict":
+    def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
         """
@@ -1417,7 +1367,7 @@ class BECQueue(RPCBase):
 class BECStatusBox(RPCBase):
     @property
     @rpc_call
-    def config_dict(self) -> "dict":
+    def _config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
 
@@ -1426,7 +1376,7 @@ class BECStatusBox(RPCBase):
         """
 
     @rpc_call
-    def get_all_rpc(self) -> "dict":
+    def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
         """
@@ -1435,14 +1385,14 @@ class BECStatusBox(RPCBase):
 class BECWaveform(RPCBase):
     @property
     @rpc_call
-    def rpc_id(self) -> "str":
+    def _rpc_id(self) -> "str":
         """
         Get the RPC ID of the widget.
         """
 
     @property
     @rpc_call
-    def config_dict(self) -> "dict":
+    def _config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
 
@@ -1565,28 +1515,6 @@ class BECWaveform(RPCBase):
 
         Returns:
             BECCurve: The curve object.
-        """
-
-    @rpc_call
-    def get_curve_config(self, curve_id: "str", dict_output: "bool" = True) -> "CurveConfig | dict":
-        """
-        Get the configuration of a curve by its ID.
-
-        Args:
-            curve_id(str): ID of the curve.
-
-        Returns:
-            CurveConfig|dict: Configuration of the curve.
-        """
-
-    @rpc_call
-    def apply_config(self, config: "dict | SubplotConfig", replot_last_scan: "bool" = False):
-        """
-        Apply the configuration to the 1D waveform widget.
-
-        Args:
-            config(dict|SubplotConfig): Configuration settings.
-            replot_last_scan(bool, optional): If True, replot the last scan. Defaults to False.
         """
 
     @rpc_call
@@ -1732,21 +1660,11 @@ class BECWaveform(RPCBase):
             size(int): Font size of the legend.
         """
 
-    @rpc_call
-    def apply_config(self, config: "dict | SubplotConfig", replot_last_scan: "bool" = False):
-        """
-        Apply the configuration to the 1D waveform widget.
-
-        Args:
-            config(dict|SubplotConfig): Configuration settings.
-            replot_last_scan(bool, optional): If True, replot the last scan. Defaults to False.
-        """
-
 
 class DeviceComboBox(RPCBase):
     @property
     @rpc_call
-    def config_dict(self) -> "dict":
+    def _config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
 
@@ -1755,7 +1673,7 @@ class DeviceComboBox(RPCBase):
         """
 
     @rpc_call
-    def get_all_rpc(self) -> "dict":
+    def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
         """
@@ -1764,7 +1682,7 @@ class DeviceComboBox(RPCBase):
 class DeviceInputBase(RPCBase):
     @property
     @rpc_call
-    def config_dict(self) -> "dict":
+    def _config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
 
@@ -1773,7 +1691,7 @@ class DeviceInputBase(RPCBase):
         """
 
     @rpc_call
-    def get_all_rpc(self) -> "dict":
+    def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
         """
@@ -1782,7 +1700,7 @@ class DeviceInputBase(RPCBase):
 class DeviceLineEdit(RPCBase):
     @property
     @rpc_call
-    def config_dict(self) -> "dict":
+    def _config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
 
@@ -1791,7 +1709,7 @@ class DeviceLineEdit(RPCBase):
         """
 
     @rpc_call
-    def get_all_rpc(self) -> "dict":
+    def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
         """
@@ -1799,21 +1717,21 @@ class DeviceLineEdit(RPCBase):
 
 class Ring(RPCBase):
     @rpc_call
-    def get_all_rpc(self) -> "dict":
+    def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
         """
 
     @property
     @rpc_call
-    def rpc_id(self) -> "str":
+    def _rpc_id(self) -> "str":
         """
         Get the RPC ID of the widget.
         """
 
     @property
     @rpc_call
-    def config_dict(self) -> "dict":
+    def _config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
 
@@ -1899,21 +1817,21 @@ class Ring(RPCBase):
 
 class RingProgressBar(RPCBase):
     @rpc_call
-    def get_all_rpc(self) -> "dict":
+    def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
         """
 
     @property
     @rpc_call
-    def rpc_id(self) -> "str":
+    def _rpc_id(self) -> "str":
         """
         Get the RPC ID of the widget.
         """
 
     @property
     @rpc_call
-    def config_dict(self) -> "dict":
+    def _config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
 
@@ -2079,7 +1997,7 @@ class RingProgressBar(RPCBase):
 class ScanControl(RPCBase):
     @property
     @rpc_call
-    def config_dict(self) -> "dict":
+    def _config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
 
@@ -2088,7 +2006,7 @@ class ScanControl(RPCBase):
         """
 
     @rpc_call
-    def get_all_rpc(self) -> "dict":
+    def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
         """
@@ -2097,7 +2015,7 @@ class ScanControl(RPCBase):
 class StopButton(RPCBase):
     @property
     @rpc_call
-    def config_dict(self) -> "dict":
+    def _config_dict(self) -> "dict":
         """
         Get the configuration of the widget.
 
@@ -2106,7 +2024,7 @@ class StopButton(RPCBase):
         """
 
     @rpc_call
-    def get_all_rpc(self) -> "dict":
+    def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
         """

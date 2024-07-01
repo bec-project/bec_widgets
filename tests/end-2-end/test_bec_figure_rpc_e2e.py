@@ -17,7 +17,7 @@ def test_rpc_waveform1d_custom_curve(rpc_server_figure):
     curve.set_color("blue")
 
     assert len(fig.widgets) == 1
-    assert len(fig.widgets[ax.rpc_id].curves) == 1
+    assert len(fig.widgets[ax._rpc_id].curves) == 1
 
 
 def test_rpc_plotting_shortcuts_init_configs(rpc_server_figure, qtbot):
@@ -39,7 +39,7 @@ def test_rpc_plotting_shortcuts_init_configs(rpc_server_figure, qtbot):
 
     # check if the correct devices are set
     # plot
-    assert plt.config_dict["curves"]["bpm4i-bpm4i"]["signals"] == {
+    assert plt._config_dict["curves"]["bpm4i-bpm4i"]["signals"] == {
         "dap": None,
         "source": "scan_segment",
         "x": {"name": "samx", "entry": "samx", "unit": None, "modifier": None, "limits": None},
@@ -47,9 +47,9 @@ def test_rpc_plotting_shortcuts_init_configs(rpc_server_figure, qtbot):
         "z": None,
     }
     # image
-    assert im.config_dict["images"]["eiger"]["monitor"] == "eiger"
+    assert im._config_dict["images"]["eiger"]["monitor"] == "eiger"
     # motor map
-    assert motor_map.config_dict["signals"] == {
+    assert motor_map._config_dict["signals"] == {
         "dap": None,
         "source": "device_readback",
         "x": {
@@ -69,7 +69,7 @@ def test_rpc_plotting_shortcuts_init_configs(rpc_server_figure, qtbot):
         "z": None,
     }
     # plot with z scatter
-    assert plt_z.config_dict["curves"]["bpm4i-bpm4i"]["signals"] == {
+    assert plt_z._config_dict["curves"]["bpm4i-bpm4i"]["signals"] == {
         "dap": None,
         "source": "scan_segment",
         "x": {"name": "samx", "entry": "samx", "unit": None, "modifier": None, "limits": None},

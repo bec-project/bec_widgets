@@ -23,7 +23,7 @@ class DockAreaConfig(ConnectionConfig):
 
 class BECDockArea(BECConnector, DockArea):
     USER_ACCESS = [
-        "config_dict",
+        "_config_dict",
         "panels",
         "save_state",
         "remove_dock",
@@ -32,7 +32,7 @@ class BECDockArea(BECConnector, DockArea):
         "clear_all",
         "detach_dock",
         "attach_all",
-        "get_all_rpc",
+        "_get_all_rpc",
         "temp_areas",
     ]
 

@@ -110,8 +110,9 @@ class WidgetHandler:
 
 class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
     USER_ACCESS = [
-        "rpc_id",
-        "config_dict",
+        "_rpc_id",
+        "_config_dict",
+        "_get_all_rpc",
         "axes",
         "widgets",
         "plot",
@@ -121,11 +122,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         "change_layout",
         "change_theme",
         "clear_all",
-        "get_all_rpc",
         "widget_list",
-        # "apply_config",
-        # "save_config",
-        # "load_config",
     ]
     subplot_map = {
         "PlotBase": BECPlotBase,

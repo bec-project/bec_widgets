@@ -65,8 +65,8 @@ class BECCurve(BECConnector, pg.PlotDataItem):
     USER_ACCESS = [
         "remove",
         "dap_params",
-        "rpc_id",
-        "config_dict",
+        "_rpc_id",
+        "_config_dict",
         "set",
         "set_data",
         "set_color",

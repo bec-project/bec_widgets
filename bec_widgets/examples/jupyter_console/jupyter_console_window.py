@@ -98,14 +98,14 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.w3.set_y_label("Y")
 
         # Configs to try to pass
-        self.w1_c = self.w1.config_dict
-        self.w2_c = self.w2.config_dict
-        self.w3_c = self.w3.config_dict
+        self.w1_c = self.w1._config_dict
+        self.w2_c = self.w2._config_dict
+        self.w3_c = self.w3._config_dict
 
         # curves for w1
         self.c1 = self.w1.get_config()
 
-        self.fig_c = self.figure.config_dict
+        self.fig_c = self.figure._config_dict
 
     def _init_dock(self):
 

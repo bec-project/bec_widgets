@@ -29,11 +29,9 @@ class ImageConfig(SubplotConfig):
 
 class BECImageShow(BECPlotBase):
     USER_ACCESS = [
-        "rpc_id",
-        "config_dict",
+        "_rpc_id",
+        "_config_dict",
         "add_image_by_config",
-        "get_image_config",
-        "get_image_dict",
         "add_monitor_image",
         "add_custom_image",
         "set_vrange",
@@ -47,7 +45,6 @@ class BECImageShow(BECPlotBase):
         "set_log",
         "set_rotation",
         "set_transpose",
-        "toggle_threading",
         "set",
         "set_title",
         "set_x_label",
@@ -60,7 +57,6 @@ class BECImageShow(BECPlotBase):
         "lock_aspect_ratio",
         "remove",
         "images",
-        "apply_config",
     ]
 
     def __init__(

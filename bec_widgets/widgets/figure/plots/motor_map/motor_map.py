@@ -38,9 +38,6 @@ class MotorMapConfig(SubplotConfig):
 
     _validate_color = field_validator("color")(Colors.validate_color)
 
-    # @field_validator("color")
-    # def convert_to_rgba(cls, value):
-
     @field_validator("background_value")
     def validate_background_value(cls, value):
         if not 0 <= value <= 255:
@@ -52,8 +49,8 @@ class MotorMapConfig(SubplotConfig):
 
 class BECMotorMap(BECPlotBase):
     USER_ACCESS = [
-        "rpc_id",
-        "config_dict",
+        "_rpc_id",
+        "_config_dict",
         "change_motors",
         "set_max_points",
         "set_precision",
@@ -62,7 +59,6 @@ class BECMotorMap(BECPlotBase):
         "set_scatter_size",
         "get_data",
         "remove",
-        "apply_config",
     ]
 
     # QT Signals

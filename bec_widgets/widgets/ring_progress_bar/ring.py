@@ -79,9 +79,9 @@ class RingConfig(ProgressbarConfig):
 
 class Ring(BECConnector):
     USER_ACCESS = [
-        "get_all_rpc",
-        "rpc_id",
-        "config_dict",
+        "_get_all_rpc",
+        "_rpc_id",
+        "_config_dict",
         "set_value",
         "set_color",
         "set_background",

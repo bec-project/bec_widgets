@@ -26,8 +26,8 @@ class DockConfig(ConnectionConfig):
 
 class BECDock(BECConnector, Dock):
     USER_ACCESS = [
-        "config_dict",
-        "rpc_id",
+        "_config_dict",
+        "_rpc_id",
         "widget_list",
         "show_title_bar",
         "hide_title_bar",

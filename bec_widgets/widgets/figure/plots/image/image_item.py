@@ -37,8 +37,8 @@ class ImageItemConfig(ConnectionConfig):
 
 class BECImageItem(BECConnector, pg.ImageItem):
     USER_ACCESS = [
-        "rpc_id",
-        "config_dict",
+        "_rpc_id",
+        "_config_dict",
         "set",
         "set_fft",
         "set_log",

@@ -46,7 +46,7 @@ class SubplotConfig(ConnectionConfig):
 
 class BECPlotBase(BECConnector, pg.GraphicsLayout):
     USER_ACCESS = [
-        "config_dict",
+        "_config_dict",
         "set",
         "set_title",
         "set_x_label",

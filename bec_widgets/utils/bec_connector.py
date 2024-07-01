@@ -66,7 +66,7 @@ class Worker(QRunnable):
 class BECConnector:
     """Connection mixin class for all BEC widgets, to handle BEC client and device manager"""
 
-    USER_ACCESS = ["config_dict", "get_all_rpc"]
+    USER_ACCESS = ["_config_dict", "_get_all_rpc"]
 
     def __init__(self, client=None, config: ConnectionConfig = None, gui_id: str = None):
         # BEC related connections
@@ -130,23 +130,23 @@ class BECConnector:
         self._thread_pool.start(worker)
         return worker
 
-    def get_all_rpc(self) -> dict:
+    def _get_all_rpc(self) -> dict:
         """Get all registered RPC objects."""
         all_connections = self.rpc_register.list_all_connections()
         return dict(all_connections)
 
     @property
-    def rpc_id(self) -> str:
+    def _rpc_id(self) -> str:
         """Get the RPC ID of the widget."""
         return self.gui_id
 
-    @rpc_id.setter
-    def rpc_id(self, rpc_id: str) -> None:
+    @_rpc_id.setter
+    def _rpc_id(self, rpc_id: str) -> None:
         """Set the RPC ID of the widget."""
         self.gui_id = rpc_id
 
     @property
-    def config_dict(self) -> dict:
+    def _config_dict(self) -> dict:
         """
         Get the configuration of the widget.
 
@@ -155,8 +155,8 @@ class BECConnector:
         """
         return self.config.model_dump()
 
-    @config_dict.setter
-    def config_dict(self, config: BaseModel) -> None:
+    @_config_dict.setter
+    def _config_dict(self, config: BaseModel) -> None:
         """
         Get the configuration of the widget.
 
@@ -211,13 +211,13 @@ class BECConnector:
             gui(bool): If True, use the GUI dialog to save the configuration file.
         """
         if gui is True:
-            save_yaml_gui(self, self.config_dict)
+            save_yaml_gui(self, self._config_dict)
         else:
             if path is None:
                 path = os.getcwd()
             file_path = os.path.join(path, f"{self.__class__.__name__}_config.yaml")
 
-            save_yaml(file_path, self.config_dict)
+            save_yaml(file_path, self._config_dict)
 
     @pyqtSlot(str)
     def set_gui_id(self, gui_id: str) -> None:

@@ -35,8 +35,8 @@ class Waveform1DConfig(SubplotConfig):
 
 class BECWaveform(BECPlotBase):
     USER_ACCESS = [
-        "rpc_id",
-        "config_dict",
+        "_rpc_id",
+        "_config_dict",
         "plot",
         "add_dap",
         "get_dap_params",
@@ -44,8 +44,6 @@ class BECWaveform(BECPlotBase):
         "scan_history",
         "curves",
         "get_curve",
-        "get_curve_config",
-        "apply_config",
         "get_all_data",
         "set",
         "set_title",
@@ -59,7 +57,6 @@ class BECWaveform(BECPlotBase):
         "lock_aspect_ratio",
         "remove",
         "set_legend_label_size",
-        "apply_config",
     ]
     scan_signal_update = pyqtSignal()
     dap_params_update = pyqtSignal(dict)

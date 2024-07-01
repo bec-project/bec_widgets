@@ -192,7 +192,7 @@ def test_motor_map_init_from_config(bec_figure):
     mm = bec_figure.motor_map(config=config)
     config["gui_id"] = mm.gui_id
 
-    assert mm.config_dict == config
+    assert mm._config_dict == config
 
 
 def test_motor_map_set_scatter_size(bec_figure, qtbot):

@@ -23,14 +23,14 @@ def test_rpc_add_dock_with_figure_e2e(bec_client_lib, rpc_server_dock):
     d1 = dock.add_dock("dock_1")
     d2 = dock.add_dock("dock_2")
 
-    dock_config = dock.config_dict
+    dock_config = dock._config_dict
     assert len(dock_config["docks"]) == 3
     # Add 3 figures with some widgets
     fig0 = d0.add_widget("BECFigure")
     fig1 = d1.add_widget("BECFigure")
     fig2 = d2.add_widget("BECFigure")
 
-    dock_config = dock.config_dict
+    dock_config = dock._config_dict
     assert len(dock_config["docks"]) == 3
     assert len(dock_config["docks"]["dock_0"]["widgets"]) == 1
     assert len(dock_config["docks"]["dock_1"]["widgets"]) == 1
@@ -52,7 +52,7 @@ def test_rpc_add_dock_with_figure_e2e(bec_client_lib, rpc_server_dock):
     assert im.__class__.__name__ == "BECImageShow"
     assert im.__class__ == BECImageShow
 
-    assert mm.config_dict["signals"] == {
+    assert mm._config_dict["signals"] == {
         "dap": None,
         "source": "device_readback",
         "x": {
@@ -71,14 +71,14 @@ def test_rpc_add_dock_with_figure_e2e(bec_client_lib, rpc_server_dock):
         },
         "z": None,
     }
-    assert plt.config_dict["curves"]["bpm4i-bpm4i"]["signals"] == {
+    assert plt._config_dict["curves"]["bpm4i-bpm4i"]["signals"] == {
         "dap": None,
         "source": "scan_segment",
         "x": {"name": "samx", "entry": "samx", "unit": None, "modifier": None, "limits": None},
         "y": {"name": "bpm4i", "entry": "bpm4i", "unit": None, "modifier": None, "limits": None},
         "z": None,
     }
-    assert im.config_dict["images"]["eiger"]["monitor"] == "eiger"
+    assert im._config_dict["images"]["eiger"]["monitor"] == "eiger"
 
     # check initial position of motor map
     initial_pos_x = dev.samx.read()["samx"]["value"]
@@ -126,29 +126,29 @@ def test_dock_manipulations_e2e(rpc_server_dock):
     d0 = dock.add_dock("dock_0")
     d1 = dock.add_dock("dock_1")
     d2 = dock.add_dock("dock_2")
-    dock_config = dock.config_dict
+    dock_config = dock._config_dict
     assert len(dock_config["docks"]) == 3
 
     d0.detach()
     dock.detach_dock("dock_2")
-    dock_config = dock.config_dict
+    dock_config = dock._config_dict
     assert len(dock_config["docks"]) == 3
     assert len(dock.temp_areas) == 2
 
     d0.attach()
-    dock_config = dock.config_dict
+    dock_config = dock._config_dict
     assert len(dock_config["docks"]) == 3
     assert len(dock.temp_areas) == 1
 
     d2.remove()
-    dock_config = dock.config_dict
+    dock_config = dock._config_dict
     assert len(dock_config["docks"]) == 2
 
     assert ["dock_0", "dock_1"] == list(dock_config["docks"])
 
     dock.clear_all()
 
-    dock_config = dock.config_dict
+    dock_config = dock._config_dict
     assert len(dock_config["docks"]) == 0
     assert len(dock.temp_areas) == 0
 
@@ -165,11 +165,11 @@ def test_ring_bar(rpc_server_dock):
     bar.set_colors_from_map("viridis")
     bar.set_value([10, 20, 30, 40, 50])
 
-    bar_config = bar.config_dict
+    bar_config = bar._config_dict
 
     expected_colors = [list(color) for color in Colors.golden_angle_color("viridis", 5, "RGB")]
-    bar_colors = [ring.config_dict["color"] for ring in bar.rings]
-    bar_values = [ring.config_dict["value"] for ring in bar.rings]
+    bar_colors = [ring._config_dict["color"] for ring in bar.rings]
+    bar_values = [ring._config_dict["value"] for ring in bar.rings]
     assert bar_config["num_bars"] == 5
     assert bar_values == [10, 20, 30, 40, 50]
     assert bar_colors == expected_colors
@@ -191,7 +191,7 @@ def test_ring_bar_scan_update(bec_client_lib, rpc_server_dock):
     status = scans.line_scan(dev.samx, -5, 5, steps=10, exp_time=0.05, relative=False)
     status.wait()
 
-    bar_config = bar.config_dict
+    bar_config = bar._config_dict
     assert bar_config["num_bars"] == 1
     assert bar_config["rings"][0]["value"] == 10
     assert bar_config["rings"][0]["min_value"] == 0
@@ -200,7 +200,7 @@ def test_ring_bar_scan_update(bec_client_lib, rpc_server_dock):
     status = scans.grid_scan(dev.samx, -5, 5, 4, dev.samy, -10, 10, 4, relative=True, exp_time=0.1)
     status.wait()
 
-    bar_config = bar.config_dict
+    bar_config = bar._config_dict
     assert bar_config["num_bars"] == 1
     assert bar_config["rings"][0]["value"] == 16
     assert bar_config["rings"][0]["min_value"] == 0
@@ -217,7 +217,7 @@ def test_ring_bar_scan_update(bec_client_lib, rpc_server_dock):
     status = scans.umv(dev.samx, 5, dev.samy, 10, relative=True)
     status.wait()
 
-    bar_config = bar.config_dict
+    bar_config = bar._config_dict
     assert bar_config["num_bars"] == 2
     assert bar_config["rings"][0]["value"] == final_samx
     assert bar_config["rings"][1]["value"] == final_samy
