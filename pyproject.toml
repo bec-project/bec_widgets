@@ -22,6 +22,7 @@ dependencies = [
     "pyqtdarktheme~=2.1",
     "qtconsole~=5.5, >=5.5.1",  # needed for jupyter console
     "qtpy~=2.4",
+    "pyte",                     # needed for vt100 console
 ]
 
 
