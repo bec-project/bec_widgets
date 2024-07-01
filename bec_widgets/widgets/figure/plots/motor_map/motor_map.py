@@ -10,7 +10,7 @@ from pydantic import Field, ValidationError, field_validator
 from pydantic_core import PydanticCustomError
 from qtpy import QtCore, QtGui
 from qtpy.QtCore import Signal as pyqtSignal
-from qtpy.QtCore import Slot as pyqtSlot
+from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils import Colors, EntryValidator
@@ -24,7 +24,7 @@ class MotorMapConfig(SubplotConfig):
         (255, 255, 255, 255), description="The color of the last point of current position."
     )
     scatter_size: Optional[int] = Field(5, description="Size of the scatter points.")
-    max_points: Optional[int] = Field(1000, description="Maximum number of points to display.")
+    max_points: Optional[int] = Field(5000, description="Maximum number of points to display.")
     num_dim_points: Optional[int] = Field(
         100,
         description="Number of points to dim before the color remains same for older recorded position.",
@@ -121,7 +121,7 @@ class BECMotorMap(BECPlotBase):
                 motor_y_entry=self.config.signals.y.entry,
             )
 
-    @pyqtSlot(str, str, str, str, bool)
+    @Slot(str, str, str, str, bool)
     def change_motors(
         self,
         motor_x: str,
@@ -167,6 +167,7 @@ class BECMotorMap(BECPlotBase):
     def get_data(self) -> dict:
         """
         Get the data of the motor map.
+
         Returns:
             dict: Data of the motor map.
         """
@@ -181,7 +182,7 @@ class BECMotorMap(BECPlotBase):
         self.database_buffer["y"] = [self.database_buffer["y"][-1]]
         self.update_signal.emit()
 
-    def set_color(self, color: [str | tuple]):
+    def set_color(self, color: str | tuple):
         """
         Set color of the motor trace.
 
@@ -439,6 +440,7 @@ class BECMotorMap(BECPlotBase):
             print(f"The device '{motor}' does not have defined limits.")
             return None
 
+    @Slot()
     def _update_plot(self):
         """Update the motor map plot."""
         # If the number of points exceeds max_points, delete the oldest points
@@ -488,7 +490,7 @@ class BECMotorMap(BECPlotBase):
             f"Motor position: ({round(float(current_x),precision)}, {round(float(current_y),precision)})"
         )
 
-    @pyqtSlot(dict)
+    @Slot(dict)
     def on_device_readback(self, msg: dict) -> None:
         """
         Update the motor map plot with the new motor position.

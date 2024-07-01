@@ -18,6 +18,7 @@ class Widgets(str, enum.Enum):
     BECDock = "BECDock"
     BECDockArea = "BECDockArea"
     BECFigure = "BECFigure"
+    BECMotorMapWidget = "BECMotorMapWidget"
     RingProgressBar = "RingProgressBar"
     ScanControl = "ScanControl"
     TextBox = "TextBox"
@@ -1192,6 +1193,7 @@ class BECMotorMap(RPCBase):
     def get_data(self) -> "dict":
         """
         Get the data of the motor map.
+
         Returns:
             dict: Data of the motor map.
         """
@@ -1213,12 +1215,12 @@ class BECMotorMapWidget(RPCBase):
     @rpc_call
     def change_motors(
         self,
-        motor_x: str,
-        motor_y: str,
-        motor_x_entry: str = None,
-        motor_y_entry: str = None,
-        validate_bec: bool = True,
-    ) -> None:
+        motor_x: "str",
+        motor_y: "str",
+        motor_x_entry: "str" = None,
+        motor_y_entry: "str" = None,
+        validate_bec: "bool" = True,
+    ) -> "None":
         """
         Change the active motors for the plot.
 
@@ -1228,6 +1230,66 @@ class BECMotorMapWidget(RPCBase):
             motor_x_entry(str): Motor entry for the X axis.
             motor_y_entry(str): Motor entry for the Y axis.
             validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
+        """
+
+    @rpc_call
+    def set_max_points(self, max_points: "int") -> "None":
+        """
+        Set the maximum number of points to display on the motor map.
+
+        Args:
+            max_points(int): Maximum number of points to display.
+        """
+
+    @rpc_call
+    def set_precision(self, precision: "int") -> "None":
+        """
+        Set the precision of the motor map.
+
+        Args:
+            precision(int): Precision to set.
+        """
+
+    @rpc_call
+    def set_num_dim_points(self, num_dim_points: "int") -> "None":
+        """
+        Set the number of points to display on the motor map.
+
+        Args:
+            num_dim_points(int): Number of points to display.
+        """
+
+    @rpc_call
+    def set_background_value(self, background_value: "int") -> "None":
+        """
+        Set the background value of the motor map.
+
+        Args:
+            background_value(int): Background value of the motor map.
+        """
+
+    @rpc_call
+    def set_scatter_size(self, scatter_size: "int") -> "None":
+        """
+        Set the scatter size of the motor map.
+
+        Args:
+            scatter_size(int): Scatter size of the motor map.
+        """
+
+    @rpc_call
+    def get_data(self) -> "dict":
+        """
+        Get the data of the motor map.
+
+        Returns:
+            dict: Data of the motor map.
+        """
+
+    @rpc_call
+    def reset_history(self) -> "None":
+        """
+        Reset the history of the motor map.
         """
 
 
