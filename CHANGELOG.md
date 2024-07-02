@@ -1,5 +1,41 @@
 # CHANGELOG
 
+## v0.77.0 (2024-07-02)
+
+### Feature
+
+* feat(bec_connector): export config to yaml ([`a391f30`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a391f3018c50fee6a4a06884491b957df80c3cd3))
+
+* feat(utils): colors added convertor for rgba to hex ([`572f2fb`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/572f2fb8110d5cb0e80f3ca45ce57ef405572456))
+
+### Fix
+
+* fix(waveform): scatter 2D brush error ([`215d59c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/215d59c8bfe7fda9aff8cec8353bef9e1ce2eca1))
+
+* fix(figure): API cleanup ([`008a33a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/008a33a9b192473cc58e90cd6d98c5bcb5f7b8c0))
+
+* fix(figure): if/else logic corrected in subplot_factory ([`3e78723`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3e787234c7274b0698423d7bf9a4c54ec46bad5f))
+
+* fix(image): processing of already displayed data; closes #106 ([`1173510`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1173510105d2d70d7e498c2ac1e122cea3a16597))
+
+* fix(bec_figure): full reconstruction with config from other bec figure ([`b6e1e20`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b6e1e20b7c8549bb092e981062329e601411dda6))
+
+* fix(motor_map): API changes updates current visualisation; motor_map can be initialised from config ([`2e2d422`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2e2d422910685a2527a3d961a468c787f771ca44))
+
+* fix(image): image add_custom_image fixed, closes #225 ([`f0556e4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f0556e44113ffee66cf735aa2dd758c62cb634f4))
+
+* fix(figure): subplot methods consolidated; added subplot factory ([`4a97105`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4a97105e4bd2ce77d72dfe5f8307dd9ee65b21b0))
+
+* fix(image): image can be fully reconstructed from config ([`797f73c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/797f73c39aa73e07d6311f3de4baea53f6c380e0))
+
+* fix(image_item): vrange added int for pydantic model check ([`b8f796f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b8f796fd3fcc15641e8fc6a3ca75c344ce90fc45))
+
+* fix(bec_figure): waveforms can be initialised from the config; widgets are deleteLater after removal ([`78673ea`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/78673ea11a47aad878128197ae6213925228ed59))
+
+### Unknown
+
+* Resolve &#34;add VT100 console executing BEC as a widget&#34; ([`c6a14c0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c6a14c0768a90695567a83a7895247ed0c64f3ce))
+
 ## v0.76.1 (2024-06-29)
 
 ### Fix
@@ -117,41 +153,3 @@
 ### Feature
 
 * feat(connector): added threadpool wrapper ([`4ca1efe`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4ca1efeeb8955604069f7b98374c7f82e1a8da67))
-
-### Unknown
-
-* tests(status_box_test): temporary disabled tests for status_box due to high rate of failures ([`aa7ce2e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/aa7ce2ea27bb9564d4f5104bbff30725b8656453))
-
-## v0.71.1 (2024-06-23)
-
-### Fix
-
-* fix: don&#39;t print exception if the auto-update module cannot be found in plugins ([`860517a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/860517a3211075d1f6e2af7fa6a567b9e0cd77f3))
-
-## v0.71.0 (2024-06-23)
-
-### Fix
-
-* fix(cleanup): cleanup added to device_input widgets and scan_control ([`8badb6a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8badb6adc1d003dbf0b2b1a800c34821f3fc9aa3))
-
-* fix(scan_group_box): added row counter based on widgets ([`37682e7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/37682e7b8a6ede38308880d285e41a948d6fe831))
-
-* fix(scan_control): added default min limit for args bundle if specified ([`ec4574e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ec4574ed5c2c85ea6fbbe2b98f162a8e1220653b))
-
-* fix(scan_control): argbox delete later added to prevent overlapping gui if scan changed ([`7ce3a83`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7ce3a83c58cb69c2bf7cb7f4eaba7e6a2ca6c546))
-
-* fix(scan_control): only scans with defined gui_config are allowed ([`6dff187`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6dff1879c4178df0f8ebfd35101acdebb028d572))
-
-### Test
-
-* test(scan_control): tests added ([`56e74a0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/56e74a0e7da72d18e89bc30d1896dbf9ef97cd6b))
-
-### Unknown
-
-* test(scan_control):e2e tests added ([`83001a0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/83001a0d8267e1320549b07032857dcf46ecd293))
-
-* doc(scan_control): docs added ([`1b7921a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1b7921a7f2e3bcc846219a2a7aa0de0fd27bb8fe))
-
-* fix(device_line_edit):SizePolicy fixed for 100 horizontal ([`21d20e0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/21d20e0fc78e9a3853abe802733388cce119ce20))
-
-* tests WIP ([`c09644b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c09644b29ddb291c91dc58bcd6ebf02ff45cab36))
