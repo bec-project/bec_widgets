@@ -170,6 +170,13 @@ class BECMotorMap(BECPlotBase):
         data = {"x": self.database_buffer["x"], "y": self.database_buffer["y"]}
         return data
 
+    def reset_history(self):
+        """
+        Reset the history of the motor map.
+        """
+        self.database_buffer = {"x": [], "y": []}
+        self.update_signal.emit()
+
     def set_color(self, color: [str | tuple]):
         """
         Set color of the motor trace.

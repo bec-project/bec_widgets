@@ -48,7 +48,7 @@ class ConnectAction(ToolBarAction):
 
 
 class BECMotorMapWidget(BECConnector, QWidget):
-    USER_ACCESS = []
+    USER_ACCESS = ["change_motors"]
 
     def __init__(
         self,
@@ -86,21 +86,37 @@ class BECMotorMapWidget(BECConnector, QWidget):
         self.map = self.fig.motor_map()
         self.map.apply_config(config)
 
-        self.config = config
-
         self._hook_actions()
 
-    def _hook_actions(self):
-        self.toolbar.widgets["connect"].action.triggered.connect(self.pass_motors)
+        self.config = config
 
-    def pass_motors(self):
+    def _hook_actions(self):
+        self.toolbar.widgets["connect"].action.triggered.connect(self._action_motors)
+
+    def _action_motors(self):
         motor_x = self.toolbar.widgets["motor_x"].device_combobox.currentText()
         motor_y = self.toolbar.widgets["motor_y"].device_combobox.currentText()
-        self.change_motors(motor_x, motor_y)
+        self.change_motors(motor_x, motor_y, None, None, True)
 
-    @Slot(str, str)
-    def change_motors(self, motor_x, motor_y):
-        self.map.change_motors(motor_x, motor_y)
+    def change_motors(
+        self,
+        motor_x: str,
+        motor_y: str,
+        motor_x_entry: str = None,
+        motor_y_entry: str = None,
+        validate_bec: bool = True,
+    ) -> None:
+        """
+        Change the active motors for the plot.
+
+        Args:
+            motor_x(str): Motor name for the X axis.
+            motor_y(str): Motor name for the Y axis.
+            motor_x_entry(str): Motor entry for the X axis.
+            motor_y_entry(str): Motor entry for the Y axis.
+            validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
+        """
+        self.map.change_motors(motor_x, motor_y, motor_x_entry, motor_y_entry, validate_bec)
 
     def set(self, **kwargs):
         self.map.set(**kwargs)
