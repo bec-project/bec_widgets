@@ -44,8 +44,11 @@ class ComboBoxHandler(WidgetHandler):
     def get_value(self, widget: QComboBox) -> int:
         return widget.currentIndex()
 
-    def set_value(self, widget: QComboBox, value: int) -> None:
-        widget.setCurrentIndex(value)
+    def set_value(self, widget: QComboBox, value: int | str) -> None:
+        if isinstance(value, str):
+            value = widget.findText(value)
+        if isinstance(value, int):
+            widget.setCurrentIndex(value)
 
 
 class TableWidgetHandler(WidgetHandler):
