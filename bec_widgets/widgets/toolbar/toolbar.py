@@ -1,12 +1,10 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QSpinBox
-
 # pylint: disable=no-name-in-module
-from qtpy.QtCore import QSize, QTimer
+from qtpy.QtCore import QSize
 from qtpy.QtGui import QAction
-from qtpy.QtWidgets import QApplication, QStyle, QToolBar, QWidget
+from qtpy.QtWidgets import QHBoxLayout, QLabel, QSpinBox, QToolBar, QWidget
 
 
 class ToolBarAction(ABC):
@@ -77,20 +75,3 @@ class ModularToolBar(QToolBar):
         for action_id, action in actions.items():
             action.add_to_toolbar(self, target_widget)
             self.widgets[action_id] = action
-
-        # for action in actions:
-        #     action.add_to_toolbar(self, target_widget)
-
-    # def set_manual_actions(self, actions, target_widget):
-    #     """Manually sets the actions for the toolbar.
-    #
-    #     Args:
-    #         actions (list[QAction or ToolBarAction]): A list of actions or action creators to populate the toolbar.
-    #         target_widget (QWidget): The widget that the actions will target.
-    #     """
-    #     self.clear()
-    #     for action in actions:
-    #         if isinstance(action, QAction):
-    #             self.addAction(action)
-    #         elif isinstance(action, ToolBarAction):
-    #             self.addAction(action.add_to_toolbar(self, target_widget))
