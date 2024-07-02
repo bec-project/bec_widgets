@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.78.0 (2024-07-02)
+
+### Feature
+
+* feat(color_button): patched ColorButton from pyqtgraph to be able to be opened in another QDialog ([`c36bb80`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c36bb80d6a4939802a4a1c8e5452c7b94bac185e))
+
 ## v0.77.0 (2024-07-02)
 
 ### Feature
@@ -143,13 +149,3 @@
 ### Fix
 
 * fix: renamed spiral progress bar to ring progress bar; closes #235 ([`e5c0087`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e5c0087c9aed831edbe1c172746325a772a3bafa))
-
-### Test
-
-* test: bugfix to prohibit leackage of mock ([`4348ed1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4348ed1bb2182da6bdecaf372d6db85279e60af8))
-
-## v0.72.0 (2024-06-24)
-
-### Feature
-
-* feat(connector): added threadpool wrapper ([`4ca1efe`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4ca1efeeb8955604069f7b98374c7f82e1a8da67))
