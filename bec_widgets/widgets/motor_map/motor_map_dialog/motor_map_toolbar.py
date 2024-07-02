@@ -32,8 +32,9 @@ class DeviceSelectionAction(ToolBarAction):
 class ConnectAction(ToolBarAction):
     def add_to_toolbar(self, toolbar, target):
         current_path = os.path.dirname(__file__)
+        parent_path = os.path.dirname(current_path)
         icon = QIcon()
-        icon.addFile(os.path.join(current_path, "assets", "connection.svg"), size=QSize(20, 20))
+        icon.addFile(os.path.join(parent_path, "assets", "connection.svg"), size=QSize(20, 20))
         self.action = QAction(icon, "Connect Motors", target)
         toolbar.addAction(self.action)
 
@@ -41,16 +42,18 @@ class ConnectAction(ToolBarAction):
 class ResetHistoryAction(ToolBarAction):
     def add_to_toolbar(self, toolbar, target):
         current_path = os.path.dirname(__file__)
+        parent_path = os.path.dirname(current_path)
         icon = QIcon()
-        icon.addFile(os.path.join(current_path, "assets", "history.svg"), size=QSize(20, 20))
-        self.action = QAction(icon, "Reset History", target)
+        icon.addFile(os.path.join(parent_path, "assets", "history.svg"), size=QSize(20, 20))
+        self.action = QAction(icon, "Reset Trace History", target)
         toolbar.addAction(self.action)
 
 
 class SettingsAction(ToolBarAction):
     def add_to_toolbar(self, toolbar, target):
         current_path = os.path.dirname(__file__)
+        parent_path = os.path.dirname(current_path)
         icon = QIcon()
-        icon.addFile(os.path.join(current_path, "assets", "settings.svg"), size=QSize(20, 20))
-        self.action = QAction(icon, "Config", target)
+        icon.addFile(os.path.join(parent_path, "assets", "settings.svg"), size=QSize(20, 20))
+        self.action = QAction(icon, "Open Configuration Dialog", target)
         toolbar.addAction(self.action)
