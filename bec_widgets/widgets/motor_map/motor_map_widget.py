@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-import os
-
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
-from bec_widgets.utils import BECConnector, UILoader
+from bec_widgets.utils import BECConnector
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.figure.plots.motor_map.motor_map import MotorMapConfig
+from bec_widgets.widgets.motor_map.motor_map_settings import MotorMapDialog
 from bec_widgets.widgets.motor_map.motor_map_toolbar import (
     ConnectAction,
     DeviceSelectionAction,
+    ResetHistoryAction,
     SettingsAction,
 )
 from bec_widgets.widgets.toolbar import ModularToolBar
@@ -52,6 +52,7 @@ class BECMotorMapWidget(BECConnector, QWidget):
                 "motor_x": DeviceSelectionAction("Motor X:"),
                 "motor_y": DeviceSelectionAction("Motor Y:"),
                 "connect": ConnectAction(),
+                "history": ResetHistoryAction(),
                 "config": SettingsAction(),
             },
             target_widget=self,
@@ -69,6 +70,8 @@ class BECMotorMapWidget(BECConnector, QWidget):
 
     def _hook_actions(self):
         self.toolbar.widgets["connect"].action.triggered.connect(self._action_motors)
+        self.toolbar.widgets["config"].action.triggered.connect(self.show_settings)
+        self.toolbar.widgets["history"].action.triggered.connect(self.reset_history)
 
     def _action_motors(self):
         toolbar_x = self.toolbar.widgets["motor_x"].device_combobox
@@ -78,6 +81,10 @@ class BECMotorMapWidget(BECConnector, QWidget):
         self.change_motors(motor_x, motor_y, None, None, True)
         toolbar_x.setStyleSheet("QComboBox {{ background-color: " "; }}")
         toolbar_y.setStyleSheet("QComboBox {{ background-color: " "; }}")
+
+    def show_settings(self) -> None:
+        dialog = MotorMapDialog(self, target_widget=self)
+        dialog.exec()
 
     ###################################
     # User Access Methods from MotorMap
@@ -176,7 +183,7 @@ class BECMotorMapWidget(BECConnector, QWidget):
 if __name__ == "__main__":
     import sys
 
-    from PySide6.QtWidgets import QApplication, QDialog
+    from PySide6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
     widget = BECMotorMapWidget()

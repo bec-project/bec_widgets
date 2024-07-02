@@ -24,7 +24,7 @@ class MotorMapConfig(SubplotConfig):
         (255, 255, 255, 255), description="The color of the last point of current position."
     )
     scatter_size: Optional[int] = Field(5, description="Size of the scatter points.")
-    max_points: Optional[int] = Field(1000, description="Maximum number of points to display.")
+    max_points: Optional[int] = Field(5000, description="Maximum number of points to display.")
     num_dim_points: Optional[int] = Field(
         100,
         description="Number of points to dim before the color remains same for older recorded position.",

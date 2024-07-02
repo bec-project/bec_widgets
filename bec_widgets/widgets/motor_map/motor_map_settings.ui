@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+    <class>Form</class>
+    <widget class="QWidget" name="Form">
+        <property name="geometry">
+            <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>237</width>
+                <height>184</height>
+            </rect>
+        </property>
+        <property name="windowTitle">
+            <string>Form</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout">
+            <item row="0" column="0">
+                <widget class="QLabel" name="max_point_label">
+                    <property name="text">
+                        <string>Max Points</string>
+                    </property>
+                </widget>
+            </item>
+            <item row="0" column="1">
+                <widget class="QSpinBox" name="max_points">
+                    <property name="maximum">
+                        <number>10000</number>
+                    </property>
+                </widget>
+            </item>
+            <item row="1" column="0">
+                <widget class="QLabel" name="trace_label">
+                    <property name="text">
+                        <string>Trace Dim</string>
+                    </property>
+                </widget>
+            </item>
+            <item row="1" column="1">
+                <widget class="QSpinBox" name="trace_dim">
+                    <property name="maximum">
+                        <number>1000</number>
+                    </property>
+                </widget>
+            </item>
+            <item row="2" column="0">
+                <widget class="QLabel" name="precision_label">
+                    <property name="text">
+                        <string>Precision</string>
+                    </property>
+                </widget>
+            </item>
+            <item row="2" column="1">
+                <widget class="QSpinBox" name="precision">
+                    <property name="maximum">
+                        <number>15</number>
+                    </property>
+                </widget>
+            </item>
+            <item row="3" column="0">
+                <widget class="QLabel" name="scatter_size_label">
+                    <property name="text">
+                        <string>Scatter Size</string>
+                    </property>
+                </widget>
+            </item>
+            <item row="3" column="1">
+                <widget class="QSpinBox" name="scatter_size">
+                    <property name="maximum">
+                        <number>20</number>
+                    </property>
+                </widget>
+            </item>
+            <item row="4" column="0">
+                <widget class="QLabel" name="background_label">
+                    <property name="text">
+                        <string>Background Intensity</string>
+                    </property>
+                </widget>
+            </item>
+            <item row="4" column="1">
+                <widget class="QSpinBox" name="background_value">
+                    <property name="maximum">
+                        <number>100</number>
+                    </property>
+                </widget>
+            </item>
+        </layout>
+    </widget>
+    <resources/>
+    <connections/>
+</ui>
