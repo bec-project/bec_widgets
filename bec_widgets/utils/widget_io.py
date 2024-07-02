@@ -146,6 +146,26 @@ class WidgetIO:
             raise ValueError(f"No handler for widget type: {type(widget)}")
 
     @staticmethod
+    def check_and_adjust_limits(spin_box: QDoubleSpinBox, number: float):
+        """
+        Check if the new limits are within the current limits, if not adjust the limits.
+
+        Args:
+            number(float): The new value to check against the limits.
+        """
+
+        min_value = spin_box.minimum()
+        max_value = spin_box.maximum()
+
+        # Calculate the new limits
+        new_limit = number + 5 * number
+
+        if number < min_value:
+            spin_box.setMinimum(new_limit)
+        elif number > max_value:
+            spin_box.setMaximum(new_limit)
+
+    @staticmethod
     def _find_handler(widget):
         """
         Find the appropriate handler for the widget by checking its base classes.
