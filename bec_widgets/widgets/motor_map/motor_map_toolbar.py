@@ -1,0 +1,43 @@
+import os
+
+from qtpy.QtCore import QSize
+from qtpy.QtGui import QAction, QIcon
+from qtpy.QtWidgets import QHBoxLayout, QLabel, QWidget
+
+from bec_widgets.widgets.device_inputs import DeviceComboBox
+from bec_widgets.widgets.toolbar.toolbar import ToolBarAction
+
+
+class SettingsAction(ToolBarAction):
+    def add_to_toolbar(self, toolbar, target):
+        current_path = os.path.dirname(__file__)
+        icon = QIcon()
+        icon.addFile(os.path.join(current_path, "assets", "settings.svg"), size=QSize(20, 20))
+        action = QAction(icon, "Config", target)
+        action.triggered.connect(lambda: print(target.config_dict))
+        toolbar.addAction(action)
+
+
+class DeviceSelectionAction(ToolBarAction):
+    def __init__(self, label: str):
+        self.label = label
+        self.device_combobox = DeviceComboBox(device_filter="Positioner")
+
+    def add_to_toolbar(self, toolbar, target):
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+
+        label = QLabel(f"{self.label}")
+
+        layout.addWidget(label)
+        layout.addWidget(self.device_combobox)
+        toolbar.addWidget(widget)
+
+
+class ConnectAction(ToolBarAction):
+    def add_to_toolbar(self, toolbar, target):
+        current_path = os.path.dirname(__file__)
+        icon = QIcon()
+        icon.addFile(os.path.join(current_path, "assets", "connection.svg"), size=QSize(20, 20))
+        self.action = QAction(icon, "Connect Motors", target)
+        toolbar.addAction(self.action)

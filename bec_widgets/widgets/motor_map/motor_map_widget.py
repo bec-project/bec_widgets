@@ -1,54 +1,29 @@
-import os
+from __future__ import annotations
 
-from qtpy.QtCore import QSize, Slot
-from qtpy.QtGui import QAction, QIcon
-from qtpy.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.utils import BECConnector
-from bec_widgets.widgets.device_inputs import DeviceComboBox
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.figure.plots.motor_map.motor_map import MotorMapConfig
+from bec_widgets.widgets.motor_map.motor_map_toolbar import (
+    ConnectAction,
+    DeviceSelectionAction,
+    SettingsAction,
+)
 from bec_widgets.widgets.toolbar import ModularToolBar
-from bec_widgets.widgets.toolbar.toolbar import ToolBarAction
-
-
-class SettingsAction(ToolBarAction):
-    def add_to_toolbar(self, toolbar, target):
-        current_path = os.path.dirname(__file__)
-        icon = QIcon()
-        icon.addFile(os.path.join(current_path, "assets", "settings.svg"), size=QSize(20, 20))
-        action = QAction(icon, "Config", target)
-        action.triggered.connect(lambda: print(target.config_dict))
-        toolbar.addAction(action)
-
-
-class DeviceSelectionAction(ToolBarAction):
-    def __init__(self, label: str):
-        self.label = label
-        self.device_combobox = DeviceComboBox(device_filter="Positioner")
-
-    def add_to_toolbar(self, toolbar, target):
-        widget = QWidget()
-        layout = QHBoxLayout(widget)
-
-        label = QLabel(f"{self.label}")
-
-        layout.addWidget(label)
-        layout.addWidget(self.device_combobox)
-        toolbar.addWidget(widget)
-
-
-class ConnectAction(ToolBarAction):
-    def add_to_toolbar(self, toolbar, target):
-        current_path = os.path.dirname(__file__)
-        icon = QIcon()
-        icon.addFile(os.path.join(current_path, "assets", "connection.svg"), size=QSize(20, 20))
-        self.action = QAction(icon, "Connect Motors", target)
-        toolbar.addAction(self.action)
 
 
 class BECMotorMapWidget(BECConnector, QWidget):
-    USER_ACCESS = ["change_motors"]
+    USER_ACCESS = [
+        "change_motors",
+        "set_max_points",
+        "set_precision",
+        "set_num_dim_points",
+        "set_background_value",
+        "set_scatter_size",
+        "get_data",
+        "reset_history",
+    ]
 
     def __init__(
         self,
@@ -98,6 +73,10 @@ class BECMotorMapWidget(BECConnector, QWidget):
         motor_y = self.toolbar.widgets["motor_y"].device_combobox.currentText()
         self.change_motors(motor_x, motor_y, None, None, True)
 
+    ###################################
+    # User Access Methods from MotorMap
+    ###################################
+
     def change_motors(
         self,
         motor_x: str,
@@ -118,8 +97,74 @@ class BECMotorMapWidget(BECConnector, QWidget):
         """
         self.map.change_motors(motor_x, motor_y, motor_x_entry, motor_y_entry, validate_bec)
 
-    def set(self, **kwargs):
-        self.map.set(**kwargs)
+    def get_data(self) -> dict:
+        """
+        Get the data of the motor map.
+
+        Returns:
+            dict: Data of the motor map.
+        """
+        return self.map.get_data()
+
+    def reset_history(self) -> None:
+        """
+        Reset the history of the motor map.
+        """
+        self.map.reset_history()
+
+    def set_color(self, color: str | tuple):
+        """
+        Set the color of the motor map.
+
+        Args:
+            color(str, tuple): Color to set.
+        """
+        self.map.set_color(color)
+
+    def set_max_points(self, max_points: int) -> None:
+        """
+        Set the maximum number of points to display on the motor map.
+
+        Args:
+            max_points(int): Maximum number of points to display.
+        """
+        self.map.set_max_points(max_points)
+
+    def set_precision(self, precision: int) -> None:
+        """
+        Set the precision of the motor map.
+
+        Args:
+            precision(int): Precision to set.
+        """
+        self.map.set_precision(precision)
+
+    def set_num_dim_points(self, num_dim_points: int) -> None:
+        """
+        Set the number of points to display on the motor map.
+
+        Args:
+            num_dim_points(int): Number of points to display.
+        """
+        self.map.set_num_dim_points(num_dim_points)
+
+    def set_background_value(self, background_value: int) -> None:
+        """
+        Set the background value of the motor map.
+
+        Args:
+            background_value(int): Background value of the motor map.
+        """
+        self.map.set_background_value(background_value)
+
+    def set_scatter_size(self, scatter_size: int) -> None:
+        """
+        Set the scatter size of the motor map.
+
+        Args:
+            scatter_size(int): Scatter size of the motor map.
+        """
+        self.map.set_scatter_size(scatter_size)
 
 
 if __name__ == "__main__":
