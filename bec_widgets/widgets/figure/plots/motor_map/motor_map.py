@@ -59,6 +59,7 @@ class BECMotorMap(BECPlotBase):
         "set_scatter_size",
         "get_data",
         "remove",
+        "reset_history",
     ]
 
     # QT Signals
@@ -174,7 +175,8 @@ class BECMotorMap(BECPlotBase):
         """
         Reset the history of the motor map.
         """
-        self.database_buffer = {"x": [], "y": []}
+        self.database_buffer["x"] = [self.database_buffer["x"][-1]]
+        self.database_buffer["y"] = [self.database_buffer["y"][-1]]
         self.update_signal.emit()
 
     def set_color(self, color: [str | tuple]):
