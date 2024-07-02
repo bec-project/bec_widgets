@@ -23,6 +23,8 @@ class DeviceSelectionAction(ToolBarAction):
         self.label = label
         self.device_combobox = DeviceComboBox(device_filter="Positioner")
 
+        self.device_combobox.currentIndexChanged.connect(lambda: self.set_combobox_style("#ffa700"))
+
     def add_to_toolbar(self, toolbar, target):
         widget = QWidget()
         layout = QHBoxLayout(widget)
@@ -32,6 +34,9 @@ class DeviceSelectionAction(ToolBarAction):
         layout.addWidget(label)
         layout.addWidget(self.device_combobox)
         toolbar.addWidget(widget)
+
+    def set_combobox_style(self, color: str):
+        self.device_combobox.setStyleSheet(f"QComboBox {{ background-color: {color}; }}")
 
 
 class ConnectAction(ToolBarAction):

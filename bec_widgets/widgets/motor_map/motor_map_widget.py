@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import os
+
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
-from bec_widgets.utils import BECConnector
+from bec_widgets.utils import BECConnector, UILoader
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.figure.plots.motor_map.motor_map import MotorMapConfig
 from bec_widgets.widgets.motor_map.motor_map_toolbar import (
@@ -69,9 +71,13 @@ class BECMotorMapWidget(BECConnector, QWidget):
         self.toolbar.widgets["connect"].action.triggered.connect(self._action_motors)
 
     def _action_motors(self):
-        motor_x = self.toolbar.widgets["motor_x"].device_combobox.currentText()
-        motor_y = self.toolbar.widgets["motor_y"].device_combobox.currentText()
+        toolbar_x = self.toolbar.widgets["motor_x"].device_combobox
+        toolbar_y = self.toolbar.widgets["motor_y"].device_combobox
+        motor_x = toolbar_x.currentText()
+        motor_y = toolbar_y.currentText()
         self.change_motors(motor_x, motor_y, None, None, True)
+        toolbar_x.setStyleSheet("QComboBox {{ background-color: " "; }}")
+        toolbar_y.setStyleSheet("QComboBox {{ background-color: " "; }}")
 
     ###################################
     # User Access Methods from MotorMap
@@ -170,7 +176,7 @@ class BECMotorMapWidget(BECConnector, QWidget):
 if __name__ == "__main__":
     import sys
 
-    from PySide6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication, QDialog
 
     app = QApplication(sys.argv)
     widget = BECMotorMapWidget()
