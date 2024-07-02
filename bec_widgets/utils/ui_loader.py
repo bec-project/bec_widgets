@@ -1,5 +1,29 @@
-from qtpy import QT_VERSION
+from qtpy import PYQT6, PYSIDE6, QT_VERSION
 from qtpy.QtCore import QFile, QIODevice
+
+if PYSIDE6:
+    from PySide6.QtUiTools import QUiLoader
+
+    from bec_widgets.utils.plugin_utils import get_rpc_classes
+    from bec_widgets.widgets.buttons.color_button.color_button import ColorButton
+
+    class CustomUiLoader(QUiLoader):
+        def __init__(self, baseinstance):
+            super().__init__(baseinstance)
+            widgets = get_rpc_classes("bec_widgets").get("top_level_classes", [])
+
+            widgets.append(ColorButton)
+
+            self.custom_widgets = {widget.__name__: widget for widget in widgets}
+
+            self.baseinstance = baseinstance
+
+        def createWidget(self, class_name, parent=None, name=""):
+            if class_name in self.custom_widgets:
+                widget = self.custom_widgets[class_name](parent)
+                widget.setObjectName(name)
+                return widget
+            return super().createWidget(class_name, parent, name)
 
 
 class UILoader:
@@ -14,14 +38,14 @@ class UILoader:
             self.loader = uic.loadUi
         elif QT_VERSION.startswith("6"):
             # PyQt6 or PySide6
-            try:
-                from PySide6.QtUiTools import QUiLoader
-
+            if PYSIDE6:
                 self.loader = self.load_ui_pyside6
-            except ImportError:
+            elif PYQT6:
                 from PyQt6.uic import loadUi
 
                 self.loader = loadUi
+            else:
+                raise ImportError("No compatible Qt bindings found.")
 
     def load_ui_pyside6(self, ui_file, parent=None):
         """
@@ -33,9 +57,8 @@ class UILoader:
         Returns:
             QWidget: The loaded widget.
         """
-        from PySide6.QtUiTools import QUiLoader
 
-        loader = QUiLoader(parent)
+        loader = CustomUiLoader(parent)
         file = QFile(ui_file)
         if not file.open(QIODevice.ReadOnly):
             raise IOError(f"Cannot open file: {ui_file}")
