@@ -1202,6 +1202,34 @@ class BECMotorMap(RPCBase):
         Remove the plot widget from the figure.
         """
 
+    @rpc_call
+    def reset_history(self):
+        """
+        Reset the history of the motor map.
+        """
+
+
+class BECMotorMapWidget(RPCBase):
+    @rpc_call
+    def change_motors(
+        self,
+        motor_x: str,
+        motor_y: str,
+        motor_x_entry: str = None,
+        motor_y_entry: str = None,
+        validate_bec: bool = True,
+    ) -> None:
+        """
+        Change the active motors for the plot.
+
+        Args:
+            motor_x(str): Motor name for the X axis.
+            motor_y(str): Motor name for the Y axis.
+            motor_x_entry(str): Motor entry for the X axis.
+            motor_y_entry(str): Motor entry for the Y axis.
+            validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
+        """
+
 
 class BECPlotBase(RPCBase):
     @property
