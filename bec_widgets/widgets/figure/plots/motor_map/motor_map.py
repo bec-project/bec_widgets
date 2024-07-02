@@ -140,6 +140,8 @@ class BECMotorMap(BECPlotBase):
             motor_y_entry(str): Motor entry for the Y axis.
             validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
         """
+        self.plot_item.clear()
+
         motor_x_entry, motor_y_entry = self._validate_signal_entries(
             motor_x, motor_y, motor_x_entry, motor_y_entry, validate_bec
         )
