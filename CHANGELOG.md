@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.78.1 (2024-07-02)
+
+### Fix
+
+* fix(ui_loader): ui loader is compatible with bec plugins ([`b787759`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b787759f44486dc7af2c03811efb156041e4b6cb))
+
 ## v0.78.0 (2024-07-02)
 
 ### Feature
@@ -143,9 +149,3 @@
 ### Fix
 
 * fix(designer): fixed designer for pyenv and venv; closes #237 ([`e631fc1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e631fc15d8707b73d58cb64316e115a7e43961ea))
-
-## v0.72.1 (2024-06-24)
-
-### Fix
-
-* fix: renamed spiral progress bar to ring progress bar; closes #235 ([`e5c0087`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e5c0087c9aed831edbe1c172746325a772a3bafa))
