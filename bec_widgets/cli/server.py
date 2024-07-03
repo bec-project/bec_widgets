@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import json
 import signal
 import sys
 from contextlib import redirect_stderr, redirect_stdout
@@ -141,10 +142,30 @@ class SimpleFileLikeFromLogOutputFunc:
         return
 
 
+def _start_server(gui_id: str, gui_class: Union[BECFigure, BECDockArea], config: str | None = None):
+    if config:
+        try:
+            config = json.loads(config)
+            service_config = ServiceConfig(config=config)
+        except (json.JSONDecodeError, TypeError):
+            service_config = ServiceConfig(config_path=config)
+    else:
+        # if no config is provided, use the default config
+        service_config = ServiceConfig()
+
+    bec_logger.configure(
+        service_config.redis,
+        QtRedisConnector,
+        service_name="BECWidgetsCLIServer",
+        service_config=service_config.service_config,
+    )
+    server = BECWidgetsCLIServer(gui_id=gui_id, config=service_config, gui_class=gui_class)
+    return server
+
+
 def main():
     import argparse
     import os
-    import sys
 
     from qtpy.QtCore import QSize
     from qtpy.QtGui import QIcon
@@ -159,7 +180,7 @@ def main():
         type=str,
         help="Name of the gui class to be rendered. Possible values: \n- BECFigure\n- BECDockArea",
     )
-    parser.add_argument("--config", type=str, help="Config file")
+    parser.add_argument("--config", type=str, help="Config file or config string.")
 
     args = parser.parse_args()
 
@@ -188,14 +209,7 @@ def main():
             win = QMainWindow()
             win.setWindowTitle("BEC Widgets")
 
-            service_config = ServiceConfig(args.config)
-            bec_logger.configure(
-                service_config.redis,
-                QtRedisConnector,
-                service_name="BECWidgetsCLIServer",
-                service_config=service_config.service_config,
-            )
-            server = BECWidgetsCLIServer(gui_id=args.id, config=service_config, gui_class=gui_class)
+            server = _start_server(args.id, gui_class, args.config)
 
             gui = server.gui
             win.setCentralWidget(gui)

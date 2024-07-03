@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import importlib.metadata as imd
+import json
 import os
 import select
 import subprocess
@@ -87,7 +88,7 @@ def _get_output(process, logger) -> None:
         print(f"Error reading process output: {str(e)}")
 
 
-def _start_plot_process(gui_id, gui_class, config, logger=None) -> None:
+def _start_plot_process(gui_id: str, gui_class: type, config: dict | str, logger=None) -> None:
     """
     Start the plot in a new process.
 
@@ -98,6 +99,8 @@ def _start_plot_process(gui_id, gui_class, config, logger=None) -> None:
     # pylint: disable=subprocess-run-check
     command = ["bec-gui-server", "--id", gui_id, "--gui_class", gui_class.__name__]
     if config:
+        if isinstance(config, dict):
+            config = json.dumps(config)
         command.extend(["--config", config])
 
     env_dict = os.environ.copy()
@@ -190,7 +193,7 @@ class BECGuiClientMixin:
         if self._process is None or self._process.poll() is not None:
             self._start_update_script()
             self._process, self._process_output_processing_thread = _start_plot_process(
-                self._gui_id, self.__class__, self._client._service_config.config_path
+                self._gui_id, self.__class__, self._client._service_config.config
             )
         while not self.gui_is_alive():
             print("Waiting for GUI to start...")
