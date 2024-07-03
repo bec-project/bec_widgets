@@ -48,7 +48,7 @@ class BECStatusBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BECStatusBox"
 
     def toolTip(self):
-        return "Widget to display the BECStatus from all active services."
+        return "An autonomous widget to display the status of BEC services."
 
     def whatsThis(self):
         return self.toolTip()

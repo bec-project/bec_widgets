@@ -23,11 +23,11 @@ def status_box(qtbot, mocked_client, service_status_fixture):
 
 
 def test_update_top_item(status_box):
-    assert status_box.children()[0].children()[0].config.status == "IDLE"
+    assert status_box.tree.children()[0].children()[0].config.status == "IDLE"
     name = status_box.box_name
     status_box.update_top_item_status(status="RUNNING")
     assert status_box.status_container[name]["info"].status == "RUNNING"
-    assert status_box.children()[0].children()[0].config.status == "RUNNING"
+    assert status_box.tree.children()[0].children()[0].config.status == "RUNNING"
 
 
 def test_create_status_widget(status_box):
@@ -62,9 +62,9 @@ def test_add_tree_item(status_box):
     status = BECStatus.IDLE
     info = {"test": "test"}
     metrics = {"metric": "test_metric"}
-    assert len(status_box.children()[0].children()) == 1
+    assert len(status_box.tree.children()[0].children()) == 1
     status_box.add_tree_item(name, status, info, metrics)
-    assert len(status_box.children()[0].children()) == 2
+    assert len(status_box.tree.children()[0].children()) == 2
     assert name in status_box.status_container
 
 
@@ -98,14 +98,14 @@ def test_update_core_services(status_box):
     services_metrics = {name: ServiceMetricMessage(name=name, metrics=metrics)}
 
     status_box.update_core_services(services_status, services_metrics)
-    assert status_box.children()[0].children()[0].config.status == "RUNNING"
+    assert status_box.tree.children()[0].children()[0].config.status == "RUNNING"
     assert status_box.status_container[name]["widget"].config.metrics == metrics
 
     status = BECStatus.IDLE
     services_status = {name: StatusMessage(name=name, status=status, info=info)}
     services_metrics = {name: ServiceMetricMessage(name=name, metrics=metrics)}
     status_box.update_core_services(services_status, services_metrics)
-    assert status_box.children()[0].children()[0].config.status == status.name
+    assert status_box.tree.children()[0].children()[0].config.status == status.name
     assert status_box.status_container[name]["widget"].config.metrics == metrics
 
 
@@ -119,5 +119,5 @@ def test_double_click_item(status_box):
     item = container["item"]
     status_item = container["widget"]
     with mock.patch.object(status_item, "show_popup") as mock_show_popup:
-        status_box.itemDoubleClicked.emit(item, 0)
+        status_box.tree.itemDoubleClicked.emit(item, 0)
         assert mock_show_popup.call_count == 1
