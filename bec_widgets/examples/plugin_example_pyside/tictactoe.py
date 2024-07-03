@@ -16,6 +16,7 @@ class TicTacToe(QWidget):  # pragma: no cover
         super().__init__(parent)
         self._state = DEFAULT_STATE
         self._turn_number = 0
+        print("TicTac HERE !!!!!!")
 
     def minimumSizeHint(self):
         return QSize(200, 200)

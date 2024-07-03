@@ -27,6 +27,7 @@ class Widgets(str, enum.Enum):
     StopButton = "StopButton"
     TextBox = "TextBox"
     VSCodeEditor = "VSCodeEditor"
+    BECWaveformWidget = "BECWaveformWidget"
     WebsiteWidget = "WebsiteWidget"
 
 
@@ -468,9 +469,8 @@ class BECFigure(RPCBase):
     @rpc_call
     def plot(
         self,
-        arg1: "list | np.ndarray | str | None" = None,
-        y: "list | np.ndarray | None" = None,
         x: "list | np.ndarray | None" = None,
+        y: "list | np.ndarray | None" = None,
         x_name: "str | None" = None,
         y_name: "str | None" = None,
         z_name: "str | None" = None,
@@ -492,9 +492,8 @@ class BECFigure(RPCBase):
         Add a 1D waveform plot to the figure. Always access the first waveform widget in the figure.
 
         Args:
-            arg1(list | np.ndarray | str | None): First argument which can be x data, y data, or y_name.
-            y(list | np.ndarray): Custom y data to plot.
             x(list | np.ndarray): Custom x data to plot.
+            y(list | np.ndarray): Custom y data to plot.
             x_name(str): The name of the device for the x-axis.
             y_name(str): The name of the device for the y-axis.
             z_name(str): The name of the device for the z-axis.
@@ -1499,9 +1498,8 @@ class BECWaveform(RPCBase):
     @rpc_call
     def plot(
         self,
-        arg1: "list | np.ndarray | str | None" = None,
-        y: "list | np.ndarray | None" = None,
         x: "list | np.ndarray | None" = None,
+        y: "list | np.ndarray | None" = None,
         x_name: "str | None" = None,
         y_name: "str | None" = None,
         z_name: "str | None" = None,
@@ -1513,20 +1511,13 @@ class BECWaveform(RPCBase):
         label: "str | None" = None,
         validate: "bool" = True,
         dap: "str | None" = None,
-        **kwargs,
     ) -> "BECCurve":
         """
         Plot a curve to the plot widget.
-
         Args:
-            arg1(list | np.ndarray | str | None): First argument which can be x data, y data, or y_name.
+            x(list | np.ndarray): Custom x data to plot.
             y(list | np.ndarray): Custom y data to plot.
-            x(list | np.ndarray): Custom y data to plot.
-            x_name(str): Name of the x signal.
-                - "best_effort": Use the best effort signal.
-                - "timestamp": Use the timestamp signal.
-                - "index": Use the index signal.
-                - Custom signal name of device from BEC.
+            x_name(str): The name of the device for the x-axis.
             y_name(str): The name of the device for the y-axis.
             z_name(str): The name of the device for the z-axis.
             x_entry(str): The name of the entry for the x-axis.
@@ -1536,7 +1527,7 @@ class BECWaveform(RPCBase):
             color_map_z(str): The color map to use for the z-axis.
             label(str): The label of the curve.
             validate(bool): If True, validate the device names and entries.
-            dap(str): The dap model to use for the curve, only available for sync devices. If not specified, none will be added.
+            dap(str): The dap model to use for the curve. If not specified, none will be added.
 
         Returns:
             BECCurve: The curve object.
@@ -1545,13 +1536,12 @@ class BECWaveform(RPCBase):
     @rpc_call
     def add_dap(
         self,
-        x_name: "str | None" = None,
-        y_name: "str | None" = None,
+        x_name: "str",
+        y_name: "str",
         x_entry: "Optional[str]" = None,
         y_entry: "Optional[str]" = None,
         color: "Optional[str]" = None,
         dap: "str" = "GaussianModel",
-        validate_bec: "bool" = True,
         **kwargs,
     ) -> "BECCurve":
         """
@@ -1566,25 +1556,10 @@ class BECWaveform(RPCBase):
             color_map_z(str): The color map to use for the z-axis.
             label(str, optional): Label of the curve. Defaults to None.
             dap(str): The dap model to use for the curve.
-            validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
             **kwargs: Additional keyword arguments for the curve configuration.
 
         Returns:
             BECCurve: The curve object.
-        """
-
-    @rpc_call
-    def set_x(self, x_name: "str", x_entry: "str | None" = None):
-        """
-        Change the x axis of the plot widget.
-
-        Args:
-            x_name(str): Name of the x signal.
-                - "best_effort": Use the best effort signal.
-                - "timestamp": Use the timestamp signal.
-                - "index": Use the index signal.
-                - Custom signal name of device from BEC.
-            x_entry(str): Entry of the x signal.
         """
 
     @rpc_call
@@ -1772,12 +1747,6 @@ class BECWaveform(RPCBase):
         """
 
     @rpc_call
-    def clear_all(self):
-        """
-        None
-        """
-
-    @rpc_call
     def set_legend_label_size(self, size: "int" = None):
         """
         Set the font size of the legend.
@@ -1802,6 +1771,235 @@ class DeviceBox(RPCBase):
     def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
+        """
+
+
+class BECWaveformWidget(RPCBase):
+    @property
+    @rpc_call
+    def curves(self) -> "list[BECCurve]":
+        """
+        Get the curves of the plot widget as a list
+        Returns:
+            list: List of curves.
+        """
+
+    @rpc_call
+    def plot(
+        self,
+        x: "list | np.ndarray | None" = None,
+        y: "list | np.ndarray | None" = None,
+        x_name: "str | None" = None,
+        y_name: "str | None" = None,
+        z_name: "str | None" = None,
+        x_entry: "str | None" = None,
+        y_entry: "str | None" = None,
+        z_entry: "str | None" = None,
+        color: "str | None" = None,
+        color_map_z: "str | None" = "plasma",
+        label: "str | None" = None,
+        validate: "bool" = True,
+        dap: "str | None" = None,
+    ) -> "BECCurve":
+        """
+        Plot a curve to the plot widget.
+        Args:
+            x(list | np.ndarray): Custom x data to plot.
+            y(list | np.ndarray): Custom y data to plot.
+            x_name(str): The name of the device for the x-axis.
+            y_name(str): The name of the device for the y-axis.
+            z_name(str): The name of the device for the z-axis.
+            x_entry(str): The name of the entry for the x-axis.
+            y_entry(str): The name of the entry for the y-axis.
+            z_entry(str): The name of the entry for the z-axis.
+            color(str): The color of the curve.
+            color_map_z(str): The color map to use for the z-axis.
+            label(str): The label of the curve.
+            validate(bool): If True, validate the device names and entries.
+            dap(str): The dap model to use for the curve. If not specified, none will be added.
+
+        Returns:
+            BECCurve: The curve object.
+        """
+
+    @rpc_call
+    def add_dap(
+        self,
+        x_name: "str",
+        y_name: "str",
+        x_entry: "str | None" = None,
+        y_entry: "str | None" = None,
+        color: "str | None" = None,
+        dap: "str" = "GaussianModel",
+        **kwargs,
+    ) -> "BECCurve":
+        """
+        Add LMFIT dap model curve to the plot widget.
+
+        Args:
+            x_name(str): Name of the x signal.
+            x_entry(str): Entry of the x signal.
+            y_name(str): Name of the y signal.
+            y_entry(str): Entry of the y signal.
+            color(str, optional): Color of the curve. Defaults to None.
+            color_map_z(str): The color map to use for the z-axis.
+            label(str, optional): Label of the curve. Defaults to None.
+            dap(str): The dap model to use for the curve.
+            **kwargs: Additional keyword arguments for the curve configuration.
+
+        Returns:
+            BECCurve: The curve object.
+        """
+
+    @rpc_call
+    def get_dap_params(self) -> "dict":
+        """
+        Get the DAP parameters of all DAP curves.
+
+        Returns:
+            dict: DAP parameters of all DAP curves.
+        """
+
+    @rpc_call
+    def remove_curve(self, *identifiers):
+        """
+        Remove a curve from the plot widget.
+
+        Args:
+            *identifiers: Identifier of the curve to be removed. Can be either an integer (index) or a string (curve_id).
+        """
+
+    @rpc_call
+    def scan_history(self, scan_index: "int" = None, scan_id: "str" = None):
+        """
+        Update the scan curves with the data from the scan storage.
+        Provide only one of scan_id or scan_index.
+
+        Args:
+            scan_id(str, optional): ScanID of the scan to be updated. Defaults to None.
+            scan_index(int, optional): Index of the scan to be updated. Defaults to None.
+        """
+
+    @rpc_call
+    def get_all_data(self, output: "Literal['dict', 'pandas']" = "dict") -> "dict | pd.DataFrame":
+        """
+        Extract all curve data into a dictionary or a pandas DataFrame.
+
+        Args:
+            output (Literal["dict", "pandas"]): Format of the output data.
+
+        Returns:
+            dict | pd.DataFrame: Data of all curves in the specified format.
+        """
+
+    @rpc_call
+    def set(self, **kwargs):
+        """
+        Set the properties of the plot widget.
+
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+
+        Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+            - legend_label_size: int
+        """
+
+    @rpc_call
+    def set_title(self, title: "str"):
+        """
+        Set the title of the plot widget.
+
+        Args:
+            title(str): Title of the plot.
+        """
+
+    @rpc_call
+    def set_x_label(self, x_label: "str"):
+        """
+        Set the x-axis label of the plot widget.
+
+        Args:
+            x_label(str): Label of the x-axis.
+        """
+
+    @rpc_call
+    def set_y_label(self, y_label: "str"):
+        """
+        Set the y-axis label of the plot widget.
+
+        Args:
+            y_label(str): Label of the y-axis.
+        """
+
+    @rpc_call
+    def set_x_scale(self, x_scale: "Literal['linear', 'log']"):
+        """
+        Set the scale of the x-axis of the plot widget.
+
+        Args:
+            x_scale(Literal["linear", "log"]): Scale of the x-axis.
+        """
+
+    @rpc_call
+    def set_y_scale(self, y_scale: "Literal['linear', 'log']"):
+        """
+        Set the scale of the y-axis of the plot widget.
+
+        Args:
+            y_scale(Literal["linear", "log"]): Scale of the y-axis.
+        """
+
+    @rpc_call
+    def set_x_lim(self, x_lim: "tuple"):
+        """
+        Set the limits of the x-axis of the plot widget.
+
+        Args:
+            x_lim(tuple): Limits of the x-axis.
+        """
+
+    @rpc_call
+    def set_y_lim(self, y_lim: "tuple"):
+        """
+        Set the limits of the y-axis of the plot widget.
+
+        Args:
+            y_lim(tuple): Limits of the y-axis.
+        """
+
+    @rpc_call
+    def set_legend_label_size(self, legend_label_size: "int"):
+        """
+        Set the size of the legend labels of the plot widget.
+
+        Args:
+            legend_label_size(int): Size of the legend labels.
+        """
+
+    @rpc_call
+    def set_grid(self, x_grid: "bool", y_grid: "bool"):
+        """
+        Set the grid visibility of the plot widget.
+
+        Args:
+            x_grid(bool): Visibility of the x-axis grid.
+            y_grid(bool): Visibility of the y-axis grid.
+        """
+
+    @rpc_call
+    def lock_aspect_ratio(self, lock: "bool"):
+        """
+        Lock the aspect ratio of the plot widget.
+
+        Args:
+            lock(bool): Lock the aspect ratio.
         """
 
 
