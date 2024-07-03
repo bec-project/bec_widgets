@@ -251,13 +251,37 @@ class BECStatusBox(QWidget):
 
 def main():
     """Main method to run the BECStatusBox widget."""
+
     # pylint: disable=import-outside-toplevel
+    from bec_lib.client import BECClient
+    from bec_lib.logger import bec_logger
+    from bec_lib.service_config import ServiceConfig
     from qtpy.QtWidgets import QApplication
 
+    from bec_widgets.utils.bec_dispatcher import QtRedisConnector
+
+    # logging has to be configured before create QApplication,
+    # otherwise it ends badly with segfault...
+    # (seems to be a threading issue with loguru and probably Redis connector,
+    # which has to be a QtRedisConnector for Qt apps... Otherwise it is not
+    # thread-safe somehow ; didn't want to debug all this now)
+    logger = bec_logger.logger
+
+    service_config = ServiceConfig()
+    bec_logger.configure(
+        service_config.redis,
+        QtRedisConnector,
+        service_name="test_status_box",
+        service_config=service_config.service_config,
+    )
+
     app = QApplication(sys.argv)
+
     qdarktheme.setup_theme("auto")
-    main_window = BECStatusBox()
-    main_window.show()
+
+    client = BECClient()
+    status = BECStatusBox(parent=None, client=client, gui_id="test")
+    status.show()
     sys.exit(app.exec())
 
 
