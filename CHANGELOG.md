@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.79.1 (2024-07-03)
+
+### Fix
+
+* fix: use libdir env var to preload Python library, also for Linux platform ([`d7718d4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d7718d4dcb9728c050b6421388af4d484f3741f2))
+
 ## v0.79.0 (2024-07-03)
 
 ### Feature
@@ -143,7 +149,3 @@
 ### Fix
 
 * fix(vscode): only run terminate if the process is still alive ([`7120f3e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7120f3e93b054b788f15e2d5bcd688e3c140c1ce))
-
-* fix(rpc): trigger shutdown of server when gui is terminated ([`acc1318`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/acc13183e28030e3ca9af21bb081e1eed081622b))
-
-* fix(rpc): remove of calling &#34;close&#34; and waiting for gui_is_alive ([`f75fc19`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f75fc19c5b10022763252917ca473f404a25165a))
