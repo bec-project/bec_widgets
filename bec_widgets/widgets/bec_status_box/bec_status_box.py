@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
 # TODO : Put normal imports back when Pydantic gets faster
 BECStatus = lazy_import_from("bec_lib.messages", ("BECStatus",))
+StatusMessage = lazy_import_from("bec_lib.messages", ("StatusMessage",))
 
 
 @dataclass
@@ -235,16 +236,13 @@ class BECStatusBox(BECConnector, QTreeWidget):
             metric_msg = services_metric.get(service_name, None)
             metrics = metric_msg.metrics if metric_msg else None
             msg = services_info.pop(service_name, None)
+            if msg is None:
+                msg = StatusMessage(name=service_name, status=BECStatus.ERROR, info={})
             if service_name not in self.status_container:
                 self.add_tree_item(service_name, msg.status, msg.info, metrics)
-                continue
-            if not msg:
-                self.status_container[service_name]["info"].status = "NOTCONNECTED"
-                core_state = None
-            else:
-                self._update_status_container(service_name, msg.status, msg.info, metrics)
-                if core_state:
-                    core_state = msg.status if msg.status.value < core_state.value else core_state
+
+            self._update_status_container(service_name, msg.status, msg.info, metrics)
+            core_state = msg.status if msg.status.value < core_state.value else core_state
 
             self.service_update.emit(self.status_container[service_name]["info"])
 
