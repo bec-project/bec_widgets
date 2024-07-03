@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## v0.79.0 (2024-07-03)
+
+### Feature
+
+* feat(motor_map_widget): standalone MotorMap Widget with toolbar + plugin ([`6e75642`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6e756420907d7093557e945bc92bc4cfc0138d07))
+
+* feat(motor_map): method to reset history trace ([`5960918`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5960918137dd41cdeb94e50f8abc4f169cf45c11))
+
+### Fix
+
+* fix(toolbar): change default color to black to match BECFigure theme ([`b8774e0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b8774e0b0bc43dcd00f94f42539a778e507ca27d))
+
+* fix(motor_map): fixed bug with residual trace after changing motors ([`aaa0d10`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/aaa0d1003d2e94b45bafe4f700852c2c05288aea))
+
+* fix(widget_io): widget handler adjusted for spinboxes and comboboxes ([`3dc0532`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3dc0532df05b6ec0a2522107fa0b1e210ce7d91b))
+
+### Refactor
+
+* refactor(toolbar): cleanup and adjusted colors ([`96863ad`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/96863adf53c15112645d20eb6200733617801c6d))
+
 ## v0.78.1 (2024-07-02)
 
 ### Fix
@@ -127,25 +147,3 @@
 * fix(rpc): trigger shutdown of server when gui is terminated ([`acc1318`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/acc13183e28030e3ca9af21bb081e1eed081622b))
 
 * fix(rpc): remove of calling &#34;close&#34; and waiting for gui_is_alive ([`f75fc19`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f75fc19c5b10022763252917ca473f404a25165a))
-
-## v0.73.1 (2024-06-25)
-
-### Fix
-
-* fix(ringprogressbar): removed hard-coded endpoint strings ([`1de3cbf`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1de3cbf65a1832150917a7549a1bf3efdee6371a))
-
-## v0.73.0 (2024-06-25)
-
-### Feature
-
-* feat: add new default scaling of image_item ([`df812ea`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/df812eaad5989f2930dde41d87491868505af946))
-
-### Test
-
-* test: add test for imageitem ([`88ecd05`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/88ecd05b95974938ef1efff40e81854baf004cb4))
-
-## v0.72.2 (2024-06-25)
-
-### Fix
-
-* fix(designer): fixed designer for pyenv and venv; closes #237 ([`e631fc1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e631fc15d8707b73d58cb64316e115a7e43961ea))
