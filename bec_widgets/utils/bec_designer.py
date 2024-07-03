@@ -73,26 +73,28 @@ def patch_designer():  # pragma: no cover
     os.environ["PY_MAJOR_VERSION"] = str(major_version)
     os.environ["PY_MINOR_VERSION"] = str(minor_version)
 
-    if sys.platform == "linux":
+    if sys.platform == "win32":
+        if is_virtual_env():
+            _extend_path_var("PATH", os.fspath(Path(sys._base_executable).parent), True)
+    else:
+        if sys.platform == "linux":
+            suffix = f"{sys.abiflags}.so"
+            env_var = "LD_PRELOAD"
+        elif sys.platform == "darwin":
+            suffix = ".dylib"
+            env_var = "DYLD_INSERT_LIBRARIES"
+        else:
+            raise RuntimeError(f"Unsupported platform: {sys.platform}")
         version = f"{major_version}.{minor_version}"
-        library_name = f"libpython{version}{sys.abiflags}.so"
-        if is_pyenv_python():
-            library_name = str(Path(sysconfig.get_config_var("LIBDIR")) / library_name)
-        os.environ["LD_PRELOAD"] = library_name
-    elif sys.platform == "darwin":
-        library_name = f"libpython{major_version}.{minor_version}.dylib"
+        library_name = f"libpython{version}{suffix}"
         lib_path = str(Path(sysconfig.get_config_var("LIBDIR")) / library_name)
-        os.environ["DYLD_INSERT_LIBRARIES"] = lib_path
+        os.environ[env_var] = lib_path
 
         if is_pyenv_python() or is_virtual_env():
             # append all editable packages to the PYTHONPATH
             editable_packages = list_editable_packages()
             for pckg in editable_packages:
                 _extend_path_var("PYTHONPATH", pckg, True)
-    elif sys.platform == "win32":
-        if is_virtual_env():
-            _extend_path_var("PATH", os.fspath(Path(sys._base_executable).parent), True)
-
     qt_tool_wrapper(ui_tool_binary("designer"), sys.argv[1:])
 
 
