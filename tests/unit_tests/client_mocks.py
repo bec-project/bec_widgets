@@ -49,11 +49,19 @@ class FakePositioner(FakeDevice):
         self.read_value = read_value
         self.name = name
 
+    @property
+    def precision(self):
+        return 3
+
     def set_read_value(self, value):
         self.read_value = value
 
     def read(self):
-        return {self.name: {"value": self.read_value}}
+        return {
+            self.name: {"value": self.read_value},
+            f"{self.name}_setpoint": {"value": self.read_value},
+            f"{self.name}_motor_is_moving": {"value": 0},
+        }
 
     def set_limits(self, limits):
         self.limits = limits
