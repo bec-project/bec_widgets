@@ -58,11 +58,12 @@ class DesignerPluginGenerator:
             os.path.dirname(os.path.abspath(__file__)), "plugin_templates"
         )
 
-    def run(self):
+    def run(self, validate=True):
         if self._excluded:
             print(f"Plugin {self.widget.__name__} is excluded from generation.")
             return
-        self._check_class_validity()
+        if validate:
+            self._check_class_validity()
         self._load_templates()
         self._write_templates()
 
@@ -142,7 +143,7 @@ class DesignerPluginGenerator:
 
 if __name__ == "__main__":  # pragma: no cover
     # from bec_widgets.widgets.bec_queue.bec_queue import BECQueue
-    from bec_widgets.widgets.dock import BECDockArea
+    from bec_widgets.widgets.spinner.spinner import SpinnerWidget
 
-    generator = DesignerPluginGenerator(BECDockArea)
-    generator.run()
+    generator = DesignerPluginGenerator(SpinnerWidget)
+    generator.run(validate=False)
