@@ -4,8 +4,8 @@ import sys
 from typing import Literal
 
 import numpy as np
-from PySide6.QtWidgets import QWidget, QVBoxLayout
 from qtpy import PYSIDE6
+from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.utils import BECConnector
 from bec_widgets.widgets.figure import BECFigure
@@ -13,7 +13,7 @@ from bec_widgets.widgets.figure.plots.axis_settings import AxisSettingsDialog
 from bec_widgets.widgets.figure.plots.waveform.waveform import Waveform1DConfig
 from bec_widgets.widgets.figure.plots.waveform.waveform_curve import BECCurve
 from bec_widgets.widgets.toolbar import ModularToolBar
-from bec_widgets.widgets.waveform.waveform_dialog.waveform_toolbar import SettingsAction
+from bec_widgets.widgets.waveform.waveform_dialog.waveform_toolbar import *
 
 try:
     import pandas as pd
@@ -71,7 +71,9 @@ class BECWaveformWidget(BECConnector, QWidget):
             actions={
                 # "connect": ConnectAction(),
                 # "history": ResetHistoryAction(),
-                "axis_settings": SettingsAction()
+                "axis_settings": SettingsAction(),
+                "import": ImportAction(),
+                "export": ExportAction(),
             },
             target_widget=self,
         )
@@ -88,6 +90,12 @@ class BECWaveformWidget(BECConnector, QWidget):
 
     def _hook_actions(self):
         self.toolbar.widgets["axis_settings"].action.triggered.connect(self.show_axis_settings)
+        self.toolbar.widgets["import"].action.triggered.connect(
+            lambda: self.load_config(path=None, gui=True)
+        )
+        self.toolbar.widgets["export"].action.triggered.connect(
+            lambda: self.save_config(path=None, gui=True)
+        )
 
     def show_axis_settings(self):
         dialog = AxisSettingsDialog(self, target_widget=self)
@@ -376,6 +384,29 @@ class BECWaveformWidget(BECConnector, QWidget):
             lock(bool): Lock the aspect ratio.
         """
         self.waveform.lock_aspect_ratio(lock)
+
+    #######################################
+    # User Access Methods from BECConnector
+    ######################################
+    def load_config(self, path: str | None = None, gui: bool = False):
+        """
+        Load the configuration of the widget from YAML.
+
+        Args:
+            path(str): Path to the configuration file for non-GUI dialog mode.
+            gui(bool): If True, use the GUI dialog to load the configuration file.
+        """
+        self.fig.load_config(path=path, gui=gui)
+
+    def save_config(self, path: str | None = None, gui: bool = False):
+        """
+        Save the configuration of the widget to YAML.
+
+        Args:
+            path(str): Path to save the configuration file for non-GUI dialog mode.
+            gui(bool): If True, use the GUI dialog to save the configuration file.
+        """
+        self.fig.save_config(path=path, gui=gui)
 
     def cleanup(self):
         self.fig.cleanup()
