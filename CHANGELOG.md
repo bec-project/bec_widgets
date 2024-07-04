@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.79.2 (2024-07-04)
+
+### Fix
+
+* fix: overwrite closeEvent and call super class ([`bc0ef78`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bc0ef7893ef100b71b62101c459655509b534a56))
+
 ## v0.79.1 (2024-07-03)
 
 ### Fix
@@ -143,9 +149,3 @@
 ### Test
 
 * test(waveform1d): dap e2e test added ([`7271b42`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7271b422f98ef9264970d708811c414b69a644db))
-
-## v0.73.2 (2024-06-25)
-
-### Fix
-
-* fix(vscode): only run terminate if the process is still alive ([`7120f3e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7120f3e93b054b788f15e2d5bcd688e3c140c1ce))
