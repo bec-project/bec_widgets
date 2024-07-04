@@ -7,13 +7,15 @@ import numpy as np
 from qtpy import PYSIDE6
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
+from bec_widgets.qt_utils.settings_dialog import SettingsDialog
+from bec_widgets.qt_utils.toolbar import ModularToolBar
 from bec_widgets.utils import BECConnector
 from bec_widgets.widgets.figure import BECFigure
-from bec_widgets.widgets.figure.plots.axis_settings import AxisSettingsDialog
+from bec_widgets.widgets.figure.plots.axis_settings import AxisSettings
 from bec_widgets.widgets.figure.plots.waveform.waveform import Waveform1DConfig
 from bec_widgets.widgets.figure.plots.waveform.waveform_curve import BECCurve
-from bec_widgets.widgets.toolbar import ModularToolBar
-from bec_widgets.widgets.waveform.waveform_dialog.waveform_toolbar import *
+from bec_widgets.widgets.waveform.waveform_toolbar.curve_dialog.curve_dialog import CurveSettings
+from bec_widgets.widgets.waveform.waveform_toolbar.waveform_toolbar import *
 
 try:
     import pandas as pd
@@ -70,7 +72,7 @@ class BECWaveformWidget(BECConnector, QWidget):
         self.toolbar = ModularToolBar(
             actions={
                 # "connect": ConnectAction(),
-                # "history": ResetHistoryAction(),
+                "curves": CurveAction(),
                 "axis_settings": SettingsAction(),
                 "import": ImportAction(),
                 "export": ExportAction(),
@@ -88,7 +90,13 @@ class BECWaveformWidget(BECConnector, QWidget):
 
         self._hook_actions()
 
+        # TEst actions
+        self.plot(x_name="samx", y_name="bpm4i")
+        self.plot(x_name="samx", y_name="bpm3a")
+        self.plot(x_name="samx", y_name="bpm6i")
+
     def _hook_actions(self):
+        self.toolbar.widgets["curves"].action.triggered.connect(self.show_curve_settings)
         self.toolbar.widgets["axis_settings"].action.triggered.connect(self.show_axis_settings)
         self.toolbar.widgets["import"].action.triggered.connect(
             lambda: self.load_config(path=None, gui=True)
@@ -98,8 +106,44 @@ class BECWaveformWidget(BECConnector, QWidget):
         )
 
     def show_axis_settings(self):
-        dialog = AxisSettingsDialog(self, target_widget=self)
+        dialog = SettingsDialog(
+            self,
+            settings_widget=AxisSettings(),
+            window_title="Motor Map Settings",
+            config=self._config_dict["axis"],
+        )
         dialog.exec()
+
+    def show_curve_settings(self):
+        dialog = SettingsDialog(
+            self,
+            settings_widget=CurveSettings(),
+            window_title="Curve Settings",
+            config=self.waveform._curves_data,
+        )
+        dialog.resize(800, 600)
+        dialog.exec()
+
+    def _check_if_scans_have_same_x(self, enabled=True, x_name_to_check: str = None) -> bool:
+        """
+        Check if all scans have the same x-axis.
+
+        Args:
+            enabled(bool): If True, check if all scans have the same x-axis.
+            x_name_to_check(str): The x-axis name to check.
+
+        Returns:
+            bool: True if all scans have the same x-axis, False otherwise.
+        """
+        if enabled and x_name_to_check is not None:
+            curves = self.waveform._curves_data["scan_segment"]
+
+            for label, curve in curves.items():
+                x_name = curve.config.signals.x.name
+                if x_name != x_name_to_check:
+                    raise ValueError(
+                        f"All scans must have the same x-axis. New curve provided with x-axis: {x_name}"
+                    )
 
     ###################################
     # User Access Methods from Waveform
@@ -144,6 +188,7 @@ class BECWaveformWidget(BECConnector, QWidget):
         label: str | None = None,
         validate: bool = True,
         dap: str | None = None,  # TODO add dap custom curve wrapper
+        **kwargs,
     ) -> BECCurve:
         """
         Plot a curve to the plot widget.
@@ -165,6 +210,7 @@ class BECWaveformWidget(BECConnector, QWidget):
         Returns:
             BECCurve: The curve object.
         """
+        self._check_if_scans_have_same_x(enabled=True, x_name_to_check=x_name)
         return self.waveform.plot(
             x=x,
             y=y,
@@ -179,6 +225,7 @@ class BECWaveformWidget(BECConnector, QWidget):
             label=label,
             validate=validate,
             dap=dap,
+            **kwargs,
         )
 
     def add_dap(
@@ -410,6 +457,7 @@ class BECWaveformWidget(BECConnector, QWidget):
 
     def cleanup(self):
         self.fig.cleanup()
+        self.client.shutdown()
         return super().cleanup()
 
     def closeEvent(self, event):

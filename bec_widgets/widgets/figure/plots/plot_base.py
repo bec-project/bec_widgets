@@ -2,11 +2,8 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-import numpy as np
 import pyqtgraph as pg
 from pydantic import BaseModel, Field
-from qtpy import QT_VERSION
-from qtpy.QtGui import QFont, QFontDatabase, QFontInfo
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils import BECConnector, ConnectionConfig

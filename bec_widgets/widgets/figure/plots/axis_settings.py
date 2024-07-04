@@ -1,21 +1,19 @@
 import os
 
-from PySide6.QtWidgets import QDialog, QDialogButtonBox
 from qtpy.QtCore import Slot
-from qtpy.QtWidgets import QVBoxLayout, QWidget
+from qtpy.QtWidgets import QVBoxLayout
 
+from bec_widgets.qt_utils.settings_dialog import SettingWidget
 from bec_widgets.utils import UILoader
-from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.widget_io import WidgetIO
 
 
-class AxisSettings(QWidget):
-    def __init__(self, parent=None, target_widget: QWidget = None, *args, **kwargs):
+class AxisSettings(SettingWidget):
+    def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
 
         current_path = os.path.dirname(__file__)
         self.ui = UILoader().load_ui(os.path.join(current_path, "axis_settings.ui"), self)
-        self.target_widget = target_widget
 
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.ui)
@@ -25,12 +23,10 @@ class AxisSettings(QWidget):
         self.setMaximumHeight(280)
         self.resize(380, 280)
 
-        self.display_current_settings(self.target_widget._config_dict.get("axis", {}))
-
     @Slot(dict)
     def display_current_settings(self, axis_config: dict):
 
-        if dict == {}:
+        if axis_config == {}:
             return
 
         # Top Box
@@ -45,6 +41,10 @@ class AxisSettings(QWidget):
             WidgetIO.check_and_adjust_limits(self.ui.x_max, axis_config["x_lim"][1])
             WidgetIO.set_value(self.ui.x_min, axis_config["x_lim"][0])
             WidgetIO.set_value(self.ui.x_max, axis_config["x_lim"][1])
+        if axis_config["x_lim"] is None:
+            x_range = self.target_widget.fig.widget_list[0].plot_item.viewRange()[0]
+            WidgetIO.set_value(self.ui.x_min, x_range[0])
+            WidgetIO.set_value(self.ui.x_max, x_range[1])
 
         # Y Axis Box
         WidgetIO.set_value(self.ui.y_label, axis_config["y_label"])
@@ -55,6 +55,10 @@ class AxisSettings(QWidget):
             WidgetIO.check_and_adjust_limits(self.ui.y_max, axis_config["y_lim"][1])
             WidgetIO.set_value(self.ui.y_min, axis_config["y_lim"][0])
             WidgetIO.set_value(self.ui.y_max, axis_config["y_lim"][1])
+        if axis_config["y_lim"] is None:
+            y_range = self.target_widget.fig.widget_list[0].plot_item.viewRange()[1]
+            WidgetIO.set_value(self.ui.y_min, y_range[0])
+            WidgetIO.set_value(self.ui.y_max, y_range[1])
 
     @Slot()
     def accept_changes(self):
@@ -82,28 +86,3 @@ class AxisSettings(QWidget):
             y_lim=y_lim,
         )
         self.target_widget.set_grid(x_grid, y_grid)
-
-
-class AxisSettingsDialog(QDialog):
-    def __init__(self, parent=None, target_widget: QWidget = None, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
-
-        self.setModal(False)
-
-        self.setWindowTitle("Axis Settings")
-        self.target_widget = target_widget
-        self.widget = AxisSettings(target_widget=self.target_widget)
-        # self.widget.display_current_settings(self.target_widget._config_dict)
-        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.reject)
-
-        self.layout = QVBoxLayout(self)
-        self.layout.addWidget(self.widget)
-        self.layout.addWidget(self.button_box)
-
-    @Slot()
-    def accept(self):
-        self.widget.accept_changes()
-        super().accept()
