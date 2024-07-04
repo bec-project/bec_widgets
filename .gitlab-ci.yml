@@ -144,6 +144,9 @@ tests:
       coverage_report:
         coverage_format: cobertura
         path: coverage.xml
+    paths:
+      - tests/unit_tests/reference_failures/
+    when: always
 
 test-matrix:
   parallel:
