@@ -337,7 +337,7 @@ class BECStatusBox(BECConnector, QTreeWidget):
 
     def closeEvent(self, event):
         super().cleanup()
-        QTreeWidget().closeEvent(event)
+        return QTreeWidget.closeEvent(self, event)
 
 
 def main():

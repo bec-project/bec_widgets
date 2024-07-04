@@ -198,7 +198,7 @@ class ScanControl(BECConnector, QWidget):
 
     def closeEvent(self, event):
         self.cleanup()
-        QWidget().closeEvent(event)
+        return QWidget.closeEvent(self, event)
 
 
 # Application example

@@ -101,4 +101,4 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
 
     def closeEvent(self, event):
         super().cleanup()
-        QLineEdit().closeEvent(event)
+        return QLineEdit.closeEvent(self, event)

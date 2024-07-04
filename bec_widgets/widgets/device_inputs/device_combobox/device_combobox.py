@@ -89,4 +89,4 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
 
     def closeEvent(self, event):
         super().cleanup()
-        QComboBox().closeEvent(event)
+        return QComboBox.closeEvent(self, event)
