@@ -221,6 +221,7 @@ class BECWaveform(BECPlotBase):
         label: str | None = None,
         validate: bool = True,
         dap: str | None = None,  # TODO add dap custom curve wrapper
+        **kwargs,
     ) -> BECCurve:
         """
         Plot a curve to the plot widget.
@@ -244,7 +245,7 @@ class BECWaveform(BECPlotBase):
         """
 
         if x is not None and y is not None:
-            return self.add_curve_custom(x=x, y=y, label=label, color=color)
+            return self.add_curve_custom(x=x, y=y, label=label, color=color, **kwargs)
         else:
             if dap:
                 self.add_dap(x_name=x_name, y_name=y_name, dap=dap)
@@ -259,6 +260,7 @@ class BECWaveform(BECPlotBase):
                 color_map_z=color_map_z,
                 label=label,
                 validate_bec=validate,
+                **kwargs,
             )
 
     def add_curve_custom(
@@ -754,7 +756,11 @@ class BECWaveform(BECPlotBase):
             self.update_dap, MessageEndpoints.dap_response(self.scan_id)
         )
         if scan_index is not None:
-            self.scan_id = self.queue.scan_storage.storage[scan_index].scan_id
+            try:
+                self.scan_id = self.queue.scan_storage.storage[scan_index].scan_id
+            except IndexError:
+                print(f"Scan index {scan_index} out of range.")
+                return
         elif scan_id is not None:
             self.scan_id = scan_id
 
