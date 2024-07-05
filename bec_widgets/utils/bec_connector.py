@@ -13,6 +13,7 @@ from qtpy.QtCore import QObject, QRunnable, QThreadPool, Signal
 from qtpy.QtCore import Slot as pyqtSlot
 
 from bec_widgets.cli.rpc_register import RPCRegister
+from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.yaml_dialog import load_yaml, load_yaml_gui, save_yaml, save_yaml_gui
 
 BECDispatcher = lazy_import_from("bec_widgets.utils.bec_dispatcher", ("BECDispatcher",))
@@ -63,7 +64,7 @@ class Worker(QRunnable):
         self.signals.completed.emit()
 
 
-class BECConnector:
+class BECConnector(BECWidget):
     """Connection mixin class for all BEC widgets, to handle BEC client and device manager"""
 
     USER_ACCESS = ["_config_dict", "_get_all_rpc"]

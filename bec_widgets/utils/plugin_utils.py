@@ -7,6 +7,7 @@ from bec_lib.plugin_helper import _get_available_plugins
 from qtpy.QtWidgets import QGraphicsWidget, QWidget
 
 from bec_widgets.utils import BECConnector
+from bec_widgets.utils.bec_widget import BECWidget
 
 
 def get_plugin_widgets() -> dict[str, BECConnector]:
@@ -78,7 +79,7 @@ def get_rpc_classes(
                 obj = getattr(module, name)
                 if not hasattr(obj, "__module__") or obj.__module__ != module.__name__:
                     continue
-                if isinstance(obj, type) and issubclass(obj, BECConnector):
+                if isinstance(obj, type) and issubclass(obj, BECWidget):
                     connector_classes.append(obj)
                     if len(subs) == 1 and (
                         issubclass(obj, QWidget) or issubclass(obj, QGraphicsWidget)
