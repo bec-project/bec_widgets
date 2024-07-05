@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v0.79.3 (2024-07-05)
+
+### Fix
+
+* fix: changed inheritance to adress qt designer bug in rendering ([`e403870`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e403870874bd5e45840a034d6f1b3dd576d9c846))
+
+* fix: add designer plugin classes ([`1586ce2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1586ce2d6cba2bb086b2ef596e724bb9e40ab4f2))
+
+### Refactor
+
+* refactor: simplify logic in bec_status_box ([`576353c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/576353cfe8c6fd64db561f0b6e2bc951300643d3))
+
 ## v0.79.2 (2024-07-04)
 
 ### Fix
@@ -135,17 +147,3 @@
 ### Test
 
 * test(bec_figure): tests for removing widgets with rpc e2e ([`a268caa`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a268caaa30711fcc7ece542d24578d74cbf65c77))
-
-## v0.74.0 (2024-06-25)
-
-### Documentation
-
-* docs(becfigure): docs added ([`a51b15d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a51b15da3f5e83e0c897a0342bdb05b9c677a179))
-
-### Feature
-
-* feat(waveform1d): dap LMFit model can be added to plot ([`1866ba6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1866ba66c8e3526661beb13fff3e13af6a0ae562))
-
-### Test
-
-* test(waveform1d): dap e2e test added ([`7271b42`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7271b422f98ef9264970d708811c414b69a644db))
