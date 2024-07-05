@@ -4,11 +4,12 @@ import sys
 
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
+from bec_widgets.qt_utils.settings_dialog import SettingsDialog
 from bec_widgets.qt_utils.toolbar import ModularToolBar
 from bec_widgets.utils import BECConnector
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.figure.plots.motor_map.motor_map import MotorMapConfig
-from bec_widgets.widgets.motor_map.motor_map_dialog.motor_map_settings import MotorMapDialog
+from bec_widgets.widgets.motor_map.motor_map_dialog.motor_map_settings import MotorMapSettings
 from bec_widgets.widgets.motor_map.motor_map_dialog.motor_map_toolbar import (
     ConnectAction,
     DeviceSelectionAction,
@@ -92,7 +93,9 @@ class BECMotorMapWidget(BECConnector, QWidget):
         toolbar_y.setStyleSheet("QComboBox {{ background-color: " "; }}")
 
     def show_settings(self) -> None:
-        dialog = MotorMapDialog(self, target_widget=self)
+        dialog = SettingsDialog(
+            self, settings_widget=MotorMapSettings(), window_title="Motor Map Settings"
+        )
         dialog.exec()
 
     ###################################

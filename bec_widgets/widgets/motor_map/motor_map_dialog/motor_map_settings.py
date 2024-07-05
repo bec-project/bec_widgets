@@ -1,19 +1,19 @@
 import os
 
 from qtpy.QtCore import Slot
-from qtpy.QtWidgets import QDialog, QDialogButtonBox, QLabel, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QVBoxLayout
 
+from bec_widgets.qt_utils.settings_dialog import SettingWidget
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.widget_io import WidgetIO
 
 
-class MotorMapSettings(QWidget):
-    def __init__(self, parent=None, target_widget: QWidget = None, *args, **kwargs):
+class MotorMapSettings(SettingWidget):
+    def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
         current_path = os.path.dirname(__file__)
 
         self.ui = UILoader(self).loader(os.path.join(current_path, "motor_map_settings.ui"))
-        self.target_widget = target_widget
 
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.ui)
@@ -45,29 +45,3 @@ class MotorMapSettings(QWidget):
             self.target_widget.set_scatter_size(scatter_size)
             self.target_widget.set_background_value(background_intensity)
             self.target_widget.set_color(color)
-
-
-class MotorMapDialog(QDialog):
-    def __init__(self, parent=None, target_widget: QWidget = None, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
-
-        self.setModal(False)
-
-        self.setWindowTitle("Motor Map Settings")
-
-        self.target_widget = target_widget
-        self.widget = MotorMapSettings(target_widget=self.target_widget)
-        self.widget.display_current_settings(self.target_widget._config_dict)
-        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.reject)
-
-        self.layout = QVBoxLayout(self)
-        self.layout.addWidget(self.widget)
-        self.layout.addWidget(self.button_box)
-
-    @Slot()
-    def accept(self):
-        self.widget.accept_changes()
-        super().accept()
