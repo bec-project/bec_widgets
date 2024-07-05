@@ -1,5 +1,5 @@
 from qtpy.QtCore import Slot
-from qtpy.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QDialog, QDialogButtonBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
 
 class SettingWidget(QWidget):
@@ -52,6 +52,7 @@ class SettingsDialog(QDialog):
         parent=None,
         settings_widget: SettingWidget = None,
         window_title: str = "Settings",
+        config: dict = None,
         *args,
         **kwargs,
     ):
@@ -63,15 +64,32 @@ class SettingsDialog(QDialog):
 
         self.widget = settings_widget
         self.widget.set_target_widget(parent)
-        self.widget.display_current_settings(parent.get_config())
+        if config is None:
+            config = parent.get_config()
+
+        self.widget.display_current_settings(config)
+
         self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+
+        self.apply_button = QPushButton("Apply")
+
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.button_box.button(QDialogButtonBox.Cancel))
+        button_layout.addWidget(self.apply_button)
+        button_layout.addWidget(self.button_box.button(QDialogButtonBox.Ok))
 
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
+        self.apply_button.clicked.connect(self.apply_changes)
 
         self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(5, 5, 5, 5)
         self.layout.addWidget(self.widget)
-        self.layout.addWidget(self.button_box)
+        self.layout.addLayout(button_layout)
+
+        ok_button = self.button_box.button(QDialogButtonBox.Ok)
+        ok_button.setDefault(True)
+        ok_button.setAutoDefault(True)
 
     @Slot()
     def accept(self):
@@ -80,3 +98,10 @@ class SettingsDialog(QDialog):
         """
         self.widget.accept_changes()
         super().accept()
+
+    @Slot()
+    def apply_changes(self):
+        """
+        Apply the changes made in the settings widget without closing the dialog.
+        """
+        self.widget.accept_changes()
