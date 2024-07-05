@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Literal
+
 import pyqtgraph as pg
 
 
@@ -15,3 +19,18 @@ class ColorButton(pg.ColorButton):
         self.colorDialog.setCurrentColor(self.color())
         self.colorDialog.open()
         self.colorDialog.exec()
+
+    def get_color(self, format: Literal["RGBA", "HEX"] = "RGBA") -> tuple | str:
+        """
+        Get the color of the button in the specified format.
+
+        Args:
+            format(Literal["RGBA", "HEX"]): The format of the returned color.
+
+        Returns:
+            tuple|str: The color in the specified format.
+        """
+        if format == "RGBA":
+            return self.color().getRgb()
+        if format == "HEX":
+            return self.color().name()
