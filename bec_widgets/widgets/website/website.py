@@ -69,6 +69,6 @@ if __name__ == "__main__":
     import sys
 
     app = QApplication(sys.argv)
-    mainWin = WebsiteWidget("https://scilog.psi.ch")
+    mainWin = WebsiteWidget(url="https://scilog.psi.ch")
     mainWin.show()
     sys.exit(app.exec())
