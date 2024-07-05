@@ -4,8 +4,8 @@ from qtpy.QtCore import QSize
 from qtpy.QtGui import QAction, QIcon
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QWidget
 
+from bec_widgets.qt_utils.toolbar import ToolBarAction
 from bec_widgets.widgets.device_combobox.device_combobox import DeviceComboBox
-from bec_widgets.widgets.toolbar.toolbar import ToolBarAction
 
 
 class DeviceSelectionAction(ToolBarAction):

@@ -3,8 +3,7 @@ from collections import defaultdict
 
 # pylint: disable=no-name-in-module
 from qtpy.QtCore import QSize
-from qtpy.QtGui import QAction
-from qtpy.QtWidgets import QHBoxLayout, QLabel, QSpinBox, QToolBar, QWidget
+from qtpy.QtWidgets import QToolBar, QWidget
 
 
 class ToolBarAction(ABC):
@@ -16,34 +15,6 @@ class ToolBarAction(ABC):
             toolbar (QToolBar): The toolbar to add the action or widget to.
             target (QWidget): The target widget for the action.
         """
-
-
-class ColumnAdjustAction(ToolBarAction):
-    """Toolbar spinbox to adjust number of columns in the plot layout"""
-
-    def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
-        """Creates a access history button for the toolbar.
-
-        Args:
-            toolbar (QToolBar): The toolbar to add the action to.
-            target (QWidget): The widget that the 'Access Scan History' action will be targeted.
-
-        Returns:
-            QAction: The 'Access Scan History' action created for the toolbar.
-        """
-        widget = QWidget()
-        layout = QHBoxLayout(widget)
-
-        label = QLabel("Columns:")
-        spin_box = QSpinBox()
-        spin_box.setMinimum(1)  # Set minimum value
-        spin_box.setMaximum(10)  # Set maximum value
-        spin_box.setValue(target.get_column_count())  # Initial value
-        spin_box.valueChanged.connect(lambda value: target.set_column_count(value))
-
-        layout.addWidget(label)
-        layout.addWidget(spin_box)
-        toolbar.addWidget(widget)
 
 
 class ModularToolBar(QToolBar):

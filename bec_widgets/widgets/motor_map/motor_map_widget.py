@@ -4,6 +4,7 @@ import sys
 
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
+from bec_widgets.qt_utils.toolbar import ModularToolBar
 from bec_widgets.utils import BECConnector
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.figure.plots.motor_map.motor_map import MotorMapConfig
@@ -14,7 +15,6 @@ from bec_widgets.widgets.motor_map.motor_map_dialog.motor_map_toolbar import (
     ResetHistoryAction,
     SettingsAction,
 )
-from bec_widgets.widgets.toolbar import ModularToolBar
 
 
 class BECMotorMapWidget(BECConnector, QWidget):
