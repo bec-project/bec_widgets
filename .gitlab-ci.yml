@@ -154,7 +154,6 @@ test-matrix:
           - "3.12"
         QT_PCKG:
           - "pyside6"
-          - "pyqt5"
           - "pyqt6"
 
   stage: AdditionalTests

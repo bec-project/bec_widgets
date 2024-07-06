@@ -8,7 +8,7 @@ import redis
 from bec_lib.client import BECClient
 from bec_lib.redis_connector import MessageObject, RedisConnector
 from bec_lib.service_config import ServiceConfig
-from qtpy.QtCore import PYQT5, PYQT6, PYSIDE2, PYSIDE6, QCoreApplication, QObject
+from qtpy.QtCore import PYQT6, PYSIDE6, QCoreApplication, QObject
 from qtpy.QtCore import Signal as pyqtSignal
 
 if TYPE_CHECKING:
@@ -127,9 +127,9 @@ class BECDispatcher:
             return
 
         # shutdown QCoreApp if it exists
-        if PYQT5 or PYQT6:
+        if PYQT6:
             cls.qapp.exit()
-        elif PYSIDE2 or PYSIDE6:
+        elif PYSIDE6:
             cls.qapp.shutdown()
         cls.qapp = None
 

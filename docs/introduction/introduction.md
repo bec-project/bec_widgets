@@ -10,7 +10,7 @@ Targeting the unique needs of beamline scientists, BEC Widgets stands out with i
 **Key Features**:
 
 - **Integration:** Seamlessly integrates with [BEC (Beamline Experiment Control)](https://gitlab.psi.ch/bec/bec), ensuring a cohesive and efficient experiment control experience.
-- **Support for PyQt5 and PyQt6:** Provides compatibility with both PyQt5 and PyQt6, offering versatility in your development environment.
+- **Support for Pyside6 and PyQt6:** Provides compatibility with both Pyside6 and PyQt6, offering versatility in your development environment.
 - **Widget Modularity:** Features modular widgets that can be easily combined to create customized applications, perfectly aligning with the diverse needs of beamline experiments.
 
 ## Getting Started

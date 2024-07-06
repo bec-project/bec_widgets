@@ -25,7 +25,7 @@ if PYSIDE6:
 
 
 class UILoader:
-    """Universal UI loader for PyQt5, PyQt6, PySide2, and PySide6."""
+    """Universal UI loader for PyQt6 and PySide6."""
 
     def __init__(self, parent=None):
         self.parent = parent
@@ -34,19 +34,12 @@ class UILoader:
 
         self.custom_widgets = {widget.__name__: widget for widget in widgets}
 
-        if QT_VERSION.startswith("5"):
-            # PyQt5 or PySide2
-            from qtpy import uic
-
-            self.loader = uic.loadUi
-        elif QT_VERSION.startswith("6"):
-            # PyQt6 or PySide6
-            if PYSIDE6:
-                self.loader = self.load_ui_pyside6
-            elif PYQT6:
-                self.loader = self.load_ui_pyqt6
-            else:
-                raise ImportError("No compatible Qt bindings found.")
+        if PYSIDE6:
+            self.loader = self.load_ui_pyside6
+        elif PYQT6:
+            self.loader = self.load_ui_pyqt6
+        else:
+            raise ImportError("No compatible Qt bindings found.")
 
     def load_ui_pyside6(self, ui_file, parent=None):
         """

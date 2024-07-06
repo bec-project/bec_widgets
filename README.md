@@ -17,7 +17,7 @@ cd bec_widgets
 pip install -e .[dev,pyqt6]
 ```
 
-BEC Widgets currently supports both PyQt5 and PyQt6, however, no default distribution is specified. As a result, users must install one of the supported
+BEC Widgets currently supports both Pyside6 and PyQt6, however, no default distribution is specified. As a result, users must install one of the supported
 Python Qt distributions manually.
 
 To select a specific Python Qt distribution, install the package with an additional tag:
@@ -28,7 +28,7 @@ pip install bec_widgets[pyqt6]
 or 
 
 ```bash
-pip install bec_widgets[pyqt5]
+pip install bec_widgets[pyside6]
 ```
 ## Documentation
 
