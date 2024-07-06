@@ -72,6 +72,13 @@ class FakePositioner(FakeDevice):
         return MagicMock(get=MagicMock(return_value=self.read_value))
 
 
+class Positioner(FakePositioner):
+    """just placeholder for testing embeded isinstance check in DeviceCombobox"""
+
+    def __init__(self, name="test", limits=None, read_value=1.0):
+        super().__init__(name, limits, read_value)
+
+
 class DMMock:
     def __init__(self):
         self.devices = DeviceContainer()
@@ -95,6 +102,7 @@ DEVICES = [
     FakeDevice("bpm3a"),
     FakeDevice("bpm3i"),
     FakeDevice("eiger"),
+    Positioner("test", limits=[-10, 10], read_value=2.0),
 ]
 
 

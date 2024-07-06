@@ -63,4 +63,4 @@ def test_device_input_base_get_device_list(device_input_base):
 
 def test_device_input_base_get_filters(device_input_base):
     filters = device_input_base.get_available_filters()
-    assert filters == {"FakePositioner", "FakeDevice"}
+    assert filters == {"FakePositioner", "FakeDevice", "Positioner"}

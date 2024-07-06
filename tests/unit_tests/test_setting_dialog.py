@@ -3,8 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.qt_utils.settings_dialog import SettingWidget, SettingsDialog
-
+from bec_widgets.qt_utils.settings_dialog import SettingsDialog, SettingWidget
 
 ###################################
 # SettingWidget base class tests
