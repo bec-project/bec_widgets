@@ -91,7 +91,7 @@ class BECWaveformWidget(BECConnector, QWidget):
         self._hook_actions()
 
         # TEst actions
-        self.plot(x_name="samx", y_name="bpm4i")
+        self.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
         self.plot(x_name="samx", y_name="bpm3a")
         self.plot(x_name="samx", y_name="bpm6i")
 
@@ -261,6 +261,7 @@ class BECWaveformWidget(BECConnector, QWidget):
         y_entry: str | None = None,
         color: str | None = None,
         dap: str = "GaussianModel",
+        validate_bec: bool = True,
         **kwargs,
     ) -> BECCurve:
         """
@@ -272,9 +273,8 @@ class BECWaveformWidget(BECConnector, QWidget):
             y_name(str): Name of the y signal.
             y_entry(str): Entry of the y signal.
             color(str, optional): Color of the curve. Defaults to None.
-            color_map_z(str): The color map to use for the z-axis.
-            label(str, optional): Label of the curve. Defaults to None.
             dap(str): The dap model to use for the curve.
+            validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
             **kwargs: Additional keyword arguments for the curve configuration.
 
         Returns:
@@ -287,6 +287,7 @@ class BECWaveformWidget(BECConnector, QWidget):
             y_entry=y_entry,
             color=color,
             dap=dap,
+            validate_bec=validate_bec,
             **kwargs,
         )
 
