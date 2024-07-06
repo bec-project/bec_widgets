@@ -13,12 +13,12 @@ class Widgets(str, enum.Enum):
     Enum for the available widgets.
     """
 
-    BECQueue = "BECQueue"
-    BECStatusBox = "BECStatusBox"
     BECDock = "BECDock"
     BECDockArea = "BECDockArea"
     BECFigure = "BECFigure"
     BECMotorMapWidget = "BECMotorMapWidget"
+    BECQueue = "BECQueue"
+    BECStatusBox = "BECStatusBox"
     RingProgressBar = "RingProgressBar"
     ScanControl = "ScanControl"
     TextBox = "TextBox"

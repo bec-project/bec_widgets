@@ -5,13 +5,12 @@ import argparse
 import inspect
 import os
 import sys
-from typing import Literal
 
 import black
 import isort
 
 from bec_widgets.utils.generate_designer_plugin import DesignerPluginGenerator
-from bec_widgets.utils.plugin_utils import get_rpc_classes
+from bec_widgets.utils.plugin_utils import BECClassContainer, get_rpc_classes
 
 if sys.version_info >= (3, 11):
     from typing import get_overloads
@@ -40,17 +39,20 @@ from bec_widgets.cli.client_utils import RPCBase, rpc_call, BECGuiClientMixin
 
         self.content = ""
 
-    def generate_client(
-        self, published_classes: dict[Literal["connector_classes", "top_level_classes"], list[type]]
-    ):
+    def generate_client(self, class_container: BECClassContainer):
         """
         Generate the client for the published classes.
 
         Args:
-            published_classes(dict): A dictionary with keys "connector_classes" and "top_level_classes" and values as lists of classes.
+            class_container: The class container with the classes to generate the client for.
         """
-        self.write_client_enum(published_classes["top_level_classes"])
-        for cls in published_classes["connector_classes"]:
+        rpc_top_level_classes = class_container.rpc_top_level_classes
+        rpc_top_level_classes.sort(key=lambda x: x.__name__)
+        connector_classes = class_container.connector_classes
+        connector_classes.sort(key=lambda x: x.__name__)
+
+        self.write_client_enum(rpc_top_level_classes)
+        for cls in connector_classes:
             self.content += "\n\n"
             self.generate_content_for_class(cls)
 
@@ -156,13 +158,12 @@ def main():
         client_path = os.path.join(current_path, "client.py")
 
         rpc_classes = get_rpc_classes("bec_widgets")
-        rpc_classes["connector_classes"].sort(key=lambda x: x.__name__)
 
         generator = ClientGenerator()
         generator.generate_client(rpc_classes)
         generator.write(client_path)
 
-        for cls in rpc_classes["top_level_classes"]:
+        for cls in rpc_classes.plugins:
             plugin = DesignerPluginGenerator(cls)
             if not hasattr(plugin, "info"):
                 continue

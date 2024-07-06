@@ -30,7 +30,7 @@ class UILoader:
     def __init__(self, parent=None):
         self.parent = parent
 
-        widgets = get_rpc_classes("bec_widgets").get("top_level_classes", [])
+        widgets = get_rpc_classes("bec_widgets").top_level_classes
 
         self.custom_widgets = {widget.__name__: widget for widget in widgets}
 

@@ -1,7 +1,7 @@
 import importlib
 import inspect
 import os
-from typing import Literal
+from dataclasses import dataclass
 
 from bec_lib.plugin_helper import _get_available_plugins
 from qtpy.QtWidgets import QGraphicsWidget, QWidget
@@ -45,9 +45,74 @@ def _filter_plugins(obj):
     return inspect.isclass(obj) and issubclass(obj, BECConnector)
 
 
-def get_rpc_classes(
-    repo_name: str,
-) -> dict[Literal["connector_classes", "top_level_classes"], list[type]]:
+@dataclass
+class BECClassInfo:
+    name: str
+    module: str
+    file: str
+    obj: type
+    is_connector: bool = False
+    is_widget: bool = False
+    is_top_level: bool = False
+
+
+class BECClassContainer:
+    def __init__(self):
+        self._collection = []
+
+    def add_class(self, class_info: BECClassInfo):
+        """
+        Add a class to the collection.
+
+        Args:
+            class_info(BECClassInfo): The class information
+        """
+        self.collection.append(class_info)
+
+    @property
+    def collection(self):
+        """
+        Get the collection of classes.
+        """
+        return self._collection
+
+    @property
+    def connector_classes(self):
+        """
+        Get all connector classes.
+        """
+        return [info.obj for info in self.collection if info.is_connector]
+
+    @property
+    def top_level_classes(self):
+        """
+        Get all top-level classes.
+        """
+        return [info.obj for info in self.collection if info.is_top_level]
+
+    @property
+    def plugins(self):
+        """
+        Get all plugins. These are all classes that are on the top level and are widgets.
+        """
+        return [info.obj for info in self.collection if info.is_widget and info.is_top_level]
+
+    @property
+    def widgets(self):
+        """
+        Get all widgets. These are all classes inheriting from BECWidget.
+        """
+        return [info.obj for info in self.collection if info.is_widget]
+
+    @property
+    def rpc_top_level_classes(self):
+        """
+        Get all top-level classes that are RPC-enabled. These are all classes that users can choose from.
+        """
+        return [info.obj for info in self.collection if info.is_top_level and info.is_connector]
+
+
+def get_rpc_classes(repo_name: str) -> BECClassContainer:
     """
     Get all RPC-enabled classes in the specified repository.
 
@@ -57,8 +122,7 @@ def get_rpc_classes(
     Returns:
         dict: A dictionary with keys "connector_classes" and "top_level_classes" and values as lists of classes.
     """
-    connector_classes = []
-    top_level_classes = []
+    collection = BECClassContainer()
     anchor_module = importlib.import_module(f"{repo_name}.widgets")
     directory = os.path.dirname(anchor_module.__file__)
     for root, _, files in sorted(os.walk(directory)):
@@ -79,11 +143,16 @@ def get_rpc_classes(
                 obj = getattr(module, name)
                 if not hasattr(obj, "__module__") or obj.__module__ != module.__name__:
                     continue
-                if isinstance(obj, type) and issubclass(obj, BECWidget):
-                    connector_classes.append(obj)
+                if isinstance(obj, type):
+                    class_info = BECClassInfo(name=name, module=module_name, file=path, obj=obj)
+                    if issubclass(obj, BECConnector):
+                        class_info.is_connector = True
+                    if issubclass(obj, BECWidget):
+                        class_info.is_widget = True
                     if len(subs) == 1 and (
                         issubclass(obj, QWidget) or issubclass(obj, QGraphicsWidget)
                     ):
-                        top_level_classes.append(obj)
+                        class_info.is_top_level = True
+                    collection.add_class(class_info)
 
-    return {"connector_classes": connector_classes, "top_level_classes": top_level_classes}
+    return collection

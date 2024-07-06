@@ -4,6 +4,7 @@ import black
 import isort
 
 from bec_widgets.cli.generate_cli import ClientGenerator
+from bec_widgets.utils.plugin_utils import BECClassContainer, BECClassInfo
 
 # pylint: disable=missing-function-docstring
 
@@ -33,11 +34,31 @@ class MockBECFigure:
 
 def test_client_generator_with_black_formatting():
     generator = ClientGenerator()
-    rpc_classes = {
-        "connector_classes": [MockBECWaveform1D, MockBECFigure],
-        "top_level_classes": [MockBECFigure],
-    }
-    generator.generate_client(rpc_classes)
+    container = BECClassContainer()
+    container.add_class(
+        BECClassInfo(
+            name="MockBECWaveform1D",
+            module="test_module",
+            file="test_file",
+            obj=MockBECWaveform1D,
+            is_connector=True,
+            is_widget=True,
+            is_top_level=False,
+        )
+    )
+    container.add_class(
+        BECClassInfo(
+            name="MockBECFigure",
+            module="test_module",
+            file="test_file",
+            obj=MockBECFigure,
+            is_connector=True,
+            is_widget=True,
+            is_top_level=True,
+        )
+    )
+
+    generator.generate_client(container)
 
     # Format the expected output with black to ensure it matches the generator output
     expected_output = dedent(
@@ -51,6 +72,7 @@ def test_client_generator_with_black_formatting():
 
         # pylint: skip-file
 
+
         class Widgets(str, enum.Enum):
             """
             Enum for the available widgets.
@@ -59,18 +81,6 @@ def test_client_generator_with_black_formatting():
             MockBECFigure = "MockBECFigure"
 
 
-        class MockBECWaveform1D(RPCBase):
-            @rpc_call
-            def set_frequency(self, frequency: float) -> list:
-                """
-                Set the frequency of the waveform.
-                """
-            @rpc_call
-            def set_amplitude(self, amplitude: float) -> tuple[float, float]:
-                """
-                Set the amplitude of the waveform.
-                """ 
-        
         class MockBECFigure(RPCBase):
             @rpc_call
             def add_plot(self, plot_id: str):
@@ -82,6 +92,20 @@ def test_client_generator_with_black_formatting():
             def remove_plot(self, plot_id: str):
                 """
                 Remove a plot from the figure.
+                """
+
+
+        class MockBECWaveform1D(RPCBase):
+            @rpc_call
+            def set_frequency(self, frequency: float) -> list:
+                """
+                Set the frequency of the waveform.
+                """
+
+            @rpc_call
+            def set_amplitude(self, amplitude: float) -> tuple[float, float]:
+                """
+                Set the amplitude of the waveform.
                 """
     '''
     )

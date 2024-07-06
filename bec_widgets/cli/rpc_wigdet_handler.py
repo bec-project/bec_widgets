@@ -29,7 +29,7 @@ class RPCWidgetHandler:
         from bec_widgets.utils.plugin_utils import get_rpc_classes
 
         clss = get_rpc_classes("bec_widgets")
-        self._widget_classes = {cls.__name__: cls for cls in clss["top_level_classes"]}
+        self._widget_classes = {cls.__name__: cls for cls in clss.top_level_classes}
 
     def create_widget(self, widget_type, **kwargs) -> BECConnector:
         """
