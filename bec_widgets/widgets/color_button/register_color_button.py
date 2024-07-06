@@ -6,7 +6,7 @@ def main():  # pragma: no cover
         return
     from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
 
-    from bec_widgets.widgets.buttons.color_button.color_button_plugin import ColorButtonPlugin
+    from bec_widgets.widgets.color_button.color_button_plugin import ColorButtonPlugin
 
     QPyDesignerCustomWidgetCollection.addCustomWidget(ColorButtonPlugin())
 

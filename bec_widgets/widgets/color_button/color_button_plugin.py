@@ -3,7 +3,7 @@ import os
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 from qtpy.QtGui import QIcon
 
-from bec_widgets.widgets.buttons.color_button.color_button import ColorButton
+from bec_widgets.widgets.color_button.color_button import ColorButton
 
 DOM_XML = """
 <ui language='c++'>
