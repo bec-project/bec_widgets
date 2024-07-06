@@ -2,8 +2,7 @@
 
 import pytest
 
-from bec_widgets.widgets.buttons import StopButton
-
+from bec_widgets.widgets.stop_button.stop_button import StopButton
 from .client_mocks import mocked_client
 
 
@@ -18,7 +17,10 @@ def stop_button(qtbot, mocked_client):
 
 def test_stop_button(stop_button):
     assert stop_button.text() == "Stop"
-    assert stop_button.styleSheet() == "background-color:  #cc181e; color: white"
+    assert (
+        stop_button.styleSheet()
+        == "background-color:  #cc181e; color: white; font-weight: bold; font-size: 12px;"
+    )
     stop_button.click()
     assert stop_button.queue.request_scan_abortion.called
     assert stop_button.queue.request_queue_reset.called

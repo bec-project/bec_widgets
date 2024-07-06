@@ -12,8 +12,8 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils import BECConnector
-from bec_widgets.widgets.buttons.stop_button.stop_button import StopButton
 from bec_widgets.widgets.scan_control.scan_group_box import ScanGroupBox
+from bec_widgets.widgets.stop_button.stop_button import StopButton
 
 
 class ScanControl(BECConnector, QWidget):

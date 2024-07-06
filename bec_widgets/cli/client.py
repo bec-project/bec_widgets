@@ -21,6 +21,7 @@ class Widgets(str, enum.Enum):
     BECStatusBox = "BECStatusBox"
     RingProgressBar = "RingProgressBar"
     ScanControl = "ScanControl"
+    StopButton = "StopButton"
     TextBox = "TextBox"
     VSCodeEditor = "VSCodeEditor"
     WebsiteWidget = "WebsiteWidget"

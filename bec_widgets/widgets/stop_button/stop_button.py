@@ -1,3 +1,4 @@
+from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QPushButton
 
 from bec_widgets.utils import BECConnector
@@ -12,21 +13,13 @@ class StopButton(BECConnector, QPushButton):
 
         self.get_bec_shortcuts()
         self.setText("Stop")
-        self.setStyleSheet("background-color:  #cc181e; color: white")
+        self.setStyleSheet(
+            "background-color:  #cc181e; color: white; font-weight: bold; font-size: 12px;"
+        )
         self.clicked.connect(self.stop_scan)
 
+    @Slot()
     def stop_scan(self):
         """Stop the scan."""
         self.queue.request_scan_abortion()
         self.queue.request_queue_reset()
-
-
-if __name__ == "__main__":  # pragma: no cover
-    import sys
-
-    from qtpy.QtWidgets import QApplication
-
-    app = QApplication(sys.argv)
-    widget = StopButton()
-    widget.show()
-    sys.exit(app.exec_())
