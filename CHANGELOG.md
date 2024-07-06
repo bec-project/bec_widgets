@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.81.0 (2024-07-06)
+
+### Feature
+
+* feat(color_button): can get colors in RGBA or HEX ([`9594be2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9594be260680d11c8550ff74ffb8d679e5a5b8f6))
+
 ## v0.80.1 (2024-07-06)
 
 ### Fix
@@ -135,9 +141,3 @@
 ### Feature
 
 * feat(widgets): added simple bec queue widget ([`3faee98`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3faee98ec80041a27e4c1f1156178de6f9dcdc63))
-
-### Refactor
-
-* refactor(dispatcher): cleanup ([`ca02132`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ca02132c8d18535b37e9192e00459d2aca6ba5cf))
-
-## v0.74.1 (2024-06-26)
