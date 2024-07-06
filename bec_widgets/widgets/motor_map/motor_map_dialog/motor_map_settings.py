@@ -36,7 +36,7 @@ class MotorMapSettings(QWidget):
         precision = WidgetIO.get_value(self.ui.precision)
         scatter_size = WidgetIO.get_value(self.ui.scatter_size)
         background_intensity = int(WidgetIO.get_value(self.ui.background_value) * 0.01 * 255)
-        color = self.ui.color.color().toTuple()
+        color = self.ui.color.get_color("RGBA")
 
         if self.target_widget is not None:
             self.target_widget.set_max_points(max_points)

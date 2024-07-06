@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import sys
 
-from qtpy import PYSIDE6
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.utils import BECConnector
@@ -37,10 +36,6 @@ class BECMotorMapWidget(BECConnector, QWidget):
         client=None,
         gui_id: str | None = None,
     ) -> None:
-        if not PYSIDE6:
-            raise RuntimeError(
-                "PYSIDE6 is not available in the environment. This widget is compatible only with PySide6."
-            )
         if config is None:
             config = MotorMapConfig(widget_class=self.__class__.__name__)
         else:
@@ -216,13 +211,6 @@ class BECMotorMapWidget(BECConnector, QWidget):
 
 
 def main():  # pragma: no cover
-
-    if not PYSIDE6:
-        print(
-            "PYSIDE6 is not available in the environment. UI files with BEC custom widgets are runnable only with PySide6."
-        )
-        return
-
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
