@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.80.1 (2024-07-06)
+
+### Fix
+
+* fix(entry_validator): check for entry == &#34;&#34; ([`61de7e9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/61de7e9e221c766b9fb3ec23246da6a11c96a986))
+
 ## v0.80.0 (2024-07-06)
 
 ### Feature
@@ -135,11 +141,3 @@
 * refactor(dispatcher): cleanup ([`ca02132`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ca02132c8d18535b37e9192e00459d2aca6ba5cf))
 
 ## v0.74.1 (2024-06-26)
-
-### Fix
-
-* fix(rings): rings properties updated right after setting ([`c8b7367`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c8b7367815b095f8e4aa8b819481efb701f2e542))
-
-### Test
-
-* test(bec_figure): tests for removing widgets with rpc e2e ([`a268caa`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a268caaa30711fcc7ece542d24578d74cbf65c77))
