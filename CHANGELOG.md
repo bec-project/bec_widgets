@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v0.80.0 (2024-07-06)
+
+### Feature
+
+* feat(qt5): dropped support for qt5; pyside2 and pyqt5 ([`fadbf77`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fadbf77866903beff6580802bc203d53367fc7e7))
+
+* feat(plugins): moved plugin dict to dataclass and container ([`03819a3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/03819a3d902b4a51f3e882d52aedd971b2a8e127))
+
+* feat(plugins): added support for pyqt6 ui files ([`d6d0777`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d6d07771135335cb78dc648508ce573b8970261a))
+
+* feat(plugins): added bec widgets base class ([`1aa83e0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1aa83e0ef1ffe45b01677b0b4590535cb0ca1cff))
+
 ## v0.79.3 (2024-07-05)
 
 ### Fix
@@ -124,25 +136,9 @@
 
 ## v0.74.1 (2024-06-26)
 
-### Build
-
-* build: added missing pytest-bec-e2e dependency; closes #219 ([`56fdae4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/56fdae42757bdb9fa301c1e425a77e98b6eaf92b))
-
-* build: fixed dependency ranges; closes #135 ([`e6a06c9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e6a06c9f43e0ad6bbfcfa550a2f580d2a27aff66))
-
-### Chore
-
-* chore: sorted dependencies alphabetically ([`21c807f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/21c807f35831fdd1ef2e488ab90edae4719f0cb7))
-
-### Documentation
-
-* docs: fixed doc string ([`f979a63`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f979a63d3d1a008f80e500510909750878ff4303))
-
 ### Fix
 
 * fix(rings): rings properties updated right after setting ([`c8b7367`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c8b7367815b095f8e4aa8b819481efb701f2e542))
-
-* fix(motor_map): motor map can be removed from BECFigure with .remove() ([`6b25abf`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6b25abff70280271e2eeb70450553c05d4b7c99c))
 
 ### Test
 
