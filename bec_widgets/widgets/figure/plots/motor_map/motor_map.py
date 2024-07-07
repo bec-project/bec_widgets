@@ -271,11 +271,12 @@ class BECMotorMap(BECPlotBase):
     def _swap_limit_map(self):
         """Swap the limit map."""
         self.plot_item.removeItem(self.plot_components["limit_map"])
-        self.plot_components["limit_map"] = self._make_limit_map(
-            self.config.signals.x.limits, self.config.signals.y.limits
-        )
-        self.plot_components["limit_map"].setZValue(-1)
-        self.plot_item.addItem(self.plot_components["limit_map"])
+        if self.config.signals.x.limits is not None and self.config.signals.y.limits is not None:
+            self.plot_components["limit_map"] = self._make_limit_map(
+                self.config.signals.x.limits, self.config.signals.y.limits
+            )
+            self.plot_components["limit_map"].setZValue(-1)
+            self.plot_item.addItem(self.plot_components["limit_map"])
 
     def _make_motor_map(self):
         """
@@ -284,9 +285,10 @@ class BECMotorMap(BECPlotBase):
         # Create limit map
         motor_x_limit = self.config.signals.x.limits
         motor_y_limit = self.config.signals.y.limits
-        self.plot_components["limit_map"] = self._make_limit_map(motor_x_limit, motor_y_limit)
-        self.plot_item.addItem(self.plot_components["limit_map"])
-        self.plot_components["limit_map"].setZValue(-1)
+        if motor_x_limit is not None or motor_y_limit is not None:
+            self.plot_components["limit_map"] = self._make_limit_map(motor_x_limit, motor_y_limit)
+            self.plot_item.addItem(self.plot_components["limit_map"])
+            self.plot_components["limit_map"].setZValue(-1)
 
         # Create scatter plot
         scatter_size = self.config.scatter_size
