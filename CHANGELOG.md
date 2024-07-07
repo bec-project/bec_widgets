@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.81.2 (2024-07-07)
+
+### Fix
+
+* fix(waveform): scan_history error check for IndexError ([`dd1875e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/dd1875ea5cc18bcef9aad743347a8accf144c08d))
+
 ## v0.81.1 (2024-07-07)
 
 ### Fix
@@ -130,14 +136,6 @@
 
 ## v0.76.0 (2024-06-28)
 
-### Feature
-
-* feat(designer): added support for creating designer plugins automatically ([`c1dd0ee`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c1dd0ee1906dba1f2e2ae9ce40a84d55c26a1cce))
-
 ### Fix
 
 * fix: fixed qwidget inheritance for ring progress bar ([`0610d2f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0610d2f9f027f8659e7149f2dfbb316ff30e337d))
-
-### Unknown
-
-* fix:parent set as first kwarg TextBox and WebsiteWidget ([`a45c407`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a45c4075684b93bfdcee03e5a416b84f61d3bc6f))
