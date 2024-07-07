@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## v0.82.1 (2024-07-07)
+
+### Fix
+
+* fix(motor_map): bug where motors without limits were selected ([`c78cd89`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c78cd898f203f950d7cb589eb5609feaa88062cf))
+
+### Refactor
+
+* refactor(setting_dialog): moved to qt_utils ([`3826bb3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3826bb3d9e870e85709b5b20ef09a4d22641280c))
+
+* refactor(toolbar): toolbar moved from widgets to qt_utils ([`7ffc06f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7ffc06f3c7ddd86a1681408a75221b9bbadb236b))
+
+### Test
+
+* test(setting_dialog): tests added ([`74a249b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/74a249bd065d01006cb532bfff2a9bfedb34b592))
+
+### Unknown
+
+* tests(motor_map_widget): tests added ([`734f4c7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/734f4c77507a1edafd477d81b5f7401d8e759be2))
+
+* feat(settings_dialog):apply button ([`2020953`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2020953b933b6fcad61ecc770588d39518c26fdd))
+
 ## v0.82.0 (2024-07-07)
 
 ### Feature
@@ -114,8 +136,6 @@
 
 * feat(bec_connector): export config to yaml ([`a391f30`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a391f3018c50fee6a4a06884491b957df80c3cd3))
 
-* feat(utils): colors added convertor for rgba to hex ([`572f2fb`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/572f2fb8110d5cb0e80f3ca45ce57ef405572456))
-
 ### Fix
 
 * fix(waveform): scatter 2D brush error ([`215d59c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/215d59c8bfe7fda9aff8cec8353bef9e1ce2eca1))
@@ -125,15 +145,3 @@
 * fix(figure): if/else logic corrected in subplot_factory ([`3e78723`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3e787234c7274b0698423d7bf9a4c54ec46bad5f))
 
 * fix(image): processing of already displayed data; closes #106 ([`1173510`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1173510105d2d70d7e498c2ac1e122cea3a16597))
-
-* fix(bec_figure): full reconstruction with config from other bec figure ([`b6e1e20`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b6e1e20b7c8549bb092e981062329e601411dda6))
-
-* fix(motor_map): API changes updates current visualisation; motor_map can be initialised from config ([`2e2d422`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2e2d422910685a2527a3d961a468c787f771ca44))
-
-* fix(image): image add_custom_image fixed, closes #225 ([`f0556e4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f0556e44113ffee66cf735aa2dd758c62cb634f4))
-
-* fix(figure): subplot methods consolidated; added subplot factory ([`4a97105`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4a97105e4bd2ce77d72dfe5f8307dd9ee65b21b0))
-
-* fix(image): image can be fully reconstructed from config ([`797f73c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/797f73c39aa73e07d6311f3de4baea53f6c380e0))
-
-* fix(image_item): vrange added int for pydantic model check ([`b8f796f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b8f796fd3fcc15641e8fc6a3ca75c344ce90fc45))
