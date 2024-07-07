@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.81.1 (2024-07-07)
+
+### Fix
+
+* fix(motor_control): temporary remove of motor control widgets ([`99114f1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/99114f14f62202e1fd8bf145616fa8c69937ada4))
+
 ## v0.81.0 (2024-07-06)
 
 ### Feature
@@ -135,9 +141,3 @@
 ### Unknown
 
 * fix:parent set as first kwarg TextBox and WebsiteWidget ([`a45c407`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a45c4075684b93bfdcee03e5a416b84f61d3bc6f))
-
-## v0.75.0 (2024-06-26)
-
-### Feature
-
-* feat(widgets): added simple bec queue widget ([`3faee98`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3faee98ec80041a27e4c1f1156178de6f9dcdc63))
