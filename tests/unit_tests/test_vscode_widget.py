@@ -25,25 +25,25 @@ def test_vscode_widget(qtbot, vscode_widget):
 def test_start_server(qtbot, mocked_client):
 
     with mock.patch("bec_widgets.widgets.vscode.vscode.subprocess.Popen") as mock_popen:
-        mock_process = mock.Mock()
-        mock_process.stdout.fileno.return_value = 1
-        mock_process.poll.return_value = None
-        mock_process.stdout.read.return_value = (
-            f"available at http://{VSCodeEditor.host}:{VSCodeEditor.port}?tkn={VSCodeEditor.token}"
-        )
-        mock_popen.return_value = mock_process
+        with mock.patch("bec_widgets.widgets.vscode.vscode.select.select") as mock_select:
+            mock_process = mock.Mock()
+            mock_process.stdout.fileno.return_value = 1
+            mock_process.poll.return_value = None
+            mock_process.stdout.read.return_value = f"available at http://{VSCodeEditor.host}:{VSCodeEditor.port}?tkn={VSCodeEditor.token}"
+            mock_popen.return_value = mock_process
+            mock_select.return_value = [[mock_process.stdout], [], []]
 
-        widget = VSCodeEditor(client=mocked_client)
+            widget = VSCodeEditor(client=mocked_client)
 
-        mock_popen.assert_called_once_with(
-            shlex.split(
-                f"code serve-web --port {widget.port} --connection-token={widget.token} --accept-server-license-terms"
-            ),
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            preexec_fn=os.setsid,
-        )
+            mock_popen.assert_called_once_with(
+                shlex.split(
+                    f"code serve-web --port {widget.port} --connection-token={widget.token} --accept-server-license-terms"
+                ),
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                preexec_fn=os.setsid,
+            )
 
 
 @pytest.fixture
