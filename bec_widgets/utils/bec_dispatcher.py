@@ -134,7 +134,10 @@ class BECDispatcher:
         cls.qapp = None
 
     def connect_slot(
-        self, slot: Callable, topics: Union[EndpointInfo, str, list[Union[EndpointInfo, str]]]
+        self,
+        slot: Callable,
+        topics: Union[EndpointInfo, str, list[Union[EndpointInfo, str]]],
+        **kwargs,
     ) -> None:
         """Connect widget's pyqt slot, so that it is called on new pub/sub topic message.
 
@@ -144,7 +147,7 @@ class BECDispatcher:
             topics (EndpointInfo | str | list): A topic or list of topics that can typically be acquired via bec_lib.MessageEndpoints
         """
         slot = QtThreadSafeCallback(slot)
-        self.client.connector.register(topics, cb=slot)
+        self.client.connector.register(topics, cb=slot, **kwargs)
         topics_str, _ = self.client.connector._convert_endpointinfo(topics)
         self._slots[slot].update(set(topics_str))
 

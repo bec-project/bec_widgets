@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Optional
+from typing import TYPE_CHECKING, Literal, Optional
 
 import pyqtgraph as pg
+from bec_lib.endpoints import MessageEndpoints
 from pydantic import BaseModel, Field, field_validator
-from pydantic_core import PydanticCustomError
 from qtpy import QtCore
 
 from bec_widgets.utils import BECConnector, Colors, ConnectionConfig
 
 if TYPE_CHECKING:
+    import numpy as np
+
     from bec_widgets.widgets.figure.plots.waveform import BECWaveform1D
 
 
@@ -103,6 +105,14 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         if kwargs:
             self.set(**kwargs)
 
+        self._async_info = {}
+
+        if self.config.source == "async_readback":
+            # get updates on new scans in order to change the subscription to the correct async readback
+            self.bec_dispatcher.connect_slot(
+                self.on_scan_status_update, MessageEndpoints.scan_status()
+            )
+
     def apply_config(self):
         pen_style_map = {
             "solid": QtCore.Qt.SolidLine,
@@ -136,6 +146,49 @@ class BECCurve(BECConnector, pg.PlotDataItem):
             self.setData(x, y)
         else:
             raise ValueError(f"Source {self.config.source} do not allow custom data setting.")
+
+    def on_scan_status_update(self, content: dict, metadata: dict):
+        """
+        Update the async info with the latest scan status.
+        """
+        scan_id = content.get("scan_id")
+        if scan_id == self._async_info.get("scan_id"):
+            return
+        active_subscription = self._async_info.get("active_subscription")
+        if active_subscription:
+            self.bec_dispatcher.disconnect_slot(self.on_async_update, active_subscription)
+        self._async_info["scan_id"] = scan_id
+        self._async_info["active_subscription"] = MessageEndpoints.device_async_readback(
+            scan_id, self.config.signals.y.name
+        )
+        self._async_info["data"] = []
+        self.bec_dispatcher.connect_slot(
+            self.on_async_update,
+            MessageEndpoints.device_async_readback(scan_id, self.config.signals.y.name),
+            from_start=True,
+        )
+
+    def on_async_update(self, content: dict, metadata: dict):
+        """
+        Update the curve with the latest async readback data.
+        """
+        async_update = metadata.get("async_update")
+        if not async_update:
+            return
+        signals = content.get("signals")
+        if not signals:
+            return
+        y_data = signals.get(self.config.signals.y.name, {}).get("value", [])
+        if y_data is None:
+            return
+        if async_update == "extend":
+            self._async_info["data"].extend(y_data)
+        elif async_update == "replace":
+            self._async_info["data"] = y_data
+        else:
+            print(f"Warning: Unsupported async update type {async_update}.")
+
+        self.setData(self._async_info["data"])
 
     def set(self, **kwargs):
         """

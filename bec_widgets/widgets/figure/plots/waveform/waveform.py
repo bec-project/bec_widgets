@@ -7,6 +7,7 @@ from typing import Any, Literal, Optional
 import numpy as np
 import pyqtgraph as pg
 from bec_lib import messages
+from bec_lib.device import ReadoutPriority
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.scan_data import ScanData
 from pydantic import Field, ValidationError
@@ -327,7 +328,7 @@ class BECWaveform(BECPlotBase):
         color_map_z: Optional[str] = "plasma",
         label: Optional[str] = None,
         validate_bec: bool = True,
-        source: str = "scan_segment",
+        source: Optional[str] = None,
         dap: Optional[str] = None,
         **kwargs,
     ) -> BECCurve:
@@ -349,8 +350,6 @@ class BECWaveform(BECPlotBase):
         Returns:
             BECCurve: The curve object.
         """
-        # Check if curve already exists
-        curve_source = source
 
         # Get entry if not provided and validate
         x_entry, y_entry, z_entry = self._validate_signal_entries(
@@ -362,6 +361,7 @@ class BECWaveform(BECPlotBase):
         else:
             label = label or f"{y_name}-{y_entry}"
 
+        # Check if curve already exists
         curve_exits = self._check_curve_id(label, self._curves_data)
         if curve_exits:
             raise ValueError(f"Curve with ID '{label}' already exists in widget '{self.gui_id}'.")
@@ -372,6 +372,18 @@ class BECWaveform(BECPlotBase):
                 colormap=self.config.color_palette, num=len(self.plot_item.curves) + 1, format="HEX"
             )[-1]
         )
+
+        if source is None:
+            if validate_bec:
+                curve_source = (
+                    "async_readback"
+                    if self.dev[y_name].readout_priority == ReadoutPriority.ASYNC
+                    else "scan_segment"
+                )
+            else:
+                curve_source = "scan_segment"
+        else:
+            curve_source = source
 
         # Create curve by config
         curve_config = CurveConfig(
