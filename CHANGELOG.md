@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## v0.82.0 (2024-07-07)
+
+### Feature
+
+* feat(toggle): added angular component-like toggle ([`b9bff38`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b9bff38b64b86f06b3bc047922ef9df0c7d32e71))
+
+### Refactor
+
+* refactor(device_input): DeviceComboBox and DeviceLineEdit moved to top layer of widgets ([`f048629`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f04862933f049030554086adef3ec9e1aebd3eda))
+
+* refactor(stop_button): moved to top layer, plugin added ([`f5b8375`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f5b8375fd36e3bb681de571da86a6c0bdb3cb6f0))
+
+* refactor(motor_map_widget): removed restriction of only PySide6 for widget ([`db1cdf4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/db1cdf42806fef6d7c6d2db83528f32df3f9751d))
+
+* refactor(color_button): ColorButton moved to top level of widgets ([`fa1e86f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fa1e86ff07b25d2c47c73117b00765b8e2f25da4))
+
 ## v0.81.2 (2024-07-07)
 
 ### Fix
@@ -121,21 +137,3 @@
 * fix(image): image can be fully reconstructed from config ([`797f73c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/797f73c39aa73e07d6311f3de4baea53f6c380e0))
 
 * fix(image_item): vrange added int for pydantic model check ([`b8f796f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b8f796fd3fcc15641e8fc6a3ca75c344ce90fc45))
-
-* fix(bec_figure): waveforms can be initialised from the config; widgets are deleteLater after removal ([`78673ea`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/78673ea11a47aad878128197ae6213925228ed59))
-
-### Unknown
-
-* Resolve &#34;add VT100 console executing BEC as a widget&#34; ([`c6a14c0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c6a14c0768a90695567a83a7895247ed0c64f3ce))
-
-## v0.76.1 (2024-06-29)
-
-### Fix
-
-* fix(plugins): fixes and tests for auto-gen plugins ([`c42511d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c42511dd44cc13577e108a6cef3166376e594f54))
-
-## v0.76.0 (2024-06-28)
-
-### Fix
-
-* fix: fixed qwidget inheritance for ring progress bar ([`0610d2f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0610d2f9f027f8659e7149f2dfbb316ff30e337d))
