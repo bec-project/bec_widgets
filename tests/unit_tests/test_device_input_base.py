@@ -1,6 +1,6 @@
 import pytest
 
-from bec_widgets.widgets.device_inputs.device_input_base import DeviceInputBase
+from bec_widgets.widgets.base_classes.device_input_base import DeviceInputBase
 
 from .client_mocks import mocked_client
 

@@ -12,7 +12,7 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils.widget_io import WidgetIO
-from bec_widgets.widgets.device_inputs import DeviceLineEdit
+from bec_widgets.widgets.device_line_edit.device_line_edit import DeviceLineEdit
 
 
 class ScanArgType:

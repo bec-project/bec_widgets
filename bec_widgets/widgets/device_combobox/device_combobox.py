@@ -2,10 +2,10 @@ from typing import TYPE_CHECKING
 
 from qtpy.QtWidgets import QComboBox
 
-from bec_widgets.widgets.device_inputs.device_input_base import DeviceInputBase, DeviceInputConfig
+from bec_widgets.widgets.base_classes.device_input_base import DeviceInputBase, DeviceInputConfig
 
 if TYPE_CHECKING:
-    from bec_widgets.widgets.device_inputs.device_input_base import DeviceInputConfig
+    from bec_widgets.widgets.base_classes.device_input_base import DeviceInputConfig
 
 
 class DeviceComboBox(DeviceInputBase, QComboBox):

@@ -6,11 +6,9 @@ def main():  # pragma: no cover
         return
     from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
 
-    from bec_widgets.widgets.device_inputs.device_line_edit.device_line_edit_plugin import (
-        DeviceLineEditPlugin,
-    )
+    from bec_widgets.widgets.device_combobox.device_combobox_plugin import DeviceComboBoxPlugin
 
-    QPyDesignerCustomWidgetCollection.addCustomWidget(DeviceLineEditPlugin())
+    QPyDesignerCustomWidgetCollection.addCustomWidget(DeviceComboBoxPlugin())
 
 
 if __name__ == "__main__":  # pragma: no cover

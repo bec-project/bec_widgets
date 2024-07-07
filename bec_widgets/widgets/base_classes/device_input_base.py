@@ -25,6 +25,7 @@ class DeviceInputBase(BECConnector):
         super().__init__(client=client, config=config, gui_id=gui_id)
 
         self.get_bec_shortcuts()
+        self._device_filter = None
         self._devices = []
 
     @property
@@ -56,6 +57,7 @@ class DeviceInputBase(BECConnector):
         """
         self.validate_device_filter(device_filter)
         self.config.device_filter = device_filter
+        self._device_filter = device_filter
 
     def set_default_device(self, default_device: str):
         """
