@@ -50,29 +50,24 @@ def test_start_server(qtbot, mocked_client):
 def patched_vscode_process(qtbot, vscode_widget):
     with mock.patch("bec_widgets.widgets.vscode.vscode.os.killpg") as mock_killpg:
         with mock.patch("bec_widgets.widgets.vscode.vscode.os.getpgid") as mock_getpgid:
-            with mock.patch(
-                "bec_widgets.widgets.website.website.WebsiteWidget.closeEvent"
-            ) as mock_close_event:
-                mock_getpgid.return_value = 123
-                vscode_widget.process = mock.Mock()
-                yield vscode_widget, mock_killpg, mock_close_event
+            mock_getpgid.return_value = 123
+            vscode_widget.process = mock.Mock()
+            yield vscode_widget, mock_killpg
 
 
-def test_close_event(qtbot, patched_vscode_process):
-    vscode_patched, mock_killpg, mock_close_event = patched_vscode_process
+def test_vscode_cleanup(qtbot, patched_vscode_process):
+    vscode_patched, mock_killpg = patched_vscode_process
     vscode_patched.process.pid = 123
     vscode_patched.process.poll.return_value = None
-    vscode_patched.closeEvent(None)
+    vscode_patched.cleanup()
     mock_killpg.assert_called_once_with(123, 15)
     vscode_patched.process.wait.assert_called_once()
-    mock_close_event.assert_called_once()
 
 
 def test_close_event_on_terminated_code(qtbot, patched_vscode_process):
-    vscode_patched, mock_killpg, mock_close_event = patched_vscode_process
+    vscode_patched, mock_killpg = patched_vscode_process
     vscode_patched.process.pid = 123
     vscode_patched.process.poll.return_value = 0
-    vscode_patched.closeEvent(None)
+    vscode_patched.cleanup()
     mock_killpg.assert_not_called()
     vscode_patched.process.wait.assert_not_called()
-    mock_close_event.assert_called_once()
