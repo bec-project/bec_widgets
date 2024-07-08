@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.82.2 (2024-07-08)
+
+### Fix
+
+* fix(rpc_server): pass cli config to server ([`90178e2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/90178e2f61fa9dac7d82c0d0db40a9767bb133e6))
+
 ## v0.82.1 (2024-07-07)
 
 ### Fix
@@ -132,10 +138,6 @@
 
 ## v0.77.0 (2024-07-02)
 
-### Feature
-
-* feat(bec_connector): export config to yaml ([`a391f30`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a391f3018c50fee6a4a06884491b957df80c3cd3))
-
 ### Fix
 
 * fix(waveform): scatter 2D brush error ([`215d59c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/215d59c8bfe7fda9aff8cec8353bef9e1ce2eca1))
@@ -143,5 +145,3 @@
 * fix(figure): API cleanup ([`008a33a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/008a33a9b192473cc58e90cd6d98c5bcb5f7b8c0))
 
 * fix(figure): if/else logic corrected in subplot_factory ([`3e78723`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3e787234c7274b0698423d7bf9a4c54ec46bad5f))
-
-* fix(image): processing of already displayed data; closes #106 ([`1173510`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1173510105d2d70d7e498c2ac1e122cea3a16597))
