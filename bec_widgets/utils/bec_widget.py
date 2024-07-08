@@ -4,4 +4,5 @@ class BECWidget:
     def closeEvent(self, event):
         if hasattr(self, "cleanup"):
             self.cleanup()
-        event.accept()
+        if hasattr(super(), "closeEvent"):
+            super().closeEvent(event)
