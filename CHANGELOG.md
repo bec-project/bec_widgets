@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## v0.83.0 (2024-07-08)
+
+### Feature
+
+* feat: added reference utils to compare renderings of widgets ([`2988fd3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2988fd387e6b8076fffec1d57e3ccab89ddb2aeb))
+
+* feat(widgets): added device box with spinner ([`1b017ed`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1b017edfad8e78fa079210486123976695b8915c))
+
+* feat(designer): added option to skip the widget validation for DesignerPluginGenerator ([`41bcb80`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/41bcb801674ab6c4d6069bba34ffee09c9e665db))
+
+### Fix
+
+* fix(terminal): added default args to avoid designer crashes on startup ([`360d171`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/360d17135573e44b80ab517756da3c0b31daab0f))
+
+* fix(widget): fixed widget cleanup routine ([`2b29e34`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2b29e34b52d056349647bb2fcf649b749a60d292))
+
+* fix(bec_widget): added cleanup method to bec widget base class ([`fd8766e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fd8766ed87770661da6591aeb4df5abdaf38afc7))
+
+* fix(website): fixed dummy input ([`903ce7d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/903ce7d46b5d37d40486d0fda92d3694d3faca62))
+
+### Test
+
+* test(vscode): fixed vscode tests for new cleanup routine ([`eb26e2a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/eb26e2a11b229a52efe2e6d4fb28d760d3740136))
+
+* test(vscode): improved vscode test ([`5de8804`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5de8804da1e41eafad2472344904b3324438c13b))
+
 ## v0.82.2 (2024-07-08)
 
 ### Fix
@@ -117,31 +143,3 @@
 * fix(toolbar): change default color to black to match BECFigure theme ([`b8774e0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b8774e0b0bc43dcd00f94f42539a778e507ca27d))
 
 * fix(motor_map): fixed bug with residual trace after changing motors ([`aaa0d10`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/aaa0d1003d2e94b45bafe4f700852c2c05288aea))
-
-* fix(widget_io): widget handler adjusted for spinboxes and comboboxes ([`3dc0532`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3dc0532df05b6ec0a2522107fa0b1e210ce7d91b))
-
-### Refactor
-
-* refactor(toolbar): cleanup and adjusted colors ([`96863ad`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/96863adf53c15112645d20eb6200733617801c6d))
-
-## v0.78.1 (2024-07-02)
-
-### Fix
-
-* fix(ui_loader): ui loader is compatible with bec plugins ([`b787759`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b787759f44486dc7af2c03811efb156041e4b6cb))
-
-## v0.78.0 (2024-07-02)
-
-### Feature
-
-* feat(color_button): patched ColorButton from pyqtgraph to be able to be opened in another QDialog ([`c36bb80`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c36bb80d6a4939802a4a1c8e5452c7b94bac185e))
-
-## v0.77.0 (2024-07-02)
-
-### Fix
-
-* fix(waveform): scatter 2D brush error ([`215d59c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/215d59c8bfe7fda9aff8cec8353bef9e1ce2eca1))
-
-* fix(figure): API cleanup ([`008a33a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/008a33a9b192473cc58e90cd6d98c5bcb5f7b8c0))
-
-* fix(figure): if/else logic corrected in subplot_factory ([`3e78723`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3e787234c7274b0698423d7bf9a4c54ec46bad5f))
