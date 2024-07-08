@@ -289,6 +289,8 @@ class BECConnector(BECWidget):
             print("No more connections. Shutting down GUI BEC client.")
             self.bec_dispatcher.disconnect_all()
             self.client.shutdown()
+        if hasattr(super(), "cleanup"):
+            super().cleanup()
 
     # def closeEvent(self, event):
     #     self.cleanup()

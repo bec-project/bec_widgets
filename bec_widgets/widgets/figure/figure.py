@@ -830,6 +830,6 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
             widget_class=self.__class__.__name__, gui_id=self.gui_id, theme=theme
         )
 
-    def cleanup(self):
-        self.clear_all()
-        super().cleanup()
+    # def cleanup(self):
+    #     self.clear_all()
+    #     super().cleanup()

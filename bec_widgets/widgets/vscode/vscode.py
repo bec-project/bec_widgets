@@ -49,13 +49,6 @@ class VSCodeEditor(WebsiteWidget):
                     break
         self.set_url(self._url)
 
-    def closeEvent(self, event):
-        """
-        Hook for the close event to terminate the server.
-        """
-        self.cleanup_vscode()
-        super().closeEvent(event)
-
     def cleanup_vscode(self):
         """
         Cleanup the VSCode editor.
@@ -71,13 +64,6 @@ class VSCodeEditor(WebsiteWidget):
         """
         self.cleanup_vscode()
         return super().cleanup()
-
-    def close(self):
-        """
-        Close the widget.
-        """
-        self.cleanup_vscode()
-        return super().close()
 
 
 if __name__ == "__main__":  # pragma: no cover
