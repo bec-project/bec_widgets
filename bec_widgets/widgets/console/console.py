@@ -222,7 +222,7 @@ class _TerminalWidget(QtWidgets.QPlainTextEdit):
     Start ``Backend`` process and render Pyte output as text.
     """
 
-    def __init__(self, parent, numColumns, numLines, **kwargs):
+    def __init__(self, parent, numColumns=125, numLines=50, **kwargs):
         super().__init__(parent)
 
         # file descriptor to communicate with the subprocess
