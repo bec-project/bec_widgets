@@ -28,7 +28,7 @@ class Signal(BaseModel):
     """The configuration of a signal in the 1D waveform widget."""
 
     source: str
-    x: SignalData  # TODO maybe add metadata for config gui later
+    x: Optional[SignalData] = None
     y: SignalData
     z: Optional[SignalData] = None
     dap: Optional[str] = None

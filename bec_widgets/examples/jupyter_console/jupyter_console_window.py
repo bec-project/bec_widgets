@@ -40,10 +40,8 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "w1": self.w1,
                     "w2": self.w2,
                     "w3": self.w3,
-                    "w1_c": self.w1_c,
-                    "w2_c": self.w2_c,
-                    "w3_c": self.w3_c,
                     "w4": self.w4,
+                    "w5": self.w5,
                     "d0": self.d0,
                     "d1": self.d1,
                     "d2": self.d2,
@@ -73,19 +71,17 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.console_layout.addWidget(self.console)
 
     def _init_figure(self):
-        self.figure.plot(x_name="samx", y_name="samy", z_name="bpm4i", color_map_z="cividis")
-        self.figure.motor_map("samx", "samy")
-        self.figure.image("eiger", color_map="viridis", vrange=(0, 100))
-        self.figure.plot(
+        self.w1 = self.figure.plot(
+            x_name="samx", y_name="samy", z_name="bpm4i", color_map_z="cividis"
+        )
+        self.w2 = self.figure.motor_map("samx", "samy")
+        self.w3 = self.figure.image("eiger", color_map="viridis", vrange=(0, 100))
+        self.w4 = self.figure.plot(
             x_name="samx", y_name="samy", z_name="bpm4i", color_map_z="magma", new=True
         )
+        self.w5 = self.figure.plot(y_name="bpm4i", new=True)
 
         self.figure.change_layout(2, 2)
-
-        self.w1 = self.figure[0, 0]
-        self.w2 = self.figure[0, 1]
-        self.w3 = self.figure[1, 0]
-        self.w4 = self.figure[1, 1]
 
         # Plot Customisation
         self.w1.set_title("Waveform 1")

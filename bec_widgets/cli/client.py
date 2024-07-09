@@ -19,6 +19,9 @@ class Widgets(str, enum.Enum):
     BECMotorMapWidget = "BECMotorMapWidget"
     BECQueue = "BECQueue"
     BECStatusBox = "BECStatusBox"
+    DeviceBox = "DeviceBox"
+    DeviceComboBox = "DeviceComboBox"
+    DeviceLineEdit = "DeviceLineEdit"
     RingProgressBar = "RingProgressBar"
     ScanControl = "ScanControl"
     StopButton = "StopButton"
@@ -1507,6 +1510,7 @@ class BECWaveform(RPCBase):
         label: "str | None" = None,
         validate: "bool" = True,
         dap: "str | None" = None,
+        **kwargs,
     ) -> "BECCurve":
         """
         Plot a curve to the plot widget.
@@ -1749,6 +1753,24 @@ class BECWaveform(RPCBase):
 
         Args:
             size(int): Font size of the legend.
+        """
+
+
+class DeviceBox(RPCBase):
+    @property
+    @rpc_call
+    def _config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def _get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
         """
 
 

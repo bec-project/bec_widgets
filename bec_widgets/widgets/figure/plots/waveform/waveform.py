@@ -78,10 +78,13 @@ class BECWaveform(BECPlotBase):
         self._curves_data = defaultdict(dict)
         self.old_scan_id = None
         self.scan_id = None
+        self.scan_item = None
+        self.dap = None
+        self.scan_motors = None  # TODO maybe not needed actually, can be fetched direclty from scan_item -> msg['info']['scan_report_devices']
 
         # Scan segment update proxy
         self.proxy_update_plot = pg.SignalProxy(
-            self.scan_signal_update, rateLimit=25, slot=self._update_scan_segment_plot
+            self.scan_signal_update, rateLimit=25, slot=self._update_scan_curves
         )
 
         self.proxy_update_dap = pg.SignalProxy(
@@ -92,6 +95,7 @@ class BECWaveform(BECPlotBase):
 
         # Connect dispatcher signals
         self.bec_dispatcher.connect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
+        self.bec_dispatcher.connect_slot(self.on_scan_status, MessageEndpoints.scan_status())
 
         self.entry_validator = EntryValidator(self.dev)
 
@@ -319,8 +323,8 @@ class BECWaveform(BECPlotBase):
 
     def add_curve_scan(
         self,
-        x_name: str,
-        y_name: str,
+        x_name: Optional[str] = None,
+        y_name: Optional[str] = None,
         z_name: Optional[str] = None,
         x_entry: Optional[str] = None,
         y_entry: Optional[str] = None,
@@ -351,6 +355,8 @@ class BECWaveform(BECPlotBase):
         Returns:
             BECCurve: The curve object.
         """
+        if y_name is None:
+            raise ValueError("y_name must be provided.")
         # Check if curve already exists
         curve_source = source
 
@@ -385,7 +391,7 @@ class BECWaveform(BECPlotBase):
             source=curve_source,
             signals=Signal(
                 source=curve_source,
-                x=SignalData(name=x_name, entry=x_entry),
+                x=SignalData(name=x_name, entry=x_entry) if x_name else None,
                 y=SignalData(name=y_name, entry=y_entry),
                 z=SignalData(name=z_name, entry=z_entry) if z_name else None,
                 dap=dap,
@@ -486,8 +492,8 @@ class BECWaveform(BECPlotBase):
 
     def _validate_signal_entries(
         self,
-        x_name: str,
-        y_name: str,
+        x_name: str | None,
+        y_name: str | None,
         z_name: str | None,
         x_entry: str | None,
         y_entry: str | None,
@@ -510,8 +516,10 @@ class BECWaveform(BECPlotBase):
             tuple[str,str,str|None]: Validated x, y, z entries.
         """
         if validate_bec:
-            x_entry = self.entry_validator.validate_signal(x_name, x_entry)
-            y_entry = self.entry_validator.validate_signal(y_name, y_entry)
+            if x_name:
+                x_entry = self.entry_validator.validate_signal(x_name, x_entry)
+            if y_name:
+                y_entry = self.entry_validator.validate_signal(y_name, y_entry)
             if z_name:
                 z_entry = self.entry_validator.validate_signal(z_name, z_entry)
         else:
@@ -593,15 +601,15 @@ class BECWaveform(BECPlotBase):
         else:
             raise IndexError(f"Curve order {N} out of range.")
 
-    @pyqtSlot(dict, dict)
-    def on_scan_segment(self, msg: dict, metadata: dict):
+    @pyqtSlot(dict)
+    def on_scan_status(self, msg):
         """
-        Handle new scan segments and saves data to a dictionary. Linked through bec_dispatcher.
+        Handle the scan status message.
 
         Args:
-            msg (dict): Message received with scan data.
-            metadata (dict): Metadata of the scan.
+            msg(dict): Message received with scan status.
         """
+
         current_scan_id = msg.get("scan_id", None)
         if current_scan_id is None:
             return
@@ -609,14 +617,28 @@ class BECWaveform(BECPlotBase):
         if current_scan_id != self.scan_id:
             self.old_scan_id = self.scan_id
             self.scan_id = current_scan_id
-            self.scan_segment_data = self.queue.scan_storage.find_scan_by_ID(
-                self.scan_id
-            )  # TODO do scan access through BECFigure
-            self.setup_dap(self.old_scan_id, self.scan_id)
+            self.scan_item = self.queue.scan_storage.find_scan_by_ID(self.scan_id)
+            if self._curves_data["DAP"]:
+                self.setup_dap(self.old_scan_id, self.scan_id)
+            if self._curves_data["async"]:
+                print("setting async")
+                # for curve in self._curves_data["async"]:
+                #     self.setup_async(curve.config.signals.y.name)
+
+    @pyqtSlot(dict, dict)
+    def on_scan_segment(self, msg: dict, metadata: dict):
+        """
+        Handle new scan segments and saves data to a dictionary. Linked through bec_dispatcher.
+        Used only for triggering scan segment update from the BECClient scan storage.
+
+        Args:
+            msg (dict): Message received with scan data.
+            metadata (dict): Metadata of the scan.
+        """
 
         self.scan_signal_update.emit()
 
-    def setup_dap(self, old_scan_id, new_scan_id):
+    def setup_dap(self, old_scan_id: str | None, new_scan_id: str | None):
         """
         Setup DAP for the new scan.
 
@@ -631,6 +653,15 @@ class BECWaveform(BECPlotBase):
         if len(self._curves_data["DAP"]) > 0:
             self.bec_dispatcher.connect_slot(
                 self.update_dap, MessageEndpoints.dap_response(new_scan_id)
+            )
+
+    def setup_async(self, device: str):
+        self.bec_dispatcher.disconnect_slot(
+            self.update_dap, MessageEndpoints.device_async_readback(self.old_scan_id, device)
+        )
+        if len(self._curves_data["async"]) > 0:
+            self.bec_dispatcher.connect_slot(
+                self.update_dap, MessageEndpoints.device_async_readback(self.scan_id, device)
             )
 
     def refresh_dap(self):
@@ -676,24 +707,31 @@ class BECWaveform(BECPlotBase):
                     self.dap_params_update.emit(curve.dap_params)
                 break
 
-    def _update_scan_segment_plot(self):
-        """Update the plot with the data from the scan segment."""
-        data = self.scan_segment_data.data
-        self._update_scan_curves(data)
+    @pyqtSlot(dict, dict)
+    def update_async(self, msg, metadata):
+        print("async")
+        print(f"msg: {msg}")
+        print(f"metadata: {metadata}")
 
-    def _update_scan_curves(self, data: ScanData):
+    @pyqtSlot()
+    def _update_scan_curves(self):
         """
         Update the scan curves with the data from the scan segment.
-
-        Args:
-            data(ScanData): Data from the scan segment.
         """
+        data = self.scan_item.data
+
         data_x = None
         data_y = None
         data_z = None
+
         for curve_id, curve in self._curves_data["scan_segment"].items():
-            x_name = curve.config.signals.x.name
-            x_entry = curve.config.signals.x.entry
+            if curve.config.signals.x:
+                x_name = curve.config.signals.x.name
+                x_entry = curve.config.signals.x.entry
+            else:
+                x_name = self.scan_item.status_message.info["scan_report_devices"][0]
+                x_entry = self.entry_validator.validate_signal(x_name, None)
+
             y_name = curve.config.signals.y.name
             y_entry = curve.config.signals.y.entry
             if curve.config.signals.z:
@@ -765,8 +803,8 @@ class BECWaveform(BECPlotBase):
             self.scan_id = scan_id
 
         self.setup_dap(self.old_scan_id, self.scan_id)
-        data = self.queue.scan_storage.find_scan_by_ID(self.scan_id).data
-        self._update_scan_curves(data)
+        self.scan_item = self.queue.scan_storage.find_scan_by_ID(self.scan_id)
+        self.scan_signal_update.emit()
 
     def get_all_data(self, output: Literal["dict", "pandas"] = "dict") -> dict | pd.DataFrame:
         """
