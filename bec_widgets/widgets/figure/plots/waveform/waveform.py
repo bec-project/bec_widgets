@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import time
 from collections import defaultdict
 from typing import Any, Literal, Optional
@@ -8,7 +9,6 @@ import numpy as np
 import pyqtgraph as pg
 from bec_lib import messages
 from bec_lib.endpoints import MessageEndpoints
-from bec_lib.scan_data import ScanData
 from pydantic import Field, ValidationError
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtCore import Slot as pyqtSlot
@@ -323,18 +323,18 @@ class BECWaveform(BECPlotBase):
 
     def add_curve_scan(
         self,
-        x_name: Optional[str] = None,
-        y_name: Optional[str] = None,
-        z_name: Optional[str] = None,
-        x_entry: Optional[str] = None,
-        y_entry: Optional[str] = None,
-        z_entry: Optional[str] = None,
-        color: Optional[str] = None,
-        color_map_z: Optional[str] = "plasma",
-        label: Optional[str] = None,
+        x_name: str | None = None,
+        y_name: str | None = None,
+        z_name: str | None = None,
+        x_entry: str | None = None,
+        y_entry: str | None = None,
+        z_entry: str | None = None,
+        color: str | None = None,
+        color_map_z: str | None = "plasma",
+        label: str | None = None,
         validate_bec: bool = True,
         source: str = "scan_segment",
-        dap: Optional[str] = None,
+        dap: str | None = None,
         **kwargs,
     ) -> BECCurve:
         """
@@ -350,6 +350,9 @@ class BECWaveform(BECPlotBase):
             color(str, optional): Color of the curve. Defaults to None.
             color_map_z(str): The color map to use for the z-axis.
             label(str, optional): Label of the curve. Defaults to None.
+            validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
+            source(str, optional): Source of the curve. Defaults to "scan_segment".
+            dap(str, optional): The dap model to use for the curve. Defaults to None.
             **kwargs: Additional keyword arguments for the curve configuration.
 
         Returns:
@@ -409,6 +412,7 @@ class BECWaveform(BECPlotBase):
         y_entry: Optional[str] = None,
         color: Optional[str] = None,
         dap: str = "GaussianModel",
+        validate_bec: bool = True,
         **kwargs,
     ) -> BECCurve:
         """
@@ -423,14 +427,17 @@ class BECWaveform(BECPlotBase):
             color_map_z(str): The color map to use for the z-axis.
             label(str, optional): Label of the curve. Defaults to None.
             dap(str): The dap model to use for the curve.
+            validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
             **kwargs: Additional keyword arguments for the curve configuration.
 
         Returns:
             BECCurve: The curve object.
         """
-        x_entry, y_entry, _ = self._validate_signal_entries(
-            x_name, y_name, None, x_entry, y_entry, None
-        )
+        if validate_bec is True:
+            x_entry = self.entry_validator.validate_signal(x_name, x_entry)
+            x_entry, y_entry, _ = self._validate_signal_entries(
+                x_name, y_name, None, x_entry, y_entry, None
+            )
         label = f"{y_name}-{y_entry}-{dap}"
         curve = self.add_curve_scan(
             x_name=x_name,
@@ -517,7 +524,10 @@ class BECWaveform(BECPlotBase):
         """
         if validate_bec:
             if x_name:
-                x_entry = self.entry_validator.validate_signal(x_name, x_entry)
+                if x_name == "index" or x_name == "timestamp":
+                    x_entry = x_name
+                else:
+                    x_entry = self.entry_validator.validate_signal(x_name, x_entry)
             if y_name:
                 y_entry = self.entry_validator.validate_signal(y_name, y_entry)
             if z_name:
@@ -725,12 +735,6 @@ class BECWaveform(BECPlotBase):
         data_z = None
 
         for curve_id, curve in self._curves_data["scan_segment"].items():
-            if curve.config.signals.x:
-                x_name = curve.config.signals.x.name
-                x_entry = curve.config.signals.x.entry
-            else:
-                x_name = self.scan_item.status_message.info["scan_report_devices"][0]
-                x_entry = self.entry_validator.validate_signal(x_name, None)
 
             y_name = curve.config.signals.y.name
             y_entry = curve.config.signals.y.entry
@@ -738,8 +742,9 @@ class BECWaveform(BECPlotBase):
                 z_name = curve.config.signals.z.name
                 z_entry = curve.config.signals.z.entry
 
+            data_x = self._get_x_data(curve, y_name, y_entry)
+
             try:
-                data_x = data[x_name][x_entry].val
                 data_y = data[y_name][y_entry].val
                 if curve.config.signals.z:
                     data_z = data[z_name][z_entry].val
@@ -752,8 +757,41 @@ class BECWaveform(BECPlotBase):
                     curve.setData(x=data_x, y=data_y, symbolBrush=color_z)
                 except:
                     return
+            if data_x is None:
+                curve.setData(data_y)
             else:
                 curve.setData(data_x, data_y)
+
+    def _get_x_data(self, curve: BECCurve, y_name: str, y_entry: str) -> list | np.ndarray | None:
+        """
+        Get the x data for the curve with the decision logic based on the curve configuration:
+            - If x is called 'timestamp', use the timestamp data from the scan item.
+            - If x is called 'index', use the rolling index.
+            - If x is a custom signal, use the data from the scan item.
+            - If x is not specified, use the first device from the scan report.
+
+        Args:
+            curve(BECCurve): The curve object.
+
+        Returns:
+            list|np.ndarray|None: X data for the curve.
+        """
+        if curve.config.signals.x is not None:
+            if curve.config.signals.x.name == "timestamp":
+                timestamps = self.scan_item.data[y_name][y_entry].timestamps
+                x_data = self.convert_timestamps(timestamps)
+            elif curve.config.signals.x.name == "index":
+                x_data = None
+            else:
+                x_name = curve.config.signals.x.name
+                x_entry = curve.config.signals.x.entry
+                x_data = self.scan_item.data[x_name][x_entry].val
+        else:
+            x_name = self.scan_item.status_message.info["scan_report_devices"][0]
+            x_entry = self.entry_validator.validate_signal(x_name, None)
+            x_data = self.scan_item.data[x_name][x_entry].val
+
+        return x_data
 
     def _make_z_gradient(self, data_z: list | np.ndarray, colormap: str) -> list | None:
         """
@@ -845,6 +883,23 @@ class BECWaveform(BECPlotBase):
             )
             return combined_data
         return data
+
+    @staticmethod
+    def convert_timestamps(timestamps: list) -> list:
+        """
+        Convert timestamps to human-readable dates.
+
+        Args:
+            timestamps(list): List of timestamps.
+
+        Returns:
+            list: List of human-readable dates.
+        """
+        human_readable_dates = [
+            datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S.%f")
+            for ts in timestamps
+        ]
+        return human_readable_dates
 
     def cleanup(self):
         """Cleanup the widget connection from BECDispatcher."""

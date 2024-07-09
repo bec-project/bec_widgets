@@ -79,7 +79,11 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.w4 = self.figure.plot(
             x_name="samx", y_name="samy", z_name="bpm4i", color_map_z="magma", new=True
         )
-        self.w5 = self.figure.plot(y_name="bpm4i", new=True)
+        self.w5 = self.figure.plot(y_name="bpm4i", new=True, title="Best Effort Plot")
+        self.w6 = self.figure.plot(
+            x_name="timestamp", y_name="bpm4i", new=True, title="Timestamp Plot"
+        )
+        self.w6 = self.figure.plot(x_name="index", y_name="bpm4i", new=True, title="Index Plot")
 
         self.figure.change_layout(2, 2)
 
