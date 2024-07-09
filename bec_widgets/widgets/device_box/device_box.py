@@ -12,6 +12,10 @@ from bec_widgets.utils.bec_connector import BECConnector
 
 
 class DeviceBox(BECConnector, QWidget):
+    """A widget that controls a single device."""
+
+    ui_file = "device_box.ui"
+    dimensions = (234, 224)
     device_changed = Signal(str, str)
 
     def __init__(self, parent=None, device=None, *args, **kwargs):
@@ -31,7 +35,7 @@ class DeviceBox(BECConnector, QWidget):
         self.device_changed.connect(self.on_device_change)
 
         current_path = os.path.dirname(__file__)
-        self.ui = UILoader(self).loader(os.path.join(current_path, "device_box.ui"))
+        self.ui = UILoader(self).loader(os.path.join(current_path, self.ui_file))
 
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.ui)
@@ -40,8 +44,8 @@ class DeviceBox(BECConnector, QWidget):
 
         # fix the size of the device box
         db = self.ui.device_box
-        db.setFixedHeight(234)
-        db.setFixedWidth(224)
+        db.setFixedHeight(self.dimensions[0])
+        db.setFixedWidth(self.dimensions[1])
 
         self.ui.step_size.setStepType(QDoubleSpinBox.AdaptiveDecimalStepType)
         self.ui.stop.clicked.connect(self.on_stop)

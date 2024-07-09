@@ -27,7 +27,7 @@ class BECStatusBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return ""
+        return "BEC Core Widgets"
 
     def icon(self):
         return QIcon()
