@@ -79,8 +79,7 @@ class BECWaveform(BECPlotBase):
         self.old_scan_id = None
         self.scan_id = None
         self.scan_item = None
-        self.dap = None
-        self.scan_motors = None  # TODO maybe not needed actually, can be fetched direclty from scan_item -> msg['info']['scan_report_devices']
+        self._x_axis_mode = {"name": None, "entry": None}
 
         # Scan segment update proxy
         self.proxy_update_plot = pg.SignalProxy(
@@ -143,6 +142,37 @@ class BECWaveform(BECPlotBase):
         for curve in self.curves:
             curve.config.parent_id = new_gui_id
 
+    ###################################
+    # Adding and Removing Curves
+    ###################################
+
+    @property
+    def curves(self) -> list[BECCurve]:
+        """
+        Get the curves of the plot widget as a list
+        Returns:
+            list: List of curves.
+        """
+        return self._curves
+
+    @curves.setter
+    def curves(self, value: list[BECCurve]):
+        self._curves = value
+
+    @property
+    def x_axis_mode(self) -> dict:
+        """
+        Get the x axis mode of the plot widget.
+
+        Returns:
+            dict: The x axis mode.
+        """
+        return self._x_axis_mode
+
+    @x_axis_mode.setter
+    def x_axis_mode(self, value: dict):
+        self._x_axis_mode = value
+
     def add_curve_by_config(self, curve_config: CurveConfig | dict) -> BECCurve:
         """
         Add a curve to the plot widget by its configuration.
@@ -176,19 +206,6 @@ class BECWaveform(BECPlotBase):
                     return curves[curve_id].config.model_dump()
                 else:
                     return curves[curve_id].config
-
-    @property
-    def curves(self) -> list[BECCurve]:
-        """
-        Get the curves of the plot widget as a list
-        Returns:
-            list: List of curves.
-        """
-        return self._curves
-
-    @curves.setter
-    def curves(self, value: list[BECCurve]):
-        self._curves = value
 
     def get_curve(self, identifier) -> BECCurve:
         """
@@ -253,7 +270,7 @@ class BECWaveform(BECPlotBase):
         else:
             if dap:
                 self.add_dap(x_name=x_name, y_name=y_name, dap=dap)
-            return self.add_curve_scan(
+            curve = self.add_curve_scan(
                 x_name=x_name,
                 y_name=y_name,
                 z_name=z_name,
@@ -266,6 +283,35 @@ class BECWaveform(BECPlotBase):
                 validate_bec=validate,
                 **kwargs,
             )
+            self.scan_signal_update.emit()
+            return curve
+
+    def change_x_axis(self, x_name: str, x_entry: str | None = None):
+        """
+        Change the x axis of the plot widget.
+
+        Args:
+            x_name(str): Name of the x signal.
+            x_entry(str): Entry of the x signal.
+        """
+        curve_configs = self.config.curves
+        curve_ids = list(curve_configs.keys())
+        curve_configs = list(curve_configs.values())
+
+        x_entry, _, _ = self._validate_signal_entries(
+            x_name, None, None, x_entry, None, None, validate_bec=True
+        )
+
+        self.x_axis_mode = {"name": x_name, "entry": x_entry}
+
+        for curve_id, curve_config in zip(curve_ids, curve_configs):
+            if curve_config.signals.x:
+                curve_config.signals.x.name = x_name
+                curve_config.signals.x.entry = x_entry
+            self.remove_curve(curve_id)
+            self.add_curve_by_config(curve_config)
+
+        self.scan_signal_update.emit()
 
     def add_curve_custom(
         self,
@@ -360,8 +406,9 @@ class BECWaveform(BECPlotBase):
         """
         if y_name is None:
             raise ValueError("y_name must be provided.")
-        # Check if curve already exists
-        curve_source = source
+
+        if x_name is None:
+            x_name = self.x_axis_mode["name"]
 
         # Get entry if not provided and validate
         x_entry, y_entry, z_entry = self._validate_signal_entries(
@@ -373,10 +420,15 @@ class BECWaveform(BECPlotBase):
         else:
             label = label or f"{y_name}-{y_entry}"
 
+        # Check if curve already exists
         curve_exits = self._check_curve_id(label, self._curves_data)
         if curve_exits:
             raise ValueError(f"Curve with ID '{label}' already exists in widget '{self.gui_id}'.")
 
+        # Validate or define x axis behaviour
+        self._validate_x_axis_behaviour(x_name, x_entry)
+
+        # Create color if not specified
         color = (
             color
             or Colors.golden_angle_color(
@@ -391,9 +443,9 @@ class BECWaveform(BECPlotBase):
             label=label,
             color=color,
             color_map_z=color_map_z,
-            source=curve_source,
+            source=source,
             signals=Signal(
-                source=curve_source,
+                source=source,
                 x=SignalData(name=x_name, entry=x_entry) if x_name else None,
                 y=SignalData(name=y_name, entry=y_entry),
                 z=SignalData(name=z_name, entry=z_entry) if z_name else None,
@@ -401,13 +453,14 @@ class BECWaveform(BECPlotBase):
             ),
             **kwargs,
         )
-        curve = self._add_curve_object(name=label, source=curve_source, config=curve_config)
+
+        curve = self._add_curve_object(name=label, source=source, config=curve_config)
         return curve
 
     def add_dap(
         self,
-        x_name: str,
-        y_name: str,
+        x_name: str | None = None,
+        y_name: str | None = None,
         x_entry: Optional[str] = None,
         y_entry: Optional[str] = None,
         color: Optional[str] = None,
@@ -433,8 +486,14 @@ class BECWaveform(BECPlotBase):
         Returns:
             BECCurve: The curve object.
         """
-        if validate_bec is True:
-            x_entry = self.entry_validator.validate_signal(x_name, x_entry)
+        if x_name is None:
+            x_name = self.x_axis_mode["name"]
+            x_entry = self.x_axis_mode["entry"]
+            if x_name == "timestamp" or x_name == "index":
+                raise ValueError(
+                    f"Cannot use x axis '{x_name}' for DAP curve. Please provide a custom x axis signal or switch to 'best_effort' signal mode."
+                )
+        if validate_bec is True:  # TODO adapt dap for x axis global behaviour
             x_entry, y_entry, _ = self._validate_signal_entries(
                 x_name, y_name, None, x_entry, y_entry, None
             )
@@ -497,6 +556,72 @@ class BECWaveform(BECPlotBase):
         self.set_legend_label_size()
         return curve
 
+    def _validate_x_axis_behaviour(
+        self, x_name: str | None = None, x_entry: str | None = None
+    ) -> None:
+        """
+        Validate the x axis behaviour and consistency for the plot item.
+
+        Args:
+            x_name(str): Name of the x signal.
+                - "best_effort": Use the best effort signal.
+                - "timestamp": Use the timestamp signal.
+                - "index": Use the index signal.
+                - Custom signal name of device from BEC.
+            x_entry(str): Entry of the x signal.
+        """
+        # Check if the x axis behaviour is already set
+        if self._x_axis_mode["name"] is not None:
+            # Case 1: The same x axis signal is used, do nothing
+            if x_name == self._x_axis_mode["name"] and x_entry == self._x_axis_mode["entry"]:
+                return
+
+            # Case 2: A different x axis signal is used, raise an exception
+            raise ValueError(
+                f"All curves must have the same x axis.\n"
+                f" Current valid x axis: '{self._x_axis_mode['name']}'\n"
+                f" Attempted to add curve with x axis: '{x_name}'\n"
+                f"If you want to change the x-axis of the curve, please remove previous curves."
+            )
+        # If x_axis_mode["name"] is None, determine the mode based on x_name
+        # Setting mode to either "best_effort", "timestamp", "index", or a custom one
+        if x_name in ["best_effort", "timestamp", "index"]:
+            self._x_axis_mode["name"] = x_name
+            self._x_axis_mode["entry"] = x_entry
+        else:
+            self._x_axis_mode["name"] = x_name
+            self._x_axis_mode["entry"] = x_entry
+
+        # Switch the x axis mode accordingly
+        self._switch_x_axis_item(
+            f"{x_name}-{x_entry}" if x_name not in ["best_effort", "timestamp", "index"] else x_name
+        )
+
+    def _switch_x_axis_item(self, mode: str):
+        """
+        Switch the x-axis mode between timestamp, index, the best effort and custom signal.
+
+        Args:
+            mode(str): Mode of the x-axis.
+                - "timestamp": Use the timestamp signal.
+                - "index": Use the index signal.
+                - "best_effort": Use the best effort signal.
+                - Custom signal name of device from BEC.
+        """
+        current_label = "" if self.config.axis.x_label is None else self.config.axis.x_label
+        date_axis = pg.graphicsItems.DateAxisItem.DateAxisItem(orientation="bottom")
+        default_axis = pg.AxisItem(orientation="bottom")
+
+        if mode == "timestamp":
+            self.plot_item.setAxisItems({"bottom": date_axis})
+            self.plot_item.setLabel("bottom", f"{current_label} [timestamp]")
+        elif mode == "index":
+            self.plot_item.setAxisItems({"bottom": default_axis})
+            self.plot_item.setLabel("bottom", f"{current_label} [index]")
+        else:
+            self.plot_item.setAxisItems({"bottom": default_axis})
+            self.plot_item.setLabel("bottom", f"{current_label} [{mode}]")
+
     def _validate_signal_entries(
         self,
         x_name: str | None,
@@ -524,7 +649,7 @@ class BECWaveform(BECPlotBase):
         """
         if validate_bec:
             if x_name:
-                if x_name == "index" or x_name == "timestamp":
+                if x_name == "index" or x_name == "timestamp" or x_name == "best_effort":
                     x_entry = x_name
                 else:
                     x_entry = self.entry_validator.validate_signal(x_name, x_entry)
@@ -674,14 +799,32 @@ class BECWaveform(BECPlotBase):
                 self.update_dap, MessageEndpoints.device_async_readback(self.scan_id, device)
             )
 
+    @pyqtSlot()
     def refresh_dap(self):
         """
         Refresh the DAP curves with the latest data from the DAP model MessageEndpoints.dap_response().
         """
         for curve_id, curve in self._curves_data["DAP"].items():
-            x_name = curve.config.signals.x.name
+            if curve.config.signals.x is not None:
+                x_name = curve.config.signals.x.name
+                x_entry = curve.config.signals.x.entry
+                if (
+                    x_name == "timestamp" or x_name == "index"
+                ):  # timestamp and index not supported by DAP
+                    return
+                try:  # to prevent DAP update if the x axis is not the same as the current scan
+                    current_x_names = self.scan_item.status_message.info["scan_report_devices"]
+                    if x_name not in current_x_names:
+                        return
+                except AttributeError:
+                    return
+            else:
+                try:
+                    x_name = self.scan_item.status_message.info["scan_report_devices"][0]
+                    x_entry = self.entry_validator.validate_signal(x_name, None)
+                except AttributeError:
+                    return
             y_name = curve.config.signals.y.name
-            x_entry = curve.config.signals.x.entry
             y_entry = curve.config.signals.y.entry
             model_name = curve.config.signals.dap
             model = getattr(self.dap, model_name)
@@ -728,7 +871,10 @@ class BECWaveform(BECPlotBase):
         """
         Update the scan curves with the data from the scan segment.
         """
-        data = self.scan_item.data
+        try:
+            data = self.scan_item.data
+        except AttributeError:
+            return
 
         data_x = None
         data_y = None
@@ -743,6 +889,8 @@ class BECWaveform(BECPlotBase):
                 z_entry = curve.config.signals.z.entry
 
             data_x = self._get_x_data(curve, y_name, y_entry)
+            if data_x == []:  # case if the data is empty because motor is not scanned
+                return
 
             try:
                 data_y = data[y_name][y_entry].val
@@ -785,11 +933,15 @@ class BECWaveform(BECPlotBase):
             else:
                 x_name = curve.config.signals.x.name
                 x_entry = curve.config.signals.x.entry
-                x_data = self.scan_item.data[x_name][x_entry].val
+                try:
+                    x_data = self.scan_item.data[x_name][x_entry].val
+                except TypeError:
+                    x_data = []
         else:
             x_name = self.scan_item.status_message.info["scan_report_devices"][0]
             x_entry = self.entry_validator.validate_signal(x_name, None)
             x_data = self.scan_item.data[x_name][x_entry].val
+            self.set_x_label(f"[auto: {x_name}-{x_entry}]")
 
         return x_data
 
@@ -899,7 +1051,11 @@ class BECWaveform(BECPlotBase):
             datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S.%f")
             for ts in timestamps
         ]
-        return human_readable_dates
+        data2float = [
+            time.mktime(datetime.datetime.strptime(date, "%Y-%m-%d %H:%M:%S.%f").timetuple())
+            for date in human_readable_dates
+        ]
+        return data2float
 
     def cleanup(self):
         """Cleanup the widget connection from BECDispatcher."""
