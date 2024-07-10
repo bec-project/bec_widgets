@@ -1,10 +1,11 @@
 import sys
 
 import numpy as np
-import qdarktheme
 from qtpy.QtCore import QRect, Qt, QTimer
 from qtpy.QtGui import QColor, QPainter, QPen
 from qtpy.QtWidgets import QApplication, QMainWindow, QWidget
+
+from bec_widgets.utils.colors import get_theme_palette
 
 
 def ease_in_out_sine(t):
@@ -52,9 +53,9 @@ class SpinnerWidget(QWidget):
         background_color = QColor(200, 200, 200, 50)
         line_width = 5
 
-        color_palette = qdarktheme.load_palette()
+        color_palette = get_theme_palette()
 
-        color = QColor(color_palette.accent().color())
+        color = QColor(color_palette.COLOR_ACCENT_4)
 
         rect.adjust(line_width, line_width, -line_width, -line_width)
 

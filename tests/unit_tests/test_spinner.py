@@ -1,13 +1,13 @@
 import pytest
-import qdarktheme
 
+from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.reference_utils import snap_and_compare
 from bec_widgets.widgets.spinner.spinner import SpinnerWidget
 
 
 @pytest.fixture
 def spinner_widget(qtbot):
-    qdarktheme.setup_theme("light")
+    apply_theme("light")
     spinner = SpinnerWidget()
     qtbot.addWidget(spinner)
     qtbot.waitExposed(spinner)
