@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal, Optional
 
+import numpy as np
 import pyqtgraph as pg
 from pydantic import BaseModel, Field, field_validator
 from pydantic_core import PydanticCustomError
@@ -248,8 +249,14 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         Returns:
             tuple[np.ndarray,np.ndarray]: X and Y data of the curve.
         """
-        x_data, y_data = self.getData()
+        try:
+            x_data, y_data = self.getData()
+        except TypeError:
+            x_data, y_data = np.array([]), np.array([])
         return x_data, y_data
+
+    def clear_data(self):
+        self.setData([], [])
 
     def remove(self):
         """Remove the curve from the plot."""

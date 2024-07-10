@@ -14,36 +14,36 @@ def test_adding_curve_to_waveform(bec_figure):
     w1 = bec_figure.plot()
 
     # adding curve which is in bec - only names
-    c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i")
+    c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i")
     assert c1.config.label == "bpm4i-bpm4i"
 
     # adding curve which is in bec - names and entry
-    c2 = w1.add_curve_scan(x_name="samx", x_entry="samx", y_name="bpm3a", y_entry="bpm3a")
+    c2 = w1.add_curve_bec(x_name="samx", x_entry="samx", y_name="bpm3a", y_entry="bpm3a")
     assert c2.config.label == "bpm3a-bpm3a"
 
     # adding curve which is not in bec
     with pytest.raises(ValueError) as excinfo:
-        w1.add_curve_scan(x_name="non_existent_device", y_name="non_existent_device")
+        w1.add_curve_bec(x_name="non_existent_device", y_name="non_existent_device")
     assert "Device 'non_existent_device' not found in current BEC session" in str(excinfo.value)
 
     # adding wrong entry for samx
     with pytest.raises(ValueError) as excinfo:
-        w1.add_curve_scan(
+        w1.add_curve_bec(
             x_name="samx", x_entry="non_existent_entry", y_name="bpm3a", y_entry="bpm3a"
         )
     assert "Entry 'non_existent_entry' not found in device 'samx' signals" in str(excinfo.value)
 
     # adding wrong device with validation switched off
-    c3 = w1.add_curve_scan(x_name="samx", y_name="non_existent_device", validate_bec=False)
+    c3 = w1.add_curve_bec(x_name="samx", y_name="non_existent_device", validate_bec=False)
     assert c3.config.label == "non_existent_device-non_existent_device"
 
 
 def test_adding_curve_with_same_id(bec_figure):
     w1 = bec_figure.plot()
-    c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i", gui_id="test_curve")
+    c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i", gui_id="test_curve")
 
     with pytest.raises(ValueError) as excinfo:
-        w1.add_curve_scan(x_name="samx", y_name="bpm4i", gui_id="test_curve")
+        w1.add_curve_bec(x_name="samx", y_name="bpm4i", gui_id="test_curve")
         assert "Curve with ID 'test_curve' already exists." in str(excinfo.value)
 
 
@@ -134,7 +134,7 @@ def test_create_waveform1D_by_config(bec_figure):
 
 def test_change_gui_id(bec_figure):
     w1 = bec_figure.plot()
-    c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i")
+    c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i")
     w1.change_gui_id("new_id")
 
     assert w1.config.gui_id == "new_id"
@@ -143,7 +143,7 @@ def test_change_gui_id(bec_figure):
 
 def test_getting_curve(bec_figure):
     w1 = bec_figure.plot()
-    c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i", gui_id="test_curve")
+    c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i", gui_id="test_curve")
     c1_expected_config = CurveConfig(
         widget_class="BECCurve",
         gui_id="test_curve",
@@ -173,7 +173,7 @@ def test_getting_curve(bec_figure):
 
 def test_getting_curve_errors(bec_figure):
     w1 = bec_figure.plot()
-    c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i", gui_id="test_curve")
+    c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i", gui_id="test_curve")
 
     with pytest.raises(ValueError) as excinfo:
         w1.get_curve("non_existent_curve")
@@ -191,7 +191,7 @@ def test_getting_curve_errors(bec_figure):
 def test_add_curve(bec_figure):
     w1 = bec_figure.plot()
 
-    c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i")
+    c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i")
 
     assert len(w1.curves) == 1
     assert w1._curves_data["scan_segment"] == {"bpm4i-bpm4i": c1}
@@ -202,7 +202,7 @@ def test_add_curve(bec_figure):
 def test_change_legend_font_size(bec_figure):
     plot = bec_figure.plot()
 
-    w1 = plot.add_curve_scan(x_name="samx", y_name="bpm4i")
+    w1 = plot.add_curve_bec(x_name="samx", y_name="bpm4i")
     my_func = plot.plot_item.legend
     with mock.patch.object(my_func, "setScale") as mock_set_scale:
         plot.set_legend_label_size(18)
@@ -214,8 +214,8 @@ def test_change_legend_font_size(bec_figure):
 def test_remove_curve(bec_figure):
     w1 = bec_figure.plot()
 
-    w1.add_curve_scan(x_name="samx", y_name="bpm4i")
-    w1.add_curve_scan(x_name="samx", y_name="bpm3a")
+    w1.add_curve_bec(x_name="samx", y_name="bpm4i")
+    w1.add_curve_bec(x_name="samx", y_name="bpm3a")
     w1.remove_curve(0)
     w1.remove_curve("bpm3a-bpm3a")
 
@@ -232,7 +232,7 @@ def test_remove_curve(bec_figure):
 def test_change_curve_appearance_methods(bec_figure, qtbot):
     w1 = bec_figure.plot()
 
-    c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i")
+    c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i")
 
     c1.set_color("#0000ff")
     c1.set_symbol("x")
@@ -261,7 +261,7 @@ def test_change_curve_appearance_methods(bec_figure, qtbot):
 def test_change_curve_appearance_args(bec_figure):
     w1 = bec_figure.plot()
 
-    c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i")
+    c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i")
 
     c1.set(
         color="#0000ff",
@@ -414,7 +414,7 @@ def test_curve_add_by_config(bec_figure):
 def test_scan_update(bec_figure, qtbot):
     w1 = bec_figure.plot()
 
-    c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i")
+    c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i")
 
     msg_waveform = {
         "data": {
@@ -448,7 +448,7 @@ def test_scan_update(bec_figure, qtbot):
 def test_scan_history_with_val_access(bec_figure, qtbot):
     w1 = bec_figure.plot()
 
-    c1 = w1.add_curve_scan(x_name="samx", y_name="bpm4i")
+    c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i")
 
     mock_scan_data = {
         "samx": {"samx": mock.MagicMock(val=np.array([1, 2, 3]))},  # Use mock.MagicMock for .val
@@ -473,7 +473,7 @@ def test_scan_history_with_val_access(bec_figure, qtbot):
 def test_scatter_2d_update(bec_figure, qtbot):
     w1 = bec_figure.plot()
 
-    c1 = w1.add_curve_scan(x_name="samx", y_name="samx", z_name="bpm4i")
+    c1 = w1.add_curve_bec(x_name="samx", y_name="samx", z_name="bpm4i")
 
     msg = {
         "data": {

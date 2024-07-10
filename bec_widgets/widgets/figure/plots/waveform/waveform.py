@@ -8,6 +8,7 @@ from typing import Any, Literal, Optional
 import numpy as np
 import pyqtgraph as pg
 from bec_lib import messages
+from bec_lib.device import ReadoutPriority
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import Field, ValidationError
 from qtpy.QtCore import Signal as pyqtSignal
@@ -27,18 +28,26 @@ from bec_widgets.widgets.figure.plots.waveform.waveform_curve import (
 class Waveform1DConfig(SubplotConfig):
     color_palette: Literal["plasma", "viridis", "inferno", "magma"] = Field(
         "plasma", description="The color palette of the figure widget."
-    )  # TODO can be extended to all colormaps from current pyqtgraph session
+    )
     curves: dict[str, CurveConfig] = Field(
         {}, description="The list of curves to be added to the 1D waveform widget."
     )
 
 
 class BECWaveform(BECPlotBase):
+    READOUT_PRIORITY_HANDLER = {
+        ReadoutPriority.ON_REQUEST: "on_request",
+        ReadoutPriority.BASELINE: "baseline",
+        ReadoutPriority.MONITORED: "monitored",
+        ReadoutPriority.ASYNC: "async",
+        ReadoutPriority.CONTINUOUS: "continuous",
+    }
     USER_ACCESS = [
         "_rpc_id",
         "_config_dict",
         "plot",
         "add_dap",
+        "change_x_axis",
         "get_dap_params",
         "remove_curve",
         "scan_history",
@@ -59,6 +68,7 @@ class BECWaveform(BECPlotBase):
         "set_legend_label_size",
     ]
     scan_signal_update = pyqtSignal()
+    async_signal_update = pyqtSignal()
     dap_params_update = pyqtSignal(dict)
 
     def __init__(
@@ -79,16 +89,17 @@ class BECWaveform(BECPlotBase):
         self.old_scan_id = None
         self.scan_id = None
         self.scan_item = None
-        self._x_axis_mode = {"name": None, "entry": None}
+        self._x_axis_mode = {"name": None, "entry": None, "readout_priority": None}
 
         # Scan segment update proxy
         self.proxy_update_plot = pg.SignalProxy(
             self.scan_signal_update, rateLimit=25, slot=self._update_scan_curves
         )
-
         self.proxy_update_dap = pg.SignalProxy(
             self.scan_signal_update, rateLimit=25, slot=self.refresh_dap
         )
+        self.async_signal_update.connect(self.replot_async_curve)
+
         # Get bec shortcuts dev, scans, queue, scan_storage, dap
         self.get_bec_shortcuts()
 
@@ -143,7 +154,7 @@ class BECWaveform(BECPlotBase):
             curve.config.parent_id = new_gui_id
 
     ###################################
-    # Adding and Removing Curves
+    # Waveform Properties
     ###################################
 
     @property
@@ -172,6 +183,10 @@ class BECWaveform(BECPlotBase):
     @x_axis_mode.setter
     def x_axis_mode(self, value: dict):
         self._x_axis_mode = value
+
+    ###################################
+    # Adding and Removing Curves
+    ###################################
 
     def add_curve_by_config(self, curve_config: CurveConfig | dict) -> BECCurve:
         """
@@ -246,6 +261,7 @@ class BECWaveform(BECPlotBase):
     ) -> BECCurve:
         """
         Plot a curve to the plot widget.
+
         Args:
             x(list | np.ndarray): Custom x data to plot.
             y(list | np.ndarray): Custom y data to plot.
@@ -259,7 +275,7 @@ class BECWaveform(BECPlotBase):
             color_map_z(str): The color map to use for the z-axis.
             label(str): The label of the curve.
             validate(bool): If True, validate the device names and entries.
-            dap(str): The dap model to use for the curve. If not specified, none will be added.
+            dap(str): The dap model to use for the curve, only available for sync devices. If not specified, none will be added.
 
         Returns:
             BECCurve: The curve object.
@@ -270,7 +286,7 @@ class BECWaveform(BECPlotBase):
         else:
             if dap:
                 self.add_dap(x_name=x_name, y_name=y_name, dap=dap)
-            curve = self.add_curve_scan(
+            curve = self.add_curve_bec(
                 x_name=x_name,
                 y_name=y_name,
                 z_name=z_name,
@@ -284,6 +300,7 @@ class BECWaveform(BECPlotBase):
                 **kwargs,
             )
             self.scan_signal_update.emit()
+            self.async_signal_update.emit()
             return curve
 
     def change_x_axis(self, x_name: str, x_entry: str | None = None):
@@ -302,16 +319,27 @@ class BECWaveform(BECPlotBase):
             x_name, None, None, x_entry, None, None, validate_bec=True
         )
 
-        self.x_axis_mode = {"name": x_name, "entry": x_entry}
+        readout_priority_x = None
+        if x_name not in ["best_effort", "timestamp", "index"]:
+            readout_priority_x = self._get_device_readout_priority(x_name)
 
-        for curve_id, curve_config in zip(curve_ids, curve_configs):
-            if curve_config.signals.x:
-                curve_config.signals.x.name = x_name
-                curve_config.signals.x.entry = x_entry
-            self.remove_curve(curve_id)
-            self.add_curve_by_config(curve_config)
+        self.x_axis_mode = {
+            "name": x_name,
+            "entry": x_entry,
+            readout_priority_x: readout_priority_x,
+        }
 
-        self.scan_signal_update.emit()
+        if len(self.curves) > 0:
+            for curve_id, curve_config in zip(curve_ids, curve_configs):
+                self._validate_x_axis_behaviour(curve_config.signals.y.name, x_name, x_entry)
+                if curve_config.signals.x:
+                    curve_config.signals.x.name = x_name
+                    curve_config.signals.x.entry = x_entry
+                self.remove_curve(curve_id)
+                self.add_curve_by_config(curve_config)
+
+            self.async_signal_update.emit()
+            self.scan_signal_update.emit()
 
     def add_curve_custom(
         self,
@@ -367,7 +395,7 @@ class BECWaveform(BECPlotBase):
         )
         return curve
 
-    def add_curve_scan(
+    def add_curve_bec(
         self,
         x_name: str | None = None,
         y_name: str | None = None,
@@ -379,8 +407,8 @@ class BECWaveform(BECPlotBase):
         color_map_z: str | None = "plasma",
         label: str | None = None,
         validate_bec: bool = True,
-        source: str = "scan_segment",
         dap: str | None = None,
+        source: str | None = None,
         **kwargs,
     ) -> BECCurve:
         """
@@ -397,20 +425,25 @@ class BECWaveform(BECPlotBase):
             color_map_z(str): The color map to use for the z-axis.
             label(str, optional): Label of the curve. Defaults to None.
             validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
-            source(str, optional): Source of the curve. Defaults to "scan_segment".
             dap(str, optional): The dap model to use for the curve. Defaults to None.
             **kwargs: Additional keyword arguments for the curve configuration.
 
         Returns:
             BECCurve: The curve object.
         """
+        # 1. Check - y_name must be provided
         if y_name is None:
             raise ValueError("y_name must be provided.")
 
+        # 2. Check - get source of the device
+        if source is None:
+            source = self._validate_device_source_compatibity(y_name)
+
+        # 3. Check - check if there is already a x axis signal
         if x_name is None:
             x_name = self.x_axis_mode["name"]
 
-        # Get entry if not provided and validate
+        # 4. Check - Get entry if not provided and validate
         x_entry, y_entry, z_entry = self._validate_signal_entries(
             x_name, y_name, z_name, x_entry, y_entry, z_entry, validate_bec
         )
@@ -420,13 +453,13 @@ class BECWaveform(BECPlotBase):
         else:
             label = label or f"{y_name}-{y_entry}"
 
-        # Check if curve already exists
+        # 5. Check - Check if curve already exists
         curve_exits = self._check_curve_id(label, self._curves_data)
         if curve_exits:
             raise ValueError(f"Curve with ID '{label}' already exists in widget '{self.gui_id}'.")
 
-        # Validate or define x axis behaviour
-        self._validate_x_axis_behaviour(x_name, x_entry)
+        # Validate or define x axis behaviour and compatibility with y_name readoutPriority
+        self._validate_x_axis_behaviour(y_name, x_name, x_entry)
 
         # Create color if not specified
         color = (
@@ -455,6 +488,7 @@ class BECWaveform(BECPlotBase):
         )
 
         curve = self._add_curve_object(name=label, source=source, config=curve_config)
+
         return curve
 
     def add_dap(
@@ -493,12 +527,18 @@ class BECWaveform(BECPlotBase):
                 raise ValueError(
                     f"Cannot use x axis '{x_name}' for DAP curve. Please provide a custom x axis signal or switch to 'best_effort' signal mode."
                 )
-        if validate_bec is True:  # TODO adapt dap for x axis global behaviour
+
+        if self.x_axis_mode["readout_priority"] == "async":
+            raise ValueError(
+                f"Async signals cannot be fitted at the moment. Please switch to 'monitored' or 'baseline' signals."
+            )
+
+        if validate_bec is True:
             x_entry, y_entry, _ = self._validate_signal_entries(
                 x_name, y_name, None, x_entry, y_entry, None
             )
         label = f"{y_name}-{y_entry}-{dap}"
-        curve = self.add_curve_scan(
+        curve = self.add_curve_bec(
             x_name=x_name,
             y_name=y_name,
             x_entry=x_entry,
@@ -516,6 +556,7 @@ class BECWaveform(BECPlotBase):
         self.refresh_dap()
         return curve
 
+    @pyqtSlot()
     def get_dap_params(self) -> dict:
         """
         Get the DAP parameters of all DAP curves.
@@ -556,13 +597,26 @@ class BECWaveform(BECPlotBase):
         self.set_legend_label_size()
         return curve
 
+    def _validate_device_source_compatibity(self, name: str):
+        readout_priority_y = self._get_device_readout_priority(name)
+        if readout_priority_y == "monitored" or readout_priority_y == "baseline":
+            source = "scan_segment"
+        elif readout_priority_y == "async":
+            source = "async"
+        else:
+            raise ValueError(
+                f"Readout priority '{readout_priority_y}' of device '{name}' is not supported for y signal."
+            )
+        return source
+
     def _validate_x_axis_behaviour(
-        self, x_name: str | None = None, x_entry: str | None = None
+        self, y_name: str, x_name: str | None = None, x_entry: str | None = None
     ) -> None:
         """
         Validate the x axis behaviour and consistency for the plot item.
 
         Args:
+            source(str): Source of updating device. Can be either "scan_segment" or "async".
             x_name(str): Name of the x signal.
                 - "best_effort": Use the best effort signal.
                 - "timestamp": Use the timestamp signal.
@@ -570,32 +624,55 @@ class BECWaveform(BECPlotBase):
                 - Custom signal name of device from BEC.
             x_entry(str): Entry of the x signal.
         """
+
+        readout_priority_y = self._get_device_readout_priority(y_name)
+
         # Check if the x axis behaviour is already set
         if self._x_axis_mode["name"] is not None:
-            # Case 1: The same x axis signal is used, do nothing
-            if x_name == self._x_axis_mode["name"] and x_entry == self._x_axis_mode["entry"]:
-                return
+            # Case 1: The same x axis signal is used, check if source is compatible with the device
+            if x_name != self._x_axis_mode["name"] and x_entry != self._x_axis_mode["entry"]:
+                # A different x axis signal is used, raise an exception
+                raise ValueError(
+                    f"All curves must have the same x axis.\n"
+                    f" Current valid x axis: '{self._x_axis_mode['name']}'\n"
+                    f" Attempted to add curve with x axis: '{x_name}'\n"
+                    f"If you want to change the x-axis of the curve, please remove previous curves."
+                )
 
-            # Case 2: A different x axis signal is used, raise an exception
-            raise ValueError(
-                f"All curves must have the same x axis.\n"
-                f" Current valid x axis: '{self._x_axis_mode['name']}'\n"
-                f" Attempted to add curve with x axis: '{x_name}'\n"
-                f"If you want to change the x-axis of the curve, please remove previous curves."
-            )
         # If x_axis_mode["name"] is None, determine the mode based on x_name
+        # With async the best effort is always "index"
         # Setting mode to either "best_effort", "timestamp", "index", or a custom one
+        if x_name is None and readout_priority_y == "async":
+            x_name = "index"
+            x_entry = "index"
         if x_name in ["best_effort", "timestamp", "index"]:
             self._x_axis_mode["name"] = x_name
             self._x_axis_mode["entry"] = x_entry
         else:
             self._x_axis_mode["name"] = x_name
             self._x_axis_mode["entry"] = x_entry
+            if readout_priority_y == "async":
+                raise ValueError(
+                    f"Async devices '{y_name}' cannot be used with custom x signal '{x_name}-{x_entry}'."
+                )
 
         # Switch the x axis mode accordingly
         self._switch_x_axis_item(
             f"{x_name}-{x_entry}" if x_name not in ["best_effort", "timestamp", "index"] else x_name
         )
+
+    def _get_device_readout_priority(self, name: str):
+        """
+        Get the type of device from the entry_validator.
+
+        Args:
+            name(str): Name of the device.
+            entry(str): Entry of the device.
+
+        Returns:
+            str: Type of the device.
+        """
+        return self.READOUT_PRIORITY_HANDLER[self.dev[name].readout_priority]
 
     def _switch_x_axis_item(self, mode: str):
         """
@@ -648,6 +725,8 @@ class BECWaveform(BECPlotBase):
             tuple[str,str,str|None]: Validated x, y, z entries.
         """
         if validate_bec:
+            if x_name is None:
+                x_name = "best_effort"
             if x_name:
                 if x_name == "index" or x_name == "timestamp" or x_name == "best_effort":
                     x_entry = x_name
@@ -756,9 +835,8 @@ class BECWaveform(BECPlotBase):
             if self._curves_data["DAP"]:
                 self.setup_dap(self.old_scan_id, self.scan_id)
             if self._curves_data["async"]:
-                print("setting async")
-                # for curve in self._curves_data["async"]:
-                #     self.setup_async(curve.config.signals.y.name)
+                for curve_id, curve in self._curves_data["async"].items():
+                    self.setup_async(curve.config.signals.y.name)
 
     @pyqtSlot(dict, dict)
     def on_scan_segment(self, msg: dict, metadata: dict):
@@ -790,13 +868,20 @@ class BECWaveform(BECPlotBase):
                 self.update_dap, MessageEndpoints.dap_response(f"{new_scan_id}-{self.gui_id}")
             )
 
+    @pyqtSlot(str)
     def setup_async(self, device: str):
         self.bec_dispatcher.disconnect_slot(
-            self.update_dap, MessageEndpoints.device_async_readback(self.old_scan_id, device)
+            self.on_async_readback, MessageEndpoints.device_async_readback(self.old_scan_id, device)
         )
+        try:
+            self._curves_data["async"][f"{device}-{device}"].clear_data()
+        except KeyError:
+            pass
         if len(self._curves_data["async"]) > 0:
             self.bec_dispatcher.connect_slot(
-                self.update_dap, MessageEndpoints.device_async_readback(self.scan_id, device)
+                self.on_async_readback,
+                MessageEndpoints.device_async_readback(self.scan_id, device),
+                from_start=True,
             )
 
     @pyqtSlot()
@@ -861,10 +946,69 @@ class BECWaveform(BECPlotBase):
                 break
 
     @pyqtSlot(dict, dict)
-    def update_async(self, msg, metadata):
-        print("async")
-        print(f"msg: {msg}")
-        print(f"metadata: {metadata}")
+    def on_async_readback(self, msg, metadata):
+        """
+        Get async data readback.
+
+        Args:
+            msg(dict): Message with the async data.
+            metadata(dict): Metadata of the message.
+        """
+        print(msg)
+        instruction = metadata.get("async_update")
+        for curve_id, curve in self._curves_data["async"].items():
+            y_name = curve.config.signals.y.name
+            y_entry = curve.config.signals.y.entry
+            x_name = self._x_axis_mode["name"]
+            for device, async_data in msg["signals"].items():
+                if device == y_entry:
+                    data_plot = async_data["value"]
+                    if instruction == "extend":
+                        x_data, y_data = curve.get_data()
+                        if y_data is not None:
+                            new_data = np.hstack((y_data, data_plot))
+                        else:
+                            new_data = data_plot
+                        if x_name == "timestamp":
+                            if x_data is not None:
+                                x_data = np.hstack(
+                                    (x_data, self.convert_timestamps(async_data["timestamp"]))
+                                )
+                            else:
+                                x_data = self.convert_timestamps(async_data["timestamp"])
+                            curve.setData(x_data, new_data)
+                        else:
+                            curve.setData(new_data)
+                    elif instruction == "replace":
+                        if x_name == "timestamp":
+                            x_data = self.convert_timestamps(async_data["timestamp"])
+                            curve.setData(x_data, data_plot)
+                        else:
+                            curve.setData(data_plot)
+
+    @pyqtSlot()
+    def replot_async_curve(self):
+        try:
+            data = self.scan_item.async_data
+        except AttributeError:
+            return
+        for curve_id, curve in self._curves_data["async"].items():
+            y_name = curve.config.signals.y.name
+            y_entry = curve.config.signals.y.entry
+
+            if curve.config.signals.x:
+                x_name = curve.config.signals.x.name
+
+            if x_name == "timestamp":
+                data_x = self.convert_timestamps(data[y_name][y_entry]["timestamp"])
+            else:
+                data_x = None
+            data_y = data[y_name][y_entry]["value"]
+
+            if data_x is None:
+                curve.setData(data_y)
+            else:
+                curve.setData(data_x, data_y)
 
     @pyqtSlot()
     def _update_scan_curves(self):
@@ -1063,6 +1207,11 @@ class BECWaveform(BECPlotBase):
         self.bec_dispatcher.disconnect_slot(
             self.update_dap, MessageEndpoints.dap_response(self.scan_id)
         )
+        for curve_id, curve in self._curves_data["async"].items():
+            self.bec_dispatcher.disconnect_slot(
+                self.on_async_readback,
+                MessageEndpoints.device_async_readback(self.scan_id, curve_id),
+            )
         for curve in self.curves:
             curve.cleanup()
         super().cleanup()

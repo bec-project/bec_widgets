@@ -71,9 +71,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.console_layout.addWidget(self.console)
 
     def _init_figure(self):
-        self.w1 = self.figure.plot(
-            x_name="samx", y_name="samy", z_name="bpm4i", color_map_z="cividis"
-        )
+        self.w1 = self.figure.plot(x_name="samx", y_name="bpm4i")
         self.w2 = self.figure.motor_map("samx", "samy")
         self.w3 = self.figure.image("eiger", color_map="viridis", vrange=(0, 100))
         self.w4 = self.figure.plot(
@@ -84,12 +82,13 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
             x_name="timestamp", y_name="bpm4i", new=True, title="Timestamp Plot"
         )
         self.w6 = self.figure.plot(x_name="index", y_name="bpm4i", new=True, title="Index Plot")
+        self.w7 = self.figure.plot(new=True, title="Async Plot")
+        self.w7.plot(x_name="index", y_name="monitor_async", source="async")
 
         self.figure.change_layout(2, 2)
 
         # Plot Customisation
         self.w1.set_title("Waveform 1")
-        self.w1.set_x_label("Motor Position (samx)")
         self.w1.set_y_label("Intensity A.U.")
 
         # Image Customisation
@@ -131,9 +130,13 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
 
     def closeEvent(self, event):
         """Override to handle things when main window is closed."""
+        self.dock.clear_all()
         self.dock.cleanup()
+        self.dock.close()
         self.figure.clear_all()
-        self.figure.client.shutdown()
+        self.figure.cleanup()
+        self.figure.close()
+
         super().closeEvent(event)
 
 

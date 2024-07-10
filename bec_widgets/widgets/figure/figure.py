@@ -297,39 +297,7 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
                 validate=validate,
                 dap=dap,
             )
-        # # User wants to add scan curve -> 1D Waveform
-        # if x_name is not None and y_name is not None and z_name is None and x is None and y is None:
-        #     waveform.plot(
-        #         x_name=x_name,
-        #         y_name=y_name,
-        #         x_entry=x_entry,
-        #         y_entry=y_entry,
-        #         validate=validate,
-        #         color=color,
-        #         label=label,
-        #         dap=dap,
-        #     )
-        # # User wants to add scan curve -> 2D Waveform Scatter
-        # if (
-        #     x_name is not None
-        #     and y_name is not None
-        #     and z_name is not None
-        #     and x is None
-        #     and y is None
-        # ):
-        #     waveform.plot(
-        #         x_name=x_name,
-        #         y_name=y_name,
-        #         z_name=z_name,
-        #         x_entry=x_entry,
-        #         y_entry=y_entry,
-        #         z_entry=z_entry,
-        #         color=color,
-        #         color_map_z=color_map_z,
-        #         label=label,
-        #         validate=validate,
-        #         dap=dap,
-        #     )
+
         # User wants to add custom curve
         elif x is not None and y is not None and x_name is None and y_name is None:
             waveform.add_curve_custom(x=x, y=y, color=color, label=label)
