@@ -1,4 +1,3 @@
-import qdarktheme
 from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtWidgets import (
     QApplication,
@@ -12,6 +11,7 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils import BECConnector
+from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.scan_control.scan_group_box import ScanGroupBox
 from bec_widgets.widgets.stop_button.stop_button import StopButton
 
@@ -206,7 +206,7 @@ if __name__ == "__main__":  # pragma: no cover
     app = QApplication([])
     scan_control = ScanControl()
 
-    qdarktheme.setup_theme("auto")
+    apply_theme("dark")
     window = scan_control
     window.show()
     app.exec()

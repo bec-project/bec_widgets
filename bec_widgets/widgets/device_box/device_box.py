@@ -9,6 +9,7 @@ from qtpy.QtWidgets import QDoubleSpinBox, QVBoxLayout, QWidget
 
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_connector import BECConnector
+from bec_widgets.utils.colors import apply_theme
 
 
 class DeviceBox(BECConnector, QWidget):
@@ -186,11 +187,10 @@ class DeviceBox(BECConnector, QWidget):
 if __name__ == "__main__":  # pragma: no cover
     import sys
 
-    import qdarktheme
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    qdarktheme.setup_theme("light")
+    apply_theme("light")
     widget = DeviceBox(device="samx")
 
     widget.show()

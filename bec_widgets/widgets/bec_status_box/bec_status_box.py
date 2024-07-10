@@ -9,12 +9,12 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import qdarktheme
 from bec_lib.utils.import_utils import lazy_import_from
 from qtpy.QtCore import QObject, QTimer, Signal, Slot
 from qtpy.QtWidgets import QHBoxLayout, QTreeWidget, QTreeWidgetItem, QWidget
 
 from bec_widgets.utils.bec_connector import BECConnector
+from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.bec_status_box.status_item import StatusItem
 
 if TYPE_CHECKING:
@@ -306,7 +306,7 @@ def main():
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    qdarktheme.setup_theme("auto")
+    apply_theme("dark")
     main_window = BECStatusBox()
     main_window.show()
     sys.exit(app.exec())

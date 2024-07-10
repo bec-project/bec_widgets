@@ -2,7 +2,6 @@ import os
 
 import numpy as np
 import pyqtgraph as pg
-import qdarktheme
 from qtconsole.inprocess import QtInProcessKernelManager
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtpy.QtCore import QSize
@@ -10,6 +9,7 @@ from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 from bec_widgets.utils import BECDispatcher, UILoader
+from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.dock.dock_area import BECDockArea
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.jupyter_console.jupyter_console import BECJupyterConsole
@@ -147,7 +147,7 @@ if __name__ == "__main__":  # pragma: no cover
     app = QApplication(sys.argv)
     app.setApplicationName("Jupyter Console")
     app.setApplicationDisplayName("Jupyter Console")
-    qdarktheme.setup_theme("auto")
+    apply_theme("dark")
     icon = QIcon()
     icon.addFile(os.path.join(module_path, "assets", "terminal_icon.png"), size=QSize(48, 48))
     app.setWindowIcon(icon)

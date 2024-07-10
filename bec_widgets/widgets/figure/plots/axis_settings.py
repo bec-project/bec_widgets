@@ -1,10 +1,10 @@
 import os
 
-import qdarktheme
 from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.utils import UILoader
+from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.widget_io import WidgetIO
 
 
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    qdarktheme.setup_theme("dark")
+    apply_theme("dark")
     window = AxisSettings()
     window.show()
     sys.exit(app.exec_())
