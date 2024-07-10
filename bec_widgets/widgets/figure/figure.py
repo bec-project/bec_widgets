@@ -7,13 +7,13 @@ from typing import Literal, Optional
 
 import numpy as np
 import pyqtgraph as pg
-import qdarktheme
 from pydantic import Field, ValidationError, field_validator
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtWidgets import QWidget
 from typeguard import typechecked
 
 from bec_widgets.utils import BECConnector, ConnectionConfig, WidgetContainerUtils
+from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.figure.plots.image.image import BECImageShow, ImageConfig
 from bec_widgets.widgets.figure.plots.motor_map.motor_map import BECMotorMap, MotorMapConfig
 from bec_widgets.widgets.figure.plots.plot_base import BECPlotBase, SubplotConfig
@@ -670,9 +670,8 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         Args:
             theme(Literal["dark","light"]): The theme to set for the figure widget.
         """
-        qdarktheme.setup_theme(theme)
-        self.setBackground("k" if theme == "dark" else "w")
         self.config.theme = theme
+        apply_theme(theme)
         for plot in self.widget_list:
             plot.set_x_label(plot.plot_item.getAxis("bottom").label.toPlainText())
             plot.set_y_label(plot.plot_item.getAxis("left").label.toPlainText())

@@ -1,10 +1,37 @@
+import itertools
 import re
 from typing import Literal
 
 import numpy as np
 import pyqtgraph as pg
+import qdarkstyle
 from pydantic_core import PydanticCustomError
+from qdarkstyle import DarkPalette, LightPalette
 from qtpy.QtGui import QColor
+from qtpy.QtWidgets import QApplication
+
+CURRENT_THEME = "dark"
+
+
+def get_theme_palette():
+    return DarkPalette if CURRENT_THEME == "dark" else LightPalette
+
+
+def apply_theme(theme: Literal["dark", "light"]):
+    global CURRENT_THEME
+    CURRENT_THEME = theme
+
+    app = QApplication.instance()
+    # go through all pyqtgraph widgets and set background
+    children = itertools.chain.from_iterable(
+        top.findChildren(pg.GraphicsLayoutWidget) for top in app.topLevelWidgets()
+    )
+    for pg_widget in children:
+        pg_widget.setBackground("k" if theme == "dark" else "w")
+
+    # now define stylesheet according to theme and apply it
+    style = qdarkstyle.load_stylesheet(palette=get_theme_palette())
+    app.setStyleSheet(style)
 
 
 class Colors:
