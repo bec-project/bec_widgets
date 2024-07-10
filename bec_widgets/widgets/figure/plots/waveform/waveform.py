@@ -783,11 +783,11 @@ class BECWaveform(BECPlotBase):
 
         """
         self.bec_dispatcher.disconnect_slot(
-            self.update_dap, MessageEndpoints.dap_response(old_scan_id)
+            self.update_dap, MessageEndpoints.dap_response(f"{old_scan_id}-{self.gui_id}")
         )
         if len(self._curves_data["DAP"]) > 0:
             self.bec_dispatcher.connect_slot(
-                self.update_dap, MessageEndpoints.dap_response(new_scan_id)
+                self.update_dap, MessageEndpoints.dap_response(f"{new_scan_id}-{self.gui_id}")
             )
 
     def setup_async(self, device: str):
@@ -838,7 +838,7 @@ class BECWaveform(BECPlotBase):
                     "class_args": model._plugin_info["class_args"],
                     "class_kwargs": model._plugin_info["class_kwargs"],
                 },
-                metadata={"RID": self.scan_id},
+                metadata={"RID": f"{self.scan_id}-{self.gui_id}"},
             )
             self.client.connector.set_and_publish(MessageEndpoints.dap_request(), msg)
 
