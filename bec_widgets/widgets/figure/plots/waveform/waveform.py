@@ -89,7 +89,12 @@ class BECWaveform(BECPlotBase):
         self.old_scan_id = None
         self.scan_id = None
         self.scan_item = None
-        self._x_axis_mode = {"name": None, "entry": None, "readout_priority": None}
+        self._x_axis_mode = {
+            "name": None,
+            "entry": None,
+            "readout_priority": None,
+            "label_suffix": "",
+        }
 
         # Scan segment update proxy
         self.proxy_update_plot = pg.SignalProxy(
@@ -105,7 +110,8 @@ class BECWaveform(BECPlotBase):
 
         # Connect dispatcher signals
         self.bec_dispatcher.connect_slot(self.on_scan_segment, MessageEndpoints.scan_segment())
-        self.bec_dispatcher.connect_slot(self.on_scan_status, MessageEndpoints.scan_status())
+        # TODO disabled -> scan_status is SET_AND_PUBLISH -> do not work in combination with autoupdate from CLI
+        # self.bec_dispatcher.connect_slot(self.on_scan_status, MessageEndpoints.scan_status())
 
         self.entry_validator = EntryValidator(self.dev)
 
@@ -330,8 +336,15 @@ class BECWaveform(BECPlotBase):
         }
 
         if len(self.curves) > 0:
+            # validate all curves
+            for curve in self.curves:
+                self._validate_x_axis_behaviour(curve.config.signals.y.name, x_name, x_entry, False)
+            self._switch_x_axis_item(
+                f"{x_name}-{x_entry}"
+                if x_name not in ["best_effort", "timestamp", "index"]
+                else x_name
+            )
             for curve_id, curve_config in zip(curve_ids, curve_configs):
-                self._validate_x_axis_behaviour(curve_config.signals.y.name, x_name, x_entry)
                 if curve_config.signals.x:
                     curve_config.signals.x.name = x_name
                     curve_config.signals.x.entry = x_entry
@@ -610,7 +623,7 @@ class BECWaveform(BECPlotBase):
         return source
 
     def _validate_x_axis_behaviour(
-        self, y_name: str, x_name: str | None = None, x_entry: str | None = None
+        self, y_name: str, x_name: str | None = None, x_entry: str | None = None, auto_switch=True
     ) -> None:
         """
         Validate the x axis behaviour and consistency for the plot item.
@@ -636,7 +649,7 @@ class BECWaveform(BECPlotBase):
                     f"All curves must have the same x axis.\n"
                     f" Current valid x axis: '{self._x_axis_mode['name']}'\n"
                     f" Attempted to add curve with x axis: '{x_name}'\n"
-                    f"If you want to change the x-axis of the curve, please remove previous curves."
+                    f"If you want to change the x-axis of the curve, please remove previous curves or change the x axis of the plot widget with '.change_x_axis({x_name})'."
                 )
 
         # If x_axis_mode["name"] is None, determine the mode based on x_name
@@ -656,10 +669,13 @@ class BECWaveform(BECPlotBase):
                     f"Async devices '{y_name}' cannot be used with custom x signal '{x_name}-{x_entry}'."
                 )
 
-        # Switch the x axis mode accordingly
-        self._switch_x_axis_item(
-            f"{x_name}-{x_entry}" if x_name not in ["best_effort", "timestamp", "index"] else x_name
-        )
+        if auto_switch is True:
+            # Switch the x axis mode accordingly
+            self._switch_x_axis_item(
+                f"{x_name}-{x_entry}"
+                if x_name not in ["best_effort", "timestamp", "index"]
+                else x_name
+            )
 
     def _get_device_readout_priority(self, name: str):
         """
@@ -688,16 +704,17 @@ class BECWaveform(BECPlotBase):
         current_label = "" if self.config.axis.x_label is None else self.config.axis.x_label
         date_axis = pg.graphicsItems.DateAxisItem.DateAxisItem(orientation="bottom")
         default_axis = pg.AxisItem(orientation="bottom")
+        self._x_axis_mode["label_suffix"] = f" [{mode}]"
 
         if mode == "timestamp":
             self.plot_item.setAxisItems({"bottom": date_axis})
-            self.plot_item.setLabel("bottom", f"{current_label} [timestamp]")
+            self.plot_item.setLabel("bottom", f"{current_label}{self._x_axis_mode['label_suffix']}")
         elif mode == "index":
             self.plot_item.setAxisItems({"bottom": default_axis})
-            self.plot_item.setLabel("bottom", f"{current_label} [index]")
+            self.plot_item.setLabel("bottom", f"{current_label}{self._x_axis_mode['label_suffix']}")
         else:
             self.plot_item.setAxisItems({"bottom": default_axis})
-            self.plot_item.setLabel("bottom", f"{current_label} [{mode}]")
+            self.plot_item.setLabel("bottom", f"{current_label}{self._x_axis_mode['label_suffix']}")
 
     def _validate_signal_entries(
         self,
@@ -848,8 +865,21 @@ class BECWaveform(BECPlotBase):
             msg (dict): Message received with scan data.
             metadata (dict): Metadata of the scan.
         """
+        self.on_scan_status(msg)
 
         self.scan_signal_update.emit()
+
+    def set_x_label(self, label: str, size: int = None):
+        """
+        Set the label of the x-axis.
+
+        Args:
+            label(str): Label of the x-axis.
+            size(int): Font size of the label.
+        """
+        super().set_x_label(label, size)
+        current_label = "" if self.config.axis.x_label is None else self.config.axis.x_label
+        self.plot_item.setLabel("bottom", f"{current_label}{self._x_axis_mode['label_suffix']}")
 
     def setup_dap(self, old_scan_id: str | None, new_scan_id: str | None):
         """
@@ -1082,10 +1112,13 @@ class BECWaveform(BECPlotBase):
                 except TypeError:
                     x_data = []
         else:
-            x_name = self.scan_item.status_message.info["scan_report_devices"][0]
-            x_entry = self.entry_validator.validate_signal(x_name, None)
-            x_data = self.scan_item.data[x_name][x_entry].val
-            self.set_x_label(f"[auto: {x_name}-{x_entry}]")
+            if len(self._curves_data["async"]) > 0:
+                x_data = None
+            else:
+                x_name = self.scan_item.status_message.info["scan_report_devices"][0]
+                x_entry = self.entry_validator.validate_signal(x_name, None)
+                x_data = self.scan_item.data[x_name][x_entry].val
+                self.set_x_label(f"[auto: {x_name}-{x_entry}]")
 
         return x_data
 

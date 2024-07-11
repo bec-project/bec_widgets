@@ -1514,6 +1514,7 @@ class BECWaveform(RPCBase):
     ) -> "BECCurve":
         """
         Plot a curve to the plot widget.
+
         Args:
             x(list | np.ndarray): Custom x data to plot.
             y(list | np.ndarray): Custom y data to plot.
@@ -1527,7 +1528,7 @@ class BECWaveform(RPCBase):
             color_map_z(str): The color map to use for the z-axis.
             label(str): The label of the curve.
             validate(bool): If True, validate the device names and entries.
-            dap(str): The dap model to use for the curve. If not specified, none will be added.
+            dap(str): The dap model to use for the curve, only available for sync devices. If not specified, none will be added.
 
         Returns:
             BECCurve: The curve object.
@@ -1536,12 +1537,13 @@ class BECWaveform(RPCBase):
     @rpc_call
     def add_dap(
         self,
-        x_name: "str",
-        y_name: "str",
+        x_name: "str | None" = None,
+        y_name: "str | None" = None,
         x_entry: "Optional[str]" = None,
         y_entry: "Optional[str]" = None,
         color: "Optional[str]" = None,
         dap: "str" = "GaussianModel",
+        validate_bec: "bool" = True,
         **kwargs,
     ) -> "BECCurve":
         """
@@ -1556,10 +1558,21 @@ class BECWaveform(RPCBase):
             color_map_z(str): The color map to use for the z-axis.
             label(str, optional): Label of the curve. Defaults to None.
             dap(str): The dap model to use for the curve.
+            validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
             **kwargs: Additional keyword arguments for the curve configuration.
 
         Returns:
             BECCurve: The curve object.
+        """
+
+    @rpc_call
+    def change_x_axis(self, x_name: "str", x_entry: "str | None" = None):
+        """
+        Change the x axis of the plot widget.
+
+        Args:
+            x_name(str): Name of the x signal.
+            x_entry(str): Entry of the x signal.
         """
 
     @rpc_call
