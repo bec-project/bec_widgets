@@ -1522,7 +1522,11 @@ class BECWaveform(RPCBase):
             arg1(list | np.ndarray | str | None): First argument which can be x data, y data, or y_name.
             y(list | np.ndarray): Custom y data to plot.
             x(list | np.ndarray): Custom y data to plot.
-            x_name(str): The name of the device for the x-axis.
+            x_name(str): Name of the x signal.
+                - "best_effort": Use the best effort signal.
+                - "timestamp": Use the timestamp signal.
+                - "index": Use the index signal.
+                - Custom signal name of device from BEC.
             y_name(str): The name of the device for the y-axis.
             z_name(str): The name of the device for the z-axis.
             x_entry(str): The name of the entry for the x-axis.
@@ -1570,12 +1574,16 @@ class BECWaveform(RPCBase):
         """
 
     @rpc_call
-    def change_x_axis(self, x_name: "str", x_entry: "str | None" = None):
+    def set_x(self, x_name: "str", x_entry: "str | None" = None):
         """
         Change the x axis of the plot widget.
 
         Args:
             x_name(str): Name of the x signal.
+                - "best_effort": Use the best effort signal.
+                - "timestamp": Use the timestamp signal.
+                - "index": Use the index signal.
+                - Custom signal name of device from BEC.
             x_entry(str): Entry of the x signal.
         """
 

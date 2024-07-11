@@ -132,15 +132,23 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
             x_name="index", y_name="bpm4i", new=True, title="Index Plot - w7", row=1, col=2
         )
         self.w8 = self.figure.plot(
+            y_name="monitor_async", new=True, title="Async Plot - Best Effort - w8", row=2, col=0
+        )
+        self.w9 = self.figure.plot(
             x_name="timestamp",
             y_name="monitor_async",
             new=True,
-            title="Async Plot - timestamp - w8",
+            title="Async Plot - timestamp - w9",
             row=2,
             col=1,
         )
-        self.w9 = self.figure.plot(
-            y_name="monitor_async", new=True, title="Async Plot - index - w9", row=2, col=2
+        self.w10 = self.figure.plot(
+            x_name="index",
+            y_name="monitor_async",
+            new=True,
+            title="Async Plot - index - w10",
+            row=2,
+            col=2,
         )
 
     def _init_dock(self):

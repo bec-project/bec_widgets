@@ -385,6 +385,24 @@ class BECWaveform(BECPlotBase):
 
             self.async_signal_update.emit()
             self.scan_signal_update.emit()
+        # self.autorange_timer.start(200)
+
+    @pyqtSlot()
+    def auto_range(self):
+        self.plot_item.autoRange()
+
+    def set_auto_range(self, enabled: bool, axis: str = "xy"):
+        """
+        Set the auto range of the plot widget.
+
+        Args:
+            enabled(bool): If True, enable the auto range.
+            axis(str, optional): The axis to enable the auto range.
+                - "xy": Enable auto range for both x and y axis.
+                - "x": Enable auto range for x axis.
+                - "y": Enable auto range for y axis.
+        """
+        self.plot_item.enableAutoRange(axis, enabled)
 
     @pyqtSlot()
     def auto_range(self):
@@ -925,6 +943,7 @@ class BECWaveform(BECPlotBase):
         """
         self.on_scan_status(msg)
         self.scan_signal_update.emit()
+        # self.autorange_timer.start(100)
 
     def set_x_label(self, label: str, size: int = None):
         """
@@ -1197,6 +1216,49 @@ class BECWaveform(BECPlotBase):
             except TypeError:
                 x_data = []
         return x_data
+
+    # def _get_x_data(self, curve: BECCurve, y_name: str, y_entry: str) -> list | np.ndarray | None:
+    #     """
+    #     Get the x data for the curve with the decision logic based on the curve configuration:
+    #         - If x is called 'timestamp', use the timestamp data from the scan item.
+    #         - If x is called 'index', use the rolling index.
+    #         - If x is a custom signal, use the data from the scan item.
+    #         - If x is not specified, use the first device from the scan report.
+    #
+    #     Args:
+    #         curve(BECCurve): The curve object.
+    #
+    #     Returns:
+    #         list|np.ndarray|None: X data for the curve.
+    #     """
+    #     x_data = None
+    #     if curve.config.signals.x is not None:
+    #         if curve.config.signals.x.name == "timestamp":
+    #             timestamps = self.scan_item.data[y_name][y_entry].timestamps
+    #             x_data = self.convert_timestamps(timestamps)
+    #         elif curve.config.signals.x.name == "index":
+    #             x_data = None
+    #         else:
+    #             x_name = curve.config.signals.x.name
+    #             x_entry = curve.config.signals.x.entry
+    #             try:
+    #                 x_data = self.scan_item.data[x_name][x_entry].val
+    #             except TypeError:
+    #                 x_data = []
+    #     else:
+    #         if len(self._curves_data["async"]) > 0:
+    #             x_data = None
+    #         else:
+    #             x_name = self.scan_item.status_message.info["scan_report_devices"][0]
+    #             x_entry = self.entry_validator.validate_signal(x_name, None)
+    #             x_data = self.scan_item.data[x_name][x_entry].val
+    #             self._x_axis_mode["label_suffix"] = f" [auto: {x_name}-{x_entry}]"
+    #             current_label = "" if self.config.axis.x_label is None else self.config.axis.x_label
+    #             self.plot_item.setLabel(
+    #                 "bottom", f"{current_label}{self._x_axis_mode['label_suffix']}"
+    #             )
+    #
+    #     return x_data
 
     def _make_z_gradient(self, data_z: list | np.ndarray, colormap: str) -> list | None:
         """
