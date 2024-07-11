@@ -2,13 +2,12 @@ import os
 
 import numpy as np
 import pyqtgraph as pg
-from qtconsole.inprocess import QtInProcessKernelManager
-from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QHBoxLayout, QSplitter, QTabWidget, QGroupBox
 
-from bec_widgets.utils import BECDispatcher, UILoader
+from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.dock.dock_area import BECDockArea
 from bec_widgets.widgets.figure import BECFigure
@@ -21,13 +20,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        current_path = os.path.dirname(__file__)
-        self.ui = UILoader().load_ui(os.path.join(current_path, "jupyter_console_window.ui"), self)
-
         self._init_ui()
-
-        self.ui.splitter.setSizes([200, 100])
-        self.safe_close = False
 
         # console push
         if self.console.inprocess is True:
@@ -42,6 +35,10 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "w3": self.w3,
                     "w4": self.w4,
                     "w5": self.w5,
+                    "w6": self.w6,
+                    "w7": self.w7,
+                    "w8": self.w8,
+                    "w9": self.w9,
                     "d0": self.d0,
                     "d1": self.d1,
                     "d2": self.d2,
@@ -51,14 +48,30 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
             )
 
     def _init_ui(self):
-        # Plotting window
-        self.glw_1_layout = QVBoxLayout(self.ui.glw)  # Create a new QVBoxLayout
-        self.figure = BECFigure(parent=self, gui_id="remote")  # Create a new BECDeviceMonitor
-        self.glw_1_layout.addWidget(self.figure)  # Add BECDeviceMonitor to the layout
+        self.layout = QHBoxLayout(self)
 
-        self.dock_layout = QVBoxLayout(self.ui.dock_placeholder)
-        self.dock = BECDockArea(gui_id="remote")
-        self.dock_layout.addWidget(self.dock)
+        # Horizontal splitter
+        splitter = QSplitter(self)
+        self.layout.addWidget(splitter)
+
+        tab_widget = QTabWidget(splitter)
+
+        first_tab = QWidget()
+        first_tab_layout = QVBoxLayout(first_tab)
+        self.dock = BECDockArea(gui_id="dock")
+        first_tab_layout.addWidget(self.dock)
+        tab_widget.addTab(first_tab, "Dock Area")
+
+        second_tab = QWidget()
+        second_tab_layout = QVBoxLayout(second_tab)
+        self.figure = BECFigure(parent=self, gui_id="figure")
+        second_tab_layout.addWidget(self.figure)
+        tab_widget.addTab(second_tab, "BEC Figure")
+
+        group_box = QGroupBox("Jupyter Console", splitter)
+        group_box_layout = QVBoxLayout(group_box)
+        self.console = BECJupyterConsole(inprocess=True)
+        group_box_layout.addWidget(self.console)
 
         # add stuff to figure
         self._init_figure()
@@ -66,45 +79,62 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         # init dock for testing
         self._init_dock()
 
-        self.console_layout = QVBoxLayout(self.ui.widget_console)
-        self.console = BECJupyterConsole(inprocess=True)
-        self.console_layout.addWidget(self.console)
+        self.setWindowTitle("Jupyter Console Window")
 
     def _init_figure(self):
-        self.w1 = self.figure.plot(x_name="samx", y_name="bpm4i")
-        self.w2 = self.figure.motor_map("samx", "samy")
-        self.w3 = self.figure.image("eiger", color_map="viridis", vrange=(0, 100))
+        self.w1 = self.figure.plot(
+            x_name="samx",
+            y_name="bpm4i",
+            # title="Standard Plot with sync device, custom labels - w1",
+            # x_label="Motor Position",
+            # y_label="Intensity (A.U.)",
+            row=0,
+            col=0,
+        )
+        self.w1.set(
+            title="Standard Plot with sync device, custom labels - w1",
+            x_label="Motor Position",
+            y_label="Intensity (A.U.)",
+        )
+        self.w2 = self.figure.motor_map("samx", "samy", row=0, col=1)
+        self.w3 = self.figure.image(
+            "eiger", color_map="viridis", vrange=(0, 100), title="Eiger Image - w3", row=0, col=2
+        )
         self.w4 = self.figure.plot(
-            x_name="samx", y_name="samy", z_name="bpm4i", color_map_z="magma", new=True
+            x_name="samx",
+            y_name="samy",
+            z_name="bpm4i",
+            color_map_z="magma",
+            new=True,
+            title="2D scatter plot - w4",
+            row=0,
+            col=3,
         )
-        self.w5 = self.figure.plot(y_name="bpm4i", new=True, title="Best Effort Plot")
+        self.w5 = self.figure.plot(
+            y_name="bpm4i",
+            new=True,
+            title="Best Effort Plot - w5",
+            dap="GaussianModel",
+            row=1,
+            col=0,
+        )
         self.w6 = self.figure.plot(
-            x_name="timestamp", y_name="bpm4i", new=True, title="Timestamp Plot"
+            x_name="timestamp", y_name="bpm4i", new=True, title="Timestamp Plot - w6", row=1, col=1
         )
-        self.w6 = self.figure.plot(x_name="index", y_name="bpm4i", new=True, title="Index Plot")
-        self.w7 = self.figure.plot(new=True, title="Async Plot")
-        self.w7.plot(x_name="index", y_name="monitor_async", source="async")
-
-        self.figure.change_layout(2, 2)
-
-        # Plot Customisation
-        self.w1.set_title("Waveform 1")
-        self.w1.set_y_label("Intensity A.U.")
-
-        # Image Customisation
-        self.w3.set_title("Eiger Image")
-        self.w3.set_x_label("X")
-        self.w3.set_y_label("Y")
-
-        # Configs to try to pass
-        self.w1_c = self.w1._config_dict
-        self.w2_c = self.w2._config_dict
-        self.w3_c = self.w3._config_dict
-
-        # curves for w1
-        self.c1 = self.w1.get_config()
-
-        self.fig_c = self.figure._config_dict
+        self.w7 = self.figure.plot(
+            x_name="index", y_name="bpm4i", new=True, title="Index Plot - w7", row=1, col=2
+        )
+        self.w8 = self.figure.plot(
+            x_name="timestamp",
+            y_name="monitor_async",
+            new=True,
+            title="Async Plot - timestamp - w8",
+            row=2,
+            col=1,
+        )
+        self.w9 = self.figure.plot(
+            y_name="monitor_async", new=True, title="Async Plot - index - w9", row=2, col=2
+        )
 
     def _init_dock(self):
 
