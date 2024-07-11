@@ -67,6 +67,7 @@ def test_device_input_combobox_init(device_input_combobox):
         "bpm3a",
         "bpm3i",
         "eiger",
+        "async_device",
         "test",
     ]
 
@@ -154,6 +155,7 @@ def test_device_input_line_edit_init(device_input_line_edit):
         "bpm3a",
         "bpm3i",
         "eiger",
+        "async_device",
         "test",
     ]
 

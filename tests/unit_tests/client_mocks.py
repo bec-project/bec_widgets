@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import fakeredis
 import pytest
 from bec_lib.client import BECClient
-from bec_lib.device import Positioner
+from bec_lib.device import Positioner, ReadoutPriority
 from bec_lib.devicemanager import DeviceContainer
 from bec_lib.redis_connector import RedisConnector
 
@@ -12,11 +12,12 @@ from bec_lib.redis_connector import RedisConnector
 class FakeDevice:
     """Fake minimal positioner class for testing."""
 
-    def __init__(self, name, enabled=True):
+    def __init__(self, name, enabled=True, readout_priority=ReadoutPriority.MONITORED):
         self.name = name
         self.enabled = enabled
         self.signals = {self.name: {"value": 1.0}}
         self.description = {self.name: {"source": self.name, "dtype": "number", "shape": []}}
+        self.readout_priority = readout_priority
 
     def __contains__(self, item):
         return item == self.name
@@ -43,8 +44,15 @@ class FakeDevice:
 
 
 class FakePositioner(FakeDevice):
-    def __init__(self, name, enabled=True, limits=None, read_value=1.0):
-        super().__init__(name, enabled)
+    def __init__(
+        self,
+        name,
+        enabled=True,
+        limits=None,
+        read_value=1.0,
+        readout_priority=ReadoutPriority.MONITORED,
+    ):
+        super().__init__(name, enabled, readout_priority)
         self.limits = limits if limits is not None else [0, 0]
         self.read_value = read_value
         self.name = name
@@ -110,6 +118,7 @@ DEVICES = [
     FakeDevice("bpm3a"),
     FakeDevice("bpm3i"),
     FakeDevice("eiger"),
+    FakeDevice("async_device", readout_priority=ReadoutPriority.ASYNC),
     Positioner("test", limits=[-10, 10], read_value=2.0),
 ]
 

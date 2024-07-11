@@ -166,6 +166,8 @@ def test_getting_curve(bec_figure):
     assert w1.curves[0].config == c1_expected_config
     assert w1._curves_data["scan_segment"]["bpm4i-bpm4i"].config == c1_expected_config
     assert w1.get_curve(0).config == c1_expected_config
+    assert w1.get_curve_config("bpm4i-bpm4i", dict_output=True) == c1_expected_config.model_dump()
+    assert w1.get_curve_config("bpm4i-bpm4i", dict_output=False) == c1_expected_config
     assert w1.get_curve("bpm4i-bpm4i").config == c1_expected_config
     assert c1.get_config(False) == c1_expected_config
     assert c1.get_config() == c1_expected_config.model_dump()
@@ -448,7 +450,7 @@ def test_scan_update(bec_figure, qtbot):
 def test_scan_history_with_val_access(bec_figure, qtbot):
     w1 = bec_figure.plot()
 
-    c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i")
+    w1.plot(x_name="samx", y_name="bpm4i")
 
     mock_scan_data = {
         "samx": {"samx": mock.MagicMock(val=np.array([1, 2, 3]))},  # Use mock.MagicMock for .val
@@ -464,7 +466,7 @@ def test_scan_history_with_val_access(bec_figure, qtbot):
 
     qtbot.wait(500)
 
-    x_data, y_data = c1.get_data()
+    x_data, y_data = w1.curves[0].get_data()
 
     assert np.array_equal(x_data, [1, 2, 3])
     assert np.array_equal(y_data, [4, 5, 6])
@@ -485,8 +487,8 @@ def test_scatter_2d_update(bec_figure, qtbot):
     }
     msg_metadata = {"scan_name": "line_scan"}
 
-    mock_scan_data = mock.MagicMock()
-    mock_scan_data.data = {
+    mock_scan_item = mock.MagicMock()
+    mock_scan_item.data = {
         device_name: {
             entry: mock.MagicMock(val=msg["data"][device_name][entry]["value"])
             for entry in msg["data"][device_name]
@@ -494,7 +496,7 @@ def test_scatter_2d_update(bec_figure, qtbot):
         for device_name in msg["data"]
     }
 
-    w1.queue.scan_storage.find_scan_by_ID.return_value = mock_scan_data
+    w1.queue.scan_storage.find_scan_by_ID.return_value = mock_scan_item
 
     w1.on_scan_segment(msg, msg_metadata)
     qtbot.wait(500)
@@ -508,3 +510,180 @@ def test_scatter_2d_update(bec_figure, qtbot):
 
     assert np.array_equal(data, expected_x_y_data)
     assert colors == expected_z_colors
+
+
+def test_waveform_single_arg_inputs(bec_figure, qtbot):
+    w1 = bec_figure.plot()
+
+    w1.plot("bpm4i")
+    w1.plot([1, 2, 3], label="just_y")
+    w1.plot([3, 4, 5], [7, 8, 9], label="x_y")
+    w1.plot(x=[1, 2, 3], y=[4, 5, 6], label="x_y_kwargs")
+    data_array_1D = np.random.rand(10)
+    data_array_2D = np.random.rand(10, 2)
+    w1.plot(data_array_1D, label="np_ndarray 1D")
+    w1.plot(data_array_2D, label="np_ndarray 2D")
+
+    qtbot.wait(200)
+
+    assert w1._curves_data["scan_segment"]["bpm4i-bpm4i"].config.label == "bpm4i-bpm4i"
+    assert w1._curves_data["custom"]["just_y"].config.label == "just_y"
+    assert w1._curves_data["custom"]["x_y"].config.label == "x_y"
+    assert w1._curves_data["custom"]["x_y_kwargs"].config.label == "x_y_kwargs"
+
+    assert np.array_equal(w1._curves_data["custom"]["just_y"].get_data(), ([0, 1, 2], [1, 2, 3]))
+    assert np.array_equal(w1._curves_data["custom"]["just_y"].get_data(), ([0, 1, 2], [1, 2, 3]))
+    assert np.array_equal(w1._curves_data["custom"]["x_y"].get_data(), ([3, 4, 5], [7, 8, 9]))
+    assert np.array_equal(
+        w1._curves_data["custom"]["x_y_kwargs"].get_data(), ([1, 2, 3], [4, 5, 6])
+    )
+    assert np.array_equal(
+        w1._curves_data["custom"]["np_ndarray 1D"].get_data(),
+        (np.arange(data_array_1D.size), data_array_1D.T),
+    )
+    assert np.array_equal(w1._curves_data["custom"]["np_ndarray 2D"].get_data(), data_array_2D.T)
+
+
+def test_waveform_set_x_sync(bec_figure, qtbot):
+    w1 = bec_figure.plot()
+    custom_label = "custom_label"
+    w1.plot("bpm4i")
+    w1.set_x_label(custom_label)
+
+    scan_item_mock = mock.MagicMock()
+    mock_data = {
+        "samx": {"samx": mock.MagicMock(val=np.array([1, 2, 3]))},
+        "samy": {"samy": mock.MagicMock(val=np.array([4, 5, 6]))},
+        "bpm4i": {
+            "bpm4i": mock.MagicMock(
+                val=np.array([7, 8, 9]),
+                timestamps=np.array([1720520189.959115, 1720520189.986618, 1720520190.0157812]),
+            )
+        },
+    }
+
+    scan_item_mock.data = mock_data
+    scan_item_mock.status_message.info = {"scan_report_devices": ["samx"]}
+
+    w1.queue.scan_storage.find_scan_by_ID.return_value = scan_item_mock
+
+    w1.on_scan_segment({"scan_id": 1}, {})
+    qtbot.wait(200)
+
+    # Best effort - samx
+    x_data, y_data = w1.curves[0].get_data()
+    assert np.array_equal(x_data, [1, 2, 3])
+    assert np.array_equal(y_data, [7, 8, 9])
+    assert w1.plot_item.getAxis("bottom").labelText == custom_label + " [auto: samx-samx]"
+
+    # Change to samy
+    w1.set_x("samy")
+    qtbot.wait(200)
+    x_data, y_data = w1.curves[0].get_data()
+    assert np.array_equal(x_data, [4, 5, 6])
+    assert np.array_equal(y_data, [7, 8, 9])
+    assert w1.plot_item.getAxis("bottom").labelText == custom_label + " [samy-samy]"
+
+    # change to index
+    w1.set_x("index")
+    qtbot.wait(200)
+    x_data, y_data = w1.curves[0].get_data()
+    assert np.array_equal(x_data, [0, 1, 2])
+    assert np.array_equal(y_data, [7, 8, 9])
+    assert w1.plot_item.getAxis("bottom").labelText == custom_label + " [index]"
+
+    # change to timestamp
+    w1.set_x("timestamp")
+    qtbot.wait(200)
+    x_data, y_data = w1.curves[0].get_data()
+    assert np.allclose(x_data, np.array([1.72052019e09, 1.72052019e09, 1.72052019e09]))
+    assert np.array_equal(y_data, [7, 8, 9])
+    assert w1.plot_item.getAxis("bottom").labelText == custom_label + " [timestamp]"
+
+
+def test_waveform_async_data_update(bec_figure, qtbot):
+    w1 = bec_figure.plot("async_device")
+    custom_label = "custom_label"
+    w1.set_x_label(custom_label)
+
+    # scan_item_mock = mock.MagicMock()
+    # mock_data = {
+    #     "async_device": {
+    #         "async_device": mock.MagicMock(
+    #             val=np.array([7, 8, 9]),
+    #             timestamps=np.array([1720520189.959115, 1720520189.986618, 1720520190.0157812]),
+    #         )
+    #     }
+    # }
+    #
+    # scan_item_mock.async_data = mock_data
+    # w1.queue.scan_storage.find_scan_by_ID.return_value = scan_item_mock
+
+    msg_1 = {"signals": {"async_device": {"value": [7, 8, 9]}}}
+    w1.on_async_readback(msg_1, {"async_update": "extend"})
+
+    qtbot.wait(200)
+    x_data, y_data = w1.curves[0].get_data()
+    assert np.array_equal(x_data, [0, 1, 2])
+    assert np.array_equal(y_data, [7, 8, 9])
+    assert w1.plot_item.getAxis("bottom").labelText == custom_label + " [best_effort]"
+
+    msg_2 = {"signals": {"async_device": {"value": [10, 11, 12]}}}
+    w1.on_async_readback(msg_2, {"async_update": "extend"})
+
+    qtbot.wait(200)
+    x_data, y_data = w1.curves[0].get_data()
+    assert np.array_equal(x_data, [0, 1, 2, 3, 4, 5])
+    assert np.array_equal(y_data, [7, 8, 9, 10, 11, 12])
+    assert w1.plot_item.getAxis("bottom").labelText == custom_label + " [best_effort]"
+
+    msg_3 = {"signals": {"async_device": {"value": [20, 21, 22]}}}
+    w1.on_async_readback(msg_3, {"async_update": "replace"})
+
+    qtbot.wait(200)
+    x_data, y_data = w1.curves[0].get_data()
+    assert np.array_equal(x_data, [0, 1, 2])
+    assert np.array_equal(y_data, [20, 21, 22])
+    assert w1.plot_item.getAxis("bottom").labelText == custom_label + " [best_effort]"
+
+
+def test_waveform_set_x_async(bec_figure, qtbot):
+    w1 = bec_figure.plot("async_device")
+    custom_label = "custom_label"
+    w1.set_x_label(custom_label)
+
+    scan_item_mock = mock.MagicMock()
+    mock_data = {
+        "async_device": {
+            "async_device": {
+                "value": np.array([7, 8, 9]),
+                "timestamp": np.array([1720520189.959115, 1720520189.986618, 1720520190.0157812]),
+            }
+        }
+    }
+
+    scan_item_mock.async_data = mock_data
+    w1.queue.scan_storage.find_scan_by_ID.return_value = scan_item_mock
+
+    w1.on_scan_status({"scan_id": 1})
+    w1.replot_async_curve()
+
+    qtbot.wait(200)
+    x_data, y_data = w1.curves[0].get_data()
+    assert np.array_equal(x_data, [0, 1, 2])
+    assert np.array_equal(y_data, [7, 8, 9])
+    assert w1.plot_item.getAxis("bottom").labelText == custom_label + " [best_effort]"
+
+    w1.set_x("timestamp")
+    qtbot.wait(200)
+    x_data, y_data = w1.curves[0].get_data()
+    assert np.allclose(x_data, np.array([1.72052019e09, 1.72052019e09, 1.72052019e09]))
+    assert np.array_equal(y_data, [7, 8, 9])
+    assert w1.plot_item.getAxis("bottom").labelText == custom_label + " [timestamp]"
+
+    w1.set_x("index")
+    qtbot.wait(200)
+    x_data, y_data = w1.curves[0].get_data()
+    assert np.array_equal(x_data, [0, 1, 2])
+    assert np.array_equal(y_data, [7, 8, 9])
+    assert w1.plot_item.getAxis("bottom").labelText == custom_label + " [index]"
