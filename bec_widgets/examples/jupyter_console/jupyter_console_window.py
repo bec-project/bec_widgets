@@ -4,8 +4,15 @@ import numpy as np
 import pyqtgraph as pg
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QIcon
-from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
-from qtpy.QtWidgets import QHBoxLayout, QSplitter, QTabWidget, QGroupBox
+from qtpy.QtWidgets import (
+    QApplication,
+    QGroupBox,
+    QHBoxLayout,
+    QSplitter,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.colors import apply_theme

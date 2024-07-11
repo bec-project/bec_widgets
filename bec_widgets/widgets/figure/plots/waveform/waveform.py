@@ -65,6 +65,7 @@ class BECWaveform(BECPlotBase):
         "set_grid",
         "lock_aspect_ratio",
         "remove",
+        "clear_all",
         "set_legend_label_size",
     ]
     scan_signal_update = pyqtSignal()
@@ -250,8 +251,9 @@ class BECWaveform(BECPlotBase):
 
     def plot(
         self,
-        x: list | np.ndarray | None = None,
+        arg1: list | np.ndarray | str | None = None,
         y: list | np.ndarray | None = None,
+        x: list | np.ndarray | None = None,
         x_name: str | None = None,
         y_name: str | None = None,
         z_name: str | None = None,
@@ -269,8 +271,9 @@ class BECWaveform(BECPlotBase):
         Plot a curve to the plot widget.
 
         Args:
-            x(list | np.ndarray): Custom x data to plot.
+            arg1(list | np.ndarray | str | None): First argument which can be x data, y data, or y_name.
             y(list | np.ndarray): Custom y data to plot.
+            x(list | np.ndarray): Custom y data to plot.
             x_name(str): The name of the device for the x-axis.
             y_name(str): The name of the device for the y-axis.
             z_name(str): The name of the device for the z-axis.
@@ -286,28 +289,45 @@ class BECWaveform(BECPlotBase):
         Returns:
             BECCurve: The curve object.
         """
-
         if x is not None and y is not None:
             return self.add_curve_custom(x=x, y=y, label=label, color=color, **kwargs)
-        else:
-            if dap:
-                self.add_dap(x_name=x_name, y_name=y_name, dap=dap)
-            curve = self.add_curve_bec(
-                x_name=x_name,
-                y_name=y_name,
-                z_name=z_name,
-                x_entry=x_entry,
-                y_entry=y_entry,
-                z_entry=z_entry,
-                color=color,
-                color_map_z=color_map_z,
-                label=label,
-                validate_bec=validate,
-                **kwargs,
-            )
-            self.scan_signal_update.emit()
-            self.async_signal_update.emit()
-            return curve
+
+        if isinstance(arg1, str):
+            y_name = arg1
+        elif isinstance(arg1, list):
+            if isinstance(y, list):
+                return self.add_curve_custom(x=arg1, y=y, label=label, color=color, **kwargs)
+            if y is None:
+                x = np.arange(len(arg1))
+                return self.add_curve_custom(x=x, y=arg1, label=label, color=color, **kwargs)
+        elif isinstance(arg1, np.ndarray) and y is None:
+            if arg1.ndim == 1:
+                x = np.arange(arg1.size)
+                return self.add_curve_custom(x=x, y=arg1, label=label, color=color, **kwargs)
+            if arg1.ndim == 2:
+                x = arg1[:, 0]
+                y = arg1[:, 1]
+                return self.add_curve_custom(x=x, y=y, label=label, color=color, **kwargs)
+        if y_name is None:
+            raise ValueError("y_name must be provided.")
+        if dap:
+            self.add_dap(x_name=x_name, y_name=y_name, dap=dap)
+        curve = self.add_curve_bec(
+            x_name=x_name,
+            y_name=y_name,
+            z_name=z_name,
+            x_entry=x_entry,
+            y_entry=y_entry,
+            z_entry=z_entry,
+            color=color,
+            color_map_z=color_map_z,
+            label=label,
+            validate_bec=validate,
+            **kwargs,
+        )
+        self.scan_signal_update.emit()
+        self.async_signal_update.emit()
+        return curve
 
     def change_x_axis(self, x_name: str, x_entry: str | None = None):
         """
@@ -666,7 +686,9 @@ class BECWaveform(BECPlotBase):
             self._x_axis_mode["entry"] = x_entry
             if readout_priority_y == "async":
                 raise ValueError(
-                    f"Async devices '{y_name}' cannot be used with custom x signal '{x_name}-{x_entry}'."
+                    f"Async devices '{y_name}' cannot be used with custom x signal '{x_name}-{x_entry}'.\n"
+                    f"Please use mode 'best_effort', 'timestamp', or 'index' signal for x axis."
+                    f"You can change the x axis mode with '.change_x_axis(mode)'"
                 )
 
         if auto_switch is True:
@@ -984,7 +1006,6 @@ class BECWaveform(BECPlotBase):
             msg(dict): Message with the async data.
             metadata(dict): Metadata of the message.
         """
-        print(msg)
         instruction = metadata.get("async_update")
         for curve_id, curve in self._curves_data["async"].items():
             y_name = curve.config.signals.y.name
@@ -1233,6 +1254,14 @@ class BECWaveform(BECPlotBase):
             for date in human_readable_dates
         ]
         return data2float
+
+    def clear_all(self):
+        curves_data = self._curves_data
+        sources = list(curves_data.keys())
+        for source in sources:
+            curve_ids_to_remove = list(curves_data[source].keys())
+            for curve_id in curve_ids_to_remove:
+                self.remove_curve(curve_id)
 
     def cleanup(self):
         """Cleanup the widget connection from BECDispatcher."""

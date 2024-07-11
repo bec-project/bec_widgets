@@ -227,88 +227,12 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         """
         self._widgets = value
 
-    def _init_waveform(
-        self,
-        waveform,
-        x_name: str = None,
-        y_name: str = None,
-        z_name: str = None,
-        x_entry: str = None,
-        y_entry: str = None,
-        z_entry: str = None,
-        x: list | np.ndarray = None,
-        y: list | np.ndarray = None,
-        color: str | None = None,
-        color_map_z: str | None = "plasma",
-        label: str | None = None,
-        validate: bool = True,
-        dap: str | None = None,
-    ) -> BECWaveform:
-        """
-        Configure the waveform based on the provided parameters.
-
-        Args:
-            waveform (BECWaveform): The waveform to configure.
-            x (list | np.ndarray): Custom x data to plot.
-            y (list | np.ndarray): Custom y data to plot.
-            x_name (str): The name of the device for the x-axis.
-            y_name (str): The name of the device for the y-axis.
-            z_name (str): The name of the device for the z-axis.
-            x_entry (str): The name of the entry for the x-axis.
-            y_entry (str): The name of the entry for the y-axis.
-            z_entry (str): The name of the entry for the z-axis.
-            color (str): The color of the curve.
-            color_map_z (str): The color map to use for the z-axis.
-            label (str): The label of the curve.
-            validate (bool): If True, validate the device names and entries.
-            dap (str): The DAP model to use for the curve.
-        """
-        if x is not None and y is None:
-            if isinstance(x, np.ndarray):
-                if x.ndim == 1:
-                    y = np.arange(x.size)
-                    waveform.add_curve_custom(x=np.arange(x.size), y=x, color=color, label=label)
-                    return waveform
-                if x.ndim == 2:
-                    waveform.add_curve_custom(x=x[:, 0], y=x[:, 1], color=color, label=label)
-                    return waveform
-            elif isinstance(x, list):
-                y = np.arange(len(x))
-                waveform.add_curve_custom(x=np.arange(len(x)), y=x, color=color, label=label)
-                return waveform
-            else:
-                raise ValueError(
-                    "Invalid input. Provide either device names (x_name, y_name) or custom data."
-                )
-        if x is not None and y is not None:
-            waveform.add_curve_custom(x=x, y=y, color=color, label=label)
-            return waveform
-        if y_name is not None:
-            waveform.plot(
-                x_name=x_name,
-                y_name=y_name,
-                z_name=z_name,
-                x_entry=x_entry,
-                y_entry=y_entry,
-                z_entry=z_entry,
-                color=color,
-                color_map_z=color_map_z,
-                label=label,
-                validate=validate,
-                dap=dap,
-            )
-
-        # User wants to add custom curve
-        elif x is not None and y is not None and x_name is None and y_name is None:
-            waveform.add_curve_custom(x=x, y=y, color=color, label=label)
-
-        return waveform
-
     @typechecked
     def plot(
         self,
-        x: list | np.ndarray | None = None,
+        arg1: list | np.ndarray | str | None = None,
         y: list | np.ndarray | None = None,
+        x: list | np.ndarray | None = None,
         x_name: str | None = None,
         y_name: str | None = None,
         z_name: str | None = None,
@@ -330,8 +254,9 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         Add a 1D waveform plot to the figure. Always access the first waveform widget in the figure.
 
         Args:
-            x(list | np.ndarray): Custom x data to plot.
+            arg1(list | np.ndarray | str | None): First argument which can be x data, y data, or y_name.
             y(list | np.ndarray): Custom y data to plot.
+            x(list | np.ndarray): Custom x data to plot.
             x_name(str): The name of the device for the x-axis.
             y_name(str): The name of the device for the y-axis.
             z_name(str): The name of the device for the z-axis.
@@ -358,23 +283,23 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         if config is not None:
             return waveform
 
-        # Passing args to init_waveform
-        waveform = self._init_waveform(
-            waveform=waveform,
-            x=x,
-            y=y,
-            x_name=x_name,
-            y_name=y_name,
-            z_name=z_name,
-            x_entry=x_entry,
-            y_entry=y_entry,
-            z_entry=z_entry,
-            color=color,
-            color_map_z=color_map_z,
-            label=label,
-            validate=validate,
-            dap=dap,
-        )
+        if arg1 is not None or y_name is not None or (y is not None and x is not None):
+            waveform.plot(
+                arg1=arg1,
+                y=y,
+                x=x,
+                x_name=x_name,
+                y_name=y_name,
+                z_name=z_name,
+                x_entry=x_entry,
+                y_entry=y_entry,
+                z_entry=z_entry,
+                color=color,
+                color_map_z=color_map_z,
+                label=label,
+                validate=validate,
+                dap=dap,
+            )
         return waveform
 
     def _init_image(

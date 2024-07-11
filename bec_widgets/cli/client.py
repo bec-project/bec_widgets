@@ -468,8 +468,9 @@ class BECFigure(RPCBase):
     @rpc_call
     def plot(
         self,
-        x: "list | np.ndarray | None" = None,
+        arg1: "list | np.ndarray | str | None" = None,
         y: "list | np.ndarray | None" = None,
+        x: "list | np.ndarray | None" = None,
         x_name: "str | None" = None,
         y_name: "str | None" = None,
         z_name: "str | None" = None,
@@ -491,8 +492,9 @@ class BECFigure(RPCBase):
         Add a 1D waveform plot to the figure. Always access the first waveform widget in the figure.
 
         Args:
-            x(list | np.ndarray): Custom x data to plot.
+            arg1(list | np.ndarray | str | None): First argument which can be x data, y data, or y_name.
             y(list | np.ndarray): Custom y data to plot.
+            x(list | np.ndarray): Custom x data to plot.
             x_name(str): The name of the device for the x-axis.
             y_name(str): The name of the device for the y-axis.
             z_name(str): The name of the device for the z-axis.
@@ -1497,8 +1499,9 @@ class BECWaveform(RPCBase):
     @rpc_call
     def plot(
         self,
-        x: "list | np.ndarray | None" = None,
+        arg1: "list | np.ndarray | str | None" = None,
         y: "list | np.ndarray | None" = None,
+        x: "list | np.ndarray | None" = None,
         x_name: "str | None" = None,
         y_name: "str | None" = None,
         z_name: "str | None" = None,
@@ -1516,8 +1519,9 @@ class BECWaveform(RPCBase):
         Plot a curve to the plot widget.
 
         Args:
-            x(list | np.ndarray): Custom x data to plot.
+            arg1(list | np.ndarray | str | None): First argument which can be x data, y data, or y_name.
             y(list | np.ndarray): Custom y data to plot.
+            x(list | np.ndarray): Custom y data to plot.
             x_name(str): The name of the device for the x-axis.
             y_name(str): The name of the device for the y-axis.
             z_name(str): The name of the device for the z-axis.
@@ -1757,6 +1761,12 @@ class BECWaveform(RPCBase):
     def remove(self):
         """
         Remove the plot widget from the figure.
+        """
+
+    @rpc_call
+    def clear_all(self):
+        """
+        None
         """
 
     @rpc_call
