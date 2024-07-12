@@ -175,12 +175,11 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
 
     def closeEvent(self, event):
         """Override to handle things when main window is closed."""
-        self.dock.clear_all()
         self.dock.cleanup()
         self.dock.close()
-        self.figure.clear_all()
         self.figure.cleanup()
         self.figure.close()
+        self.console.close()
 
         super().closeEvent(event)
 

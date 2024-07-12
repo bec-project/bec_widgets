@@ -10,6 +10,7 @@ class BECJupyterConsole(RichJupyterWidget):  # pragma: no cover:
         super().__init__()
 
         self.inprocess = None
+        self.client = None
 
         self.kernel_manager, self.kernel_client = self._init_kernel(inprocess=inprocess)
         self.set_default_style("linux")
@@ -59,6 +60,11 @@ class BECJupyterConsole(RichJupyterWidget):  # pragma: no cover:
     def shutdown_kernel(self):
         self.kernel_client.stop_channels()
         self.kernel_manager.shutdown_kernel()
+
+    def closeEvent(self, event):
+        self.shutdown_kernel()
+        if self.client:
+            self.client.shutdown()
 
 
 if __name__ == "__main__":  # pragma: no cover
