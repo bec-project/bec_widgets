@@ -19,6 +19,7 @@ class Widgets(str, enum.Enum):
     BECMotorMapWidget = "BECMotorMapWidget"
     BECQueue = "BECQueue"
     BECStatusBox = "BECStatusBox"
+    BECWaveformWidget = "BECWaveformWidget"
     DeviceBox = "DeviceBox"
     DeviceComboBox = "DeviceComboBox"
     DeviceLineEdit = "DeviceLineEdit"
@@ -27,7 +28,6 @@ class Widgets(str, enum.Enum):
     StopButton = "StopButton"
     TextBox = "TextBox"
     VSCodeEditor = "VSCodeEditor"
-    BECWaveformWidget = "BECWaveformWidget"
     WebsiteWidget = "WebsiteWidget"
 
 
@@ -469,8 +469,9 @@ class BECFigure(RPCBase):
     @rpc_call
     def plot(
         self,
-        x: "list | np.ndarray | None" = None,
+        arg1: "list | np.ndarray | str | None" = None,
         y: "list | np.ndarray | None" = None,
+        x: "list | np.ndarray | None" = None,
         x_name: "str | None" = None,
         y_name: "str | None" = None,
         z_name: "str | None" = None,
@@ -492,8 +493,9 @@ class BECFigure(RPCBase):
         Add a 1D waveform plot to the figure. Always access the first waveform widget in the figure.
 
         Args:
-            x(list | np.ndarray): Custom x data to plot.
+            arg1(list | np.ndarray | str | None): First argument which can be x data, y data, or y_name.
             y(list | np.ndarray): Custom y data to plot.
+            x(list | np.ndarray): Custom x data to plot.
             x_name(str): The name of the device for the x-axis.
             y_name(str): The name of the device for the y-axis.
             z_name(str): The name of the device for the z-axis.
@@ -1498,8 +1500,9 @@ class BECWaveform(RPCBase):
     @rpc_call
     def plot(
         self,
-        x: "list | np.ndarray | None" = None,
+        arg1: "list | np.ndarray | str | None" = None,
         y: "list | np.ndarray | None" = None,
+        x: "list | np.ndarray | None" = None,
         x_name: "str | None" = None,
         y_name: "str | None" = None,
         z_name: "str | None" = None,
@@ -1511,13 +1514,20 @@ class BECWaveform(RPCBase):
         label: "str | None" = None,
         validate: "bool" = True,
         dap: "str | None" = None,
+        **kwargs,
     ) -> "BECCurve":
         """
         Plot a curve to the plot widget.
+
         Args:
-            x(list | np.ndarray): Custom x data to plot.
+            arg1(list | np.ndarray | str | None): First argument which can be x data, y data, or y_name.
             y(list | np.ndarray): Custom y data to plot.
-            x_name(str): The name of the device for the x-axis.
+            x(list | np.ndarray): Custom y data to plot.
+            x_name(str): Name of the x signal.
+                - "best_effort": Use the best effort signal.
+                - "timestamp": Use the timestamp signal.
+                - "index": Use the index signal.
+                - Custom signal name of device from BEC.
             y_name(str): The name of the device for the y-axis.
             z_name(str): The name of the device for the z-axis.
             x_entry(str): The name of the entry for the x-axis.
@@ -1527,7 +1537,7 @@ class BECWaveform(RPCBase):
             color_map_z(str): The color map to use for the z-axis.
             label(str): The label of the curve.
             validate(bool): If True, validate the device names and entries.
-            dap(str): The dap model to use for the curve. If not specified, none will be added.
+            dap(str): The dap model to use for the curve, only available for sync devices. If not specified, none will be added.
 
         Returns:
             BECCurve: The curve object.
@@ -1536,12 +1546,13 @@ class BECWaveform(RPCBase):
     @rpc_call
     def add_dap(
         self,
-        x_name: "str",
-        y_name: "str",
+        x_name: "str | None" = None,
+        y_name: "str | None" = None,
         x_entry: "Optional[str]" = None,
         y_entry: "Optional[str]" = None,
         color: "Optional[str]" = None,
         dap: "str" = "GaussianModel",
+        validate_bec: "bool" = True,
         **kwargs,
     ) -> "BECCurve":
         """
@@ -1556,10 +1567,25 @@ class BECWaveform(RPCBase):
             color_map_z(str): The color map to use for the z-axis.
             label(str, optional): Label of the curve. Defaults to None.
             dap(str): The dap model to use for the curve.
+            validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
             **kwargs: Additional keyword arguments for the curve configuration.
 
         Returns:
             BECCurve: The curve object.
+        """
+
+    @rpc_call
+    def set_x(self, x_name: "str", x_entry: "str | None" = None):
+        """
+        Change the x axis of the plot widget.
+
+        Args:
+            x_name(str): Name of the x signal.
+                - "best_effort": Use the best effort signal.
+                - "timestamp": Use the timestamp signal.
+                - "index": Use the index signal.
+                - Custom signal name of device from BEC.
+            x_entry(str): Entry of the x signal.
         """
 
     @rpc_call
@@ -1747,30 +1773,18 @@ class BECWaveform(RPCBase):
         """
 
     @rpc_call
+    def clear_all(self):
+        """
+        None
+        """
+
+    @rpc_call
     def set_legend_label_size(self, size: "int" = None):
         """
         Set the font size of the legend.
 
         Args:
             size(int): Font size of the legend.
-        """
-
-
-class DeviceBox(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @rpc_call
-    def _get_all_rpc(self) -> "dict":
-        """
-        Get all registered RPC objects.
         """
 
 
@@ -1800,6 +1814,7 @@ class BECWaveformWidget(RPCBase):
         label: "str | None" = None,
         validate: "bool" = True,
         dap: "str | None" = None,
+        **kwargs,
     ) -> "BECCurve":
         """
         Plot a curve to the plot widget.
@@ -2000,6 +2015,24 @@ class BECWaveformWidget(RPCBase):
 
         Args:
             lock(bool): Lock the aspect ratio.
+        """
+
+
+class DeviceBox(RPCBase):
+    @property
+    @rpc_call
+    def _config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def _get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
         """
 
 

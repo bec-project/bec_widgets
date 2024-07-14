@@ -124,7 +124,9 @@ class BECWaveformWidget(BECConnector, QWidget):
         dialog.resize(800, 600)
         dialog.exec()
 
-    def _check_if_scans_have_same_x(self, enabled=True, x_name_to_check: str = None) -> bool:
+    def _check_if_scans_have_same_x(
+        self, enabled=True, x_name_to_check: str = None
+    ) -> bool:  # TODO probably not needed anymore
         """
         Check if all scans have the same x-axis.
 
@@ -173,6 +175,20 @@ class BECWaveformWidget(BECConnector, QWidget):
         """
         return self.waveform.get_curve(identifier)
 
+    def set_x(self, x_name: str, x_entry: str | None = None):
+        """
+        Change the x axis of the plot widget.
+
+        Args:
+            x_name(str): Name of the x signal.
+                - "best_effort": Use the best effort signal.
+                - "timestamp": Use the timestamp signal.
+                - "index": Use the index signal.
+                - Custom signal name of device from BEC.
+            x_entry(str): Entry of the x signal.
+        """
+        self.waveform.set_x(x_name, x_entry)
+
     def plot(
         self,
         x: list | np.ndarray | None = None,
@@ -210,7 +226,7 @@ class BECWaveformWidget(BECConnector, QWidget):
         Returns:
             BECCurve: The curve object.
         """
-        self._check_if_scans_have_same_x(enabled=True, x_name_to_check=x_name)
+        # self._check_if_scans_have_same_x(enabled=True, x_name_to_check=x_name)
         return self.waveform.plot(
             x=x,
             y=y,

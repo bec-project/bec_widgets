@@ -29,17 +29,41 @@ class CurveSettings(SettingWidget):
         self.layout.addWidget(self.ui)
 
         self.ui.add_curve.clicked.connect(self.add_curve)
+        self.ui.x_mode.currentIndexChanged.connect(self.set_x_mode)
 
     @Slot(dict)
     def display_current_settings(self, config: dict | BaseModel):
         curves = config["scan_segment"]
-        first_label, first_curve = next(iter(curves.items()))
-        self.ui.x_name.setText(first_curve.config.signals.x.name)
-        self.ui.x_entry.setText(first_curve.config.signals.x.entry)
+
+        # set mode of x axis box
+        x_name = self.target_widget.waveform._x_axis_mode["name"]
+        x_entry = self.target_widget.waveform._x_axis_mode["entry"]
+        self._setup_x_box(x_name, x_entry)
+
         for label, curve in curves.items():
             row_count = self.ui.scan_table.rowCount()
             self.ui.scan_table.insertRow(row_count)
             ScanRow(table_widget=self.ui.scan_table, row=row_count, config=curve.config)
+
+    def _setup_x_box(self, name, entry):
+        if name in ["index", "timestamp", "best_effort"]:
+            self.ui.x_mode.setCurrentText(name)
+            self.set_x_mode()
+        else:
+            self.ui.x_mode.setCurrentText("device")
+            self.set_x_mode()
+            self.ui.x_name.setText(name)
+            self.ui.x_entry.setText(entry)
+
+    @Slot()
+    def set_x_mode(self):
+        x_mode = self.ui.x_mode.currentText()
+        if x_mode in ["index", "timestamp", "best_effort"]:
+            self.ui.x_name.setEnabled(False)
+            self.ui.x_entry.setEnabled(False)
+        else:
+            self.ui.x_name.setEnabled(True)
+            self.ui.x_entry.setEnabled(True)
 
     @Slot()
     def accept_changes(self):
@@ -52,8 +76,17 @@ class CurveSettings(SettingWidget):
         self.get_curve_params()
 
     def get_curve_params(self):
-        x_name = self.ui.x_name.text()
-        x_entry = self.ui.x_entry.text()
+        x_mode = self.ui.x_mode.currentText()
+
+        if x_mode in ["index", "timestamp", "best_effort"]:
+            x_name = x_mode
+            x_entry = x_mode
+        else:
+            x_name = self.ui.x_name.text()
+            x_entry = self.ui.x_entry.text()
+
+        self.target_widget.set_x(x_name=x_name, x_entry=x_entry)
+
         for row in range(self.ui.scan_table.rowCount()):
             y_name = self.ui.scan_table.cellWidget(row, 0).text()
             y_entry = self.ui.scan_table.cellWidget(row, 1).text()
@@ -62,8 +95,6 @@ class CurveSettings(SettingWidget):
             width = self.ui.scan_table.cellWidget(row, 4).value()
             symbol_size = self.ui.scan_table.cellWidget(row, 5).value()
             self.target_widget.plot(
-                x_name=x_name,
-                x_entry=x_entry,
                 y_name=y_name,
                 y_entry=y_entry,
                 color=color,
