@@ -26,7 +26,9 @@ class ModularToolBar(QToolBar):
         color (str, optional): The background color of the toolbar. Defaults to "black".
     """
 
-    def __init__(self, parent=None, actions=None, target_widget=None, color: str = "black"):
+    def __init__(
+        self, parent=None, actions=None, target_widget=None, color: str = "rgba(255, 255, 255, 0)"
+    ):
         super().__init__(parent)
 
         self.widgets = defaultdict(dict)
