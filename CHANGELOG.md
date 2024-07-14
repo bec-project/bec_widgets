@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## v0.83.1 (2024-07-14)
+
+### Fix
+
+* fix(toolbar): default transparent background ([`eab7883`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/eab78839792f175b7ac127ca603385c6baa5ff15))
+
+* fix: use apply_theme ([`2d4249e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2d4249e73a792fed1c2c7ab79bb8aec38c57466c))
+
+* fix: spinner: update reference image for widget test, use apply_theme ([`63db135`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/63db1352ee883d35670b3a692dbe51d6d01872ae))
+
+* fix: replace pyqtdarktheme by qdarkstyle, add &#39;apply_theme&#39; function (in utils/colors.py) ([`8308115`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8308115f3646245d825fc47ab57297d3460bbcf5))
+
+### Test
+
+* test(toolbar): added reference pngs for spinner for Darwin ([`11a7204`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/11a7204c98e0bf211a8721d296b45d24a3102b97))
+
 ## v0.83.0 (2024-07-08)
 
 ### Feature
@@ -125,21 +141,3 @@
 * fix: overwrite closeEvent and call super class ([`bc0ef78`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bc0ef7893ef100b71b62101c459655509b534a56))
 
 ## v0.79.1 (2024-07-03)
-
-### Fix
-
-* fix: use libdir env var to preload Python library, also for Linux platform ([`d7718d4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d7718d4dcb9728c050b6421388af4d484f3741f2))
-
-## v0.79.0 (2024-07-03)
-
-### Feature
-
-* feat(motor_map_widget): standalone MotorMap Widget with toolbar + plugin ([`6e75642`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6e756420907d7093557e945bc92bc4cfc0138d07))
-
-* feat(motor_map): method to reset history trace ([`5960918`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5960918137dd41cdeb94e50f8abc4f169cf45c11))
-
-### Fix
-
-* fix(toolbar): change default color to black to match BECFigure theme ([`b8774e0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b8774e0b0bc43dcd00f94f42539a778e507ca27d))
-
-* fix(motor_map): fixed bug with residual trace after changing motors ([`aaa0d10`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/aaa0d1003d2e94b45bafe4f700852c2c05288aea))
