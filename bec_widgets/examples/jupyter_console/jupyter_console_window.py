@@ -49,8 +49,9 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "d0": self.d0,
                     "d1": self.d1,
                     "d2": self.d2,
-                    "plt": self.plt,
+                    "wave": self.wave,
                     "bar": self.bar,
+                    "cm": self.colormap,
                 }
             )
 
@@ -165,11 +166,15 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.fig1.plot(x_name="samx", y_name="bpm3a")
 
         self.d2 = self.dock.add_dock(name="dock_2", position="bottom")
-        self.fig2 = self.d2.add_widget("BECFigure", row=0, col=0)
-        self.plt = self.fig2.plot(x_name="samx", y_name="bpm3a")
-        self.plt.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
+        self.wave = self.d2.add_widget("BECWaveformWidget", row=0, col=0)
+        # self.wave.plot(x_name="samx", y_name="bpm3a")
+        # self.wave.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
         self.bar = self.d2.add_widget("RingProgressBar", row=0, col=1)
         self.bar.set_diameter(200)
+
+        self.d3 = self.dock.add_dock(name="dock_3", position="bottom")
+        self.colormap = pg.GradientWidget()
+        self.d3.add_widget(self.colormap, row=0, col=0)
 
         self.dock.save_state()
 

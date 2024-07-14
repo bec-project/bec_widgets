@@ -10,7 +10,7 @@ from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QVBoxLayout
 
 from bec_widgets.qt_utils.settings_dialog import SettingWidget
-from bec_widgets.utils import UILoader
+from bec_widgets.utils import UILoader, Colors
 from bec_widgets.widgets.color_button.color_button import ColorButton
 from bec_widgets.widgets.device_line_edit.device_line_edit import DeviceLineEdit
 from bec_widgets.widgets.figure.plots.plot_base import AxisConfig
@@ -30,6 +30,7 @@ class CurveSettings(SettingWidget):
 
         self.ui.add_curve.clicked.connect(self.add_curve)
         self.ui.x_mode.currentIndexChanged.connect(self.set_x_mode)
+        self.ui.normalize_colors.clicked.connect(self.change_colormap)
 
     @Slot(dict)
     def display_current_settings(self, config: dict | BaseModel):
@@ -39,6 +40,8 @@ class CurveSettings(SettingWidget):
         x_name = self.target_widget.waveform._x_axis_mode["name"]
         x_entry = self.target_widget.waveform._x_axis_mode["entry"]
         self._setup_x_box(x_name, x_entry)
+        cm = self.target_widget.config.color_palette
+        self.ui.color_map_selector.combo.setCurrentText(cm)
 
         for label, curve in curves.items():
             row_count = self.ui.scan_table.rowCount()
@@ -64,6 +67,15 @@ class CurveSettings(SettingWidget):
         else:
             self.ui.x_name.setEnabled(True)
             self.ui.x_entry.setEnabled(True)
+
+    @Slot()
+    def change_colormap(self):
+        cm = self.ui.color_map_selector.combo.currentText()
+        rows = self.ui.scan_table.rowCount()
+        colors = Colors.golden_angle_color(colormap=cm, num=rows + 1, format="HEX")
+        for row, color in zip(range(rows), colors):
+            self.ui.scan_table.cellWidget(row, 2).setColor(color)
+        self.target_widget.set_colormap(cm)
 
     @Slot()
     def accept_changes(self):
@@ -131,15 +143,19 @@ class ScanRow(QObject):
         self.entry_line_edit = QLineEdit()
 
         # Styling
+        default_color = Colors.golden_angle_color(colormap="magma", num=row + 1, format="HEX")[-1]
         self.color_button = ColorButton()
+        self.color_button.setColor(default_color)
         self.style_combo = StyleComboBox()
         self.width = QSpinBox()
         self.width.setMinimum(1)
         self.width.setMaximum(20)
+        self.width.setValue(2)
 
         self.symbol_size = QSpinBox()
         self.symbol_size.setMinimum(1)
         self.symbol_size.setMaximum(20)
+        self.symbol_size.setValue(5)
 
         self.table_widget = table_widget
         self.row = row

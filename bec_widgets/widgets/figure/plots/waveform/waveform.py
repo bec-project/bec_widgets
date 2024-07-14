@@ -10,7 +10,7 @@ import pyqtgraph as pg
 from bec_lib import messages
 from bec_lib.device import ReadoutPriority
 from bec_lib.endpoints import MessageEndpoints
-from pydantic import Field, ValidationError
+from pydantic import Field, ValidationError, field_validator
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QWidget
@@ -26,12 +26,15 @@ from bec_widgets.widgets.figure.plots.waveform.waveform_curve import (
 
 
 class Waveform1DConfig(SubplotConfig):
-    color_palette: Literal["plasma", "viridis", "inferno", "magma"] = Field(
-        "plasma", description="The color palette of the figure widget."
+    color_palette: Optional[str] = Field(
+        "plasma", description="The color palette of the figure widget.", validate_default=True
     )
     curves: dict[str, CurveConfig] = Field(
         {}, description="The list of curves to be added to the 1D waveform widget."
     )
+
+    model_config: dict = {"validate_assignment": True}
+    _validate_color_map_z = field_validator("color_palette")(Colors.validate_color_map)
 
 
 class BECWaveform(BECPlotBase):
@@ -63,6 +66,7 @@ class BECWaveform(BECPlotBase):
         "set_x_lim",
         "set_y_lim",
         "set_grid",
+        "set_colormap",
         "lock_aspect_ratio",
         "remove",
         "clear_all",
@@ -954,6 +958,22 @@ class BECWaveform(BECPlotBase):
         current_label = "" if self.config.axis.x_label is None else self.config.axis.x_label
         self.plot_item.setLabel("bottom", f"{current_label}{self._x_axis_mode['label_suffix']}")
 
+    def set_colormap(self, colormap: str | None = None):
+        """
+        Set the colormap of the plot widget.
+
+        Args:
+            colormap(str, optional): Scale the colors of curves to colormap. If None, use the default color palette.
+        """
+        if colormap is not None:
+            self.config.color_palette = colormap
+
+        colors = Colors.golden_angle_color(
+            colormap=self.config.color_palette, num=len(self.plot_item.curves) + 1, format="HEX"
+        )
+        for curve, color in zip(self.curves, colors):
+            curve.set_color(color)
+
     def setup_dap(self, old_scan_id: str | None, new_scan_id: str | None):
         """
         Setup DAP for the new scan.
@@ -1213,49 +1233,6 @@ class BECWaveform(BECPlotBase):
             except TypeError:
                 x_data = []
         return x_data
-
-    # def _get_x_data(self, curve: BECCurve, y_name: str, y_entry: str) -> list | np.ndarray | None:
-    #     """
-    #     Get the x data for the curve with the decision logic based on the curve configuration:
-    #         - If x is called 'timestamp', use the timestamp data from the scan item.
-    #         - If x is called 'index', use the rolling index.
-    #         - If x is a custom signal, use the data from the scan item.
-    #         - If x is not specified, use the first device from the scan report.
-    #
-    #     Args:
-    #         curve(BECCurve): The curve object.
-    #
-    #     Returns:
-    #         list|np.ndarray|None: X data for the curve.
-    #     """
-    #     x_data = None
-    #     if curve.config.signals.x is not None:
-    #         if curve.config.signals.x.name == "timestamp":
-    #             timestamps = self.scan_item.data[y_name][y_entry].timestamps
-    #             x_data = self.convert_timestamps(timestamps)
-    #         elif curve.config.signals.x.name == "index":
-    #             x_data = None
-    #         else:
-    #             x_name = curve.config.signals.x.name
-    #             x_entry = curve.config.signals.x.entry
-    #             try:
-    #                 x_data = self.scan_item.data[x_name][x_entry].val
-    #             except TypeError:
-    #                 x_data = []
-    #     else:
-    #         if len(self._curves_data["async"]) > 0:
-    #             x_data = None
-    #         else:
-    #             x_name = self.scan_item.status_message.info["scan_report_devices"][0]
-    #             x_entry = self.entry_validator.validate_signal(x_name, None)
-    #             x_data = self.scan_item.data[x_name][x_entry].val
-    #             self._x_axis_mode["label_suffix"] = f" [auto: {x_name}-{x_entry}]"
-    #             current_label = "" if self.config.axis.x_label is None else self.config.axis.x_label
-    #             self.plot_item.setLabel(
-    #                 "bottom", f"{current_label}{self._x_axis_mode['label_suffix']}"
-    #             )
-    #
-    #     return x_data
 
     def _make_z_gradient(self, data_z: list | np.ndarray, colormap: str) -> list | None:
         """

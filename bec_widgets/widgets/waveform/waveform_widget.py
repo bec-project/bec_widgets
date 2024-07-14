@@ -175,6 +175,15 @@ class BECWaveformWidget(BECConnector, QWidget):
         """
         return self.waveform.get_curve(identifier)
 
+    def set_colormap(self, colormap: str):
+        """
+        Set the colormap of the plot widget.
+
+        Args:
+            colormap(str, optional): Scale the colors of curves to colormap. If None, use the default color palette.
+        """
+        self.waveform.set_colormap(colormap)
+
     def set_x(self, x_name: str, x_entry: str | None = None):
         """
         Change the x axis of the plot widget.

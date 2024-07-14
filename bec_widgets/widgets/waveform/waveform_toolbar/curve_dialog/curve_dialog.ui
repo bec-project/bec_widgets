@@ -6,92 +6,92 @@
    <rect>
     <x>0</x>
     <y>0</y>
-       <width>720</width>
-       <height>806</height>
+    <width>720</width>
+    <height>806</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
-      <property name="leftMargin">
-          <number>2</number>
-      </property>
-      <property name="topMargin">
-          <number>2</number>
-      </property>
-      <property name="rightMargin">
-          <number>2</number>
-      </property>
-      <property name="bottomMargin">
-          <number>2</number>
-      </property>
+   <property name="leftMargin">
+    <number>2</number>
+   </property>
+   <property name="topMargin">
+    <number>2</number>
+   </property>
+   <property name="rightMargin">
+    <number>2</number>
+   </property>
+   <property name="bottomMargin">
+    <number>2</number>
+   </property>
    <item>
     <widget class="QGroupBox" name="x_group_box">
      <property name="title">
       <string>X Axis</string>
      </property>
-        <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0,0,1,3,0,1,3">
-            <item>
-                <widget class="QLabel" name="x_mode_label">
-                    <property name="text">
-                        <string>X Axis Mode</string>
-                    </property>
-                </widget>
-            </item>
-            <item>
-                <widget class="QComboBox" name="x_mode">
-                    <item>
-                        <property name="text">
-                            <string>best_effort</string>
-                        </property>
-                    </item>
-                    <item>
-                        <property name="text">
-                            <string>device</string>
-                        </property>
-                    </item>
-                    <item>
-                        <property name="text">
-                            <string>index</string>
-                        </property>
-                    </item>
-                    <item>
-                        <property name="text">
-                            <string>timestamp</string>
-                        </property>
-                    </item>
-                </widget>
-            </item>
-            <item>
-                <spacer name="horizontalSpacer_3">
-                    <property name="orientation">
-                        <enum>Qt::Orientation::Horizontal</enum>
-                    </property>
-                    <property name="sizeHint" stdset="0">
-                        <size>
-                            <width>40</width>
-                            <height>20</height>
-                        </size>
-                    </property>
-                </spacer>
-            </item>
-            <item>
-                <widget class="Line" name="line_2">
-                    <property name="frameShadow">
-                        <enum>QFrame::Shadow::Sunken</enum>
-                    </property>
-                    <property name="lineWidth">
-                        <number>1</number>
-                    </property>
-                    <property name="midLineWidth">
-                        <number>0</number>
-                    </property>
-                    <property name="orientation">
-                        <enum>Qt::Orientation::Vertical</enum>
-                    </property>
-                </widget>
-            </item>
+     <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0,0,1,3,0,1,3">
+      <item>
+       <widget class="QLabel" name="x_mode_label">
+        <property name="text">
+         <string>X Axis Mode</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="x_mode">
+        <item>
+         <property name="text">
+          <string>best_effort</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>device</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>index</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>timestamp</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_3">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="Line" name="line_2">
+        <property name="frameShadow">
+         <enum>QFrame::Shadow::Sunken</enum>
+        </property>
+        <property name="lineWidth">
+         <number>1</number>
+        </property>
+        <property name="midLineWidth">
+         <number>0</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Orientation::Vertical</enum>
+        </property>
+       </widget>
+      </item>
       <item>
        <widget class="QLabel" name="x_name_label">
         <property name="text">
@@ -157,6 +157,78 @@
             </property>
            </widget>
           </item>
+          <item row="0" column="3">
+           <widget class="ColormapSelector" name="color_map_selector">
+            <property name="minimumSize">
+             <size>
+              <width>150</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="colormaps" stdset="0">
+             <stringlist>
+              <string>inferno</string>
+              <string>viridis</string>
+              <string>plasma</string>
+              <string>magma</string>
+             </stringlist>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="6">
+           <widget class="QTableWidget" name="scan_table">
+            <property name="rowCount">
+             <number>0</number>
+            </property>
+            <attribute name="horizontalHeaderCascadingSectionResizes">
+             <bool>false</bool>
+            </attribute>
+            <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
+             <bool>true</bool>
+            </attribute>
+            <attribute name="horizontalHeaderStretchLastSection">
+             <bool>true</bool>
+            </attribute>
+            <attribute name="verticalHeaderStretchLastSection">
+             <bool>false</bool>
+            </attribute>
+            <column>
+             <property name="text">
+              <string>Name</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Entry</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Color</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Style</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Width</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Symbol Size</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Delete</string>
+             </property>
+            </column>
+           </widget>
+          </item>
           <item row="0" column="1">
            <spacer name="horizontalSpacer">
             <property name="orientation">
@@ -170,23 +242,60 @@
             </property>
            </spacer>
           </item>
+          <item row="0" column="2">
+           <widget class="QPushButton" name="normalize_colors">
+            <property name="text">
+             <string>Normalize Colors</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="tab_DAP">
+         <attribute name="title">
+          <string>DAP</string>
+         </attribute>
+         <layout class="QGridLayout" name="gridLayout_2">
+          <property name="leftMargin">
+           <number>5</number>
+          </property>
+          <property name="topMargin">
+           <number>5</number>
+          </property>
+          <property name="rightMargin">
+           <number>5</number>
+          </property>
+          <property name="bottomMargin">
+           <number>5</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QPushButton" name="add_dap">
+            <property name="text">
+             <string>Add DAP</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <spacer name="horizontalSpacer_2">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>585</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
           <item row="1" column="0" colspan="2">
-           <widget class="QTableWidget" name="scan_table">
-               <property name="rowCount">
-                   <number>0</number>
-               </property>
-               <attribute name="horizontalHeaderCascadingSectionResizes">
-                   <bool>false</bool>
-               </attribute>
-               <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
-                   <bool>true</bool>
-               </attribute>
-               <attribute name="horizontalHeaderStretchLastSection">
-                   <bool>true</bool>
-               </attribute>
-               <attribute name="verticalHeaderStretchLastSection">
-                   <bool>false</bool>
-               </attribute>
+           <widget class="QTableWidget" name="dap_table">
+            <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
+             <bool>true</bool>
+            </attribute>
+            <attribute name="horizontalHeaderStretchLastSection">
+             <bool>true</bool>
+            </attribute>
             <column>
              <property name="text">
               <string>Name</string>
@@ -197,128 +306,39 @@
               <string>Entry</string>
              </property>
             </column>
-               <column>
-                   <property name="text">
-                       <string>Color</string>
-                   </property>
-               </column>
-               <column>
-                   <property name="text">
-                       <string>Style</string>
-                   </property>
-               </column>
-               <column>
-                   <property name="text">
-                       <string>Width</string>
-                   </property>
-               </column>
-               <column>
-                   <property name="text">
-                       <string>Symbol Size</string>
-                   </property>
-               </column>
-               <column>
-                   <property name="text">
-                       <string>Delete</string>
+            <column>
+             <property name="text">
+              <string>Model</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Color</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Style</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Width</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Symbol Size</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string>Delete</string>
              </property>
             </column>
            </widget>
           </item>
          </layout>
-        </widget>
-        <widget class="QWidget" name="tab_DAP">
-         <attribute name="title">
-          <string>DAP</string>
-         </attribute>
-            <layout class="QGridLayout" name="gridLayout_2">
-                <property name="leftMargin">
-                    <number>5</number>
-                </property>
-                <property name="topMargin">
-                    <number>5</number>
-                </property>
-                <property name="rightMargin">
-                    <number>5</number>
-                </property>
-                <property name="bottomMargin">
-                    <number>5</number>
-                </property>
-                <item row="0" column="0">
-                    <widget class="QPushButton" name="add_dap">
-                        <property name="text">
-                            <string>Add DAP</string>
-                        </property>
-                    </widget>
-                </item>
-                <item row="0" column="1">
-                    <spacer name="horizontalSpacer_2">
-                        <property name="orientation">
-                            <enum>Qt::Orientation::Horizontal</enum>
-                        </property>
-                        <property name="sizeHint" stdset="0">
-                            <size>
-                                <width>585</width>
-                                <height>20</height>
-                            </size>
-                        </property>
-                    </spacer>
-                </item>
-                <item row="1" column="0" colspan="2">
-                    <widget class="QTableWidget" name="dap_table">
-                        <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
-                            <bool>true</bool>
-                        </attribute>
-                        <attribute name="horizontalHeaderStretchLastSection">
-                            <bool>true</bool>
-                        </attribute>
-                        <column>
-                            <property name="text">
-                                <string>Name</string>
-                            </property>
-                        </column>
-                        <column>
-                            <property name="text">
-                                <string>Entry</string>
-                            </property>
-                        </column>
-                        <column>
-                            <property name="text">
-                                <string>Model</string>
-                            </property>
-                        </column>
-                        <column>
-                            <property name="text">
-                                <string>Color</string>
-                            </property>
-                        </column>
-                        <column>
-                            <property name="text">
-                                <string>Style</string>
-                            </property>
-                        </column>
-                        <column>
-                            <property name="text">
-                                <string>Width</string>
-                            </property>
-                        </column>
-                        <column>
-                            <property name="text">
-                                <string>Symbol Size</string>
-                            </property>
-                        </column>
-                        <column>
-                            <property name="text">
-                                <string>Delete</string>
-                            </property>
-                        </column>
-                    </widget>
-                </item>
-            </layout>
-        </widget>
-        <widget class="QWidget" name="tab_custom">
-         <attribute name="title">
-          <string>Custom</string>
-         </attribute>
         </widget>
        </widget>
       </item>
@@ -332,6 +352,11 @@
    <class>DeviceLineEdit</class>
    <extends>QLineEdit</extends>
    <header>device_line_edit</header>
+  </customwidget>
+  <customwidget>
+   <class>ColormapSelector</class>
+   <extends>QWidget</extends>
+   <header>color_map_selector</header>
   </customwidget>
  </customwidgets>
  <resources/>
