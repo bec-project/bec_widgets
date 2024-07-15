@@ -364,7 +364,7 @@ class BECWaveform(BECPlotBase):
         self.x_axis_mode = {
             "name": x_name,
             "entry": x_entry,
-            readout_priority_x: readout_priority_x,
+            "readout_priority": readout_priority_x,
         }
 
         if len(self.curves) > 0:
@@ -596,8 +596,6 @@ class BECWaveform(BECPlotBase):
             y_name(str): Name of the y signal.
             y_entry(str): Entry of the y signal.
             color(str, optional): Color of the curve. Defaults to None.
-            color_map_z(str): The color map to use for the z-axis.
-            label(str, optional): Label of the curve. Defaults to None.
             dap(str): The dap model to use for the curve.
             validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
             **kwargs: Additional keyword arguments for the curve configuration.
@@ -632,7 +630,6 @@ class BECWaveform(BECPlotBase):
             label=label,
             source="DAP",
             dap=dap,
-            pen_style="dash",
             symbol="star",
             **kwargs,
         )
