@@ -1082,17 +1082,15 @@ class BECWaveform(BECPlotBase):
                             new_data = data_plot
                         if x_name == "timestamp":
                             if x_data is not None:
-                                x_data = np.hstack(
-                                    (x_data, self.convert_timestamps(async_data["timestamp"]))
-                                )
+                                x_data = np.hstack((x_data, async_data["timestamp"]))
                             else:
-                                x_data = self.convert_timestamps(async_data["timestamp"])
+                                x_data = async_data["timestamp"]
                             curve.setData(x_data, new_data)
                         else:
                             curve.setData(new_data)
                     elif instruction == "replace":
                         if x_name == "timestamp":
-                            x_data = self.convert_timestamps(async_data["timestamp"])
+                            x_data = async_data["timestamp"]
                             curve.setData(x_data, data_plot)
                         else:
                             curve.setData(data_plot)
@@ -1112,7 +1110,7 @@ class BECWaveform(BECPlotBase):
                 x_name = curve.config.signals.x.name
 
             if x_name == "timestamp":
-                data_x = self.convert_timestamps(data[y_name][y_entry]["timestamp"])
+                data_x = data[y_name][y_entry]["timestamp"]
             else:
                 data_x = None
             data_y = data[y_name][y_entry]["value"]
@@ -1183,7 +1181,9 @@ class BECWaveform(BECPlotBase):
         x_data = None
         if self._x_axis_mode["name"] == "timestamp":
             timestamps = self.scan_item.data[y_name][y_entry].timestamps
-            x_data = self.convert_timestamps(timestamps)
+
+            x_data = timestamps
+            print(x_data)
             return x_data
         if self._x_axis_mode["name"] == "index":
             x_data = None
@@ -1351,27 +1351,6 @@ class BECWaveform(BECPlotBase):
             )
             return combined_data
         return data
-
-    @staticmethod
-    def convert_timestamps(timestamps: list) -> list:
-        """
-        Convert timestamps to human-readable dates.
-
-        Args:
-            timestamps(list): List of timestamps.
-
-        Returns:
-            list: List of human-readable dates.
-        """
-        human_readable_dates = [
-            datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S.%f")
-            for ts in timestamps
-        ]
-        data2float = [
-            time.mktime(datetime.datetime.strptime(date, "%Y-%m-%d %H:%M:%S.%f").timetuple())
-            for date in human_readable_dates
-        ]
-        return data2float
 
     def clear_all(self):
         curves_data = self._curves_data
