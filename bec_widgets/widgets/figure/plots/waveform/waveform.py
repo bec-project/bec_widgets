@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import datetime
-import time
 from collections import defaultdict
 from typing import Any, Literal, Optional
 
@@ -1200,7 +1198,6 @@ class BECWaveform(BECPlotBase):
             timestamps = self.scan_item.data[y_name][y_entry].timestamps
 
             x_data = timestamps
-            print(x_data)
             return x_data
         if self._x_axis_mode["name"] == "index":
             x_data = None
