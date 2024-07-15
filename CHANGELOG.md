@@ -1,5 +1,39 @@
 # CHANGELOG
 
+## v0.84.0 (2024-07-15)
+
+### Feature
+
+* feat(waveform): async readback update implemented for async devices ([`0c6a9f2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0c6a9f2310df31ddcd68050a17cfbf52c3e2e226))
+
+* feat(waveform): data are taken directly from ScanItem which is defined from scan_status endpoint; scan update is triggered from scan_segment; plots can be added just specifying y_name -&gt; best effort for setting x reported device ([`b8717f1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b8717f13276734dd655ab03cd6005985ad5af9fb))
+
+### Fix
+
+* fix(waveform): timestamp are not converted to human readable format ([`e495fd3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e495fd30c4c16474689943c7263e3060cb09ffb4))
+
+* fix(waveform): set_x method various bugs fixed ([`8516a1d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8516a1d639925a877f174fa13f427a71131cc918))
+
+* fix(waveform): x axis switching logic fixed when axis are not compatible ([`e4e1a90`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e4e1a905d19def22f970b364c18c953f00e10389))
+
+* fix(waveform): dap leaked RID for all daps in current process; dap RID is now f&#34;{scan_id}-{gui_id}&#34; to distinguish for each plot instance ([`d23fd8b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d23fd8bd074ede6e14eb8e85e025cbced4bd45ef))
+
+* fix(waveform): only one type of x axis allowed; x mode validated ([`9d6ae87`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9d6ae87d0f03ca227570fcca8af2d8190828d271))
+
+* fix(waveform): data for axis are taken by separate method; validation consolidated ([`fc5a8bd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fc5a8bdd8b260f5e9b59ec71a4610c57442e43fe))
+
+* fix(bec_dispatcher): connect_slot can accept kwargs ([`0aa317a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0aa317aae58d3612d46f05b85f8b0db3d12bbe14))
+
+### Refactor
+
+* refactor(waveform): plot can be prompted without specifying kwargs ([`48911e9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/48911e934815923c94edb5ced6042058a11a97f5))
+
+* refactor(jupyter_console_window): added more examples of waveforms ([`fc935d9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fc935d9fc81067c3a67389ff88ea97da2e0c903e))
+
+### Test
+
+* test(waveform): tests extended ([`006992e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/006992e43cc56d56261bc4fd3e9cae9abcab2153))
+
 ## v0.83.1 (2024-07-14)
 
 ### Fix
@@ -105,39 +139,3 @@
 * feat(color_button): can get colors in RGBA or HEX ([`9594be2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9594be260680d11c8550ff74ffb8d679e5a5b8f6))
 
 ## v0.80.1 (2024-07-06)
-
-### Fix
-
-* fix(entry_validator): check for entry == &#34;&#34; ([`61de7e9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/61de7e9e221c766b9fb3ec23246da6a11c96a986))
-
-## v0.80.0 (2024-07-06)
-
-### Feature
-
-* feat(qt5): dropped support for qt5; pyside2 and pyqt5 ([`fadbf77`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fadbf77866903beff6580802bc203d53367fc7e7))
-
-* feat(plugins): moved plugin dict to dataclass and container ([`03819a3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/03819a3d902b4a51f3e882d52aedd971b2a8e127))
-
-* feat(plugins): added support for pyqt6 ui files ([`d6d0777`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d6d07771135335cb78dc648508ce573b8970261a))
-
-* feat(plugins): added bec widgets base class ([`1aa83e0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1aa83e0ef1ffe45b01677b0b4590535cb0ca1cff))
-
-## v0.79.3 (2024-07-05)
-
-### Fix
-
-* fix: changed inheritance to adress qt designer bug in rendering ([`e403870`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e403870874bd5e45840a034d6f1b3dd576d9c846))
-
-* fix: add designer plugin classes ([`1586ce2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1586ce2d6cba2bb086b2ef596e724bb9e40ab4f2))
-
-### Refactor
-
-* refactor: simplify logic in bec_status_box ([`576353c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/576353cfe8c6fd64db561f0b6e2bc951300643d3))
-
-## v0.79.2 (2024-07-04)
-
-### Fix
-
-* fix: overwrite closeEvent and call super class ([`bc0ef78`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bc0ef7893ef100b71b62101c459655509b534a56))
-
-## v0.79.1 (2024-07-03)
