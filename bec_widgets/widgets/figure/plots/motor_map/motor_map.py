@@ -518,4 +518,3 @@ class BECMotorMap(BECPlotBase):
     def cleanup(self):
         """Cleanup the widget."""
         self._disconnect_current_motors()
-        super().cleanup()

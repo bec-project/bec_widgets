@@ -10,13 +10,13 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.utils import BECConnector
+from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.scan_control.scan_group_box import ScanGroupBox
 from bec_widgets.widgets.stop_button.stop_button import StopButton
 
 
-class ScanControl(BECConnector, QWidget):
+class ScanControl(BECWidget, QWidget):
 
     def __init__(
         self, parent=None, client=None, gui_id: str | None = None, allowed_scans: list | None = None
@@ -195,10 +195,6 @@ class ScanControl(BECConnector, QWidget):
                 if hasattr(widget, "cleanup"):
                     widget.cleanup()
         super().cleanup()
-
-    def closeEvent(self, event):
-        self.cleanup()
-        return QWidget.closeEvent(self, event)
 
 
 # Application example

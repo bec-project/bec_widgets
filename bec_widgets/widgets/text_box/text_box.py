@@ -3,7 +3,8 @@ import re
 from pydantic import Field, field_validator
 from qtpy.QtWidgets import QTextEdit
 
-from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
+from bec_widgets.utils.bec_connector import ConnectionConfig
+from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import Colors
 
 
@@ -27,7 +28,7 @@ class TextBoxConfig(ConnectionConfig):
     _validate_background_color = field_validator("background_color")(Colors.validate_color)
 
 
-class TextBox(BECConnector, QTextEdit):
+class TextBox(BECWidget, QTextEdit):
 
     USER_ACCESS = ["set_color", "set_text", "set_font_size"]
 

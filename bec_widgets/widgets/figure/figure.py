@@ -12,7 +12,8 @@ from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtWidgets import QWidget
 from typeguard import typechecked
 
-from bec_widgets.utils import BECConnector, ConnectionConfig, WidgetContainerUtils
+from bec_widgets.utils import ConnectionConfig, WidgetContainerUtils
+from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.figure.plots.image.image import BECImageShow, ImageConfig
 from bec_widgets.widgets.figure.plots.motor_map.motor_map import BECMotorMap, MotorMapConfig
@@ -108,7 +109,7 @@ class WidgetHandler:
         return widget
 
 
-class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
+class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
     USER_ACCESS = [
         "_rpc_id",
         "_config_dict",
@@ -728,14 +729,9 @@ class BECFigure(BECConnector, pg.GraphicsLayoutWidget):
         """Clear all widgets from the figure and reset to default state"""
         for widget in list(self._widgets.values()):
             widget.remove()
-        # self.clear()
-        self._widgets = defaultdict(dict)
+        self._widgets.clear()
         self.grid = []
         theme = self.config.theme
         self.config = FigureConfig(
             widget_class=self.__class__.__name__, gui_id=self.gui_id, theme=theme
         )
-
-    # def cleanup(self):
-    #     self.clear_all()
-    #     super().cleanup()

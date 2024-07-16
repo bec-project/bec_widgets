@@ -1,10 +1,10 @@
 from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QPushButton
 
-from bec_widgets.utils import BECConnector
+from bec_widgets.utils.bec_widget import BECWidget
 
 
-class StopButton(BECConnector, QPushButton):
+class StopButton(BECWidget, QPushButton):
     """A button that stops the current scan."""
 
     def __init__(self, parent=None, client=None, config=None, gui_id=None):

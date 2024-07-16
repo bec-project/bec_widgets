@@ -9,7 +9,8 @@ from qtpy.QtCore import Qt
 from qtpy.QtGui import QPainter, QPaintEvent
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.utils import BECConnector, ConnectionConfig, WidgetContainerUtils
+from bec_widgets.utils import ConnectionConfig, WidgetContainerUtils
+from bec_widgets.utils.bec_widget import BECWidget
 
 from .dock import BECDock, DockConfig
 
@@ -21,7 +22,7 @@ class DockAreaConfig(ConnectionConfig):
     )
 
 
-class BECDockArea(BECConnector, DockArea):
+class BECDockArea(BECWidget, DockArea):
     USER_ACCESS = [
         "_config_dict",
         "panels",
@@ -227,6 +228,7 @@ class BECDockArea(BECConnector, DockArea):
         self.attach_all()
         for dock in dict(self.docks).values():
             dock.remove()
+        self.docks.clear()
 
     def cleanup(self):
         """

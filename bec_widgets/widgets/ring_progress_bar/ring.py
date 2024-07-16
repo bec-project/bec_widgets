@@ -288,7 +288,3 @@ class Ring(BECConnector):
         value = msg.get("signals").get(device).get("value")
         self.set_value(value)
         self.parent_progress_widget.update()
-
-    def cleanup(self):
-        self.reset_connection()
-        super().cleanup()

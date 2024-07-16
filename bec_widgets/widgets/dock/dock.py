@@ -6,7 +6,8 @@ from pydantic import Field
 from pyqtgraph.dockarea import Dock
 
 from bec_widgets.cli.rpc_wigdet_handler import widget_handler
-from bec_widgets.utils import BECConnector, ConnectionConfig, GridLayoutManager
+from bec_widgets.utils import ConnectionConfig, GridLayoutManager
+from bec_widgets.utils.bec_widget import BECWidget
 
 if TYPE_CHECKING:
     from qtpy.QtWidgets import QWidget
@@ -24,7 +25,7 @@ class DockConfig(ConnectionConfig):
     )
 
 
-class BECDock(BECConnector, Dock):
+class BECDock(BECWidget, Dock):
     USER_ACCESS = [
         "_config_dict",
         "_rpc_id",
@@ -91,7 +92,7 @@ class BECDock(BECConnector, Dock):
             super().float()
 
     @property
-    def widget_list(self) -> list[BECConnector]:
+    def widget_list(self) -> list[BECWidget]:
         """
         Get the widgets in the dock.
 
@@ -101,7 +102,7 @@ class BECDock(BECConnector, Dock):
         return self.widgets
 
     @widget_list.setter
-    def widget_list(self, value: list[BECConnector]):
+    def widget_list(self, value: list[BECWidget]):
         self.widgets = value
 
     def hide_title_bar(self):
@@ -153,13 +154,13 @@ class BECDock(BECConnector, Dock):
 
     def add_widget(
         self,
-        widget: BECConnector | str,
+        widget: BECWidget | str,
         row=None,
         col=0,
         rowspan=1,
         colspan=1,
         shift: Literal["down", "up", "left", "right"] = "down",
-    ) -> BECConnector:
+    ) -> BECWidget:
         """
         Add a widget to the dock.
 
@@ -236,8 +237,8 @@ class BECDock(BECConnector, Dock):
         Clean up the dock, including all its widgets.
         """
         for widget in self.widgets:
-            if hasattr(widget, "cleanup"):
-                widget.cleanup()
+            widget.cleanup()
+        self.widgets.clear()
         super().cleanup()
 
     def close(self):

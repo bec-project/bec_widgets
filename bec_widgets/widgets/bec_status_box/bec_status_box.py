@@ -13,7 +13,7 @@ from bec_lib.utils.import_utils import lazy_import_from
 from qtpy.QtCore import QObject, QTimer, Signal, Slot
 from qtpy.QtWidgets import QHBoxLayout, QTreeWidget, QTreeWidgetItem, QWidget
 
-from bec_widgets.utils.bec_connector import BECConnector
+from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.bec_status_box.status_item import StatusItem
 
@@ -57,7 +57,7 @@ class BECServiceStatusMixin(QObject):
         self.services_update.emit(self.client._services_info, self.client._services_metric)
 
 
-class BECStatusBox(BECConnector, QWidget):
+class BECStatusBox(BECWidget, QWidget):
     """An autonomous widget to display the status of BEC services.
 
     Args:
@@ -289,15 +289,6 @@ class BECStatusBox(BECConnector, QWidget):
         for _, objects in self.status_container.items():
             if objects["item"] == item:
                 objects["widget"].show_popup()
-
-    def closeEvent(self, event):
-        """Upon closing the widget, clean up the BECStatusBox and the QWidget.
-
-        Args:
-            event: The close event.
-        """
-        super().cleanup()
-        super().closeEvent(event)
 
 
 def main():

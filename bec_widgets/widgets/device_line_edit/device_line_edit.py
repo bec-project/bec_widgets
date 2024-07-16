@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from qtpy.QtCore import QSize
 from qtpy.QtWidgets import QCompleter, QLineEdit, QSizePolicy
 
+from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.base_classes.device_input_base import DeviceInputBase, DeviceInputConfig
 
 if TYPE_CHECKING:
@@ -33,8 +34,8 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
         default: str | None = None,
         arg_name: str | None = None,
     ):
+        super().__init__(client=client, config=config, gui_id=gui_id)
         QLineEdit.__init__(self, parent=parent)
-        DeviceInputBase.__init__(self, client=client, config=config, gui_id=gui_id)
 
         self.completer = QCompleter(self)
         self.setCompleter(self.completer)
@@ -94,11 +95,3 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
         if device_obj is None:
             raise ValueError(f"Device {device_name} is not found.")
         return device_obj
-
-    def cleanup(self):
-        """Cleanup the widget."""
-        super().cleanup()
-
-    def closeEvent(self, event):
-        super().cleanup()
-        return QLineEdit.closeEvent(self, event)

@@ -2,10 +2,11 @@ from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import Qt, Slot
 from qtpy.QtWidgets import QHeaderView, QTableWidget, QTableWidgetItem, QWidget
 
-from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
+from bec_widgets.utils.bec_connector import ConnectionConfig
+from bec_widgets.utils.bec_widget import BECWidget
 
 
-class BECQueue(BECConnector, QTableWidget):
+class BECQueue(BECWidget, QTableWidget):
     """
     Widget to display the BEC queue.
     """

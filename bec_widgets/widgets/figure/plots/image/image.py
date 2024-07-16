@@ -596,7 +596,4 @@ class BECImageShow(BECPlotBase):
             self.bec_dispatcher.disconnect_slot(
                 self.on_image_update, MessageEndpoints.device_monitor(monitor)
             )
-        for image in self.images:
-            image.cleanup()
-
-        super().cleanup()
+        self.images.clear()

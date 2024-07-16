@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 
 from qtpy.QtWidgets import QComboBox
 
+from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.base_classes.device_input_base import DeviceInputBase, DeviceInputConfig
 
 if TYPE_CHECKING:
@@ -82,11 +83,3 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         if device_obj is None:
             raise ValueError(f"Device {device_name} is not found.")
         return device_obj
-
-    def cleanup(self):
-        """Cleanup the widget."""
-        super().cleanup()
-
-    def closeEvent(self, event):
-        super().cleanup()
-        return QComboBox.closeEvent(self, event)

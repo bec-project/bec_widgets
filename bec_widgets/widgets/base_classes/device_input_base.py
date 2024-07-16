@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from bec_widgets.utils import BECConnector, ConnectionConfig
+from bec_widgets.utils import ConnectionConfig
+from bec_widgets.utils.bec_widget import BECWidget
 
 
 class DeviceInputConfig(ConnectionConfig):
@@ -9,7 +10,7 @@ class DeviceInputConfig(ConnectionConfig):
     arg_name: str | None = None
 
 
-class DeviceInputBase(BECConnector):
+class DeviceInputBase(BECWidget):
     """
     Mixin class for device input widgets. This class provides methods to get the device list and device object based
     on the current text of the widget.
@@ -120,6 +121,3 @@ class DeviceInputBase(BECConnector):
         """
         if device not in self.get_device_list(self.config.device_filter):
             raise ValueError(f"Device {device} is not valid.")
-
-    def cleanup(self):
-        super().cleanup()

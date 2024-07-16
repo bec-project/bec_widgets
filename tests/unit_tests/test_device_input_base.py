@@ -1,13 +1,19 @@
 import pytest
+from qtpy.QtWidgets import QWidget
 
 from bec_widgets.widgets.base_classes.device_input_base import DeviceInputBase
 
 from .client_mocks import mocked_client
 
 
+# DeviceInputBase is meant to be mixed in a QWidget
+class DeviceInputWidget(DeviceInputBase, QWidget):
+    pass
+
+
 @pytest.fixture
 def device_input_base(mocked_client):
-    widget = DeviceInputBase(client=mocked_client)
+    widget = DeviceInputWidget(client=mocked_client)
     yield widget
 
 
@@ -15,7 +21,7 @@ def test_device_input_base_init(device_input_base):
     assert device_input_base is not None
     assert device_input_base.client is not None
     assert isinstance(device_input_base, DeviceInputBase)
-    assert device_input_base.config.widget_class == "DeviceInputBase"
+    assert device_input_base.config.widget_class == "DeviceInputWidget"
     assert device_input_base.config.device_filter is None
     assert device_input_base.config.default is None
     assert device_input_base.devices == []
@@ -23,12 +29,12 @@ def test_device_input_base_init(device_input_base):
 
 def test_device_input_base_init_with_config(mocked_client):
     config = {
-        "widget_class": "DeviceInputBase",
+        "widget_class": "DeviceInputWidget",
         "gui_id": "test_gui_id",
         "device_filter": "FakePositioner",
         "default": "samx",
     }
-    widget = DeviceInputBase(client=mocked_client, config=config)
+    widget = DeviceInputWidget(client=mocked_client, config=config)
     assert widget.config.gui_id == "test_gui_id"
     assert widget.config.device_filter == "FakePositioner"
     assert widget.config.default == "samx"

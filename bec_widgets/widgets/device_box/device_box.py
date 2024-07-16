@@ -8,11 +8,11 @@ from qtpy.QtGui import QDoubleValidator
 from qtpy.QtWidgets import QDoubleSpinBox, QVBoxLayout, QWidget
 
 from bec_widgets.utils import UILoader
-from bec_widgets.utils.bec_connector import BECConnector
+from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 
 
-class DeviceBox(BECConnector, QWidget):
+class DeviceBox(BECWidget, QWidget):
     device_changed = Signal(str, str)
 
     def __init__(self, parent=None, device=None, *args, **kwargs):

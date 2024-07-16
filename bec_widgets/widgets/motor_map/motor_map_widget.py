@@ -6,7 +6,7 @@ from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.qt_utils.settings_dialog import SettingsDialog
 from bec_widgets.qt_utils.toolbar import ModularToolBar
-from bec_widgets.utils import BECConnector
+from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.figure.plots.motor_map.motor_map import MotorMapConfig
 from bec_widgets.widgets.motor_map.motor_map_dialog.motor_map_settings import MotorMapSettings
@@ -18,7 +18,7 @@ from bec_widgets.widgets.motor_map.motor_map_dialog.motor_map_toolbar import (
 )
 
 
-class BECMotorMapWidget(BECConnector, QWidget):
+class BECMotorMapWidget(BECWidget, QWidget):
     USER_ACCESS = [
         "change_motors",
         "set_max_points",
@@ -207,10 +207,6 @@ class BECMotorMapWidget(BECConnector, QWidget):
         self.toolbar.widgets["motor_x"].device_combobox.cleanup()
         self.toolbar.widgets["motor_y"].device_combobox.cleanup()
         return super().cleanup()
-
-    def closeEvent(self, event):
-        self.cleanup()
-        QWidget().closeEvent(event)
 
 
 def main():  # pragma: no cover

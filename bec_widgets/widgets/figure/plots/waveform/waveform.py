@@ -1368,6 +1368,4 @@ class BECWaveform(BECPlotBase):
                 self.on_async_readback,
                 MessageEndpoints.device_async_readback(self.scan_id, curve_id),
             )
-        for curve in self.curves:
-            curve.cleanup()
-        super().cleanup()
+        self.curves.clear()

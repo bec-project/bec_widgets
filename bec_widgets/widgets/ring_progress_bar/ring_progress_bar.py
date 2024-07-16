@@ -10,7 +10,8 @@ from qtpy import QtCore, QtGui
 from qtpy.QtCore import QSize, Slot
 from qtpy.QtWidgets import QSizePolicy, QWidget
 
-from bec_widgets.utils import BECConnector, Colors, ConnectionConfig, EntryValidator
+from bec_widgets.utils import Colors, ConnectionConfig, EntryValidator
+from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.ring_progress_bar.ring import Ring, RingConfig
 
 
@@ -66,7 +67,7 @@ class RingProgressBarConfig(ConnectionConfig):
     _validate_colormap = field_validator("color_map")(Colors.validate_color_map)
 
 
-class RingProgressBar(BECConnector, QWidget):
+class RingProgressBar(BECWidget, QWidget):
     USER_ACCESS = [
         "_get_all_rpc",
         "_rpc_id",
@@ -208,7 +209,7 @@ class RingProgressBar(BECConnector, QWidget):
             index(int): Index of the progress bar to remove.
         """
         ring = self._find_ring_by_index(index)
-        ring.cleanup()
+        ring.reset_connection()
         self._rings.remove(ring)
         self.config.rings.remove(ring.config)
         self.config.num_bars -= 1
@@ -622,9 +623,8 @@ class RingProgressBar(BECConnector, QWidget):
 
     def clear_all(self):
         for ring in self._rings:
-            ring.cleanup()
-            del ring
-            self._rings = []
+            ring.reset_connection()
+        self._rings.clear()
         self.update()
         self.initialize_bars()
 
@@ -633,6 +633,6 @@ class RingProgressBar(BECConnector, QWidget):
             self.on_scan_queue_status, MessageEndpoints.scan_queue_status()
         )
         for ring in self._rings:
-            ring.cleanup()
-            del ring
+            ring.reset_connection()
+        self._rings.clear()
         super().cleanup()
