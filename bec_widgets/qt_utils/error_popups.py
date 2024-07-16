@@ -5,6 +5,37 @@ from qtpy.QtCore import QObject, Qt, Signal, Slot
 from qtpy.QtWidgets import QApplication, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
 
+class WarningPopupUtility(QObject):
+    """
+    Utility class to show warning popups in the application.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    @Slot(str, str, str, QWidget)
+    def show_warning_message(self, title, message, detailed_text, widget):
+        msg = QMessageBox(widget)
+        msg.setIcon(QMessageBox.Warning)
+        msg.setWindowTitle(title)
+        msg.setText(message)
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.setDetailedText(detailed_text)
+        msg.exec_()
+
+    def show_warning(self, title: str, message: str, detailed_text: str, widget: QWidget = None):
+        """
+        Show a warning message with the given title, message, and detailed text.
+
+        Args:
+            title (str): The title of the warning message.
+            message (str): The main text of the warning message.
+            detailed_text (str): The detailed text to show when the user expands the message.
+            widget (QWidget): The parent widget for the message box.
+        """
+        self.show_warning_message(title, message, detailed_text, widget)
+
+
 class ErrorPopupUtility(QObject):
     """
     Utility class to manage error popups in the application to show error messages to the users.
@@ -137,6 +168,7 @@ class ExampleWidget(QWidget):  # pragma: no cover
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         self.init_ui()
+        self.warning_utility = WarningPopupUtility(self)
 
     def init_ui(self):
         self.layout = QVBoxLayout(self)
@@ -151,6 +183,11 @@ class ExampleWidget(QWidget):  # pragma: no cover
         self.normal_button.clicked.connect(self.method_without_error_handling)
         self.layout.addWidget(self.normal_button)
 
+        # Button to trigger warning popup
+        self.warning_button = QPushButton("Trigger Warning", self)
+        self.warning_button.clicked.connect(self.trigger_warning)
+        self.layout.addWidget(self.warning_button)
+
     @error_managed
     def method_with_error_handling(self):
         """This method raises an error and the exception is handled by the decorator."""
@@ -159,6 +196,15 @@ class ExampleWidget(QWidget):  # pragma: no cover
     def method_without_error_handling(self):
         """This method raises an error and the exception is not handled here."""
         raise ValueError("This is an unhandled error.")
+
+    def trigger_warning(self):
+        """Trigger a warning using the WarningPopupUtility."""
+        self.warning_utility.show_warning(
+            title="Warning",
+            message="This is a warning message.",
+            detailed_text="This is the detailed text of the warning message.",
+            widget=self,
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover
