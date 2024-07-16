@@ -3,7 +3,7 @@ from collections import defaultdict
 
 # pylint: disable=no-name-in-module
 from qtpy.QtCore import QSize
-from qtpy.QtWidgets import QToolBar, QWidget
+from qtpy.QtWidgets import QToolBar, QToolButton, QWidget
 
 
 class ToolBarAction(ABC):
@@ -15,6 +15,15 @@ class ToolBarAction(ABC):
             toolbar (QToolBar): The toolbar to add the action or widget to.
             target (QWidget): The target widget for the action.
         """
+
+
+class SeparatorAction(ToolBarAction):
+    """Separator action for the toolbar."""
+
+    def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
+        self.separator = QToolButton()
+        self.separator.setFixedSize(2, 22)
+        toolbar.addWidget(self.separator)
 
 
 class ModularToolBar(QToolBar):
