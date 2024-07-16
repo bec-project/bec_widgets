@@ -13,6 +13,7 @@ from qtpy.QtCore import QObject, QRunnable, QThreadPool, Signal
 from qtpy.QtCore import Slot as pyqtSlot
 
 from bec_widgets.cli.rpc_register import RPCRegister
+from bec_widgets.qt_utils.error_popups import ErrorPopupUtility
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.yaml_dialog import load_yaml, load_yaml_gui, save_yaml, save_yaml_gui
 
@@ -93,6 +94,9 @@ class BECConnector(BECWidget):
         # register widget to rpc register
         self.rpc_register = RPCRegister()
         self.rpc_register.add_rpc(self)
+
+        # Error popups
+        self.error_utility = ErrorPopupUtility()
 
         self._thread_pool = QThreadPool.globalInstance()
 
