@@ -3,19 +3,18 @@ from __future__ import annotations
 import os
 from typing import Literal
 
-from pydantic import BaseModel
 from PySide6.QtCore import QObject
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QComboBox, QLineEdit, QPushButton, QSpinBox, QTableWidget
+from pydantic import BaseModel
 from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QVBoxLayout
 
+from bec_widgets.qt_utils.error_popups import WarningPopupUtility
 from bec_widgets.qt_utils.settings_dialog import SettingWidget
-from bec_widgets.utils import BECConnector, Colors, UILoader
+from bec_widgets.utils import Colors, UILoader
 from bec_widgets.widgets.color_button.color_button import ColorButton
 from bec_widgets.widgets.device_line_edit.device_line_edit import DeviceLineEdit
-from bec_widgets.widgets.figure.plots.plot_base import AxisConfig
-from bec_widgets.widgets.figure.plots.waveform.waveform_curve import CurveConfig
 
 
 class CurveSettings(SettingWidget):
@@ -24,6 +23,8 @@ class CurveSettings(SettingWidget):
         current_path = os.path.dirname(__file__)
 
         self.ui = UILoader(self).loader(os.path.join(current_path, "curve_dialog.ui"))
+
+        self.warning_util = WarningPopupUtility(self)
 
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.ui)
@@ -86,6 +87,12 @@ class CurveSettings(SettingWidget):
             self.ui.x_entry.setEnabled(False)
             self.ui.dap_table.setEnabled(False)
             self.ui.add_dap.setEnabled(False)
+            if self.ui.dap_table.rowCount() > 0:
+                self.warning_util.show_warning(
+                    title="DAP Warning",
+                    message="DAP is not supported without specific x-axis device. All current DAP curves will be removed.",
+                    detailed_text=f"Affected curves: {[self.ui.dap_table.cellWidget(row, 0).text() for row in range(self.ui.dap_table.rowCount())]}",
+                )
         else:
             self.ui.x_name.setEnabled(True)
             self.ui.x_entry.setEnabled(True)
@@ -148,6 +155,7 @@ class CurveSettings(SettingWidget):
             )
 
         if x_mode not in ["index", "timestamp", "best_effort"]:
+
             for row in range(self.ui.dap_table.rowCount()):
                 y_name = self.ui.dap_table.cellWidget(row, 0).text()
                 y_entry = self.ui.dap_table.cellWidget(row, 1).text()
