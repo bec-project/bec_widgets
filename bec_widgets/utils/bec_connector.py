@@ -15,7 +15,6 @@ from qtpy.QtWidgets import QApplication
 
 from bec_widgets.cli.rpc_register import RPCRegister
 from bec_widgets.qt_utils.error_popups import ErrorPopupUtility
-from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.yaml_dialog import load_yaml, load_yaml_gui, save_yaml, save_yaml_gui
 
 BECDispatcher = lazy_import_from("bec_widgets.utils.bec_dispatcher", ("BECDispatcher",))
