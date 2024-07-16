@@ -8,7 +8,7 @@ from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.qt_utils.error_popups import error_managed
 from bec_widgets.qt_utils.settings_dialog import SettingsDialog
-from bec_widgets.qt_utils.toolbar import ModularToolBar
+from bec_widgets.qt_utils.toolbar import ModularToolBar, SeparatorAction
 from bec_widgets.utils import BECConnector
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.figure.plots.axis_settings import AxisSettings
@@ -67,9 +67,10 @@ class BECWaveformWidget(BECConnector, QWidget):
         self.fig = BECFigure()
         self.toolbar = ModularToolBar(
             actions={
-                # "connect": ConnectAction(),
+                "separator_1": SeparatorAction(),
                 "curves": CurveAction(),
                 "axis_settings": SettingsAction(),
+                "separator_2": SeparatorAction(),
                 "import": ImportAction(),
                 "export": ExportAction(),
             },

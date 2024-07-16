@@ -3,18 +3,19 @@ from __future__ import annotations
 import os
 from typing import Literal
 
-from PySide6.QtCore import QObject
-from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QComboBox, QLineEdit, QPushButton, QSpinBox, QTableWidget
 from pydantic import BaseModel
-from qtpy.QtCore import Slot
-from qtpy.QtWidgets import QVBoxLayout
+from qtpy.QtCore import QObject, QSize, Slot
+from qtpy.QtGui import QIcon
+from qtpy.QtWidgets import QComboBox, QLineEdit, QPushButton, QSpinBox, QTableWidget, QVBoxLayout
 
+import bec_widgets
 from bec_widgets.qt_utils.error_popups import WarningPopupUtility
 from bec_widgets.qt_utils.settings_dialog import SettingWidget
 from bec_widgets.utils import Colors, UILoader
 from bec_widgets.widgets.color_button.color_button import ColorButton
 from bec_widgets.widgets.device_line_edit.device_line_edit import DeviceLineEdit
+
+MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
 class CurveSettings(SettingWidget):
@@ -23,6 +24,7 @@ class CurveSettings(SettingWidget):
         current_path = os.path.dirname(__file__)
 
         self.ui = UILoader(self).loader(os.path.join(current_path, "curve_dialog.ui"))
+        self._setup_icons()
 
         self.warning_util = WarningPopupUtility(self)
 
@@ -34,6 +36,16 @@ class CurveSettings(SettingWidget):
         self.ui.x_mode.currentIndexChanged.connect(self.set_x_mode)
         self.ui.normalize_colors_scan.clicked.connect(lambda: self.change_colormap("scan"))
         self.ui.normalize_colors_dap.clicked.connect(lambda: self.change_colormap("dap"))
+
+    def _setup_icons(self):
+        add_icon = QIcon()
+        add_icon.addFile(
+            os.path.join(MODULE_PATH, "assets", "toolbar_icons", "add.svg"), size=QSize(20, 20)
+        )
+        self.ui.add_dap.setIcon(add_icon)
+        self.ui.add_dap.setToolTip("Add DAP Curve")
+        self.ui.add_curve.setIcon(add_icon)
+        self.ui.add_curve.setToolTip("Add Scan Curve")
 
     @Slot(dict)
     def display_current_settings(self, config: dict | BaseModel):
@@ -323,6 +335,5 @@ class StyleComboBox(QComboBox):
 class RemoveButton(QPushButton):
     def __init__(self, parent=None):
         super().__init__(parent)
-        current_path = os.path.dirname(__file__)
-        icon_path = os.path.join(current_path, "remove.svg")
+        icon_path = os.path.join(MODULE_PATH, "assets", "toolbar_icons", "remove.svg")
         self.setIcon(QIcon(icon_path))

@@ -171,8 +171,11 @@
           </property>
           <item row="0" column="0">
            <widget class="QPushButton" name="add_curve">
+               <property name="toolTip">
+                   <string/>
+               </property>
             <property name="text">
-             <string>Add Curve</string>
+                <string/>
             </property>
            </widget>
           </item>
@@ -360,7 +363,7 @@
           <item row="0" column="0">
            <widget class="QPushButton" name="add_dap">
             <property name="text">
-             <string>Add DAP</string>
+                <string/>
             </property>
            </widget>
           </item>

@@ -202,7 +202,8 @@ def main():
             module_path = os.path.dirname(bec_widgets.__file__)
             icon = QIcon()
             icon.addFile(
-                os.path.join(module_path, "assets", "bec_widgets_icon.png"), size=QSize(48, 48)
+                os.path.join(module_path, "assets", "app_icons", "bec_widgets_icon.png"),
+                size=QSize(48, 48),
             )
             app.setWindowIcon(icon)
 

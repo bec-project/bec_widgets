@@ -201,7 +201,9 @@ if __name__ == "__main__":  # pragma: no cover
     app.setApplicationDisplayName("Jupyter Console")
     apply_theme("dark")
     icon = QIcon()
-    icon.addFile(os.path.join(module_path, "assets", "terminal_icon.png"), size=QSize(48, 48))
+    icon.addFile(
+        os.path.join(module_path, "assets", "app_icons", "terminal_icon.png"), size=QSize(48, 48)
+    )
     app.setWindowIcon(icon)
 
     bec_dispatcher = BECDispatcher()
