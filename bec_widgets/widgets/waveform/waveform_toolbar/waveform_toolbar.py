@@ -9,6 +9,16 @@ from bec_widgets.qt_utils.toolbar import ToolBarAction
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
+class SaveAction(ToolBarAction):
+    def add_to_toolbar(self, toolbar, target):
+        icon = QIcon()
+        icon.addFile(
+            os.path.join(MODULE_PATH, "assets", "toolbar_icons", "save.svg"), size=QSize(20, 20)
+        )
+        self.action = QAction(icon, "Open Export Dialog", target)
+        toolbar.addAction(self.action)
+
+
 class CurveAction(ToolBarAction):
     def add_to_toolbar(self, toolbar, target):
         icon = QIcon()

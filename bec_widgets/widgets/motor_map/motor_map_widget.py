@@ -28,6 +28,7 @@ class BECMotorMapWidget(BECWidget, QWidget):
         "set_scatter_size",
         "get_data",
         "reset_history",
+        "export",
     ]
 
     def __init__(
@@ -201,6 +202,12 @@ class BECMotorMapWidget(BECWidget, QWidget):
             scatter_size(int): Scatter size of the motor map.
         """
         self.map.set_scatter_size(scatter_size)
+
+    def export(self):
+        """
+        Show the export dialog for the motor map.
+        """
+        self.map.export()
 
     def cleanup(self):
         self.fig.cleanup()

@@ -4,6 +4,7 @@ from typing import Literal, Optional
 
 import pyqtgraph as pg
 from pydantic import BaseModel, Field
+from pyqtgraph.GraphicsScene.exportDialog import ExportDialog
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils import BECConnector, ConnectionConfig
@@ -54,6 +55,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         "set_y_lim",
         "set_grid",
         "lock_aspect_ratio",
+        "export",
         "remove",
         "set_legend_label_size",
     ]
@@ -289,6 +291,12 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
             lock(bool): True to lock, False to unlock.
         """
         self.plot_item.setAspectLocked(lock)
+
+    def export(self):
+        """Show the Export Dialog of the plot widget."""
+        scene = self.plot_item.scene()
+        scene.contextMenuItem = self.plot_item
+        scene.showExportDialog()
 
     def remove(self):
         """Remove the plot widget from the figure."""

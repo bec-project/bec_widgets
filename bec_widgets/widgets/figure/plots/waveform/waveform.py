@@ -66,6 +66,7 @@ class BECWaveform(BECPlotBase):
         "set_grid",
         "set_colormap",
         "lock_aspect_ratio",
+        "export",
         "remove",
         "clear_all",
         "set_legend_label_size",

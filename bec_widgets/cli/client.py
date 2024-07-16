@@ -616,6 +616,12 @@ class BECFigure(RPCBase):
         """
 
     @rpc_call
+    def export(self):
+        """
+        Export the plot widget.
+        """
+
+    @rpc_call
     def clear_all(self):
         """
         Clear all widgets from the figure and reset to default state
@@ -1098,6 +1104,12 @@ class BECImageShow(RPCBase):
         """
 
     @rpc_call
+    def export(self):
+        """
+        Show the Export Dialog of the plot widget.
+        """
+
+    @rpc_call
     def remove(self):
         """
         Remove the plot widget from the figure.
@@ -1206,6 +1218,12 @@ class BECMotorMap(RPCBase):
         """
 
     @rpc_call
+    def export(self):
+        """
+        Show the Export Dialog of the plot widget.
+        """
+
+    @rpc_call
     def remove(self):
         """
         Remove the plot widget from the figure.
@@ -1297,6 +1315,12 @@ class BECMotorMapWidget(RPCBase):
     def reset_history(self) -> "None":
         """
         Reset the history of the motor map.
+        """
+
+    @rpc_call
+    def export(self):
+        """
+        Show the export dialog for the motor map.
         """
 
 
@@ -1425,6 +1449,12 @@ class BECPlotBase(RPCBase):
 
         Args:
             lock(bool): True to lock, False to unlock.
+        """
+
+    @rpc_call
+    def export(self):
+        """
+        Show the Export Dialog of the plot widget.
         """
 
     @rpc_call
@@ -1774,6 +1804,12 @@ class BECWaveform(RPCBase):
         """
 
     @rpc_call
+    def export(self):
+        """
+        Show the Export Dialog of the plot widget.
+        """
+
+    @rpc_call
     def remove(self):
         """
         Remove the plot widget from the figure.
@@ -1806,38 +1842,15 @@ class BECWaveformWidget(RPCBase):
         """
 
     @rpc_call
-    def plot(widget, *args, **kwargs):
+    def plot(*args, **kwargs):
         """
         None
         """
 
     @rpc_call
-    def add_dap(
-        self,
-        x_name: "str",
-        y_name: "str",
-        x_entry: "str | None" = None,
-        y_entry: "str | None" = None,
-        color: "str | None" = None,
-        dap: "str" = "GaussianModel",
-        validate_bec: "bool" = True,
-        **kwargs,
-    ) -> "BECCurve":
+    def add_dap(*args, **kwargs):
         """
-        Add LMFIT dap model curve to the plot widget.
-
-        Args:
-            x_name(str): Name of the x signal.
-            x_entry(str): Entry of the x signal.
-            y_name(str): Name of the y signal.
-            y_entry(str): Entry of the y signal.
-            color(str, optional): Color of the curve. Defaults to None.
-            dap(str): The dap model to use for the curve.
-            validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
-            **kwargs: Additional keyword arguments for the curve configuration.
-
-        Returns:
-            BECCurve: The curve object.
+        None
         """
 
     @rpc_call
@@ -1989,6 +2002,12 @@ class BECWaveformWidget(RPCBase):
 
         Args:
             lock(bool): Lock the aspect ratio.
+        """
+
+    @rpc_call
+    def export(self):
+        """
+        Show the export dialog for the plot widget.
         """
 
 

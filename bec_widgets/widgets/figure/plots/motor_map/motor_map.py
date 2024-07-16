@@ -58,6 +58,7 @@ class BECMotorMap(BECPlotBase):
         "set_background_value",
         "set_scatter_size",
         "get_data",
+        "export",
         "remove",
         "reset_history",
     ]

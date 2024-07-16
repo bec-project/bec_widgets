@@ -43,6 +43,7 @@ class BECWaveformWidget(BECConnector, QWidget):
         "set_legend_label_size",
         "set_grid",
         "lock_aspect_ratio",
+        "export",
     ]
 
     def __init__(
@@ -67,6 +68,7 @@ class BECWaveformWidget(BECConnector, QWidget):
         self.fig = BECFigure()
         self.toolbar = ModularToolBar(
             actions={
+                "save": SaveAction(),
                 "separator_1": SeparatorAction(),
                 "curves": CurveAction(),
                 "axis_settings": SettingsAction(),
@@ -93,6 +95,7 @@ class BECWaveformWidget(BECConnector, QWidget):
         self.plot(x_name="samx", y_name="bpm6i")
 
     def _hook_actions(self):
+        self.toolbar.widgets["save"].action.triggered.connect(self.export)
         self.toolbar.widgets["curves"].action.triggered.connect(self.show_curve_settings)
         self.toolbar.widgets["axis_settings"].action.triggered.connect(self.show_axis_settings)
         self.toolbar.widgets["import"].action.triggered.connect(
@@ -457,6 +460,12 @@ class BECWaveformWidget(BECConnector, QWidget):
             lock(bool): Lock the aspect ratio.
         """
         self.waveform.lock_aspect_ratio(lock)
+
+    def export(self):
+        """
+        Show the export dialog for the plot widget.
+        """
+        self.waveform.export()
 
     #######################################
     # User Access Methods from BECConnector

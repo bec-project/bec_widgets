@@ -122,6 +122,7 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
         "remove",
         "change_layout",
         "change_theme",
+        "export",
         "clear_all",
         "widget_list",
     ]
@@ -227,6 +228,17 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
             dict: All widgets within the figure.
         """
         self._widgets = value
+
+    def export(self):
+        """Export the plot widget."""
+        try:
+            plot_item = self.widget_list[0]
+        except:
+            raise ValueError("No plot widget available to export.")
+
+        scene = plot_item.scene()
+        scene.contextMenuItem = plot_item
+        scene.showExportDialog()
 
     @typechecked
     def plot(
