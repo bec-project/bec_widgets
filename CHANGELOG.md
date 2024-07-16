@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.85.0 (2024-07-16)
+
+### Feature
+
+* feat(color_map_selector): added colormap selector with plugin ([`b98fd00`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b98fd00adef97adf57f49b60ade99972b9f5a6bc))
+
 ## v0.84.0 (2024-07-15)
 
 ### Feature
@@ -133,9 +139,3 @@
 * fix(motor_control): temporary remove of motor control widgets ([`99114f1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/99114f14f62202e1fd8bf145616fa8c69937ada4))
 
 ## v0.81.0 (2024-07-06)
-
-### Feature
-
-* feat(color_button): can get colors in RGBA or HEX ([`9594be2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9594be260680d11c8550ff74ffb8d679e5a5b8f6))
-
-## v0.80.1 (2024-07-06)
