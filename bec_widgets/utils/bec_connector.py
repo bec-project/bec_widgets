@@ -11,6 +11,7 @@ from bec_lib.utils.import_utils import lazy_import_from
 from pydantic import BaseModel, Field, field_validator
 from qtpy.QtCore import QObject, QRunnable, QThreadPool, Signal
 from qtpy.QtCore import Slot as pyqtSlot
+from qtpy.QtWidgets import QApplication
 
 from bec_widgets.cli.rpc_register import RPCRegister
 from bec_widgets.qt_utils.error_popups import ErrorPopupUtility
@@ -65,15 +66,29 @@ class Worker(QRunnable):
         self.signals.completed.emit()
 
 
-class BECConnector(BECWidget):
-    """Connection mixin class for all BEC widgets, to handle BEC client and device manager"""
+class BECConnector:
+    """Connection mixin class to handle BEC client and device manager"""
 
     USER_ACCESS = ["_config_dict", "_get_all_rpc"]
+    EXIT_HANDLERS = {}
 
     def __init__(self, client=None, config: ConnectionConfig = None, gui_id: str = None):
         # BEC related connections
         self.bec_dispatcher = BECDispatcher(client=client)
         self.client = self.bec_dispatcher.client if client is None else client
+
+        if not self.client in BECConnector.EXIT_HANDLERS:
+            # register function to clean connections at exit;
+            # the function depends on BECClient, and BECDispatcher
+            @pyqtSlot()
+            def terminate(client=self.client, dispatcher=self.bec_dispatcher):
+                print("Disconnecting", repr(dispatcher))
+                dispatcher.disconnect_all()
+                print("Shutting down BEC Client", repr(client))
+                client.shutdown()
+
+            BECConnector.EXIT_HANDLERS[self.client] = terminate
+            QApplication.instance().aboutToQuit.connect(terminate)
 
         if config:
             self.config = config
@@ -92,6 +107,8 @@ class BECConnector(BECWidget):
             self.gui_id = self.config.gui_id
 
         # register widget to rpc register
+        # be careful: when registering, and the object is not a BECWidget,
+        # cleanup has to called manually since there is no 'closeEvent'
         self.rpc_register = RPCRegister()
         self.rpc_register.add_rpc(self)
 
@@ -284,18 +301,3 @@ class BECConnector(BECWidget):
             return self.config.model_dump()
         else:
             return self.config
-
-    def cleanup(self):
-        """Cleanup the widget."""
-        self.rpc_register.remove_rpc(self)
-        all_connections = self.rpc_register.list_all_connections()
-        if len(all_connections) == 0:
-            print("No more connections. Shutting down GUI BEC client.")
-            self.bec_dispatcher.disconnect_all()
-            self.client.shutdown()
-        if hasattr(super(), "cleanup"):
-            super().cleanup()
-
-    # def closeEvent(self, event):
-    #     self.cleanup()
-    #     super().closeEvent(event)
