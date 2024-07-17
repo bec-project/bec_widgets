@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v0.87.0 (2024-07-17)
+
+### Feature
+
+* feat(qt_utils): added warning utility with simple API to setup warning message ([`787f749`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/787f74949bac27aaa51cbb43911919071481707c))
+
+* feat(qt_utils): added error handle utility with popup messageBoxes ([`196ef7a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/196ef7afe11a1b5dcc536f8859dc3b6044ea628e))
+
+### Unknown
+
+* tests: add unit tests for error and warning message boxes ([`8f104cf`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8f104cf4024d3a4516e6aba5daa8fb78c85e2bfd))
+
 ## v0.86.0 (2024-07-17)
 
 ### Feature
@@ -131,11 +143,3 @@
 ### Refactor
 
 * refactor(device_input): DeviceComboBox and DeviceLineEdit moved to top layer of widgets ([`f048629`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f04862933f049030554086adef3ec9e1aebd3eda))
-
-* refactor(stop_button): moved to top layer, plugin added ([`f5b8375`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f5b8375fd36e3bb681de571da86a6c0bdb3cb6f0))
-
-* refactor(motor_map_widget): removed restriction of only PySide6 for widget ([`db1cdf4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/db1cdf42806fef6d7c6d2db83528f32df3f9751d))
-
-* refactor(color_button): ColorButton moved to top level of widgets ([`fa1e86f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fa1e86ff07b25d2c47c73117b00765b8e2f25da4))
-
-## v0.81.2 (2024-07-07)
