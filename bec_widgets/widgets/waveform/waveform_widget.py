@@ -78,9 +78,9 @@ class BECWaveformWidget(BECConnector, QWidget):
                 "curves": CurveAction(),
                 "fit_params": FitParamsAction(),
                 "axis_settings": SettingsAction(),
-                "separator_2": SeparatorAction(),
-                "import": ImportAction(),
-                "export": ExportAction(),
+                # "separator_2": SeparatorAction(),
+                # "import": ImportAction(),
+                # "export": ExportAction(),
             },
             target_widget=self,
         )
