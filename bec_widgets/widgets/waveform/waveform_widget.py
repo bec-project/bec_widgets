@@ -75,10 +75,12 @@ class BECWaveformWidget(BECConnector, QWidget):
                 "save": SaveAction(),
                 "matplotlib": MatplotlibAction(),
                 "separator_1": SeparatorAction(),
+                "auto_range": AutoRangeAction(),
+                "separator_2": SeparatorAction(),
                 "curves": CurveAction(),
                 "fit_params": FitParamsAction(),
                 "axis_settings": SettingsAction(),
-                # "separator_2": SeparatorAction(),
+                # "separator_3": SeparatorAction(),
                 # "import": ImportAction(),
                 # "export": ExportAction(),
             },
@@ -105,15 +107,16 @@ class BECWaveformWidget(BECConnector, QWidget):
     def _hook_actions(self):
         self.toolbar.widgets["save"].action.triggered.connect(self.export)
         self.toolbar.widgets["matplotlib"].action.triggered.connect(self.export_to_matplotlib)
+        self.toolbar.widgets["auto_range"].action.triggered.connect(self._auto_range_from_toolbar)
         self.toolbar.widgets["curves"].action.triggered.connect(self.show_curve_settings)
         self.toolbar.widgets["fit_params"].action.triggered.connect(self.show_fit_summary_dialog)
         self.toolbar.widgets["axis_settings"].action.triggered.connect(self.show_axis_settings)
-        self.toolbar.widgets["import"].action.triggered.connect(
-            lambda: self.load_config(path=None, gui=True)
-        )
-        self.toolbar.widgets["export"].action.triggered.connect(
-            lambda: self.save_config(path=None, gui=True)
-        )
+        # self.toolbar.widgets["import"].action.triggered.connect(
+        #     lambda: self.load_config(path=None, gui=True)
+        # )
+        # self.toolbar.widgets["export"].action.triggered.connect(
+        #     lambda: self.save_config(path=None, gui=True)
+        # )
 
     def show_axis_settings(self):
         dialog = SettingsDialog(
@@ -465,6 +468,26 @@ class BECWaveformWidget(BECConnector, QWidget):
             legend_label_size(int): Size of the legend labels.
         """
         self.waveform.set_legend_label_size(legend_label_size)
+
+    def set_auto_range(self, enabled: bool, axis: str = "xy"):
+        """
+        Set the auto range of the plot widget.
+
+        Args:
+            enabled(bool): If True, enable the auto range.
+            axis(str, optional): The axis to enable the auto range.
+                - "xy": Enable auto range for both x and y axis.
+                - "x": Enable auto range for x axis.
+                - "y": Enable auto range for y axis.
+        """
+        self.waveform.set_auto_range(enabled, axis)
+
+    @SafeSlot()
+    def _auto_range_from_toolbar(self):
+        """
+        Set the auto range of the plot widget from the toolbar.
+        """
+        self.waveform.set_auto_range(True, "xy")
 
     def set_grid(self, x_grid: bool, y_grid: bool):
         """

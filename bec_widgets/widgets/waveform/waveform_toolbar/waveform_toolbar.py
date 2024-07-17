@@ -30,6 +30,17 @@ class MatplotlibAction(ToolBarAction):
         toolbar.addAction(self.action)
 
 
+class AutoRangeAction(ToolBarAction):
+    def add_to_toolbar(self, toolbar, target):
+        icon = QIcon()
+        icon.addFile(
+            os.path.join(MODULE_PATH, "assets", "toolbar_icons", "auto_range.svg"),
+            size=QSize(20, 20),
+        )
+        self.action = QAction(icon, "Autorange Plot", target)
+        toolbar.addAction(self.action)
+
+
 class CurveAction(ToolBarAction):
     def add_to_toolbar(self, toolbar, target):
         icon = QIcon()
