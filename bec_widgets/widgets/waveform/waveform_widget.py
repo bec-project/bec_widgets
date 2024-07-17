@@ -6,7 +6,7 @@ from typing import Literal
 import numpy as np
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
-from bec_widgets.qt_utils.error_popups import WarningPopupUtility, error_managed
+from bec_widgets.qt_utils.error_popups import WarningPopupUtility, SafeSlot
 from bec_widgets.qt_utils.settings_dialog import SettingsDialog
 from bec_widgets.qt_utils.toolbar import ModularToolBar, SeparatorAction
 from bec_widgets.utils import BECConnector
@@ -189,7 +189,7 @@ class BECWaveformWidget(BECConnector, QWidget):
         """
         self.waveform.set_colormap(colormap)
 
-    @error_managed
+    @SafeSlot(popup_error=True)
     def set_x(self, x_name: str, x_entry: str | None = None):
         """
         Change the x axis of the plot widget.
@@ -204,7 +204,7 @@ class BECWaveformWidget(BECConnector, QWidget):
         """
         self.waveform.set_x(x_name, x_entry)
 
-    @error_managed
+    @SafeSlot(popup_error=True)
     def plot(
         self,
         x: list | np.ndarray | None = None,
@@ -260,7 +260,7 @@ class BECWaveformWidget(BECConnector, QWidget):
             **kwargs,
         )
 
-    @error_managed
+    @SafeSlot(popup_error=True)
     def add_dap(
         self,
         x_name: str,
