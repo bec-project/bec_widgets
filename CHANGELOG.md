@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.86.0 (2024-07-17)
+
+### Feature
+
+* feat(toolbar): added separator action ([`ba69e79`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ba69e7957cd20df1557ac0c3a9ca43a54493c34d))
+
 ## v0.85.1 (2024-07-17)
 
 ### Fix
@@ -133,9 +139,3 @@
 * refactor(color_button): ColorButton moved to top level of widgets ([`fa1e86f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fa1e86ff07b25d2c47c73117b00765b8e2f25da4))
 
 ## v0.81.2 (2024-07-07)
-
-### Fix
-
-* fix(waveform): scan_history error check for IndexError ([`dd1875e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/dd1875ea5cc18bcef9aad743347a8accf144c08d))
-
-## v0.81.1 (2024-07-07)
