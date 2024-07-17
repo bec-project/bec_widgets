@@ -4,6 +4,8 @@ import sys
 from typing import Literal
 
 import numpy as np
+import pyqtgraph as pg
+from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeSlot, WarningPopupUtility
@@ -75,6 +77,8 @@ class BECWaveformWidget(BECConnector, QWidget):
                 "save": SaveAction(),
                 "matplotlib": MatplotlibAction(),
                 "separator_1": SeparatorAction(),
+                "drag_mode": DragModeAction(),
+                "rectangle_mode": RectangeModeAction(),
                 "auto_range": AutoRangeAction(),
                 "separator_2": SeparatorAction(),
                 "curves": CurveAction(),
@@ -107,6 +111,10 @@ class BECWaveformWidget(BECConnector, QWidget):
     def _hook_actions(self):
         self.toolbar.widgets["save"].action.triggered.connect(self.export)
         self.toolbar.widgets["matplotlib"].action.triggered.connect(self.export_to_matplotlib)
+        self.toolbar.widgets["drag_mode"].action.triggered.connect(self.enable_mouse_pan_mode)
+        self.toolbar.widgets["rectangle_mode"].action.triggered.connect(
+            self.enable_mouse_rectangle_mode
+        )
         self.toolbar.widgets["auto_range"].action.triggered.connect(self._auto_range_from_toolbar)
         self.toolbar.widgets["curves"].action.triggered.connect(self.show_curve_settings)
         self.toolbar.widgets["fit_params"].action.triggered.connect(self.show_fit_summary_dialog)
@@ -118,6 +126,9 @@ class BECWaveformWidget(BECConnector, QWidget):
         #     lambda: self.save_config(path=None, gui=True)
         # )
 
+    ###################################
+    # Dialog Windows
+    ###################################
     def show_axis_settings(self):
         dialog = SettingsDialog(
             self,
@@ -507,6 +518,18 @@ class BECWaveformWidget(BECConnector, QWidget):
             lock(bool): Lock the aspect ratio.
         """
         self.waveform.lock_aspect_ratio(lock)
+
+    @Slot()
+    def enable_mouse_rectangle_mode(self):
+        self.toolbar.widgets["rectangle_mode"].action.setChecked(True)
+        self.toolbar.widgets["drag_mode"].action.setChecked(False)
+        self.waveform.plot_item.getViewBox().setMouseMode(pg.ViewBox.RectMode)
+
+    @Slot()
+    def enable_mouse_pan_mode(self):
+        self.toolbar.widgets["drag_mode"].action.setChecked(True)
+        self.toolbar.widgets["rectangle_mode"].action.setChecked(False)
+        self.waveform.plot_item.getViewBox().setMouseMode(pg.ViewBox.PanMode)
 
     def export(self):
         """

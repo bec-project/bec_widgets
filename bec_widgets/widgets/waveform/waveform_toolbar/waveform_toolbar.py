@@ -30,6 +30,30 @@ class MatplotlibAction(ToolBarAction):
         toolbar.addAction(self.action)
 
 
+class DragModeAction(ToolBarAction):
+    def add_to_toolbar(self, toolbar, target):
+        icon = QIcon()
+        icon.addFile(
+            os.path.join(MODULE_PATH, "assets", "toolbar_icons", "drag_pan_mode.svg"),
+            size=QSize(20, 20),
+        )
+        self.action = QAction(icon, "Drag Mouse Mode", target)
+        self.action.setCheckable(True)
+        toolbar.addAction(self.action)
+
+
+class RectangeModeAction(ToolBarAction):
+    def add_to_toolbar(self, toolbar, target):
+        icon = QIcon()
+        icon.addFile(
+            os.path.join(MODULE_PATH, "assets", "toolbar_icons", "rectangle_mode.svg"),
+            size=QSize(20, 20),
+        )
+        self.action = QAction(icon, "Rectangle Zoom Mode", target)
+        self.action.setCheckable(True)
+        toolbar.addAction(self.action)
+
+
 class AutoRangeAction(ToolBarAction):
     def add_to_toolbar(self, toolbar, target):
         icon = QIcon()

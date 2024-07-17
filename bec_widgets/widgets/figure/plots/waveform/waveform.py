@@ -390,7 +390,6 @@ class BECWaveform(BECPlotBase):
 
             self.async_signal_update.emit()
             self.scan_signal_update.emit()
-        # self.autorange_timer.start(200)
 
     @pyqtSlot()
     def auto_range(self):
