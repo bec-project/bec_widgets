@@ -41,6 +41,17 @@ class CurveAction(ToolBarAction):
         toolbar.addAction(self.action)
 
 
+class FitParamsAction(ToolBarAction):
+    def add_to_toolbar(self, toolbar, target):
+        icon = QIcon()
+        icon.addFile(
+            os.path.join(MODULE_PATH, "assets", "toolbar_icons", "fitting_parameters.svg"),
+            size=QSize(20, 20),
+        )
+        self.action = QAction(icon, "Open Fitting Parameters", target)
+        toolbar.addAction(self.action)
+
+
 class SettingsAction(ToolBarAction):
     def add_to_toolbar(self, toolbar, target):
         icon = QIcon()

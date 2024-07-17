@@ -101,6 +101,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         self.parent_item = parent_item
         self.apply_config()
         self.dap_params = None
+        self.dap_summary = None
         if kwargs:
             self.set(**kwargs)
 
@@ -131,6 +132,14 @@ class BECCurve(BECConnector, pg.PlotDataItem):
     @dap_params.setter
     def dap_params(self, value):
         self._dap_params = value
+
+    @property
+    def dap_summary(self):
+        return self._dap_report
+
+    @dap_summary.setter
+    def dap_summary(self, value):
+        self._dap_report = value
 
     def set_data(self, x, y):
         if self.config.source == "custom":

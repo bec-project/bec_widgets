@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+    <class>Form</class>
+    <widget class="QWidget" name="Form">
+        <property name="geometry">
+            <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>800</width>
+                <height>600</height>
+            </rect>
+        </property>
+        <property name="windowTitle">
+            <string>Form</string>
+        </property>
+        <layout class="QGridLayout" name="gridLayout">
+            <item row="0" column="0">
+                <widget class="QSplitter" name="splitter_2">
+                    <property name="sizePolicy">
+                        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                            <horstretch>1</horstretch>
+                            <verstretch>0</verstretch>
+                        </sizepolicy>
+                    </property>
+                    <property name="frameShape">
+                        <enum>QFrame::Shape::VLine</enum>
+                    </property>
+                    <property name="frameShadow">
+                        <enum>QFrame::Shadow::Plain</enum>
+                    </property>
+                    <property name="lineWidth">
+                        <number>1</number>
+                    </property>
+                    <property name="orientation">
+                        <enum>Qt::Orientation::Horizontal</enum>
+                    </property>
+                    <property name="opaqueResize">
+                        <bool>true</bool>
+                    </property>
+                    <property name="childrenCollapsible">
+                        <bool>true</bool>
+                    </property>
+                    <widget class="QGroupBox" name="group_curve_selection">
+                        <property name="title">
+                            <string>Select Curve</string>
+                        </property>
+                        <layout class="QVBoxLayout" name="verticalLayout">
+                            <item>
+                                <widget class="QPushButton" name="refresh_button">
+                                    <property name="text">
+                                        <string>Refresh DAP Summary</string>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="QListWidget" name="curve_list"/>
+                            </item>
+                        </layout>
+                    </widget>
+                    <widget class="QSplitter" name="splitter">
+                        <property name="sizePolicy">
+                            <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+                                <horstretch>2</horstretch>
+                                <verstretch>0</verstretch>
+                            </sizepolicy>
+                        </property>
+                        <property name="orientation">
+                            <enum>Qt::Orientation::Vertical</enum>
+                        </property>
+                        <widget class="QGroupBox" name="group_summary">
+                            <property name="title">
+                                <string>Fit Summary</string>
+                            </property>
+                            <layout class="QVBoxLayout" name="verticalLayout_2">
+                                <item>
+                                    <widget class="QTreeWidget" name="summary_tree">
+                                        <property name="uniformRowHeights">
+                                            <bool>false</bool>
+                                        </property>
+                                        <column>
+                                            <property name="text">
+                                                <string>Property</string>
+                                            </property>
+                                        </column>
+                                        <column>
+                                            <property name="text">
+                                                <string>Value</string>
+                                            </property>
+                                        </column>
+                                    </widget>
+                                </item>
+                            </layout>
+                        </widget>
+                        <widget class="QGroupBox" name="group_parameters">
+                            <property name="title">
+                                <string>Parameter Details</string>
+                            </property>
+                            <layout class="QVBoxLayout" name="verticalLayout_3">
+                                <item>
+                                    <widget class="QTreeWidget" name="param_tree">
+                                        <column>
+                                            <property name="text">
+                                                <string>Parameter</string>
+                                            </property>
+                                        </column>
+                                        <column>
+                                            <property name="text">
+                                                <string>Value</string>
+                                            </property>
+                                        </column>
+                                        <column>
+                                            <property name="text">
+                                                <string>Std</string>
+                                            </property>
+                                        </column>
+                                    </widget>
+                                </item>
+                            </layout>
+                        </widget>
+                    </widget>
+                </widget>
+            </item>
+        </layout>
+    </widget>
+    <resources/>
+    <connections/>
+</ui>

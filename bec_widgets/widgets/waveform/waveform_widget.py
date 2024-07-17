@@ -6,7 +6,7 @@ from typing import Literal
 import numpy as np
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
-from bec_widgets.qt_utils.error_popups import WarningPopupUtility, SafeSlot
+from bec_widgets.qt_utils.error_popups import SafeSlot, WarningPopupUtility
 from bec_widgets.qt_utils.settings_dialog import SettingsDialog
 from bec_widgets.qt_utils.toolbar import ModularToolBar, SeparatorAction
 from bec_widgets.utils import BECConnector
@@ -15,6 +15,9 @@ from bec_widgets.widgets.figure.plots.axis_settings import AxisSettings
 from bec_widgets.widgets.figure.plots.waveform.waveform import Waveform1DConfig
 from bec_widgets.widgets.figure.plots.waveform.waveform_curve import BECCurve
 from bec_widgets.widgets.waveform.waveform_toolbar.curve_dialog.curve_dialog import CurveSettings
+from bec_widgets.widgets.waveform.waveform_toolbar.dap_summary_dialog.dap_summary_dialog import (
+    FitSummaryWidget,
+)
 from bec_widgets.widgets.waveform.waveform_toolbar.waveform_toolbar import *
 
 try:
@@ -73,6 +76,7 @@ class BECWaveformWidget(BECConnector, QWidget):
                 "matplotlib": MatplotlibAction(),
                 "separator_1": SeparatorAction(),
                 "curves": CurveAction(),
+                "fit_params": FitParamsAction(),
                 "axis_settings": SettingsAction(),
                 "separator_2": SeparatorAction(),
                 "import": ImportAction(),
@@ -95,13 +99,14 @@ class BECWaveformWidget(BECConnector, QWidget):
 
         # TEst actions
         self.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
-        self.plot(x_name="samx", y_name="bpm3a")
+        self.plot(x_name="samx", y_name="bpm3a", dap="GaussianModel")
         self.plot(x_name="samx", y_name="bpm6i")
 
     def _hook_actions(self):
         self.toolbar.widgets["save"].action.triggered.connect(self.export)
         self.toolbar.widgets["matplotlib"].action.triggered.connect(self.export_to_matplotlib)
         self.toolbar.widgets["curves"].action.triggered.connect(self.show_curve_settings)
+        self.toolbar.widgets["fit_params"].action.triggered.connect(self.show_fit_summary_dialog)
         self.toolbar.widgets["axis_settings"].action.triggered.connect(self.show_axis_settings)
         self.toolbar.widgets["import"].action.triggered.connect(
             lambda: self.load_config(path=None, gui=True)
@@ -128,6 +133,11 @@ class BECWaveformWidget(BECConnector, QWidget):
         )
         dialog.resize(800, 600)
         dialog.exec()
+
+    def show_fit_summary_dialog(self):
+        dialog = FitSummaryWidget(target_widget=self)
+        dialog.resize(800, 600)
+        dialog.show()
 
     def _check_if_scans_have_same_x(
         self, enabled=True, x_name_to_check: str = None
@@ -307,7 +317,16 @@ class BECWaveformWidget(BECConnector, QWidget):
             dict: DAP parameters of all DAP curves.
         """
 
-        self.waveform.get_dap_params()
+        return self.waveform.get_dap_params()
+
+    def get_dap_summary(self) -> dict:
+        """
+        Get the DAP summary of all DAP curves.
+
+        Returns:
+            dict: DAP summary of all DAP curves.
+        """
+        return self.waveform.get_dap_summary()
 
     def remove_curve(self, *identifiers):
         """
