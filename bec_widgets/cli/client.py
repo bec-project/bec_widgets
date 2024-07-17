@@ -2010,6 +2010,12 @@ class BECWaveformWidget(RPCBase):
         Show the export dialog for the plot widget.
         """
 
+    @rpc_call
+    def export_to_matplotlib(self):
+        """
+        Export the plot widget to Matplotlib.
+        """
+
 
 class DeviceBox(RPCBase):
     @property

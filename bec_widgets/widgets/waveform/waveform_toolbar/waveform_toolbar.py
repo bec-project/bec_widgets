@@ -19,6 +19,17 @@ class SaveAction(ToolBarAction):
         toolbar.addAction(self.action)
 
 
+class MatplotlibAction(ToolBarAction):
+    def add_to_toolbar(self, toolbar, target):
+        icon = QIcon()
+        icon.addFile(
+            os.path.join(MODULE_PATH, "assets", "toolbar_icons", "photo_library.svg"),
+            size=QSize(20, 20),
+        )
+        self.action = QAction(icon, "Open Matplotlib Plot", target)
+        toolbar.addAction(self.action)
+
+
 class CurveAction(ToolBarAction):
     def add_to_toolbar(self, toolbar, target):
         icon = QIcon()

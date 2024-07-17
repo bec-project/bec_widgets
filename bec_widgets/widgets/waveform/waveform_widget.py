@@ -6,7 +6,7 @@ from typing import Literal
 import numpy as np
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
-from bec_widgets.qt_utils.error_popups import error_managed
+from bec_widgets.qt_utils.error_popups import WarningPopupUtility, error_managed
 from bec_widgets.qt_utils.settings_dialog import SettingsDialog
 from bec_widgets.qt_utils.toolbar import ModularToolBar, SeparatorAction
 from bec_widgets.utils import BECConnector
@@ -44,6 +44,7 @@ class BECWaveformWidget(BECConnector, QWidget):
         "set_grid",
         "lock_aspect_ratio",
         "export",
+        "export_to_matplotlib",
     ]
 
     def __init__(
@@ -69,6 +70,7 @@ class BECWaveformWidget(BECConnector, QWidget):
         self.toolbar = ModularToolBar(
             actions={
                 "save": SaveAction(),
+                "matplotlib": MatplotlibAction(),
                 "separator_1": SeparatorAction(),
                 "curves": CurveAction(),
                 "axis_settings": SettingsAction(),
@@ -81,6 +83,8 @@ class BECWaveformWidget(BECConnector, QWidget):
 
         self.layout.addWidget(self.toolbar)
         self.layout.addWidget(self.fig)
+
+        self.warning_util = WarningPopupUtility(self)
 
         self.waveform = self.fig.plot()
         self.waveform.apply_config(config)
@@ -96,6 +100,7 @@ class BECWaveformWidget(BECConnector, QWidget):
 
     def _hook_actions(self):
         self.toolbar.widgets["save"].action.triggered.connect(self.export)
+        self.toolbar.widgets["matplotlib"].action.triggered.connect(self.export_to_matplotlib)
         self.toolbar.widgets["curves"].action.triggered.connect(self.show_curve_settings)
         self.toolbar.widgets["axis_settings"].action.triggered.connect(self.show_axis_settings)
         self.toolbar.widgets["import"].action.triggered.connect(
@@ -466,6 +471,21 @@ class BECWaveformWidget(BECConnector, QWidget):
         Show the export dialog for the plot widget.
         """
         self.waveform.export()
+
+    def export_to_matplotlib(self):
+        """
+        Export the plot widget to Matplotlib.
+        """
+        try:
+            import matplotlib as mpl
+        except ImportError:
+            self.warning_util.show_warning(
+                title="Matplotlib not installed",
+                message="Matplotlib is required for this feature.",
+                detailed_text="Please install matplotlib in your Python environment by using 'pip install matplotlib'.",
+            )
+            return
+        self.waveform.export_to_matplotlib()
 
     #######################################
     # User Access Methods from BECConnector

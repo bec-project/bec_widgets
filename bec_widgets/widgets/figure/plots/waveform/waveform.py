@@ -9,6 +9,7 @@ from bec_lib import messages
 from bec_lib.device import ReadoutPriority
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import Field, ValidationError, field_validator
+from pyqtgraph.exporters import MatplotlibExporter
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QWidget
@@ -1323,6 +1324,13 @@ class BECWaveform(BECPlotBase):
             )
             return combined_data
         return data
+
+    def export_to_matplotlib(self):
+        """
+        Export current waveform to matplotlib gui. Available only if matplotlib is installed in the enviroment.
+
+        """
+        MatplotlibExporter(self.plot_item).export()
 
     def clear_all(self):
         curves_data = self._curves_data

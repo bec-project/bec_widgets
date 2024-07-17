@@ -4,7 +4,6 @@ from typing import Literal, Optional
 
 import pyqtgraph as pg
 from pydantic import BaseModel, Field
-from pyqtgraph.GraphicsScene.exportDialog import ExportDialog
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils import BECConnector, ConnectionConfig
