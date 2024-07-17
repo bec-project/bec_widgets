@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.85.1 (2024-07-17)
+
+### Fix
+
+* fix(waveform): readout_priority dict fixed, not overwritten to &#39;baseline&#39; key ([`b5b0aa4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b5b0aa4f82a998bb0162dc319591e854204a7354))
+
 ## v0.85.0 (2024-07-16)
 
 ### Feature
@@ -133,9 +139,3 @@
 * fix(waveform): scan_history error check for IndexError ([`dd1875e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/dd1875ea5cc18bcef9aad743347a8accf144c08d))
 
 ## v0.81.1 (2024-07-07)
-
-### Fix
-
-* fix(motor_control): temporary remove of motor control widgets ([`99114f1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/99114f14f62202e1fd8bf145616fa8c69937ada4))
-
-## v0.81.0 (2024-07-06)
