@@ -1,25 +1,30 @@
+# Copyright (C) 2022 The Qt Company Ltd.
+# SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 import os
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 from qtpy.QtGui import QIcon
 
-from bec_widgets.widgets.motor_map.motor_map_widget import BECMotorMapWidget
+import bec_widgets
+from bec_widgets.widgets.waveform.waveform_widget import BECWaveformWidget
 
 DOM_XML = """
 <ui language='c++'>
-    <widget class='BECMotorMapWidget' name='bec_motor_map_widget'>
+    <widget class='BECWaveformWidget' name='bec_waveform_widget'>
     </widget>
 </ui>
 """
 
+MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
-class BECMotorMapWidgetPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
+
+class BECWaveformWidgetPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
     def __init__(self):
         super().__init__()
         self._form_editor = None
 
     def createWidget(self, parent):
-        t = BECMotorMapWidget(parent)
+        t = BECWaveformWidget(parent)
         return t
 
     def domXml(self):
@@ -29,12 +34,11 @@ class BECMotorMapWidgetPlugin(QDesignerCustomWidgetInterface):  # pragma: no cov
         return "BEC Plots"
 
     def icon(self):
-        current_path = os.path.dirname(__file__)
-        icon_path = os.path.join(current_path, "assets", "motor_map.png")
+        icon_path = os.path.join(MODULE_PATH, "assets", "designer_icons", "BECWaveformWidget.png")
         return QIcon(icon_path)
 
     def includeFile(self):
-        return "bec_motor_map_widget"
+        return "bec_waveform_widget"
 
     def initialize(self, form_editor):
         self._form_editor = form_editor
@@ -46,10 +50,10 @@ class BECMotorMapWidgetPlugin(QDesignerCustomWidgetInterface):  # pragma: no cov
         return self._form_editor is not None
 
     def name(self):
-        return "BECMotorMapWidget"
+        return "BECWaveformWidget"
 
     def toolTip(self):
-        return "BECMotorMapWidget"
+        return "BECWaveformWidget"
 
     def whatsThis(self):
         return self.toolTip()

@@ -1842,15 +1842,71 @@ class BECWaveformWidget(RPCBase):
         """
 
     @rpc_call
-    def plot(*args, **kwargs):
+    def plot(
+        self,
+        x: "list | np.ndarray | None" = None,
+        y: "list | np.ndarray | None" = None,
+        x_name: "str | None" = None,
+        y_name: "str | None" = None,
+        z_name: "str | None" = None,
+        x_entry: "str | None" = None,
+        y_entry: "str | None" = None,
+        z_entry: "str | None" = None,
+        color: "str | None" = None,
+        color_map_z: "str | None" = "plasma",
+        label: "str | None" = None,
+        validate: "bool" = True,
+        dap: "str | None" = None,
+        **kwargs,
+    ) -> "BECCurve":
         """
-        None
+        Plot a curve to the plot widget.
+        Args:
+            x(list | np.ndarray): Custom x data to plot.
+            y(list | np.ndarray): Custom y data to plot.
+            x_name(str): The name of the device for the x-axis.
+            y_name(str): The name of the device for the y-axis.
+            z_name(str): The name of the device for the z-axis.
+            x_entry(str): The name of the entry for the x-axis.
+            y_entry(str): The name of the entry for the y-axis.
+            z_entry(str): The name of the entry for the z-axis.
+            color(str): The color of the curve.
+            color_map_z(str): The color map to use for the z-axis.
+            label(str): The label of the curve.
+            validate(bool): If True, validate the device names and entries.
+            dap(str): The dap model to use for the curve. If not specified, none will be added.
+
+        Returns:
+            BECCurve: The curve object.
         """
 
     @rpc_call
-    def add_dap(*args, **kwargs):
+    def add_dap(
+        self,
+        x_name: "str",
+        y_name: "str",
+        x_entry: "str | None" = None,
+        y_entry: "str | None" = None,
+        color: "str | None" = None,
+        dap: "str" = "GaussianModel",
+        validate_bec: "bool" = True,
+        **kwargs,
+    ) -> "BECCurve":
         """
-        None
+        Add LMFIT dap model curve to the plot widget.
+
+        Args:
+            x_name(str): Name of the x signal.
+            x_entry(str): Entry of the x signal.
+            y_name(str): Name of the y signal.
+            y_entry(str): Entry of the y signal.
+            color(str, optional): Color of the curve. Defaults to None.
+            dap(str): The dap model to use for the curve.
+            validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
+            **kwargs: Additional keyword arguments for the curve configuration.
+
+        Returns:
+            BECCurve: The curve object.
         """
 
     @rpc_call
@@ -1911,6 +1967,20 @@ class BECWaveformWidget(RPCBase):
             - x_lim: tuple
             - y_lim: tuple
             - legend_label_size: int
+        """
+
+    @rpc_call
+    def set_x(self, x_name: "str", x_entry: "str | None" = None):
+        """
+        Change the x axis of the plot widget.
+
+        Args:
+            x_name(str): Name of the x signal.
+                - "best_effort": Use the best effort signal.
+                - "timestamp": Use the timestamp signal.
+                - "index": Use the index signal.
+                - Custom signal name of device from BEC.
+            x_entry(str): Entry of the x signal.
         """
 
     @rpc_call

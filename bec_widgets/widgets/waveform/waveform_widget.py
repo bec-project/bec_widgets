@@ -38,6 +38,7 @@ class BECWaveformWidget(BECConnector, QWidget):
         "scan_history",
         "get_all_data",
         "set",
+        "set_x",
         "set_title",
         "set_x_label",
         "set_y_label",
@@ -99,14 +100,9 @@ class BECWaveformWidget(BECConnector, QWidget):
         self.waveform = self.fig.plot()
         self.waveform.apply_config(config)
 
-        self.config = config  # TODO not sure if this should be here
+        self.config = config
 
         self._hook_actions()
-
-        # TEst actions
-        self.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
-        self.plot(x_name="samx", y_name="bpm3a", dap="GaussianModel")
-        self.plot(x_name="samx", y_name="bpm6i")
 
     def _hook_actions(self):
         self.toolbar.widgets["save"].action.triggered.connect(self.export)
