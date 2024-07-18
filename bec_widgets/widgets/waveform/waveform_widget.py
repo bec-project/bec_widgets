@@ -47,6 +47,7 @@ class BECWaveformWidget(BECWidget, QWidget):
         "set_x_lim",
         "set_y_lim",
         "set_legend_label_size",
+        "set_auto_range",
         "set_grid",
         "lock_aspect_ratio",
         "export",

@@ -291,6 +291,19 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         """
         self.plot_item.setAspectLocked(lock)
 
+    def set_auto_range(self, enabled: bool, axis: str = "xy"):
+        """
+        Set the auto range of the plot widget.
+
+        Args:
+            enabled(bool): If True, enable the auto range.
+            axis(str, optional): The axis to enable the auto range.
+                - "xy": Enable auto range for both x and y axis.
+                - "x": Enable auto range for x axis.
+                - "y": Enable auto range for y axis.
+        """
+        self.plot_item.enableAutoRange(axis, enabled)
+
     def export(self):
         """Show the Export Dialog of the plot widget."""
         scene = self.plot_item.scene()
