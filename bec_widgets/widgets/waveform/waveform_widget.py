@@ -11,7 +11,7 @@ from qtpy.QtWidgets import QVBoxLayout, QWidget
 from bec_widgets.qt_utils.error_popups import SafeSlot, WarningPopupUtility
 from bec_widgets.qt_utils.settings_dialog import SettingsDialog
 from bec_widgets.qt_utils.toolbar import ModularToolBar, SeparatorAction
-from bec_widgets.utils import BECConnector
+from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.figure.plots.axis_settings import AxisSettings
 from bec_widgets.widgets.figure.plots.waveform.waveform import Waveform1DConfig
@@ -28,7 +28,7 @@ except ImportError:
     pd = None
 
 
-class BECWaveformWidget(BECConnector, QWidget):
+class BECWaveformWidget(BECWidget, QWidget):
     USER_ACCESS = [
         "curves",
         "plot",
@@ -148,29 +148,6 @@ class BECWaveformWidget(BECConnector, QWidget):
         dialog = FitSummaryWidget(target_widget=self)
         dialog.resize(800, 600)
         dialog.show()
-
-    def _check_if_scans_have_same_x(
-        self, enabled=True, x_name_to_check: str = None
-    ) -> bool:  # TODO probably not needed anymore
-        """
-        Check if all scans have the same x-axis.
-
-        Args:
-            enabled(bool): If True, check if all scans have the same x-axis.
-            x_name_to_check(str): The x-axis name to check.
-
-        Returns:
-            bool: True if all scans have the same x-axis, False otherwise.
-        """
-        if enabled and x_name_to_check is not None:
-            curves = self.waveform._curves_data["scan_segment"]
-
-            for label, curve in curves.items():
-                x_name = curve.config.signals.x.name
-                if x_name != x_name_to_check:
-                    raise ValueError(
-                        f"All scans must have the same x-axis. New curve provided with x-axis: {x_name}"
-                    )
 
     ###################################
     # User Access Methods from Waveform
@@ -575,10 +552,6 @@ class BECWaveformWidget(BECConnector, QWidget):
         self.fig.cleanup()
         self.client.shutdown()
         return super().cleanup()
-
-    def closeEvent(self, event):
-        self.cleanup()
-        QWidget().closeEvent(event)
 
 
 def main():  # pragma: no cover
