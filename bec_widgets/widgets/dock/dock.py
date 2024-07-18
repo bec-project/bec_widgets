@@ -237,7 +237,8 @@ class BECDock(BECWidget, Dock):
         Clean up the dock, including all its widgets.
         """
         for widget in self.widgets:
-            widget.cleanup()
+            if hasattr(widget, "cleanup"):
+                widget.cleanup()
         self.widgets.clear()
         super().cleanup()
 
