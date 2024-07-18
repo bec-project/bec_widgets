@@ -82,6 +82,8 @@ class CurveSettings(SettingWidget):
             ).add_dap_row()
 
     def _enable_ui_elements(self, name, entry):
+        if name is None:
+            name = "best_effort"
         if name in ["index", "timestamp", "best_effort"]:
             self.ui.x_mode.setCurrentText(name)
             self.set_x_mode()

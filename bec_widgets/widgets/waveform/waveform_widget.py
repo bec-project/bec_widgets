@@ -129,7 +129,7 @@ class BECWaveformWidget(BECWidget, QWidget):
         dialog = SettingsDialog(
             self,
             settings_widget=AxisSettings(),
-            window_title="Motor Map Settings",
+            window_title="Axis Settings",
             config=self._config_dict["axis"],
         )
         dialog.exec()
@@ -492,13 +492,13 @@ class BECWaveformWidget(BECWidget, QWidget):
         """
         self.waveform.lock_aspect_ratio(lock)
 
-    @Slot()
+    @SafeSlot()
     def enable_mouse_rectangle_mode(self):
         self.toolbar.widgets["rectangle_mode"].action.setChecked(True)
         self.toolbar.widgets["drag_mode"].action.setChecked(False)
         self.waveform.plot_item.getViewBox().setMouseMode(pg.ViewBox.RectMode)
 
-    @Slot()
+    @SafeSlot()
     def enable_mouse_pan_mode(self):
         self.toolbar.widgets["drag_mode"].action.setChecked(True)
         self.toolbar.widgets["rectangle_mode"].action.setChecked(False)
