@@ -185,7 +185,7 @@ class BECDock(RPCBase):
 
     @property
     @rpc_call
-    def widget_list(self) -> "list[BECConnector]":
+    def widget_list(self) -> "list[BECWidget]":
         """
         Get the widgets in the dock.
 
@@ -226,13 +226,13 @@ class BECDock(RPCBase):
     @rpc_call
     def add_widget(
         self,
-        widget: "BECConnector | str",
+        widget: "BECWidget | str",
         row=None,
         col=0,
         rowspan=1,
         colspan=1,
         shift: "Literal['down', 'up', 'left', 'right']" = "down",
-    ) -> "BECConnector":
+    ) -> "BECWidget":
         """
         Add a widget to the dock.
 

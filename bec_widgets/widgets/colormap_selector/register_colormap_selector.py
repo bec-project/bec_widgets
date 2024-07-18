@@ -6,7 +6,7 @@ def main():  # pragma: no cover
         return
     from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
 
-    from bec_widgets.widgets.color_map_selector.color_map_selector_plugin import (
+    from bec_widgets.widgets.colormap_selector.colormap_selector_plugin import (
         ColormapSelectorPlugin,
     )
 

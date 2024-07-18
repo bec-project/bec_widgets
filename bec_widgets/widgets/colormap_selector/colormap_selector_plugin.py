@@ -5,14 +5,17 @@ import os
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 from qtpy.QtGui import QIcon
 
-from bec_widgets.widgets.color_map_selector.color_map_selector import ColormapSelector
+import bec_widgets
+from bec_widgets.widgets.colormap_selector.colormap_selector import ColormapSelector
 
 DOM_XML = """
 <ui language='c++'>
-    <widget class='ColormapSelector' name='color_map_selector'>
+    <widget class='ColormapSelector' name='colormap_selector'>
     </widget>
 </ui>
 """
+
+MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
 class ColormapSelectorPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
@@ -31,12 +34,11 @@ class ColormapSelectorPlugin(QDesignerCustomWidgetInterface):  # pragma: no cove
         return "BEC Buttons"
 
     def icon(self):
-        current_path = os.path.dirname(__file__)
-        icon_path = os.path.join(current_path, "assets", "color_map_selector_icon.png")
+        icon_path = os.path.join(MODULE_PATH, "assets", "designer_icons", "colormap_selector.png")
         return QIcon(icon_path)
 
     def includeFile(self):
-        return "color_map_selector"
+        return "colormap_selector"
 
     def initialize(self, form_editor):
         self._form_editor = form_editor
@@ -51,7 +53,7 @@ class ColormapSelectorPlugin(QDesignerCustomWidgetInterface):  # pragma: no cove
         return "ColormapSelector"
 
     def toolTip(self):
-        return "A custom QComboBox widget for selecting colormaps."
+        return ""
 
     def whatsThis(self):
         return self.toolTip()

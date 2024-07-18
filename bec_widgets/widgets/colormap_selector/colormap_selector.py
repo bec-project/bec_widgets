@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pyqtgraph as pg
 from qtpy.QtCore import Property, Signal, Slot
 from qtpy.QtGui import QColor, QFontMetrics, QImage
@@ -46,7 +48,7 @@ class ColormapSelector(QWidget):
     colormap_changed_signal = Signal(str)
 
     def __init__(self, parent=None, default_colormaps=None):
-        super().__init__(parent)
+        super().__init__(parent=parent)
         self._colormaps = []
         self.initUI(default_colormaps)
 

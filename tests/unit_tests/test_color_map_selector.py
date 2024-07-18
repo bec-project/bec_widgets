@@ -1,7 +1,7 @@
 import pyqtgraph as pg
 import pytest
 
-from bec_widgets.widgets.color_map_selector.color_map_selector import ColormapSelector
+from bec_widgets.widgets.colormap_selector.colormap_selector import ColormapSelector
 
 
 @pytest.fixture

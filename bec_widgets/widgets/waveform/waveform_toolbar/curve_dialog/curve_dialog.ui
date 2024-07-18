@@ -31,7 +31,7 @@
      <property name="title">
       <string>X Axis</string>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0,0,0,1,3,0,1,3">
+     <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0,0,1,3,1,3">
       <item>
        <widget class="QLabel" name="x_mode_label">
         <property name="text">
@@ -83,22 +83,6 @@
        </spacer>
       </item>
       <item>
-       <widget class="Line" name="line_2">
-        <property name="frameShadow">
-         <enum>QFrame::Shadow::Sunken</enum>
-        </property>
-        <property name="lineWidth">
-         <number>1</number>
-        </property>
-        <property name="midLineWidth">
-         <number>0</number>
-        </property>
-        <property name="orientation">
-         <enum>Qt::Orientation::Vertical</enum>
-        </property>
-       </widget>
-      </item>
-      <item>
        <spacer name="horizontalSpacer_4">
         <property name="orientation">
          <enum>Qt::Orientation::Horizontal</enum>
@@ -120,13 +104,6 @@
       </item>
       <item>
        <widget class="DeviceLineEdit" name="x_name"/>
-      </item>
-      <item>
-       <widget class="Line" name="line">
-        <property name="orientation">
-         <enum>Qt::Orientation::Vertical</enum>
-        </property>
-       </widget>
       </item>
       <item>
        <widget class="QLabel" name="x_entry_label">
@@ -169,35 +146,14 @@
           <property name="bottomMargin">
            <number>5</number>
           </property>
-          <item row="0" column="0">
-           <widget class="QPushButton" name="add_curve">
-               <property name="toolTip">
-                   <string/>
-               </property>
+          <item row="0" column="2">
+           <widget class="QPushButton" name="normalize_colors_scan">
             <property name="text">
-                <string/>
+             <string>Normalize Colors</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="3">
-           <widget class="ColormapSelector" name="color_map_selector_scan">
-            <property name="minimumSize">
-             <size>
-              <width>150</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="colormaps" stdset="0">
-             <stringlist>
-              <string>inferno</string>
-              <string>viridis</string>
-              <string>plasma</string>
-              <string>magma</string>
-             </stringlist>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0" colspan="6">
+          <item row="1" column="0" colspan="4">
            <widget class="QTableWidget" name="scan_table">
             <property name="rowCount">
              <number>0</number>
@@ -264,12 +220,18 @@
             </property>
            </spacer>
           </item>
-          <item row="0" column="2">
-           <widget class="QPushButton" name="normalize_colors_scan">
+          <item row="0" column="0">
+           <widget class="QPushButton" name="add_curve">
+            <property name="toolTip">
+             <string/>
+            </property>
             <property name="text">
-             <string>Normalize Colors</string>
+             <string/>
             </property>
            </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="ColormapSelector" name="color_map_selector_scan"/>
           </item>
          </layout>
         </widget>
@@ -363,27 +325,12 @@
           <item row="0" column="0">
            <widget class="QPushButton" name="add_dap">
             <property name="text">
-                <string/>
+             <string/>
             </property>
            </widget>
           </item>
           <item row="0" column="3">
-           <widget class="ColormapSelector" name="color_map_selector_dap">
-            <property name="minimumSize">
-             <size>
-              <width>150</width>
-              <height>0</height>
-             </size>
-            </property>
-            <property name="colormaps" stdset="0">
-             <stringlist>
-              <string>inferno</string>
-              <string>viridis</string>
-              <string>plasma</string>
-              <string>magma</string>
-             </stringlist>
-            </property>
-           </widget>
+           <widget class="ColormapSelector" name="color_map_selector_dap"/>
           </item>
          </layout>
         </widget>
@@ -403,7 +350,7 @@
   <customwidget>
    <class>ColormapSelector</class>
    <extends>QWidget</extends>
-   <header>color_map_selector</header>
+   <header>colormap_selector</header>
   </customwidget>
  </customwidgets>
  <resources/>
