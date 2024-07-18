@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## v0.87.1 (2024-07-18)
+
+### Fix
+
+* fix(dock): added hasattr to cleanup method for widgets ([`d75c55b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d75c55b2b1ccf156fb789c7813f1c5bdf256f860))
+
+* fix: add missing close() call, ensure jupyter console client.shutdown() is called in closeEvent ([`e52ee26`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e52ee2604cb35096f1bd833ca9516d8a34197d35))
+
+* fix: BECWidget checks if it is a widget, and implements closeEvent and cleanup ([`d64758f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d64758f268cad69e6a17bd52dc9913a6367d3cde))
+
+* fix: add exit handlers for BECConnection objects ([`6202d22`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6202d224fe85c103a4c33bd8c255f18cfd027303))
+
+### Refactor
+
+* refactor: BECWidget is a mixin based on BECConnector, for each QWidget in BEC
+
+Handles closeEvent() and RPC registering/unregistering ([`c7feb69`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c7feb6952d590b569f7b0cba3b019a9af0ce0c93))
+
 ## v0.87.0 (2024-07-17)
 
 ### Feature
@@ -118,12 +136,6 @@
 
 * fix(motor_map): bug where motors without limits were selected ([`c78cd89`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c78cd898f203f950d7cb589eb5609feaa88062cf))
 
-### Refactor
-
-* refactor(setting_dialog): moved to qt_utils ([`3826bb3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3826bb3d9e870e85709b5b20ef09a4d22641280c))
-
-* refactor(toolbar): toolbar moved from widgets to qt_utils ([`7ffc06f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7ffc06f3c7ddd86a1681408a75221b9bbadb236b))
-
 ### Test
 
 * test(setting_dialog): tests added ([`74a249b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/74a249bd065d01006cb532bfff2a9bfedb34b592))
@@ -131,15 +143,3 @@
 ### Unknown
 
 * tests(motor_map_widget): tests added ([`734f4c7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/734f4c77507a1edafd477d81b5f7401d8e759be2))
-
-* feat(settings_dialog):apply button ([`2020953`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2020953b933b6fcad61ecc770588d39518c26fdd))
-
-## v0.82.0 (2024-07-07)
-
-### Feature
-
-* feat(toggle): added angular component-like toggle ([`b9bff38`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b9bff38b64b86f06b3bc047922ef9df0c7d32e71))
-
-### Refactor
-
-* refactor(device_input): DeviceComboBox and DeviceLineEdit moved to top layer of widgets ([`f048629`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f04862933f049030554086adef3ec9e1aebd3eda))
