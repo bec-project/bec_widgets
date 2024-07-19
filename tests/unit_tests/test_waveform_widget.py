@@ -54,6 +54,7 @@ def test_waveform_widget_set_x(waveform_widget, mock_waveform):
 def test_waveform_plot_data(waveform_widget, mock_waveform):
     waveform_widget.plot(x=[1, 2, 3], y=[1, 2, 3])
     waveform_widget.waveform.plot.assert_called_once_with(
+        arg1=None,
         x=[1, 2, 3],
         y=[1, 2, 3],
         x_name=None,
@@ -73,6 +74,7 @@ def test_waveform_plot_data(waveform_widget, mock_waveform):
 def test_waveform_plot_scan_curves(waveform_widget, mock_waveform):
     waveform_widget.plot(x_name="samx", y_name="samy", dap="GaussianModel")
     waveform_widget.waveform.plot.assert_called_once_with(
+        arg1=None,
         x=None,
         y=None,
         x_name="samx",

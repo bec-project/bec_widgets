@@ -204,6 +204,7 @@ class BECWaveformWidget(BECWidget, QWidget):
     @SafeSlot(popup_error=True)
     def plot(
         self,
+        arg1: list | np.ndarray | str | None = None,
         x: list | np.ndarray | None = None,
         y: list | np.ndarray | None = None,
         x_name: str | None = None,
@@ -222,6 +223,7 @@ class BECWaveformWidget(BECWidget, QWidget):
         """
         Plot a curve to the plot widget.
         Args:
+            arg1(list | np.ndarray | str | None): First argument which can be x data(list | np.ndarray), y data(list | np.ndarray), or y_name(str).
             x(list | np.ndarray): Custom x data to plot.
             y(list | np.ndarray): Custom y data to plot.
             x_name(str): The name of the device for the x-axis.
@@ -241,6 +243,7 @@ class BECWaveformWidget(BECWidget, QWidget):
         """
         # self._check_if_scans_have_same_x(enabled=True, x_name_to_check=x_name)
         return self.waveform.plot(
+            arg1=arg1,
             x=x,
             y=y,
             x_name=x_name,
