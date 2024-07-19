@@ -71,6 +71,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
 
         self.parent_image = parent_image
         self.colorbar_bar = None
+        self._raw_data = None
 
         self._add_color_bar(
             self.config.color_bar, self.config.vrange
@@ -79,6 +80,14 @@ class BECImageItem(BECConnector, pg.ImageItem):
         if kwargs:
             self.set(**kwargs)
         self.connected = False
+
+    @property
+    def raw_data(self) -> np.ndarray:
+        return self._raw_data
+
+    @raw_data.setter
+    def raw_data(self, data: np.ndarray):
+        self._raw_data = data
 
     def apply_config(self):
         """

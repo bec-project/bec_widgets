@@ -496,6 +496,7 @@ class BECImageShow(BECPlotBase):
         data = msg["data"]
         device = msg["device"]
         image = self._images["device_monitor"][device]
+        image.raw_data = data
         self.process_image(device, image, data)
 
     @pyqtSlot(str, np.ndarray)
@@ -528,7 +529,7 @@ class BECImageShow(BECPlotBase):
         """
         for source, images in self._images.items():
             for image_id, image in images.items():
-                data = image.get_data()
+                data = image.raw_data
                 self.process_image(image_id, image, data)
 
     def _connect_device_monitor(self, monitor: str):
