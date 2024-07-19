@@ -1,5 +1,63 @@
 # CHANGELOG
 
+## v0.88.0 (2024-07-19)
+
+### Feature
+
+* feat(waveform_widget): designer plugin added ([`1f8ef52`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1f8ef52b606283038052640849094f515a463403))
+
+* feat(waveform_widget): switch between drag and rectangle mode ([`2be009c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2be009c6477ba26c5cfb4d827534c5d5eb428999))
+
+* feat(waveform_widget): autorange button ([`8df6b00`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8df6b003e5c6a942fa2e875d9790e492c087bf26))
+
+* feat(waveform_widget): dap parameter window ([`1e551d6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1e551d6e9696f79ea2e0a179d13a4fc6c2a128b2))
+
+* feat(waveform): export to matplotlib window of current scene ([`8d93405`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8d9340539967b06b1e15f21a2106a39d5c740f31))
+
+* feat(figure): export dialog can be launched from CLI and from toolbar ([`6ff6111`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6ff611109153b9412dce37c527b19e839d99bba7))
+
+* feat(waveform_widget): added error handle utility ([`a8ff1d4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a8ff1d4cd09cae5eaeb4bd0ea90fdd102e32f3a3))
+
+* feat(curve_dialog): add DAP functionality ([`e830565`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e8305652fde384da037242cf8f7e3606f22bcfb6))
+
+* feat(curve_dialog): curves can be added ([`c926a75`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c926a75a7927d672c044ea8f68771209ae5accc6))
+
+* feat(waveform_widget): BECWaveformWidget toolbar added import/export config ([`fa9b171`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fa9b17191ddbb4043a658dae9aa0801e1dc22b84))
+
+* feat(waveform_widget): BECWaveformWidget added with toolbar ([`755b394`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/755b394c1c4d7c443c442d89c630d08ce5415554))
+
+### Fix
+
+* fix(waveform_widget): plot API unified with BECFigure ([`2c8764a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2c8764a27de89b39b717032b58465e120ec57fbc))
+
+* fix(colormap_selector): compatibility for PyQt6 when using designer fixed ([`50135b5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/50135b5fe90a88618291e9357f180cb19251dace))
+
+* fix(waveform_widget): adapted for BECWidget base class ([`6eb313f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6eb313fa76e559d62ecd8fa8849142b83817e47c))
+
+* fix(waveform_widget): temporary disabled save/load config ([`7089cf3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7089cf356a43d805241d5621952e544d690e65e0))
+
+* fix(waveform_widget): use @SafeSlot decorator for automatic error message ([`8e588d7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8e588d79c86e950f6915e89c08fa9415c4bd8033))
+
+* fix(waveform): colormaps of curves can be changed and normalised
+
+feat(waveform): colormap can be changed from curve dialog
+
+fix(curve_dialog): default dialog parameters fixed
+
+curve Dialog colormap WIP ([`33495cf`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/33495cfe03b363f18db61d8af2983f49027b7a43))
+
+* fix(waveform_widget): adapted for changes from improved scan logic from waveform widget ([`8ac35d7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8ac35d7280b1ff007c10612228d163cc0c5d1a99))
+
+### Refactor
+
+* refactor(icons): icons moved to the assets directory ([`a8b6ef2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a8b6ef20cccae87515b10f054d0ed5b10e152769))
+
+* refactor(waveform_widget): removed PYSIDE6 check ([`47fcb9e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/47fcb9ebfe35ae600cced95a1edc68f6f6e37a04))
+
+### Test
+
+* test(waveform_widget): test added ([`8d764e2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8d764e2d46a1e017dadc3c4630648c1ca708afc2))
+
 ## v0.87.1 (2024-07-18)
 
 ### Fix
@@ -81,65 +139,3 @@ Handles closeEvent() and RPC registering/unregistering ([`c7feb69`](https://gitl
 ### Test
 
 * test(waveform): tests extended ([`006992e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/006992e43cc56d56261bc4fd3e9cae9abcab2153))
-
-## v0.83.1 (2024-07-14)
-
-### Fix
-
-* fix(toolbar): default transparent background ([`eab7883`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/eab78839792f175b7ac127ca603385c6baa5ff15))
-
-* fix: use apply_theme ([`2d4249e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2d4249e73a792fed1c2c7ab79bb8aec38c57466c))
-
-* fix: spinner: update reference image for widget test, use apply_theme ([`63db135`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/63db1352ee883d35670b3a692dbe51d6d01872ae))
-
-* fix: replace pyqtdarktheme by qdarkstyle, add &#39;apply_theme&#39; function (in utils/colors.py) ([`8308115`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8308115f3646245d825fc47ab57297d3460bbcf5))
-
-### Test
-
-* test(toolbar): added reference pngs for spinner for Darwin ([`11a7204`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/11a7204c98e0bf211a8721d296b45d24a3102b97))
-
-## v0.83.0 (2024-07-08)
-
-### Feature
-
-* feat: added reference utils to compare renderings of widgets ([`2988fd3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2988fd387e6b8076fffec1d57e3ccab89ddb2aeb))
-
-* feat(widgets): added device box with spinner ([`1b017ed`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1b017edfad8e78fa079210486123976695b8915c))
-
-* feat(designer): added option to skip the widget validation for DesignerPluginGenerator ([`41bcb80`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/41bcb801674ab6c4d6069bba34ffee09c9e665db))
-
-### Fix
-
-* fix(terminal): added default args to avoid designer crashes on startup ([`360d171`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/360d17135573e44b80ab517756da3c0b31daab0f))
-
-* fix(widget): fixed widget cleanup routine ([`2b29e34`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2b29e34b52d056349647bb2fcf649b749a60d292))
-
-* fix(bec_widget): added cleanup method to bec widget base class ([`fd8766e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fd8766ed87770661da6591aeb4df5abdaf38afc7))
-
-* fix(website): fixed dummy input ([`903ce7d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/903ce7d46b5d37d40486d0fda92d3694d3faca62))
-
-### Test
-
-* test(vscode): fixed vscode tests for new cleanup routine ([`eb26e2a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/eb26e2a11b229a52efe2e6d4fb28d760d3740136))
-
-* test(vscode): improved vscode test ([`5de8804`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5de8804da1e41eafad2472344904b3324438c13b))
-
-## v0.82.2 (2024-07-08)
-
-### Fix
-
-* fix(rpc_server): pass cli config to server ([`90178e2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/90178e2f61fa9dac7d82c0d0db40a9767bb133e6))
-
-## v0.82.1 (2024-07-07)
-
-### Fix
-
-* fix(motor_map): bug where motors without limits were selected ([`c78cd89`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c78cd898f203f950d7cb589eb5609feaa88062cf))
-
-### Test
-
-* test(setting_dialog): tests added ([`74a249b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/74a249bd065d01006cb532bfff2a9bfedb34b592))
-
-### Unknown
-
-* tests(motor_map_widget): tests added ([`734f4c7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/734f4c77507a1edafd477d81b5f7401d8e759be2))
