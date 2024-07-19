@@ -67,7 +67,20 @@ class BECImageWidget(BECWidget, QWidget):
                     checkable=True,
                 ),
                 "separator_2": SeparatorAction(),
-                "FFT": IconAction(icon_path="transform.svg", tooltip="Toggle FFT", checkable=True),
+                "FFT": IconAction(icon_path="compare.svg", tooltip="Toggle FFT", checkable=True),
+                "log": IconAction(
+                    icon_path="line_curve.svg", tooltip="Toggle log scale", checkable=True
+                ),
+                "transpose": IconAction(
+                    icon_path="transform.svg", tooltip="Transpose Image", checkable=True
+                ),
+                "rotate_right": IconAction(
+                    icon_path="rotate_right.svg", tooltip="Rotate image clockwise by 90 deg"
+                ),
+                "rotate_left": IconAction(
+                    icon_path="rotate_left.svg", tooltip="Rotate image counterclockwise by 90 deg"
+                ),
+                "reset": IconAction(icon_path="reset_settings.svg", tooltip="Reset Image Settings"),
                 "separator_3": SeparatorAction(),
                 "axis_settings": IconAction(
                     icon_path="settings.svg", tooltip="Open Configuration Dialog"
@@ -83,17 +96,20 @@ class BECImageWidget(BECWidget, QWidget):
 
         self.image = self.fig.image()
         self.image.apply_config(config)
+        self.rotation = 0
 
         self.config = config
 
         self._hook_actions()
 
         # TODO test commands
-        self.image.add_monitor_image("eiger")
+        # self.image.add_monitor_image("eiger")
 
     def _hook_actions(self):
         self.toolbar.widgets["connect"].action.triggered.connect(self._connect_action)
+        # sepatator
         self.toolbar.widgets["save"].action.triggered.connect(self.export)
+        # sepatator
         self.toolbar.widgets["drag_mode"].action.triggered.connect(self.enable_mouse_pan_mode)
         self.toolbar.widgets["rectangle_mode"].action.triggered.connect(
             self.enable_mouse_rectangle_mode
@@ -102,7 +118,14 @@ class BECImageWidget(BECWidget, QWidget):
         self.toolbar.widgets["auto_range_image"].action.triggered.connect(
             self.toogle_image_autorange
         )
+        # sepatator
         self.toolbar.widgets["FFT"].action.triggered.connect(self.toogle_fft)
+        self.toolbar.widgets["log"].action.triggered.connect(self.toogle_log)
+        self.toolbar.widgets["transpose"].action.triggered.connect(self.toogle_transpose)
+        self.toolbar.widgets["rotate_left"].action.triggered.connect(self.rotate_left)
+        self.toolbar.widgets["rotate_right"].action.triggered.connect(self.rotate_right)
+        self.toolbar.widgets["reset"].action.triggered.connect(self.reset_settings)
+        # sepatator
         self.toolbar.widgets["axis_settings"].action.triggered.connect(self.show_axis_settings)
 
     ###################################
@@ -112,7 +135,8 @@ class BECImageWidget(BECWidget, QWidget):
     def _connect_action(self):
         monitor_combo = self.toolbar.widgets["monitor"].device_combobox
         monitor_name = monitor_combo.currentText()
-        self.add_monitor_image(monitor_name)
+        # self.add_monitor_image(monitor_name)
+        self.set_monitor_image(monitor_name)
         monitor_combo.setStyleSheet("QComboBox { background-color: " "; }")
 
     def show_axis_settings(self):
@@ -159,6 +183,39 @@ class BECImageWidget(BECWidget, QWidget):
             name(str): The name of the image. If None, apply to all images.
         """
         self.image.set_fft(enable, name)
+
+    def set_transpose(self, enable: bool = False, name: str = None):
+        """
+        Set the transpose of the image.
+        If name is not specified, then set transpose for all images.
+
+        Args:
+            enable(bool): Whether to transpose the monitor data before displaying.
+            name(str): The name of the image. If None, apply to all images.
+        """
+        self.image.set_transpose(enable, name)
+
+    def set_rotation(self, deg_90: int = 0, name: str = None):
+        """
+        Set the rotation of the image.
+        If name is not specified, then set rotation for all images.
+
+        Args:
+            deg_90(int): The rotation angle of the monitor data before displaying.
+            name(str): The name of the image. If None, apply to all images.
+        """
+        self.image.set_rotation(deg_90, name)
+
+    def set_log(self, enable: bool = False, name: str = None):
+        """
+        Set the log of the image.
+        If name is not specified, then set log for all images.
+
+        Args:
+            enable(bool): Whether to perform log on the monitor data.
+            name(str): The name of the image. If None, apply to all images.
+        """
+        self.image.set_log(enable, name)
 
     ###################################
     # User Access Methods from Plotbase
@@ -290,19 +347,44 @@ class BECImageWidget(BECWidget, QWidget):
         self.set_fft(checked)
 
     @SafeSlot()
+    def toogle_log(self):
+        checked = self.toolbar.widgets["log"].action.isChecked()
+        self.set_log(checked)
+
+    @SafeSlot()
+    def toogle_transpose(self):
+        checked = self.toolbar.widgets["transpose"].action.isChecked()
+        self.set_transpose(checked)
+
+    @SafeSlot()
+    def rotate_left(self):
+        self.rotation = (self.rotation + 1) % 4
+        self.set_rotation(self.rotation)
+
+    @SafeSlot()
+    def rotate_right(self):
+        self.rotation = (self.rotation - 1) % 4
+        self.set_rotation(self.rotation)
+
+    @SafeSlot()
+    def reset_settings(self):
+        self.set_log(False)
+        self.set_fft(False)
+        self.set_transpose(False)
+        self.rotation = 0
+        self.set_rotation(0)
+
+        self.toolbar.widgets["FFT"].action.setChecked(False)
+        self.toolbar.widgets["log"].action.setChecked(False)
+        self.toolbar.widgets["transpose"].action.setChecked(False)
+
+    @SafeSlot()
     def toogle_image_autorange(self):
         """
         Enable the auto range of the image intensity.
         """
         checked = self.toolbar.widgets["auto_range_image"].action.isChecked()
         self.image.set_autorange(checked)
-        # self.autorange_checked = checked
-        # if self.autorange_checked:
-        #     print("Auto range is enabled")
-        #     self.image.set_autorange(True)
-        # else:
-        #     print("Auto range is disabled")
-        #     self.image.set_autorange(False)
 
     @SafeSlot()
     def enable_mouse_rectangle_mode(self):
