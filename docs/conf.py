@@ -78,4 +78,4 @@ language = "Python"
 html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
-html_logo = "../bec_widgets/assets/bec_widgets_icon.png"
+html_logo = "../bec_widgets/assets/app_icons/bec_widgets_icon.png"
