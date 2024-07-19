@@ -5,22 +5,20 @@ from typing import Literal
 
 import numpy as np
 import pyqtgraph as pg
-from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeSlot, WarningPopupUtility
 from bec_widgets.qt_utils.settings_dialog import SettingsDialog
-from bec_widgets.qt_utils.toolbar import ModularToolBar, SeparatorAction
+from bec_widgets.qt_utils.toolbar import IconAction, ModularToolBar, SeparatorAction
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.figure.plots.axis_settings import AxisSettings
 from bec_widgets.widgets.figure.plots.waveform.waveform import Waveform1DConfig
 from bec_widgets.widgets.figure.plots.waveform.waveform_curve import BECCurve
-from bec_widgets.widgets.waveform.waveform_toolbar.curve_dialog.curve_dialog import CurveSettings
-from bec_widgets.widgets.waveform.waveform_toolbar.dap_summary_dialog.dap_summary_dialog import (
+from bec_widgets.widgets.waveform.waveform_popups.curve_dialog.curve_dialog import CurveSettings
+from bec_widgets.widgets.waveform.waveform_popups.dap_summary_dialog.dap_summary_dialog import (
     FitSummaryWidget,
 )
-from bec_widgets.widgets.waveform.waveform_toolbar.waveform_toolbar import *
 
 try:
     import pandas as pd
@@ -76,19 +74,28 @@ class BECWaveformWidget(BECWidget, QWidget):
         self.fig = BECFigure()
         self.toolbar = ModularToolBar(
             actions={
-                "save": SaveAction(),
-                "matplotlib": MatplotlibAction(),
+                "save": IconAction(icon_path="save.svg", tooltip="Open Export Dialog"),
+                "matplotlib": IconAction(
+                    icon_path="photo_library.svg", tooltip="Open Matplotlib Plot"
+                ),
                 "separator_1": SeparatorAction(),
-                "drag_mode": DragModeAction(),
-                "rectangle_mode": RectangeModeAction(),
-                "auto_range": AutoRangeAction(),
+                "drag_mode": IconAction(
+                    icon_path="drag_pan_mode.svg", tooltip="Drag Mouse Mode", checkable=True
+                ),
+                "rectangle_mode": IconAction(
+                    icon_path="rectangle_mode.svg", tooltip="Rectangle Zoom Mode", checkable=True
+                ),
+                "auto_range": IconAction(icon_path="auto_range.svg", tooltip="Autorange Plot"),
                 "separator_2": SeparatorAction(),
-                "curves": CurveAction(),
-                "fit_params": FitParamsAction(),
-                "axis_settings": SettingsAction(),
-                # "separator_3": SeparatorAction(),
-                # "import": ImportAction(),
-                # "export": ExportAction(),
+                "curves": IconAction(
+                    icon_path="line_axis.svg", tooltip="Open Curves Configuration"
+                ),
+                "fit_params": IconAction(
+                    icon_path="fitting_parameters.svg", tooltip="Open Fitting Parameters"
+                ),
+                "axis_settings": IconAction(
+                    icon_path="settings.svg", tooltip="Open Configuration Dialog"
+                ),
             },
             target_widget=self,
         )

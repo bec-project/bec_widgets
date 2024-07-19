@@ -3,6 +3,7 @@ import os
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 from qtpy.QtGui import QIcon
 
+import bec_widgets
 from bec_widgets.widgets.motor_map.motor_map_widget import BECMotorMapWidget
 
 DOM_XML = """
@@ -11,6 +12,8 @@ DOM_XML = """
     </widget>
 </ui>
 """
+
+MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
 class BECMotorMapWidgetPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
@@ -29,8 +32,7 @@ class BECMotorMapWidgetPlugin(QDesignerCustomWidgetInterface):  # pragma: no cov
         return "BEC Plots"
 
     def icon(self):
-        current_path = os.path.dirname(__file__)
-        icon_path = os.path.join(current_path, "assets", "motor_map.png")
+        icon_path = os.path.join(MODULE_PATH, "assets", "designer_icons", "motor_map.png")
         return QIcon(icon_path)
 
     def includeFile(self):

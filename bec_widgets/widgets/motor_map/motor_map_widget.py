@@ -5,17 +5,12 @@ import sys
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.qt_utils.settings_dialog import SettingsDialog
-from bec_widgets.qt_utils.toolbar import ModularToolBar
+from bec_widgets.qt_utils.toolbar import DeviceSelectionAction, IconAction, ModularToolBar
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.widgets.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.figure.plots.motor_map.motor_map import MotorMapConfig
 from bec_widgets.widgets.motor_map.motor_map_dialog.motor_map_settings import MotorMapSettings
-from bec_widgets.widgets.motor_map.motor_map_dialog.motor_map_toolbar import (
-    ConnectAction,
-    DeviceSelectionAction,
-    ResetHistoryAction,
-    SettingsAction,
-)
 
 
 class BECMotorMapWidget(BECWidget, QWidget):
@@ -53,11 +48,15 @@ class BECMotorMapWidget(BECWidget, QWidget):
         self.fig = BECFigure()
         self.toolbar = ModularToolBar(
             actions={
-                "motor_x": DeviceSelectionAction("Motor X:"),
-                "motor_y": DeviceSelectionAction("Motor Y:"),
-                "connect": ConnectAction(),
-                "history": ResetHistoryAction(),
-                "config": SettingsAction(),
+                "motor_x": DeviceSelectionAction(
+                    "Motor X:", DeviceComboBox(device_filter="Positioner")
+                ),
+                "motor_y": DeviceSelectionAction(
+                    "Motor Y:", DeviceComboBox(device_filter="Positioner")
+                ),
+                "connect": IconAction(icon_path="connection.svg", tooltip="Connect Motors"),
+                "history": IconAction(icon_path="history.svg", tooltip="Reset Trace History"),
+                "config": IconAction(icon_path="settings.svg", tooltip="Open Configuration Dialog"),
             },
             target_widget=self,
         )

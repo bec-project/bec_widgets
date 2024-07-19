@@ -1,12 +1,35 @@
+# pylint: disable=no-name-in-module
+import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
 
-# pylint: disable=no-name-in-module
 from qtpy.QtCore import QSize
-from qtpy.QtWidgets import QToolBar, QToolButton, QWidget
+from qtpy.QtGui import QAction, QIcon
+from qtpy.QtWidgets import QHBoxLayout, QLabel, QToolBar, QToolButton, QWidget
+
+import bec_widgets
+
+MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
 class ToolBarAction(ABC):
+    """
+    Abstract base class for toolbar actions.
+
+    Args:
+        icon_path (str, optional): The name of the icon file from `assets/toolbar_icons`. Defaults to None.
+        tooltip (bool, optional): The tooltip for the action. Defaults to None.
+        checkable (bool, optional): Whether the action is checkable. Defaults to False.
+    """
+
+    def __init__(self, icon_path: str = None, tooltip: str = None, checkable: bool = False):
+        self.icon_path = (
+            os.path.join(MODULE_PATH, "assets", "toolbar_icons", icon_path) if icon_path else None
+        )
+        self.tooltip = tooltip
+        self.checkable = checkable
+        self.action = None
+
     @abstractmethod
     def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
         """Adds an action or widget to a toolbar.
@@ -24,6 +47,55 @@ class SeparatorAction(ToolBarAction):
         self.separator = QToolButton()
         self.separator.setFixedSize(2, 22)
         toolbar.addWidget(self.separator)
+
+
+class IconAction(ToolBarAction):
+    """
+    Action with an icon for the toolbar.
+
+    Args:
+        icon_path (str): The path to the icon file.
+        tooltip (str): The tooltip for the action.
+        checkable (bool, optional): Whether the action is checkable. Defaults to False.
+    """
+
+    def __init__(self, icon_path: str = None, tooltip: str = None, checkable: bool = False):
+        super().__init__(icon_path, tooltip, checkable)
+
+    def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
+        icon = QIcon()
+        icon.addFile(self.icon_path, size=QSize(20, 20))
+        self.action = QAction(icon, self.tooltip, target)
+        self.action.setCheckable(self.checkable)
+        toolbar.addAction(self.action)
+
+
+class DeviceSelectionAction(ToolBarAction):
+    """
+    Action for selecting a device in a combobox.
+
+    Args:
+        label (str): The label for the combobox.
+        device_combobox (DeviceComboBox): The combobox for selecting the device.
+
+    """
+
+    def __init__(self, label: str, device_combobox):
+        super().__init__()
+        self.label = label
+        self.device_combobox = device_combobox
+        self.device_combobox.currentIndexChanged.connect(lambda: self.set_combobox_style("#ffa700"))
+
+    def add_to_toolbar(self, toolbar, target):
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        label = QLabel(f"{self.label}")
+        layout.addWidget(label)
+        layout.addWidget(self.device_combobox)
+        toolbar.addWidget(widget)
+
+    def set_combobox_style(self, color: str):
+        self.device_combobox.setStyleSheet(f"QComboBox {{ background-color: {color}; }}")
 
 
 class ModularToolBar(QToolBar):
