@@ -324,3 +324,8 @@ class BECImageItem(BECConnector, pg.ImageItem):
             self.config.color_bar = "full"
         else:
             raise ValueError("style should be 'simple' or 'full'")
+
+    def remove(self):
+        """Remove the curve from the plot."""
+        self.parent_image.remove_image(self.config.monitor)
+        self.rpc_register.remove_rpc(self)

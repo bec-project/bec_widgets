@@ -32,7 +32,7 @@ class BECImageShow(BECPlotBase):
         "_rpc_id",
         "_config_dict",
         "add_image_by_config",
-        "add_monitor_image",
+        "image",
         "add_custom_image",
         "set_vrange",
         "set_color_map",
@@ -67,6 +67,7 @@ class BECImageShow(BECPlotBase):
         config: Optional[ImageConfig] = None,
         client=None,
         gui_id: Optional[str] = None,
+        single_image: bool = True,
     ):
         if config is None:
             config = ImageConfig(widget_class=self.__class__.__name__)
@@ -74,6 +75,7 @@ class BECImageShow(BECPlotBase):
             parent=parent, parent_figure=parent_figure, config=config, client=client, gui_id=gui_id
         )
         # Get bec shortcuts dev, scans, queue, scan_storage, dap
+        self.single_image = single_image
         self.get_bec_shortcuts()
         self.entry_validator = EntryValidator(self.dev)
         self._images = defaultdict(dict)
@@ -221,7 +223,7 @@ class BECImageShow(BECPlotBase):
         """
         return self._images
 
-    def add_monitor_image(
+    def image(
         self,
         monitor: str,
         color_map: Optional[str] = "magma",
@@ -232,6 +234,19 @@ class BECImageShow(BECPlotBase):
         # post_processing: Optional[PostProcessingConfig] = None,
         **kwargs,
     ) -> BECImageItem:
+        """
+        Add an image to the figure. Always access the first image widget in the figure.
+
+        Args:
+            monitor(str): The name of the monitor to display.
+            color_bar(Literal["simple","full"]): The type of color bar to display.
+            color_map(str): The color map to use for the image.
+            data(np.ndarray): Custom data to display.
+            vrange(tuple[float, float]): The range of values to display.
+
+        Returns:
+            BECImageItem: The image item.
+        """
         image_source = "device_monitor"
 
         image_exits = self._check_image_id(monitor, self._images)
@@ -563,6 +578,8 @@ class BECImageShow(BECPlotBase):
         config.parent_id = self.gui_id
         image = BECImageItem(config=config, parent_image=self)
         self.plot_item.addItem(image)
+        if self.single_image is True and len(self.images) > 0:
+            self.remove_image(0)
         self._images[source][name] = image
         if source == "device_monitor":
             self._connect_device_monitor(config.monitor)
@@ -589,6 +606,70 @@ class BECImageShow(BECPlotBase):
                 if self._check_image_id(val, dict_to_check[key]):
                     return True
         return False
+
+    def remove_image(self, *identifiers):
+        """
+        Remove an image from the plot widget.
+
+        Args:
+            *identifiers: Identifier of the image to be removed. Can be either an integer (index) or a string (image_id).
+        """
+        for identifier in identifiers:
+            if isinstance(identifier, int):
+                self._remove_image_by_order(identifier)
+            elif isinstance(identifier, str):
+                self._remove_image_by_id(identifier)
+            else:
+                raise ValueError(
+                    "Each identifier must be either an integer (index) or a string (image_id)."
+                )
+
+    def _remove_image_by_id(self, image_id):
+        for source, images in self._images.items():
+            if image_id in images:
+                self._disconnect_monitor(image_id)
+                image = images.pop(image_id)
+                self.removeItem(image.color_bar)
+                self.plot_item.removeItem(image)
+                del self.config.images[image_id]
+                if image in self.images:
+                    self.images.remove(image)
+                return
+        raise KeyError(f"Image with ID '{image_id}' not found.")
+
+    def _remove_image_by_order(self, N):
+        """
+        Remove an image by its order from the plot widget.
+
+        Args:
+            N(int): Order of the image to be removed.
+        """
+        if N < len(self.images):
+            image = self.images[N]
+            image_id = image.config.monitor
+            self._disconnect_monitor(image_id)
+            self.removeItem(image.color_bar)
+            self.plot_item.removeItem(image)
+            del self.config.images[image_id]
+            for source, images in self._images.items():
+                if image_id in images:
+                    del images[image_id]
+                    break
+        else:
+            raise IndexError(f"Image order {N} out of range.")
+
+    def _disconnect_monitor(self, image_id):
+        """
+        Disconnect the monitor from the device.
+
+        Args:
+            image_id(str): The ID of the monitor.
+        """
+        image = self.find_image_by_monitor(image_id)
+        if image:
+            self.bec_dispatcher.disconnect_slot(
+                self.on_image_update, MessageEndpoints.device_monitor(image.config.monitor)
+            )
 
     def cleanup(self):
         """

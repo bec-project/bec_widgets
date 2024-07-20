@@ -335,9 +335,7 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
             data (np.ndarray): Custom data to display.
         """
         if monitor is not None and data is None:
-            image.add_monitor_image(
-                monitor=monitor, color_map=color_map, vrange=vrange, color_bar=color_bar
-            )
+            image.image(monitor=monitor, color_map=color_map, vrange=vrange, color_bar=color_bar)
         elif data is not None and monitor is None:
             image.add_custom_image(
                 name="custom", data=data, color_map=color_map, vrange=vrange, color_bar=color_bar
