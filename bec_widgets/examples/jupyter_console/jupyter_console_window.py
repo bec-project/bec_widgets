@@ -49,10 +49,11 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "d0": self.d0,
                     "d1": self.d1,
                     "d2": self.d2,
-                    "wave": self.wave,
-                    "bar": self.bar,
-                    "cm": self.colormap,
+                    "wave": self.wf,
+                    # "bar": self.bar,
+                    # "cm": self.colormap,
                     "im": self.im,
+                    "mm": self.mm,
                 }
             )
 
@@ -156,24 +157,23 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
     def _init_dock(self):
 
         self.d0 = self.dock.add_dock(name="dock_0")
-        self.fig0 = self.d0.add_widget("BECFigure")
-        data = np.random.rand(10, 2)
-        self.fig0.plot(data, label="2d Data")
+        self.mm = self.d0.add_widget("BECMotorMapWidget")
+        self.mm.change_motors("samx", "samy")
 
         self.d1 = self.dock.add_dock(name="dock_1", position="right")
-        self.fig1 = self.d1.add_widget("BECFigure")
-        self.im = self.fig1.image("eiger")
+        self.im = self.d1.add_widget("BECImageWidget")
+        self.im.image("eiger")
 
         self.d2 = self.dock.add_dock(name="dock_2", position="bottom")
-        self.wave = self.d2.add_widget("BECWaveformWidget", row=0, col=0)
-        # self.wave.plot(x_name="samx", y_name="bpm3a")
-        # self.wave.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
-        self.bar = self.d2.add_widget("RingProgressBar", row=0, col=1)
-        self.bar.set_diameter(200)
+        self.wf = self.d2.add_widget("BECWaveformWidget", row=0, col=0)
+        self.wf.plot(x_name="samx", y_name="bpm3a")
+        self.wf.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
+        # self.bar = self.d2.add_widget("RingProgressBar", row=0, col=1)
+        # self.bar.set_diameter(200)
 
-        self.d3 = self.dock.add_dock(name="dock_3", position="bottom")
-        self.colormap = pg.GradientWidget()
-        self.d3.add_widget(self.colormap, row=0, col=0)
+        # self.d3 = self.dock.add_dock(name="dock_3", position="bottom")
+        # self.colormap = pg.GradientWidget()
+        # self.d3.add_widget(self.colormap, row=0, col=0)
 
         self.dock.save_state()
 
