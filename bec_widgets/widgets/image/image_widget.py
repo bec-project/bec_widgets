@@ -1,16 +1,18 @@
+from __future__ import annotations
+
 import sys
 from typing import Literal, Optional
+
 import pyqtgraph as pg
+from qtpy.QtWidgets import QVBoxLayout, QWidget
 
-from qtpy.QtWidgets import QWidget, QVBoxLayout
-
-from bec_widgets.qt_utils.error_popups import WarningPopupUtility, SafeSlot
+from bec_widgets.qt_utils.error_popups import SafeSlot, WarningPopupUtility
 from bec_widgets.qt_utils.settings_dialog import SettingsDialog
 from bec_widgets.qt_utils.toolbar import (
+    DeviceSelectionAction,
+    IconAction,
     ModularToolBar,
     SeparatorAction,
-    IconAction,
-    DeviceSelectionAction,
 )
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.device_combobox.device_combobox import DeviceComboBox
@@ -20,11 +22,25 @@ from bec_widgets.widgets.figure.plots.image.image import ImageConfig
 from bec_widgets.widgets.figure.plots.image.image_item import BECImageItem
 
 
-# TODO move the actions to general place
-
-
 class BECImageWidget(BECWidget, QWidget):
-    USER_ACCESS = []
+    USER_ACCESS = [
+        "image",
+        "set",
+        "set_title",
+        "set_x_label",
+        "set_y_label",
+        "set_x_scale",
+        "set_y_scale",
+        "set_x_lim",
+        "set_y_lim",
+        "set_vrange",
+        "set_fft",
+        "set_transpose",
+        "set_rotation",
+        "set_log",
+        "set_grid",
+        "lock_aspect_ratio",
+    ]
 
     def __init__(
         self,
@@ -66,10 +82,15 @@ class BECImageWidget(BECWidget, QWidget):
                     tooltip="Autorange Image Intensity",
                     checkable=True,
                 ),
+                "aspect_ratio": IconAction(
+                    icon_path="lock_aspect_ratio.svg",
+                    tooltip="Lock image aspect ratio",
+                    checkable=True,
+                ),
                 "separator_2": SeparatorAction(),
-                "FFT": IconAction(icon_path="compare.svg", tooltip="Toggle FFT", checkable=True),
+                "FFT": IconAction(icon_path="fft.svg", tooltip="Toggle FFT", checkable=True),
                 "log": IconAction(
-                    icon_path="line_curve.svg", tooltip="Toggle log scale", checkable=True
+                    icon_path="log_scale.png", tooltip="Toggle log scale", checkable=True
                 ),
                 "transpose": IconAction(
                     icon_path="transform.svg", tooltip="Transpose Image", checkable=True
@@ -94,16 +115,16 @@ class BECImageWidget(BECWidget, QWidget):
 
         self.warning_util = WarningPopupUtility(self)
 
-        self.image = self.fig.image()
-        self.image.apply_config(config)
+        self._image = self.fig.image()
+        self._image.apply_config(config)
         self.rotation = 0
 
         self.config = config
 
         self._hook_actions()
 
-        # TODO test commands
-        # self.image.add_monitor_image("eiger")
+        self.toolbar.widgets["drag_mode"].action.setChecked(True)
+        self.toolbar.widgets["auto_range_image"].action.setChecked(True)
 
     def _hook_actions(self):
         self.toolbar.widgets["connect"].action.triggered.connect(self._connect_action)
@@ -114,14 +135,15 @@ class BECImageWidget(BECWidget, QWidget):
         self.toolbar.widgets["rectangle_mode"].action.triggered.connect(
             self.enable_mouse_rectangle_mode
         )
-        self.toolbar.widgets["auto_range"].action.triggered.connect(self._auto_range_from_toolbar)
+        self.toolbar.widgets["auto_range"].action.triggered.connect(self.toggle_auto_range)
         self.toolbar.widgets["auto_range_image"].action.triggered.connect(
-            self.toogle_image_autorange
+            self.toggle_image_autorange
         )
+        self.toolbar.widgets["aspect_ratio"].action.triggered.connect(self.toggle_aspect_ratio)
         # sepatator
-        self.toolbar.widgets["FFT"].action.triggered.connect(self.toogle_fft)
-        self.toolbar.widgets["log"].action.triggered.connect(self.toogle_log)
-        self.toolbar.widgets["transpose"].action.triggered.connect(self.toogle_transpose)
+        self.toolbar.widgets["FFT"].action.triggered.connect(self.toggle_fft)
+        self.toolbar.widgets["log"].action.triggered.connect(self.toggle_log)
+        self.toolbar.widgets["transpose"].action.triggered.connect(self.toggle_transpose)
         self.toolbar.widgets["rotate_left"].action.triggered.connect(self.rotate_left)
         self.toolbar.widgets["rotate_right"].action.triggered.connect(self.rotate_right)
         self.toolbar.widgets["reset"].action.triggered.connect(self.reset_settings)
@@ -135,8 +157,7 @@ class BECImageWidget(BECWidget, QWidget):
     def _connect_action(self):
         monitor_combo = self.toolbar.widgets["monitor"].device_combobox
         monitor_name = monitor_combo.currentText()
-        # self.add_monitor_image(monitor_name)
-        self.set_monitor_image(monitor_name)
+        self.image(monitor_name)
         monitor_combo.setStyleSheet("QComboBox { background-color: " "; }")
 
     def show_axis_settings(self):
@@ -152,7 +173,7 @@ class BECImageWidget(BECWidget, QWidget):
     # User Access Methods from image
     ###################################
     @SafeSlot(popup_error=True)
-    def add_monitor_image(
+    def image(
         self,
         monitor: str,
         color_map: Optional[str] = "magma",
@@ -163,8 +184,13 @@ class BECImageWidget(BECWidget, QWidget):
         # post_processing: Optional[PostProcessingConfig] = None,
         **kwargs,
     ) -> BECImageItem:
-        return self.image.add_monitor_image(
-            monitor,
+        if self.toolbar.widgets["monitor"].device_combobox.currentText() != monitor:
+            self.toolbar.widgets["monitor"].device_combobox.setCurrentText(monitor)
+            self.toolbar.widgets["monitor"].device_combobox.setStyleSheet(
+                "QComboBox {{ background-color: " "; }}"
+            )
+        return self._image.image(
+            monitor=monitor,
             color_map=color_map,
             color_bar=color_bar,
             downsample=downsample,
@@ -172,6 +198,29 @@ class BECImageWidget(BECWidget, QWidget):
             vrange=vrange,
             **kwargs,
         )
+
+    def set_vrange(self, vmin: float, vmax: float, name: str = None):
+        """
+        Set the range of the color bar.
+        If name is not specified, then set vrange for all images.
+
+        Args:
+            vmin(float): Minimum value of the color bar.
+            vmax(float): Maximum value of the color bar.
+            name(str): The name of the image. If None, apply to all images.
+        """
+        self._image.set_vrange(vmin, vmax, name)
+
+    def set_color_map(self, color_map: str, name: str = None):
+        """
+        Set the color map of the image.
+        If name is not specified, then set color map for all images.
+
+        Args:
+            cmap(str): The color map of the image.
+            name(str): The name of the image. If None, apply to all images.
+        """
+        self._image.set_color_map(color_map, name)
 
     def set_fft(self, enable: bool = False, name: str = None):
         """
@@ -182,7 +231,8 @@ class BECImageWidget(BECWidget, QWidget):
             enable(bool): Whether to perform FFT on the monitor data.
             name(str): The name of the image. If None, apply to all images.
         """
-        self.image.set_fft(enable, name)
+        self._image.set_fft(enable, name)
+        self.toolbar.widgets["FFT"].action.setChecked(enable)
 
     def set_transpose(self, enable: bool = False, name: str = None):
         """
@@ -193,7 +243,8 @@ class BECImageWidget(BECWidget, QWidget):
             enable(bool): Whether to transpose the monitor data before displaying.
             name(str): The name of the image. If None, apply to all images.
         """
-        self.image.set_transpose(enable, name)
+        self._image.set_transpose(enable, name)
+        self.toolbar.widgets["transpose"].action.setChecked(enable)
 
     def set_rotation(self, deg_90: int = 0, name: str = None):
         """
@@ -204,7 +255,7 @@ class BECImageWidget(BECWidget, QWidget):
             deg_90(int): The rotation angle of the monitor data before displaying.
             name(str): The name of the image. If None, apply to all images.
         """
-        self.image.set_rotation(deg_90, name)
+        self._image.set_rotation(deg_90, name)
 
     def set_log(self, enable: bool = False, name: str = None):
         """
@@ -215,7 +266,8 @@ class BECImageWidget(BECWidget, QWidget):
             enable(bool): Whether to perform log on the monitor data.
             name(str): The name of the image. If None, apply to all images.
         """
-        self.image.set_log(enable, name)
+        self._image.set_log(enable, name)
+        self.toolbar.widgets["log"].action.setChecked(enable)
 
     ###################################
     # User Access Methods from Plotbase
@@ -238,7 +290,7 @@ class BECImageWidget(BECWidget, QWidget):
             - y_lim: tuple
             - legend_label_size: int
         """
-        self.image.set(**kwargs)
+        self._image.set(**kwargs)
 
     def set_title(self, title: str):
         """
@@ -247,7 +299,7 @@ class BECImageWidget(BECWidget, QWidget):
         Args:
             title(str): Title of the plot.
         """
-        self.image.set_title(title)
+        self._image.set_title(title)
 
     def set_x_label(self, x_label: str):
         """
@@ -256,7 +308,7 @@ class BECImageWidget(BECWidget, QWidget):
         Args:
             x_label(str): Label of the x-axis.
         """
-        self.image.set_x_label(x_label)
+        self._image.set_x_label(x_label)
 
     def set_y_label(self, y_label: str):
         """
@@ -265,7 +317,7 @@ class BECImageWidget(BECWidget, QWidget):
         Args:
             y_label(str): Label of the y-axis.
         """
-        self.image.set_y_label(y_label)
+        self._image.set_y_label(y_label)
 
     def set_x_scale(self, x_scale: Literal["linear", "log"]):
         """
@@ -274,7 +326,7 @@ class BECImageWidget(BECWidget, QWidget):
         Args:
             x_scale(Literal["linear", "log"]): Scale of the x-axis.
         """
-        self.image.set_x_scale(x_scale)
+        self._image.set_x_scale(x_scale)
 
     def set_y_scale(self, y_scale: Literal["linear", "log"]):
         """
@@ -283,7 +335,7 @@ class BECImageWidget(BECWidget, QWidget):
         Args:
             y_scale(Literal["linear", "log"]): Scale of the y-axis.
         """
-        self.image.set_y_scale(y_scale)
+        self._image.set_y_scale(y_scale)
 
     def set_x_lim(self, x_lim: tuple):
         """
@@ -292,7 +344,7 @@ class BECImageWidget(BECWidget, QWidget):
         Args:
             x_lim(tuple): Limits of the x-axis.
         """
-        self.image.set_x_lim(x_lim)
+        self._image.set_x_lim(x_lim)
 
     def set_y_lim(self, y_lim: tuple):
         """
@@ -301,23 +353,7 @@ class BECImageWidget(BECWidget, QWidget):
         Args:
             y_lim(tuple): Limits of the y-axis.
         """
-        self.image.set_y_lim(y_lim)
-
-    def set_legend_label_size(self, legend_label_size: int):
-        """
-        Set the size of the legend labels of the plot widget.
-
-        Args:
-            legend_label_size(int): Size of the legend labels.
-        """
-        self.image.set_legend_label_size(legend_label_size)
-
-    @SafeSlot()
-    def _auto_range_from_toolbar(self):
-        """
-        Set the auto range of the plot widget from the toolbar.
-        """
-        self.image.set_auto_range(True, "xy")
+        self._image.set_y_lim(y_lim)
 
     def set_grid(self, x_grid: bool, y_grid: bool):
         """
@@ -327,7 +363,7 @@ class BECImageWidget(BECWidget, QWidget):
             x_grid(bool): Visibility of the x-axis grid.
             y_grid(bool): Visibility of the y-axis grid.
         """
-        self.image.set_grid(x_grid, y_grid)
+        self._image.set_grid(x_grid, y_grid)
 
     def lock_aspect_ratio(self, lock: bool):
         """
@@ -336,23 +372,31 @@ class BECImageWidget(BECWidget, QWidget):
         Args:
             lock(bool): Lock the aspect ratio.
         """
-        self.image.lock_aspect_ratio(lock)
+        self._image.lock_aspect_ratio(lock)
 
     ###################################
     # Toolbar Actions
     ###################################
     @SafeSlot()
-    def toogle_fft(self):
+    def toggle_auto_range(self):
+        """
+        Set the auto range of the plot widget from the toolbar.
+        """
+        checked = self.toolbar.widgets["auto_range"].action.isChecked()
+        self._image.set_auto_range(checked, "xy")
+
+    @SafeSlot()
+    def toggle_fft(self):
         checked = self.toolbar.widgets["FFT"].action.isChecked()
         self.set_fft(checked)
 
     @SafeSlot()
-    def toogle_log(self):
+    def toggle_log(self):
         checked = self.toolbar.widgets["log"].action.isChecked()
         self.set_log(checked)
 
     @SafeSlot()
-    def toogle_transpose(self):
+    def toggle_transpose(self):
         checked = self.toolbar.widgets["transpose"].action.isChecked()
         self.set_transpose(checked)
 
@@ -379,30 +423,38 @@ class BECImageWidget(BECWidget, QWidget):
         self.toolbar.widgets["transpose"].action.setChecked(False)
 
     @SafeSlot()
-    def toogle_image_autorange(self):
+    def toggle_image_autorange(self):
         """
         Enable the auto range of the image intensity.
         """
         checked = self.toolbar.widgets["auto_range_image"].action.isChecked()
-        self.image.set_autorange(checked)
+        self._image.set_autorange(checked)
+
+    @SafeSlot()
+    def toggle_aspect_ratio(self):
+        """
+        Enable the auto range of the image intensity.
+        """
+        checked = self.toolbar.widgets["aspect_ratio"].action.isChecked()
+        self._image.lock_aspect_ratio(checked)
 
     @SafeSlot()
     def enable_mouse_rectangle_mode(self):
         self.toolbar.widgets["rectangle_mode"].action.setChecked(True)
         self.toolbar.widgets["drag_mode"].action.setChecked(False)
-        self.image.plot_item.getViewBox().setMouseMode(pg.ViewBox.RectMode)
+        self._image.plot_item.getViewBox().setMouseMode(pg.ViewBox.RectMode)
 
     @SafeSlot()
     def enable_mouse_pan_mode(self):
         self.toolbar.widgets["drag_mode"].action.setChecked(True)
         self.toolbar.widgets["rectangle_mode"].action.setChecked(False)
-        self.image.plot_item.getViewBox().setMouseMode(pg.ViewBox.PanMode)
+        self._image.plot_item.getViewBox().setMouseMode(pg.ViewBox.PanMode)
 
     def export(self):
         """
         Show the export dialog for the plot widget.
         """
-        self.image.export()
+        self._image.export()
 
     def cleanup(self):
         self.fig.cleanup()

@@ -16,6 +16,7 @@ class Widgets(str, enum.Enum):
     BECDock = "BECDock"
     BECDockArea = "BECDockArea"
     BECFigure = "BECFigure"
+    BECImageWidget = "BECImageWidget"
     BECMotorMapWidget = "BECMotorMapWidget"
     BECQueue = "BECQueue"
     BECStatusBox = "BECStatusBox"
@@ -822,7 +823,7 @@ class BECImageShow(RPCBase):
         """
 
     @rpc_call
-    def add_monitor_image(
+    def image(
         self,
         monitor: "str",
         color_map: "Optional[str]" = "magma",
@@ -833,7 +834,17 @@ class BECImageShow(RPCBase):
         **kwargs,
     ) -> "BECImageItem":
         """
-        None
+        Add an image to the figure. Always access the first image widget in the figure.
+
+        Args:
+            monitor(str): The name of the monitor to display.
+            color_bar(Literal["simple","full"]): The type of color bar to display.
+            color_map(str): The color map to use for the image.
+            data(np.ndarray): Custom data to display.
+            vrange(tuple[float, float]): The range of values to display.
+
+        Returns:
+            BECImageItem: The image item.
         """
 
     @rpc_call
@@ -1122,6 +1133,180 @@ class BECImageShow(RPCBase):
         Get the list of images.
         Returns:
             list[BECImageItem]: The list of images.
+        """
+
+
+class BECImageWidget(RPCBase):
+    @rpc_call
+    def image(
+        self,
+        monitor: "str",
+        color_map: "Optional[str]" = "magma",
+        color_bar: "Optional[Literal['simple', 'full']]" = "full",
+        downsample: "Optional[bool]" = True,
+        opacity: "Optional[float]" = 1.0,
+        vrange: "Optional[tuple[int, int]]" = None,
+        **kwargs,
+    ) -> "BECImageItem":
+        """
+        None
+        """
+
+    @rpc_call
+    def set(self, **kwargs):
+        """
+        Set the properties of the plot widget.
+
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+
+        Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+            - legend_label_size: int
+        """
+
+    @rpc_call
+    def set_title(self, title: "str"):
+        """
+        Set the title of the plot widget.
+
+        Args:
+            title(str): Title of the plot.
+        """
+
+    @rpc_call
+    def set_x_label(self, x_label: "str"):
+        """
+        Set the x-axis label of the plot widget.
+
+        Args:
+            x_label(str): Label of the x-axis.
+        """
+
+    @rpc_call
+    def set_y_label(self, y_label: "str"):
+        """
+        Set the y-axis label of the plot widget.
+
+        Args:
+            y_label(str): Label of the y-axis.
+        """
+
+    @rpc_call
+    def set_x_scale(self, x_scale: "Literal['linear', 'log']"):
+        """
+        Set the scale of the x-axis of the plot widget.
+
+        Args:
+            x_scale(Literal["linear", "log"]): Scale of the x-axis.
+        """
+
+    @rpc_call
+    def set_y_scale(self, y_scale: "Literal['linear', 'log']"):
+        """
+        Set the scale of the y-axis of the plot widget.
+
+        Args:
+            y_scale(Literal["linear", "log"]): Scale of the y-axis.
+        """
+
+    @rpc_call
+    def set_x_lim(self, x_lim: "tuple"):
+        """
+        Set the limits of the x-axis of the plot widget.
+
+        Args:
+            x_lim(tuple): Limits of the x-axis.
+        """
+
+    @rpc_call
+    def set_y_lim(self, y_lim: "tuple"):
+        """
+        Set the limits of the y-axis of the plot widget.
+
+        Args:
+            y_lim(tuple): Limits of the y-axis.
+        """
+
+    @rpc_call
+    def set_vrange(self, vmin: "float", vmax: "float", name: "str" = None):
+        """
+        Set the range of the color bar.
+        If name is not specified, then set vrange for all images.
+
+        Args:
+            vmin(float): Minimum value of the color bar.
+            vmax(float): Maximum value of the color bar.
+            name(str): The name of the image. If None, apply to all images.
+        """
+
+    @rpc_call
+    def set_fft(self, enable: "bool" = False, name: "str" = None):
+        """
+        Set the FFT of the image.
+        If name is not specified, then set FFT for all images.
+
+        Args:
+            enable(bool): Whether to perform FFT on the monitor data.
+            name(str): The name of the image. If None, apply to all images.
+        """
+
+    @rpc_call
+    def set_transpose(self, enable: "bool" = False, name: "str" = None):
+        """
+        Set the transpose of the image.
+        If name is not specified, then set transpose for all images.
+
+        Args:
+            enable(bool): Whether to transpose the monitor data before displaying.
+            name(str): The name of the image. If None, apply to all images.
+        """
+
+    @rpc_call
+    def set_rotation(self, deg_90: "int" = 0, name: "str" = None):
+        """
+        Set the rotation of the image.
+        If name is not specified, then set rotation for all images.
+
+        Args:
+            deg_90(int): The rotation angle of the monitor data before displaying.
+            name(str): The name of the image. If None, apply to all images.
+        """
+
+    @rpc_call
+    def set_log(self, enable: "bool" = False, name: "str" = None):
+        """
+        Set the log of the image.
+        If name is not specified, then set log for all images.
+
+        Args:
+            enable(bool): Whether to perform log on the monitor data.
+            name(str): The name of the image. If None, apply to all images.
+        """
+
+    @rpc_call
+    def set_grid(self, x_grid: "bool", y_grid: "bool"):
+        """
+        Set the grid visibility of the plot widget.
+
+        Args:
+            x_grid(bool): Visibility of the x-axis grid.
+            y_grid(bool): Visibility of the y-axis grid.
+        """
+
+    @rpc_call
+    def lock_aspect_ratio(self, lock: "bool"):
+        """
+        Lock the aspect ratio of the plot widget.
+
+        Args:
+            lock(bool): Lock the aspect ratio.
         """
 
 
