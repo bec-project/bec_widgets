@@ -69,6 +69,7 @@ def test_device_input_combobox_init(device_input_combobox):
         "eiger",
         "async_device",
         "test",
+        "test_device",
     ]
 
 
@@ -157,6 +158,7 @@ def test_device_input_line_edit_init(device_input_line_edit):
         "eiger",
         "async_device",
         "test",
+        "test_device",
     ]
 
 

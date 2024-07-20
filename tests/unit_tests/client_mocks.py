@@ -89,10 +89,17 @@ class FakePositioner(FakeDevice):
 
 
 class Positioner(FakePositioner):
-    """just placeholder for testing embeded isinstance check in DeviceCombobox"""
+    """just placeholder for testing embedded isinstance check in DeviceCombobox"""
 
     def __init__(self, name="test", limits=None, read_value=1.0):
         super().__init__(name, limits, read_value)
+
+
+class Device(FakeDevice):
+    """just placeholder for testing embedded isinstance check in DeviceCombobox"""
+
+    def __init__(self, name, enabled=True):
+        super().__init__(name, enabled)
 
 
 class DMMock:
@@ -120,6 +127,7 @@ DEVICES = [
     FakeDevice("eiger"),
     FakeDevice("async_device", readout_priority=ReadoutPriority.ASYNC),
     Positioner("test", limits=[-10, 10], read_value=2.0),
+    Device("test_device"),
 ]
 
 

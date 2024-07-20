@@ -24,7 +24,7 @@ def mock_waveform(waveform_widget):
     return waveform_mock
 
 
-def test_waveform_widget_inti(waveform_widget):
+def test_waveform_widget_init(waveform_widget):
     assert waveform_widget is not None
     assert waveform_widget.client is not None
     assert isinstance(waveform_widget, BECWaveformWidget)
