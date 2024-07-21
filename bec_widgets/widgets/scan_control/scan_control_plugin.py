@@ -6,39 +6,38 @@ from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 from qtpy.QtGui import QIcon
 
 import bec_widgets
-from bec_widgets.widgets.toggle.toggle import ToggleSwitch
+from bec_widgets.widgets.scan_control.scan_control import ScanControl
 
 DOM_XML = """
 <ui language='c++'>
-    <widget class='ToggleSwitch' name='toggle_switch'>
+    <widget class='ScanControl' name='scan_control'>
     </widget>
 </ui>
 """
-
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
-class ToggleSwitchPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
+class ScanControlPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
     def __init__(self):
         super().__init__()
         self._form_editor = None
 
     def createWidget(self, parent):
-        t = ToggleSwitch(parent)
+        t = ScanControl(parent)
         return t
 
     def domXml(self):
         return DOM_XML
 
     def group(self):
-        return "BEC Utils"
+        return "Device Control"
 
     def icon(self):
-        icon_path = os.path.join(MODULE_PATH, "assets", "designer_icons", "toggle.png")
+        icon_path = os.path.join(MODULE_PATH, "assets", "designer_icons", "scan_control.png")
         return QIcon(icon_path)
 
     def includeFile(self):
-        return "toggle_switch"
+        return "scan_control"
 
     def initialize(self, form_editor):
         self._form_editor = form_editor
@@ -50,10 +49,10 @@ class ToggleSwitchPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return self._form_editor is not None
 
     def name(self):
-        return "ToggleSwitch"
+        return "ScanControl"
 
     def toolTip(self):
-        return "ToggleSwitch"
+        return "ScanControl"
 
     def whatsThis(self):
         return self.toolTip()

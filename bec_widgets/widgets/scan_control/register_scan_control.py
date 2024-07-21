@@ -6,9 +6,9 @@ def main():  # pragma: no cover
         return
     from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
 
-    from bec_widgets.widgets.device_combobox.device_combobox_plugin import DeviceComboBoxPlugin
+    from bec_widgets.widgets.scan_control.scan_control_plugin import ScanControlPlugin
 
-    QPyDesignerCustomWidgetCollection.addCustomWidget(DeviceComboBoxPlugin())
+    QPyDesignerCustomWidgetCollection.addCustomWidget(ScanControlPlugin())
 
 
 if __name__ == "__main__":  # pragma: no cover

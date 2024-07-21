@@ -351,7 +351,7 @@ class BECDockArea(RPCBase, BECGuiClientMixin):
         name: "str" = None,
         position: "Literal['bottom', 'top', 'left', 'right', 'above', 'below']" = None,
         relative_to: "BECDock | None" = None,
-        closable: "bool" = False,
+        closable: "bool" = True,
         floating: "bool" = False,
         prefix: "str" = "dock",
         widget: "str | QWidget | None" = None,

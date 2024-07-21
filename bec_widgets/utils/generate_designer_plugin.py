@@ -4,7 +4,7 @@ import re
 
 from qtpy.QtCore import QObject
 
-EXCLUDED_PLUGINS = ["BECConnector", "BECDockArea", "BECDock"]
+EXCLUDED_PLUGINS = ["BECConnector", "BECDockArea", "BECDock", "BECFigure"]
 
 
 class DesignerPluginInfo:

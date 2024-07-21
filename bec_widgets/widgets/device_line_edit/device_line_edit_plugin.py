@@ -5,6 +5,7 @@ import os
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 from qtpy.QtGui import QIcon
 
+import bec_widgets
 from bec_widgets.widgets.device_line_edit.device_line_edit import DeviceLineEdit
 
 DOM_XML = """
@@ -13,6 +14,8 @@ DOM_XML = """
     </widget>
 </ui>
 """
+
+MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
 class DeviceLineEditPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
@@ -28,11 +31,10 @@ class DeviceLineEditPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return "BEC Device Inputs"
+        return "Device Control"
 
     def icon(self):
-        current_path = os.path.dirname(__file__)
-        icon_path = os.path.join(current_path, "assets", "line_edit_icon.png")
+        icon_path = os.path.join(MODULE_PATH, "assets", "designer_icons", "device_line_edit.png")
         return QIcon(icon_path)
 
     def includeFile(self):

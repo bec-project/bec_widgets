@@ -96,7 +96,7 @@ class BECDockArea(BECWidget, QWidget):
                         "vs_code": IconAction(icon_path="terminal.svg", tooltip="Add VS Code"),
                         "status": IconAction(icon_path="status.svg", tooltip="Add BEC Status Box"),
                         "progress_bar": IconAction(
-                            icon_path="progress.svg", tooltip="Add Circular ProgressBar"
+                            icon_path="ring_progress.svg", tooltip="Add Circular ProgressBar"
                         ),
                     },
                 ),

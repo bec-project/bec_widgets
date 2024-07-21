@@ -5,6 +5,7 @@ import os
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 from qtpy.QtGui import QIcon
 
+import bec_widgets
 from bec_widgets.widgets.stop_button.stop_button import StopButton
 
 DOM_XML = """
@@ -13,6 +14,8 @@ DOM_XML = """
     </widget>
 </ui>
 """
+
+MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
 class StopButtonPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
@@ -28,11 +31,10 @@ class StopButtonPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return "BEC Buttons"
+        return "BEC Utils"
 
     def icon(self):
-        current_path = os.path.dirname(__file__)
-        icon_path = os.path.join(current_path, "assets", "stop.png")
+        icon_path = os.path.join(MODULE_PATH, "assets", "designer_icons", "stop.png")
         return QIcon(icon_path)
 
     def includeFile(self):

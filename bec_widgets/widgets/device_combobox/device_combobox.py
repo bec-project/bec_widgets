@@ -2,7 +2,6 @@ from typing import TYPE_CHECKING
 
 from qtpy.QtWidgets import QComboBox
 
-from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.base_classes.device_input_base import DeviceInputBase, DeviceInputConfig
 
 if TYPE_CHECKING:

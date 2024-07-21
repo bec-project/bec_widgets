@@ -1,9 +1,11 @@
 # Copyright (C) 2022 The Qt Company Ltd.
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
+import os
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 from qtpy.QtGui import QIcon
 
+import bec_widgets
 from bec_widgets.widgets.device_box.device_box import DeviceBox
 
 DOM_XML = """
@@ -12,6 +14,8 @@ DOM_XML = """
     </widget>
 </ui>
 """
+
+MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
 class DeviceBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
@@ -30,7 +34,8 @@ class DeviceBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "Device Control"
 
     def icon(self):
-        return QIcon()
+        icon_path = os.path.join(MODULE_PATH, "assets", "designer_icons", "device_box.png")
+        return QIcon(icon_path)
 
     def includeFile(self):
         return "device_box"

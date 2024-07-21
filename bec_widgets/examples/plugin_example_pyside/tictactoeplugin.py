@@ -1,10 +1,13 @@
 # Copyright (C) 2022 The Qt Company Ltd.
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
+import os
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 from qtpy.QtGui import QIcon
 from tictactoe import TicTacToe
 from tictactoetaskmenu import TicTacToeTaskMenuFactory
+
+import bec_widgets
 
 DOM_XML = """
 <ui language='c++'>
@@ -24,6 +27,8 @@ DOM_XML = """
 </ui>
 """
 
+MODULE_PATH = os.path.dirname(bec_widgets.__file__)
+
 
 class TicTacToePlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
     def __init__(self):
@@ -38,10 +43,11 @@ class TicTacToePlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return ""
+        return "Games"
 
     def icon(self):
-        return QIcon()
+        icon_path = os.path.join(MODULE_PATH, "assets", "designer_icons", "games.png")
+        return QIcon(icon_path)
 
     def includeFile(self):
         return "tictactoe"

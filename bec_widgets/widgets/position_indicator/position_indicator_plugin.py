@@ -1,9 +1,11 @@
 # Copyright (C) 2022 The Qt Company Ltd.
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
+import os
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 from qtpy.QtGui import QIcon
 
+import bec_widgets
 from bec_widgets.widgets.position_indicator.position_indicator import PositionIndicator
 
 DOM_XML = """
@@ -12,6 +14,8 @@ DOM_XML = """
     </widget>
 </ui>
 """
+
+MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
 class PositionIndicatorPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
@@ -27,10 +31,11 @@ class PositionIndicatorPlugin(QDesignerCustomWidgetInterface):  # pragma: no cov
         return DOM_XML
 
     def group(self):
-        return ""
+        return "BEC Utils"
 
     def icon(self):
-        return QIcon()
+        icon_path = os.path.join(MODULE_PATH, "assets", "designer_icons", "position_indicator.png")
+        return QIcon(icon_path)
 
     def includeFile(self):
         return "position_indicator"
