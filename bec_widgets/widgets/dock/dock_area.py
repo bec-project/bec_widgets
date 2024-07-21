@@ -119,35 +119,35 @@ class BECDockArea(BECWidget, QWidget):
     def _hook_toolbar(self):
         # Menu Plot
         self.toolbar.widgets["menu_plots"].widgets["waveform"].triggered.connect(
-            lambda: self.add_dock(widget="BECWaveformWidget")
+            lambda: self.add_dock(widget="BECWaveformWidget", prefix="waveform")
         )
         self.toolbar.widgets["menu_plots"].widgets["image"].triggered.connect(
-            lambda: self.add_dock(widget="BECImageWidget")
+            lambda: self.add_dock(widget="BECImageWidget", prefix="image")
         )
         self.toolbar.widgets["menu_plots"].widgets["motor_map"].triggered.connect(
-            lambda: self.add_dock(widget="BECMotorMapWidget")
+            lambda: self.add_dock(widget="BECMotorMapWidget", prefix="motor_map")
         )
 
         # Menu Devices
         self.toolbar.widgets["menu_devices"].widgets["scan_control"].triggered.connect(
-            lambda: self.add_dock(widget="ScanControl")
+            lambda: self.add_dock(widget="ScanControl", prefix="scan_control")
         )
         self.toolbar.widgets["menu_devices"].widgets["device_box"].triggered.connect(
-            lambda: self.add_dock(widget="DeviceBox")
+            lambda: self.add_dock(widget="DeviceBox", prefix="device_box")
         )
 
         # Menu Utils
         self.toolbar.widgets["menu_utils"].widgets["queue"].triggered.connect(
-            lambda: self.add_dock(widget="BECQueue")
+            lambda: self.add_dock(widget="BECQueue", prefix="queue")
         )
         self.toolbar.widgets["menu_utils"].widgets["status"].triggered.connect(
-            lambda: self.add_dock(widget="BECStatusBox")
+            lambda: self.add_dock(widget="BECStatusBox", prefix="status")
         )
         self.toolbar.widgets["menu_utils"].widgets["vs_code"].triggered.connect(
-            lambda: self.add_dock(widget="VSCodeEditor")
+            lambda: self.add_dock(widget="VSCodeEditor", prefix="vs_code")
         )
         self.toolbar.widgets["menu_utils"].widgets["progress_bar"].triggered.connect(
-            lambda: self.add_dock(widget="RingProgressBar")
+            lambda: self.add_dock(widget="RingProgressBar", prefix="progress_bar")
         )
 
         # Icons
