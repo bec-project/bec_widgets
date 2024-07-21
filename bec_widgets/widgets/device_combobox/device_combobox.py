@@ -34,7 +34,7 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
     ):
         super().__init__(client=client, config=config, gui_id=gui_id)
         QComboBox.__init__(self, parent=parent)
-
+        self.setMinimumSize(125, 26)
         self.populate_combobox()
 
         if arg_name is not None:
