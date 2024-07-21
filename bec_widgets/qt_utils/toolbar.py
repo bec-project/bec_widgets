@@ -5,7 +5,7 @@ from collections import defaultdict
 
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QAction, QIcon
-from qtpy.QtWidgets import QHBoxLayout, QLabel, QToolBar, QToolButton, QWidget
+from qtpy.QtWidgets import QHBoxLayout, QLabel, QMenu, QToolBar, QToolButton, QWidget
 
 import bec_widgets
 
@@ -98,6 +98,52 @@ class DeviceSelectionAction(ToolBarAction):
         self.device_combobox.setStyleSheet(f"QComboBox {{ background-color: {color}; }}")
 
 
+class ExpandableMenuAction(ToolBarAction):
+    """
+    Action for an expandable menu in the toolbar.
+
+    Args:
+        label (str): The label for the menu.
+        actions (dict): A dictionary of actions to populate the menu.
+        icon_path (str, optional): The path to the icon file. Defaults to None.
+
+    """
+
+    def __init__(self, label: str, actions: dict, icon_path: str = None):
+        super().__init__(icon_path, label)
+        self.actions = actions
+        self.widgets = defaultdict(dict)
+
+    def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
+        button = QToolButton(toolbar)
+        if self.icon_path:
+            button.setIcon(QIcon(self.icon_path))
+        button.setText(self.tooltip)
+        button.setPopupMode(QToolButton.InstantPopup)
+        button.setStyleSheet(
+            """
+                   QToolButton {
+                       font-size: 14px;
+                   }
+                   QMenu {
+                       font-size: 14px;
+                   }
+               """
+        )
+        menu = QMenu(button)
+        for action_id, action in self.actions.items():
+            sub_action = QAction(action.tooltip, target)
+            if action.icon_path:
+                icon = QIcon()
+                icon.addFile(action.icon_path, size=QSize(20, 20))
+                sub_action.setIcon(icon)
+            sub_action.setCheckable(action.checkable)
+            menu.addAction(sub_action)
+            self.widgets[action_id] = sub_action
+        button.setMenu(menu)
+        toolbar.addWidget(button)
+
+
 class ModularToolBar(QToolBar):
     """Modular toolbar with optional automatic initialization.
     Args:
@@ -108,7 +154,11 @@ class ModularToolBar(QToolBar):
     """
 
     def __init__(
-        self, parent=None, actions=None, target_widget=None, color: str = "rgba(255, 255, 255, 0)"
+        self,
+        parent=None,
+        actions: dict | None = None,
+        target_widget=None,
+        color: str = "rgba(255, 255, 255, 0)",
     ):
         super().__init__(parent)
 
