@@ -2,24 +2,30 @@
 The widget is bound to be used with the BECStatusBox widget."""
 
 import enum
+import os
 from datetime import datetime
 
 from bec_lib.utils.import_utils import lazy_import_from
 from qtpy.QtCore import Qt, Slot
-from qtpy.QtWidgets import QDialog, QHBoxLayout, QLabel, QStyle, QVBoxLayout, QWidget
+from qtpy.QtGui import QIcon
+from qtpy.QtWidgets import QDialog, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+
+import bec_widgets
 
 # TODO : Put normal imports back when Pydantic gets faster
 BECStatus = lazy_import_from("bec_lib.messages", ("BECStatus",))
+
+MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
 class IconsEnum(enum.Enum):
     """Enum class for icons in the status item widget."""
 
-    RUNNING = "SP_DialogApplyButton"
-    BUSY = "SP_BrowserReload"
-    IDLE = "SP_MessageBoxWarning"
-    ERROR = "SP_DialogCancelButton"
-    NOTCONNECTED = "SP_TitleBarContextHelpButton"
+    RUNNING = os.path.join(MODULE_PATH, "assets", "status_icons", "running.svg")
+    BUSY = os.path.join(MODULE_PATH, "assets", "status_icons", "refresh.svg")
+    IDLE = os.path.join(MODULE_PATH, "assets", "status_icons", "warning.svg")
+    ERROR = os.path.join(MODULE_PATH, "assets", "status_icons", "error.svg")
+    NOTCONNECTED = os.path.join(MODULE_PATH, "assets", "status_icons", "not_connected.svg")
 
 
 class StatusItem(QWidget):
@@ -91,8 +97,8 @@ class StatusItem(QWidget):
 
     def set_status(self) -> None:
         """Set the status icon for the status item widget."""
-        icon_name = IconsEnum[self.config.status].value
-        icon = self.style().standardIcon(getattr(QStyle.StandardPixmap, icon_name))
+        icon_path = IconsEnum[self.config.status].value
+        icon = QIcon(icon_path)
         self._icon.setPixmap(icon.pixmap(*self.icon_size))
         self._icon.setAlignment(Qt.AlignmentFlag.AlignRight)
 
