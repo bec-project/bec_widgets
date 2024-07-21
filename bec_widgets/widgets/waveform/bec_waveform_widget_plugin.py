@@ -34,7 +34,7 @@ class BECWaveformWidgetPlugin(QDesignerCustomWidgetInterface):  # pragma: no cov
         return "BEC Plots"
 
     def icon(self):
-        icon_path = os.path.join(MODULE_PATH, "assets", "designer_icons", "BECWaveformWidget.png")
+        icon_path = os.path.join(MODULE_PATH, "assets", "designer_icons", "waveform.png")
         return QIcon(icon_path)
 
     def includeFile(self):

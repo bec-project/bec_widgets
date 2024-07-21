@@ -46,7 +46,7 @@ class BECDock(BECWidget, Dock):
     def __init__(
         self,
         parent: QWidget | None = None,
-        parent_dock_area: BECDockArea | None = None,
+        parent_dock_area: QWidget | None = None,
         config: DockConfig | None = None,
         name: str | None = None,
         client=None,
@@ -63,6 +63,8 @@ class BECDock(BECWidget, Dock):
             self.config = config
         super().__init__(client=client, config=config, gui_id=gui_id)
         Dock.__init__(self, name=name, **kwargs)
+
+        self.parent_dock_area = parent_dock_area
 
         # Layout Manager
         self.layout_manager = GridLayoutManager(self.layout)
@@ -230,7 +232,7 @@ class BECDock(BECWidget, Dock):
         Remove the dock from the parent dock area.
         """
         # self.cleanup()
-        self.orig_area.remove_dock(self.name())
+        self.parent_dock_area.remove_dock(self.name())
 
     def cleanup(self):
         """
@@ -249,3 +251,4 @@ class BECDock(BECWidget, Dock):
         """
         self.cleanup()
         super().close()
+        self.parent_dock_area.dock_area.docks.pop(self.name(), None)
