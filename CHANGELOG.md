@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v0.89.0 (2024-07-22)
+
+### Feature
+
+* feat(themes): moved themes to bec_qthemes ([`3798714`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3798714369adf4023f833b7749d2f46a0ec74eee))
+
+### Unknown
+
+* Revert &#34;feat(themes): moved themes to bec_qthemes&#34;
+
+This reverts commit 3798714369adf4023f833b7749d2f46a0ec74eee ([`fd6ae91`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fd6ae91993a23a7b8dbb2cf3c4b7c3eda6d2b0f6))
+
 ## v0.88.1 (2024-07-22)
 
 ### Documentation
@@ -122,10 +134,6 @@ Handles closeEvent() and RPC registering/unregistering ([`c7feb69`](https://gitl
 
 ## v0.84.0 (2024-07-15)
 
-### Feature
-
-* feat(waveform): async readback update implemented for async devices ([`0c6a9f2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0c6a9f2310df31ddcd68050a17cfbf52c3e2e226))
-
 ### Fix
 
 * fix(waveform): timestamp are not converted to human readable format ([`e495fd3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e495fd30c4c16474689943c7263e3060cb09ffb4))
@@ -134,13 +142,9 @@ Handles closeEvent() and RPC registering/unregistering ([`c7feb69`](https://gitl
 
 * fix(waveform): x axis switching logic fixed when axis are not compatible ([`e4e1a90`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e4e1a905d19def22f970b364c18c953f00e10389))
 
-* fix(waveform): dap leaked RID for all daps in current process; dap RID is now f&#34;{scan_id}-{gui_id}&#34; to distinguish for each plot instance ([`d23fd8b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d23fd8bd074ede6e14eb8e85e025cbced4bd45ef))
-
 ### Refactor
 
 * refactor(waveform): plot can be prompted without specifying kwargs ([`48911e9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/48911e934815923c94edb5ced6042058a11a97f5))
-
-* refactor(jupyter_console_window): added more examples of waveforms ([`fc935d9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fc935d9fc81067c3a67389ff88ea97da2e0c903e))
 
 ### Test
 
