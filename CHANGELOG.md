@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v0.88.1 (2024-07-22)
+
+### Documentation
+
+* docs: readthedocs icon path fixed ([`2bcaa42`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2bcaa4256d6daaefacb3ead8c72458d7b1498e29))
+
+### Fix
+
+* fix(plot_base): set_xy autorange moved to plotbase from waveform ([`a3dff7d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a3dff7decc16115c12dc6b4ef1572552368da309))
+
+### Refactor
+
+* refactor(toolbar): generalizations of the ToolBarAction ([`ad112d1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ad112d1f08157f6987edd48a0bacf9f669ef1997))
+
 ## v0.88.0 (2024-07-19)
 
 ### Feature
@@ -112,8 +126,6 @@ Handles closeEvent() and RPC registering/unregistering ([`c7feb69`](https://gitl
 
 * feat(waveform): async readback update implemented for async devices ([`0c6a9f2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0c6a9f2310df31ddcd68050a17cfbf52c3e2e226))
 
-* feat(waveform): data are taken directly from ScanItem which is defined from scan_status endpoint; scan update is triggered from scan_segment; plots can be added just specifying y_name -&gt; best effort for setting x reported device ([`b8717f1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b8717f13276734dd655ab03cd6005985ad5af9fb))
-
 ### Fix
 
 * fix(waveform): timestamp are not converted to human readable format ([`e495fd3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e495fd30c4c16474689943c7263e3060cb09ffb4))
@@ -123,12 +135,6 @@ Handles closeEvent() and RPC registering/unregistering ([`c7feb69`](https://gitl
 * fix(waveform): x axis switching logic fixed when axis are not compatible ([`e4e1a90`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e4e1a905d19def22f970b364c18c953f00e10389))
 
 * fix(waveform): dap leaked RID for all daps in current process; dap RID is now f&#34;{scan_id}-{gui_id}&#34; to distinguish for each plot instance ([`d23fd8b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d23fd8bd074ede6e14eb8e85e025cbced4bd45ef))
-
-* fix(waveform): only one type of x axis allowed; x mode validated ([`9d6ae87`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9d6ae87d0f03ca227570fcca8af2d8190828d271))
-
-* fix(waveform): data for axis are taken by separate method; validation consolidated ([`fc5a8bd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fc5a8bdd8b260f5e9b59ec71a4610c57442e43fe))
-
-* fix(bec_dispatcher): connect_slot can accept kwargs ([`0aa317a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0aa317aae58d3612d46f05b85f8b0db3d12bbe14))
 
 ### Refactor
 
