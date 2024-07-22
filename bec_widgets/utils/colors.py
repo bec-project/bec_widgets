@@ -2,11 +2,10 @@ import itertools
 import re
 from typing import Literal
 
+import bec_qthemes
 import numpy as np
 import pyqtgraph as pg
-import qdarkstyle
 from pydantic_core import PydanticCustomError
-from qdarkstyle import DarkPalette, LightPalette
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QApplication
 
@@ -14,7 +13,7 @@ CURRENT_THEME = "dark"
 
 
 def get_theme_palette():
-    return DarkPalette if CURRENT_THEME == "dark" else LightPalette
+    return bec_qthemes.load_palette(CURRENT_THEME)
 
 
 def apply_theme(theme: Literal["dark", "light"]):
@@ -30,7 +29,7 @@ def apply_theme(theme: Literal["dark", "light"]):
         pg_widget.setBackground("k" if theme == "dark" else "w")
 
     # now define stylesheet according to theme and apply it
-    style = qdarkstyle.load_stylesheet(palette=get_theme_palette())
+    style = bec_qthemes.load_stylesheet(theme)
     app.setStyleSheet(style)
 
 

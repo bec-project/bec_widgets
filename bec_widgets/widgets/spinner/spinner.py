@@ -55,7 +55,7 @@ class SpinnerWidget(QWidget):
 
         color_palette = get_theme_palette()
 
-        color = QColor(color_palette.COLOR_ACCENT_4)
+        color = QColor(color_palette.accent().color())
 
         rect.adjust(line_width, line_width, -line_width, -line_width)
 
