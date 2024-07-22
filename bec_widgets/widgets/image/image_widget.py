@@ -66,7 +66,7 @@ class BECImageWidget(BECWidget, QWidget):
                 "monitor": DeviceSelectionAction(
                     "Monitor:", DeviceComboBox(device_filter="Device")
                 ),
-                "connect": IconAction(icon_path="connection.svg", tooltip="Connect Motors"),
+                "connect": IconAction(icon_path="connection.svg", tooltip="Connect Device"),
                 "separator_0": SeparatorAction(),
                 "save": IconAction(icon_path="save.svg", tooltip="Open Export Dialog"),
                 "separator_1": SeparatorAction(),
@@ -382,8 +382,7 @@ class BECImageWidget(BECWidget, QWidget):
         """
         Set the auto range of the plot widget from the toolbar.
         """
-        checked = self.toolbar.widgets["auto_range"].action.isChecked()
-        self._image.set_auto_range(checked, "xy")
+        self._image.set_auto_range(True, "xy")
 
     @SafeSlot()
     def toggle_fft(self):

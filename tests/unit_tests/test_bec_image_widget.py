@@ -83,8 +83,7 @@ def test_image_toolbar_rectangle_mode_action_triggered(image_widget, qtbot):
 def test_image_toolbar_auto_range(image_widget, mock_image):
     action = image_widget.toolbar.widgets["auto_range"].action
     action.trigger()
-    assert action.isChecked() == False
-    image_widget._image.set_auto_range.assert_called_once_with(False, "xy")
+    image_widget._image.set_auto_range.assert_called_once_with(True, "xy")
 
 
 def test_image_toolbar_enable_mouse_pan_mode(qtbot, image_widget):
