@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, Optional
 
 from pydantic import Field
-from pyqtgraph.dockarea import Dock
+from pyqtgraph.dockarea import Dock, DockLabel
 
 from bec_widgets.cli.rpc_wigdet_handler import widget_handler
 from bec_widgets.utils import ConnectionConfig, GridLayoutManager
@@ -23,6 +23,64 @@ class DockConfig(ConnectionConfig):
     parent_dock_area: Optional[str] = Field(
         None, description="The GUI ID of parent dock area of the dock."
     )
+
+
+class CustomDockLabel(DockLabel):
+    def updateStyle(self):
+        r = "3px"
+        if self.dim:
+            fg = "#aaa"
+            bg = "#44a"
+            border = "#339"
+        else:
+            fg = "#fff"
+            bg = "#3f4042"
+            border = "#3f4042"
+
+        if self.orientation == "vertical":
+            self.vStyle = """DockLabel {
+                background-color : %s;
+                color : %s;
+                border-top-right-radius: 0px;
+                border-top-left-radius: %s;
+                border-bottom-right-radius: 0px;
+                border-bottom-left-radius: %s;
+                border-width: 0px;
+                border-right: 2px solid %s;
+                padding-top: 3px;
+                padding-bottom: 3px;
+                font-size: %s;
+            }""" % (
+                bg,
+                fg,
+                r,
+                r,
+                border,
+                self.fontSize,
+            )
+            self.setStyleSheet(self.vStyle)
+        else:
+            self.hStyle = """DockLabel {
+                background-color : %s;
+                color : %s;
+                border-top-right-radius: %s;
+                border-top-left-radius: %s;
+                border-bottom-right-radius: 0px;
+                border-bottom-left-radius: 0px;
+                border-width: 0px;
+                border-bottom: 2px solid %s;
+                padding-left: 3px;
+                padding-right: 3px;
+                font-size: %s;
+            }""" % (
+                bg,
+                fg,
+                r,
+                r,
+                border,
+                self.fontSize,
+            )
+            self.setStyleSheet(self.hStyle)
 
 
 class BECDock(BECWidget, Dock):
@@ -62,7 +120,9 @@ class BECDock(BECWidget, Dock):
                 config = DockConfig(**config)
             self.config = config
         super().__init__(client=client, config=config, gui_id=gui_id)
-        Dock.__init__(self, name=name, **kwargs)
+        label = CustomDockLabel(text=name)
+        Dock.__init__(self, name=name, label=label, **kwargs)
+        # Dock.__init__(self, name=name, **kwargs)
 
         self.parent_dock_area = parent_dock_area
 
