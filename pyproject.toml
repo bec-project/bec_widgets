@@ -19,7 +19,7 @@ dependencies = [
     "isort~=5.13, >=5.13.2",    # needed for bw-generate-cli
     "pydantic~=2.0",
     "pyqtgraph~=0.13",
-    "bec_qthemes~=0.0",
+    "qdarkstyle>=3.2.2",
     "qtconsole~=5.5, >=5.5.1",  # needed for jupyter console
     "qtpy~=2.4",
     "pyte",                     # needed for vt100 console
