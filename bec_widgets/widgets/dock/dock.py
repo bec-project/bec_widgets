@@ -109,6 +109,7 @@ class BECDock(BECWidget, Dock):
         name: str | None = None,
         client=None,
         gui_id: str | None = None,
+        closable: bool = True,
         **kwargs,
     ) -> None:
         if config is None:
@@ -120,7 +121,7 @@ class BECDock(BECWidget, Dock):
                 config = DockConfig(**config)
             self.config = config
         super().__init__(client=client, config=config, gui_id=gui_id)
-        label = CustomDockLabel(text=name)
+        label = CustomDockLabel(text=name, closable=closable)
         Dock.__init__(self, name=name, label=label, **kwargs)
         # Dock.__init__(self, name=name, **kwargs)
 
