@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## v0.91.0 (2024-07-23)
+
+### Feature
+
+* feat(dock_area): plugin added ([`a16b87a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a16b87ac28d164230dd2e8020f50ff3a63cd407e))
+
+* feat(dock_area): Added toolbar to dock area to add widgets without CLI interactions ([`cce1367`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cce1367a72fca7206d351894bd1831b7bbfa7ec6))
+
+* feat(toolbar): expandable menu actions ([`28f26e9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/28f26e92a46063db1a194be552156a5d3b2c43e7))
+
+### Fix
+
+* fix(status_item): icons changed to material design ([`1b9c55a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1b9c55a46a0dfd8678c8e95ff64dd6e8cfb9233e))
+
+* fix(plugins): Qt Designer plugins icons adjusted ([`f4844d2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f4844d2e067ce75dc64b89b230d7932b308ddfc2))
+
+### Test
+
+* test(dock_area): tests extended ([`06fab0e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/06fab0eab926cef5677d4988fd1fce09da342dd8))
+
 ## v0.90.0 (2024-07-23)
 
 ### Feature
@@ -122,26 +142,8 @@ curve Dialog colormap WIP ([`33495cf`](https://gitlab.psi.ch/bec/bec_widgets/-/c
 
 * fix: add missing close() call, ensure jupyter console client.shutdown() is called in closeEvent ([`e52ee26`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e52ee2604cb35096f1bd833ca9516d8a34197d35))
 
-* fix: BECWidget checks if it is a widget, and implements closeEvent and cleanup ([`d64758f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d64758f268cad69e6a17bd52dc9913a6367d3cde))
-
-* fix: add exit handlers for BECConnection objects ([`6202d22`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6202d224fe85c103a4c33bd8c255f18cfd027303))
-
 ### Refactor
 
 * refactor: BECWidget is a mixin based on BECConnector, for each QWidget in BEC
 
 Handles closeEvent() and RPC registering/unregistering ([`c7feb69`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c7feb6952d590b569f7b0cba3b019a9af0ce0c93))
-
-## v0.87.0 (2024-07-17)
-
-### Feature
-
-* feat(qt_utils): added warning utility with simple API to setup warning message ([`787f749`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/787f74949bac27aaa51cbb43911919071481707c))
-
-* feat(qt_utils): added error handle utility with popup messageBoxes ([`196ef7a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/196ef7afe11a1b5dcc536f8859dc3b6044ea628e))
-
-### Unknown
-
-* tests: add unit tests for error and warning message boxes ([`8f104cf`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8f104cf4024d3a4516e6aba5daa8fb78c85e2bfd))
-
-## v0.86.0 (2024-07-17)
