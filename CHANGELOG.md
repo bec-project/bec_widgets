@@ -1,5 +1,35 @@
 # CHANGELOG
 
+## v0.90.0 (2024-07-23)
+
+### Feature
+
+* feat(image_widget): plugin added ([`4371168`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/43711680ba253f81fb0ffe764bcaae701b02bb49))
+
+* feat(image_widget): all toolbar actions added ([`501eb92`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/501eb923f12fa6aaa93f5428ca78e57694edfbc0))
+
+* feat(image_widget): image_widget added ([`6a9317f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6a9317facda896ee784c7fc1db0cd3d68cdfcf73))
+
+### Fix
+
+* fix(axis_setting): fix compatibility for issue with horizontal line for PyQt6 ([`1cf6e32`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1cf6e32303f82bc7c3f3391d0e96a88bc31f29fc))
+
+* fix(image_widget): image_widget autorange fixed ([`7f49893`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7f49893d2ce3b9d02efa764f7f10442ed6ab8f3c))
+
+* fix(image_widget): image widget adjusted ([`3d2ca48`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3d2ca4855c36fe0af59a4b540caa3c8023a81773))
+
+* fix(image): only single monitor image is allowed ([`fe7e542`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fe7e542b19dc5b401523501acb74ac03edf62ad4))
+
+* fix(image): raw data are saved in image item to always have precise processing ([`c15035b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c15035b6b769a96780a16da9e7f75af3b823654c))
+
+### Refactor
+
+* refactor(jupyter_console_example): added examples of standalone widgets ([`ba0d1ea`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ba0d1ea9031b4ae2e2e73bf269fbfad973b924a5))
+
+### Test
+
+* test(image_widget): tests added ([`70fb276`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/70fb276fdf31dffc105435d3dfe7c5caea0b10ce))
+
 ## v0.89.0 (2024-07-22)
 
 ### Feature
@@ -115,37 +145,3 @@ Handles closeEvent() and RPC registering/unregistering ([`c7feb69`](https://gitl
 * tests: add unit tests for error and warning message boxes ([`8f104cf`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8f104cf4024d3a4516e6aba5daa8fb78c85e2bfd))
 
 ## v0.86.0 (2024-07-17)
-
-### Feature
-
-* feat(toolbar): added separator action ([`ba69e79`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ba69e7957cd20df1557ac0c3a9ca43a54493c34d))
-
-## v0.85.1 (2024-07-17)
-
-### Fix
-
-* fix(waveform): readout_priority dict fixed, not overwritten to &#39;baseline&#39; key ([`b5b0aa4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b5b0aa4f82a998bb0162dc319591e854204a7354))
-
-## v0.85.0 (2024-07-16)
-
-### Feature
-
-* feat(color_map_selector): added colormap selector with plugin ([`b98fd00`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b98fd00adef97adf57f49b60ade99972b9f5a6bc))
-
-## v0.84.0 (2024-07-15)
-
-### Fix
-
-* fix(waveform): timestamp are not converted to human readable format ([`e495fd3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e495fd30c4c16474689943c7263e3060cb09ffb4))
-
-* fix(waveform): set_x method various bugs fixed ([`8516a1d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8516a1d639925a877f174fa13f427a71131cc918))
-
-* fix(waveform): x axis switching logic fixed when axis are not compatible ([`e4e1a90`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e4e1a905d19def22f970b364c18c953f00e10389))
-
-### Refactor
-
-* refactor(waveform): plot can be prompted without specifying kwargs ([`48911e9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/48911e934815923c94edb5ced6042058a11a97f5))
-
-### Test
-
-* test(waveform): tests extended ([`006992e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/006992e43cc56d56261bc4fd3e9cae9abcab2153))
