@@ -17,7 +17,7 @@ def bec_image_show(bec_figure):
 
 def test_on_image_update(bec_image_show):
     data = np.random.rand(100, 100)
-    msg = messages.DeviceMonitorMessage(
+    msg = messages.DeviceMonitor2DMessage(
         device="eiger", data=data, metadata={"scan_id": "12345"}
     ).model_dump()
     bec_image_show.on_image_update(msg)
@@ -28,7 +28,7 @@ def test_on_image_update(bec_image_show):
 def test_autorange_on_image_update(bec_image_show):
     # Check if autorange mode "mean" works, should be default
     data = np.random.rand(100, 100)
-    msg = messages.DeviceMonitorMessage(
+    msg = messages.DeviceMonitor2DMessage(
         device="eiger", data=data, metadata={"scan_id": "12345"}
     ).model_dump()
     bec_image_show.on_image_update(msg)
@@ -47,7 +47,7 @@ def test_autorange_on_image_update(bec_image_show):
     assert np.isclose(img.color_bar.getLevels(), (vmin, vmax), rtol=(1e-5, 1e-5)).all()
     # Change the input data, and switch to autorange False, colormap levels should stay untouched
     data *= 100
-    msg = messages.DeviceMonitorMessage(
+    msg = messages.DeviceMonitor2DMessage(
         device="eiger", data=data, metadata={"scan_id": "12345"}
     ).model_dump()
     bec_image_show.set_autorange(False)
