@@ -167,7 +167,9 @@ test-matrix:
     QT_PCKG: ""
   image: $CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX/python:$PYTHON_VERSION
   script:
+    - ulimit -c unlimited
     - echo /tmp/core > /proc/sys/kernel/core_pattern
+    - echo /proc/sys/kernel/core_pattern
     - *clone-repos
     - *install-os-packages
     - pip install -e ./bec/bec_lib[dev]
