@@ -174,6 +174,12 @@ test-matrix:
     - pip install -e .[dev,$QT_PCKG]
     - pytest -v --junitxml=report.xml --random-order ./tests/unit_tests
   allow_failure: true
+  artifacts:
+    # upload core dumps
+    when: on_failure
+    paths:
+      - /tmp/coredump/
+    expire_in: 1 week
 
 end-2-end-conda:
   stage: End2End
