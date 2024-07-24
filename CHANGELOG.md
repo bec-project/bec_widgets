@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v0.92.0 (2024-07-24)
+
+### Feature
+
+* feat(dock): dock style sheets updated ([`8ca60d5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8ca60d54b3cfa621172ce097fc1ba514c47ebac7))
+
+* feat(general_gui): general gui added ([`5696c99`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5696c993dc1c0da40ff3e99f754c246cc017ea32))
+
+### Fix
+
+* fix(dock): custom label can be created closable ([`4457ef2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4457ef2147e21b856c9dcaf63c81ba98002dcaf1))
+
+* fix(device_combobox): set minimum size to 125px ([`1206e15`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1206e153094cd8505badf69a1461572a76b4c5ad))
+
 ## v0.91.0 (2024-07-23)
 
 ### Feature
@@ -100,8 +114,6 @@ This reverts commit 3798714369adf4023f833b7749d2f46a0ec74eee ([`fd6ae91`](https:
 
 * feat(waveform_widget): BECWaveformWidget toolbar added import/export config ([`fa9b171`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fa9b17191ddbb4043a658dae9aa0801e1dc22b84))
 
-* feat(waveform_widget): BECWaveformWidget added with toolbar ([`755b394`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/755b394c1c4d7c443c442d89c630d08ce5415554))
-
 ### Fix
 
 * fix(waveform_widget): plot API unified with BECFigure ([`2c8764a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2c8764a27de89b39b717032b58465e120ec57fbc))
@@ -133,17 +145,3 @@ curve Dialog colormap WIP ([`33495cf`](https://gitlab.psi.ch/bec/bec_widgets/-/c
 ### Test
 
 * test(waveform_widget): test added ([`8d764e2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8d764e2d46a1e017dadc3c4630648c1ca708afc2))
-
-## v0.87.1 (2024-07-18)
-
-### Fix
-
-* fix(dock): added hasattr to cleanup method for widgets ([`d75c55b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d75c55b2b1ccf156fb789c7813f1c5bdf256f860))
-
-* fix: add missing close() call, ensure jupyter console client.shutdown() is called in closeEvent ([`e52ee26`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e52ee2604cb35096f1bd833ca9516d8a34197d35))
-
-### Refactor
-
-* refactor: BECWidget is a mixin based on BECConnector, for each QWidget in BEC
-
-Handles closeEvent() and RPC registering/unregistering ([`c7feb69`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c7feb6952d590b569f7b0cba3b019a9af0ce0c93))
