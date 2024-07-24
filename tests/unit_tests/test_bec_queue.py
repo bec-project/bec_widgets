@@ -97,15 +97,15 @@ def bec_queue(qtbot, mocked_client):
 
 def test_bec_queue(bec_queue, bec_queue_msg_full):
     bec_queue.update_queue(bec_queue_msg_full.content, {})
-    assert bec_queue.rowCount() == 1
-    assert bec_queue.item(0, 0).text() == "1289"
-    assert bec_queue.item(0, 1).text() == "line_scan"
-    assert bec_queue.item(0, 2).text() == "COMPLETED"
+    assert bec_queue.table.rowCount() == 1
+    assert bec_queue.table.item(0, 0).text() == "1289"
+    assert bec_queue.table.item(0, 1).text() == "line_scan"
+    assert bec_queue.table.item(0, 2).text() == "COMPLETED"
 
 
 def test_bec_queue_empty(bec_queue):
     bec_queue.update_queue({}, {})
-    assert bec_queue.rowCount() == 1
-    assert bec_queue.item(0, 0).text() == ""
-    assert bec_queue.item(0, 1).text() == ""
-    assert bec_queue.item(0, 2).text() == ""
+    assert bec_queue.table.rowCount() == 1
+    assert bec_queue.table.item(0, 0).text() == ""
+    assert bec_queue.table.item(0, 1).text() == ""
+    assert bec_queue.table.item(0, 2).text() == ""

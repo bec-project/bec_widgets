@@ -1,12 +1,12 @@
 from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import Qt, Slot
-from qtpy.QtWidgets import QHeaderView, QTableWidget, QTableWidgetItem, QWidget
+from qtpy.QtWidgets import QHBoxLayout, QHeaderView, QTableWidget, QTableWidgetItem, QWidget
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 
 
-class BECQueue(BECWidget, QTableWidget):
+class BECQueue(BECWidget, QWidget):
     """
     Widget to display the BEC queue.
     """
@@ -19,10 +19,14 @@ class BECQueue(BECWidget, QTableWidget):
         gui_id: str = None,
     ):
         super().__init__(client, config, gui_id)
-        QTableWidget.__init__(self, parent=parent)
-        self.setColumnCount(3)
-        self.setHorizontalHeaderLabels(["Scan Number", "Type", "Status"])
-        header = self.horizontalHeader()
+        QWidget.__init__(self, parent=parent)
+        self.table = QTableWidget(self)
+        self.layout = QHBoxLayout(self)
+        self.layout.addWidget(self.table)
+
+        self.table.setColumnCount(3)
+        self.table.setHorizontalHeaderLabels(["Scan Number", "Type", "Status"])
+        header = self.table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)
         self.bec_dispatcher.connect_slot(self.update_queue, MessageEndpoints.scan_queue_status())
         self.reset_content()
@@ -38,8 +42,8 @@ class BECQueue(BECWidget, QTableWidget):
         """
         # only show the primary queue for now
         queue_info = content.get("queue", {}).get("primary", {}).get("info", [])
-        self.setRowCount(len(queue_info))
-        self.clearContents()
+        self.table.setRowCount(len(queue_info))
+        self.table.clearContents()
 
         if not queue_info:
             self.reset_content()
@@ -73,6 +77,8 @@ class BECQueue(BECWidget, QTableWidget):
         Returns:
             QTableWidgetItem: The formatted item.
         """
+        if not content or not isinstance(content, str):
+            content = ""
         item = QTableWidgetItem(content)
         item.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         return item
@@ -88,16 +94,16 @@ class BECQueue(BECWidget, QTableWidget):
             status (str): The status.
         """
 
-        self.setItem(index, 0, self.format_item(scan_number))
-        self.setItem(index, 1, self.format_item(scan_type))
-        self.setItem(index, 2, self.format_item(status))
+        self.table.setItem(index, 0, self.format_item(scan_number))
+        self.table.setItem(index, 1, self.format_item(scan_type))
+        self.table.setItem(index, 2, self.format_item(status))
 
     def reset_content(self):
         """
         Reset the content of the table.
         """
 
-        self.setRowCount(1)
+        self.table.setRowCount(1)
         self.set_row(0, "", "", "")
 
 
