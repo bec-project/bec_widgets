@@ -43,9 +43,16 @@ stages:
   - export QTWEBENGINE_DISABLE_SANDBOX=1
 
 .clone-repos: &clone-repos
+  - echo -e "\033[35;1m Using branch $BEC_CORE_BRANCH of BEC CORE \033[0;m";
   - git clone --branch $BEC_CORE_BRANCH https://gitlab.psi.ch/bec/bec.git
+  - echo -e "\033[35;1m Using branch $OPHYD_DEVICES_BRANCH of OPHYD_DEVICES \033[0;m";
   - git clone --branch $OPHYD_DEVICES_BRANCH https://gitlab.psi.ch/bec/ophyd_devices.git
   - export OHPYD_DEVICES_PATH=$PWD/ophyd_devices
+
+.install-repos: &install-repos
+  - pip install -e ./ophyd_devices
+  - pip install -e ./bec/bec_lib[dev]
+  - pip install -e ./bec/bec_ipython_client
 
 .install-os-packages: &install-os-packages
   - apt-get update
@@ -131,8 +138,7 @@ tests:
   script:
     - *clone-repos
     - *install-os-packages
-    - pip install -e ./bec/bec_lib[dev]
-    - pip install -e ./bec/bec_ipython_client
+    - *install-repos
     - pip install -e .[dev,pyqt6]
     - coverage run --source=./bec_widgets -m pytest -v --junitxml=report.xml --random-order --full-trace ./tests/unit_tests
     - coverage report
@@ -169,8 +175,7 @@ test-matrix:
   script:
     - *clone-repos
     - *install-os-packages
-    - pip install -e ./bec/bec_lib[dev]
-    - pip install -e ./bec/bec_ipython_client
+    - *install-repos
     - pip install -e .[dev,$QT_PCKG]
     - pytest -v --junitxml=report.xml --random-order ./tests/unit_tests
   allow_failure: true
@@ -195,10 +200,9 @@ end-2-end-conda:
 
     - cd ./bec
     - source ./bin/install_bec_dev.sh -t
-
-    - pip install -e ./bec_lib[dev]
-    - pip install -e ./bec_ipython_client[dev]
     - cd ../
+    - pip install -e ./ophyd_devices
+
     - pip install -e .[dev,pyqt6]
     - cd ./tests/end-2-end
     - pytest -v --start-servers --flush-redis --random-order
