@@ -247,7 +247,7 @@ class BECImageShow(BECPlotBase):
         Returns:
             BECImageItem: The image item.
         """
-        image_source = "device_monitor"
+        image_source = "device_monitor_2d"
 
         image_exits = self._check_image_id(monitor, self._images)
         if image_exits:
@@ -287,7 +287,7 @@ class BECImageShow(BECPlotBase):
         **kwargs,
     ):
         image_source = "custom"
-        # image_source = "device_monitor"
+        # image_source = "device_monitor_2d"
 
         image_exits = self._check_image_id(name, self._images)
         if image_exits:
@@ -510,7 +510,7 @@ class BECImageShow(BECPlotBase):
         """
         data = msg["data"]
         device = msg["device"]
-        image = self._images["device_monitor"][device]
+        image = self._images["device_monitor_2d"][device]
         image.raw_data = data
         self.process_image(device, image, data)
 
@@ -523,7 +523,7 @@ class BECImageShow(BECPlotBase):
             device(str): The name of the device.
             data(np.ndarray): The data to be updated.
         """
-        image_to_update = self._images["device_monitor"][device]
+        image_to_update = self._images["device_monitor_2d"][device]
         image_to_update.updateImage(data, autoLevels=image_to_update.config.autorange)
 
     @pyqtSlot(str, ImageStats)
@@ -534,7 +534,7 @@ class BECImageShow(BECPlotBase):
         Args:
             stats(ImageStats): The statistics of the image.
         """
-        image_to_update = self._images["device_monitor"][device]
+        image_to_update = self._images["device_monitor_2d"][device]
         if image_to_update.config.autorange:
             image_to_update.auto_update_vrange(stats)
 
@@ -547,7 +547,7 @@ class BECImageShow(BECPlotBase):
                 data = image.raw_data
                 self.process_image(image_id, image, data)
 
-    def _connect_device_monitor(self, monitor: str):
+    def _connect_device_monitor_2d(self, monitor: str):
         """
         Connect to the device monitor.
 
@@ -561,13 +561,13 @@ class BECImageShow(BECPlotBase):
             previous_monitor = None
         if previous_monitor and image_item.connected is True:
             self.bec_dispatcher.disconnect_slot(
-                self.on_image_update, MessageEndpoints.device_monitor(previous_monitor)
+                self.on_image_update, MessageEndpoints.device_monitor_2d(previous_monitor)
             )
             image_item.connected = False
         if monitor and image_item.connected is False:
             self.entry_validator.validate_monitor(monitor)
             self.bec_dispatcher.connect_slot(
-                self.on_image_update, MessageEndpoints.device_monitor(monitor)
+                self.on_image_update, MessageEndpoints.device_monitor_2d(monitor)
             )
             image_item.set_monitor(monitor)
             image_item.connected = True
@@ -581,8 +581,8 @@ class BECImageShow(BECPlotBase):
         if self.single_image is True and len(self.images) > 0:
             self.remove_image(0)
         self._images[source][name] = image
-        if source == "device_monitor":
-            self._connect_device_monitor(config.monitor)
+        if source == "device_monitor_2d":
+            self._connect_device_monitor_2d(config.monitor)
         self.config.images[name] = config
         if data is not None:
             image.setImage(data)
@@ -668,15 +668,15 @@ class BECImageShow(BECPlotBase):
         image = self.find_image_by_monitor(image_id)
         if image:
             self.bec_dispatcher.disconnect_slot(
-                self.on_image_update, MessageEndpoints.device_monitor(image.config.monitor)
+                self.on_image_update, MessageEndpoints.device_monitor_2d(image.config.monitor)
             )
 
     def cleanup(self):
         """
         Clean up the widget.
         """
-        for monitor in self._images["device_monitor"]:
+        for monitor in self._images["device_monitor_2d"]:
             self.bec_dispatcher.disconnect_slot(
-                self.on_image_update, MessageEndpoints.device_monitor(monitor)
+                self.on_image_update, MessageEndpoints.device_monitor_2d(monitor)
             )
         self.images.clear()

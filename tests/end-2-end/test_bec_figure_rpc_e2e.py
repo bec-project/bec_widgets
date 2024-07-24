@@ -120,7 +120,7 @@ def test_rpc_image(rpc_server_figure, bec_client_lib):
     status = scans.line_scan(dev.samx, -5, 5, steps=10, exp_time=0.05, relative=False)
     status.wait()
 
-    last_image_device = client.connector.get_last(MessageEndpoints.device_monitor("eiger"))[
+    last_image_device = client.connector.get_last(MessageEndpoints.device_monitor_2d("eiger"))[
         "data"
     ].data
     last_image_plot = im.images[0].get_data()

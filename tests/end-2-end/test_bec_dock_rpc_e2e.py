@@ -98,7 +98,7 @@ def test_rpc_add_dock_with_figure_e2e(bec_client_lib, rpc_server_dock):
     assert plt_data["bpm4i-bpm4i"]["y"] == plt_last_scan_data["bpm4i"]["bpm4i"].val
 
     # image
-    last_image_device = client.connector.get_last(MessageEndpoints.device_monitor("eiger"))[
+    last_image_device = client.connector.get_last(MessageEndpoints.device_monitor_2d("eiger"))[
         "data"
     ].data
     time.sleep(0.5)
