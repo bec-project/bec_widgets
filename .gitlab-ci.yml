@@ -168,7 +168,7 @@ test-matrix:
   image: $CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX/python:$PYTHON_VERSION
   script:
     - ulimit -c unlimited
-    - echo /tmp/core > /proc/sys/kernel/core_pattern
+    - echo $pwd/core > /proc/sys/kernel/core_pattern
     - cat /proc/sys/kernel/core_pattern
     - *clone-repos
     - *install-os-packages
