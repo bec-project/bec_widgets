@@ -71,8 +71,6 @@ class _ErrorPopupUtility(QObject):
 
     error_occurred = Signal(str, str, QWidget)
 
-
-
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         self.error_occurred.connect(self.show_error_message)
