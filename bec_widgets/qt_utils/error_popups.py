@@ -60,7 +60,10 @@ class WarningPopupUtility(QObject):
         self.show_warning_message(title, message, detailed_text, widget)
 
 
-class ErrorPopupUtility(QObject):
+_popup_utility_instance = None
+
+
+class _ErrorPopupUtility(QObject):
     """
     Utility class to manage error popups in the application to show error messages to the users.
     This class is singleton and the error popup can be enabled or disabled globally or attach to widget methods with decorator @error_managed.
@@ -68,22 +71,14 @@ class ErrorPopupUtility(QObject):
 
     error_occurred = Signal(str, str, QWidget)
 
-    _instance = None
-    _initialized = False
 
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(ErrorPopupUtility, cls).__new__(cls)
-            cls._instance._initialized = False
-        return cls._instance
 
     def __init__(self, parent=None):
-        if not self._initialized:
-            super().__init__(parent=parent)
-            self.error_occurred.connect(self.show_error_message)
-            self.enable_error_popup = False
-            self._initialized = True
-            sys.excepthook = self.custom_exception_hook
+        super().__init__(parent=parent)
+        self.error_occurred.connect(self.show_error_message)
+        self.enable_error_popup = False
+        self._initialized = True
+        sys.excepthook = self.custom_exception_hook
 
     @Slot(str, str, QWidget)
     def show_error_message(self, title, message, widget):
@@ -157,13 +152,12 @@ class ErrorPopupUtility(QObject):
         """
         self.enable_error_popup = bool(state)
 
-    @classmethod
-    def reset_singleton(cls):
-        """
-        Reset the singleton instance.
-        """
-        cls._instance = None
-        cls._initialized = False
+
+def ErrorPopupUtility():
+    global _popup_utility_instance
+    if not _popup_utility_instance:
+        _popup_utility_instance = _ErrorPopupUtility()
+    return _popup_utility_instance
 
 
 class ExampleWidget(QWidget):  # pragma: no cover
