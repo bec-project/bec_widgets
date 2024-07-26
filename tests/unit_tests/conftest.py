@@ -6,13 +6,18 @@ from bec_widgets.utils import bec_dispatcher as bec_dispatcher_module
 
 
 @pytest.fixture(autouse=True)
+def qapplication(qapp):  # pylint: disable=unused-argument
+    yield
+
+
+@pytest.fixture(autouse=True)
 def rpc_register():
     yield RPCRegister()
     RPCRegister.reset_singleton()
 
 
 @pytest.fixture(autouse=True)
-def bec_dispatcher(threads_check):
+def bec_dispatcher(threads_check):  # pylint: disable=unused-argument
     bec_dispatcher = bec_dispatcher_module.BECDispatcher()
     yield bec_dispatcher
     bec_dispatcher.disconnect_all()
