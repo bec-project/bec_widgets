@@ -56,7 +56,7 @@ stages:
 
 .install-os-packages: &install-os-packages
   - apt-get update
-  - apt-get install -y libgl1-mesa-glx libegl1-mesa x11-utils libxkbcommon-x11-0 libdbus-1-3
+  - apt-get install -y libgl1-mesa-glx libegl1-mesa x11-utils libxkbcommon-x11-0 libdbus-1-3 xvfb
   - *install-qt-webengine-deps
 
 before_script:
