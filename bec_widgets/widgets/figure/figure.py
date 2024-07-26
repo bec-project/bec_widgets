@@ -164,7 +164,7 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
     def __getitem__(self, key: tuple | str):
         if isinstance(key, tuple) and len(key) == 2:
             return self.axes(*key)
-        elif isinstance(key, str):
+        if isinstance(key, str):
             widget = self._widgets.get(key)
             if widget is None:
                 raise KeyError(f"No widget with ID {key}")
@@ -185,7 +185,7 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
         self.change_theme(self.config.theme)
 
         # widget_config has to be reset for not have each widget config twice when added to the figure
-        widget_configs = [config for config in self.config.widgets.values()]
+        widget_configs = list(self.config.widgets.values())
         self.config.widgets = {}
         for widget_config in widget_configs:
             getattr(self, self.widget_method_map[widget_config.widget_class])(
@@ -233,8 +233,8 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
         """Export the plot widget."""
         try:
             plot_item = self.widget_list[0]
-        except:
-            raise ValueError("No plot widget available to export.")
+        except Exception as exc:
+            raise ValueError("No plot widget available to export.") from exc
 
         scene = plot_item.scene()
         scene.contextMenuItem = plot_item
@@ -529,12 +529,12 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
         if row is not None and col is not None:
             if self.getItem(row, col):
                 raise ValueError(f"Position at row {row} and column {col} is already occupied.")
-            else:
-                widget.config.row = row
-                widget.config.col = col
 
-                # Add widget to the figure
-                self.addItem(widget, row=row, col=col)
+            widget.config.row = row
+            widget.config.col = col
+
+            # Add widget to the figure
+            self.addItem(widget, row=row, col=col)
         else:
             row, col = self._find_next_empty_position()
             widget.config.row = row
@@ -721,7 +721,7 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
 
         # Populate the new grid with widgets' IDs
         current_idx = 0
-        for widget_id, widget in self._widgets.items():
+        for widget_id in self._widgets:
             row = current_idx // len(new_grid[0])
             col = current_idx % len(new_grid[0])
             new_grid[row][col] = widget_id

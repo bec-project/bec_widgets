@@ -6,7 +6,7 @@ from qtpy.QtCore import QObject, Qt, Signal, Slot
 from qtpy.QtWidgets import QApplication, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
 
-def SafeSlot(*slot_args, **slot_kwargs):
+def SafeSlot(*slot_args, **slot_kwargs):  # pylint: disable=invalid-name
     """Function with args, acting like a decorator, applying "error_managed" decorator + Qt Slot
     to the passed function, to display errors instead of potentially raising an exception
 
@@ -33,9 +33,6 @@ class WarningPopupUtility(QObject):
     """
     Utility class to show warning popups in the application.
     """
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
 
     @Slot(str, str, str, QWidget)
     def show_warning_message(self, title, message, detailed_text, widget):
