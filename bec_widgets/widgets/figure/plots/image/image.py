@@ -7,9 +7,9 @@ import numpy as np
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import BaseModel, Field, ValidationError
 from qtpy.QtCore import QThread
-from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QWidget
 
+from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
 from bec_widgets.utils import EntryValidator
 from bec_widgets.widgets.figure.plots.image.image_item import BECImageItem, ImageItemConfig
 from bec_widgets.widgets.figure.plots.image.image_processor import (
@@ -500,7 +500,7 @@ class BECImageShow(BECPlotBase):
             self.update_image(device, data)
             self.update_vrange(device, self.processor.config.stats)
 
-    @pyqtSlot(dict)
+    @Slot(dict)
     def on_image_update(self, msg: dict):
         """
         Update the image of the device monitor from bec.
@@ -514,7 +514,7 @@ class BECImageShow(BECPlotBase):
         image.raw_data = data
         self.process_image(device, image, data)
 
-    @pyqtSlot(str, np.ndarray)
+    @Slot(str, np.ndarray)
     def update_image(self, device: str, data: np.ndarray):
         """
         Update the image of the device monitor.
@@ -526,7 +526,7 @@ class BECImageShow(BECPlotBase):
         image_to_update = self._images["device_monitor_2d"][device]
         image_to_update.updateImage(data, autoLevels=image_to_update.config.autorange)
 
-    @pyqtSlot(str, ImageStats)
+    @Slot(str, ImageStats)
     def update_vrange(self, device: str, stats: ImageStats):
         """
         Update the scaling of the image.

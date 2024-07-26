@@ -34,7 +34,7 @@ class WarningPopupUtility(QObject):
     Utility class to show warning popups in the application.
     """
 
-    @Slot(str, str, str, QWidget)
+    @SafeSlot(str, str, str, QWidget)
     def show_warning_message(self, title, message, detailed_text, widget):
         msg = QMessageBox(widget)
         msg.setIcon(QMessageBox.Warning)
@@ -75,7 +75,7 @@ class _ErrorPopupUtility(QObject):
         self._initialized = True
         sys.excepthook = self.custom_exception_hook
 
-    @Slot(str, str, QWidget)
+    @SafeSlot(str, str, QWidget)
     def show_error_message(self, title, message, widget):
         detailed_text = self.format_traceback(message)
         error_message = self.parse_error_message(detailed_text)

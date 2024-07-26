@@ -10,9 +10,9 @@ from pydantic import Field, ValidationError, field_validator
 from pydantic_core import PydanticCustomError
 from qtpy import QtCore, QtGui
 from qtpy.QtCore import Signal as pyqtSignal
-from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QWidget
 
+from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
 from bec_widgets.utils import Colors, EntryValidator
 from bec_widgets.widgets.figure.plots.plot_base import BECPlotBase, SubplotConfig
 from bec_widgets.widgets.figure.plots.waveform.waveform import Signal, SignalData
@@ -444,7 +444,7 @@ class BECMotorMap(BECPlotBase):
             return None
 
     @Slot()
-    def _update_plot(self):
+    def _update_plot(self, _=None):
         """Update the motor map plot."""
         # If the number of points exceeds max_points, delete the oldest points
         if len(self.database_buffer["x"]) > self.config.max_points:

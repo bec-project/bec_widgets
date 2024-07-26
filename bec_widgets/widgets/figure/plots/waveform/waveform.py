@@ -11,9 +11,9 @@ from bec_lib.endpoints import MessageEndpoints
 from pydantic import Field, ValidationError, field_validator
 from pyqtgraph.exporters import MatplotlibExporter
 from qtpy.QtCore import Signal as pyqtSignal
-from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtWidgets import QWidget
 
+from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
 from bec_widgets.utils import Colors, EntryValidator
 from bec_widgets.widgets.figure.plots.plot_base import BECPlotBase, SubplotConfig
 from bec_widgets.widgets.figure.plots.waveform.waveform_curve import (
@@ -391,7 +391,7 @@ class BECWaveform(BECPlotBase):
             self.async_signal_update.emit()
             self.scan_signal_update.emit()
 
-    @pyqtSlot()
+    @Slot()
     def auto_range(self):
         self.plot_item.autoRange()
 
@@ -408,7 +408,7 @@ class BECWaveform(BECPlotBase):
         """
         self.plot_item.enableAutoRange(axis, enabled)
 
-    @pyqtSlot()
+    @Slot()
     def auto_range(self):
         self.plot_item.autoRange()
 
@@ -642,7 +642,7 @@ class BECWaveform(BECPlotBase):
         self.refresh_dap()
         return curve
 
-    @pyqtSlot()
+    @Slot()
     def get_dap_params(self) -> dict:
         """
         Get the DAP parameters of all DAP curves.
@@ -655,7 +655,7 @@ class BECWaveform(BECPlotBase):
             params[curve_id] = curve.dap_params
         return params
 
-    @pyqtSlot()
+    @Slot()
     def get_dap_summary(self) -> dict:
         """
         Get the DAP summary of all DAP curves.
@@ -921,7 +921,7 @@ class BECWaveform(BECPlotBase):
         else:
             raise IndexError(f"Curve order {N} out of range.")
 
-    @pyqtSlot(dict)
+    @Slot(dict)
     def on_scan_status(self, msg):
         """
         Handle the scan status message.
@@ -945,7 +945,7 @@ class BECWaveform(BECPlotBase):
                 for curve_id, curve in self._curves_data["async"].items():
                     self.setup_async(curve.config.signals.y.name)
 
-    @pyqtSlot(dict, dict)
+    @Slot(dict, dict)
     def on_scan_segment(self, msg: dict, metadata: dict):
         """
         Handle new scan segments and saves data to a dictionary. Linked through bec_dispatcher.
@@ -1004,7 +1004,7 @@ class BECWaveform(BECPlotBase):
                 self.update_dap, MessageEndpoints.dap_response(f"{new_scan_id}-{self.gui_id}")
             )
 
-    @pyqtSlot(str)
+    @Slot(str)
     def setup_async(self, device: str):
         self.bec_dispatcher.disconnect_slot(
             self.on_async_readback, MessageEndpoints.device_async_readback(self.old_scan_id, device)
@@ -1020,8 +1020,8 @@ class BECWaveform(BECPlotBase):
                 from_start=True,
             )
 
-    @pyqtSlot()
-    def refresh_dap(self):
+    @Slot()
+    def refresh_dap(self, _=None):
         """
         Refresh the DAP curves with the latest data from the DAP model MessageEndpoints.dap_response().
         """
@@ -1069,7 +1069,7 @@ class BECWaveform(BECPlotBase):
             )
             self.client.connector.set_and_publish(MessageEndpoints.dap_request(), msg)
 
-    @pyqtSlot(dict, dict)
+    @Slot(dict, dict)
     def update_dap(self, msg, metadata):
         self.msg = msg
         scan_id, x_name, x_entry, y_name, y_entry = msg["dap_request"].content["config"]["args"]
@@ -1089,7 +1089,7 @@ class BECWaveform(BECPlotBase):
                     self.dap_summary_update.emit(curve.dap_summary)
                 break
 
-    @pyqtSlot(dict, dict)
+    @Slot(dict, dict)
     def on_async_readback(self, msg, metadata):
         """
         Get async data readback.
@@ -1127,7 +1127,7 @@ class BECWaveform(BECPlotBase):
                         else:
                             curve.setData(data_plot)
 
-    @pyqtSlot()
+    @Slot()
     def replot_async_curve(self):
         try:
             data = self.scan_item.async_data
@@ -1152,8 +1152,8 @@ class BECWaveform(BECPlotBase):
             else:
                 curve.setData(data_x, data_y)
 
-    @pyqtSlot()
-    def _update_scan_curves(self):
+    @Slot()
+    def _update_scan_curves(self, _=None):
         """
         Update the scan curves with the data from the scan segment.
         """

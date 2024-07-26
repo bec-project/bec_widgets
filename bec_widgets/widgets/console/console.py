@@ -18,9 +18,10 @@ import pyte
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import QSize, QSocketNotifier, Qt
 from qtpy.QtCore import Signal as pyqtSignal
-from qtpy.QtCore import Slot as pyqtSlot
 from qtpy.QtGui import QClipboard, QTextCursor
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QScrollBar, QSizePolicy
+
+from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
 
 ansi_colors = {
     "black": "#000000",
@@ -289,7 +290,7 @@ class _TerminalWidget(QtWidgets.QPlainTextEdit):
         old["value"] = value
         self.dataReady(self.backend.screen, reset_scroll=False)
 
-    @pyqtSlot(object)
+    @Slot(object)
     def keyPressEvent(self, event):
         """
         Redirect all keystrokes to the terminal process.

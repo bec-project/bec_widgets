@@ -1,11 +1,12 @@
 # Copyright (C) 2022 The Qt Company Ltd.
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
-from qtpy.QtCore import Slot
 from qtpy.QtDesigner import QExtensionFactory, QPyDesignerTaskMenuExtension
 from qtpy.QtGui import QAction
 from qtpy.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout
 from tictactoe import TicTacToe
+
+from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
 
 
 class TicTacToeDialog(QDialog):  # pragma: no cover

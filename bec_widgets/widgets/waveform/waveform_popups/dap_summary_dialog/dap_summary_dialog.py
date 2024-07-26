@@ -1,8 +1,8 @@
 import os
 
-from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QDialog, QTreeWidgetItem, QVBoxLayout
 
+from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
 from bec_widgets.utils import UILoader
 
 

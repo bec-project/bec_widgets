@@ -1,5 +1,6 @@
-from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QDialog, QDialogButtonBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
+
+from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
 
 
 class SettingWidget(QWidget):

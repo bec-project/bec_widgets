@@ -1,6 +1,6 @@
-from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QPushButton
 
+from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
 from bec_widgets.utils.bec_widget import BECWidget
 
 
