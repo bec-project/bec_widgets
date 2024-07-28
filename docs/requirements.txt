@@ -6,7 +6,6 @@ pydata-sphinx-theme
 sphinx-copybutton
 myst-parser
 sphinx-design
-PyQt6
-PyQt6-WebEngine
+PySide6
 bec-widgets
 tomli
