@@ -7,7 +7,8 @@ import sys
 
 from bec_ipython_client.main import BECIPythonClient
 from qtpy.QtWidgets import QApplication
-from tictactoe import TicTacToe
+
+from bec_widgets.examples.plugin_example_pyside.tictactoe import TicTacToe
 
 if __name__ == "__main__":  # pragma: no cover
     app = QApplication(sys.argv)

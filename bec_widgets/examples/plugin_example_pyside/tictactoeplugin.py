@@ -4,10 +4,10 @@ import os
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 from qtpy.QtGui import QIcon
-from tictactoe import TicTacToe
-from tictactoetaskmenu import TicTacToeTaskMenuFactory
 
 import bec_widgets
+from bec_widgets.examples.plugin_example_pyside.tictactoe import TicTacToe
+from bec_widgets.examples.plugin_example_pyside.tictactoetaskmenu import TicTacToeTaskMenuFactory
 
 DOM_XML = """
 <ui language='c++'>

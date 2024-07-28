@@ -4,8 +4,8 @@
 from qtpy.QtDesigner import QExtensionFactory, QPyDesignerTaskMenuExtension
 from qtpy.QtGui import QAction
 from qtpy.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout
-from tictactoe import TicTacToe
 
+from bec_widgets.examples.plugin_example_pyside.tictactoe import TicTacToe
 from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
 
 
