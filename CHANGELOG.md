@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## v0.92.1 (2024-07-28)
+
+### Build
+
+* build(ci): install ophyd_devices in editable mode for pipelines ([`06205e0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/06205e07903d93accf40abab153f440059f236ed))
+
+### Fix
+
+* fix: use SafeSlot instead of Slot ([`bc1e239`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bc1e23944cc0e5a861e3d0b4dc5b4ac6292d5269))
+
+* fix: linting ([`a3fe205`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a3fe20500ae2ac03dcde07432f7e21ce5262ce46))
+
+* fix: always add a QApplication for tests ([`61a4e32`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/61a4e32deb337ed27f2f43358b88b7266413b58e))
+
+* fix: add xvfb to draw offscreen ([`3d681f7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3d681f77e144e74138fc5fa65630004d7c166878))
+
+* fix: reset ErrorPopup singleton between tests ([`5a9ccfd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5a9ccfd1f6d2aacd5d86c1a34f74163b272d1ae4))
+
+* fix: metaclass + QObject segfaults PyQt(cpp bindings) ([`fc57b7a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fc57b7a1262031a2df9e6a99493db87e766b779a))
+
+### Refactor
+
+* refactor: renamed DeviceMonitor2DMessage ([`4be6fd6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4be6fd6b83ea1048f16310f7d2bbe777b13b245e))
+
+* refactor: rename device_monitor to device_monitor_2d ([`714e1e1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/714e1e139e0033d2725fefb636c419ca137a68c6))
+
 ## v0.92.0 (2024-07-24)
 
 ### Feature
@@ -102,18 +128,6 @@ This reverts commit 3798714369adf4023f833b7749d2f46a0ec74eee ([`fd6ae91`](https:
 
 * feat(waveform_widget): dap parameter window ([`1e551d6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1e551d6e9696f79ea2e0a179d13a4fc6c2a128b2))
 
-* feat(waveform): export to matplotlib window of current scene ([`8d93405`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8d9340539967b06b1e15f21a2106a39d5c740f31))
-
-* feat(figure): export dialog can be launched from CLI and from toolbar ([`6ff6111`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6ff611109153b9412dce37c527b19e839d99bba7))
-
-* feat(waveform_widget): added error handle utility ([`a8ff1d4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a8ff1d4cd09cae5eaeb4bd0ea90fdd102e32f3a3))
-
-* feat(curve_dialog): add DAP functionality ([`e830565`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e8305652fde384da037242cf8f7e3606f22bcfb6))
-
-* feat(curve_dialog): curves can be added ([`c926a75`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c926a75a7927d672c044ea8f68771209ae5accc6))
-
-* feat(waveform_widget): BECWaveformWidget toolbar added import/export config ([`fa9b171`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fa9b17191ddbb4043a658dae9aa0801e1dc22b84))
-
 ### Fix
 
 * fix(waveform_widget): plot API unified with BECFigure ([`2c8764a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2c8764a27de89b39b717032b58465e120ec57fbc))
@@ -125,22 +139,6 @@ This reverts commit 3798714369adf4023f833b7749d2f46a0ec74eee ([`fd6ae91`](https:
 * fix(waveform_widget): temporary disabled save/load config ([`7089cf3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7089cf356a43d805241d5621952e544d690e65e0))
 
 * fix(waveform_widget): use @SafeSlot decorator for automatic error message ([`8e588d7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8e588d79c86e950f6915e89c08fa9415c4bd8033))
-
-* fix(waveform): colormaps of curves can be changed and normalised
-
-feat(waveform): colormap can be changed from curve dialog
-
-fix(curve_dialog): default dialog parameters fixed
-
-curve Dialog colormap WIP ([`33495cf`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/33495cfe03b363f18db61d8af2983f49027b7a43))
-
-* fix(waveform_widget): adapted for changes from improved scan logic from waveform widget ([`8ac35d7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8ac35d7280b1ff007c10612228d163cc0c5d1a99))
-
-### Refactor
-
-* refactor(icons): icons moved to the assets directory ([`a8b6ef2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a8b6ef20cccae87515b10f054d0ed5b10e152769))
-
-* refactor(waveform_widget): removed PYSIDE6 check ([`47fcb9e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/47fcb9ebfe35ae600cced95a1edc68f6f6e37a04))
 
 ### Test
 
