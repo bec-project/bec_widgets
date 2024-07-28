@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.92.3 (2024-07-28)
+
+### Fix
+
+* fix(docs): moved to pyside6 ([`71873dd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/71873ddf359516ded8f74f4d2f73df4156aa1368))
+
 ## v0.92.2 (2024-07-28)
 
 ### Fix
@@ -130,8 +136,6 @@ This reverts commit 3798714369adf4023f833b7749d2f46a0ec74eee ([`fd6ae91`](https:
 
 * feat(waveform_widget): switch between drag and rectangle mode ([`2be009c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2be009c6477ba26c5cfb4d827534c5d5eb428999))
 
-* feat(waveform_widget): autorange button ([`8df6b00`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8df6b003e5c6a942fa2e875d9790e492c087bf26))
-
 ### Fix
 
 * fix(waveform_widget): plot API unified with BECFigure ([`2c8764a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2c8764a27de89b39b717032b58465e120ec57fbc))
@@ -139,8 +143,6 @@ This reverts commit 3798714369adf4023f833b7749d2f46a0ec74eee ([`fd6ae91`](https:
 * fix(colormap_selector): compatibility for PyQt6 when using designer fixed ([`50135b5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/50135b5fe90a88618291e9357f180cb19251dace))
 
 * fix(waveform_widget): adapted for BECWidget base class ([`6eb313f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6eb313fa76e559d62ecd8fa8849142b83817e47c))
-
-* fix(waveform_widget): temporary disabled save/load config ([`7089cf3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7089cf356a43d805241d5621952e544d690e65e0))
 
 ### Test
 
