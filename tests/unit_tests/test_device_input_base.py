@@ -8,13 +8,18 @@ from .client_mocks import mocked_client
 
 # DeviceInputBase is meant to be mixed in a QWidget
 class DeviceInputWidget(DeviceInputBase, QWidget):
-    pass
+    def __init__(self, parent=None, client=None, config=None, gui_id=None):
+        super().__init__(client=client, config=config, gui_id=gui_id)
+        QWidget.__init__(self, parent=parent)
 
 
 @pytest.fixture
-def device_input_base(mocked_client):
+def device_input_base(qtbot, mocked_client):
     widget = DeviceInputWidget(client=mocked_client)
+    qtbot.addWidget(widget)
+    qtbot.waitExposed(widget)
     yield widget
+    widget.close()
 
 
 def test_device_input_base_init(device_input_base):

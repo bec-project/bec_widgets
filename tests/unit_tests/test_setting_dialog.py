@@ -46,23 +46,23 @@ def test_setting_widget_display_current_settings(setting_widget):
 # SettingsDialog tests
 ###################################
 @pytest.fixture
-def settings_dialog(qtbot):
+def settings_dialog(qtbot, setting_widget):
     parent_widget = QWidget()
-    settings_widget = SettingWidget()
-    settings_widget.set_target_widget = MagicMock()
-    settings_widget.display_current_settings = MagicMock()
-    settings_widget.accept_changes = MagicMock()
+    setting_widget.set_target_widget = MagicMock()
+    setting_widget.display_current_settings = MagicMock()
+    setting_widget.accept_changes = MagicMock()
 
     dialog = SettingsDialog(
         parent=parent_widget,
-        settings_widget=settings_widget,
+        settings_widget=setting_widget,
         window_title="Test Settings",
         config={"setting1": "value1", "setting2": "value2"},
     )
     qtbot.addWidget(dialog)
     qtbot.waitExposed(dialog)
-    yield dialog, parent_widget, settings_widget
+    yield dialog, parent_widget, setting_widget
     dialog.close()
+    parent_widget.close()
 
 
 def test_settings_dialog_initialization(settings_dialog):

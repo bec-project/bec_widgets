@@ -12,6 +12,7 @@ def scan_control(qtbot, bec_client_lib):  # , mock_dev):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
+    widget.close()
 
 
 def test_scan_control_populate_scans_e2e(scan_control):

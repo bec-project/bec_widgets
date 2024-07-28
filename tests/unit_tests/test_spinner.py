@@ -12,6 +12,7 @@ def spinner_widget(qtbot):
     qtbot.addWidget(spinner)
     qtbot.waitExposed(spinner)
     yield spinner
+    spinner.close()
 
 
 def test_spinner_widget_paint_event(spinner_widget, qtbot):

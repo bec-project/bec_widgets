@@ -14,7 +14,9 @@ from .client_mocks import mocked_client
 def vscode_widget(qtbot, mocked_client):
     with mock.patch("bec_widgets.widgets.vscode.vscode.subprocess.Popen") as mock_popen:
         widget = VSCodeEditor(client=mocked_client)
+        # qtbot.addWidget(widget)
         yield widget
+        # widget.close()
 
 
 def test_vscode_widget(qtbot, vscode_widget):

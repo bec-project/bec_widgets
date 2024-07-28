@@ -8,6 +8,7 @@ from bec_widgets.utils import bec_dispatcher as bec_dispatcher_module
 @pytest.fixture(autouse=True)
 def qapplication(qapp):  # pylint: disable=unused-argument
     yield
+    qapp.processEvents()  # make sure all events are processed before shutting down
 
 
 @pytest.fixture(autouse=True)

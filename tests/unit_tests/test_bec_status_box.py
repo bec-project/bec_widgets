@@ -20,6 +20,7 @@ def status_box(qtbot, mocked_client, service_status_fixture):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
+    widget.close()
 
 
 def test_update_top_item(status_box):
