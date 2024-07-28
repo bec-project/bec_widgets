@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.92.2 (2024-07-28)
+
+### Fix
+
+* fix(widgets): fixed import for tictactoe example ([`995a795`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/995a795060bebe25c17108d80ae0fa30463f03b1))
+
 ## v0.92.1 (2024-07-28)
 
 ### Build
@@ -126,8 +132,6 @@ This reverts commit 3798714369adf4023f833b7749d2f46a0ec74eee ([`fd6ae91`](https:
 
 * feat(waveform_widget): autorange button ([`8df6b00`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8df6b003e5c6a942fa2e875d9790e492c087bf26))
 
-* feat(waveform_widget): dap parameter window ([`1e551d6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1e551d6e9696f79ea2e0a179d13a4fc6c2a128b2))
-
 ### Fix
 
 * fix(waveform_widget): plot API unified with BECFigure ([`2c8764a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2c8764a27de89b39b717032b58465e120ec57fbc))
@@ -137,8 +141,6 @@ This reverts commit 3798714369adf4023f833b7749d2f46a0ec74eee ([`fd6ae91`](https:
 * fix(waveform_widget): adapted for BECWidget base class ([`6eb313f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6eb313fa76e559d62ecd8fa8849142b83817e47c))
 
 * fix(waveform_widget): temporary disabled save/load config ([`7089cf3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7089cf356a43d805241d5621952e544d690e65e0))
-
-* fix(waveform_widget): use @SafeSlot decorator for automatic error message ([`8e588d7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8e588d79c86e950f6915e89c08fa9415c4bd8033))
 
 ### Test
 
