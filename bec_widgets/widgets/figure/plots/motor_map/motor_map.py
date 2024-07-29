@@ -493,13 +493,14 @@ class BECMotorMap(BECPlotBase):
             f"Motor position: ({round(float(current_x),precision)}, {round(float(current_y),precision)})"
         )
 
-    @Slot(dict)
-    def on_device_readback(self, msg: dict) -> None:
+    @Slot(dict, dict)
+    def on_device_readback(self, msg: dict, metadata: dict) -> None:
         """
         Update the motor map plot with the new motor position.
 
         Args:
             msg(dict): Message from the device readback.
+            metadata(dict): Metadata of the message.
         """
         if self.motor_x is None or self.motor_y is None:
             return

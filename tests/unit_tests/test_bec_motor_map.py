@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from bec_lib.messages import DeviceMessage
 
 from bec_widgets.widgets.figure.plots.motor_map.motor_map import BECMotorMap, MotorMapConfig
 from bec_widgets.widgets.figure.plots.waveform.waveform_curve import SignalData
@@ -72,7 +73,8 @@ def test_motor_movement_updates_position_and_database(bec_figure):
 
     # Simulate motor movement for 'samx' only
     new_position_samx = 4.0
-    mm.on_device_readback({"signals": {"samx": {"value": new_position_samx}}})
+    msg = DeviceMessage(signals={"samx": {"value": new_position_samx}}, metadata={})
+    mm.on_device_readback(msg.content, msg.metadata)
 
     init_positions["samx"].append(new_position_samx)
     init_positions["samy"].append(init_positions["samy"][-1])
@@ -96,7 +98,8 @@ def test_scatter_plot_rendering(bec_figure):
 
     # Simulate motor movement for 'samx' only
     new_position_samx = 4.0
-    mm.on_device_readback({"signals": {"samx": {"value": new_position_samx}}})
+    msg = DeviceMessage(signals={"samx": {"value": new_position_samx}}, metadata={})
+    mm.on_device_readback(msg.content, msg.metadata)
     mm._update_plot()
 
     # Get the scatter plot item
@@ -116,8 +119,10 @@ def test_plot_visualization_consistency(bec_figure):
     mm = bec_figure.motor_map("samx", "samy")
     mm.change_motors("samx", "samy")
     # Simulate updating the plot with new data
-    mm.on_device_readback({"signals": {"samx": {"value": 5}}})
-    mm.on_device_readback({"signals": {"samy": {"value": 9}}})
+    msg = DeviceMessage(signals={"samx": {"value": 5}}, metadata={})
+    mm.on_device_readback(msg.content, msg.metadata)
+    msg = DeviceMessage(signals={"samy": {"value": 9}}, metadata={})
+    mm.on_device_readback(msg.content, msg.metadata)
     mm._update_plot()
 
     scatter_plot_item = mm.plot_components["scatter"]
@@ -234,10 +239,14 @@ def test_motor_map_get_data_max_points(bec_figure, qtbot):
         "samx": [motor_map_dev["samx"].read()["samx"]["value"]],
         "samy": [motor_map_dev["samy"].read()["samy"]["value"]],
     }
-    mm.on_device_readback({"signals": {"samx": {"value": 5.0}}})
-    mm.on_device_readback({"signals": {"samy": {"value": 9.0}}})
-    mm.on_device_readback({"signals": {"samx": {"value": 6.0}}})
-    mm.on_device_readback({"signals": {"samy": {"value": 7.0}}})
+    msg = DeviceMessage(signals={"samx": {"value": 5.0}}, metadata={})
+    mm.on_device_readback(msg.content, msg.metadata)
+    msg = DeviceMessage(signals={"samy": {"value": 9.0}}, metadata={})
+    mm.on_device_readback(msg.content, msg.metadata)
+    msg = DeviceMessage(signals={"samx": {"value": 6.0}}, metadata={})
+    mm.on_device_readback(msg.content, msg.metadata)
+    msg = DeviceMessage(signals={"samy": {"value": 7.0}}, metadata={})
+    mm.on_device_readback(msg.content, msg.metadata)
 
     expected_x = [init_positions["samx"][-1], 5.0, 5.0, 6.0, 6.0]
     expected_y = [init_positions["samy"][-1], init_positions["samy"][-1], 9.0, 9.0, 7.0]

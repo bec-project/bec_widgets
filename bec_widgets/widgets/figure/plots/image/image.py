@@ -500,13 +500,14 @@ class BECImageShow(BECPlotBase):
             self.update_image(device, data)
             self.update_vrange(device, self.processor.config.stats)
 
-    @Slot(dict)
-    def on_image_update(self, msg: dict):
+    @Slot(dict, dict)
+    def on_image_update(self, msg: dict, metadata: dict):
         """
         Update the image of the device monitor from bec.
 
         Args:
             msg(dict): The message from bec.
+            metadata(dict): The metadata of the message.
         """
         data = msg["data"]
         device = msg["device"]
