@@ -75,6 +75,10 @@ class SpinnerWidget(QWidget):
             painter.drawArc(adjusted_rect, self.angle * 16, int(angle_span))
         painter.end()
 
+    def closeEvent(self, event):
+        self.timer.stop()
+        super().closeEvent(event)
+
 
 if __name__ == "__main__":  # pragma: no cover
     app = QApplication(sys.argv)
