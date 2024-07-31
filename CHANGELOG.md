@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.92.4 (2024-07-31)
+
+### Fix
+
+* fix: fix missmatch of signal/slot in image and motormap ([`dcc5fd7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/dcc5fd71ee9f51767a7b2b1ed6200e89d1ef754c))
+
 ## v0.92.3 (2024-07-28)
 
 ### Fix
@@ -129,12 +135,6 @@ This reverts commit 3798714369adf4023f833b7749d2f46a0ec74eee ([`fd6ae91`](https:
 * refactor(toolbar): generalizations of the ToolBarAction ([`ad112d1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ad112d1f08157f6987edd48a0bacf9f669ef1997))
 
 ## v0.88.0 (2024-07-19)
-
-### Feature
-
-* feat(waveform_widget): designer plugin added ([`1f8ef52`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1f8ef52b606283038052640849094f515a463403))
-
-* feat(waveform_widget): switch between drag and rectangle mode ([`2be009c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2be009c6477ba26c5cfb4d827534c5d5eb428999))
 
 ### Fix
 
