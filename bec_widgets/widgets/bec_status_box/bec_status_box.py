@@ -56,6 +56,11 @@ class BECServiceStatusMixin(QObject):
         self.client._update_existing_services()
         self.services_update.emit(self.client._services_info, self.client._services_metric)
 
+    def cleanup(self):
+        """Cleanup the BECServiceStatusMixin."""
+        self._service_update_timer.stop()
+        self._service_update_timer.deleteLater()
+
 
 class BECStatusBox(BECWidget, QWidget):
     """An autonomous widget to display the status of BEC services.
@@ -289,6 +294,11 @@ class BECStatusBox(BECWidget, QWidget):
         for _, objects in self.status_container.items():
             if objects["item"] == item:
                 objects["widget"].show_popup()
+
+    def cleanup(self):
+        """Cleanup the BECStatusBox widget."""
+        self.bec_service_status.cleanup()
+        return super().cleanup()
 
 
 def main():
