@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v0.93.0 (2024-08-05)
+
+### Feature
+
+* feat(themes): moved themes to bec_qthemes
+
+This reverts commit fd6ae91993a23a7b8dbb2cf3c4b7c3eda6d2b0f6 ([`5aad401`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5aad401ef8774c7330784f72cd3b9d8c253e2b6a))
+
 ## v0.92.5 (2024-08-05)
 
 ### Fix
@@ -137,14 +145,6 @@
 This reverts commit 3798714369adf4023f833b7749d2f46a0ec74eee ([`fd6ae91`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fd6ae91993a23a7b8dbb2cf3c4b7c3eda6d2b0f6))
 
 ## v0.88.1 (2024-07-22)
-
-### Documentation
-
-* docs: readthedocs icon path fixed ([`2bcaa42`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2bcaa4256d6daaefacb3ead8c72458d7b1498e29))
-
-### Fix
-
-* fix(plot_base): set_xy autorange moved to plotbase from waveform ([`a3dff7d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a3dff7decc16115c12dc6b4ef1572552368da309))
 
 ### Refactor
 
