@@ -1,9 +1,13 @@
 from typing import Literal
 
+from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QDoubleSpinBox,
+    QFormLayout,
     QGridLayout,
     QGroupBox,
     QLabel,
@@ -25,13 +29,46 @@ class ScanArgType:
     LITERALS = "dict"
 
 
+class SettingsDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Settings")
+
+        layout = QFormLayout()
+
+        self.precision_spin_box = QSpinBox()
+        self.precision_spin_box.setRange(
+            -2147483647, 2147483647
+        )  # 2147483647 is the largest int which qt allows
+
+        self.step_size_spin_box = QDoubleSpinBox()
+        self.step_size_spin_box.setRange(-float("inf"), float("inf"))
+
+        fixed_width = 80
+        self.precision_spin_box.setFixedWidth(fixed_width)
+        self.step_size_spin_box.setFixedWidth(fixed_width)
+
+        layout.addRow("Decimal Precision:", self.precision_spin_box)
+        layout.addRow("Step Size:", self.step_size_spin_box)
+
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+        self.setLayout(layout)
+
+    def getValues(self):
+        return self.precision_spin_box.value(), self.step_size_spin_box.value()
+
+
 class ScanSpinBox(QSpinBox):
     def __init__(
         self, parent=None, arg_name: str = None, default: int | None = None, *args, **kwargs
     ):
         super().__init__(parent=parent, *args, **kwargs)
         self.arg_name = arg_name
-        self.setRange(-9999, 9999)
+        self.setRange(-2147483647, 2147483647)  # 2147483647 is the largest int which qt allows
         if default is not None:
             self.setValue(default)
 
@@ -42,9 +79,24 @@ class ScanDoubleSpinBox(QDoubleSpinBox):
     ):
         super().__init__(parent=parent, *args, **kwargs)
         self.arg_name = arg_name
-        self.setRange(-9999, 9999)
+        self.setRange(-float("inf"), float("inf"))
         if default is not None:
             self.setValue(default)
+
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.showSettingsDialog)
+
+        self.setToolTip("Right click to open settings dialog for decimal precision and step size.")
+
+    def showSettingsDialog(self):
+        dialog = SettingsDialog(self)
+        dialog.precision_spin_box.setValue(self.decimals())
+        dialog.step_size_spin_box.setValue(self.singleStep())
+
+        if dialog.exec_() == QDialog.Accepted:
+            precision, step_size = dialog.getValues()
+            self.setDecimals(precision)
+            self.setSingleStep(step_size)
 
 
 class ScanLineEdit(QLineEdit):
