@@ -11,4 +11,5 @@ hidden: true
 installation/
 quick_start/
 auto_updates/
+video_tutorials/
 ```
