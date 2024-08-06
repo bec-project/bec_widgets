@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.93.1 (2024-08-06)
+
+### Documentation
+
+* docs: added video tutorial section with BSEG YT video ([`302ae90`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/302ae90139f6a88e2401fe29fe312387486e27a9))
+
+### Fix
+
+* fix(dock): docks have more recognizable red icon for closing docks ([`af86860`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/af86860bf35474805fb1a7bc3725cf8835ed4cc7))
+
 ## v0.93.0 (2024-08-05)
 
 ### Feature
@@ -134,18 +144,8 @@ This reverts commit fd6ae91993a23a7b8dbb2cf3c4b7c3eda6d2b0f6 ([`5aad401`](https:
 
 ## v0.89.0 (2024-07-22)
 
-### Feature
-
-* feat(themes): moved themes to bec_qthemes ([`3798714`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3798714369adf4023f833b7749d2f46a0ec74eee))
-
 ### Unknown
 
 * Revert &#34;feat(themes): moved themes to bec_qthemes&#34;
 
 This reverts commit 3798714369adf4023f833b7749d2f46a0ec74eee ([`fd6ae91`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fd6ae91993a23a7b8dbb2cf3c4b7c3eda6d2b0f6))
-
-## v0.88.1 (2024-07-22)
-
-### Refactor
-
-* refactor(toolbar): generalizations of the ToolBarAction ([`ad112d1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ad112d1f08157f6987edd48a0bacf9f669ef1997))
