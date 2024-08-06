@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Literal, Optional
 
 from pydantic import Field
 from pyqtgraph.dockarea import Dock, DockLabel
+from qtpy import QtCore, QtGui
 
 from bec_widgets.cli.rpc_wigdet_handler import widget_handler
 from bec_widgets.utils import ConnectionConfig, GridLayoutManager
@@ -11,8 +12,6 @@ from bec_widgets.utils.bec_widget import BECWidget
 
 if TYPE_CHECKING:
     from qtpy.QtWidgets import QWidget
-
-    from bec_widgets.widgets.dock import BECDockArea
 
 
 class DockConfig(ConnectionConfig):
@@ -26,6 +25,23 @@ class DockConfig(ConnectionConfig):
 
 
 class CustomDockLabel(DockLabel):
+    def __init__(self, text: str, closable: bool = True):
+        super().__init__(text, closable)
+        if closable:
+            red_icon = QtGui.QIcon()
+            pixmap = QtGui.QPixmap(32, 32)
+            pixmap.fill(QtCore.Qt.GlobalColor.red)
+            painter = QtGui.QPainter(pixmap)
+            pen = QtGui.QPen(QtCore.Qt.GlobalColor.white)
+            pen.setWidth(2)
+            painter.setPen(pen)
+            painter.drawLine(8, 8, 24, 24)
+            painter.drawLine(24, 8, 8, 24)
+            painter.end()
+            red_icon.addPixmap(pixmap)
+
+            self.closeButton.setIcon(red_icon)
+
     def updateStyle(self):
         r = "3px"
         if self.dim:
