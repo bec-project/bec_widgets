@@ -6,9 +6,9 @@ def main():  # pragma: no cover
         return
     from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
 
-    from bec_widgets.widgets.device_box.device_box_plugin import DeviceBoxPlugin
+    from bec_widgets.widgets.positioner_box.positioner_box_plugin import PositionerBoxPlugin
 
-    QPyDesignerCustomWidgetCollection.addCustomWidget(DeviceBoxPlugin())
+    QPyDesignerCustomWidgetCollection.addCustomWidget(PositionerBoxPlugin())
 
 
 if __name__ == "__main__":  # pragma: no cover

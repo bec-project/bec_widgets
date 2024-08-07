@@ -83,8 +83,8 @@ class BECDockArea(BECWidget, QWidget):
                         "scan_control": IconAction(
                             icon_path="scan_control.svg", tooltip="Add Scan Control"
                         ),
-                        "device_box": IconAction(
-                            icon_path="device_box.svg", tooltip="Add Device Box"
+                        "positioner_box": IconAction(
+                            icon_path="positioner_box.svg", tooltip="Add Device Box"
                         ),
                     },
                 ),
@@ -132,8 +132,8 @@ class BECDockArea(BECWidget, QWidget):
         self.toolbar.widgets["menu_devices"].widgets["scan_control"].triggered.connect(
             lambda: self.add_dock(widget="ScanControl", prefix="scan_control")
         )
-        self.toolbar.widgets["menu_devices"].widgets["device_box"].triggered.connect(
-            lambda: self.add_dock(widget="DeviceBox", prefix="device_box")
+        self.toolbar.widgets["menu_devices"].widgets["positioner_box"].triggered.connect(
+            lambda: self.add_dock(widget="PositionerBox", prefix="positioner_box")
         )
 
         # Menu Utils

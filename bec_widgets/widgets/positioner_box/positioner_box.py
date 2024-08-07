@@ -1,8 +1,11 @@
+""" Module for a PositionerBox widget to control a positioner device."""
+
 import os
 import uuid
 
 from bec_lib.device import Positioner
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.logger import bec_logger
 from bec_lib.messages import ScanQueueMessage
 from qtpy.QtCore import Property, Signal, Slot
 from qtpy.QtGui import QDoubleValidator
@@ -12,12 +15,23 @@ from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 
+logger = bec_logger.logger
 
-class DeviceBox(BECWidget, QWidget):
+
+class PositionerBox(BECWidget, QWidget):
+    """Simple Widget to control a positioner in box form"""
+
+    USER_ACCESS = ["set_positioner"]
     device_changed = Signal(str, str)
 
     def __init__(self, parent=None, device: Positioner = None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        """Initialize the PositionerBox widget.
+
+        Args:
+            parent: The parent widget.
+            device (Positioner): The device to control.
+        """
+        super().__init__(**kwargs)
         QWidget.__init__(self, parent=parent)
         self.get_bec_shortcuts()
         self._device = ""
@@ -30,10 +44,11 @@ class DeviceBox(BECWidget, QWidget):
             self.init_device()
 
     def init_ui(self):
+        """Init the ui"""
         self.device_changed.connect(self.on_device_change)
 
         current_path = os.path.dirname(__file__)
-        self.ui = UILoader(self).loader(os.path.join(current_path, "device_box.ui"))
+        self.ui = UILoader(self).loader(os.path.join(current_path, "positioner_box.ui"))
 
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.ui)
@@ -58,11 +73,17 @@ class DeviceBox(BECWidget, QWidget):
         self.ui.spinner_widget.start()
 
     def init_device(self):
-        if self.device in self.dev and isinstance(self.dev[self.device], Positioner):
+        """Init the device view and readback"""
+        if self._check_device_is_valid(self.device):
             data = self.dev[self.device].read()
             self.on_device_readback({"signals": data}, {})
 
     def _toogle_enable_buttons(self, enable: bool) -> None:
+        """Toogle enable/disable on available buttons
+
+        Args:
+            enable (bool): Enable buttons
+        """
         self.ui.tweak_left.setEnabled(enable)
         self.ui.tweak_right.setEnabled(enable)
         self.ui.stop.setEnabled(enable)
@@ -71,25 +92,53 @@ class DeviceBox(BECWidget, QWidget):
 
     @Property(str)
     def device(self):
+        """Property to set the device"""
         return self._device
 
     @device.setter
     def device(self, value: str):
+        """Setter, checks if device is a string"""
         if not value or not isinstance(value, str):
             return
         old_device = self._device
         self._device = value
         self.device_changed.emit(old_device, value)
 
+    def set_positioner(self, positioner: str):
+        """Set the device
+
+        Args:
+            positioner (Positioner | str) : Positioner to set, accepts str or the device
+        """
+        if isinstance(positioner, Positioner):
+            positioner = positioner.name
+        self.device = positioner
+
+    def _check_device_is_valid(self, device: str):
+        """Check if the device is a positioner
+
+        Args:
+            device (str): The device name
+        """
+        if device not in self.dev:
+            logger.info(f"Device {device} not found in the device list")
+            return False
+        if not isinstance(self.dev[device], Positioner):
+            logger.info(f"Device {device} is not a positioner")
+            return False
+        return True
+
     @Slot(str, str)
     def on_device_change(self, old_device: str, new_device: str):
-        if new_device not in self.dev:
-            print(f"Device {new_device} not found in the device list")
+        """Upon changing the device, a check will be performed if the device is a Positioner.
+
+        Args:
+            old_device (str): The old device name.
+            new_device (str): The new device name.
+        """
+        if not self._check_device_is_valid(new_device):
             return
-        if not isinstance(self.dev[new_device], Positioner):
-            print(f"Device {new_device} is not a positioner")
-            return
-        print(f"Device changed from {old_device} to {new_device}")
+        logger.info(f"Device changed from {old_device} to {new_device}")
         self._toogle_enable_buttons(True)
         self.init_device()
         self.bec_dispatcher.disconnect_slot(
@@ -110,6 +159,12 @@ class DeviceBox(BECWidget, QWidget):
 
     @Slot(dict, dict)
     def on_device_readback(self, msg_content: dict, metadata: dict):
+        """Callback for device readback.
+
+        Args:
+            msg_content (dict): The message content.
+            metadata (dict): The message metadata.
+        """
         signals = msg_content.get("signals", {})
         # pylint: disable=protected-access
         hinted_signals = self.dev[self.device]._hints
@@ -146,7 +201,12 @@ class DeviceBox(BECWidget, QWidget):
             pos = (readback_val - limits[0]) / (limits[1] - limits[0])
             self.ui.position_indicator.on_position_update(pos)
 
-    def update_limits(self, limits):
+    def update_limits(self, limits: tuple):
+        """Update limits
+
+        Args:
+            limits (tuple): Limits of the positioner
+        """
         if limits == self._limits:
             return
         self._limits = limits
@@ -159,6 +219,7 @@ class DeviceBox(BECWidget, QWidget):
 
     @Slot()
     def on_stop(self):
+        """Stop call"""
         request_id = str(uuid.uuid4())
         params = {
             "device": self.device,
@@ -177,18 +238,22 @@ class DeviceBox(BECWidget, QWidget):
 
     @property
     def step_size(self):
+        """Step size for tweak"""
         return self.ui.step_size.value()
 
     @Slot()
     def on_tweak_right(self):
+        """Tweak motor right"""
         self.dev[self.device].move(self.step_size, relative=True)
 
     @Slot()
     def on_tweak_left(self):
+        """Tweak motor left"""
         self.dev[self.device].move(-self.step_size, relative=True)
 
     @Slot()
     def on_setpoint_change(self):
+        """Change the setpoint for the motor"""
         self.ui.setpoint.clearFocus()
         setpoint = self.ui.setpoint.text()
         self.dev[self.device].move(float(setpoint), relative=False)
@@ -203,7 +268,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     app = QApplication(sys.argv)
     apply_theme("light")
-    widget = DeviceBox(device="bpm4i")
+    widget = PositionerBox(device="bpm4i")
 
     widget.show()
     sys.exit(app.exec_())

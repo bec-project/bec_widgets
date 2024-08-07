@@ -21,9 +21,9 @@ class Widgets(str, enum.Enum):
     BECQueue = "BECQueue"
     BECStatusBox = "BECStatusBox"
     BECWaveformWidget = "BECWaveformWidget"
-    DeviceBox = "DeviceBox"
     DeviceComboBox = "DeviceComboBox"
     DeviceLineEdit = "DeviceLineEdit"
+    PositionerBox = "PositionerBox"
     RingProgressBar = "RingProgressBar"
     ScanControl = "ScanControl"
     StopButton = "StopButton"
@@ -2287,24 +2287,6 @@ class BECWaveformWidget(RPCBase):
         """
 
 
-class DeviceBox(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @rpc_call
-    def _get_all_rpc(self) -> "dict":
-        """
-        Get all registered RPC objects.
-        """
-
-
 class DeviceComboBox(RPCBase):
     @property
     @rpc_call
@@ -2356,6 +2338,17 @@ class DeviceLineEdit(RPCBase):
     def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
+        """
+
+
+class PositionerBox(RPCBase):
+    @rpc_call
+    def set_positioner(self, positioner: str):
+        """
+        Set the device
+
+        Args:
+            positioner (Positioner | str) : Positioner to set, accepts str or the device
         """
 
 

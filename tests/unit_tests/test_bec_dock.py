@@ -127,10 +127,12 @@ def test_toolbar_add_plot_motor_map(bec_dock_area):
     assert bec_dock_area.panels["motor_map_1"].widgets[0].config.widget_class == "BECMotorMapWidget"
 
 
-def test_toolbar_add_device_device_box(bec_dock_area):
-    bec_dock_area.toolbar.widgets["menu_devices"].widgets["device_box"].trigger()
-    assert "device_box_1" in bec_dock_area.panels
-    assert bec_dock_area.panels["device_box_1"].widgets[0].config.widget_class == "DeviceBox"
+def test_toolbar_add_device_positioner_box(bec_dock_area):
+    bec_dock_area.toolbar.widgets["menu_devices"].widgets["positioner_box"].trigger()
+    assert "positioner_box_1" in bec_dock_area.panels
+    assert (
+        bec_dock_area.panels["positioner_box_1"].widgets[0].config.widget_class == "PositionerBox"
+    )
 
 
 def test_toolbar_add_utils_queue(bec_dock_area):
