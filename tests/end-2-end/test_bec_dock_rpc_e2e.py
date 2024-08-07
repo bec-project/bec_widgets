@@ -9,6 +9,10 @@ from bec_widgets.cli.auto_updates import AutoUpdates
 from bec_widgets.cli.client import BECDockArea, BECFigure, BECImageShow, BECMotorMap, BECWaveform
 from bec_widgets.utils import Colors
 
+# pylint: disable=unused-argument
+# pylint: disable=redefined-outer-name
+# pylint: disable=too-many-locals
+
 
 def test_rpc_add_dock_with_figure_e2e(bec_client_lib, rpc_server_dock):
     # BEC client shortcuts
@@ -227,13 +231,20 @@ def test_ring_bar_scan_update(bec_client_lib, rpc_server_dock):
     assert bar_config["rings"][1]["max_value"] == final_samy
 
 
-def test_auto_update(bec_client_lib, rpc_server_dock):
+def test_auto_update(bec_client_lib, rpc_server_dock, qtbot):
     dock = BECDockArea(rpc_server_dock)
 
     AutoUpdates.enabled = True
     AutoUpdates.create_default_dock = True
     dock.auto_updates = AutoUpdates(gui=dock)
     dock.auto_updates.start_default_dock()
+
+    def get_default_figure():
+        return dock.auto_updates.get_default_figure()
+
+    qtbot.waitUntil(lambda: get_default_figure() is not None, timeout=10000)
+    plt = get_default_figure()
+
     dock.selected_device = "bpm4i"
 
     # we need to start the update script manually; normally this is done when the GUI is started
@@ -250,7 +261,6 @@ def test_auto_update(bec_client_lib, rpc_server_dock):
     last_scan_data = queue.scan_storage.storage[-1].data
 
     # get data from curves
-    plt = dock.auto_updates.get_default_figure()
     widgets = plt.widget_list
     plt_data = widgets[0].get_all_data()
 
@@ -271,6 +281,7 @@ def test_auto_update(bec_client_lib, rpc_server_dock):
 
     plt = dock.auto_updates.get_default_figure()
     widgets = plt.widget_list
+    qtbot.waitUntil(lambda: len(plt.widget_list) > 0, timeout=5000)
     plt_data = widgets[0].get_all_data()
 
     last_scan_data = queue.scan_storage.storage[-1].data
