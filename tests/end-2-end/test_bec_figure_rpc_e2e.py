@@ -158,7 +158,7 @@ def test_rpc_motor_map(rpc_server_figure, bec_client_lib):
     )
 
 
-def test_dap_rpc(rpc_server_figure, bec_client_lib):
+def test_dap_rpc(rpc_server_figure, bec_client_lib, qtbot):
 
     fig = BECFigure(rpc_server_figure)
     plt = fig.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
@@ -178,13 +178,15 @@ def test_dap_rpc(rpc_server_figure, bec_client_lib):
     res = scans.line_scan(dev.samx, 0, 8, steps=50, relative=False)
     res.wait()
 
-    time.sleep(2)
+    # especially on slow machines, the fit might not be done yet
+    # so we wait until the fit reaches the expected value
+    def wait_for_fit():
+        dap_curve = plt.get_curve("bpm4i-bpm4i-GaussianModel")
+        fit_params = dap_curve.dap_params
+        print(fit_params)
+        return np.isclose(fit_params["center"], 5, atol=0.5)
 
-    dap_curve = plt.get_curve("bpm4i-bpm4i-GaussianModel")
-    fit_params = dap_curve.dap_params
-    print(fit_params)
-
-    assert np.isclose(fit_params["center"], 5, atol=0.5)
+    qtbot.waitUntil(wait_for_fit, timeout=10000)
 
 
 def test_removing_subplots(rpc_server_figure, bec_client_lib):
