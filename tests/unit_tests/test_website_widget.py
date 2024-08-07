@@ -12,8 +12,6 @@ def website_widget(qtbot, mocked_client):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.page().deleteLater()
-    qtbot.wait(1000)
 
 
 def test_website_widget_set_url(website_widget):

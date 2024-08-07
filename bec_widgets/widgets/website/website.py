@@ -64,6 +64,12 @@ class WebsiteWidget(BECWidget, QWebEngineView):
         """
         QWebEngineView.forward(self)
 
+    def cleanup(self):
+        """
+        Cleanup the widget
+        """
+        self.page().deleteLater()
+
 
 if __name__ == "__main__":
     import sys
