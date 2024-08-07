@@ -34,3 +34,10 @@ class ColorButton(pg.ColorButton):
             return self.color().getRgb()
         if format == "HEX":
             return self.color().name()
+
+    def cleanup(self):
+        """
+        Clean up the ColorButton.
+        """
+        self.colorDialog.close()
+        self.colorDialog.deleteLater()

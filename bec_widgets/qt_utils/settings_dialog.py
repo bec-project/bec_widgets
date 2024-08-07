@@ -106,3 +106,14 @@ class SettingsDialog(QDialog):
         Apply the changes made in the settings widget without closing the dialog.
         """
         self.widget.accept_changes()
+
+    def cleanup(self):
+        """
+        Cleanup the dialog.
+        """
+        self.button_box.close()
+        self.button_box.deleteLater()
+
+    def closeEvent(self, event):
+        self.cleanup()
+        super().closeEvent(event)

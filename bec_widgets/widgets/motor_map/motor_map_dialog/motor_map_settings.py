@@ -45,3 +45,12 @@ class MotorMapSettings(SettingWidget):
             self.target_widget.set_scatter_size(scatter_size)
             self.target_widget.set_background_value(background_intensity)
             self.target_widget.set_color(color)
+
+    def cleanup(self):
+        self.ui.color.cleanup()
+        self.ui.color.close()
+        self.ui.color.deleteLater()
+
+    def closeEvent(self, event):
+        self.cleanup()
+        super().closeEvent(event)
