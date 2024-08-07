@@ -6,8 +6,10 @@ import pytest
 from bec_lib import messages
 from qtpy.QtGui import QFontInfo
 
+from bec_widgets.widgets.figure import BECFigure
+
 from .client_mocks import mocked_client
-from .test_bec_figure import bec_figure
+from .conftest import create_widget
 
 
 @pytest.fixture
@@ -15,7 +17,8 @@ def bec_image_show(bec_figure):
     yield bec_figure.image("eiger")
 
 
-def test_on_image_update(bec_image_show):
+def test_on_image_update(qtbot, mocked_client):
+    bec_image_show = create_widget(qtbot, BECFigure, client=mocked_client).image("eiger")
     data = np.random.rand(100, 100)
     msg = messages.DeviceMonitor2DMessage(device="eiger", data=data, metadata={"scan_id": "12345"})
     bec_image_show.on_image_update(msg.content, msg.metadata)
@@ -23,7 +26,8 @@ def test_on_image_update(bec_image_show):
     assert np.array_equal(img.get_data(), data)
 
 
-def test_autorange_on_image_update(bec_image_show):
+def test_autorange_on_image_update(qtbot, mocked_client):
+    bec_image_show = create_widget(qtbot, BECFigure, client=mocked_client).image("eiger")
     # Check if autorange mode "mean" works, should be default
     data = np.random.rand(100, 100)
     msg = messages.DeviceMonitor2DMessage(device="eiger", data=data, metadata={"scan_id": "12345"})

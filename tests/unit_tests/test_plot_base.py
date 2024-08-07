@@ -4,18 +4,22 @@ from unittest import mock
 import pytest
 from qtpy.QtGui import QFontInfo
 
+from bec_widgets.widgets.figure import BECFigure
+
 from .client_mocks import mocked_client
-from .test_bec_figure import bec_figure
+from .conftest import create_widget
 
 
-def test_init_plot_base(bec_figure):
+def test_init_plot_base(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     plot_base = bec_figure.add_widget(widget_type="BECPlotBase", widget_id="test_plot")
     assert plot_base is not None
     assert plot_base.config.widget_class == "BECPlotBase"
     assert plot_base.config.gui_id == "test_plot"
 
 
-def test_plot_base_axes_by_separate_methods(bec_figure):
+def test_plot_base_axes_by_separate_methods(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     plot_base = bec_figure.add_widget(widget_type="BECPlotBase", widget_id="test_plot")
 
     plot_base.set_title("Test Title")
@@ -65,7 +69,8 @@ def test_plot_base_axes_by_separate_methods(bec_figure):
         assert mock_set_title.call_args == call
 
 
-def test_plot_base_axes_added_by_kwargs(bec_figure):
+def test_plot_base_axes_added_by_kwargs(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     plot_base = bec_figure.add_widget(widget_type="BECPlotBase", widget_id="test_plot")
 
     plot_base.set(

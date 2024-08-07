@@ -2,14 +2,16 @@ import numpy as np
 import pytest
 from bec_lib.messages import DeviceMessage
 
+from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.figure.plots.motor_map.motor_map import BECMotorMap, MotorMapConfig
 from bec_widgets.widgets.figure.plots.waveform.waveform_curve import SignalData
 
 from .client_mocks import mocked_client
-from .test_bec_figure import bec_figure
+from .conftest import create_widget
 
 
-def test_motor_map_init(bec_figure):
+def test_motor_map_init(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     default_config = MotorMapConfig(widget_class="BECMotorMap")
 
     mm = bec_figure.motor_map(config=default_config.model_dump())
@@ -18,7 +20,8 @@ def test_motor_map_init(bec_figure):
     assert mm.config == default_config
 
 
-def test_motor_map_change_motors(bec_figure):
+def test_motor_map_change_motors(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     mm = bec_figure.motor_map("samx", "samy")
 
     assert mm.motor_x == "samx"
@@ -32,7 +35,8 @@ def test_motor_map_change_motors(bec_figure):
     assert mm.config.signals.y == SignalData(name="samz", entry="samz", limits=[-8, 8])
 
 
-def test_motor_map_get_limits(bec_figure):
+def test_motor_map_get_limits(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     mm = bec_figure.motor_map("samx", "samy")
     expected_limits = {"samx": [-10, 10], "samy": [-5, 5]}
 
@@ -41,7 +45,8 @@ def test_motor_map_get_limits(bec_figure):
         assert actual_limit == expected_limit
 
 
-def test_motor_map_get_init_position(bec_figure):
+def test_motor_map_get_init_position(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     mm = bec_figure.motor_map("samx", "samy")
     mm.set_precision(2)
 
@@ -57,7 +62,8 @@ def test_motor_map_get_init_position(bec_figure):
         assert actual_position == expected_position
 
 
-def test_motor_movement_updates_position_and_database(bec_figure):
+def test_motor_movement_updates_position_and_database(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     mm = bec_figure.motor_map("samx", "samy")
     motor_map_dev = mm.client.device_manager.devices
 
@@ -85,7 +91,8 @@ def test_motor_movement_updates_position_and_database(bec_figure):
     assert mm.database_buffer["y"] == init_positions["samy"]
 
 
-def test_scatter_plot_rendering(bec_figure):
+def test_scatter_plot_rendering(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     mm = bec_figure.motor_map("samx", "samy")
     motor_map_dev = mm.client.device_manager.devices
 
@@ -115,7 +122,8 @@ def test_scatter_plot_rendering(bec_figure):
     ), "Scatter plot Y data should retain last known position"
 
 
-def test_plot_visualization_consistency(bec_figure):
+def test_plot_visualization_consistency(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     mm = bec_figure.motor_map("samx", "samy")
     mm.change_motors("samx", "samy")
     # Simulate updating the plot with new data
@@ -133,7 +141,8 @@ def test_plot_visualization_consistency(bec_figure):
     ), "Plot not updated correctly with new data"
 
 
-def test_change_background_value(bec_figure, qtbot):
+def test_change_background_value(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     mm = bec_figure.motor_map("samx", "samy")
 
     assert mm.config.background_value == 25
@@ -146,7 +155,8 @@ def test_change_background_value(bec_figure, qtbot):
     assert np.all(mm.plot_components["limit_map"].image == 50.0)
 
 
-def test_motor_map_init_from_config(bec_figure):
+def test_motor_map_init_from_config(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     config = {
         "widget_class": "BECMotorMap",
         "gui_id": "mm_id",
@@ -200,7 +210,8 @@ def test_motor_map_init_from_config(bec_figure):
     assert mm._config_dict == config
 
 
-def test_motor_map_set_scatter_size(bec_figure, qtbot):
+def test_motor_map_set_scatter_size(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     mm = bec_figure.motor_map("samx", "samy")
 
     assert mm.config.scatter_size == 5
@@ -213,7 +224,8 @@ def test_motor_map_set_scatter_size(bec_figure, qtbot):
     assert mm.plot_components["scatter"].opts["size"] == 10
 
 
-def test_motor_map_change_precision(bec_figure):
+def test_motor_map_change_precision(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     mm = bec_figure.motor_map("samx", "samy")
 
     assert mm.config.precision == 2
@@ -221,7 +233,8 @@ def test_motor_map_change_precision(bec_figure):
     assert mm.config.precision == 10
 
 
-def test_motor_map_set_color(bec_figure, qtbot):
+def test_motor_map_set_color(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     mm = bec_figure.motor_map("samx", "samy")
 
     assert mm.config.color == (255, 255, 255, 255)
@@ -231,7 +244,8 @@ def test_motor_map_set_color(bec_figure, qtbot):
     assert mm.config.color == (0, 0, 0, 255)
 
 
-def test_motor_map_get_data_max_points(bec_figure, qtbot):
+def test_motor_map_get_data_max_points(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     mm = bec_figure.motor_map("samx", "samy")
     motor_map_dev = mm.client.device_manager.devices
 

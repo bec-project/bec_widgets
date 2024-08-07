@@ -9,18 +9,11 @@ from bec_widgets.widgets.figure.plots.motor_map.motor_map import BECMotorMap
 from bec_widgets.widgets.figure.plots.waveform.waveform import BECWaveform
 
 from .client_mocks import mocked_client
+from .conftest import create_widget
 
 
-@pytest.fixture
-def bec_figure(qtbot, mocked_client):
-    widget = BECFigure(client=mocked_client)
-    qtbot.addWidget(widget)
-    qtbot.waitExposed(widget)
-    yield widget
-    widget.close()
-
-
-def test_bec_figure_init(bec_figure):
+def test_bec_figure_init(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     assert bec_figure is not None
     assert bec_figure.client is not None
     assert isinstance(bec_figure, BECFigure)
@@ -34,7 +27,8 @@ def test_bec_figure_init_with_config(mocked_client):
     assert widget.config.theme == "dark"
 
 
-def test_bec_figure_add_remove_plot(bec_figure):
+def test_bec_figure_add_remove_plot(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     initial_count = len(bec_figure._widgets)
 
     # Adding 3 widgets -  2 WaveformBase and 1 PlotBase
@@ -64,7 +58,8 @@ def test_bec_figure_add_remove_plot(bec_figure):
     assert bec_figure._widgets[w1.gui_id].config.widget_class == "BECWaveform"
 
 
-def test_add_different_types_of_widgets(bec_figure):
+def test_add_different_types_of_widgets(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     plt = bec_figure.plot(x_name="samx", y_name="bpm4i")
     im = bec_figure.image("eiger")
     motor_map = bec_figure.motor_map("samx", "samy")
@@ -74,7 +69,8 @@ def test_add_different_types_of_widgets(bec_figure):
     assert motor_map.__class__ == BECMotorMap
 
 
-def test_access_widgets_access_errors(bec_figure):
+def test_access_widgets_access_errors(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     bec_figure.plot(row=0, col=0)
 
     # access widget by non-existent coordinates
@@ -96,7 +92,8 @@ def test_access_widgets_access_errors(bec_figure):
         )
 
 
-def test_add_plot_to_occupied_position(bec_figure):
+def test_add_plot_to_occupied_position(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     bec_figure.plot(row=0, col=0)
 
     with pytest.raises(ValueError) as excinfo:
@@ -104,7 +101,8 @@ def test_add_plot_to_occupied_position(bec_figure):
         assert "Position at row 0 and column 0 is already occupied." in str(excinfo.value)
 
 
-def test_remove_plots(bec_figure):
+def test_remove_plots(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot(row=0, col=0)
     w2 = bec_figure.plot(row=0, col=1)
     w3 = bec_figure.plot(row=1, col=0)
@@ -134,7 +132,8 @@ def test_remove_plots(bec_figure):
     assert len(bec_figure._widgets) == 1
 
 
-def test_remove_plots_by_coordinates_ints(bec_figure):
+def test_remove_plots_by_coordinates_ints(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot(row=0, col=0)
     w2 = bec_figure.plot(row=0, col=1)
 
@@ -145,7 +144,8 @@ def test_remove_plots_by_coordinates_ints(bec_figure):
     assert len(bec_figure._widgets) == 1
 
 
-def test_remove_plots_by_coordinates_tuple(bec_figure):
+def test_remove_plots_by_coordinates_tuple(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot(row=0, col=0)
     w2 = bec_figure.plot(row=0, col=1)
 
@@ -156,7 +156,8 @@ def test_remove_plots_by_coordinates_tuple(bec_figure):
     assert len(bec_figure._widgets) == 1
 
 
-def test_remove_plot_by_id_error(bec_figure):
+def test_remove_plot_by_id_error(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     bec_figure.plot()
 
     with pytest.raises(ValueError) as excinfo:
@@ -164,7 +165,8 @@ def test_remove_plot_by_id_error(bec_figure):
         assert "Widget with ID 'non_existent_widget' does not exist." in str(excinfo.value)
 
 
-def test_remove_plot_by_coordinates_error(bec_figure):
+def test_remove_plot_by_coordinates_error(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     bec_figure.plot(row=0, col=0)
 
     with pytest.raises(ValueError) as excinfo:
@@ -172,7 +174,8 @@ def test_remove_plot_by_coordinates_error(bec_figure):
         assert "No widget at coordinates (0, 1)" in str(excinfo.value)
 
 
-def test_remove_plot_by_providing_nothing(bec_figure):
+def test_remove_plot_by_providing_nothing(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     bec_figure.plot(row=0, col=0)
 
     with pytest.raises(ValueError) as excinfo:
@@ -192,7 +195,8 @@ def test_remove_plot_by_providing_nothing(bec_figure):
 #     assert bec_figure.backgroundBrush().color().name() == "#000000"
 
 
-def test_change_layout(bec_figure):
+def test_change_layout(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot(row=0, col=0)
     w2 = bec_figure.plot(row=0, col=1)
     w3 = bec_figure.plot(row=1, col=0)
@@ -215,7 +219,8 @@ def test_change_layout(bec_figure):
     assert bec_figure[0, 3] == w4
 
 
-def test_clear_all(bec_figure):
+def test_clear_all(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     bec_figure.plot(row=0, col=0)
     bec_figure.plot(row=0, col=1)
     bec_figure.plot(row=1, col=0)
@@ -227,7 +232,8 @@ def test_clear_all(bec_figure):
     assert np.shape(bec_figure.grid) == (0,)
 
 
-def test_shortcuts(bec_figure):
+def test_shortcuts(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     plt = bec_figure.plot(x_name="samx", y_name="bpm4i")
     im = bec_figure.image("eiger")
     motor_map = bec_figure.motor_map("samx", "samy")
@@ -240,7 +246,8 @@ def test_shortcuts(bec_figure):
     assert motor_map.__class__ == BECMotorMap
 
 
-def test_plot_access_factory(bec_figure):
+def test_plot_access_factory(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     plt_00 = bec_figure.plot(x_name="samx", y_name="bpm4i")
     plt_01 = bec_figure.plot(x_name="samx", y_name="bpm4i", row=0, col=1)
     plt_10 = bec_figure.plot(new=True)

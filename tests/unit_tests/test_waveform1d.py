@@ -4,13 +4,15 @@ from unittest import mock
 import numpy as np
 import pytest
 
+from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.figure.plots.waveform.waveform_curve import CurveConfig, Signal, SignalData
 
 from .client_mocks import mocked_client
-from .test_bec_figure import bec_figure
+from .conftest import create_widget
 
 
-def test_adding_curve_to_waveform(bec_figure):
+def test_adding_curve_to_waveform(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot()
 
     # adding curve which is in bec - only names
@@ -38,7 +40,8 @@ def test_adding_curve_to_waveform(bec_figure):
     assert c3.config.label == "non_existent_device-non_existent_device"
 
 
-def test_adding_curve_with_same_id(bec_figure):
+def test_adding_curve_with_same_id(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot()
     c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i", gui_id="test_curve")
 
@@ -47,7 +50,8 @@ def test_adding_curve_with_same_id(bec_figure):
         assert "Curve with ID 'test_curve' already exists." in str(excinfo.value)
 
 
-def test_create_waveform1D_by_config(bec_figure):
+def test_create_waveform1D_by_config(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1_config_input = {
         "widget_class": "BECWaveform",
         "gui_id": "widget_1",
@@ -132,7 +136,8 @@ def test_create_waveform1D_by_config(bec_figure):
     assert w1.config.axis.title == "Widget 1"
 
 
-def test_change_gui_id(bec_figure):
+def test_change_gui_id(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot()
     c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i")
     w1.change_gui_id("new_id")
@@ -141,7 +146,8 @@ def test_change_gui_id(bec_figure):
     assert c1.config.parent_id == "new_id"
 
 
-def test_getting_curve(bec_figure):
+def test_getting_curve(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot()
     c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i", gui_id="test_curve")
     c1_expected_config = CurveConfig(
@@ -173,7 +179,8 @@ def test_getting_curve(bec_figure):
     assert c1.get_config() == c1_expected_config.model_dump()
 
 
-def test_getting_curve_errors(bec_figure):
+def test_getting_curve_errors(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot()
     c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i", gui_id="test_curve")
 
@@ -190,7 +197,8 @@ def test_getting_curve_errors(bec_figure):
         )
 
 
-def test_add_curve(bec_figure):
+def test_add_curve(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot()
 
     c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i")
@@ -201,7 +209,8 @@ def test_add_curve(bec_figure):
     assert c1.config.source == "scan_segment"
 
 
-def test_change_legend_font_size(bec_figure):
+def test_change_legend_font_size(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     plot = bec_figure.plot()
 
     w1 = plot.add_curve_bec(x_name="samx", y_name="bpm4i")
@@ -213,7 +222,8 @@ def test_change_legend_font_size(bec_figure):
         assert mock_set_scale.call_args == mock.call(2)
 
 
-def test_remove_curve(bec_figure):
+def test_remove_curve(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot()
 
     w1.add_curve_bec(x_name="samx", y_name="bpm4i")
@@ -231,7 +241,8 @@ def test_remove_curve(bec_figure):
         )
 
 
-def test_change_curve_appearance_methods(bec_figure, qtbot):
+def test_change_curve_appearance_methods(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot()
 
     c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i")
@@ -260,7 +271,8 @@ def test_change_curve_appearance_methods(bec_figure, qtbot):
     }
 
 
-def test_change_curve_appearance_args(bec_figure):
+def test_change_curve_appearance_args(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot()
 
     c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i")
@@ -290,7 +302,8 @@ def test_change_curve_appearance_args(bec_figure):
     }
 
 
-def test_set_custom_curve_data(bec_figure, qtbot):
+def test_set_custom_curve_data(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot()
 
     c1 = w1.add_curve_custom(
@@ -326,7 +339,8 @@ def test_set_custom_curve_data(bec_figure, qtbot):
     assert np.array_equal(y_new, [7, 8, 9])
 
 
-def test_custom_data_2D_array(bec_figure, qtbot):
+def test_custom_data_2D_array(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
 
     data = np.random.rand(10, 2)
 
@@ -338,7 +352,8 @@ def test_custom_data_2D_array(bec_figure, qtbot):
     assert np.array_equal(y, data[:, 1])
 
 
-def test_get_all_data(bec_figure):
+def test_get_all_data(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot()
 
     c1 = w1.add_curve_custom(
@@ -373,7 +388,8 @@ def test_get_all_data(bec_figure):
     }
 
 
-def test_curve_add_by_config(bec_figure):
+def test_curve_add_by_config(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot()
 
     c1_config_input = {
@@ -413,7 +429,8 @@ def test_curve_add_by_config(bec_figure):
     assert c1.get_config(False) == CurveConfig(**c1_config_input)
 
 
-def test_scan_update(bec_figure, qtbot):
+def test_scan_update(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot()
 
     c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i")
@@ -447,7 +464,8 @@ def test_scan_update(bec_figure, qtbot):
     assert c1.get_data() == ([10], [5])
 
 
-def test_scan_history_with_val_access(bec_figure, qtbot):
+def test_scan_history_with_val_access(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot()
 
     w1.plot(x_name="samx", y_name="bpm4i")
@@ -472,7 +490,8 @@ def test_scan_history_with_val_access(bec_figure, qtbot):
     assert np.array_equal(y_data, [4, 5, 6])
 
 
-def test_scatter_2d_update(bec_figure, qtbot):
+def test_scatter_2d_update(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot()
 
     c1 = w1.add_curve_bec(x_name="samx", y_name="samx", z_name="bpm4i")
@@ -512,7 +531,8 @@ def test_scatter_2d_update(bec_figure, qtbot):
     assert colors == expected_z_colors
 
 
-def test_waveform_single_arg_inputs(bec_figure, qtbot):
+def test_waveform_single_arg_inputs(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot()
 
     w1.plot("bpm4i")
@@ -544,7 +564,8 @@ def test_waveform_single_arg_inputs(bec_figure, qtbot):
     assert np.array_equal(w1._curves_data["custom"]["np_ndarray 2D"].get_data(), data_array_2D.T)
 
 
-def test_waveform_set_x_sync(bec_figure, qtbot):
+def test_waveform_set_x_sync(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot()
     custom_label = "custom_label"
     w1.plot("bpm4i")
@@ -601,7 +622,8 @@ def test_waveform_set_x_sync(bec_figure, qtbot):
     assert w1.plot_item.getAxis("bottom").labelText == custom_label + " [timestamp]"
 
 
-def test_waveform_async_data_update(bec_figure, qtbot):
+def test_waveform_async_data_update(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot("async_device")
     custom_label = "custom_label"
     w1.set_x_label(custom_label)
@@ -647,7 +669,8 @@ def test_waveform_async_data_update(bec_figure, qtbot):
     assert w1.plot_item.getAxis("bottom").labelText == custom_label + " [best_effort]"
 
 
-def test_waveform_set_x_async(bec_figure, qtbot):
+def test_waveform_set_x_async(qtbot, mocked_client):
+    bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot("async_device")
     custom_label = "custom_label"
     w1.set_x_label(custom_label)
