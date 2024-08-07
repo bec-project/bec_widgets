@@ -58,16 +58,17 @@ class CurveSettings(SettingWidget):
         self.ui.color_map_selector_scan.combo.setCurrentText(cm)
 
         # Scan Curve Table
-        for label, curve in config["scan_segment"].items():
-            row_count = self.ui.scan_table.rowCount()
-            self.ui.scan_table.insertRow(row_count)
-            DialogRow(
-                parent=self,
-                table_widget=self.ui.scan_table,
-                client=self.target_widget.client,
-                row=row_count,
-                config=curve.config,
-            ).add_scan_row()
+        for source in ["scan_segment", "async"]:
+            for label, curve in config[source].items():
+                row_count = self.ui.scan_table.rowCount()
+                self.ui.scan_table.insertRow(row_count)
+                DialogRow(
+                    parent=self,
+                    table_widget=self.ui.scan_table,
+                    client=self.target_widget.client,
+                    row=row_count,
+                    config=curve.config,
+                ).add_scan_row()
 
         # Add DAP Curves
         for label, curve in config["DAP"].items():
@@ -132,11 +133,12 @@ class CurveSettings(SettingWidget):
         self.accept_curve_changes()
 
     def accept_curve_changes(self):
-        old_curves_scans = list(self.target_widget.waveform._curves_data["scan_segment"].values())
-        old_curves_dap = list(self.target_widget.waveform._curves_data["DAP"].values())
-        for curve in old_curves_scans:
-            curve.remove()
-        for curve in old_curves_dap:
+        sources = ["scan_segment", "async", "DAP"]
+        old_curves = []
+
+        for source in sources:
+            old_curves += list(self.target_widget.waveform._curves_data[source].values())
+        for curve in old_curves:
             curve.remove()
         self.get_curve_params()
 
