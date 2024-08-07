@@ -943,7 +943,9 @@ class BECWaveform(BECPlotBase):
                 self.setup_dap(self.old_scan_id, self.scan_id)
             if self._curves_data["async"]:
                 for curve_id, curve in self._curves_data["async"].items():
-                    self.setup_async(curve.config.signals.y.name)
+                    self.setup_async(
+                        name=curve.config.signals.y.name, entry=curve.config.signals.y.entry
+                    )
 
     @Slot(dict, dict)
     def on_scan_segment(self, msg: dict, metadata: dict):
@@ -1005,18 +1007,18 @@ class BECWaveform(BECPlotBase):
             )
 
     @Slot(str)
-    def setup_async(self, device: str):
+    def setup_async(self, name: str, entry: str):
         self.bec_dispatcher.disconnect_slot(
-            self.on_async_readback, MessageEndpoints.device_async_readback(self.old_scan_id, device)
+            self.on_async_readback, MessageEndpoints.device_async_readback(self.old_scan_id, name)
         )
         try:
-            self._curves_data["async"][f"{device}-{device}"].clear_data()
+            self._curves_data["async"][f"{name}-{entry}"].clear_data()
         except KeyError:
             pass
         if len(self._curves_data["async"]) > 0:
             self.bec_dispatcher.connect_slot(
                 self.on_async_readback,
-                MessageEndpoints.device_async_readback(self.scan_id, device),
+                MessageEndpoints.device_async_readback(self.scan_id, name),
                 from_start=True,
             )
 

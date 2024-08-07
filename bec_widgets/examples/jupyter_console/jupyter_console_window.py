@@ -46,6 +46,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "w7": self.w7,
                     "w8": self.w8,
                     "w9": self.w9,
+                    "w10": self.w10,
                     "d0": self.d0,
                     "d1": self.d1,
                     "d2": self.d2,
