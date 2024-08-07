@@ -12,7 +12,7 @@ def qapplication(qtbot):  # pylint: disable=unused-argument
     yield
 
     qapp = QApplication.instance()
-    qapp.quit()
+    # qapp.quit()
     qapp.processEvents()
     try:
         qtbot.waitUntil(lambda: qapp.topLevelWidgets() == [])
