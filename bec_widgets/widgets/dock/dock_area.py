@@ -330,7 +330,16 @@ class BECDockArea(BECWidget, QWidget):
         """
         while self.dock_area.tempAreas:
             for temp_area in self.dock_area.tempAreas:
-                self.dock_area.removeTempArea(temp_area)
+                self.remove_temp_area(temp_area)
+
+    def remove_temp_area(self, area):
+        """
+        Remove a temporary area from the dock area.
+        This is a patched method of pyqtgraph's removeTempArea
+        """
+        self.dock_area.tempAreas.remove(area)
+        area.window().close()
+        area.window().deleteLater()
 
     def clear_all(self):
         """

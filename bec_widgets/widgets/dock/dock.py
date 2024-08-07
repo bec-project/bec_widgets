@@ -153,6 +153,7 @@ class BECDock(BECWidget, Dock):
         super().dropEvent(event)
         if old_area in self.orig_area.tempAreas and old_area != self.orig_area:
             self.orig_area.removeTempArea(old_area)
+            old_area.window().deleteLater()
 
     def float(self):
         """
@@ -284,7 +285,7 @@ class BECDock(BECWidget, Dock):
         """
         Attach the dock to the parent dock area.
         """
-        self.orig_area.removeTempArea(self.area)
+        self.parent_dock_area.remove_temp_area(self.area)
 
     def detach(self):
         """
