@@ -1,6 +1,8 @@
 # Copyright (C) 2022 The Qt Company Ltd.
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
+import os
+
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 from qtpy.QtGui import QIcon
 
@@ -12,6 +14,7 @@ DOM_XML = """
     </widget>
 </ui>
 """
+MODULE_PATH = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 
 class PositionerBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
@@ -27,10 +30,11 @@ class PositionerBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return ""
+        return "Device Control"
 
     def icon(self):
-        return QIcon()
+        icon_path = os.path.join(MODULE_PATH, "assets", "designer_icons", "positioner_box.png")
+        return QIcon(icon_path)
 
     def includeFile(self):
         return "positioner_box"

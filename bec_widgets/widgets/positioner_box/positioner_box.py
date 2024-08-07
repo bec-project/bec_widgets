@@ -7,15 +7,18 @@ from bec_lib.device import Positioner
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.messages import ScanQueueMessage
-from qtpy.QtCore import Property, Signal, Slot
-from qtpy.QtGui import QDoubleValidator
-from qtpy.QtWidgets import QDoubleSpinBox, QVBoxLayout, QWidget
+from qtpy.QtCore import Property, QSize, Signal, Slot
+from qtpy.QtGui import QDoubleValidator, QIcon
+from qtpy.QtWidgets import QDialog, QDoubleSpinBox, QPushButton, QVBoxLayout, QWidget
 
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
+from bec_widgets.widgets.device_line_edit.device_line_edit import DeviceLineEdit
 
 logger = bec_logger.logger
+
+MODULE_PATH = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 
 class PositionerBox(BECWidget, QWidget):
@@ -71,6 +74,36 @@ class PositionerBox(BECWidget, QWidget):
         self.setpoint_validator = QDoubleValidator()
         self.ui.setpoint.setValidator(self.setpoint_validator)
         self.ui.spinner_widget.start()
+        self.ui.tool_button.clicked.connect(self._open_dialog_selection)
+        icon = QIcon()
+        icon.addFile(
+            os.path.join(MODULE_PATH, "assets", "designer_icons", "device_line_edit.png"),
+            size=QSize(16, 16),
+        )
+        self.ui.tool_button.setIcon(icon)
+
+    def _open_dialog_selection(self):
+        """Open dialog window for positioner selection"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Positioner Selection")
+        layout = QVBoxLayout()
+        line_edit = DeviceLineEdit(self, client=self.client, device_filter="Positioner")
+        line_edit.textChanged.connect(self._positioner_changed)
+        layout.addWidget(line_edit)
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(dialog.accept)
+        layout.addWidget(close_button)
+        dialog.setLayout(layout)
+        dialog.exec()
+
+    @Slot(str)
+    def _positioner_changed(self, positioner_name: str):
+        """Changed input in combobox.
+
+        Args:
+            positioner_name (str): name of the positioner
+        """
+        self.set_positioner(positioner_name)
 
     def init_device(self):
         """Init the device view and readback"""
@@ -267,7 +300,7 @@ if __name__ == "__main__":  # pragma: no cover
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    apply_theme("light")
+    apply_theme("dark")
     widget = PositionerBox(device="bpm4i")
 
     widget.show()
