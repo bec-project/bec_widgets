@@ -18,7 +18,6 @@ def ring_progress_bar(qtbot, mocked_client):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.close()
 
 
 def test_bar_init(ring_progress_bar):

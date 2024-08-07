@@ -16,7 +16,6 @@ def setting_widget(qtbot):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.close()
 
 
 def test_setting_widget_initialization(setting_widget):
@@ -61,8 +60,8 @@ def settings_dialog(qtbot, setting_widget):
     qtbot.addWidget(dialog)
     qtbot.waitExposed(dialog)
     yield dialog, parent_widget, setting_widget
-    dialog.close()
     parent_widget.close()
+    parent_widget.deleteLater()
 
 
 def test_settings_dialog_initialization(settings_dialog):

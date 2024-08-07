@@ -15,7 +15,6 @@ def image_widget(qtbot, mocked_client):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.close()
 
 
 @pytest.fixture

@@ -13,7 +13,6 @@ def stop_button(qtbot, mocked_client):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.close()
 
 
 def test_stop_button(stop_button):

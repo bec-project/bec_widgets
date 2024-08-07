@@ -16,7 +16,6 @@ def motor_map_widget(qtbot, mocked_client):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.close()
 
 
 @pytest.fixture
@@ -139,7 +138,6 @@ def motor_map_settings(qtbot):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.close()
 
 
 def test_display_current_settings(motor_map_settings):

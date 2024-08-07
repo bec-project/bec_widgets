@@ -12,7 +12,6 @@ def device_input_combobox(qtbot, mocked_client):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.close()
 
 
 @pytest.fixture
@@ -28,7 +27,6 @@ def device_input_combobox_with_config(qtbot, mocked_client):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.close()
 
 
 @pytest.fixture
@@ -43,7 +41,6 @@ def device_input_combobox_with_kwargs(qtbot, mocked_client):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.close()
 
 
 def test_device_input_combobox_init(device_input_combobox):
@@ -101,7 +98,6 @@ def device_input_line_edit(qtbot, mocked_client):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.close()
 
 
 @pytest.fixture
@@ -117,7 +113,6 @@ def device_input_line_edit_with_config(qtbot, mocked_client):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.close()
 
 
 @pytest.fixture
@@ -132,7 +127,6 @@ def device_input_line_edit_with_kwargs(qtbot, mocked_client):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.close()
 
 
 def test_device_input_line_edit_init(device_input_line_edit):

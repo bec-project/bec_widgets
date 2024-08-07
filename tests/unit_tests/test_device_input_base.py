@@ -19,7 +19,6 @@ def device_input_base(qtbot, mocked_client):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.close()
 
 
 def test_device_input_base_init(device_input_base):

@@ -93,7 +93,6 @@ def bec_queue(qtbot, mocked_client):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.close()
 
 
 def test_bec_queue(bec_queue, bec_queue_msg_full):

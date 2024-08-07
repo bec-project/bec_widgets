@@ -14,7 +14,6 @@ def text_box_widget(qtbot, mocked_client):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.close()
 
 
 def test_textbox_widget(text_box_widget):

@@ -220,7 +220,6 @@ def scan_control(qtbot, mocked_client):  # , mock_dev):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.close()
 
 
 def test_populate_scans(scan_control, mocked_client):

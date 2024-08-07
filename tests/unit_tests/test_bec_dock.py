@@ -14,7 +14,6 @@ def bec_dock_area(qtbot, mocked_client):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.close()
 
 
 def test_bec_dock_area_init(bec_dock_area):

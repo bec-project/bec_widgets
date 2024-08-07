@@ -10,7 +10,6 @@ def color_map_selector(qtbot):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.close()
 
 
 def test_color_map_selector_init(color_map_selector):
