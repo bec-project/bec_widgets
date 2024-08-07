@@ -1,6 +1,7 @@
 import os
 import uuid
 
+from bec_lib.device import Positioner
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.messages import ScanQueueMessage
 from qtpy.QtCore import Property, Signal, Slot
@@ -15,7 +16,7 @@ from bec_widgets.utils.colors import apply_theme
 class DeviceBox(BECWidget, QWidget):
     device_changed = Signal(str, str)
 
-    def __init__(self, parent=None, device=None, *args, **kwargs):
+    def __init__(self, parent=None, device: Positioner = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         QWidget.__init__(self, parent=parent)
         self.get_bec_shortcuts()
@@ -57,16 +58,23 @@ class DeviceBox(BECWidget, QWidget):
         self.ui.spinner_widget.start()
 
     def init_device(self):
-        if self.device in self.dev:
+        if self.device in self.dev and isinstance(self.dev[self.device], Positioner):
             data = self.dev[self.device].read()
             self.on_device_readback({"signals": data}, {})
+
+    def _toogle_enable_buttons(self, enable: bool) -> None:
+        self.ui.tweak_left.setEnabled(enable)
+        self.ui.tweak_right.setEnabled(enable)
+        self.ui.stop.setEnabled(enable)
+        self.ui.setpoint.setEnabled(enable)
+        self.ui.step_size.setEnabled(enable)
 
     @Property(str)
     def device(self):
         return self._device
 
     @device.setter
-    def device(self, value):
+    def device(self, value: str):
         if not value or not isinstance(value, str):
             return
         old_device = self._device
@@ -78,7 +86,11 @@ class DeviceBox(BECWidget, QWidget):
         if new_device not in self.dev:
             print(f"Device {new_device} not found in the device list")
             return
+        if not isinstance(self.dev[new_device], Positioner):
+            print(f"Device {new_device} is not a positioner")
+            return
         print(f"Device changed from {old_device} to {new_device}")
+        self._toogle_enable_buttons(True)
         self.init_device()
         self.bec_dispatcher.disconnect_slot(
             self.on_device_readback, MessageEndpoints.device_readback(old_device)
@@ -191,7 +203,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     app = QApplication(sys.argv)
     apply_theme("light")
-    widget = DeviceBox(device="samx")
+    widget = DeviceBox(device="bpm4i")
 
     widget.show()
     sys.exit(app.exec_())
