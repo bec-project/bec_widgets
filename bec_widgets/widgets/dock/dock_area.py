@@ -231,6 +231,7 @@ class BECDockArea(BECWidget, QWidget):
         self.config.docks.pop(name, None)
         if dock:
             dock.close()
+            dock.deleteLater()
             if len(self.dock_area.docks) <= 1:
                 for dock in self.dock_area.docks.values():
                     dock.hide_title_bar()
@@ -345,6 +346,10 @@ class BECDockArea(BECWidget, QWidget):
         Cleanup the dock area.
         """
         self.clear_all()
+        self.toolbar.close()
+        self.toolbar.deleteLater()
+        self.dock_area.close()
+        self.dock_area.deleteLater()
         super().cleanup()
 
     def close(self):

@@ -319,6 +319,8 @@ class BECDock(BECWidget, Dock):
             if hasattr(widget, "cleanup"):
                 widget.cleanup()
         self.widgets.clear()
+        self.label.close()
+        self.label.deleteLater()
         super().cleanup()
 
     def close(self):

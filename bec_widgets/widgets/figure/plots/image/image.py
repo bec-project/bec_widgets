@@ -686,6 +686,8 @@ class BECImageShow(BECPlotBase):
         """Cleanup pyqtgraph items."""
         super().cleanup_pyqtgraph()
         item = self.plot_item
+        if not item.items:
+            return
         cbar = item.items[0].color_bar
         cbar.vb.menu.close()
         cbar.vb.menu.deleteLater()

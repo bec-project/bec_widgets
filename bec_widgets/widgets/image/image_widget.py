@@ -458,6 +458,8 @@ class BECImageWidget(BECWidget, QWidget):
     def cleanup(self):
         self.fig.cleanup()
         self.client.shutdown()
+        self.toolbar.close()
+        self.toolbar.deleteLater()
         return super().cleanup()
 
 
