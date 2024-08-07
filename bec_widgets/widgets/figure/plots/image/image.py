@@ -681,3 +681,15 @@ class BECImageShow(BECPlotBase):
                 self.on_image_update, MessageEndpoints.device_monitor_2d(monitor)
             )
         self.images.clear()
+
+    def cleanup_pyqtgraph(self):
+        """Cleanup pyqtgraph items."""
+        super().cleanup_pyqtgraph()
+        item = self.plot_item
+        cbar = item.items[0].color_bar
+        cbar.vb.menu.close()
+        cbar.vb.menu.deleteLater()
+        cbar.gradient.menu.close()
+        cbar.gradient.menu.deleteLater()
+        cbar.gradient.colorDialog.close()
+        cbar.gradient.colorDialog.deleteLater()

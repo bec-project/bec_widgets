@@ -513,6 +513,13 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
         if widget_id in self._widgets:
             raise ValueError(f"Widget with ID '{widget_id}' already exists.")
 
+        # Check if position is occupied
+        if row is not None and col is not None:
+            if self.getItem(row, col):
+                raise ValueError(f"Position at row {row} and column {col} is already occupied.")
+        else:
+            row, col = self._find_next_empty_position()
+
         widget = self.widget_handler.create_widget(
             widget_type=widget_type,
             widget_id=widget_id,
@@ -525,23 +532,11 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
         # used otherwise multiple times
         widget.set_gui_id(widget_id)
 
-        # Check if position is occupied
-        if row is not None and col is not None:
-            if self.getItem(row, col):
-                raise ValueError(f"Position at row {row} and column {col} is already occupied.")
+        widget.config.row = row
+        widget.config.col = col
 
-            widget.config.row = row
-            widget.config.col = col
-
-            # Add widget to the figure
-            self.addItem(widget, row=row, col=col)
-        else:
-            row, col = self._find_next_empty_position()
-            widget.config.row = row
-            widget.config.col = col
-
-            # Add widget to the figure
-            self.addItem(widget, row=row, col=col)
+        # Add widget to the figure
+        self.addItem(widget, row=row, col=col)
 
         # Update num_cols and num_rows based on the added widget
         self.config.num_rows = max(self.config.num_rows, row + 1)
@@ -620,6 +615,7 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
         """
         if widget_id in self._widgets:
             widget = self._widgets.pop(widget_id)
+            widget.cleanup_pyqtgraph()
             widget.cleanup()
             self.removeItem(widget)
             self.grid[widget.config.row][widget.config.col] = None
@@ -745,3 +741,12 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
         self.config = FigureConfig(
             widget_class=self.__class__.__name__, gui_id=self.gui_id, theme=theme
         )
+
+    def cleanup_pyqtgraph_all_widgets(self):
+        """Clean up the pyqtgraph widget."""
+        for widget in self.widget_list:
+            widget.cleanup_pyqtgraph()
+
+    def cleanup(self):
+        """Close the figure widget."""
+        self.cleanup_pyqtgraph_all_widgets()

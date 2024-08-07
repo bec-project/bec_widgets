@@ -314,3 +314,11 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         """Remove the plot widget from the figure."""
         if self.figure is not None:
             self.figure.remove(widget_id=self.gui_id)
+
+    def cleanup_pyqtgraph(self):
+        """Cleanup pyqtgraph items."""
+        item = self.plot_item
+        item.vb.menu.close()
+        item.vb.menu.deleteLater()
+        item.ctrlMenu.close()
+        item.ctrlMenu.deleteLater()
