@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.93.2 (2024-08-07)
+
+### Fix
+
+* fix(scan_group_box): Scan Spinboxes limits increased to max allowed values; setting dialog for step size and decimal precision for ScanDoubleSpinBox on right click ([`a372925`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a372925fffa787c686198ae7cb3f9c15b459c109))
+
 ## v0.93.1 (2024-08-06)
 
 ### Documentation
@@ -141,11 +147,3 @@ This reverts commit fd6ae91993a23a7b8dbb2cf3c4b7c3eda6d2b0f6 ([`5aad401`](https:
 ### Test
 
 * test(image_widget): tests added ([`70fb276`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/70fb276fdf31dffc105435d3dfe7c5caea0b10ce))
-
-## v0.89.0 (2024-07-22)
-
-### Unknown
-
-* Revert &#34;feat(themes): moved themes to bec_qthemes&#34;
-
-This reverts commit 3798714369adf4023f833b7749d2f46a0ec74eee ([`fd6ae91`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fd6ae91993a23a7b8dbb2cf3c4b7c3eda6d2b0f6))
