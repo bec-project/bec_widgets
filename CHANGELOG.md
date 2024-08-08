@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## v0.93.5 (2024-08-08)
+
+### Fix
+
+* fix(positioner_box): icons fixed ([`281633d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/281633deff15b6879dac3a4f0770fa6949aaecdc))
+
+### Refactor
+
+* refactor: add button for positioner selection ([`0d190c5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0d190c5c5996e59fec4bdd44d2003e10e200b009))
+
+### Test
+
+* test(dap): wait for fit ([`6269009`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6269009e5451f830cdee58a514c7858483488a8d))
+
+* test(auto-update): wait for rendering ([`6d2442d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6d2442d23c683fe92af13df982ce681c07e99cde))
+
 ## v0.93.4 (2024-08-07)
 
 ### Fix
@@ -129,19 +145,3 @@ This reverts commit fd6ae91993a23a7b8dbb2cf3c4b7c3eda6d2b0f6 ([`5aad401`](https:
 * fix(dock): custom label can be created closable ([`4457ef2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4457ef2147e21b856c9dcaf63c81ba98002dcaf1))
 
 * fix(device_combobox): set minimum size to 125px ([`1206e15`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1206e153094cd8505badf69a1461572a76b4c5ad))
-
-## v0.91.0 (2024-07-23)
-
-### Feature
-
-* feat(dock_area): plugin added ([`a16b87a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a16b87ac28d164230dd2e8020f50ff3a63cd407e))
-
-### Fix
-
-* fix(status_item): icons changed to material design ([`1b9c55a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1b9c55a46a0dfd8678c8e95ff64dd6e8cfb9233e))
-
-* fix(plugins): Qt Designer plugins icons adjusted ([`f4844d2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f4844d2e067ce75dc64b89b230d7932b308ddfc2))
-
-### Test
-
-* test(dock_area): tests extended ([`06fab0e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/06fab0eab926cef5677d4988fd1fce09da342dd8))
