@@ -77,7 +77,7 @@ class PositionerBox(BECWidget, QWidget):
         self.ui.tool_button.clicked.connect(self._open_dialog_selection)
         icon = QIcon()
         icon.addFile(
-            os.path.join(MODULE_PATH, "assets", "designer_icons", "device_line_edit.png"),
+            os.path.join(MODULE_PATH, "assets", "toolbar_icons", "device_line_edit.svg"),
             size=QSize(16, 16),
         )
         self.ui.tool_button.setIcon(icon)
