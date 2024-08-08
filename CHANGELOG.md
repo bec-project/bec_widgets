@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.94.0 (2024-08-08)
+
+### Feature
+
+* feat: add PositionerControlLine ([`c80a7cd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c80a7cd1083baa9543a2cee2e3c3a51dfd209b19))
+
+### Refactor
+
+* refactor: adjust dimensions ([`0273bf4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0273bf485694609325b5b556a3c69fb53c18446e))
+
 ## v0.93.5 (2024-08-08)
 
 ### Fix
@@ -134,14 +144,6 @@ This reverts commit fd6ae91993a23a7b8dbb2cf3c4b7c3eda6d2b0f6 ([`5aad401`](https:
 
 ## v0.92.0 (2024-07-24)
 
-### Feature
-
-* feat(dock): dock style sheets updated ([`8ca60d5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8ca60d54b3cfa621172ce097fc1ba514c47ebac7))
-
-* feat(general_gui): general gui added ([`5696c99`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5696c993dc1c0da40ff3e99f754c246cc017ea32))
-
 ### Fix
 
 * fix(dock): custom label can be created closable ([`4457ef2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4457ef2147e21b856c9dcaf63c81ba98002dcaf1))
-
-* fix(device_combobox): set minimum size to 125px ([`1206e15`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1206e153094cd8505badf69a1461572a76b4c5ad))
