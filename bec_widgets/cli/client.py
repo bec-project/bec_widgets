@@ -489,7 +489,7 @@ class BECFigure(RPCBase):
         col: "int | None" = None,
         dap: "str | None" = None,
         config: "dict | None" = None,
-        **axis_kwargs
+        **axis_kwargs,
     ) -> "BECWaveform":
         """
         Add a 1D waveform plot to the figure. Always access the first waveform widget in the figure.
@@ -531,7 +531,7 @@ class BECFigure(RPCBase):
         row: "int | None" = None,
         col: "int | None" = None,
         config: "dict | None" = None,
-        **axis_kwargs
+        **axis_kwargs,
     ) -> "BECImageShow":
         """
         Add an image to the figure. Always access the first image widget in the figure.
@@ -561,7 +561,7 @@ class BECFigure(RPCBase):
         row: "int | None" = None,
         col: "int | None" = None,
         config: "dict | None" = None,
-        **axis_kwargs
+        **axis_kwargs,
     ) -> "BECMotorMap":
         """
         Add a motor map to the figure. Always access the first motor map widget in the figure.
@@ -832,7 +832,7 @@ class BECImageShow(RPCBase):
         downsample: "Optional[bool]" = True,
         opacity: "Optional[float]" = 1.0,
         vrange: "Optional[tuple[int, int]]" = None,
-        **kwargs
+        **kwargs,
     ) -> "BECImageItem":
         """
         Add an image to the figure. Always access the first image widget in the figure.
@@ -858,7 +858,7 @@ class BECImageShow(RPCBase):
         downsample: "Optional[bool]" = True,
         opacity: "Optional[float]" = 1.0,
         vrange: "Optional[tuple[int, int]]" = None,
-        **kwargs
+        **kwargs,
     ):
         """
         None
@@ -1147,7 +1147,7 @@ class BECImageWidget(RPCBase):
         downsample: "Optional[bool]" = True,
         opacity: "Optional[float]" = 1.0,
         vrange: "Optional[tuple[int, int]]" = None,
-        **kwargs
+        **kwargs,
     ) -> "BECImageItem":
         """
         None
@@ -1730,7 +1730,7 @@ class BECWaveform(RPCBase):
         label: "str | None" = None,
         validate: "bool" = True,
         dap: "str | None" = None,
-        **kwargs
+        **kwargs,
     ) -> "BECCurve":
         """
         Plot a curve to the plot widget.
@@ -1769,7 +1769,7 @@ class BECWaveform(RPCBase):
         color: "Optional[str]" = None,
         dap: "str" = "GaussianModel",
         validate_bec: "bool" = True,
-        **kwargs
+        **kwargs,
     ) -> "BECCurve":
         """
         Add LMFIT dap model curve to the plot widget.
@@ -2044,7 +2044,7 @@ class BECWaveformWidget(RPCBase):
         label: "str | None" = None,
         validate: "bool" = True,
         dap: "str | None" = None,
-        **kwargs
+        **kwargs,
     ) -> "BECCurve":
         """
         Plot a curve to the plot widget.
@@ -2078,7 +2078,7 @@ class BECWaveformWidget(RPCBase):
         color: "str | None" = None,
         dap: "str" = "GaussianModel",
         validate_bec: "bool" = True,
-        **kwargs
+        **kwargs,
     ) -> "BECCurve":
         """
         Add LMFIT dap model curve to the plot widget.

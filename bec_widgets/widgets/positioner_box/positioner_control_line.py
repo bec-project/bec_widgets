@@ -7,7 +7,7 @@ class PositionerControlLine(PositionerBox):
     """A widget that controls a single device."""
 
     ui_file = "positioner_control_line.ui"
-    dimensions = (70, 800)  # height, width
+    dimensions = (60, 600)  # height, width
 
     def __init__(self, parent=None, device: Positioner = None, *args, **kwargs):
         """Initialize the DeviceControlLine.

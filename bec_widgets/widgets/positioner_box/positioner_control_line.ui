@@ -60,13 +60,36 @@
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
-         <widget class="PositionIndicator" name="position_indicator"/>
+         <widget class="PositionIndicator" name="position_indicator">
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>10</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="SpinnerWidget" name="spinner_widget">
+          <property name="minimumSize">
+           <size>
+            <width>25</width>
+            <height>25</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>25</width>
+            <height>25</height>
+           </size>
+          </property>
+         </widget>
         </item>
         <item>
          <widget class="QLabel" name="readback">
           <property name="minimumSize">
            <size>
-            <width>150</width>
+            <width>80</width>
             <height>0</height>
            </size>
           </property>
@@ -88,7 +111,7 @@
          <widget class="QLineEdit" name="setpoint">
           <property name="minimumSize">
            <size>
-            <width>150</width>
+            <width>80</width>
             <height>24</height>
            </size>
           </property>
@@ -168,22 +191,6 @@
         </property>
         <property name="arrowType">
          <enum>Qt::ArrowType::RightArrow</enum>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="SpinnerWidget" name="spinner_widget">
-        <property name="minimumSize">
-         <size>
-          <width>25</width>
-          <height>25</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>25</width>
-          <height>25</height>
-         </size>
         </property>
        </widget>
       </item>

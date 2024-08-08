@@ -126,5 +126,5 @@ def test_positioner_control_line(qtbot, mocked_client):
             db = PositionerControlLine(device="samx", client=mocked_client)
             qtbot.addWidget(db)
 
-            assert db.ui.device_box.height() == 70
-            assert db.ui.device_box.width() == 800
+            assert db.ui.device_box.height() == 60
+            assert db.ui.device_box.width() == 600
