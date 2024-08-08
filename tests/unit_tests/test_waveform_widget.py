@@ -3,6 +3,9 @@ from unittest.mock import MagicMock, patch
 import pyqtgraph as pg
 import pytest
 
+from bec_widgets.qt_utils.settings_dialog import SettingsDialog
+from bec_widgets.widgets.figure.plots.axis_settings import AxisSettings
+from bec_widgets.widgets.waveform.waveform_popups.curve_dialog.curve_dialog import CurveSettings
 from bec_widgets.widgets.waveform.waveform_widget import BECWaveformWidget
 
 from .client_mocks import mocked_client
@@ -261,3 +264,199 @@ def test_enable_mouse_pan_mode(qtbot, waveform_widget):
     assert action_drag.isChecked() == True
     assert action_rectangle.isChecked() == False
     mock_view_box.setMouseMode.assert_called_once_with(pg.ViewBox.PanMode)
+
+
+###################################
+# Curve Dialog Tests
+###################################
+def show_curve_dialog(qtbot, waveform_widget):
+    curve_dialog = SettingsDialog(
+        waveform_widget,
+        settings_widget=CurveSettings(),
+        window_title="Curve Settings",
+        config=waveform_widget.waveform._curves_data,
+    )
+    qtbot.addWidget(curve_dialog)
+    qtbot.waitExposed(curve_dialog)
+    return curve_dialog
+
+
+def test_curve_dialog_scan_curves_interactions(qtbot, waveform_widget):
+    waveform_widget.plot(y_name="bpm4i")
+    waveform_widget.plot(y_name="bpm3a")
+
+    curve_dialog = show_curve_dialog(qtbot, waveform_widget)
+
+    # Check default display of config from waveform widget
+    assert curve_dialog is not None
+    assert curve_dialog.widget.ui.scan_table.rowCount() == 2
+    assert curve_dialog.widget.ui.scan_table.cellWidget(0, 0).text() == "bpm4i"
+    assert curve_dialog.widget.ui.scan_table.cellWidget(0, 1).text() == "bpm4i"
+    assert curve_dialog.widget.ui.scan_table.cellWidget(1, 0).text() == "bpm3a"
+    assert curve_dialog.widget.ui.scan_table.cellWidget(1, 1).text() == "bpm3a"
+    assert curve_dialog.widget.ui.x_mode.currentText() == "best_effort"
+    assert curve_dialog.widget.ui.x_name.isEnabled() == False
+    assert curve_dialog.widget.ui.x_entry.isEnabled() == False
+
+    # Add a new curve
+    curve_dialog.widget.ui.add_curve.click()
+    qtbot.wait(200)
+    assert curve_dialog.widget.ui.scan_table.rowCount() == 3
+
+    # Set device to new curve
+    curve_dialog.widget.ui.scan_table.cellWidget(2, 0).setText("bpm3i")
+
+    # Change the x mode to device
+    curve_dialog.widget.ui.x_mode.setCurrentText("device")
+    qtbot.wait(200)
+    assert curve_dialog.widget.ui.x_name.isEnabled() == True
+    assert curve_dialog.widget.ui.x_entry.isEnabled() == True
+
+    # Set the x device
+    curve_dialog.widget.ui.x_name.setText("samx")
+
+    # Delete first curve ('bpm4i')
+    curve_dialog.widget.ui.scan_table.cellWidget(0, 6).click()
+    qtbot.wait(200)
+    assert curve_dialog.widget.ui.scan_table.rowCount() == 2
+    assert curve_dialog.widget.ui.scan_table.cellWidget(0, 0).text() == "bpm3a"
+    assert curve_dialog.widget.ui.scan_table.cellWidget(0, 1).text() == "bpm3a"
+    assert curve_dialog.widget.ui.scan_table.cellWidget(1, 0).text() == "bpm3i"
+
+    # Close the dialog
+    curve_dialog.accept()
+    qtbot.wait(200)
+
+    # Check the curve data in the target widget
+    assert list(waveform_widget.waveform._curves_data["scan_segment"].keys()) == [
+        "bpm3a-bpm3a",
+        "bpm3i-bpm3i",
+    ]
+    assert len(waveform_widget.curves) == 2
+
+
+def test_curve_dialog_async(qtbot, waveform_widget):
+    waveform_widget.plot(y_name="bpm4i")
+    waveform_widget.plot(y_name="async_device")
+
+    curve_dialog = show_curve_dialog(qtbot, waveform_widget)
+
+    assert curve_dialog is not None
+    assert curve_dialog.widget.ui.scan_table.rowCount() == 2
+    assert curve_dialog.widget.ui.scan_table.cellWidget(0, 0).text() == "bpm4i"
+    assert curve_dialog.widget.ui.scan_table.cellWidget(0, 1).text() == "bpm4i"
+    assert curve_dialog.widget.ui.scan_table.cellWidget(1, 0).text() == "async_device"
+    assert curve_dialog.widget.ui.scan_table.cellWidget(1, 1).text() == "async_device"
+
+
+def test_curve_dialog_dap(qtbot, waveform_widget):
+    waveform_widget.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
+
+    curve_dialog = show_curve_dialog(qtbot, waveform_widget)
+
+    assert curve_dialog is not None
+    assert curve_dialog.widget.ui.scan_table.rowCount() == 1
+    assert curve_dialog.widget.ui.scan_table.cellWidget(0, 0).text() == "bpm4i"
+    assert curve_dialog.widget.ui.scan_table.cellWidget(0, 1).text() == "bpm4i"
+    assert curve_dialog.widget.ui.dap_table.isEnabled() == True
+    assert curve_dialog.widget.ui.dap_table.rowCount() == 1
+    assert curve_dialog.widget.ui.dap_table.cellWidget(0, 0).text() == "bpm4i"
+    assert curve_dialog.widget.ui.dap_table.cellWidget(0, 1).text() == "bpm4i"
+    assert curve_dialog.widget.ui.x_mode.currentText() == "device"
+    assert curve_dialog.widget.ui.x_name.isEnabled() == True
+    assert curve_dialog.widget.ui.x_entry.isEnabled() == True
+    assert curve_dialog.widget.ui.x_name.text() == "samx"
+    assert curve_dialog.widget.ui.x_entry.text() == "samx"
+
+    curve_dialog.accept()
+    qtbot.wait(200)
+
+    assert list(waveform_widget.waveform._curves_data["scan_segment"].keys()) == ["bpm4i-bpm4i"]
+    assert len(waveform_widget.curves) == 2
+
+
+###################################
+# Axis Dialog Tests
+###################################
+
+
+def show_axis_dialog(qtbot, waveform_widget):
+    axis_dialog = SettingsDialog(
+        waveform_widget,
+        settings_widget=AxisSettings(),
+        window_title="Axis Settings",
+        config=waveform_widget._config_dict["axis"],
+    )
+    qtbot.addWidget(axis_dialog)
+    qtbot.waitExposed(axis_dialog)
+    return axis_dialog
+
+
+def test_axis_dialog_with_axis_limits(qtbot, waveform_widget):
+    waveform_widget.set(
+        title="Test Title",
+        x_label="X Label",
+        y_label="Y Label",
+        x_scale="linear",
+        y_scale="log",
+        x_lim=(0, 10),
+        y_lim=(0, 10),
+    )
+
+    axis_dialog = show_axis_dialog(qtbot, waveform_widget)
+
+    assert axis_dialog is not None
+    assert axis_dialog.widget.ui.plot_title.text() == "Test Title"
+    assert axis_dialog.widget.ui.x_label.text() == "X Label"
+    assert axis_dialog.widget.ui.y_label.text() == "Y Label"
+    assert axis_dialog.widget.ui.x_scale.currentText() == "linear"
+    assert axis_dialog.widget.ui.y_scale.currentText() == "log"
+    assert axis_dialog.widget.ui.x_min.value() == 0
+    assert axis_dialog.widget.ui.x_max.value() == 10
+    assert axis_dialog.widget.ui.y_min.value() == 0
+    assert axis_dialog.widget.ui.y_max.value() == 10
+
+
+def test_axis_dialog_without_axis_limits(qtbot, waveform_widget):
+    waveform_widget.set(
+        title="Test Title", x_label="X Label", y_label="Y Label", x_scale="linear", y_scale="log"
+    )
+    x_range = waveform_widget.fig.widget_list[0].plot_item.viewRange()[0]
+    y_range = waveform_widget.fig.widget_list[0].plot_item.viewRange()[1]
+
+    axis_dialog = show_axis_dialog(qtbot, waveform_widget)
+
+    assert axis_dialog is not None
+    assert axis_dialog.widget.ui.plot_title.text() == "Test Title"
+    assert axis_dialog.widget.ui.x_label.text() == "X Label"
+    assert axis_dialog.widget.ui.y_label.text() == "Y Label"
+    assert axis_dialog.widget.ui.x_scale.currentText() == "linear"
+    assert axis_dialog.widget.ui.y_scale.currentText() == "log"
+    assert axis_dialog.widget.ui.x_min.value() == x_range[0]
+    assert axis_dialog.widget.ui.x_max.value() == x_range[1]
+    assert axis_dialog.widget.ui.y_min.value() == y_range[0]
+    assert axis_dialog.widget.ui.y_max.value() == y_range[1]
+
+
+def test_axis_dialog_set_properties(qtbot, waveform_widget):
+    axis_dialog = show_axis_dialog(qtbot, waveform_widget)
+
+    axis_dialog.widget.ui.plot_title.setText("New Title")
+    axis_dialog.widget.ui.x_label.setText("New X Label")
+    axis_dialog.widget.ui.y_label.setText("New Y Label")
+    axis_dialog.widget.ui.x_scale.setCurrentText("log")
+    axis_dialog.widget.ui.y_scale.setCurrentText("linear")
+    axis_dialog.widget.ui.x_min.setValue(5)
+    axis_dialog.widget.ui.x_max.setValue(15)
+    axis_dialog.widget.ui.y_min.setValue(5)
+    axis_dialog.widget.ui.y_max.setValue(15)
+
+    axis_dialog.accept()
+
+    assert waveform_widget._config_dict["axis"]["title"] == "New Title"
+    assert waveform_widget._config_dict["axis"]["x_label"] == "New X Label"
+    assert waveform_widget._config_dict["axis"]["y_label"] == "New Y Label"
+    assert waveform_widget._config_dict["axis"]["x_scale"] == "log"
+    assert waveform_widget._config_dict["axis"]["y_scale"] == "linear"
+    assert waveform_widget._config_dict["axis"]["x_lim"] == (5, 15)
+    assert waveform_widget._config_dict["axis"]["y_lim"] == (5, 15)
