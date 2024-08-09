@@ -251,9 +251,10 @@ class BECImageShow(BECPlotBase):
 
         image_exits = self._check_image_id(monitor, self._images)
         if image_exits:
-            raise ValueError(
-                f"Monitor with ID '{monitor}' already exists in widget '{self.gui_id}'."
-            )
+            # raise ValueError(
+            #     f"Monitor with ID '{monitor}' already exists in widget '{self.gui_id}'."
+            # )
+            return
 
         # monitor = self.entry_validator.validate_monitor(monitor)
 
@@ -577,10 +578,10 @@ class BECImageShow(BECPlotBase):
         self, source: str, name: str, config: ImageItemConfig, data=None
     ) -> BECImageItem:  # TODO fix types
         config.parent_id = self.gui_id
-        image = BECImageItem(config=config, parent_image=self)
-        self.plot_item.addItem(image)
         if self.single_image is True and len(self.images) > 0:
             self.remove_image(0)
+        image = BECImageItem(config=config, parent_image=self)
+        self.plot_item.addItem(image)
         self._images[source][name] = image
         if source == "device_monitor_2d":
             self._connect_device_monitor_2d(config.monitor)
