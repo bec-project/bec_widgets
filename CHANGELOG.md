@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.94.1 (2024-08-12)
+
+### Fix
+
+* fix: issue #292, wrong key was used to clean _slots internal dictionary ([`93d3977`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/93d397759c756397604ebff5e24f3a580be8620d))
+
 ## v0.94.0 (2024-08-08)
 
 ### Feature
@@ -141,9 +147,3 @@ This reverts commit fd6ae91993a23a7b8dbb2cf3c4b7c3eda6d2b0f6 ([`5aad401`](https:
 * refactor: renamed DeviceMonitor2DMessage ([`4be6fd6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4be6fd6b83ea1048f16310f7d2bbe777b13b245e))
 
 * refactor: rename device_monitor to device_monitor_2d ([`714e1e1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/714e1e139e0033d2725fefb636c419ca137a68c6))
-
-## v0.92.0 (2024-07-24)
-
-### Fix
-
-* fix(dock): custom label can be created closable ([`4457ef2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4457ef2147e21b856c9dcaf63c81ba98002dcaf1))
