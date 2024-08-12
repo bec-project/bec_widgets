@@ -92,7 +92,9 @@ def test_dispatcher_2_cb_same_topic(bec_dispatcher_w_connector, qtbot, send_msg_
     bec_dispatcher.connect_slot(cb1, "topic1")
     bec_dispatcher.connect_slot(cb2, "topic1")
     assert len(bec_dispatcher.client.connector._topics_cb) == 1
+    assert len(bec_dispatcher._slots) == 2
     bec_dispatcher.disconnect_slot(cb1, "topic1")
+    assert len(bec_dispatcher._slots) == 1
 
     send_msg_event.set()
     qtbot.wait(10)

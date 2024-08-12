@@ -162,9 +162,9 @@ class BECDispatcher:
             return
         self.client.connector.unregister(topics, cb=connected_slot)
         topics_str, _ = self.client.connector._convert_endpointinfo(topics)
-        self._slots[slot].difference_update(set(topics_str))
-        if not self._slots[slot]:
-            del self._slots[slot]
+        self._slots[connected_slot].difference_update(set(topics_str))
+        if not self._slots[connected_slot]:
+            del self._slots[connected_slot]
 
     def disconnect_topics(self, topics: Union[str, list]):
         self.client.connector.unregister(topics)
