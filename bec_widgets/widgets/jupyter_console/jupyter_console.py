@@ -63,8 +63,6 @@ class BECJupyterConsole(RichJupyterWidget):  # pragma: no cover:
 
     def closeEvent(self, event):
         self.shutdown_kernel()
-        if self.client:
-            self.client.shutdown()
 
 
 if __name__ == "__main__":  # pragma: no cover

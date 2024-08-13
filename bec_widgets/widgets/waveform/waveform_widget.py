@@ -561,7 +561,6 @@ class BECWaveformWidget(BECWidget, QWidget):
 
     def cleanup(self):
         self.fig.cleanup()
-        self.client.shutdown()
         return super().cleanup()
 
 
