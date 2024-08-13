@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v0.94.3 (2024-08-13)
+
+### Fix
+
+* fix(curve_dialog): async curves are shown in curve dialog after addition. ([`7aeb2b5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7aeb2b5c26c7c2851e8d663d32521da8daec95ef))
+
+* fix(waveform): async device entry is correctly passed, updated and with new scan the previous data are cleared ([`d56ea95`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d56ea95ef97bfdd0bc3eeddc4505d20b38e28559))
+
+### Test
+
+* test(waveform_widget): added tests for axis setting and curve dialog ([`f285b35`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f285b35b491660549e74349318119f7c2c44f619))
+
 ## v0.94.2 (2024-08-13)
 
 ### Fix
@@ -130,10 +142,6 @@ This reverts commit fd6ae91993a23a7b8dbb2cf3c4b7c3eda6d2b0f6 ([`5aad401`](https:
 
 ## v0.92.1 (2024-07-28)
 
-### Build
-
-* build(ci): install ophyd_devices in editable mode for pipelines ([`06205e0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/06205e07903d93accf40abab153f440059f236ed))
-
 ### Fix
 
 * fix: use SafeSlot instead of Slot ([`bc1e239`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bc1e23944cc0e5a861e3d0b4dc5b4ac6292d5269))
@@ -141,9 +149,3 @@ This reverts commit fd6ae91993a23a7b8dbb2cf3c4b7c3eda6d2b0f6 ([`5aad401`](https:
 * fix: linting ([`a3fe205`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a3fe20500ae2ac03dcde07432f7e21ce5262ce46))
 
 * fix: always add a QApplication for tests ([`61a4e32`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/61a4e32deb337ed27f2f43358b88b7266413b58e))
-
-* fix: add xvfb to draw offscreen ([`3d681f7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3d681f77e144e74138fc5fa65630004d7c166878))
-
-* fix: reset ErrorPopup singleton between tests ([`5a9ccfd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5a9ccfd1f6d2aacd5d86c1a34f74163b272d1ae4))
-
-* fix: metaclass + QObject segfaults PyQt(cpp bindings) ([`fc57b7a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fc57b7a1262031a2df9e6a99493db87e766b779a))
