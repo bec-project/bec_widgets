@@ -14,6 +14,7 @@ A flexible and extensible framework for building graphical user interfaces in Py
 :link-type: ref
 :img-top: /assets/index_getting_started.svg
 :text-align: center
+:class-item: index-card
 
 ## Introduction
 
@@ -25,6 +26,7 @@ General information about BEC Widgets.
 :link-type: ref
 :img-top:  /assets/index_user_guide.svg
 :text-align: center
+:class-item: index-card
 
 ## User guide
 
@@ -36,6 +38,7 @@ Information for users of BEC Widgets.
 :link-type: ref
 :img-top: /assets/index_contribute.svg
 :text-align: center
+:class-item: index-card
 
 ## Developer guide
 
@@ -47,6 +50,7 @@ Information for developers of BEC Widgets.
 :link-type: ref
 :img-top: /assets/index_api.svg
 :text-align: center
+:class-item: index-card
 
 ## API reference
 

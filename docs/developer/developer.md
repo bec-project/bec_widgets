@@ -27,6 +27,7 @@ api_reference/api_reference.md
 :link-type: ref
 :img-top: /assets/rocket_launch_48dp.svg
 :text-align: center
+:class-item: index-card
 
 ## Introduction
 
@@ -38,6 +39,7 @@ An introduction into the single-resposibility principle and the modular design o
 :link-type: ref
 :img-top: /assets/apps_48dp.svg
 :text-align: center
+:class-item: index-card
 
 ## Widget Development
 

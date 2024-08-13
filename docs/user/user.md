@@ -25,6 +25,7 @@ api_reference/api_reference.md
 :link-type: ref
 :img-top: /assets/rocket_launch_48dp.svg
 :text-align: center
+:class-item: index-card
 
 ## Getting Started
 
@@ -36,6 +37,7 @@ Learn how to install BEC Widgets and get started with the framework.
 :link-type: ref
 :img-top: /assets/display_settings_48dp.svg
 :text-align: center
+:class-item: index-card
 
 ## Applications
 
@@ -48,6 +50,7 @@ Learn how to use BEC Widgets Applications, to modify and create new applications
 :link-type: ref
 :img-top: /assets/apps_48dp.svg
 :text-align: center
+:class-item: index-card
 
 ## Widgets
 
@@ -59,6 +62,7 @@ Learn about the building blocks of larger applications: widgets.
 :link-type: ref
 :img-top: /assets/index_api.svg
 :text-align: center
+:class-item: index-card
 
 ## API reference
 
