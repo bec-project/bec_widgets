@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.94.2 (2024-08-13)
+
+### Fix
+
+* fix(image): image is single image mode do not raise popup error when connected twice with the same monitor ([`98b79aa`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/98b79aac7b47b73137f4d582f7f1d552b1d95366))
+
 ## v0.94.1 (2024-08-12)
 
 ### Fix
@@ -141,9 +147,3 @@ This reverts commit fd6ae91993a23a7b8dbb2cf3c4b7c3eda6d2b0f6 ([`5aad401`](https:
 * fix: reset ErrorPopup singleton between tests ([`5a9ccfd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5a9ccfd1f6d2aacd5d86c1a34f74163b272d1ae4))
 
 * fix: metaclass + QObject segfaults PyQt(cpp bindings) ([`fc57b7a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fc57b7a1262031a2df9e6a99493db87e766b779a))
-
-### Refactor
-
-* refactor: renamed DeviceMonitor2DMessage ([`4be6fd6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4be6fd6b83ea1048f16310f7d2bbe777b13b245e))
-
-* refactor: rename device_monitor to device_monitor_2d ([`714e1e1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/714e1e139e0033d2725fefb636c419ca137a68c6))
