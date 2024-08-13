@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import threading
+from queue import Queue
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
@@ -25,6 +27,17 @@ class AutoUpdates:
 
     def __init__(self, gui: BECDockArea):
         self.gui = gui
+        self.msg_queue = Queue()
+        self.auto_update_thread = None
+        self._shutdown_sentinel = object()
+        self.start()
+
+    def start(self):
+        """
+        Start the auto update thread.
+        """
+        self.auto_update_thread = threading.Thread(target=self.process_queue)
+        self.auto_update_thread.start()
 
     def start_default_dock(self):
         """
@@ -78,6 +91,16 @@ class AutoUpdates:
             return
         info = self.get_scan_info(msg)
         self.handler(info)
+
+    def process_queue(self):
+        """
+        Process the message queue.
+        """
+        while True:
+            msg = self.msg_queue.get()
+            if msg is self._shutdown_sentinel:
+                break
+            self.run(msg)
 
     @staticmethod
     def get_selected_device(monitored_devices, selected_device):
@@ -151,3 +174,11 @@ class AutoUpdates:
         fig.clear_all()
         plt = fig.plot(x_name=dev_x, y_name=dev_y, label=f"Scan {info.scan_number} - {dev_y}")
         plt.set(title=f"Scan {info.scan_number}", x_label=dev_x, y_label=dev_y)
+
+    def shutdown(self):
+        """
+        Shutdown the auto update thread.
+        """
+        self.msg_queue.put(self._shutdown_sentinel)
+        if self.auto_update_thread:
+            self.auto_update_thread.join()

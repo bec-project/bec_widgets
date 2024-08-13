@@ -295,3 +295,4 @@ def test_auto_update(bec_client_lib, rpc_server_dock, qtbot):
         plt_data[f"Scan {status.scan.scan_number} - {dock.selected_device}"]["y"]
         == last_scan_data["samy"]["samy"].val
     )
+    dock.auto_updates.shutdown()

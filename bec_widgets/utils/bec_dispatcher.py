@@ -8,7 +8,7 @@ import redis
 from bec_lib.client import BECClient
 from bec_lib.redis_connector import MessageObject, RedisConnector
 from bec_lib.service_config import ServiceConfig
-from qtpy.QtCore import PYQT6, PYSIDE6, QCoreApplication, QObject
+from qtpy.QtCore import QObject
 from qtpy.QtCore import Signal as pyqtSignal
 
 if TYPE_CHECKING:
@@ -75,7 +75,6 @@ class BECDispatcher:
 
     _instance = None
     _initialized = False
-    qapp = None
 
     def __new__(cls, client=None, config: str = None, *args, **kwargs):
         if cls._instance is None:
@@ -86,9 +85,6 @@ class BECDispatcher:
     def __init__(self, client=None, config: str | ServiceConfig = None):
         if self._initialized:
             return
-
-        if not QCoreApplication.instance():
-            BECDispatcher.qapp = QCoreApplication([])
 
         self._slots = collections.defaultdict(set)
         self.client = client
@@ -122,16 +118,6 @@ class BECDispatcher:
     def reset_singleton(cls):
         cls._instance = None
         cls._initialized = False
-
-        if not cls.qapp:
-            return
-
-        # shutdown QCoreApp if it exists
-        if PYQT6:
-            cls.qapp.exit()
-        elif PYSIDE6:
-            cls.qapp.shutdown()
-        cls.qapp = None
 
     def connect_slot(
         self,
