@@ -28,12 +28,13 @@ class BECWidgetsCLIServer:
 
     def __init__(
         self,
-        gui_id: str = None,
+        gui_id: str,
         dispatcher: BECDispatcher = None,
         client=None,
         config=None,
         gui_class: Union[BECFigure, BECDockArea] = BECFigure,
     ) -> None:
+        self.status = messages.BECStatus.BUSY
         self.dispatcher = BECDispatcher(config=config) if dispatcher is None else dispatcher
         self.client = self.dispatcher.client if client is None else client
         self.client.start()
@@ -47,10 +48,11 @@ class BECWidgetsCLIServer:
         )
 
         # Setup QTimer for heartbeat
-        self._shutdown_event = False
         self._heartbeat_timer = QTimer()
         self._heartbeat_timer.timeout.connect(self.emit_heartbeat)
         self._heartbeat_timer.start(200)
+
+        self.status = messages.BECStatus.RUNNING
 
     def on_rpc_update(self, msg: dict, metadata: dict):
         request_id = metadata.get("request_id")
@@ -111,16 +113,16 @@ class BECWidgetsCLIServer:
         return obj
 
     def emit_heartbeat(self):
-        if self._shutdown_event is False:
-            self.client.connector.set(
-                MessageEndpoints.gui_heartbeat(self.gui_id),
-                messages.StatusMessage(name=self.gui_id, status=1, info={}),
-                expire=1,
-            )
+        self.client.connector.set(
+            MessageEndpoints.gui_heartbeat(self.gui_id),
+            messages.StatusMessage(name=self.gui_id, status=self.status, info={}),
+            expire=10,
+        )
 
     def shutdown(self):  # TODO not sure if needed when cleanup is done at level of BECConnector
-        self._shutdown_event = True
+        self.status = messages.BECStatus.IDLE
         self._heartbeat_timer.stop()
+        self.emit_heartbeat()
         self.gui.close()
         self.client.shutdown()
 
@@ -231,4 +233,5 @@ def main():
 
 
 if __name__ == "__main__":  # pragma: no cover
+    sys.argv = ["bec_widgets.cli.server", "--id", "test", "--gui_class", "BECDockArea"]
     main()

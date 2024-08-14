@@ -331,4 +331,8 @@ class RPCBase:
         Check if the GUI is alive.
         """
         heart = self._client.connector.get(MessageEndpoints.gui_heartbeat(self._root._gui_id))
-        return heart is not None
+        if heart is None:
+            return False
+        if heart.status == messages.BECStatus.RUNNING:
+            return True
+        return False
