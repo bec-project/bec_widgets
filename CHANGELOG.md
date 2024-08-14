@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v0.94.5 (2024-08-14)
+
+### Build
+
+* build: increased min version of bec to 2.21.4
+
+Since we now rely on reusing the BECClient singleton, we need the fix introduced with 2.21.4 in BEC. ([`4f96d0e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4f96d0e4a14edc4b2839c1dddeda384737dc7a8a))
+
+### Fix
+
+* fix(rpc): use client singleton instead of dispatcher ([`ea9240d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ea9240d2f71931082f33fb6b68231469875c3d63))
+
+* fix: removed qcoreapplication for polling events ([`4d02b42`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4d02b42f11e9882b843317255a4975565c8a536f))
+
 ## v0.94.4 (2024-08-14)
 
 ### Documentation
@@ -141,15 +155,3 @@ This reverts commit fd6ae91993a23a7b8dbb2cf3c4b7c3eda6d2b0f6 ([`5aad401`](https:
 * fix: fix missmatch of signal/slot in image and motormap ([`dcc5fd7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/dcc5fd71ee9f51767a7b2b1ed6200e89d1ef754c))
 
 ## v0.92.3 (2024-07-28)
-
-### Fix
-
-* fix(docs): moved to pyside6 ([`71873dd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/71873ddf359516ded8f74f4d2f73df4156aa1368))
-
-## v0.92.2 (2024-07-28)
-
-### Fix
-
-* fix(widgets): fixed import for tictactoe example ([`995a795`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/995a795060bebe25c17108d80ae0fa30463f03b1))
-
-## v0.92.1 (2024-07-28)
