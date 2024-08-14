@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v0.94.4 (2024-08-14)
+
+### Documentation
+
+* docs: review developer section; add introduction ([`2af5c94`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2af5c94913a3435c1839034df4f45f885b56d08b))
+
+### Fix
+
+* fix: do not shutdown client in &#34;close&#34;
+
+Terminating client connections has to be done at the application level ([`198c1d1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/198c1d1064cc2dae55de4b941929341faddacb28))
+
 ## v0.94.3 (2024-08-13)
 
 ### Fix
@@ -141,11 +153,3 @@ This reverts commit fd6ae91993a23a7b8dbb2cf3c4b7c3eda6d2b0f6 ([`5aad401`](https:
 * fix(widgets): fixed import for tictactoe example ([`995a795`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/995a795060bebe25c17108d80ae0fa30463f03b1))
 
 ## v0.92.1 (2024-07-28)
-
-### Fix
-
-* fix: use SafeSlot instead of Slot ([`bc1e239`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bc1e23944cc0e5a861e3d0b4dc5b4ac6292d5269))
-
-* fix: linting ([`a3fe205`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a3fe20500ae2ac03dcde07432f7e21ce5262ce46))
-
-* fix: always add a QApplication for tests ([`61a4e32`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/61a4e32deb337ed27f2f43358b88b7266413b58e))
