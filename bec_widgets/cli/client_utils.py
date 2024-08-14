@@ -12,6 +12,7 @@ import uuid
 from functools import wraps
 from typing import TYPE_CHECKING
 
+from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import isinstance_based_on_class_name, lazy_import, lazy_import_from
@@ -222,7 +223,7 @@ class RPCResponseTimeoutError(Exception):
 
 class RPCBase:
     def __init__(self, gui_id: str = None, config: dict = None, parent=None) -> None:
-        self._client = BECDispatcher().client
+        self._client = BECClient()  # BECClient is a singleton; here, we simply get the instance
         self._config = config if config is not None else {}
         self._gui_id = gui_id if gui_id is not None else str(uuid.uuid4())
         self._parent = parent
