@@ -100,6 +100,7 @@ def _start_plot_process(gui_id: str, gui_class: type, config: dict | str, logger
 
     env_dict = os.environ.copy()
     env_dict["PYTHONUNBUFFERED"] = "1"
+
     if logger is None:
         stdout_redirect = subprocess.DEVNULL
         stderr_redirect = subprocess.DEVNULL

@@ -130,15 +130,15 @@ class BECWidgetsCLIServer:
 class SimpleFileLikeFromLogOutputFunc:
     def __init__(self, log_func):
         self._log_func = log_func
+        self._buffer = []
 
     def write(self, buffer):
-        for line in buffer.rstrip().splitlines():
-            line = line.rstrip()
-            if line:
-                self._log_func(line)
+        self._buffer.append(buffer)
 
     def flush(self):
-        return
+        lines, _, remaining = "".join(self._buffer).rpartition("\n")
+        self._log_func(lines)
+        self._buffer = [remaining]
 
     def close(self):
         return
