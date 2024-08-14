@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.94.6 (2024-08-14)
+
+### Fix
+
+* fix(server): emit heartbeat with state ([`bc2abe9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bc2abe945fb5adeec89ed5ac45e966db86ce6ffc))
+
 ## v0.94.5 (2024-08-14)
 
 ### Build
@@ -149,9 +155,3 @@ This reverts commit fd6ae91993a23a7b8dbb2cf3c4b7c3eda6d2b0f6 ([`5aad401`](https:
 * test: register all widgets with qtbot and close them ([`73cd11e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/73cd11e47277e4437554b785a9551b28a572094f))
 
 ## v0.92.4 (2024-07-31)
-
-### Fix
-
-* fix: fix missmatch of signal/slot in image and motormap ([`dcc5fd7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/dcc5fd71ee9f51767a7b2b1ed6200e89d1ef754c))
-
-## v0.92.3 (2024-07-28)
