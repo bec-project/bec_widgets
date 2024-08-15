@@ -4,6 +4,7 @@ recommonmark
 sphinx-toolbox
 pydata-sphinx-theme
 sphinx-copybutton
+sphinx-inline-tabs
 myst-parser
 sphinx-design
 PySide6
