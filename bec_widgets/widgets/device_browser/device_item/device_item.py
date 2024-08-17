@@ -42,7 +42,7 @@ class DeviceItem(QWidget):
         return super().mouseDoubleClickEvent(event)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import sys
 
     from qtpy.QtWidgets import QApplication

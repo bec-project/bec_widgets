@@ -18,6 +18,20 @@ class FakeDevice:
         self.signals = {self.name: {"value": 1.0}}
         self.description = {self.name: {"source": self.name, "dtype": "number", "shape": []}}
         self.readout_priority = readout_priority
+        self._config = {
+            "readoutPriority": "baseline",
+            "deviceClass": "ophyd_devices.SimPositioner",
+            "deviceConfig": {
+                "delay": 1,
+                "limits": [-50, 50],
+                "tolerance": 0.01,
+                "update_frequency": 400,
+            },
+            "deviceTags": ["user motors"],
+            "enabled": enabled,
+            "readOnly": False,
+            "name": self.name,
+        }
 
     def __contains__(self, item):
         return item == self.name
