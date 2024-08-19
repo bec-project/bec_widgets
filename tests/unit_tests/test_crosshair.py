@@ -1,19 +1,40 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 import numpy as np
-import pyqtgraph as pg
+import pytest
 from qtpy.QtCore import QPointF
 
-from bec_widgets.utils import Crosshair
+from bec_widgets.widgets.image.image_widget import BECImageWidget
+from bec_widgets.widgets.waveform.waveform_widget import BECWaveformWidget
+
+from .client_mocks import mocked_client
+
+# pylint: disable = redefined-outer-name
 
 
-def test_mouse_moved_lines(qtbot):
-    # Create a PlotWidget and add a PlotItem
-    plot_widget = pg.PlotWidget(title="1D PlotWidget with multiple curves")
-    plot_item = plot_widget.getPlotItem()
-    plot_item.plot([1, 2, 3], [4, 5, 6])
+@pytest.fixture
+def plot_widget_with_crosshair(qtbot, mocked_client):
+    widget = BECWaveformWidget(client=mocked_client())
+    widget.plot(x=[1, 2, 3], y=[4, 5, 6])
+    widget.waveform.hook_crosshair()
+    qtbot.addWidget(widget)
+    qtbot.waitExposed(widget)
 
-    # Create a Crosshair instance
-    crosshair = Crosshair(plot_item=plot_item, precision=2)
+    yield widget.waveform.crosshair, widget.waveform.plot_item
+
+
+@pytest.fixture
+def image_widget_with_crosshair(qtbot, mocked_client):
+    widget = BECImageWidget(client=mocked_client())
+    widget._image.add_custom_image(name="test", data=np.random.random((100, 200)))
+    widget._image.hook_crosshair()
+    qtbot.addWidget(widget)
+    qtbot.waitExposed(widget)
+
+    yield widget._image.crosshair, widget._image.plot_item
+
+
+def test_mouse_moved_lines(plot_widget_with_crosshair):
+    crosshair, plot_item = plot_widget_with_crosshair
 
     # Connect the signals to slots that will store the emitted values
     emitted_values_1D = []
@@ -32,14 +53,8 @@ def test_mouse_moved_lines(qtbot):
     assert crosshair.h_line.pos().y() == 5
 
 
-def test_mouse_moved_signals(qtbot):
-    # Create a PlotWidget and add a PlotItem
-    plot_widget = pg.PlotWidget(title="1D PlotWidget with multiple curves")
-    plot_item = plot_widget.getPlotItem()
-    plot_item.plot([1, 2, 3], [4, 5, 6])
-
-    # Create a Crosshair instance
-    crosshair = Crosshair(plot_item=plot_item, precision=2)
+def test_mouse_moved_signals(plot_widget_with_crosshair):
+    crosshair, plot_item = plot_widget_with_crosshair
 
     # Create a slot that will store the emitted values as tuples
     emitted_values_1D = []
@@ -59,17 +74,11 @@ def test_mouse_moved_signals(qtbot):
     crosshair.mouse_moved(event_mock)
 
     # Assert the expected behavior
-    assert emitted_values_1D == [(2, [5])]
+    assert emitted_values_1D == [("Curve 1", 2, 5)]
 
 
-def test_mouse_moved_signals_outside(qtbot):
-    # Create a PlotWidget and add a PlotItem
-    plot_widget = pg.PlotWidget(title="1D PlotWidget with multiple curves")
-    plot_item = plot_widget.getPlotItem()
-    plot_item.plot([1, 2, 3], [4, 5, 6])
-
-    # Create a Crosshair instance
-    crosshair = Crosshair(plot_item=plot_item, precision=2)
+def test_mouse_moved_signals_outside(plot_widget_with_crosshair):
+    crosshair, plot_item = plot_widget_with_crosshair
 
     # Create a slot that will store the emitted values as tuples
     emitted_values_1D = []
@@ -92,17 +101,9 @@ def test_mouse_moved_signals_outside(qtbot):
     assert emitted_values_1D == []
 
 
-def test_mouse_moved_signals_2D(qtbot):
-    # write similar test for 2D plot
+def test_mouse_moved_signals_2D(image_widget_with_crosshair):
+    crosshair, plot_item = image_widget_with_crosshair
 
-    # Create a PlotWidget and add a PlotItem
-    plot_widget = pg.PlotWidget(title="2D plot with crosshair and ROI square")
-    data_2D = np.random.random((100, 200))
-    plot_item = plot_widget.getPlotItem()
-    image_item = pg.ImageItem(data_2D)
-    plot_item.addItem(image_item)
-    # Create a Crosshair instance
-    crosshair = Crosshair(plot_item=plot_item)
     # Create a slot that will store the emitted values as tuples
     emitted_values_2D = []
 
@@ -118,20 +119,12 @@ def test_mouse_moved_signals_2D(qtbot):
     # Call the mouse_moved method
     crosshair.mouse_moved(event_mock)
     # Assert the expected behavior
-    assert emitted_values_2D == [(22.0, 55.0)]
+    assert emitted_values_2D == [("test", 22.0, 55.0)]
 
 
-def test_mouse_moved_signals_2D_outside(qtbot):
-    # write similar test for 2D plot
+def test_mouse_moved_signals_2D_outside(image_widget_with_crosshair):
+    crosshair, plot_item = image_widget_with_crosshair
 
-    # Create a PlotWidget and add a PlotItem
-    plot_widget = pg.PlotWidget(title="2D plot with crosshair and ROI square")
-    data_2D = np.random.random((100, 200))
-    plot_item = plot_widget.getPlotItem()
-    image_item = pg.ImageItem(data_2D)
-    plot_item.addItem(image_item)
-    # Create a Crosshair instance
-    crosshair = Crosshair(plot_item=plot_item, precision=2)
     # Create a slot that will store the emitted values as tuples
     emitted_values_2D = []
 

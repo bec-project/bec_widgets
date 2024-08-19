@@ -9,7 +9,12 @@ from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeSlot, WarningPopupUtility
 from bec_widgets.qt_utils.settings_dialog import SettingsDialog
-from bec_widgets.qt_utils.toolbar import IconAction, ModularToolBar, SeparatorAction
+from bec_widgets.qt_utils.toolbar import (
+    IconAction,
+    MaterialIconAction,
+    ModularToolBar,
+    SeparatorAction,
+)
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.figure.plots.axis_settings import AxisSettings
@@ -93,8 +98,11 @@ class BECWaveformWidget(BECWidget, QWidget):
                 "fit_params": IconAction(
                     icon_path="fitting_parameters.svg", tooltip="Open Fitting Parameters"
                 ),
-                "axis_settings": IconAction(
-                    icon_path="settings.svg", tooltip="Open Configuration Dialog"
+                "axis_settings": MaterialIconAction(
+                    icon_name="settings", tooltip="Open Configuration Dialog"
+                ),
+                "crosshair": MaterialIconAction(
+                    icon_name="grid_goldenratio", tooltip="Show Crosshair"
                 ),
             },
             target_widget=self,
@@ -123,6 +131,7 @@ class BECWaveformWidget(BECWidget, QWidget):
         self.toolbar.widgets["curves"].action.triggered.connect(self.show_curve_settings)
         self.toolbar.widgets["fit_params"].action.triggered.connect(self.show_fit_summary_dialog)
         self.toolbar.widgets["axis_settings"].action.triggered.connect(self.show_axis_settings)
+        self.toolbar.widgets["crosshair"].action.triggered.connect(self.waveform.toggle_crosshair)
         # self.toolbar.widgets["import"].action.triggered.connect(
         #     lambda: self.load_config(path=None, gui=True)
         # )

@@ -14,7 +14,7 @@ from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
-from bec_widgets.utils import Colors, EntryValidator
+from bec_widgets.utils import Colors, Crosshair, EntryValidator
 from bec_widgets.widgets.figure.plots.plot_base import BECPlotBase, SubplotConfig
 from bec_widgets.widgets.figure.plots.waveform.waveform_curve import (
     BECCurve,

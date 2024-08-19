@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils import BECConnector, ConnectionConfig
+from bec_widgets.utils.crosshair import Crosshair
 
 
 class AxisConfig(BaseModel):
@@ -41,6 +42,18 @@ class SubplotConfig(ConnectionConfig):
     )
 
 
+class BECViewBox(pg.ViewBox):
+
+    def itemBoundsChanged(self, item):
+        self._itemBoundsCache.pop(item, None)
+        if (self.state["autoRange"][0] is not False) or (self.state["autoRange"][1] is not False):
+            # check if the call is coming from a mouse-move event
+            if hasattr(item, "skip_auto_range") and item.skip_auto_range:
+                return
+            self._autoRangeNeedsUpdate = True
+            self.update()
+
+
 class BECPlotBase(BECConnector, pg.GraphicsLayout):
     USER_ACCESS = [
         "_config_dict",
@@ -73,9 +86,13 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         pg.GraphicsLayout.__init__(self, parent)
 
         self.figure = parent_figure
-        self.plot_item = self.addPlot(row=0, col=0)
+
+        # self.plot_item = self.addPlot(row=0, col=0)
+        self.plot_item = pg.PlotItem(viewBox=BECViewBox(parent=self, enableMenu=True), parent=self)
+        self.addItem(self.plot_item, row=0, col=0)
 
         self.add_legend()
+        self.crosshair = None
 
     def set(self, **kwargs) -> None:
         """
@@ -304,6 +321,25 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         """
         self.plot_item.enableAutoRange(axis, enabled)
 
+    def hook_crosshair(self) -> None:
+        """Hook the crosshair to all plots."""
+        if self.crosshair is None:
+            self.crosshair = Crosshair(self.plot_item, precision=3)
+
+    def unhook_crosshair(self) -> None:
+        """Unhook the crosshair from all plots."""
+        if self.crosshair is not None:
+            self.crosshair.cleanup()
+            self.crosshair.deleteLater()
+            self.crosshair = None
+
+    def toggle_crosshair(self) -> None:
+        """Toggle the crosshair on all plots."""
+        if self.crosshair is None:
+            return self.hook_crosshair()
+
+        self.unhook_crosshair()
+
     def export(self):
         """Show the Export Dialog of the plot widget."""
         scene = self.plot_item.scene()
@@ -317,6 +353,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
 
     def cleanup_pyqtgraph(self):
         """Cleanup pyqtgraph items."""
+        self.unhook_crosshair()
         item = self.plot_item
         item.vb.menu.close()
         item.vb.menu.deleteLater()

@@ -1,8 +1,10 @@
+from collections import defaultdict
+
 import numpy as np
 import pyqtgraph as pg
 
 # from qtpy.QtCore import QObject, pyqtSignal
-from qtpy.QtCore import QObject
+from qtpy.QtCore import QObject, Qt
 from qtpy.QtCore import Signal as pyqtSignal
 
 
@@ -26,16 +28,23 @@ class Crosshair(QObject):
         super().__init__(parent)
         self.is_log_y = None
         self.is_log_x = None
+        self.is_derivative = None
         self.plot_item = plot_item
         self.precision = precision
         self.v_line = pg.InfiniteLine(angle=90, movable=False)
+        self.v_line.skip_auto_range = True
         self.h_line = pg.InfiniteLine(angle=0, movable=False)
+        self.h_line.skip_auto_range = True
         self.plot_item.addItem(self.v_line, ignoreBounds=True)
         self.plot_item.addItem(self.h_line, ignoreBounds=True)
         self.proxy = pg.SignalProxy(
             self.plot_item.scene().sigMouseMoved, rateLimit=60, slot=self.mouse_moved
         )
         self.plot_item.scene().sigMouseClicked.connect(self.mouse_clicked)
+
+        self.plot_item.ctrl.derivativeCheck.checkStateChanged.connect(self.check_derivatives)
+        self.plot_item.ctrl.logXCheck.checkStateChanged.connect(self.check_log)
+        self.plot_item.ctrl.logYCheck.checkStateChanged.connect(self.check_log)
 
         # Initialize markers
         self.marker_moved_1d = []
@@ -53,8 +62,8 @@ class Crosshair(QObject):
             self.plot_item.removeItem(self.marker_2d)
 
         # Create new markers
-        self.marker_moved_1d = []
-        self.marker_clicked_1d = []
+        self.marker_moved_1d = {}
+        self.marker_clicked_1d = {}
         self.marker_2d = None
         for item in self.plot_item.items:
             if isinstance(item, pg.PlotDataItem):  # 1D plot
@@ -63,48 +72,48 @@ class Crosshair(QObject):
                 marker_moved = pg.ScatterPlotItem(
                     size=10, pen=pg.mkPen(color), brush=pg.mkBrush(None)
                 )
-                marker_clicked = pg.ScatterPlotItem(
-                    size=10, pen=pg.mkPen(None), brush=pg.mkBrush(color)
-                )
-                self.marker_moved_1d.append(marker_moved)
+                marker_moved.skip_auto_range = True
+                self.marker_moved_1d[item.name()] = marker_moved
                 self.plot_item.addItem(marker_moved)
+
                 # Create glowing effect markers for clicked events
-                marker_clicked_list = []
                 for size, alpha in [(18, 64), (14, 128), (10, 255)]:
                     marker_clicked = pg.ScatterPlotItem(
                         size=size,
                         pen=pg.mkPen(None),
                         brush=pg.mkBrush(color.red(), color.green(), color.blue(), alpha),
                     )
-                    marker_clicked_list.append(marker_clicked)
+                    marker_clicked.skip_auto_range = True
+                    self.marker_clicked_1d[item.name()] = marker_clicked
                     self.plot_item.addItem(marker_clicked)
 
-                self.marker_clicked_1d.append(marker_clicked_list)
             elif isinstance(item, pg.ImageItem):  # 2D plot
                 self.marker_2d = pg.ROI(
                     [0, 0], size=[1, 1], pen=pg.mkPen("r", width=2), movable=False
                 )
                 self.plot_item.addItem(self.marker_2d)
 
-    def snap_to_data(self, x, y) -> tuple:
+    def snap_to_data(self, x, y) -> tuple[defaultdict[list], defaultdict[list]]:
         """
         Finds the nearest data points to the given x and y coordinates.
 
         Args:
-            x: The x-coordinate
-            y: The y-coordinate
+            x: The x-coordinate of the mouse cursor
+            y: The y-coordinate of the mouse cursor
 
         Returns:
-            tuple: The nearest x and y values
+            tuple: x and y values snapped to the nearest data
         """
-        y_values_1d = []
-        x_values_1d = []
+        y_values = defaultdict(list)
+        x_values = defaultdict(list)
         image_2d = None
 
         # Iterate through items in the plot
         for item in self.plot_item.items:
             if isinstance(item, pg.PlotDataItem):  # 1D plot
-                x_data, y_data = item.xData, item.yData
+                name = item.name()
+                plot_data = item._getDisplayDataset()
+                x_data, y_data = plot_data.x, plot_data.y
                 if x_data is not None and y_data is not None:
                     if self.is_log_x:
                         min_x_data = np.min(x_data[x_data > 0])
@@ -112,25 +121,25 @@ class Crosshair(QObject):
                         min_x_data = np.min(x_data)
                     max_x_data = np.max(x_data)
                     if x < min_x_data or x > max_x_data:
-                        return None, None
+                        y_values[name] = None
+                        x_values[name] = None
+                        continue
                     closest_x, closest_y = self.closest_x_y_value(x, x_data, y_data)
-                    y_values_1d.append(closest_y)
-                    x_values_1d.append(closest_x)
+                    y_values[name] = closest_y
+                    x_values[name] = closest_x
             elif isinstance(item, pg.ImageItem):  # 2D plot
+                name = item.config.monitor
                 image_2d = item.image
+                # clip the x and y values to the image dimensions to avoid out of bounds errors
+                y_values[name] = int(np.clip(y, 0, image_2d.shape[1] - 1))
+                x_values[name] = int(np.clip(x, 0, image_2d.shape[0] - 1))
 
-        # Handle 1D plot
-        if y_values_1d:
-            if all(v is None for v in x_values_1d) or all(v is None for v in y_values_1d):
+        if x_values and y_values:
+            if all(v is None for v in x_values.values()) or all(
+                v is None for v in y_values.values()
+            ):
                 return None, None
-            closest_x = min(x_values_1d, key=lambda xi: abs(xi - x))  # Snap x to closest data point
-            return closest_x, y_values_1d
-
-        # Handle 2D plot
-        if image_2d is not None:
-            x_idx = int(np.clip(x, 0, image_2d.shape[0] - 1))
-            y_idx = int(np.clip(y, 0, image_2d.shape[1] - 1))
-            return x_idx, y_idx
+            return x_values, y_values
 
         return None, None
 
@@ -156,7 +165,6 @@ class Crosshair(QObject):
         Args:
             event: The mouse moved event
         """
-        self.check_log()
         pos = event[0]
         if self.plot_item.vb.sceneBoundingRect().contains(pos):
             mouse_point = self.plot_item.vb.mapSceneToView(pos)
@@ -168,27 +176,34 @@ class Crosshair(QObject):
                 x = 10**x
             if self.is_log_y:
                 y = 10**y
-            x, y_values = self.snap_to_data(x, y)
+            x_snap_values, y_snap_values = self.snap_to_data(x, y)
+            if x_snap_values is None or y_snap_values is None:
+                return
+            if all(v is None for v in x_snap_values.values()) or all(
+                v is None for v in y_snap_values.values()
+            ):
+                # not sure how we got here, but just to be safe...
+                return
 
             for item in self.plot_item.items:
                 if isinstance(item, pg.PlotDataItem):
-                    if x is None or all(v is None for v in y_values):
-                        return
-                    coordinate_to_emit = (
-                        round(x, self.precision),
-                        [round(y_val, self.precision) for y_val in y_values],
-                    )
+                    name = item.name()
+                    x, y = x_snap_values[name], y_snap_values[name]
+                    if x is None or y is None:
+                        continue
+                    self.marker_moved_1d[name].setData([x], [y])
+                    coordinate_to_emit = (name, round(x, self.precision), round(y, self.precision))
                     self.coordinatesChanged1D.emit(coordinate_to_emit)
-                    for i, y_val in enumerate(y_values):
-                        self.marker_moved_1d[i].setData(
-                            [x if not self.is_log_x else np.log10(x)],
-                            [y_val if not self.is_log_y else np.log10(y_val)],
-                        )
                 elif isinstance(item, pg.ImageItem):
-                    if x is None or y_values is None:
-                        return
-                    coordinate_to_emit = (x, y_values)
+                    name = item.config.monitor
+                    x, y = x_snap_values[name], y_snap_values[name]
+                    if x is None or y is None:
+                        continue
+                    self.marker_2d.setPos([x, y])
+                    coordinate_to_emit = (name, x, y)
                     self.coordinatesChanged2D.emit(coordinate_to_emit)
+                else:
+                    continue
 
     def mouse_clicked(self, event):
         """Handles the mouse clicked event, updating the crosshair position and emitting signals.
@@ -196,7 +211,11 @@ class Crosshair(QObject):
         Args:
             event: The mouse clicked event
         """
-        self.check_log()
+
+        # we only accept left mouse clicks
+        if event.button() != Qt.MouseButton.LeftButton:
+            return
+
         if self.plot_item.vb.sceneBoundingRect().contains(event._scenePos):
             mouse_point = self.plot_item.vb.mapSceneToView(event._scenePos)
             x, y = mouse_point.x(), mouse_point.y()
@@ -205,31 +224,57 @@ class Crosshair(QObject):
                 x = 10**x
             if self.is_log_y:
                 y = 10**y
-            x, y_values = self.snap_to_data(x, y)
+            x_snap_values, y_snap_values = self.snap_to_data(x, y)
+
+            if x_snap_values is None or y_snap_values is None:
+                return
+            if all(v is None for v in x_snap_values.values()) or all(
+                v is None for v in y_snap_values.values()
+            ):
+                # not sure how we got here, but just to be safe...
+                return
 
             for item in self.plot_item.items:
                 if isinstance(item, pg.PlotDataItem):
-                    if x is None or all(v is None for v in y_values):
-                        return
-                    coordinate_to_emit = (
-                        round(x, self.precision),
-                        [round(y_val, self.precision) for y_val in y_values],
-                    )
+                    name = item.name()
+                    x, y = x_snap_values[name], y_snap_values[name]
+                    if x is None or y is None:
+                        continue
+                    self.marker_clicked_1d[name].setData([x], [y])
+                    coordinate_to_emit = (name, round(x, self.precision), round(y, self.precision))
                     self.coordinatesClicked1D.emit(coordinate_to_emit)
-                    for i, y_val in enumerate(y_values):
-                        for marker in self.marker_clicked_1d[i]:
-                            marker.setData(
-                                [x if not self.is_log_x else np.log10(x)],
-                                [y_val if not self.is_log_y else np.log10(y_val)],
-                            )
                 elif isinstance(item, pg.ImageItem):
-                    if x is None or y_values is None:
-                        return
-                    coordinate_to_emit = (x, y_values)
+                    name = item.config.monitor
+                    x, y = x_snap_values[name], y_snap_values[name]
+                    if x is None or y is None:
+                        continue
+                    self.marker_2d.setPos([x, y])
+                    coordinate_to_emit = (name, x, y)
                     self.coordinatesClicked2D.emit(coordinate_to_emit)
-                    self.marker_2d.setPos([x, y_values])
+                else:
+                    continue
+
+    def clear_markers(self):
+        """Clears the markers from the plot."""
+        for marker in self.marker_moved_1d.values():
+            marker.clear()
+            # marker.deleteLater()
+        for marker in self.marker_clicked_1d.values():
+            marker.clear()
+            # marker.deleteLater()
 
     def check_log(self):
         """Checks if the x or y axis is in log scale and updates the internal state accordingly."""
         self.is_log_x = self.plot_item.ctrl.logXCheck.isChecked()
         self.is_log_y = self.plot_item.ctrl.logYCheck.isChecked()
+        self.clear_markers()
+
+    def check_derivatives(self):
+        """Checks if the derivatives are enabled and updates the internal state accordingly."""
+        self.is_derivative = self.plot_item.ctrl.derivativeCheck.isChecked()
+        self.clear_markers()
+
+    def cleanup(self):
+        self.v_line.deleteLater()
+        self.h_line.deleteLater()
+        self.clear_markers()
