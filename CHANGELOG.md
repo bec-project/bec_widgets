@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.94.7 (2024-08-20)
+
+### Fix
+
+* fix: formatting of stdout, stderr captured text for logger ([`939f834`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/939f834a26ddbac0bdead0b60b1cdf52014f182f))
+
 ## v0.94.6 (2024-08-14)
 
 ### Fix
@@ -146,12 +152,6 @@ This reverts commit fd6ae91993a23a7b8dbb2cf3c4b7c3eda6d2b0f6 ([`5aad401`](https:
 
 * fix(status_box): fix cleanup of status box ([`1f30dd7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1f30dd73a9c1e3135087a5eef92c7329f54a604e))
 
-### Refactor
-
-* refactor(queue): refactored bec queue to inherit only from qwidget ([`7616ca0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7616ca0e145e233ccb48029a8c0b54b54b5b4194))
-
 ### Test
 
 * test: register all widgets with qtbot and close them ([`73cd11e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/73cd11e47277e4437554b785a9551b28a572094f))
-
-## v0.92.4 (2024-07-31)
