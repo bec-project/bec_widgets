@@ -3,8 +3,9 @@
 
 import os
 
+from bec_qthemes import material_icon
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
-from qtpy.QtGui import QIcon
+from qtpy.QtGui import QGuiApplication, QIcon
 
 from bec_widgets.widgets.positioner_box.positioner_control_line import PositionerControlLine
 
@@ -33,8 +34,9 @@ class PositionerControlLinePlugin(QDesignerCustomWidgetInterface):  # pragma: no
         return "Device Control"
 
     def icon(self):
-        icon_path = os.path.join(MODULE_PATH, "assets", "designer_icons", "positioner_box.png")
-        return QIcon(icon_path)
+        palette = QGuiApplication.palette()
+        pixmap = material_icon("switch_left", color=palette.text().color(), filled=True)
+        return QIcon(pixmap)
 
     def includeFile(self):
         return "positioner_control_line"

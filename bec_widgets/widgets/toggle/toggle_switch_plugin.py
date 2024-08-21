@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 import os
 
+from bec_qthemes import material_icon
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
-from qtpy.QtGui import QIcon
+from qtpy.QtGui import QGuiApplication, QIcon
 
 import bec_widgets
 from bec_widgets.widgets.toggle.toggle import ToggleSwitch
@@ -34,8 +35,9 @@ class ToggleSwitchPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Utils"
 
     def icon(self):
-        icon_path = os.path.join(MODULE_PATH, "assets", "designer_icons", "toggle.png")
-        return QIcon(icon_path)
+        palette = QGuiApplication.palette()
+        pixmap = material_icon("toggle_on", color=palette.text().color(), filled=True)
+        return QIcon(pixmap)
 
     def includeFile(self):
         return "toggle_switch"

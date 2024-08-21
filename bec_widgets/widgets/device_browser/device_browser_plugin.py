@@ -1,8 +1,9 @@
 # Copyright (C) 2022 The Qt Company Ltd.
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
+from bec_qthemes import material_icon
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
-from qtpy.QtGui import QIcon
+from qtpy.QtGui import QGuiApplication, QIcon
 
 from bec_widgets.widgets.device_browser.device_browser import DeviceBrowser
 
@@ -30,7 +31,9 @@ class DeviceBrowserPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Services"
 
     def icon(self):
-        return QIcon()
+        palette = QGuiApplication.palette()
+        pixmap = material_icon("lists", color=palette.text().color(), filled=True)
+        return QIcon(pixmap)
 
     def includeFile(self):
         return "device_browser"

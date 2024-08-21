@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 import os
 
+from bec_qthemes import material_icon
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
-from qtpy.QtGui import QIcon
+from qtpy.QtGui import QGuiApplication, QIcon
 
 import bec_widgets
 from bec_widgets.widgets.scan_control.scan_control import ScanControl
@@ -33,8 +34,9 @@ class ScanControlPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "Device Control"
 
     def icon(self):
-        icon_path = os.path.join(MODULE_PATH, "assets", "designer_icons", "scan_control.png")
-        return QIcon(icon_path)
+        palette = QGuiApplication.palette()
+        pixmap = material_icon("stacked_line_chart", color=palette.text().color(), filled=True)
+        return QIcon(pixmap)
 
     def includeFile(self):
         return "scan_control"

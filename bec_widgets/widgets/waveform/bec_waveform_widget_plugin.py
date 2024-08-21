@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 import os
 
+from bec_qthemes import material_icon
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
-from qtpy.QtGui import QIcon
+from qtpy.QtGui import QGuiApplication, QIcon
 
 import bec_widgets
 from bec_widgets.widgets.waveform.waveform_widget import BECWaveformWidget
@@ -34,8 +35,9 @@ class BECWaveformWidgetPlugin(QDesignerCustomWidgetInterface):  # pragma: no cov
         return "BEC Plots"
 
     def icon(self):
-        icon_path = os.path.join(MODULE_PATH, "assets", "designer_icons", "waveform.png")
-        return QIcon(icon_path)
+        palette = QGuiApplication.palette()
+        pixmap = material_icon("show_chart", color=palette.text().color(), filled=True)
+        return QIcon(pixmap)
 
     def includeFile(self):
         return "bec_waveform_widget"
