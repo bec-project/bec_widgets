@@ -27,7 +27,7 @@ class DeviceBrowserPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return ""
+        return "BEC Services"
 
     def icon(self):
         return QIcon()
