@@ -125,7 +125,7 @@ class BECDispatcher:
         topics: Union[EndpointInfo, str, list[Union[EndpointInfo, str]]],
         **kwargs,
     ) -> None:
-        """Connect widget's pyqt slot, so that it is called on new pub/sub topic message.
+        """Connect widget's qt slot, so that it is called on new pub/sub topic message.
 
         Args:
             slot (Callable): A slot method/function that accepts two inputs: content and metadata of
@@ -138,6 +138,13 @@ class BECDispatcher:
         self._slots[slot].update(set(topics_str))
 
     def disconnect_slot(self, slot: Callable, topics: Union[str, list]):
+        """
+        Disconnect a slot from a topic.
+
+        Args:
+            slot(Callable): The slot to disconnect
+            topics(Union[str, list]): The topic(s) to disconnect from
+        """
         # find the right slot to disconnect from ;
         # slot callbacks are wrapped in QtThreadSafeCallback objects,
         # but the slot we receive here is the original callable
@@ -153,6 +160,12 @@ class BECDispatcher:
             del self._slots[connected_slot]
 
     def disconnect_topics(self, topics: Union[str, list]):
+        """
+        Disconnect all slots from a topic.
+
+        Args:
+            topics(Union[str, list]): The topic(s) to disconnect from
+        """
         self.client.connector.unregister(topics)
         topics_str, _ = self.client.connector._convert_endpointinfo(topics)
         for slot in list(self._slots.keys()):
@@ -162,4 +175,11 @@ class BECDispatcher:
                 del self._slots[slot]
 
     def disconnect_all(self, *args, **kwargs):
+        """
+        Disconnect all slots from all topics.
+
+        Args:
+            *args: Arbitrary positional arguments
+            **kwargs: Arbitrary keyword arguments
+        """
         self.disconnect_topics(self.client.connector._topics_cb)
