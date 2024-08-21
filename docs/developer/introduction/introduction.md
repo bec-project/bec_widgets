@@ -12,4 +12,5 @@ hidden: false
 
 concepts/
 contributing/
+useful_links/
 ```
