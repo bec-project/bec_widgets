@@ -1,5 +1,35 @@
 # CHANGELOG
 
+## v0.95.0 (2024-08-21)
+
+### Documentation
+
+* docs(device_browser): added user docs ([`2c31cc9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2c31cc90ae751f14a653cbbdd6c353d6359aaafe))
+
+* docs(user): widget gallery with documentation added ([`7357f3d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7357f3d2a189f9f04954a027f39ce07c394d57ec))
+
+* docs: added sphinx-inline-tabs as sphinx dependency ([`e9ecd26`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e9ecd268c602ea9572df0e8d508e49ee62d0c170))
+
+* docs(cards): changed index cards to custom css class instead of overwriting the default sd-card theme ([`91ba30e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/91ba30e8d054a9c7f6c6d98b21113a5d0b1bbbbb))
+
+### Feature
+
+* feat(cli): added device_browser to cli ([`196504b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/196504b533367a899c19b88af4ccd5b39dc46aac))
+
+* feat(widgets): added device_browser widget ([`73f5a2f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/73f5a2f085b289ac18fa8a918b6ad7cfed595fb4))
+
+### Fix
+
+* fix(device_browser): fixed plugin assignment for designer ([`6500393`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/650039303aae9bbec62c676285938416fff146ce))
+
+### Refactor
+
+* refactor(docs): review response ([`4790afd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4790afde3d61fc9beb073c2775c339d4f80779e3))
+
+### Test
+
+* test: added test for device browser ([`e870e5b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e870e5ba083c61df581c9c0305adabe72967f997))
+
 ## v0.94.7 (2024-08-20)
 
 ### Fix
@@ -121,37 +151,3 @@ Terminating client connections has to be done at the application level ([`198c1d
 * test: ensure all toplevelwidgets are closed ([`f9e5897`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f9e58979009cf632feea529700ad191401dd7eb8))
 
 ## v0.93.2 (2024-08-07)
-
-### Fix
-
-* fix(scan_group_box): Scan Spinboxes limits increased to max allowed values; setting dialog for step size and decimal precision for ScanDoubleSpinBox on right click ([`a372925`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a372925fffa787c686198ae7cb3f9c15b459c109))
-
-## v0.93.1 (2024-08-06)
-
-### Documentation
-
-* docs: added video tutorial section with BSEG YT video ([`302ae90`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/302ae90139f6a88e2401fe29fe312387486e27a9))
-
-### Fix
-
-* fix(dock): docks have more recognizable red icon for closing docks ([`af86860`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/af86860bf35474805fb1a7bc3725cf8835ed4cc7))
-
-## v0.93.0 (2024-08-05)
-
-### Feature
-
-* feat(themes): moved themes to bec_qthemes
-
-This reverts commit fd6ae91993a23a7b8dbb2cf3c4b7c3eda6d2b0f6 ([`5aad401`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5aad401ef8774c7330784f72cd3b9d8c253e2b6a))
-
-## v0.92.5 (2024-08-05)
-
-### Fix
-
-* fix(spinner): stop timer on close event ([`30fef92`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/30fef929cf6fb4b73f48151c92a0ee54c734031d))
-
-* fix(status_box): fix cleanup of status box ([`1f30dd7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1f30dd73a9c1e3135087a5eef92c7329f54a604e))
-
-### Test
-
-* test: register all widgets with qtbot and close them ([`73cd11e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/73cd11e47277e4437554b785a9551b28a572094f))
