@@ -14,7 +14,7 @@ from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
-from bec_widgets.utils import Colors, Crosshair, EntryValidator
+from bec_widgets.utils import Colors, EntryValidator
 from bec_widgets.widgets.figure.plots.plot_base import BECPlotBase, SubplotConfig
 from bec_widgets.widgets.figure.plots.waveform.waveform_curve import (
     BECCurve,
@@ -77,6 +77,7 @@ class BECWaveform(BECPlotBase):
     dap_params_update = pyqtSignal(dict)
     dap_summary_update = pyqtSignal(dict)
     autorange_signal = pyqtSignal()
+    new_scan = pyqtSignal()
 
     def __init__(
         self,
@@ -390,23 +391,6 @@ class BECWaveform(BECPlotBase):
 
             self.async_signal_update.emit()
             self.scan_signal_update.emit()
-
-    @Slot()
-    def auto_range(self):
-        self.plot_item.autoRange()
-
-    def set_auto_range(self, enabled: bool, axis: str = "xy"):
-        """
-        Set the auto range of the plot widget.
-
-        Args:
-            enabled(bool): If True, enable the auto range.
-            axis(str, optional): The axis to enable the auto range.
-                - "xy": Enable auto range for both x and y axis.
-                - "x": Enable auto range for x axis.
-                - "y": Enable auto range for y axis.
-        """
-        self.plot_item.enableAutoRange(axis, enabled)
 
     @Slot()
     def auto_range(self):
@@ -935,6 +919,8 @@ class BECWaveform(BECPlotBase):
             return
 
         if current_scan_id != self.scan_id:
+            self.reset()
+            self.new_scan.emit()
             self.set_auto_range(True, "xy")
             self.old_scan_id = self.scan_id
             self.scan_id = current_scan_id

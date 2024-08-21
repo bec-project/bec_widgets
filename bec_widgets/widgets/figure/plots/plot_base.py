@@ -4,6 +4,7 @@ from typing import Literal, Optional
 
 import pyqtgraph as pg
 from pydantic import BaseModel, Field
+from qtpy.QtCore import Signal, Slot
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils import BECConnector, ConnectionConfig
@@ -55,6 +56,8 @@ class BECViewBox(pg.ViewBox):
 
 
 class BECPlotBase(BECConnector, pg.GraphicsLayout):
+    crosshair_coordinates_changed = Signal(tuple)
+    crosshair_coordinates_clicked = Signal(tuple)
     USER_ACCESS = [
         "_config_dict",
         "set",
@@ -325,10 +328,18 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         """Hook the crosshair to all plots."""
         if self.crosshair is None:
             self.crosshair = Crosshair(self.plot_item, precision=3)
+            self.crosshair.coordinatesChanged1D.connect(self.crosshair_coordinates_changed)
+            self.crosshair.coordinatesClicked1D.connect(self.crosshair_coordinates_clicked)
+            self.crosshair.coordinatesChanged2D.connect(self.crosshair_coordinates_changed)
+            self.crosshair.coordinatesClicked2D.connect(self.crosshair_coordinates_clicked)
 
     def unhook_crosshair(self) -> None:
         """Unhook the crosshair from all plots."""
         if self.crosshair is not None:
+            self.crosshair.coordinatesChanged1D.disconnect(self.crosshair_coordinates_changed)
+            self.crosshair.coordinatesClicked1D.disconnect(self.crosshair_coordinates_clicked)
+            self.crosshair.coordinatesChanged2D.disconnect(self.crosshair_coordinates_changed)
+            self.crosshair.coordinatesClicked2D.disconnect(self.crosshair_coordinates_clicked)
             self.crosshair.cleanup()
             self.crosshair.deleteLater()
             self.crosshair = None
@@ -339,6 +350,12 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
             return self.hook_crosshair()
 
         self.unhook_crosshair()
+
+    @Slot()
+    def reset(self) -> None:
+        """Reset the plot widget."""
+        if self.crosshair is not None:
+            self.crosshair.clear_markers()
 
     def export(self):
         """Show the Export Dialog of the plot widget."""

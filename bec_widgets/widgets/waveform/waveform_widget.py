@@ -5,6 +5,7 @@ from typing import Literal
 
 import numpy as np
 import pyqtgraph as pg
+from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeSlot, WarningPopupUtility
@@ -56,6 +57,14 @@ class BECWaveformWidget(BECWidget, QWidget):
         "export",
         "export_to_matplotlib",
     ]
+    scan_signal_update = Signal()
+    async_signal_update = Signal()
+    dap_params_update = Signal(dict)
+    dap_summary_update = Signal(dict)
+    autorange_signal = Signal()
+    new_scan = Signal()
+    crosshair_coordinates_changed = Signal(tuple)
+    crosshair_coordinates_clicked = Signal(tuple)
 
     def __init__(
         self,
@@ -118,7 +127,18 @@ class BECWaveformWidget(BECWidget, QWidget):
 
         self.config = config
 
+        self.hook_waveform_signals()
         self._hook_actions()
+
+    def hook_waveform_signals(self):
+        self.waveform.scan_signal_update.connect(self.scan_signal_update)
+        self.waveform.async_signal_update.connect(self.async_signal_update)
+        self.waveform.dap_params_update.connect(self.dap_params_update)
+        self.waveform.dap_summary_update.connect(self.dap_summary_update)
+        self.waveform.autorange_signal.connect(self.autorange_signal)
+        self.waveform.new_scan.connect(self.new_scan)
+        self.waveform.crosshair_coordinates_changed.connect(self.crosshair_coordinates_changed)
+        self.waveform.crosshair_coordinates_clicked.connect(self.crosshair_coordinates_clicked)
 
     def _hook_actions(self):
         self.toolbar.widgets["save"].action.triggered.connect(self.export)
