@@ -21,6 +21,7 @@ class Widgets(str, enum.Enum):
     BECQueue = "BECQueue"
     BECStatusBox = "BECStatusBox"
     BECWaveformWidget = "BECWaveformWidget"
+    DeviceBrowser = "DeviceBrowser"
     DeviceComboBox = "DeviceComboBox"
     DeviceLineEdit = "DeviceLineEdit"
     PositionerBox = "PositionerBox"
@@ -2285,6 +2286,24 @@ class BECWaveformWidget(RPCBase):
     def export_to_matplotlib(self):
         """
         Export the plot widget to Matplotlib.
+        """
+
+
+class DeviceBrowser(RPCBase):
+    @property
+    @rpc_call
+    def _config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def _get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
         """
 
 
