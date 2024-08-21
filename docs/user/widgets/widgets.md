@@ -78,6 +78,14 @@ Control and monitor devices/scan in the BEC environment.
 Launch scans.
 ```
 
+```{grid-item-card}  Device Browser
+:link: user.widgets.device_browser
+:link-type: ref
+:img-top: /assets/widget_screenshots/device_browser.png
+
+Find and drag devices.
+```
+
 ```{grid-item-card}  Positioner Box
 :link: user.widgets.positioner_box
 :link-type: ref
@@ -200,6 +208,7 @@ progress_bar/ring_progress_bar.md
 bec_status_box/bec_status_box.md
 queue/queue.md
 buttons/buttons.md
+device_browser/device_browser.md
 positioner_box/positioner_box.md
 text_box/text_box.md
 website/website.md
