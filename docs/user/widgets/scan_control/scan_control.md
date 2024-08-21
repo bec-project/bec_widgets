@@ -20,7 +20,7 @@ By default, this widget supports scans that are derived from the following base 
 ```
 
 ```{hint}
-The full procedure how to design `gui_config` for your custom scan class is described in the [Scan GUI Configuration](https://beamline-experiment-control.readthedocs.io/en/latest/developer/scans/scans.html) tutorial.
+The full procedure how to design `gui_config` for your custom scan class is described in the [Scan GUI Configuration](https://bec.readthedocs.io/en/latest/developer/scans/scan_gui_config.html) tutorial.
 ```
 
 ````
