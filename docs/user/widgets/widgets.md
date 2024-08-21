@@ -1,8 +1,11 @@
 (user.widgets)=
 # Widgets
-BEC Widgets includes a variety of visualization widgets designed to cater to diverse data representation needs in beamline experiments. These widgets enhance the user experience by providing intuitive and interactive data visualizations.
 
-## Widget Frameworks
+BEC Widgets offers a range of tools designed to make data visualization in beamline experiments easier and more
+interactive. These widgets help users better understand their data by providing clear, intuitive displays that enhance
+the overall experience.
+
+## Widget Containers
 
 Serves as containers to organise and display other widgets.
 

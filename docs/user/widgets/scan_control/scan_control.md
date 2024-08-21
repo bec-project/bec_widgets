@@ -4,7 +4,7 @@
 
 ````{tab} Overview
 
-The [`Scan Control`](/api_reference/_autosummary/bec_widgets.cli.client.ScanControl) widget provides a graphical user interface (GUI) to manage various scan operations in a BEC environment. It is designed to interact with the `ScanServer` and `ScanBundler` services from the BEC core, enabling users to start and stop. The widget automatically generates controls based on the scan's signature and `gui_config`, making it highly adaptable to different scanning processes.
+The [`Scan Control`](/api_reference/_autosummary/bec_widgets.cli.client.ScanControl) widget provides a graphical user interface (GUI) to manage various scan operations in a BEC environment. It is designed to interact with the BEC server, enabling users to start and stop scans. The widget automatically creates the necessary input form based on the scan's signature and gui_config, making it highly adaptable to different scanning processes.
 
 ## Key Features:
 - **Automatic Interface Generation**: Automatically generates a control interface based on scan signatures and `gui_config`.
@@ -18,6 +18,11 @@ By default, this widget supports scans that are derived from the following base 
 - [SyncFlyScanBase](https://beamline-experiment-control.readthedocs.io/en/latest/api_reference/_autosummary/bec_server.scan_server.scans.SyncFlyScanBase.html)
 - [AsyncFlyScanBase](https://beamline-experiment-control.readthedocs.io/en/latest/api_reference/_autosummary/bec_server.scan_server.scans.AsyncFlyScanBase.html)
 ```
+
+```{hint}
+The full procedure how to design `gui_config` for your custom scan class is described in the [Scan GUI Configuration](https://beamline-experiment-control.readthedocs.io/en/latest/developer/scans/scans.html) tutorial.
+```
+
 ````
 
 ````{tab} Examples

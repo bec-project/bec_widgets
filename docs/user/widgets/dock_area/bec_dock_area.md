@@ -12,6 +12,8 @@
 - **Integration with Widgets**: Integrate various widgets like [`WaveformWidget`](user.widgets.waveform_widget), [`ImageWidget`](user.widgets.image_widget), and [`MotorMapWidget`](user.widgets.motor_map) into `BECDockArea`, either as standalone tools or as part of a more complex interface.
 ```
 
+![BECDockArea.png](BECDockArea.png)
+
 ````{tab} Examples - CLI
 In the following examples, we will use `BECIPythonClient` as the main object to interact with the `BECDockArea`. These tutorials focus on how to work with the `BECDockArea` framework, such as adding and removing docks, saving and restoring layouts, and managing the docked widgets. By default the `BECDockArea` is refered as `gui` in `BECIPythonClient`. For more detailed examples of each individual component, please refer to the example sections of each individual [`widget`](user.widgets).
 
