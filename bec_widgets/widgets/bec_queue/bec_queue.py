@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import Qt, Slot
 from qtpy.QtWidgets import QHBoxLayout, QHeaderView, QTableWidget, QTableWidgetItem, QWidget

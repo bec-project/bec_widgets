@@ -65,7 +65,7 @@ add_module_names = False  # Remove namespaces from class/method signatures
 autodoc_inherit_docstrings = True  # If no docstring, inherit from base class
 set_type_checking_flag = True  # Enable 'expensive' imports for sphinx_autodoc_typehints
 autoclass_content = "both"  # Include both class docstring and __init__
-autodoc_mock_imports = ["pyqtgraph"]
+autodoc_mock_imports = ["pyqtgraph", "qtpy", "PySide6"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
