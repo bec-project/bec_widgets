@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v0.96.2 (2024-08-22)
+
+### Fix
+
+* fix(waveform): validation of custom curves removed ([`af28574`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/af28574bd58457a05f1269f121db01ad627b5769))
+
+* fix(waveform): skip validation for curves that are not BECCurve instances ([`617db36`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/617db36ed4932c8a0633724079b695bc67d5c77b))
+
 ## v0.96.1 (2024-08-22)
 
 ### Ci
@@ -149,13 +157,3 @@ Terminating client connections has to be done at the application level ([`198c1d
 ### Fix
 
 * fix(positioner_box): icons fixed ([`281633d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/281633deff15b6879dac3a4f0770fa6949aaecdc))
-
-### Refactor
-
-* refactor: add button for positioner selection ([`0d190c5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0d190c5c5996e59fec4bdd44d2003e10e200b009))
-
-### Test
-
-* test(dap): wait for fit ([`6269009`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6269009e5451f830cdee58a514c7858483488a8d))
-
-* test(auto-update): wait for rendering ([`6d2442d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6d2442d23c683fe92af13df982ce681c07e99cde))
