@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## v0.95.1 (2024-08-22)
+
+### Documentation
+
+* docs: links section added ([`2bf5c70`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2bf5c7096e7d822713e1b50bde89f072e6356e17))
+
+### Fix
+
+* fix(docs): changed link to scan gui config in main docs ([`640464a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/640464a6543b2111bdb58d0174f2ce86c5836cbe))
+
+### Refactor
+
+* refactor: removed designer pngs ([`84abe46`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/84abe460502d838aac41bb8ff63d93c9fcec9214))
+
+* refactor: moved to dynamically loaded material design icons ([`1d2afaa`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1d2afaa09e64b7f714d72796e87e2cb49b2a75a7))
+
 ## v0.95.0 (2024-08-21)
 
 ### Documentation
@@ -136,18 +152,8 @@ Terminating client connections has to be done at the application level ([`198c1d
 
 * fix(website): fixed teardown of website widgets ([`a3d4f5a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a3d4f5ac4bc52acfed2791a1724fade6972ed320))
 
-* fix(dock): properly shut down docks and dock areas ([`bc26497`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bc264975b1363c9dfea516621d7878c320677d15))
-
-* fix(figure): cleanup pyqtgraph ([`ad07bbf`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ad07bbf85e9c8d9838bdd686f69d41c235b7db19))
-
 ### Test
 
 * test: removed quit from teardown ([`cf94599`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cf94599c2544d6831c8afbe7b340082077557ed1))
 
 * test: removed explicit call to close the widget ([`bf6294e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bf6294ecbfd494565d2dc215e4d7e0c280ac7745))
-
-* test: use factory instead of fixture to properly cleanup widgets on teardown ([`9856857`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9856857f4cc7fa229c10d00fbae4452464a207cb))
-
-* test: ensure all toplevelwidgets are closed ([`f9e5897`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f9e58979009cf632feea529700ad191401dd7eb8))
-
-## v0.93.2 (2024-08-07)
