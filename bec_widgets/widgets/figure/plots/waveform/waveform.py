@@ -376,6 +376,8 @@ class BECWaveform(BECPlotBase):
         if len(self.curves) > 0:
             # validate all curves
             for curve in self.curves:
+                if not isinstance(curve, BECCurve):
+                    continue
                 self._validate_x_axis_behaviour(curve.config.signals.y.name, x_name, x_entry, False)
             self._switch_x_axis_item(
                 f"{x_name}-{x_entry}"
