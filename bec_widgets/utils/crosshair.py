@@ -47,26 +47,19 @@ class Crosshair(QObject):
         self.plot_item.ctrl.logYCheck.checkStateChanged.connect(self.check_log)
 
         # Initialize markers
-        self.marker_moved_1d = []
-        self.marker_clicked_1d = []
+        self.marker_moved_1d = {}
+        self.marker_clicked_1d = {}
         self.marker_2d = None
         self.update_markers()
 
     def update_markers(self):
         """Update the markers for the crosshair, creating new ones if necessary."""
 
-        # Clear existing markers
-        for marker in self.marker_moved_1d + self.marker_clicked_1d:
-            self.plot_item.removeItem(marker)
-        if self.marker_2d:
-            self.plot_item.removeItem(self.marker_2d)
-
         # Create new markers
-        self.marker_moved_1d = {}
-        self.marker_clicked_1d = {}
-        self.marker_2d = None
         for item in self.plot_item.items:
             if isinstance(item, pg.PlotDataItem):  # 1D plot
+                if item.name() in self.marker_moved_1d:
+                    continue
                 pen = item.opts["pen"]
                 color = pen.color() if hasattr(pen, "color") else pg.mkColor(pen)
                 marker_moved = pg.ScatterPlotItem(
@@ -88,6 +81,8 @@ class Crosshair(QObject):
                     self.plot_item.addItem(marker_clicked)
 
             elif isinstance(item, pg.ImageItem):  # 2D plot
+                if self.marker_2d is not None:
+                    continue
                 self.marker_2d = pg.ROI(
                     [0, 0], size=[1, 1], pen=pg.mkPen("r", width=2), movable=False
                 )
@@ -113,6 +108,8 @@ class Crosshair(QObject):
             if isinstance(item, pg.PlotDataItem):  # 1D plot
                 name = item.name()
                 plot_data = item._getDisplayDataset()
+                if plot_data is None:
+                    continue
                 x_data, y_data = plot_data.x, plot_data.y
                 if x_data is not None and y_data is not None:
                     if self.is_log_x:
@@ -166,6 +163,7 @@ class Crosshair(QObject):
             event: The mouse moved event
         """
         pos = event[0]
+        self.update_markers()
         if self.plot_item.vb.sceneBoundingRect().contains(pos):
             mouse_point = self.plot_item.vb.mapSceneToView(pos)
             self.v_line.setPos(mouse_point.x())
@@ -215,7 +213,7 @@ class Crosshair(QObject):
         # we only accept left mouse clicks
         if event.button() != Qt.MouseButton.LeftButton:
             return
-
+        self.update_markers()
         if self.plot_item.vb.sceneBoundingRect().contains(event._scenePos):
             mouse_point = self.plot_item.vb.mapSceneToView(event._scenePos)
             x, y = mouse_point.x(), mouse_point.y()
@@ -258,10 +256,8 @@ class Crosshair(QObject):
         """Clears the markers from the plot."""
         for marker in self.marker_moved_1d.values():
             marker.clear()
-            # marker.deleteLater()
         for marker in self.marker_clicked_1d.values():
             marker.clear()
-            # marker.deleteLater()
 
     def check_log(self):
         """Checks if the x or y axis is in log scale and updates the internal state accordingly."""

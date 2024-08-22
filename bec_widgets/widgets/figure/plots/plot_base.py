@@ -356,6 +356,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         """Reset the plot widget."""
         if self.crosshair is not None:
             self.crosshair.clear_markers()
+            self.crosshair.update_markers()
 
     def export(self):
         """Show the Export Dialog of the plot widget."""
