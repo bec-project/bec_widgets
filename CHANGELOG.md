@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.96.0 (2024-08-22)
+
+### Documentation
+
+* docs(scan_control): added designer options ([`9d7718c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9d7718c3d9badf14150174410b9958a3134a1e23))
+
+### Feature
+
+* feat(scan_control): added the ability to configure the scan control widget from designer ([`9d8fb0b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9d8fb0b761efa92972399bcd9aea28e956074380))
+
 ## v0.95.1 (2024-08-22)
 
 ### Documentation
@@ -148,12 +158,6 @@ Terminating client connections has to be done at the application level ([`198c1d
 
 * fix(dock): properly shut down docks and temp areas ([`99ee545`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/99ee545e41c6078654958b668b5b329f85553d16))
 
-* fix(settings): shut down settings dialog ([`b50b3a2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b50b3a27e68956e10e8169a0aa698c911d2d9642))
-
-* fix(website): fixed teardown of website widgets ([`a3d4f5a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a3d4f5ac4bc52acfed2791a1724fade6972ed320))
-
 ### Test
 
 * test: removed quit from teardown ([`cf94599`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cf94599c2544d6831c8afbe7b340082077557ed1))
-
-* test: removed explicit call to close the widget ([`bf6294e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bf6294ecbfd494565d2dc215e4d7e0c280ac7745))
