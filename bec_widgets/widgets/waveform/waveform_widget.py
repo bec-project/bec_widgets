@@ -111,7 +111,7 @@ class BECWaveformWidget(BECWidget, QWidget):
                     icon_name="settings", tooltip="Open Configuration Dialog"
                 ),
                 "crosshair": MaterialIconAction(
-                    icon_name="grid_goldenratio", tooltip="Show Crosshair"
+                    icon_name="point_scan", tooltip="Show Crosshair", checkable=True
                 ),
             },
             target_widget=self,
