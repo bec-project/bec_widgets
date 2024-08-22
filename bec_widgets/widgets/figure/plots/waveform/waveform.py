@@ -378,6 +378,8 @@ class BECWaveform(BECPlotBase):
             for curve in self.curves:
                 if not isinstance(curve, BECCurve):
                     continue
+                if curve.config.source == "custom":
+                    continue
                 self._validate_x_axis_behaviour(curve.config.signals.y.name, x_name, x_entry, False)
             self._switch_x_axis_item(
                 f"{x_name}-{x_entry}"
@@ -385,9 +387,12 @@ class BECWaveform(BECPlotBase):
                 else x_name
             )
             for curve_id, curve_config in zip(curve_ids, curve_configs):
-                if curve_config.signals.x:
-                    curve_config.signals.x.name = x_name
-                    curve_config.signals.x.entry = x_entry
+                if curve_config.signals is None:
+                    continue
+                if curve_config.signals.x is None:
+                    continue
+                curve_config.signals.x.name = x_name
+                curve_config.signals.x.entry = x_entry
                 self.remove_curve(curve_id)
                 self.add_curve_by_config(curve_config)
 
