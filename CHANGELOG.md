@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## v0.96.1 (2024-08-22)
+
+### Ci
+
+* ci: fail pytest after 2 failed tests ([`f0203d9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f0203d9bf60c4975ba5ab93a057d9091762454d5))
+
+### Fix
+
+* fix(crosshair): update markers if necessary ([`4473805`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/44738057a36f5de2bbb55affdd309f92286d4a0f))
+
+* fix(waveform_widget): fixed icon appearance ([`f98a9f9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f98a9f9771b93226d47830aa52f45739624f51b4))
+
+* fix: bubble-up signals ([`2fe72c9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2fe72c9ccb71bcb196a1b78197b73acf9aa3f506))
+
+* fix(crosshair): fixed crosshair for image and waveforms ([`37835cb`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/37835cbf76ca3ba1081f514ee7793244ac500e7f))
+
 ## v0.96.0 (2024-08-22)
 
 ### Documentation
@@ -143,21 +159,3 @@ Terminating client connections has to be done at the application level ([`198c1d
 * test(dap): wait for fit ([`6269009`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6269009e5451f830cdee58a514c7858483488a8d))
 
 * test(auto-update): wait for rendering ([`6d2442d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6d2442d23c683fe92af13df982ce681c07e99cde))
-
-## v0.93.4 (2024-08-07)
-
-### Fix
-
-* fix: rename DeviceBox to PositionerBox, fix test for validation ([`37aa371`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/37aa371e7c4c62d70abf37abc125db0c088790fe))
-
-* fix: add validation for bec_lib.device.Positioner; closes #268 ([`eb54e9f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/eb54e9f788e97af23db8fe0c78f8facb8688bb99))
-
-## v0.93.3 (2024-08-07)
-
-### Fix
-
-* fix(dock): properly shut down docks and temp areas ([`99ee545`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/99ee545e41c6078654958b668b5b329f85553d16))
-
-### Test
-
-* test: removed quit from teardown ([`cf94599`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cf94599c2544d6831c8afbe7b340082077557ed1))
