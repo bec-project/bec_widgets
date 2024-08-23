@@ -10,11 +10,10 @@ from pydantic_core import PydanticCustomError
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QApplication
 
-CURRENT_THEME = "dark"
-
 
 def get_theme_palette():
-    return bec_qthemes.load_palette(CURRENT_THEME)
+    theme = QApplication.instance().theme["theme"]
+    return bec_qthemes.load_palette(theme)
 
 
 def set_theme(theme: Literal["dark", "light", "auto"]):
@@ -42,9 +41,6 @@ def set_theme(theme: Literal["dark", "light", "auto"]):
 
 
 def apply_theme(theme: Literal["dark", "light"]):
-    global CURRENT_THEME
-    CURRENT_THEME = theme
-
     app = QApplication.instance()
     # go through all pyqtgraph widgets and set background
     children = itertools.chain.from_iterable(
