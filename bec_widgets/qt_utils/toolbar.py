@@ -102,16 +102,9 @@ class MaterialIconAction:
         toolbar.addAction(self.action)
 
     def get_icon(self):
-        color = {
-            "dark": "#FFFFFF",
-            "light": "#000000",
-        }  # FIXME: This should be a theme color but the toolbar doesn't respect the theme atm
-        # once fixed, change it to
-        # palette = QGuiApplication.palette()
-        # palette.toolTipBase().color()
 
         icon = material_icon(
-            self.icon_name, size=(20, 20), color=color, convert_to_pixmap=False, filled=self.filled
+            self.icon_name, size=(20, 20), convert_to_pixmap=False, filled=self.filled
         )
         return icon
 
