@@ -2,11 +2,10 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 import os
 
-from bec_qthemes import material_icon
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
-from qtpy.QtGui import QGuiApplication, QIcon
 
 import bec_widgets
+from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.bec_queue.bec_queue import BECQueue
 
 DOM_XML = """
@@ -35,9 +34,7 @@ class BECQueuePlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Services"
 
     def icon(self):
-        palette = QGuiApplication.palette()
-        pixmap = material_icon("edit_note", color=palette.text().color(), filled=True)
-        return QIcon(pixmap)
+        return designer_material_icon("edit_note")
 
     def includeFile(self):
         return "bec_queue"

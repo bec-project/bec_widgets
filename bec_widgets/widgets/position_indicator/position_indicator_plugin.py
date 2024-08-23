@@ -2,11 +2,10 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 import os
 
-from bec_qthemes import material_icon
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
-from qtpy.QtGui import QGuiApplication, QIcon
 
 import bec_widgets
+from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.position_indicator.position_indicator import PositionIndicator
 
 DOM_XML = """
@@ -35,9 +34,7 @@ class PositionIndicatorPlugin(QDesignerCustomWidgetInterface):  # pragma: no cov
         return "BEC Utils"
 
     def icon(self):
-        palette = QGuiApplication.palette()
-        pixmap = material_icon("horizontal_distribute", color=palette.text().color(), filled=True)
-        return QIcon(pixmap)
+        return designer_material_icon("horizontal_distribute")
 
     def includeFile(self):
         return "position_indicator"

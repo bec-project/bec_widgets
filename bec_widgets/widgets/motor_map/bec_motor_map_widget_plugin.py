@@ -1,10 +1,9 @@
 import os
 
-from bec_qthemes import material_icon
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
-from qtpy.QtGui import QGuiApplication, QIcon
 
 import bec_widgets
+from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.motor_map.motor_map_widget import BECMotorMapWidget
 
 DOM_XML = """
@@ -33,9 +32,7 @@ class BECMotorMapWidgetPlugin(QDesignerCustomWidgetInterface):  # pragma: no cov
         return "BEC Plots"
 
     def icon(self):
-        palette = QGuiApplication.palette()
-        pixmap = material_icon("my_location", color=palette.text().color(), filled=True)
-        return QIcon(pixmap)
+        return designer_material_icon("my_location")
 
     def includeFile(self):
         return "bec_motor_map_widget"

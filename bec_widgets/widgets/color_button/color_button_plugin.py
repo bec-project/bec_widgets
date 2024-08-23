@@ -1,10 +1,9 @@
 import os
 
-from bec_qthemes import material_icon
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
-from qtpy.QtGui import QGuiApplication, QIcon
 
 import bec_widgets
+from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.color_button.color_button import ColorButton
 
 DOM_XML = """
@@ -32,9 +31,7 @@ class ColorButtonPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Buttons"
 
     def icon(self):
-        palette = QGuiApplication.palette()
-        pixmap = material_icon("colors", color=palette.text().color(), filled=True)
-        return QIcon(pixmap)
+        return designer_material_icon("colors")
 
     def includeFile(self):
         return "color_button"

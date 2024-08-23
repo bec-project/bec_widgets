@@ -2,13 +2,12 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 import os
 
-from bec_qthemes import material_icon
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
-from qtpy.QtGui import QGuiApplication, QIcon
 
 import bec_widgets
 from bec_widgets.examples.plugin_example_pyside.tictactoe import TicTacToe
 from bec_widgets.examples.plugin_example_pyside.tictactoetaskmenu import TicTacToeTaskMenuFactory
+from bec_widgets.utils.bec_designer import designer_material_icon
 
 DOM_XML = """
 <ui language='c++'>
@@ -47,9 +46,7 @@ class TicTacToePlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "Games"
 
     def icon(self):
-        palette = QGuiApplication.palette()
-        pixmap = material_icon("sports_esports", color=palette.text().color(), filled=True)
-        return QIcon(pixmap)
+        return designer_material_icon("sports_esports")
 
     def includeFile(self):
         return "tictactoe"

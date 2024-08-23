@@ -6,7 +6,9 @@ import sys
 import sysconfig
 from pathlib import Path
 
+from bec_qthemes import material_icon
 from qtpy import PYSIDE6
+from qtpy.QtGui import QIcon
 
 if PYSIDE6:
     from PySide6.scripts.pyside_tool import (
@@ -19,6 +21,19 @@ if PYSIDE6:
     )
 
 import bec_widgets
+
+
+def designer_material_icon(icon_name: str) -> QIcon:
+    """
+    Create a QIcon for the BECDesigner with the given material icon name.
+
+    Args:
+        icon_name (str): The name of the material icon.
+
+    Returns:
+        QIcon: The QIcon for the material icon.
+    """
+    return QIcon(material_icon(icon_name, filled=True, convert_to_pixmap=True))
 
 
 def list_editable_packages() -> set[str]:

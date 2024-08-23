@@ -3,10 +3,9 @@
 
 import os
 
-from bec_qthemes import material_icon
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
-from qtpy.QtGui import QGuiApplication, QIcon
 
+from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.positioner_box.positioner_box import PositionerBox
 
 DOM_XML = """
@@ -34,9 +33,7 @@ class PositionerBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "Device Control"
 
     def icon(self):
-        palette = QGuiApplication.palette()
-        pixmap = material_icon("switch_right", color=palette.text().color(), filled=True)
-        return QIcon(pixmap)
+        return designer_material_icon("switch_right")
 
     def includeFile(self):
         return "positioner_box"

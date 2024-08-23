@@ -2,11 +2,10 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 import os
 
-from bec_qthemes import material_icon
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
-from qtpy.QtGui import QGuiApplication, QIcon
 
 import bec_widgets
+from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.dock import BECDockArea
 
 DOM_XML = """
@@ -35,9 +34,7 @@ class BECDockAreaPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Plots"
 
     def icon(self):
-        palette = QGuiApplication.palette()
-        pixmap = material_icon("widgets", color=palette.text().color(), filled=True)
-        return QIcon(pixmap)
+        return designer_material_icon("widgets")
 
     def includeFile(self):
         return "dock_area"

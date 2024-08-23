@@ -2,11 +2,10 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 import os
 
-from bec_qthemes import material_icon
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
-from qtpy.QtGui import QGuiApplication, QIcon
 
 import bec_widgets
+from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.website.website import WebsiteWidget
 
 DOM_XML = """
@@ -34,9 +33,7 @@ class WebsiteWidgetPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Utils"
 
     def icon(self):
-        palette = QGuiApplication.palette()
-        pixmap = material_icon("travel_explore", color=palette.text().color(), filled=True)
-        return QIcon(pixmap)
+        return designer_material_icon("travel_explore")
 
     def includeFile(self):
         return "website_widget"

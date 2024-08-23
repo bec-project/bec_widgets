@@ -2,11 +2,10 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 import os
 
-from bec_qthemes import material_icon
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
-from qtpy.QtGui import QGuiApplication, QIcon
 
 import bec_widgets
+from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.device_combobox.device_combobox import DeviceComboBox
 
 DOM_XML = """
@@ -35,9 +34,7 @@ class DeviceComboBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "Device Control"
 
     def icon(self):
-        palette = QGuiApplication.palette()
-        pixmap = material_icon("list_alt", color=palette.text().color(), filled=True)
-        return QIcon(pixmap)
+        return designer_material_icon("list_alt")
 
     def includeFile(self):
         return "device_combobox"
