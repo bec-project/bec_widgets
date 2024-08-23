@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.97.0 (2024-08-23)
+
+### Feature
+
+* feat(designer): added designer icon factory ([`82a55dd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/82a55ddf3eafb589cb63408db1c0e7e5c9d629da))
+
+### Fix
+
+* fix(toolbar icon): fixed material icon toolbar for theme changes ([`3ecbd60`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3ecbd60627994417c9175364e5909710dbcdceb2))
+
 ## v0.96.3 (2024-08-23)
 
 ### Documentation
@@ -147,13 +157,3 @@ Terminating client connections has to be done at the application level ([`198c1d
 * fix(image): image is single image mode do not raise popup error when connected twice with the same monitor ([`98b79aa`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/98b79aac7b47b73137f4d582f7f1d552b1d95366))
 
 ## v0.94.1 (2024-08-12)
-
-### Fix
-
-* fix: issue #292, wrong key was used to clean _slots internal dictionary ([`93d3977`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/93d397759c756397604ebff5e24f3a580be8620d))
-
-## v0.94.0 (2024-08-08)
-
-### Refactor
-
-* refactor: adjust dimensions ([`0273bf4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0273bf485694609325b5b556a3c69fb53c18446e))
