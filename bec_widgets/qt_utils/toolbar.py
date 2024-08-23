@@ -182,20 +182,13 @@ class ModularToolBar(QToolBar):
         parent (QWidget, optional): The parent widget of the toolbar. Defaults to None.
         actions (list[ToolBarAction], optional): A list of action creators to populate the toolbar. Defaults to None.
         target_widget (QWidget, optional): The widget that the actions will target. Defaults to None.
-        color (str, optional): The background color of the toolbar. Defaults to "black".
     """
 
-    def __init__(
-        self,
-        parent=None,
-        actions: dict | None = None,
-        target_widget=None,
-        color: str = "rgba(255, 255, 255, 0)",
-    ):
+    def __init__(self, parent=None, actions: dict | None = None, target_widget=None):
         super().__init__(parent)
 
         self.widgets = defaultdict(dict)
-        self.set_background_color(color)
+        self.set_background_color()
 
         if actions is not None and target_widget is not None:
             self.populate_toolbar(actions, target_widget)
@@ -212,8 +205,7 @@ class ModularToolBar(QToolBar):
             action.add_to_toolbar(self, target_widget)
             self.widgets[action_id] = action
 
-    def set_background_color(self, color: str):
-        self.setStyleSheet(f"QToolBar {{ background: {color}; }}")
+    def set_background_color(self):
         self.setIconSize(QSize(20, 20))
         self.setMovable(False)
         self.setFloatable(False)

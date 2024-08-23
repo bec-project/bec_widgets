@@ -88,24 +88,26 @@ class BECWaveformWidget(BECWidget, QWidget):
         self.fig = BECFigure()
         self.toolbar = ModularToolBar(
             actions={
-                "save": IconAction(icon_path="save.svg", tooltip="Open Export Dialog"),
-                "matplotlib": IconAction(
-                    icon_path="photo_library.svg", tooltip="Open Matplotlib Plot"
+                "save": MaterialIconAction(icon_name="save", tooltip="Open Export Dialog"),
+                "matplotlib": MaterialIconAction(
+                    icon_name="photo_library", tooltip="Open Matplotlib Plot"
                 ),
                 "separator_1": SeparatorAction(),
-                "drag_mode": IconAction(
-                    icon_path="drag_pan_mode.svg", tooltip="Drag Mouse Mode", checkable=True
+                "drag_mode": MaterialIconAction(
+                    icon_name="drag_pan", tooltip="Drag Mouse Mode", checkable=True
                 ),
-                "rectangle_mode": IconAction(
-                    icon_path="rectangle_mode.svg", tooltip="Rectangle Zoom Mode", checkable=True
+                "rectangle_mode": MaterialIconAction(
+                    icon_name="frame_inspect", tooltip="Rectangle Zoom Mode", checkable=True
                 ),
-                "auto_range": IconAction(icon_path="auto_range.svg", tooltip="Autorange Plot"),
+                "auto_range": MaterialIconAction(
+                    icon_name="open_in_full", tooltip="Autorange Plot"
+                ),
                 "separator_2": SeparatorAction(),
-                "curves": IconAction(
-                    icon_path="line_axis.svg", tooltip="Open Curves Configuration"
+                "curves": MaterialIconAction(
+                    icon_name="stacked_line_chart", tooltip="Open Curves Configuration"
                 ),
-                "fit_params": IconAction(
-                    icon_path="fitting_parameters.svg", tooltip="Open Fitting Parameters"
+                "fit_params": MaterialIconAction(
+                    icon_name="monitoring", tooltip="Open Fitting Parameters"
                 ),
                 "axis_settings": MaterialIconAction(
                     icon_name="settings", tooltip="Open Configuration Dialog"
@@ -595,9 +597,13 @@ class BECWaveformWidget(BECWidget, QWidget):
 
 def main():  # pragma: no cover
 
+    import bec_qthemes
+    from bec_qthemes._os_appearance.listener import OSThemeSwitchListener
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
+    bec_qthemes.setup_theme("auto")
+
     widget = BECWaveformWidget()
     widget.show()
     sys.exit(app.exec_())
