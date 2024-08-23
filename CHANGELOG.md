@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.96.3 (2024-08-23)
+
+### Documentation
+
+* docs(dispatcher): docs added ([`dd7c71b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/dd7c71bb1e0b7ef5398b1e1a05fc1147c772420a))
+
+### Fix
+
+* fix: minor fixes for type annotations ([`8c2e7c8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8c2e7c82592ace50e4e1f47e392a0ddc988f57ae))
+
 ## v0.96.2 (2024-08-22)
 
 ### Fix
@@ -144,16 +154,6 @@ Terminating client connections has to be done at the application level ([`198c1d
 
 ## v0.94.0 (2024-08-08)
 
-### Feature
-
-* feat: add PositionerControlLine ([`c80a7cd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c80a7cd1083baa9543a2cee2e3c3a51dfd209b19))
-
 ### Refactor
 
 * refactor: adjust dimensions ([`0273bf4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0273bf485694609325b5b556a3c69fb53c18446e))
-
-## v0.93.5 (2024-08-08)
-
-### Fix
-
-* fix(positioner_box): icons fixed ([`281633d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/281633deff15b6879dac3a4f0770fa6949aaecdc))
