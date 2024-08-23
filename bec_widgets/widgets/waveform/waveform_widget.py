@@ -596,14 +596,12 @@ class BECWaveformWidget(BECWidget, QWidget):
 
 
 def main():  # pragma: no cover
-
-    import bec_qthemes
-    from bec_qthemes._os_appearance.listener import OSThemeSwitchListener
     from qtpy.QtWidgets import QApplication
 
-    app = QApplication(sys.argv)
-    bec_qthemes.setup_theme("auto")
+    from bec_widgets.utils.colors import set_theme
 
+    app = QApplication(sys.argv)
+    set_theme("auto")
     widget = BECWaveformWidget()
     widget.show()
     sys.exit(app.exec_())
