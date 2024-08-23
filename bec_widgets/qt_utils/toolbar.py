@@ -3,9 +3,9 @@ import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
 
-from bec_qthemes import material_icon
+from bec_qthemes._icon.material_icons import material_icon
 from qtpy.QtCore import QSize
-from qtpy.QtGui import QAction, QGuiApplication, QIcon
+from qtpy.QtGui import QAction, QIcon
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QMenu, QToolBar, QToolButton, QWidget
 
 import bec_widgets
@@ -73,7 +73,7 @@ class IconAction(ToolBarAction):
 
 class MaterialIconAction:
     """
-    Abstract base class for toolbar actions.
+    Action with a Material icon for the toolbar.
 
     Args:
         icon_path (str, optional): The name of the icon file from `assets/toolbar_icons`. Defaults to None.
@@ -88,12 +88,16 @@ class MaterialIconAction:
         self.action = None
 
     def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
-        palette = QGuiApplication.palette()
-        color = "#FFFFFF"  # FIXME: This should be a theme color but the toolbar doesn't respect the theme atm
-        # one fixed, change it to palette.toolTipBase().color()
+        color = {
+            "dark": "#FFFFFF",
+            "light": "#000000",
+        }  # FIXME: This should be a theme color but the toolbar doesn't respect the theme atm
+        # once fixed, change it to
+        # palette = QGuiApplication.palette()
+        # palette.toolTipBase().color()
 
-        icon = material_icon(self.icon_name, size=(20, 20), color=color)
-        self.action = QAction(QIcon(icon), self.tooltip, target)
+        icon = material_icon(self.icon_name, size=(20, 20), color=color, convert_to_pixmap=False)
+        self.action = QAction(icon, self.tooltip, target)
         self.action.setCheckable(self.checkable)
         toolbar.addAction(self.action)
 
