@@ -260,10 +260,12 @@ class ScanControl(BECWidget, QWidget):
 
 # Application example
 if __name__ == "__main__":  # pragma: no cover
+    from bec_widgets.utils.colors import set_theme
+
     app = QApplication([])
     scan_control = ScanControl()
 
-    apply_theme("dark")
+    set_theme("auto")
     window = scan_control
     window.show()
     app.exec()

@@ -9,17 +9,16 @@ from qtpy.QtCore import Qt
 from qtpy.QtGui import QPainter, QPaintEvent
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
+from bec_widgets.qt_utils.error_popups import SafeSlot
 from bec_widgets.qt_utils.toolbar import (
     ExpandableMenuAction,
-    IconAction,
+    MaterialIconAction,
     ModularToolBar,
     SeparatorAction,
 )
 from bec_widgets.utils import ConnectionConfig, WidgetContainerUtils
 from bec_widgets.utils.bec_widget import BECWidget
-
-from ...qt_utils.error_popups import SafeSlot
-from .dock import BECDock, DockConfig
+from bec_widgets.widgets.dock.dock import BECDock, DockConfig
 
 
 class DockAreaConfig(ConnectionConfig):
@@ -71,20 +70,26 @@ class BECDockArea(BECWidget, QWidget):
                 "menu_plots": ExpandableMenuAction(
                     label="Add Plot ",
                     actions={
-                        "waveform": IconAction(icon_path="waveform.svg", tooltip="Add Waveform"),
-                        "image": IconAction(icon_path="image.svg", tooltip="Add Image"),
-                        "motor_map": IconAction(icon_path="motor_map.svg", tooltip="Add Motor Map"),
+                        "waveform": MaterialIconAction(
+                            icon_name="show_chart", tooltip="Add Waveform", filled=True
+                        ),
+                        "image": MaterialIconAction(
+                            icon_name="image", tooltip="Add Image", filled=True
+                        ),
+                        "motor_map": MaterialIconAction(
+                            icon_name="my_location", tooltip="Add Motor Map", filled=True
+                        ),
                     },
                 ),
                 "separator_0": SeparatorAction(),
                 "menu_devices": ExpandableMenuAction(
                     label="Add Device Control ",
                     actions={
-                        "scan_control": IconAction(
-                            icon_path="scan_control.svg", tooltip="Add Scan Control"
+                        "scan_control": MaterialIconAction(
+                            icon_name="stacked_line_chart", tooltip="Add Scan Control", filled=True
                         ),
-                        "positioner_box": IconAction(
-                            icon_path="positioner_box.svg", tooltip="Add Device Box"
+                        "positioner_box": MaterialIconAction(
+                            icon_name="switch_right", tooltip="Add Device Box", filled=True
                         ),
                     },
                 ),
@@ -92,21 +97,29 @@ class BECDockArea(BECWidget, QWidget):
                 "menu_utils": ExpandableMenuAction(
                     label="Add Utils ",
                     actions={
-                        "queue": IconAction(icon_path="queue.svg", tooltip="Add Scan Queue"),
-                        "vs_code": IconAction(icon_path="terminal.svg", tooltip="Add VS Code"),
-                        "status": IconAction(icon_path="status.svg", tooltip="Add BEC Status Box"),
-                        "progress_bar": IconAction(
-                            icon_path="ring_progress.svg", tooltip="Add Circular ProgressBar"
+                        "queue": MaterialIconAction(
+                            icon_name="edit_note", tooltip="Add Scan Queue", filled=True
+                        ),
+                        "vs_code": MaterialIconAction(
+                            icon_name="show_chart", tooltip="Add VS Code", filled=True
+                        ),
+                        "status": MaterialIconAction(
+                            icon_name="dns", tooltip="Add BEC Status Box", filled=True
+                        ),
+                        "progress_bar": MaterialIconAction(
+                            icon_name="track_changes",
+                            tooltip="Add Circular ProgressBar",
+                            filled=True,
                         ),
                     },
                 ),
                 "separator_2": SeparatorAction(),
-                "attach_all": IconAction(
-                    icon_path="attach_all.svg", tooltip="Attach all floating docks"
+                "attach_all": MaterialIconAction(
+                    icon_name="zoom_in_map", tooltip="Attach all floating docks"
                 ),
-                "save_state": IconAction(icon_path="save_state.svg", tooltip="Save Dock State"),
-                "restore_state": IconAction(
-                    icon_path="restore_state.svg", tooltip="Restore Dock State"
+                "save_state": MaterialIconAction(icon_name="bookmark", tooltip="Save Dock State"),
+                "restore_state": MaterialIconAction(
+                    icon_name="frame_reload", tooltip="Restore Dock State"
                 ),
             },
             target_widget=self,
@@ -368,3 +381,15 @@ class BECDockArea(BECWidget, QWidget):
         """
         self.cleanup()
         super().close()
+
+
+if __name__ == "__main__":
+    from qtpy.QtWidgets import QApplication
+
+    from bec_widgets.utils.colors import set_theme
+
+    app = QApplication([])
+    set_theme("light")
+    dock_area = BECDockArea()
+    dock_area.show()
+    app.exec_()
