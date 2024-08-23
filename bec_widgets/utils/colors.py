@@ -12,7 +12,10 @@ from qtpy.QtWidgets import QApplication
 
 
 def get_theme_palette():
-    theme = QApplication.instance().theme["theme"]
+    if QApplication.instance() is None or not hasattr(QApplication.instance(), "theme"):
+        theme = "dark"
+    else:
+        theme = QApplication.instance().theme["theme"]
     return bec_qthemes.load_palette(theme)
 
 
