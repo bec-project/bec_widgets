@@ -5,6 +5,7 @@ from typing import Literal
 import bec_qthemes
 import numpy as np
 import pyqtgraph as pg
+from bec_qthemes._os_appearance.listener import OSThemeSwitchListener
 from pydantic_core import PydanticCustomError
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QApplication
@@ -14,6 +15,30 @@ CURRENT_THEME = "dark"
 
 def get_theme_palette():
     return bec_qthemes.load_palette(CURRENT_THEME)
+
+
+def set_theme(theme: Literal["dark", "light", "auto"]):
+    """
+    Set the theme for the application.
+
+    Args:
+        theme (Literal["dark", "light", "auto"]): The theme to set. "auto" will automatically switch between dark and light themes based on the system theme.
+    """
+    app = QApplication.instance()
+    bec_qthemes.setup_theme(theme)
+    pg.setConfigOption("background", "w" if app.theme["theme"] == "light" else "k")
+
+    # pylint: disable=protected-access
+    if theme != "auto":
+        return
+
+    def callback():
+        app.theme["theme"] = listener._theme.lower()
+        apply_theme(listener._theme.lower())
+
+    listener = OSThemeSwitchListener(callback)
+
+    app.installEventFilter(listener)
 
 
 def apply_theme(theme: Literal["dark", "light"]):
