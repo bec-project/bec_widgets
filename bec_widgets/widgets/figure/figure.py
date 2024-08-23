@@ -182,7 +182,6 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
                 print(f"Error in applying config: {e}")
                 return
         self.config = config
-        self.change_theme(self.config.theme)
 
         # widget_config has to be reset for not have each widget config twice when added to the figure
         widget_configs = list(self.config.widgets.values())
