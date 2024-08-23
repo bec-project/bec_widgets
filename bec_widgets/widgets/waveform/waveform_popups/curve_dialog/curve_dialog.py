@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from typing import Literal
 
+from bec_qthemes import material_icon
 from pydantic import BaseModel
 from qtpy.QtCore import QObject, QSize, Slot
 from qtpy.QtGui import QIcon
@@ -38,10 +39,7 @@ class CurveSettings(SettingWidget):
         self.ui.normalize_colors_dap.clicked.connect(lambda: self.change_colormap("dap"))
 
     def _setup_icons(self):
-        add_icon = QIcon()
-        add_icon.addFile(
-            os.path.join(MODULE_PATH, "assets", "toolbar_icons", "add.svg"), size=QSize(20, 20)
-        )
+        add_icon = material_icon(icon_name="add", size=(20, 20), convert_to_pixmap=False)
         self.ui.add_dap.setIcon(add_icon)
         self.ui.add_dap.setToolTip("Add DAP Curve")
         self.ui.add_curve.setIcon(add_icon)
@@ -339,5 +337,5 @@ class StyleComboBox(QComboBox):
 class RemoveButton(QPushButton):
     def __init__(self, parent=None):
         super().__init__(parent)
-        icon_path = os.path.join(MODULE_PATH, "assets", "toolbar_icons", "remove.svg")
-        self.setIcon(QIcon(icon_path))
+        icon = material_icon("disabled_by_default", size=(20, 20), convert_to_pixmap=False)
+        self.setIcon(icon)

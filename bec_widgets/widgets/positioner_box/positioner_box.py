@@ -7,13 +7,14 @@ from bec_lib.device import Positioner
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.messages import ScanQueueMessage
-from qtpy.QtCore import Property, QSize, Signal, Slot
-from qtpy.QtGui import QDoubleValidator, QIcon
+from bec_qthemes import material_icon
+from qtpy.QtCore import Property, Signal, Slot
+from qtpy.QtGui import QDoubleValidator
 from qtpy.QtWidgets import QDialog, QDoubleSpinBox, QPushButton, QVBoxLayout, QWidget
 
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import apply_theme
+from bec_widgets.utils.colors import set_theme
 from bec_widgets.widgets.device_line_edit.device_line_edit import DeviceLineEdit
 
 logger = bec_logger.logger
@@ -78,11 +79,7 @@ class PositionerBox(BECWidget, QWidget):
         self.ui.setpoint.setValidator(self.setpoint_validator)
         self.ui.spinner_widget.start()
         self.ui.tool_button.clicked.connect(self._open_dialog_selection)
-        icon = QIcon()
-        icon.addFile(
-            os.path.join(MODULE_PATH, "assets", "toolbar_icons", "device_line_edit.svg"),
-            size=QSize(16, 16),
-        )
+        icon = material_icon(icon_name="edit_note", size=(16, 16), convert_to_pixmap=False)
         self.ui.tool_button.setIcon(icon)
 
     def _open_dialog_selection(self):
@@ -303,7 +300,7 @@ if __name__ == "__main__":  # pragma: no cover
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    apply_theme("dark")
+    set_theme("dark")
     widget = PositionerBox(device="bpm4i")
 
     widget.show()

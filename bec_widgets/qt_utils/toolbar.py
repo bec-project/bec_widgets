@@ -76,7 +76,7 @@ class MaterialIconAction:
     Action with a Material icon for the toolbar.
 
     Args:
-        icon_path (str, optional): The name of the icon file from `assets/toolbar_icons`. Defaults to None.
+        icon_path (str, optional): The name of the Material icon. Defaults to None.
         tooltip (bool, optional): The tooltip for the action. Defaults to None.
         checkable (bool, optional): Whether the action is checkable. Defaults to False.
         filled (bool, optional): Whether the icon is filled. Defaults to False.

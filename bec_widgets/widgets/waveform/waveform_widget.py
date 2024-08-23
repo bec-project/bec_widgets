@@ -10,12 +10,7 @@ from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeSlot, WarningPopupUtility
 from bec_widgets.qt_utils.settings_dialog import SettingsDialog
-from bec_widgets.qt_utils.toolbar import (
-    IconAction,
-    MaterialIconAction,
-    ModularToolBar,
-    SeparatorAction,
-)
+from bec_widgets.qt_utils.toolbar import MaterialIconAction, ModularToolBar, SeparatorAction
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.figure.plots.axis_settings import AxisSettings

@@ -5,7 +5,7 @@ import sys
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.qt_utils.settings_dialog import SettingsDialog
-from bec_widgets.qt_utils.toolbar import DeviceSelectionAction, IconAction, ModularToolBar
+from bec_widgets.qt_utils.toolbar import DeviceSelectionAction, MaterialIconAction, ModularToolBar
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.figure import BECFigure
@@ -54,9 +54,11 @@ class BECMotorMapWidget(BECWidget, QWidget):
                 "motor_y": DeviceSelectionAction(
                     "Motor Y:", DeviceComboBox(device_filter="Positioner")
                 ),
-                "connect": IconAction(icon_path="connection.svg", tooltip="Connect Motors"),
-                "history": IconAction(icon_path="history.svg", tooltip="Reset Trace History"),
-                "config": IconAction(icon_path="settings.svg", tooltip="Open Configuration Dialog"),
+                "connect": MaterialIconAction(icon_name="link", tooltip="Connect Motors"),
+                "history": MaterialIconAction(icon_name="history", tooltip="Reset Trace History"),
+                "config": MaterialIconAction(
+                    icon_name="settings", tooltip="Open Configuration Dialog"
+                ),
             },
             target_widget=self,
         )

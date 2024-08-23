@@ -389,7 +389,7 @@ if __name__ == "__main__":
     from bec_widgets.utils.colors import set_theme
 
     app = QApplication([])
-    set_theme("light")
+    set_theme("auto")
     dock_area = BECDockArea()
     dock_area.show()
     app.exec_()

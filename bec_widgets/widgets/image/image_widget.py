@@ -10,7 +10,7 @@ from bec_widgets.qt_utils.error_popups import SafeSlot, WarningPopupUtility
 from bec_widgets.qt_utils.settings_dialog import SettingsDialog
 from bec_widgets.qt_utils.toolbar import (
     DeviceSelectionAction,
-    IconAction,
+    MaterialIconAction,
     ModularToolBar,
     SeparatorAction,
 )
@@ -66,45 +66,45 @@ class BECImageWidget(BECWidget, QWidget):
                 "monitor": DeviceSelectionAction(
                     "Monitor:", DeviceComboBox(device_filter="Device")
                 ),
-                "connect": IconAction(icon_path="connection.svg", tooltip="Connect Device"),
+                "connect": MaterialIconAction(icon_name="link", tooltip="Connect Device"),
                 "separator_0": SeparatorAction(),
-                "save": IconAction(icon_path="save.svg", tooltip="Open Export Dialog"),
+                "save": MaterialIconAction(icon_name="save", tooltip="Open Export Dialog"),
                 "separator_1": SeparatorAction(),
-                "drag_mode": IconAction(
-                    icon_path="drag_pan_mode.svg", tooltip="Drag Mouse Mode", checkable=True
+                "drag_mode": MaterialIconAction(
+                    icon_name="open_with", tooltip="Drag Mouse Mode", checkable=True
                 ),
-                "rectangle_mode": IconAction(
-                    icon_path="rectangle_mode.svg", tooltip="Rectangle Zoom Mode", checkable=True
+                "rectangle_mode": MaterialIconAction(
+                    icon_name="frame_inspect", tooltip="Rectangle Zoom Mode", checkable=True
                 ),
-                "auto_range": IconAction(icon_path="auto_range.svg", tooltip="Autorange Plot"),
-                "auto_range_image": IconAction(
-                    icon_path="image_autorange.svg",
-                    tooltip="Autorange Image Intensity",
-                    checkable=True,
+                "auto_range": MaterialIconAction(
+                    icon_name="open_in_full", tooltip="Autorange Plot"
                 ),
-                "aspect_ratio": IconAction(
-                    icon_path="lock_aspect_ratio.svg",
-                    tooltip="Lock image aspect ratio",
-                    checkable=True,
+                "auto_range_image": MaterialIconAction(
+                    icon_name="hdr_auto", tooltip="Autorange Image Intensity", checkable=True
+                ),
+                "aspect_ratio": MaterialIconAction(
+                    icon_name="aspect_ratio", tooltip="Lock image aspect ratio", checkable=True
                 ),
                 "separator_2": SeparatorAction(),
-                "FFT": IconAction(icon_path="fft.svg", tooltip="Toggle FFT", checkable=True),
-                "log": IconAction(
-                    icon_path="log_scale.png", tooltip="Toggle log scale", checkable=True
+                "FFT": MaterialIconAction(icon_name="fft", tooltip="Toggle FFT", checkable=True),
+                "log": MaterialIconAction(
+                    icon_name="log_scale", tooltip="Toggle log scale", checkable=True
                 ),
-                "transpose": IconAction(
-                    icon_path="transform.svg", tooltip="Transpose Image", checkable=True
+                "transpose": MaterialIconAction(
+                    icon_name="transform", tooltip="Transpose Image", checkable=True
                 ),
-                "rotate_right": IconAction(
-                    icon_path="rotate_right.svg", tooltip="Rotate image clockwise by 90 deg"
+                "rotate_right": MaterialIconAction(
+                    icon_name="rotate_right", tooltip="Rotate image clockwise by 90 deg"
                 ),
-                "rotate_left": IconAction(
-                    icon_path="rotate_left.svg", tooltip="Rotate image counterclockwise by 90 deg"
+                "rotate_left": MaterialIconAction(
+                    icon_name="rotate_left", tooltip="Rotate image counterclockwise by 90 deg"
                 ),
-                "reset": IconAction(icon_path="reset_settings.svg", tooltip="Reset Image Settings"),
+                "reset": MaterialIconAction(
+                    icon_name="reset_settings", tooltip="Reset Image Settings"
+                ),
                 "separator_3": SeparatorAction(),
-                "axis_settings": IconAction(
-                    icon_path="settings.svg", tooltip="Open Configuration Dialog"
+                "axis_settings": MaterialIconAction(
+                    icon_name="settings", tooltip="Open Configuration Dialog"
                 ),
             },
             target_widget=self,
