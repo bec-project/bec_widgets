@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## v0.98.0 (2024-08-25)
+
+### Feature
+
+* feat(themes): added set_theme method ([`2b4449a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2b4449afebdda0a97f95712a1353cf40ec55c283))
+
+### Fix
+
+* fix(toolbar): removed hardcoded color values ([`afdf4e8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/afdf4e8782a22566932180224fa1c924d24c810f))
+
+* fix: transitioning to material icons ([`2a82032`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2a82032644a84e38df04e2035a6aa63f4a046360))
+
+* fix(dock_area): transitioned to MaterialIconAction ([`88a2f66`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/88a2f667588e9aeb34ae556fa327898824052bc3))
+
+* fix: fix color palette if qtheme was not called ([`3f3b207`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3f3b207295ebd406ebaeecee465c774965161b8b))
+
+* fix(figure): removed theme from figure init ([`e42b84c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e42b84c63650297d67feffccc02a2c2ba111ca79))
+
+* fix: use globally set theme instead of the internal bec widgets theme ([`77c5aa7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/77c5aa741cf1f5b969a42aa878aa2965176dbf41))
+
+* fix(waveform): fixed icon appearance ([`36ad464`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/36ad4641594b67c9b789515c28f7db78a12757ee))
+
+### Refactor
+
+* refactor(waveform): use set theme for demo ([`44cfda1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/44cfda1c07306669c9a4e09706d95e6b91dee370))
+
 ## v0.97.0 (2024-08-23)
 
 ### Feature
@@ -125,35 +151,3 @@ Since we now rely on reusing the BECClient singleton, we need the fix introduced
 * fix(rpc): use client singleton instead of dispatcher ([`ea9240d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ea9240d2f71931082f33fb6b68231469875c3d63))
 
 * fix: removed qcoreapplication for polling events ([`4d02b42`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4d02b42f11e9882b843317255a4975565c8a536f))
-
-## v0.94.4 (2024-08-14)
-
-### Documentation
-
-* docs: review developer section; add introduction ([`2af5c94`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2af5c94913a3435c1839034df4f45f885b56d08b))
-
-### Fix
-
-* fix: do not shutdown client in &#34;close&#34;
-
-Terminating client connections has to be done at the application level ([`198c1d1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/198c1d1064cc2dae55de4b941929341faddacb28))
-
-## v0.94.3 (2024-08-13)
-
-### Fix
-
-* fix(curve_dialog): async curves are shown in curve dialog after addition. ([`7aeb2b5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7aeb2b5c26c7c2851e8d663d32521da8daec95ef))
-
-* fix(waveform): async device entry is correctly passed, updated and with new scan the previous data are cleared ([`d56ea95`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d56ea95ef97bfdd0bc3eeddc4505d20b38e28559))
-
-### Test
-
-* test(waveform_widget): added tests for axis setting and curve dialog ([`f285b35`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f285b35b491660549e74349318119f7c2c44f619))
-
-## v0.94.2 (2024-08-13)
-
-### Fix
-
-* fix(image): image is single image mode do not raise popup error when connected twice with the same monitor ([`98b79aa`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/98b79aac7b47b73137f4d582f7f1d552b1d95366))
-
-## v0.94.1 (2024-08-12)
