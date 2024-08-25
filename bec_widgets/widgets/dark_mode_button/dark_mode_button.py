@@ -7,7 +7,7 @@ from bec_widgets.utils.colors import set_theme
 
 
 class DarkModeButton(BECWidget, QWidget):
-    USER_ACCESS = ["set_dark_mode_enabled"]
+    USER_ACCESS = ["toggle_dark_mode"]
 
     def __init__(
         self, parent: QWidget | None = None, client=None, gui_id: str | None = None
@@ -24,7 +24,7 @@ class DarkModeButton(BECWidget, QWidget):
         icon = material_icon("dark_mode", size=(20, 20), convert_to_pixmap=False)
         self.mode_button = QPushButton(icon=icon)
         self.update_mode_button()
-        self.mode_button.clicked.connect(self.set_dark_mode_enabled)
+        self.mode_button.clicked.connect(self.toggle_dark_mode)
         self.layout.addWidget(self.mode_button)
         self.setLayout(self.layout)
         self.setFixedSize(40, 40)
@@ -41,7 +41,11 @@ class DarkModeButton(BECWidget, QWidget):
         self._dark_mode_enabled = state
 
     @Slot()
-    def set_dark_mode_enabled(self) -> None:
+    def toggle_dark_mode(self) -> None:
+        """
+        Toggle the dark mode state. This will change the theme of the entire
+        application to dark or light mode.
+        """
         self.dark_mode_enabled = not self.dark_mode_enabled
         self.update_mode_button()
         set_theme("dark" if self.dark_mode_enabled else "light")

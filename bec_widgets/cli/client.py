@@ -2292,9 +2292,10 @@ class BECWaveformWidget(RPCBase):
 
 class DarkModeButton(RPCBase):
     @rpc_call
-    def set_dark_mode_enabled(self) -> None:
+    def toggle_dark_mode(self) -> None:
         """
-        None
+        Toggle the dark mode state. This will change the theme of the entire
+        application to dark or light mode.
         """
 
 

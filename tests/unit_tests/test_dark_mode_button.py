@@ -34,11 +34,11 @@ def test_dark_mode_button_toggle(dark_mode_button):
     """
     Test that the dark mode button toggles correctly.
     """
-    dark_mode_button.set_dark_mode_enabled()
+    dark_mode_button.toggle_dark_mode()
     assert dark_mode_button.dark_mode_enabled is True
     assert dark_mode_button.mode_button.toolTip() == "Set Light Mode"
 
-    dark_mode_button.set_dark_mode_enabled()
+    dark_mode_button.toggle_dark_mode()
     assert dark_mode_button.dark_mode_enabled == False
     assert dark_mode_button.mode_button.toolTip() == "Set Dark Mode"
 
@@ -63,8 +63,8 @@ def test_dark_mode_button_changes_theme(dark_mode_button):
     with mock.patch(
         "bec_widgets.widgets.dark_mode_button.dark_mode_button.set_theme"
     ) as mocked_set_theme:
-        dark_mode_button.set_dark_mode_enabled()
+        dark_mode_button.toggle_dark_mode()
         mocked_set_theme.assert_called_with("dark")
 
-        dark_mode_button.set_dark_mode_enabled()
+        dark_mode_button.toggle_dark_mode()
         mocked_set_theme.assert_called_with("light")
