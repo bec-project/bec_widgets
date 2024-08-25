@@ -14,6 +14,18 @@ The `Stop Button` is a specialized control that provides an immediate interface 
 - **Immediate Termination**: Instantly halts the execution of the current script or process.
 - **Queue Management**: Clears any pending operations in the scan queue, ensuring the system is reset and ready for new tasks.
 
+## Dark Mode Button
+
+The `Dark Mode Button` is a toggle control that allows users to switch between light and dark themes in the BEC GUI. It provides a convenient way to adjust the interface's appearance based on user preferences or environmental conditions.
+
+```{figure} ./dark_mode_enabled.png
+```
+```{figure} ./dark_mode_disabled.png
+```
+
+**Key Features:**
+- **Theme Switching**: Enables users to switch between light and dark themes with a single click.
+- **Configurable from BECDesigner**: The defaults for the dark mode can be set in the BECDesigner, allowing users to customize the startup appearance of the GUI.
 ````
 
 ````{tab} Examples
@@ -46,5 +58,6 @@ my_gui.show()
 ````{tab} API
 ```{eval-rst} 
 .. include:: /api_reference/_autosummary/bec_widgets.cli.client.StopButton.rst
+.. include:: /api_reference/_autosummary/bec_widgets.cli.client.DarkModeButton.rst
 ```
 ````
