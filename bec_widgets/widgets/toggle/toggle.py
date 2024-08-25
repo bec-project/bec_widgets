@@ -1,6 +1,6 @@
 import sys
 
-from qtpy.QtCore import Property, QEasingCurve, QPointF, QPropertyAnimation, Qt
+from qtpy.QtCore import Property, QEasingCurve, QPointF, QPropertyAnimation, Qt, Signal
 from qtpy.QtGui import QColor, QPainter
 from qtpy.QtWidgets import QApplication, QWidget
 
@@ -9,6 +9,8 @@ class ToggleSwitch(QWidget):
     """
     A simple toggle.
     """
+
+    enabled = Signal(bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -41,6 +43,7 @@ class ToggleSwitch(QWidget):
         self._checked = state
         self.update_colors()
         self.set_thumb_pos_to_state()
+        self.enabled.emit(self._checked)
 
     @Property(QPointF)
     def thumb_pos(self):
@@ -109,9 +112,7 @@ class ToggleSwitch(QWidget):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            self._checked = not self._checked
-            self.update_colors()
-            self.animate_thumb()
+            self.checked = not self.checked
 
     def update_colors(self):
 
