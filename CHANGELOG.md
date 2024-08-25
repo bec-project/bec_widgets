@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## v0.99.0 (2024-08-25)
+
+### Documentation
+
+* docs(darkmodebutton): added dark mode button docs ([`406c263`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/406c263746f0e809c1a4d98356c48f40428c23d7))
+
+### Feature
+
+* feat(darkmodebutton): added button to toggle between dark and light mode ([`cc8c166`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cc8c166b5c1d37e0f64c83801b2347a54a6550b6))
+
+### Fix
+
+* fix(toggle): emit state change ([`c4f3308`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c4f3308dc0c3e4b2064760ccd7372d71b3e49f96))
+
+### Refactor
+
+* refactor(darkmodebutton): renamed set_dark_mode_enabled to toggle_dark_mode ([`c70724a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c70724a456900bcb06b040407a2c5d497e49ce77))
+
+### Test
+
+* test(dark_mode_button): added tests for dark mode button ([`df35aab`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/df35aabff30c5d00b1c441132bd370446653741e))
+
 ## v0.98.0 (2024-08-25)
 
 ### Feature
@@ -149,5 +171,3 @@ Since we now rely on reusing the BECClient singleton, we need the fix introduced
 ### Fix
 
 * fix(rpc): use client singleton instead of dispatcher ([`ea9240d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ea9240d2f71931082f33fb6b68231469875c3d63))
-
-* fix: removed qcoreapplication for polling events ([`4d02b42`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4d02b42f11e9882b843317255a4975565c8a536f))
