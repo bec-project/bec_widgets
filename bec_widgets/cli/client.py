@@ -21,6 +21,7 @@ class Widgets(str, enum.Enum):
     BECQueue = "BECQueue"
     BECStatusBox = "BECStatusBox"
     BECWaveformWidget = "BECWaveformWidget"
+    DarkModeButton = "DarkModeButton"
     DeviceBrowser = "DeviceBrowser"
     DeviceComboBox = "DeviceComboBox"
     DeviceLineEdit = "DeviceLineEdit"
@@ -2286,6 +2287,14 @@ class BECWaveformWidget(RPCBase):
     def export_to_matplotlib(self):
         """
         Export the plot widget to Matplotlib.
+        """
+
+
+class DarkModeButton(RPCBase):
+    @rpc_call
+    def set_dark_mode_enabled(self) -> None:
+        """
+        None
         """
 
 
