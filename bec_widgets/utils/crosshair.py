@@ -9,6 +9,8 @@ from qtpy.QtCore import Signal as pyqtSignal
 
 
 class Crosshair(QObject):
+    positionChanged = pyqtSignal(tuple)
+    positionClicked = pyqtSignal(tuple)
     # Signal for 1D plot
     coordinatesChanged1D = pyqtSignal(tuple)
     coordinatesClicked1D = pyqtSignal(tuple)
@@ -164,6 +166,7 @@ class Crosshair(QObject):
         """
         pos = event[0]
         self.update_markers()
+        self.positionChanged.emit((pos.x(), pos.y()))
         if self.plot_item.vb.sceneBoundingRect().contains(pos):
             mouse_point = self.plot_item.vb.mapSceneToView(pos)
             self.v_line.setPos(mouse_point.x())
@@ -217,6 +220,7 @@ class Crosshair(QObject):
         if self.plot_item.vb.sceneBoundingRect().contains(event._scenePos):
             mouse_point = self.plot_item.vb.mapSceneToView(event._scenePos)
             x, y = mouse_point.x(), mouse_point.y()
+            self.positionClicked.emit((x, y))
 
             if self.is_log_x:
                 x = 10**x

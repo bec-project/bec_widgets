@@ -58,8 +58,14 @@ class BECWaveformWidget(BECWidget, QWidget):
     dap_summary_update = Signal(dict)
     autorange_signal = Signal()
     new_scan = Signal()
+    crosshair_position_changed = Signal(tuple)
+    crosshair_position_changed_string = Signal(str)
+    crosshair_position_clicked = Signal(tuple)
+    crosshair_position_clicked_string = Signal(str)
     crosshair_coordinates_changed = Signal(tuple)
+    crosshair_coordinates_changed_string = Signal(str)
     crosshair_coordinates_clicked = Signal(tuple)
+    crosshair_coordinates_clicked_string = Signal(str)
 
     def __init__(
         self,
@@ -136,6 +142,20 @@ class BECWaveformWidget(BECWidget, QWidget):
         self.waveform.new_scan.connect(self.new_scan)
         self.waveform.crosshair_coordinates_changed.connect(self.crosshair_coordinates_changed)
         self.waveform.crosshair_coordinates_clicked.connect(self.crosshair_coordinates_clicked)
+        self.waveform.crosshair_coordinates_changed.connect(
+            self._emit_crosshair_coordinates_changed_string
+        )
+        self.waveform.crosshair_coordinates_clicked.connect(
+            self._emit_crosshair_coordinates_clicked_string
+        )
+        self.waveform.crosshair_position_changed.connect(self.crosshair_position_changed)
+        self.waveform.crosshair_position_clicked.connect(self.crosshair_position_clicked)
+        self.waveform.crosshair_position_changed.connect(
+            self._emit_crosshair_position_changed_string
+        )
+        self.waveform.crosshair_position_clicked.connect(
+            self._emit_crosshair_position_clicked_string
+        )
 
     def _hook_actions(self):
         self.toolbar.widgets["save"].action.triggered.connect(self.export)
@@ -155,6 +175,22 @@ class BECWaveformWidget(BECWidget, QWidget):
         # self.toolbar.widgets["export"].action.triggered.connect(
         #     lambda: self.save_config(path=None, gui=True)
         # )
+
+    @SafeSlot(tuple)
+    def _emit_crosshair_coordinates_changed_string(self, coordinates):
+        self.crosshair_coordinates_changed_string.emit(str(coordinates))
+
+    @SafeSlot(tuple)
+    def _emit_crosshair_coordinates_clicked_string(self, coordinates):
+        self.crosshair_coordinates_clicked_string.emit(str(coordinates))
+
+    @SafeSlot(tuple)
+    def _emit_crosshair_position_changed_string(self, position):
+        self.crosshair_position_changed_string.emit(str(position))
+
+    @SafeSlot(tuple)
+    def _emit_crosshair_position_clicked_string(self, position):
+        self.crosshair_position_clicked_string.emit(str(position))
 
     ###################################
     # Dialog Windows
