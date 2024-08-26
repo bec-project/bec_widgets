@@ -1,6 +1,7 @@
-from qtpy.QtWidgets import QWidget
+from qtpy.QtWidgets import QApplication, QWidget
 
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
+from bec_widgets.utils.colors import set_theme
 
 
 class BECWidget(BECConnector):
@@ -11,9 +12,13 @@ class BECWidget(BECConnector):
             raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")
         super().__init__(client, config, gui_id)
 
+        # Set the theme to auto if it is not set yet
+        app = QApplication.instance()
+        if not hasattr(app, "theme"):
+            set_theme("dark")
+
     def cleanup(self):
         """Cleanup the widget."""
-        pass
 
     def closeEvent(self, event):
         self.rpc_register.remove_rpc(self)
