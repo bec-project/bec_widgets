@@ -135,7 +135,7 @@ Various utility widgets to enhance user experience.
 ````{grid} 3
 :gutter: 2
 
-```{grid-item-card} Service Buttons
+```{grid-item-card} Buttons
 :link: user.widgets.buttons
 :link-type: ref
 :img-top: /assets/widget_screenshots/buttons.png

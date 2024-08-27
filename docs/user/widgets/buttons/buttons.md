@@ -1,6 +1,6 @@
 (user.widgets.buttons)=
 
-# Service Buttons
+# Buttons
 
 `````{tab} Overview
 
@@ -34,6 +34,25 @@ The `Dark Mode Button` is a toggle control that allows users to switch between l
 **Key Features:**
 - **Theme Switching**: Enables users to switch between light and dark themes with a single click.
 - **Configurable from BECDesigner**: The defaults for the dark mode can be set in the BECDesigner, allowing users to customize the startup appearance of the GUI.
+
+
+## Color Button
+
+The `Color Button` is a user interface element that provides a dialog to select colors. This button, adapted from `pyqtgraph`, is a simple yet powerful tool to integrate color selection functionality into the BEC GUIs.
+
+**Key Features:**
+- **Color Selection**: Opens a dialog for selecting colors, returning the selected color in both RGBA and HEX formats.
+
+## Colormap Selector
+
+The `Colormap Selector` is a specialized combobox that allows users to select a colormap. It includes a preview of the colormap, making it easier for users to choose the appropriate one for their needs.
+
+**Key Features:**
+- **Colormap Selection**: Provides a dropdown to select from all available colormaps in `pyqtgraph`.
+- **Visual Preview**: Displays a small preview of the colormap next to its name, enhancing usability.
+
+
+
 `````
 
 ````{tab} Examples
