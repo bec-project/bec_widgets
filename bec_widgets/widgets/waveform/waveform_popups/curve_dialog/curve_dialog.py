@@ -5,8 +5,7 @@ from typing import Literal
 
 from bec_qthemes import material_icon
 from pydantic import BaseModel
-from qtpy.QtCore import QObject, QSize, Slot
-from qtpy.QtGui import QIcon
+from qtpy.QtCore import QObject, Slot
 from qtpy.QtWidgets import QComboBox, QLineEdit, QPushButton, QSpinBox, QTableWidget, QVBoxLayout
 
 import bec_widgets
@@ -121,10 +120,10 @@ class CurveSettings(SettingWidget):
             cm = self.ui.color_map_selector_dap.combo.currentText()
             table = self.ui.dap_table
         rows = table.rowCount()
-        colors = Colors.golden_angle_color(colormap=cm, num=rows + 1, format="HEX")
+        colors = Colors.golden_angle_color(colormap=cm, num=max(10, rows + 1), format="HEX")
         color_button_col = 2 if target == "scan" else 3
-        for row, color in zip(range(rows), colors):
-            table.cellWidget(row, color_button_col).setColor(color)
+        for row in range(rows):
+            table.cellWidget(row, color_button_col).setColor(colors[row])
 
     @Slot()
     def accept_changes(self):
@@ -251,12 +250,12 @@ class DialogRow(QObject):
         self.width = QSpinBox()
         self.width.setMinimum(1)
         self.width.setMaximum(20)
-        self.width.setValue(2)
+        self.width.setValue(4)
 
         self.symbol_size = QSpinBox()
         self.symbol_size.setMinimum(1)
         self.symbol_size.setMaximum(20)
-        self.symbol_size.setValue(5)
+        self.symbol_size.setValue(7)
 
         self.remove_button.clicked.connect(
             lambda: self.remove_row()
@@ -281,9 +280,10 @@ class DialogRow(QObject):
             self.width.setValue(self.config.pen_width)
             self.symbol_size.setValue(self.config.symbol_size)
         else:
-            default_color = Colors.golden_angle_color(
-                colormap="magma", num=self.row + 1, format="HEX"
-            )[-1]
+            default_colors = Colors.golden_angle_color(
+                colormap="plasma", num=max(10, self.row + 1), format="HEX"
+            )
+            default_color = default_colors[self.row]
             self.color_button.setColor(default_color)
 
         self.table_widget.setCellWidget(self.row, 0, self.device_line_edit)
@@ -304,9 +304,10 @@ class DialogRow(QObject):
             self.width.setValue(self.config.pen_width)
             self.symbol_size.setValue(self.config.symbol_size)
         else:
-            default_color = Colors.golden_angle_color(
-                colormap="magma", num=self.row + 1, format="HEX"
-            )[-1]
+            default_colors = Colors.golden_angle_color(
+                colormap="plasma", num=max(10, self.row + 1), format="HEX"
+            )
+            default_color = default_colors[self.row]
             self.color_button.setColor(default_color)
 
         self.table_widget.setCellWidget(self.row, 0, self.device_line_edit)

@@ -451,8 +451,10 @@ class BECWaveform(BECPlotBase):
         color = (
             color
             or Colors.golden_angle_color(
-                colormap=self.config.color_palette, num=len(self.plot_item.curves) + 1, format="HEX"
-            )[-1]
+                colormap=self.config.color_palette,
+                num=max(10, len(self.plot_item.curves) + 1),
+                format="HEX",
+            )[len(self.plot_item.curves)]
         )
 
         # Create curve by config
@@ -546,9 +548,12 @@ class BECWaveform(BECPlotBase):
         color = (
             color
             or Colors.golden_angle_color(
-                colormap=self.config.color_palette, num=len(self.plot_item.curves) + 1, format="HEX"
-            )[-1]
+                colormap=self.config.color_palette,
+                num=max(10, len(self.plot_item.curves) + 1),
+                format="HEX",
+            )[len(self.plot_item.curves)]
         )
+        print(f"Color: {color}")
 
         # Create curve by config
         curve_config = CurveConfig(

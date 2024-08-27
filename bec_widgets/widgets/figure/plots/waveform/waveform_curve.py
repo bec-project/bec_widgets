@@ -44,8 +44,8 @@ class CurveConfig(ConnectionConfig):
     symbol_color: Optional[str | tuple] = Field(
         None, description="The color of the symbol of the curve."
     )
-    symbol_size: Optional[int] = Field(5, description="The size of the symbol of the curve.")
-    pen_width: Optional[int] = Field(2, description="The width of the pen of the curve.")
+    symbol_size: Optional[int] = Field(7, description="The size of the symbol of the curve.")
+    pen_width: Optional[int] = Field(4, description="The width of the pen of the curve.")
     pen_style: Optional[Literal["solid", "dash", "dot", "dashdot"]] = Field(
         "solid", description="The style of the pen of the curve."
     )

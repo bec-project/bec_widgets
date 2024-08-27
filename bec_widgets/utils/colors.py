@@ -105,8 +105,19 @@ class Colors:
         angles = Colors.golden_ratio(len(cmap_colors))
         color_selection = np.round(np.interp(angles, (-np.pi, np.pi), (0, len(cmap_colors))))
         colors = []
-        for ii in color_selection[:num]:
-            color = cmap_colors[int(ii)]
+        ii = 0
+        while len(colors) < num:
+            color_index = int(color_selection[ii])
+            color = cmap_colors[color_index]
+            app = QApplication.instance()
+            if hasattr(app, "theme") and app.theme["theme"] == "light":
+                background = 255
+            else:
+                background = 0
+            if np.abs(np.mean(color[:3] * 255) - background) < 50:
+                ii += 1
+                continue
+
             if format.upper() == "HEX":
                 colors.append(QColor.fromRgbF(*color).name())
             elif format.upper() == "RGB":
@@ -115,6 +126,7 @@ class Colors:
                 colors.append(QColor.fromRgbF(*color))
             else:
                 raise ValueError("Unsupported format. Please choose 'RGB', 'HEX', or 'QColor'.")
+            ii += 1
         return colors
 
     @staticmethod
