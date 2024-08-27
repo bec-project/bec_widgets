@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.99.1 (2024-08-27)
+
+### Fix
+
+* fix(crosshair): emit all crosshair events, not just line coordinates ([`2265458`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2265458dcc57970db18c62619f5877d542d72e81))
+
 ## v0.99.0 (2024-08-25)
 
 ### Documentation
@@ -147,27 +153,3 @@
 ### Test
 
 * test: added test for device browser ([`e870e5b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e870e5ba083c61df581c9c0305adabe72967f997))
-
-## v0.94.7 (2024-08-20)
-
-### Fix
-
-* fix: formatting of stdout, stderr captured text for logger ([`939f834`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/939f834a26ddbac0bdead0b60b1cdf52014f182f))
-
-## v0.94.6 (2024-08-14)
-
-### Fix
-
-* fix(server): emit heartbeat with state ([`bc2abe9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bc2abe945fb5adeec89ed5ac45e966db86ce6ffc))
-
-## v0.94.5 (2024-08-14)
-
-### Build
-
-* build: increased min version of bec to 2.21.4
-
-Since we now rely on reusing the BECClient singleton, we need the fix introduced with 2.21.4 in BEC. ([`4f96d0e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4f96d0e4a14edc4b2839c1dddeda384737dc7a8a))
-
-### Fix
-
-* fix(rpc): use client singleton instead of dispatcher ([`ea9240d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ea9240d2f71931082f33fb6b68231469875c3d63))
