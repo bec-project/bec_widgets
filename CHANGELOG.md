@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v0.99.3 (2024-08-27)
+
+### Build
+
+* build: updated min version of bec qthemes ([`d482434`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d48243483ef8228cc5eb85e40a6b8f5da3b45520))
+
+### Fix
+
+* fix(cmaps): unified all defaults to magma cmap ([`1ca9499`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1ca9499edd334c19fe1e7aac71d3940a80a1ec95))
+
+* fix(color maps): color maps should take the background color into account; fixed min colors to 10 ([`060935f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/060935ffc5472a958c337bf60834c5291f104ece))
+
 ## v0.99.2 (2024-08-27)
 
 ### Ci
@@ -138,24 +150,10 @@ If not theme is set, the init of the BECWidget base class sets the default theme
 
 ## v0.95.0 (2024-08-21)
 
-### Documentation
-
-* docs(device_browser): added user docs ([`2c31cc9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2c31cc90ae751f14a653cbbdd6c353d6359aaafe))
-
 ### Feature
 
 * feat(cli): added device_browser to cli ([`196504b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/196504b533367a899c19b88af4ccd5b39dc46aac))
 
-* feat(widgets): added device_browser widget ([`73f5a2f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/73f5a2f085b289ac18fa8a918b6ad7cfed595fb4))
-
 ### Fix
 
 * fix(device_browser): fixed plugin assignment for designer ([`6500393`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/650039303aae9bbec62c676285938416fff146ce))
-
-### Refactor
-
-* refactor(docs): review response ([`4790afd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4790afde3d61fc9beb073c2775c339d4f80779e3))
-
-### Test
-
-* test: added test for device browser ([`e870e5b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e870e5ba083c61df581c9c0305adabe72967f997))
