@@ -34,7 +34,7 @@ integrated with the BEC system by providing:
    dictionaries, JSON, or YAML formats, allowing for persistent storage and retrieval of widget states.
 
 4. **RPC Registration**: Widgets derived
-   from [`BECWidget`](https://bec.readthedocs.io/projects/bec-widgets/en/latest/api_reference/_autosummary/bec_widgets.utils.bec_widget.BECWidget.html#bec_widgets.utils.bec_widget.BECWidget)
+   from [`BECConnector`](https://bec.readthedocs.io/projects/bec-widgets/en/latest/api_reference/_autosummary/bec_widgets.utils.bec_connector.BECConnector.html#bec_widgets.utils.bec_connector.BECConnector)
    are automatically registered with
    the [`RPCRegister`](https://bec.readthedocs.io/projects/bec-widgets/en/latest/api_reference/_autosummary/bec_widgets.cli.rpc_register.RPCRegister.html#bec_widgets.cli.rpc_register.RPCRegister),
    enabling them to handle remote procedure calls (RPCs) efficiently. This allows the widget to be controlled remotely
@@ -135,7 +135,7 @@ BEC system through convenient shortcuts:
    self.client.shutdown()  
    ```
 
-### Example: `PositionerBox` Widget
+### Example: [`PositionerBox`](user.widgets.positioner_box) Widget
 
 Let’s look at an example of a widget that leverages
 the [`BECWidget`](https://bec.readthedocs.io/projects/bec-widgets/en/latest/api_reference/_autosummary/bec_widgets.utils.bec_widget.BECWidget.html#bec_widgets.utils.bec_widget.BECWidget)
