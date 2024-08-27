@@ -34,7 +34,7 @@ class DeviceLineEditPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "Device Control"
 
     def icon(self):
-        return designer_material_icon("edit_note")
+        return designer_material_icon(DeviceLineEdit.ICON_NAME)
 
     def includeFile(self):
         return "device_line_edit"

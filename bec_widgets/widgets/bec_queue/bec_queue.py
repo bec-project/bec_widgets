@@ -13,6 +13,8 @@ class BECQueue(BECWidget, QWidget):
     Widget to display the BEC queue.
     """
 
+    ICON_NAME = "edit_note"
+
     def __init__(
         self,
         parent: QWidget | None = None,

@@ -31,7 +31,7 @@ class ColorButtonPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Buttons"
 
     def icon(self):
-        return designer_material_icon("colors")
+        return designer_material_icon(ColorButton.ICON_NAME)
 
     def includeFile(self):
         return "color_button"

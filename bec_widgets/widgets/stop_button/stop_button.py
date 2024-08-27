@@ -7,6 +7,8 @@ from bec_widgets.utils.bec_widget import BECWidget
 class StopButton(BECWidget, QPushButton):
     """A button that stops the current scan."""
 
+    ICON_NAME = "dangerous"
+
     def __init__(self, parent=None, client=None, config=None, gui_id=None):
         super().__init__(client=client, config=config, gui_id=gui_id)
         QPushButton.__init__(self, parent=parent)

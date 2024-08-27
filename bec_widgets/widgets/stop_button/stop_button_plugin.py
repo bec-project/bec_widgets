@@ -34,7 +34,7 @@ class StopButtonPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Utils"
 
     def icon(self):
-        return designer_material_icon("dangerous")
+        return designer_material_icon(StopButton.ICON_NAME)
 
     def includeFile(self):
         return "stop_button"

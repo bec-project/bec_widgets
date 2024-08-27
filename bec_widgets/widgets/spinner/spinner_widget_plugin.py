@@ -34,7 +34,7 @@ class SpinnerWidgetPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Utils"
 
     def icon(self):
-        return designer_material_icon("progress_activity")
+        return designer_material_icon(SpinnerWidget.ICON_NAME)
 
     def includeFile(self):
         return "spinner_widget"

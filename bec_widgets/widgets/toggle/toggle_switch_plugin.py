@@ -34,7 +34,7 @@ class ToggleSwitchPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Utils"
 
     def icon(self):
-        return designer_material_icon("toggle_on")
+        return designer_material_icon(ToggleSwitch.ICON_NAME)
 
     def includeFile(self):
         return "toggle_switch"

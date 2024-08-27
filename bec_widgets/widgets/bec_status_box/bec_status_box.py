@@ -43,6 +43,8 @@ class BECServiceStatusMixin(QObject):
 
     services_update = Signal(dict, dict)
 
+    ICON_NAME = "dns"
+
     def __init__(self, parent, client: BECClient):
         super().__init__(parent)
         self.client = client

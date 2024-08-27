@@ -32,7 +32,7 @@ class BECMotorMapWidgetPlugin(QDesignerCustomWidgetInterface):  # pragma: no cov
         return "BEC Plots"
 
     def icon(self):
-        return designer_material_icon("my_location")
+        return designer_material_icon(BECMotorMapWidget.ICON_NAME)
 
     def includeFile(self):
         return "bec_motor_map_widget"

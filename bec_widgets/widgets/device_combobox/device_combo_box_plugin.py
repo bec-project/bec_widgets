@@ -34,7 +34,7 @@ class DeviceComboBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "Device Control"
 
     def icon(self):
-        return designer_material_icon("list_alt")
+        return designer_material_icon(DeviceComboBox.ICON_NAME)
 
     def includeFile(self):
         return "device_combobox"

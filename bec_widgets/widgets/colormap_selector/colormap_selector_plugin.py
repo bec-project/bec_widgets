@@ -34,7 +34,7 @@ class ColormapSelectorPlugin(QDesignerCustomWidgetInterface):  # pragma: no cove
         return "BEC Buttons"
 
     def icon(self):
-        return designer_material_icon("palette")
+        return designer_material_icon(ColormapSelector.ICON_NAME)
 
     def includeFile(self):
         return "colormap_selector"

@@ -34,7 +34,7 @@ class BECImageWidgetPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Plots"
 
     def icon(self):
-        return designer_material_icon("image")
+        return designer_material_icon(BECImageWidget.ICON_NAME)
 
     def includeFile(self):
         return "bec_image_widget"

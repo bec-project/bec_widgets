@@ -1,10 +1,8 @@
 # Copyright (C) 2022 The Qt Company Ltd.
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
-import os
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 
-import bec_widgets
 from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.scan_control.scan_control import ScanControl
 
@@ -14,7 +12,6 @@ DOM_XML = """
     </widget>
 </ui>
 """
-MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
 class ScanControlPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
@@ -33,7 +30,7 @@ class ScanControlPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "Device Control"
 
     def icon(self):
-        return designer_material_icon("stacked_line_chart")
+        return designer_material_icon(ScanControl.ICON_NAME)
 
     def includeFile(self):
         return "scan_control"

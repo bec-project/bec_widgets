@@ -33,7 +33,7 @@ class PositionerControlLinePlugin(QDesignerCustomWidgetInterface):  # pragma: no
         return "Device Control"
 
     def icon(self):
-        return designer_material_icon("switch_left")
+        return designer_material_icon(PositionerControlLine.ICON_NAME)
 
     def includeFile(self):
         return "positioner_control_line"

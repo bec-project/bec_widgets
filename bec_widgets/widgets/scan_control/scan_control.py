@@ -20,6 +20,8 @@ from bec_widgets.widgets.stop_button.stop_button import StopButton
 
 class ScanControl(BECWidget, QWidget):
 
+    ICON_NAME = "tune"
+
     scan_started = Signal()
     scan_selected = Signal(str)
 

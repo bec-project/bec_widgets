@@ -28,6 +28,7 @@ class PositionerBox(BECWidget, QWidget):
     ui_file = "positioner_box.ui"
     dimensions = (234, 224)
 
+    ICON_NAME = "switch_right"
     USER_ACCESS = ["set_positioner"]
     device_changed = Signal(str, str)
 

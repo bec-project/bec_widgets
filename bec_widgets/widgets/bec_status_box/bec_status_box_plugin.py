@@ -34,7 +34,7 @@ class BECStatusBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Services"
 
     def icon(self):
-        return designer_material_icon("dns")
+        return designer_material_icon(BECStatusBox.ICON_NAME)
 
     def includeFile(self):
         return "bec_status_box"

@@ -30,7 +30,7 @@ class DarkModeButtonPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Buttons"
 
     def icon(self):
-        return designer_material_icon("dark_mode")
+        return designer_material_icon(DarkModeButton.ICON_NAME)
 
     def includeFile(self):
         return "dark_mode_button"

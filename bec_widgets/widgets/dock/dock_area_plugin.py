@@ -34,7 +34,7 @@ class BECDockAreaPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Plots"
 
     def icon(self):
-        return designer_material_icon("widgets")
+        return designer_material_icon(BECDockArea.ICON_NAME)
 
     def includeFile(self):
         return "dock_area"

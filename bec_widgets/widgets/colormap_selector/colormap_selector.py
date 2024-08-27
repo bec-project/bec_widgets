@@ -46,6 +46,7 @@ class ColormapSelector(QWidget):
     """
 
     colormap_changed_signal = Signal(str)
+    ICON_NAME = "palette"
 
     def __init__(self, parent=None, default_colormaps=None):
         super().__init__(parent=parent)

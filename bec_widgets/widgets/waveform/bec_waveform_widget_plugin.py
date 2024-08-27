@@ -34,7 +34,7 @@ class BECWaveformWidgetPlugin(QDesignerCustomWidgetInterface):  # pragma: no cov
         return "BEC Plots"
 
     def icon(self):
-        return designer_material_icon("show_chart")
+        return designer_material_icon(BECWaveformWidget.ICON_NAME)
 
     def includeFile(self):
         return "bec_waveform_widget"

@@ -100,6 +100,7 @@ class CustomDockLabel(DockLabel):
 
 
 class BECDock(BECWidget, Dock):
+    ICON_NAME = "widgets"
     USER_ACCESS = [
         "_config_dict",
         "_rpc_id",

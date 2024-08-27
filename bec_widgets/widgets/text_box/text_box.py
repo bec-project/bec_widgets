@@ -31,6 +31,7 @@ class TextBoxConfig(ConnectionConfig):
 class TextBox(BECWidget, QTextEdit):
 
     USER_ACCESS = ["set_color", "set_text", "set_font_size"]
+    ICON_NAME = "chat"
 
     def __init__(self, parent=None, text: str = "", client=None, config=None, gui_id=None):
         if config is None:

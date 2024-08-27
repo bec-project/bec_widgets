@@ -33,7 +33,7 @@ class RingProgressBarPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Utils"
 
     def icon(self):
-        return designer_material_icon("track_changes")
+        return designer_material_icon(RingProgressBar.ICON_NAME)
 
     def includeFile(self):
         return "ring_progress_bar"

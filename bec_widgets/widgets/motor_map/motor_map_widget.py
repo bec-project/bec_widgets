@@ -14,6 +14,7 @@ from bec_widgets.widgets.motor_map.motor_map_dialog.motor_map_settings import Mo
 
 
 class BECMotorMapWidget(BECWidget, QWidget):
+    ICON_NAME = "my_location"
     USER_ACCESS = [
         "change_motors",
         "set_max_points",

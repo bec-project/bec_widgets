@@ -13,6 +13,8 @@ def ease_in_out_sine(t):
 
 
 class SpinnerWidget(QWidget):
+    ICON_NAME = "progress_activity"
+
     def __init__(self, parent=None):
         super().__init__(parent)
 

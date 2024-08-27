@@ -23,6 +23,7 @@ from bec_widgets.widgets.figure.plots.image.image_item import BECImageItem
 
 
 class BECImageWidget(BECWidget, QWidget):
+    ICON_NAME = "image"
     USER_ACCESS = [
         "image",
         "set",

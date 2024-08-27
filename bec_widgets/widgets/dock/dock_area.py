@@ -18,7 +18,16 @@ from bec_widgets.qt_utils.toolbar import (
 )
 from bec_widgets.utils import ConnectionConfig, WidgetContainerUtils
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.widgets.bec_queue.bec_queue import BECQueue
+from bec_widgets.widgets.bec_status_box.bec_status_box import BECStatusBox
 from bec_widgets.widgets.dock.dock import BECDock, DockConfig
+from bec_widgets.widgets.image.image_widget import BECImageWidget
+from bec_widgets.widgets.motor_map.motor_map_widget import BECMotorMapWidget
+from bec_widgets.widgets.positioner_box.positioner_box import PositionerBox
+from bec_widgets.widgets.ring_progress_bar.ring_progress_bar import RingProgressBar
+from bec_widgets.widgets.scan_control.scan_control import ScanControl
+from bec_widgets.widgets.vscode.vscode import VSCodeEditor
+from bec_widgets.widgets.waveform.waveform_widget import BECWaveformWidget
 
 
 class DockAreaConfig(ConnectionConfig):
@@ -71,13 +80,17 @@ class BECDockArea(BECWidget, QWidget):
                     label="Add Plot ",
                     actions={
                         "waveform": MaterialIconAction(
-                            icon_name="show_chart", tooltip="Add Waveform", filled=True
+                            icon_name=BECWaveformWidget.ICON_NAME,
+                            tooltip="Add Waveform",
+                            filled=True,
                         ),
                         "image": MaterialIconAction(
-                            icon_name="image", tooltip="Add Image", filled=True
+                            icon_name=BECImageWidget.ICON_NAME, tooltip="Add Image", filled=True
                         ),
                         "motor_map": MaterialIconAction(
-                            icon_name="my_location", tooltip="Add Motor Map", filled=True
+                            icon_name=BECMotorMapWidget.ICON_NAME,
+                            tooltip="Add Motor Map",
+                            filled=True,
                         ),
                     },
                 ),
@@ -86,10 +99,10 @@ class BECDockArea(BECWidget, QWidget):
                     label="Add Device Control ",
                     actions={
                         "scan_control": MaterialIconAction(
-                            icon_name="stacked_line_chart", tooltip="Add Scan Control", filled=True
+                            icon_name=ScanControl.ICON_NAME, tooltip="Add Scan Control", filled=True
                         ),
                         "positioner_box": MaterialIconAction(
-                            icon_name="switch_right", tooltip="Add Device Box", filled=True
+                            icon_name=PositionerBox.ICON_NAME, tooltip="Add Device Box", filled=True
                         ),
                     },
                 ),
@@ -98,16 +111,18 @@ class BECDockArea(BECWidget, QWidget):
                     label="Add Utils ",
                     actions={
                         "queue": MaterialIconAction(
-                            icon_name="edit_note", tooltip="Add Scan Queue", filled=True
+                            icon_name=BECQueue.ICON_NAME, tooltip="Add Scan Queue", filled=True
                         ),
                         "vs_code": MaterialIconAction(
-                            icon_name="show_chart", tooltip="Add VS Code", filled=True
+                            icon_name=VSCodeEditor.ICON_NAME, tooltip="Add VS Code", filled=True
                         ),
                         "status": MaterialIconAction(
-                            icon_name="dns", tooltip="Add BEC Status Box", filled=True
+                            icon_name=BECStatusBox.ICON_NAME,
+                            tooltip="Add BEC Status Box",
+                            filled=True,
                         ),
                         "progress_bar": MaterialIconAction(
-                            icon_name="track_changes",
+                            icon_name=RingProgressBar.ICON_NAME,
                             tooltip="Add Circular ProgressBar",
                             filled=True,
                         ),

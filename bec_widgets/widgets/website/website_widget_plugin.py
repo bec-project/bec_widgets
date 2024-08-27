@@ -33,7 +33,7 @@ class WebsiteWidgetPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Utils"
 
     def icon(self):
-        return designer_material_icon("travel_explore")
+        return designer_material_icon(WebsiteWidget.ICON_NAME)
 
     def includeFile(self):
         return "website_widget"

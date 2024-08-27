@@ -22,6 +22,8 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         arg_name: Argument name, can be used for the other widgets which has to call some other function in bec using correct argument names.
     """
 
+    ICON_NAME = "list_alt"
+
     def __init__(
         self,
         parent=None,

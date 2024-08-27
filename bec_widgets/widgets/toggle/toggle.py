@@ -11,6 +11,7 @@ class ToggleSwitch(QWidget):
     """
 
     enabled = Signal(bool)
+    ICON_NAME = "toggle_on"
 
     def __init__(self, parent=None):
         super().__init__(parent)

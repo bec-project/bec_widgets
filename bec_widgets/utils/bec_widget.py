@@ -7,6 +7,10 @@ from bec_widgets.utils.colors import set_theme
 class BECWidget(BECConnector):
     """Mixin class for all BEC widgets, to handle cleanup"""
 
+    # The icon name is the name of the icon in the icon theme, typically a name taken
+    # from fonts.google.com/icons. Override this in subclasses to set the icon name.
+    ICON_NAME = "widgets"
+
     def __init__(self, client=None, config: ConnectionConfig = None, gui_id: str = None):
         if not isinstance(self, QWidget):
             raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")

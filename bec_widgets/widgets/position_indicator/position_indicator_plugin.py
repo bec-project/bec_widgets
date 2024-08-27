@@ -34,7 +34,7 @@ class PositionIndicatorPlugin(QDesignerCustomWidgetInterface):  # pragma: no cov
         return "BEC Utils"
 
     def icon(self):
-        return designer_material_icon("horizontal_distribute")
+        return designer_material_icon(PositionIndicator.ICON_NAME)
 
     def includeFile(self):
         return "position_indicator"

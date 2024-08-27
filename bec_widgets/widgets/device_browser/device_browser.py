@@ -15,6 +15,8 @@ from bec_widgets.widgets.device_browser.device_item import DeviceItem
 class DeviceBrowser(BECWidget, QWidget):
     device_update: Signal = Signal()
 
+    ICON_NAME = "lists"
+
     def __init__(
         self,
         parent: Optional[QWidget] = None,

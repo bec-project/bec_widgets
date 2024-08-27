@@ -34,7 +34,7 @@ class BECQueuePlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Services"
 
     def icon(self):
-        return designer_material_icon("edit_note")
+        return designer_material_icon(BECQueue.ICON_NAME)
 
     def includeFile(self):
         return "bec_queue"

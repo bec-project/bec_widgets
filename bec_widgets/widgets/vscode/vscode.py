@@ -18,6 +18,7 @@ class VSCodeEditor(WebsiteWidget):
     port = 7000
 
     USER_ACCESS = []
+    ICON_NAME = "developer_mode_tv"
 
     def __init__(self, parent=None, config=None, client=None, gui_id=None):
 

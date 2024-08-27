@@ -28,6 +28,7 @@ except ImportError:
 
 
 class BECWaveformWidget(BECWidget, QWidget):
+    ICON_NAME = "show_chart"
     USER_ACCESS = [
         "curves",
         "plot",
@@ -105,7 +106,7 @@ class BECWaveformWidget(BECWidget, QWidget):
                 ),
                 "separator_2": SeparatorAction(),
                 "curves": MaterialIconAction(
-                    icon_name="stacked_line_chart", tooltip="Open Curves Configuration"
+                    icon_name="timeline", tooltip="Open Curves Configuration"
                 ),
                 "fit_params": MaterialIconAction(
                     icon_name="monitoring", tooltip="Open Fitting Parameters"

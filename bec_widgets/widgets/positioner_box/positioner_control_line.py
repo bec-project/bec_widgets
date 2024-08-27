@@ -9,6 +9,8 @@ class PositionerControlLine(PositionerBox):
     ui_file = "positioner_control_line.ui"
     dimensions = (60, 600)  # height, width
 
+    ICON_NAME = "switch_left"
+
     def __init__(self, parent=None, device: Positioner = None, *args, **kwargs):
         """Initialize the DeviceControlLine.
 

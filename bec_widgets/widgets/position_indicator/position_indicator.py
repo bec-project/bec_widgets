@@ -5,6 +5,8 @@ from qtpy.QtWidgets import QWidget
 
 class PositionIndicator(QWidget):
 
+    ICON_NAME = "horizontal_distribute"
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.position = 0.5

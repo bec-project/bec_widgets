@@ -33,7 +33,7 @@ class TextBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Utils"
 
     def icon(self):
-        return designer_material_icon("chat")
+        return designer_material_icon(TextBox.ICON_NAME)
 
     def includeFile(self):
         return "text_box"

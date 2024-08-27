@@ -30,7 +30,7 @@ class DeviceBrowserPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Services"
 
     def icon(self):
-        return designer_material_icon("lists")
+        return designer_material_icon(DeviceBrowser.ICON_NAME)
 
     def includeFile(self):
         return "device_browser"

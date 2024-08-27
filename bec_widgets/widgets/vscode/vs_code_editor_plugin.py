@@ -34,7 +34,7 @@ class VSCodeEditorPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Developer"
 
     def icon(self):
-        return designer_material_icon("developer_mode_tv")
+        return designer_material_icon(VSCodeEditor.ICON_NAME)
 
     def includeFile(self):
         return "vs_code_editor"

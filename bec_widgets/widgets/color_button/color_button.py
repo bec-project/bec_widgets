@@ -11,6 +11,8 @@ class ColorButton(pg.ColorButton):
     Patches event loop of the ColorDialog, if opened in another QDialog.
     """
 
+    ICON_NAME = "colors"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

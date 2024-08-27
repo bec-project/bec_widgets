@@ -68,6 +68,7 @@ class RingProgressBarConfig(ConnectionConfig):
 
 
 class RingProgressBar(BECWidget, QWidget):
+    ICON_NAME = "track_changes"
     USER_ACCESS = [
         "_get_all_rpc",
         "_rpc_id",

@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
-from qtpy.QtGui import QIcon
 
+from bec_widgets.utils.bec_designer import designer_material_icon
 {widget_import}
 
 DOM_XML = """
@@ -30,7 +30,7 @@ class {plugin_name_pascal}Plugin(QDesignerCustomWidgetInterface):  # pragma: no 
         return ""
 
     def icon(self):
-        return QIcon()
+        return designer_material_icon({plugin_name_pascal}.ICON_NAME)
 
     def includeFile(self):
         return "{plugin_name_snake}"

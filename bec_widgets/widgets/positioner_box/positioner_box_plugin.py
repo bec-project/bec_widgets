@@ -33,7 +33,7 @@ class PositionerBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "Device Control"
 
     def icon(self):
-        return designer_material_icon("switch_right")
+        return designer_material_icon(PositionerBox.ICON_NAME)
 
     def includeFile(self):
         return "positioner_box"

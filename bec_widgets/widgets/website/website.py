@@ -19,6 +19,7 @@ class WebsiteWidget(BECWidget, QWebEngineView):
     A simple widget to display a website
     """
 
+    ICON_NAME = "travel_explore"
     USER_ACCESS = ["set_url", "get_url", "reload", "back", "forward"]
 
     def __init__(self, parent=None, url: str = None, config=None, client=None, gui_id=None):
