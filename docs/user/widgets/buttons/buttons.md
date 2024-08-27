@@ -2,7 +2,7 @@
 
 # Service Buttons
 
-````{tab} Overview
+`````{tab} Overview
 
 This section consolidates various custom buttons used within the BEC GUIs, providing essential controls for managing operations and processes. These buttons are designed for easy integration into different layouts within the BEC environment, allowing users to embed functional controls into their applications seamlessly.
 
@@ -18,15 +18,23 @@ The `Stop Button` is a specialized control that provides an immediate interface 
 
 The `Dark Mode Button` is a toggle control that allows users to switch between light and dark themes in the BEC GUI. It provides a convenient way to adjust the interface's appearance based on user preferences or environmental conditions.
 
-```{figure} ./dark_mode_enabled.png
+````{grid} 2
+:gutter: 2
+
+```{grid-item-card} Dark Mode
+:img-top:  ./dark_mode_enabled.png
 ```
-```{figure} ./dark_mode_disabled.png
+
+```{grid-item-card} Light Mode
+:img-top:  ./dark_mode_disabled.png
 ```
+````
+
 
 **Key Features:**
 - **Theme Switching**: Enables users to switch between light and dark themes with a single click.
 - **Configurable from BECDesigner**: The defaults for the dark mode can be set in the BECDesigner, allowing users to customize the startup appearance of the GUI.
-````
+`````
 
 ````{tab} Examples
 
