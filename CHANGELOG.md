@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v0.99.2 (2024-08-27)
+
+### Ci
+
+* ci: additional tests are not allowed to fail ([`bb385f0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bb385f07ca18904461a541b5cadde05398c84438))
+
+### Fix
+
+* fix(widgets): fixed default theme for widgets
+
+If not theme is set, the init of the BECWidget base class sets the default theme to &#34;dark&#34; ([`cf28730`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cf28730515e3c2d5914e0205768734c578711e5c))
+
 ## v0.99.1 (2024-08-27)
 
 ### Fix
@@ -129,12 +141,6 @@
 ### Documentation
 
 * docs(device_browser): added user docs ([`2c31cc9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2c31cc90ae751f14a653cbbdd6c353d6359aaafe))
-
-* docs(user): widget gallery with documentation added ([`7357f3d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7357f3d2a189f9f04954a027f39ce07c394d57ec))
-
-* docs: added sphinx-inline-tabs as sphinx dependency ([`e9ecd26`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e9ecd268c602ea9572df0e8d508e49ee62d0c170))
-
-* docs(cards): changed index cards to custom css class instead of overwriting the default sd-card theme ([`91ba30e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/91ba30e8d054a9c7f6c6d98b21113a5d0b1bbbbb))
 
 ### Feature
 
