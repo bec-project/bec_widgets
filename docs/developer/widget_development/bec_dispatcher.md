@@ -1,4 +1,4 @@
-(developer.bec_dispatcher)=
+(developer.widget_development.bec_dispatcher)=
 
 # BECDispatcher
 
