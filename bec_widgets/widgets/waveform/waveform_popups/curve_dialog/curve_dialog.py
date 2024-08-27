@@ -281,7 +281,7 @@ class DialogRow(QObject):
             self.symbol_size.setValue(self.config.symbol_size)
         else:
             default_colors = Colors.golden_angle_color(
-                colormap="plasma", num=max(10, self.row + 1), format="HEX"
+                colormap="magma", num=max(10, self.row + 1), format="HEX"
             )
             default_color = default_colors[self.row]
             self.color_button.setColor(default_color)
@@ -305,7 +305,7 @@ class DialogRow(QObject):
             self.symbol_size.setValue(self.config.symbol_size)
         else:
             default_colors = Colors.golden_angle_color(
-                colormap="plasma", num=max(10, self.row + 1), format="HEX"
+                colormap="magma", num=max(10, self.row + 1), format="HEX"
             )
             default_color = default_colors[self.row]
             self.color_button.setColor(default_color)

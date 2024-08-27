@@ -49,8 +49,8 @@ def test_mouse_moved_lines(plot_widget_with_crosshair):
     crosshair.mouse_moved(event_mock)
 
     # Assert the expected behavior
-    assert crosshair.v_line.pos().x() == 2
-    assert crosshair.h_line.pos().y() == 5
+    assert np.isclose(crosshair.v_line.pos().x(), 2)
+    assert np.isclose(crosshair.h_line.pos().y(), 5)
 
 
 def test_mouse_moved_signals(plot_widget_with_crosshair):

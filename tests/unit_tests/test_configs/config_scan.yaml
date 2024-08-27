@@ -1,7 +1,7 @@
 plot_settings:
   background_color: "white"
   num_columns: 3
-  colormap: "plasma"
+  colormap: "magma"
   scan_types: true
 plot_data:
   grid_scan:

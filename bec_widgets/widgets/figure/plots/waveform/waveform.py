@@ -26,7 +26,7 @@ from bec_widgets.widgets.figure.plots.waveform.waveform_curve import (
 
 class Waveform1DConfig(SubplotConfig):
     color_palette: Optional[str] = Field(
-        "plasma", description="The color palette of the figure widget.", validate_default=True
+        "magma", description="The color palette of the figure widget.", validate_default=True
     )
     curves: dict[str, CurveConfig] = Field(
         {}, description="The list of curves to be added to the 1D waveform widget."
@@ -269,7 +269,7 @@ class BECWaveform(BECPlotBase):
         y_entry: str | None = None,
         z_entry: str | None = None,
         color: str | None = None,
-        color_map_z: str | None = "plasma",
+        color_map_z: str | None = "magma",
         label: str | None = None,
         validate: bool = True,
         dap: str | None = None,  # TODO add dap custom curve wrapper
@@ -481,7 +481,7 @@ class BECWaveform(BECPlotBase):
         y_entry: str | None = None,
         z_entry: str | None = None,
         color: str | None = None,
-        color_map_z: str | None = "plasma",
+        color_map_z: str | None = "magma",
         label: str | None = None,
         validate_bec: bool = True,
         dap: str | None = None,

@@ -252,7 +252,7 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
         y_entry: str | None = None,
         z_entry: str | None = None,
         color: str | None = None,
-        color_map_z: str | None = "plasma",
+        color_map_z: str | None = "magma",
         label: str | None = None,
         validate: bool = True,
         new: bool = False,

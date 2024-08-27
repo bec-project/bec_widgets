@@ -52,7 +52,7 @@ class CurveConfig(ConnectionConfig):
     source: Optional[str] = Field(None, description="The source of the curve.")
     signals: Optional[Signal] = Field(None, description="The signal of the curve.")
     color_map_z: Optional[str] = Field(
-        "plasma", description="The colormap of the curves z gradient.", validate_default=True
+        "magma", description="The colormap of the curves z gradient.", validate_default=True
     )
 
     model_config: dict = {"validate_assignment": True}

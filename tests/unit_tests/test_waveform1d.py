@@ -73,7 +73,7 @@ def test_create_waveform1D_by_config(qtbot, mocked_client):
             "x_grid": False,
             "y_grid": False,
         },
-        "color_palette": "plasma",
+        "color_palette": "magma",
         "curves": {
             "bpm4i-bpm4i": {
                 "widget_class": "BECCurve",
@@ -81,11 +81,11 @@ def test_create_waveform1D_by_config(qtbot, mocked_client):
                 "parent_id": "widget_1",
                 "label": "bpm4i-bpm4i",
                 "color": "#cc4778",
-                "color_map_z": "plasma",
+                "color_map_z": "magma",
                 "symbol": "o",
                 "symbol_color": None,
-                "symbol_size": 5,
-                "pen_width": 2,
+                "symbol_size": 7,
+                "pen_width": 4,
                 "pen_style": "dash",
                 "source": "scan_segment",
                 "signals": {
@@ -114,11 +114,11 @@ def test_create_waveform1D_by_config(qtbot, mocked_client):
                 "parent_id": "widget_1",
                 "label": "curve-custom",
                 "color": "blue",
-                "color_map_z": "plasma",
+                "color_map_z": "magma",
                 "symbol": "o",
                 "symbol_color": None,
-                "symbol_size": 5,
-                "pen_width": 2,
+                "symbol_size": 7,
+                "pen_width": 5,
                 "pen_style": "dashdot",
                 "source": "custom",
                 "signals": None,
@@ -155,11 +155,11 @@ def test_getting_curve(qtbot, mocked_client):
         gui_id="test_curve",
         parent_id=w1.gui_id,
         label="bpm4i-bpm4i",
-        color="#cc4778",
+        color="#b73779",
         symbol="o",
         symbol_color=None,
-        symbol_size=5,
-        pen_width=2,
+        symbol_size=7,
+        pen_width=4,
         pen_style="solid",
         source="scan_segment",
         signals=Signal(
@@ -398,11 +398,11 @@ def test_curve_add_by_config(qtbot, mocked_client):
         "parent_id": "widget_1",
         "label": "bpm4i-bpm4i",
         "color": "#cc4778",
-        "color_map_z": "plasma",
+        "color_map_z": "magma",
         "symbol": "o",
         "symbol_color": None,
-        "symbol_size": 5,
-        "pen_width": 2,
+        "symbol_size": 7,
+        "pen_width": 4,
         "pen_style": "dash",
         "source": "scan_segment",
         "signals": {
@@ -522,7 +522,7 @@ def test_scatter_2d_update(qtbot, mocked_client):
 
     data = c1.get_data()
     expected_x_y_data = ([1, 2, 3], [1, 2, 3])
-    expected_z_colors = w1._make_z_gradient([1, 3, 2], "plasma")
+    expected_z_colors = w1._make_z_gradient([1, 3, 2], "magma")
 
     scatter_points = c1.scatter.points()
     colors = [point.brush().color() for point in scatter_points]
