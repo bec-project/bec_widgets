@@ -29,6 +29,7 @@ def set_theme(theme: Literal["dark", "light", "auto"]):
     app = QApplication.instance()
     bec_qthemes.setup_theme(theme)
     pg.setConfigOption("background", "w" if app.theme["theme"] == "light" else "k")
+    apply_theme(theme)
 
     # pylint: disable=protected-access
     if theme != "auto":
@@ -44,6 +45,9 @@ def set_theme(theme: Literal["dark", "light", "auto"]):
 
 
 def apply_theme(theme: Literal["dark", "light"]):
+    """
+    Apply the theme to all pyqtgraph widgets. Do not use this function directly. Use set_theme instead.
+    """
     app = QApplication.instance()
     # go through all pyqtgraph widgets and set background
     children = itertools.chain.from_iterable(
