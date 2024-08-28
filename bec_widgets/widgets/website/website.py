@@ -1,4 +1,4 @@
-from qtpy.QtCore import QUrl, qInstallMessageHandler
+from qtpy.QtCore import Property, QUrl, Slot, qInstallMessageHandler
 from qtpy.QtWebEngineWidgets import QWebEngineView
 from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
@@ -32,6 +32,27 @@ class WebsiteWidget(BECWidget, QWidget):
         self.setLayout(layout)
         self.set_url(url)
 
+    @Property(str)
+    def url(self) -> str:
+        """
+        The url of the website widget
+
+        Returns:
+            str: The url
+        """
+        return self.get_url()
+
+    @url.setter
+    def url(self, url: str) -> None:
+        """
+        Set the url of the website widget
+
+        Args:
+            url (str): The url to set
+        """
+        self.set_url(url)
+
+    @Slot(str)
     def set_url(self, url: str) -> None:
         """
         Set the url of the website widget
@@ -40,6 +61,8 @@ class WebsiteWidget(BECWidget, QWidget):
             url (str): The url to set
         """
         if not url:
+            return
+        if not isinstance(url, str):
             return
         self.website.setUrl(QUrl(url))
 
@@ -52,18 +75,21 @@ class WebsiteWidget(BECWidget, QWidget):
         """
         return self.website.url().toString()
 
+    @Slot()
     def reload(self):
         """
         Reload the website
         """
         QWebEngineView.reload(self.website)
 
+    @Slot()
     def back(self):
         """
         Go back in the history
         """
         QWebEngineView.back(self.website)
 
+    @Slot()
     def forward(self):
         """
         Go forward in the history
