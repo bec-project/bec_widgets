@@ -2,10 +2,11 @@
 import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from typing import Literal
 
 from bec_qthemes._icon.material_icons import material_icon
 from qtpy.QtCore import QSize
-from qtpy.QtGui import QAction, QIcon
+from qtpy.QtGui import QAction, QColor, QIcon
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QMenu, QToolBar, QToolButton, QWidget
 
 import bec_widgets
@@ -86,12 +87,14 @@ class MaterialIconAction:
         tooltip: str = None,
         checkable: bool = False,
         filled: bool = False,
+        color: str | tuple | QColor | dict[Literal["dark", "light"], str] | None = None,
     ):
         self.icon_name = icon_name
         self.tooltip = tooltip
         self.checkable = checkable
         self.action = None
         self.filled = filled
+        self.color = color
 
     def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
         icon = self.get_icon()
@@ -102,7 +105,11 @@ class MaterialIconAction:
     def get_icon(self):
 
         icon = material_icon(
-            self.icon_name, size=(20, 20), convert_to_pixmap=False, filled=self.filled
+            self.icon_name,
+            size=(20, 20),
+            convert_to_pixmap=False,
+            filled=self.filled,
+            color=self.color,
         )
         return icon
 
@@ -217,3 +224,4 @@ class ModularToolBar(QToolBar):
         self.setMovable(False)
         self.setFloatable(False)
         self.setContentsMargins(0, 0, 0, 0)
+        self.setStyleSheet("QToolBar { background-color: rgba(0, 0, 0, 0); border: none; }")
