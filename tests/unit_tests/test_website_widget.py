@@ -16,10 +16,10 @@ def website_widget(qtbot, mocked_client):
 
 def test_website_widget_set_url(website_widget):
     website_widget.set_url("https://scilog.psi.ch")
-    assert website_widget.url() == QUrl("https://scilog.psi.ch")
+    assert website_widget.website.url() == QUrl("https://scilog.psi.ch")
 
     website_widget.set_url(None)
-    assert website_widget.url() == QUrl("https://scilog.psi.ch")
+    assert website_widget.website.url() == QUrl("https://scilog.psi.ch")
 
     website_widget.set_url("https://google.com")
     assert website_widget.get_url() == "https://google.com"

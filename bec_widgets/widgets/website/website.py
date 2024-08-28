@@ -1,6 +1,6 @@
 from qtpy.QtCore import QUrl, qInstallMessageHandler
 from qtpy.QtWebEngineWidgets import QWebEngineView
-from qtpy.QtWidgets import QApplication
+from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
 
@@ -14,7 +14,7 @@ def suppress_qt_messages(type_, context, msg):
 qInstallMessageHandler(suppress_qt_messages)
 
 
-class WebsiteWidget(BECWidget, QWebEngineView):
+class WebsiteWidget(BECWidget, QWidget):
     """
     A simple widget to display a website
     """
@@ -24,7 +24,12 @@ class WebsiteWidget(BECWidget, QWebEngineView):
 
     def __init__(self, parent=None, url: str = None, config=None, client=None, gui_id=None):
         super().__init__(client=client, config=config, gui_id=gui_id)
-        QWebEngineView.__init__(self, parent=parent)
+        QWidget.__init__(self, parent=parent)
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.website = QWebEngineView()
+        layout.addWidget(self.website)
+        self.setLayout(layout)
         self.set_url(url)
 
     def set_url(self, url: str) -> None:
@@ -36,7 +41,7 @@ class WebsiteWidget(BECWidget, QWebEngineView):
         """
         if not url:
             return
-        self.setUrl(QUrl(url))
+        self.website.setUrl(QUrl(url))
 
     def get_url(self) -> str:
         """
@@ -45,31 +50,31 @@ class WebsiteWidget(BECWidget, QWebEngineView):
         Returns:
             str: The current url
         """
-        return self.url().toString()
+        return self.website.url().toString()
 
     def reload(self):
         """
         Reload the website
         """
-        QWebEngineView.reload(self)
+        QWebEngineView.reload(self.website)
 
     def back(self):
         """
         Go back in the history
         """
-        QWebEngineView.back(self)
+        QWebEngineView.back(self.website)
 
     def forward(self):
         """
         Go forward in the history
         """
-        QWebEngineView.forward(self)
+        QWebEngineView.forward(self.website)
 
     def cleanup(self):
         """
         Cleanup the widget
         """
-        self.page().deleteLater()
+        self.website.page().deleteLater()
 
 
 if __name__ == "__main__":
