@@ -54,4 +54,5 @@ hidden: false
 bec_dispatcher
 widget_base_class
 widget_tutorial
+tutorial_tests
 ```
