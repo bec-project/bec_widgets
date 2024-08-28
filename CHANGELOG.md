@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.99.6 (2024-08-28)
+
+### Documentation
+
+* docs: various bugs fixed ([`c31e9a3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c31e9a3aff3ee8e984674dee0965ee7f1b6e2b8f))
+
+### Fix
+
+* fix(toolbar): use of native qt separators ([`09c6c93`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/09c6c93c397ce4a21c293f6c79106c74b2db65ca))
+
 ## v0.99.5 (2024-08-28)
 
 ### Documentation
@@ -138,10 +148,6 @@ If not theme is set, the init of the BECWidget base class sets the default theme
 
 ## v0.96.1 (2024-08-22)
 
-### Ci
-
-* ci: fail pytest after 2 failed tests ([`f0203d9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f0203d9bf60c4975ba5ab93a057d9091762454d5))
-
 ### Fix
 
 * fix(crosshair): update markers if necessary ([`4473805`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/44738057a36f5de2bbb55affdd309f92286d4a0f))
@@ -149,15 +155,3 @@ If not theme is set, the init of the BECWidget base class sets the default theme
 * fix(waveform_widget): fixed icon appearance ([`f98a9f9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f98a9f9771b93226d47830aa52f45739624f51b4))
 
 * fix: bubble-up signals ([`2fe72c9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2fe72c9ccb71bcb196a1b78197b73acf9aa3f506))
-
-* fix(crosshair): fixed crosshair for image and waveforms ([`37835cb`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/37835cbf76ca3ba1081f514ee7793244ac500e7f))
-
-## v0.96.0 (2024-08-22)
-
-### Documentation
-
-* docs(scan_control): added designer options ([`9d7718c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9d7718c3d9badf14150174410b9958a3134a1e23))
-
-### Feature
-
-* feat(scan_control): added the ability to configure the scan control widget from designer ([`9d8fb0b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9d8fb0b761efa92972399bcd9aea28e956074380))
