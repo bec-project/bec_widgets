@@ -126,12 +126,43 @@ class ScanControl(BECWidget, QWidget):
         selected_scan_name = self.comboBox_scan_selection.currentText()
         self.scan_selected.emit(selected_scan_name)
 
+    @Property(str)
+    def current_scan(self):
+        """Returns the scan name for the currently selected scan."""
+        return self.comboBox_scan_selection.currentText()
+
+    @current_scan.setter
+    def current_scan(self, scan_name: str):
+        """Sets the current scan to the given scan name.
+
+        Args:
+            scan_name(str): Name of the scan to set as current.
+        """
+        if scan_name not in self.available_scans:
+            return
+        self.comboBox_scan_selection.setCurrentText(scan_name)
+
+    @Slot(str)
+    def set_current_scan(self, scan_name: str):
+        """Slot for setting the current scan to the given scan name.
+
+        Args:
+            scan_name(str): Name of the scan to set as current.
+        """
+        self.current_scan = scan_name
+
     @Property(bool)
     def hide_scan_control_buttons(self):
+        """Property to hide the scan control buttons."""
         return not self.button_run_scan.isVisible()
 
     @hide_scan_control_buttons.setter
     def hide_scan_control_buttons(self, hide: bool):
+        """Setter for the hide_scan_control_buttons property.
+
+        Args:
+            hide(bool): Hide or show the scan control buttons.
+        """
         self.show_scan_control_buttons(not hide)
 
     @Slot(bool)
@@ -145,10 +176,16 @@ class ScanControl(BECWidget, QWidget):
 
     @Property(bool)
     def hide_scan_selection_combobox(self):
+        """Property to hide the scan selection combobox."""
         return not self.comboBox_scan_selection.isVisible()
 
     @hide_scan_selection_combobox.setter
     def hide_scan_selection_combobox(self, hide: bool):
+        """Setter for the hide_scan_selection_combobox property.
+
+        Args:
+            hide(bool): Hide or show the scan selection combobox.
+        """
         self.show_scan_selection_combobox(not hide)
 
     @Slot(bool)
@@ -176,8 +213,7 @@ class ScanControl(BECWidget, QWidget):
 
         show_bundle_buttons = bool(self.arg_group["arg_inputs"])
 
-        self.button_add_bundle.setVisible(show_bundle_buttons)
-        self.button_remove_bundle.setVisible(show_bundle_buttons)
+        self._show_bundle_buttons(show_bundle_buttons)
 
         if show_bundle_buttons:
             self.add_arg_group(self.arg_group)
@@ -186,6 +222,29 @@ class ScanControl(BECWidget, QWidget):
 
         self.update()
         self.adjustSize()
+
+    def _show_bundle_buttons(self, show: bool):
+        """Shows or hides the bundle buttons based on the show argument.
+
+        Args:
+            show(bool): Show or hide the bundle buttons.
+        """
+        self.button_add_bundle.setVisible(show)
+        self.button_remove_bundle.setVisible(show)
+
+    @Property(bool)
+    def hide_bundle_buttons(self):
+        """Property to hide the bundle buttons."""
+        return not self.button_add_bundle.isVisible()
+
+    @hide_bundle_buttons.setter
+    def hide_bundle_buttons(self, hide: bool):
+        """Setter for the hide_bundle_buttons property.
+
+        Args:
+            hide(bool): Hide or show the bundle buttons.
+        """
+        self._show_bundle_buttons(not hide)
 
     def add_kwargs_boxes(self, groups: list):
         """
@@ -212,10 +271,12 @@ class ScanControl(BECWidget, QWidget):
 
     @Slot()
     def add_arg_bundle(self):
+        """Adds a new argument bundle to the scan control layout."""
         self.arg_box.add_widget_bundle()
 
     @Slot()
     def remove_arg_bundle(self):
+        """Removes the last argument bundle from the scan control layout."""
         self.arg_box.remove_widget_bundle()
 
     def reset_layout(self):
@@ -235,6 +296,7 @@ class ScanControl(BECWidget, QWidget):
 
     @Slot()
     def run_scan(self):
+        """Starts the selected scan with the given parameters."""
         self.scan_started.emit()
         args = []
         kwargs = {}
@@ -248,6 +310,7 @@ class ScanControl(BECWidget, QWidget):
             scan_function(*args, **kwargs)
 
     def cleanup(self):
+        """Cleanup the scan control widget."""
         self.button_stop_scan.cleanup()
         if self.arg_box:
             for widget in self.arg_box.widgets:

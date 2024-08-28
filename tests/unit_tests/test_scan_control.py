@@ -233,6 +233,16 @@ def test_populate_scans(scan_control, mocked_client):
     assert sorted(items) == sorted(expected_scans)
 
 
+def test_current_scan(scan_control, mocked_client):
+    current_scan = scan_control.current_scan
+    wrong_scan = "error_scan"
+    scan_control.current_scan = wrong_scan
+    assert scan_control.current_scan == current_scan
+    new_scan = "grid_scan" if current_scan == "line_scan" else "line_scan"
+    scan_control.current_scan = new_scan
+    assert scan_control.current_scan == new_scan
+
+
 @pytest.mark.parametrize("scan_name", ["line_scan", "grid_scan"])
 def test_on_scan_selected(scan_control, scan_name):
     expected_scan_info = available_scans_message.resource[scan_name]
