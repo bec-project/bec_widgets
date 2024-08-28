@@ -20,6 +20,7 @@ from bec_widgets.utils import ConnectionConfig, WidgetContainerUtils
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.bec_queue.bec_queue import BECQueue
 from bec_widgets.widgets.bec_status_box.bec_status_box import BECStatusBox
+from bec_widgets.widgets.dark_mode_button.dark_mode_button import DarkModeButton
 from bec_widgets.widgets.dock.dock import BECDock, DockConfig
 from bec_widgets.widgets.image.image_widget import BECImageWidget
 from bec_widgets.widgets.motor_map.motor_map_widget import BECMotorMapWidget
@@ -142,6 +143,7 @@ class BECDockArea(BECWidget, QWidget):
 
         self.layout.addWidget(self.toolbar)
         self.layout.addWidget(self.dock_area)
+        self.toolbar.addWidget(DarkModeButton(toolbar=True))
         self._hook_toolbar()
 
     def _hook_toolbar(self):

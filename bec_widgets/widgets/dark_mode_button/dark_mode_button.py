@@ -1,6 +1,6 @@
 from bec_qthemes import material_icon
 from qtpy.QtCore import Property, Qt, Slot
-from qtpy.QtWidgets import QHBoxLayout, QPushButton, QWidget
+from qtpy.QtWidgets import QHBoxLayout, QPushButton, QToolButton, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import set_theme
@@ -12,7 +12,11 @@ class DarkModeButton(BECWidget, QWidget):
     ICON_NAME = "dark_mode"
 
     def __init__(
-        self, parent: QWidget | None = None, client=None, gui_id: str | None = None
+        self,
+        parent: QWidget | None = None,
+        client=None,
+        gui_id: str | None = None,
+        toolbar: bool = False,
     ) -> None:
         super().__init__(client=client, gui_id=gui_id)
         QWidget.__init__(self, parent)
@@ -24,7 +28,10 @@ class DarkModeButton(BECWidget, QWidget):
         self.layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         icon = material_icon("dark_mode", size=(20, 20), convert_to_pixmap=False)
-        self.mode_button = QPushButton(icon=icon)
+        if toolbar:
+            self.mode_button = QToolButton(icon=icon)
+        else:
+            self.mode_button = QPushButton(icon=icon)
         self.update_mode_button()
         self.mode_button.clicked.connect(self.toggle_dark_mode)
         self.layout.addWidget(self.mode_button)
