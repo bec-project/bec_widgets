@@ -1,8 +1,8 @@
+:html_theme.sidebar_secondary.remove:
+
 # BEC Widgets documentation
 
 A flexible and extensible framework for building graphical user interfaces in Python, optimized for use in the BEC environment.
-
-<br><br>
 
 <br><br>
 
