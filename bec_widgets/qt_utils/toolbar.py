@@ -45,9 +45,7 @@ class SeparatorAction(ToolBarAction):
     """Separator action for the toolbar."""
 
     def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
-        self.separator = QToolButton()
-        self.separator.setFixedSize(2, 22)
-        toolbar.addWidget(self.separator)
+        toolbar.addSeparator()
 
 
 class IconAction(ToolBarAction):

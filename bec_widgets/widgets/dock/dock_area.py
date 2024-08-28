@@ -7,7 +7,7 @@ from pydantic import Field
 from pyqtgraph.dockarea.DockArea import DockArea
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QPainter, QPaintEvent
-from qtpy.QtWidgets import QVBoxLayout, QWidget
+from qtpy.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeSlot
 from bec_widgets.qt_utils.toolbar import (
@@ -143,6 +143,9 @@ class BECDockArea(BECWidget, QWidget):
 
         self.layout.addWidget(self.toolbar)
         self.layout.addWidget(self.dock_area)
+        self.spacer = QWidget()
+        self.spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.toolbar.addWidget(self.spacer)
         self.toolbar.addWidget(DarkModeButton(toolbar=True))
         self._hook_toolbar()
 
