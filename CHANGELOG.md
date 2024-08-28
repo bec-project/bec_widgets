@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.99.5 (2024-08-28)
+
+### Documentation
+
+* docs(index): index page is centered ([`02239de`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/02239de0a36fcd6cbf97990b0dec1ddf7ecf6ba6))
+
+### Fix
+
+* fix(dock_area): dark button added ([`e6f204b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e6f204b6aa295747a68769f43af2e549149b401a))
+
 ## v0.99.4 (2024-08-28)
 
 ### Documentation
@@ -151,5 +161,3 @@ If not theme is set, the init of the BECWidget base class sets the default theme
 ### Feature
 
 * feat(scan_control): added the ability to configure the scan control widget from designer ([`9d8fb0b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9d8fb0b761efa92972399bcd9aea28e956074380))
-
-## v0.95.1 (2024-08-22)
