@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## v0.99.4 (2024-08-28)
+
+### Documentation
+
+* docs(buttons): added missing buttons docs ([`4e5520a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4e5520aee2115d2fc0cebb3865433478a5ec8253))
+
+* docs(developer): tutorial for BECWidget base class ([`ac2cb51`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ac2cb5197deef4d51e26ee5beb070eba3ffc210d))
+
+### Fix
+
+* fix(theme): apply theme to all pyqtgraph widgets on manual updates ([`c550186`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c5501860e8e07a53f4bce144d44ed39eda6290ef))
+
+### Refactor
+
+* refactor(buttons): changed grid and thumbnail fig in gallery ([`4591ba8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4591ba8f73e22aba7258cad93c073f1387cb74a0))
+
+* refactor(icons): removed toolbar icons from assets ([`f335763`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f335763280adb1d83ba31f073ce206e4cb5d15ef))
+
+* refactor(icons): moved widget icons to class attribute ICON_NAME ([`e890091`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e890091d862e42317c7a54fc414ba37c85f268b0))
+
 ## v0.99.3 (2024-08-27)
 
 ### Build
@@ -133,27 +153,3 @@ If not theme is set, the init of the BECWidget base class sets the default theme
 * feat(scan_control): added the ability to configure the scan control widget from designer ([`9d8fb0b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9d8fb0b761efa92972399bcd9aea28e956074380))
 
 ## v0.95.1 (2024-08-22)
-
-### Documentation
-
-* docs: links section added ([`2bf5c70`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2bf5c7096e7d822713e1b50bde89f072e6356e17))
-
-### Fix
-
-* fix(docs): changed link to scan gui config in main docs ([`640464a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/640464a6543b2111bdb58d0174f2ce86c5836cbe))
-
-### Refactor
-
-* refactor: removed designer pngs ([`84abe46`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/84abe460502d838aac41bb8ff63d93c9fcec9214))
-
-* refactor: moved to dynamically loaded material design icons ([`1d2afaa`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1d2afaa09e64b7f714d72796e87e2cb49b2a75a7))
-
-## v0.95.0 (2024-08-21)
-
-### Feature
-
-* feat(cli): added device_browser to cli ([`196504b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/196504b533367a899c19b88af4ccd5b39dc46aac))
-
-### Fix
-
-* fix(device_browser): fixed plugin assignment for designer ([`6500393`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/650039303aae9bbec62c676285938416fff146ce))
