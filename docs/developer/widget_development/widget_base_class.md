@@ -15,10 +15,8 @@ The [`BECWidget`](https://bec.readthedocs.io/projects/bec-widgets/en/latest/api_
 base class is designed to serve as the foundation for all BEC-connected widgets. It ensures that your widget is properly
 integrated with the BEC system by providing:
 
-1. **Connection to BEC Services
-   **: [`BECWidget`](https://bec.readthedocs.io/projects/bec-widgets/en/latest/api_reference/_autosummary/bec_widgets.utils.bec_widget.BECWidget.html#bec_widgets.utils.bec_widget.BECWidget)
-   includes
-   the [`BECConnector`](https://bec.readthedocs.io/projects/bec-widgets/en/latest/api_reference/_autosummary/bec_widgets.utils.bec_connector.BECConnector.html#bec_widgets.utils.bec_connector.BECConnector)
+1. **Connection to BEC Services**: 
+   [`BECWidget`](https://bec.readthedocs.io/projects/bec-widgets/en/latest/api_reference/_autosummary/bec_widgets.utils.bec_widget.BECWidget.html#bec_widgets.utils.bec_widget.BECWidget) includes the [`BECConnector`](https://bec.readthedocs.io/projects/bec-widgets/en/latest/api_reference/_autosummary/bec_widgets.utils.bec_connector.BECConnector.html#bec_widgets.utils.bec_connector.BECConnector)
    mixin, which handles all the necessary connections to BEC services such as the BEC server, device manager, scan
    control, and more.
 

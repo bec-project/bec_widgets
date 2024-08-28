@@ -5,10 +5,7 @@
 ## Overview
 
 The [`BECDispatcher`](https://bec.readthedocs.io/projects/bec-widgets/en/latest/api_reference/_autosummary/bec_widgets.utils.bec_dispatcher.BECDispatcher.html#bec_widgets.utils.bec_dispatcher.BECDispatcher)
-is a powerful tool that
-simplifies the process of connecting Qt slots to message updates from the BEC server. It enables real-time communication
-between your widget and the BEC server by listening to specific message channels and triggering callbacks when new data
-is received.
+is a powerful tool that simplifies the process of connecting [Qt slots](https://doc.qt.io/qt-6/signalsandslots.html) to message updates from the BEC server. It enables real-time communication between your widget and the BEC server by listening to specific message channels and triggering callbacks when new data is received.
 
 This tool is especially useful for creating widgets that need to respond to dynamic data, such as device readbacks or
 scan updates. By
@@ -31,7 +28,7 @@ etc.).
 ### Step-by-Step Guide
 
 1. **Create a Callback Function**: Define a function within your widget that will handle the data received from the BEC
-   server. This function should usually accept two parameters: `msg_content` (the message content) and `metadata` (
+   server. This function must accept two parameters: `msg_content` (the message content) and `metadata` (
    additional
    information about the message).
 
@@ -40,7 +37,7 @@ etc.).
    from qtpy.QtCore import Slot
    
     @Slot(dict, dict)
-    def on_device_readback(self, msg_content, metadata):
+    def on_device_readback(self, msg_content:dict, metadata:dict):
         # Process the incoming data
         new_value = msg_content["signals"]['motor_x']["value"]
         # Update the widget's display or perform another action
@@ -132,8 +129,7 @@ widget:
 ## Conclusion
 
 The [`BECDispatcher`](https://bec.readthedocs.io/projects/bec-widgets/en/latest/api_reference/_autosummary/bec_widgets.utils.bec_dispatcher.BECDispatcher.html#bec_widgets.utils.bec_dispatcher.BECDispatcher)
-is a key tool for developing interactive and responsive widgets within the BEC framework. By
-leveraging this tool, you can create widgets that automatically respond to real-time data updates from the BEC server,
+is a key tool for developing interactive and responsive widgets within the BEC framework. By leveraging this tool, you can create widgets that automatically respond to real-time data updates from the BEC server,
 enhancing the interactivity and functionality of your user interface.
 
 In next tutorials we will cover how to create a custom widget using the BECDispatcher and BECWidget base class.
