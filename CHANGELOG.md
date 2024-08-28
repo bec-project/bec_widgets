@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.99.8 (2024-08-28)
+
+### Fix
+
+* fix(website): fixed designer integration for website widget ([`5f37e86`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5f37e862c95ac7173b6918ad39bcaef938dad698))
+
+### Refactor
+
+* refactor(website): changed inheritance of website widget to simple qwidget; closes #325 ([`9925bbd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9925bbdb48b55eacbbce9fd6a1555a21b84221f9))
+
 ## v0.99.7 (2024-08-28)
 
 ### Fix
@@ -149,11 +159,3 @@ If not theme is set, the init of the BECWidget base class sets the default theme
 ### Fix
 
 * fix(waveform): validation of custom curves removed ([`af28574`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/af28574bd58457a05f1269f121db01ad627b5769))
-
-* fix(waveform): skip validation for curves that are not BECCurve instances ([`617db36`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/617db36ed4932c8a0633724079b695bc67d5c77b))
-
-## v0.96.1 (2024-08-22)
-
-### Fix
-
-* fix(crosshair): update markers if necessary ([`4473805`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/44738057a36f5de2bbb55affdd309f92286d4a0f))
