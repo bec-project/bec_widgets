@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.99.7 (2024-08-28)
+
+### Fix
+
+* fix(toolbar): material icons can accept color as kwarg ([`ffc871e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ffc871ebbd3b68abc3e151bb8f5849e6c50e775e))
+
 ## v0.99.6 (2024-08-28)
 
 ### Documentation
@@ -151,7 +157,3 @@ If not theme is set, the init of the BECWidget base class sets the default theme
 ### Fix
 
 * fix(crosshair): update markers if necessary ([`4473805`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/44738057a36f5de2bbb55affdd309f92286d4a0f))
-
-* fix(waveform_widget): fixed icon appearance ([`f98a9f9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f98a9f9771b93226d47830aa52f45739624f51b4))
-
-* fix: bubble-up signals ([`2fe72c9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2fe72c9ccb71bcb196a1b78197b73acf9aa3f506))
