@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.99.9 (2024-08-28)
+
+### Fix
+
+* fix: fixed build process and excluded docs and tests from tarballs and wheels ([`719254c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/719254cf0a48e1fc4bd541edba239570778bcfea))
+
 ## v0.99.8 (2024-08-28)
 
 ### Fix
@@ -153,9 +159,3 @@ If not theme is set, the init of the BECWidget base class sets the default theme
 ### Fix
 
 * fix: minor fixes for type annotations ([`8c2e7c8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8c2e7c82592ace50e4e1f47e392a0ddc988f57ae))
-
-## v0.96.2 (2024-08-22)
-
-### Fix
-
-* fix(waveform): validation of custom curves removed ([`af28574`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/af28574bd58457a05f1269f121db01ad627b5769))
