@@ -66,10 +66,3 @@ self.spinner_widget.stop()
 ```
 
 ````
-
-````{tab} API
-
-```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.widgets.spinner.spinner.SpinnerWidget.rst
-```
-````

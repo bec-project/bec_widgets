@@ -19,11 +19,11 @@ The Waveform Widget is used to display 1D detector signals. The widget is direct
 
 ````{tab} Examples - CLI
 
-`WaveformWidget` can be embedded in both `BECFigure` and `BECDockArea`, or used as an individual component in your application through `BECDesigner`. However, the command-line API is the same for all cases.
+`WaveformWidget` can be embedded in both [`BECFigure`](user.widgets.bec_figure) and [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`. However, the command-line API is the same for all cases.
 
 ## Example 1 - Adding Waveform Widget to BECFigure
 
-In this example, we will demonstrate how to add two different `WaveformWidgets` into a single `BECFigure` widget.
+In this example, we will demonstrate how to add two different `WaveformWidgets` into a single [`BECFigure`](user.widgets.bec_figure) widget.
 
 ```python
 # Add new dock with BECFigure widget
@@ -36,7 +36,7 @@ plt2 = fig.plot(x_name='samx', y_name='bpm3i')
 
 ## Example 2 - Adding Waveform Widget as a dock with BECDockArea
 
-Adding `WaveformWidget` into a `BECDockArea` is similar to adding any other widget. The widget has the same API as the one in BECFigure; however, as an independent widget outside BECFigure, it has its own toolbar, allowing users to configure the widget without needing CLI commands.
+Adding `WaveformWidget` into a [`BECDockArea`](user.widgets.bec_dock_area) is similar to adding any other widget. The widget has the same API as the one in BECFigure; however, as an independent widget outside BECFigure, it has its own toolbar, allowing users to configure the widget without needing CLI commands.
 
 ```python
 # Add new WaveformWidgets to the BECDockArea

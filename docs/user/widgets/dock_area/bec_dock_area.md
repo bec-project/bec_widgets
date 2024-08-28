@@ -2,7 +2,7 @@
 
 # BECDockArea
 
-```{tab} Overview
+````{tab} Overview
 
 [`BECDockArea`](/api_reference/_autosummary/bec_widgets.cli.client.BECDockArea) is a powerful and flexible container designed to host various widgets and docks within a grid layout. It provides an environment for organizing and managing complex user interfaces, making it ideal for applications that require multiple tools and data visualizations to be displayed simultaneously. BECDockArea is particularly useful for embedding not only visualization tools but also other interactive components, allowing users to tailor their workspace to their specific needs.
 
@@ -10,9 +10,11 @@
 - **State Persistence**: Save and restore the state of the dock area, enabling consistent user experiences across sessions.
 - **Dock Customization**: Add docks with customizable positions, names, and behaviors, such as floating or closable docks.
 - **Integration with Widgets**: Integrate various widgets like [`WaveformWidget`](user.widgets.waveform_widget), [`ImageWidget`](user.widgets.image_widget), and [`MotorMapWidget`](user.widgets.motor_map) into `BECDockArea`, either as standalone tools or as part of a more complex interface.
-```
+
+**BEC Dock Area Components Schema**
 
 ![BECDockArea.png](BECDockArea.png)
+````
 
 ````{tab} Examples - CLI
 In the following examples, we will use `BECIPythonClient` as the main object to interact with the `BECDockArea`. These tutorials focus on how to work with the `BECDockArea` framework, such as adding and removing docks, saving and restoring layouts, and managing the docked widgets. By default the `BECDockArea` is refered as `gui` in `BECIPythonClient`. For more detailed examples of each individual component, please refer to the example sections of each individual [`widget`](user.widgets).

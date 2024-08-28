@@ -67,10 +67,3 @@ self.position_indicator.on_position_update(new_position_value)
 ```
 
 ````
-
-````{tab} API
-
-```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.PositionIndicator.rst
-```
-````
