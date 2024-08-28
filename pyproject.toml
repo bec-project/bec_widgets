@@ -51,6 +51,11 @@ bec-designer = "bec_widgets.utils.bec_designer:main"
 
 [tool.hatch.build.targets.wheel]
 include = ["*"]
+exclude = ["docs/**", "tests/**"]
+
+[tool.hatch.build.targets.sdist]
+include = ["*"]
+exclude = ["docs/**", "tests/**"]
 
 [tool.black]
 line-length = 100
