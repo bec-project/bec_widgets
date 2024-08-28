@@ -32,7 +32,7 @@ class PositionerBox(BECWidget, QWidget):
     USER_ACCESS = ["set_positioner"]
     device_changed = Signal(str, str)
 
-    def __init__(self, parent=None, device: Positioner = None, *args, **kwargs):
+    def __init__(self, parent=None, device: Positioner = None, **kwargs):
         """Initialize the PositionerBox widget.
 
         Args:
@@ -97,15 +97,6 @@ class PositionerBox(BECWidget, QWidget):
         dialog.setLayout(layout)
         dialog.exec()
 
-    @Slot(str)
-    def _positioner_changed(self, positioner_name: str):
-        """Changed input in combobox.
-
-        Args:
-            positioner_name (str): name of the positioner
-        """
-        self.set_positioner(positioner_name)
-
     def init_device(self):
         """Init the device view and readback"""
         if self._check_device_is_valid(self.device):
@@ -138,7 +129,27 @@ class PositionerBox(BECWidget, QWidget):
         self._device = value
         self.device_changed.emit(old_device, value)
 
-    def set_positioner(self, positioner: str):
+    @Property(bool)
+    def hide_device_selection(self):
+        """Hide the device selection"""
+        return not self.ui.tool_button.isVisible()
+
+    @hide_device_selection.setter
+    def hide_device_selection(self, value: bool):
+        """Set the device selection visibility"""
+        self.ui.tool_button.setVisible(not value)
+
+    @Slot(bool)
+    def show_device_selection(self, value: bool):
+        """Show the device selection
+
+        Args:
+            value (bool): Show the device selection
+        """
+        self.hide_device_selection = not value
+
+    @Slot(str)
+    def set_positioner(self, positioner: str | Positioner):
         """Set the device
 
         Args:
@@ -191,6 +202,7 @@ class PositionerBox(BECWidget, QWidget):
             self.ui.step_size.setDecimals(precision)
             self.ui.step_size.setValue(10**-precision * 10)
 
+    # pylint: disable=unused-argument
     @Slot(dict, dict)
     def on_device_readback(self, msg_content: dict, metadata: dict):
         """Callback for device readback.
