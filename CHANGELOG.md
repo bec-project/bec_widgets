@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v0.99.11 (2024-08-29)
+
+### Fix
+
+* fix(resume_button): resume button added ([`8be8295`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8be8295b2b38f36da210ab36c5da6d0a00e330cc))
+
+### Refactor
+
+* refactor(icons): general app icon changed; jupyter app icon changed to material icon ([`5d73fe4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5d73fe455a568ad40a9fadc5ce6e249d782ad20d))
+
+* refactor: add option to select scan and hide arg bundle buttons ([`7dadab1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7dadab1f14aa41876ad39e8cdc7f7732248cc643))
+
 ## v0.99.10 (2024-08-29)
 
 ### Fix
@@ -128,10 +140,6 @@ If not theme is set, the init of the BECWidget base class sets the default theme
 
 ## v0.98.0 (2024-08-25)
 
-### Feature
-
-* feat(themes): added set_theme method ([`2b4449a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2b4449afebdda0a97f95712a1353cf40ec55c283))
-
 ### Fix
 
 * fix(toolbar): removed hardcoded color values ([`afdf4e8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/afdf4e8782a22566932180224fa1c924d24c810f))
@@ -146,14 +154,6 @@ If not theme is set, the init of the BECWidget base class sets the default theme
 
 * fix: use globally set theme instead of the internal bec widgets theme ([`77c5aa7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/77c5aa741cf1f5b969a42aa878aa2965176dbf41))
 
-* fix(waveform): fixed icon appearance ([`36ad464`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/36ad4641594b67c9b789515c28f7db78a12757ee))
-
 ### Refactor
 
 * refactor(waveform): use set theme for demo ([`44cfda1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/44cfda1c07306669c9a4e09706d95e6b91dee370))
-
-## v0.97.0 (2024-08-23)
-
-### Fix
-
-* fix(toolbar icon): fixed material icon toolbar for theme changes ([`3ecbd60`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3ecbd60627994417c9175364e5909710dbcdceb2))
