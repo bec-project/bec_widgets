@@ -142,6 +142,31 @@ class DeviceSelectionAction(ToolBarAction):
         self.device_combobox.setStyleSheet(f"QComboBox {{ background-color: {color}; }}")
 
 
+class WidgetAction(ToolBarAction):
+    """
+    Action for adding any widget to the toolbar.
+
+    Args:
+        label (str|None): The label for the widget.
+        widget (QWidget): The widget to be added to the toolbar.
+
+    """
+
+    def __init__(self, label: str | None = None, widget: QWidget = None):
+        super().__init__()
+        self.label = label
+        self.widget = widget
+
+    def add_to_toolbar(self, toolbar, target):
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        if self.label is not None:
+            label = QLabel(f"{self.label}")
+            layout.addWidget(label)
+        layout.addWidget(self.widget)
+        toolbar.addWidget(widget)
+
+
 class ExpandableMenuAction(ToolBarAction):
     """
     Action for an expandable menu in the toolbar.
