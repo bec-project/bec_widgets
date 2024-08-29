@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import pyqtgraph as pg
+from bec_qthemes import material_icon
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import (
@@ -200,10 +201,7 @@ if __name__ == "__main__":  # pragma: no cover
     app.setApplicationName("Jupyter Console")
     app.setApplicationDisplayName("Jupyter Console")
     apply_theme("dark")
-    icon = QIcon()
-    icon.addFile(
-        os.path.join(module_path, "assets", "app_icons", "terminal_icon.png"), size=QSize(48, 48)
-    )
+    icon = material_icon("terminal", color="#434343", filled=True)
     app.setWindowIcon(icon)
 
     bec_dispatcher = BECDispatcher()

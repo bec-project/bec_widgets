@@ -80,7 +80,7 @@ def main():  # pragma: no cover
     app = QApplication(sys.argv)
     icon = QIcon()
     icon.addFile(
-        os.path.join(MODULE_PATH, "assets", "app_icons", "BEC-Dark.png"), size=QSize(48, 48)
+        os.path.join(MODULE_PATH, "assets", "app_icons", "BEC-General-App.png"), size=QSize(48, 48)
     )
     app.setWindowIcon(icon)
     main_window = BECGeneralApp()
