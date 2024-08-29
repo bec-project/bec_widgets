@@ -19,7 +19,7 @@ def test_resume_button(resume_button):
     assert resume_button.button.text() == "Resume"
     assert (
         resume_button.button.styleSheet()
-        == "background-color:  #2793e8 color: white; font-weight: bold; font-size: 12px;"
+        == "background-color:  #2793e8; color: white; font-weight: bold; font-size: 12px;"
     )
     resume_button.button.click()
     assert resume_button.queue.request_scan_continuation.called

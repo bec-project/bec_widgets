@@ -13,6 +13,7 @@ class Widgets(str, enum.Enum):
     Enum for the available widgets.
     """
 
+    AbortButton = "AbortButton"
     BECDock = "BECDock"
     BECDockArea = "BECDockArea"
     BECFigure = "BECFigure"
@@ -34,6 +35,24 @@ class Widgets(str, enum.Enum):
     TextBox = "TextBox"
     VSCodeEditor = "VSCodeEditor"
     WebsiteWidget = "WebsiteWidget"
+
+
+class AbortButton(RPCBase):
+    @property
+    @rpc_call
+    def _config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def _get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
+        """
 
 
 class BECCurve(RPCBase):
@@ -2374,7 +2393,7 @@ class DeviceLineEdit(RPCBase):
 
 class PositionerBox(RPCBase):
     @rpc_call
-    def set_positioner(self, positioner: str):
+    def set_positioner(self, positioner: "str | Positioner"):
         """
         Set the device
 
@@ -2385,7 +2404,7 @@ class PositionerBox(RPCBase):
 
 class PositionerControlLine(RPCBase):
     @rpc_call
-    def set_positioner(self, positioner: str):
+    def set_positioner(self, positioner: "str | Positioner"):
         """
         Set the device
 

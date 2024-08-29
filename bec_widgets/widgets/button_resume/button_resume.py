@@ -30,7 +30,7 @@ class ResumeButton(BECWidget, QWidget):
             self.button = QPushButton()
             self.button.setText("Resume")
             self.button.setStyleSheet(
-                "background-color:  #2793e8 color: white; font-weight: bold; font-size: 12px;"
+                "background-color:  #2793e8; color: white; font-weight: bold; font-size: 12px;"
             )
             self.button.clicked.connect(self.continue_scan)
 

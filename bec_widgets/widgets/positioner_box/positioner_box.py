@@ -1,5 +1,7 @@
 """ Module for a PositionerBox widget to control a positioner device."""
 
+from __future__ import annotations
+
 import os
 import uuid
 
