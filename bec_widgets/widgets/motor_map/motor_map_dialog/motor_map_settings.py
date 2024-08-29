@@ -27,7 +27,7 @@ class MotorMapSettings(SettingWidget):
         background_intensity = int((config["background_value"] / 255) * 100)
         WidgetIO.set_value(self.ui.background_value, background_intensity)
         color = config["color"]
-        self.ui.color.setColor(color)
+        self.ui.color.set_color(color)
 
     @Slot()
     def accept_changes(self):

@@ -3,9 +3,13 @@ from __future__ import annotations
 from typing import Literal
 
 import pyqtgraph as pg
+from qtpy.QtCore import Qt
+from qtpy.QtWidgets import QHBoxLayout, QWidget
+
+from bec_widgets.qt_utils.error_popups import SafeSlot
 
 
-class ColorButton(pg.ColorButton):
+class ColorButton(QWidget):
     """
     A ColorButton that opens a dialog to select a color. Inherits from pyqtgraph.ColorButton.
     Patches event loop of the ColorDialog, if opened in another QDialog.
@@ -16,11 +20,31 @@ class ColorButton(pg.ColorButton):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def selectColor(self):
-        self.origColor = self.color()
-        self.colorDialog.setCurrentColor(self.color())
-        self.colorDialog.open()
-        self.colorDialog.exec()
+        self.layout = QHBoxLayout(self)
+        self.layout.setSpacing(0)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+
+        self.button = pg.ColorButton()
+        self.button.setFlat(True)
+        self.button.clicked.connect(self.select_color)
+        self.layout.addWidget(self.button)
+
+    @SafeSlot()
+    def select_color(self):
+        self.origColor = self.button.color()
+        self.button.colorDialog.setCurrentColor(self.button.color())
+        self.button.colorDialog.open()
+        self.button.colorDialog.exec()
+
+    def set_color(self, color: tuple | str):
+        """
+        Set the color of the button.
+
+        Args:
+            color(tuple|str): The color to set.
+        """
+        self.button.setColor(color)
 
     def get_color(self, format: Literal["RGBA", "HEX"] = "RGBA") -> tuple | str:
         """
@@ -33,13 +57,13 @@ class ColorButton(pg.ColorButton):
             tuple|str: The color in the specified format.
         """
         if format == "RGBA":
-            return self.color().getRgb()
+            return self.button.color().getRgb()
         if format == "HEX":
-            return self.color().name()
+            return self.button.color().name()
 
     def cleanup(self):
         """
         Clean up the ColorButton.
         """
-        self.colorDialog.close()
-        self.colorDialog.deleteLater()
+        self.button.colorDialog.close()
+        self.button.colorDialog.deleteLater()

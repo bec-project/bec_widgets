@@ -123,7 +123,7 @@ class CurveSettings(SettingWidget):
         colors = Colors.golden_angle_color(colormap=cm, num=max(10, rows + 1), format="HEX")
         color_button_col = 2 if target == "scan" else 3
         for row in range(rows):
-            table.cellWidget(row, color_button_col).setColor(colors[row])
+            table.cellWidget(row, color_button_col).set_color(colors[row])
 
     @Slot()
     def accept_changes(self):
@@ -275,7 +275,7 @@ class DialogRow(QObject):
         if self.config is not None:
             self.device_line_edit.setText(self.config.signals.y.name)
             self.entry_line_edit.setText(self.config.signals.y.entry)
-            self.color_button.setColor(self.config.color)
+            self.color_button.set_color(self.config.color)
             self.style_combo.setCurrentText(self.config.pen_style)
             self.width.setValue(self.config.pen_width)
             self.symbol_size.setValue(self.config.symbol_size)
@@ -284,7 +284,7 @@ class DialogRow(QObject):
                 colormap="magma", num=max(10, self.row + 1), format="HEX"
             )
             default_color = default_colors[self.row]
-            self.color_button.setColor(default_color)
+            self.color_button.set_color(default_color)
 
         self.table_widget.setCellWidget(self.row, 0, self.device_line_edit)
         self.table_widget.setCellWidget(self.row, 1, self.entry_line_edit)
@@ -299,7 +299,7 @@ class DialogRow(QObject):
             self.device_line_edit.setText(self.config.signals.y.name)
             self.entry_line_edit.setText(self.config.signals.y.entry)
             self.dap_combo.setCurrentText(self.config.signals.dap)
-            self.color_button.setColor(self.config.color)
+            self.color_button.set_color(self.config.color)
             self.style_combo.setCurrentText(self.config.pen_style)
             self.width.setValue(self.config.pen_width)
             self.symbol_size.setValue(self.config.symbol_size)
@@ -308,7 +308,7 @@ class DialogRow(QObject):
                 colormap="magma", num=max(10, self.row + 1), format="HEX"
             )
             default_color = default_colors[self.row]
-            self.color_button.setColor(default_color)
+            self.color_button.set_color(default_color)
 
         self.table_widget.setCellWidget(self.row, 0, self.device_line_edit)
         self.table_widget.setCellWidget(self.row, 1, self.entry_line_edit)

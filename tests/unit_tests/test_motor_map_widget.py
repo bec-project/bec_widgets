@@ -151,7 +151,7 @@ def test_display_current_settings(motor_map_settings):
     }
 
     with patch("bec_widgets.utils.widget_io.WidgetIO.set_value") as mock_set_value:
-        with patch.object(motor_map_settings.ui.color, "setColor") as mock_set_color:
+        with patch.object(motor_map_settings.ui.color, "set_color") as mock_set_color:
             motor_map_settings.display_current_settings(config)
             mock_set_value.assert_any_call(motor_map_settings.ui.max_points, config["max_points"])
             mock_set_value.assert_any_call(
