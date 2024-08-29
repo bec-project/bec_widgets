@@ -1,26 +1,44 @@
-from qtpy.QtWidgets import QPushButton
+from bec_qthemes import material_icon
+from qtpy.QtCore import Qt
+from qtpy.QtWidgets import QHBoxLayout, QPushButton, QToolButton, QWidget
 
-from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
+from bec_widgets.qt_utils.error_popups import SafeSlot
 from bec_widgets.utils.bec_widget import BECWidget
 
 
-class StopButton(BECWidget, QPushButton):
+class StopButton(BECWidget, QWidget):
     """A button that stops the current scan."""
 
     ICON_NAME = "dangerous"
 
-    def __init__(self, parent=None, client=None, config=None, gui_id=None):
+    def __init__(self, parent=None, client=None, config=None, gui_id=None, toolbar=False):
         super().__init__(client=client, config=config, gui_id=gui_id)
-        QPushButton.__init__(self, parent=parent)
+        QWidget.__init__(self, parent=parent)
 
         self.get_bec_shortcuts()
-        self.setText("Stop")
-        self.setStyleSheet(
-            "background-color:  #cc181e; color: white; font-weight: bold; font-size: 12px;"
-        )
-        self.clicked.connect(self.stop_scan)
 
-    @Slot()
+        self.layout = QHBoxLayout(self)
+        self.layout.setSpacing(0)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+
+        if toolbar:
+            icon = material_icon(
+                "stop", size=(20, 20), color="#cc181e", filled=True, convert_to_pixmap=False
+            )
+            self.button = QToolButton(icon=icon)
+            self.button.triggered.connect(self.stop_scan)
+        else:
+            self.button = QPushButton()
+            self.button.setText("Stop")
+            self.button.setStyleSheet(
+                "background-color:  #cc181e; color: white; font-weight: bold; font-size: 12px;"
+            )
+            self.button.clicked.connect(self.stop_scan)
+
+        self.layout.addWidget(self.button)
+
+    @SafeSlot()
     def stop_scan(self):
         """Stop the scan."""
         self.queue.request_scan_halt()
