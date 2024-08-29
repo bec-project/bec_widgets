@@ -33,7 +33,6 @@ class BECWaveformWidget(BECWidget, QWidget):
         "curves",
         "plot",
         "add_dap",
-        "get_dap_params",
         "remove_curve",
         "scan_history",
         "get_all_data",
@@ -55,8 +54,8 @@ class BECWaveformWidget(BECWidget, QWidget):
     ]
     scan_signal_update = Signal()
     async_signal_update = Signal()
-    dap_params_update = Signal(dict)
-    dap_summary_update = Signal(dict)
+    dap_summary_update = Signal(dict, dict)
+    dap_params_update = Signal(dict, dict)
     autorange_signal = Signal()
     new_scan = Signal()
     crosshair_position_changed = Signal(tuple)
@@ -218,7 +217,7 @@ class BECWaveformWidget(BECWidget, QWidget):
     def show_fit_summary_dialog(self):
         dialog = FitSummaryWidget(target_widget=self)
         dialog.resize(800, 600)
-        dialog.show()
+        dialog.exec()
 
     ###################################
     # User Access Methods from Waveform
@@ -257,7 +256,7 @@ class BECWaveformWidget(BECWidget, QWidget):
         """
         self.waveform.set_colormap(colormap)
 
-    @SafeSlot(popup_error=True)
+    @SafeSlot(str, popup_error=True)
     def set_x(self, x_name: str, x_entry: str | None = None):
         """
         Change the x axis of the plot widget.
@@ -272,7 +271,7 @@ class BECWaveformWidget(BECWidget, QWidget):
         """
         self.waveform.set_x(x_name, x_entry)
 
-    @SafeSlot(popup_error=True)
+    @SafeSlot(str, popup_error=True)
     def plot(
         self,
         arg1: list | np.ndarray | str | None = None,
@@ -331,15 +330,16 @@ class BECWaveformWidget(BECWidget, QWidget):
             **kwargs,
         )
 
-    @SafeSlot(popup_error=True)
+    @SafeSlot(str, str, str, popup_error=True)
     def add_dap(
         self,
         x_name: str,
         y_name: str,
+        dap: str,
         x_entry: str | None = None,
         y_entry: str | None = None,
         color: str | None = None,
-        dap: str = "GaussianModel",
+        # dap: str = "GaussianModel",
         validate_bec: bool = True,
         **kwargs,
     ) -> BECCurve:

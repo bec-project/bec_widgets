@@ -190,6 +190,14 @@ Display spinner widget for loading or device movement.
 
 Display position of motor withing its limits.
 ```
+
+```{grid-item-card} LMFit Dialog
+:link: user.widgets.lmfit_dialog
+:link-type: ref
+:img-top: /assets/widget_screenshots/lmfit_dialog.png
+
+Display DAP summaries of LMFit models in a window.
+```
 ````
 
 ```{toctree}
@@ -216,5 +224,6 @@ toggle/toggle.md
 spinner/spinner.md
 device_input/device_input.md
 position_indicator/position_indicator.md
+lmfit_dialog/lmfit_dialog.md
 
 ```

@@ -26,6 +26,7 @@ class Widgets(str, enum.Enum):
     DeviceBrowser = "DeviceBrowser"
     DeviceComboBox = "DeviceComboBox"
     DeviceLineEdit = "DeviceLineEdit"
+    LMFitDialog = "LMFitDialog"
     PositionerBox = "PositionerBox"
     PositionerControlLine = "PositionerControlLine"
     ResetButton = "ResetButton"
@@ -1826,15 +1827,6 @@ class BECWaveform(RPCBase):
         """
 
     @rpc_call
-    def get_dap_params(self) -> "dict":
-        """
-        Get the DAP parameters of all DAP curves.
-
-        Returns:
-            dict: DAP parameters of all DAP curves.
-        """
-
-    @rpc_call
     def remove_curve(self, *identifiers):
         """
         Remove a curve from the plot widget.
@@ -2096,10 +2088,10 @@ class BECWaveformWidget(RPCBase):
         self,
         x_name: "str",
         y_name: "str",
+        dap: "str",
         x_entry: "str | None" = None,
         y_entry: "str | None" = None,
         color: "str | None" = None,
-        dap: "str" = "GaussianModel",
         validate_bec: "bool" = True,
         **kwargs,
     ) -> "BECCurve":
@@ -2118,15 +2110,6 @@ class BECWaveformWidget(RPCBase):
 
         Returns:
             BECCurve: The curve object.
-        """
-
-    @rpc_call
-    def get_dap_params(self) -> "dict":
-        """
-        Get the DAP parameters of all DAP curves.
-
-        Returns:
-            dict: DAP parameters of all DAP curves.
         """
 
     @rpc_call
@@ -2313,7 +2296,7 @@ class BECWaveformWidget(RPCBase):
 
 class DarkModeButton(RPCBase):
     @rpc_call
-    def toggle_dark_mode(self) -> None:
+    def toggle_dark_mode(self) -> "None":
         """
         Toggle the dark mode state. This will change the theme of the entire
         application to dark or light mode.
@@ -2375,6 +2358,24 @@ class DeviceInputBase(RPCBase):
 
 
 class DeviceLineEdit(RPCBase):
+    @property
+    @rpc_call
+    def _config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def _get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
+        """
+
+
+class LMFitDialog(RPCBase):
     @property
     @rpc_call
     def _config_dict(self) -> "dict":

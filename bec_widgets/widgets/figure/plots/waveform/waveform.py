@@ -50,7 +50,6 @@ class BECWaveform(BECPlotBase):
         "plot",
         "add_dap",
         "set_x",
-        "get_dap_params",
         "remove_curve",
         "scan_history",
         "curves",
@@ -74,8 +73,8 @@ class BECWaveform(BECPlotBase):
     ]
     scan_signal_update = pyqtSignal()
     async_signal_update = pyqtSignal()
-    dap_params_update = pyqtSignal(dict)
-    dap_summary_update = pyqtSignal(dict)
+    dap_params_update = pyqtSignal(dict, dict)
+    dap_summary_update = pyqtSignal(dict, dict)
     autorange_signal = pyqtSignal()
     new_scan = pyqtSignal()
 
@@ -1085,8 +1084,9 @@ class BECWaveform(BECPlotBase):
                     curve.setData(x, y)
                     curve.dap_params = msg["data"][1]["fit_parameters"]
                     curve.dap_summary = msg["data"][1]["fit_summary"]
-                    self.dap_params_update.emit(curve.dap_params)
-                    self.dap_summary_update.emit(curve.dap_summary)
+                    metadata.update({"curve_id": curve_id_request})
+                    self.dap_params_update.emit(curve.dap_params, metadata)
+                    self.dap_summary_update.emit(curve.dap_summary, metadata)
                 break
 
     @Slot(dict, dict)

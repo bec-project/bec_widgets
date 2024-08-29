@@ -9,9 +9,13 @@ from bec_widgets.qt_utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.colors import apply_theme, get_theme_palette, set_theme
 from bec_widgets.widgets.figure.plots.axis_settings import AxisSettings
 from bec_widgets.widgets.waveform.waveform_popups.curve_dialog.curve_dialog import CurveSettings
+from bec_widgets.widgets.waveform.waveform_popups.dap_summary_dialog.dap_summary_dialog import (
+    FitSummaryWidget,
+)
 from bec_widgets.widgets.waveform.waveform_widget import BECWaveformWidget
 
 from .client_mocks import mocked_client
+from .conftest import create_widget
 
 
 @pytest.fixture
@@ -97,7 +101,7 @@ def test_waveform_plot_scan_curves(waveform_widget, mock_waveform):
 
 
 def test_waveform_widget_add_dap(waveform_widget, mock_waveform):
-    waveform_widget.add_dap(x_name="samx", y_name="bpm4i")
+    waveform_widget.add_dap(x_name="samx", y_name="bpm4i", dap="GaussianModel")
     waveform_widget.waveform.add_dap.assert_called_once_with(
         x_name="samx",
         y_name="bpm4i",
@@ -252,7 +256,7 @@ def test_toolbar_fit_params_action_triggered(qtbot, waveform_widget):
     ) as MockFitSummaryWidget:
         mock_dialog_instance = MockFitSummaryWidget.return_value
         action.trigger()
-        mock_dialog_instance.show.assert_called_once()
+        mock_dialog_instance.exec.assert_called_once()
 
 
 def test_enable_mouse_pan_mode(qtbot, waveform_widget):
@@ -376,6 +380,14 @@ def test_curve_dialog_dap(qtbot, waveform_widget):
 
     assert list(waveform_widget.waveform._curves_data["scan_segment"].keys()) == ["bpm4i-bpm4i"]
     assert len(waveform_widget.curves) == 2
+
+
+def test_fit_dialog_summary(qtbot, waveform_widget):
+    """Test the fit dialog summary widget"""
+    waveform_widget.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
+    fit_dialog_summary = create_widget(qtbot, FitSummaryWidget, target_widget=waveform_widget)
+    assert fit_dialog_summary.dap_dialog.fit_curve_id == "bpm4i-bpm4i-GaussianModel"
+    assert fit_dialog_summary.dap_dialog.ui.curve_list.count() == 1
 
 
 ###################################
