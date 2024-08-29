@@ -11,7 +11,9 @@ class AbortButton(BECWidget, QWidget):
 
     ICON_NAME = "cancel"
 
-    def __init__(self, parent=None, client=None, config=None, gui_id=None, toolbar=False):
+    def __init__(
+        self, parent=None, client=None, config=None, gui_id=None, toolbar=False, scan_id=None
+    ):
         super().__init__(client=client, config=config, gui_id=gui_id)
         QWidget.__init__(self, parent=parent)
 
@@ -25,16 +27,18 @@ class AbortButton(BECWidget, QWidget):
         if toolbar:
             icon = material_icon("cancel", color="#666666", filled=True)
             self.button = QToolButton(icon=icon)
-            self.button.triggered.connect(self.abort_scan)
+            self.button.setToolTip("Abort the scan")
         else:
             self.button = QPushButton()
             self.button.setText("Abort")
             self.button.setStyleSheet(
                 "background-color:  #666666; color: white; font-weight: bold; font-size: 12px;"
             )
-            self.button.clicked.connect(self.abort_scan)
+        self.button.clicked.connect(self.abort_scan)
 
         self.layout.addWidget(self.button)
+
+        self.scan_id = scan_id
 
     @SafeSlot()
     def abort_scan(
@@ -46,4 +50,8 @@ class AbortButton(BECWidget, QWidget):
         Args:
             scan_id(str|None): The scan id to abort. If None, the current scan will be aborted.
         """
-        self.queue.request_scan_abortion()
+        if self.scan_id is not None:
+            print(f"Aborting scan with scan_id: {self.scan_id}")
+            self.queue.request_scan_abortion(scan_id=self.scan_id)
+        else:
+            self.queue.request_scan_abortion()

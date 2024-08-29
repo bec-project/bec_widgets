@@ -23,16 +23,18 @@ class ResetButton(BECWidget, QWidget):
         self.layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         if toolbar:
-            icon = material_icon("restart_alt", color="#F19E39", filled=True)
+            icon = material_icon(
+                "restart_alt", color="#F19E39", filled=True, convert_to_pixmap=False
+            )
             self.button = QToolButton(icon=icon)
-            self.button.triggered.connect(self.reset_queue)
+            self.button.setToolTip("Reset the scan queue")
         else:
             self.button = QPushButton()
             self.button.setText("Reset Queue")
             self.button.setStyleSheet(
                 "background-color:  #F19E39; color: white; font-weight: bold; font-size: 12px;"
             )
-            self.button.clicked.connect(self.reset_queue)
+        self.button.clicked.connect(self.reset_queue)
 
         self.layout.addWidget(self.button)
 

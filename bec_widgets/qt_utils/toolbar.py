@@ -162,6 +162,7 @@ class WidgetAction(ToolBarAction):
     def add_to_toolbar(self, toolbar, target):
         widget = QWidget()
         layout = QHBoxLayout(widget)
+        layout.setContentsMargins(0, 0, 0, 0)
         if self.label is not None:
             label = QLabel(f"{self.label}")
             layout.addWidget(label)

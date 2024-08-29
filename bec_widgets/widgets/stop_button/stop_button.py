@@ -23,16 +23,16 @@ class StopButton(BECWidget, QWidget):
         self.layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         if toolbar:
-            icon = material_icon("stop", color="#cc181e", filled=True)
+            icon = material_icon("stop", color="#cc181e", filled=True, convert_to_pixmap=False)
             self.button = QToolButton(icon=icon)
-            self.button.triggered.connect(self.stop_scan)
+            self.button.setToolTip("Stop the scan queue")
         else:
             self.button = QPushButton()
             self.button.setText("Stop")
             self.button.setStyleSheet(
                 "background-color:  #cc181e; color: white; font-weight: bold; font-size: 12px;"
             )
-            self.button.clicked.connect(self.stop_scan)
+        self.button.clicked.connect(self.stop_scan)
 
         self.layout.addWidget(self.button)
 

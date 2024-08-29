@@ -4,11 +4,12 @@
 
 ````{tab} Overview
 
-The [`BEC Queue Widget`](/api_reference/_autosummary/bec_widgets.cli.client.BECQueue) provides a real-time display of the BEC scan queue, allowing users to monitor and track the status of ongoing and pending scans. The widget automatically updates to reflect the current state of the scan queue, displaying critical information such as scan numbers, types, and statuses. This widget is particularly useful for users who need to manage and oversee multiple scans in the BEC environment.
+The [`BEC Queue Widget`](/api_reference/_autosummary/bec_widgets.cli.client.BECQueue) provides a real-time display and control of the BEC scan queue, allowing users to monitor, manage, and control the status of ongoing and pending scans. The widget automatically updates to reflect the current state of the scan queue, displaying critical information such as scan numbers, types, and statuses. Additionally, it provides control options to stop individual scans, stop the entire queue, resume, and reset the queue, making it a powerful tool for managing scan operations in the BEC environment.
 
 ## Key Features:
 - **Real-Time Queue Monitoring**: Displays the current state of the BEC scan queue, with automatic updates as the queue changes.
 - **Detailed Scan Information**: Provides a clear view of scan numbers, types, and statuses, helping users track the progress and state of each scan.
+- **Queue Control**: Allows users to stop specific scans, stop the entire queue, resume paused scans, and reset the queue.
 - **Interactive Table Layout**: The queue is presented in a table format, with customizable columns that stretch to fit the available space.
 - **Flexible Integration**: The widget can be integrated into both [`BECDockArea`](user.widgets.bec_dock_area) and used as an individual component in your application through `QtDesigner`.
 

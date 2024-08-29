@@ -2,10 +2,13 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from bec_lib.endpoints import MessageEndpoints
+from bec_lib.messages import ScanQueueStatusMessage
 
 from bec_widgets.widgets.dock import BECDock, BECDockArea
 
 from .client_mocks import mocked_client
+from .test_bec_queue import bec_queue_msg_full
 
 
 @pytest.fixture
@@ -135,7 +138,10 @@ def test_toolbar_add_device_positioner_box(bec_dock_area):
     )
 
 
-def test_toolbar_add_utils_queue(bec_dock_area):
+def test_toolbar_add_utils_queue(bec_dock_area, bec_queue_msg_full):
+    bec_dock_area.client.connector.set_and_publish(
+        MessageEndpoints.scan_queue_status(), bec_queue_msg_full
+    )
     bec_dock_area.toolbar.widgets["menu_utils"].widgets["queue"].trigger()
     assert "queue_1" in bec_dock_area.panels
     assert bec_dock_area.panels["queue_1"].widgets[0].config.widget_class == "BECQueue"

@@ -23,16 +23,16 @@ class ResumeButton(BECWidget, QWidget):
         self.layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         if toolbar:
-            icon = material_icon("resume", color="#2793e8", filled=True)
+            icon = material_icon("resume", color="#2793e8", filled=True, convert_to_pixmap=False)
             self.button = QToolButton(icon=icon)
-            self.button.triggered.connect(self.continue_scan)
+            self.button.setToolTip("Resume the scan queue")
         else:
             self.button = QPushButton()
             self.button.setText("Resume")
             self.button.setStyleSheet(
                 "background-color:  #2793e8; color: white; font-weight: bold; font-size: 12px;"
             )
-            self.button.clicked.connect(self.continue_scan)
+        self.button.clicked.connect(self.continue_scan)
 
         self.layout.addWidget(self.button)
 
