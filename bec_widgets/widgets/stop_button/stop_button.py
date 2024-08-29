@@ -23,5 +23,4 @@ class StopButton(BECWidget, QPushButton):
     @Slot()
     def stop_scan(self):
         """Stop the scan."""
-        self.queue.request_scan_abortion()
-        self.queue.request_queue_reset()
+        self.queue.request_scan_halt()
