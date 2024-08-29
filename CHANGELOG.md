@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v0.99.10 (2024-08-29)
+
+### Fix
+
+* fix(stop_button): queue logic scan changed to halt instead of abort and reset ([`4a89028`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4a890281f7eaef02d0ec9f4c5bf080be11fe0fe3))
+
+### Refactor
+
+* refactor(stop_button): stop button changed to QWidget and adapted for toolbar ([`097946f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/097946fd688b8faf770e7cc0e689ea668206bc7a))
+
+* refactor: added hide option for device selection button ([`cdd1752`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cdd175207e922904b2efbb2d9ecf7c556c617f2e))
+
 ## v0.99.9 (2024-08-28)
 
 ### Fix
@@ -142,20 +154,6 @@ If not theme is set, the init of the BECWidget base class sets the default theme
 
 ## v0.97.0 (2024-08-23)
 
-### Feature
-
-* feat(designer): added designer icon factory ([`82a55dd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/82a55ddf3eafb589cb63408db1c0e7e5c9d629da))
-
 ### Fix
 
 * fix(toolbar icon): fixed material icon toolbar for theme changes ([`3ecbd60`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3ecbd60627994417c9175364e5909710dbcdceb2))
-
-## v0.96.3 (2024-08-23)
-
-### Documentation
-
-* docs(dispatcher): docs added ([`dd7c71b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/dd7c71bb1e0b7ef5398b1e1a05fc1147c772420a))
-
-### Fix
-
-* fix: minor fixes for type annotations ([`8c2e7c8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8c2e7c82592ace50e4e1f47e392a0ddc988f57ae))
