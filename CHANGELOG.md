@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.99.12 (2024-08-29)
+
+### Fix
+
+* fix(toolbar): widget action added ([`2efd487`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2efd48736cbe04e84533f7933c552ea8274e2162))
+
+* fix(reset_button): reset button added ([`6ed1efc`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6ed1efc6af193908f70aa37fb73157d2ca6a62f4))
+
+* fix(abort_button): abort button added; some minor fixes ([`a568633`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a568633c3206a8c26069d140f2d9a548bf4124b0))
+
 ## v0.99.11 (2024-08-29)
 
 ### Fix
@@ -149,10 +159,6 @@ If not theme is set, the init of the BECWidget base class sets the default theme
 * fix(dock_area): transitioned to MaterialIconAction ([`88a2f66`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/88a2f667588e9aeb34ae556fa327898824052bc3))
 
 * fix: fix color palette if qtheme was not called ([`3f3b207`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3f3b207295ebd406ebaeecee465c774965161b8b))
-
-* fix(figure): removed theme from figure init ([`e42b84c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e42b84c63650297d67feffccc02a2c2ba111ca79))
-
-* fix: use globally set theme instead of the internal bec widgets theme ([`77c5aa7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/77c5aa741cf1f5b969a42aa878aa2965176dbf41))
 
 ### Refactor
 
