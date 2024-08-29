@@ -28,6 +28,7 @@ class Widgets(str, enum.Enum):
     DeviceLineEdit = "DeviceLineEdit"
     PositionerBox = "PositionerBox"
     PositionerControlLine = "PositionerControlLine"
+    ResetButton = "ResetButton"
     ResumeButton = "ResumeButton"
     RingProgressBar = "RingProgressBar"
     ScanControl = "ScanControl"
@@ -2410,6 +2411,24 @@ class PositionerControlLine(RPCBase):
 
         Args:
             positioner (Positioner | str) : Positioner to set, accepts str or the device
+        """
+
+
+class ResetButton(RPCBase):
+    @property
+    @rpc_call
+    def _config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def _get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
         """
 
 
