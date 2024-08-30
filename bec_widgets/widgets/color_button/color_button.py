@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Literal
 
 import pyqtgraph as pg
-from qtpy.QtCore import Qt
+from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import QHBoxLayout, QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeSlot
@@ -14,6 +14,8 @@ class ColorButton(QWidget):
     A ColorButton that opens a dialog to select a color. Inherits from pyqtgraph.ColorButton.
     Patches event loop of the ColorDialog, if opened in another QDialog.
     """
+
+    color_selected = Signal(str)
 
     ICON_NAME = "colors"
 
@@ -36,7 +38,9 @@ class ColorButton(QWidget):
         self.button.colorDialog.setCurrentColor(self.button.color())
         self.button.colorDialog.open()
         self.button.colorDialog.exec()
+        self.color_selected.emit(self.button.color().name())
 
+    @SafeSlot(str)
     def set_color(self, color: tuple | str):
         """
         Set the color of the button.
