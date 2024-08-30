@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v0.99.13 (2024-08-30)
+
+### Documentation
+
+* docs: minor updates to the widget tutorial ([`ec9c8f2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ec9c8f29633364c45ebd998a5411d428c1ce488d))
+
+* docs(widget tutorial): step by step guide added ([`b32ced8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b32ced85fff628a9e1303a781630cdae3865238e))
+
+### Fix
+
+* fix(dark mode button): fixed dark mode button state for external updates, including auto ([`a3110d9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a3110d98147295dcb1f9353f9aaf5461cba9232a))
+
 ## v0.99.12 (2024-08-29)
 
 ### Fix
@@ -147,19 +159,3 @@ If not theme is set, the init of the BECWidget base class sets the default theme
 ### Test
 
 * test(dark_mode_button): added tests for dark mode button ([`df35aab`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/df35aabff30c5d00b1c441132bd370446653741e))
-
-## v0.98.0 (2024-08-25)
-
-### Fix
-
-* fix(toolbar): removed hardcoded color values ([`afdf4e8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/afdf4e8782a22566932180224fa1c924d24c810f))
-
-* fix: transitioning to material icons ([`2a82032`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2a82032644a84e38df04e2035a6aa63f4a046360))
-
-* fix(dock_area): transitioned to MaterialIconAction ([`88a2f66`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/88a2f667588e9aeb34ae556fa327898824052bc3))
-
-* fix: fix color palette if qtheme was not called ([`3f3b207`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3f3b207295ebd406ebaeecee465c774965161b8b))
-
-### Refactor
-
-* refactor(waveform): use set theme for demo ([`44cfda1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/44cfda1c07306669c9a4e09706d95e6b91dee370))
