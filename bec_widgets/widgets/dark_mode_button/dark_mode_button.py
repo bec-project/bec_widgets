@@ -1,6 +1,6 @@
 from bec_qthemes import material_icon
 from qtpy.QtCore import Property, Qt, Slot
-from qtpy.QtWidgets import QHBoxLayout, QPushButton, QToolButton, QWidget
+from qtpy.QtWidgets import QApplication, QHBoxLayout, QPushButton, QToolButton, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import set_theme
@@ -27,16 +27,30 @@ class DarkModeButton(BECWidget, QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
-        icon = material_icon("dark_mode", size=(20, 20), convert_to_pixmap=False)
         if toolbar:
-            self.mode_button = QToolButton(icon=icon)
+            self.mode_button = QToolButton()
         else:
-            self.mode_button = QPushButton(icon=icon)
+            self.mode_button = QPushButton()
+
+        self.dark_mode_enabled = self._get_qapp_dark_mode_state()
         self.update_mode_button()
         self.mode_button.clicked.connect(self.toggle_dark_mode)
         self.layout.addWidget(self.mode_button)
         self.setLayout(self.layout)
         self.setFixedSize(40, 40)
+
+    def _get_qapp_dark_mode_state(self) -> bool:
+        """
+        Get the dark mode state from the QApplication.
+
+        Returns:
+            bool: True if dark mode is enabled, False otherwise.
+        """
+        qapp = QApplication.instance()
+        if hasattr(qapp, "theme") and qapp.theme["theme"] == "dark":
+            return True
+
+        return False
 
     @Property(bool)
     def dark_mode_enabled(self) -> bool:
@@ -72,8 +86,10 @@ class DarkModeButton(BECWidget, QWidget):
 if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
 
-    app = QApplication([])
+    from bec_widgets.utils.colors import set_theme
 
+    app = QApplication([])
+    set_theme("auto")
     w = DarkModeButton()
     w.show()
 

@@ -8,7 +8,7 @@ import pyqtgraph as pg
 from bec_qthemes._os_appearance.listener import OSThemeSwitchListener
 from pydantic_core import PydanticCustomError
 from qtpy.QtGui import QColor
-from qtpy.QtWidgets import QApplication
+from qtpy.QtWidgets import QApplication, QPushButton, QToolButton
 
 
 def get_theme_palette():
@@ -56,6 +56,17 @@ def apply_theme(theme: Literal["dark", "light"]):
     for pg_widget in children:
         pg_widget.setBackground("k" if theme == "dark" else "w")
 
+    dark_mode_buttons = [
+        button
+        for button in app.topLevelWidgets()
+        if hasattr(button, "dark_mode_enabled")
+        and hasattr(button, "mode_button")
+        and isinstance(button.mode_button, (QPushButton, QToolButton))
+    ]
+
+    for button in dark_mode_buttons:
+        button.dark_mode_enabled = theme == "dark"
+        button.update_mode_button()
     # now define stylesheet according to theme and apply it
     style = bec_qthemes.load_stylesheet(theme)
     app.setStyleSheet(style)

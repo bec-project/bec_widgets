@@ -3,6 +3,7 @@ from unittest import mock
 import pytest
 from qtpy.QtCore import Qt
 
+from bec_widgets.utils.colors import set_theme
 from bec_widgets.widgets.dark_mode_button.dark_mode_button import DarkModeButton
 
 # pylint: disable=unused-import
@@ -19,6 +20,7 @@ def dark_mode_button(qtbot, mocked_client):
     button = DarkModeButton(client=mocked_client)
     qtbot.addWidget(button)
     qtbot.waitExposed(button)
+    set_theme("light")
     yield button
 
 
