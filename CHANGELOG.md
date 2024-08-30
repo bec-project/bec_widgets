@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v0.99.14 (2024-08-30)
+
+### Fix
+
+* fix(color_button): signal and slot added for selecting color and for emitting color after change ([`99a98de`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/99a98de8a3b7a83d71e4b567e865ac6f5c62a754))
+
+* fix(color_button): inheritance changed to QWidget ([`3c0e501`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3c0e501c56227d4d98ff0ac2186ff5065bff8d7a))
+
 ## v0.99.13 (2024-08-30)
 
 ### Documentation
@@ -144,18 +152,6 @@ If not theme is set, the init of the BECWidget base class sets the default theme
 
 * docs(darkmodebutton): added dark mode button docs ([`406c263`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/406c263746f0e809c1a4d98356c48f40428c23d7))
 
-### Feature
-
-* feat(darkmodebutton): added button to toggle between dark and light mode ([`cc8c166`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cc8c166b5c1d37e0f64c83801b2347a54a6550b6))
-
-### Fix
-
-* fix(toggle): emit state change ([`c4f3308`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c4f3308dc0c3e4b2064760ccd7372d71b3e49f96))
-
 ### Refactor
 
 * refactor(darkmodebutton): renamed set_dark_mode_enabled to toggle_dark_mode ([`c70724a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c70724a456900bcb06b040407a2c5d497e49ce77))
-
-### Test
-
-* test(dark_mode_button): added tests for dark mode button ([`df35aab`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/df35aabff30c5d00b1c441132bd370446653741e))
