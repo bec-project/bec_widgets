@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QApplication, QWidget
 
@@ -37,7 +39,6 @@ class BECWidget(BECConnector):
         if hasattr(qapp, "theme_signal"):
             qapp.theme_signal.theme_updated.connect(self._update_theme)
 
-    @Slot(str)
     def _update_theme(self, theme: str):
         """Update the theme."""
         if theme is None:
