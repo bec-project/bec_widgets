@@ -46,6 +46,7 @@ class PositionerBox(BECWidget, QWidget):
         self.get_bec_shortcuts()
         self._device = ""
         self._limits = None
+        self._dialog = None
 
         self.init_ui()
 
@@ -87,17 +88,18 @@ class PositionerBox(BECWidget, QWidget):
 
     def _open_dialog_selection(self):
         """Open dialog window for positioner selection"""
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Positioner Selection")
+        self._dialog = QDialog(self)
+        self._dialog.setWindowTitle("Positioner Selection")
         layout = QVBoxLayout()
         line_edit = DeviceLineEdit(self, client=self.client, device_filter="Positioner")
-        line_edit.textChanged.connect(self._positioner_changed)
+        line_edit.textChanged.connect(self.set_positioner)
         layout.addWidget(line_edit)
         close_button = QPushButton("Close")
-        close_button.clicked.connect(dialog.accept)
+        close_button.clicked.connect(self._dialog.accept)
         layout.addWidget(close_button)
-        dialog.setLayout(layout)
-        dialog.exec()
+        self._dialog.setLayout(layout)
+        self._dialog.exec()
+        self._dialog = None
 
     def init_device(self):
         """Init the device view and readback"""

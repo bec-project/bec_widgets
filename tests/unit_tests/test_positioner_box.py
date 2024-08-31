@@ -4,8 +4,11 @@ import pytest
 from bec_lib.device import Positioner
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.messages import ScanQueueMessage
+from qtpy.QtCore import Qt, QTimer
 from qtpy.QtGui import QValidator
+from qtpy.QtWidgets import QPushButton
 
+from bec_widgets.widgets.device_line_edit.device_line_edit import DeviceLineEdit
 from bec_widgets.widgets.positioner_box.positioner_box import PositionerBox
 from bec_widgets.widgets.positioner_box.positioner_control_line import PositionerControlLine
 
@@ -128,3 +131,23 @@ def test_positioner_control_line(qtbot, mocked_client):
 
             assert db.ui.device_box.height() == 60
             assert db.ui.device_box.width() == 600
+
+
+def test_positioner_box_open_dialog_selection(qtbot, positioner_box):
+    """Test open positioner edit"""
+
+    # Use a timer to close the dialog after it opens
+    def close_dialog():
+        # pylint: disable=protected-access
+        assert positioner_box._dialog is not None
+        qtbot.waitUntil(lambda: positioner_box._dialog.isVisible() is True, timeout=1000)
+        line_edit = positioner_box._dialog.findChild(DeviceLineEdit)
+        line_edit.setText("samy")
+        close_button = positioner_box._dialog.findChild(QPushButton)
+        assert close_button.text() == "Close"
+        qtbot.mouseClick(close_button, Qt.LeftButton)
+
+    # Execute the timer after the dialog opens to close it
+    QTimer.singleShot(100, close_dialog)
+    qtbot.mouseClick(positioner_box.ui.tool_button, Qt.LeftButton)
+    assert positioner_box.device == "samy"
