@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v0.99.15 (2024-08-31)
+
+### Fix
+
+* fix(theme): update pg axes on theme update ([`af23e74`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/af23e74f71152f4abc319ab7b45e65deefde3519))
+
+* fix(positioner_box): fixed positioner box dialog; added test; closes #332 ([`0bf1cf9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0bf1cf9b8ab2f9171d5ff63d4e3672eb93e9a5fa))
+
 ## v0.99.14 (2024-08-30)
 
 ### Fix
@@ -147,11 +155,3 @@ If not theme is set, the init of the BECWidget base class sets the default theme
 * fix(crosshair): emit all crosshair events, not just line coordinates ([`2265458`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2265458dcc57970db18c62619f5877d542d72e81))
 
 ## v0.99.0 (2024-08-25)
-
-### Documentation
-
-* docs(darkmodebutton): added dark mode button docs ([`406c263`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/406c263746f0e809c1a4d98356c48f40428c23d7))
-
-### Refactor
-
-* refactor(darkmodebutton): renamed set_dark_mode_enabled to toggle_dark_mode ([`c70724a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c70724a456900bcb06b040407a2c5d497e49ce77))
