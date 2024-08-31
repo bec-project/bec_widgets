@@ -1,4 +1,6 @@
 # pylint: disable=no-name-in-module
+from __future__ import annotations
+
 import os
 from abc import ABC, abstractmethod
 from collections import defaultdict

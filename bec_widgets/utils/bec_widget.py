@@ -21,6 +21,23 @@ class BECWidget(BECConnector):
         gui_id: str = None,
         theme_update: bool = False,
     ):
+        """
+        Base class for all BEC widgets. This class should be used as a mixin class for all BEC widgets, e.g.:
+
+
+        >>> class MyWidget(BECWidget, QWidget):
+        >>>     def __init__(self, parent=None, client=None, config=None, gui_id=None):
+        >>>         super().__init__(client=client, config=config, gui_id=gui_id)
+        >>>         QWidget.__init__(self, parent=parent)
+
+
+        Args:
+            client(BECClient, optional): The BEC client.
+            config(ConnectionConfig, optional): The connection configuration.
+            gui_id(str, optional): The GUI ID.
+            theme_update(bool, optional): Whether to subscribe to theme updates. Defaults to False. When set to True, the
+                widget's apply_theme method will be called when the theme changes.
+        """
         if not isinstance(self, QWidget):
             raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")
         super().__init__(client, config, gui_id)
@@ -52,7 +69,7 @@ class BECWidget(BECConnector):
     @Slot(str)
     def apply_theme(self, theme: str):
         """
-        Apply the theme to the plot widget.
+        Apply the theme to the widget.
 
         Args:
             theme(str, optional): The theme to be applied.

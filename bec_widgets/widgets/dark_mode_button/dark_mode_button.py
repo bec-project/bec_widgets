@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from bec_qthemes import material_icon
 from qtpy.QtCore import Property, Qt, Slot
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QPushButton, QToolButton, QWidget

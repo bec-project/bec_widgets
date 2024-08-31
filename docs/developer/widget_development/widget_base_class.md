@@ -39,6 +39,10 @@ integrated with the BEC system by providing:
    from the `BECIPythonClient` via CLI, providing powerful control and automation capabilities. For example, you can
    remotely adjust widget settings, start/stop operations, or query the widget’s status directly from the command line.
 
+5. **Reacting to Theme Changes**: The base class provides a dedicated input flag to subscribe to theme changes, allowing
+   your widget to adapt its appearance based on the current theme (e.g., light or dark mode) and can even synchronize with the user's OS settings. The widget-specific logic can then 
+   be implemented in the `apply_theme` method, which is called whenever the theme changes. This ensures a consistent user experience across different themes and environments. 
+
 Here’s a basic example of a widget inheriting
 from [`BECWidget`](https://bec.readthedocs.io/projects/bec-widgets/en/latest/api_reference/_autosummary/bec_widgets.utils.bec_widget.BECWidget.html#bec_widgets.utils.bec_widget.BECWidget):
 
@@ -46,10 +50,9 @@ from [`BECWidget`](https://bec.readthedocs.io/projects/bec-widgets/en/latest/api
 from bec_widgets.utils.bec_widget import BECWidget
 from qtpy.QtWidgets import QWidget, QVBoxLayout
 
-
 class MyWidget(BECWidget, QWidget):
     def __init__(self, parent=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs) # disable theme updates
         QWidget.__init__(self, parent=parent)
         self.get_bec_shortcuts()  # Initialize BEC shortcuts
         self.init_ui()
@@ -58,6 +61,26 @@ class MyWidget(BECWidget, QWidget):
         layout = QVBoxLayout(self)
         # Add more UI components here
         self.setLayout(layout)
+
+
+# To enable theme updates, set theme_update=True, e.g.:
+
+class MyDynamicWidget(BECWidget, QWidget):
+    def __init__(self, parent=None, *args, **kwargs):
+        super().__init__(*args, theme_update=True, **kwargs) # enable theme updates
+        QWidget.__init__(self, parent=parent)
+        self.get_bec_shortcuts()  # Initialize BEC shortcuts
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout(self)
+        # Add more UI components here
+        self.setLayout(layout)
+
+    def apply_theme(self, theme):
+         # Implement theme-specific logic here
+         pass
+
 ```
 
 ### The Role of `BECConnector`
