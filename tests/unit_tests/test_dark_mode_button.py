@@ -2,6 +2,7 @@ from unittest import mock
 
 import pytest
 from qtpy.QtCore import Qt
+from qtpy.QtWidgets import QApplication
 
 from bec_widgets.utils.colors import set_theme
 from bec_widgets.widgets.dark_mode_button.dark_mode_button import DarkModeButton
@@ -70,3 +71,16 @@ def test_dark_mode_button_changes_theme(dark_mode_button):
 
         dark_mode_button.toggle_dark_mode()
         mocked_set_theme.assert_called_with("light")
+
+
+def test_dark_mode_button_changes_on_os_theme_change(qtbot, dark_mode_button):
+    """
+    Test that the dark mode button changes the theme correctly when the OS theme changes.
+    """
+    qapp = QApplication.instance()
+    assert dark_mode_button.dark_mode_enabled is False
+    assert dark_mode_button.mode_button.toolTip() == "Set Dark Mode"
+    qapp.theme_signal.theme_updated.emit("dark")
+    qtbot.wait(100)
+    assert dark_mode_button.dark_mode_enabled is True
+    assert dark_mode_button.mode_button.toolTip() == "Set Light Mode"

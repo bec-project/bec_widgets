@@ -18,7 +18,7 @@ class DarkModeButton(BECWidget, QWidget):
         gui_id: str | None = None,
         toolbar: bool = False,
     ) -> None:
-        super().__init__(client=client, gui_id=gui_id)
+        super().__init__(client=client, gui_id=gui_id, theme_update=True)
         QWidget.__init__(self, parent)
 
         self._dark_mode_enabled = False
@@ -38,6 +38,17 @@ class DarkModeButton(BECWidget, QWidget):
         self.layout.addWidget(self.mode_button)
         self.setLayout(self.layout)
         self.setFixedSize(40, 40)
+
+    @Slot(str)
+    def apply_theme(self, theme: str):
+        """
+        Apply the theme to the widget.
+
+        Args:
+            theme(str, optional): The theme to be applied.
+        """
+        self.dark_mode_enabled = theme == "dark"
+        self.update_mode_button()
 
     def _get_qapp_dark_mode_state(self) -> bool:
         """

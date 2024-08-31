@@ -14,6 +14,8 @@ def qapplication(qtbot):  # pylint: disable=unused-argument
     qapp = QApplication.instance()
     # qapp.quit()
     qapp.processEvents()
+    if hasattr(qapp, "os_listener") and qapp.os_listener:
+        qapp.removeEventFilter(qapp.os_listener)
     try:
         qtbot.waitUntil(lambda: qapp.topLevelWidgets() == [])
     except QtBotTimeoutError as exc:

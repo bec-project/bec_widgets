@@ -99,30 +99,32 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
 
         self.add_legend()
         self.crosshair = None
-        self.connect_to_theme_change()
-        self.apply_theme()
+        self._connect_to_theme_change()
 
-    def connect_to_theme_change(self):
+    def _connect_to_theme_change(self):
         """Connect to the theme change signal."""
         qapp = QApplication.instance()
         if hasattr(qapp, "theme_signal"):
-            qapp.theme_signal.theme_updated.connect(self.apply_theme)
+            qapp.theme_signal.theme_updated.connect(self._update_theme)
 
     @Slot(str)
-    @Slot()
-    def apply_theme(self, theme: str | None = None):
-        """
-        Apply the theme to the plot widget.
-
-        Args:
-            theme(str, optional): The theme to be applied.
-        """
+    def _update_theme(self, theme: str):
+        """Update the theme."""
         if theme is None:
             qapp = QApplication.instance()
             if hasattr(qapp, "theme"):
                 theme = qapp.theme["theme"]
             else:
                 theme = "dark"
+        self.apply_theme(theme)
+
+    def apply_theme(self, theme: str):
+        """
+        Apply the theme to the plot widget.
+
+        Args:
+            theme(str, optional): The theme to be applied.
+        """
         palette = bec_qthemes.load_palette(theme)
         text_pen = pg.mkPen(color=palette.text().color())
 

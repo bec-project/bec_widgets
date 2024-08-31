@@ -2,8 +2,11 @@ from unittest.mock import MagicMock, patch
 
 import pyqtgraph as pg
 import pytest
+from qtpy.QtGui import QColor
+from qtpy.QtWidgets import QApplication
 
 from bec_widgets.qt_utils.settings_dialog import SettingsDialog
+from bec_widgets.utils.colors import apply_theme, get_theme_palette, set_theme
 from bec_widgets.widgets.figure.plots.axis_settings import AxisSettings
 from bec_widgets.widgets.waveform.waveform_popups.curve_dialog.curve_dialog import CurveSettings
 from bec_widgets.widgets.waveform.waveform_widget import BECWaveformWidget
@@ -460,3 +463,42 @@ def test_axis_dialog_set_properties(qtbot, waveform_widget):
     assert waveform_widget._config_dict["axis"]["y_scale"] == "linear"
     assert waveform_widget._config_dict["axis"]["x_lim"] == (5, 15)
     assert waveform_widget._config_dict["axis"]["y_lim"] == (5, 15)
+
+
+def test_waveform_widget_theme_update(qtbot, waveform_widget):
+    """Test theme update for waveform widget."""
+    qapp = QApplication.instance()
+
+    # Set the theme directly; equivalent to clicking the dark mode button
+    # The background color should be black and the axis color should be white
+    set_theme("dark")
+    palette = get_theme_palette()
+    waveform_color_dark = waveform_widget.waveform.plot_item.getAxis("left").pen().color()
+    bg_color = waveform_widget.fig.backgroundBrush().color()
+    assert bg_color == QColor("black")
+    assert waveform_color_dark == palette.text().color()
+
+    # Set the theme to light; equivalent to clicking the light mode button
+    # The background color should be white and the axis color should be black
+    set_theme("light")
+    palette = get_theme_palette()
+    waveform_color_light = waveform_widget.waveform.plot_item.getAxis("left").pen().color()
+    bg_color = waveform_widget.fig.backgroundBrush().color()
+    assert bg_color == QColor("white")
+    assert waveform_color_light == palette.text().color()
+
+    assert waveform_color_dark != waveform_color_light
+
+    # Set the theme to auto; equivalent starting the application with no theme set
+    set_theme("auto")
+    # Simulate that the OS theme changes to dark
+    qapp.theme_signal.theme_updated.emit("dark")
+    apply_theme("dark")
+
+    # The background color should be black and the axis color should be white
+    # As we don't have access to the listener here, we can't test the palette change. Instead,
+    # we compare the waveform color to the dark theme color
+    waveform_color = waveform_widget.waveform.plot_item.getAxis("left").pen().color()
+    bg_color = waveform_widget.fig.backgroundBrush().color()
+    assert bg_color == QColor("black")
+    assert waveform_color == waveform_color_dark

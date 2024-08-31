@@ -61,7 +61,7 @@ def test_vscode_cleanup(qtbot, patched_vscode_process):
     vscode_patched, mock_killpg = patched_vscode_process
     vscode_patched.process.pid = 123
     vscode_patched.process.poll.return_value = None
-    vscode_patched.cleanup()
+    vscode_patched.cleanup_vscode()
     mock_killpg.assert_called_once_with(123, 15)
     vscode_patched.process.wait.assert_called_once()
 
@@ -70,6 +70,6 @@ def test_close_event_on_terminated_code(qtbot, patched_vscode_process):
     vscode_patched, mock_killpg = patched_vscode_process
     vscode_patched.process.pid = 123
     vscode_patched.process.poll.return_value = 0
-    vscode_patched.cleanup()
+    vscode_patched.cleanup_vscode()
     mock_killpg.assert_not_called()
     vscode_patched.process.wait.assert_not_called()

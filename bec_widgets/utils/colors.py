@@ -19,6 +19,17 @@ def get_theme_palette():
     return bec_qthemes.load_palette(theme)
 
 
+def _theme_update_callback():
+    """
+    Internal callback function to update the theme based on the system theme.
+    """
+    app = QApplication.instance()
+    # pylint: disable=protected-access
+    app.theme["theme"] = app.os_listener._theme.lower()
+    app.theme_signal.theme_updated.emit(app.theme["theme"])
+    apply_theme(app.os_listener._theme.lower())
+
+
 def set_theme(theme: Literal["dark", "light", "auto"]):
     """
     Set the theme for the application.
@@ -27,23 +38,17 @@ def set_theme(theme: Literal["dark", "light", "auto"]):
         theme (Literal["dark", "light", "auto"]): The theme to set. "auto" will automatically switch between dark and light themes based on the system theme.
     """
     app = QApplication.instance()
-    bec_qthemes.setup_theme(theme)
-    pg.setConfigOption("background", "w" if app.theme["theme"] == "light" else "k")
+    bec_qthemes.setup_theme(theme, install_event_filter=False)
+
     app.theme_signal.theme_updated.emit(theme)
     apply_theme(theme)
 
-    # pylint: disable=protected-access
     if theme != "auto":
         return
 
-    def callback():
-        app.theme["theme"] = listener._theme.lower()
-        app.theme_signal.theme_updated.emit(app.theme["theme"])
-        apply_theme(listener._theme.lower())
-
-    listener = OSThemeSwitchListener(callback)
-
-    app.installEventFilter(listener)
+    if not hasattr(app, "os_listener") or app.os_listener is None:
+        app.os_listener = OSThemeSwitchListener(_theme_update_callback)
+        app.installEventFilter(app.os_listener)
 
 
 def apply_theme(theme: Literal["dark", "light"]):
@@ -55,21 +60,12 @@ def apply_theme(theme: Literal["dark", "light"]):
     children = itertools.chain.from_iterable(
         top.findChildren(pg.GraphicsLayoutWidget) for top in app.topLevelWidgets()
     )
-    pg.setConfigOptions(foreground="d" if theme == "dark" else "k")
+    pg.setConfigOptions(
+        foreground="d" if theme == "dark" else "k", background="k" if theme == "dark" else "w"
+    )
     for pg_widget in children:
         pg_widget.setBackground("k" if theme == "dark" else "w")
 
-    dark_mode_buttons = [
-        button
-        for button in app.topLevelWidgets()
-        if hasattr(button, "dark_mode_enabled")
-        and hasattr(button, "mode_button")
-        and isinstance(button.mode_button, (QPushButton, QToolButton))
-    ]
-
-    for button in dark_mode_buttons:
-        button.dark_mode_enabled = theme == "dark"
-        button.update_mode_button()
     # now define stylesheet according to theme and apply it
     style = bec_qthemes.load_stylesheet(theme)
     app.setStyleSheet(style)
