@@ -29,6 +29,7 @@ def set_theme(theme: Literal["dark", "light", "auto"]):
     app = QApplication.instance()
     bec_qthemes.setup_theme(theme)
     pg.setConfigOption("background", "w" if app.theme["theme"] == "light" else "k")
+    app.theme_signal.theme_updated.emit(theme)
     apply_theme(theme)
 
     # pylint: disable=protected-access
@@ -37,6 +38,7 @@ def set_theme(theme: Literal["dark", "light", "auto"]):
 
     def callback():
         app.theme["theme"] = listener._theme.lower()
+        app.theme_signal.theme_updated.emit(app.theme["theme"])
         apply_theme(listener._theme.lower())
 
     listener = OSThemeSwitchListener(callback)
@@ -53,6 +55,7 @@ def apply_theme(theme: Literal["dark", "light"]):
     children = itertools.chain.from_iterable(
         top.findChildren(pg.GraphicsLayoutWidget) for top in app.topLevelWidgets()
     )
+    pg.setConfigOptions(foreground="d" if theme == "dark" else "k")
     for pg_widget in children:
         pg_widget.setBackground("k" if theme == "dark" else "w")
 

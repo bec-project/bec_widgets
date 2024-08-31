@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
+import bec_qthemes
 import pyqtgraph as pg
 from pydantic import BaseModel, Field
 from qtpy.QtCore import Signal, Slot
-from qtpy.QtWidgets import QWidget
+from qtpy.QtWidgets import QApplication, QWidget
 
 from bec_widgets.utils import BECConnector, ConnectionConfig
 from bec_widgets.utils.crosshair import Crosshair
@@ -98,6 +99,36 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
 
         self.add_legend()
         self.crosshair = None
+        self.connect_to_theme_change()
+        self.apply_theme()
+
+    def connect_to_theme_change(self):
+        """Connect to the theme change signal."""
+        qapp = QApplication.instance()
+        if hasattr(qapp, "theme_signal"):
+            qapp.theme_signal.theme_updated.connect(self.apply_theme)
+
+    @Slot(str)
+    @Slot()
+    def apply_theme(self, theme: str | None = None):
+        """
+        Apply the theme to the plot widget.
+
+        Args:
+            theme(str, optional): The theme to be applied.
+        """
+        if theme is None:
+            qapp = QApplication.instance()
+            if hasattr(qapp, "theme"):
+                theme = qapp.theme["theme"]
+            else:
+                theme = "dark"
+        palette = bec_qthemes.load_palette(theme)
+        text_pen = pg.mkPen(color=palette.text().color())
+
+        for axis in ["left", "bottom", "right", "top"]:
+            self.plot_item.getAxis(axis).setPen(text_pen)
+            self.plot_item.getAxis(axis).setTextPen(text_pen)
 
     def set(self, **kwargs) -> None:
         """
