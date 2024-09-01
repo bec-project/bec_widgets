@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v0.100.0 (2024-09-01)
+
+### Documentation
+
+* docs(becwidget): improvements to the bec widget base class docs; fixed type hint import for sphinx ([`99d5e8e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/99d5e8e71c7f89a53d7967126f4056dde005534c))
+
+### Feature
+
+* feat(theme): added theme handler to bec widget base class; added tests ([`7fb938a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7fb938a8506685278ee5eeb6fe9a03f74b713cf8))
+
+### Fix
+
+* fix(pyqt slot): removed slot decorator to avoid problems with pyqt6 ([`6c1f89a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6c1f89ad39b7240ab1d1c1123422b99ae195bf01))
+
 ## v0.99.15 (2024-08-31)
 
 ### Fix
@@ -137,21 +151,3 @@
 * fix(color maps): color maps should take the background color into account; fixed min colors to 10 ([`060935f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/060935ffc5472a958c337bf60834c5291f104ece))
 
 ## v0.99.2 (2024-08-27)
-
-### Ci
-
-* ci: additional tests are not allowed to fail ([`bb385f0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bb385f07ca18904461a541b5cadde05398c84438))
-
-### Fix
-
-* fix(widgets): fixed default theme for widgets
-
-If not theme is set, the init of the BECWidget base class sets the default theme to &#34;dark&#34; ([`cf28730`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cf28730515e3c2d5914e0205768734c578711e5c))
-
-## v0.99.1 (2024-08-27)
-
-### Fix
-
-* fix(crosshair): emit all crosshair events, not just line coordinates ([`2265458`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2265458dcc57970db18c62619f5877d542d72e81))
-
-## v0.99.0 (2024-08-25)
