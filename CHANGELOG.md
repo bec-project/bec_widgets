@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.101.0 (2024-09-02)
+
+### Feature
+
+* feat: add Dap dialog widget ([`9781b77`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9781b77de27b2810fbb1047a61b1832dd186db01))
+
+### Refactor
+
+* refactor: add docs, cleanup ([`61ecf49`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/61ecf491e52bfbfa0d5a84764a9095310659043d))
+
 ## v0.100.0 (2024-09-01)
 
 ### Documentation
@@ -143,11 +153,3 @@
 ### Build
 
 * build: updated min version of bec qthemes ([`d482434`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d48243483ef8228cc5eb85e40a6b8f5da3b45520))
-
-### Fix
-
-* fix(cmaps): unified all defaults to magma cmap ([`1ca9499`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1ca9499edd334c19fe1e7aac71d3940a80a1ec95))
-
-* fix(color maps): color maps should take the background color into account; fixed min colors to 10 ([`060935f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/060935ffc5472a958c337bf60834c5291f104ece))
-
-## v0.99.2 (2024-08-27)
