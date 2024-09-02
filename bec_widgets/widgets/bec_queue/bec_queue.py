@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from bec_lib.endpoints import MessageEndpoints
+from bec_qthemes import material_icon
 from qtpy.QtCore import Property, Qt, Slot
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QHeaderView, QLabel, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 
-from bec_qthemes import material_icon
 from bec_widgets.qt_utils.toolbar import ModularToolBar, SeparatorAction, WidgetAction
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
