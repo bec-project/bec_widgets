@@ -206,6 +206,14 @@ Display position of motor withing its limits.
 
 Display DAP summaries of LMFit models in a window.
 ```
+
+```{grid-item-card} DAP ComboBox
+:link: user.widgets.dap_combo_box
+:link-type: ref
+:img-top: /assets/widget_screenshots/dap_combo_box.png
+
+Select DAP model from a list of DAP processes.
+```
 ````
 
 ```{toctree}
@@ -234,5 +242,6 @@ spinner/spinner.md
 device_input/device_input.md
 position_indicator/position_indicator.md
 lmfit_dialog/lmfit_dialog.md
+dap_combo_box/dap_combo_box.md
 
 ```

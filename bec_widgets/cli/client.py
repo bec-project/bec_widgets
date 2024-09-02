@@ -22,6 +22,7 @@ class Widgets(str, enum.Enum):
     BECQueue = "BECQueue"
     BECStatusBox = "BECStatusBox"
     BECWaveformWidget = "BECWaveformWidget"
+    DapComboBox = "DapComboBox"
     DarkModeButton = "DarkModeButton"
     DeviceBrowser = "DeviceBrowser"
     DeviceComboBox = "DeviceComboBox"
@@ -2309,6 +2310,35 @@ class BECWaveformWidget(RPCBase):
     def export_to_matplotlib(self):
         """
         Export the plot widget to Matplotlib.
+        """
+
+
+class DapComboBox(RPCBase):
+    @rpc_call
+    def select_y_axis(self, y_axis: str):
+        """
+        Receive update signal for the y axis.
+
+        Args:
+            y_axis(str): Y axis.
+        """
+
+    @rpc_call
+    def select_x_axis(self, x_axis: str):
+        """
+        Receive update signal for the x axis.
+
+        Args:
+            x_axis(str): X axis.
+        """
+
+    @rpc_call
+    def select_fit(self, fit_name: str | None):
+        """
+        Select current fit.
+
+         Args:
+             default_device(str): Default device name.
         """
 
 

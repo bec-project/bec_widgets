@@ -1,0 +1,176 @@
+""" Module for DapComboBox widget class to select a DAP model from a combobox. """
+
+from bec_lib.logger import bec_logger
+from qtpy.QtCore import Property, Signal, Slot
+from qtpy.QtWidgets import QComboBox, QVBoxLayout, QWidget
+
+from bec_widgets.utils.bec_widget import BECWidget
+
+logger = bec_logger.logger
+
+
+class DapComboBox(BECWidget, QWidget):
+    """
+    ComboBox widget for device input with autocomplete for device names.
+
+    Args:
+        parent: Parent widget.
+        client: BEC client object.
+        gui_id: GUI ID.
+        default: Default device name.
+    """
+
+    ICON_NAME = "data_exploration"
+
+    USER_ACCESS = ["select_y_axis", "select_x_axis", "select_fit"]
+
+    add_dap_model = Signal(str, str, str)
+    update_x_axis = Signal(str)
+    update_y_axis = Signal(str)
+    update_fit_model = Signal(str)
+
+    def __init__(
+        self, parent=None, client=None, gui_id: str | None = None, default_fit: str | None = None
+    ):
+        super().__init__(client=client, gui_id=gui_id)
+        QWidget.__init__(self, parent=parent)
+        self.layout = QVBoxLayout(self)
+        self.combobox = QComboBox(self)
+        self.layout.addWidget(self.combobox)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self._available_models = None
+        self._x_axis = None
+        self._y_axis = None
+        self.populate_combobox()
+        self.combobox.currentTextChanged.connect(self._update_current_fit)
+        # Set default fit model
+        self.select_default_fit(default_fit)
+
+    def select_default_fit(self, default_fit: str | None):
+        """Set the default fit model.
+
+        Args:
+            default_fit(str): Default fit model.
+        """
+        if self._validate_dap_model(default_fit):
+            self.select_fit(default_fit)
+        else:
+            self.select_fit("GaussianModel")
+
+    @property
+    def available_models(self):
+        """Available models property."""
+        return self._available_models
+
+    @available_models.setter
+    def available_models(self, available_models: list[str]):
+        """Set the available models.
+
+        Args:
+            available_models(list[str]): Available models.
+        """
+        self._available_models = available_models
+
+    @Property(str)
+    def x_axis(self):
+        """X axis property."""
+        return self._x_axis
+
+    @x_axis.setter
+    def x_axis(self, x_axis: str):
+        """Set the x axis.
+
+        Args:
+            x_axis(str): X axis.
+        """
+        # TODO add validator for x axis -> Positioner? or also device (must be monitored)!!
+        self._x_axis = x_axis
+        self.update_x_axis.emit(x_axis)
+
+    @Property(str)
+    def y_axis(self):
+        """Y axis property."""
+        # TODO add validator for y axis -> Positioner & Device? Must be a monitored device!!
+        return self._y_axis
+
+    @y_axis.setter
+    def y_axis(self, y_axis: str):
+        """Set the y axis.
+
+        Args:
+            y_axis(str): Y axis.
+        """
+        self._y_axis = y_axis
+        self.update_y_axis.emit(y_axis)
+
+    def _update_current_fit(self, fit_name: str):
+        """Update the current fit."""
+        self.update_fit_model.emit(fit_name)
+        if self.x_axis is not None and self.y_axis is not None:
+            self.add_dap_model.emit(self._x_axis, self._y_axis, fit_name)
+
+    @Slot(str)
+    def select_x_axis(self, x_axis: str):
+        """Receive update signal for the x axis.
+
+        Args:
+            x_axis(str): X axis.
+        """
+        self.x_axis = x_axis
+
+    @Slot(str)
+    def select_y_axis(self, y_axis: str):
+        """Receive update signal for the y axis.
+
+        Args:
+            y_axis(str): Y axis.
+        """
+        self.y_axis = y_axis
+
+    @Slot(str)
+    def select_fit(self, fit_name: str | None):
+        """
+        Select current fit.
+
+        Args:
+            default_device(str): Default device name.
+        """
+        if not self._validate_dap_model(fit_name):
+            raise ValueError(f"Fit {fit_name} is not valid.")
+        self.combobox.setCurrentText(fit_name)
+
+    def populate_combobox(self):
+        """Populate the combobox with the devices."""
+        self.available_models = [model for model in self.client.dap._available_dap_plugins.keys()]
+        self.combobox.clear()
+        self.combobox.addItems(self.available_models)
+
+    def _validate_dap_model(self, model: str | None) -> bool:
+        """Validate the DAP model.
+
+        Args:
+            model(str): Model name.
+        """
+        if model is None:
+            return False
+        if model not in self.available_models:
+            return False
+        return True
+
+
+def main():
+    import sys
+
+    from qtpy.QtWidgets import QApplication
+
+    from bec_widgets.utils.colors import set_theme
+
+    app = QApplication(sys.argv)
+    set_theme("auto")
+    widget = DapComboBox()
+    widget.show()
+    sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    main()

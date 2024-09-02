@@ -343,7 +343,6 @@ class BECWaveformWidget(BECWidget, QWidget):
         x_entry: str | None = None,
         y_entry: str | None = None,
         color: str | None = None,
-        # dap: str = "GaussianModel",
         validate_bec: bool = True,
         **kwargs,
     ) -> BECCurve:
