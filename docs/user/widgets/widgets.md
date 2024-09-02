@@ -135,12 +135,20 @@ Various utility widgets to enhance user experience.
 ````{grid} 3
 :gutter: 2
 
-```{grid-item-card} Buttons
-:link: user.widgets.buttons
+```{grid-item-card} Buttons Appearance
+:link: user.widgets.buttons_appearance
 :link-type: ref
 :img-top: /assets/widget_screenshots/buttons.png
 
-Various service buttons.
+Various buttons which manage the appearance of the BEC GUI.
+```
+
+```{grid-item-card} Buttons Queue
+:link: user.widgets.buttons_queue
+:link-type: ref
+:img-top: /assets/widget_screenshots/buttons_queue.png
+
+Various buttons which manage the control of the BEC Queue.
 ```
 
 ```{grid-item-card} Device Input Widgets
@@ -215,7 +223,8 @@ scan_control/scan_control.md
 progress_bar/ring_progress_bar.md
 bec_status_box/bec_status_box.md
 queue/queue.md
-buttons/buttons.md
+buttons_appearance/buttons_appearance.md
+buttons_queue/buttons_queue.md
 device_browser/device_browser.md
 positioner_box/positioner_box.md
 text_box/text_box.md
