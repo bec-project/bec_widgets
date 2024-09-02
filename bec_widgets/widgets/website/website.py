@@ -1,5 +1,5 @@
 from qtpy.QtCore import Property, QUrl, Slot, qInstallMessageHandler
-from qtpy.QtWebEngineWidgets import QWebEngineView
+from qtpy.QtWebEngineWidgets import QWebEngineSettings, QWebEngineView
 from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
@@ -31,6 +31,19 @@ class WebsiteWidget(BECWidget, QWidget):
         layout.addWidget(self.website)
         self.setLayout(layout)
         self.set_url(url)
+
+        self._loaded = False
+        self.website.loadFinished.connect(self._on_load_finished)
+
+    def wait_until_loaded(self):
+        while not self._loaded:
+            QApplication.processEvents()
+
+    def _on_load_finished(self):
+        """
+        Callback when the website has finished loading
+        """
+        self._loaded = True
 
     @Property(str)
     def url(self) -> str:
@@ -64,6 +77,7 @@ class WebsiteWidget(BECWidget, QWidget):
             return
         if not isinstance(url, str):
             return
+        self._loaded = False
         self.website.setUrl(QUrl(url))
 
     def get_url(self) -> str:
