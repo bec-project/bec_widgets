@@ -2,10 +2,25 @@ import os
 import select
 import shlex
 import signal
+import socket
 import subprocess
 import sys
 
 from bec_widgets.widgets.website.website import WebsiteWidget
+
+
+def get_free_port():
+    """
+    Get a free port on the local machine.
+
+    Returns:
+        int: The free port number
+    """
+    sock = socket.socket()
+    sock.bind(("", 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    return port
 
 
 class VSCodeEditor(WebsiteWidget):
@@ -15,7 +30,6 @@ class VSCodeEditor(WebsiteWidget):
 
     token = "bec"
     host = "127.0.0.1"
-    port = 7000
 
     USER_ACCESS = []
     ICON_NAME = "developer_mode_tv"
@@ -23,6 +37,7 @@ class VSCodeEditor(WebsiteWidget):
     def __init__(self, parent=None, config=None, client=None, gui_id=None):
 
         self.process = None
+        self.port = get_free_port()
         self._url = f"http://{self.host}:{self.port}?tkn={self.token}"
         super().__init__(parent=parent, config=config, client=client, gui_id=gui_id)
         self.start_server()
@@ -49,6 +64,7 @@ class VSCodeEditor(WebsiteWidget):
                 if output and f"available at {self._url}" in output:
                     break
         self.set_url(self._url)
+        self.wait_until_loaded()
 
     def cleanup_vscode(self):
         """
