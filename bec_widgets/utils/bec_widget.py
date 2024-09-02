@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import darkdetect
 from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QApplication, QWidget
 
@@ -45,7 +46,12 @@ class BECWidget(BECConnector):
         # Set the theme to auto if it is not set yet
         app = QApplication.instance()
         if not hasattr(app, "theme"):
-            set_theme("auto")
+            # DO NOT SET THE THEME TO AUTO! Otherwise, the qwebengineview will segfault
+            # Instead, we will set the theme to the system setting on startup
+            if darkdetect.isDark():
+                set_theme("dark")
+            else:
+                set_theme("light")
 
         if theme_update:
             self._connect_to_theme_change()
