@@ -21,21 +21,27 @@ def vscode_widget(qtbot, mocked_client):
 
 def test_vscode_widget(qtbot, vscode_widget):
     assert vscode_widget.process is not None
-    assert vscode_widget._url == "http://127.0.0.1:7000?tkn=bec"
+    assert vscode_widget._url == f"http://127.0.0.1:{vscode_widget.port}?tkn=bec"
 
 
 def test_start_server(qtbot, mocked_client):
 
     with mock.patch("bec_widgets.widgets.vscode.vscode.subprocess.Popen") as mock_popen:
         with mock.patch("bec_widgets.widgets.vscode.vscode.select.select") as mock_select:
-            mock_process = mock.Mock()
-            mock_process.stdout.fileno.return_value = 1
-            mock_process.poll.return_value = None
-            mock_process.stdout.read.return_value = f"available at http://{VSCodeEditor.host}:{VSCodeEditor.port}?tkn={VSCodeEditor.token}"
-            mock_popen.return_value = mock_process
-            mock_select.return_value = [[mock_process.stdout], [], []]
+            with mock.patch(
+                "bec_widgets.widgets.vscode.vscode.get_free_port"
+            ) as mock_get_free_port:
+                mock_get_free_port.return_value = 12345
+                mock_process = mock.Mock()
+                mock_process.stdout.fileno.return_value = 1
+                mock_process.poll.return_value = None
+                mock_process.stdout.read.return_value = (
+                    f"available at http://{VSCodeEditor.host}:{12345}?tkn={VSCodeEditor.token}"
+                )
+                mock_popen.return_value = mock_process
+                mock_select.return_value = [[mock_process.stdout], [], []]
 
-            widget = VSCodeEditor(client=mocked_client)
+                widget = VSCodeEditor(client=mocked_client)
 
             assert (
                 mock.call(

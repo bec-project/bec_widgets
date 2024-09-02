@@ -22,4 +22,5 @@ def test_website_widget_set_url(website_widget):
     assert website_widget.website.url() == QUrl("https://scilog.psi.ch")
 
     website_widget.set_url("https://google.com")
-    assert website_widget.get_url() == "https://google.com"
+    website_widget.wait_until_loaded()
+    assert website_widget.get_url() == "https://www.google.com/"
