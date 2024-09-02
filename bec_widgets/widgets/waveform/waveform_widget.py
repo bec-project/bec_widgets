@@ -33,6 +33,7 @@ class BECWaveformWidget(BECWidget, QWidget):
         "curves",
         "plot",
         "add_dap",
+        "get_dap_params",
         "remove_curve",
         "scan_history",
         "get_all_data",

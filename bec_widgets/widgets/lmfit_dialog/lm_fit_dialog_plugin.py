@@ -27,7 +27,7 @@ class LMFitDialogPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return ""
+        return "BEC Utils"
 
     def icon(self):
         return designer_material_icon(LMFitDialog.ICON_NAME)

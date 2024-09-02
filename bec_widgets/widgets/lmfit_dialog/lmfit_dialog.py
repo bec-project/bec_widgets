@@ -12,8 +12,9 @@ logger = bec_logger.logger
 
 
 class LMFitDialog(BECWidget, QWidget):
+    """Dialog for displaying the fit summary and params for LMFit DAP processes"""
 
-    ICON_NAME = "bike_lane"
+    ICON_NAME = "monitoring"
     selected_fit = Signal(str)
 
     def __init__(
@@ -25,6 +26,17 @@ class LMFitDialog(BECWidget, QWidget):
         gui_id: str | None = None,
         ui_file="lmfit_dialog_vertical.ui",
     ):
+        """
+        Initialises the LMFitDialog widget.
+
+        Args:
+            parent (QWidget): The parent widget.
+            client: BEC client object.
+            config: Configuration of the widget.
+            target_widget: The widget that the settings will be taken from and applied to.
+            gui_id (str): GUI ID.
+            ui_file (str): The UI file to be loaded.
+        """
         super().__init__(client=client, config=config, gui_id=gui_id)
         QWidget.__init__(self, parent=parent)
         self._ui_file = ui_file
@@ -38,6 +50,7 @@ class LMFitDialog(BECWidget, QWidget):
         self._fit_curve_id = None
         self._deci_precision = 3
         self.ui.curve_list.currentItemChanged.connect(self.display_fit_details)
+        self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
 
     @Property(bool)
@@ -101,10 +114,6 @@ class LMFitDialog(BECWidget, QWidget):
         self.refresh_curve_list()
         if self.fit_curve_id is None:
             self.fit_curve_id = curve_id
-            for index in range(self.ui.curve_list.count()):
-                item = self.ui.curve_list.item(index)
-                if item.text() == curve_id:
-                    self.ui.curve_list.setCurrentItem(item)
         if curve_id != self.fit_curve_id:
             return
         if data is None:

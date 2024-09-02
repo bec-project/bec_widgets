@@ -1813,6 +1813,15 @@ class BECWaveform(RPCBase):
         """
 
     @rpc_call
+    def get_dap_params(self) -> "dict":
+        """
+        Get the DAP parameters of all DAP curves.
+
+        Returns:
+            dict: DAP parameters of all DAP curves.
+        """
+
+    @rpc_call
     def set_x(self, x_name: "str", x_entry: "str | None" = None):
         """
         Change the x axis of the plot widget.
@@ -2110,6 +2119,15 @@ class BECWaveformWidget(RPCBase):
 
         Returns:
             BECCurve: The curve object.
+        """
+
+    @rpc_call
+    def get_dap_params(self) -> "dict":
+        """
+        Get the DAP parameters of all DAP curves.
+
+        Returns:
+            dict: DAP parameters of all DAP curves.
         """
 
     @rpc_call

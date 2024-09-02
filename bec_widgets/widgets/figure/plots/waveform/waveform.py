@@ -49,6 +49,7 @@ class BECWaveform(BECPlotBase):
         "_config_dict",
         "plot",
         "add_dap",
+        "get_dap_params",
         "set_x",
         "remove_curve",
         "scan_history",
