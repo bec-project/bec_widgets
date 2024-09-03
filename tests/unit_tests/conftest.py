@@ -48,7 +48,6 @@ def create_widget(qtbot, widget, *args, **kwargs):
     """
     Create a widget and add it to the qtbot for testing. This is a helper function that
     should be used in all tests that require a widget to be created.
-    DO NOT CREATE WIDGETS DIRECTLY IN A FIXTURE!
 
     Args:
         qtbot (fixture): pytest-qt fixture
@@ -58,7 +57,6 @@ def create_widget(qtbot, widget, *args, **kwargs):
 
     Returns:
         QWidget: the created widget
-
     """
     widget = widget(*args, **kwargs)
     qtbot.addWidget(widget)

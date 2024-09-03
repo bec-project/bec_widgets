@@ -13,6 +13,7 @@ from bec_widgets.widgets.positioner_box.positioner_box import PositionerBox
 from bec_widgets.widgets.positioner_box.positioner_control_line import PositionerControlLine
 
 from .client_mocks import mocked_client
+from .conftest import create_widget
 
 
 @pytest.fixture
@@ -24,8 +25,7 @@ def positioner_box(qtbot, mocked_client):
             "bec_widgets.widgets.positioner_box.positioner_box.PositionerBox._check_device_is_valid",
             return_value=True,
         ):
-            db = PositionerBox(device="samx", client=mocked_client)
-            qtbot.addWidget(db)
+            db = create_widget(qtbot, PositionerBox, device="samx", client=mocked_client)
             yield db
 
 
