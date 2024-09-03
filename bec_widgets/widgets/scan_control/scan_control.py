@@ -1,3 +1,7 @@
+from typing import Optional
+
+from pydantic import BaseModel, Field
+
 from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import Property, Signal, Slot
 from qtpy.QtWidgets import (
@@ -12,10 +16,22 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.scan_control.scan_group_box import ScanGroupBox
 from bec_widgets.widgets.stop_button.stop_button import StopButton
+
+
+class ScanParameterConfig(BaseModel):
+    name: str
+    args: Optional[list] = Field(None)
+    kwargs: Optional[dict] = Field(None)
+
+
+class ScanControlConfig(ConnectionConfig):
+    default_scan: Optional[str] = Field(None)
+    scans: Optional[dict[str, ScanParameterConfig]] = Field(None)
 
 
 class ScanControl(BECWidget, QWidget):
@@ -26,9 +42,19 @@ class ScanControl(BECWidget, QWidget):
     scan_selected = Signal(str)
 
     def __init__(
-        self, parent=None, client=None, gui_id: str | None = None, allowed_scans: list | None = None
+        self,
+        parent=None,
+        client=None,
+        config: ScanControlConfig | dict | None = None,
+        gui_id: str | None = None,
+        allowed_scans: list | None = None,
     ):
-        super().__init__(client=client, gui_id=gui_id)
+
+        if config is None:
+            config = ScanControlConfig(
+                widget_class=self.__class__.__name__, allowed_scans=allowed_scans
+            )
+        super().__init__(client=client, gui_id=gui_id, config=config)
         QWidget.__init__(self, parent=parent)
 
         # Client from BEC + shortcuts to device manager and scans
@@ -41,7 +67,7 @@ class ScanControl(BECWidget, QWidget):
         self.expert_mode = False  # TODO implement in the future versions
 
         # Scan list - allowed scans for the GUI
-        self.allowed_scans = allowed_scans
+        self.allowed_scans = allowed_scans  # FIXME should be changed to config.allowed_scans
 
         # Create and set main layout
         self._init_UI()
@@ -295,9 +321,8 @@ class ScanControl(BECWidget, QWidget):
         self.kwarg_boxes = []
 
     @Slot()
-    def run_scan(self):
-        """Starts the selected scan with the given parameters."""
-        self.scan_started.emit()
+    def get_scan_parameters(self):
+        """Returns the scan parameters for the selected scan."""
         args = []
         kwargs = {}
         if self.arg_box is not None:
@@ -305,6 +330,13 @@ class ScanControl(BECWidget, QWidget):
         for box in self.kwarg_boxes:
             box_kwargs = box.get_parameters()
             kwargs.update(box_kwargs)
+        return args, kwargs
+
+    @Slot()
+    def run_scan(self):
+        """Starts the selected scan with the given parameters."""
+        self.scan_started.emit()
+        args, kwargs = self.get_scan_parameters()
         scan_function = getattr(self.scans, self.comboBox_scan_selection.currentText())
         if callable(scan_function):
             scan_function(*args, **kwargs)
