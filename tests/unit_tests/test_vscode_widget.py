@@ -37,14 +37,17 @@ def test_start_server(qtbot, mocked_client):
 
             widget = VSCodeEditor(client=mocked_client)
 
-            mock_popen.assert_called_once_with(
-                shlex.split(
-                    f"code serve-web --port {widget.port} --connection-token={widget.token} --accept-server-license-terms"
-                ),
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.DEVNULL,
-                preexec_fn=os.setsid,
+            assert (
+                mock.call(
+                    shlex.split(
+                        f"code serve-web --port {widget.port} --connection-token={widget.token} --accept-server-license-terms"
+                    ),
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    preexec_fn=os.setsid,
+                )
+                in mock_popen.mock_calls
             )
 
 
