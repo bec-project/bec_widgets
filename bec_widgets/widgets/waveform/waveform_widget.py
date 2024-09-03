@@ -5,6 +5,7 @@ from typing import Literal
 
 import numpy as np
 import pyqtgraph as pg
+from bec_lib.logger import bec_logger
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
@@ -25,6 +26,8 @@ try:
     import pandas as pd
 except ImportError:
     pd = None
+
+logger = bec_logger.logger
 
 
 class BECWaveformWidget(BECWidget, QWidget):
@@ -425,7 +428,7 @@ class BECWaveformWidget(BECWidget, QWidget):
         except ImportError:
             pd = None
             if output == "pandas":
-                print(
+                logger.warning(
                     "Pandas is not installed. "
                     "Please install pandas using 'pip install pandas'."
                     "Output will be dictionary instead."

@@ -5,6 +5,7 @@ from typing import Any, Literal, Optional
 
 import numpy as np
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.logger import bec_logger
 from pydantic import BaseModel, Field, ValidationError
 from qtpy.QtCore import QThread
 from qtpy.QtWidgets import QWidget
@@ -18,6 +19,8 @@ from bec_widgets.widgets.figure.plots.image.image_processor import (
     ProcessorWorker,
 )
 from bec_widgets.widgets.figure.plots.plot_base import BECPlotBase, SubplotConfig
+
+logger = bec_logger.logger
 
 
 class ImageConfig(SubplotConfig):
@@ -130,7 +133,7 @@ class BECImageShow(BECPlotBase):
             try:
                 config = ImageConfig(**config)
             except ValidationError as e:
-                print(f"Validation error when applying config to BECImageShow: {e}")
+                logger.error(f"Validation error when applying config to BECImageShow: {e}")
                 return
         self.config = config
         self.plot_item.clear()

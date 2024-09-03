@@ -6,6 +6,7 @@ from typing import Optional, Union
 import numpy as np
 import pyqtgraph as pg
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.logger import bec_logger
 from pydantic import Field, ValidationError, field_validator
 from pydantic_core import PydanticCustomError
 from qtpy import QtCore, QtGui
@@ -16,6 +17,8 @@ from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
 from bec_widgets.utils import Colors, EntryValidator
 from bec_widgets.widgets.figure.plots.plot_base import BECPlotBase, SubplotConfig
 from bec_widgets.widgets.figure.plots.waveform.waveform import Signal, SignalData
+
+logger = bec_logger.logger
 
 
 class MotorMapConfig(SubplotConfig):
@@ -101,7 +104,7 @@ class BECMotorMap(BECPlotBase):
             try:
                 config = MotorMapConfig(**config)
             except ValidationError as e:
-                print(f"Error in applying config: {e}")
+                logger.error(f"Error in applying config: {e}")
                 return
 
         self.config = config
@@ -440,7 +443,7 @@ class BECMotorMap(BECPlotBase):
             return limits
         except AttributeError:  # TODO maybe not needed, if no limits it returns [0,0]
             # If the motor doesn't have a 'limits' attribute, return a default value or raise a custom exception
-            print(f"The device '{motor}' does not have defined limits.")
+            logger.error(f"The device '{motor}' does not have defined limits.")
             return None
 
     @Slot()

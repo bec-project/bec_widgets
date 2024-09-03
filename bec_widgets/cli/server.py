@@ -53,9 +53,11 @@ class BECWidgetsCLIServer:
         self._heartbeat_timer.start(200)
 
         self.status = messages.BECStatus.RUNNING
+        logger.success(f"Server started with gui_id: {self.gui_id}")
 
     def on_rpc_update(self, msg: dict, metadata: dict):
         request_id = metadata.get("request_id")
+        logger.debug(f"Received RPC instruction: {msg}, metadata: {metadata}")
         try:
             obj = self.get_object_from_config(msg["parameter"])
             method = msg["action"]
@@ -63,9 +65,10 @@ class BECWidgetsCLIServer:
             kwargs = msg["parameter"].get("kwargs", {})
             res = self.run_rpc(obj, method, args, kwargs)
         except Exception as e:
-            print(e)
+            logger.error(f"Error while executing RPC instruction: {e}")
             self.send_response(request_id, False, {"error": str(e)})
         else:
+            logger.debug(f"RPC instruction executed successfully: {res}")
             self.send_response(request_id, True, {"result": res})
 
     def send_response(self, request_id: str, accepted: bool, msg: dict):
@@ -113,6 +116,7 @@ class BECWidgetsCLIServer:
         return obj
 
     def emit_heartbeat(self):
+        logger.trace(f"Emitting heartbeat for {self.gui_id}")
         self.client.connector.set(
             MessageEndpoints.gui_heartbeat(self.gui_id),
             messages.StatusMessage(name=self.gui_id, status=self.status, info={}),
@@ -120,6 +124,7 @@ class BECWidgetsCLIServer:
         )
 
     def shutdown(self):  # TODO not sure if needed when cleanup is done at level of BECConnector
+        logger.info(f"Shutting down server with gui_id: {self.gui_id}")
         self.status = messages.BECStatus.IDLE
         self._heartbeat_timer.stop()
         self.emit_heartbeat()
@@ -137,7 +142,8 @@ class SimpleFileLikeFromLogOutputFunc:
 
     def flush(self):
         lines, _, remaining = "".join(self._buffer).rpartition("\n")
-        self._log_func(lines)
+        if lines:
+            self._log_func(lines)
         self._buffer = [remaining]
 
     def close(self):
@@ -155,12 +161,12 @@ def _start_server(gui_id: str, gui_class: Union[BECFigure, BECDockArea], config:
         # if no config is provided, use the default config
         service_config = ServiceConfig()
 
-    bec_logger.configure(
-        service_config.redis,
-        QtRedisConnector,
-        service_name="BECWidgetsCLIServer",
-        service_config=service_config.service_config,
-    )
+    # bec_logger.configure(
+    #     service_config.redis,
+    #     QtRedisConnector,
+    #     service_name="BECWidgetsCLIServer",
+    #     service_config=service_config.service_config,
+    # )
     server = BECWidgetsCLIServer(gui_id=gui_id, config=service_config, gui_class=gui_class)
     return server
 
@@ -174,6 +180,12 @@ def main():
     from qtpy.QtWidgets import QApplication, QMainWindow
 
     import bec_widgets
+
+    bec_logger.level = bec_logger.LOGLEVEL.DEBUG
+    if __name__ != "__main__":
+        # if not running as main, set the log level to critical
+        # pylint: disable=protected-access
+        bec_logger._stderr_log_level = bec_logger.LOGLEVEL.CRITICAL
 
     parser = argparse.ArgumentParser(description="BEC Widgets CLI Server")
     parser.add_argument("--id", type=str, help="The id of the server")
@@ -197,7 +209,7 @@ def main():
         )
         gui_class = BECFigure
 
-    with redirect_stdout(SimpleFileLikeFromLogOutputFunc(logger.debug)):
+    with redirect_stdout(SimpleFileLikeFromLogOutputFunc(logger.info)):
         with redirect_stderr(SimpleFileLikeFromLogOutputFunc(logger.error)):
             app = QApplication(sys.argv)
             app.setApplicationName("BEC Figure")

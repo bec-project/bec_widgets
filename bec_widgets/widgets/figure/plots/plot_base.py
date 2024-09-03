@@ -4,12 +4,15 @@ from typing import Literal, Optional
 
 import bec_qthemes
 import pyqtgraph as pg
+from bec_lib.logger import bec_logger
 from pydantic import BaseModel, Field
 from qtpy.QtCore import Signal, Slot
 from qtpy.QtWidgets import QApplication, QWidget
 
 from bec_widgets.utils import BECConnector, ConnectionConfig
 from bec_widgets.utils.crosshair import Crosshair
+
+logger = bec_logger.logger
 
 
 class AxisConfig(BaseModel):
@@ -164,7 +167,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
             if key in method_map:
                 method_map[key](value)
             else:
-                print(f"Warning: '{key}' is not a recognized property.")
+                logger.warning(f"Warning: '{key}' is not a recognized property.")
 
     def apply_axis_config(self):
         """Apply the axis configuration to the plot widget."""

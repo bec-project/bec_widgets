@@ -80,7 +80,7 @@ def _get_output(process, logger) -> None:
                     buf.clear()
                     buf.append(remaining)
     except Exception as e:
-        print(f"Error reading process output: {str(e)}")
+        logger.error(f"Error reading process output: {str(e)}")
 
 
 def _start_plot_process(gui_id: str, gui_class: type, config: dict | str, logger=None) -> None:
@@ -146,7 +146,7 @@ class BECGuiClientMixin:
                         continue
                     return ep.load()(gui=self)
                 except Exception as e:
-                    print(f"Error loading auto update script from plugin: {str(e)}")
+                    logger.error(f"Error loading auto update script from plugin: {str(e)}")
         return None
 
     @property
@@ -189,11 +189,12 @@ class BECGuiClientMixin:
         if self._process is None or self._process.poll() is not None:
             self._start_update_script()
             self._process, self._process_output_processing_thread = _start_plot_process(
-                self._gui_id, self.__class__, self._client._service_config.config
+                self._gui_id, self.__class__, self._client._service_config.config, logger=logger
             )
         while not self.gui_is_alive():
             print("Waiting for GUI to start...")
             time.sleep(1)
+        logger.success(f"GUI started with id: {self._gui_id}")
 
     def close(self) -> None:
         """
@@ -226,7 +227,7 @@ class RPCBase:
     def __init__(self, gui_id: str = None, config: dict = None, parent=None) -> None:
         self._client = BECClient()  # BECClient is a singleton; here, we simply get the instance
         self._config = config if config is not None else {}
-        self._gui_id = gui_id if gui_id is not None else str(uuid.uuid4())
+        self._gui_id = gui_id if gui_id is not None else str(uuid.uuid4())[:5]
         self._parent = parent
         self._msg_wait_event = threading.Event()
         self._rpc_response = None

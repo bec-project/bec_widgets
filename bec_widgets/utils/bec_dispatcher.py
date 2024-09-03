@@ -6,10 +6,13 @@ from typing import TYPE_CHECKING, Union
 
 import redis
 from bec_lib.client import BECClient
+from bec_lib.logger import bec_logger
 from bec_lib.redis_connector import MessageObject, RedisConnector
 from bec_lib.service_config import ServiceConfig
 from qtpy.QtCore import QObject
 from qtpy.QtCore import Signal as pyqtSignal
+
+logger = bec_logger.logger
 
 if TYPE_CHECKING:
     from bec_lib.endpoints import EndpointInfo
@@ -65,11 +68,6 @@ class QtRedisConnector(RedisConnector):
             cb(msg.content, msg.metadata)
 
 
-class BECClientWithoutLoggerInit(BECClient):
-    def _initialize_logger(self):
-        return
-
-
 class BECDispatcher:
     """Utility class to keep track of slots connected to a particular redis connector"""
 
@@ -94,24 +92,22 @@ class BECDispatcher:
                 if not isinstance(config, ServiceConfig):
                     # config is supposed to be a path
                     config = ServiceConfig(config)
-                self.client = BECClientWithoutLoggerInit(
-                    config=config, connector_cls=QtRedisConnector
-                )  # , forced=True)
-            else:
-                self.client = BECClientWithoutLoggerInit(
-                    connector_cls=QtRedisConnector
-                )  # , forced=True)
+            self.client = BECClient(
+                config=config, connector_cls=QtRedisConnector, name="BECWidgets"
+            )
         else:
             if self.client.started:
                 # have to reinitialize client to use proper connector
+                logger.info("Shutting down BECClient to switch to QtRedisConnector")
                 self.client.shutdown()
             self.client._BECClient__init_params["connector_cls"] = QtRedisConnector
 
         try:
             self.client.start()
         except redis.exceptions.ConnectionError:
-            print("Could not connect to Redis, skipping start of BECClient.")
+            logger.warning("Could not connect to Redis, skipping start of BECClient.")
 
+        logger.success("Initialized BECDispatcher")
         self._initialized = True
 
     @classmethod

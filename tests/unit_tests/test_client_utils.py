@@ -71,6 +71,6 @@ def test_client_utils_passes_client_config_to_server(bec_dispatcher):
             mock_start_plot.return_value = [mock.MagicMock(), mock.MagicMock()]
             mixin.show()
             mock_start_plot.assert_called_once_with(
-                "gui_id", BECGuiClientMixin, mixin._client._service_config.config
+                "gui_id", BECGuiClientMixin, mixin._client._service_config.config, logger=mock.ANY
             )
             mock_start_update.assert_called_once()

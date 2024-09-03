@@ -7,6 +7,7 @@ from typing import Literal, Optional
 
 import numpy as np
 import pyqtgraph as pg
+from bec_lib.logger import bec_logger
 from pydantic import Field, ValidationError, field_validator
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtWidgets import QWidget
@@ -19,6 +20,8 @@ from bec_widgets.widgets.figure.plots.image.image import BECImageShow, ImageConf
 from bec_widgets.widgets.figure.plots.motor_map.motor_map import BECMotorMap, MotorMapConfig
 from bec_widgets.widgets.figure.plots.plot_base import BECPlotBase, SubplotConfig
 from bec_widgets.widgets.figure.plots.waveform.waveform import BECWaveform, Waveform1DConfig
+
+logger = bec_logger.logger
 
 
 class FigureConfig(ConnectionConfig):
@@ -179,7 +182,7 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
             try:
                 config = FigureConfig(**config)
             except ValidationError as e:
-                print(f"Error in applying config: {e}")
+                logger.error(f"Error in applying config: {e}")
                 return
         self.config = config
 

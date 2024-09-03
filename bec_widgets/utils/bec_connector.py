@@ -6,7 +6,7 @@ import time
 import uuid
 from typing import Optional
 
-import yaml
+from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
 from pydantic import BaseModel, Field, field_validator
 from qtpy.QtCore import QObject, QRunnable, QThreadPool, Signal
@@ -17,6 +17,7 @@ from bec_widgets.qt_utils.error_popups import ErrorPopupUtility
 from bec_widgets.qt_utils.error_popups import SafeSlot as pyqtSlot
 from bec_widgets.utils.yaml_dialog import load_yaml, load_yaml_gui, save_yaml, save_yaml_gui
 
+logger = bec_logger.logger
 BECDispatcher = lazy_import_from("bec_widgets.utils.bec_dispatcher", ("BECDispatcher",))
 
 
@@ -81,9 +82,9 @@ class BECConnector:
             # the function depends on BECClient, and BECDispatcher
             @pyqtSlot()
             def terminate(client=self.client, dispatcher=self.bec_dispatcher):
-                print("Disconnecting", repr(dispatcher))
+                logger.info("Disconnecting", repr(dispatcher))
                 dispatcher.disconnect_all()
-                print("Shutting down BEC Client", repr(client))
+                logger.info("Shutting down BEC Client", repr(client))
                 client.shutdown()
 
             BECConnector.EXIT_HANDLERS[self.client] = terminate
@@ -93,7 +94,7 @@ class BECConnector:
             self.config = config
             self.config.widget_class = self.__class__.__name__
         else:
-            print(
+            logger.debug(
                 f"No initial config found for {self.__class__.__name__}.\n"
                 f"Initializing with default config."
             )

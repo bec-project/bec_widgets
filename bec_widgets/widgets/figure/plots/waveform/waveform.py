@@ -8,6 +8,7 @@ import pyqtgraph as pg
 from bec_lib import messages
 from bec_lib.device import ReadoutPriority
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.logger import bec_logger
 from pydantic import Field, ValidationError, field_validator
 from pyqtgraph.exporters import MatplotlibExporter
 from qtpy.QtCore import Signal as pyqtSignal
@@ -22,6 +23,8 @@ from bec_widgets.widgets.figure.plots.waveform.waveform_curve import (
     Signal,
     SignalData,
 )
+
+logger = bec_logger.logger
 
 
 class Waveform1DConfig(SubplotConfig):
@@ -139,7 +142,7 @@ class BECWaveform(BECPlotBase):
             try:
                 config = Waveform1DConfig(**config)
             except ValidationError as e:
-                print(f"Validation error when applying config to BECWaveform1D: {e}")
+                logger.error(f"Validation error when applying config to BECWaveform1D: {e}")
                 return
 
         self.config = config
@@ -553,7 +556,7 @@ class BECWaveform(BECPlotBase):
                 format="HEX",
             )[len(self.plot_item.curves)]
         )
-        print(f"Color: {color}")
+        logger.info(f"Color: {color}")
 
         # Create curve by config
         curve_config = CurveConfig(
@@ -1291,7 +1294,7 @@ class BECWaveform(BECPlotBase):
             try:
                 self.scan_id = self.queue.scan_storage.storage[scan_index].scan_id
             except IndexError:
-                print(f"Scan index {scan_index} out of range.")
+                logger.error(f"Scan index {scan_index} out of range.")
                 return
         elif scan_id is not None:
             self.scan_id = scan_id
@@ -1317,7 +1320,7 @@ class BECWaveform(BECPlotBase):
         except ImportError:
             pd = None
             if output == "pandas":
-                print(
+                logger.warning(
                     "Pandas is not installed. "
                     "Please install pandas using 'pip install pandas'."
                     "Output will be dictionary instead."

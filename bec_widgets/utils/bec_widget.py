@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import darkdetect
+from bec_lib.logger import bec_logger
 from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QApplication, QWidget
 
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
 from bec_widgets.utils.colors import set_theme
+
+logger = bec_logger.logger
 
 
 class BECWidget(BECConnector):
@@ -54,6 +57,7 @@ class BECWidget(BECConnector):
                 set_theme("light")
 
         if theme_update:
+            logger.debug(f"Subscribing to theme updates for {self.__class__.__name__}")
             self._connect_to_theme_change()
 
     def _connect_to_theme_change(self):

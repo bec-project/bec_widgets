@@ -4,6 +4,7 @@ from typing import Literal, Optional
 
 import pyqtgraph as pg
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.logger import bec_logger
 from pydantic import Field, field_validator
 from pydantic_core import PydanticCustomError
 from qtpy import QtCore, QtGui
@@ -13,6 +14,8 @@ from qtpy.QtWidgets import QSizePolicy, QWidget
 from bec_widgets.utils import Colors, ConnectionConfig, EntryValidator
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.ring_progress_bar.ring import Ring, RingConfig
+
+logger = bec_logger.logger
 
 
 class RingProgressBarConfig(ConnectionConfig):
@@ -38,7 +41,7 @@ class RingProgressBarConfig(ConnectionConfig):
         min_number_of_bars = values.data.get("min_number_of_bars", None)
         max_number_of_bars = values.data.get("max_number_of_bars", None)
         if min_number_of_bars is not None and max_number_of_bars is not None:
-            print(
+            logger.info(
                 f"Number of bars adjusted to be between defined min:{min_number_of_bars} and max:{max_number_of_bars} number of bars."
             )
             v = max(min_number_of_bars, min(v, max_number_of_bars))
@@ -318,7 +321,7 @@ class RingProgressBar(BECWidget, QWidget):
             ring = self._find_ring_by_index(ring_index)
             if isinstance(values, list):
                 values = values[0]
-                print(
+                logger.warning(
                     f"Warning: Only a single value can be set for a single progress bar. Using the first value in the list {values}"
                 )
             ring.set_value(values)
@@ -380,7 +383,7 @@ class RingProgressBar(BECWidget, QWidget):
             ring = self._find_ring_by_index(bar_index)
             if isinstance(widths, list):
                 widths = widths[0]
-                print(
+                logger.warning(
                     f"Warning: Only a single line width can be set for a single progress bar. Using the first value in the list {widths}"
                 )
             ring.set_line_width(widths)
@@ -487,7 +490,7 @@ class RingProgressBar(BECWidget, QWidget):
                         for index, device in enumerate(devices):
                             self._hook_readback(index, device, start[index], end[index])
                     else:
-                        print(f"{instruction_type} not supported yet.")
+                        logger.error(f"{instruction_type} not supported yet.")
 
                     # elif instruction_type == "device_progress":
                     #     print("hook device_progress")
@@ -609,7 +612,7 @@ class RingProgressBar(BECWidget, QWidget):
         Calculate the minimum size of the widget.
         """
         if not self.config.rings:
-            print("no rings to get size from setting size to 10x10")
+            logger.warning("no rings to get size from setting size to 10x10")
             return QSize(10, 10)
         ring_widths = [self.config.rings[i].line_width for i in range(self.config.num_bars)]
         total_width = sum(ring_widths) + self.config.gap * (self.config.num_bars - 1)

@@ -4,14 +4,16 @@ from typing import TYPE_CHECKING, Any, Literal, Optional
 
 import numpy as np
 import pyqtgraph as pg
+from bec_lib.logger import bec_logger
 from pydantic import BaseModel, Field, field_validator
-from pydantic_core import PydanticCustomError
 from qtpy import QtCore
 
 from bec_widgets.utils import BECConnector, Colors, ConnectionConfig
 
 if TYPE_CHECKING:
     from bec_widgets.widgets.figure.plots.waveform import BECWaveform1D
+
+logger = bec_logger.logger
 
 
 class SignalData(BaseModel):
@@ -177,7 +179,7 @@ class BECCurve(BECConnector, pg.PlotDataItem):
             if key in method_map:
                 method_map[key](value)
             else:
-                print(f"Warning: '{key}' is not a recognized property.")
+                logger.warning(f"Warning: '{key}' is not a recognized property.")
 
     def set_color(self, color: str, symbol_color: Optional[str] = None):
         """

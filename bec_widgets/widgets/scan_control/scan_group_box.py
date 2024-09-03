@@ -1,5 +1,6 @@
 from typing import Literal
 
+from bec_lib.logger import bec_logger
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
     QCheckBox,
@@ -17,6 +18,8 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.device_line_edit.device_line_edit import DeviceLineEdit
+
+logger = bec_logger.logger
 
 
 class ScanArgType:
@@ -191,7 +194,9 @@ class ScanGroupBox(QGroupBox):
             default = item.get("default", None)
             widget = self.WIDGET_HANDLER.get(item["type"], None)
             if widget is None:
-                print(f"Unsupported annotation '{item['type']}' for parameter '{item['name']}'")
+                logger.error(
+                    f"Unsupported annotation '{item['type']}' for parameter '{item['name']}'"
+                )
                 continue
             if default == "_empty":
                 default = None

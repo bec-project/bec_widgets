@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from bec_lib.logger import bec_logger
 from qtpy.QtCore import QMimeData, Qt
 from qtpy.QtGui import QDrag
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QWidget
 
 if TYPE_CHECKING:
     from qtpy.QtGui import QMouseEvent
+
+logger = bec_logger.logger
 
 
 class DeviceItem(QWidget):
@@ -37,7 +40,7 @@ class DeviceItem(QWidget):
             drag.exec_(Qt.MoveAction)
 
     def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
-        print("Double Clicked")
+        logger.debug("Double Clicked")
         # TODO: Implement double click action for opening the device properties dialog
         return super().mouseDoubleClickEvent(event)
 

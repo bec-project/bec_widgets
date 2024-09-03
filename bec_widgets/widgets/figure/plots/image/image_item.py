@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Literal, Optional
 
 import numpy as np
 import pyqtgraph as pg
+from bec_lib.logger import bec_logger
 from pydantic import Field
 
 from bec_widgets.utils import BECConnector, ConnectionConfig
@@ -11,6 +12,8 @@ from bec_widgets.widgets.figure.plots.image.image_processor import ImageStats, P
 
 if TYPE_CHECKING:
     from bec_widgets.widgets.figure.plots.image.image import BECImageShow
+
+logger = bec_logger.logger
 
 
 class ImageItemConfig(ConnectionConfig):
@@ -133,7 +136,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
             if key in method_map:
                 method_map[key](value)
             else:
-                print(f"Warning: '{key}' is not a recognized property.")
+                logger.warning(f"Warning: '{key}' is not a recognized property.")
 
     def set_fft(self, enable: bool = False):
         """
