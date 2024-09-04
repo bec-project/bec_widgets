@@ -1,8 +1,8 @@
+from collections import defaultdict
 from typing import Optional
 
-from pydantic import BaseModel, Field
-
 from bec_lib.endpoints import MessageEndpoints
+from pydantic import BaseModel, Field
 from qtpy.QtCore import Property, Signal, Slot
 from qtpy.QtWidgets import (
     QApplication,
@@ -16,6 +16,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_widgets.qt_utils.error_popups import SafeSlot
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
@@ -30,8 +31,9 @@ class ScanParameterConfig(BaseModel):
 
 
 class ScanControlConfig(ConnectionConfig):
-    default_scan: Optional[str] = Field(None)
-    scans: Optional[dict[str, ScanParameterConfig]] = Field(None)
+    # default_scan: Optional[str] = Field(None)  # TODO implement later
+    # allowed_scans: Optional[list] = Field(None)
+    scans: Optional[dict[str, ScanParameterConfig]] = defaultdict(dict)
 
 
 class ScanControl(BECWidget, QWidget):
@@ -62,9 +64,11 @@ class ScanControl(BECWidget, QWidget):
 
         # Main layout
         self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(5, 5, 5, 5)
         self.arg_box = None
         self.kwarg_boxes = []
         self.expert_mode = False  # TODO implement in the future versions
+        self.previous_scan = None
 
         # Scan list - allowed scans for the GUI
         self.allowed_scans = allowed_scans  # FIXME should be changed to config.allowed_scans
@@ -83,6 +87,7 @@ class ScanControl(BECWidget, QWidget):
         self.layout.addWidget(self.scan_selection_group)
 
         # Connect signals
+        self.comboBox_scan_selection.view().pressed.connect(self.save_current_scan_parameters)
         self.comboBox_scan_selection.currentIndexChanged.connect(self.on_scan_selection_changed)
         self.button_run_scan.clicked.connect(self.run_scan)
 
@@ -151,6 +156,7 @@ class ScanControl(BECWidget, QWidget):
         """Callback for scan selection combo box"""
         selected_scan_name = self.comboBox_scan_selection.currentText()
         self.scan_selected.emit(selected_scan_name)
+        self.restore_scan_parameters(selected_scan_name)
 
     @Property(str)
     def current_scan(self):
@@ -320,17 +326,56 @@ class ScanControl(BECWidget, QWidget):
             box.deleteLater()
         self.kwarg_boxes = []
 
-    @Slot()
-    def get_scan_parameters(self):
-        """Returns the scan parameters for the selected scan."""
+    def get_scan_parameters(self, bec_object: bool = True):
+        """
+        Returns the scan parameters for the selected scan.
+
+        Args:
+            bec_object(bool): If True, returns the BEC object for the scan parameters such as device objects.
+        """
         args = []
         kwargs = {}
         if self.arg_box is not None:
-            args = self.arg_box.get_parameters()
+            args = self.arg_box.get_parameters(bec_object)
         for box in self.kwarg_boxes:
-            box_kwargs = box.get_parameters()
+            box_kwargs = box.get_parameters(bec_object)
             kwargs.update(box_kwargs)
         return args, kwargs
+
+    def restore_scan_parameters(self, scan_name: str):
+        """
+        Restores the scan parameters for the given scan name
+
+        Args:
+            scan_name(str): Name of the scan to restore the parameters for.
+        """
+        scan_params = self.config.scans.get(scan_name, None)
+        if scan_params is None and self.previous_scan is None:
+            return
+
+        if scan_params is None and self.previous_scan is not None:
+            previous_scan_params = self.config.scans.get(self.previous_scan, None)
+            self._restore_kwargs(previous_scan_params)
+            return
+
+        if scan_params.args is not None and self.arg_box is not None:
+            self.arg_box.set_parameters(scan_params.args)
+
+        self._restore_kwargs(scan_params)
+
+    def _restore_kwargs(self, scan_params: ScanParameterConfig):
+        """Restores the kwargs for the given scan parameters."""
+        if scan_params.kwargs is not None and self.kwarg_boxes is not None:
+            for box in self.kwarg_boxes:
+                box.set_parameters(scan_params.kwargs)
+
+    def save_current_scan_parameters(self):
+        """Saves the current scan parameters to the scan control config for further use."""
+        scan_name = self.comboBox_scan_selection.currentText()
+        self.previous_scan = scan_name
+        args, kwargs = self.get_scan_parameters(False)
+        scan_params = ScanParameterConfig(name=scan_name, args=args, kwargs=kwargs)
+        self.config.scans[scan_name] = scan_params
 
     @Slot()
     def run_scan(self):

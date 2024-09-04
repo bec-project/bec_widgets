@@ -230,32 +230,35 @@ class ScanGroupBox(QGroupBox):
             widget.deleteLater()
         self.widgets = self.widgets[: -len(self.inputs)]
 
-    def get_parameters(self):
+    def get_parameters(self, device_object: bool = True):
         """
         Returns the parameters from the widgets in the scan control layout formated to run scan from BEC.
         """
         if self.box_type == "args":
-            return self._get_arg_parameterts()
+            return self._get_arg_parameterts(device_object=device_object)
         elif self.box_type == "kwargs":
-            return self._get_kwarg_parameters()
+            return self._get_kwarg_parameters(device_object=device_object)
 
-    def _get_arg_parameterts(self):
+    def _get_arg_parameterts(self, device_object: bool = True):
         args = []
         for i in range(1, self.layout.rowCount()):
             for j in range(self.layout.columnCount()):
-                widget = self.layout.itemAtPosition(i, j).widget()
-                if isinstance(widget, DeviceLineEdit):
-                    value = widget.get_device()
-                else:
-                    value = WidgetIO.get_value(widget)
-                args.append(value)
+                try:  # In case that the bundle size changes
+                    widget = self.layout.itemAtPosition(i, j).widget()
+                    if isinstance(widget, DeviceLineEdit) and device_object:
+                        value = widget.get_device()
+                    else:
+                        value = WidgetIO.get_value(widget)
+                    args.append(value)
+                except AttributeError:
+                    continue
         return args
 
-    def _get_kwarg_parameters(self):
+    def _get_kwarg_parameters(self, device_object: bool = True):
         kwargs = {}
         for i in range(self.layout.columnCount()):
             widget = self.layout.itemAtPosition(1, i).widget()
-            if isinstance(widget, DeviceLineEdit):
+            if isinstance(widget, DeviceLineEdit) and device_object:
                 value = widget.get_device()
             else:
                 value = WidgetIO.get_value(widget)
@@ -273,3 +276,22 @@ class ScanGroupBox(QGroupBox):
                         if isinstance(widget, DeviceLineEdit):
                             widget_rows += 1
         return widget_rows
+
+    def set_parameters(self, parameters: list | dict):
+        if self.box_type == "args":
+            self._set_arg_parameters(parameters)
+        elif self.box_type == "kwargs":
+            self._set_kwarg_parameters(parameters)
+
+    def _set_arg_parameters(self, parameters: list):
+        while len(parameters) != len(self.widgets):
+            self.add_widget_bundle()
+        for i, parameter in enumerate(parameters):
+            WidgetIO.set_value(self.widgets[i], parameter)
+
+    def _set_kwarg_parameters(self, parameters: dict):
+        for widget in self.widgets:
+            for key, value in parameters.items():
+                if widget.arg_name == key:
+                    WidgetIO.set_value(widget, value)
+                    break
