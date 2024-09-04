@@ -1,7 +1,6 @@
 from collections import defaultdict
 from typing import Optional
 
-from bec_lib.endpoints import MessageEndpoints
 from pydantic import BaseModel, Field
 from qtpy.QtCore import Property, Signal, Slot
 from qtpy.QtWidgets import (
@@ -10,18 +9,19 @@ from qtpy.QtWidgets import (
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
+    QLabel,
     QPushButton,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
 
-from bec_widgets.qt_utils.error_popups import SafeSlot
+from bec_lib.endpoints import MessageEndpoints
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.scan_control.scan_group_box import ScanGroupBox
 from bec_widgets.widgets.stop_button.stop_button import StopButton
+from bec_widgets.widgets.toggle.toggle import ToggleSwitch
 
 
 class ScanParameterConfig(BaseModel):
@@ -31,8 +31,8 @@ class ScanParameterConfig(BaseModel):
 
 
 class ScanControlConfig(ConnectionConfig):
-    # default_scan: Optional[str] = Field(None)  # TODO implement later
-    # allowed_scans: Optional[list] = Field(None)
+    default_scan: Optional[str] = Field(None)  # TODO implement later
+    allowed_scans: Optional[list] = Field(None)
     scans: Optional[dict[str, ScanParameterConfig]] = defaultdict(dict)
 
 
@@ -50,6 +50,7 @@ class ScanControl(BECWidget, QWidget):
         config: ScanControlConfig | dict | None = None,
         gui_id: str | None = None,
         allowed_scans: list | None = None,
+        default_scan: str | None = None,
     ):
 
         if config is None:
@@ -69,9 +70,11 @@ class ScanControl(BECWidget, QWidget):
         self.kwarg_boxes = []
         self.expert_mode = False  # TODO implement in the future versions
         self.previous_scan = None
+        self.last_scan_found = None
 
-        # Scan list - allowed scans for the GUI
-        self.allowed_scans = allowed_scans  # FIXME should be changed to config.allowed_scans
+        # Widget Default Parameters
+        self.config.default_scan = default_scan
+        self.config.allowed_scans = allowed_scans
 
         # Create and set main layout
         self._init_UI()
@@ -85,6 +88,10 @@ class ScanControl(BECWidget, QWidget):
         self.scan_selection_group = self.create_scan_selection_group()
         self.scan_selection_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.layout.addWidget(self.scan_selection_group)
+
+        # Default scan from config
+        if self.config.default_scan is not None:
+            self.comboBox_scan_selection.setCurrentText(self.config.default_scan)
 
         # Connect signals
         self.comboBox_scan_selection.view().pressed.connect(self.save_current_scan_parameters)
@@ -128,10 +135,17 @@ class ScanControl(BECWidget, QWidget):
         self.button_run_scan.setStyleSheet("background-color:  #559900; color: white")
         # Stop button
         self.button_stop_scan = StopButton(parent=scan_selection_group)
+        # Label to reload the last scan parameters
+        self.last_scan_label = QLabel("Restore last scan parameters", scan_selection_group)
+        # Switch toggle button
+        self.toggle = ToggleSwitch(parent=scan_selection_group, checked=False)
+        self.toggle.enabled.connect(self.request_last_executed_scan_parameters)
 
         self.scan_selection_layout.addWidget(self.comboBox_scan_selection, 0, 0, 1, 2)
         self.scan_selection_layout.addWidget(self.button_run_scan, 1, 0)
         self.scan_selection_layout.addWidget(self.button_stop_scan, 1, 1)
+        self.scan_selection_layout.addWidget(self.last_scan_label, 2, 0)
+        self.scan_selection_layout.addWidget(self.toggle, 2, 1)
 
         return scan_selection_group
 
@@ -140,7 +154,7 @@ class ScanControl(BECWidget, QWidget):
         self.available_scans = self.client.connector.get(
             MessageEndpoints.available_scans()
         ).resource
-        if self.allowed_scans is None:
+        if self.config.allowed_scans is None:
             supported_scans = ["ScanBase", "SyncFlyScanBase", "AsyncFlyScanBase"]
             allowed_scans = [
                 scan_name
@@ -149,14 +163,50 @@ class ScanControl(BECWidget, QWidget):
             ]
 
         else:
-            allowed_scans = self.allowed_scans
+            allowed_scans = self.config.allowed_scans
         self.comboBox_scan_selection.addItems(allowed_scans)
 
     def on_scan_selection_changed(self, index: int):
         """Callback for scan selection combo box"""
         selected_scan_name = self.comboBox_scan_selection.currentText()
         self.scan_selected.emit(selected_scan_name)
+        self.request_last_executed_scan_parameters()
         self.restore_scan_parameters(selected_scan_name)
+
+    @Slot()
+    def request_last_executed_scan_parameters(self):
+        """
+        Requests the last executed scan parameters from BEC and restores them to the scan control widget.
+        """
+        enabled = self.toggle.checked
+        current_scan = self.comboBox_scan_selection.currentText()
+        if enabled:
+            history = self.client.connector.lrange(MessageEndpoints.scan_queue_history(), 0, -1)
+
+            for scan in history:
+                scan_name = scan.content["info"]["request_blocks"][-1]["msg"].content["scan_type"]
+                if scan_name == current_scan:
+                    args_dict = scan.content["info"]["request_blocks"][-1]["msg"].content[
+                        "parameter"
+                    ]["args"]
+                    args_list = []
+                    for key, value in args_dict.items():
+                        args_list.append(key)
+                        args_list.extend(value)
+                    if len(args_list) > 1 and self.arg_box is not None:
+                        self.arg_box.set_parameters(args_list)
+                    kwargs = scan.content["info"]["request_blocks"][-1]["msg"].content["parameter"][
+                        "kwargs"
+                    ]
+                    if kwargs and self.kwarg_boxes:
+                        for box in self.kwarg_boxes:
+                            box.set_parameters(kwargs)
+                    self.last_scan_found = True
+                    break
+                else:
+                    self.last_scan_found = False
+        else:
+            self.last_scan_found = False
 
     @Property(str)
     def current_scan(self):
@@ -182,6 +232,29 @@ class ScanControl(BECWidget, QWidget):
             scan_name(str): Name of the scan to set as current.
         """
         self.current_scan = scan_name
+
+    @Property(bool)
+    def hide_scan_remember_toggle(self):
+        """Property to hide the scan remember toggle."""
+        return not self.toggle.isVisible()
+
+    @hide_scan_remember_toggle.setter
+    def hide_scan_remember_toggle(self, hide: bool):
+        """Setter for the hide_scan_remember_toggle property.
+
+        Args:
+            hide(bool): Hide or show the scan remember toggle.
+        """
+        self.show_scan_remember_toggle(not hide)
+
+    @Slot(bool)
+    def show_scan_remember_toggle(self, show: bool):
+        """Shows or hides the scan control buttons."""
+        self.toggle.setVisible(show)
+        self.last_scan_label.setVisible(show)
+
+        show_group = show or self.button_run_scan.isVisible()
+        self.scan_selection_group.setVisible(show_group)
 
     @Property(bool)
     def hide_scan_control_buttons(self):
@@ -349,25 +422,27 @@ class ScanControl(BECWidget, QWidget):
         Args:
             scan_name(str): Name of the scan to restore the parameters for.
         """
+        if self.last_scan_found is True:
+            return
         scan_params = self.config.scans.get(scan_name, None)
         if scan_params is None and self.previous_scan is None:
             return
 
         if scan_params is None and self.previous_scan is not None:
             previous_scan_params = self.config.scans.get(self.previous_scan, None)
-            self._restore_kwargs(previous_scan_params)
+            self._restore_kwargs(previous_scan_params.kwargs)
             return
 
         if scan_params.args is not None and self.arg_box is not None:
             self.arg_box.set_parameters(scan_params.args)
 
-        self._restore_kwargs(scan_params)
+        self._restore_kwargs(scan_params.kwargs)
 
-    def _restore_kwargs(self, scan_params: ScanParameterConfig):
+    def _restore_kwargs(self, scan_kwargs: dict):
         """Restores the kwargs for the given scan parameters."""
-        if scan_params.kwargs is not None and self.kwarg_boxes is not None:
+        if scan_kwargs is not None and self.kwarg_boxes is not None:
             for box in self.kwarg_boxes:
-                box.set_parameters(scan_params.kwargs)
+                box.set_parameters(scan_kwargs)
 
     def save_current_scan_parameters(self):
         """Saves the current scan parameters to the scan control config for further use."""
