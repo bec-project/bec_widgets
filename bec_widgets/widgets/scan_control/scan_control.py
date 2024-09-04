@@ -16,6 +16,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_widgets.qt_utils.error_popups import SafeSlot
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.scan_control.scan_group_box import ScanGroupBox
@@ -461,7 +462,7 @@ class ScanControl(BECWidget, QWidget):
         scan_params = ScanParameterConfig(name=scan_name, args=args, kwargs=kwargs)
         self.config.scans[scan_name] = scan_params
 
-    @Slot()
+    @SafeSlot(popup_error=True)
     def run_scan(self):
         """Starts the selected scan with the given parameters."""
         self.scan_started.emit()
