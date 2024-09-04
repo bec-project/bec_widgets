@@ -11,7 +11,7 @@ logger = bec_logger.logger
 
 class DapComboBox(BECWidget, QWidget):
     """
-    ComboBox widget for device input with autocomplete for device names.
+    The DAPComboBox widget is an extension to the QComboBox with all avaialble DAP model from BEC.
 
     Args:
         parent: Parent widget.
@@ -22,12 +22,19 @@ class DapComboBox(BECWidget, QWidget):
 
     ICON_NAME = "data_exploration"
 
-    USER_ACCESS = ["select_y_axis", "select_x_axis", "select_fit"]
+    USER_ACCESS = ["select_y_axis", "select_x_axis", "select_fit_model"]
 
-    add_dap_model = Signal(str, str, str)
-    update_x_axis = Signal(str)
-    update_y_axis = Signal(str)
-    update_fit_model = Signal(str)
+    ### Signals ###
+    # Signal to emit a new dap_config: (x_axis, y_axis, fit_model). Can be used to add a new DAP process
+    # in the BECWaveformWidget using its add_dap method. The signal is emitted when the user selects a new
+    # fit model, but only if x_axis and y_axis are set.
+    new_dap_config = Signal(str, str, str)
+    # Signal to emit the name of the updated x_axis
+    x_axis_updated = Signal(str)
+    # Signal to emit the name of the updated y_axis
+    y_axis_updated = Signal(str)
+    # Signal to emit the name of the updated fit model
+    fit_model_updated = Signal(str)
 
     def __init__(
         self, parent=None, client=None, gui_id: str | None = None, default_fit: str | None = None
@@ -35,14 +42,14 @@ class DapComboBox(BECWidget, QWidget):
         super().__init__(client=client, gui_id=gui_id)
         QWidget.__init__(self, parent=parent)
         self.layout = QVBoxLayout(self)
-        self.combobox = QComboBox(self)
-        self.layout.addWidget(self.combobox)
+        self.fit_model_combobox = QComboBox(self)
+        self.layout.addWidget(self.fit_model_combobox)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self._available_models = None
         self._x_axis = None
         self._y_axis = None
-        self.populate_combobox()
-        self.combobox.currentTextChanged.connect(self._update_current_fit)
+        self.populate_fit_model_combobox()
+        self.fit_model_combobox.currentTextChanged.connect(self._update_current_fit)
         # Set default fit model
         self.select_default_fit(default_fit)
 
@@ -53,9 +60,9 @@ class DapComboBox(BECWidget, QWidget):
             default_fit(str): Default fit model.
         """
         if self._validate_dap_model(default_fit):
-            self.select_fit(default_fit)
+            self.select_fit_model(default_fit)
         else:
-            self.select_fit("GaussianModel")
+            self.select_fit_model("GaussianModel")
 
     @property
     def available_models(self):
@@ -85,7 +92,7 @@ class DapComboBox(BECWidget, QWidget):
         """
         # TODO add validator for x axis -> Positioner? or also device (must be monitored)!!
         self._x_axis = x_axis
-        self.update_x_axis.emit(x_axis)
+        self.x_axis_updated.emit(x_axis)
 
     @Property(str)
     def y_axis(self):
@@ -101,17 +108,17 @@ class DapComboBox(BECWidget, QWidget):
             y_axis(str): Y axis.
         """
         self._y_axis = y_axis
-        self.update_y_axis.emit(y_axis)
+        self.y_axis_updated.emit(y_axis)
 
     def _update_current_fit(self, fit_name: str):
         """Update the current fit."""
-        self.update_fit_model.emit(fit_name)
+        self.fit_model_updated.emit(fit_name)
         if self.x_axis is not None and self.y_axis is not None:
-            self.add_dap_model.emit(self._x_axis, self._y_axis, fit_name)
+            self.new_dap_config.emit(self._x_axis, self._y_axis, fit_name)
 
     @Slot(str)
     def select_x_axis(self, x_axis: str):
-        """Receive update signal for the x axis.
+        """Slot to update the x axis.
 
         Args:
             x_axis(str): X axis.
@@ -120,7 +127,7 @@ class DapComboBox(BECWidget, QWidget):
 
     @Slot(str)
     def select_y_axis(self, y_axis: str):
-        """Receive update signal for the y axis.
+        """Slot to update the y axis.
 
         Args:
             y_axis(str): Y axis.
@@ -128,22 +135,22 @@ class DapComboBox(BECWidget, QWidget):
         self.y_axis = y_axis
 
     @Slot(str)
-    def select_fit(self, fit_name: str | None):
-        """
-        Select current fit.
+    def select_fit_model(self, fit_name: str | None):
+        """Slot to update the fit model.
 
         Args:
             default_device(str): Default device name.
         """
         if not self._validate_dap_model(fit_name):
             raise ValueError(f"Fit {fit_name} is not valid.")
-        self.combobox.setCurrentText(fit_name)
+        self.fit_model_combobox.setCurrentText(fit_name)
 
-    def populate_combobox(self):
-        """Populate the combobox with the devices."""
+    def populate_fit_model_combobox(self):
+        """Populate the fit_model_combobox with the devices."""
+        # pylint: disable=protected-access
         self.available_models = [model for model in self.client.dap._available_dap_plugins.keys()]
-        self.combobox.clear()
-        self.combobox.addItems(self.available_models)
+        self.fit_model_combobox.clear()
+        self.fit_model_combobox.addItems(self.available_models)
 
     def _validate_dap_model(self, model: str | None) -> bool:
         """Validate the DAP model.
@@ -158,7 +165,9 @@ class DapComboBox(BECWidget, QWidget):
         return True
 
 
+# pragma: no cover
 def main():
+    """Main function to run the DapComboBox widget."""
     import sys
 
     from qtpy.QtWidgets import QApplication

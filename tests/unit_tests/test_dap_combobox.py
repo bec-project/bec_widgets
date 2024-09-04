@@ -19,7 +19,7 @@ def dap_combobox(qtbot, mocked_client):
 
 def test_dap_combobox_init(dap_combobox):
     """Test DapComboBox init."""
-    assert dap_combobox.combobox.currentText() == "GaussianModel"
+    assert dap_combobox.fit_model_combobox.currentText() == "GaussianModel"
     assert dap_combobox.available_models == ["GaussianModel", "LorentzModel", "SineModel"]
     assert dap_combobox._validate_dap_model("GaussianModel") is True
     assert dap_combobox._validate_dap_model("somemodel") is False
@@ -35,8 +35,8 @@ def test_dap_combobox_set_axis(dap_combobox):
         """Calback function to store the messages."""
         container.append(msg)
 
-    dap_combobox.update_x_axis.connect(my_callback)
-    dap_combobox.update_y_axis.connect(my_callback)
+    dap_combobox.x_axis_updated.connect(my_callback)
+    dap_combobox.y_axis_updated.connect(my_callback)
     dap_combobox.select_x_axis("x_axis")
     assert dap_combobox.x_axis == "x_axis"
     dap_combobox.select_y_axis("y_axis")
@@ -54,9 +54,9 @@ def test_dap_combobox_select_fit(dap_combobox):
         """Calback function to store the messages."""
         container.append(msg)
 
-    dap_combobox.update_fit_model.connect(my_callback)
-    dap_combobox.select_fit("LorentzModel")
-    assert dap_combobox.combobox.currentText() == "LorentzModel"
+    dap_combobox.fit_model_updated.connect(my_callback)
+    dap_combobox.select_fit_model("LorentzModel")
+    assert dap_combobox.fit_model_combobox.currentText() == "LorentzModel"
     assert container[0] == "LorentzModel"
 
 
@@ -69,7 +69,7 @@ def test_dap_combobox_currentTextchanged(dap_combobox):
         """Calback function to store the messages."""
         container.append(msg)
 
-    assert dap_combobox.combobox.currentText() == "GaussianModel"
-    dap_combobox.update_fit_model.connect(my_callback)
-    dap_combobox.combobox.setCurrentText("SineModel")
+    assert dap_combobox.fit_model_combobox.currentText() == "GaussianModel"
+    dap_combobox.fit_model_updated.connect(my_callback)
+    dap_combobox.fit_model_combobox.setCurrentText("SineModel")
     assert container[0] == "SineModel"
