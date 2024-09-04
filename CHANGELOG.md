@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## v0.103.0 (2024-09-04)
+
+### Ci
+
+* ci: prefill variables for manual pipeline start ([`158c19e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/158c19eda771562a325fd59405f9fd4cb9a17ed6))
+
+### Feature
+
+* feat(vscode): open vscode on a free port ([`52da835`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/52da835803f2453096a8b7df23bee5fdf93ae2bb))
+
+* feat(website): added method to wait until the webpage is loaded ([`9be19d4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9be19d4abebad08c5fc6bea936dd97475fe8f628))
+
+### Fix
+
+* fix(theme): fixed segfault for webengineview for auto updates ([`9866075`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9866075100577948755b563dc7b7dc4cdc60d040))
+
+### Test
+
+* test(webview): fixed tests after refactoring ([`d5eb30c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d5eb30cd7df4cb0dc3275dd362768afc211eaf2d))
+
+* test(vscode): popen call does not have to be the only one ([`39f98ec`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/39f98ec223ba8b59e478ac788c08c59ffe886b4e))
+
 ## v0.102.0 (2024-09-04)
 
 ### Documentation
@@ -130,30 +152,6 @@
 
 ## v0.99.6 (2024-08-28)
 
-### Documentation
-
-* docs: various bugs fixed ([`c31e9a3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c31e9a3aff3ee8e984674dee0965ee7f1b6e2b8f))
-
 ### Fix
 
 * fix(toolbar): use of native qt separators ([`09c6c93`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/09c6c93c397ce4a21c293f6c79106c74b2db65ca))
-
-## v0.99.5 (2024-08-28)
-
-### Documentation
-
-* docs(index): index page is centered ([`02239de`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/02239de0a36fcd6cbf97990b0dec1ddf7ecf6ba6))
-
-### Fix
-
-* fix(dock_area): dark button added ([`e6f204b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e6f204b6aa295747a68769f43af2e549149b401a))
-
-## v0.99.4 (2024-08-28)
-
-### Documentation
-
-* docs(buttons): added missing buttons docs ([`4e5520a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4e5520aee2115d2fc0cebb3865433478a5ec8253))
-
-### Fix
-
-* fix(theme): apply theme to all pyqtgraph widgets on manual updates ([`c550186`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c5501860e8e07a53f4bce144d44ed39eda6290ef))
