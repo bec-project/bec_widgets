@@ -7,12 +7,26 @@ from bec_widgets.qt_utils import error_popups
 from bec_widgets.utils import bec_dispatcher as bec_dispatcher_module
 
 
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    # execute all other hooks to obtain the report object
+    outcome = yield
+    rep = outcome.get_result()
+
+    item.stash["failed"] = rep.failed
+
+
 @pytest.fixture(autouse=True)
-def qapplication(qtbot):  # pylint: disable=unused-argument
+def qapplication(qtbot, request):  # pylint: disable=unused-argument
     yield
 
+    # if the test failed, we don't want to check for open widgets as
+    # it simply pollutes the output
+    if request.node.stash._storage.get("failed"):
+        print("Test failed, skipping cleanup checks")
+        return
+
     qapp = QApplication.instance()
-    # qapp.quit()
     qapp.processEvents()
     if hasattr(qapp, "os_listener") and qapp.os_listener:
         qapp.removeEventFilter(qapp.os_listener)
