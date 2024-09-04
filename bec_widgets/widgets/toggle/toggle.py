@@ -13,7 +13,7 @@ class ToggleSwitch(QWidget):
     enabled = Signal(bool)
     ICON_NAME = "toggle_on"
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, checked=True):
         super().__init__(parent)
         self.setFixedSize(40, 21)
 
@@ -23,14 +23,14 @@ class ToggleSwitch(QWidget):
         self._inactive_track_color = QColor(200, 200, 200)
         self._inactive_thumb_color = QColor(255, 255, 255)
 
-        self._checked = False
+        self._checked = checked
         self._track_color = self.inactive_track_color
         self._thumb_color = self.inactive_thumb_color
 
         self._animation = QPropertyAnimation(self, b"thumb_pos")
         self._animation.setDuration(200)
         self._animation.setEasingCurve(QEasingCurve.Type.OutBack)
-        self.setProperty("checked", True)
+        self.setProperty("checked", checked)
 
     @Property(bool)
     def checked(self):
