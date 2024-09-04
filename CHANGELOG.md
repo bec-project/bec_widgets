@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## v0.102.0 (2024-09-04)
+
+### Documentation
+
+* docs(buttons): buttons section of docs split to appearance and queue buttons ([`047aa26`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/047aa26a60220c826cc1375cf81daf11d1f3ab5c))
+
+* docs(tests): added tests tutorial for widget ([`18d8561`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/18d8561c965d149a7662085f7dbe2a39a8c4a475))
+
+### Feature
+
+* feat(queue): BECQueue controls extended with Resume, Stop, Abort, Reset buttons ([`0d7c10e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0d7c10e670e4937787e1afaa19ca8259ac752486))
+
+### Fix
+
+* fix(queue_reset_button): queue reset has to be confirmed with msgBox ([`9dd43aa`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9dd43aa1fd3991368002605df4389a7a7271011b))
+
+### Refactor
+
+* refactor(tests): positioner box test changed to use create_widget fixture ([`df5eff3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/df5eff3147c79ff0278e6a5a09c8f73d5236aed3))
+
 ## v0.101.0 (2024-09-02)
 
 ### Feature
@@ -134,22 +154,6 @@
 
 * docs(buttons): added missing buttons docs ([`4e5520a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4e5520aee2115d2fc0cebb3865433478a5ec8253))
 
-* docs(developer): tutorial for BECWidget base class ([`ac2cb51`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ac2cb5197deef4d51e26ee5beb070eba3ffc210d))
-
 ### Fix
 
 * fix(theme): apply theme to all pyqtgraph widgets on manual updates ([`c550186`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c5501860e8e07a53f4bce144d44ed39eda6290ef))
-
-### Refactor
-
-* refactor(buttons): changed grid and thumbnail fig in gallery ([`4591ba8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4591ba8f73e22aba7258cad93c073f1387cb74a0))
-
-* refactor(icons): removed toolbar icons from assets ([`f335763`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f335763280adb1d83ba31f073ce206e4cb5d15ef))
-
-* refactor(icons): moved widget icons to class attribute ICON_NAME ([`e890091`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e890091d862e42317c7a54fc414ba37c85f268b0))
-
-## v0.99.3 (2024-08-27)
-
-### Build
-
-* build: updated min version of bec qthemes ([`d482434`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d48243483ef8228cc5eb85e40a6b8f5da3b45520))
