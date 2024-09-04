@@ -72,6 +72,7 @@ def test_create_waveform1D_by_config(qtbot, mocked_client):
             "y_lim": None,
             "x_grid": False,
             "y_grid": False,
+            "outer_axes": False,
         },
         "color_palette": "magma",
         "curves": {

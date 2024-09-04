@@ -31,6 +31,7 @@ class AxisSettings(SettingWidget):
 
         # Top Box
         WidgetIO.set_value(self.ui.plot_title, axis_config["title"])
+        self.ui.switch_outer_axes.checked = axis_config["outer_axes"]
 
         # X Axis Box
         WidgetIO.set_value(self.ui.x_label, axis_config["x_label"])
@@ -63,6 +64,7 @@ class AxisSettings(SettingWidget):
     @Slot()
     def accept_changes(self):
         title = WidgetIO.get_value(self.ui.plot_title)
+        outer_axes = self.ui.switch_outer_axes.checked
 
         # X Axis
         x_label = WidgetIO.get_value(self.ui.x_label)
@@ -86,3 +88,4 @@ class AxisSettings(SettingWidget):
             y_lim=y_lim,
         )
         self.target_widget.set_grid(x_grid, y_grid)
+        self.target_widget.set_outer_axes(outer_axes)

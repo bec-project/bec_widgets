@@ -177,6 +177,7 @@ def test_motor_map_init_from_config(qtbot, mocked_client):
             "y_lim": None,
             "x_grid": True,
             "y_grid": True,
+            "outer_axes": False,
         },
         "signals": {
             "source": "device_readback",

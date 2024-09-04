@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import Literal, Optional
 
 import bec_qthemes
@@ -31,6 +32,7 @@ class AxisConfig(BaseModel):
     y_lim: Optional[tuple] = Field(None, description="The limits of the y-axis.")
     x_grid: bool = Field(False, description="Show grid on the x-axis.")
     y_grid: bool = Field(False, description="Show grid on the y-axis.")
+    outer_axes: bool = Field(False, description="Show the outer axes of the plot widget.")
     model_config: dict = {"validate_assignment": True}
 
 
@@ -75,6 +77,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         "set_x_lim",
         "set_y_lim",
         "set_grid",
+        "set_outer_axes",
         "lock_aspect_ratio",
         "export",
         "remove",
@@ -335,6 +338,17 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         self.plot_item.showGrid(x, y)
         self.config.axis.x_grid = x
         self.config.axis.y_grid = y
+
+    def set_outer_axes(self, show: bool = True):
+        """
+        Set the outer axes of the plot widget.
+
+        Args:
+            show(bool): Show the outer axes.
+        """
+        self.plot_item.showAxis("top", show)
+        self.plot_item.showAxis("right", show)
+        self.config.axis.outer_axes = show
 
     def add_legend(self):
         """Add legend to the plot"""

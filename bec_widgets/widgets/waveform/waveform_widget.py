@@ -560,6 +560,15 @@ class BECWaveformWidget(BECWidget, QWidget):
         """
         self.waveform.set_grid(x_grid, y_grid)
 
+    def set_outer_axes(self, show: bool):
+        """
+        Set the outer axes visibility of the plot widget.
+
+        Args:
+            show(bool): Visibility of the outer axes.
+        """
+        self.waveform.set_outer_axes(show)
+
     def lock_aspect_ratio(self, lock: bool):
         """
         Lock the aspect ratio of the plot widget.
@@ -633,10 +642,7 @@ class BECWaveformWidget(BECWidget, QWidget):
 def main():  # pragma: no cover
     from qtpy.QtWidgets import QApplication
 
-    from bec_widgets.utils.colors import set_theme
-
     app = QApplication(sys.argv)
-    set_theme("auto")
     widget = BECWaveformWidget()
     widget.show()
     sys.exit(app.exec_())

@@ -1654,6 +1654,15 @@ class BECPlotBase(RPCBase):
         """
 
     @rpc_call
+    def set_outer_axes(self, show: "bool" = True):
+        """
+        Set the outer axes of the plot widget.
+
+        Args:
+            show(bool): Show the outer axes.
+        """
+
+    @rpc_call
     def lock_aspect_ratio(self, lock):
         """
         Lock aspect ratio.
@@ -2317,7 +2326,7 @@ class DapComboBox(RPCBase):
     @rpc_call
     def select_y_axis(self, y_axis: str):
         """
-        Receive update signal for the y axis.
+        Slot to update the y axis.
 
         Args:
             y_axis(str): Y axis.
@@ -2326,19 +2335,19 @@ class DapComboBox(RPCBase):
     @rpc_call
     def select_x_axis(self, x_axis: str):
         """
-        Receive update signal for the x axis.
+        Slot to update the x axis.
 
         Args:
             x_axis(str): X axis.
         """
 
     @rpc_call
-    def select_fit(self, fit_name: str | None):
+    def select_fit_model(self, fit_name: str | None):
         """
-        Select current fit.
+        Slot to update the fit model.
 
-         Args:
-             default_device(str): Default device name.
+        Args:
+            default_device(str): Default device name.
         """
 
 
