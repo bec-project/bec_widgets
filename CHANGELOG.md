@@ -1,5 +1,35 @@
 # CHANGELOG
 
+## v0.104.0 (2024-09-04)
+
+### Documentation
+
+* docs(scan_control): docs extended ([`730e25f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/730e25fd3a8be156603005982bfd2a2c2b16dff1))
+
+### Feature
+
+* feat(scan_control): scan control remember the previously set parameters and shares kwarg settings across scans ([`d28f9b0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d28f9b04c45385179353cc247221ec821dcaa29b))
+
+### Fix
+
+* fix(scan_control): SafeSlot applied to run_scan to avoid faulty scan requests ([`9047916`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/90479167fb5cae393c884e71a80fcfdb48a76427))
+
+* fix(scan_control): scan parameters can be loaded from the last executed scan from redis ([`ec3bc8b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ec3bc8b5194c680b847d3306c41eef4638ccfcc7))
+
+* fix(toggle): state can be determined with the widget initialisation ([`2cd9c7f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2cd9c7f5854f158468e53b5b29ec31b1ff1e00e6))
+
+### Refactor
+
+* refactor(scan_control): scan control layout adjusted ([`85dcbda`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/85dcbdaa88fe77aeea7012bfc16f10c4f873f75e))
+
+* refactor(scan_control): basic pydantic config added ([`fe8dc55`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fe8dc55eb102c51c34bf9606690914da53b5ac02))
+
+### Test
+
+* test(scan_control): tests extended for getting kwargs between scan switching and getting parameters from redis ([`b07e677`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b07e67715c9284e9bf36056ba4ba8068f60cbaf3))
+
+* test(conftest): only run cleanup checks if test passed ([`26920f8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/26920f8482bdb35ece46df37232af50ab9cab463))
+
 ## v0.103.0 (2024-09-04)
 
 ### Ci
@@ -125,33 +155,3 @@
 ### Refactor
 
 * refactor(stop_button): stop button changed to QWidget and adapted for toolbar ([`097946f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/097946fd688b8faf770e7cc0e689ea668206bc7a))
-
-* refactor: added hide option for device selection button ([`cdd1752`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cdd175207e922904b2efbb2d9ecf7c556c617f2e))
-
-## v0.99.9 (2024-08-28)
-
-### Fix
-
-* fix: fixed build process and excluded docs and tests from tarballs and wheels ([`719254c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/719254cf0a48e1fc4bd541edba239570778bcfea))
-
-## v0.99.8 (2024-08-28)
-
-### Fix
-
-* fix(website): fixed designer integration for website widget ([`5f37e86`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5f37e862c95ac7173b6918ad39bcaef938dad698))
-
-### Refactor
-
-* refactor(website): changed inheritance of website widget to simple qwidget; closes #325 ([`9925bbd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9925bbdb48b55eacbbce9fd6a1555a21b84221f9))
-
-## v0.99.7 (2024-08-28)
-
-### Fix
-
-* fix(toolbar): material icons can accept color as kwarg ([`ffc871e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ffc871ebbd3b68abc3e151bb8f5849e6c50e775e))
-
-## v0.99.6 (2024-08-28)
-
-### Fix
-
-* fix(toolbar): use of native qt separators ([`09c6c93`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/09c6c93c397ce4a21c293f6c79106c74b2db65ca))
