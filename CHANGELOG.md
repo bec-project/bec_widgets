@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v0.105.0 (2024-09-04)
+
+### Feature
+
+* feat: add dap_combobox ([`cc691d4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cc691d4039bde710e78f362d2f0e712f9e8f196f))
+
+### Refactor
+
+* refactor: cleanup and renaming of slot/signals ([`0fd5cee`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0fd5cee77611b6645326eaefa68455ea8de26597))
+
+* refactor(logger): changed prints to logger calls ([`3a5d7d0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3a5d7d07966ab9b38ba33bda0bed38c30f500c66))
+
 ## v0.104.0 (2024-09-04)
 
 ### Documentation
@@ -143,15 +155,3 @@
 ### Refactor
 
 * refactor(icons): general app icon changed; jupyter app icon changed to material icon ([`5d73fe4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5d73fe455a568ad40a9fadc5ce6e249d782ad20d))
-
-* refactor: add option to select scan and hide arg bundle buttons ([`7dadab1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7dadab1f14aa41876ad39e8cdc7f7732248cc643))
-
-## v0.99.10 (2024-08-29)
-
-### Fix
-
-* fix(stop_button): queue logic scan changed to halt instead of abort and reset ([`4a89028`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4a890281f7eaef02d0ec9f4c5bf080be11fe0fe3))
-
-### Refactor
-
-* refactor(stop_button): stop button changed to QWidget and adapted for toolbar ([`097946f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/097946fd688b8faf770e7cc0e689ea668206bc7a))
