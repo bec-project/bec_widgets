@@ -1,12 +1,12 @@
 from collections import defaultdict
 from typing import Optional
 
+from bec_lib.endpoints import MessageEndpoints
 from pydantic import BaseModel, Field
 from qtpy.QtCore import Property, Signal, Slot
 from qtpy.QtWidgets import (
     QApplication,
     QComboBox,
-    QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -16,7 +16,6 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_lib.endpoints import MessageEndpoints
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.scan_control.scan_group_box import ScanGroupBox
@@ -127,25 +126,35 @@ class ScanControl(BECWidget, QWidget):
         """
 
         scan_selection_group = QGroupBox("Scan Selection", self)
-        self.scan_selection_layout = QGridLayout(scan_selection_group)
+        self.scan_selection_layout = QVBoxLayout(scan_selection_group)
         self.comboBox_scan_selection = QComboBox(scan_selection_group)
 
-        # Run button
+        # Buttons
+        self.button_layout = QHBoxLayout()
+        ## Run button
         self.button_run_scan = QPushButton("Start", scan_selection_group)
         self.button_run_scan.setStyleSheet("background-color:  #559900; color: white")
-        # Stop button
+        ## Stop button
         self.button_stop_scan = StopButton(parent=scan_selection_group)
+        ## Add buttons to layout
+        self.button_layout.addWidget(self.button_run_scan)
+        self.button_layout.addWidget(self.button_stop_scan)
+
         # Label to reload the last scan parameters
+        self.toggle_layout = QHBoxLayout()
+        ## Label
         self.last_scan_label = QLabel("Restore last scan parameters", scan_selection_group)
-        # Switch toggle button
+        ## Switch toggle button
         self.toggle = ToggleSwitch(parent=scan_selection_group, checked=False)
         self.toggle.enabled.connect(self.request_last_executed_scan_parameters)
+        ## Add label and switch to layout
+        self.toggle_layout.addWidget(self.last_scan_label)
+        self.toggle_layout.addWidget(self.toggle)
 
-        self.scan_selection_layout.addWidget(self.comboBox_scan_selection, 0, 0, 1, 2)
-        self.scan_selection_layout.addWidget(self.button_run_scan, 1, 0)
-        self.scan_selection_layout.addWidget(self.button_stop_scan, 1, 1)
-        self.scan_selection_layout.addWidget(self.last_scan_label, 2, 0)
-        self.scan_selection_layout.addWidget(self.toggle, 2, 1)
+        # Add widgets to layout
+        self.scan_selection_layout.addWidget(self.comboBox_scan_selection)
+        self.scan_selection_layout.addLayout(self.button_layout)
+        self.scan_selection_layout.addLayout(self.toggle_layout)
 
         return scan_selection_group
 
