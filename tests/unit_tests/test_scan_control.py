@@ -2,7 +2,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from bec_lib.messages import AvailableResourceMessage
+from bec_lib.messages import AvailableResourceMessage, ScanQueueHistoryMessage, ScanQueueMessage
 
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.scan_control import ScanControl
@@ -212,10 +212,82 @@ available_scans_message = AvailableResourceMessage(
     }
 )
 
+scan_history = ScanQueueHistoryMessage(
+    metadata={},
+    status="COMPLETED",
+    queue_id="94d7cb39-aa70-4060-92de-addcfb64e3c0",
+    info={
+        "queue_id": "94d7cb39-aa70-4060-92de-addcfb64e3c0",
+        "scan_id": ["bc2aa11f-24f6-44d6-8717-95e97fb43015"],
+        "is_scan": [True],
+        "request_blocks": [
+            {
+                "msg": ScanQueueMessage(
+                    metadata={
+                        "file_suffix": None,
+                        "file_directory": None,
+                        "user_metadata": {},
+                        "RID": "99321ef7-00ac-4e0c-9120-ce689bd88a4d",
+                    },
+                    scan_type="line_scan",
+                    parameter={
+                        "args": {"samx": [0.0, 2.0]},
+                        "kwargs": {
+                            "steps": 10,
+                            "relative": False,
+                            "exp_time": 2.0,
+                            "burst_at_each_point": 1,
+                            "system_config": {"file_suffix": None, "file_directory": None},
+                        },
+                    },
+                    queue="primary",
+                ),
+                "RID": "99321ef7-00ac-4e0c-9120-ce689bd88a4d",
+                "scan_motors": ["samx"],
+                "readout_priority": {
+                    "monitored": ["samx"],
+                    "baseline": [],
+                    "on_request": [],
+                    "async": [],
+                },
+                "is_scan": True,
+                "scan_number": 176,
+                "scan_id": "bc2aa11f-24f6-44d6-8717-95e97fb43015",
+                "metadata": {
+                    "file_suffix": None,
+                    "file_directory": None,
+                    "user_metadata": {},
+                    "RID": "99321ef7-00ac-4e0c-9120-ce689bd88a4d",
+                },
+                "content": {
+                    "scan_type": "line_scan",
+                    "parameter": {
+                        "args": {"samx": [0.0, 2.0]},
+                        "kwargs": {
+                            "steps": 10,
+                            "relative": False,
+                            "exp_time": 2.0,
+                            "burst_at_each_point": 1,
+                            "system_config": {"file_suffix": None, "file_directory": None},
+                        },
+                    },
+                    "queue": "primary",
+                },
+                "report_instructions": [{"scan_progress": 10}],
+            }
+        ],
+        "scan_number": [176],
+        "status": "COMPLETED",
+        "active_request_block": None,
+    },
+    queue="primary",
+)
+
 
 @pytest.fixture(scope="function")
 def scan_control(qtbot, mocked_client):  # , mock_dev):
     mocked_client.connector.set("scans/available_scans", available_scans_message)
+    mocked_client.connector.lpush("internal/queue/queue_history", scan_history)
     widget = ScanControl(client=mocked_client)
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
@@ -332,3 +404,49 @@ def test_run_line_scan_with_parameters(scan_control, mocked_client):
     expected_args_list = [expected_device, args["start"], args["stop"]]
     assert called_args == tuple(expected_args_list)
     assert called_kwargs == kwargs
+
+
+def test_changing_scans_remember_parameters(scan_control, mocked_client):
+    scan_name = "line_scan"
+    kwargs = {"exp_time": 0.1, "steps": 10, "relative": True, "burst_at_each_point": 1}
+    args = {"device": "samx", "start": -5, "stop": 5}
+
+    scan_control.comboBox_scan_selection.setCurrentText(scan_name)
+
+    # Set kwargs in the UI
+    for kwarg_box in scan_control.kwarg_boxes:
+        for widget in kwarg_box.widgets:
+            for key, value in kwargs.items():
+                if widget.arg_name == key:
+                    WidgetIO.set_value(widget, value)
+                    break
+    # Set args in the UI
+    for widget in scan_control.arg_box.widgets:
+        for key, value in args.items():
+            if widget.arg_name == key:
+                WidgetIO.set_value(widget, value)
+                break
+
+    scan_control.save_current_scan_parameters()
+
+    # Change the scan
+    new_scan_name = "grid_scan"
+    scan_control.comboBox_scan_selection.setCurrentText(new_scan_name)
+
+    # Check if kwargs are same as in the line_scan
+    grid_args, grid_kwargs = scan_control.get_scan_parameters(bec_object=False)
+    assert grid_kwargs["exp_time"] == kwargs["exp_time"]
+    assert grid_kwargs["relative"] == kwargs["relative"]
+    assert grid_kwargs["burst_at_each_point"] == kwargs["burst_at_each_point"]
+
+
+def test_get_scan_parameters_from_redis(scan_control, mocked_client):
+    scan_name = "line_scan"
+    scan_control.comboBox_scan_selection.setCurrentText(scan_name)
+
+    scan_control.toggle.checked = True
+
+    args, kwargs = scan_control.get_scan_parameters(bec_object=False)
+
+    assert args == ["samx", 0.0, 2.0]
+    assert kwargs == {"steps": 10, "relative": False, "exp_time": 2.0, "burst_at_each_point": 1}

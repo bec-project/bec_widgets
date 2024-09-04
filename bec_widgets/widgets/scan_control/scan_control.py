@@ -30,7 +30,7 @@ class ScanParameterConfig(BaseModel):
 
 
 class ScanControlConfig(ConnectionConfig):
-    default_scan: Optional[str] = Field(None)  # TODO implement later
+    default_scan: Optional[str] = Field(None)
     allowed_scans: Optional[list] = Field(None)
     scans: Optional[dict[str, ScanParameterConfig]] = defaultdict(dict)
 
