@@ -20,6 +20,8 @@ from .conftest import create_widget
 
 @pytest.fixture
 def waveform_widget(qtbot, mocked_client):
+    models = ["GaussianModel", "LorentzModel", "SineModel"]
+    mocked_client.dap._available_dap_plugins.keys.return_value = models
     widget = BECWaveformWidget(client=mocked_client())
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
@@ -357,7 +359,8 @@ def test_curve_dialog_async(qtbot, waveform_widget):
 
 
 def test_curve_dialog_dap(qtbot, waveform_widget):
-    waveform_widget.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
+    # Don't use default dap for curve_dialog dialog
+    waveform_widget.plot(x_name="samx", y_name="bpm4i", dap="LorentzModel")
 
     curve_dialog = show_curve_dialog(qtbot, waveform_widget)
 
@@ -369,6 +372,7 @@ def test_curve_dialog_dap(qtbot, waveform_widget):
     assert curve_dialog.widget.ui.dap_table.rowCount() == 1
     assert curve_dialog.widget.ui.dap_table.cellWidget(0, 0).text() == "bpm4i"
     assert curve_dialog.widget.ui.dap_table.cellWidget(0, 1).text() == "bpm4i"
+    assert curve_dialog.widget.ui.dap_table.cellWidget(0, 2).currentText() == "LorentzModel"
     assert curve_dialog.widget.ui.x_mode.currentText() == "device"
     assert curve_dialog.widget.ui.x_name.isEnabled() == True
     assert curve_dialog.widget.ui.x_entry.isEnabled() == True
