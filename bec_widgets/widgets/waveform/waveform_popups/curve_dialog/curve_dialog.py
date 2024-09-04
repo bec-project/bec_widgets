@@ -13,6 +13,7 @@ from bec_widgets.qt_utils.error_popups import WarningPopupUtility
 from bec_widgets.qt_utils.settings_dialog import SettingWidget
 from bec_widgets.utils import Colors, UILoader
 from bec_widgets.widgets.color_button.color_button import ColorButton
+from bec_widgets.widgets.dap_combo_box.dap_combo_box import DapComboBox
 from bec_widgets.widgets.device_line_edit.device_line_edit import DeviceLineEdit
 
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
@@ -241,8 +242,9 @@ class DialogRow(QObject):
         self.device_line_edit = DeviceLineEdit()
         self.entry_line_edit = QLineEdit()
 
-        self.dap_combo = QComboBox()
-        self.populate_dap_combobox()
+        self.dap_combo = DapComboBox()
+        self.dap_combo.populate_fit_model_combobox()
+        self.dap_combo.select_fit_model("GaussianModel")
 
         # Styling
         self.color_button = ColorButton()
@@ -260,16 +262,6 @@ class DialogRow(QObject):
         self.remove_button.clicked.connect(
             lambda: self.remove_row()
         )  # From some reason do not work without lambda
-
-    def populate_dap_combobox(self):
-        available_models = [
-            attr
-            for attr in dir(self.client.dap)
-            if not attr.startswith("__")
-            and not callable(getattr(self.client.dap, attr))
-            and not attr.startswith("_")
-        ]
-        self.dap_combo.addItems(available_models)
 
     def add_scan_row(self):
         if self.config is not None:
@@ -298,7 +290,7 @@ class DialogRow(QObject):
         if self.config is not None:
             self.device_line_edit.setText(self.config.signals.y.name)
             self.entry_line_edit.setText(self.config.signals.y.entry)
-            self.dap_combo.setCurrentText(self.config.signals.dap)
+            self.dap_combo.fit_model_combobox.setCurrentText(self.config.signals.dap)
             self.color_button.set_color(self.config.color)
             self.style_combo.setCurrentText(self.config.pen_style)
             self.width.setValue(self.config.pen_width)
@@ -312,7 +304,7 @@ class DialogRow(QObject):
 
         self.table_widget.setCellWidget(self.row, 0, self.device_line_edit)
         self.table_widget.setCellWidget(self.row, 1, self.entry_line_edit)
-        self.table_widget.setCellWidget(self.row, 2, self.dap_combo)
+        self.table_widget.setCellWidget(self.row, 2, self.dap_combo.fit_model_combobox)
         self.table_widget.setCellWidget(self.row, 3, self.color_button)
         self.table_widget.setCellWidget(self.row, 4, self.style_combo)
         self.table_widget.setCellWidget(self.row, 5, self.width)
