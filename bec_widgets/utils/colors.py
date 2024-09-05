@@ -8,14 +8,14 @@ import pyqtgraph as pg
 from bec_qthemes._os_appearance.listener import OSThemeSwitchListener
 from pydantic_core import PydanticCustomError
 from qtpy.QtGui import QColor
-from qtpy.QtWidgets import QApplication, QPushButton, QToolButton
+from qtpy.QtWidgets import QApplication
 
 
 def get_theme_palette():
     if QApplication.instance() is None or not hasattr(QApplication.instance(), "theme"):
         theme = "dark"
     else:
-        theme = QApplication.instance().theme["theme"]
+        theme = QApplication.instance().theme.theme
     return bec_qthemes.load_palette(theme)
 
 
@@ -25,8 +25,8 @@ def _theme_update_callback():
     """
     app = QApplication.instance()
     # pylint: disable=protected-access
-    app.theme["theme"] = app.os_listener._theme.lower()
-    app.theme_signal.theme_updated.emit(app.theme["theme"])
+    app.theme.theme = app.os_listener._theme.lower()
+    app.theme_signal.theme_updated.emit(app.theme.theme)
     apply_theme(app.os_listener._theme.lower())
 
 
@@ -124,7 +124,7 @@ class Colors:
             color_index = int(color_selection[ii])
             color = cmap_colors[color_index]
             app = QApplication.instance()
-            if hasattr(app, "theme") and app.theme["theme"] == "light":
+            if hasattr(app, "theme") and app.theme.theme == "light":
                 background = 255
             else:
                 background = 0

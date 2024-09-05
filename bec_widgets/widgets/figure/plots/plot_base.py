@@ -119,7 +119,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         if theme is None:
             qapp = QApplication.instance()
             if hasattr(qapp, "theme"):
-                theme = qapp.theme["theme"]
+                theme = qapp.theme.theme
             else:
                 theme = "dark"
         self.apply_theme(theme)

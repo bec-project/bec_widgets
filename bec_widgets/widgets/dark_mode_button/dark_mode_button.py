@@ -60,7 +60,7 @@ class DarkModeButton(BECWidget, QWidget):
             bool: True if dark mode is enabled, False otherwise.
         """
         qapp = QApplication.instance()
-        if hasattr(qapp, "theme") and qapp.theme["theme"] == "dark":
+        if hasattr(qapp, "theme") and qapp.theme.theme == "dark":
             return True
 
         return False
