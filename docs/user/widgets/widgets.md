@@ -191,6 +191,14 @@ Angular like toggle switch.
 Display spinner widget for loading or device movement.
 ```
 
+```{grid-item-card} BEC Progressbar 
+:link: user.widgets.bec_progressbar
+:link-type: ref
+:img-top: /assets/widget_screenshots/bec_progressbar.png
+
+Modern progress bar for BEC.
+```
+
 ```{grid-item-card} Position Indicator
 :link: user.widgets.position_indicator
 :link-type: ref
@@ -239,6 +247,7 @@ text_box/text_box.md
 website/website.md
 toggle/toggle.md
 spinner/spinner.md
+bec_progressbar/bec_progressbar.md
 device_input/device_input.md
 position_indicator/position_indicator.md
 lmfit_dialog/lmfit_dialog.md

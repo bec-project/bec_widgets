@@ -1698,19 +1698,28 @@ class BECProgressBar(RPCBase):
     @rpc_call
     def set_value(self, value):
         """
-        Smoothly transition the progress bar to the new value.
+        Set the value of the progress bar.
+
+        Args:
+            value (float): The value to set.
         """
 
     @rpc_call
     def set_maximum(self, maximum: float):
         """
         Set the maximum value of the progress bar.
+
+        Args:
+            maximum (float): The maximum value.
         """
 
     @rpc_call
     def set_minimum(self, minimum: float):
         """
-        None
+        Set the minimum value of the progress bar.
+
+        Args:
+            minimum (float): The minimum value.
         """
 
     @property

@@ -15,7 +15,7 @@ The [`BEC Status Box`](/api_reference/_autosummary/bec_widgets.cli.client.BECSta
 
 ````{tab} Examples
 
-The `BECStatusBox` widget can be integrated within a [`BECDockArea`](user.widgets.bec_dock_area) or used as an individual component in your application through `QtDesigner`. Below are examples demonstrating how to create and use the `BECStatusBox` widget.
+The `BECStatusBox` widget can be integrated within a [`BECDockArea`](user.widgets.bec_dock_area) or used as an individual component in your application through `BECDesigner`. Below are examples demonstrating how to create and use the `BECStatusBox` widget.
 
 ## Example 1 - Adding BEC Status Box to BECDockArea
 

@@ -107,7 +107,12 @@ class BECProgressBar(BECWidget, QWidget):
     @Slot(float)
     @Slot(int)
     def set_value(self, value):
-        """Smoothly transition the progress bar to the new value."""
+        """
+        Set the value of the progress bar.
+
+        Args:
+            value (float): The value to set.
+        """
         if value > self._user_maximum:
             value = self._user_maximum
         elif value < self._user_minimum:
@@ -201,6 +206,9 @@ class BECProgressBar(BECWidget, QWidget):
     def set_maximum(self, maximum: float):
         """
         Set the maximum value of the progress bar.
+
+        Args:
+            maximum (float): The maximum value.
         """
         self._user_maximum = maximum
         self.set_value(self._user_value)  # Update the value to fit the new range
@@ -208,6 +216,12 @@ class BECProgressBar(BECWidget, QWidget):
 
     @Slot(float)
     def set_minimum(self, minimum: float):
+        """
+        Set the minimum value of the progress bar.
+
+        Args:
+            minimum (float): The minimum value.
+        """
         self._user_minimum = minimum
         self.set_value(self._user_value)  # Update the value to fit the new range
         self.update()
@@ -219,12 +233,6 @@ class BECProgressBar(BECWidget, QWidget):
         return (
             (value - self._user_minimum) / (self._user_maximum - self._user_minimum) * self._maximum
         )
-
-    def sizeHint(self):
-        return self.minimumSizeHint()
-
-    def minimumSizeHint(self):
-        return self.size()
 
 
 if __name__ == "__main__":  # pragma: no cover
