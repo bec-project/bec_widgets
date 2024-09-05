@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v0.106.0 (2024-09-05)
+
+### Feature
+
+* feat(plot_base): toggle to switch outer axes for plotting widgets ([`06d7741`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/06d7741622aea8556208cd17cae521c37333f8b6))
+
+### Refactor
+
+* refactor: use DAPComboBox in curve_dialog selection ([`998a745`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/998a7451335b1b35c3e18691d3bab8d882e2d30b))
+
+### Test
+
+* test: fix tests ([`6b15abc`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6b15abcc73170cb49292741a619a08ee615e6250))
+
 ## v0.105.0 (2024-09-04)
 
 ### Feature
@@ -143,15 +157,3 @@
 * fix(toolbar): widget action added ([`2efd487`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2efd48736cbe04e84533f7933c552ea8274e2162))
 
 * fix(reset_button): reset button added ([`6ed1efc`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6ed1efc6af193908f70aa37fb73157d2ca6a62f4))
-
-* fix(abort_button): abort button added; some minor fixes ([`a568633`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a568633c3206a8c26069d140f2d9a548bf4124b0))
-
-## v0.99.11 (2024-08-29)
-
-### Fix
-
-* fix(resume_button): resume button added ([`8be8295`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8be8295b2b38f36da210ab36c5da6d0a00e330cc))
-
-### Refactor
-
-* refactor(icons): general app icon changed; jupyter app icon changed to material icon ([`5d73fe4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5d73fe455a568ad40a9fadc5ce6e249d782ad20d))
