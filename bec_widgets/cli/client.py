@@ -19,6 +19,7 @@ class Widgets(str, enum.Enum):
     BECFigure = "BECFigure"
     BECImageWidget = "BECImageWidget"
     BECMotorMapWidget = "BECMotorMapWidget"
+    BECProgressBar = "BECProgressBar"
     BECQueue = "BECQueue"
     BECStatusBox = "BECStatusBox"
     BECWaveformWidget = "BECWaveformWidget"
@@ -1690,6 +1691,48 @@ class BECPlotBase(RPCBase):
 
         Args:
             size(int): Font size of the legend.
+        """
+
+
+class BECProgressBar(RPCBase):
+    @rpc_call
+    def set_value(self, value):
+        """
+        Smoothly transition the progress bar to the new value.
+        """
+
+    @rpc_call
+    def set_maximum(self, maximum: float):
+        """
+        Set the maximum value of the progress bar.
+        """
+
+    @rpc_call
+    def set_minimum(self, minimum: float):
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def label_template(self):
+        """
+        The template for the center label. Use $value, $maximum, and $percentage to insert the values.
+
+        Examples:
+        >>> progressbar.label_template = "$value / $maximum - $percentage %"
+        >>> progressbar.label_template = "$value / $percentage %"
+        """
+
+    @label_template.setter
+    @rpc_call
+    def label_template(self):
+        """
+        The template for the center label. Use $value, $maximum, and $percentage to insert the values.
+
+        Examples:
+        >>> progressbar.label_template = "$value / $maximum - $percentage %"
+        >>> progressbar.label_template = "$value / $percentage %"
         """
 
 
