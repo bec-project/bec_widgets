@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.109.0 (2024-09-06)
+
+### Feature
+
+* feat(accent colors): added helper function to get all accent colors ([`84a59f7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/84a59f70eed6d8a3c3aeeabc77a5f9ea4e864f61))
+
+### Fix
+
+* fix(theme): fixed theme access for themecontainer ([`de303f0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/de303f0227fc9d3a74a0410f1e7999ac5132273c))
+
 ## v0.108.0 (2024-09-06)
 
 ### Documentation
@@ -153,11 +163,3 @@
 * fix(pyqt slot): removed slot decorator to avoid problems with pyqt6 ([`6c1f89a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6c1f89ad39b7240ab1d1c1123422b99ae195bf01))
 
 ## v0.99.15 (2024-08-31)
-
-### Fix
-
-* fix(theme): update pg axes on theme update ([`af23e74`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/af23e74f71152f4abc319ab7b45e65deefde3519))
-
-* fix(positioner_box): fixed positioner box dialog; added test; closes #332 ([`0bf1cf9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0bf1cf9b8ab2f9171d5ff63d4e3672eb93e9a5fa))
-
-## v0.99.14 (2024-08-30)
