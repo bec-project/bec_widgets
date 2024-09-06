@@ -1887,7 +1887,7 @@ class BECWaveform(RPCBase):
         """
 
     @rpc_call
-    def get_all_data(self, output: "Literal['dict', 'pandas']" = "dict") -> "dict | pd.DataFrame":
+    def get_all_data(self, output: "Literal['dict', 'pandas']" = "dict") -> "dict":
         """
         Extract all curve data into a dictionary or a pandas DataFrame.
 
@@ -2048,6 +2048,25 @@ class BECWaveform(RPCBase):
 
         Args:
             size(int): Font size of the legend.
+        """
+
+    @rpc_call
+    def toggle_roi(self, toggled: "bool") -> "None":
+        """
+        Toggle the linear region selector on the plot.
+
+        Args:
+            toggled(bool): If True, enable the linear region selector.
+        """
+
+    @rpc_call
+    def select_roi(self, region: "tuple[float, float]"):
+        """
+        Set the fit region of the plot widget. At the moment only a single region is supported.
+        To remove the roi region again, use toggle_roi_region
+
+        Args:
+            region(tuple[float, float]): The fit region.
         """
 
 
@@ -2319,6 +2338,24 @@ class BECWaveformWidget(RPCBase):
     def export_to_matplotlib(self):
         """
         Export the plot widget to Matplotlib.
+        """
+
+    @rpc_call
+    def toggle_roi(self, checked: "bool"):
+        """
+        Toggle the linear region selector.
+
+        Args:
+            checked(bool): If True, enable the linear region selector.
+        """
+
+    @rpc_call
+    def select_roi(self, region: "tuple"):
+        """
+        Set the region of interest of the plot widget.
+
+        Args:
+            region(tuple): Region of interest.
         """
 
 

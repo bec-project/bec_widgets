@@ -6,7 +6,7 @@ from typing import Literal
 import numpy as np
 import pyqtgraph as pg
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import Signal
+from qtpy.QtCore import Property, Signal, Slot
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeSlot, WarningPopupUtility
@@ -55,6 +55,8 @@ class BECWaveformWidget(BECWidget, QWidget):
         "lock_aspect_ratio",
         "export",
         "export_to_matplotlib",
+        "toggle_roi",
+        "select_roi",
     ]
     scan_signal_update = Signal()
     async_signal_update = Signal()
@@ -70,6 +72,8 @@ class BECWaveformWidget(BECWidget, QWidget):
     crosshair_coordinates_changed_string = Signal(str)
     crosshair_coordinates_clicked = Signal(tuple)
     crosshair_coordinates_clicked_string = Signal(str)
+    roi_changed = Signal(tuple)
+    roi_active = Signal(bool)
 
     def __init__(
         self,
@@ -120,6 +124,9 @@ class BECWaveformWidget(BECWidget, QWidget):
                 "crosshair": MaterialIconAction(
                     icon_name="point_scan", tooltip="Show Crosshair", checkable=True
                 ),
+                "roi_select": MaterialIconAction(
+                    icon_name="select_all", tooltip="Add ROI region for DAP", checkable=True
+                ),
             },
             target_widget=self,
         )
@@ -133,6 +140,7 @@ class BECWaveformWidget(BECWidget, QWidget):
         self.waveform.apply_config(config)
 
         self.config = config
+        self._clear_curves_on_plot_update = False
 
         self.hook_waveform_signals()
         self._hook_actions()
@@ -160,6 +168,8 @@ class BECWaveformWidget(BECWidget, QWidget):
         self.waveform.crosshair_position_clicked.connect(
             self._emit_crosshair_position_clicked_string
         )
+        self.waveform.roi_changed.connect(self.roi_changed)
+        self.waveform.roi_active.connect(self.roi_active)
 
     def _hook_actions(self):
         self.toolbar.widgets["save"].action.triggered.connect(self.export)
@@ -173,12 +183,36 @@ class BECWaveformWidget(BECWidget, QWidget):
         self.toolbar.widgets["fit_params"].action.triggered.connect(self.show_fit_summary_dialog)
         self.toolbar.widgets["axis_settings"].action.triggered.connect(self.show_axis_settings)
         self.toolbar.widgets["crosshair"].action.triggered.connect(self.waveform.toggle_crosshair)
+        self.toolbar.widgets["roi_select"].action.toggled.connect(self.waveform.toggle_roi)
         # self.toolbar.widgets["import"].action.triggered.connect(
         #     lambda: self.load_config(path=None, gui=True)
         # )
         # self.toolbar.widgets["export"].action.triggered.connect(
         #     lambda: self.save_config(path=None, gui=True)
         # )
+
+    @Slot(bool)
+    def toogle_roi_select(self, checked: bool):
+        """Toggle the linear region selector.
+
+        Args:
+            checked(bool): If True, enable the linear region selector.
+        """
+        self.toolbar.widgets["roi_select"].action.setChecked(checked)
+
+    @Property(bool)
+    def clear_curves_on_plot_update(self) -> bool:
+        """If True, clear curves on plot update."""
+        return self._clear_curves_on_plot_update
+
+    @clear_curves_on_plot_update.setter
+    def clear_curves_on_plot_update(self, value: bool):
+        """Set the clear curves on plot update property.
+
+        Args:
+            value(bool): If True, clear curves on plot update.
+        """
+        self._clear_curves_on_plot_update = value
 
     @SafeSlot(tuple)
     def _emit_crosshair_coordinates_changed_string(self, coordinates):
@@ -260,7 +294,8 @@ class BECWaveformWidget(BECWidget, QWidget):
         """
         self.waveform.set_colormap(colormap)
 
-    @SafeSlot(str, popup_error=True)
+    @Slot(str, str)  # Slot for x_name, x_entry
+    @SafeSlot(str, popup_error=True)  # Slot for x_name and
     def set_x(self, x_name: str, x_entry: str | None = None):
         """
         Change the x axis of the plot widget.
@@ -275,7 +310,8 @@ class BECWaveformWidget(BECWidget, QWidget):
         """
         self.waveform.set_x(x_name, x_entry)
 
-    @SafeSlot(str, popup_error=True)
+    @Slot(str)  # Slot for y_name
+    @SafeSlot(popup_error=True)
     def plot(
         self,
         arg1: list | np.ndarray | str | None = None,
@@ -315,7 +351,8 @@ class BECWaveformWidget(BECWidget, QWidget):
         Returns:
             BECCurve: The curve object.
         """
-        # self._check_if_scans_have_same_x(enabled=True, x_name_to_check=x_name)
+        if self.clear_curves_on_plot_update is True:
+            self.waveform.clear_source(source="scan_segment")
         return self.waveform.plot(
             arg1=arg1,
             x=x,
@@ -334,6 +371,9 @@ class BECWaveformWidget(BECWidget, QWidget):
             **kwargs,
         )
 
+    @Slot(
+        str, str, str, str, str, str, bool
+    )  # Slot for x_name, y_name, x_entry, y_entry, color, validate_bec
     @SafeSlot(str, str, str, popup_error=True)
     def add_dap(
         self,
@@ -362,6 +402,8 @@ class BECWaveformWidget(BECWidget, QWidget):
         Returns:
             BECCurve: The curve object.
         """
+        if self.clear_curves_on_plot_update is True:
+            self.waveform.clear_source(source="DAP")
         return self.waveform.add_dap(
             x_name=x_name,
             y_name=y_name,
@@ -542,6 +584,23 @@ class BECWaveformWidget(BECWidget, QWidget):
                 - "y": Enable auto range for y axis.
         """
         self.waveform.set_auto_range(enabled, axis)
+
+    def toggle_roi(self, checked: bool):
+        """Toggle the linear region selector.
+
+        Args:
+            checked(bool): If True, enable the linear region selector.
+        """
+        self.waveform.toggle_roi(checked)
+
+    def select_roi(self, region: tuple):
+        """
+        Set the region of interest of the plot widget.
+
+        Args:
+            region(tuple): Region of interest.
+        """
+        self.waveform.select_roi(region)
 
     @SafeSlot()
     def _auto_range_from_toolbar(self):

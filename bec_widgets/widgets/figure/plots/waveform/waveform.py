@@ -16,6 +16,7 @@ from qtpy.QtWidgets import QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
 from bec_widgets.utils import Colors, EntryValidator
+from bec_widgets.utils.linear_region_selector import LinearRegionWrapper
 from bec_widgets.widgets.figure.plots.plot_base import BECPlotBase, SubplotConfig
 from bec_widgets.widgets.figure.plots.waveform.waveform_curve import (
     BECCurve,
@@ -74,6 +75,8 @@ class BECWaveform(BECPlotBase):
         "remove",
         "clear_all",
         "set_legend_label_size",
+        "toggle_roi",
+        "select_roi",
     ]
     scan_signal_update = pyqtSignal()
     async_signal_update = pyqtSignal()
@@ -81,6 +84,9 @@ class BECWaveform(BECPlotBase):
     dap_summary_update = pyqtSignal(dict, dict)
     autorange_signal = pyqtSignal()
     new_scan = pyqtSignal()
+    roi_changed = pyqtSignal(tuple)
+    roi_active = pyqtSignal(bool)
+    request_dap_refresh = pyqtSignal()
 
     def __init__(
         self,
@@ -100,6 +106,8 @@ class BECWaveform(BECPlotBase):
         self.old_scan_id = None
         self.scan_id = None
         self.scan_item = None
+        self._roi_region = None
+        self.roi_select = None
         self._x_axis_mode = {
             "name": None,
             "entry": None,
@@ -129,6 +137,57 @@ class BECWaveform(BECPlotBase):
 
         self.add_legend()
         self.apply_config(self.config)
+
+    @Slot(bool)
+    def toggle_roi(self, toggled: bool) -> None:
+        """Toggle the linear region selector on the plot.
+
+        Args:
+            toggled(bool): If True, enable the linear region selector.
+        """
+        if toggled:
+            return self._hook_roi()
+        return self._unhook_roi()
+
+    @Slot(tuple)
+    def select_roi(self, region: tuple[float, float]):
+        """Set the fit region of the plot widget. At the moment only a single region is supported.
+        To remove the roi region again, use toggle_roi_region
+
+        Args:
+            region(tuple[float, float]): The fit region.
+        """
+        if self.roi_region == (None, None):
+            self.toggle_roi(True)
+        try:
+            self.roi_select.linear_region_selector.setRegion(region)
+        except Exception as e:
+            logger.error(f"Error setting region {tuple}; Exception raised: {e}")
+            raise ValueError(f"Error setting region {tuple}; Exception raised: {e}")
+
+    def _hook_roi(self):
+        """Hook the linear region selector to the plot."""
+        if self.roi_select is None:
+            self.roi_select = LinearRegionWrapper(self.plot_item, parent=self)
+            self.roi_select.add_region_selector()
+            self.roi_select.region_changed.connect(self.roi_changed)
+            self.roi_select.region_changed.connect(self.set_roi_region)
+            self.request_dap_refresh.connect(self.refresh_dap)
+            self._emit_roi_region()
+            self.roi_active.emit(True)
+
+    def _unhook_roi(self):
+        """Unhook the linear region selector from the plot."""
+        if self.roi_select is not None:
+            self.roi_select.region_changed.disconnect(self.roi_changed)
+            self.roi_select.region_changed.disconnect(self.set_roi_region)
+            self.request_dap_refresh.disconnect(self.refresh_dap)
+            self.roi_active.emit(False)
+            self.roi_region = None
+            self.refresh_dap()
+            self.roi_select.cleanup()
+            self.roi_select.deleteLater()
+            self.roi_select = None
 
     def apply_config(self, config: dict | SubplotConfig, replot_last_scan: bool = False):
         """
@@ -170,6 +229,48 @@ class BECWaveform(BECPlotBase):
 
         for curve in self.curves:
             curve.config.parent_id = new_gui_id
+
+    ###################################
+    # Fit Range Properties
+    ###################################
+
+    @property
+    def roi_region(self) -> tuple[float, float] | None:
+        """
+        Get the fit region of the plot widget.
+
+        Returns:
+            tuple: The fit region.
+        """
+        if self._roi_region is not None:
+            return self._roi_region
+        return None, None
+
+    @roi_region.setter
+    def roi_region(self, value: tuple[float, float] | None):
+        """Set the fit region of the plot widget.
+
+        Args:
+            value(tuple[float, float]|None): The fit region.
+        """
+        self._roi_region = value
+        if value is not None:
+            self.request_dap_refresh.emit()
+
+    @Slot(tuple)
+    def set_roi_region(self, region: tuple[float, float]):
+        """
+        Set the fit region of the plot widget.
+
+        Args:
+            region(tuple[float, float]): The fit region.
+        """
+        self.roi_region = region
+
+    def _emit_roi_region(self):
+        """Emit the current ROI from selector the plot widget."""
+        if self.roi_select is not None:
+            self.set_roi_region(self.roi_select.linear_region_selector.getRegion())
 
     ###################################
     # Waveform Properties
@@ -1058,13 +1159,14 @@ class BECWaveform(BECPlotBase):
             y_entry = curve.config.signals.y.entry
             model_name = curve.config.signals.dap
             model = getattr(self.dap, model_name)
+            x_min, x_max = self.roi_region
 
             msg = messages.DAPRequestMessage(
                 dap_cls="LmfitService1D",
                 dap_type="on_demand",
                 config={
                     "args": [self.scan_id, x_name, x_entry, y_name, y_entry],
-                    "kwargs": {},
+                    "kwargs": {"x_min": x_min, "x_max": x_max},
                     "class_args": model._plugin_info["class_args"],
                     "class_kwargs": model._plugin_info["class_kwargs"],
                 },
@@ -1304,7 +1406,8 @@ class BECWaveform(BECPlotBase):
         self.scan_signal_update.emit()
         self.async_signal_update.emit()
 
-    def get_all_data(self, output: Literal["dict", "pandas"] = "dict") -> dict | pd.DataFrame:
+    # pylint: ignore: undefined-variable
+    def get_all_data(self, output: Literal["dict", "pandas"] = "dict") -> dict:  # | pd.DataFrame:
         """
         Extract all curve data into a dictionary or a pandas DataFrame.
 
@@ -1351,13 +1454,21 @@ class BECWaveform(BECPlotBase):
         """
         MatplotlibExporter(self.plot_item).export()
 
-    def clear_all(self):
+    def clear_source(self, source: Literal["DAP", "async", "scan_segment", "custom"]):
+        """Clear speicific source from self._curves_data.
+
+        Args:
+            source (Literal["DAP", "async", "scan_segment", "custom"]): Source to be cleared.
+        """
         curves_data = self._curves_data
-        sources = list(curves_data.keys())
+        curve_ids_to_remove = list(curves_data[source].keys())
+        for curve_id in curve_ids_to_remove:
+            self.remove_curve(curve_id)
+
+    def clear_all(self):
+        sources = list(self._curves_data.keys())
         for source in sources:
-            curve_ids_to_remove = list(curves_data[source].keys())
-            for curve_id in curve_ids_to_remove:
-                self.remove_curve(curve_id)
+            self.clear_source(source)
 
     def cleanup(self):
         """Cleanup the widget connection from BECDispatcher."""
