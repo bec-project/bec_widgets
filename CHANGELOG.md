@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## v0.107.0 (2024-09-06)
+
+### Documentation
+
+* docs: extend waveform docs ([`e6976dc`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e6976dc15105209852090a00a97b7cda723142e9))
+
+### Feature
+
+* feat: add roi select for dap, allow automatic clear curves on plot request ([`7bdca84`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7bdca8431496fe6562d2c28f5a6af869d1a2e654))
+
+### Refactor
+
+* refactor: change style to bec_accent_colors ([`bd126dd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bd126dddbbec3e6c448cce263433d328d577c5c0))
+
+### Test
+
+* test: add tests, including extension to end-2-end test ([`b1aff6d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b1aff6d791ff847eb2f628e66ccaa4672fdeea08))
+
 ## v0.106.0 (2024-09-05)
 
 ### Feature
@@ -140,20 +158,6 @@
 
 ## v0.99.13 (2024-08-30)
 
-### Documentation
-
-* docs: minor updates to the widget tutorial ([`ec9c8f2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ec9c8f29633364c45ebd998a5411d428c1ce488d))
-
-* docs(widget tutorial): step by step guide added ([`b32ced8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b32ced85fff628a9e1303a781630cdae3865238e))
-
 ### Fix
 
 * fix(dark mode button): fixed dark mode button state for external updates, including auto ([`a3110d9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a3110d98147295dcb1f9353f9aaf5461cba9232a))
-
-## v0.99.12 (2024-08-29)
-
-### Fix
-
-* fix(toolbar): widget action added ([`2efd487`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2efd48736cbe04e84533f7933c552ea8274e2162))
-
-* fix(reset_button): reset button added ([`6ed1efc`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6ed1efc6af193908f70aa37fb73157d2ca6a62f4))
