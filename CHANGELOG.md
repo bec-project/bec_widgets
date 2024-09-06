@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v0.108.0 (2024-09-06)
+
+### Documentation
+
+* docs(progressbar): added docs ([`7d07cea`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7d07cea946f9c884477b01bebfb60b332ff09e0a))
+
+### Feature
+
+* feat(progressbar): added bec progressbar ([`f6d1d0b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f6d1d0bbe3ba30a3b7291cd36a1f7f8e6bd5b895))
+
+* feat(generate_cli): added support for property and qproperty setter ([`a52182d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a52182dca978833bfc3fad755c596d3a2ef45c42))
+
 ## v0.107.0 (2024-09-06)
 
 ### Documentation
@@ -149,15 +161,3 @@
 * fix(positioner_box): fixed positioner box dialog; added test; closes #332 ([`0bf1cf9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0bf1cf9b8ab2f9171d5ff63d4e3672eb93e9a5fa))
 
 ## v0.99.14 (2024-08-30)
-
-### Fix
-
-* fix(color_button): signal and slot added for selecting color and for emitting color after change ([`99a98de`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/99a98de8a3b7a83d71e4b567e865ac6f5c62a754))
-
-* fix(color_button): inheritance changed to QWidget ([`3c0e501`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3c0e501c56227d4d98ff0ac2186ff5065bff8d7a))
-
-## v0.99.13 (2024-08-30)
-
-### Fix
-
-* fix(dark mode button): fixed dark mode button state for external updates, including auto ([`a3110d9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a3110d98147295dcb1f9353f9aaf5461cba9232a))
