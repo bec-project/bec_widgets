@@ -125,7 +125,9 @@ class BECWaveformWidget(BECWidget, QWidget):
                     icon_name="point_scan", tooltip="Show Crosshair", checkable=True
                 ),
                 "roi_select": MaterialIconAction(
-                    icon_name="select_all", tooltip="Add ROI region for DAP", checkable=True
+                    icon_name="align_justify_space_between",
+                    tooltip="Add ROI region for DAP",
+                    checkable=True,
                 ),
             },
             target_widget=self,
@@ -703,6 +705,10 @@ def main():  # pragma: no cover
 
     app = QApplication(sys.argv)
     widget = BECWaveformWidget()
+    widget.plot(x_name="samx", y_name="bpm4i")
+    widget.plot(y_name="bpm3i")
+    widget.plot(y_name="bpm4a")
+    widget.plot(y_name="bpm5i")
     widget.show()
     sys.exit(app.exec_())
 

@@ -12,7 +12,7 @@ from bec_lib.logger import bec_logger
 from pydantic import Field, ValidationError, field_validator
 from pyqtgraph.exporters import MatplotlibExporter
 from qtpy.QtCore import Signal as pyqtSignal
-from qtpy.QtWidgets import QWidget
+from qtpy.QtWidgets import QApplication, QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
 from bec_widgets.utils import Colors, EntryValidator
@@ -108,6 +108,7 @@ class BECWaveform(BECPlotBase):
         self.scan_item = None
         self._roi_region = None
         self.roi_select = None
+        self._accent_colors = QApplication.instance().theme.accent_colors
         self._x_axis_mode = {
             "name": None,
             "entry": None,
@@ -167,8 +168,14 @@ class BECWaveform(BECPlotBase):
 
     def _hook_roi(self):
         """Hook the linear region selector to the plot."""
+        color = self._accent_colors.default
+        color.setAlpha(int(0.2 * 255))
+        hover_color = self._accent_colors.default
+        hover_color.setAlpha(int(0.35 * 255))
         if self.roi_select is None:
-            self.roi_select = LinearRegionWrapper(self.plot_item, parent=self)
+            self.roi_select = LinearRegionWrapper(
+                self.plot_item, color=color, hover_color=hover_color, parent=self
+            )
             self.roi_select.add_region_selector()
             self.roi_select.region_changed.connect(self.roi_changed)
             self.roi_select.region_changed.connect(self.set_roi_region)
