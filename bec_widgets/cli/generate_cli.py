@@ -8,6 +8,7 @@ import sys
 
 import black
 import isort
+from qtpy.QtCore import Property as QtProperty
 
 from bec_widgets.utils.generate_designer_plugin import DesignerPluginGenerator
 from bec_widgets.utils.plugin_utils import BECClassContainer, get_rpc_classes
@@ -90,11 +91,27 @@ class {class_name}(RPCBase):"""
             self.content += """...
     """
         for method in cls.USER_ACCESS:
-            obj = getattr(cls, method)
-            if isinstance(obj, property):
-                self.content += """
+            is_property_setter = False
+            obj = getattr(cls, method, None)
+            if obj is None:
+                obj = getattr(cls, method.split(".setter")[0], None)
+                is_property_setter = True
+                method = method.split(".setter")[0]
+            if obj is None:
+                raise AttributeError(
+                    f"Method {method} not found in class {cls.__name__}. Please check the USER_ACCESS list."
+                )
+            if isinstance(obj, (property, QtProperty)):
+                # for the cli, we can map qt properties to regular properties
+                if is_property_setter:
+                    self.content += f"""
+    @{method}.setter
+    @rpc_call"""
+                else:
+                    self.content += """
     @property
     @rpc_call"""
+
                 sig = str(inspect.signature(obj.fget))
                 doc = inspect.getdoc(obj.fget)
             else:

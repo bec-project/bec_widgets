@@ -86,10 +86,15 @@ class BECWidgetsCLIServer:
         return obj
 
     def run_rpc(self, obj, method, args, kwargs):
+        logger.debug(f"Running RPC instruction: {method} with args: {args}, kwargs: {kwargs}")
         method_obj = getattr(obj, method)
         # check if the method accepts args and kwargs
         if not callable(method_obj):
-            res = method_obj
+            if not args:
+                res = method_obj
+            else:
+                setattr(obj, method, args[0])
+                res = None
         else:
             sig = inspect.signature(method_obj)
             if sig.parameters:
@@ -245,5 +250,5 @@ def main():
 
 
 if __name__ == "__main__":  # pragma: no cover
-    sys.argv = ["bec_widgets.cli.server", "--id", "test", "--gui_class", "BECDockArea"]
+    sys.argv = ["bec_widgets.cli.server", "--id", "e2860", "--gui_class", "BECDockArea"]
     main()
