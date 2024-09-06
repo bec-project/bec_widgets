@@ -36,7 +36,7 @@ waveform.dap_summary_update.connect(lmfit_dialog.update_summary_tree)
 ````
 ````{tab} API
 ```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.LMFitDialog.rst
+.. include:: /api_reference/_autosummary/bec_widgets.widgets.lmfit_dialog.lmfit_dialog.LMFitDialog.rst
 ```
 ````
 

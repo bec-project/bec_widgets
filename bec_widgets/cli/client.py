@@ -2914,31 +2914,21 @@ class StopButton(RPCBase):
 
 class TextBox(RPCBase):
     @rpc_call
-    def set_color(self, background_color: str, font_color: str) -> None:
+    def set_plain_text(self, text: str) -> None:
         """
-        Set the background color of the widget.
-
-        Args:
-            background_color (str): The color to set the background in HEX.
-            font_color (str): The color to set the font in HEX.
-        """
-
-    @rpc_call
-    def set_text(self, text: str) -> None:
-        """
-        Set the text of the widget.
+        Set the plain text of the widget.
 
         Args:
             text (str): The text to set.
         """
 
     @rpc_call
-    def set_font_size(self, size: int) -> None:
+    def set_html_text(self, text: str) -> None:
         """
-        Set the font size of the text in the widget.
+        Set the HTML text of the widget.
 
         Args:
-            size (int): The font size to set.
+            text (str): The text to set.
         """
 
 

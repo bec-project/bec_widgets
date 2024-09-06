@@ -1,39 +1,47 @@
-import re
+"""Module for a text box widget that displays text in plain and HTML format and adheres to the BECWidget interface & style."""
 
-from pydantic import Field, field_validator
-from qtpy.QtWidgets import QTextEdit
+import re
+from html.parser import HTMLParser
+
+from bec_lib.logger import bec_logger
+from pydantic import Field
+from qtpy.QtCore import Property, Slot
+from qtpy.QtWidgets import QTextEdit, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import Colors
+
+logger = bec_logger.logger
+
+DEFAULT_TEXT = "<h1>Welcome to the BEC Widget TextBox</h1><p>A widget that allows user to display text in plain and HTML format.</p><p>This is an example of displaying HTML text.</p>"
 
 
 class TextBoxConfig(ConnectionConfig):
+    """Configuration for the TextBox widget.
 
-    theme: str = Field("dark", description="The theme of the figure widget.")
-    font_color: str = Field("#FFF", description="The font color of the text")
-    background_color: str = Field("#000", description="The background color of the widget.")
-    font_size: int = Field(16, description="The font size of the text in the widget.")
-    text: str = Field("", description="The text to display in the widget.")
+    Args:
+        text (str, optional): The text to display in the widget. Defaults to None.
+        is_html (bool, optional): Whether the text is in HTML format or not. Defaults to False.
+    """
 
-    @classmethod
-    @field_validator("theme")
-    def validate_theme(cls, v):
-        """Validate the theme of the figure widget."""
-        if v not in ["dark", "light"]:
-            raise ValueError("Theme must be either 'dark' or 'light'")
-        return v
-
-    _validate_font_color = field_validator("font_color")(Colors.validate_color)
-    _validate_background_color = field_validator("background_color")(Colors.validate_color)
+    text: str | None = Field(None, description="The text to display in the widget.")
+    is_html: bool = Field(False, description="Whether the text is in HTML format or not.")
 
 
-class TextBox(BECWidget, QTextEdit):
+class TextBox(BECWidget, QWidget):
+    """A widget that displays text in plain and HTML format
 
-    USER_ACCESS = ["set_color", "set_text", "set_font_size"]
+    Args:
+        parent (QWidget, optional): The parent widget. Defaults to None.
+        client ([type], optional): The client to use. Defaults to None.
+        config ([type], optional): The config to use. Defaults to None.
+        gui_id ([type], optional): The gui_id to use. Defaults to None.
+    """
+
+    USER_ACCESS = ["set_plain_text", "set_html_text"]
     ICON_NAME = "chat"
 
-    def __init__(self, parent=None, text: str = "", client=None, config=None, gui_id=None):
+    def __init__(self, parent=None, client=None, config=None, gui_id=None):
         if config is None:
             config = TextBoxConfig(widget_class=self.__class__.__name__)
         else:
@@ -41,80 +49,79 @@ class TextBox(BECWidget, QTextEdit):
                 config = TextBoxConfig(**config)
             self.config = config
         super().__init__(client=client, config=config, gui_id=gui_id)
-        QTextEdit.__init__(self, parent=parent)
-
+        QWidget.__init__(self, parent)
+        self.layout = QVBoxLayout(self)
+        self.text_box_text_edit = QTextEdit(parent=self)
+        self.layout.addWidget(self.text_box_text_edit)
+        self.setLayout(self.layout)
+        self.layout.setContentsMargins(0, 0, 0, 0)
         self.config = config
-        self.setReadOnly(True)
-        self.setGeometry(self.rect())
-        self.set_color(self.config.background_color, self.config.font_color)
-        if not text:
-            text = "<h1>Welcome to the BEC Widget TextBox</h1><p>A widget that allows user to display text in plain and HTML format.</p><p>This is an example of displaying HTML text.</p>"
-        self.set_text(text)
-
-    def change_theme(self) -> None:
-        """
-        Change the theme of the figure widget.
-        """
-        if self.config.theme == "dark":
-            theme = "light"
-            font_color = "#000"
-            background_color = "#FFF"
+        self.text_box_text_edit.setReadOnly(True)
+        if self.config.text is not None:
+            if self.config.is_html:
+                self.set_html_text(self.config.text)
+            else:
+                self.set_plain_text(self.config.text)
         else:
-            theme = "dark"
-            font_color = "#FFF"
-            background_color = "#000"
-        self.config.theme = theme
-        self.set_color(background_color, font_color)
+            self.set_html_text(DEFAULT_TEXT)
 
-    def set_color(self, background_color: str, font_color: str) -> None:
-        """Set the background color of the widget.
+    @Slot(str)
+    def set_plain_text(self, text: str) -> None:
+        """Set the plain text of the widget.
 
         Args:
-            background_color (str): The color to set the background in HEX.
-            font_color (str): The color to set the font in HEX.
-
+            text (str): The text to set.
         """
-        self.config.background_color = background_color
-        self.config.font_color = font_color
-        self._update_stylesheet()
+        self.text_box_text_edit.setPlainText(text)
+        self.config.text = text
+        self.config.is_html = False
 
-    def set_font_size(self, size: int) -> None:
-        """Set the font size of the text in the widget.
+    @Slot(str)
+    def set_html_text(self, text: str) -> None:
+        """Set the HTML text of the widget.
 
         Args:
-            size (int): The font size to set.
+            text (str): The text to set.
         """
-        self.config.font_size = size
-        self._update_stylesheet()
+        self.text_box_text_edit.setHtml(text)
+        self.config.text = text
+        self.config.is_html = True
 
-    def _update_stylesheet(self):
-        """Update the stylesheet of the widget."""
-        self.setStyleSheet(
-            f"background-color: {self.config.background_color}; color: {self.config.font_color}; font-size: {self.config.font_size}px"
-        )
+    @Property(str)
+    def plain_text(self) -> str:
+        """Get the text of the widget.
 
-    def set_text(self, text: str) -> None:
+        Returns:
+            str: The text of the widget.
+        """
+        return self.text_box_text_edit.toPlainText()
+
+    @plain_text.setter
+    def plain_text(self, text: str) -> None:
         """Set the text of the widget.
 
         Args:
             text (str): The text to set.
         """
-        if self.is_html(text):
-            self.setHtml(text)
-        else:
-            self.setPlainText(text)
-        self.config.text = text
+        self.set_plain_text(text)
 
-    def is_html(self, text: str) -> bool:
-        """Check if the text contains HTML tags.
-
-        Args:
-            text (str): The text to check.
+    @Property(str)
+    def html_text(self) -> str:
+        """Get the HTML text of the widget.
 
         Returns:
-            bool: True if the text contains HTML tags, False otherwise.
+            str: The HTML text of the widget.
         """
-        return bool(re.search(r"<[a-zA-Z/][^>]*>", text))
+        return self.text_box_text_edit.toHtml()
+
+    @html_text.setter
+    def html_text(self, text: str) -> None:
+        """Set the HTML text of the widget.
+
+        Args:
+            text (str): The HTML text to set.
+        """
+        self.set_html_text(text)
 
 
 if __name__ == "__main__":
@@ -123,7 +130,6 @@ if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-
     widget = TextBox()
     widget.show()
     sys.exit(app.exec())

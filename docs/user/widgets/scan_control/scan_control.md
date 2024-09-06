@@ -30,6 +30,7 @@ Within the BECDesigner's [property editor](https://doc.qt.io/qt-6/designer-widge
 - **Hide Scan Control**: Allows you to hide the scan control buttons from the widget interface. This is useful when you want to place the control buttons in a different location.
 - **Hide Scan Selection**: Allows you to hide the scan selection combobox from the widget interface. This is useful when you want to restrict the user to a specific scan type or implement a custom scan selection mechanism.
 - **Hide Scan Remember Toggle**: Allows you to hide the toggle button that reloads scan parameters from the last executed scan. This is useful if you want to disable or restrict this functionality in specific scenarios.
+- **Hide Bundle Buttons**: Allows you to hide the buttons that add or remove argument bundles from the widget interface. This is useful when you want to restrict the user from adding additional motor bundles to the scan by accident.
 
 **BEC Designer properties:**
 ```{figure} ./hide_scan_control.png

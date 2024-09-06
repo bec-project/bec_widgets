@@ -8,8 +8,11 @@ The [`Text Box Widget`](/api_reference/_autosummary/bec_widgets.cli.client.TextB
 
 ## Key Features:
 - **Text Display**: Display either plain text or HTML content, with automatic detection of the format.
-- **Customizable Appearance**: Set the background and font colors to match the design of your application.
-- **Font Size Adjustment**: Customize the font size of the displayed text for better readability.
+- **Automatic styling**: The widget automatically adheres to BEC's style guides. No need to worry about background colors, font sizes, or other appearance settings.
+
+## BEC Designer Properties
+```{figure} ../../assets/widget_screenshots/text_box_properties.png
+```
 
 ````
 
@@ -36,24 +39,6 @@ The `TextBox` widget can automatically detect and render HTML content. This exam
 ```python
 # Set the text to display as HTML
 text_box.set_text("<h1>Welcome to BEC Widgets</h1><p>This is an example of displaying <strong>HTML</strong> text.</p>")
-```
-
-## Example 3 - Customizing Appearance
-
-The `TextBox` widget allows you to customize the background and font colors to fit your application's design. Below is an example of how to set these properties.
-
-```python
-# Set the background color to white and the font color to black
-text_box.set_color(background_color="#FFF", font_color="#000")
-```
-
-## Example 4 - Adjusting Font Size
-
-To improve readability or fit more text within the widget, you can adjust the font size.
-
-```python
-# Set the font size to 14 pixels
-text_box.set_font_size(14)
 ```
 
 ````
