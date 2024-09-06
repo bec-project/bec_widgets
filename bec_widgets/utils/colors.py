@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import itertools
 import re
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import bec_qthemes
 import numpy as np
@@ -10,6 +12,9 @@ from pydantic_core import PydanticCustomError
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QApplication
 
+if TYPE_CHECKING:
+    from bec_qthemes._main import AccentColors
+
 
 def get_theme_palette():
     if QApplication.instance() is None or not hasattr(QApplication.instance(), "theme"):
@@ -17,6 +22,16 @@ def get_theme_palette():
     else:
         theme = QApplication.instance().theme.theme
     return bec_qthemes.load_palette(theme)
+
+
+def get_accent_colors() -> AccentColors | None:
+    """
+    Get the accent colors for the current theme. These colors are extensions of the color palette
+    and are used to highlight specific elements in the UI.
+    """
+    if QApplication.instance() is None or not hasattr(QApplication.instance(), "theme"):
+        return None
+    return QApplication.instance().theme.accent_colors
 
 
 def _theme_update_callback():

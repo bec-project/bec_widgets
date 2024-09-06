@@ -6,6 +6,7 @@ from qtpy.QtGui import QColor, QPainter, QPainterPath
 from qtpy.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.colors import get_accent_colors
 
 
 class BECProgressBar(BECWidget, QWidget):
@@ -26,7 +27,7 @@ class BECProgressBar(BECWidget, QWidget):
         super().__init__(client=client, config=config, gui_id=gui_id)
         QWidget.__init__(self, parent=parent)
 
-        accent_colors = QApplication.instance().theme.accent_colors
+        accent_colors = get_accent_colors()
 
         # internal values
         self._oversampling_factor = 50

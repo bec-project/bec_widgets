@@ -16,6 +16,7 @@ from qtpy.QtWidgets import QApplication, QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
 from bec_widgets.utils import Colors, EntryValidator
+from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.linear_region_selector import LinearRegionWrapper
 from bec_widgets.widgets.figure.plots.plot_base import BECPlotBase, SubplotConfig
 from bec_widgets.widgets.figure.plots.waveform.waveform_curve import (
@@ -108,7 +109,7 @@ class BECWaveform(BECPlotBase):
         self.scan_item = None
         self._roi_region = None
         self.roi_select = None
-        self._accent_colors = QApplication.instance().theme.accent_colors
+        self._accent_colors = get_accent_colors()
         self._x_axis_mode = {
             "name": None,
             "entry": None,
