@@ -7,6 +7,7 @@ from qtpy.QtWidgets import QApplication
 
 from bec_widgets.qt_utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.colors import apply_theme, get_theme_palette, set_theme
+from bec_widgets.utils.linear_region_selector import LinearRegionWrapper
 from bec_widgets.widgets.figure.plots.axis_settings import AxisSettings
 from bec_widgets.widgets.waveform.waveform_popups.curve_dialog.curve_dialog import CurveSettings
 from bec_widgets.widgets.waveform.waveform_popups.dap_summary_dialog.dap_summary_dialog import (
@@ -518,3 +519,63 @@ def test_waveform_widget_theme_update(qtbot, waveform_widget):
     bg_color = waveform_widget.fig.backgroundBrush().color()
     assert bg_color == QColor("black")
     assert waveform_color == waveform_color_dark
+
+
+def test_waveform_roi_selection_creation(waveform_widget, qtbot):
+    """Test ROI selection for waveform widget.
+
+    This checks that the ROI select is properly created and removed when the button is toggled.
+    """
+    # Check if curve is create upon ROI select slot
+    # This also checks that the button in the toolbar works
+    container = []
+
+    def callback(msg):
+        container.append(msg)
+
+    waveform_widget.waveform.roi_active.connect(callback)
+    assert waveform_widget.waveform.roi_select is None
+    assert waveform_widget.waveform.roi_region == (None, None)
+    # Toggle the ROI select
+    waveform_widget.toogle_roi_select(True)
+    assert isinstance(waveform_widget.waveform.roi_select, LinearRegionWrapper)
+    # This is the default region for the pg.LinearRegionItem
+    assert waveform_widget.waveform.roi_region == (0, 1)
+    # Untoggle the ROI select
+    waveform_widget.toogle_roi_select(False)
+    assert waveform_widget.waveform.roi_select is None
+    assert container[0] is True
+    assert container[1] is False
+
+
+def test_waveform_roi_selection_updates_fit(waveform_widget, qtbot):
+    """This test checks that upon selection of a new region, the fit is updated and all signals are emitted as expected."""
+    container = []
+
+    def callback(msg):
+        container.append(msg)
+
+    waveform_widget.waveform.roi_changed.connect(callback)
+    # Mock refresh_dap method
+    with patch.object(waveform_widget.waveform, "refresh_dap") as mock_refresh_dap:
+        waveform_widget.toogle_roi_select(True)
+        waveform_widget.waveform.roi_select.linear_region_selector.setRegion([0.5, 1.5])
+        qtbot.wait(200)
+        assert waveform_widget.waveform.roi_region == (0.5, 1.5)
+        waveform_widget.toogle_roi_select(False)
+        assert waveform_widget.waveform.roi_region == (None, None)
+        assert len(container) == 1
+        assert container[0] == (0.5, 1.5)
+        # 3 refresh DAP calls: 1x upon hook, 1x unhook and 1x from roi_changed
+        assert mock_refresh_dap.call_count == 3
+
+
+def test_waveform_roi_selection_change_color(waveform_widget, qtbot):
+    """This test checks that the color of the ROI region can be changed."""
+    waveform_widget.toogle_roi_select(True)
+    waveform_widget.waveform.roi_select.change_roi_color((QColor("red"), QColor("blue")))
+    # I can only get the brush from the RegionSelectItem
+    assert (
+        waveform_widget.waveform.roi_select.linear_region_selector.currentBrush.color()
+        == QColor("red")
+    )

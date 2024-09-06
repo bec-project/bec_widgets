@@ -188,6 +188,13 @@ def test_dap_rpc(rpc_server_figure, bec_client_lib, qtbot):
 
     qtbot.waitUntil(wait_for_fit, timeout=10000)
 
+    # Repeat fit after adding a region of interest
+    plt.select_roi(region=(3, 7))
+    res = scans.line_scan(dev.samx, 0, 8, steps=50, relative=False)
+    res.wait()
+
+    qtbot.waitUntil(wait_for_fit, timeout=10000)
+
 
 def test_removing_subplots(rpc_server_figure, bec_client_lib):
     fig = BECFigure(rpc_server_figure)
