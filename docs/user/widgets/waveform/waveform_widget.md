@@ -75,7 +75,7 @@ dev.bpm3i.sim.select_sim_model("StepModel")
 ```
 ## Example 4 - Adding Data Processing Pipeline Curve with LMFit Models
 
-In addition to the scan curve, you can also add a second curve that fits the signal using a specified model from [LMFit](https://lmfit.github.io/lmfit-py/builtin_models.html). The following code snippet demonstrates how to create a 1D waveform curve with an attached DAP process, or how to add a DAP process to an existing curve using the BEC CLI. Please note that for this example, both devices were set as Gaussian signals.
+In addition to the scan curve, you can also add a second curve that fits the signal using a specified model from [LMFit](https://lmfit.github.io/lmfit-py/builtin_models.html). The following code snippet demonstrates how to create a 1D waveform curve with an attached DAP process, or how to add a DAP process to an existing curve using the BEC CLI. Please note that for this example, both devices were set as Gaussian signals. You can also add a region of interest (roi) to the plot which will respected by all running DAP processes. 
 
 ```python
 # Add a new dock, a new BECFigure, and a BECWaveForm to the dock with a GaussianModel DAP
@@ -86,6 +86,13 @@ plt.plot(x_name='samx', y_name='bpm3a')
 
 # Add DAP to the second curve
 plt.add_dap(x_name='samx', y_name='bpm3a', dap="GaussianModel")
+
+# Add roi to the plot, this limits the DAP fit to the selected region x_min=-1, x_max=1
+# The fit will automatically update
+plt.select_roi(region=(-1, 1))
+
+# To remove the DAP from the curve, you can use the toggle button in the toolbar or the following command
+plt.toggle_roi(False)
 
 ```
 
