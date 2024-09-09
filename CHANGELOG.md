@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.109.1 (2024-09-09)
+
+### Fix
+
+* fix: refactor textbox widget, remove inheritance, adhere to bec style; closes #324 ([`b0d786b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b0d786b991677c0846a0c6ba3f2252d48d94ccaa))
+
 ## v0.109.0 (2024-09-06)
 
 ### Feature
@@ -154,12 +160,6 @@
 
 * docs(becwidget): improvements to the bec widget base class docs; fixed type hint import for sphinx ([`99d5e8e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/99d5e8e71c7f89a53d7967126f4056dde005534c))
 
-### Feature
-
-* feat(theme): added theme handler to bec widget base class; added tests ([`7fb938a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7fb938a8506685278ee5eeb6fe9a03f74b713cf8))
-
 ### Fix
 
 * fix(pyqt slot): removed slot decorator to avoid problems with pyqt6 ([`6c1f89a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6c1f89ad39b7240ab1d1c1123422b99ae195bf01))
-
-## v0.99.15 (2024-08-31)
