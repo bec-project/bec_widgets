@@ -23,11 +23,14 @@ class LinearRegionWrapper(QObject):
         self, plot_item: pg.PlotItem, color: QColor = None, hover_color: QColor = None, parent=None
     ):
         super().__init__(parent)
+        self.is_log_x = None
         self._edge_width = 2
         self.plot_item = plot_item
         self.linear_region_selector = pg.LinearRegionItem()
         self.proxy = None
         self.change_roi_color((color, hover_color))
+        self.plot_item.ctrl.logXCheck.checkStateChanged.connect(self.check_log)
+        self.plot_item.ctrl.logXCheck.checkStateChanged.connect(self.check_log)
 
     # Slot for changing the color of the region selector (edge and fill)
     @Slot(tuple)
@@ -63,9 +66,18 @@ class LinearRegionWrapper(QObject):
         self.plot_item.removeItem(self.linear_region_selector)
 
     def _region_change_proxy(self):
-        """Emit the region change signal"""
-        region = self.linear_region_selector.getRegion()
-        self.region_changed.emit(region)
+        """Emit the region change signal. If the plot is in log mode, convert the region to log."""
+        x_low, x_high = self.linear_region_selector.getRegion()
+        if self.is_log_x:
+            x_low = 10**x_low
+            x_high = 10**x_high
+        self.region_changed.emit((x_low, x_high))
+
+    @Slot()
+    def check_log(self):
+        """Check if the plot is in log mode."""
+        self.is_log_x = self.plot_item.ctrl.logXCheck.isChecked()
+        self.is_log_y = self.plot_item.ctrl.logYCheck.isChecked()
 
     def cleanup(self):
         """Cleanup the widget."""
