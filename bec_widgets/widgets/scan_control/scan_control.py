@@ -244,6 +244,44 @@ class ScanControl(BECWidget, QWidget):
         self.current_scan = scan_name
 
     @Property(bool)
+    def hide_arg_box(self):
+        """Property to hide the argument box."""
+        if self.arg_box is None:
+            return True
+        return not self.arg_box.isVisible()
+
+    @hide_arg_box.setter
+    def hide_arg_box(self, hide: bool):
+        """Setter for the hide_arg_box property.
+
+        Args:
+            hide(bool): Hide or show the argument box.
+        """
+        if self.arg_box is not None:
+            self.arg_box.setVisible(not hide)
+
+    @Property(bool)
+    def hide_kwarg_boxes(self):
+        """Property to hide the keyword argument boxes."""
+        if len(self.kwarg_boxes) == 0:
+            return True
+
+        for box in self.kwarg_boxes:
+            if box is not None:
+                return not box.isVisible()
+
+    @hide_kwarg_boxes.setter
+    def hide_kwarg_boxes(self, hide: bool):
+        """Setter for the hide_kwarg_boxes property.
+
+        Args:
+            hide(bool): Hide or show the keyword argument boxes.
+        """
+        if len(self.kwarg_boxes) > 0:
+            for box in self.kwarg_boxes:
+                box.setVisible(not hide)
+
+    @Property(bool)
     def hide_scan_remember_toggle(self):
         """Property to hide the scan remember toggle."""
         return not self.toggle.isVisible()
