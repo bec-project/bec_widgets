@@ -124,6 +124,7 @@ class DapComboBox(BECWidget, QWidget):
             x_axis(str): X axis.
         """
         self.x_axis = x_axis
+        self._update_current_fit(self.fit_model_combobox.currentText())
 
     @Slot(str)
     def select_y_axis(self, y_axis: str):
@@ -133,6 +134,7 @@ class DapComboBox(BECWidget, QWidget):
             y_axis(str): Y axis.
         """
         self.y_axis = y_axis
+        self._update_current_fit(self.fit_model_combobox.currentText())
 
     @Slot(str)
     def select_fit_model(self, fit_name: str | None):
