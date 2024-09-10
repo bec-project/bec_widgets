@@ -3245,6 +3245,16 @@ class ScanControl(RPCBase):
         """
 
 
+class ScanProgressBar(RPCBase):
+    """Widget to display a progress bar that is hooked up to the scan progress of a scan."""
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+
 class ScatterCurve(RPCBase):
     """Scatter curve item for the scatter waveform widget."""
 
