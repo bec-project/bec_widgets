@@ -42,6 +42,7 @@ class Widgets(str, enum.Enum):
     ScanControl = "ScanControl"
     SignalComboBox = "SignalComboBox"
     SignalLineEdit = "SignalLineEdit"
+    ScanProgressBar = "ScanProgressBar"
     StopButton = "StopButton"
     TextBox = "TextBox"
     VSCodeEditor = "VSCodeEditor"
@@ -3063,6 +3064,24 @@ class SignalComboBox(RPCBase):
 
 
 class SignalLineEdit(RPCBase):
+    @property
+    @rpc_call
+    def _config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def _get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
+        """
+
+
+class ScanProgressBar(RPCBase):
     @property
     @rpc_call
     def _config_dict(self) -> "dict":
