@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from collections import defaultdict
 from typing import Any, Literal, Optional
 
@@ -27,6 +28,30 @@ from bec_widgets.widgets.figure.plots.waveform.waveform_curve import (
 )
 
 logger = bec_logger.logger
+
+
+class BECSignalProxy(pg.SignalProxy):
+    """Thin wrapper around the SignalProxy class to allow signal calls to be blocked, but args still being stored"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.blocking = False
+
+    def signalReceived(self, *args):
+        """Received signa, but store the args"""
+        self.args = args
+        if self.blocking:
+            return
+        super().signalReceived(*args)
+
+    def flush(self):
+        """If there is a signal queued send it out"""
+        super().flush()
+
+    @Slot()
+    def unblock_proxy(self):
+        """Unblock the proxy"""
+        self.blocking = False
 
 
 class Waveform1DConfig(SubplotConfig):
@@ -121,7 +146,7 @@ class BECWaveform(BECPlotBase):
         self.proxy_update_plot = pg.SignalProxy(
             self.scan_signal_update, rateLimit=25, slot=self._update_scan_curves
         )
-        self.proxy_update_dap = pg.SignalProxy(
+        self.proxy_update_dap = BECSignalProxy(
             self.scan_signal_update, rateLimit=25, slot=self.refresh_dap
         )
         self.async_signal_update.connect(self.replot_async_curve)
@@ -1184,6 +1209,9 @@ class BECWaveform(BECPlotBase):
 
     @Slot(dict, dict)
     def update_dap(self, msg, metadata):
+        """Callback for DAP response message."""
+        if self.proxy_update_dap is not None:
+            self.proxy_update_dap.unblock_proxy()
         self.msg = msg
         scan_id, x_name, x_entry, y_name, y_entry = msg["dap_request"].content["config"]["args"]
         model = msg["dap_request"].content["config"]["class_kwargs"]["model"]
@@ -1414,7 +1442,6 @@ class BECWaveform(BECPlotBase):
         self.scan_signal_update.emit()
         self.async_signal_update.emit()
 
-    # pylint: ignore: undefined-variable
     def get_all_data(self, output: Literal["dict", "pandas"] = "dict") -> dict:  # | pd.DataFrame:
         """
         Extract all curve data into a dictionary or a pandas DataFrame.
