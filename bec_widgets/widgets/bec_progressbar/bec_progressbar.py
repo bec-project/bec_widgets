@@ -49,6 +49,7 @@ class BECProgressBar(BECWidget, QWidget):
         self._border_color = QColor(50, 50, 50)
 
         # layout settings
+        self._padding_left_right = 10
         self._value_animation = QPropertyAnimation(self, b"_progressbar_value")
         self._value_animation.setDuration(200)
         self._value_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
@@ -123,10 +124,19 @@ class BECProgressBar(BECWidget, QWidget):
         self.center_label.setText(self._update_template())
         self.animate_progress()
 
+    @Property(float)
+    def padding_left_right(self) -> float:
+        return self._padding_left_right
+
+    @padding_left_right.setter
+    def padding_left_right(self, padding: float):
+        self._padding_left_right = padding
+        self.update()
+
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        rect = self.rect().adjusted(10, 0, -10, -1)
+        rect = self.rect().adjusted(self._padding_left_right, 0, -self._padding_left_right, -1)
 
         # Draw background
         painter.setBrush(self._background_color)
