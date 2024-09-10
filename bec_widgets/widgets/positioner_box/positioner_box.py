@@ -33,6 +33,8 @@ class PositionerBox(BECWidget, QWidget):
     ICON_NAME = "switch_right"
     USER_ACCESS = ["set_positioner"]
     device_changed = Signal(str, str)
+    # Signal emitted to inform listeners about a position update
+    position_update = Signal(float)
 
     def __init__(self, parent=None, device: Positioner = None, **kwargs):
         """Initialize the PositionerBox widget.
@@ -245,6 +247,7 @@ class PositionerBox(BECWidget, QWidget):
 
         if readback_val is not None:
             self.ui.readback.setText(f"{readback_val:.{precision}f}")
+            self.position_update.emit(readback_val)
 
         if setpoint_val is not None:
             self.ui.setpoint.setText(f"{setpoint_val:.{precision}f}")

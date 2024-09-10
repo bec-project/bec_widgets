@@ -12,6 +12,7 @@ from qtpy.QtWidgets import QApplication, QWidget
 
 from bec_widgets.utils import BECConnector, ConnectionConfig
 from bec_widgets.utils.crosshair import Crosshair
+from bec_widgets.utils.plot_indicator_items import BECArrowItem, BECTickItem
 
 logger = bec_logger.logger
 
@@ -105,6 +106,8 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
 
         self.add_legend()
         self.crosshair = None
+        self.motor_pos_tick = BECTickItem(parent=self, plot_item=self.plot_item)
+        self.arrow_item = BECArrowItem(parent=self, plot_item=self.plot_item)
         self._connect_to_theme_change()
 
     def _connect_to_theme_change(self):
@@ -428,6 +431,8 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
     def cleanup_pyqtgraph(self):
         """Cleanup pyqtgraph items."""
         self.unhook_crosshair()
+        self.motor_pos_tick.cleanup()
+        self.arrow_item.cleanup()
         item = self.plot_item
         item.vb.menu.close()
         item.vb.menu.deleteLater()

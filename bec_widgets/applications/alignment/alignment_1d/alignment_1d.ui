@@ -1,0 +1,779 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1578</width>
+    <height>962</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="leftMargin">
+    <number>6</number>
+   </property>
+   <property name="topMargin">
+    <number>12</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>12</number>
+   </property>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout" stretch="1">
+     <item>
+      <widget class="QTabWidget" name="tabWidget">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="currentIndex">
+        <number>0</number>
+       </property>
+       <widget class="QWidget" name="tab">
+        <attribute name="title">
+         <string>Alignment Control</string>
+        </attribute>
+        <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="0,1,2">
+         <property name="leftMargin">
+          <number>4</number>
+         </property>
+         <property name="topMargin">
+          <number>4</number>
+         </property>
+         <property name="rightMargin">
+          <number>4</number>
+         </property>
+         <property name="bottomMargin">
+          <number>4</number>
+         </property>
+         <item>
+          <widget class="ScanControl" name="scan_control">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="current_scan" stdset="0">
+            <string>line_scan</string>
+           </property>
+           <property name="hide_arg_box" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="hide_kwarg_boxes" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="hide_scan_remember_toggle" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="hide_scan_control_buttons" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="hide_bundle_buttons" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="hide_args_group" stdset="0">
+            <bool>true</bool>
+           </property>
+           <property name="hide_kwargs_group" stdset="0">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QVBoxLayout" name="control_layout" stretch="0,0,0,0">
+           <item>
+            <widget class="QGroupBox" name="device_box">
+             <property name="minimumSize">
+              <size>
+               <width>600</width>
+               <height>95</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>600</width>
+               <height>95</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>15</pointsize>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="autoFillBackground">
+              <bool>false</bool>
+             </property>
+             <property name="title">
+              <string>Devices</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout" rowstretch="0,0" columnstretch="0,0,0">
+              <property name="leftMargin">
+               <number>8</number>
+              </property>
+              <property name="topMargin">
+               <number>8</number>
+              </property>
+              <property name="rightMargin">
+               <number>8</number>
+              </property>
+              <property name="bottomMargin">
+               <number>8</number>
+              </property>
+              <item row="0" column="2">
+               <widget class="QLabel" name="label_3">
+                <property name="font">
+                 <font/>
+                </property>
+                <property name="text">
+                 <string>LMFit Model</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="DeviceComboBox" name="device_combobox_2"/>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label">
+                <property name="font">
+                 <font/>
+                </property>
+                <property name="text">
+                 <string>Motor</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="DeviceComboBox" name="device_combobox"/>
+              </item>
+              <item row="0" column="1">
+               <widget class="QLabel" name="label_2">
+                <property name="font">
+                 <font/>
+                </property>
+                <property name="text">
+                 <string>Monitor</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="DapComboBox" name="dap_combo_box"/>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="scan_box">
+             <property name="minimumSize">
+              <size>
+               <width>600</width>
+               <height>191</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>600</width>
+               <height>191</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>15</pointsize>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="autoFillBackground">
+              <bool>false</bool>
+             </property>
+             <property name="title">
+              <string>LineScan</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_3" rowstretch="0,0,0,0,0" columnstretch="0,0,0">
+              <property name="leftMargin">
+               <number>8</number>
+              </property>
+              <property name="topMargin">
+               <number>8</number>
+              </property>
+              <property name="rightMargin">
+               <number>8</number>
+              </property>
+              <property name="bottomMargin">
+               <number>8</number>
+              </property>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_10">
+                <property name="font">
+                 <font>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Relative</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="QDoubleSpinBox" name="linescan_exp_time">
+                <property name="decimals">
+                 <number>3</number>
+                </property>
+                <property name="minimum">
+                 <double>-10000000.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>10000000.000000000000000</double>
+                </property>
+                <property name="value">
+                 <double>0.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="2">
+               <widget class="QSpinBox" name="linescan_step_2">
+                <property name="minimum">
+                 <number>1</number>
+                </property>
+                <property name="maximum">
+                 <number>10000000</number>
+                </property>
+                <property name="value">
+                 <number>1</number>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0" colspan="3">
+               <layout class="QHBoxLayout" name="horizontalLayout_2">
+                <item>
+                 <widget class="QPushButton" name="scan_button">
+                  <property name="text">
+                   <string>Run Scan</string>
+                  </property>
+                  <property name="autoDefault">
+                   <bool>false</bool>
+                  </property>
+                  <property name="default">
+                   <bool>false</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="AbortButton" name="abort_button"/>
+                </item>
+               </layout>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_7">
+                <property name="font">
+                 <font>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Start</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QLabel" name="label_11">
+                <property name="font">
+                 <font>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Exposure Time</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QLabel" name="label_9">
+                <property name="font">
+                 <font>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Steps</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QLabel" name="label_8">
+                <property name="font">
+                 <font>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Stop</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="2">
+               <widget class="QLabel" name="label_12">
+                <property name="font">
+                 <font>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Burst at each point</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QDoubleSpinBox" name="linescan_stop">
+                <property name="decimals">
+                 <number>3</number>
+                </property>
+                <property name="minimum">
+                 <double>-10000000.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>10000000.000000000000000</double>
+                </property>
+                <property name="value">
+                 <double>0.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QDoubleSpinBox" name="linescan_start">
+                <property name="decimals">
+                 <number>3</number>
+                </property>
+                <property name="minimum">
+                 <double>-10000000.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>10000000.000000000000000</double>
+                </property>
+                <property name="value">
+                 <double>0.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QSpinBox" name="linescan_step">
+                <property name="minimum">
+                 <number>0</number>
+                </property>
+                <property name="maximum">
+                 <number>10000000</number>
+                </property>
+                <property name="value">
+                 <number>0</number>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QCheckBox" name="linescan_relative">
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="motor_tweak_box">
+             <property name="minimumSize">
+              <size>
+               <width>600</width>
+               <height>201</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>600</width>
+               <height>201</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>15</pointsize>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="title">
+              <string>Motor Tweak</string>
+             </property>
+             <layout class="QHBoxLayout" name="horizontalLayout_5">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>12</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>12</number>
+              </property>
+              <item>
+               <widget class="PositionerControlLine" name="positioner_control_line">
+                <property name="hide_device_selection" stdset="0">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="action_box">
+             <property name="minimumSize">
+              <size>
+               <width>600</width>
+               <height>85</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>600</width>
+               <height>85</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>15</pointsize>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="title">
+              <string>Utils</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_2">
+              <item row="0" column="0">
+               <widget class="QPushButton" name="button_send_summary_scilog">
+                <property name="text">
+                 <string>Send summary to SciLog</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QVBoxLayout" name="plotting_layout" stretch="7,0,2">
+           <item>
+            <widget class="BECWaveformWidget" name="bec_waveform_widget">
+             <property name="minimumSize">
+              <size>
+               <width>600</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="clear_curves_on_plot_update" stdset="0">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="ToggleSwitch" name="toggle_switch">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>3</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="toolTip">
+              <string>Activate linear region select for LMFit</string>
+             </property>
+             <property name="layoutDirection">
+              <enum>Qt::LayoutDirection::LeftToRight</enum>
+             </property>
+             <property name="checked" stdset="0">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="fit_dialog_layout" stretch="4">
+             <item>
+              <widget class="LMFitDialog" name="lm_fit_dialog">
+               <property name="always_show_latest" stdset="0">
+                <bool>true</bool>
+               </property>
+               <property name="hide_curve_selection" stdset="0">
+                <bool>true</bool>
+               </property>
+               <property name="hide_summary" stdset="0">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="tab_2">
+        <attribute name="title">
+         <string>Logbook</string>
+        </attribute>
+        <layout class="QHBoxLayout" name="horizontalLayout_4">
+         <item>
+          <widget class="WebsiteWidget" name="website_widget">
+           <property name="url" stdset="0">
+            <string>https://scilog.psi.ch/login</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,4">
+     <item>
+      <widget class="StopButton" name="stop_button"/>
+     </item>
+     <item>
+      <widget class="BECProgressBar" name="bec_progress_bar"/>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>DapComboBox</class>
+   <extends>QWidget</extends>
+   <header>dap_combo_box</header>
+  </customwidget>
+  <customwidget>
+   <class>StopButton</class>
+   <extends>QWidget</extends>
+   <header>stop_button</header>
+  </customwidget>
+  <customwidget>
+   <class>WebsiteWidget</class>
+   <extends>QWidget</extends>
+   <header>website_widget</header>
+  </customwidget>
+  <customwidget>
+   <class>ScanControl</class>
+   <extends>QWidget</extends>
+   <header>scan_control</header>
+  </customwidget>
+  <customwidget>
+   <class>ToggleSwitch</class>
+   <extends>QWidget</extends>
+   <header>toggle_switch</header>
+  </customwidget>
+  <customwidget>
+   <class>PositionerBox</class>
+   <extends>QWidget</extends>
+   <header>positioner_box</header>
+  </customwidget>
+  <customwidget>
+   <class>PositionerControlLine</class>
+   <extends>PositionerBox</extends>
+   <header>positioner_control_line</header>
+  </customwidget>
+  <customwidget>
+   <class>BECProgressBar</class>
+   <extends>QWidget</extends>
+   <header>bec_progress_bar</header>
+  </customwidget>
+  <customwidget>
+   <class>BECWaveformWidget</class>
+   <extends>QWidget</extends>
+   <header>bec_waveform_widget</header>
+  </customwidget>
+  <customwidget>
+   <class>DeviceComboBox</class>
+   <extends>QComboBox</extends>
+   <header>device_combobox</header>
+  </customwidget>
+  <customwidget>
+   <class>LMFitDialog</class>
+   <extends>QWidget</extends>
+   <header>lm_fit_dialog</header>
+  </customwidget>
+  <customwidget>
+   <class>AbortButton</class>
+   <extends>QWidget</extends>
+   <header>abort_button</header>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>device_combobox</tabstop>
+  <tabstop>device_combobox_2</tabstop>
+  <tabstop>linescan_start</tabstop>
+  <tabstop>linescan_stop</tabstop>
+  <tabstop>linescan_step</tabstop>
+  <tabstop>linescan_relative</tabstop>
+  <tabstop>linescan_exp_time</tabstop>
+  <tabstop>linescan_step_2</tabstop>
+  <tabstop>scan_button</tabstop>
+ </tabstops>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>device_combobox</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>dap_combo_box</receiver>
+   <slot>select_x_axis(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>214</x>
+     <y>130</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>629</x>
+     <y>130</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>device_combobox_2</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>dap_combo_box</receiver>
+   <slot>select_y_axis(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>388</x>
+     <y>130</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>629</x>
+     <y>130</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>dap_combo_box</sender>
+   <signal>new_dap_config(QString,QString,QString)</signal>
+   <receiver>bec_waveform_widget</receiver>
+   <slot>add_dap(QString,QString,QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>629</x>
+     <y>130</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1099</x>
+     <y>221</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>device_combobox</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>positioner_control_line</receiver>
+   <slot>set_positioner(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>214</x>
+     <y>130</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>174</x>
+     <y>550</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>scan_button</sender>
+   <signal>clicked()</signal>
+   <receiver>scan_control</receiver>
+   <slot>run_scan()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>332</x>
+     <y>336</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>28</x>
+     <y>319</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>device_combobox_2</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>bec_waveform_widget</receiver>
+   <slot>plot(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>388</x>
+     <y>130</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1099</x>
+     <y>201</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>device_combobox</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>bec_waveform_widget</receiver>
+   <slot>set_x(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>214</x>
+     <y>130</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1099</x>
+     <y>258</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>toggle_switch</sender>
+   <signal>enabled(bool)</signal>
+   <receiver>bec_waveform_widget</receiver>
+   <slot>toogle_roi_select(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>691</x>
+     <y>536</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1099</x>
+     <y>96</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>bec_waveform_widget</sender>
+   <signal>dap_summary_update(QVariantMap,QVariantMap)</signal>
+   <receiver>lm_fit_dialog</receiver>
+   <slot>update_summary_tree(QVariantMap,QVariantMap)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1099</x>
+     <y>258</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1098</x>
+     <y>668</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
