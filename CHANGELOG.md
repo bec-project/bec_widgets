@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.110.0 (2024-09-12)
+
+### Feature
+
+* feat(palette_viewer): added widget to display the current palette and accent colors ([`a8576c1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a8576c164cad17746ec4fcd5c775fb78f70c055c))
+
 ## v0.109.1 (2024-09-09)
 
 ### Fix
@@ -155,11 +161,3 @@
 * refactor: add docs, cleanup ([`61ecf49`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/61ecf491e52bfbfa0d5a84764a9095310659043d))
 
 ## v0.100.0 (2024-09-01)
-
-### Documentation
-
-* docs(becwidget): improvements to the bec widget base class docs; fixed type hint import for sphinx ([`99d5e8e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/99d5e8e71c7f89a53d7967126f4056dde005534c))
-
-### Fix
-
-* fix(pyqt slot): removed slot decorator to avoid problems with pyqt6 ([`6c1f89a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6c1f89ad39b7240ab1d1c1123422b99ae195bf01))
