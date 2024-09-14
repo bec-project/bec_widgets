@@ -249,7 +249,7 @@ class PositionerBox(BECWidget, QWidget):
         self.update_limits(limits)
         if limits is not None and readback_val is not None and limits[0] != limits[1]:
             pos = (readback_val - limits[0]) / (limits[1] - limits[0])
-            self.ui.position_indicator.on_position_update(pos)
+            self.ui.position_indicator.set_value(pos)
 
     def update_limits(self, limits: tuple):
         """Update limits
