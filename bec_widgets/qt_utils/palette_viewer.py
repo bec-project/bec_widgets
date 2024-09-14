@@ -167,7 +167,7 @@ class PaletteViewer(BECWidget, QWidget):
             QLabel: The label with the background color.
         """
         button = QLabel()
-        button.setStyleSheet(f"background-color: {color.name()};")
+        button.setStyleSheet(f"QLabel {{ background-color: {color.name()}; }}")
         button.setToolTip("Click to copy color to clipboard")
         button.setCursor(Qt.PointingHandCursor)
         button.mousePressEvent = lambda event: QApplication.clipboard().setText(color.name())
