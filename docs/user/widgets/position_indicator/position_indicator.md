@@ -10,7 +10,27 @@ The [`PositionIndicator`](/api_reference/_autosummary/bec_widgets.cli.client.Pos
 - **Position Visualization**: Displays the current position of a motor on a linear scale, showing its location relative to the defined limits.
 - **Customizable Range**: The widget allows you to set the minimum and maximum range, adapting to different motor configurations.
 - **Real-Time Updates**: Responds to real-time updates, allowing the position indicator to move dynamically as the motor's position changes.
+- **Compact Design**: The widget is designed to be compact and visually appealing, making it suitable for various GUI applications.
+- **Customizable Appearance**: The appearance of the position indicator can be customized to match the overall design of your application, including colors, orientation, and size.
 - **QtDesigner Integration**: Can be added directly in code or through `QtDesigner`, making it adaptable to various use cases.
+
+
+## BEC Designer Customization
+Within the BECDesigner's [property editor](https://doc.qt.io/qt-6/designer-widget-mode.html#the-property-editor/), the `PositionIndicator` widget can be customized to suit your application's requirements. The widget provides the following customization options:
+- **minimum**: The minimum value of the position indicator.
+- **maximum**: The maximum value of the position indicator.
+- **value**: The current value of the position indicator.
+- **vertical**: A boolean value indicating whether the position indicator is oriented vertically or horizontally.
+- **indicator_width**: The width of the position indicator.
+- **rounded_corners**: The radius of the rounded corners of the position indicator.
+- **indicator_color**: The color of the position indicator.
+- **background_color**: The color of the background of the position indicator.
+- **use_color_palette**: A boolean value indicating whether to use the color palette for the position indicator or the custom colors. 
+
+**BEC Designer properties:**
+```{figure} ./position_indicator_designer_props.png
+```
+
 
 ````
 
@@ -33,7 +53,7 @@ position_indicator = PositionIndicator()
 
 # Create a slider to simulate position changes
 slider = QSlider(Qt.Horizontal)
-slider.valueChanged.connect(lambda value: position_indicator.on_position_update(value / 100))
+slider.valueChanged.connect(lambda value: position_indicator.set_value(value))
 
 # Create a layout and add the widgets
 layout = QVBoxLayout()
@@ -63,7 +83,13 @@ The `PositionIndicator` can be added to your GUI layout using `QtDesigner`. Once
 
 ```python
 # Example: Updating the position in a QtDesigner-based application
-self.position_indicator.on_position_update(new_position_value)
+self.position_indicator.set_value(new_position_value)
 ```
 
+````
+
+````{tab} API
+```{eval-rst} 
+.. include:: /api_reference/_autosummary/bec_widgets.cli.client.PositionIndicator.rst
+```
 ````
