@@ -8,6 +8,7 @@ from bec_widgets.utils.colors import get_accent_colors, get_theme_palette
 
 
 class PositionIndicator(BECWidget, QWidget):
+    USER_ACCESS = ["set_value", "set_range", "vertical", "indicator_width", "rounded_corners"]
 
     ICON_NAME = "horizontal_distribute"
 
