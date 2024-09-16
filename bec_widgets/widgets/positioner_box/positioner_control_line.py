@@ -24,11 +24,9 @@ class PositionerControlLine(PositionerBox):
 if __name__ == "__main__":  # pragma: no cover
     import sys
 
-    import qdarktheme
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    qdarktheme.setup_theme("dark")
     widget = PositionerControlLine(device="samy")
 
     widget.show()

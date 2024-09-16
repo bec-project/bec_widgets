@@ -170,7 +170,20 @@
          </layout>
         </item>
         <item>
-         <widget class="PositionIndicator" name="position_indicator"/>
+         <widget class="PositionIndicator" name="position_indicator">
+          <property name="maximum" stdset="0">
+           <double>1.000000000000000</double>
+          </property>
+          <property name="value" stdset="0">
+           <double>0.500000000000000</double>
+          </property>
+          <property name="indicator_width" stdset="0">
+           <number>4</number>
+          </property>
+          <property name="rounded_corners" stdset="0">
+           <number>4</number>
+          </property>
+         </widget>
         </item>
         <item>
          <widget class="QLabel" name="readback">

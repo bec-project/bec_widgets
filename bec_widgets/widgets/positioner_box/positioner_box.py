@@ -16,7 +16,7 @@ from qtpy.QtWidgets import QDialog, QDoubleSpinBox, QPushButton, QVBoxLayout, QW
 
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import set_theme
+from bec_widgets.utils.colors import get_accent_colors, set_theme
 from bec_widgets.widgets.device_line_edit.device_line_edit import DeviceLineEdit
 
 logger = bec_logger.logger
@@ -73,6 +73,10 @@ class PositionerBox(BECWidget, QWidget):
 
         self.ui.step_size.setStepType(QDoubleSpinBox.AdaptiveDecimalStepType)
         self.ui.stop.clicked.connect(self.on_stop)
+        self.ui.stop.setToolTip("Stop")
+        self.ui.stop.setStyleSheet(
+            f"QPushButton {{background-color: {get_accent_colors().emergency.name()}; color: white;}}"
+        )
         self.ui.tweak_right.clicked.connect(self.on_tweak_right)
         self.ui.tweak_right.setToolTip("Tweak right")
         self.ui.tweak_left.clicked.connect(self.on_tweak_left)

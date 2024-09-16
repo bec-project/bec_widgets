@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>785</width>
+    <width>612</width>
     <height>91</height>
    </rect>
   </property>
@@ -59,16 +59,6 @@
       </item>
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout_2">
-        <item>
-         <widget class="PositionIndicator" name="position_indicator">
-          <property name="minimumSize">
-           <size>
-            <width>80</width>
-            <height>10</height>
-           </size>
-          </property>
-         </widget>
-        </item>
         <item>
          <widget class="SpinnerWidget" name="spinner_widget">
           <property name="minimumSize">
@@ -139,14 +129,14 @@
        <widget class="QToolButton" name="tweak_left">
         <property name="minimumSize">
          <size>
-          <width>30</width>
-          <height>30</height>
+          <width>25</width>
+          <height>25</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>30</width>
-          <height>30</height>
+          <width>25</width>
+          <height>25</height>
          </size>
         </property>
         <property name="text">
@@ -154,8 +144,8 @@
         </property>
         <property name="iconSize">
          <size>
-          <width>30</width>
-          <height>30</height>
+          <width>25</width>
+          <height>25</height>
          </size>
         </property>
         <property name="arrowType">
@@ -170,14 +160,14 @@
        <widget class="QToolButton" name="tweak_right">
         <property name="minimumSize">
          <size>
-          <width>30</width>
-          <height>30</height>
+          <width>25</width>
+          <height>25</height>
          </size>
         </property>
         <property name="maximumSize">
          <size>
-          <width>30</width>
-          <height>30</height>
+          <width>25</width>
+          <height>25</height>
          </size>
         </property>
         <property name="text">
@@ -185,12 +175,40 @@
         </property>
         <property name="iconSize">
          <size>
-          <width>30</width>
-          <height>30</height>
+          <width>25</width>
+          <height>25</height>
          </size>
         </property>
         <property name="arrowType">
          <enum>Qt::ArrowType::RightArrow</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="PositionIndicator" name="position_indicator">
+        <property name="minimumSize">
+         <size>
+          <width>15</width>
+          <height>10</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>15</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="maximum" stdset="0">
+         <double>1.000000000000000</double>
+        </property>
+        <property name="vertical" stdset="0">
+         <bool>true</bool>
+        </property>
+        <property name="value" stdset="0">
+         <double>0.500000000000000</double>
+        </property>
+        <property name="rounded_corners" stdset="0">
+         <number>2</number>
         </property>
        </widget>
       </item>
