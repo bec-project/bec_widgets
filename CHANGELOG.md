@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## v0.111.0 (2024-09-17)
+
+### Documentation
+
+* docs(position_indicator): updated position indicator documentation and added designer properties ([`60f7d54`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/60f7d54e2b4c3129de6c95729b8b4aea1757174f))
+
+### Feature
+
+* feat(position_indicator): improved design and added more customization options ([`d15b222`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d15b22250fbceb708d89872c0380693e04acb107))
+
+### Fix
+
+* fix(position_indicator): fixed user access ([`dd932dd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/dd932dd8f3910ab67ec8403124f4e176d048e542))
+
+* fix(generate_cli): fixed type annotations ([`d3c1a1b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d3c1a1b2edcba7afea9d369820fa7974ac29c333))
+
+* fix(positioner_box): visual improvements to the positioner_box and positioner_control_line ([`7ea4a48`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7ea4a482e7cd9499a7268ac887b345cab01632aa))
+
+* fix(palette viewer): fixed background for tool tip ([`9045323`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9045323049d2a39c36fc8845f3b2883d6933436b))
+
 ## v0.110.0 (2024-09-12)
 
 ### Feature
@@ -136,28 +156,6 @@
 
 * docs(buttons): buttons section of docs split to appearance and queue buttons ([`047aa26`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/047aa26a60220c826cc1375cf81daf11d1f3ab5c))
 
-* docs(tests): added tests tutorial for widget ([`18d8561`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/18d8561c965d149a7662085f7dbe2a39a8c4a475))
-
-### Feature
-
-* feat(queue): BECQueue controls extended with Resume, Stop, Abort, Reset buttons ([`0d7c10e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0d7c10e670e4937787e1afaa19ca8259ac752486))
-
 ### Fix
 
 * fix(queue_reset_button): queue reset has to be confirmed with msgBox ([`9dd43aa`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9dd43aa1fd3991368002605df4389a7a7271011b))
-
-### Refactor
-
-* refactor(tests): positioner box test changed to use create_widget fixture ([`df5eff3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/df5eff3147c79ff0278e6a5a09c8f73d5236aed3))
-
-## v0.101.0 (2024-09-02)
-
-### Feature
-
-* feat: add Dap dialog widget ([`9781b77`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9781b77de27b2810fbb1047a61b1832dd186db01))
-
-### Refactor
-
-* refactor: add docs, cleanup ([`61ecf49`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/61ecf491e52bfbfa0d5a84764a9095310659043d))
-
-## v0.100.0 (2024-09-01)
