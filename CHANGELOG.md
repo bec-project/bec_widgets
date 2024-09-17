@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.112.0 (2024-09-17)
+
+### Feature
+
+* feat: console: various improvements, auto-adapt rows to widget size, Qt Designer plugin ([`286ad71`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/286ad7196b0b8562d648fb304eab7d759b6a959b))
+
 ## v0.111.0 (2024-09-17)
 
 ### Documentation
@@ -151,11 +157,3 @@
 * test(vscode): popen call does not have to be the only one ([`39f98ec`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/39f98ec223ba8b59e478ac788c08c59ffe886b4e))
 
 ## v0.102.0 (2024-09-04)
-
-### Documentation
-
-* docs(buttons): buttons section of docs split to appearance and queue buttons ([`047aa26`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/047aa26a60220c826cc1375cf81daf11d1f3ab5c))
-
-### Fix
-
-* fix(queue_reset_button): queue reset has to be confirmed with msgBox ([`9dd43aa`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9dd43aa1fd3991368002605df4389a7a7271011b))
