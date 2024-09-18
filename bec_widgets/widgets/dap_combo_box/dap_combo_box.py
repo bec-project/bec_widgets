@@ -165,21 +165,18 @@ class DapComboBox(BECWidget, QWidget):
         return True
 
 
-# pragma: no cover
-def main():
-    """Main function to run the DapComboBox widget."""
-    import sys
-
+if __name__ == "__main__":  # pragma: no cover
+    # pylint: disable=import-outside-toplevel
     from qtpy.QtWidgets import QApplication
 
     from bec_widgets.utils.colors import set_theme
 
-    app = QApplication(sys.argv)
-    set_theme("auto")
-    widget = DapComboBox()
+    app = QApplication([])
+    set_theme("dark")
+    widget = QWidget()
+    widget.setFixedSize(200, 200)
+    layout = QVBoxLayout()
+    widget.setLayout(layout)
+    layout.addWidget(DapComboBox())
     widget.show()
-    sys.exit(app.exec_())
-
-
-if __name__ == "__main__":
-    main()
+    app.exec_()
