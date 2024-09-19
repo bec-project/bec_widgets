@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## v0.112.1 (2024-09-19)
+
+### Documentation
+
+* docs(dap_combo_box): updated screenshot ([`e3b5e33`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e3b5e338bfaec276979183fb6d79ab41a7ca21e1))
+
+* docs(device_box): updated screenshot ([`c8e614b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c8e614b575b48be788a6389a7aa0cfa033d86ab8))
+
+### Fix
+
+* fix: test e2e dap wait_for_fit ([`b2f7d3c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b2f7d3c5f3f4bf00cc628f788e2c278ebb5688ae))
+
 ## v0.112.0 (2024-09-17)
 
 ### Feature
@@ -136,24 +148,12 @@
 
 ## v0.103.0 (2024-09-04)
 
-### Ci
-
-* ci: prefill variables for manual pipeline start ([`158c19e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/158c19eda771562a325fd59405f9fd4cb9a17ed6))
-
 ### Feature
 
 * feat(vscode): open vscode on a free port ([`52da835`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/52da835803f2453096a8b7df23bee5fdf93ae2bb))
 
 * feat(website): added method to wait until the webpage is loaded ([`9be19d4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9be19d4abebad08c5fc6bea936dd97475fe8f628))
 
-### Fix
-
-* fix(theme): fixed segfault for webengineview for auto updates ([`9866075`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9866075100577948755b563dc7b7dc4cdc60d040))
-
 ### Test
 
 * test(webview): fixed tests after refactoring ([`d5eb30c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d5eb30cd7df4cb0dc3275dd362768afc211eaf2d))
-
-* test(vscode): popen call does not have to be the only one ([`39f98ec`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/39f98ec223ba8b59e478ac788c08c59ffe886b4e))
-
-## v0.102.0 (2024-09-04)
