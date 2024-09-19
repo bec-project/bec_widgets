@@ -183,6 +183,8 @@ def test_dap_rpc(rpc_server_figure, bec_client_lib, qtbot):
     def wait_for_fit():
         dap_curve = plt.get_curve("bpm4i-bpm4i-GaussianModel")
         fit_params = dap_curve.dap_params
+        if fit_params is None:
+            return False
         print(fit_params)
         return np.isclose(fit_params["center"], 5, atol=0.5)
 
