@@ -25,42 +25,44 @@ def test_vscode_widget(qtbot, vscode_widget):
 
 
 def test_start_server(qtbot, mocked_client):
+    with mock.patch("bec_widgets.widgets.vscode.vscode.os.killpg") as mock_killpg:
+        with mock.patch("bec_widgets.widgets.vscode.vscode.os.getpgid") as mock_getpgid:
+            with mock.patch("bec_widgets.widgets.vscode.vscode.subprocess.Popen") as mock_popen:
+                with mock.patch("bec_widgets.widgets.vscode.vscode.select.select") as mock_select:
+                    with mock.patch(
+                        "bec_widgets.widgets.vscode.vscode.get_free_port"
+                    ) as mock_get_free_port:
+                        mock_get_free_port.return_value = 12345
+                        mock_process = mock.Mock()
+                        mock_process.stdout.fileno.return_value = 1
+                        mock_process.poll.return_value = None
+                        mock_process.stdout.read.return_value = f"available at http://{VSCodeEditor.host}:{12345}?tkn={VSCodeEditor.token}"
+                        mock_popen.return_value = mock_process
+                        mock_select.return_value = [[mock_process.stdout], [], []]
 
-    with mock.patch("bec_widgets.widgets.vscode.vscode.subprocess.Popen") as mock_popen:
-        with mock.patch("bec_widgets.widgets.vscode.vscode.select.select") as mock_select:
-            with mock.patch(
-                "bec_widgets.widgets.vscode.vscode.get_free_port"
-            ) as mock_get_free_port:
-                mock_get_free_port.return_value = 12345
-                mock_process = mock.Mock()
-                mock_process.stdout.fileno.return_value = 1
-                mock_process.poll.return_value = None
-                mock_process.stdout.read.return_value = (
-                    f"available at http://{VSCodeEditor.host}:{12345}?tkn={VSCodeEditor.token}"
-                )
-                mock_popen.return_value = mock_process
-                mock_select.return_value = [[mock_process.stdout], [], []]
+                        widget = VSCodeEditor(client=mocked_client)
+                        widget.close()
+                        widget.deleteLater()
 
-                widget = VSCodeEditor(client=mocked_client)
-
-            assert (
-                mock.call(
-                    shlex.split(
-                        f"code serve-web --port {widget.port} --connection-token={widget.token} --accept-server-license-terms"
-                    ),
-                    text=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.DEVNULL,
-                    preexec_fn=os.setsid,
-                    env=mock.ANY,
-                )
-                in mock_popen.mock_calls
-            )
+                    assert (
+                        mock.call(
+                            shlex.split(
+                                f"code serve-web --port {widget.port} --connection-token={widget.token} --accept-server-license-terms"
+                            ),
+                            text=True,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.DEVNULL,
+                            preexec_fn=os.setsid,
+                            env=mock.ANY,
+                        )
+                        in mock_popen.mock_calls
+                    )
 
 
 @pytest.fixture
 def patched_vscode_process(qtbot, vscode_widget):
     with mock.patch("bec_widgets.widgets.vscode.vscode.os.killpg") as mock_killpg:
+        mock_killpg.reset_mock()
         with mock.patch("bec_widgets.widgets.vscode.vscode.os.getpgid") as mock_getpgid:
             mock_getpgid.return_value = 123
             vscode_widget.process = mock.Mock()
