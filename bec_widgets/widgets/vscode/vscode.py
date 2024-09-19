@@ -49,11 +49,19 @@ class VSCodeEditor(WebsiteWidget):
         This method starts the server for the VSCode editor in a subprocess.
         """
 
+        env = os.environ.copy()
+        env["BEC_Widgets_GUIID"] = self.gui_id
+        env["BEC_REDIS_HOST"] = self.client.connector.host
         cmd = shlex.split(
             f"code serve-web --port {self.port} --connection-token={self.token} --accept-server-license-terms"
         )
         self.process = subprocess.Popen(
-            cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, preexec_fn=os.setsid
+            cmd,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            preexec_fn=os.setsid,
+            env=env,
         )
 
         os.set_blocking(self.process.stdout.fileno(), False)

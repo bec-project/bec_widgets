@@ -52,6 +52,7 @@ def test_start_server(qtbot, mocked_client):
                     stdout=subprocess.PIPE,
                     stderr=subprocess.DEVNULL,
                     preexec_fn=os.setsid,
+                    env=mock.ANY,
                 )
                 in mock_popen.mock_calls
             )
