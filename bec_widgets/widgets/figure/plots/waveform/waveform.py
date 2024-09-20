@@ -1,6 +1,6 @@
+# pylint: disable=too_many_lines
 from __future__ import annotations
 
-import time
 from collections import defaultdict
 from typing import Any, Literal, Optional
 
@@ -13,7 +13,7 @@ from bec_lib.logger import bec_logger
 from pydantic import Field, ValidationError, field_validator
 from pyqtgraph.exporters import MatplotlibExporter
 from qtpy.QtCore import Signal as pyqtSignal
-from qtpy.QtWidgets import QApplication, QWidget
+from qtpy.QtWidgets import QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
 from bec_widgets.utils import Colors, EntryValidator
@@ -42,11 +42,12 @@ class BECSignalProxy(pg.SignalProxy):
         self.args = args
         if self.blocking:
             return
+        # self.blocking = True
         super().signalReceived(*args)
 
-    def flush(self):
-        """If there is a signal queued send it out"""
-        super().flush()
+    # def flush(self):
+    #     """If there is a signal queued send it out"""
+    #     super().flush()
 
     @Slot()
     def unblock_proxy(self):
@@ -190,7 +191,7 @@ class BECWaveform(BECPlotBase):
             self.roi_select.linear_region_selector.setRegion(region)
         except Exception as e:
             logger.error(f"Error setting region {tuple}; Exception raised: {e}")
-            raise ValueError(f"Error setting region {tuple}; Exception raised: {e}")
+            raise ValueError(f"Error setting region {tuple}; Exception raised: {e}") from e
 
     def _hook_roi(self):
         """Hook the linear region selector to the plot."""
@@ -244,7 +245,7 @@ class BECWaveform(BECPlotBase):
         # Reset curves
         self._curves_data = defaultdict(dict)
         self._curves = self.plot_item.curves
-        for curve_id, curve_config in self.config.curves.items():
+        for curve_config in self.config.curves.values():
             self.add_curve_by_config(curve_config)
         if replot_last_scan:
             self.scan_history(scan_index=-1)
@@ -367,7 +368,7 @@ class BECWaveform(BECPlotBase):
         Returns:
             CurveConfig|dict: Configuration of the curve.
         """
-        for source, curves in self._curves_data.items():
+        for curves in self._curves_data.values():
             if curve_id in curves:
                 if dict_output:
                     return curves[curve_id].config.model_dump()
@@ -387,7 +388,7 @@ class BECWaveform(BECPlotBase):
         if isinstance(identifier, int):
             return self.plot_item.curves[identifier]
         elif isinstance(identifier, str):
-            for source_type, curves in self._curves_data.items():
+            for curves in self._curves_data.values():
                 if identifier in curves:
                     return curves[identifier]
             raise ValueError(f"Curve with ID '{identifier}' not found.")
@@ -538,6 +539,7 @@ class BECWaveform(BECPlotBase):
 
     @Slot()
     def auto_range(self):
+        """Manually set auto range of the plotitem"""
         self.plot_item.autoRange()
 
     def set_auto_range(self, enabled: bool, axis: str = "xy"):
@@ -576,7 +578,6 @@ class BECWaveform(BECPlotBase):
         Returns:
             BECCurve: The curve object.
         """
-        curve_source = curve_source
         curve_id = label or f"Curve {len(self.plot_item.curves) + 1}"
 
         curve_exits = self._check_curve_id(curve_id, self._curves_data)
@@ -750,7 +751,7 @@ class BECWaveform(BECPlotBase):
 
         if self.x_axis_mode["readout_priority"] == "async":
             raise ValueError(
-                f"Async signals cannot be fitted at the moment. Please switch to 'monitored' or 'baseline' signals."
+                "Async signals cannot be fitted at the moment. Please switch to 'monitored' or 'baseline' signals."
             )
 
         if validate_bec is True:
@@ -1024,7 +1025,7 @@ class BECWaveform(BECPlotBase):
         Args:
             curve_id(str): ID of the curve to be removed.
         """
-        for source, curves in self._curves_data.items():
+        for curves in self._curves_data.values():
             if curve_id in curves:
                 curve = curves.pop(curve_id)
                 self.plot_item.removeItem(curve)
@@ -1047,7 +1048,7 @@ class BECWaveform(BECPlotBase):
             self.plot_item.removeItem(curve)
             del self.config.curves[curve_id]
             # Remove from self.curve_data
-            for source, curves in self._curves_data.items():
+            for curves in self._curves_data.values():
                 if curve_id in curves:
                     del curves[curve_id]
                     break
@@ -1077,7 +1078,7 @@ class BECWaveform(BECPlotBase):
             if self._curves_data["DAP"]:
                 self.setup_dap(self.old_scan_id, self.scan_id)
             if self._curves_data["async"]:
-                for curve_id, curve in self._curves_data["async"].items():
+                for curve in self._curves_data["async"].values():
                     self.setup_async(
                         name=curve.config.signals.y.name, entry=curve.config.signals.y.entry
                     )
@@ -1212,7 +1213,8 @@ class BECWaveform(BECPlotBase):
         """Callback for DAP response message."""
         if self.proxy_update_dap is not None:
             self.proxy_update_dap.unblock_proxy()
-        self.msg = msg
+
+        # pylint: disable=unused-variable
         scan_id, x_name, x_entry, y_name, y_entry = msg["dap_request"].content["config"]["args"]
         model = msg["dap_request"].content["config"]["class_kwargs"]["model"]
 
@@ -1241,7 +1243,7 @@ class BECWaveform(BECPlotBase):
             metadata(dict): Metadata of the message.
         """
         instruction = metadata.get("async_update")
-        for curve_id, curve in self._curves_data["async"].items():
+        for curve in self._curves_data["async"].values():
             y_name = curve.config.signals.y.name
             y_entry = curve.config.signals.y.entry
             x_name = self._x_axis_mode["name"]
@@ -1365,7 +1367,7 @@ class BECWaveform(BECPlotBase):
         if self._x_axis_mode["name"] is None or self._x_axis_mode["name"] == "best_effort":
             if len(self._curves_data["async"]) > 0:
                 x_data = None
-                self._x_axis_mode["label_suffix"] = f" [auto: index]"
+                self._x_axis_mode["label_suffix"] = " [auto: index]"
                 current_label = "" if self.config.axis.x_label is None else self.config.axis.x_label
                 self.plot_item.setLabel(
                     "bottom", f"{current_label}{self._x_axis_mode['label_suffix']}"
@@ -1511,7 +1513,7 @@ class BECWaveform(BECPlotBase):
         self.bec_dispatcher.disconnect_slot(
             self.update_dap, MessageEndpoints.dap_response(self.scan_id)
         )
-        for curve_id, curve in self._curves_data["async"].items():
+        for curve_id in self._curves_data["async"]:
             self.bec_dispatcher.disconnect_slot(
                 self.on_async_readback,
                 MessageEndpoints.device_async_readback(self.scan_id, curve_id),

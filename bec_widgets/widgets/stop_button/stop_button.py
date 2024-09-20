@@ -1,6 +1,6 @@
 from bec_qthemes import material_icon
 from qtpy.QtCore import Qt
-from qtpy.QtWidgets import QHBoxLayout, QPushButton, QToolButton, QWidget
+from qtpy.QtWidgets import QHBoxLayout, QPushButton, QSizePolicy, QToolButton, QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeSlot
 from bec_widgets.utils.bec_widget import BECWidget
@@ -28,9 +28,10 @@ class StopButton(BECWidget, QWidget):
             self.button.setToolTip("Stop the scan queue")
         else:
             self.button = QPushButton()
+            self.button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             self.button.setText("Stop")
             self.button.setStyleSheet(
-                "background-color:  #cc181e; color: white; font-weight: bold; font-size: 12px;"
+                f"background-color:  #cc181e; color: white; font-weight: bold; font-size: 12px;"
             )
         self.button.clicked.connect(self.stop_scan)
 
@@ -47,3 +48,14 @@ class StopButton(BECWidget, QWidget):
             scan_id(str|None): The scan id to stop. If None, the current scan will be stopped.
         """
         self.queue.request_scan_halt()
+
+
+if __name__ == "__main__":
+    import sys
+
+    from qtpy.QtWidgets import QApplication
+
+    app = QApplication(sys.argv)
+    w = StopButton()
+    w.show()
+    sys.exit(app.exec_())

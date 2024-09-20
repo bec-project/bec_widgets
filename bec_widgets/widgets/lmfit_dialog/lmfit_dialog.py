@@ -1,12 +1,12 @@
 import os
 
-from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import Property, Signal, Slot
 from qtpy.QtWidgets import QPushButton, QTreeWidgetItem, QVBoxLayout, QWidget
 
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.colors import get_accent_colors
 
 logger = bec_logger.logger
 
@@ -17,8 +17,8 @@ class LMFitDialog(BECWidget, QWidget):
     ICON_NAME = "monitoring"
     # Signal to emit the currently selected fit curve_id
     selected_fit = Signal(str)
-    # Signal to emit a position to move to.
-    move_to_position = Signal(float)
+    # Signal to emit a move action in form of a tuple (param_name, value)
+    move_action = Signal(tuple)
 
     def __init__(
         self,
@@ -53,56 +53,44 @@ class LMFitDialog(BECWidget, QWidget):
         self._fit_curve_id = None
         self._deci_precision = 3
         self._always_show_latest = False
-        self._activated_buttons_for_move_action = []
         self.ui.curve_list.currentItemChanged.connect(self.display_fit_details)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
-        self._enable_move_to_buttons = False
+        self._active_actions = []
+        self._enable_actions = True
         self._move_buttons = []
+        self._accent_colors = get_accent_colors()
+        self.action_buttons = {}
 
-    @Property(bool)
-    def enable_move_to_buttons(self):
+    @property
+    def enable_actions(self) -> bool:
         """Property to enable the move to buttons."""
-        return self._enable_move_to_buttons
+        return self._enable_actions
 
-    @enable_move_to_buttons.setter
-    def enable_move_to_buttons(self, enable: bool):
-        self._enable_move_to_buttons = enable
-        for button in self._move_buttons:
-            if button.text().split(" ")[-1] in self.activated_buttons_for_move_action:
-                button.setEnabled(enable)
+    @enable_actions.setter
+    def enable_actions(self, enable: bool):
+        self._enable_actions = enable
+        for button in self.action_buttons.values():
+            button.setEnabled(enable)
 
+    @Property(list)
+    def active_action_list(self) -> list[str]:
+        """Property to list the names of the fit parameters for which actions should be enabled."""
+        return self._active_actions
+
+    @active_action_list.setter
+    def active_action_list(self, actions: list[str]):
+        self._active_actions = actions
+
+    # This slot needed?
     @Slot(bool)
-    def set_enable_move_to_buttons(self, enable: bool):
+    def set_actions_enabled(self, enable: bool) -> bool:
         """Slot to enable the move to buttons.
 
         Args:
-            enable (bool): Whether to enable the move to buttons.
+            enable (bool): Whether to enable the action buttons.
         """
-        self.enable_move_to_buttons = enable
-
-    @Property(list)
-    def activated_buttons_for_move_action(self) -> list:
-        """Property for the buttons that should be activated for the move action in the parameter list."""
-        return self._activated_buttons_for_move_action
-
-    @activated_buttons_for_move_action.setter
-    def activated_buttons_for_move_action(self, buttons: list):
-        """Setter for the buttons that should be activated for the move action.
-
-        Args:
-            buttons (list): The buttons that should be activated for the move action.
-        """
-        self._activated_buttons_for_move_action = buttons
-
-    @Slot(list)
-    def update_activated_button_list(self, names: list) -> None:
-        """Update the list of activated buttons for the move action.
-
-        Args:
-            names (list): List of button names to be activated.
-        """
-        self.activated_buttons_for_move_action = names
+        self.enable_actions = enable
 
     @Property(bool)
     def always_show_latest(self):
@@ -128,7 +116,7 @@ class LMFitDialog(BECWidget, QWidget):
         self.ui.group_curve_selection.setVisible(not show)
 
     @Property(bool)
-    def hide_summary(self):
+    def hide_summary(self) -> bool:
         """Property for showing the summary."""
         return not self.ui.group_summary.isVisible()
 
@@ -142,7 +130,7 @@ class LMFitDialog(BECWidget, QWidget):
         self.ui.group_summary.setVisible(not show)
 
     @Property(bool)
-    def hide_parameters(self):
+    def hide_parameters(self) -> bool:
         """Property for showing the parameters."""
         return not self.ui.group_parameters.isVisible()
 
@@ -156,7 +144,7 @@ class LMFitDialog(BECWidget, QWidget):
         self.ui.group_parameters.setVisible(not show)
 
     @property
-    def fit_curve_id(self):
+    def fit_curve_id(self) -> str:
         """Property for the currently displayed fit curve_id."""
         return self._fit_curve_id
 
@@ -266,28 +254,48 @@ class LMFitDialog(BECWidget, QWidget):
                 param_std = f"{param_std:.{self._deci_precision}f}"
             else:
                 param_std = "None"
-            # Create a push button to move the motor to a specific position
-            # Per default, this feature is deactivated
-            widget = QWidget()
-            layout = QVBoxLayout(widget)
-            push_button = QPushButton(f"Move to {param_name}")
-            if param_name in self.activated_buttons_for_move_action:
-                push_button.setEnabled(True)
-                push_button.clicked.connect(
-                    lambda _, value=param[1]: self.move_to_position.emit(float(value))
-                )
-            else:
-                push_button.setEnabled(False)
-            self._move_buttons.append(push_button)
-            layout.addWidget(push_button)
-            layout.setContentsMargins(0, 0, 0, 0)
 
             tree_item = QTreeWidgetItem(self.ui.param_tree, [param_name, param_value, param_std])
-            self.ui.param_tree.setItemWidget(tree_item, 3, widget)
+            if param_name in self.active_action_list:  # pylint: disable=unsupported-membership-test
+                # Create a push button to move the motor to a specific position
+                widget = QWidget()
+                button = QPushButton(f"Move to {param_name}")
+                button.clicked.connect(self._create_move_action(param_name, param[1]))
+                if self.enable_actions is True:
+                    button.setEnabled(True)
+                else:
+                    button.setEnabled(False)
+                button.setStyleSheet(
+                    f"""
+                    QPushButton:enabled {{ background-color: {self._accent_colors.success.name()};color: white; }} 
+                    QPushButton:disabled {{ background-color: grey;color: white; }}
+                    """
+                )
+                self.action_buttons[param_name] = button
+                layout = QVBoxLayout()
+                layout.addWidget(self.action_buttons[param_name])
+                layout.setContentsMargins(0, 0, 0, 0)
+                widget.setLayout(layout)
+                self.ui.param_tree.setItemWidget(tree_item, 3, widget)
+
+    def _create_move_action(self, param_name: str, param_value: float) -> callable:
+        """Create a move action for the given parameter name and value.
+
+        Args:
+            param_name (str): The name of the parameter.
+            param_value (float): The value of the parameter.
+        Returns:
+            callable: The move action with the given parameter name and value.
+        """
+
+        def move_action():
+            self.move_action.emit((param_name, param_value))
+
+        return move_action
 
     def populate_curve_list(self):
         """Populate the curve list with the available fit curves."""
-        for curve_name in self.summary_data.keys():
+        for curve_name in self.summary_data:
             self.ui.curve_list.addItem(curve_name)
 
     def refresh_curve_list(self):
@@ -310,10 +318,10 @@ class LMFitDialog(BECWidget, QWidget):
             self.update_summary_tree(data, {"curve_id": curve_name})
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import sys
 
-    from qtpy.QtWidgets import QApplication
+    from qtpy.QtWidgets import QApplication  # pylint: disable=ungrouped-imports
 
     app = QApplication(sys.argv)
     dialog = LMFitDialog()

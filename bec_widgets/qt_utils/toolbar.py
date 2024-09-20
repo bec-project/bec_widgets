@@ -9,7 +9,7 @@ from typing import Literal
 from bec_qthemes._icon.material_icons import material_icon
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QAction, QColor, QIcon
-from qtpy.QtWidgets import QHBoxLayout, QLabel, QMenu, QToolBar, QToolButton, QWidget
+from qtpy.QtWidgets import QHBoxLayout, QLabel, QMenu, QSizePolicy, QToolBar, QToolButton, QWidget
 
 import bec_widgets
 
@@ -165,7 +165,9 @@ class WidgetAction(ToolBarAction):
         layout.setContentsMargins(0, 0, 0, 0)
         if self.label is not None:
             label = QLabel(f"{self.label}")
+            label.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
             layout.addWidget(label)
+        self.widget.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         layout.addWidget(self.widget)
         toolbar.addWidget(widget)
 

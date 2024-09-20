@@ -321,7 +321,7 @@ class PositionerBox(BECWidget, QWidget):
 if __name__ == "__main__":  # pragma: no cover
     import sys
 
-    from qtpy.QtWidgets import QApplication
+    from qtpy.QtWidgets import QApplication  # pylint: disable=ungrouped-imports
 
     app = QApplication(sys.argv)
     set_theme("dark")

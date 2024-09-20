@@ -168,6 +168,7 @@ def test_remove_dap_data(lmfit_dialog):
 
 def test_update_summary_tree(lmfit_dialog, lmfit_message):
     """Test display_fit_details method"""
+    lmfit_dialog.active_action_list = ["center", "amplitude"]
     lmfit_dialog.update_summary_tree(data=lmfit_message, metadata={"curve_id": "test_curve_id"})
     # Check if the data is updated
     assert lmfit_dialog.summary_data == {"test_curve_id": lmfit_message}

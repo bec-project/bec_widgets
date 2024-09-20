@@ -106,7 +106,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
 
         self.add_legend()
         self.crosshair = None
-        self.motor_pos_tick = BECTickItem(parent=self, plot_item=self.plot_item)
+        self.tick_item = BECTickItem(parent=self, plot_item=self.plot_item)
         self.arrow_item = BECArrowItem(parent=self, plot_item=self.plot_item)
         self._connect_to_theme_change()
 
@@ -431,7 +431,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
     def cleanup_pyqtgraph(self):
         """Cleanup pyqtgraph items."""
         self.unhook_crosshair()
-        self.motor_pos_tick.cleanup()
+        self.tick_item.cleanup()
         self.arrow_item.cleanup()
         item = self.plot_item
         item.vb.menu.close()

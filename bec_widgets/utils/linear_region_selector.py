@@ -30,7 +30,7 @@ class LinearRegionWrapper(QObject):
         self.proxy = None
         self.change_roi_color((color, hover_color))
         self.plot_item.ctrl.logXCheck.checkStateChanged.connect(self.check_log)
-        self.plot_item.ctrl.logXCheck.checkStateChanged.connect(self.check_log)
+        self.plot_item.ctrl.logYCheck.checkStateChanged.connect(self.check_log)
 
     # Slot for changing the color of the region selector (edge and fill)
     @Slot(tuple)
