@@ -14,7 +14,7 @@ from qtpy.QtCore import QObject, QTimer, Signal, Slot
 from qtpy.QtWidgets import QHBoxLayout, QTreeWidget, QTreeWidgetItem, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import apply_theme
+from bec_widgets.utils.colors import set_theme
 from bec_widgets.widgets.bec_status_box.status_item import StatusItem
 
 if TYPE_CHECKING:
@@ -303,17 +303,13 @@ class BECStatusBox(BECWidget, QWidget):
         return super().cleanup()
 
 
-def main():
-    """Main method to run the BECStatusBox widget."""
-    # pylint: disable=import-outside-toplevel
+if __name__ == "__main__":  # pragma: no cover
+    import sys
+
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    apply_theme("dark")
+    set_theme("dark")
     main_window = BECStatusBox()
     main_window.show()
     sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    main()

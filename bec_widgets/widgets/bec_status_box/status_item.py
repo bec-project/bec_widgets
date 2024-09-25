@@ -6,11 +6,13 @@ import os
 from datetime import datetime
 
 from bec_lib.utils.import_utils import lazy_import_from
+from bec_qthemes import material_icon
 from qtpy.QtCore import Qt, Slot
-from qtpy.QtGui import QIcon
+from qtpy.QtGui import QIcon, QPainter
 from qtpy.QtWidgets import QDialog, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 import bec_widgets
+from bec_widgets.utils.colors import get_accent_colors
 
 # TODO : Put normal imports back when Pydantic gets faster
 BECStatus = lazy_import_from("bec_lib.messages", ("BECStatus",))
@@ -21,11 +23,11 @@ MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 class IconsEnum(enum.Enum):
     """Enum class for icons in the status item widget."""
 
-    RUNNING = os.path.join(MODULE_PATH, "assets", "status_icons", "running.svg")
-    BUSY = os.path.join(MODULE_PATH, "assets", "status_icons", "refresh.svg")
-    IDLE = os.path.join(MODULE_PATH, "assets", "status_icons", "warning.svg")
-    ERROR = os.path.join(MODULE_PATH, "assets", "status_icons", "error.svg")
-    NOTCONNECTED = os.path.join(MODULE_PATH, "assets", "status_icons", "not_connected.svg")
+    RUNNING = "done_outline"
+    BUSY = "progress_activity"
+    IDLE = "progress_activity"
+    ERROR = "emergency_home"
+    NOTCONNECTED = "signal_disconnected"
 
 
 class StatusItem(QWidget):
@@ -43,13 +45,13 @@ class StatusItem(QWidget):
             raise ValueError(
                 "Please initialize the StatusItem with a BECServiceInfoContainer for config, received None."
             )
+        self.accent_colors = get_accent_colors()
         self.config = config
         self.parent = parent
         self.layout = None
         self._label = None
         self._icon = None
         self.icon_size = (24, 24)
-
         self._popup_label_ref = {}
         self.init_ui()
 
@@ -97,8 +99,15 @@ class StatusItem(QWidget):
 
     def set_status(self) -> None:
         """Set the status icon for the status item widget."""
-        icon_path = IconsEnum[self.config.status].value
-        icon = QIcon(icon_path)
+        status = self.config.status
+        if status in ["RUNNING", "BUSY"]:
+            color = self.accent_colors.success
+        elif status == "IDLE":
+            color = self.accent_colors.warning
+        elif status in ["ERROR", "NOTCONNECTED"]:
+            color = self.accent_colors.emergency
+        icon = QIcon(material_icon(IconsEnum[status].value, filled=True, color=color))
+
         self._icon.setPixmap(icon.pixmap(*self.icon_size))
         self._icon.setAlignment(Qt.AlignmentFlag.AlignRight)
 
