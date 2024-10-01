@@ -241,12 +241,6 @@ class BECArrowItem(BECIndicatorItem):
             self.plot_item.removeItem(self.arrow_item)
         self.item_on_plot = False
 
-    def check_log(self):
-        """Checks if the x or y axis is in log scale and updates the internal state accordingly."""
-        self.is_log_x = self.plot_item.ctrl.logXCheck.isChecked()
-        self.is_log_y = self.plot_item.ctrl.logYCheck.isChecked()
-        self.set_position(self._pos)
-
     def cleanup(self) -> None:
         """Cleanup the item"""
         self.remove_from_plot()

@@ -5,10 +5,10 @@ It is a preliminary version of the GUI, which will be added to the main branch a
 import os
 from typing import Optional
 
-from bec_lib.device import Positioner, Signal
+from bec_lib.device import Positioner as BECPositioner
+from bec_lib.device import Signal as BECSignal
 from bec_lib.endpoints import MessageEndpoints
-from qtpy.QtCore import QSize
-from qtpy.QtCore import Signal as pyqtSignal
+from qtpy.QtCore import QSize, Signal
 from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QCheckBox, QDoubleSpinBox, QPushButton, QSpinBox, QVBoxLayout, QWidget
 
@@ -33,7 +33,7 @@ class Alignment1D(BECWidget, QWidget):
     """Alignment GUI to perform 1D scans"""
 
     # Emit a signal when a motion is ongoing
-    motion_is_active = pyqtSignal(bool)
+    motion_is_active = Signal(bool)
 
     def __init__(
         self, parent: Optional[QWidget] = None, client=None, gui_id: Optional[str] = None
@@ -198,14 +198,14 @@ class Alignment1D(BECWidget, QWidget):
     def _setup_motor_combobox(self) -> None:
         """Setup motor selection"""
         # FIXME after changing the filtering in the combobox
-        motors = [name for name in self.dev if isinstance(self.dev.get(name), Positioner)]
+        motors = [name for name in self.dev if isinstance(self.dev.get(name), BECPositioner)]
         self.ui.device_combobox.setCurrentText(motors[0])
         self.ui.device_combobox.set_device_filter("Positioner")
 
     def _setup_signal_combobox(self) -> None:
         """Setup signal selection"""
         # FIXME after changing the filtering in the combobox
-        signals = [name for name in self.dev if isinstance(self.dev.get(name), Signal)]
+        signals = [name for name in self.dev if isinstance(self.dev.get(name), BECSignal)]
         self.ui.device_combobox_2.setCurrentText(signals[0])
         self.ui.device_combobox_2.set_device_filter("Signal")
 

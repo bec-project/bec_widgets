@@ -50,7 +50,7 @@ class StopButton(BECWidget, QWidget):
         self.queue.request_scan_halt()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import sys
 
     from qtpy.QtWidgets import QApplication
