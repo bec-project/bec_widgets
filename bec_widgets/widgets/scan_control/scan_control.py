@@ -42,6 +42,7 @@ class ScanControl(BECWidget, QWidget):
 
     scan_started = Signal()
     scan_selected = Signal(str)
+    device_selected = Signal(str)
     scan_axis = Signal(str, float, float)
 
     def __init__(
@@ -423,6 +424,16 @@ class ScanControl(BECWidget, QWidget):
         self.arg_box.device_selected.connect(self.emit_device_selected)
         self.arg_box.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.layout.addWidget(self.arg_box)
+
+    @Slot(str)
+    def emit_device_selected(self, dev_names):
+        """
+        Emit the signal to inform about selected device(s)
+
+        "dev_names" is a string separated by space, in case of multiple devices
+        """
+        self._selected_devices = dev_names
+        self.device_selected.emit(dev_names)
 
     @Slot()
     def add_arg_bundle(self):
