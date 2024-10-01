@@ -249,7 +249,7 @@ class Alignment1D(BECWidget, QWidget):
         box.ui.position_indicator.setFixedHeight(20)
 
 
-if __name__ == "__main__":  # pragma: no cover
+def main():
     import sys
 
     from qtpy.QtWidgets import QApplication  # pylint: disable=ungrouped-imports
@@ -263,3 +263,7 @@ if __name__ == "__main__":  # pragma: no cover
     window = Alignment1D()
     window.show()
     sys.exit(app.exec_())
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()
