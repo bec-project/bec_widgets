@@ -10,7 +10,7 @@ from bec_lib.device import Signal as BECSignal
 from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import QSize, Signal
 from qtpy.QtGui import QIcon
-from qtpy.QtWidgets import QCheckBox, QDoubleSpinBox, QPushButton, QSpinBox, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QCheckBox, QDoubleSpinBox, QMainWindow, QPushButton, QSpinBox
 
 import bec_widgets
 from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
@@ -29,15 +29,13 @@ from bec_widgets.widgets.waveform.waveform_widget import BECWaveformWidget
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
-class Alignment1D(BECWidget, QWidget):
+class Alignment1D(BECWidget, QMainWindow):
     """Alignment GUI to perform 1D scans"""
 
     # Emit a signal when a motion is ongoing
     motion_is_active = Signal(bool)
 
-    def __init__(
-        self, parent: Optional[QWidget] = None, client=None, gui_id: Optional[str] = None
-    ) -> None:
+    def __init__(self, client=None, gui_id: Optional[str] = None) -> None:
         """Initialise the widget
 
         Args:
@@ -47,7 +45,7 @@ class Alignment1D(BECWidget, QWidget):
             gui_id: GUI ID.
         """
         super().__init__(client=client, gui_id=gui_id)
-        QWidget.__init__(self, parent)
+        QMainWindow.__init__(self)
         self.get_bec_shortcuts()
         self._accent_colors = get_accent_colors()
         self.ui_file = "alignment_1d.ui"
@@ -60,9 +58,7 @@ class Alignment1D(BECWidget, QWidget):
         """Initialise the UI from QT Designer file"""
         current_path = os.path.dirname(__file__)
         self.ui = UILoader(self).loader(os.path.join(current_path, self.ui_file))
-        layout = QVBoxLayout(self)
-        layout.addWidget(self.ui)
-        self.setLayout(layout)
+        self.setCentralWidget(self.ui)
         # Customize the plotting widget
         self.waveform = self.ui.findChild(BECWaveformWidget, "bec_waveform_widget")
         self._customise_bec_waveform_widget()
