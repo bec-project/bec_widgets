@@ -90,7 +90,7 @@ class Alignment1D(BECWidget, QWidget):
     @Slot(dict, dict)
     def scan_status_callback(self, content: dict, _) -> None:
         """This slot allows to enable/disable the UI critical components when a scan is running"""
-        if content["status"] in ["running", "open"]:
+        if content["status"] in ["open"]:
             self.motion_is_active.emit(True)
             self.enable_ui(False)
         elif content["status"] in ["aborted", "halted", "closed"]:
