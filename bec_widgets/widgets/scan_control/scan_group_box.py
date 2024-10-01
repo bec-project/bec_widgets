@@ -1,7 +1,7 @@
 from typing import Literal
 
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import Qt
+from qtpy.QtCore import Qt, Slot, Signal
 from qtpy.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -133,6 +133,8 @@ class ScanGroupBox(QGroupBox):
         ScanArgType.LITERALS: QComboBox,  # TODO figure out combobox logic
     }
 
+    device_selected = Signal(str)
+
     def __init__(
         self,
         parent=None,
@@ -148,6 +150,7 @@ class ScanGroupBox(QGroupBox):
         self.layout = QGridLayout(self)
         self.labels = []
         self.widgets = []
+        self.selected_devices = {}
 
         self.init_box(self.config)
 
@@ -192,20 +195,29 @@ class ScanGroupBox(QGroupBox):
         for column_index, item in enumerate(group_inputs):
             arg_name = item.get("name", None)
             default = item.get("default", None)
-            widget = self.WIDGET_HANDLER.get(item["type"], None)
-            if widget is None:
+            widget_class = self.WIDGET_HANDLER.get(item["type"], None)
+            if widget_class is None:
                 logger.error(
                     f"Unsupported annotation '{item['type']}' for parameter '{item['name']}'"
                 )
                 continue
             if default == "_empty":
                 default = None
-            widget_to_add = widget(arg_name=arg_name, default=default)
+            widget = widget_class(arg_name=arg_name, default=default)
+            if isinstance(widget, DeviceLineEdit):
+                self.selected_devices[widget] = ""
+                widget.device_selected.connect(self.emit_device_selected)
             tooltip = item.get("tooltip", None)
             if tooltip is not None:
-                widget_to_add.setToolTip(item["tooltip"])
-            self.layout.addWidget(widget_to_add, row, column_index)
-            self.widgets.append(widget_to_add)
+                widget.setToolTip(item["tooltip"])
+            self.layout.addWidget(widget, row, column_index)
+            self.widgets.append(widget)
+
+    @Slot(str)
+    def emit_device_selected(self, device_name):
+        self.selected_devices[self.sender()] = device_name.strip()
+        selected_devices_str = " ".join(self.selected_devices.values())
+        self.device_selected.emit(selected_devices_str)
 
     def add_widget_bundle(self):
         """

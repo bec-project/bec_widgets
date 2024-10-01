@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from qtpy.QtCore import QSize
+from qtpy.QtCore import QSize, Signal, Slot
 from qtpy.QtWidgets import QCompleter, QLineEdit, QSizePolicy
 
 from bec_widgets.utils.bec_widget import BECWidget
@@ -23,6 +23,8 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
         default: Default device name.
         arg_name: Argument name, can be used for the other widgets which has to call some other function in bec using correct argument names.
     """
+
+    device_selected = Signal(str)
 
     ICON_NAME = "edit_note"
 
@@ -53,6 +55,18 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
 
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.setMinimumSize(QSize(100, 0))
+
+        self.editingFinished.connect(self.emit_device_selected)
+
+    @Slot()
+    def emit_device_selected(self):
+        """
+        Editing finished, let's see which device is selected and emit signal
+        """
+        device_name = self.text().lower()
+        device_obj = getattr(self.dev, device_name, None)
+        if device_obj is not None:
+            self.device_selected.emit(device_name)
 
     def set_device_filter(self, device_filter: str | list[str]):
         """

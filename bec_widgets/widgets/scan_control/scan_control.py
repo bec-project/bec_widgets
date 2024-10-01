@@ -420,6 +420,7 @@ class ScanControl(BECWidget, QWidget):
         Args:
         """
         self.arg_box = ScanGroupBox(box_type="args", config=group)
+        self.arg_box.device_selected.connect(self.emit_device_selected)
         self.arg_box.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.layout.addWidget(self.arg_box)
 
