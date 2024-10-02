@@ -1,5 +1,39 @@
 # CHANGELOG
 
+## v0.113.0 (2024-10-02)
+
+### Feature
+
+* feat: add first draft for alignment_1d GUI ([`63c24f9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/63c24f97a355edaa928b6e222909252b276bcada))
+
+* feat: add move to position button to lmfit dialog ([`281cb27`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/281cb27d8b5433e27a7ba0ca0a19e4b45b9c544f))
+
+### Fix
+
+* fix: add is_log checks and functionality to plot_indicator_items ([`0f9953e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0f9953e8fdcf3f9b5a09f994c69edb6b34756df9))
+
+### Refactor
+
+* refactor: various minor improvements for the alignment gui ([`f554f3c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f554f3c1672c4fe32968a5991dc98802556a6f3b))
+
+* refactor: allow hiding of arg/kwarg boxes ([`efe90eb`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/efe90eb163e2123a5b4d0bb59f66025a569336ad))
+
+* refactor: add proxy to waveform to limit the dap_request frequency ([`5c74037`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5c740371d86d9b1b341bc3c4d8bdf62027aa089b))
+
+* refactor: update dap_model also if x and y axis are selected ([`28ee385`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/28ee3856be2c47a63182b16454ece37a0ec04811))
+
+* refactor: linear_region_selector accepts log_x data ([`7cc0726`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7cc07263982a171744ff87adb10ea77585764b71))
+
+* refactor: use accent colors for bec_status_box icons; closes #338 ([`e039304`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e039304fd3ee03dc4a3fa22a69c207139e0c0d28))
+
+### Test
+
+* test: add tests for scan_status_callback ([`dc0c825`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/dc0c825fd594c093a24543ff803d6c6564010e92))
+
+### Unknown
+
+* feat : Add bec_signal_proxy to handle signals with option to unblock them manually. ([`1dcfeb6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1dcfeb6cfce3c69f0c5401731d4d3f9a1981b22e))
+
 ## v0.112.1 (2024-09-19)
 
 ### Documentation
@@ -118,42 +152,6 @@
 
 ## v0.104.0 (2024-09-04)
 
-### Documentation
-
-* docs(scan_control): docs extended ([`730e25f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/730e25fd3a8be156603005982bfd2a2c2b16dff1))
-
-### Feature
-
-* feat(scan_control): scan control remember the previously set parameters and shares kwarg settings across scans ([`d28f9b0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d28f9b04c45385179353cc247221ec821dcaa29b))
-
 ### Fix
 
 * fix(scan_control): SafeSlot applied to run_scan to avoid faulty scan requests ([`9047916`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/90479167fb5cae393c884e71a80fcfdb48a76427))
-
-* fix(scan_control): scan parameters can be loaded from the last executed scan from redis ([`ec3bc8b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ec3bc8b5194c680b847d3306c41eef4638ccfcc7))
-
-* fix(toggle): state can be determined with the widget initialisation ([`2cd9c7f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2cd9c7f5854f158468e53b5b29ec31b1ff1e00e6))
-
-### Refactor
-
-* refactor(scan_control): scan control layout adjusted ([`85dcbda`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/85dcbdaa88fe77aeea7012bfc16f10c4f873f75e))
-
-* refactor(scan_control): basic pydantic config added ([`fe8dc55`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fe8dc55eb102c51c34bf9606690914da53b5ac02))
-
-### Test
-
-* test(scan_control): tests extended for getting kwargs between scan switching and getting parameters from redis ([`b07e677`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b07e67715c9284e9bf36056ba4ba8068f60cbaf3))
-
-* test(conftest): only run cleanup checks if test passed ([`26920f8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/26920f8482bdb35ece46df37232af50ab9cab463))
-
-## v0.103.0 (2024-09-04)
-
-### Feature
-
-* feat(vscode): open vscode on a free port ([`52da835`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/52da835803f2453096a8b7df23bee5fdf93ae2bb))
-
-* feat(website): added method to wait until the webpage is loaded ([`9be19d4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9be19d4abebad08c5fc6bea936dd97475fe8f628))
-
-### Test
-
-* test(webview): fixed tests after refactoring ([`d5eb30c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d5eb30cd7df4cb0dc3275dd362768afc211eaf2d))
