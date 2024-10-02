@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1335</width>
-    <height>939</height>
+       <width>1339</width>
+       <height>851</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+     <layout class="QVBoxLayout" name="verticalLayout" stretch="1,10,1">
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,0,0,0,0,1">
      <item>
@@ -184,7 +184,7 @@
           </widget>
          </item>
          <item>
-          <layout class="QVBoxLayout" name="control_layout" stretch="0,0,2">
+             <layout class="QVBoxLayout" name="control_layout" stretch="0,0,0,0">
            <item>
             <widget class="QGroupBox" name="device_box">
              <property name="minimumSize">
@@ -288,67 +288,80 @@
                <string>LineScan</string>
               </attribute>
               <layout class="QGridLayout" name="gridLayout_2">
-               <item row="2" column="0">
-                <widget class="QLabel" name="label_10">
+                  <item row="0" column="0">
+                      <widget class="QLabel" name="label_7">
                  <property name="font">
                   <font>
                    <bold>false</bold>
                   </font>
                  </property>
                  <property name="text">
-                  <string>Relative</string>
+                     <string>Start</string>
                  </property>
                 </widget>
                </item>
-               <item row="1" column="0">
-                <widget class="QDoubleSpinBox" name="linescan_start">
-                 <property name="decimals">
-                  <number>3</number>
-                 </property>
+                  <item row="1" column="3">
+                      <widget class="QSpinBox" name="linescan_step">
                  <property name="minimum">
-                  <double>-10000000.000000000000000</double>
+                     <number>0</number>
                  </property>
                  <property name="maximum">
-                  <double>10000000.000000000000000</double>
+                     <number>10000000</number>
                  </property>
                  <property name="value">
-                  <double>0.000000000000000</double>
+                     <number>0</number>
                  </property>
                 </widget>
                </item>
-               <item row="2" column="1">
-                <widget class="QLabel" name="label_11">
+                  <item row="0" column="1" colspan="2">
+                      <widget class="QLabel" name="label_8">
                  <property name="font">
                   <font>
                    <bold>false</bold>
                   </font>
                  </property>
                  <property name="text">
-                  <string>Exposure Time</string>
+                     <string>Stop</string>
                  </property>
                 </widget>
                </item>
-               <item row="0" column="0">
-                <widget class="QLabel" name="label_7">
+                  <item row="2" column="1">
+                      <widget class="QLabel" name="label_11">
                  <property name="font">
                   <font>
                    <bold>false</bold>
                   </font>
                  </property>
                  <property name="text">
-                  <string>Start</string>
+                     <string>Exposure Time</string>
                  </property>
                 </widget>
                </item>
-               <item row="2" column="3">
-                <widget class="QLabel" name="label_12">
+                  <item row="3" column="1">
+                      <widget class="QDoubleSpinBox" name="linescan_exp_time">
+                          <property name="decimals">
+                              <number>3</number>
+                          </property>
+                          <property name="minimum">
+                              <double>-10000000.000000000000000</double>
+                          </property>
+                          <property name="maximum">
+                              <double>10000000.000000000000000</double>
+                          </property>
+                          <property name="value">
+                              <double>0.000000000000000</double>
+                          </property>
+                      </widget>
+                  </item>
+                  <item row="0" column="3">
+                      <widget class="QLabel" name="label_9">
                  <property name="font">
                   <font>
                    <bold>false</bold>
                   </font>
                  </property>
                  <property name="text">
-                  <string>Burst at each point</string>
+                     <string>Steps</string>
                  </property>
                 </widget>
                </item>
@@ -359,50 +372,15 @@
                  </property>
                 </widget>
                </item>
-               <item row="0" column="1" colspan="2">
-                <widget class="QLabel" name="label_8">
+                  <item row="2" column="0">
+                      <widget class="QLabel" name="label_10">
                  <property name="font">
                   <font>
                    <bold>false</bold>
                   </font>
                  </property>
                  <property name="text">
-                  <string>Stop</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="3">
-                <widget class="QSpinBox" name="linescan_step">
-                 <property name="minimum">
-                  <number>0</number>
-                 </property>
-                 <property name="maximum">
-                  <number>10000000</number>
-                 </property>
-                 <property name="value">
-                  <number>0</number>
-                 </property>
-                </widget>
-               </item>
-               <item row="5" column="0" colspan="4">
-                <widget class="QPushButton" name="scan_button">
-                 <property name="minimumSize">
-                  <size>
-                   <width>0</width>
-                   <height>40</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font/>
-                 </property>
-                 <property name="text">
-                  <string>Run Scan</string>
-                 </property>
-                 <property name="autoDefault">
-                  <bool>false</bool>
-                 </property>
-                 <property name="default">
-                  <bool>false</bool>
+                     <string>Relative</string>
                  </property>
                 </widget>
                </item>
@@ -435,35 +413,57 @@
                  </property>
                 </widget>
                </item>
-               <item row="0" column="3">
-                <widget class="QLabel" name="label_9">
+                  <item row="1" column="0">
+                      <widget class="QDoubleSpinBox" name="linescan_start">
+                          <property name="decimals">
+                              <number>3</number>
+                          </property>
+                          <property name="minimum">
+                              <double>-10000000.000000000000000</double>
+                          </property>
+                          <property name="maximum">
+                              <double>10000000.000000000000000</double>
+                          </property>
+                          <property name="value">
+                              <double>0.000000000000000</double>
+                          </property>
+                      </widget>
+                  </item>
+                  <item row="2" column="3">
+                      <widget class="QLabel" name="label_12">
                  <property name="font">
                   <font>
                    <bold>false</bold>
                   </font>
                  </property>
                  <property name="text">
-                  <string>Steps</string>
+                     <string>Burst at each point</string>
                  </property>
                 </widget>
                </item>
-               <item row="3" column="1">
-                <widget class="QDoubleSpinBox" name="linescan_exp_time">
-                 <property name="decimals">
-                  <number>3</number>
+                  <item row="4" column="0" colspan="4">
+                      <widget class="QPushButton" name="scan_button">
+                          <property name="minimumSize">
+                              <size>
+                                  <width>0</width>
+                                  <height>40</height>
+                              </size>
                  </property>
-                 <property name="minimum">
-                  <double>-10000000.000000000000000</double>
+                          <property name="font">
+                              <font/>
                  </property>
-                 <property name="maximum">
-                  <double>10000000.000000000000000</double>
+                          <property name="text">
+                              <string>Run Scan</string>
+                          </property>
+                          <property name="autoDefault">
+                              <bool>false</bool>
                  </property>
-                 <property name="value">
-                  <double>0.000000000000000</double>
+                          <property name="default">
+                              <bool>false</bool>
                  </property>
                 </widget>
                </item>
-               <item row="4" column="1">
+                  <item row="5" column="1">
                 <spacer name="verticalSpacer_2">
                  <property name="orientation">
                   <enum>Qt::Orientation::Vertical</enum>
@@ -520,6 +520,31 @@
              </widget>
             </widget>
            </item>
+                 <item>
+                     <widget class="LMFitDialog" name="lm_fit_dialog">
+                         <property name="sizePolicy">
+                             <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+                                 <horstretch>0</horstretch>
+                                 <verstretch>0</verstretch>
+                             </sizepolicy>
+                         </property>
+                         <property name="minimumSize">
+                             <size>
+                                 <width>0</width>
+                                 <height>190</height>
+                             </size>
+                         </property>
+                         <property name="always_show_latest" stdset="0">
+                             <bool>true</bool>
+                         </property>
+                         <property name="hide_curve_selection" stdset="0">
+                             <bool>true</bool>
+                         </property>
+                         <property name="hide_summary" stdset="0">
+                             <bool>true</bool>
+                         </property>
+            </widget>
+           </item>
            <item>
             <spacer name="verticalSpacer">
              <property name="orientation">
@@ -536,7 +561,7 @@
           </layout>
          </item>
          <item>
-          <layout class="QVBoxLayout" name="plotting_layout" stretch="7,0,2">
+             <layout class="QVBoxLayout" name="plotting_layout" stretch="7,0">
            <item>
             <widget class="BECWaveformWidget" name="bec_waveform_widget">
              <property name="minimumSize">
@@ -568,35 +593,6 @@
               <bool>false</bool>
              </property>
             </widget>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="fit_dialog_layout" stretch="4">
-             <item>
-              <widget class="LMFitDialog" name="lm_fit_dialog">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>190</height>
-                </size>
-               </property>
-               <property name="always_show_latest" stdset="0">
-                <bool>true</bool>
-               </property>
-               <property name="hide_curve_selection" stdset="0">
-                <bool>true</bool>
-               </property>
-               <property name="hide_summary" stdset="0">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-            </layout>
            </item>
           </layout>
          </item>
@@ -833,24 +829,6 @@
     </hint>
    </hints>
   </connection>
-  <!--
-  <connection>
-   <sender>device_combobox</sender>
-   <signal>currentTextChanged(QString)</signal>
-   <receiver>bec_waveform_widget</receiver>
-   <slot>set_x(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>297</x>
-     <y>170</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>467</x>
-     <y>170</y>
-    </hint>
-   </hints>
-  </connection>
-  -->
   <connection>
    <sender>scan_control</sender>
    <signal>scan_axis(QString,double,double)</signal>

@@ -1,0 +1,656 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+    <class>MainWindow</class>
+    <widget class="QMainWindow" name="MainWindow">
+        <property name="geometry">
+            <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>1422</width>
+                <height>976</height>
+            </rect>
+        </property>
+        <property name="windowTitle">
+            <string>MainWindow</string>
+        </property>
+        <widget class="QWidget" name="centralwidget">
+            <layout class="QVBoxLayout" name="verticalLayout">
+                <item>
+                    <widget class="BECWaveformWidget" name="bec_waveform_widget">
+                        <property name="minimumSize">
+                            <size>
+                                <width>600</width>
+                                <height>450</height>
+                            </size>
+                        </property>
+                        <property name="clear_curves_on_plot_update" stdset="0">
+                            <bool>true</bool>
+                        </property>
+                    </widget>
+                </item>
+                <item>
+                    <widget class="ToggleSwitch" name="toggle_switch">
+                        <property name="sizePolicy">
+                            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                                <horstretch>3</horstretch>
+                                <verstretch>0</verstretch>
+                            </sizepolicy>
+                        </property>
+                        <property name="toolTip">
+                            <string>Activate linear region select for LMFit</string>
+                        </property>
+                        <property name="layoutDirection">
+                            <enum>Qt::LayoutDirection::LeftToRight</enum>
+                        </property>
+                        <property name="checked" stdset="0">
+                            <bool>false</bool>
+                        </property>
+                    </widget>
+                </item>
+                <item>
+                    <widget class="BECProgressBar" name="bec_progress_bar">
+                        <property name="minimumSize">
+                            <size>
+                                <width>0</width>
+                                <height>25</height>
+                            </size>
+                        </property>
+                        <property name="maximumSize">
+                            <size>
+                                <width>16777215</width>
+                                <height>25</height>
+                            </size>
+                        </property>
+                    </widget>
+                </item>
+            </layout>
+        </widget>
+        <widget class="QMenuBar" name="menubar">
+            <property name="geometry">
+                <rect>
+                    <x>0</x>
+                    <y>0</y>
+                    <width>1422</width>
+                    <height>29</height>
+                </rect>
+            </property>
+        </widget>
+        <widget class="QStatusBar" name="statusbar"/>
+        <widget class="QDockWidget" name="dockWidget">
+            <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                </sizepolicy>
+            </property>
+            <property name="maximumSize">
+                <size>
+                    <width>474</width>
+                    <height>141</height>
+                </size>
+            </property>
+            <property name="features">
+                <set>QDockWidget::DockWidgetFeature::DockWidgetMovable</set>
+            </property>
+            <property name="windowTitle">
+                <string>Device Control</string>
+            </property>
+            <attribute name="dockWidgetArea">
+                <number>1</number>
+            </attribute>
+            <widget class="QWidget" name="dockWidgetContents">
+                <layout class="QVBoxLayout" name="verticalLayout_2">
+                    <item>
+                        <widget class="QGroupBox" name="device_box">
+                            <property name="minimumSize">
+                                <size>
+                                    <width>450</width>
+                                    <height>95</height>
+                                </size>
+                            </property>
+                            <property name="maximumSize">
+                                <size>
+                                    <width>450</width>
+                                    <height>16777215</height>
+                                </size>
+                            </property>
+                            <property name="font">
+                                <font>
+                                    <pointsize>15</pointsize>
+                                    <bold>true</bold>
+                                </font>
+                            </property>
+                            <property name="autoFillBackground">
+                                <bool>false</bool>
+                            </property>
+                            <property name="title">
+                                <string>Devices</string>
+                            </property>
+                            <layout class="QGridLayout" name="gridLayout" rowstretch="0,0" columnstretch="0,0,0">
+                                <property name="leftMargin">
+                                    <number>8</number>
+                                </property>
+                                <property name="topMargin">
+                                    <number>8</number>
+                                </property>
+                                <property name="rightMargin">
+                                    <number>8</number>
+                                </property>
+                                <property name="bottomMargin">
+                                    <number>8</number>
+                                </property>
+                                <item row="0" column="0">
+                                    <widget class="QLabel" name="label">
+                                        <property name="font">
+                                            <font/>
+                                        </property>
+                                        <property name="text">
+                                            <string>Motor</string>
+                                        </property>
+                                    </widget>
+                                </item>
+                                <item row="0" column="1">
+                                    <widget class="QLabel" name="label_2">
+                                        <property name="font">
+                                            <font/>
+                                        </property>
+                                        <property name="text">
+                                            <string>Monitor</string>
+                                        </property>
+                                    </widget>
+                                </item>
+                                <item row="0" column="2">
+                                    <widget class="QLabel" name="label_3">
+                                        <property name="font">
+                                            <font/>
+                                        </property>
+                                        <property name="text">
+                                            <string>LMFit Model</string>
+                                        </property>
+                                    </widget>
+                                </item>
+                                <item row="1" column="0">
+                                    <widget class="DeviceComboBox" name="device_combobox"/>
+                                </item>
+                                <item row="1" column="1">
+                                    <widget class="DeviceComboBox" name="device_combobox_2"/>
+                                </item>
+                                <item row="1" column="2">
+                                    <widget class="DapComboBox" name="dap_combo_box"/>
+                                </item>
+                            </layout>
+                        </widget>
+                    </item>
+                </layout>
+            </widget>
+        </widget>
+        <widget class="QDockWidget" name="dockWidget_2">
+            <property name="maximumSize">
+                <size>
+                    <width>474</width>
+                    <height>383</height>
+                </size>
+            </property>
+            <property name="features">
+                <set>QDockWidget::DockWidgetFeature::DockWidgetMovable</set>
+            </property>
+            <property name="windowTitle">
+                <string>Scan Control</string>
+            </property>
+            <attribute name="dockWidgetArea">
+                <number>1</number>
+            </attribute>
+            <widget class="QWidget" name="dockWidgetContents_2">
+                <layout class="QVBoxLayout" name="verticalLayout_4">
+                    <item>
+                        <widget class="QTabWidget" name="tabWidget_2">
+                            <property name="minimumSize">
+                                <size>
+                                    <width>450</width>
+                                    <height>343</height>
+                                </size>
+                            </property>
+                            <property name="maximumSize">
+                                <size>
+                                    <width>450</width>
+                                    <height>343</height>
+                                </size>
+                            </property>
+                            <property name="currentIndex">
+                                <number>0</number>
+                            </property>
+                            <widget class="QWidget" name="scan_control_tab">
+                                <attribute name="title">
+                                    <string>LineScan</string>
+                                </attribute>
+                                <layout class="QGridLayout" name="gridLayout_2">
+                                    <item row="0" column="0">
+                                        <widget class="QLabel" name="label_7">
+                                            <property name="font">
+                                                <font>
+                                                    <bold>false</bold>
+                                                </font>
+                                            </property>
+                                            <property name="text">
+                                                <string>Start</string>
+                                            </property>
+                                        </widget>
+                                    </item>
+                                    <item row="1" column="3">
+                                        <widget class="QSpinBox" name="linescan_step">
+                                            <property name="minimum">
+                                                <number>0</number>
+                                            </property>
+                                            <property name="maximum">
+                                                <number>10000000</number>
+                                            </property>
+                                            <property name="value">
+                                                <number>0</number>
+                                            </property>
+                                        </widget>
+                                    </item>
+                                    <item row="0" column="1" colspan="2">
+                                        <widget class="QLabel" name="label_8">
+                                            <property name="font">
+                                                <font>
+                                                    <bold>false</bold>
+                                                </font>
+                                            </property>
+                                            <property name="text">
+                                                <string>Stop</string>
+                                            </property>
+                                        </widget>
+                                    </item>
+                                    <item row="2" column="1">
+                                        <widget class="QLabel" name="label_11">
+                                            <property name="font">
+                                                <font>
+                                                    <bold>false</bold>
+                                                </font>
+                                            </property>
+                                            <property name="text">
+                                                <string>Exposure Time</string>
+                                            </property>
+                                        </widget>
+                                    </item>
+                                    <item row="3" column="1">
+                                        <widget class="QDoubleSpinBox" name="linescan_exp_time">
+                                            <property name="decimals">
+                                                <number>3</number>
+                                            </property>
+                                            <property name="minimum">
+                                                <double>-10000000.000000000000000</double>
+                                            </property>
+                                            <property name="maximum">
+                                                <double>10000000.000000000000000</double>
+                                            </property>
+                                            <property name="value">
+                                                <double>0.000000000000000</double>
+                                            </property>
+                                        </widget>
+                                    </item>
+                                    <item row="0" column="3">
+                                        <widget class="QLabel" name="label_9">
+                                            <property name="font">
+                                                <font>
+                                                    <bold>false</bold>
+                                                </font>
+                                            </property>
+                                            <property name="text">
+                                                <string>Steps</string>
+                                            </property>
+                                        </widget>
+                                    </item>
+                                    <item row="3" column="0">
+                                        <widget class="QCheckBox" name="linescan_relative">
+                                            <property name="text">
+                                                <string/>
+                                            </property>
+                                        </widget>
+                                    </item>
+                                    <item row="2" column="0">
+                                        <widget class="QLabel" name="label_10">
+                                            <property name="font">
+                                                <font>
+                                                    <bold>false</bold>
+                                                </font>
+                                            </property>
+                                            <property name="text">
+                                                <string>Relative</string>
+                                            </property>
+                                        </widget>
+                                    </item>
+                                    <item row="1" column="1" colspan="2">
+                                        <widget class="QDoubleSpinBox" name="linescan_stop">
+                                            <property name="decimals">
+                                                <number>3</number>
+                                            </property>
+                                            <property name="minimum">
+                                                <double>-10000000.000000000000000</double>
+                                            </property>
+                                            <property name="maximum">
+                                                <double>10000000.000000000000000</double>
+                                            </property>
+                                            <property name="value">
+                                                <double>0.000000000000000</double>
+                                            </property>
+                                        </widget>
+                                    </item>
+                                    <item row="3" column="3">
+                                        <widget class="QSpinBox" name="linescan_step_2">
+                                            <property name="minimum">
+                                                <number>1</number>
+                                            </property>
+                                            <property name="maximum">
+                                                <number>10000000</number>
+                                            </property>
+                                            <property name="value">
+                                                <number>1</number>
+                                            </property>
+                                        </widget>
+                                    </item>
+                                    <item row="1" column="0">
+                                        <widget class="QDoubleSpinBox" name="linescan_start">
+                                            <property name="decimals">
+                                                <number>3</number>
+                                            </property>
+                                            <property name="minimum">
+                                                <double>-10000000.000000000000000</double>
+                                            </property>
+                                            <property name="maximum">
+                                                <double>10000000.000000000000000</double>
+                                            </property>
+                                            <property name="value">
+                                                <double>0.000000000000000</double>
+                                            </property>
+                                        </widget>
+                                    </item>
+                                    <item row="2" column="3">
+                                        <widget class="QLabel" name="label_12">
+                                            <property name="font">
+                                                <font>
+                                                    <bold>false</bold>
+                                                </font>
+                                            </property>
+                                            <property name="text">
+                                                <string>Burst at each point</string>
+                                            </property>
+                                        </widget>
+                                    </item>
+                                    <item row="4" column="0" colspan="4">
+                                        <widget class="QPushButton" name="scan_button">
+                                            <property name="minimumSize">
+                                                <size>
+                                                    <width>0</width>
+                                                    <height>40</height>
+                                                </size>
+                                            </property>
+                                            <property name="font">
+                                                <font/>
+                                            </property>
+                                            <property name="text">
+                                                <string>Run Scan</string>
+                                            </property>
+                                            <property name="autoDefault">
+                                                <bool>false</bool>
+                                            </property>
+                                            <property name="default">
+                                                <bool>false</bool>
+                                            </property>
+                                        </widget>
+                                    </item>
+                                </layout>
+                            </widget>
+                            <widget class="QWidget" name="tweak_tab">
+                                <attribute name="title">
+                                    <string>MotorTweak</string>
+                                </attribute>
+                                <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,0,0">
+                                    <item>
+                                        <spacer name="horizontalSpacer_2">
+                                            <property name="orientation">
+                                                <enum>Qt::Orientation::Horizontal</enum>
+                                            </property>
+                                            <property name="sizeHint" stdset="0">
+                                                <size>
+                                                    <width>40</width>
+                                                    <height>20</height>
+                                                </size>
+                                            </property>
+                                        </spacer>
+                                    </item>
+                                    <item>
+                                        <widget class="PositionerBox" name="positioner_box">
+                                            <property name="hide_device_selection" stdset="0">
+                                                <bool>true</bool>
+                                            </property>
+                                        </widget>
+                                    </item>
+                                    <item>
+                                        <spacer name="horizontalSpacer">
+                                            <property name="orientation">
+                                                <enum>Qt::Orientation::Horizontal</enum>
+                                            </property>
+                                            <property name="sizeHint" stdset="0">
+                                                <size>
+                                                    <width>40</width>
+                                                    <height>20</height>
+                                                </size>
+                                            </property>
+                                        </spacer>
+                                    </item>
+                                </layout>
+                            </widget>
+                        </widget>
+                    </item>
+                </layout>
+            </widget>
+        </widget>
+        <widget class="QDockWidget" name="dockWidget_3">
+            <property name="features">
+                <set>QDockWidget::DockWidgetFeature::DockWidgetMovable</set>
+            </property>
+            <attribute name="dockWidgetArea">
+                <number>4</number>
+            </attribute>
+            <widget class="QWidget" name="dockWidgetContents_3">
+                <layout class="QVBoxLayout" name="verticalLayout_3">
+                    <item>
+                        <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,0,0,0,0,1">
+                            <item>
+                                <widget class="DarkModeButton" name="dark_mode_button"/>
+                            </item>
+                            <item>
+                                <widget class="QRadioButton" name="radioButton_2">
+                                    <property name="enabled">
+                                        <bool>false</bool>
+                                    </property>
+                                    <property name="text">
+                                        <string>BEC Server State</string>
+                                    </property>
+                                    <property name="checkable">
+                                        <bool>true</bool>
+                                    </property>
+                                    <property name="checked">
+                                        <bool>true</bool>
+                                    </property>
+                                    <property name="autoExclusive">
+                                        <bool>false</bool>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="QRadioButton" name="radioButton_4">
+                                    <property name="enabled">
+                                        <bool>false</bool>
+                                    </property>
+                                    <property name="text">
+                                        <string>BEC Queue</string>
+                                    </property>
+                                    <property name="checkable">
+                                        <bool>true</bool>
+                                    </property>
+                                    <property name="checked">
+                                        <bool>true</bool>
+                                    </property>
+                                    <property name="autoExclusive">
+                                        <bool>false</bool>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="QRadioButton" name="radioButton">
+                                    <property name="enabled">
+                                        <bool>false</bool>
+                                    </property>
+                                    <property name="text">
+                                        <string>SLS Light On</string>
+                                    </property>
+                                    <property name="checkable">
+                                        <bool>true</bool>
+                                    </property>
+                                    <property name="checked">
+                                        <bool>true</bool>
+                                    </property>
+                                    <property name="autoExclusive">
+                                        <bool>false</bool>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="QRadioButton" name="radioButton_3">
+                                    <property name="enabled">
+                                        <bool>false</bool>
+                                    </property>
+                                    <property name="text">
+                                        <string>BEAMLINE Checks</string>
+                                    </property>
+                                    <property name="checkable">
+                                        <bool>true</bool>
+                                    </property>
+                                    <property name="checked">
+                                        <bool>true</bool>
+                                    </property>
+                                    <property name="autoExclusive">
+                                        <bool>false</bool>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="StopButton" name="stop_button">
+                                    <property name="sizePolicy">
+                                        <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+                                            <horstretch>0</horstretch>
+                                            <verstretch>0</verstretch>
+                                        </sizepolicy>
+                                    </property>
+                                    <property name="minimumSize">
+                                        <size>
+                                            <width>200</width>
+                                            <height>40</height>
+                                        </size>
+                                    </property>
+                                    <property name="maximumSize">
+                                        <size>
+                                            <width>200</width>
+                                            <height>40</height>
+                                        </size>
+                                    </property>
+                                </widget>
+                            </item>
+                        </layout>
+                    </item>
+                </layout>
+            </widget>
+        </widget>
+        <widget class="QDockWidget" name="dockWidget_4">
+            <property name="features">
+                <set>QDockWidget::DockWidgetFeature::DockWidgetMovable</set>
+            </property>
+            <property name="windowTitle">
+                <string>Fit Parameters</string>
+            </property>
+            <attribute name="dockWidgetArea">
+                <number>1</number>
+            </attribute>
+            <widget class="QWidget" name="dockWidgetContents_4">
+                <layout class="QVBoxLayout" name="verticalLayout_5">
+                    <item>
+                        <widget class="LMFitDialog" name="lm_fit_dialog">
+                            <property name="sizePolicy">
+                                <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+                                    <horstretch>0</horstretch>
+                                    <verstretch>0</verstretch>
+                                </sizepolicy>
+                            </property>
+                            <property name="minimumSize">
+                                <size>
+                                    <width>0</width>
+                                    <height>190</height>
+                                </size>
+                            </property>
+                            <property name="always_show_latest" stdset="0">
+                                <bool>true</bool>
+                            </property>
+                            <property name="hide_curve_selection" stdset="0">
+                                <bool>true</bool>
+                            </property>
+                            <property name="hide_summary" stdset="0">
+                                <bool>true</bool>
+                            </property>
+                        </widget>
+                    </item>
+                </layout>
+            </widget>
+        </widget>
+    </widget>
+    <customwidgets>
+        <customwidget>
+            <class>DapComboBox</class>
+            <extends>QWidget</extends>
+            <header>dap_combo_box</header>
+        </customwidget>
+        <customwidget>
+            <class>StopButton</class>
+            <extends>QWidget</extends>
+            <header>stop_button</header>
+        </customwidget>
+        <customwidget>
+            <class>ToggleSwitch</class>
+            <extends>QWidget</extends>
+            <header>toggle_switch</header>
+        </customwidget>
+        <customwidget>
+            <class>PositionerBox</class>
+            <extends>QWidget</extends>
+            <header>positioner_box</header>
+        </customwidget>
+        <customwidget>
+            <class>BECProgressBar</class>
+            <extends>QWidget</extends>
+            <header>bec_progress_bar</header>
+        </customwidget>
+        <customwidget>
+            <class>DarkModeButton</class>
+            <extends>QWidget</extends>
+            <header>dark_mode_button</header>
+        </customwidget>
+        <customwidget>
+            <class>BECWaveformWidget</class>
+            <extends>QWidget</extends>
+            <header>bec_waveform_widget</header>
+        </customwidget>
+        <customwidget>
+            <class>DeviceComboBox</class>
+            <extends>QComboBox</extends>
+            <header>device_combobox</header>
+        </customwidget>
+        <customwidget>
+            <class>LMFitDialog</class>
+            <extends>QWidget</extends>
+            <header>lm_fit_dialog</header>
+        </customwidget>
+    </customwidgets>
+    <resources/>
+    <connections/>
+</ui>
