@@ -467,6 +467,10 @@ class BECWaveform(BECPlotBase):
                 - Custom signal name of device from BEC.
             x_entry(str): Entry of the x signal.
         """
+        if not x_name:
+            # this can happen, if executed by a signal from a widget
+            return
+
         curve_configs = self.config.curves
         curve_ids = list(curve_configs.keys())
         curve_configs = list(curve_configs.values())
@@ -630,6 +634,13 @@ class BECWaveform(BECPlotBase):
             mode = self.x_axis_mode["name"]
             x_name = mode if mode is not None else "best_effort"
             self.x_axis_mode["name"] = x_name
+
+        if not x_name or not y_name:
+            # can happen if executed from a signal from a widget ;
+            # the code above has to be executed to set some other
+            # variables, but it cannot continue if both names are
+            # not set properly -> exit here
+            return
 
         # 3. Check - Get entry if not provided and validate
         x_entry, y_entry, z_entry = self._validate_signal_entries(
