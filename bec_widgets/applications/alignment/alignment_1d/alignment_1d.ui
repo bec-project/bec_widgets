@@ -722,22 +722,6 @@
  <resources/>
  <connections>
   <connection>
-   <sender>device_combobox</sender>
-   <signal>currentTextChanged(QString)</signal>
-   <receiver>dap_combo_box</receiver>
-   <slot>select_x_axis(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>162</x>
-     <y>170</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>467</x>
-     <y>170</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>device_combobox_2</sender>
    <signal>currentTextChanged(QString)</signal>
    <receiver>dap_combo_box</receiver>
@@ -802,22 +786,6 @@
    </hints>
   </connection>
   <connection>
-   <sender>device_combobox</sender>
-   <signal>currentTextChanged(QString)</signal>
-   <receiver>bec_waveform_widget</receiver>
-   <slot>set_x(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>162</x>
-     <y>170</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1099</x>
-     <y>258</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>toggle_switch</sender>
    <signal>enabled(bool)</signal>
    <receiver>bec_waveform_widget</receiver>
@@ -862,6 +830,56 @@
     <hint type="destinationlabel">
      <x>160</x>
      <y>286</y>
+    </hint>
+   </hints>
+  </connection>
+  <!--
+  <connection>
+   <sender>device_combobox</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>bec_waveform_widget</receiver>
+   <slot>set_x(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>297</x>
+     <y>170</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>467</x>
+     <y>170</y>
+    </hint>
+   </hints>
+  </connection>
+  -->
+  <connection>
+   <sender>scan_control</sender>
+   <signal>scan_axis(QString,double,double)</signal>
+   <receiver>bec_waveform_widget</receiver>
+   <slot>set_x(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>244</x>
+     <y>348</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1140</x>
+     <y>491</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>scan_control</sender>
+   <signal>scan_axis(QString,double,double)</signal>
+   <receiver>dap_combo_box</receiver>
+   <slot>select_x_axis(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>244</x>
+     <y>322</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>909</x>
+     <y>189</y>
     </hint>
    </hints>
   </connection>
