@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## v0.114.0 (2024-10-02)
+
+### Feature
+
+* feat: new &#39;scan_axis&#39; signal
+
+Signal is emitted before &#34;scan_started&#34;, to inform about scan positioner
+and (start, stop) positions. In case of multiple bundles, the signal
+is emitted multiple times. ([`f084e25`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f084e2514bc9459cccaa951b79044bc25884e738))
+
+### Fix
+
+* fix: prevent exception when empty string updates are coming from widget ([`04cfb1e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/04cfb1edf19437d54f07b868bcf3cfc2a35fd3bc))
+
+* fix: use new &#39;scan_axis&#39; signal, to set_x and select x axis on waveform
+
+Fixes #361, do not try to change x axis when not permitted ([`efa2763`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/efa276358b0f5a45cce9fa84fa5f9aafaf4284f7))
+
 ## v0.113.0 (2024-10-02)
 
 ### Feature
@@ -140,18 +158,6 @@
 
 ## v0.105.0 (2024-09-04)
 
-### Feature
-
-* feat: add dap_combobox ([`cc691d4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cc691d4039bde710e78f362d2f0e712f9e8f196f))
-
 ### Refactor
 
 * refactor: cleanup and renaming of slot/signals ([`0fd5cee`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0fd5cee77611b6645326eaefa68455ea8de26597))
-
-* refactor(logger): changed prints to logger calls ([`3a5d7d0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3a5d7d07966ab9b38ba33bda0bed38c30f500c66))
-
-## v0.104.0 (2024-09-04)
-
-### Fix
-
-* fix(scan_control): SafeSlot applied to run_scan to avoid faulty scan requests ([`9047916`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/90479167fb5cae393c884e71a80fcfdb48a76427))
