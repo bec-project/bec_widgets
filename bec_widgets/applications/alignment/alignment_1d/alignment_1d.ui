@@ -1,568 +1,260 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Form</class>
- <widget class="QWidget" name="Form">
+ <class>mainWindow</class>
+ <widget class="QMainWindow" name="mainWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1335</width>
-    <height>939</height>
+    <width>1611</width>
+    <height>1019</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Form</string>
+   <string>Alignment tool</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,0,0,0,0,0,0,0,0,0,1">
-     <item>
-      <widget class="DarkModeButton" name="dark_mode_button"/>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer_6">
-       <property name="orientation">
-        <enum>Qt::Orientation::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="BECStatusBox" name="bec_status_box">
-       <property name="compact" stdset="0">
-        <bool>true</bool>
-       </property>
-       <property name="label" stdset="0">
-        <string>BEC Servers</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer_4">
-       <property name="orientation">
-        <enum>Qt::Orientation::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="BECQueue" name="bec_queue">
-       <property name="compact" stdset="0">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer_3">
-       <property name="orientation">
-        <enum>Qt::Orientation::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QRadioButton" name="radioButton">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>SLS Light On</string>
-       </property>
-       <property name="checkable">
-        <bool>true</bool>
-       </property>
-       <property name="checked">
-        <bool>true</bool>
-       </property>
-       <property name="autoExclusive">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer_5">
-       <property name="orientation">
-        <enum>Qt::Orientation::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QRadioButton" name="radioButton_3">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>BEAMLINE Checks</string>
-       </property>
-       <property name="checkable">
-        <bool>true</bool>
-       </property>
-       <property name="checked">
-        <bool>true</bool>
-       </property>
-       <property name="autoExclusive">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer_7">
-       <property name="orientation">
-        <enum>Qt::Orientation::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="StopButton" name="stop_button">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>200</width>
-         <height>40</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>200</width>
-         <height>40</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout" stretch="0">
-     <item>
-      <widget class="QTabWidget" name="tabWidget">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="currentIndex">
-        <number>0</number>
-       </property>
-       <widget class="QWidget" name="ControlTab">
-        <attribute name="title">
-         <string>Alignment Control</string>
-        </attribute>
-        <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="0,1,2">
-         <property name="leftMargin">
-          <number>2</number>
+  <widget class="QWidget" name="widget">
+   <layout class="QVBoxLayout" name="verticalLayout_2">
+    <item>
+     <widget class="QWidget" name="widget" native="true">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout_5">
+       <item>
+        <widget class="DarkModeButton" name="dark_mode_button"/>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_6">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
          </property>
-         <property name="topMargin">
-          <number>2</number>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
          </property>
-         <property name="rightMargin">
-          <number>2</number>
+        </spacer>
+       </item>
+       <item>
+        <widget class="BECStatusBox" name="bec_status_box">
+         <property name="compact" stdset="0">
+          <bool>true</bool>
          </property>
-         <property name="bottomMargin">
-          <number>2</number>
+         <property name="label" stdset="0">
+          <string>BEC Servers</string>
          </property>
-         <item>
-          <widget class="ScanControl" name="scan_control">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="current_scan" stdset="0">
-            <string>line_scan</string>
-           </property>
-           <property name="hide_arg_box" stdset="0">
-            <bool>true</bool>
-           </property>
-           <property name="hide_kwarg_boxes" stdset="0">
-            <bool>true</bool>
-           </property>
-           <property name="hide_scan_remember_toggle" stdset="0">
-            <bool>true</bool>
-           </property>
-           <property name="hide_scan_control_buttons" stdset="0">
-            <bool>true</bool>
-           </property>
-           <property name="hide_bundle_buttons" stdset="0">
-            <bool>true</bool>
-           </property>
-           <property name="hide_args_group" stdset="0">
-            <bool>true</bool>
-           </property>
-           <property name="hide_kwargs_group" stdset="0">
-            <bool>false</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <layout class="QVBoxLayout" name="control_layout" stretch="0,0,2">
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_3">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="BECQueue" name="bec_queue">
+         <property name="compact" stdset="0">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_5">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="radioButton">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>SLS Light On</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+         <property name="autoExclusive">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_7">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="radioButton_3">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string>BEAMLINE Checks</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+         <property name="autoExclusive">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_4">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="StopButton" name="stop_button">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>200</width>
+           <height>40</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>200</width>
+           <height>40</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="BECProgressBar" name="bec_progress_bar">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>25</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>25</height>
+       </size>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="ControlTab">
+       <attribute name="title">
+        <string>Alignment Control</string>
+       </attribute>
+       <layout class="QHBoxLayout" name="horizontalLayout_6">
+        <item>
+         <widget class="QWidget" name="widget_4" native="true">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>1</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_3">
            <item>
-            <widget class="QGroupBox" name="device_box">
+            <widget class="ScanControl" name="scan_control">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>1</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="minimumSize">
               <size>
-               <width>450</width>
-               <height>95</height>
+               <width>0</width>
+               <height>0</height>
               </size>
              </property>
-             <property name="maximumSize">
-              <size>
-               <width>450</width>
-               <height>16777215</height>
-              </size>
+             <property name="current_scan" stdset="0">
+              <string>line_scan</string>
              </property>
-             <property name="font">
-              <font>
-               <pointsize>15</pointsize>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="autoFillBackground">
+             <property name="hide_arg_box" stdset="0">
               <bool>false</bool>
              </property>
-             <property name="title">
-              <string>Devices</string>
+             <property name="hide_kwarg_boxes" stdset="0">
+              <bool>false</bool>
              </property>
-             <layout class="QGridLayout" name="gridLayout" rowstretch="0,0" columnstretch="0,0,0">
-              <property name="leftMargin">
-               <number>8</number>
-              </property>
-              <property name="topMargin">
-               <number>8</number>
-              </property>
-              <property name="rightMargin">
-               <number>8</number>
-              </property>
-              <property name="bottomMargin">
-               <number>8</number>
-              </property>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label">
-                <property name="font">
-                 <font/>
-                </property>
-                <property name="text">
-                 <string>Motor</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QLabel" name="label_2">
-                <property name="font">
-                 <font/>
-                </property>
-                <property name="text">
-                 <string>Monitor</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="2">
-               <widget class="QLabel" name="label_3">
-                <property name="font">
-                 <font/>
-                </property>
-                <property name="text">
-                 <string>LMFit Model</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="DeviceComboBox" name="device_combobox"/>
-              </item>
-              <item row="1" column="1">
-               <widget class="DeviceComboBox" name="device_combobox_2"/>
-              </item>
-              <item row="1" column="2">
-               <widget class="DapComboBox" name="dap_combo_box"/>
-              </item>
-             </layout>
+             <property name="hide_scan_control_buttons" stdset="0">
+              <bool>false</bool>
+             </property>
+             <property name="hide_scan_selection_combobox" stdset="0">
+              <bool>true</bool>
+             </property>
+             <property name="hide_add_remove_buttons" stdset="0">
+              <bool>true</bool>
+             </property>
+             <property name="hide_args_group" stdset="0">
+              <bool>false</bool>
+             </property>
+             <property name="hide_kwargs_group" stdset="0">
+              <bool>false</bool>
+             </property>
             </widget>
            </item>
            <item>
-            <widget class="QTabWidget" name="tabWidget_2">
-             <property name="minimumSize">
-              <size>
-               <width>450</width>
-               <height>343</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>450</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="currentIndex">
-              <number>0</number>
-             </property>
-             <widget class="QWidget" name="scan_control_tab">
-              <attribute name="title">
-               <string>LineScan</string>
-              </attribute>
-              <layout class="QGridLayout" name="gridLayout_2">
-               <item row="2" column="0">
-                <widget class="QLabel" name="label_10">
-                 <property name="font">
-                  <font>
-                   <bold>false</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>Relative</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="0">
-                <widget class="QDoubleSpinBox" name="linescan_start">
-                 <property name="decimals">
-                  <number>3</number>
-                 </property>
-                 <property name="minimum">
-                  <double>-10000000.000000000000000</double>
-                 </property>
-                 <property name="maximum">
-                  <double>10000000.000000000000000</double>
-                 </property>
-                 <property name="value">
-                  <double>0.000000000000000</double>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="1">
-                <widget class="QLabel" name="label_11">
-                 <property name="font">
-                  <font>
-                   <bold>false</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>Exposure Time</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="0">
-                <widget class="QLabel" name="label_7">
-                 <property name="font">
-                  <font>
-                   <bold>false</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>Start</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="2" column="3">
-                <widget class="QLabel" name="label_12">
-                 <property name="font">
-                  <font>
-                   <bold>false</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>Burst at each point</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="3" column="0">
-                <widget class="QCheckBox" name="linescan_relative">
-                 <property name="text">
-                  <string/>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="1" colspan="2">
-                <widget class="QLabel" name="label_8">
-                 <property name="font">
-                  <font>
-                   <bold>false</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>Stop</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="3">
-                <widget class="QSpinBox" name="linescan_step">
-                 <property name="minimum">
-                  <number>0</number>
-                 </property>
-                 <property name="maximum">
-                  <number>10000000</number>
-                 </property>
-                 <property name="value">
-                  <number>0</number>
-                 </property>
-                </widget>
-               </item>
-               <item row="5" column="0" colspan="4">
-                <widget class="QPushButton" name="scan_button">
-                 <property name="minimumSize">
-                  <size>
-                   <width>0</width>
-                   <height>40</height>
-                  </size>
-                 </property>
-                 <property name="font">
-                  <font/>
-                 </property>
-                 <property name="text">
-                  <string>Run Scan</string>
-                 </property>
-                 <property name="autoDefault">
-                  <bool>false</bool>
-                 </property>
-                 <property name="default">
-                  <bool>false</bool>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="1" colspan="2">
-                <widget class="QDoubleSpinBox" name="linescan_stop">
-                 <property name="decimals">
-                  <number>3</number>
-                 </property>
-                 <property name="minimum">
-                  <double>-10000000.000000000000000</double>
-                 </property>
-                 <property name="maximum">
-                  <double>10000000.000000000000000</double>
-                 </property>
-                 <property name="value">
-                  <double>0.000000000000000</double>
-                 </property>
-                </widget>
-               </item>
-               <item row="3" column="3">
-                <widget class="QSpinBox" name="linescan_step_2">
-                 <property name="minimum">
-                  <number>1</number>
-                 </property>
-                 <property name="maximum">
-                  <number>10000000</number>
-                 </property>
-                 <property name="value">
-                  <number>1</number>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="3">
-                <widget class="QLabel" name="label_9">
-                 <property name="font">
-                  <font>
-                   <bold>false</bold>
-                  </font>
-                 </property>
-                 <property name="text">
-                  <string>Steps</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="3" column="1">
-                <widget class="QDoubleSpinBox" name="linescan_exp_time">
-                 <property name="decimals">
-                  <number>3</number>
-                 </property>
-                 <property name="minimum">
-                  <double>-10000000.000000000000000</double>
-                 </property>
-                 <property name="maximum">
-                  <double>10000000.000000000000000</double>
-                 </property>
-                 <property name="value">
-                  <double>0.000000000000000</double>
-                 </property>
-                </widget>
-               </item>
-               <item row="4" column="1">
-                <spacer name="verticalSpacer_2">
-                 <property name="orientation">
-                  <enum>Qt::Orientation::Vertical</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>20</width>
-                   <height>40</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-              </layout>
-             </widget>
-             <widget class="QWidget" name="tweak_tab">
-              <attribute name="title">
-               <string>MotorTweak</string>
-              </attribute>
-              <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="0,0,0">
-               <item>
-                <spacer name="horizontalSpacer_2">
-                 <property name="orientation">
-                  <enum>Qt::Orientation::Horizontal</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>40</width>
-                   <height>20</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-               <item>
-                <widget class="PositionerBox" name="positioner_box">
-                 <property name="hide_device_selection" stdset="0">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <spacer name="horizontalSpacer">
-                 <property name="orientation">
-                  <enum>Qt::Orientation::Horizontal</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>40</width>
-                   <height>20</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-              </layout>
-             </widget>
-            </widget>
+            <widget class="PositionerGroup" name="positioner_group"/>
            </item>
            <item>
             <spacer name="verticalSpacer">
@@ -578,11 +270,102 @@
             </spacer>
            </item>
           </layout>
-         </item>
-         <item>
-          <layout class="QVBoxLayout" name="plotting_layout" stretch="7,0,2">
+         </widget>
+        </item>
+        <item>
+         <widget class="QWidget" name="widget_3" native="true">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>4</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout">
+           <item>
+            <widget class="QWidget" name="widget_2" native="true">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <layout class="QHBoxLayout" name="horizontalLayout_3">
+              <item>
+               <widget class="QLabel" name="label_2">
+                <property name="font">
+                 <font/>
+                </property>
+                <property name="text">
+                 <string>Monitor</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="DeviceComboBox" name="device_combobox_2"/>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_3">
+                <property name="font">
+                 <font/>
+                </property>
+                <property name="text">
+                 <string>LMFit Model</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="DapComboBox" name="dap_combo_box"/>
+              </item>
+              <item>
+               <widget class="QLabel" name="label">
+                <property name="text">
+                 <string>Enable ROI</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="ToggleSwitch" name="toggle_switch">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                  <horstretch>3</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="toolTip">
+                 <string>Activate linear region select for LMFit</string>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::LayoutDirection::LeftToRight</enum>
+                </property>
+                <property name="checked" stdset="0">
+                 <bool>false</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_8">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
+           </item>
            <item>
             <widget class="BECWaveformWidget" name="bec_waveform_widget">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>1</verstretch>
+              </sizepolicy>
+             </property>
              <property name="minimumSize">
               <size>
                <width>600</width>
@@ -595,104 +378,65 @@
             </widget>
            </item>
            <item>
-            <widget class="ToggleSwitch" name="toggle_switch">
+            <widget class="LMFitDialog" name="lm_fit_dialog">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-               <horstretch>3</horstretch>
+              <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+               <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
-             <property name="toolTip">
-              <string>Activate linear region select for LMFit</string>
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>190</height>
+              </size>
              </property>
-             <property name="layoutDirection">
-              <enum>Qt::LayoutDirection::LeftToRight</enum>
+             <property name="always_show_latest" stdset="0">
+              <bool>true</bool>
              </property>
-             <property name="checked" stdset="0">
-              <bool>false</bool>
+             <property name="hide_curve_selection" stdset="0">
+              <bool>true</bool>
+             </property>
+             <property name="hide_summary" stdset="0">
+              <bool>true</bool>
              </property>
             </widget>
            </item>
-           <item>
-            <layout class="QHBoxLayout" name="fit_dialog_layout" stretch="4">
-             <item>
-              <widget class="LMFitDialog" name="lm_fit_dialog">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>190</height>
-                </size>
-               </property>
-               <property name="always_show_latest" stdset="0">
-                <bool>true</bool>
-               </property>
-               <property name="hide_curve_selection" stdset="0">
-                <bool>true</bool>
-               </property>
-               <property name="hide_summary" stdset="0">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
           </layout>
-         </item>
-        </layout>
-       </widget>
-       <widget class="QWidget" name="tab_2">
-        <attribute name="title">
-         <string>Logbook</string>
-        </attribute>
-        <layout class="QHBoxLayout" name="horizontalLayout_4">
-         <property name="leftMargin">
-          <number>2</number>
-         </property>
-         <property name="topMargin">
-          <number>2</number>
-         </property>
-         <property name="rightMargin">
-          <number>2</number>
-         </property>
-         <property name="bottomMargin">
-          <number>2</number>
-         </property>
-         <item>
-          <widget class="WebsiteWidget" name="website_widget">
-           <property name="url" stdset="0">
-            <string>https://scilog.psi.ch/login</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
+         </widget>
+        </item>
+       </layout>
       </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <widget class="BECProgressBar" name="bec_progress_bar">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>25</height>
-      </size>
-     </property>
-     <property name="maximumSize">
-      <size>
-       <width>16777215</width>
-       <height>25</height>
-      </size>
-     </property>
-    </widget>
-   </item>
-  </layout>
+      <widget class="QWidget" name="tab_2">
+       <attribute name="title">
+        <string>Logbook</string>
+       </attribute>
+       <layout class="QHBoxLayout" name="horizontalLayout_4">
+        <property name="leftMargin">
+         <number>2</number>
+        </property>
+        <property name="topMargin">
+         <number>2</number>
+        </property>
+        <property name="rightMargin">
+         <number>2</number>
+        </property>
+        <property name="bottomMargin">
+         <number>2</number>
+        </property>
+        <item>
+         <widget class="WebsiteWidget" name="website_widget">
+          <property name="url" stdset="0">
+           <string>https://scilog.psi.ch/login</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
  </widget>
  <customwidgets>
   <customwidget>
@@ -726,6 +470,11 @@
    <header>lm_fit_dialog</header>
   </customwidget>
   <customwidget>
+   <class>PositionerGroup</class>
+   <extends>QWidget</extends>
+   <header>positioner_group</header>
+  </customwidget>
+  <customwidget>
    <class>ScanControl</class>
    <extends>QWidget</extends>
    <header>scan_control</header>
@@ -755,90 +504,9 @@
    <extends>QWidget</extends>
    <header>dap_combo_box</header>
   </customwidget>
-  <customwidget>
-   <class>PositionerBox</class>
-   <extends>QWidget</extends>
-   <header>positioner_box</header>
-  </customwidget>
  </customwidgets>
- <tabstops>
-  <tabstop>device_combobox</tabstop>
-  <tabstop>device_combobox_2</tabstop>
-  <tabstop>tabWidget_2</tabstop>
-  <tabstop>linescan_start</tabstop>
-  <tabstop>linescan_stop</tabstop>
-  <tabstop>linescan_step</tabstop>
-  <tabstop>linescan_relative</tabstop>
-  <tabstop>linescan_exp_time</tabstop>
-  <tabstop>linescan_step_2</tabstop>
-  <tabstop>scan_button</tabstop>
- </tabstops>
  <resources/>
  <connections>
-  <connection>
-   <sender>device_combobox_2</sender>
-   <signal>currentTextChanged(QString)</signal>
-   <receiver>dap_combo_box</receiver>
-   <slot>select_y_axis(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>297</x>
-     <y>170</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>467</x>
-     <y>170</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>dap_combo_box</sender>
-   <signal>new_dap_config(QString,QString,QString)</signal>
-   <receiver>bec_waveform_widget</receiver>
-   <slot>add_dap(QString,QString,QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>467</x>
-     <y>170</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1099</x>
-     <y>221</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>scan_button</sender>
-   <signal>clicked()</signal>
-   <receiver>scan_control</receiver>
-   <slot>run_scan()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>455</x>
-     <y>511</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>16</x>
-     <y>441</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>device_combobox_2</sender>
-   <signal>currentTextChanged(QString)</signal>
-   <receiver>bec_waveform_widget</receiver>
-   <slot>plot(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>297</x>
-     <y>170</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1099</x>
-     <y>201</y>
-    </hint>
-   </hints>
-  </connection>
   <connection>
    <sender>toggle_switch</sender>
    <signal>enabled(bool)</signal>
@@ -872,27 +540,26 @@
    </hints>
   </connection>
   <connection>
-   <sender>device_combobox</sender>
+   <sender>device_combobox_2</sender>
    <signal>currentTextChanged(QString)</signal>
-   <receiver>positioner_box</receiver>
-   <slot>set_positioner(QString)</slot>
+   <receiver>bec_waveform_widget</receiver>
+   <slot>plot(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>109</x>
-     <y>155</y>
+     <x>297</x>
+     <y>170</y>
     </hint>
     <hint type="destinationlabel">
-     <x>160</x>
-     <y>286</y>
+     <x>1099</x>
+     <y>201</y>
     </hint>
    </hints>
   </connection>
-  <!--
   <connection>
-   <sender>device_combobox</sender>
+   <sender>device_combobox_2</sender>
    <signal>currentTextChanged(QString)</signal>
-   <receiver>bec_waveform_widget</receiver>
-   <slot>set_x(QString)</slot>
+   <receiver>dap_combo_box</receiver>
+   <slot>select_y_axis(QString)</slot>
    <hints>
     <hint type="sourcelabel">
      <x>297</x>
@@ -904,7 +571,22 @@
     </hint>
    </hints>
   </connection>
-  -->
+  <connection>
+   <sender>dap_combo_box</sender>
+   <signal>new_dap_config(QString,QString,QString)</signal>
+   <receiver>bec_waveform_widget</receiver>
+   <slot>add_dap(QString,QString,QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>467</x>
+     <y>170</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1099</x>
+     <y>221</y>
+    </hint>
+   </hints>
+  </connection>
   <connection>
    <sender>scan_control</sender>
    <signal>scan_axis(QString,double,double)</signal>
@@ -934,6 +616,22 @@
     <hint type="destinationlabel">
      <x>909</x>
      <y>189</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>scan_control</sender>
+   <signal>device_selected(QString)</signal>
+   <receiver>positioner_group</receiver>
+   <slot>set_positioners(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>227</x>
+     <y>337</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>227</x>
+     <y>676</y>
     </hint>
    </hints>
   </connection>
