@@ -15,47 +15,65 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,0,0,0,0,1">
+    <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,0,0,0,0,0,0,0,0,0,1">
      <item>
       <widget class="DarkModeButton" name="dark_mode_button"/>
      </item>
      <item>
-      <widget class="QRadioButton" name="radioButton_2">
-       <property name="enabled">
-        <bool>false</bool>
+      <spacer name="horizontalSpacer_6">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
        </property>
-       <property name="text">
-        <string>BEC Server State</string>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
        </property>
-       <property name="checkable">
+      </spacer>
+     </item>
+     <item>
+      <widget class="BECStatusBox" name="bec_status_box">
+       <property name="compact" stdset="0">
         <bool>true</bool>
        </property>
-       <property name="checked">
-        <bool>true</bool>
-       </property>
-       <property name="autoExclusive">
-        <bool>false</bool>
+       <property name="label" stdset="0">
+        <string>BEC Servers</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QRadioButton" name="radioButton_4">
-       <property name="enabled">
-        <bool>false</bool>
+      <spacer name="horizontalSpacer_4">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
        </property>
-       <property name="text">
-        <string>BEC Queue</string>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
        </property>
-       <property name="checkable">
+      </spacer>
+     </item>
+     <item>
+      <widget class="BECQueue" name="bec_queue">
+       <property name="compact" stdset="0">
         <bool>true</bool>
-       </property>
-       <property name="checked">
-        <bool>true</bool>
-       </property>
-       <property name="autoExclusive">
-        <bool>false</bool>
        </property>
       </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_3">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
      </item>
      <item>
       <widget class="QRadioButton" name="radioButton">
@@ -77,6 +95,19 @@
       </widget>
      </item>
      <item>
+      <spacer name="horizontalSpacer_5">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
       <widget class="QRadioButton" name="radioButton_3">
        <property name="enabled">
         <bool>false</bool>
@@ -94,6 +125,19 @@
         <bool>false</bool>
        </property>
       </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_7">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
      </item>
      <item>
       <widget class="StopButton" name="stop_button">
@@ -652,44 +696,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>DapComboBox</class>
-   <extends>QWidget</extends>
-   <header>dap_combo_box</header>
-  </customwidget>
-  <customwidget>
-   <class>StopButton</class>
-   <extends>QWidget</extends>
-   <header>stop_button</header>
-  </customwidget>
-  <customwidget>
-   <class>WebsiteWidget</class>
-   <extends>QWidget</extends>
-   <header>website_widget</header>
-  </customwidget>
-  <customwidget>
-   <class>ScanControl</class>
-   <extends>QWidget</extends>
-   <header>scan_control</header>
-  </customwidget>
-  <customwidget>
    <class>ToggleSwitch</class>
    <extends>QWidget</extends>
    <header>toggle_switch</header>
-  </customwidget>
-  <customwidget>
-   <class>PositionerBox</class>
-   <extends>QWidget</extends>
-   <header>positioner_box</header>
-  </customwidget>
-  <customwidget>
-   <class>BECProgressBar</class>
-   <extends>QWidget</extends>
-   <header>bec_progress_bar</header>
-  </customwidget>
-  <customwidget>
-   <class>DarkModeButton</class>
-   <extends>QWidget</extends>
-   <header>dark_mode_button</header>
   </customwidget>
   <customwidget>
    <class>BECWaveformWidget</class>
@@ -697,14 +706,59 @@
    <header>bec_waveform_widget</header>
   </customwidget>
   <customwidget>
-   <class>DeviceComboBox</class>
-   <extends>QComboBox</extends>
-   <header>device_combobox</header>
+   <class>BECStatusBox</class>
+   <extends>QWidget</extends>
+   <header>bec_status_box</header>
+  </customwidget>
+  <customwidget>
+   <class>WebsiteWidget</class>
+   <extends>QWidget</extends>
+   <header>website_widget</header>
+  </customwidget>
+  <customwidget>
+   <class>StopButton</class>
+   <extends>QWidget</extends>
+   <header>stop_button</header>
   </customwidget>
   <customwidget>
    <class>LMFitDialog</class>
    <extends>QWidget</extends>
    <header>lm_fit_dialog</header>
+  </customwidget>
+  <customwidget>
+   <class>ScanControl</class>
+   <extends>QWidget</extends>
+   <header>scan_control</header>
+  </customwidget>
+  <customwidget>
+   <class>BECQueue</class>
+   <extends>QWidget</extends>
+   <header>bec_queue</header>
+  </customwidget>
+  <customwidget>
+   <class>BECProgressBar</class>
+   <extends>QWidget</extends>
+   <header>bec_progress_bar</header>
+  </customwidget>
+  <customwidget>
+   <class>DeviceComboBox</class>
+   <extends>QComboBox</extends>
+   <header>device_combobox</header>
+  </customwidget>
+  <customwidget>
+   <class>DarkModeButton</class>
+   <extends>QWidget</extends>
+   <header>dark_mode_button</header>
+  </customwidget>
+  <customwidget>
+   <class>DapComboBox</class>
+   <extends>QWidget</extends>
+   <header>dap_combo_box</header>
+  </customwidget>
+  <customwidget>
+   <class>PositionerBox</class>
+   <extends>QWidget</extends>
+   <header>positioner_box</header>
   </customwidget>
  </customwidgets>
  <tabstops>
