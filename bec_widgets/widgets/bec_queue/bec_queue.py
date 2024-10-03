@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from bec_lib.endpoints import MessageEndpoints
 from bec_qthemes import material_icon
-from qtpy.QtCore import Property, Qt, Slot
+from qtpy.QtCore import Property, Qt, Signal, Slot
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QHeaderView, QLabel, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 
+from bec_widgets.qt_utils.compact_popup import CompactPopupWidget
 from bec_widgets.qt_utils.toolbar import ModularToolBar, SeparatorAction, WidgetAction
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
@@ -15,7 +16,7 @@ from bec_widgets.widgets.button_resume.button_resume import ResumeButton
 from bec_widgets.widgets.stop_button.stop_button import StopButton
 
 
-class BECQueue(BECWidget, QWidget):
+class BECQueue(BECWidget, CompactPopupWidget):
     """
     Widget to display the BEC queue.
     """
@@ -31,6 +32,8 @@ class BECQueue(BECWidget, QWidget):
         "COMPLETED": "blue",
     }
 
+    queue_busy = Signal(bool)
+
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -40,21 +43,23 @@ class BECQueue(BECWidget, QWidget):
         refresh_upon_start: bool = True,
     ):
         super().__init__(client, config, gui_id)
-        QWidget.__init__(self, parent=parent)
-        self.layout = QVBoxLayout(self)
+        CompactPopupWidget.__init__(self, parent=parent, layout=QVBoxLayout)
         self.layout.setSpacing(0)
         self.layout.setContentsMargins(0, 0, 0, 0)
 
         # Set up the toolbar
         self.set_toolbar()
-
         # Set up the table
         self.table = QTableWidget(self)
-        self.layout.addWidget(self.table)
+        # self.layout.addWidget(self.table)
         self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels(["Scan Number", "Type", "Status", "Cancel"])
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)
+
+        self.addWidget(self.table)
+        self.label = "BEC Queue"
+        self.tooltip = "BEC Queue status"
 
         self.bec_dispatcher.connect_slot(self.update_queue, MessageEndpoints.scan_queue_status())
         self.reset_content()
@@ -78,7 +83,7 @@ class BECQueue(BECWidget, QWidget):
             target_widget=self,
         )
 
-        self.layout.addWidget(self.toolbar)
+        self.addWidget(self.toolbar)
 
     @Property(bool)
     def hide_toolbar(self):
@@ -109,6 +114,9 @@ class BECQueue(BECWidget, QWidget):
         Refresh the queue.
         """
         msg = self.client.connector.get(MessageEndpoints.scan_queue_status())
+        if msg is None:
+            # msg is None if no scan has been run yet (fresh start)
+            return
         self.update_queue(msg.content, msg.metadata)
 
     @Slot(dict, dict)
@@ -152,6 +160,13 @@ class BECQueue(BECWidget, QWidget):
             if scan_ids:
                 scan_ids = ", ".join(scan_ids)
             self.set_row(index, scan_numbers, scan_types, status, scan_ids)
+        busy = (
+            False
+            if all(item.get("status") in ("STOPPED", "COMPLETED", "IDLE") for item in queue_info)
+            else True
+        )
+        self.set_global_state("warning" if busy else "default")
+        self.queue_busy.emit(busy)
 
     def format_item(self, content: str, status=False) -> QTableWidgetItem:
         """

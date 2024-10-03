@@ -13,8 +13,8 @@ from bec_lib.utils.import_utils import lazy_import_from
 from qtpy.QtCore import QObject, QTimer, Signal, Slot
 from qtpy.QtWidgets import QHBoxLayout, QTreeWidget, QTreeWidgetItem, QWidget
 
+from bec_widgets.qt_utils.compact_popup import CompactPopupWidget
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import set_theme
 from bec_widgets.widgets.bec_status_box.status_item import StatusItem
 
 if TYPE_CHECKING:
@@ -64,7 +64,7 @@ class BECServiceStatusMixin(QObject):
         self._service_update_timer.deleteLater()
 
 
-class BECStatusBox(BECWidget, QWidget):
+class BECStatusBox(BECWidget, CompactPopupWidget):
     """An autonomous widget to display the status of BEC services.
 
     Args:
@@ -83,15 +83,13 @@ class BECStatusBox(BECWidget, QWidget):
     def __init__(
         self,
         parent=None,
-        box_name: str = "BEC Server",
+        box_name: str = "BEC Servers",
         client: BECClient = None,
         bec_service_status_mixin: BECServiceStatusMixin = None,
         gui_id: str = None,
     ):
         super().__init__(client=client, gui_id=gui_id)
-        QWidget.__init__(self, parent=parent)
-        self.tree = QTreeWidget(self)
-        self.layout = QHBoxLayout(self)
+        CompactPopupWidget.__init__(self, parent=parent, layout=QHBoxLayout)
 
         self.box_name = box_name
         self.status_container = defaultdict(lambda: {"info": None, "item": None, "widget": None})
@@ -100,11 +98,13 @@ class BECStatusBox(BECWidget, QWidget):
             bec_service_status_mixin = BECServiceStatusMixin(self, client=self.client)
         self.bec_service_status = bec_service_status_mixin
 
+        self.label = box_name
+        self.tooltip = "BEC servers health status"
         self.init_ui()
         self.bec_service_status.services_update.connect(self.update_service_status)
         self.bec_core_state.connect(self.update_top_item_status)
         self.tree.itemDoubleClicked.connect(self.on_tree_item_double_clicked)
-        self.layout.addWidget(self.tree)
+        self.addWidget(self.tree)
 
     def init_ui(self) -> None:
         """Init the UI for the BECStatusBox widget, should only take place once."""
@@ -121,6 +121,7 @@ class BECStatusBox(BECWidget, QWidget):
 
     def init_ui_tree_widget(self) -> None:
         """Initialise the tree widget for the status box."""
+        self.tree = QTreeWidget(self)
         self.tree.setHeaderHidden(True)
         # TODO probably here is a problem still with setting the stylesheet
         self.tree.setStyleSheet(
@@ -163,6 +164,7 @@ class BECStatusBox(BECWidget, QWidget):
             status (BECStatus): The state of the core services.
         """
         self.status_container[self.box_name]["info"].status = status
+        self.set_global_state("emergency" if status == "NOTCONNECTED" else "success")
         self.service_update.emit(self.status_container[self.box_name]["info"])
 
     def _update_status_container(
@@ -307,6 +309,8 @@ if __name__ == "__main__":  # pragma: no cover
     import sys
 
     from qtpy.QtWidgets import QApplication
+
+    from bec_widgets.utils.colors import set_theme
 
     app = QApplication(sys.argv)
     set_theme("dark")
