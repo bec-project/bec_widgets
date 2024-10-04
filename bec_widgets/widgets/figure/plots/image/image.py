@@ -7,10 +7,10 @@ import numpy as np
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from pydantic import BaseModel, Field, ValidationError
-from qtpy.QtCore import QThread
+from qtpy.QtCore import QThread, Slot
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
+# from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
 from bec_widgets.utils import EntryValidator
 from bec_widgets.widgets.figure.plots.image.image_item import BECImageItem, ImageItemConfig
 from bec_widgets.widgets.figure.plots.image.image_processor import (
@@ -80,6 +80,8 @@ class BECImageShow(BECPlotBase):
         )
         # Get bec shortcuts dev, scans, queue, scan_storage, dap
         self.single_image = single_image
+        self.image_type = "device_monitor_2d"
+        self.scan_id = None
         self.get_bec_shortcuts()
         self.entry_validator = EntryValidator(self.dev)
         self._images = defaultdict(dict)
@@ -105,7 +107,7 @@ class BECImageShow(BECPlotBase):
 
     def find_image_by_monitor(self, item_id: str) -> BECImageItem:
         """
-        Find the widget by its gui_id.
+        Find the image item by its gui_id.
 
         Args:
             item_id(str): The gui_id of the widget.
@@ -230,6 +232,7 @@ class BECImageShow(BECPlotBase):
     def image(
         self,
         monitor: str,
+        monitor_type: Literal["1d", "2d"] = "2d",
         color_map: Optional[str] = "magma",
         color_bar: Optional[Literal["simple", "full"]] = "full",
         downsample: Optional[bool] = True,
@@ -243,6 +246,7 @@ class BECImageShow(BECPlotBase):
 
         Args:
             monitor(str): The name of the monitor to display.
+            monitor_type(Literal["1d","2d"]): The type of monitor to display.
             color_bar(Literal["simple","full"]): The type of color bar to display.
             color_map(str): The color map to use for the image.
             data(np.ndarray): Custom data to display.
@@ -251,7 +255,12 @@ class BECImageShow(BECPlotBase):
         Returns:
             BECImageItem: The image item.
         """
-        image_source = "device_monitor_2d"
+        if monitor_type == "1d":
+            image_source = "device_monitor_1d"
+            self.image_type = "device_monitor_1d"
+        elif monitor_type == "2d":
+            image_source = "device_monitor_2d"
+            self.image_type = "device_monitor_2d"
 
         image_exits = self._check_image_id(monitor, self._images)
         if image_exits:
@@ -292,7 +301,6 @@ class BECImageShow(BECPlotBase):
         **kwargs,
     ):
         image_source = "custom"
-        # image_source = "device_monitor_2d"
 
         image_exits = self._check_image_id(name, self._images)
         if image_exits:
@@ -516,9 +524,58 @@ class BECImageShow(BECPlotBase):
         """
         data = msg["data"]
         device = msg["device"]
-        image = self._images["device_monitor_2d"][device]
-        image.raw_data = data
-        self.process_image(device, image, data)
+        if self.image_type == "device_monitor_1d":
+            image = self._images["device_monitor_1d"][device]
+            current_scan_id = metadata.get("scan_id", None)
+            if current_scan_id is None:
+                return
+            if current_scan_id != self.scan_id:
+                self.reset()
+                self.scan_id = current_scan_id
+                image.image_buffer_list = []
+                image.max_len = 0
+            image_buffer = self.adjust_image_buffer(image, data)
+            image.raw_data = image_buffer
+            self.process_image(device, image, image_buffer)
+        elif self.image_type == "device_monitor_2d":
+            image = self._images["device_monitor_2d"][device]
+            image.raw_data = data
+            self.process_image(device, image, data)
+
+    def adjust_image_buffer(self, image: BECImageItem, new_data: np.ndarray) -> np.ndarray:
+        """
+        Adjusts the image buffer to accommodate the new data, ensuring that all rows have the same length.
+
+        Args:
+            image: The image object (used to store buffer list and max_len).
+            new_data (np.ndarray): The new incoming 1D waveform data.
+
+        Returns:
+            np.ndarray: The updated image buffer with adjusted shapes.
+        """
+        new_len = new_data.shape[0]
+        if not hasattr(image, "image_buffer_list"):
+            image.image_buffer_list = []
+            image.max_len = 0
+
+        if new_len > image.max_len:
+            image.max_len = new_len
+            for i in range(len(image.image_buffer_list)):
+                wf = image.image_buffer_list[i]
+                pad_width = image.max_len - wf.shape[0]
+                if pad_width > 0:
+                    image.image_buffer_list[i] = np.pad(
+                        wf, (0, pad_width), mode="constant", constant_values=0
+                    )
+            image.image_buffer_list.append(new_data)
+        else:
+            pad_width = image.max_len - new_len
+            if pad_width > 0:
+                new_data = np.pad(new_data, (0, pad_width), mode="constant", constant_values=0)
+            image.image_buffer_list.append(new_data)
+
+        image_buffer = np.array(image.image_buffer_list)
+        return image_buffer
 
     @Slot(str, np.ndarray)
     def update_image(self, device: str, data: np.ndarray):
@@ -529,7 +586,7 @@ class BECImageShow(BECPlotBase):
             device(str): The name of the device.
             data(np.ndarray): The data to be updated.
         """
-        image_to_update = self._images["device_monitor_2d"][device]
+        image_to_update = self._images[self.image_type][device]
         image_to_update.updateImage(data, autoLevels=image_to_update.config.autorange)
 
     @Slot(str, ImageStats)
@@ -540,7 +597,7 @@ class BECImageShow(BECPlotBase):
         Args:
             stats(ImageStats): The statistics of the image.
         """
-        image_to_update = self._images["device_monitor_2d"][device]
+        image_to_update = self._images[self.image_type][device]
         if image_to_update.config.autorange:
             image_to_update.auto_update_vrange(stats)
 
@@ -553,7 +610,7 @@ class BECImageShow(BECPlotBase):
                 data = image.raw_data
                 self.process_image(image_id, image, data)
 
-    def _connect_device_monitor_2d(self, monitor: str):
+    def _connect_device_monitor(self, monitor: str):
         """
         Connect to the device monitor.
 
@@ -567,28 +624,35 @@ class BECImageShow(BECPlotBase):
             previous_monitor = None
         if previous_monitor and image_item.connected is True:
             self.bec_dispatcher.disconnect_slot(
+                self.on_image_update, MessageEndpoints.device_monitor_1d(previous_monitor)
+            )
+            self.bec_dispatcher.disconnect_slot(
                 self.on_image_update, MessageEndpoints.device_monitor_2d(previous_monitor)
             )
             image_item.connected = False
         if monitor and image_item.connected is False:
             self.entry_validator.validate_monitor(monitor)
-            self.bec_dispatcher.connect_slot(
-                self.on_image_update, MessageEndpoints.device_monitor_2d(monitor)
-            )
+            if self.image_type == "device_monitor_1d":
+                self.bec_dispatcher.connect_slot(
+                    self.on_image_update, MessageEndpoints.device_monitor_1d(monitor)
+                )
+            elif self.image_type == "device_monitor_2d":
+                self.bec_dispatcher.connect_slot(
+                    self.on_image_update, MessageEndpoints.device_monitor_2d(monitor)
+                )
             image_item.set_monitor(monitor)
             image_item.connected = True
 
     def _add_image_object(
         self, source: str, name: str, config: ImageItemConfig, data=None
-    ) -> BECImageItem:  # TODO fix types
+    ) -> BECImageItem:
         config.parent_id = self.gui_id
         if self.single_image is True and len(self.images) > 0:
             self.remove_image(0)
         image = BECImageItem(config=config, parent_image=self)
         self.plot_item.addItem(image)
         self._images[source][name] = image
-        if source == "device_monitor_2d":
-            self._connect_device_monitor_2d(config.monitor)
+        self._connect_device_monitor(config.monitor)
         self.config.images[name] = config
         if data is not None:
             image.setImage(data)
@@ -674,6 +738,9 @@ class BECImageShow(BECPlotBase):
         image = self.find_image_by_monitor(image_id)
         if image:
             self.bec_dispatcher.disconnect_slot(
+                self.on_image_update, MessageEndpoints.device_monitor_1d(image.config.monitor)
+            )
+            self.bec_dispatcher.disconnect_slot(
                 self.on_image_update, MessageEndpoints.device_monitor_2d(image.config.monitor)
             )
 
@@ -681,9 +748,9 @@ class BECImageShow(BECPlotBase):
         """
         Clean up the widget.
         """
-        for monitor in self._images["device_monitor_2d"]:
+        for monitor in self._images[self.image_type]:
             self.bec_dispatcher.disconnect_slot(
-                self.on_image_update, MessageEndpoints.device_monitor_2d(monitor)
+                self.on_image_update, MessageEndpoints.device_monitor_1d(monitor)
             )
         self.images.clear()
 

@@ -7,9 +7,18 @@ from collections import defaultdict
 from typing import Literal
 
 from bec_qthemes._icon.material_icons import material_icon
-from qtpy.QtCore import QSize
+from qtpy.QtCore import QSize, Qt
 from qtpy.QtGui import QAction, QColor, QIcon
-from qtpy.QtWidgets import QHBoxLayout, QLabel, QMenu, QSizePolicy, QToolBar, QToolButton, QWidget
+from qtpy.QtWidgets import (
+    QComboBox,
+    QHBoxLayout,
+    QLabel,
+    QMenu,
+    QSizePolicy,
+    QToolBar,
+    QToolButton,
+    QWidget,
+)
 
 import bec_widgets
 
@@ -154,22 +163,52 @@ class WidgetAction(ToolBarAction):
 
     """
 
-    def __init__(self, label: str | None = None, widget: QWidget = None):
-        super().__init__()
+    def __init__(self, label: str | None = None, widget: QWidget = None, parent=None):
+        super().__init__(parent)
         self.label = label
         self.widget = widget
 
-    def add_to_toolbar(self, toolbar, target):
-        widget = QWidget()
-        layout = QHBoxLayout(widget)
+    def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
+        container = QWidget()
+        layout = QHBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(5)
+
         if self.label is not None:
-            label = QLabel(f"{self.label}")
-            label.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
-            layout.addWidget(label)
-        self.widget.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+            label_widget = QLabel(f"{self.label}")
+            label_widget.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+            label_widget.setAlignment(Qt.AlignVCenter | Qt.AlignRight)
+            layout.addWidget(label_widget)
+
+        if isinstance(self.widget, QComboBox):
+            self.widget.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+
+            size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.widget.setSizePolicy(size_policy)
+
+            self.widget.setMinimumWidth(self.calculate_minimum_width(self.widget))
+
+        else:
+            self.widget.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+
         layout.addWidget(self.widget)
-        toolbar.addWidget(widget)
+
+        toolbar.addWidget(container)
+
+    @staticmethod
+    def calculate_minimum_width(combo_box: QComboBox) -> int:
+        """
+        Calculate the minimum width required to display the longest item in the combo box.
+
+        Args:
+            combo_box (QComboBox): The combo box to calculate the width for.
+
+        Returns:
+            int: The calculated minimum width in pixels.
+        """
+        font_metrics = combo_box.fontMetrics()
+        max_width = max(font_metrics.width(combo_box.itemText(i)) for i in range(combo_box.count()))
+        return max_width + 60
 
 
 class ExpandableMenuAction(ToolBarAction):

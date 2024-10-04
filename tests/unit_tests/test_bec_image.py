@@ -12,11 +12,6 @@ from .client_mocks import mocked_client
 from .conftest import create_widget
 
 
-@pytest.fixture
-def bec_image_show(bec_figure):
-    yield bec_figure.image("eiger")
-
-
 def test_on_image_update(qtbot, mocked_client):
     bec_image_show = create_widget(qtbot, BECFigure, client=mocked_client).image("eiger")
     data = np.random.rand(100, 100)
@@ -61,3 +56,45 @@ def test_autorange_on_image_update(qtbot, mocked_client):
     vmin = max(np.mean(data) - 2 * np.std(data), 0)
     vmax = np.mean(data) + 2 * np.std(data)
     assert np.isclose(img.color_bar.getLevels(), (vmin, vmax), rtol=(1e-5, 1e-5)).all()
+
+
+def test_on_image_update_variable_length(qtbot, mocked_client):
+    """
+    Test the on_image_update slot with data arrays of varying lengths for 'device_monitor_1d' image type.
+    """
+    # Create the widget and set image_type to 'device_monitor_1d'
+    bec_image_show = create_widget(qtbot, BECFigure, client=mocked_client).image("waveform1d", "1d")
+
+    # Generate data arrays of varying lengths
+    data_lengths = [10, 15, 12, 20, 5, 8, 1, 21]
+    data_arrays = [np.random.rand(length) for length in data_lengths]
+
+    # Simulate sending messages with these data arrays
+    device = "waveform1d"
+    for data in data_arrays:
+        msg = messages.DeviceMonitor1DMessage(
+            device=device, data=data, metadata={"scan_id": "12345"}
+        )
+        bec_image_show.on_image_update(msg.content, msg.metadata)
+
+    # After processing all data, retrieve the image and its data
+    img = bec_image_show.images[0]
+    image_buffer = img.get_data()
+
+    # The image_buffer should be a 2D array with number of rows equal to number of data arrays
+    # and number of columns equal to the maximum data length
+    expected_num_rows = len(data_arrays)
+    expected_num_cols = max(data_lengths)
+    assert image_buffer.shape == (
+        expected_num_rows,
+        expected_num_cols,
+    ), f"Expected image buffer shape {(expected_num_rows, expected_num_cols)}, got {image_buffer.shape}"
+
+    # Check that each row in image_buffer corresponds to the padded data arrays
+    for i, data in enumerate(data_arrays):
+        padded_data = np.pad(
+            data, (0, expected_num_cols - len(data)), mode="constant", constant_values=0
+        )
+        assert np.array_equal(
+            image_buffer[i], padded_data
+        ), f"Row {i} in image buffer does not match expected padded data"

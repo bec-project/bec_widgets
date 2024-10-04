@@ -321,6 +321,7 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
         self,
         image,
         monitor: str = None,
+        monitor_type: Literal["1d", "2d"] = "2d",
         color_bar: Literal["simple", "full"] = "full",
         color_map: str = "magma",
         data: np.ndarray = None,
@@ -337,7 +338,13 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
             data (np.ndarray): Custom data to display.
         """
         if monitor is not None and data is None:
-            image.image(monitor=monitor, color_map=color_map, vrange=vrange, color_bar=color_bar)
+            image.image(
+                monitor=monitor,
+                monitor_type=monitor_type,
+                color_map=color_map,
+                vrange=vrange,
+                color_bar=color_bar,
+            )
         elif data is not None and monitor is None:
             image.add_custom_image(
                 name="custom", data=data, color_map=color_map, vrange=vrange, color_bar=color_bar
@@ -355,6 +362,7 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
     def image(
         self,
         monitor: str = None,
+        monitor_type: Literal["1d", "2d"] = "2d",
         color_bar: Literal["simple", "full"] = "full",
         color_map: str = "magma",
         data: np.ndarray = None,
@@ -393,6 +401,7 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
         image = self._init_image(
             image=image,
             monitor=monitor,
+            monitor_type=monitor_type,
             color_bar=color_bar,
             color_map=color_map,
             data=data,

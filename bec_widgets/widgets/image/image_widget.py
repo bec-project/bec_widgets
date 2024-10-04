@@ -4,7 +4,7 @@ import sys
 from typing import Literal, Optional
 
 import pyqtgraph as pg
-from qtpy.QtWidgets import QVBoxLayout, QWidget
+from qtpy.QtWidgets import QComboBox, QVBoxLayout, QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeSlot, WarningPopupUtility
 from bec_widgets.qt_utils.settings_dialog import SettingsDialog
@@ -13,6 +13,7 @@ from bec_widgets.qt_utils.toolbar import (
     MaterialIconAction,
     ModularToolBar,
     SeparatorAction,
+    WidgetAction,
 )
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.device_combobox.device_combobox import DeviceComboBox
@@ -63,11 +64,14 @@ class BECImageWidget(BECWidget, QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
 
         self.fig = BECFigure()
+        self.dim_combo_box = QComboBox()
+        self.dim_combo_box.addItems(["1d", "2d"])
         self.toolbar = ModularToolBar(
             actions={
                 "monitor": DeviceSelectionAction(
                     "Monitor:", DeviceComboBox(device_filter="Device")
                 ),
+                "monitor_type": WidgetAction(widget=self.dim_combo_box),
                 "connect": MaterialIconAction(icon_name="link", tooltip="Connect Device"),
                 "separator_0": SeparatorAction(),
                 "save": MaterialIconAction(icon_name="save", tooltip="Open Export Dialog"),
@@ -163,7 +167,8 @@ class BECImageWidget(BECWidget, QWidget):
     def _connect_action(self):
         monitor_combo = self.toolbar.widgets["monitor"].device_combobox
         monitor_name = monitor_combo.currentText()
-        self.image(monitor_name)
+        monitor_type = self.toolbar.widgets["monitor_type"].widget.currentText()
+        self.image(monitor=monitor_name, monitor_type=monitor_type)
         monitor_combo.setStyleSheet("QComboBox { background-color: " "; }")
 
     def show_axis_settings(self):
@@ -182,6 +187,7 @@ class BECImageWidget(BECWidget, QWidget):
     def image(
         self,
         monitor: str,
+        monitor_type: Optional[Literal["1d", "2d"]] = "2d",
         color_map: Optional[str] = "magma",
         color_bar: Optional[Literal["simple", "full"]] = "full",
         downsample: Optional[bool] = True,
@@ -195,8 +201,14 @@ class BECImageWidget(BECWidget, QWidget):
             self.toolbar.widgets["monitor"].device_combobox.setStyleSheet(
                 "QComboBox {{ background-color: " "; }}"
             )
+        if self.toolbar.widgets["monitor_type"].widget.currentText() != monitor_type:
+            self.toolbar.widgets["monitor_type"].widget.setCurrentText(monitor_type)
+            self.toolbar.widgets["monitor_type"].widget.setStyleSheet(
+                "QComboBox {{ background-color: " "; }}"
+            )
         return self._image.image(
             monitor=monitor,
+            monitor_type=monitor_type,
             color_map=color_map,
             color_bar=color_bar,
             downsample=downsample,
@@ -486,6 +498,7 @@ def main():  # pragma: no cover
 
     app = QApplication(sys.argv)
     widget = BECImageWidget()
+    widget.image("waveform", "1d")
     widget.show()
     sys.exit(app.exec_())
 

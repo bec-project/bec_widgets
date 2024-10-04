@@ -47,14 +47,19 @@ def test_image_widget_init(image_widget):
 # Toolbar Actions
 ###################################
 def test_toolbar_connect_action(image_widget, mock_image, qtbot):
-    combo = image_widget.toolbar.widgets["monitor"].device_combobox
-    combo.setCurrentText("eiger")
+    combo_device = image_widget.toolbar.widgets["monitor"].device_combobox
+    combo_device.setCurrentText("eiger")
     qtbot.wait(200)
-    assert combo.currentText() == "eiger"
+    assert combo_device.currentText() == "eiger"
+    combo_dim = image_widget.toolbar.widgets["monitor_type"].widget
+    combo_dim.setCurrentText("2d")
+    qtbot.wait(200)
+    assert combo_dim.currentText() == "2d"
     action = image_widget.toolbar.widgets["connect"].action
     action.trigger()
     image_widget._image.image.assert_called_once_with(
         monitor="eiger",
+        monitor_type="2d",
         color_map="magma",
         color_bar="full",
         downsample=True,
@@ -146,9 +151,10 @@ def test_image_toolbar_rotation(image_widget, mock_image):
 
 
 def test_image_set_image(image_widget, mock_image):
-    image_widget.image(monitor="image")
+    image_widget.image(monitor="image", monitor_type="2d")
     image_widget._image.image.assert_called_once_with(
         monitor="image",
+        monitor_type="2d",
         color_map="magma",
         color_bar="full",
         downsample=True,

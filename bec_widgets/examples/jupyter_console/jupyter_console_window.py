@@ -164,7 +164,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
 
         self.d1 = self.dock.add_dock(name="dock_1", position="right")
         self.im = self.d1.add_widget("BECImageWidget")
-        self.im.image("eiger")
+        self.im.image("waveform", "1d")
 
         self.d2 = self.dock.add_dock(name="dock_2", position="bottom")
         self.wf = self.d2.add_widget("BECWaveformWidget", row=0, col=0)

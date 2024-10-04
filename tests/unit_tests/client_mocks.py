@@ -139,6 +139,7 @@ DEVICES = [
     FakeDevice("bpm3a"),
     FakeDevice("bpm3i"),
     FakeDevice("eiger"),
+    FakeDevice("waveform1d"),
     FakeDevice("async_device", readout_priority=ReadoutPriority.ASYNC),
     Positioner("test", limits=[-10, 10], read_value=2.0),
     Device("test_device"),
