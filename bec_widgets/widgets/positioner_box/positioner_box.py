@@ -18,6 +18,7 @@ from bec_widgets.qt_utils.compact_popup import CompactPopupWidget
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_accent_colors, set_theme
+from bec_widgets.widgets.base_classes.device_input_base import BECDeviceFilter
 from bec_widgets.widgets.device_line_edit.device_line_edit import DeviceLineEdit
 
 logger = bec_logger.logger
@@ -97,7 +98,9 @@ class PositionerBox(BECWidget, CompactPopupWidget):
         self._dialog = QDialog(self)
         self._dialog.setWindowTitle("Positioner Selection")
         layout = QVBoxLayout()
-        line_edit = DeviceLineEdit(self, client=self.client, device_filter="Positioner")
+        line_edit = DeviceLineEdit(
+            self, client=self.client, device_filter=[BECDeviceFilter.POSITIONER]
+        )
         line_edit.textChanged.connect(self.set_positioner)
         layout.addWidget(line_edit)
         close_button = QPushButton("Close")

@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from bec_widgets.widgets.base_classes.device_input_base import BECDeviceFilter
 from bec_widgets.widgets.motor_map.motor_map_dialog.motor_map_settings import MotorMapSettings
 from bec_widgets.widgets.motor_map.motor_map_widget import BECMotorMapWidget
 
@@ -11,8 +12,8 @@ from .client_mocks import mocked_client
 @pytest.fixture
 def motor_map_widget(qtbot, mocked_client):
     widget = BECMotorMapWidget(client=mocked_client())
-    widget.toolbar.widgets["motor_x"].device_combobox.set_device_filter("FakePositioner")
-    widget.toolbar.widgets["motor_y"].device_combobox.set_device_filter("FakePositioner")
+    widget.toolbar.widgets["motor_x"].device_combobox.set_device_filter(BECDeviceFilter.POSITIONER)
+    widget.toolbar.widgets["motor_y"].device_combobox.set_device_filter(BECDeviceFilter.POSITIONER)
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
@@ -35,14 +36,12 @@ def test_motor_map_widget_init(motor_map_widget):
     assert motor_map_widget.toolbar.widgets["connect"].action.isEnabled() == True
     assert motor_map_widget.toolbar.widgets["config"].action.isEnabled() == False
     assert motor_map_widget.toolbar.widgets["history"].action.isEnabled() == False
-    assert (
-        motor_map_widget.toolbar.widgets["motor_x"].device_combobox.config.device_filter
-        == "FakePositioner"
-    )
-    assert (
-        motor_map_widget.toolbar.widgets["motor_y"].device_combobox.config.device_filter
-        == "FakePositioner"
-    )
+    assert motor_map_widget.toolbar.widgets["motor_x"].device_combobox.config.device_filter == [
+        BECDeviceFilter.POSITIONER
+    ]
+    assert motor_map_widget.toolbar.widgets["motor_y"].device_combobox.config.device_filter == [
+        BECDeviceFilter.POSITIONER
+    ]
     assert motor_map_widget.map.motor_x is None
     assert motor_map_widget.map.motor_y is None
 

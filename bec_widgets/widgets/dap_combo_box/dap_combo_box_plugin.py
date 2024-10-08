@@ -27,7 +27,7 @@ class DapComboBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return "BEC Selection Widgets"
+        return "BEC Input Widgets"
 
     def icon(self):
         return designer_material_icon(DapComboBox.ICON_NAME)

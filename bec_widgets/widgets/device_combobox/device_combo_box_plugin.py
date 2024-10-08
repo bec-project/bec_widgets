@@ -31,7 +31,7 @@ class DeviceComboBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return "Device Control"
+        return "BEC Input Widgets"
 
     def icon(self):
         return designer_material_icon(DeviceComboBox.ICON_NAME)

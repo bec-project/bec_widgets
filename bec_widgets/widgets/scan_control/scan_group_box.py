@@ -306,7 +306,7 @@ class ScanGroupBox(QGroupBox):
                 try:  # In case that the bundle size changes
                     widget = self.layout.itemAtPosition(i, j).widget()
                     if isinstance(widget, DeviceLineEdit) and device_object:
-                        value = widget.get_device()
+                        value = widget.get_current_device()
                     else:
                         value = WidgetIO.get_value(widget)
                     args.append(value)

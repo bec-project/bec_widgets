@@ -1,17 +1,12 @@
-from bec_lib.device import ReadoutPriority
-from qtpy.QtCore import QSize
+from qtpy.QtCore import QSize, Slot
 from qtpy.QtGui import QPainter, QPaintEvent, QPen
 from qtpy.QtWidgets import QCompleter, QLineEdit, QSizePolicy
 
 from bec_widgets.utils.colors import get_accent_colors
-from bec_widgets.widgets.base_classes.device_input_base import (
-    BECDeviceFilter,
-    DeviceInputBase,
-    DeviceInputConfig,
-)
+from bec_widgets.widgets.base_classes.device_signal_input_base import DeviceSignalInputBase
 
 
-class DeviceLineEdit(DeviceInputBase, QLineEdit):
+class SignalLineEdit(DeviceSignalInputBase, QLineEdit):
     """
     Line edit widget for device input with autocomplete for device names.
 
@@ -20,60 +15,47 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
         client: BEC client object.
         config: Device input configuration.
         gui_id: GUI ID.
-        device_filter: Device filter, name of the device class from BECDeviceFilter and ReadoutPriority. Check DeviceInputBase for more details.
+        device_filter: Device filter, name of the device class from BECDeviceFilter and BECReadoutPriority. Check DeviceInputBase for more details.
         default: Default device name.
         arg_name: Argument name, can be used for the other widgets which has to call some other function in bec using correct argument names.
     """
 
-    device_selected = Signal(str)
-
-    ICON_NAME = "edit_note"
+    ICON_NAME = "vital_signs"
 
     def __init__(
         self,
         parent=None,
         client=None,
-        config: DeviceInputConfig = None,
+        config: DeviceSignalInputBase = None,
         gui_id: str | None = None,
-        device_filter: BECDeviceFilter | list[BECDeviceFilter] | None = None,
-        readout_priority_filter: (
-            str | ReadoutPriority | list[str] | list[ReadoutPriority] | None
-        ) = None,
-        device_list: list[str] | None = None,
+        device: str | None = None,
+        signal_filter: str | list[str] | None = None,
         default: str | None = None,
         arg_name: str | None = None,
     ):
         super().__init__(client=client, config=config, gui_id=gui_id)
         QLineEdit.__init__(self, parent=parent)
         self._is_valid_input = False
+        self._accent_colors = get_accent_colors()
         self.completer = QCompleter(self)
         self.setCompleter(self.completer)
         if arg_name is not None:
             self.config.arg_name = arg_name
             self.arg_name = arg_name
-        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        self.setMinimumSize(QSize(100, 0))
-        self._accent_colors = get_accent_colors()
-        # Set readout priority filter and device filter.
-        # If value is set directly in init, this overrules value from the config
-        readout_priority_filter = (
-            readout_priority_filter
-            if readout_priority_filter is not None
-            else self.config.readout_filter
-        )
-        if readout_priority_filter is not None:
-            self.set_readout_priority_filter(readout_priority_filter)
-        device_filter = device_filter if device_filter is not None else self.config.device_filter
-        if device_filter is not None:
-            self.set_device_filter(device_filter)
-        device_list = device_list if device_list is not None else self.config.devices
-        if device_list is not None:
-            self.set_available_devices(device_list)
-        else:
-            self.update_devices_from_filters()
-        default = default if default is not None else self.config.default
         if default is not None:
             self.set_device(default)
+
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.setMinimumSize(QSize(100, 0))
+        signal_filter = signal_filter if not None else self.config.signal_filter
+        if signal_filter is not None:
+            self.set_filter(signal_filter)
+        device = device if not None else self.config.device
+        if device is not None:
+            self.set_device(device)
+        default = default if not None else self.config.default
+        if default is not None:
+            self.set_signal(default)
         self.textChanged.connect(self.check_validity)
 
     def get_current_device(self) -> object:
@@ -102,13 +84,14 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
             painter.setPen(pen)
             painter.drawRect(self.rect().adjusted(1, 1, -1, -1))
 
+    @Slot(str)
     def check_validity(self, input_text: str) -> None:
         """
         Check if the current value is a valid device name.
         """
-        if self.validate_device(input_text) is True:
+        # i
+        if self.validate_signal(input_text) is True:
             self._is_valid_input = True
-            self.device_selected.emit(input_text.lower())
         else:
             self._is_valid_input = False
         self.update()
@@ -126,8 +109,6 @@ if __name__ == "__main__":  # pragma: no cover
     widget.setFixedSize(200, 200)
     layout = QVBoxLayout()
     widget.setLayout(layout)
-    line_edit = DeviceLineEdit()
-    line_edit.include_positioner = True
-    layout.addWidget(line_edit)
+    layout.addWidget(SignalLineEdit(device="samx"))
     widget.show()
     app.exec_()

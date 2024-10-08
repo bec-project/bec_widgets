@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import sys
 
+from bec_lib.device import ReadoutPriority
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.qt_utils.settings_dialog import SettingsDialog
 from bec_widgets.qt_utils.toolbar import DeviceSelectionAction, MaterialIconAction, ModularToolBar
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.widgets.base_classes.device_input_base import BECDeviceFilter
 from bec_widgets.widgets.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.figure.plots.motor_map.motor_map import MotorMapConfig
@@ -50,10 +52,10 @@ class BECMotorMapWidget(BECWidget, QWidget):
         self.toolbar = ModularToolBar(
             actions={
                 "motor_x": DeviceSelectionAction(
-                    "Motor X:", DeviceComboBox(device_filter="Positioner")
+                    "Motor X:", DeviceComboBox(device_filter=[BECDeviceFilter.POSITIONER])
                 ),
                 "motor_y": DeviceSelectionAction(
-                    "Motor Y:", DeviceComboBox(device_filter="Positioner")
+                    "Motor Y:", DeviceComboBox(device_filter=[BECDeviceFilter.POSITIONER])
                 ),
                 "connect": MaterialIconAction(icon_name="link", tooltip="Connect Motors"),
                 "history": MaterialIconAction(icon_name="history", tooltip="Reset Trace History"),

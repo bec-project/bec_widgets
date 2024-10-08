@@ -1,13 +1,21 @@
-import pytest
-from qtpy.QtWidgets import QWidget
+from unittest import mock
 
-from bec_widgets.widgets.base_classes.device_input_base import DeviceInputBase
+import pytest
+from bec_lib.device import ReadoutPriority
+from qtpy.QtWidgets import QWidget
+from typeguard import TypeCheckError
+
+from bec_widgets.test_utils.client_mocks import FakePositioner
+from bec_widgets.widgets.base_classes.device_input_base import BECDeviceFilter, DeviceInputBase
 
 from .client_mocks import mocked_client
+from .conftest import create_widget
 
 
 # DeviceInputBase is meant to be mixed in a QWidget
 class DeviceInputWidget(DeviceInputBase, QWidget):
+    """Thin wrapper around DeviceInputBase to make it a QWidget"""
+
     def __init__(self, parent=None, client=None, config=None, gui_id=None):
         super().__init__(client=client, config=config, gui_id=gui_id)
         QWidget.__init__(self, parent=parent)
@@ -15,13 +23,15 @@ class DeviceInputWidget(DeviceInputBase, QWidget):
 
 @pytest.fixture
 def device_input_base(qtbot, mocked_client):
-    widget = DeviceInputWidget(client=mocked_client)
-    qtbot.addWidget(widget)
-    qtbot.waitExposed(widget)
-    yield widget
+    """Fixture with mocked FilterIO and WidgetIO"""
+    with mock.patch("bec_widgets.utils.filter_io.FilterIO.set_selection"):
+        with mock.patch("bec_widgets.utils.widget_io.WidgetIO.set_value"):
+            widget = create_widget(qtbot=qtbot, widget=DeviceInputWidget, client=mocked_client)
+            yield widget
 
 
 def test_device_input_base_init(device_input_base):
+    """Test init"""
     assert device_input_base is not None
     assert device_input_base.client is not None
     assert isinstance(device_input_base, DeviceInputBase)
@@ -32,45 +42,95 @@ def test_device_input_base_init(device_input_base):
 
 
 def test_device_input_base_init_with_config(mocked_client):
+    """Test init with Config"""
     config = {
         "widget_class": "DeviceInputWidget",
         "gui_id": "test_gui_id",
-        "device_filter": "FakePositioner",
+        "device_filter": [BECDeviceFilter.POSITIONER],
         "default": "samx",
     }
     widget = DeviceInputWidget(client=mocked_client, config=config)
     assert widget.config.gui_id == "test_gui_id"
-    assert widget.config.device_filter == "FakePositioner"
+    assert widget.config.device_filter == [BECDeviceFilter.POSITIONER]
     assert widget.config.default == "samx"
 
 
 def test_device_input_base_set_device_filter(device_input_base):
-    device_input_base.set_device_filter("FakePositioner")
-    assert device_input_base.config.device_filter == "FakePositioner"
+    """Test device filter setter."""
+    device_input_base.set_device_filter(BECDeviceFilter.POSITIONER)
+    assert device_input_base.config.device_filter == [BECDeviceFilter.POSITIONER]
 
 
 def test_device_input_base_set_device_filter_error(device_input_base):
+    """Test set_device_filter with Noneexisting class"""
     with pytest.raises(ValueError) as excinfo:
         device_input_base.set_device_filter("NonExistingClass")
         assert "Device filter NonExistingClass is not in the device list." in str(excinfo.value)
 
 
 def test_device_input_base_set_default_device(device_input_base):
-    device_input_base.set_default_device("samx")
+    """Test setting the default device. Also tests the update_devices method."""
+    with pytest.raises(ValueError) as excinfo:
+        device_input_base.set_device("samx")
+        assert "Device samx is not in filtered selection." in str(excinfo.value)
+    device_input_base.set_device_filter(BECDeviceFilter.POSITIONER)
+    device_input_base.set_readout_priority_filter(ReadoutPriority.MONITORED)
+    device_input_base.set_device("samx")
     assert device_input_base.config.default == "samx"
 
 
-def test_device_input_base_set_default_device_error(device_input_base):
-    with pytest.raises(ValueError) as excinfo:
-        device_input_base.set_default_device("NonExistingDevice")
-        assert "Default device NonExistingDevice is not in the device list." in str(excinfo.value)
-
-
-def test_device_input_base_get_device_list(device_input_base):
-    devices = device_input_base.get_device_list("FakePositioner")
-    assert devices == ["samx", "samy", "samz", "aptrx", "aptry"]
-
-
 def test_device_input_base_get_filters(device_input_base):
+    """Test getting the available filters."""
     filters = device_input_base.get_available_filters()
-    assert filters == {"FakePositioner", "FakeDevice", "Positioner", "Device"}
+    selection = [
+        BECDeviceFilter.POSITIONER,
+        BECDeviceFilter.DEVICE,
+        BECDeviceFilter.COMPUTED_SIGNAL,
+        BECDeviceFilter.SIGNAL,
+    ] + [
+        ReadoutPriority.MONITORED,
+        ReadoutPriority.BASELINE,
+        ReadoutPriority.ASYNC,
+        ReadoutPriority.ON_REQUEST,
+    ]
+    assert [entry for entry in filters if entry in selection]
+
+
+def test_device_input_base_properties(device_input_base):
+    """Test setting the properties of the device input base."""
+    assert device_input_base.device_filter == []
+    device_input_base.include_device = True
+    assert device_input_base.device_filter == [BECDeviceFilter.DEVICE]
+    device_input_base.include_positioner = True
+    assert device_input_base.device_filter == [BECDeviceFilter.DEVICE, BECDeviceFilter.POSITIONER]
+    device_input_base.include_computed_signal = True
+    assert device_input_base.device_filter == [
+        BECDeviceFilter.DEVICE,
+        BECDeviceFilter.POSITIONER,
+        BECDeviceFilter.COMPUTED_SIGNAL,
+    ]
+    device_input_base.include_signal = True
+    assert device_input_base.device_filter == [
+        BECDeviceFilter.DEVICE,
+        BECDeviceFilter.POSITIONER,
+        BECDeviceFilter.COMPUTED_SIGNAL,
+        BECDeviceFilter.SIGNAL,
+    ]
+    assert device_input_base.readout_filter == []
+    device_input_base.readout_async = True
+    assert device_input_base.readout_filter == [ReadoutPriority.ASYNC]
+    device_input_base.readout_baseline = True
+    assert device_input_base.readout_filter == [ReadoutPriority.ASYNC, ReadoutPriority.BASELINE]
+    device_input_base.readout_monitored = True
+    assert device_input_base.readout_filter == [
+        ReadoutPriority.ASYNC,
+        ReadoutPriority.BASELINE,
+        ReadoutPriority.MONITORED,
+    ]
+    device_input_base.readout_on_request = True
+    assert device_input_base.readout_filter == [
+        ReadoutPriority.ASYNC,
+        ReadoutPriority.BASELINE,
+        ReadoutPriority.MONITORED,
+        ReadoutPriority.ON_REQUEST,
+    ]

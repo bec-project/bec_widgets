@@ -16,6 +16,7 @@ from bec_widgets.qt_utils.toolbar import (
     WidgetAction,
 )
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.widgets.base_classes.device_input_base import BECDeviceFilter
 from bec_widgets.widgets.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.figure.plots.axis_settings import AxisSettings
@@ -69,7 +70,7 @@ class BECImageWidget(BECWidget, QWidget):
         self.toolbar = ModularToolBar(
             actions={
                 "monitor": DeviceSelectionAction(
-                    "Monitor:", DeviceComboBox(device_filter="Device")
+                    "Monitor:", DeviceComboBox(device_filter=BECDeviceFilter.DEVICE)
                 ),
                 "monitor_type": WidgetAction(widget=self.dim_combo_box),
                 "connect": MaterialIconAction(icon_name="link", tooltip="Connect Device"),

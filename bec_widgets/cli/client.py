@@ -38,6 +38,8 @@ class Widgets(str, enum.Enum):
     ResumeButton = "ResumeButton"
     RingProgressBar = "RingProgressBar"
     ScanControl = "ScanControl"
+    SignalComboBox = "SignalComboBox"
+    SignalLineEdit = "SignalLineEdit"
     StopButton = "StopButton"
     TextBox = "TextBox"
     VSCodeEditor = "VSCodeEditor"
@@ -2591,6 +2593,24 @@ class DeviceLineEdit(RPCBase):
         """
 
 
+class DeviceSignalInputBase(RPCBase):
+    @property
+    @rpc_call
+    def _config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def _get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
+        """
+
+
 class LMFitDialog(RPCBase):
     @property
     @rpc_call
@@ -2986,6 +3006,42 @@ class RingProgressBar(RPCBase):
 
 
 class ScanControl(RPCBase):
+    @property
+    @rpc_call
+    def _config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def _get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
+        """
+
+
+class SignalComboBox(RPCBase):
+    @property
+    @rpc_call
+    def _config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def _get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
+        """
+
+
+class SignalLineEdit(RPCBase):
     @property
     @rpc_call
     def _config_dict(self) -> "dict":

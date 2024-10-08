@@ -4,8 +4,7 @@ import pytest
 
 from bec_widgets.cli.client import BECFigure
 from bec_widgets.cli.client_utils import BECGuiClientMixin, _start_plot_process
-
-from .client_mocks import FakeDevice
+from bec_widgets.test_utils.client_mocks import FakeDevice
 
 
 @pytest.fixture

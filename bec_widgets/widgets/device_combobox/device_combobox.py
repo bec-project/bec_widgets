@@ -1,23 +1,25 @@
-from typing import TYPE_CHECKING
+from bec_lib.device import ReadoutPriority
+from qtpy.QtCore import QSize
+from qtpy.QtWidgets import QComboBox, QSizePolicy
 
-from qtpy.QtWidgets import QComboBox
-
-from bec_widgets.widgets.base_classes.device_input_base import DeviceInputBase, DeviceInputConfig
-
-if TYPE_CHECKING:
-    from bec_widgets.widgets.base_classes.device_input_base import DeviceInputConfig
+from bec_widgets.utils.colors import get_accent_colors
+from bec_widgets.widgets.base_classes.device_input_base import (
+    BECDeviceFilter,
+    DeviceInputBase,
+    DeviceInputConfig,
+)
 
 
 class DeviceComboBox(DeviceInputBase, QComboBox):
     """
-    Line edit widget for device input with autocomplete for device names.
+    Combobox widget for device input with autocomplete for device names.
 
     Args:
         parent: Parent widget.
         client: BEC client object.
         config: Device input configuration.
         gui_id: GUI ID.
-        device_filter: Device filter, name of the device class.
+        device_filter: Device filter, name of the device class from BECDeviceFilter and BECReadoutPriority. Check DeviceInputBase for more details.
         default: Default device name.
         arg_name: Argument name, can be used for the other widgets which has to call some other function in bec using correct argument names.
     """
@@ -30,57 +32,68 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         client=None,
         config: DeviceInputConfig = None,
         gui_id: str | None = None,
-        device_filter: str | None = None,
+        device_filter: BECDeviceFilter | list[BECDeviceFilter] | None = None,
+        readout_priority_filter: (
+            str | ReadoutPriority | list[str] | list[ReadoutPriority] | None
+        ) = None,
+        device_list: list[str] | None = None,
         default: str | None = None,
         arg_name: str | None = None,
     ):
         super().__init__(client=client, config=config, gui_id=gui_id)
         QComboBox.__init__(self, parent=parent)
-        self.setMinimumSize(125, 26)
-        self.populate_combobox()
-
         if arg_name is not None:
             self.config.arg_name = arg_name
+            self.arg_name = arg_name
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.setMinimumSize(QSize(100, 0))
+        self._is_valid_input = False
+        self._accent_colors = get_accent_colors()
+        # Set readout priority filter and device filter.
+        # If value is set directly in init, this overrules value from the config
+        readout_priority_filter = (
+            readout_priority_filter
+            if readout_priority_filter is not None
+            else self.config.readout_filter
+        )
+        if readout_priority_filter is not None:
+            self.set_readout_priority_filter(readout_priority_filter)
+        device_filter = device_filter if device_filter is not None else self.config.device_filter
         if device_filter is not None:
             self.set_device_filter(device_filter)
+        device_list = device_list if device_list is not None else self.config.devices
+        if device_list is not None:
+            self.set_available_devices(device_list)
+        else:
+            self.update_devices_from_filters()
+        default = default if default is not None else self.config.default
         if default is not None:
-            self.set_default_device(default)
+            self.set_device(default)
 
-    def set_device_filter(self, device_filter: str):
+    def get_current_device(self) -> object:
         """
-        Set the device filter.
-
-        Args:
-            device_filter(str): Device filter, name of the device class.
-        """
-        super().set_device_filter(device_filter)
-        self.populate_combobox()
-
-    def set_default_device(self, default_device: str):
-        """
-        Set the default device.
-
-        Args:
-            default_device(str): Default device name.
-        """
-        super().set_default_device(default_device)
-        self.setCurrentText(default_device)
-
-    def populate_combobox(self):
-        """Populate the combobox with the devices."""
-        self.devices = self.get_device_list(self.config.device_filter)
-        self.clear()
-        self.addItems(self.devices)
-
-    def get_device(self) -> object:
-        """
-        Get the selected device object.
+        Get the current device object based on the current value.
 
         Returns:
-            object: Device object.
+            object: Device object, can be device of type Device, Positioner, Signal or ComputedSignal.
         """
-        device_name = self.currentText()
-        device_obj = getattr(self.dev, device_name.lower(), None)
-        if device_obj is None:
-            raise ValueError(f"Device {device_name} is not found.")
-        return device_obj
+        dev_name = self.currentText()
+        return self.get_device_object(dev_name)
+
+
+if __name__ == "__main__":  # pragma: no cover
+    # pylint: disable=import-outside-toplevel
+    from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
+
+    from bec_widgets.utils.colors import set_theme
+
+    app = QApplication([])
+    set_theme("dark")
+    widget = QWidget()
+    widget.setFixedSize(200, 200)
+    layout = QVBoxLayout()
+    widget.setLayout(layout)
+    combo = DeviceComboBox()
+    layout.addWidget(combo)
+    widget.show()
+    app.exec_()

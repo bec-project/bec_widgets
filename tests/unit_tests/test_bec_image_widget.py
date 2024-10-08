@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import pyqtgraph as pg
 import pytest
 
+from bec_widgets.widgets.base_classes.device_input_base import BECDeviceFilter
 from bec_widgets.widgets.image.image_widget import BECImageWidget
 
 from .client_mocks import mocked_client
@@ -11,7 +12,6 @@ from .client_mocks import mocked_client
 @pytest.fixture
 def image_widget(qtbot, mocked_client):
     widget = BECImageWidget(client=mocked_client())
-    widget.toolbar.widgets["monitor"].device_combobox.set_device_filter("FakeDevice")
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
@@ -32,7 +32,8 @@ def test_image_widget_init(image_widget):
     assert image_widget._image is not None
 
     assert (
-        image_widget.toolbar.widgets["monitor"].device_combobox.config.device_filter == "FakeDevice"
+        BECDeviceFilter.DEVICE
+        in image_widget.toolbar.widgets["monitor"].device_combobox.config.device_filter
     )
     assert image_widget.toolbar.widgets["drag_mode"].action.isChecked() == True
     assert image_widget.toolbar.widgets["rectangle_mode"].action.isChecked() == False

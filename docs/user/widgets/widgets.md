@@ -159,6 +159,14 @@ Various buttons which manage the control of the BEC Queue.
 Choose individual device from current session.
 ```
 
+```{grid-item-card} Signal Input Widgets
+:link: user.widgets.signal_input
+:link-type: ref
+:img-top: /assets/widget_screenshots/signal_inputs.png
+
+Choose individual signals available for a selected device.
+```
+
 ```{grid-item-card} Text Box Widget
 :link: user.widgets.text_box
 :link-type: ref
