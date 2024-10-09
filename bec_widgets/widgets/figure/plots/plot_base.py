@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import defaultdict
 from typing import Literal, Optional
 
 import bec_qthemes
@@ -12,6 +11,7 @@ from qtpy.QtWidgets import QApplication, QWidget
 
 from bec_widgets.utils import BECConnector, ConnectionConfig
 from bec_widgets.utils.crosshair import Crosshair
+from bec_widgets.utils.fps_counter import FPSCounter
 from bec_widgets.utils.plot_indicator_items import BECArrowItem, BECTickItem
 
 logger = bec_logger.logger
@@ -51,6 +51,11 @@ class SubplotConfig(ConnectionConfig):
 
 
 class BECViewBox(pg.ViewBox):
+    sigPaint = Signal()
+
+    def paint(self, painter, opt, widget):
+        super().paint(painter, opt, widget)
+        self.sigPaint.emit()
 
     def itemBoundsChanged(self, item):
         self._itemBoundsCache.pop(item, None)
@@ -79,6 +84,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         "set_y_lim",
         "set_grid",
         "set_outer_axes",
+        "enable_fps_monitor",
         "lock_aspect_ratio",
         "export",
         "remove",
@@ -100,12 +106,13 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
 
         self.figure = parent_figure
 
-        # self.plot_item = self.addPlot(row=0, col=0)
         self.plot_item = pg.PlotItem(viewBox=BECViewBox(parent=self, enableMenu=True), parent=self)
-        self.addItem(self.plot_item, row=0, col=0)
+        self.addItem(self.plot_item, row=1, col=0)
 
         self.add_legend()
         self.crosshair = None
+        self.fps_monitor = None
+        self.fps_label = None
         self.tick_item = BECTickItem(parent=self, plot_item=self.plot_item)
         self.arrow_item = BECArrowItem(parent=self, plot_item=self.plot_item)
         self._connect_to_theme_change()
@@ -379,6 +386,10 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         """
         self.plot_item.enableAutoRange(axis, enabled)
 
+    ############################################################
+    ###################### Crosshair ###########################
+    ############################################################
+
     def hook_crosshair(self) -> None:
         """Hook the crosshair to all plots."""
         if self.crosshair is None:
@@ -417,6 +428,54 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
             self.crosshair.clear_markers()
             self.crosshair.update_markers()
 
+    ############################################################
+    ##################### FPS Counter ##########################
+    ############################################################
+
+    def update_fps_label(self, fps: float) -> None:
+        """
+        Update the FPS label.
+
+        Args:
+            fps(float): The frames per second.
+        """
+        if self.fps_label:
+            self.fps_label.setText(f"FPS: {fps:.2f}")
+
+    def hook_fps_monitor(self):
+        """Hook the FPS monitor to the plot."""
+        if self.fps_monitor is None:
+            # text_color = self.get_text_color()#TODO later
+            self.fps_monitor = FPSCounter(self.plot_item.vb)  # text_color=text_color)
+            self.fps_label = pg.LabelItem(justify="right")
+            self.addItem(self.fps_label, row=0, col=0)
+
+            self.fps_monitor.sigFpsUpdate.connect(self.update_fps_label)
+
+    def unhook_fps_monitor(self):
+        """Unhook the FPS monitor from the plot."""
+        if self.fps_monitor is not None:
+            # Remove Monitor
+            self.fps_monitor.cleanup()
+            self.fps_monitor.deleteLater()
+            self.fps_monitor = None
+            # Remove Label
+            self.removeItem(self.fps_label)
+            self.fps_label.deleteLater()
+            self.fps_label = None
+
+    def enable_fps_monitor(self, enable: bool = True):
+        """
+        Enable the FPS monitor.
+
+        Args:
+            enable(bool): True to enable, False to disable.
+        """
+        if enable and self.fps_monitor is None:
+            self.hook_fps_monitor()
+        elif not enable and self.fps_monitor is not None:
+            self.unhook_fps_monitor()
+
     def export(self):
         """Show the Export Dialog of the plot widget."""
         scene = self.plot_item.scene()
@@ -431,6 +490,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
     def cleanup_pyqtgraph(self):
         """Cleanup pyqtgraph items."""
         self.unhook_crosshair()
+        self.unhook_fps_monitor()
         self.tick_item.cleanup()
         self.arrow_item.cleanup()
         item = self.plot_item

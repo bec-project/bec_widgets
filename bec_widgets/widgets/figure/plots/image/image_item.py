@@ -307,7 +307,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
             if vrange is not None:
                 self.color_bar.setLevels(low=vrange[0], high=vrange[1])
             self.color_bar.setImageItem(self)
-            self.parent_image.addItem(self.color_bar)  # , row=0, col=1)
+            self.parent_image.addItem(self.color_bar, row=1, col=1)
             self.config.color_bar = "simple"
         elif color_bar_style == "full":
             # Setting histogram
@@ -321,7 +321,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
                 )
 
             # Adding histogram to the layout
-            self.parent_image.addItem(self.color_bar)  # , row=0, col=1)
+            self.parent_image.addItem(self.color_bar, row=1, col=1)
 
             # save settings
             self.config.color_bar = "full"

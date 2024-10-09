@@ -52,6 +52,7 @@ class BECWaveformWidget(BECWidget, QWidget):
         "set_legend_label_size",
         "set_auto_range",
         "set_grid",
+        "enable_fps_monitor",
         "lock_aspect_ratio",
         "export",
         "export_to_matplotlib",
@@ -118,9 +119,7 @@ class BECWaveformWidget(BECWidget, QWidget):
                 "fit_params": MaterialIconAction(
                     icon_name="monitoring", tooltip="Open Fitting Parameters"
                 ),
-                "axis_settings": MaterialIconAction(
-                    icon_name="settings", tooltip="Open Configuration Dialog"
-                ),
+                "separator_3": SeparatorAction(),
                 "crosshair": MaterialIconAction(
                     icon_name="point_scan", tooltip="Show Crosshair", checkable=True
                 ),
@@ -128,6 +127,13 @@ class BECWaveformWidget(BECWidget, QWidget):
                     icon_name="align_justify_space_between",
                     tooltip="Add ROI region for DAP",
                     checkable=True,
+                ),
+                "separator_4": SeparatorAction(),
+                "fps_monitor": MaterialIconAction(
+                    icon_name="speed", tooltip="Show FPS Monitor", checkable=True
+                ),
+                "axis_settings": MaterialIconAction(
+                    icon_name="settings", tooltip="Open Configuration Dialog"
                 ),
             },
             target_widget=self,
@@ -186,6 +192,7 @@ class BECWaveformWidget(BECWidget, QWidget):
         self.toolbar.widgets["axis_settings"].action.triggered.connect(self.show_axis_settings)
         self.toolbar.widgets["crosshair"].action.triggered.connect(self.waveform.toggle_crosshair)
         self.toolbar.widgets["roi_select"].action.toggled.connect(self.waveform.toggle_roi)
+        self.toolbar.widgets["fps_monitor"].action.toggled.connect(self.enable_fps_monitor)
         # self.toolbar.widgets["import"].action.triggered.connect(
         #     lambda: self.load_config(path=None, gui=True)
         # )
@@ -594,6 +601,8 @@ class BECWaveformWidget(BECWidget, QWidget):
             checked(bool): If True, enable the linear region selector.
         """
         self.waveform.toggle_roi(checked)
+        if self.toolbar.widgets["roi_select"].action.isChecked() != checked:
+            self.toolbar.widgets["roi_select"].action.setChecked(checked)
 
     def select_roi(self, region: tuple):
         """
@@ -603,6 +612,17 @@ class BECWaveformWidget(BECWidget, QWidget):
             region(tuple): Region of interest.
         """
         self.waveform.select_roi(region)
+
+    def enable_fps_monitor(self, enabled: bool):
+        """
+        Enable the FPS monitor of the plot widget.
+
+        Args:
+            enabled(bool): If True, enable the FPS monitor.
+        """
+        self.waveform.enable_fps_monitor(enabled)
+        if self.toolbar.widgets["fps_monitor"].action.isChecked() != enabled:
+            self.toolbar.widgets["fps_monitor"].action.setChecked(enabled)
 
     @SafeSlot()
     def _auto_range_from_toolbar(self):

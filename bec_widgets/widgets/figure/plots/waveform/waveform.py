@@ -72,6 +72,7 @@ class BECWaveform(BECPlotBase):
         "set_y_lim",
         "set_grid",
         "set_colormap",
+        "enable_fps_monitor",
         "lock_aspect_ratio",
         "export",
         "remove",

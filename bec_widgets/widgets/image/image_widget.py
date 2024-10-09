@@ -40,6 +40,7 @@ class BECImageWidget(BECWidget, QWidget):
         "set_rotation",
         "set_log",
         "set_grid",
+        "enable_fps_monitor",
         "lock_aspect_ratio",
     ]
 
@@ -104,6 +105,9 @@ class BECImageWidget(BECWidget, QWidget):
                     icon_name="reset_settings", tooltip="Reset Image Settings"
                 ),
                 "separator_3": SeparatorAction(),
+                "fps_monitor": MaterialIconAction(
+                    icon_name="speed", tooltip="Show FPS Monitor", checkable=True
+                ),
                 "axis_settings": MaterialIconAction(
                     icon_name="settings", tooltip="Open Configuration Dialog"
                 ),
@@ -150,6 +154,7 @@ class BECImageWidget(BECWidget, QWidget):
         self.toolbar.widgets["reset"].action.triggered.connect(self.reset_settings)
         # sepatator
         self.toolbar.widgets["axis_settings"].action.triggered.connect(self.show_axis_settings)
+        self.toolbar.widgets["fps_monitor"].action.toggled.connect(self.enable_fps_monitor)
 
     ###################################
     # Dialog Windows
@@ -449,6 +454,18 @@ class BECImageWidget(BECWidget, QWidget):
         self.toolbar.widgets["drag_mode"].action.setChecked(True)
         self.toolbar.widgets["rectangle_mode"].action.setChecked(False)
         self._image.plot_item.getViewBox().setMouseMode(pg.ViewBox.PanMode)
+
+    @SafeSlot()
+    def enable_fps_monitor(self, enabled: bool):
+        """
+        Enable the FPS monitor of the plot widget.
+
+        Args:
+            enabled(bool): If True, enable the FPS monitor.
+        """
+        self._image.enable_fps_monitor(enabled)
+        if self.toolbar.widgets["fps_monitor"].action.isChecked() != enabled:
+            self.toolbar.widgets["fps_monitor"].action.setChecked(enabled)
 
     def export(self):
         """

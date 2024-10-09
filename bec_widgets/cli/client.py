@@ -1136,6 +1136,15 @@ class BECImageShow(RPCBase):
         """
 
     @rpc_call
+    def enable_fps_monitor(self, enable: "bool" = True):
+        """
+        Enable the FPS monitor.
+
+        Args:
+            enable(bool): True to enable, False to disable.
+        """
+
+    @rpc_call
     def lock_aspect_ratio(self, lock):
         """
         Lock aspect ratio.
@@ -1328,6 +1337,15 @@ class BECImageWidget(RPCBase):
         Args:
             x_grid(bool): Visibility of the x-axis grid.
             y_grid(bool): Visibility of the y-axis grid.
+        """
+
+    @rpc_call
+    def enable_fps_monitor(self, enabled: "bool"):
+        """
+        Enable the FPS monitor of the plot widget.
+
+        Args:
+            enabled(bool): If True, enable the FPS monitor.
         """
 
     @rpc_call
@@ -1664,6 +1682,15 @@ class BECPlotBase(RPCBase):
 
         Args:
             show(bool): Show the outer axes.
+        """
+
+    @rpc_call
+    def enable_fps_monitor(self, enable: "bool" = True):
+        """
+        Enable the FPS monitor.
+
+        Args:
+            enable(bool): True to enable, False to disable.
         """
 
     @rpc_call
@@ -2070,6 +2097,15 @@ class BECWaveform(RPCBase):
         """
 
     @rpc_call
+    def enable_fps_monitor(self, enable: "bool" = True):
+        """
+        Enable the FPS monitor.
+
+        Args:
+            enable(bool): True to enable, False to disable.
+        """
+
+    @rpc_call
     def lock_aspect_ratio(self, lock):
         """
         Lock aspect ratio.
@@ -2372,6 +2408,15 @@ class BECWaveformWidget(RPCBase):
         Args:
             x_grid(bool): Visibility of the x-axis grid.
             y_grid(bool): Visibility of the y-axis grid.
+        """
+
+    @rpc_call
+    def enable_fps_monitor(self, enabled: "bool"):
+        """
+        Enable the FPS monitor of the plot widget.
+
+        Args:
+            enabled(bool): If True, enable the FPS monitor.
         """
 
     @rpc_call

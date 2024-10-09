@@ -57,6 +57,7 @@ class BECImageShow(BECPlotBase):
         "set_x_lim",
         "set_y_lim",
         "set_grid",
+        "enable_fps_monitor",
         "lock_aspect_ratio",
         "export",
         "remove",
