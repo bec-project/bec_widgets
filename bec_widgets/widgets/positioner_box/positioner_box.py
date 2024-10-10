@@ -14,6 +14,7 @@ from qtpy.QtCore import Property, Signal, Slot
 from qtpy.QtGui import QDoubleValidator
 from qtpy.QtWidgets import QDialog, QDoubleSpinBox, QPushButton, QVBoxLayout, QWidget
 
+from bec_widgets.qt_utils.compact_popup import CompactPopupWidget
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_accent_colors, set_theme
@@ -24,7 +25,7 @@ logger = bec_logger.logger
 MODULE_PATH = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 
-class PositionerBox(BECWidget, QWidget):
+class PositionerBox(BECWidget, CompactPopupWidget):
     """Simple Widget to control a positioner in box form"""
 
     ui_file = "positioner_box.ui"
@@ -44,7 +45,7 @@ class PositionerBox(BECWidget, QWidget):
             device (Positioner): The device to control.
         """
         super().__init__(**kwargs)
-        QWidget.__init__(self, parent=parent)
+        CompactPopupWidget.__init__(self, parent=parent, layout=QVBoxLayout)
         self.get_bec_shortcuts()
         self._device = ""
         self._limits = None
@@ -63,8 +64,7 @@ class PositionerBox(BECWidget, QWidget):
         current_path = os.path.dirname(__file__)
         self.ui = UILoader(self).loader(os.path.join(current_path, self.ui_file))
 
-        self.layout = QVBoxLayout(self)
-        self.layout.addWidget(self.ui)
+        self.addWidget(self.ui)
         self.layout.setSpacing(0)
         self.layout.setContentsMargins(0, 0, 0, 0)
 
@@ -135,8 +135,12 @@ class PositionerBox(BECWidget, QWidget):
         """Setter, checks if device is a string"""
         if not value or not isinstance(value, str):
             return
+        if not self._check_device_is_valid(value):
+            return
         old_device = self._device
         self._device = value
+        if not self.label:
+            self.label = value
         self.device_changed.emit(old_device, value)
 
     @Property(bool)
@@ -241,9 +245,11 @@ class PositionerBox(BECWidget, QWidget):
             if is_moving:
                 self.ui.spinner_widget.start()
                 self.ui.spinner_widget.setToolTip("Device is moving")
+                self.set_global_state("warning")
             else:
                 self.ui.spinner_widget.stop()
                 self.ui.spinner_widget.setToolTip("Device is idle")
+                self.set_global_state("success")
 
         if readback_val is not None:
             self.ui.readback.setText(f"{readback_val:.{precision}f}")
