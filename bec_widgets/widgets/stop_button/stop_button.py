@@ -28,7 +28,7 @@ class StopButton(BECWidget, QWidget):
             self.button.setToolTip("Stop the scan queue")
         else:
             self.button = QPushButton()
-            self.button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            self.button.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
             self.button.setText("Stop")
             self.button.setStyleSheet(
                 f"background-color:  #cc181e; color: white; font-weight: bold; font-size: 12px;"
