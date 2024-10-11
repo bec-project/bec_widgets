@@ -1,4 +1,5 @@
 from collections import defaultdict
+from types import SimpleNamespace
 from typing import Optional
 
 from bec_lib.endpoints import MessageEndpoints
@@ -7,11 +8,11 @@ from qtpy.QtCore import Property, Signal, Slot
 from qtpy.QtWidgets import (
     QApplication,
     QComboBox,
-    QGroupBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QSizePolicy,
+    QSpacerItem,
     QVBoxLayout,
     QWidget,
 )
@@ -19,6 +20,7 @@ from qtpy.QtWidgets import (
 from bec_widgets.qt_utils.error_popups import SafeSlot
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.widgets.scan_control.scan_group_box import ScanGroupBox
 from bec_widgets.widgets.stop_button.stop_button import StopButton
 from bec_widgets.widgets.toggle.toggle import ToggleSwitch
@@ -87,11 +89,53 @@ class ScanControl(BECWidget, QWidget):
         """
         Initializes the UI of the scan control widget. Create the top box for scan selection and populate scans to main combobox.
         """
+        palette = get_accent_colors()
+        if palette is None:
+            palette = SimpleNamespace(
+                default=QColor("blue"),
+                success=QColor("green"),
+                warning=QColor("orange"),
+                emergency=QColor("red"),
+            )
+        # Scan selection box
+        self.scan_selection_group = QWidget(self)
+        QVBoxLayout(self.scan_selection_group)
+        scan_selection_layout = QHBoxLayout()
+        self.comboBox_scan_selection_label = QLabel("Scan:", self.scan_selection_group)
+        self.comboBox_scan_selection = QComboBox(self.scan_selection_group)
+        scan_selection_layout.addWidget(self.comboBox_scan_selection_label, 0)
+        scan_selection_layout.addWidget(self.comboBox_scan_selection, 1)
+        self.scan_selection_group.layout().addLayout(scan_selection_layout)
 
-        # Scan selection group box
-        self.scan_selection_group = self.create_scan_selection_group()
+        # Label to reload the last scan parameters within scan selection group box
+        self.toggle_layout = QHBoxLayout()
+        self.toggle_layout.addSpacerItem(
+            QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Fixed)
+        )
+        self.last_scan_label = QLabel("Restore last scan parameters", self.scan_selection_group)
+        self.toggle = ToggleSwitch(parent=self.scan_selection_group, checked=False)
+        self.toggle.enabled.connect(self.request_last_executed_scan_parameters)
+        self.toggle_layout.addWidget(self.last_scan_label)
+        self.toggle_layout.addWidget(self.toggle)
+        self.scan_selection_group.layout().addLayout(self.toggle_layout)
         self.scan_selection_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.layout.addWidget(self.scan_selection_group)
+
+        # Scan control (Run/Stop) buttons
+        self.scan_control_group = QWidget(self)
+        self.scan_control_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.button_layout = QHBoxLayout(self.scan_control_group)
+        self.button_run_scan = QPushButton("Start", self.scan_control_group)
+        self.button_run_scan.setStyleSheet(
+            f"background-color: {palette.success.name()}; color: white"
+        )
+        self.button_stop_scan = StopButton(parent=self.scan_control_group)
+        self.button_stop_scan.setStyleSheet(
+            f"background-color: {palette.emergency.name()}; color: white"
+        )
+        self.button_layout.addWidget(self.button_run_scan)
+        self.button_layout.addWidget(self.button_stop_scan)
+        self.layout.addWidget(self.scan_control_group)
 
         # Default scan from config
         if self.config.default_scan is not None:
@@ -106,47 +150,6 @@ class ScanControl(BECWidget, QWidget):
 
         # Initialize scan selection
         self.populate_scans()
-
-    def create_scan_selection_group(self) -> QGroupBox:
-        """
-        Creates the scan selection group box with combobox to select the scan and start/stop button.
-
-        Returns:
-            QGroupBox: Group box containing the scan selection widgets.
-        """
-
-        scan_selection_group = QGroupBox("Scan Selection", self)
-        self.scan_selection_layout = QVBoxLayout(scan_selection_group)
-        self.comboBox_scan_selection = QComboBox(scan_selection_group)
-
-        # Buttons
-        self.button_layout = QHBoxLayout()
-        ## Run button
-        self.button_run_scan = QPushButton("Start", scan_selection_group)
-        self.button_run_scan.setStyleSheet("background-color:  #559900; color: white")
-        ## Stop button
-        self.button_stop_scan = StopButton(parent=scan_selection_group)
-        ## Add buttons to layout
-        self.button_layout.addWidget(self.button_run_scan)
-        self.button_layout.addWidget(self.button_stop_scan)
-
-        # Label to reload the last scan parameters
-        self.toggle_layout = QHBoxLayout()
-        ## Label
-        self.last_scan_label = QLabel("Restore last scan parameters", scan_selection_group)
-        ## Switch toggle button
-        self.toggle = ToggleSwitch(parent=scan_selection_group, checked=False)
-        self.toggle.enabled.connect(self.request_last_executed_scan_parameters)
-        ## Add label and switch to layout
-        self.toggle_layout.addWidget(self.last_scan_label)
-        self.toggle_layout.addWidget(self.toggle)
-
-        # Add widgets to layout
-        self.scan_selection_layout.addWidget(self.comboBox_scan_selection)
-        self.scan_selection_layout.addLayout(self.button_layout)
-        self.scan_selection_layout.addLayout(self.toggle_layout)
-
-        return scan_selection_group
 
     def populate_scans(self):
         """Populates the scan selection combo box with available scans from BEC session."""
@@ -271,29 +274,6 @@ class ScanControl(BECWidget, QWidget):
                 box.setVisible(not hide)
 
     @Property(bool)
-    def hide_scan_remember_toggle(self):
-        """Property to hide the scan remember toggle."""
-        return not self.toggle.isVisible()
-
-    @hide_scan_remember_toggle.setter
-    def hide_scan_remember_toggle(self, hide: bool):
-        """Setter for the hide_scan_remember_toggle property.
-
-        Args:
-            hide(bool): Hide or show the scan remember toggle.
-        """
-        self.show_scan_remember_toggle(not hide)
-
-    @Slot(bool)
-    def show_scan_remember_toggle(self, show: bool):
-        """Shows or hides the scan control buttons."""
-        self.toggle.setVisible(show)
-        self.last_scan_label.setVisible(show)
-
-        show_group = show or self.button_run_scan.isVisible()
-        self.scan_selection_group.setVisible(show_group)
-
-    @Property(bool)
     def hide_scan_control_buttons(self):
         """Property to hide the scan control buttons."""
         return not self.button_run_scan.isVisible()
@@ -310,11 +290,7 @@ class ScanControl(BECWidget, QWidget):
     @Slot(bool)
     def show_scan_control_buttons(self, show: bool):
         """Shows or hides the scan control buttons."""
-        self.button_run_scan.setVisible(show)
-        self.button_stop_scan.setVisible(show)
-
-        show_group = show or self.button_run_scan.isVisible()
-        self.scan_selection_group.setVisible(show_group)
+        self.scan_control_group.setVisible(show)
 
     @Property(bool)
     def hide_scan_selection_combobox(self):
@@ -333,10 +309,7 @@ class ScanControl(BECWidget, QWidget):
     @Slot(bool)
     def show_scan_selection_combobox(self, show: bool):
         """Shows or hides the scan selection combobox."""
-        self.comboBox_scan_selection.setVisible(show)
-
-        show_group = show or self.button_run_scan.isVisible()
-        self.scan_selection_group.setVisible(show_group)
+        self.scan_selection_group.setVisible(show)
 
     @Slot(str)
     def scan_select(self, scan_name: str):
