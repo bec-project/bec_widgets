@@ -1,6 +1,26 @@
 # CHANGELOG
 
 
+## v0.116.0 (2024-10-11)
+
+### Build System
+
+* build: fix PySide6 to 6.7.2 ([`908dbc1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/908dbc1760da5b323722207163f00850b84fb90b))
+
+### Features
+
+* feat: UI changes to have top toolbar with compact popup widgets (fix issue #360) ([`499b6b9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/499b6b9a12efd931b5728b519404c41a7e29e4d6))
+
+* feat: adapt BECQueue and BECStatusBox widgets to use CompactPopupWidget ([`94ce92f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/94ce92f5b054d25ea3bb7976c1f75e14b78b9edc))
+
+* feat: add 'CompactPopupWidget' container widget
+
+Makes it easy to write widgets which can have a compact
+representation with LED-like global state indicator,
+with the possibility to display a popup dialog with more
+complete UI ([`49268e3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/49268e3829406d70b09e4d88989812f5578e46f4))
+
+
 ## v0.115.0 (2024-10-08)
 
 ### Features
@@ -149,25 +169,6 @@ Fixes #361, do not try to change x axis when not permitted ([`efa2763`](https://
 
 ## v0.107.0 (2024-09-06)
 
-### Documentation
-
-* docs: extend waveform docs ([`e6976dc`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e6976dc15105209852090a00a97b7cda723142e9))
-
-### Features
-
-* feat: add roi select for dap, allow automatic clear curves on plot request ([`7bdca84`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7bdca8431496fe6562d2c28f5a6af869d1a2e654))
-
 ### Refactoring
 
 * refactor: change style to bec_accent_colors ([`bd126dd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bd126dddbbec3e6c448cce263433d328d577c5c0))
-
-### Testing
-
-* test: add tests, including extension to end-2-end test ([`b1aff6d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b1aff6d791ff847eb2f628e66ccaa4672fdeea08))
-
-
-## v0.106.0 (2024-09-05)
-
-### Features
-
-* feat(plot_base): toggle to switch outer axes for plotting widgets ([`06d7741`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/06d7741622aea8556208cd17cae521c37333f8b6))
