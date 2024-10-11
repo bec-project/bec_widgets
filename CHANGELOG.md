@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.117.0 (2024-10-11)
+
+### Features
+
+* feat(utils): FPS counter utility based on the viewBox updates, integrated to waveform and image widget ([`8c5ef26`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8c5ef268430d5243ac05fcbbdb6b76ad24ac5735))
+
+### Unknown
+
+* tests(plot_base): tests extended ([`8dc892d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8dc892df0a47ccbdd812555b7c5775a455a23ede))
+
+
 ## v0.116.0 (2024-10-11)
 
 ### Build System
@@ -163,12 +174,3 @@ Fixes #361, do not try to change x axis when not permitted ([`efa2763`](https://
 ### Features
 
 * feat(progressbar): added bec progressbar ([`f6d1d0b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f6d1d0bbe3ba30a3b7291cd36a1f7f8e6bd5b895))
-
-* feat(generate_cli): added support for property and qproperty setter ([`a52182d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a52182dca978833bfc3fad755c596d3a2ef45c42))
-
-
-## v0.107.0 (2024-09-06)
-
-### Refactoring
-
-* refactor: change style to bec_accent_colors ([`bd126dd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bd126dddbbec3e6c448cce263433d328d577c5c0))
