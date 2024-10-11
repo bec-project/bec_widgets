@@ -490,7 +490,6 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
     def cleanup_pyqtgraph(self):
         """Cleanup pyqtgraph items."""
         self.unhook_crosshair()
-        self.unhook_fps_monitor()
         self.tick_item.cleanup()
         self.arrow_item.cleanup()
         item = self.plot_item
