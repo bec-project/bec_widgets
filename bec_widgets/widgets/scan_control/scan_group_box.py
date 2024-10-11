@@ -1,7 +1,8 @@
 from typing import Literal
 
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import Qt, Slot, Signal
+from bec_qthemes import material_icon
+from qtpy.QtCore import Property, Qt, Signal, Slot
 from qtpy.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -11,9 +12,12 @@ from qtpy.QtWidgets import (
     QFormLayout,
     QGridLayout,
     QGroupBox,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
+    QPushButton,
     QSpinBox,
+    QVBoxLayout,
 )
 
 from bec_widgets.utils.widget_io import WidgetIO
@@ -146,13 +150,35 @@ class ScanGroupBox(QGroupBox):
         super().__init__(parent=parent, *args, **kwargs)
         self.config = config
         self.box_type = box_type
+        self._hide_add_remove_buttons = False
 
+        vbox_layout = QVBoxLayout(self)
+        hbox_layout = QHBoxLayout()
+        vbox_layout.addLayout(hbox_layout)
         self.layout = QGridLayout(self)
+        vbox_layout.addLayout(self.layout)
+
+        # Add bundle button
+        self.button_add_bundle = QPushButton(self)
+        self.button_add_bundle.setIcon(
+            material_icon(icon_name="add", size=(15, 15), convert_to_pixmap=False)
+        )
+        # Remove bundle button
+        self.button_remove_bundle = QPushButton(self)
+        self.button_remove_bundle.setIcon(
+            material_icon(icon_name="remove", size=(15, 15), convert_to_pixmap=False)
+        )
+        hbox_layout.addWidget(self.button_add_bundle)
+        hbox_layout.addWidget(self.button_remove_bundle)
+
         self.labels = []
         self.widgets = []
         self.selected_devices = {}
 
         self.init_box(self.config)
+
+        self.button_add_bundle.clicked.connect(self.add_widget_bundle)
+        self.button_remove_bundle.clicked.connect(self.remove_widget_bundle)
 
     def init_box(self, config: dict):
         box_name = config.get("name", "ScanGroupBox")
@@ -169,6 +195,8 @@ class ScanGroupBox(QGroupBox):
                 self.add_input_widgets(self.inputs, i)
         else:
             self.add_input_widgets(self.inputs, 1)
+            self.button_add_bundle.setVisible(False)
+            self.button_remove_bundle.setVisible(False)
 
     def add_input_labels(self, group_inputs: dict, row: int) -> None:
         """
@@ -223,8 +251,6 @@ class ScanGroupBox(QGroupBox):
         """
         Adds a new row of widgets to the scan control layout. Only usable for arg_groups.
         """
-        if self.box_type != "args":
-            return
         arg_max = self.config.get("max", None)
         row = self.layout.rowCount()
         if arg_max is not None and row >= arg_max:
@@ -236,16 +262,33 @@ class ScanGroupBox(QGroupBox):
         """
         Removes the last row of widgets from the scan control layout. Only usable for arg_groups.
         """
-        if self.box_type != "args":
-            return
         arg_min = self.config.get("min", None)
         row = self.count_arg_rows()
         if arg_min is not None and row <= arg_min:
             return
 
         for widget in self.widgets[-len(self.inputs) :]:
+            if isinstance(widget, DeviceLineEdit):
+                self.selected_devices[widget] = ""
             widget.deleteLater()
         self.widgets = self.widgets[: -len(self.inputs)]
+
+        selected_devices_str = " ".join(self.selected_devices.values())
+        self.device_selected.emit(selected_devices_str.strip())
+
+    @Property(bool)
+    def hide_add_remove_buttons(self):
+        return self._hide_add_remove_buttons
+
+    @hide_add_remove_buttons.setter
+    def hide_add_remove_buttons(self, hide: bool):
+        self._hide_add_remove_buttons = hide
+        if not hide and self.box_type == "args":
+            self.button_add_bundle.show()
+            self.button_remove_bundle.show()
+            return
+        self.button_add_bundle.hide()
+        self.button_remove_bundle.hide()
 
     def get_parameters(self, device_object: bool = True):
         """

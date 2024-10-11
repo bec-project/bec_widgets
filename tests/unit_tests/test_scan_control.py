@@ -355,14 +355,14 @@ def test_add_remove_bundle(scan_control, scan_name, qtbot):
 
     assert initial_num_of_rows == expected_scan_info["arg_bundle_size"]["min"]
 
-    scan_control.button_add_bundle.click()
-    scan_control.button_add_bundle.click()
+    scan_control.arg_box.button_add_bundle.click()
+    scan_control.arg_box.button_add_bundle.click()
 
     if expected_scan_info["arg_bundle_size"]["max"] is None:
         assert scan_control.arg_box.count_arg_rows() == initial_num_of_rows + 2
 
     # Remove one bundle
-    scan_control.button_remove_bundle.click()
+    scan_control.arg_box.button_remove_bundle.click()
     qtbot.wait(200)
 
     assert scan_control.arg_box.count_arg_rows() == initial_num_of_rows + 1

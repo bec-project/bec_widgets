@@ -62,6 +62,8 @@ class ScanControl(BECWidget, QWidget):
         super().__init__(client=client, gui_id=gui_id, config=config)
         QWidget.__init__(self, parent=parent)
 
+        self._hide_add_remove_buttons = False
+
         # Client from BEC + shortcuts to device manager and scans
         self.get_bec_shortcuts()
 
@@ -99,21 +101,6 @@ class ScanControl(BECWidget, QWidget):
         self.comboBox_scan_selection.view().pressed.connect(self.save_current_scan_parameters)
         self.comboBox_scan_selection.currentIndexChanged.connect(self.on_scan_selection_changed)
         self.button_run_scan.clicked.connect(self.run_scan)
-
-        # Add bundle button
-        self.button_add_bundle = QPushButton("Add Bundle")
-        self.button_add_bundle.setVisible(False)
-        # Remove bundle button
-        self.button_remove_bundle = QPushButton("Remove Bundle")
-        self.button_remove_bundle.setVisible(False)
-
-        bundle_layout = QHBoxLayout()
-        bundle_layout.addWidget(self.button_add_bundle)
-        bundle_layout.addWidget(self.button_remove_bundle)
-        self.layout.addLayout(bundle_layout)
-
-        self.button_add_bundle.clicked.connect(self.add_arg_bundle)
-        self.button_remove_bundle.clicked.connect(self.remove_arg_bundle)
 
         self.scan_selected.connect(self.scan_select)
 
@@ -366,11 +353,7 @@ class ScanControl(BECWidget, QWidget):
         self.arg_group = gui_config.get("arg_group", None)
         self.kwarg_groups = gui_config.get("kwarg_groups", None)
 
-        show_bundle_buttons = bool(self.arg_group["arg_inputs"])
-
-        self._show_bundle_buttons(show_bundle_buttons)
-
-        if show_bundle_buttons:
+        if bool(self.arg_group["arg_inputs"]):
             self.add_arg_group(self.arg_group)
         if len(self.kwarg_groups) > 0:
             self.add_kwargs_boxes(self.kwarg_groups)
@@ -378,28 +361,21 @@ class ScanControl(BECWidget, QWidget):
         self.update()
         self.adjustSize()
 
-    def _show_bundle_buttons(self, show: bool):
-        """Shows or hides the bundle buttons based on the show argument.
-
-        Args:
-            show(bool): Show or hide the bundle buttons.
-        """
-        self.button_add_bundle.setVisible(show)
-        self.button_remove_bundle.setVisible(show)
-
     @Property(bool)
-    def hide_bundle_buttons(self):
-        """Property to hide the bundle buttons."""
-        return not self.button_add_bundle.isVisible()
+    def hide_add_remove_buttons(self):
+        """Property to hide the add_remove buttons."""
+        return self._hide_add_remove_buttons
 
-    @hide_bundle_buttons.setter
-    def hide_bundle_buttons(self, hide: bool):
-        """Setter for the hide_bundle_buttons property.
+    @hide_add_remove_buttons.setter
+    def hide_add_remove_buttons(self, hide: bool):
+        """Setter for the hide_add_remove_buttons property.
 
         Args:
-            hide(bool): Hide or show the bundle buttons.
+            hide(bool): Hide or show the add_remove buttons.
         """
-        self._show_bundle_buttons(not hide)
+        self._hide_add_remove_buttons = hide
+        if self.arg_box is not None:
+            self.arg_box.hide_add_remove_buttons = hide
 
     def add_kwargs_boxes(self, groups: list):
         """
@@ -423,6 +399,7 @@ class ScanControl(BECWidget, QWidget):
         self.arg_box = ScanGroupBox(box_type="args", config=group)
         self.arg_box.device_selected.connect(self.emit_device_selected)
         self.arg_box.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.arg_box.hide_add_remove_buttons = self._hide_add_remove_buttons
         self.layout.addWidget(self.arg_box)
 
     @Slot(str)
@@ -434,16 +411,6 @@ class ScanControl(BECWidget, QWidget):
         """
         self._selected_devices = dev_names
         self.device_selected.emit(dev_names)
-
-    @Slot()
-    def add_arg_bundle(self):
-        """Adds a new argument bundle to the scan control layout."""
-        self.arg_box.add_widget_bundle()
-
-    @Slot()
-    def remove_arg_bundle(self):
-        """Removes the last argument bundle from the scan control layout."""
-        self.arg_box.remove_widget_bundle()
 
     def reset_layout(self):
         """Clears the scan control layout from GuiGroups and ArgGroups boxes."""
