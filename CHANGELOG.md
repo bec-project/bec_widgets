@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v0.117.1 (2024-10-11)
+
+### Fixes
+
+* fix(FPS): qtimer cleanup leaking ([`3a22392`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3a2239278075de7489ad10a58c31d7d89715e221))
+
+### Unknown
+
+* feature(vscode): added support for vscode instructions ([`f5f1f6c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f5f1f6c304b890dc162e8653005233bce4ea82e4))
+
+* feature(vscode): support for controlling vscode from widgets ([`9238679`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/923867947f62db026ac0378c30ef62c883596058))
+
+
 ## v0.117.0 (2024-10-11)
 
 ### Features
@@ -159,18 +172,3 @@ Fixes #361, do not try to change x axis when not permitted ([`efa2763`](https://
 ### Features
 
 * feat(accent colors): added helper function to get all accent colors ([`84a59f7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/84a59f70eed6d8a3c3aeeabc77a5f9ea4e864f61))
-
-### Fixes
-
-* fix(theme): fixed theme access for themecontainer ([`de303f0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/de303f0227fc9d3a74a0410f1e7999ac5132273c))
-
-
-## v0.108.0 (2024-09-06)
-
-### Documentation
-
-* docs(progressbar): added docs ([`7d07cea`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7d07cea946f9c884477b01bebfb60b332ff09e0a))
-
-### Features
-
-* feat(progressbar): added bec progressbar ([`f6d1d0b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f6d1d0bbe3ba30a3b7291cd36a1f7f8e6bd5b895))
