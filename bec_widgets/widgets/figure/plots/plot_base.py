@@ -452,13 +452,14 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
 
             self.fps_monitor.sigFpsUpdate.connect(self.update_fps_label)
 
-    def unhook_fps_monitor(self):
+    def unhook_fps_monitor(self, delete_label=True):
         """Unhook the FPS monitor from the plot."""
         if self.fps_monitor is not None:
             # Remove Monitor
             self.fps_monitor.cleanup()
             self.fps_monitor.deleteLater()
             self.fps_monitor = None
+        if self.fps_label is not None and delete_label:
             # Remove Label
             self.removeItem(self.fps_label)
             self.fps_label.deleteLater()
@@ -490,6 +491,7 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
     def cleanup_pyqtgraph(self):
         """Cleanup pyqtgraph items."""
         self.unhook_crosshair()
+        self.unhook_fps_monitor(delete_label=False)
         self.tick_item.cleanup()
         self.arrow_item.cleanup()
         item = self.plot_item

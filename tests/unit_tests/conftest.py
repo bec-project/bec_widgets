@@ -1,10 +1,29 @@
+from unittest import mock
+
 import pytest
 from pytestqt.exceptions import TimeoutError as QtBotTimeoutError
+from qtpy.QtCore import QTimer
 from qtpy.QtWidgets import QApplication
 
 from bec_widgets.cli.rpc_register import RPCRegister
 from bec_widgets.qt_utils import error_popups
 from bec_widgets.utils import bec_dispatcher as bec_dispatcher_module
+
+
+class TestableQTimer(QTimer):
+    _instances = []
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        TestableQTimer._instances.append(self)
+
+    @classmethod
+    def check_all_stopped(cls, qtbot):
+        try:
+            qtbot.waitUntil(lambda: all(not timer.isActive() for timer in cls._instances))
+        except QtBotTimeoutError as exc:
+            raise TimeoutError("Failed to stop all timers") from exc
+        cls._instances = []
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
@@ -18,13 +37,16 @@ def pytest_runtest_makereport(item, call):
 
 @pytest.fixture(autouse=True)
 def qapplication(qtbot, request):  # pylint: disable=unused-argument
-    yield
+    with mock.patch("qtpy.QtCore.QTimer", new=TestableQTimer):
+        yield
 
-    # if the test failed, we don't want to check for open widgets as
-    # it simply pollutes the output
-    if request.node.stash._storage.get("failed"):
-        print("Test failed, skipping cleanup checks")
-        return
+        # if the test failed, we don't want to check for open widgets as
+        # it simply pollutes the output
+        if request.node.stash._storage.get("failed"):
+            print("Test failed, skipping cleanup checks")
+            return
+
+        TestableQTimer.check_all_stopped(qtbot)
 
     qapp = QApplication.instance()
     qapp.processEvents()
