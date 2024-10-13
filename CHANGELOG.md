@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v0.118.0 (2024-10-13)
+
+### Documentation
+
+* docs(sphinx-build): adjusted pyside verion ([`b236951`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b23695167ab969f754a058ffdccca2b40f00a008))
+
+### Features
+
+* feat(image): image widget can take data from monitor_1d endpoint ([`9ef1d1c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9ef1d1c9ac2178d9fa2e655942208f8abbdf5c1b))
+
+
 ## v0.117.1 (2024-10-11)
 
 ### Fixes
@@ -161,14 +172,3 @@ Fixes #361, do not try to change x axis when not permitted ([`efa2763`](https://
 
 
 ## v0.109.1 (2024-09-09)
-
-### Fixes
-
-* fix: refactor textbox widget, remove inheritance, adhere to bec style; closes #324 ([`b0d786b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b0d786b991677c0846a0c6ba3f2252d48d94ccaa))
-
-
-## v0.109.0 (2024-09-06)
-
-### Features
-
-* feat(accent colors): added helper function to get all accent colors ([`84a59f7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/84a59f70eed6d8a3c3aeeabc77a5f9ea4e864f61))
