@@ -1,7 +1,8 @@
+import time
 from types import SimpleNamespace
 
 from bec_qthemes import material_icon
-from qtpy.QtCore import Property, Qt
+from qtpy.QtCore import Property, Qt, Signal
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import (
     QDialog,
@@ -9,6 +10,7 @@ from qtpy.QtWidgets import (
     QLabel,
     QPushButton,
     QSizePolicy,
+    QSpacerItem,
     QVBoxLayout,
     QWidget,
 )
@@ -98,6 +100,7 @@ class PopupDialog(QDialog):
     def closeEvent(self, event):
         self.content_widget.setVisible(False)
         self.content_widget.setParent(self.parent)
+        self.done(True)
 
 
 class CompactPopupWidget(QWidget):
@@ -107,23 +110,29 @@ class CompactPopupWidget(QWidget):
     In the compact form, a LED-like indicator shows a status indicator.
     """
 
+    expand = Signal(bool)
+
     def __init__(self, parent=None, layout=QVBoxLayout):
         super().__init__(parent)
 
         self._popup_window = None
+        self._expand_popup = True
 
         QVBoxLayout(self)
         self.compact_view = QWidget(self)
-        self.compact_view.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.compact_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         QHBoxLayout(self.compact_view)
         self.compact_view.layout().setSpacing(0)
         self.compact_view.layout().setContentsMargins(0, 0, 0, 0)
+        self.compact_view.layout().addSpacerItem(
+            QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Fixed)
+        )
         self.compact_label = QLabel(self.compact_view)
         self.compact_status = LedLabel(self.compact_view)
         self.compact_show_popup = QPushButton(self.compact_view)
         self.compact_show_popup.setFlat(True)
         self.compact_show_popup.setIcon(
-            material_icon(icon_name="pan_zoom", size=(10, 10), convert_to_pixmap=False)
+            material_icon(icon_name="expand_content", size=(10, 10), convert_to_pixmap=False)
         )
         self.compact_view.layout().addWidget(self.compact_label)
         self.compact_view.layout().addWidget(self.compact_status)
@@ -148,8 +157,36 @@ class CompactPopupWidget(QWidget):
 
     def show_popup(self):
         """Display the contained widgets in a popup dialog"""
-        self._popup_window = PopupDialog(self.container)
-        self._popup_window.show()
+        if self._expand_popup:
+            # show popup
+            self._popup_window = PopupDialog(self.container)
+            self._popup_window.show()
+            self._popup_window.finished.connect(lambda: self.expand.emit(False))
+            self.expand.emit(True)
+        else:
+            if self.compact:
+                # expand in place
+                self.compact = False
+                self.compact_view.setVisible(True)
+                self.compact_label.setVisible(False)
+                self.compact_status.setVisible(False)
+                self.compact_show_popup.setIcon(
+                    material_icon(
+                        icon_name="collapse_content", size=(10, 10), convert_to_pixmap=False
+                    )
+                )
+                self.expand.emit(True)
+            else:
+                # back to compact form
+                self.compact_label.setVisible(True)
+                self.compact_status.setVisible(True)
+                self.compact_show_popup.setIcon(
+                    material_icon(
+                        icon_name="expand_content", size=(10, 10), convert_to_pixmap=False
+                    )
+                )
+                self.compact = True
+                self.expand.emit(False)
 
     def setSizePolicy(self, size_policy1, size_policy2=None):
         # setting size policy on the compact popup widget will set
@@ -173,7 +210,7 @@ class CompactPopupWidget(QWidget):
 
     @Property(bool)
     def compact(self):
-        return self.compact_view.isVisible()
+        return self.compact_label.isVisible()
 
     @compact.setter
     def compact(self, set_compact: bool):
@@ -214,6 +251,14 @@ class CompactPopupWidget(QWidget):
         """Set the tooltip text associated to the compact view"""
         self.compact_label.setToolTip(tooltip)
         self.compact_status.setToolTip(tooltip)
+
+    @Property(bool)
+    def expand_popup(self):
+        return self._expand_popup
+
+    @expand_popup.setter
+    def expand_popup(self, popup: bool):
+        self._expand_popup = popup
 
     def closeEvent(self, event):
         # Called by Qt, on closing - since the children widgets can be
