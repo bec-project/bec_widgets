@@ -11,6 +11,7 @@ from bec_lib.logger import bec_logger
 from pydantic import Field, ValidationError, field_validator
 from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtWidgets import QWidget
+from tornado.gen import multi
 from typeguard import typechecked
 
 from bec_widgets.utils import ConnectionConfig, WidgetContainerUtils
@@ -18,6 +19,10 @@ from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.figure.plots.image.image import BECImageShow, ImageConfig
 from bec_widgets.widgets.figure.plots.motor_map.motor_map import BECMotorMap, MotorMapConfig
+from bec_widgets.widgets.figure.plots.multi_waveform.multi_waveform import (
+    BECMultiWaveform,
+    BECMultiWaveformConfig,
+)
 from bec_widgets.widgets.figure.plots.plot_base import BECPlotBase, SubplotConfig
 from bec_widgets.widgets.figure.plots.waveform.waveform import BECWaveform, Waveform1DConfig
 
@@ -64,6 +69,7 @@ class WidgetHandler:
             "BECWaveform": (BECWaveform, Waveform1DConfig),
             "BECImageShow": (BECImageShow, ImageConfig),
             "BECMotorMap": (BECMotorMap, MotorMapConfig),
+            "BECMultiWaveform": (BECMultiWaveform, BECMultiWaveformConfig),
         }
 
     def create_widget(
@@ -134,8 +140,14 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
         "BECWaveform": BECWaveform,
         "BECImageShow": BECImageShow,
         "BECMotorMap": BECMotorMap,
+        "BECMultiWaveform": BECMultiWaveform,
     }
-    widget_method_map = {"BECWaveform": "plot", "BECImageShow": "image", "BECMotorMap": "motor_map"}
+    widget_method_map = {
+        "BECWaveform": "plot",
+        "BECImageShow": "image",
+        "BECMotorMap": "motor_map",
+        "BECMultiWaveform": "multi_waveform",
+    }
 
     clean_signal = pyqtSignal()
 
@@ -445,10 +457,27 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
 
         return motor_map
 
+    def multi_waveform(
+        self,
+        monitor: str = None,
+        new: bool = False,
+        row: int | None = None,
+        col: int | None = None,
+        config: dict | None = None,
+        **axis_kwargs,
+    ):
+        multi_waveform = self.subplot_factory(
+            widget_type="BECMultiWaveform", config=config, row=row, col=col, new=new, **axis_kwargs
+        )
+        if config is not None:
+            return multi_waveform
+        multi_waveform.set_monitor(monitor)
+        return multi_waveform
+
     def subplot_factory(
         self,
         widget_type: Literal[
-            "BECPlotBase", "BECWaveform", "BECImageShow", "BECMotorMap"
+            "BECPlotBase", "BECWaveform", "BECImageShow", "BECMotorMap", "BECMultiWaveform"
         ] = "BECPlotBase",
         row: int = None,
         col: int = None,
@@ -500,7 +529,7 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
     def add_widget(
         self,
         widget_type: Literal[
-            "BECPlotBase", "BECWaveform", "BECImageShow", "BECMotorMap"
+            "BECPlotBase", "BECWaveform", "BECImageShow", "BECMotorMap", "BECMultiWaveform"
         ] = "BECPlotBase",
         widget_id: str = None,
         row: int = None,

@@ -22,6 +22,7 @@ class Widgets(str, enum.Enum):
     BECFigure = "BECFigure"
     BECImageWidget = "BECImageWidget"
     BECMotorMapWidget = "BECMotorMapWidget"
+    BECMultiWaveformWidget = "BECMultiWaveformWidget"
     BECProgressBar = "BECProgressBar"
     BECQueue = "BECQueue"
     BECStatusBox = "BECStatusBox"
@@ -1571,6 +1572,436 @@ class BECMotorMapWidget(RPCBase):
     def export(self):
         """
         Show the export dialog for the motor map.
+        """
+
+
+class BECMultiWaveform(RPCBase):
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
+        """
+
+    @property
+    @rpc_call
+    def _config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @property
+    @rpc_call
+    def curves(self) -> collections.deque:
+        """
+        Get the curves of the plot widget as a deque.
+        Returns:
+            deque: Deque of curves.
+        """
+
+    @rpc_call
+    def set_monitor(self, monitor: str):
+        """
+        Set the monitor for the plot widget.
+        Args:
+            monitor (str): The monitor to set.
+        """
+
+    @rpc_call
+    def set_opacity(self, opacity: int):
+        """
+        Set the opacity of the curve on the plot.
+
+        Args:
+            opacity(int): The opacity of the curve. 0-100.
+        """
+
+    @rpc_call
+    def set_curve_limit(self, max_trace: int, flush_buffer: bool = False):
+        """
+        Set the maximum number of traces to display on the plot.
+
+        Args:
+            max_trace (int): The maximum number of traces to display.
+            flush_buffer (bool): Flush the buffer.
+        """
+
+    @rpc_call
+    def set_curve_highlight(self, index: int):
+        """
+        Set the curve highlight based on visible curves.
+
+        Args:
+            index (int): The index of the curve to highlight among visible curves.
+        """
+
+    @rpc_call
+    def set_colormap(self, colormap: str):
+        """
+        Set the colormap for the scatter plot z gradient.
+
+        Args:
+            colormap(str): Colormap for the scatter plot.
+        """
+
+    @rpc_call
+    def set(self, **kwargs) -> "None":
+        """
+        Set the properties of the plot widget.
+
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+
+        Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+            - legend_label_size: int
+        """
+
+    @rpc_call
+    def set_title(self, title: "str", size: "int" = None):
+        """
+        Set the title of the plot widget.
+
+        Args:
+            title(str): Title of the plot widget.
+            size(int): Font size of the title.
+        """
+
+    @rpc_call
+    def set_x_label(self, label: "str", size: "int" = None):
+        """
+        Set the label of the x-axis.
+
+        Args:
+            label(str): Label of the x-axis.
+            size(int): Font size of the label.
+        """
+
+    @rpc_call
+    def set_y_label(self, label: "str", size: "int" = None):
+        """
+        Set the label of the y-axis.
+
+        Args:
+            label(str): Label of the y-axis.
+            size(int): Font size of the label.
+        """
+
+    @rpc_call
+    def set_x_scale(self, scale: "Literal['linear', 'log']" = "linear"):
+        """
+        Set the scale of the x-axis.
+
+        Args:
+            scale(Literal["linear", "log"]): Scale of the x-axis.
+        """
+
+    @rpc_call
+    def set_y_scale(self, scale: "Literal['linear', 'log']" = "linear"):
+        """
+        Set the scale of the y-axis.
+
+        Args:
+            scale(Literal["linear", "log"]): Scale of the y-axis.
+        """
+
+    @rpc_call
+    def set_x_lim(self, *args) -> "None":
+        """
+        Set the limits of the x-axis. This method can accept either two separate arguments
+        for the minimum and maximum x-axis values, or a single tuple containing both limits.
+
+        Usage:
+            set_x_lim(x_min, x_max)
+            set_x_lim((x_min, x_max))
+
+        Args:
+            *args: A variable number of arguments. Can be two integers (x_min and x_max)
+                   or a single tuple with two integers.
+        """
+
+    @rpc_call
+    def set_y_lim(self, *args) -> "None":
+        """
+        Set the limits of the y-axis. This method can accept either two separate arguments
+        for the minimum and maximum y-axis values, or a single tuple containing both limits.
+
+        Usage:
+            set_y_lim(y_min, y_max)
+            set_y_lim((y_min, y_max))
+
+        Args:
+            *args: A variable number of arguments. Can be two integers (y_min and y_max)
+                   or a single tuple with two integers.
+        """
+
+    @rpc_call
+    def set_grid(self, x: "bool" = False, y: "bool" = False):
+        """
+        Set the grid of the plot widget.
+
+        Args:
+            x(bool): Show grid on the x-axis.
+            y(bool): Show grid on the y-axis.
+        """
+
+    @rpc_call
+    def set_colormap(self, colormap: str):
+        """
+        Set the colormap for the scatter plot z gradient.
+
+        Args:
+            colormap(str): Colormap for the scatter plot.
+        """
+
+    @rpc_call
+    def enable_fps_monitor(self, enable: "bool" = True):
+        """
+        Enable the FPS monitor.
+
+        Args:
+            enable(bool): True to enable, False to disable.
+        """
+
+    @rpc_call
+    def lock_aspect_ratio(self, lock):
+        """
+        Lock aspect ratio.
+
+        Args:
+            lock(bool): True to lock, False to unlock.
+        """
+
+    @rpc_call
+    def get_all_data(self, output: Literal["dict", "pandas"] = "dict") -> dict:
+        """
+        Extract all curve data into a dictionary or a pandas DataFrame.
+
+        Args:
+            output (Literal["dict", "pandas"]): Format of the output data.
+
+        Returns:
+            dict | pd.DataFrame: Data of all curves in the specified format.
+        """
+
+    @rpc_call
+    def export(self):
+        """
+        Show the Export Dialog of the plot widget.
+        """
+
+    @rpc_call
+    def remove(self):
+        """
+        Remove the plot widget from the figure.
+        """
+
+
+class BECMultiWaveformWidget(RPCBase):
+    @property
+    @rpc_call
+    def curves(self) -> list[pyqtgraph.graphicsItems.PlotDataItem.PlotDataItem]:
+        """
+        Get the curves of the plot widget as a list
+        Returns:
+            list: List of curves.
+        """
+
+    @rpc_call
+    def set_monitor(self, monitor: str) -> None:
+        """
+        Set the monitor of the plot widget.
+
+        Args:
+            monitor(str): The monitor to set.
+        """
+
+    @rpc_call
+    def set_curve_highlight(self, index: int) -> None:
+        """
+        Set the curve highlight of the plot widget by index
+
+        Args:
+            index(int): The index of the curve to highlight.
+        """
+
+    @rpc_call
+    def set_opacity(self, opacity: int) -> None:
+        """
+        Set the opacity of the plot widget.
+
+        Args:
+            opacity(int): The opacity to set.
+        """
+
+    @rpc_call
+    def set_curve_limit(self, curve_limit: int) -> None:
+        """
+        Set the maximum number of traces to display on the plot widget.
+
+        Args:
+            curve_limit(int): The maximum number of traces to display.
+        """
+
+    @rpc_call
+    def set_buffer_flush(self, flush_buffer: bool) -> None:
+        """
+        Set the buffer flush property of the plot widget.
+
+        Args:
+            flush_buffer(bool): True to flush the buffer, False to not flush the buffer.
+        """
+
+    @rpc_call
+    def set_highlight_last_curve(self, enable: bool) -> None:
+        """
+        Enable or disable highlighting of the last curve.
+
+        Args:
+            enable(bool): True to enable highlighting of the last curve, False to disable.
+        """
+
+    @rpc_call
+    def set_colormap(self, colormap: str) -> None:
+        """
+        Set the colormap of the plot widget.
+
+        Args:
+            colormap(str): The colormap to set.
+        """
+
+    @rpc_call
+    def set(self, **kwargs):
+        """
+        Set the properties of the plot widget.
+
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+
+        Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+            - legend_label_size: int
+        """
+
+    @rpc_call
+    def set_title(self, title: str):
+        """
+        Set the title of the plot widget.
+
+        Args:
+            title(str): The title to set.
+        """
+
+    @rpc_call
+    def set_x_label(self, x_label: str):
+        """
+        Set the x-axis label of the plot widget.
+
+        Args:
+            x_label(str): The x-axis label to set.
+        """
+
+    @rpc_call
+    def set_y_label(self, y_label: str):
+        """
+        Set the y-axis label of the plot widget.
+
+        Args:
+            y_label(str): The y-axis label to set.
+        """
+
+    @rpc_call
+    def set_x_scale(self, x_scale: Literal["linear", "log"]):
+        """
+        Set the x-axis scale of the plot widget.
+
+        Args:
+            x_scale(str): The x-axis scale to set.
+        """
+
+    @rpc_call
+    def set_y_scale(self, y_scale: Literal["linear", "log"]):
+        """
+        Set the y-axis scale of the plot widget.
+
+        Args:
+            y_scale(str): The y-axis scale to set.
+        """
+
+    @rpc_call
+    def set_x_lim(self, x_lim: tuple):
+        """
+        Set x-axis limits of the plot widget.
+
+        Args:
+            x_lim(tuple): The x-axis limits to set.
+        """
+
+    @rpc_call
+    def set_y_lim(self, y_lim: tuple):
+        """
+        Set y-axis limits of the plot widget.
+
+        Args:
+            y_lim(tuple): The y-axis limits to set.
+        """
+
+    @rpc_call
+    def set_grid(self, x_grid: bool, y_grid: bool):
+        """
+        Set the grid of the plot widget.
+
+        Args:
+            x_grid(bool): True to enable the x-grid, False to disable.
+            y_grid(bool): True to enable the y-grid, False to disable.
+        """
+
+    @rpc_call
+    def set_colormap(self, colormap: str) -> None:
+        """
+        Set the colormap of the plot widget.
+
+        Args:
+            colormap(str): The colormap to set.
+        """
+
+    @rpc_call
+    def enable_fps_monitor(self, enabled: bool):
+        """
+        Enable or disable the FPS monitor
+
+        Args:
+            enabled(bool): True to enable the FPS monitor, False to disable.
+        """
+
+    @rpc_call
+    def lock_aspect_ratio(self, lock: bool):
+        """
+        Lock the aspect ratio of the plot widget.
+
+        Args:
+            lock(bool): True to lock the aspect ratio, False to unlock.
+        """
+
+    @rpc_call
+    def export(self):
+        """
+        Export the plot widget.
         """
 
 

@@ -6,6 +6,7 @@ import pytest
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.figure.plots.image.image import BECImageShow
 from bec_widgets.widgets.figure.plots.motor_map.motor_map import BECMotorMap
+from bec_widgets.widgets.figure.plots.multi_waveform.multi_waveform import BECMultiWaveform
 from bec_widgets.widgets.figure.plots.waveform.waveform import BECWaveform
 
 from .client_mocks import mocked_client
@@ -63,10 +64,12 @@ def test_add_different_types_of_widgets(qtbot, mocked_client):
     plt = bec_figure.plot(x_name="samx", y_name="bpm4i")
     im = bec_figure.image("eiger")
     motor_map = bec_figure.motor_map("samx", "samy")
+    multi_waveform = bec_figure.multi_waveform("waveform")
 
     assert plt.__class__ == BECWaveform
     assert im.__class__ == BECImageShow
     assert motor_map.__class__ == BECMotorMap
+    assert multi_waveform.__class__ == BECMultiWaveform
 
 
 def test_access_widgets_access_errors(qtbot, mocked_client):

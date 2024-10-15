@@ -65,16 +65,18 @@ def test_add_remove_bec_figure_to_dock(bec_dock_area):
     plt = fig.plot(x_name="samx", y_name="bpm4i")
     im = fig.image("eiger")
     mm = fig.motor_map("samx", "samy")
+    mw = fig.multi_waveform("waveform1d")
 
     assert len(bec_dock_area.dock_area.docks) == 1
     assert len(d0.widgets) == 1
     assert len(d0.widget_list) == 1
-    assert len(fig.widgets) == 3
+    assert len(fig.widgets) == 4
 
     assert fig.config.widget_class == "BECFigure"
     assert plt.config.widget_class == "BECWaveform"
     assert im.config.widget_class == "BECImageShow"
     assert mm.config.widget_class == "BECMotorMap"
+    assert mw.config.widget_class == "BECMultiWaveform"
 
 
 def test_close_docks(bec_dock_area, qtbot):

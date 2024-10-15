@@ -56,6 +56,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     # "cm": self.colormap,
                     "im": self.im,
                     "mm": self.mm,
+                    "mw": self.mw,
                 }
             )
 
@@ -167,9 +168,11 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.im.image("waveform", "1d")
 
         self.d2 = self.dock.add_dock(name="dock_2", position="bottom")
-        self.wf = self.d2.add_widget("BECWaveformWidget", row=0, col=0)
-        self.wf.plot(x_name="samx", y_name="bpm3a")
-        self.wf.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
+        self.wf = self.d2.add_widget("BECFigure", row=0, col=0)
+
+        self.mw = self.wf.multi_waveform(monitor="waveform")  # , config=config)
+        # self.wf.plot(x_name="samx", y_name="bpm3a")
+        # self.wf.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
         # self.bar = self.d2.add_widget("RingProgressBar", row=0, col=1)
         # self.bar.set_diameter(200)
 
@@ -210,6 +213,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     win = JupyterConsoleWindow()
     win.show()
+    win.resize(1200, 800)
 
     app.aboutToQuit.connect(win.close)
     sys.exit(app.exec_())

@@ -24,6 +24,7 @@ from bec_widgets.widgets.dark_mode_button.dark_mode_button import DarkModeButton
 from bec_widgets.widgets.dock.dock import BECDock, DockConfig
 from bec_widgets.widgets.image.image_widget import BECImageWidget
 from bec_widgets.widgets.motor_map.motor_map_widget import BECMotorMapWidget
+from bec_widgets.widgets.multi_waveform.multi_waveform_widget import BECMultiWaveformWidget
 from bec_widgets.widgets.positioner_box.positioner_box import PositionerBox
 from bec_widgets.widgets.ring_progress_bar.ring_progress_bar import RingProgressBar
 from bec_widgets.widgets.scan_control.scan_control import ScanControl
@@ -83,6 +84,11 @@ class BECDockArea(BECWidget, QWidget):
                         "waveform": MaterialIconAction(
                             icon_name=BECWaveformWidget.ICON_NAME,
                             tooltip="Add Waveform",
+                            filled=True,
+                        ),
+                        "multi_waveform": MaterialIconAction(
+                            icon_name=BECMultiWaveformWidget.ICON_NAME,
+                            tooltip="Add Multi Waveform",
                             filled=True,
                         ),
                         "image": MaterialIconAction(
@@ -153,6 +159,9 @@ class BECDockArea(BECWidget, QWidget):
         # Menu Plot
         self.toolbar.widgets["menu_plots"].widgets["waveform"].triggered.connect(
             lambda: self.add_dock(widget="BECWaveformWidget", prefix="waveform")
+        )
+        self.toolbar.widgets["menu_plots"].widgets["multi_waveform"].triggered.connect(
+            lambda: self.add_dock(widget="BECMultiWaveformWidget", prefix="multi_waveform")
         )
         self.toolbar.widgets["menu_plots"].widgets["image"].triggered.connect(
             lambda: self.add_dock(widget="BECImageWidget", prefix="image")
