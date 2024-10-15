@@ -552,6 +552,7 @@ class BECFigure(RPCBase):
     def image(
         self,
         monitor: "str" = None,
+        monitor_type: "Literal['1d', '2d']" = "2d",
         color_bar: "Literal['simple', 'full']" = "full",
         color_map: "str" = "magma",
         data: "np.ndarray" = None,
@@ -856,6 +857,7 @@ class BECImageShow(RPCBase):
     def image(
         self,
         monitor: "str",
+        monitor_type: "Literal['1d', '2d']" = "2d",
         color_map: "Optional[str]" = "magma",
         color_bar: "Optional[Literal['simple', 'full']]" = "full",
         downsample: "Optional[bool]" = True,
@@ -868,6 +870,7 @@ class BECImageShow(RPCBase):
 
         Args:
             monitor(str): The name of the monitor to display.
+            monitor_type(Literal["1d","2d"]): The type of monitor to display.
             color_bar(Literal["simple","full"]): The type of color bar to display.
             color_map(str): The color map to use for the image.
             data(np.ndarray): Custom data to display.
@@ -1180,6 +1183,7 @@ class BECImageWidget(RPCBase):
     def image(
         self,
         monitor: "str",
+        monitor_type: "Optional[Literal['1d', '2d']]" = "2d",
         color_map: "Optional[str]" = "magma",
         color_bar: "Optional[Literal['simple', 'full']]" = "full",
         downsample: "Optional[bool]" = True,
@@ -2097,6 +2101,15 @@ class BECWaveform(RPCBase):
         """
 
     @rpc_call
+    def enable_scatter(self, enable: "bool"):
+        """
+        Enable/Disable scatter plot on all curves.
+
+        Args:
+            enable(bool): If True, enable scatter markers; if False, disable them.
+        """
+
+    @rpc_call
     def enable_fps_monitor(self, enable: "bool" = True):
         """
         Enable the FPS monitor.
@@ -2417,6 +2430,15 @@ class BECWaveformWidget(RPCBase):
 
         Args:
             enabled(bool): If True, enable the FPS monitor.
+        """
+
+    @rpc_call
+    def enable_scatter(self, enabled: "bool"):
+        """
+        Enable the scatter plot of the plot widget.
+
+        Args:
+            enabled(bool): If True, enable the scatter plot.
         """
 
     @rpc_call

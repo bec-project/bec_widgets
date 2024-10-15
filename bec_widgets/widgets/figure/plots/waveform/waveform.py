@@ -72,6 +72,7 @@ class BECWaveform(BECPlotBase):
         "set_y_lim",
         "set_grid",
         "set_colormap",
+        "enable_scatter",
         "enable_fps_monitor",
         "lock_aspect_ratio",
         "export",
@@ -370,6 +371,20 @@ class BECWaveform(BECPlotBase):
             raise ValueError(f"Curve with ID '{identifier}' not found.")
         else:
             raise ValueError("Identifier must be either an integer (index) or a string (curve_id).")
+
+    def enable_scatter(self, enable: bool):
+        """
+        Enable/Disable scatter plot on all curves.
+
+        Args:
+            enable(bool): If True, enable scatter markers; if False, disable them.
+        """
+        for curve in self.curves:
+            if isinstance(curve, BECCurve):
+                if enable:
+                    curve.set_symbol("o")  # You can choose any symbol you like
+                else:
+                    curve.set_symbol(None)
 
     def plot(
         self,

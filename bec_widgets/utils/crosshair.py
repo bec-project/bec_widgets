@@ -8,6 +8,14 @@ from qtpy.QtCore import QObject, Qt
 from qtpy.QtCore import Signal as pyqtSignal
 
 
+class NonDownsamplingScatterPlotItem(pg.ScatterPlotItem):
+    def setDownsampling(self, ds=None, auto=None, method=None):
+        pass
+
+    def setClipToView(self, state):
+        pass
+
+
 class Crosshair(QObject):
     positionChanged = pyqtSignal(tuple)
     positionClicked = pyqtSignal(tuple)
@@ -64,7 +72,7 @@ class Crosshair(QObject):
                     continue
                 pen = item.opts["pen"]
                 color = pen.color() if hasattr(pen, "color") else pg.mkColor(pen)
-                marker_moved = pg.ScatterPlotItem(
+                marker_moved = NonDownsamplingScatterPlotItem(
                     size=10, pen=pg.mkPen(color), brush=pg.mkBrush(None)
                 )
                 marker_moved.skip_auto_range = True
@@ -73,7 +81,7 @@ class Crosshair(QObject):
 
                 # Create glowing effect markers for clicked events
                 for size, alpha in [(18, 64), (14, 128), (10, 255)]:
-                    marker_clicked = pg.ScatterPlotItem(
+                    marker_clicked = NonDownsamplingScatterPlotItem(
                         size=size,
                         pen=pg.mkPen(None),
                         brush=pg.mkBrush(color.red(), color.green(), color.blue(), alpha),

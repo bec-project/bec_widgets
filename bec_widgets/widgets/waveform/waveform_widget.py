@@ -53,6 +53,7 @@ class BECWaveformWidget(BECWidget, QWidget):
         "set_auto_range",
         "set_grid",
         "enable_fps_monitor",
+        "enable_scatter",
         "lock_aspect_ratio",
         "export",
         "export_to_matplotlib",
@@ -649,6 +650,15 @@ class BECWaveformWidget(BECWidget, QWidget):
             show(bool): Visibility of the outer axes.
         """
         self.waveform.set_outer_axes(show)
+
+    def enable_scatter(self, enabled: bool):
+        """
+        Enable the scatter plot of the plot widget.
+
+        Args:
+            enabled(bool): If True, enable the scatter plot.
+        """
+        self.waveform.enable_scatter(enabled)
 
     def lock_aspect_ratio(self, lock: bool):
         """

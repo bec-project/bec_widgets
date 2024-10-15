@@ -42,7 +42,7 @@ class CurveConfig(ConnectionConfig):
     parent_id: Optional[str] = Field(None, description="The parent plot of the curve.")
     label: Optional[str] = Field(None, description="The label of the curve.")
     color: Optional[str | tuple] = Field(None, description="The color of the curve.")
-    symbol: Optional[str] = Field("o", description="The symbol of the curve.")
+    symbol: Optional[str | None] = Field("o", description="The symbol of the curve.")
     symbol_color: Optional[str | tuple] = Field(
         None, description="The color of the symbol of the curve."
     )
@@ -201,7 +201,8 @@ class BECCurve(BECConnector, pg.PlotDataItem):
             symbol(str): Symbol of the curve.
         """
         self.config.symbol = symbol
-        self.apply_config()
+        self.setSymbol(symbol)
+        self.updateItems()
 
     def set_symbol_color(self, symbol_color: str):
         """
