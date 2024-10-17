@@ -119,26 +119,26 @@ class CompactPopupWidget(QWidget):
         self._expand_popup = True
 
         QVBoxLayout(self)
-        self.compact_view = QWidget(self)
-        self.compact_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        QHBoxLayout(self.compact_view)
-        self.compact_view.layout().setSpacing(0)
-        self.compact_view.layout().setContentsMargins(0, 0, 0, 0)
-        self.compact_view.layout().addSpacerItem(
+        self.compact_view_widget = QWidget(self)
+        self.compact_view_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        QHBoxLayout(self.compact_view_widget)
+        self.compact_view_widget.layout().setSpacing(0)
+        self.compact_view_widget.layout().setContentsMargins(0, 0, 0, 0)
+        self.compact_view_widget.layout().addSpacerItem(
             QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Fixed)
         )
-        self.compact_label = QLabel(self.compact_view)
-        self.compact_status = LedLabel(self.compact_view)
-        self.compact_show_popup = QPushButton(self.compact_view)
+        self.compact_label = QLabel(self.compact_view_widget)
+        self.compact_status = LedLabel(self.compact_view_widget)
+        self.compact_show_popup = QPushButton(self.compact_view_widget)
         self.compact_show_popup.setFlat(True)
         self.compact_show_popup.setIcon(
             material_icon(icon_name="expand_content", size=(10, 10), convert_to_pixmap=False)
         )
-        self.compact_view.layout().addWidget(self.compact_label)
-        self.compact_view.layout().addWidget(self.compact_status)
-        self.compact_view.layout().addWidget(self.compact_show_popup)
-        self.compact_view.setVisible(False)
-        self.layout().addWidget(self.compact_view)
+        self.compact_view_widget.layout().addWidget(self.compact_label)
+        self.compact_view_widget.layout().addWidget(self.compact_status)
+        self.compact_view_widget.layout().addWidget(self.compact_show_popup)
+        self.compact_view_widget.setVisible(False)
+        self.layout().addWidget(self.compact_view_widget)
         self.container = QWidget(self)
         self.layout().addWidget(self.container)
         self.container.setVisible(True)
@@ -164,10 +164,10 @@ class CompactPopupWidget(QWidget):
             self._popup_window.finished.connect(lambda: self.expand.emit(False))
             self.expand.emit(True)
         else:
-            if self.compact:
+            if self.compact_view:
                 # expand in place
-                self.compact = False
-                self.compact_view.setVisible(True)
+                self.compact_view = False
+                self.compact_view_widget.setVisible(True)
                 self.compact_label.setVisible(False)
                 self.compact_status.setVisible(False)
                 self.compact_show_popup.setIcon(
@@ -185,7 +185,7 @@ class CompactPopupWidget(QWidget):
                         icon_name="expand_content", size=(10, 10), convert_to_pixmap=False
                     )
                 )
-                self.compact = True
+                self.compact_view = True
                 self.expand.emit(False)
 
     def setSizePolicy(self, size_policy1, size_policy2=None):
@@ -209,11 +209,11 @@ class CompactPopupWidget(QWidget):
         self.container.layout().addWidget(widget)
 
     @Property(bool)
-    def compact(self):
+    def compact_view(self):
         return self.compact_label.isVisible()
 
-    @compact.setter
-    def compact(self, set_compact: bool):
+    @compact_view.setter
+    def compact_view(self, set_compact: bool):
         """Sets the compact form
 
         If set_compact is True, the compact view is displayed ; otherwise,
@@ -221,11 +221,11 @@ class CompactPopupWidget(QWidget):
         the container widget or the compact view widget.
         """
         if set_compact:
-            self.compact_view.setVisible(True)
+            self.compact_view_widget.setVisible(True)
             self.container.setVisible(False)
             QWidget.setSizePolicy(self, QSizePolicy.Fixed, QSizePolicy.Fixed)
         else:
-            self.compact_view.setVisible(False)
+            self.compact_view_widget.setVisible(False)
             self.container.setVisible(True)
             QWidget.setSizePolicy(self, self.container.sizePolicy())
         if self.parentWidget():

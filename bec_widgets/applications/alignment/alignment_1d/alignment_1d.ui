@@ -42,7 +42,7 @@
        </item>
        <item>
         <widget class="BECStatusBox" name="bec_status_box">
-         <property name="compact" stdset="0">
+         <property name="compact_view" stdset="0">
           <bool>true</bool>
          </property>
          <property name="label" stdset="0">
@@ -65,7 +65,7 @@
        </item>
        <item>
         <widget class="BECQueue" name="bec_queue">
-         <property name="compact" stdset="0">
+         <property name="compact_view" stdset="0">
           <bool>true</bool>
          </property>
         </widget>

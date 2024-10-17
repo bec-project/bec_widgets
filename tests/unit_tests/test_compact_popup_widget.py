@@ -46,11 +46,11 @@ def test_size_policy(compact_popup):
     csp = compact_popup.sizePolicy()
     assert csp.horizontalPolicy() == QSizePolicy.Minimum
     assert csp.verticalPolicy() == QSizePolicy.Expanding
-    compact_popup.compact = True
+    compact_popup.compact_view = True
     csp = compact_popup.sizePolicy()
     assert csp.horizontalPolicy() == QSizePolicy.Fixed
     assert csp.verticalPolicy() == QSizePolicy.Fixed
-    compact_popup.compact = False
+    compact_popup.compact_view = False
     csp = compact_popup.sizePolicy()
     assert csp.horizontalPolicy() == QSizePolicy.Minimum
     assert csp.verticalPolicy() == QSizePolicy.Expanding
@@ -58,8 +58,8 @@ def test_size_policy(compact_popup):
 
 def test_open_full_view(qtbot, compact_popup):
     qtbot.waitUntil(compact_popup.container.isVisible, timeout=1000)
-    compact_popup.compact = True
-    qtbot.waitUntil(compact_popup.compact_view.isVisible, timeout=1000)
+    compact_popup.compact_view = True
+    qtbot.waitUntil(compact_popup.compact_view_widget.isVisible, timeout=1000)
     qtbot.mouseClick(compact_popup.compact_show_popup, Qt.LeftButton)
     qtbot.waitUntil(compact_popup.container.isVisible, timeout=1000)
     compact_popup._popup_window.close()
