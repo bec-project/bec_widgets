@@ -167,12 +167,12 @@ def test_dap_rpc(rpc_server_figure, bec_client_lib, qtbot):
     dev = client.device_manager.devices
     scans = client.scans
 
-    dev.bpm4i.sim.sim_select_model("GaussianModel")
-    params = dev.bpm4i.sim.sim_params
+    dev.bpm4i.sim.select_model("GaussianModel")
+    params = dev.bpm4i.sim.params
     params.update(
         {"noise": "uniform", "noise_multiplier": 10, "center": 5, "sigma": 1, "amplitude": 200}
     )
-    dev.bpm4i.sim.sim_params = params
+    dev.bpm4i.sim.params = params
     time.sleep(1)
 
     res = scans.line_scan(dev.samx, 0, 8, steps=50, relative=False)
