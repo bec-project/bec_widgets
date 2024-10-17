@@ -53,7 +53,7 @@ class CurveSettings(SettingWidget):
         x_entry = self.target_widget.waveform._x_axis_mode["entry"]
         self._enable_ui_elements(x_name, x_entry)
         cm = self.target_widget.config.color_palette
-        self.ui.color_map_selector_scan.combo.setCurrentText(cm)
+        self.ui.color_map_selector_scan.setCurrentText(cm)
 
         # Scan Curve Table
         for source in ["scan_segment", "async"]:
@@ -115,10 +115,10 @@ class CurveSettings(SettingWidget):
     @Slot()
     def change_colormap(self, target: Literal["scan", "dap"]):
         if target == "scan":
-            cm = self.ui.color_map_selector_scan.combo.currentText()
+            cm = self.ui.color_map_selector_scan.currentText()
             table = self.ui.scan_table
         if target == "dap":
-            cm = self.ui.color_map_selector_dap.combo.currentText()
+            cm = self.ui.color_map_selector_dap.currentText()
             table = self.ui.dap_table
         rows = table.rowCount()
         colors = Colors.golden_angle_color(colormap=cm, num=max(10, rows + 1), format="HEX")

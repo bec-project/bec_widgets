@@ -40,7 +40,7 @@ class ColormapDelegate(QStyledItemDelegate):
         )
 
 
-class ColormapSelector(QWidget):
+class ColormapSelector(QComboBox):
     """
     Simple colormap combobox widget. By  default it loads all the available colormaps in pyqtgraph.
     """
@@ -54,22 +54,19 @@ class ColormapSelector(QWidget):
         self.initUI(default_colormaps)
 
     def initUI(self, default_colormaps=None):
-        self.layout = QVBoxLayout(self)
-        self.combo = QComboBox()
-        self.combo.setItemDelegate(ColormapDelegate())
-        self.combo.currentTextChanged.connect(self.colormap_changed)
+        self.setItemDelegate(ColormapDelegate())
+        self.currentTextChanged.connect(self.colormap_changed)
         self.available_colormaps = pg.colormap.listMaps()
         if default_colormaps is None:
             default_colormaps = self.available_colormaps
         self.add_color_maps(default_colormaps)
-        self.layout.addWidget(self.combo)
 
     @Slot()
     def colormap_changed(self):
         """
         Emit the colormap changed signal with the current colormap selected in the combobox.
         """
-        self.colormap_changed_signal.emit(self.combo.currentText())
+        self.colormap_changed_signal.emit(self.currentText())
 
     def add_color_maps(self, colormaps=None):
         """
@@ -78,14 +75,14 @@ class ColormapSelector(QWidget):
         Args:
             colormaps(list): List of colormaps to add to the combobox. If None, all available colormaps are added.
         """
-        self.combo.clear()
+        self.clear()
         if colormaps is not None:
             for name in colormaps:
                 if name in self.available_colormaps:
-                    self.combo.addItem(name)
+                    self.addItem(name)
         else:
             for name in self.available_colormaps:
-                self.combo.addItem(name)
+                self.addItem(name)
         self._colormaps = colormaps if colormaps is not None else self.available_colormaps
 
     @Property("QStringList")

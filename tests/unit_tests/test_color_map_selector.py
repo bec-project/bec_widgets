@@ -17,26 +17,24 @@ def test_color_map_selector_init(color_map_selector):
     assert isinstance(color_map_selector, ColormapSelector)
 
     all_maps = pg.colormap.listMaps()
-    loaded_maps = [
-        color_map_selector.combo.itemText(i) for i in range(color_map_selector.combo.count())
-    ]
+    loaded_maps = [color_map_selector.itemText(i) for i in range(color_map_selector.count())]
     assert len(loaded_maps) > 0
     assert all_maps == loaded_maps
 
 
 def test_color_map_selector_add_color_maps(color_map_selector):
     color_map_selector.add_color_maps(["cividis", "viridis"])
-    assert color_map_selector.combo.count() == 2
-    assert color_map_selector.combo.itemText(0) == "cividis"
-    assert color_map_selector.combo.itemText(1) == "viridis"
-    assert color_map_selector.combo.itemText(2) != "cividis"
-    assert color_map_selector.combo.itemText(2) != "viridis"
+    assert color_map_selector.count() == 2
+    assert color_map_selector.itemText(0) == "cividis"
+    assert color_map_selector.itemText(1) == "viridis"
+    assert color_map_selector.itemText(2) != "cividis"
+    assert color_map_selector.itemText(2) != "viridis"
 
 
 def test_colormap_add_maps_by_property(color_map_selector):
     color_map_selector.colormaps = ["cividis", "viridis"]
-    assert color_map_selector.combo.count() == 2
-    assert color_map_selector.combo.itemText(0) == "cividis"
-    assert color_map_selector.combo.itemText(1) == "viridis"
-    assert color_map_selector.combo.itemText(2) != "cividis"
-    assert color_map_selector.combo.itemText(2) != "viridis"
+    assert color_map_selector.count() == 2
+    assert color_map_selector.itemText(0) == "cividis"
+    assert color_map_selector.itemText(1) == "viridis"
+    assert color_map_selector.itemText(2) != "cividis"
+    assert color_map_selector.itemText(2) != "viridis"
