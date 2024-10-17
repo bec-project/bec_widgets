@@ -1,6 +1,42 @@
 # CHANGELOG
 
 
+## v0.119.0 (2024-10-17)
+
+### Features
+
+* feat: new PositionerGroup widget ([`af9655d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/af9655de0c541092437accfbaa779628a2f48ccb))
+
+* feat: add 'expand_popup' property to CompactPopupWidget
+
+This property tells if expand should show a popup (by default), or
+if the widget should expand in-place ([`e4121a0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e4121a01cb6b8d496e630cd43bc642b994b8f310))
+
+* feat: PositionerBox with a popup view ([`2615787`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/261578796f1de8ca9cab9b91659bc1484f7aa89d))
+
+* feat: emit 'device_selected' and 'scan_axis' from scan control widget ([`0b9b1a3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0b9b1a3c89a98505079f7d4078915b7bbfaa1e23))
+
+* feat: new 'device_selected' signals to ScanControl, ScanGroupBox, DeviceLineEdit ([`9801d27`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9801d2769eb0ee95c94ec0c011e1dac1407142ae))
+
+### Fixes
+
+* fix: fix syntax due to change of api for simulated devices ([`19f4e40`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/19f4e407e00ee242973ca4c3f90e4e41a4d3e315))
+
+* fix: remove wrongly scoped test ([`a23841b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a23841b2553dc7162da943715d58275c7dc39ed9))
+
+* fix: rename 'compact' property -> 'compact_view' ([`6982711`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6982711fea5fb8a73845ed7c0692e3ec53ef7871))
+
+* fix: Alignment 1D update, make app window a main window (in .ui file) ([`0015f0e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0015f0e2d62adc02d3ef334e1f6dbb2d0288fec6))
+
+* fix: set (Minimum, Fixed) size policy on Stop button ([`523cc43`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/523cc435725b10b7d59a4477a1aaa24a1f3e37a2))
+
+### Refactoring
+
+* refactor: redesign of scan selection and scan control boxes ([`a69d287`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a69d2870e2b3539739781d741b27b8599c0f4abd))
+
+* refactor: move add/remove bundle to scan group box ([`e3d0a7b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e3d0a7bbf9918dc16eb7227a178c310256ce570d))
+
+
 ## v0.118.0 (2024-10-13)
 
 ### Documentation
@@ -129,46 +165,6 @@ Fixes #361, do not try to change x axis when not permitted ([`efa2763`](https://
 
 * docs(dap_combo_box): updated screenshot ([`e3b5e33`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e3b5e338bfaec276979183fb6d79ab41a7ca21e1))
 
-* docs(device_box): updated screenshot ([`c8e614b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c8e614b575b48be788a6389a7aa0cfa033d86ab8))
-
 ### Fixes
 
 * fix: test e2e dap wait_for_fit ([`b2f7d3c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b2f7d3c5f3f4bf00cc628f788e2c278ebb5688ae))
-
-
-## v0.112.0 (2024-09-17)
-
-### Features
-
-* feat: console: various improvements, auto-adapt rows to widget size, Qt Designer plugin ([`286ad71`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/286ad7196b0b8562d648fb304eab7d759b6a959b))
-
-
-## v0.111.0 (2024-09-17)
-
-### Documentation
-
-* docs(position_indicator): updated position indicator documentation and added designer properties ([`60f7d54`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/60f7d54e2b4c3129de6c95729b8b4aea1757174f))
-
-### Features
-
-* feat(position_indicator): improved design and added more customization options ([`d15b222`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d15b22250fbceb708d89872c0380693e04acb107))
-
-### Fixes
-
-* fix(position_indicator): fixed user access ([`dd932dd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/dd932dd8f3910ab67ec8403124f4e176d048e542))
-
-* fix(generate_cli): fixed type annotations ([`d3c1a1b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d3c1a1b2edcba7afea9d369820fa7974ac29c333))
-
-* fix(positioner_box): visual improvements to the positioner_box and positioner_control_line ([`7ea4a48`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7ea4a482e7cd9499a7268ac887b345cab01632aa))
-
-* fix(palette viewer): fixed background for tool tip ([`9045323`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9045323049d2a39c36fc8845f3b2883d6933436b))
-
-
-## v0.110.0 (2024-09-12)
-
-### Features
-
-* feat(palette_viewer): added widget to display the current palette and accent colors ([`a8576c1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a8576c164cad17746ec4fcd5c775fb78f70c055c))
-
-
-## v0.109.1 (2024-09-09)
