@@ -1,8 +1,6 @@
 import time
 
 import numpy as np
-import pytest
-from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
 
 from bec_widgets.cli.auto_updates import AutoUpdates
@@ -96,7 +94,8 @@ def test_rpc_add_dock_with_figure_e2e(bec_client_lib, rpc_server_dock):
         time.sleep(0.2)
 
     # plot
-    plt_last_scan_data = queue.scan_storage.storage[-1].data
+    item = queue.scan_storage.storage[-1]
+    plt_last_scan_data = item.live_data if hasattr(item, "live_data") else item.data
     plt_data = plt.get_all_data()
     assert plt_data["bpm4i-bpm4i"]["x"] == plt_last_scan_data["samx"]["samx"].val
     assert plt_data["bpm4i-bpm4i"]["y"] == plt_last_scan_data["bpm4i"]["bpm4i"].val
@@ -258,7 +257,8 @@ def test_auto_update(bec_client_lib, rpc_server_dock, qtbot):
     status = scans.line_scan(dev.samx, -5, 5, steps=10, exp_time=0.05, relative=False)
     status.wait()
 
-    last_scan_data = queue.scan_storage.storage[-1].data
+    item = queue.scan_storage.storage[-1]
+    last_scan_data = item.live_data if hasattr(item, "live_data") else item.data
 
     # get data from curves
     widgets = plt.widget_list
@@ -284,7 +284,8 @@ def test_auto_update(bec_client_lib, rpc_server_dock, qtbot):
     qtbot.waitUntil(lambda: len(plt.widget_list) > 0, timeout=5000)
     plt_data = widgets[0].get_all_data()
 
-    last_scan_data = queue.scan_storage.storage[-1].data
+    item = queue.scan_storage.storage[-1]
+    last_scan_data = item.live_data if hasattr(item, "live_data") else item.data
 
     # check plotted data
     assert (

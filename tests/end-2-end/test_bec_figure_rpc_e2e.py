@@ -94,7 +94,8 @@ def test_rpc_waveform_scan(rpc_server_figure, bec_client_lib):
     status = scans.line_scan(dev.samx, -5, 5, steps=10, exp_time=0.05, relative=False)
     status.wait()
 
-    last_scan_data = queue.scan_storage.storage[-1].data
+    item = queue.scan_storage.storage[-1]
+    last_scan_data = item.live_data if hasattr(item, "live_data") else item.data
 
     # get data from curves
     plt_data = plt.get_all_data()

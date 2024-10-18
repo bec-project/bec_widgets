@@ -1302,7 +1302,11 @@ class BECWaveform(BECPlotBase):
         Update the scan curves with the data from the scan segment.
         """
         try:
-            data = self.scan_item.data
+            data = (
+                self.scan_item.live_data
+                if hasattr(self.scan_item, "live_data")  # backward compatibility
+                else self.scan_item.data
+            )
         except AttributeError:
             return
 
@@ -1355,8 +1359,14 @@ class BECWaveform(BECPlotBase):
             list|np.ndarray|None: X data for the curve.
         """
         x_data = None
+        live_data = (
+            self.scan_item.live_data
+            if hasattr(self.scan_item, "live_data")
+            else self.scan_item.data
+        )
         if self._x_axis_mode["name"] == "timestamp":
-            timestamps = self.scan_item.data[y_name][y_entry].timestamps
+
+            timestamps = live_data[y_name][y_entry].timestamps
 
             x_data = timestamps
             return x_data
@@ -1376,7 +1386,7 @@ class BECWaveform(BECPlotBase):
             else:
                 x_name = self.scan_item.status_message.info["scan_report_devices"][0]
                 x_entry = self.entry_validator.validate_signal(x_name, None)
-                x_data = self.scan_item.data[x_name][x_entry].val
+                x_data = live_data[x_name][x_entry].val
                 self._x_axis_mode["label_suffix"] = f" [auto: {x_name}-{x_entry}]"
                 current_label = "" if self.config.axis.x_label is None else self.config.axis.x_label
                 self.plot_item.setLabel(
@@ -1387,7 +1397,7 @@ class BECWaveform(BECPlotBase):
             x_name = curve.config.signals.x.name
             x_entry = curve.config.signals.x.entry
             try:
-                x_data = self.scan_item.data[x_name][x_entry].val
+                x_data = live_data[x_name][x_entry].val
             except TypeError:
                 x_data = []
         return x_data

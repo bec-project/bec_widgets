@@ -3,6 +3,7 @@ from unittest import mock
 
 import numpy as np
 import pytest
+from bec_lib.scan_items import ScanItem
 
 from bec_widgets.widgets.figure import BECFigure
 from bec_widgets.widgets.figure.plots.waveform.waveform_curve import CurveConfig, Signal, SignalData
@@ -447,8 +448,8 @@ def test_scan_update(qtbot, mocked_client):
         "scan_id": 1,
     }
     # Mock scan_storage.find_scan_by_ID
-    mock_scan_data_waveform = mock.MagicMock()
-    mock_scan_data_waveform.data = {
+    mock_scan_data_waveform = mock.MagicMock(spec=ScanItem)
+    mock_scan_data_waveform.live_data = {
         device_name: {
             entry: mock.MagicMock(val=[msg_waveform["data"][device_name][entry]["value"]])
             for entry in msg_waveform["data"][device_name]
@@ -477,7 +478,9 @@ def test_scan_history_with_val_access(qtbot, mocked_client):
     }
 
     mock_scan_storage = mock.MagicMock()
-    mock_scan_storage.find_scan_by_ID.return_value = mock.MagicMock(data=mock_scan_data)
+    scan_item_mock = mock.MagicMock(spec=ScanItem)
+    scan_item_mock.data = mock_scan_data
+    mock_scan_storage.find_scan_by_ID.return_value = scan_item_mock
     w1.queue.scan_storage = mock_scan_storage
 
     fake_scan_id = "fake_scan_id"
@@ -507,8 +510,8 @@ def test_scatter_2d_update(qtbot, mocked_client):
     }
     msg_metadata = {"scan_name": "line_scan"}
 
-    mock_scan_item = mock.MagicMock()
-    mock_scan_item.data = {
+    mock_scan_item = mock.MagicMock(spec=ScanItem)
+    mock_scan_item.live_data = {
         device_name: {
             entry: mock.MagicMock(val=msg["data"][device_name][entry]["value"])
             for entry in msg["data"][device_name]
@@ -572,7 +575,7 @@ def test_waveform_set_x_sync(qtbot, mocked_client):
     w1.plot("bpm4i")
     w1.set_x_label(custom_label)
 
-    scan_item_mock = mock.MagicMock()
+    scan_item_mock = mock.MagicMock(spec=ScanItem)
     mock_data = {
         "samx": {"samx": mock.MagicMock(val=np.array([1, 2, 3]))},
         "samy": {"samy": mock.MagicMock(val=np.array([4, 5, 6]))},
@@ -584,7 +587,8 @@ def test_waveform_set_x_sync(qtbot, mocked_client):
         },
     }
 
-    scan_item_mock.data = mock_data
+    scan_item_mock.live_data = mock_data
+    scan_item_mock.status_message = mock.MagicMock()
     scan_item_mock.status_message.info = {"scan_report_devices": ["samx"]}
 
     w1.queue.scan_storage.find_scan_by_ID.return_value = scan_item_mock
