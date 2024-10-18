@@ -55,6 +55,7 @@ class Crosshair(QObject):
         self.plot_item.ctrl.derivativeCheck.checkStateChanged.connect(self.check_derivatives)
         self.plot_item.ctrl.logXCheck.checkStateChanged.connect(self.check_log)
         self.plot_item.ctrl.logYCheck.checkStateChanged.connect(self.check_log)
+        self.plot_item.ctrl.downsampleSpin.valueChanged.connect(self.clear_markers)
 
         # Initialize markers
         self.marker_moved_1d = {}
