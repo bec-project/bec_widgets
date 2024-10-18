@@ -1,7 +1,30 @@
 # CHANGELOG
 
 
+## v1.0.0 (2024-10-18)
+
+### Breaking
+
+* feat!: ability to disable scatter from waveform & compatible crosshair with down sampling ([`2ab12ed`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2ab12ed60abb995abc381d9330fdcf399796d9e5))
+
+### Bug Fixes
+
+* fix(crosshair): downsample clear markers ([`f9a889f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f9a889fc6d380b9e587edcb465203122ea0bffc1))
+
+
 ## v0.119.0 (2024-10-17)
+
+### Bug Fixes
+
+* fix: fix syntax due to change of api for simulated devices ([`19f4e40`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/19f4e407e00ee242973ca4c3f90e4e41a4d3e315))
+
+* fix: remove wrongly scoped test ([`a23841b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a23841b2553dc7162da943715d58275c7dc39ed9))
+
+* fix: rename 'compact' property -> 'compact_view' ([`6982711`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6982711fea5fb8a73845ed7c0692e3ec53ef7871))
+
+* fix: Alignment 1D update, make app window a main window (in .ui file) ([`0015f0e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0015f0e2d62adc02d3ef334e1f6dbb2d0288fec6))
+
+* fix: set (Minimum, Fixed) size policy on Stop button ([`523cc43`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/523cc435725b10b7d59a4477a1aaa24a1f3e37a2))
 
 ### Features
 
@@ -17,18 +40,6 @@ if the widget should expand in-place ([`e4121a0`](https://gitlab.psi.ch/bec/bec_
 * feat: emit 'device_selected' and 'scan_axis' from scan control widget ([`0b9b1a3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0b9b1a3c89a98505079f7d4078915b7bbfaa1e23))
 
 * feat: new 'device_selected' signals to ScanControl, ScanGroupBox, DeviceLineEdit ([`9801d27`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9801d2769eb0ee95c94ec0c011e1dac1407142ae))
-
-### Fixes
-
-* fix: fix syntax due to change of api for simulated devices ([`19f4e40`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/19f4e407e00ee242973ca4c3f90e4e41a4d3e315))
-
-* fix: remove wrongly scoped test ([`a23841b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a23841b2553dc7162da943715d58275c7dc39ed9))
-
-* fix: rename 'compact' property -> 'compact_view' ([`6982711`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6982711fea5fb8a73845ed7c0692e3ec53ef7871))
-
-* fix: Alignment 1D update, make app window a main window (in .ui file) ([`0015f0e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0015f0e2d62adc02d3ef334e1f6dbb2d0288fec6))
-
-* fix: set (Minimum, Fixed) size policy on Stop button ([`523cc43`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/523cc435725b10b7d59a4477a1aaa24a1f3e37a2))
 
 ### Refactoring
 
@@ -50,7 +61,7 @@ if the widget should expand in-place ([`e4121a0`](https://gitlab.psi.ch/bec/bec_
 
 ## v0.117.1 (2024-10-11)
 
-### Fixes
+### Bug Fixes
 
 * fix(FPS): qtimer cleanup leaking ([`3a22392`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3a2239278075de7489ad10a58c31d7d89715e221))
 
@@ -94,18 +105,26 @@ complete UI ([`49268e3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/49268e38
 
 ## v0.115.0 (2024-10-08)
 
-### Features
-
-* feat: add bec-app script to launch applications ([`8bf4842`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8bf48427884338672a8e3de3deb20439b0bfdf99))
-
-### Fixes
+### Bug Fixes
 
 * fix: make Alignment1D a MainWindow as it is an application ([`c5e9ed6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c5e9ed6e422acb908e1ada32822f5d7cc256ade7))
 
 * fix: adjust bec_qthemes dependency ([`b207e45`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b207e45a67818ee061272ce00a09fe7ea31cd1ba))
 
+### Features
+
+* feat: add bec-app script to launch applications ([`8bf4842`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8bf48427884338672a8e3de3deb20439b0bfdf99))
+
 
 ## v0.114.0 (2024-10-02)
+
+### Bug Fixes
+
+* fix: prevent exception when empty string updates are coming from widget ([`04cfb1e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/04cfb1edf19437d54f07b868bcf3cfc2a35fd3bc))
+
+* fix: use new 'scan_axis' signal, to set_x and select x axis on waveform
+
+Fixes #361, do not try to change x axis when not permitted ([`efa2763`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/efa276358b0f5a45cce9fa84fa5f9aafaf4284f7))
 
 ### Features
 
@@ -115,26 +134,18 @@ Signal is emitted before "scan_started", to inform about scan positioner
 and (start, stop) positions. In case of multiple bundles, the signal
 is emitted multiple times. ([`f084e25`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f084e2514bc9459cccaa951b79044bc25884e738))
 
-### Fixes
-
-* fix: prevent exception when empty string updates are coming from widget ([`04cfb1e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/04cfb1edf19437d54f07b868bcf3cfc2a35fd3bc))
-
-* fix: use new 'scan_axis' signal, to set_x and select x axis on waveform
-
-Fixes #361, do not try to change x axis when not permitted ([`efa2763`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/efa276358b0f5a45cce9fa84fa5f9aafaf4284f7))
-
 
 ## v0.113.0 (2024-10-02)
+
+### Bug Fixes
+
+* fix: add is_log checks and functionality to plot_indicator_items ([`0f9953e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0f9953e8fdcf3f9b5a09f994c69edb6b34756df9))
 
 ### Features
 
 * feat: add first draft for alignment_1d GUI ([`63c24f9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/63c24f97a355edaa928b6e222909252b276bcada))
 
 * feat: add move to position button to lmfit dialog ([`281cb27`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/281cb27d8b5433e27a7ba0ca0a19e4b45b9c544f))
-
-### Fixes
-
-* fix: add is_log checks and functionality to plot_indicator_items ([`0f9953e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0f9953e8fdcf3f9b5a09f994c69edb6b34756df9))
 
 ### Refactoring
 
@@ -157,14 +168,3 @@ Fixes #361, do not try to change x axis when not permitted ([`efa2763`](https://
 ### Unknown
 
 * feat : Add bec_signal_proxy to handle signals with option to unblock them manually. ([`1dcfeb6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1dcfeb6cfce3c69f0c5401731d4d3f9a1981b22e))
-
-
-## v0.112.1 (2024-09-19)
-
-### Documentation
-
-* docs(dap_combo_box): updated screenshot ([`e3b5e33`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e3b5e338bfaec276979183fb6d79ab41a7ca21e1))
-
-### Fixes
-
-* fix: test e2e dap wait_for_fit ([`b2f7d3c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b2f7d3c5f3f4bf00cc628f788e2c278ebb5688ae))
