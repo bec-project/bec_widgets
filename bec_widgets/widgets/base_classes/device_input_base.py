@@ -5,7 +5,6 @@ import enum
 from bec_lib.device import ComputedSignal, Device, Positioner, ReadoutPriority, Signal
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import Property, Slot
-from typeguard import typechecked
 
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
@@ -25,11 +24,12 @@ class BECDeviceFilter(enum.Enum):
 
 
 class DeviceInputConfig(ConnectionConfig):
-    device_filter: list[BECDeviceFilter] | None = None
-    readout_filter: list[ReadoutPriority] | None = None
-    devices: list[str] | None = None
+    device_filter: list[BECDeviceFilter] = []
+    readout_filter: list[ReadoutPriority] = []
+    devices: list[str] = []
     default: str | None = None
     arg_name: str | None = None
+    apply_filter: bool = True
 
 
 class DeviceInputBase(BECWidget):
@@ -47,10 +47,10 @@ class DeviceInputBase(BECWidget):
     }
 
     _filter_handler = {
-        BECDeviceFilter.DEVICE: "include_device",
-        BECDeviceFilter.POSITIONER: "include_positioner",
-        BECDeviceFilter.SIGNAL: "include_signal",
-        BECDeviceFilter.COMPUTED_SIGNAL: "include_computed_signal",
+        BECDeviceFilter.DEVICE: "filter_to_device",
+        BECDeviceFilter.POSITIONER: "filter_to_positioner",
+        BECDeviceFilter.SIGNAL: "filter_to_signal",
+        BECDeviceFilter.COMPUTED_SIGNAL: "filter_to_computed_signal",
         ReadoutPriority.MONITORED: "readout_monitored",
         ReadoutPriority.BASELINE: "readout_baseline",
         ReadoutPriority.ASYNC: "readout_async",
@@ -66,7 +66,7 @@ class DeviceInputBase(BECWidget):
             if isinstance(config, dict):
                 config = DeviceInputConfig(**config)
             self.config = config
-        super().__init__(client=client, config=config, gui_id=gui_id)
+        super().__init__(client=client, config=config, gui_id=gui_id, theme_update=True)
         self.get_bec_shortcuts()
         self._device_filter = []
         self._readout_filter = []
@@ -82,7 +82,7 @@ class DeviceInputBase(BECWidget):
         Args:
             device (str): Default name.
         """
-        if self.validate_device(device, raise_on_false=True) is True:
+        if self.validate_device(device) is True:
             WidgetIO.set_value(widget=self, value=device)
             self.config.default = device
         else:
@@ -91,9 +91,13 @@ class DeviceInputBase(BECWidget):
     @Slot()
     def update_devices_from_filters(self):
         """Update the devices based on the current filter selection
-        in self.device_filter and self.readout_filter."""
+        in self.device_filter and self.readout_filter. If apply_filter is False,
+        it will not apply the filters, store the filter settings and return.
+        """
         self.config.device_filter = self.device_filter
         self.config.readout_filter = self.readout_filter
+        if self.apply_filter is False:
+            return
         all_dev = self.dev.enabled_devices
         # Filter based on device class
         devs = [dev for dev in all_dev if self._check_device_filter(dev)]
@@ -109,15 +113,36 @@ class DeviceInputBase(BECWidget):
         Args:
             devices (list[str]): List of devices.
         """
-        valid_dev = []
-        all_dev_names = [dev.name for dev in self.dev.enabled_devices]
-        for device in devices:
-            if device not in all_dev_names:
-                continue
-            valid_dev.append(device)
-        self.devices = valid_dev
+        self.apply_filter = False
+        self.devices = devices
 
     ### QtProperties ###
+
+    @Property(
+        "QStringList",
+        doc="List of devices. If updated, it will disable the apply filters property.",
+    )
+    def devices(self) -> list[str]:
+        """
+        Get the list of devices for the applied filters.
+
+        Returns:
+            list[str]: List of devices.
+        """
+        return self._devices
+
+    @devices.setter
+    def devices(self, value: list):
+        valid_dev = []
+        all_dev_names = [dev.name for dev in self.dev.enabled_devices]
+        for dev in value:
+            if dev in all_dev_names:
+                valid_dev.append(dev)
+        self._devices = valid_dev
+        self.config.devices = valid_dev
+
+        FilterIO.set_selection(widget=self, selection=valid_dev)
+        # QTimer.singleShot(200, lambda: FilterIO.set_selection(widget=self, selection=valid_dev))
 
     @Property(str)
     def default(self):
@@ -126,30 +151,52 @@ class DeviceInputBase(BECWidget):
 
     @default.setter
     def default(self, value: str):
-        if self.validate_device(value, raise_on_false=False) is False:
-            return
-        self.set_device(value)
+        def set_default():
+            if self.validate_device(value) is False:
+                return
+            self.set_device(value)
+
+        set_default()
+        # QTimer.singleShot(200, set_default)
 
     @Property(bool)
-    def include_device(self):
+    def apply_filter(self):
+        """Apply the filters on the devices."""
+        return self.config.apply_filter
+
+    @apply_filter.setter
+    def apply_filter(self, value: bool):
+        def apply_filters():
+            self.config.apply_filter = value
+            self.update_devices_from_filters()
+
+        apply_filters()
+        # QTimer.singleShot(200, apply_filters)
+
+    @Property(bool)
+    def filter_to_device(self):
         """Include devices in filters."""
         return BECDeviceFilter.DEVICE in self.device_filter
 
-    @include_device.setter
-    def include_device(self, value: bool):
-        if value is True and BECDeviceFilter.DEVICE not in self.device_filter:
-            self._device_filter.append(BECDeviceFilter.DEVICE)
-        if value is False and BECDeviceFilter.DEVICE in self.device_filter:
-            self._device_filter.remove(BECDeviceFilter.DEVICE)
-        self.update_devices_from_filters()
+    @filter_to_device.setter
+    def filter_to_device(self, value: bool):
+        def set_filter():
+            if value is True and BECDeviceFilter.DEVICE not in self.device_filter:
+                self._device_filter.append(BECDeviceFilter.DEVICE)
+            if value is False and BECDeviceFilter.DEVICE in self.device_filter:
+                self._device_filter.remove(BECDeviceFilter.DEVICE)
+            self.update_devices_from_filters()
+
+        set_filter()
+        # QTimer.singleShot(200, set_filter)
 
     @Property(bool)
-    def include_positioner(self):
+    def filter_to_positioner(self):
         """Include devices of type Positioner in filters."""
         return BECDeviceFilter.POSITIONER in self.device_filter
 
-    @include_positioner.setter
-    def include_positioner(self, value: bool):
+    @filter_to_positioner.setter
+    def filter_to_positioner(self, value: bool):
         if value is True and BECDeviceFilter.POSITIONER not in self.device_filter:
             self._device_filter.append(BECDeviceFilter.POSITIONER)
         if value is False and BECDeviceFilter.POSITIONER in self.device_filter:
@@ -157,12 +204,12 @@ class DeviceInputBase(BECWidget):
         self.update_devices_from_filters()
 
     @Property(bool)
-    def include_signal(self):
+    def filter_to_signal(self):
         """Include devices of type Signal in filters."""
         return BECDeviceFilter.SIGNAL in self.device_filter
 
-    @include_signal.setter
-    def include_signal(self, value: bool):
+    @filter_to_signal.setter
+    def filter_to_signal(self, value: bool):
         if value is True and BECDeviceFilter.SIGNAL not in self.device_filter:
             self._device_filter.append(BECDeviceFilter.SIGNAL)
         if value is False and BECDeviceFilter.SIGNAL in self.device_filter:
@@ -170,12 +217,12 @@ class DeviceInputBase(BECWidget):
         self.update_devices_from_filters()
 
     @Property(bool)
-    def include_computed_signal(self):
+    def filter_to_computed_signal(self):
         """Include devices of type ComputedSignal in filters."""
         return BECDeviceFilter.COMPUTED_SIGNAL in self.device_filter
 
-    @include_computed_signal.setter
-    def include_computed_signal(self, value: bool):
+    @filter_to_computed_signal.setter
+    def filter_to_computed_signal(self, value: bool):
         if value is True and BECDeviceFilter.COMPUTED_SIGNAL not in self.device_filter:
             self._device_filter.append(BECDeviceFilter.COMPUTED_SIGNAL)
         if value is False and BECDeviceFilter.COMPUTED_SIGNAL in self.device_filter:
@@ -250,22 +297,6 @@ class DeviceInputBase(BECWidget):
     ### Python Methods and Properties ###
 
     @property
-    def devices(self) -> list[str]:
-        """
-        Get the list of devices for the applied filters.
-
-        Returns:
-            list[str]: List of devices.
-        """
-        return self._devices
-
-    @devices.setter
-    def devices(self, value: list[str]):
-        self._devices = value
-        self.config.devices = value
-        FilterIO.set_selection(widget=self, selection=value)
-
-    @property
     def device_filter(self) -> list[object]:
         """Get the list of filters to apply on the devices."""
         return self._device_filter
@@ -283,7 +314,6 @@ class DeviceInputBase(BECWidget):
         """Get the available readout priority filters."""
         return [entry for entry in ReadoutPriority]
 
-    @typechecked
     def set_device_filter(
         self, filter_selection: str | BECDeviceFilter | list[str] | list[BECDeviceFilter]
     ):
@@ -299,11 +329,11 @@ class DeviceInputBase(BECWidget):
         if isinstance(filter_selection, str) or isinstance(filter_selection, BECDeviceFilter):
             filters = [self._filter_handler.get(filter_selection)]
         if filters is None or any([entry is None for entry in filters]):
-            raise ValueError(f"Device filter {filter_selection} is not in the device list.")
+            logger.warning(f"Device filter {filter_selection} is not in the device filter list.")
+            return
         for entry in filters:
             setattr(self, entry, True)
 
-    @typechecked
     def set_readout_priority_filter(
         self, filter_selection: str | ReadoutPriority | list[str] | list[ReadoutPriority]
     ):
@@ -319,30 +349,27 @@ class DeviceInputBase(BECWidget):
         if isinstance(filter_selection, str) or isinstance(filter_selection, ReadoutPriority):
             filters = [self._filter_handler.get(filter_selection)]
         if filters is None or any([entry is None for entry in filters]):
-            raise ValueError(
+            logger.warning(
                 f"Readout priority filter {filter_selection} is not in the readout priority list."
             )
+            return
         for entry in filters:
             setattr(self, entry, True)
 
     def _check_device_filter(self, device: Device | Signal | ComputedSignal | Positioner) -> bool:
-        """If filters are defined, return True. Else return if the device complies to all active filters.
+        """Check if filter for device type is applied or not.
 
         Args:
             device(Device | Signal | ComputedSignal | Positioner): Device object.
         """
-        if len(self.device_filter) == 0:
-            return True
         return all(isinstance(device, self._device_handler[entry]) for entry in self.device_filter)
 
     def _check_readout_filter(self, device: Device | Signal | ComputedSignal | Positioner) -> bool:
-        """If filters are defined, return True. Else return if the device complies to all active filters.
+        """Check if filter for readout priority is applied or not.
 
         Args:
             device(Device | Signal | ComputedSignal | Positioner): Device object.
         """
-        if len(self.readout_filter) == 0:
-            return True
         return device.readout_priority in self.readout_filter
 
     def get_device_object(self, device: str) -> object:
@@ -363,7 +390,7 @@ class DeviceInputBase(BECWidget):
             )
         return dev
 
-    def validate_device(self, device: str, raise_on_false: bool = False) -> bool:
+    def validate_device(self, device: str) -> bool:
         """
         Validate the device if it is present in the filtered device selection.
 
@@ -372,5 +399,4 @@ class DeviceInputBase(BECWidget):
         """
         if device in self.devices:
             return True
-        if raise_on_false is True:
-            raise ValueError(f"Device {device} is not in filtered selection.")
+        return False

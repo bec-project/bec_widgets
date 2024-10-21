@@ -99,7 +99,7 @@ class FilterIO:
     _handlers = {QLineEdit: LineEditFilterHandler, QComboBox: ComboBoxFilterHandler}
 
     @staticmethod
-    def set_selection(widget, selection: list, ignore_errors=False):
+    def set_selection(widget, selection: list, ignore_errors=True):
         """
         Retrieve value from the widget instance.
 
@@ -118,7 +118,7 @@ class FilterIO:
         return None
 
     @staticmethod
-    def check_input(widget, text: str, ignore_errors=False):
+    def check_input(widget, text: str, ignore_errors=True):
         """
         Check if the input text is in the filtered selection.
 

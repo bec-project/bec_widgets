@@ -1,4 +1,6 @@
-from qtpy.QtCore import QSize
+from bec_lib.device import Positioner
+from ophyd import Kind
+from qtpy.QtCore import QSize, Signal, Slot
 from qtpy.QtWidgets import QComboBox, QSizePolicy
 
 from bec_widgets.utils.filter_io import ComboBoxFilterHandler, FilterIO
@@ -21,6 +23,8 @@ class SignalComboBox(DeviceSignalInputBase, QComboBox):
 
     ICON_NAME = "list_alt"
 
+    device_signal_changed = Signal(str)
+
     def __init__(
         self,
         parent=None,
@@ -42,13 +46,16 @@ class SignalComboBox(DeviceSignalInputBase, QComboBox):
 
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.setMinimumSize(QSize(100, 0))
-        signal_filter = signal_filter if not None else self.config.signal_filter
+        # We do not consider the config that is passed here, this produced problems
+        # with QtDesigner, since config and input arguments may differ and resolve properly
+        # Implementing this logic and config recoverage is postponed.
+        self.currentTextChanged.connect(self.on_text_changed)
         if signal_filter is not None:
             self.set_filter(signal_filter)
-        device = device if not None else self.config.device
+        else:
+            self.set_filter([Kind.hinted, Kind.normal, Kind.config])
         if device is not None:
             self.set_device(device)
-        default = default if not None else self.config.default
         if default is not None:
             self.set_signal(default)
 
@@ -70,6 +77,24 @@ class SignalComboBox(DeviceSignalInputBase, QComboBox):
             if len(self._hinted_signals) > 0:
                 self.insertItem(0, "Hinted Signals")
                 self.model().item(0).setEnabled(False)
+
+    @Slot(str)
+    def on_text_changed(self, text: str):
+        """Slot for text changed. If a device is selected and the signal is changed and valid it emits a signal.
+        For a positioner, the readback value has to be renamed to the device name.
+
+        Args:
+            text (str): Text in the combobox.
+        """
+        if self.validate_device(self.device) is False:
+            return
+        if self.validate_signal(text) is False:
+            return
+        if text == "readback" and isinstance(self.get_device_object(self.device), Positioner):
+            device_signal = self.device
+        else:
+            device_signal = f"{self.device}_{text}"
+        self.device_signal_changed.emit(device_signal)
 
 
 if __name__ == "__main__":  # pragma: no cover

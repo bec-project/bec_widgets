@@ -36,7 +36,7 @@ def test_device_input_base_init(device_input_base):
     assert device_input_base.client is not None
     assert isinstance(device_input_base, DeviceInputBase)
     assert device_input_base.config.widget_class == "DeviceInputWidget"
-    assert device_input_base.config.device_filter is None
+    assert device_input_base.config.device_filter == []
     assert device_input_base.config.default is None
     assert device_input_base.devices == []
 
@@ -62,17 +62,15 @@ def test_device_input_base_set_device_filter(device_input_base):
 
 
 def test_device_input_base_set_device_filter_error(device_input_base):
-    """Test set_device_filter with Noneexisting class"""
-    with pytest.raises(ValueError) as excinfo:
-        device_input_base.set_device_filter("NonExistingClass")
-        assert "Device filter NonExistingClass is not in the device list." in str(excinfo.value)
+    """Test set_device_filter with Noneexisting class. This should not raise. It writes a log message entry."""
+    device_input_base.set_device_filter("NonExistingClass")
+    assert device_input_base.device_filter == []
 
 
 def test_device_input_base_set_default_device(device_input_base):
     """Test setting the default device. Also tests the update_devices method."""
-    with pytest.raises(ValueError) as excinfo:
-        device_input_base.set_device("samx")
-        assert "Device samx is not in filtered selection." in str(excinfo.value)
+    device_input_base.set_device("samx")
+    assert device_input_base.config.default == None
     device_input_base.set_device_filter(BECDeviceFilter.POSITIONER)
     device_input_base.set_readout_priority_filter(ReadoutPriority.MONITORED)
     device_input_base.set_device("samx")
@@ -99,17 +97,17 @@ def test_device_input_base_get_filters(device_input_base):
 def test_device_input_base_properties(device_input_base):
     """Test setting the properties of the device input base."""
     assert device_input_base.device_filter == []
-    device_input_base.include_device = True
+    device_input_base.filter_to_device = True
     assert device_input_base.device_filter == [BECDeviceFilter.DEVICE]
-    device_input_base.include_positioner = True
+    device_input_base.filter_to_positioner = True
     assert device_input_base.device_filter == [BECDeviceFilter.DEVICE, BECDeviceFilter.POSITIONER]
-    device_input_base.include_computed_signal = True
+    device_input_base.filter_to_computed_signal = True
     assert device_input_base.device_filter == [
         BECDeviceFilter.DEVICE,
         BECDeviceFilter.POSITIONER,
         BECDeviceFilter.COMPUTED_SIGNAL,
     ]
-    device_input_base.include_signal = True
+    device_input_base.filter_to_signal = True
     assert device_input_base.device_filter == [
         BECDeviceFilter.DEVICE,
         BECDeviceFilter.POSITIONER,

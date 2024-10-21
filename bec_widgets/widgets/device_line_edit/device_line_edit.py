@@ -1,7 +1,8 @@
 from bec_lib.device import ReadoutPriority
-from qtpy.QtCore import QSize
+from bec_lib.logger import bec_logger
+from qtpy.QtCore import QSize, Signal, Slot
 from qtpy.QtGui import QPainter, QPaintEvent, QPen
-from qtpy.QtWidgets import QCompleter, QLineEdit, QSizePolicy
+from qtpy.QtWidgets import QApplication, QCompleter, QLineEdit, QSizePolicy
 
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.widgets.base_classes.device_input_base import (
@@ -9,6 +10,8 @@ from bec_widgets.widgets.base_classes.device_input_base import (
     DeviceInputBase,
     DeviceInputConfig,
 )
+
+logger = bec_logger.logger
 
 
 class DeviceLineEdit(DeviceInputBase, QLineEdit):
@@ -39,39 +42,46 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
         readout_priority_filter: (
             str | ReadoutPriority | list[str] | list[ReadoutPriority] | None
         ) = None,
-        device_list: list[str] | None = None,
+        available_devices: list[str] | None = None,
         default: str | None = None,
         arg_name: str | None = None,
     ):
+        self._is_valid_input = False
+        self._accent_colors = get_accent_colors()
         super().__init__(client=client, config=config, gui_id=gui_id)
         QLineEdit.__init__(self, parent=parent)
-        self._is_valid_input = False
         self.completer = QCompleter(self)
         self.setCompleter(self.completer)
+
         if arg_name is not None:
             self.config.arg_name = arg_name
             self.arg_name = arg_name
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.setMinimumSize(QSize(100, 0))
-        self._accent_colors = get_accent_colors()
-        # Set readout priority filter and device filter.
-        # If value is set directly in init, this overrules value from the config
-        readout_priority_filter = (
-            readout_priority_filter
-            if readout_priority_filter is not None
-            else self.config.readout_filter
-        )
+
+        # We do not consider the config that is passed here, this produced problems
+        # with QtDesigner, since config and input arguments may differ and resolve properly
+        # Implementing this logic and config recoverage is postponed.
+        # Set available devices if passed
+        if available_devices is not None:
+            self.set_available_devices(available_devices)
+        # Set readout priority filter default is all
         if readout_priority_filter is not None:
             self.set_readout_priority_filter(readout_priority_filter)
-        device_filter = device_filter if device_filter is not None else self.config.device_filter
+        else:
+            self.set_readout_priority_filter(
+                [
+                    ReadoutPriority.MONITORED,
+                    ReadoutPriority.BASELINE,
+                    ReadoutPriority.ASYNC,
+                    ReadoutPriority.CONTINUOUS,
+                    ReadoutPriority.ON_REQUEST,
+                ]
+            )
+        # Device filter default is None
         if device_filter is not None:
             self.set_device_filter(device_filter)
-        device_list = device_list if device_list is not None else self.config.devices
-        if device_list is not None:
-            self.set_available_devices(device_list)
-        else:
-            self.update_devices_from_filters()
-        default = default if default is not None else self.config.default
+        # Set default device if passed
         if default is not None:
             self.set_device(default)
         self.textChanged.connect(self.check_validity)
@@ -92,16 +102,19 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
         Args:
             event (PySide6.QtGui.QPaintEvent) : Paint event.
         """
+        # logger.info(f"Received paint event: {event} in {self.__class__}")
         super().paintEvent(event)
-        painter = QPainter(self)
-        pen = QPen()
-        pen.setWidth(2)
 
         if self._is_valid_input is False and self.isEnabled() is True:
+            painter = QPainter(self)
+            pen = QPen()
+            pen.setWidth(2)
             pen.setColor(self._accent_colors.emergency)
             painter.setPen(pen)
             painter.drawRect(self.rect().adjusted(1, 1, -1, -1))
+            painter.end()
 
+    @Slot(str)
     def check_validity(self, input_text: str) -> None:
         """
         Check if the current value is a valid device name.
@@ -116,9 +129,10 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
 
 if __name__ == "__main__":  # pragma: no cover
     # pylint: disable=import-outside-toplevel
-    from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
+    from qtpy.QtWidgets import QVBoxLayout, QWidget
 
     from bec_widgets.utils.colors import set_theme
+    from bec_widgets.widgets.signal_combobox.signal_combobox import SignalComboBox
 
     app = QApplication([])
     set_theme("dark")
@@ -127,7 +141,12 @@ if __name__ == "__main__":  # pragma: no cover
     layout = QVBoxLayout()
     widget.setLayout(layout)
     line_edit = DeviceLineEdit()
-    line_edit.include_positioner = True
+    line_edit.filter_to_positioner = True
+    signal_line_edit = SignalComboBox()
+    line_edit.textChanged.connect(signal_line_edit.set_device)
+    line_edit.set_available_devices(["samx", "samy", "samz"])
+    line_edit.set_device("samx")
     layout.addWidget(line_edit)
+    layout.addWidget(signal_line_edit)
     widget.show()
     app.exec_()

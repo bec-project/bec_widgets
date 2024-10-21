@@ -1,12 +1,12 @@
 from unittest import mock
 
 import pytest
+from ophyd import Kind
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.widgets.base_classes.device_signal_input_base import (
-    BECSignalFilter,
-    DeviceSignalInputBase,
-)
+from bec_widgets.widgets.base_classes.device_input_base import BECDeviceFilter
+from bec_widgets.widgets.base_classes.device_signal_input_base import DeviceSignalInputBase
+from bec_widgets.widgets.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.signal_combobox.signal_combobox import SignalComboBox
 from bec_widgets.widgets.signal_line_edit.signal_line_edit import SignalLineEdit
 
@@ -45,6 +45,19 @@ def device_signal_line_edit(qtbot, mocked_client):
     yield widget
 
 
+@pytest.fixture
+def test_device_signal_combo(qtbot, mocked_client):
+    """Fixture to create a SignalComboBox widget and a DeviceInputWidget widget"""
+    input = create_widget(
+        qtbot=qtbot,
+        widget=DeviceComboBox,
+        client=mocked_client,
+        device_filter=[BECDeviceFilter.POSITIONER],
+    )
+    signal = create_widget(qtbot=qtbot, widget=SignalComboBox, client=mocked_client)
+    yield input, signal
+
+
 def test_device_signal_base_init(device_signal_base):
     """Test if the DeviceSignalInputBase is initialized correctly"""
     assert device_signal_base._device is None
@@ -58,15 +71,11 @@ def test_device_signal_base_init(device_signal_base):
 def test_device_signal_qproperties(device_signal_base):
     """Test if the DeviceSignalInputBase has the correct QProperties"""
     device_signal_base.include_config_signals = True
-    assert device_signal_base._signal_filter == [BECSignalFilter.CONFIG]
+    assert device_signal_base._signal_filter == [Kind.config]
     device_signal_base.include_normal_signals = True
-    assert device_signal_base._signal_filter == [BECSignalFilter.CONFIG, BECSignalFilter.NORMAL]
+    assert device_signal_base._signal_filter == [Kind.config, Kind.normal]
     device_signal_base.include_hinted_signals = True
-    assert device_signal_base._signal_filter == [
-        BECSignalFilter.CONFIG,
-        BECSignalFilter.NORMAL,
-        BECSignalFilter.HINTED,
-    ]
+    assert device_signal_base._signal_filter == [Kind.config, Kind.normal, Kind.hinted]
 
 
 def test_device_signal_set_device(device_signal_base):

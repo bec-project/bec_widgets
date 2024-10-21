@@ -1,4 +1,5 @@
-from qtpy.QtCore import QSize, Slot
+from ophyd import Kind
+from qtpy.QtCore import QSize, Signal, Slot
 from qtpy.QtGui import QPainter, QPaintEvent, QPen
 from qtpy.QtWidgets import QCompleter, QLineEdit, QSizePolicy
 
@@ -20,6 +21,8 @@ class SignalLineEdit(DeviceSignalInputBase, QLineEdit):
         arg_name: Argument name, can be used for the other widgets which has to call some other function in bec using correct argument names.
     """
 
+    device_signal_changed = Signal(str)
+
     ICON_NAME = "vital_signs"
 
     def __init__(
@@ -33,9 +36,9 @@ class SignalLineEdit(DeviceSignalInputBase, QLineEdit):
         default: str | None = None,
         arg_name: str | None = None,
     ):
+        self._is_valid_input = False
         super().__init__(client=client, config=config, gui_id=gui_id)
         QLineEdit.__init__(self, parent=parent)
-        self._is_valid_input = False
         self._accent_colors = get_accent_colors()
         self.completer = QCompleter(self)
         self.setCompleter(self.completer)
@@ -47,13 +50,15 @@ class SignalLineEdit(DeviceSignalInputBase, QLineEdit):
 
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.setMinimumSize(QSize(100, 0))
-        signal_filter = signal_filter if not None else self.config.signal_filter
+        # We do not consider the config that is passed here, this produced problems
+        # with QtDesigner, since config and input arguments may differ and resolve properly
+        # Implementing this logic and config recoverage is postponed.
         if signal_filter is not None:
             self.set_filter(signal_filter)
-        device = device if not None else self.config.device
+        else:
+            self.set_filter([Kind.hinted, Kind.normal, Kind.config])
         if device is not None:
             self.set_device(device)
-        default = default if not None else self.config.default
         if default is not None:
             self.set_signal(default)
         self.textChanged.connect(self.check_validity)
@@ -89,9 +94,10 @@ class SignalLineEdit(DeviceSignalInputBase, QLineEdit):
         """
         Check if the current value is a valid device name.
         """
-        # i
         if self.validate_signal(input_text) is True:
             self._is_valid_input = True
+            if self.validate_device(self.device) is True:
+                self.device_signal_changed.emit(input_text)
         else:
             self._is_valid_input = False
         self.update()

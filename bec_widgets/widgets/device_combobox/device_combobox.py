@@ -36,7 +36,7 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         readout_priority_filter: (
             str | ReadoutPriority | list[str] | list[ReadoutPriority] | None
         ) = None,
-        device_list: list[str] | None = None,
+        available_devices: list[str] | None = None,
         default: str | None = None,
         arg_name: str | None = None,
     ):
@@ -49,24 +49,29 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         self.setMinimumSize(QSize(100, 0))
         self._is_valid_input = False
         self._accent_colors = get_accent_colors()
-        # Set readout priority filter and device filter.
-        # If value is set directly in init, this overrules value from the config
-        readout_priority_filter = (
-            readout_priority_filter
-            if readout_priority_filter is not None
-            else self.config.readout_filter
-        )
+        # We do not consider the config that is passed here, this produced problems
+        # with QtDesigner, since config and input arguments may differ and resolve properly
+        # Implementing this logic and config recoverage is postponed.
+        # Set available devices if passed
+        if available_devices is not None:
+            self.set_available_devices(available_devices)
+        # Set readout priority filter default is all
         if readout_priority_filter is not None:
             self.set_readout_priority_filter(readout_priority_filter)
-        device_filter = device_filter if device_filter is not None else self.config.device_filter
+        else:
+            self.set_readout_priority_filter(
+                [
+                    ReadoutPriority.MONITORED,
+                    ReadoutPriority.BASELINE,
+                    ReadoutPriority.ASYNC,
+                    ReadoutPriority.CONTINUOUS,
+                    ReadoutPriority.ON_REQUEST,
+                ]
+            )
+        # Device filter default is None
         if device_filter is not None:
             self.set_device_filter(device_filter)
-        device_list = device_list if device_list is not None else self.config.devices
-        if device_list is not None:
-            self.set_available_devices(device_list)
-        else:
-            self.update_devices_from_filters()
-        default = default if default is not None else self.config.default
+        # Set default device if passed
         if default is not None:
             self.set_device(default)
 

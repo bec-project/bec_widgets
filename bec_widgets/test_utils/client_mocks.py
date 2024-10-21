@@ -217,7 +217,7 @@ DEVICES = [
     FakeDevice("bpm4i"),
     FakeDevice("bpm3a"),
     FakeDevice("bpm3i"),
-    FakeDevice("eiger"),
+    FakeDevice("eiger", readout_priority=ReadoutPriority.ASYNC),
     FakeDevice("waveform1d"),
     FakeDevice("async_device", readout_priority=ReadoutPriority.ASYNC),
     Positioner("test", limits=[-10, 10], read_value=2.0),

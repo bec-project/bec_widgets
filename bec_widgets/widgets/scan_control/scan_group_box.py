@@ -21,6 +21,7 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils.widget_io import WidgetIO
+from bec_widgets.widgets.base_classes.device_input_base import BECDeviceFilter
 from bec_widgets.widgets.device_line_edit.device_line_edit import DeviceLineEdit
 
 logger = bec_logger.logger
@@ -233,6 +234,7 @@ class ScanGroupBox(QGroupBox):
                 default = None
             widget = widget_class(arg_name=arg_name, default=default)
             if isinstance(widget, DeviceLineEdit):
+                widget.set_device_filter(BECDeviceFilter.DEVICE)
                 self.selected_devices[widget] = ""
                 widget.device_selected.connect(self.emit_device_selected)
             tooltip = item.get("tooltip", None)

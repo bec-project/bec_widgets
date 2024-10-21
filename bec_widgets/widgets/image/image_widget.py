@@ -4,6 +4,7 @@ import sys
 from typing import Literal, Optional
 
 import pyqtgraph as pg
+from bec_lib.device import ReadoutPriority
 from qtpy.QtWidgets import QComboBox, QVBoxLayout, QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeSlot, WarningPopupUtility
@@ -70,7 +71,11 @@ class BECImageWidget(BECWidget, QWidget):
         self.toolbar = ModularToolBar(
             actions={
                 "monitor": DeviceSelectionAction(
-                    "Monitor:", DeviceComboBox(device_filter=BECDeviceFilter.DEVICE)
+                    "Monitor:",
+                    DeviceComboBox(
+                        device_filter=BECDeviceFilter.DEVICE,
+                        readout_priority_filter=[ReadoutPriority.ASYNC],
+                    ),
                 ),
                 "monitor_type": WidgetAction(widget=self.dim_combo_box),
                 "connect": MaterialIconAction(icon_name="link", tooltip="Connect Device"),
