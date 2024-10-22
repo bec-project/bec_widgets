@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v1.0.2 (2024-10-22)
+
+### Bug Fixes
+
+* fix(scan_control): scan args signal fixed to emit list instead of hardcoded structure ([`4f5448c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4f5448cf51a204e077af162c7f0aed1f1a60e57a))
+
+
 ## v1.0.1 (2024-10-22)
 
 ### Bug Fixes
@@ -159,10 +166,6 @@ is emitted multiple times. ([`f084e25`](https://gitlab.psi.ch/bec/bec_widgets/-/
 * refactor: various minor improvements for the alignment gui ([`f554f3c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f554f3c1672c4fe32968a5991dc98802556a6f3b))
 
 * refactor: allow hiding of arg/kwarg boxes ([`efe90eb`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/efe90eb163e2123a5b4d0bb59f66025a569336ad))
-
-* refactor: add proxy to waveform to limit the dap_request frequency ([`5c74037`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5c740371d86d9b1b341bc3c4d8bdf62027aa089b))
-
-* refactor: update dap_model also if x and y axis are selected ([`28ee385`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/28ee3856be2c47a63182b16454ece37a0ec04811))
 
 ### Testing
 
