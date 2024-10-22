@@ -372,22 +372,21 @@ def test_run_line_scan_with_parameters(scan_control, mocked_client):
     scan_name = "line_scan"
     kwargs = {"exp_time": 0.1, "steps": 10, "relative": True, "burst_at_each_point": 1}
     args = {"device": "samx", "start": -5, "stop": 5}
+    mock_slot = MagicMock()
+    scan_control.scan_args.connect(mock_slot)
 
     scan_control.comboBox_scan_selection.setCurrentText(scan_name)
 
     # Set kwargs in the UI
     for kwarg_box in scan_control.kwarg_boxes:
         for widget in kwarg_box.widgets:
-            for key, value in kwargs.items():
-                if widget.arg_name == key:
-                    WidgetIO.set_value(widget, value)
-                    break
+            if widget.arg_name in kwargs:
+                WidgetIO.set_value(widget, kwargs[widget.arg_name])
+
     # Set args in the UI
     for widget in scan_control.arg_box.widgets:
-        for key, value in args.items():
-            if widget.arg_name == key:
-                WidgetIO.set_value(widget, value)
-                break
+        if widget.arg_name in args:
+            WidgetIO.set_value(widget, args[widget.arg_name])
 
     # Mock the scan function
     mocked_scan_function = MagicMock()
@@ -404,6 +403,88 @@ def test_run_line_scan_with_parameters(scan_control, mocked_client):
     expected_args_list = [expected_device, args["start"], args["stop"]]
     assert called_args == tuple(expected_args_list)
     assert called_kwargs == kwargs
+
+    # Check the emitted signal
+    mock_slot.assert_called_once()
+    emitted_args_list = mock_slot.call_args[0][0]
+    assert len(emitted_args_list) == 3  # Expected 3 arguments for line_scan
+    assert emitted_args_list == [expected_device, -5.0, 5.0]
+
+
+def test_run_grid_scan_with_parameters(scan_control, mocked_client):
+    scan_name = "grid_scan"
+    kwargs = {"exp_time": 0.2, "settling_time": 0.1, "relative": False, "burst_at_each_point": 2}
+    args_row1 = {"device": "samx", "start": -10, "stop": 10, "steps": 20}
+    args_row2 = {"device": "samy", "start": -5, "stop": 5, "steps": 10}
+    mock_slot = MagicMock()
+    scan_control.scan_args.connect(mock_slot)
+
+    scan_control.comboBox_scan_selection.setCurrentText(scan_name)
+
+    # Ensure there are two rows in the arg_box
+    current_rows = scan_control.arg_box.count_arg_rows()
+    required_rows = 2
+    while current_rows < required_rows:
+        scan_control.arg_box.add_widget_bundle()
+        current_rows += 1
+
+    # Set kwargs in the UI
+    for kwarg_box in scan_control.kwarg_boxes:
+        for widget in kwarg_box.widgets:
+            if widget.arg_name in kwargs:
+                WidgetIO.set_value(widget, kwargs[widget.arg_name])
+
+    # Set args in the UI for both rows
+    arg_widgets = scan_control.arg_box.widgets  # This is a flat list of widgets
+    num_columns = len(scan_control.arg_box.inputs)
+    num_rows = int(len(arg_widgets) / num_columns)
+    assert num_rows == required_rows  # We expect 2 rows for grid_scan
+
+    # Set values for first row
+    for i in range(num_columns):
+        widget = arg_widgets[i]
+        arg_name = widget.arg_name
+        if arg_name in args_row1:
+            WidgetIO.set_value(widget, args_row1[arg_name])
+
+    # Set values for second row
+    for i in range(num_columns):
+        widget = arg_widgets[num_columns + i]  # Next row
+        arg_name = widget.arg_name
+        if arg_name in args_row2:
+            WidgetIO.set_value(widget, args_row2[arg_name])
+
+    # Mock the scan function
+    mocked_scan_function = MagicMock()
+    setattr(mocked_client.scans, scan_name, mocked_scan_function)
+
+    # Run the scan
+    scan_control.button_run_scan.click()
+
+    # Retrieve the actual arguments passed to the mock
+    called_args, called_kwargs = mocked_scan_function.call_args
+
+    # Check if the scan function was called correctly
+    expected_device1 = mocked_client.device_manager.devices.samx
+    expected_device2 = mocked_client.device_manager.devices.samy
+    expected_args_list = [
+        expected_device1,
+        args_row1["start"],
+        args_row1["stop"],
+        args_row1["steps"],
+        expected_device2,
+        args_row2["start"],
+        args_row2["stop"],
+        args_row2["steps"],
+    ]
+    assert called_args == tuple(expected_args_list)
+    assert called_kwargs == kwargs
+
+    # Check the emitted signal
+    mock_slot.assert_called_once()
+    emitted_args_list = mock_slot.call_args[0][0]
+    assert len(emitted_args_list) == 8  # Expected 8 arguments for grid_scan
+    assert emitted_args_list == expected_args_list
 
 
 def test_changing_scans_remember_parameters(scan_control, mocked_client):
