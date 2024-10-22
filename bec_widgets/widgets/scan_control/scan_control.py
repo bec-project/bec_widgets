@@ -45,7 +45,7 @@ class ScanControl(BECWidget, QWidget):
     scan_started = Signal()
     scan_selected = Signal(str)
     device_selected = Signal(str)
-    scan_axis = Signal(str, float, float)
+    scan_args = Signal(list)
 
     def __init__(
         self,
@@ -457,8 +457,7 @@ class ScanControl(BECWidget, QWidget):
     def run_scan(self):
         """Starts the selected scan with the given parameters."""
         args, kwargs = self.get_scan_parameters()
-        for device, start, stop in zip(*[iter(args)] * 3):
-            self.scan_axis.emit(device.name, start, stop)
+        self.scan_args.emit(args)
         scan_function = getattr(self.scans, self.comboBox_scan_selection.currentText())
         if callable(scan_function):
             self.scan_started.emit()

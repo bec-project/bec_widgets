@@ -215,28 +215,10 @@
           <layout class="QVBoxLayout" name="verticalLayout_3">
            <item>
             <widget class="ScanControl" name="scan_control">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-               <horstretch>1</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
              <property name="current_scan" stdset="0">
               <string>line_scan</string>
              </property>
              <property name="hide_arg_box" stdset="0">
-              <bool>false</bool>
-             </property>
-             <property name="hide_kwarg_boxes" stdset="0">
-              <bool>false</bool>
-             </property>
-             <property name="hide_scan_control_buttons" stdset="0">
               <bool>false</bool>
              </property>
              <property name="hide_scan_selection_combobox" stdset="0">
@@ -244,12 +226,6 @@
              </property>
              <property name="hide_add_remove_buttons" stdset="0">
               <bool>true</bool>
-             </property>
-             <property name="hide_args_group" stdset="0">
-              <bool>false</bool>
-             </property>
-             <property name="hide_kwargs_group" stdset="0">
-              <bool>false</bool>
              </property>
             </widget>
            </item>
@@ -440,24 +416,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>ToggleSwitch</class>
+   <class>DapComboBox</class>
    <extends>QWidget</extends>
-   <header>toggle_switch</header>
-  </customwidget>
-  <customwidget>
-   <class>BECWaveformWidget</class>
-   <extends>QWidget</extends>
-   <header>bec_waveform_widget</header>
-  </customwidget>
-  <customwidget>
-   <class>BECStatusBox</class>
-   <extends>QWidget</extends>
-   <header>bec_status_box</header>
-  </customwidget>
-  <customwidget>
-   <class>WebsiteWidget</class>
-   <extends>QWidget</extends>
-   <header>website_widget</header>
+   <header>dap_combo_box</header>
   </customwidget>
   <customwidget>
    <class>StopButton</class>
@@ -465,19 +426,9 @@
    <header>stop_button</header>
   </customwidget>
   <customwidget>
-   <class>LMFitDialog</class>
+   <class>WebsiteWidget</class>
    <extends>QWidget</extends>
-   <header>lm_fit_dialog</header>
-  </customwidget>
-  <customwidget>
-   <class>PositionerGroup</class>
-   <extends>QWidget</extends>
-   <header>positioner_group</header>
-  </customwidget>
-  <customwidget>
-   <class>ScanControl</class>
-   <extends>QWidget</extends>
-   <header>scan_control</header>
+   <header>website_widget</header>
   </customwidget>
   <customwidget>
    <class>BECQueue</class>
@@ -485,14 +436,19 @@
    <header>bec_queue</header>
   </customwidget>
   <customwidget>
+   <class>ScanControl</class>
+   <extends>QWidget</extends>
+   <header>scan_control</header>
+  </customwidget>
+  <customwidget>
+   <class>ToggleSwitch</class>
+   <extends>QWidget</extends>
+   <header>toggle_switch</header>
+  </customwidget>
+  <customwidget>
    <class>BECProgressBar</class>
    <extends>QWidget</extends>
    <header>bec_progress_bar</header>
-  </customwidget>
-  <customwidget>
-   <class>DeviceComboBox</class>
-   <extends>QComboBox</extends>
-   <header>device_combobox</header>
   </customwidget>
   <customwidget>
    <class>DarkModeButton</class>
@@ -500,9 +456,29 @@
    <header>dark_mode_button</header>
   </customwidget>
   <customwidget>
-   <class>DapComboBox</class>
+   <class>PositionerGroup</class>
    <extends>QWidget</extends>
-   <header>dap_combo_box</header>
+   <header>positioner_group</header>
+  </customwidget>
+  <customwidget>
+   <class>BECWaveformWidget</class>
+   <extends>QWidget</extends>
+   <header>bec_waveform_widget</header>
+  </customwidget>
+  <customwidget>
+   <class>DeviceComboBox</class>
+   <extends>QComboBox</extends>
+   <header>device_combobox</header>
+  </customwidget>
+  <customwidget>
+   <class>LMFitDialog</class>
+   <extends>QWidget</extends>
+   <header>lm_fit_dialog</header>
+  </customwidget>
+  <customwidget>
+   <class>BECStatusBox</class>
+   <extends>QWidget</extends>
+   <header>bec_status_box</header>
   </customwidget>
  </customwidgets>
  <resources/>
@@ -514,12 +490,12 @@
    <slot>toogle_roi_select(bool)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>529</x>
-     <y>728</y>
+     <x>1042</x>
+     <y>212</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1099</x>
-     <y>96</y>
+     <x>1416</x>
+     <y>322</y>
     </hint>
    </hints>
   </connection>
@@ -546,12 +522,12 @@
    <slot>plot(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>297</x>
-     <y>170</y>
+     <x>577</x>
+     <y>215</y>
     </hint>
     <hint type="destinationlabel">
-     <x>1099</x>
-     <y>201</y>
+     <x>1416</x>
+     <y>427</y>
     </hint>
    </hints>
   </connection>
@@ -562,12 +538,12 @@
    <slot>select_y_axis(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>297</x>
-     <y>170</y>
+     <x>577</x>
+     <y>215</y>
     </hint>
     <hint type="destinationlabel">
-     <x>467</x>
-     <y>170</y>
+     <x>909</x>
+     <y>215</y>
     </hint>
    </hints>
   </connection>
@@ -578,44 +554,12 @@
    <slot>add_dap(QString,QString,QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>467</x>
-     <y>170</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1099</x>
-     <y>221</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>scan_control</sender>
-   <signal>scan_axis(QString,double,double)</signal>
-   <receiver>bec_waveform_widget</receiver>
-   <slot>set_x(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>244</x>
-     <y>348</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>1140</x>
-     <y>491</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>scan_control</sender>
-   <signal>scan_axis(QString,double,double)</signal>
-   <receiver>dap_combo_box</receiver>
-   <slot>select_x_axis(QString)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>244</x>
-     <y>322</y>
-    </hint>
-    <hint type="destinationlabel">
      <x>909</x>
-     <y>189</y>
+     <y>215</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1416</x>
+     <y>447</y>
     </hint>
    </hints>
   </connection>
@@ -626,12 +570,44 @@
    <slot>set_positioners(QString)</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>227</x>
-     <y>337</y>
+     <x>230</x>
+     <y>306</y>
     </hint>
     <hint type="destinationlabel">
-     <x>227</x>
-     <y>676</y>
+     <x>187</x>
+     <y>926</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>scan_control</sender>
+   <signal>device_selected(QString)</signal>
+   <receiver>bec_waveform_widget</receiver>
+   <slot>set_x(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>187</x>
+     <y>356</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>972</x>
+     <y>509</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>scan_control</sender>
+   <signal>device_selected(QString)</signal>
+   <receiver>dap_combo_box</receiver>
+   <slot>select_x_axis(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>187</x>
+     <y>356</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>794</x>
+     <y>202</y>
     </hint>
    </hints>
   </connection>
