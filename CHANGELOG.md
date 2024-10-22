@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v1.0.1 (2024-10-22)
+
+### Bug Fixes
+
+* fix(waveform): added support for live_data and data access ([`7469c89`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7469c892c8076fc09e61f173df6920c551241cec))
+
+
 ## v1.0.0 (2024-10-18)
 
 ### Breaking
@@ -156,10 +163,6 @@ is emitted multiple times. ([`f084e25`](https://gitlab.psi.ch/bec/bec_widgets/-/
 * refactor: add proxy to waveform to limit the dap_request frequency ([`5c74037`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5c740371d86d9b1b341bc3c4d8bdf62027aa089b))
 
 * refactor: update dap_model also if x and y axis are selected ([`28ee385`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/28ee3856be2c47a63182b16454ece37a0ec04811))
-
-* refactor: linear_region_selector accepts log_x data ([`7cc0726`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7cc07263982a171744ff87adb10ea77585764b71))
-
-* refactor: use accent colors for bec_status_box icons; closes #338 ([`e039304`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e039304fd3ee03dc4a3fa22a69c207139e0c0d28))
 
 ### Testing
 
