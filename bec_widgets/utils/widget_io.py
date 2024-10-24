@@ -1,5 +1,6 @@
 # pylint: disable=no-name-in-module
 from abc import ABC, abstractmethod
+from typing import Literal
 
 from qtpy.QtWidgets import (
     QApplication,
@@ -20,7 +21,7 @@ class WidgetHandler(ABC):
     """Abstract base class for all widget handlers."""
 
     @abstractmethod
-    def get_value(self, widget: QWidget):
+    def get_value(self, widget: QWidget, **kwargs):
         """Retrieve value from the widget instance."""
 
     @abstractmethod
@@ -31,7 +32,7 @@ class WidgetHandler(ABC):
 class LineEditHandler(WidgetHandler):
     """Handler for QLineEdit widgets."""
 
-    def get_value(self, widget: QLineEdit) -> str:
+    def get_value(self, widget: QLineEdit, **kwargs) -> str:
         return widget.text()
 
     def set_value(self, widget: QLineEdit, value: str) -> None:
@@ -41,7 +42,9 @@ class LineEditHandler(WidgetHandler):
 class ComboBoxHandler(WidgetHandler):
     """Handler for QComboBox widgets."""
 
-    def get_value(self, widget: QComboBox) -> int:
+    def get_value(self, widget: QComboBox, as_string: bool = False, **kwargs) -> int | str:
+        if as_string is True:
+            return widget.currentText()
         return widget.currentIndex()
 
     def set_value(self, widget: QComboBox, value: int | str) -> None:
@@ -54,7 +57,7 @@ class ComboBoxHandler(WidgetHandler):
 class TableWidgetHandler(WidgetHandler):
     """Handler for QTableWidget widgets."""
 
-    def get_value(self, widget: QTableWidget) -> list:
+    def get_value(self, widget: QTableWidget, **kwargs) -> list:
         return [
             [
                 widget.item(row, col).text() if widget.item(row, col) else ""
@@ -73,7 +76,7 @@ class TableWidgetHandler(WidgetHandler):
 class SpinBoxHandler(WidgetHandler):
     """Handler for QSpinBox and QDoubleSpinBox widgets."""
 
-    def get_value(self, widget):
+    def get_value(self, widget, **kwargs):
         return widget.value()
 
     def set_value(self, widget, value):
@@ -83,7 +86,7 @@ class SpinBoxHandler(WidgetHandler):
 class CheckBoxHandler(WidgetHandler):
     """Handler for QCheckBox widgets."""
 
-    def get_value(self, widget):
+    def get_value(self, widget, **kwargs):
         return widget.isChecked()
 
     def set_value(self, widget, value):
@@ -93,7 +96,7 @@ class CheckBoxHandler(WidgetHandler):
 class LabelHandler(WidgetHandler):
     """Handler for QLabel widgets."""
 
-    def get_value(self, widget):
+    def get_value(self, widget, **kwargs):
         return widget.text()
 
     def set_value(self, widget, value):
@@ -114,7 +117,7 @@ class WidgetIO:
     }
 
     @staticmethod
-    def get_value(widget, ignore_errors=False):
+    def get_value(widget, ignore_errors=False, **kwargs):
         """
         Retrieve value from the widget instance.
 
@@ -124,7 +127,7 @@ class WidgetIO:
         """
         handler_class = WidgetIO._find_handler(widget)
         if handler_class:
-            return handler_class().get_value(widget)  # Instantiate the handler
+            return handler_class().get_value(widget, **kwargs)  # Instantiate the handler
         if not ignore_errors:
             raise ValueError(f"No handler for widget type: {type(widget)}")
         return None

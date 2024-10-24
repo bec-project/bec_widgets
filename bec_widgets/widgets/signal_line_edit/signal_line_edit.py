@@ -1,3 +1,4 @@
+from bec_lib.device import Positioner
 from ophyd import Kind
 from qtpy.QtCore import QSize, Signal, Slot
 from qtpy.QtGui import QPainter, QPaintEvent, QPen
@@ -61,7 +62,8 @@ class SignalLineEdit(DeviceSignalInputBase, QLineEdit):
             self.set_device(device)
         if default is not None:
             self.set_signal(default)
-        self.textChanged.connect(self.check_validity)
+        self.textChanged.connect(self.validate_device)
+        self.validate_device(self.text())
 
     def get_current_device(self) -> object:
         """
@@ -96,11 +98,29 @@ class SignalLineEdit(DeviceSignalInputBase, QLineEdit):
         """
         if self.validate_signal(input_text) is True:
             self._is_valid_input = True
-            if self.validate_device(self.device) is True:
-                self.device_signal_changed.emit(input_text)
+            self.on_text_changed(input_text)
         else:
             self._is_valid_input = False
         self.update()
+
+    @Slot(str)
+    def on_text_changed(self, text: str):
+        """Slot for text changed. If a device is selected and the signal is changed and valid it emits a signal.
+        For a positioner, the readback value has to be renamed to the device name.
+
+        Args:
+            text (str): Text in the combobox.
+        """
+        print("test")
+        if self.validate_device(self.device) is False:
+            return
+        if self.validate_signal(text) is False:
+            return
+        if text == "readback" and isinstance(self.get_device_object(self.device), Positioner):
+            device_signal = self.device
+        else:
+            device_signal = f"{self.device}_{text}"
+        self.device_signal_changed.emit(device_signal)
 
 
 if __name__ == "__main__":  # pragma: no cover

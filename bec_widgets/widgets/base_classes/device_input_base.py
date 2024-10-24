@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import enum
 
-from bec_lib.callback_handler import EventType
-from bec_lib.device import ComputedSignal, Device, Positioner, ReadoutPriority, Signal
+from bec_lib.device import ComputedSignal, Device, Positioner, ReadoutPriority
+from bec_lib.device import Signal as BECSignal
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import Property, Slot
+from qtpy.QtCore import Property, Signal, Slot
 
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
@@ -43,7 +43,7 @@ class DeviceInputBase(BECWidget):
     _device_handler = {
         BECDeviceFilter.DEVICE: Device,
         BECDeviceFilter.POSITIONER: Positioner,
-        BECDeviceFilter.SIGNAL: Signal,
+        BECDeviceFilter.SIGNAL: BECSignal,
         BECDeviceFilter.COMPUTED_SIGNAL: ComputedSignal,
     }
 
@@ -72,9 +72,6 @@ class DeviceInputBase(BECWidget):
         self._device_filter = []
         self._readout_filter = []
         self._devices = []
-        self.bec_dispatcher.client.callbacks.register(
-            EventType.DEVICE_UPDATE, self.update_devices_from_filters
-        )
 
     ### QtSlots ###
 
@@ -92,15 +89,13 @@ class DeviceInputBase(BECWidget):
         else:
             logger.warning(f"Device {device} is not in the filtered selection.")
 
-    @Slot(dict, dict)
     @Slot()
-    def update_devices_from_filters(
-        self, content: dict | None = None, metadata: dict | None = None
-    ):
+    def update_devices_from_filters(self):
         """Update the devices based on the current filter selection
         in self.device_filter and self.readout_filter. If apply_filter is False,
         it will not apply the filters, store the filter settings and return.
         """
+        current_device = WidgetIO.get_value(widget=self, as_string=True)
         self.config.device_filter = self.device_filter
         self.config.readout_filter = self.readout_filter
         if self.apply_filter is False:
@@ -111,6 +106,7 @@ class DeviceInputBase(BECWidget):
         # Filter based on readout priority
         devs = [dev for dev in devs if self._check_readout_filter(dev)]
         self.devices = [device.name for device in devs]
+        self.set_device(current_device)
 
     @Slot(list)
     def set_available_devices(self, devices: list[str]):
@@ -153,6 +149,8 @@ class DeviceInputBase(BECWidget):
     def default(self, value: str):
         if self.validate_device(value) is False:
             return
+        self.config.default = value
+        WidgetIO.set_value(widget=self, value=value)
 
     @Property(bool)
     def apply_filter(self):
@@ -343,7 +341,9 @@ class DeviceInputBase(BECWidget):
         for entry in filters:
             setattr(self, entry, True)
 
-    def _check_device_filter(self, device: Device | Signal | ComputedSignal | Positioner) -> bool:
+    def _check_device_filter(
+        self, device: Device | BECSignal | ComputedSignal | Positioner
+    ) -> bool:
         """Check if filter for device type is applied or not.
 
         Args:
@@ -351,7 +351,9 @@ class DeviceInputBase(BECWidget):
         """
         return all(isinstance(device, self._device_handler[entry]) for entry in self.device_filter)
 
-    def _check_readout_filter(self, device: Device | Signal | ComputedSignal | Positioner) -> bool:
+    def _check_readout_filter(
+        self, device: Device | BECSignal | ComputedSignal | Positioner
+    ) -> bool:
         """Check if filter for readout priority is applied or not.
 
         Args:
@@ -373,7 +375,7 @@ class DeviceInputBase(BECWidget):
         dev = getattr(self.dev, device.lower(), None)
         if dev is None:
             raise ValueError(
-                f"Device {device} is not found in devicemanager {self.dev} as enabled device."
+                f"Device {device} is not found in the device manager {self.dev} as enabled device."
             )
         return dev
 
@@ -384,6 +386,7 @@ class DeviceInputBase(BECWidget):
         Args:
             device(str): Device to validate.
         """
-        if device in self.devices:
+        all_devs = [dev.name for dev in self.dev.enabled_devices]
+        if device in self.devices and device in all_devs:
             return True
         return False

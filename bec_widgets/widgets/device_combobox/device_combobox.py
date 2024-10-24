@@ -1,5 +1,7 @@
+from bec_lib.callback_handler import EventType
 from bec_lib.device import ReadoutPriority
-from qtpy.QtCore import QSize
+from qtpy.QtCore import QSize, Signal, Slot
+from qtpy.QtGui import QPainter, QPaintEvent, QPen
 from qtpy.QtWidgets import QComboBox, QSizePolicy
 
 from bec_widgets.utils.colors import get_accent_colors
@@ -26,6 +28,9 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
 
     ICON_NAME = "list_alt"
 
+    device_selected = Signal(str)
+    device_config_update = Signal()
+
     def __init__(
         self,
         parent=None,
@@ -47,6 +52,7 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
             self.arg_name = arg_name
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.setMinimumSize(QSize(100, 0))
+        self._callback_id = None
         self._is_valid_input = False
         self._accent_colors = get_accent_colors()
         # We do not consider the config that is passed here, this produced problems
@@ -74,6 +80,28 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         # Set default device if passed
         if default is not None:
             self.set_device(default)
+        self._callback_id = self.bec_dispatcher.client.callbacks.register(
+            EventType.DEVICE_UPDATE, self.on_device_update
+        )
+        self.device_config_update.connect(self.update_devices_from_filters)
+        self.currentTextChanged.connect(self.check_validity)
+        self.check_validity(self.currentText())
+
+    def on_device_update(self, action: str, content: dict) -> None:
+        """
+        Callback for device update events. Triggers the device_update signal.
+
+        Args:
+            action (str): The action that triggered the event.
+            content (dict): The content of the config update.
+        """
+        if action in ["add", "remove", "reload"]:
+            self.device_config_update.emit()
+
+    def cleanup(self):
+        """Cleanup the widget."""
+        if self._callback_id is not None:
+            self.bec_dispatcher.client.callbacks.remove(self._callback_id)
 
     def get_current_device(self) -> object:
         """
@@ -84,6 +112,36 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         """
         dev_name = self.currentText()
         return self.get_device_object(dev_name)
+
+    def paintEvent(self, event: QPaintEvent) -> None:
+        """Extend the paint event to set the border color based on the validity of the input.
+
+        Args:
+            event (PySide6.QtGui.QPaintEvent) : Paint event.
+        """
+        # logger.info(f"Received paint event: {event} in {self.__class__}")
+        super().paintEvent(event)
+
+        if self._is_valid_input is False and self.isEnabled() is True:
+            painter = QPainter(self)
+            pen = QPen()
+            pen.setWidth(2)
+            pen.setColor(self._accent_colors.emergency)
+            painter.setPen(pen)
+            painter.drawRect(self.rect().adjusted(1, 1, -1, -1))
+            painter.end()
+
+    @Slot(str)
+    def check_validity(self, input_text: str) -> None:
+        """
+        Check if the current value is a valid device name.
+        """
+        if self.validate_device(input_text) is True:
+            self._is_valid_input = True
+            self.device_selected.emit(input_text.lower())
+        else:
+            self._is_valid_input = False
+        self.update()
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -99,6 +157,7 @@ if __name__ == "__main__":  # pragma: no cover
     layout = QVBoxLayout()
     widget.setLayout(layout)
     combo = DeviceComboBox()
+    combo.devices = ["samx", "dev1", "dev2", "dev3", "dev4"]
     layout.addWidget(combo)
     widget.show()
     app.exec_()

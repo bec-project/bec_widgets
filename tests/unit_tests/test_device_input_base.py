@@ -3,9 +3,8 @@ from unittest import mock
 import pytest
 from bec_lib.device import ReadoutPriority
 from qtpy.QtWidgets import QWidget
-from typeguard import TypeCheckError
 
-from bec_widgets.test_utils.client_mocks import FakePositioner
+from bec_widgets.tests.utils import FakePositioner
 from bec_widgets.widgets.base_classes.device_input_base import BECDeviceFilter, DeviceInputBase
 
 from .client_mocks import mocked_client
@@ -26,8 +25,9 @@ def device_input_base(qtbot, mocked_client):
     """Fixture with mocked FilterIO and WidgetIO"""
     with mock.patch("bec_widgets.utils.filter_io.FilterIO.set_selection"):
         with mock.patch("bec_widgets.utils.widget_io.WidgetIO.set_value"):
-            widget = create_widget(qtbot=qtbot, widget=DeviceInputWidget, client=mocked_client)
-            yield widget
+            with mock.patch("bec_widgets.utils.widget_io.WidgetIO.get_value"):
+                widget = create_widget(qtbot=qtbot, widget=DeviceInputWidget, client=mocked_client)
+                yield widget
 
 
 def test_device_input_base_init(device_input_base):

@@ -5,7 +5,7 @@ import fakeredis
 import pytest
 from bec_lib.redis_connector import RedisConnector
 
-from bec_widgets.test_utils.client_mocks import DEVICES, DMMock, FakePositioner, Positioner
+from bec_widgets.tests.utils import DEVICES, DMMock, FakePositioner, Positioner
 
 
 def fake_redis_server(host, port):

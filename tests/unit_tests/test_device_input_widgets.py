@@ -35,7 +35,6 @@ def test_device_input_combobox_init(device_input_combobox):
     assert device_input_combobox.client is not None
     assert isinstance(device_input_combobox, DeviceComboBox)
     assert device_input_combobox.config.widget_class == "DeviceComboBox"
-    assert device_input_combobox.config.default is None
     assert device_input_combobox.devices == [
         "samx",
         "samy",

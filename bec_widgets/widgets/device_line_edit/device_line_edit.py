@@ -1,3 +1,4 @@
+from bec_lib.callback_handler import EventType
 from bec_lib.device import ReadoutPriority
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import QSize, Signal, Slot
@@ -29,6 +30,7 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
     """
 
     device_selected = Signal(str)
+    device_config_update = Signal()
 
     ICON_NAME = "edit_note"
 
@@ -46,6 +48,7 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
         default: str | None = None,
         arg_name: str | None = None,
     ):
+        self._callback_id = None
         self._is_valid_input = False
         self._accent_colors = get_accent_colors()
         super().__init__(client=client, config=config, gui_id=gui_id)
@@ -84,7 +87,28 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
         # Set default device if passed
         if default is not None:
             self.set_device(default)
+        self._callback_id = self.bec_dispatcher.client.callbacks.register(
+            EventType.DEVICE_UPDATE, self.on_device_update
+        )
+        self.device_config_update.connect(self.update_devices_from_filters)
         self.textChanged.connect(self.check_validity)
+        self.check_validity(self.text())
+
+    def on_device_update(self, action: str, content: dict) -> None:
+        """
+        Callback for device update events. Triggers the device_update signal.
+
+        Args:
+            action (str): The action that triggered the event.
+            content (dict): The content of the config update.
+        """
+        if action in ["add", "remove", "reload"]:
+            self.device_config_update.emit()
+
+    def cleanup(self):
+        """Cleanup the widget."""
+        if self._callback_id is not None:
+            self.bec_dispatcher.client.callbacks.remove(self._callback_id)
 
     def get_current_device(self) -> object:
         """

@@ -90,23 +90,32 @@ def test_device_signal_set_device(device_signal_base):
     assert device_signal_base.signals == ["readback", "setpoint", "velocity"]
 
 
-def test_signal_combobox(device_signal_combobox):
+def test_signal_combobox(qtbot, device_signal_combobox):
     """Test the signal_combobox"""
-    device_signal_combobox._signals == []
+    container = []
+
+    def test_cb(input):
+        container.append(input)
+
+    device_signal_combobox.device_signal_changed.connect(test_cb)
+    assert device_signal_combobox._signals == []
     device_signal_combobox.include_normal_signals = True
     device_signal_combobox.include_hinted_signals = True
     device_signal_combobox.include_config_signals = True
-    device_signal_combobox.signals == []
+    assert device_signal_combobox.signals == []
     device_signal_combobox.set_device("samx")
-    device_signal_combobox.signals == ["readback", "setpoint", "velocity"]
+    assert device_signal_combobox.signals == ["readback", "setpoint", "velocity"]
+    qtbot.wait(100)
+    assert container == ["samx"]
 
 
 def test_signal_lineeidt(device_signal_line_edit):
     """Test the signal_combobox"""
-    device_signal_line_edit._signals == []
+
+    assert device_signal_line_edit._signals == []
     device_signal_line_edit.include_normal_signals = True
     device_signal_line_edit.include_hinted_signals = True
     device_signal_line_edit.include_config_signals = True
-    device_signal_line_edit.signals == []
+    assert device_signal_line_edit.signals == []
     device_signal_line_edit.set_device("samx")
-    device_signal_line_edit.signals == ["readback", "setpoint", "velocity"]
+    assert device_signal_line_edit.signals == ["readback", "setpoint", "velocity"]

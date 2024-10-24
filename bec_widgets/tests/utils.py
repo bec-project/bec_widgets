@@ -1,11 +1,9 @@
 from unittest.mock import MagicMock
 
-from bec_lib.client import BECClient
 from bec_lib.device import Device as BECDevice
 from bec_lib.device import Positioner as BECPositioner
 from bec_lib.device import ReadoutPriority
 from bec_lib.devicemanager import DeviceContainer
-from bec_lib.redis_connector import RedisConnector
 
 
 class FakeDevice(BECDevice):
@@ -80,6 +78,8 @@ class FakePositioner(BECPositioner):
         super().__init__(name=name)
         # self.limits = limits if limits is not None else [0.0, 0.0]
         self.read_value = read_value
+        self.setpoint_value = read_value
+        self.motor_is_moving_value = 0
         self._enabled = enabled
         self._limits = limits
         self._readout_priority = readout_priority
@@ -100,6 +100,11 @@ class FakePositioner(BECPositioner):
                 "setpoint": {"kind_str": "1"},  # normal
                 "velocity": {"kind_str": "2"},  # config
             }
+        }
+        self.signals = {
+            self.name: {"value": self.read_value},
+            f"{self.name}_setpoint": {"value": self.setpoint_value},
+            f"{self.name}_motor_is_moving": {"value": self.motor_is_moving_value},
         }
 
     @property
@@ -139,7 +144,7 @@ class FakePositioner(BECPositioner):
         Args:
             fake_value(float): Desired fake value
         """
-        self.signals[self.name]["value"] = fake_value
+        self.read_value = fake_value
 
     def describe(self) -> dict:
         """
@@ -157,11 +162,7 @@ class FakePositioner(BECPositioner):
         self.read_value = value
 
     def read(self):
-        return {
-            self.name: {"value": self.read_value},
-            f"{self.name}_setpoint": {"value": self.read_value},
-            f"{self.name}_motor_is_moving": {"value": 0},
-        }
+        return self.signals
 
     def set_limits(self, limits):
         self.limits = limits
