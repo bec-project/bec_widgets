@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import enum
 
+from bec_lib.callback_handler import EventType
 from bec_lib.device import ComputedSignal, Device, Positioner, ReadoutPriority, Signal
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import Property, Slot
@@ -71,6 +72,9 @@ class DeviceInputBase(BECWidget):
         self._device_filter = []
         self._readout_filter = []
         self._devices = []
+        self.bec_dispatcher.client.callbacks.register(
+            EventType.DEVICE_UPDATE, self.update_devices_from_filters
+        )
 
     ### QtSlots ###
 
@@ -88,8 +92,11 @@ class DeviceInputBase(BECWidget):
         else:
             logger.warning(f"Device {device} is not in the filtered selection.")
 
+    @Slot(dict, dict)
     @Slot()
-    def update_devices_from_filters(self):
+    def update_devices_from_filters(
+        self, content: dict | None = None, metadata: dict | None = None
+    ):
         """Update the devices based on the current filter selection
         in self.device_filter and self.readout_filter. If apply_filter is False,
         it will not apply the filters, store the filter settings and return.
@@ -133,16 +140,9 @@ class DeviceInputBase(BECWidget):
 
     @devices.setter
     def devices(self, value: list):
-        valid_dev = []
-        all_dev_names = [dev.name for dev in self.dev.enabled_devices]
-        for dev in value:
-            if dev in all_dev_names:
-                valid_dev.append(dev)
-        self._devices = valid_dev
-        self.config.devices = valid_dev
-
-        FilterIO.set_selection(widget=self, selection=valid_dev)
-        # QTimer.singleShot(200, lambda: FilterIO.set_selection(widget=self, selection=valid_dev))
+        self._devices = value
+        self.config.devices = value
+        FilterIO.set_selection(widget=self, selection=value)
 
     @Property(str)
     def default(self):
@@ -151,13 +151,8 @@ class DeviceInputBase(BECWidget):
 
     @default.setter
     def default(self, value: str):
-        def set_default():
-            if self.validate_device(value) is False:
-                return
-            self.set_device(value)
-
-        set_default()
-        # QTimer.singleShot(200, set_default)
+        if self.validate_device(value) is False:
+            return
 
     @Property(bool)
     def apply_filter(self):
@@ -166,12 +161,8 @@ class DeviceInputBase(BECWidget):
 
     @apply_filter.setter
     def apply_filter(self, value: bool):
-        def apply_filters():
-            self.config.apply_filter = value
-            self.update_devices_from_filters()
-
-        apply_filters()
-        # QTimer.singleShot(200, apply_filters)
+        self.config.apply_filter = value
+        self.update_devices_from_filters()
 
     @Property(bool)
     def filter_to_device(self):
@@ -180,15 +171,11 @@ class DeviceInputBase(BECWidget):
 
     @filter_to_device.setter
     def filter_to_device(self, value: bool):
-        def set_filter():
-            if value is True and BECDeviceFilter.DEVICE not in self.device_filter:
-                self._device_filter.append(BECDeviceFilter.DEVICE)
-            if value is False and BECDeviceFilter.DEVICE in self.device_filter:
-                self._device_filter.remove(BECDeviceFilter.DEVICE)
-            self.update_devices_from_filters()
-
-        set_filter()
-        # QTimer.singleShot(200, set_filter)
+        if value is True and BECDeviceFilter.DEVICE not in self.device_filter:
+            self._device_filter.append(BECDeviceFilter.DEVICE)
+        if value is False and BECDeviceFilter.DEVICE in self.device_filter:
+            self._device_filter.remove(BECDeviceFilter.DEVICE)
+        self.update_devices_from_filters()
 
     @Property(bool)
     def filter_to_positioner(self):

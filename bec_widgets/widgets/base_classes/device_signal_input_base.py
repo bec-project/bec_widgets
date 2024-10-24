@@ -1,3 +1,4 @@
+from bec_lib.callback_handler import EventType
 from bec_lib.device import Signal
 from bec_lib.logger import bec_logger
 from ophyd import Kind
@@ -50,6 +51,9 @@ class DeviceSignalInputBase(BECWidget):
         self._hinted_signals = []
         self._normal_signals = []
         self._config_signals = []
+        self.bec_dispatcher.client.callbacks.register(
+            EventType.DEVICE_UPDATE, self.update_signals_from_filters
+        )
 
     ### Qt Slots ###
 
@@ -83,8 +87,11 @@ class DeviceSignalInputBase(BECWidget):
             self._device = device
         self.update_signals_from_filters()
 
+    @Slot(dict, dict)
     @Slot()
-    def update_signals_from_filters(self):
+    def update_signals_from_filters(
+        self, content: dict | None = None, metadata: dict | None = None
+    ):
         """Update the filters for the device signals based on list in self.signal_filter.
         In addition, store the hinted, normal and config signals in separate lists to allow
         customisation within QLineEdit.
