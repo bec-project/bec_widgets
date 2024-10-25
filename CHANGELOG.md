@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.2.0 (2024-10-25)
+
+### Features
+
+* feat(colors): evenly spaced color generation + new golden ratio calculation ([`40c9fea`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/40c9fea35f869ef52e05948dd1989bcd99f602e0))
+
+### Refactoring
+
+* refactor: add bec_lib version to statusbox ([`5d4b86e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5d4b86e1c6e1800051afce4f991153e370767fa6))
+
+
 ## v1.1.0 (2024-10-25)
 
 ### Features
@@ -158,18 +169,3 @@ complete UI ([`49268e3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/49268e38
 * fix: use new 'scan_axis' signal, to set_x and select x axis on waveform
 
 Fixes #361, do not try to change x axis when not permitted ([`efa2763`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/efa276358b0f5a45cce9fa84fa5f9aafaf4284f7))
-
-### Features
-
-* feat: new 'scan_axis' signal
-
-Signal is emitted before "scan_started", to inform about scan positioner
-and (start, stop) positions. In case of multiple bundles, the signal
-is emitted multiple times. ([`f084e25`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f084e2514bc9459cccaa951b79044bc25884e738))
-
-
-## v0.113.0 (2024-10-02)
-
-### Testing
-
-* test: add tests for scan_status_callback ([`dc0c825`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/dc0c825fd594c093a24543ff803d6c6564010e92))
