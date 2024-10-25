@@ -108,8 +108,97 @@ class Colors:
         return angles
 
     @staticmethod
+    def set_theme_offset(theme: Literal["light", "dark"] | None = None, offset=0.2) -> tuple:
+        """
+        Set the theme offset to avoid colors too close to white or black with light or dark theme respectively for pyqtgraph plot background.
+
+        Args:
+            theme(str): The theme to be applied.
+            offset(float): Offset to avoid colors too close to white or black with light or dark theme respectively for pyqtgraph plot background.
+
+        Returns:
+            tuple: Tuple of min_pos and max_pos.
+
+        Raises:
+            ValueError: If theme_offset is not between 0 and 1.
+        """
+
+        if offset < 0 or offset > 1:
+            raise ValueError("theme_offset must be between 0 and 1")
+
+        if theme is None:
+            app = QApplication.instance()
+            if hasattr(app, "theme"):
+                theme = app.theme.theme
+
+        if theme == "light":
+            min_pos = 0.0
+            max_pos = 1 - offset
+        else:
+            min_pos = 0.0 + offset
+            max_pos = 1.0
+
+        return min_pos, max_pos
+
+    @staticmethod
+    def evenly_spaced_colors(
+        colormap: str,
+        num: int,
+        format: Literal["QColor", "HEX", "RGB"] = "QColor",
+        theme_offset=0.2,
+        theme: Literal["light", "dark"] | None = None,
+    ) -> list:
+        """
+        Extract `num` colors from the specified colormap, evenly spaced along its range,
+        and return them in the specified format.
+
+        Args:
+            colormap (str): Name of the colormap.
+            num (int): Number of requested colors.
+            format (Literal["QColor","HEX","RGB"]): The format of the returned colors ('RGB', 'HEX', 'QColor').
+            theme_offset (float): Has to be between 0-1. Offset to avoid colors too close to white or black with light or dark theme respectively for pyqtgraph plot background.
+            theme (Literal['light', 'dark'] | None): The theme to be applied. Overrides the QApplication theme if specified.
+
+        Returns:
+            list: List of colors in the specified format.
+
+        Raises:
+            ValueError: If theme_offset is not between 0 and 1.
+        """
+        if theme_offset < 0 or theme_offset > 1:
+            raise ValueError("theme_offset must be between 0 and 1")
+
+        cmap = pg.colormap.get(colormap)
+        min_pos, max_pos = Colors.set_theme_offset(theme, theme_offset)
+
+        # Generate positions that are evenly spaced within the acceptable range
+        if num == 1:
+            positions = np.array([(min_pos + max_pos) / 2])
+        else:
+            positions = np.linspace(min_pos, max_pos, num)
+
+        # Sample colors from the colormap at the calculated positions
+        colors = cmap.map(positions, mode="float")
+        color_list = []
+
+        for color in colors:
+            if format.upper() == "HEX":
+                color_list.append(QColor.fromRgbF(*color).name())
+            elif format.upper() == "RGB":
+                color_list.append(tuple((np.array(color) * 255).astype(int)))
+            elif format.upper() == "QCOLOR":
+                color_list.append(QColor.fromRgbF(*color))
+            else:
+                raise ValueError("Unsupported format. Please choose 'RGB', 'HEX', or 'QColor'.")
+        return color_list
+
+    @staticmethod
     def golden_angle_color(
-        colormap: str, num: int, format: Literal["QColor", "HEX", "RGB"] = "QColor"
+        colormap: str,
+        num: int,
+        format: Literal["QColor", "HEX", "RGB"] = "QColor",
+        theme_offset=0.2,
+        theme: Literal["dark", "light"] | None = None,
     ) -> list:
         """
         Extract num colors from the specified colormap following golden angle distribution and return them in the specified format.
@@ -118,45 +207,39 @@ class Colors:
             colormap (str): Name of the colormap.
             num (int): Number of requested colors.
             format (Literal["QColor","HEX","RGB"]): The format of the returned colors ('RGB', 'HEX', 'QColor').
+            theme_offset (float): Has to be between 0-1. Offset to avoid colors too close to white or black with light or dark theme respectively for pyqtgraph plot background.
 
         Returns:
             list: List of colors in the specified format.
 
         Raises:
-            ValueError: If the number of requested colors is greater than the number of colors in the colormap.
+            ValueError: If theme_offset is not between 0 and 1.
         """
-        cmap = pg.colormap.get(colormap)
-        cmap_colors = cmap.getColors(mode="float")
-        if num > len(cmap_colors):
-            raise ValueError(
-                f"Number of colors requested ({num}) is greater than the number of colors in the colormap ({len(cmap_colors)})"
-            )
-        angles = Colors.golden_ratio(len(cmap_colors))
-        color_selection = np.round(np.interp(angles, (-np.pi, np.pi), (0, len(cmap_colors))))
-        colors = []
-        ii = 0
-        while len(colors) < num:
-            color_index = int(color_selection[ii])
-            color = cmap_colors[color_index]
-            app = QApplication.instance()
-            if hasattr(app, "theme") and app.theme.theme == "light":
-                background = 255
-            else:
-                background = 0
-            if np.abs(np.mean(color[:3] * 255) - background) < 50:
-                ii += 1
-                continue
 
+        cmap = pg.colormap.get(colormap)
+        phi = (1 + np.sqrt(5)) / 2  # Golden ratio
+        golden_angle_conjugate = 1 - (1 / phi)  # Approximately 0.38196601125
+
+        min_pos, max_pos = Colors.set_theme_offset(theme, theme_offset)
+
+        # Generate positions within the acceptable range
+        positions = np.mod(np.arange(num) * golden_angle_conjugate, 1)
+        positions = min_pos + positions * (max_pos - min_pos)
+
+        # Sample colors from the colormap at the calculated positions
+        colors = cmap.map(positions, mode="float")
+        color_list = []
+
+        for color in colors:
             if format.upper() == "HEX":
-                colors.append(QColor.fromRgbF(*color).name())
+                color_list.append(QColor.fromRgbF(*color).name())
             elif format.upper() == "RGB":
-                colors.append(tuple((np.array(color) * 255).astype(int)))
+                color_list.append(tuple((np.array(color) * 255).astype(int)))
             elif format.upper() == "QCOLOR":
-                colors.append(QColor.fromRgbF(*color))
+                color_list.append(QColor.fromRgbF(*color))
             else:
                 raise ValueError("Unsupported format. Please choose 'RGB', 'HEX', or 'QColor'.")
-            ii += 1
-        return colors
+        return color_list
 
     @staticmethod
     def hex_to_rgba(hex_color: str, alpha=255) -> tuple:

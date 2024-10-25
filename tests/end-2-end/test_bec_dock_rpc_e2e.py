@@ -170,12 +170,17 @@ def test_ring_bar(rpc_server_dock):
 
     bar_config = bar._config_dict
 
-    expected_colors = [list(color) for color in Colors.golden_angle_color("viridis", 5, "RGB")]
+    expected_colors_light = [
+        list(color) for color in Colors.golden_angle_color("viridis", 5, "RGB", theme="light")
+    ]
+    expected_colors_dark = [
+        list(color) for color in Colors.golden_angle_color("viridis", 5, "RGB", theme="dark")
+    ]
     bar_colors = [ring._config_dict["color"] for ring in bar.rings]
     bar_values = [ring._config_dict["value"] for ring in bar.rings]
     assert bar_config["num_bars"] == 5
     assert bar_values == [10, 20, 30, 40, 50]
-    assert bar_colors == expected_colors
+    assert bar_colors == expected_colors_light or bar_colors == expected_colors_dark
 
 
 def test_ring_bar_scan_update(bec_client_lib, rpc_server_dock):

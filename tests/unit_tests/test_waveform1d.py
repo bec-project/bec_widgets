@@ -152,12 +152,30 @@ def test_getting_curve(qtbot, mocked_client):
     bec_figure = create_widget(qtbot, BECFigure, client=mocked_client)
     w1 = bec_figure.plot()
     c1 = w1.add_curve_bec(x_name="samx", y_name="bpm4i", gui_id="test_curve")
-    c1_expected_config = CurveConfig(
+    c1_expected_config_dark = CurveConfig(
         widget_class="BECCurve",
         gui_id="test_curve",
         parent_id=w1.gui_id,
         label="bpm4i-bpm4i",
-        color="#b73779",
+        color="#3b0f70",
+        symbol="o",
+        symbol_color=None,
+        symbol_size=7,
+        pen_width=4,
+        pen_style="solid",
+        source="scan_segment",
+        signals=Signal(
+            source="scan_segment",
+            x=SignalData(name="samx", entry="samx", unit=None, modifier=None),
+            y=SignalData(name="bpm4i", entry="bpm4i", unit=None, modifier=None),
+        ),
+    )
+    c1_expected_config_light = CurveConfig(
+        widget_class="BECCurve",
+        gui_id="test_curve",
+        parent_id=w1.gui_id,
+        label="bpm4i-bpm4i",
+        color="#000004",
         symbol="o",
         symbol_color=None,
         symbol_size=7,
@@ -171,14 +189,39 @@ def test_getting_curve(qtbot, mocked_client):
         ),
     )
 
-    assert w1.curves[0].config == c1_expected_config
-    assert w1._curves_data["scan_segment"]["bpm4i-bpm4i"].config == c1_expected_config
-    assert w1.get_curve(0).config == c1_expected_config
-    assert w1.get_curve_config("bpm4i-bpm4i", dict_output=True) == c1_expected_config.model_dump()
-    assert w1.get_curve_config("bpm4i-bpm4i", dict_output=False) == c1_expected_config
-    assert w1.get_curve("bpm4i-bpm4i").config == c1_expected_config
-    assert c1.get_config(False) == c1_expected_config
-    assert c1.get_config() == c1_expected_config.model_dump()
+    assert (
+        w1.curves[0].config == c1_expected_config_dark
+        or w1.curves[0].config == c1_expected_config_light
+    )
+    assert (
+        w1._curves_data["scan_segment"]["bpm4i-bpm4i"].config == c1_expected_config_dark
+        or w1._curves_data["scan_segment"]["bpm4i-bpm4i"].config == c1_expected_config_light
+    )
+    assert (
+        w1.get_curve(0).config == c1_expected_config_dark
+        or w1.get_curve(0).config == c1_expected_config_light
+    )
+    assert (
+        w1.get_curve_config("bpm4i-bpm4i", dict_output=True) == c1_expected_config_dark.model_dump()
+        or w1.get_curve_config("bpm4i-bpm4i", dict_output=True)
+        == c1_expected_config_light.model_dump()
+    )
+    assert (
+        w1.get_curve_config("bpm4i-bpm4i", dict_output=False) == c1_expected_config_dark
+        or w1.get_curve_config("bpm4i-bpm4i", dict_output=False) == c1_expected_config_light
+    )
+    assert (
+        w1.get_curve("bpm4i-bpm4i").config == c1_expected_config_dark
+        or w1.get_curve("bpm4i-bpm4i").config == c1_expected_config_light
+    )
+    assert (
+        c1.get_config(False) == c1_expected_config_dark
+        or c1.get_config(False) == c1_expected_config_light
+    )
+    assert (
+        c1.get_config() == c1_expected_config_dark.model_dump()
+        or c1.get_config() == c1_expected_config_light.model_dump()
+    )
 
 
 def test_getting_curve_errors(qtbot, mocked_client):
