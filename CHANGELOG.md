@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## v1.1.0 (2024-10-25)
+
+### Features
+
+* feat: add filter i/o utility class ([`0350833`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0350833f36e0a7cadce4173f9b1d1fbfdf985375))
+
+### Refactoring
+
+* refactor: do not flush selection upon receiving config update; allow widgetIO to receive kwargs to be able to use get_value to receive string instead of int for QComboBox ([`91959e8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/91959e82de8586934af3ebb5aaa0923930effc51))
+
+* refactor: allow to set selection in DeviceInput; automatic update of selection on device config update; cleanup ([`5eb15b7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5eb15b785f12e30eb8ccbc56d4ad9e759a4cf5eb))
+
+* refactor: cleanup, added device_signal for signal inputs ([`6fb2055`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6fb20552ff57978f4aeb79fd7f062f8d6b5581e7))
+
+### Testing
+
+* test(scan_control): tests added for grid_scan to ensure scan_args signal validity ([`acb7902`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/acb79020d4be546efc001ff47b6f5cdba2ee9375))
+
+
 ## v1.0.2 (2024-10-22)
 
 ### Bug Fixes
@@ -151,26 +170,6 @@ is emitted multiple times. ([`f084e25`](https://gitlab.psi.ch/bec/bec_widgets/-/
 
 ## v0.113.0 (2024-10-02)
 
-### Bug Fixes
-
-* fix: add is_log checks and functionality to plot_indicator_items ([`0f9953e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0f9953e8fdcf3f9b5a09f994c69edb6b34756df9))
-
-### Features
-
-* feat: add first draft for alignment_1d GUI ([`63c24f9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/63c24f97a355edaa928b6e222909252b276bcada))
-
-* feat: add move to position button to lmfit dialog ([`281cb27`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/281cb27d8b5433e27a7ba0ca0a19e4b45b9c544f))
-
-### Refactoring
-
-* refactor: various minor improvements for the alignment gui ([`f554f3c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f554f3c1672c4fe32968a5991dc98802556a6f3b))
-
-* refactor: allow hiding of arg/kwarg boxes ([`efe90eb`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/efe90eb163e2123a5b4d0bb59f66025a569336ad))
-
 ### Testing
 
 * test: add tests for scan_status_callback ([`dc0c825`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/dc0c825fd594c093a24543ff803d6c6564010e92))
-
-### Unknown
-
-* feat : Add bec_signal_proxy to handle signals with option to unblock them manually. ([`1dcfeb6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1dcfeb6cfce3c69f0c5401731d4d3f9a1981b22e))
