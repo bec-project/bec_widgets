@@ -265,7 +265,7 @@ class DeviceSignalInputBase(BECWidget):
         if device in self.dev:
             return True
         if raise_on_false is True:
-            raise ValueError(f"Device {device} not found in devicemanager.")
+            raise ValueError(f"Device {device} not found in device manager.")
         return False
 
     def validate_signal(self, signal: str) -> bool:

@@ -31,7 +31,7 @@
      <property name="title">
       <string>X Axis</string>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0,0,1,3,1,3">
+        <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0,0,1,3,1,0">
       <item>
        <widget class="QLabel" name="x_mode_label">
         <property name="text">
@@ -113,7 +113,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QLineEdit" name="x_entry"/>
+          <widget class="SignalLineEdit" name="x_entry"/>
       </item>
      </layout>
     </widget>
@@ -348,11 +348,33 @@
    <header>device_line_edit</header>
   </customwidget>
   <customwidget>
+      <class>SignalLineEdit</class>
+      <extends>QLineEdit</extends>
+      <header>signal_line_edit</header>
+  </customwidget>
+     <customwidget>
    <class>ColormapSelector</class>
    <extends>QWidget</extends>
    <header>colormap_selector</header>
   </customwidget>
  </customwidgets>
  <resources/>
- <connections/>
+    <connections>
+        <connection>
+            <sender>x_name</sender>
+            <signal>device_selected(QString)</signal>
+            <receiver>x_entry</receiver>
+            <slot>set_device(QString)</slot>
+            <hints>
+                <hint type="sourcelabel">
+                    <x>465</x>
+                    <y>34</y>
+                </hint>
+                <hint type="destinationlabel">
+                    <x>609</x>
+                    <y>39</y>
+                </hint>
+            </hints>
+        </connection>
+    </connections>
 </ui>

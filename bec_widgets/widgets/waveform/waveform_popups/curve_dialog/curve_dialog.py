@@ -15,6 +15,7 @@ from bec_widgets.utils import Colors, UILoader
 from bec_widgets.widgets.color_button.color_button import ColorButton
 from bec_widgets.widgets.dap_combo_box.dap_combo_box import DapComboBox
 from bec_widgets.widgets.device_line_edit.device_line_edit import DeviceLineEdit
+from bec_widgets.widgets.signal_line_edit.signal_line_edit import SignalLineEdit
 
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
@@ -240,7 +241,7 @@ class DialogRow(QObject):
 
         # Name and Entry
         self.device_line_edit = DeviceLineEdit()
-        self.entry_line_edit = QLineEdit()
+        self.entry_line_edit = SignalLineEdit()
 
         self.dap_combo = DapComboBox()
         self.dap_combo.populate_fit_model_combobox()
@@ -262,6 +263,7 @@ class DialogRow(QObject):
         self.remove_button.clicked.connect(
             lambda: self.remove_row()
         )  # From some reason do not work without lambda
+        self.device_line_edit.device_selected.connect(self.entry_line_edit.set_device)
 
     def add_scan_row(self):
         if self.config is not None:
@@ -319,6 +321,7 @@ class DialogRow(QObject):
 
     def cleanup(self):
         self.device_line_edit.cleanup()
+        self.entry_line_edit.cleanup()
 
 
 class StyleComboBox(QComboBox):
