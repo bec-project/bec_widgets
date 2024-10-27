@@ -16,6 +16,7 @@ class Widgets(str, enum.Enum):
     """
 
     AbortButton = "AbortButton"
+    BECColorMapWidget = "BECColorMapWidget"
     BECDock = "BECDock"
     BECDockArea = "BECDockArea"
     BECFigure = "BECFigure"
@@ -34,6 +35,7 @@ class Widgets(str, enum.Enum):
     PositionIndicator = "PositionIndicator"
     PositionerBox = "PositionerBox"
     PositionerControlLine = "PositionerControlLine"
+    PositionerGroup = "PositionerGroup"
     ResetButton = "ResetButton"
     ResumeButton = "ResumeButton"
     RingProgressBar = "RingProgressBar"
@@ -61,6 +63,15 @@ class AbortButton(RPCBase):
     def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
+        """
+
+
+class BECColorMapWidget(RPCBase):
+    @property
+    @rpc_call
+    def colormap(self):
+        """
+        Get the current colormap name.
         """
 
 
@@ -2687,6 +2698,16 @@ class PositionerControlLine(RPCBase):
 
         Args:
             positioner (Positioner | str) : Positioner to set, accepts str or the device
+        """
+
+
+class PositionerGroup(RPCBase):
+    @rpc_call
+    def set_positioners(self, device_names: "str"):
+        """
+        Redraw grid with positioners from device_names string
+
+        Device names must be separated by space
         """
 
 

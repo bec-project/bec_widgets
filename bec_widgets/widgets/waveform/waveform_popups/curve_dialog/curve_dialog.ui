@@ -231,7 +231,14 @@
            </widget>
           </item>
           <item row="0" column="3">
-           <widget class="ColormapSelector" name="color_map_selector_scan"/>
+              <widget class="BECColorMapWidget" name="color_map_selector_scan">
+                  <property name="sizePolicy">
+                      <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                          <horstretch>0</horstretch>
+                          <verstretch>0</verstretch>
+                      </sizepolicy>
+                  </property>
+              </widget>
           </item>
          </layout>
         </widget>
@@ -330,7 +337,14 @@
            </widget>
           </item>
           <item row="0" column="3">
-           <widget class="ColormapSelector" name="color_map_selector_dap"/>
+              <widget class="BECColorMapWidget" name="color_map_selector_dap">
+                  <property name="sizePolicy">
+                      <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                          <horstretch>0</horstretch>
+                          <verstretch>0</verstretch>
+                      </sizepolicy>
+                  </property>
+              </widget>
           </item>
          </layout>
         </widget>
@@ -348,9 +362,9 @@
    <header>device_line_edit</header>
   </customwidget>
   <customwidget>
-   <class>ColormapSelector</class>
+      <class>BECColorMapWidget</class>
    <extends>QWidget</extends>
-   <header>colormap_selector</header>
+      <header>bec_color_map_widget</header>
   </customwidget>
  </customwidgets>
  <resources/>

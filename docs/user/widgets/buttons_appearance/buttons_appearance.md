@@ -39,6 +39,17 @@ The `Colormap Selector` is a specialized combobox that allows users to select a 
 **Key Features:**
 - **Colormap Selection**: Provides a dropdown to select from all available colormaps in `pyqtgraph`.
 - **Visual Preview**: Displays a small preview of the colormap next to its name, enhancing usability.
+
+## Colormap Button
+
+The `Colormap Button` is a custom widget that displays the current colormap and, upon clicking, shows a nested menu for selecting a different colormap. It integrates the `ColorMapMenu` from `pyqtgraph`, providing an intuitive and interactive way for users to choose colormaps within the GUI.
+
+**Key Features:**
+- **Current Colormap Display**: Shows the name and a gradient icon of the current colormap directly on the button.
+- **Nested Menu Selection**: Offers a nested menu with categorized colormaps, making it easy to find and select the desired colormap.
+- **Signal Emission**: Emits a signal when the colormap changes, providing the new colormap name as a string.
+- **Qt Designer Integration**: Exposes properties and signals to be used within Qt Designer, allowing for customization within the designer interface.
+- **Resizable and Styled**: Features adjustable size policies and styles to match the look and feel of standard `QPushButton` widgets, including rounded edges.
 `````
 
 ````{tab} Examples
@@ -104,6 +115,33 @@ class MyGui(QWidget):
 my_gui = MyGui()
 my_gui.show()
 ```
+
+## Example 4 - Adding a Colormap Button
+
+```python
+from qtpy.QtWidgets import QWidget, QVBoxLayout
+from bec_widgets.widgets.buttons import ColormapButton
+
+class MyGui(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setLayout(QVBoxLayout(self))
+
+        # Create and add the ColormapButton to the layout
+        self.colormap_button = ColormapButton()
+        self.layout().addWidget(self.colormap_button)
+
+        # Connect the signal to handle colormap changes
+        self.colormap_button.colormap_changed_signal.connect(self.on_colormap_changed)
+
+    def on_colormap_changed(self, colormap_name):
+        print(f"Selected colormap: {colormap_name}")
+
+# Example of how this custom GUI might be used:
+my_gui = MyGui()
+my_gui.show()
+```
+
 ````
 
 ````{tab} API

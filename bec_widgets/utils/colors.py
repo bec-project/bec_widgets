@@ -468,7 +468,7 @@ class Colors:
             return color
 
     @staticmethod
-    def validate_color_map(color_map: str) -> str:
+    def validate_color_map(color_map: str, return_error: bool = True) -> str | bool:
         """
         Validate the colormap input if it is supported by pyqtgraph. Can be used in any pydantic model as a field validator. If validation fails it prints all available colormaps from pyqtgraph instance.
 
@@ -476,13 +476,20 @@ class Colors:
             color_map(str): The colormap to be validated.
 
         Returns:
-            str: The validated colormap.
+            str: The validated colormap, if colormap is valid.
+            bool: False, if colormap is invalid.
+
+        Raises:
+            PydanticCustomError: If colormap is invalid.
         """
         available_colormaps = pg.colormap.listMaps()
         if color_map not in available_colormaps:
-            raise PydanticCustomError(
-                "unsupported colormap",
-                f"Colormap '{color_map}' not found in the current installation of pyqtgraph. Choose on the following: {available_colormaps}.",
-                {"wrong_value": color_map},
-            )
+            if return_error:
+                raise PydanticCustomError(
+                    "unsupported colormap",
+                    f"Colormap '{color_map}' not found in the current installation of pyqtgraph. Choose on the following: {available_colormaps}.",
+                    {"wrong_value": color_map},
+                )
+            else:
+                return False
         return color_map
