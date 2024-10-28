@@ -482,7 +482,11 @@ class Colors:
         Raises:
             PydanticCustomError: If colormap is invalid.
         """
-        available_colormaps = pg.colormap.listMaps()
+        available_pg_maps = pg.colormap.listMaps()
+        available_mpl_maps = pg.colormap.listMaps("matplotlib")
+        available_mpl_colorcet = pg.colormap.listMaps("colorcet")
+
+        available_colormaps = available_pg_maps + available_mpl_maps + available_mpl_colorcet
         if color_map not in available_colormaps:
             if return_error:
                 raise PydanticCustomError(
