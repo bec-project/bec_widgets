@@ -62,7 +62,7 @@ class SignalLineEdit(DeviceSignalInputBase, QLineEdit):
             self.set_device(device)
         if default is not None:
             self.set_signal(default)
-        self.textChanged.connect(self.validate_device)
+        self.textChanged.connect(self.check_validity)
         self.validate_device(self.text())
 
     def get_current_device(self) -> object:
@@ -111,7 +111,6 @@ class SignalLineEdit(DeviceSignalInputBase, QLineEdit):
         Args:
             text (str): Text in the combobox.
         """
-        print("test")
         if self.validate_device(self.device) is False:
             return
         if self.validate_signal(text) is False:
@@ -122,12 +121,24 @@ class SignalLineEdit(DeviceSignalInputBase, QLineEdit):
             device_signal = f"{self.device}_{text}"
         self.device_signal_changed.emit(device_signal)
 
+    @Slot(str)
+    def set_device(self, device: str) -> None:
+        """
+        Set the device name.
+
+        Args:
+            device (str): Device name.
+        """
+        super().set_device(device)
+        self.check_validity(self.text())
+
 
 if __name__ == "__main__":  # pragma: no cover
     # pylint: disable=import-outside-toplevel
     from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
     from bec_widgets.utils.colors import set_theme
+    from bec_widgets.widgets.device_line_edit.device_line_edit import DeviceLineEdit
 
     app = QApplication([])
     set_theme("dark")
@@ -135,6 +146,10 @@ if __name__ == "__main__":  # pragma: no cover
     widget.setFixedSize(200, 200)
     layout = QVBoxLayout()
     widget.setLayout(layout)
-    layout.addWidget(SignalLineEdit(device="samx"))
+    line_edit = DeviceLineEdit()
+    signal_line_edit = SignalLineEdit()
+    layout.addWidget(line_edit)
+    line_edit.textChanged.connect(signal_line_edit.set_device)
+    layout.addWidget(signal_line_edit)
     widget.show()
     app.exec_()
