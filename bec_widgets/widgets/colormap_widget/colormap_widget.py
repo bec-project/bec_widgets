@@ -34,6 +34,10 @@ class BECColorMapWidget(BECWidget, QWidget):
         self.button.setColorMap(cmap)
         self._cmap = cmap
 
+        # Remove None from the top of the menu
+        self.button._menu = self.button.getMenu()
+        self.button._menu.removeAction(self.button._menu.actions()[0])
+
         # Connect the signal
         self.button.sigColorMapChanged.connect(self.colormap_changed)
 
