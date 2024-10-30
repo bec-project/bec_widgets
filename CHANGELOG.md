@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.3.0 (2024-10-30)
+
+### Bug Fixes
+
+* fix(colors): extend color map validation for matplotlib and colorcet maps (if available) ([`14dd8c5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/14dd8c5b2947c92f6643b888d71975e4e8d4ee88))
+
+### Features
+
+* feat(colormap_button): colormap button with menu to select colormap filtered by the colormap type ([`b039933`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b039933405e2fbe92bd81bd0748e79e8d443a741))
+
+
 ## v1.2.0 (2024-10-25)
 
 ### Features
@@ -158,14 +169,3 @@ complete UI ([`49268e3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/49268e38
 ### Features
 
 * feat: add bec-app script to launch applications ([`8bf4842`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8bf48427884338672a8e3de3deb20439b0bfdf99))
-
-
-## v0.114.0 (2024-10-02)
-
-### Bug Fixes
-
-* fix: prevent exception when empty string updates are coming from widget ([`04cfb1e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/04cfb1edf19437d54f07b868bcf3cfc2a35fd3bc))
-
-* fix: use new 'scan_axis' signal, to set_x and select x axis on waveform
-
-Fixes #361, do not try to change x axis when not permitted ([`efa2763`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/efa276358b0f5a45cce9fa84fa5f9aafaf4284f7))
