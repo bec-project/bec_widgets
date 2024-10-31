@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## v1.3.1 (2024-10-31)
+
+### Bug Fixes
+
+* fix(ophyd_kind_util): Kind enums are imported from the bec widget util class ([`940ee65`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/940ee6552c1ee8d9b4e4a74c62351f2e133ab678))
+
+
 ## v1.3.0 (2024-10-30)
 
 ### Bug Fixes
@@ -163,9 +170,3 @@ complete UI ([`49268e3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/49268e38
 ### Bug Fixes
 
 * fix: make Alignment1D a MainWindow as it is an application ([`c5e9ed6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c5e9ed6e422acb908e1ada32822f5d7cc256ade7))
-
-* fix: adjust bec_qthemes dependency ([`b207e45`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b207e45a67818ee061272ce00a09fe7ea31cd1ba))
-
-### Features
-
-* feat: add bec-app script to launch applications ([`8bf4842`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8bf48427884338672a8e3de3deb20439b0bfdf99))
