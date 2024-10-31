@@ -1,9 +1,9 @@
 from bec_lib.device import Positioner
-from ophyd import Kind
 from qtpy.QtCore import QSize, Signal, Slot
 from qtpy.QtWidgets import QComboBox, QSizePolicy
 
 from bec_widgets.utils.filter_io import ComboBoxFilterHandler, FilterIO
+from bec_widgets.utils.ophyd_kind_util import Kind
 from bec_widgets.widgets.base_classes.device_signal_input_base import DeviceSignalInputBase
 
 

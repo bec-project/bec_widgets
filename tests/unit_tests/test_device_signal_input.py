@@ -1,9 +1,9 @@
 from unittest import mock
 
 import pytest
-from ophyd import Kind
 from qtpy.QtWidgets import QWidget
 
+from bec_widgets.utils.ophyd_kind_util import Kind
 from bec_widgets.widgets.base_classes.device_input_base import BECDeviceFilter
 from bec_widgets.widgets.base_classes.device_signal_input_base import DeviceSignalInputBase
 from bec_widgets.widgets.device_combobox.device_combobox import DeviceComboBox

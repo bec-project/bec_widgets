@@ -1,12 +1,12 @@
 from bec_lib.callback_handler import EventType
 from bec_lib.device import Signal
 from bec_lib.logger import bec_logger
-from ophyd import Kind
 from qtpy.QtCore import Property, Slot
 
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.filter_io import FilterIO
+from bec_widgets.utils.ophyd_kind_util import Kind
 from bec_widgets.utils.widget_io import WidgetIO
 
 logger = bec_logger.logger

@@ -1,10 +1,10 @@
 from bec_lib.device import Positioner
-from ophyd import Kind
 from qtpy.QtCore import QSize, Signal, Slot
 from qtpy.QtGui import QPainter, QPaintEvent, QPen
 from qtpy.QtWidgets import QCompleter, QLineEdit, QSizePolicy
 
 from bec_widgets.utils.colors import get_accent_colors
+from bec_widgets.utils.ophyd_kind_util import Kind
 from bec_widgets.widgets.base_classes.device_signal_input_base import DeviceSignalInputBase
 
 
