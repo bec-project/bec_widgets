@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from bec_widgets.utils import BECConnector
 
 

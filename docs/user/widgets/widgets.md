@@ -45,6 +45,14 @@ Plotting widgets are used to display data in a graphical format.
 Display 1D detector signals.
 ```
 
+```{grid-item-card}  Multi Waveform Widget
+:link: user.widgets.multi_waveform_widget
+:link-type: ref
+:img-top: /assets/widget_screenshots/multi_waveform.png
+
+Display multiple 1D waveforms.
+```
+
 ```{grid-item-card}  Image Widget
 :link: user.widgets.image_widget
 :link-type: ref
@@ -241,6 +249,7 @@ hidden: true
 dock_area/bec_dock_area.md
 bec_figure/bec_figure.md
 waveform/waveform_widget.md
+multi_waveform/multi_waveform.md
 image/image_widget.md
 motor_map/motor_map.md
 scan_control/scan_control.md
@@ -248,7 +257,7 @@ progress_bar/ring_progress_bar.md
 bec_status_box/bec_status_box.md
 queue/queue.md
 buttons_appearance/buttons_appearance.md
-buttons_queue/buttons_queue.md
+buttons_queue/button_queue.md
 device_browser/device_browser.md
 positioner_box/positioner_box.md
 text_box/text_box.md
@@ -257,6 +266,7 @@ toggle/toggle.md
 spinner/spinner.md
 bec_progressbar/bec_progressbar.md
 device_input/device_input.md
+signal_input/signal_input.md
 position_indicator/position_indicator.md
 lmfit_dialog/lmfit_dialog.md
 dap_combo_box/dap_combo_box.md
