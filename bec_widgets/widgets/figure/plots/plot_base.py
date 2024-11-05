@@ -397,8 +397,8 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         """Hook the crosshair to all plots."""
         if self.crosshair is None:
             self.crosshair = Crosshair(self.plot_item, precision=3)
-            self.crosshair.positionChanged.connect(self.crosshair_position_changed)
-            self.crosshair.positionClicked.connect(self.crosshair_position_clicked)
+            self.crosshair.crosshairChanged.connect(self.crosshair_position_changed)
+            self.crosshair.crosshairClicked.connect(self.crosshair_position_clicked)
             self.crosshair.coordinatesChanged1D.connect(self.crosshair_coordinates_changed)
             self.crosshair.coordinatesClicked1D.connect(self.crosshair_coordinates_clicked)
             self.crosshair.coordinatesChanged2D.connect(self.crosshair_coordinates_changed)
@@ -407,8 +407,8 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
     def unhook_crosshair(self) -> None:
         """Unhook the crosshair from all plots."""
         if self.crosshair is not None:
-            self.crosshair.positionChanged.disconnect(self.crosshair_position_changed)
-            self.crosshair.positionClicked.disconnect(self.crosshair_position_clicked)
+            self.crosshair.crosshairChanged.disconnect(self.crosshair_position_changed)
+            self.crosshair.crosshairClicked.disconnect(self.crosshair_position_clicked)
             self.crosshair.coordinatesChanged1D.disconnect(self.crosshair_coordinates_changed)
             self.crosshair.coordinatesClicked1D.disconnect(self.crosshair_coordinates_clicked)
             self.crosshair.coordinatesChanged2D.disconnect(self.crosshair_coordinates_changed)

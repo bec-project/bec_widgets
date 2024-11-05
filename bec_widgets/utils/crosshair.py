@@ -2,10 +2,7 @@ from collections import defaultdict
 
 import numpy as np
 import pyqtgraph as pg
-
-# from qtpy.QtCore import QObject, pyqtSignal
-from qtpy.QtCore import QObject, Qt
-from qtpy.QtCore import Signal as pyqtSignal
+from qtpy.QtCore import QObject, Qt, Signal
 
 
 class NonDownsamplingScatterPlotItem(pg.ScatterPlotItem):
@@ -17,14 +14,15 @@ class NonDownsamplingScatterPlotItem(pg.ScatterPlotItem):
 
 
 class Crosshair(QObject):
-    positionChanged = pyqtSignal(tuple)
-    positionClicked = pyqtSignal(tuple)
+    # Plain crosshair position signals mapped to real coordinates
+    crosshairChanged = Signal(tuple)
+    crosshairClicked = Signal(tuple)
     # Signal for 1D plot
-    coordinatesChanged1D = pyqtSignal(tuple)
-    coordinatesClicked1D = pyqtSignal(tuple)
+    coordinatesChanged1D = Signal(tuple)
+    coordinatesClicked1D = Signal(tuple)
     # Signal for 2D plot
-    coordinatesChanged2D = pyqtSignal(tuple)
-    coordinatesClicked2D = pyqtSignal(tuple)
+    coordinatesChanged2D = Signal(tuple)
+    coordinatesClicked2D = Signal(tuple)
 
     def __init__(self, plot_item: pg.PlotItem, precision: int = 3, parent=None):
         """
@@ -52,6 +50,7 @@ class Crosshair(QObject):
         )
         self.plot_item.scene().sigMouseClicked.connect(self.mouse_clicked)
 
+        # Connect signals from pyqtgraph right click menu
         self.plot_item.ctrl.derivativeCheck.checkStateChanged.connect(self.check_derivatives)
         self.plot_item.ctrl.logXCheck.checkStateChanged.connect(self.check_log)
         self.plot_item.ctrl.logYCheck.checkStateChanged.connect(self.check_log)
@@ -151,21 +150,34 @@ class Crosshair(QObject):
 
         return None, None
 
-    def closest_x_y_value(self, input_value: float, list_x: list, list_y: list) -> tuple:
+    def closest_x_y_value(self, input_x: float, list_x: list, list_y: list) -> tuple:
         """
         Find the closest x and y value to the input value.
 
         Args:
-            input_value (float): Input value
+            input_x (float): Input value
             list_x (list): List of x values
             list_y (list): List of y values
 
         Returns:
             tuple: Closest x and y value
         """
-        arr = np.asarray(list_x)
-        i = (np.abs(arr - input_value)).argmin()
-        return list_x[i], list_y[i]
+        # Convert lists to NumPy arrays
+        arr_x = np.asarray(list_x)
+
+        # Get the indices where x is not NaN
+        valid_indices = ~np.isnan(arr_x)
+
+        # Filter x array to exclude NaN values
+        filtered_x = arr_x[valid_indices]
+
+        # Find the index of the closest value in the filtered x array
+        closest_index = np.abs(filtered_x - input_x).argmin()
+
+        # Map back to the original index in the list_x and list_y arrays
+        original_index = np.where(valid_indices)[0][closest_index]
+
+        return list_x[original_index], list_y[original_index]
 
     def mouse_moved(self, event):
         """Handles the mouse moved event, updating the crosshair position and emitting signals.
@@ -175,17 +187,14 @@ class Crosshair(QObject):
         """
         pos = event[0]
         self.update_markers()
-        self.positionChanged.emit((pos.x(), pos.y()))
         if self.plot_item.vb.sceneBoundingRect().contains(pos):
             mouse_point = self.plot_item.vb.mapSceneToView(pos)
-            self.v_line.setPos(mouse_point.x())
-            self.h_line.setPos(mouse_point.y())
-
             x, y = mouse_point.x(), mouse_point.y()
-            if self.is_log_x:
-                x = 10**x
-            if self.is_log_y:
-                y = 10**y
+            self.v_line.setPos(x)
+            self.h_line.setPos(y)
+            scaled_x, scaled_y = self.scale_emitted_coordinates(mouse_point.x(), mouse_point.y())
+            self.crosshairChanged.emit((scaled_x, scaled_y))
+
             x_snap_values, y_snap_values = self.snap_to_data(x, y)
             if x_snap_values is None or y_snap_values is None:
                 return
@@ -202,7 +211,12 @@ class Crosshair(QObject):
                     if x is None or y is None:
                         continue
                     self.marker_moved_1d[name].setData([x], [y])
-                    coordinate_to_emit = (name, round(x, self.precision), round(y, self.precision))
+                    x_snapped_scaled, y_snapped_scaled = self.scale_emitted_coordinates(x, y)
+                    coordinate_to_emit = (
+                        name,
+                        round(x_snapped_scaled, self.precision),
+                        round(y_snapped_scaled, self.precision),
+                    )
                     self.coordinatesChanged1D.emit(coordinate_to_emit)
                 elif isinstance(item, pg.ImageItem):
                     name = item.config.monitor
@@ -229,12 +243,9 @@ class Crosshair(QObject):
         if self.plot_item.vb.sceneBoundingRect().contains(event._scenePos):
             mouse_point = self.plot_item.vb.mapSceneToView(event._scenePos)
             x, y = mouse_point.x(), mouse_point.y()
-            self.positionClicked.emit((x, y))
+            scaled_x, scaled_y = self.scale_emitted_coordinates(mouse_point.x(), mouse_point.y())
+            self.crosshairClicked.emit((scaled_x, scaled_y))
 
-            if self.is_log_x:
-                x = 10**x
-            if self.is_log_y:
-                y = 10**y
             x_snap_values, y_snap_values = self.snap_to_data(x, y)
 
             if x_snap_values is None or y_snap_values is None:
@@ -252,7 +263,12 @@ class Crosshair(QObject):
                     if x is None or y is None:
                         continue
                     self.marker_clicked_1d[name].setData([x], [y])
-                    coordinate_to_emit = (name, round(x, self.precision), round(y, self.precision))
+                    x_snapped_scaled, y_snapped_scaled = self.scale_emitted_coordinates(x, y)
+                    coordinate_to_emit = (
+                        name,
+                        round(x_snapped_scaled, self.precision),
+                        round(y_snapped_scaled, self.precision),
+                    )
                     self.coordinatesClicked1D.emit(coordinate_to_emit)
                 elif isinstance(item, pg.ImageItem):
                     name = item.config.monitor
@@ -272,10 +288,26 @@ class Crosshair(QObject):
         for marker in self.marker_clicked_1d.values():
             marker.clear()
 
+    def scale_emitted_coordinates(self, x, y):
+        """Scales the emitted coordinates if the axes are in log scale.
+
+        Args:
+            x (float): The x-coordinate
+            y (float): The y-coordinate
+
+        Returns:
+            tuple: The scaled x and y coordinates
+        """
+        if self.is_log_x:
+            x = 10**x
+        if self.is_log_y:
+            y = 10**y
+        return x, y
+
     def check_log(self):
         """Checks if the x or y axis is in log scale and updates the internal state accordingly."""
-        self.is_log_x = self.plot_item.ctrl.logXCheck.isChecked()
-        self.is_log_y = self.plot_item.ctrl.logYCheck.isChecked()
+        self.is_log_x = self.plot_item.axes["bottom"]["item"].logMode
+        self.is_log_y = self.plot_item.axes["left"]["item"].logMode
         self.clear_markers()
 
     def check_derivatives(self):
