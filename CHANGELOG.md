@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.3.2 (2024-11-05)
+
+### Bug Fixes
+
+* fix(plot_base): legend text color is changed when changing dark-light theme ([`2304c9f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2304c9f8497c1ab1492f3e6690bb79b0464c0df8))
+
+### Build System
+
+* build: PySide6 version fixed 6.7.2 ([`c6e48ec`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c6e48ec1fe5aaee6a7c7a6f930f1520cd439cdb2))
+
+
 ## v1.3.1 (2024-10-31)
 
 ### Bug Fixes
@@ -147,10 +158,6 @@ if the widget should expand in-place ([`e4121a0`](https://gitlab.psi.ch/bec/bec_
 
 ## v0.116.0 (2024-10-11)
 
-### Build System
-
-* build: fix PySide6 to 6.7.2 ([`908dbc1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/908dbc1760da5b323722207163f00850b84fb90b))
-
 ### Features
 
 * feat: UI changes to have top toolbar with compact popup widgets (fix issue #360) ([`499b6b9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/499b6b9a12efd931b5728b519404c41a7e29e4d6))
@@ -163,10 +170,3 @@ Makes it easy to write widgets which can have a compact
 representation with LED-like global state indicator,
 with the possibility to display a popup dialog with more
 complete UI ([`49268e3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/49268e3829406d70b09e4d88989812f5578e46f4))
-
-
-## v0.115.0 (2024-10-08)
-
-### Bug Fixes
-
-* fix: make Alignment1D a MainWindow as it is an application ([`c5e9ed6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c5e9ed6e422acb908e1ada32822f5d7cc256ade7))
