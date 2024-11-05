@@ -147,6 +147,9 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         for axis in ["left", "bottom", "right", "top"]:
             self.plot_item.getAxis(axis).setPen(text_pen)
             self.plot_item.getAxis(axis).setTextPen(text_pen)
+        if self.plot_item.legend is not None:
+            for sample, label in self.plot_item.legend.items:
+                label.setText(label.text, color=palette.text().color())
 
     def set(self, **kwargs) -> None:
         """
