@@ -1,7 +1,7 @@
-# pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 import numpy as np
+import pyqtgraph as pg
 import pytest
-from qtpy.QtCore import QPointF
+from qtpy.QtCore import QPointF, Qt
 
 from bec_widgets.widgets.image.image_widget import BECImageWidget
 from bec_widgets.widgets.waveform.waveform_widget import BECWaveformWidget
@@ -36,10 +36,6 @@ def image_widget_with_crosshair(qtbot, mocked_client):
 def test_mouse_moved_lines(plot_widget_with_crosshair):
     crosshair, plot_item = plot_widget_with_crosshair
 
-    # Connect the signals to slots that will store the emitted values
-    emitted_values_1D = []
-    crosshair.coordinatesChanged1D.connect(emitted_values_1D.append)
-
     # Simulate a mouse moved event at a specific position
     pos_in_view = QPointF(2, 5)
     pos_in_scene = plot_item.vb.mapViewToScene(pos_in_view)
@@ -56,21 +52,17 @@ def test_mouse_moved_lines(plot_widget_with_crosshair):
 def test_mouse_moved_signals(plot_widget_with_crosshair):
     crosshair, plot_item = plot_widget_with_crosshair
 
-    # Create a slot that will store the emitted values as tuples
     emitted_values_1D = []
 
     def slot(coordinates):
         emitted_values_1D.append(coordinates)
 
-    # Connect the signal to the custom slot
     crosshair.coordinatesChanged1D.connect(slot)
 
-    # Simulate a mouse moved event at a specific position
     pos_in_view = QPointF(2, 5)
     pos_in_scene = plot_item.vb.mapViewToScene(pos_in_view)
     event_mock = [pos_in_scene]
 
-    # Call the mouse_moved method
     crosshair.mouse_moved(event_mock)
 
     # Assert the expected behavior
@@ -83,8 +75,8 @@ def test_mouse_moved_signals_outside(plot_widget_with_crosshair):
     # Create a slot that will store the emitted values as tuples
     emitted_values_1D = []
 
-    def slot(x, y_values):
-        emitted_values_1D.append((x, y_values))
+    def slot(coordinates):
+        emitted_values_1D.append(coordinates)
 
     # Connect the signal to the custom slot
     crosshair.coordinatesChanged1D.connect(slot)
@@ -104,40 +96,132 @@ def test_mouse_moved_signals_outside(plot_widget_with_crosshair):
 def test_mouse_moved_signals_2D(image_widget_with_crosshair):
     crosshair, plot_item = image_widget_with_crosshair
 
-    # Create a slot that will store the emitted values as tuples
     emitted_values_2D = []
 
     def slot(coordinates):
         emitted_values_2D.append(coordinates)
 
-    # Connect the signal to the custom slot
     crosshair.coordinatesChanged2D.connect(slot)
-    # Simulate a mouse moved event at a specific position
+
     pos_in_view = QPointF(22.0, 55.0)
     pos_in_scene = plot_item.vb.mapViewToScene(pos_in_view)
     event_mock = [pos_in_scene]
-    # Call the mouse_moved method
+
     crosshair.mouse_moved(event_mock)
-    # Assert the expected behavior
+
     assert emitted_values_2D == [("test", 22.0, 55.0)]
 
 
 def test_mouse_moved_signals_2D_outside(image_widget_with_crosshair):
     crosshair, plot_item = image_widget_with_crosshair
 
-    # Create a slot that will store the emitted values as tuples
     emitted_values_2D = []
 
-    def slot(x, y):
-        emitted_values_2D.append((x, y))
+    def slot(coordinates):
+        emitted_values_2D.append(coordinates)
 
-    # Connect the signal to the custom slot
     crosshair.coordinatesChanged2D.connect(slot)
-    # Simulate a mouse moved event at a specific position
+
     pos_in_view = QPointF(220.0, 555.0)
     pos_in_scene = plot_item.vb.mapViewToScene(pos_in_view)
     event_mock = [pos_in_scene]
-    # Call the mouse_moved method
+
     crosshair.mouse_moved(event_mock)
-    # Assert the expected behavior
+
     assert emitted_values_2D == []
+
+
+def test_marker_positions_after_mouse_move(plot_widget_with_crosshair):
+    crosshair, plot_item = plot_widget_with_crosshair
+
+    pos_in_view = QPointF(2, 5)
+    pos_in_scene = plot_item.vb.mapViewToScene(pos_in_view)
+    event_mock = [pos_in_scene]
+
+    crosshair.mouse_moved(event_mock)
+
+    marker = crosshair.marker_moved_1d["Curve 1"]
+    marker_x, marker_y = marker.getData()
+    assert marker_x == [2]
+    assert marker_y == [5]
+
+
+def test_scale_emitted_coordinates(plot_widget_with_crosshair):
+    crosshair, _ = plot_widget_with_crosshair
+
+    x, y = crosshair.scale_emitted_coordinates(2, 5)
+    assert x == 2
+    assert y == 5
+
+    crosshair.is_log_x = True
+    crosshair.is_log_y = True
+
+    x, y = crosshair.scale_emitted_coordinates(np.log10(2), np.log10(5))
+    assert np.isclose(x, 2)
+    assert np.isclose(y, 5)
+
+
+def test_crosshair_changed_signal(plot_widget_with_crosshair):
+    crosshair, plot_item = plot_widget_with_crosshair
+
+    emitted_positions = []
+
+    def slot(position):
+        emitted_positions.append(position)
+
+    crosshair.crosshairChanged.connect(slot)
+
+    pos_in_view = QPointF(2, 5)
+    pos_in_scene = plot_item.vb.mapViewToScene(pos_in_view)
+    event_mock = [pos_in_scene]
+
+    crosshair.mouse_moved(event_mock)
+
+    x, y = emitted_positions[0]
+
+    assert np.isclose(x, 2)
+    assert np.isclose(y, 5)
+
+
+def test_marker_positions_after_mouse_move(plot_widget_with_crosshair):
+    crosshair, plot_item = plot_widget_with_crosshair
+
+    pos_in_view = QPointF(2, 5)
+    pos_in_scene = plot_item.vb.mapViewToScene(pos_in_view)
+    event_mock = [pos_in_scene]
+
+    crosshair.mouse_moved(event_mock)
+
+    marker = crosshair.marker_moved_1d["Curve 1"]
+    marker_x, marker_y = marker.getData()
+    assert marker_x == [2]
+    assert marker_y == [5]
+
+
+def test_crosshair_clicked_signal(qtbot, plot_widget_with_crosshair):
+    crosshair, plot_item = plot_widget_with_crosshair
+
+    emitted_positions = []
+
+    def slot(position):
+        emitted_positions.append(position)
+
+    crosshair.crosshairClicked.connect(slot)
+
+    x_data = 2
+    y_data = 5
+
+    # Map data coordinates to scene coordinates
+    pos_in_scene = plot_item.vb.mapViewToScene(QPointF(x_data, y_data))
+    # Map scene coordinates to widget coordinates
+    graphics_view = plot_item.vb.scene().views()[0]
+    qtbot.waitExposed(graphics_view)
+    pos_in_widget = graphics_view.mapFromScene(pos_in_scene)
+
+    # Simulate mouse click
+    qtbot.mouseClick(graphics_view.viewport(), Qt.LeftButton, pos=pos_in_widget)
+
+    x, y = emitted_positions[0]
+
+    assert np.isclose(round(x, 1), 2)
+    assert np.isclose(round(y, 1), 5)
