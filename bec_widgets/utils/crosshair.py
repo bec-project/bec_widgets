@@ -2,7 +2,7 @@ from collections import defaultdict
 
 import numpy as np
 import pyqtgraph as pg
-from qtpy.QtCore import QObject, Qt, Signal
+from qtpy.QtCore import QObject, Qt, Signal, Slot
 
 
 class NonDownsamplingScatterPlotItem(pg.ScatterPlotItem):
@@ -14,6 +14,9 @@ class NonDownsamplingScatterPlotItem(pg.ScatterPlotItem):
 
 
 class Crosshair(QObject):
+    # QT Position of mouse cursor
+    positionChanged = Signal(tuple)
+    positionClicked = Signal(tuple)
     # Plain crosshair position signals mapped to real coordinates
     crosshairChanged = Signal(tuple)
     crosshairClicked = Signal(tuple)
@@ -45,9 +48,18 @@ class Crosshair(QObject):
         self.h_line.skip_auto_range = True
         self.plot_item.addItem(self.v_line, ignoreBounds=True)
         self.plot_item.addItem(self.h_line, ignoreBounds=True)
+
+        # Add TextItem to display coordinates
+        self.coord_label = pg.TextItem("", anchor=(1, 1), fill=(0, 0, 0, 100))
+        self.coord_label.setVisible(False)  # Hide initially
+        self.coord_label.skip_auto_range = True
+        self.plot_item.addItem(self.coord_label)
+
+        # Signals to connect
         self.proxy = pg.SignalProxy(
             self.plot_item.scene().sigMouseMoved, rateLimit=60, slot=self.mouse_moved
         )
+        self.positionChanged.connect(self.update_coord_label)
         self.plot_item.scene().sigMouseClicked.connect(self.mouse_clicked)
 
         # Connect signals from pyqtgraph right click menu
@@ -61,6 +73,8 @@ class Crosshair(QObject):
         self.marker_clicked_1d = {}
         self.marker_2d = None
         self.update_markers()
+        self.check_log()
+        self.check_derivatives()
 
     def update_markers(self):
         """Update the markers for the crosshair, creating new ones if necessary."""
@@ -194,6 +208,7 @@ class Crosshair(QObject):
             self.h_line.setPos(y)
             scaled_x, scaled_y = self.scale_emitted_coordinates(mouse_point.x(), mouse_point.y())
             self.crosshairChanged.emit((scaled_x, scaled_y))
+            self.positionChanged.emit((x, y))
 
             x_snap_values, y_snap_values = self.snap_to_data(x, y)
             if x_snap_values is None or y_snap_values is None:
@@ -245,6 +260,7 @@ class Crosshair(QObject):
             x, y = mouse_point.x(), mouse_point.y()
             scaled_x, scaled_y = self.scale_emitted_coordinates(mouse_point.x(), mouse_point.y())
             self.crosshairClicked.emit((scaled_x, scaled_y))
+            self.positionClicked.emit((x, y))
 
             x_snap_values, y_snap_values = self.snap_to_data(x, y)
 
@@ -304,6 +320,20 @@ class Crosshair(QObject):
             y = 10**y
         return x, y
 
+    def update_coord_label(self, pos: tuple):
+        """Updates the coordinate label based on the crosshair position and axis scales.
+
+        Args:
+            pos (tuple): The (x, y) position of the crosshair.
+        """
+        x, y = pos
+        x_scaled, y_scaled = self.scale_emitted_coordinates(x, y)
+
+        # # Update coordinate label
+        self.coord_label.setText(f"({x_scaled:.{self.precision}f}, {y_scaled:.{self.precision}f})")
+        self.coord_label.setPos(x, y)
+        self.coord_label.setVisible(True)
+
     def check_log(self):
         """Checks if the x or y axis is in log scale and updates the internal state accordingly."""
         self.is_log_x = self.plot_item.axes["bottom"]["item"].logMode
@@ -316,6 +346,8 @@ class Crosshair(QObject):
         self.clear_markers()
 
     def cleanup(self):
-        self.v_line.deleteLater()
-        self.h_line.deleteLater()
+        self.plot_item.removeItem(self.v_line)
+        self.plot_item.removeItem(self.h_line)
+        self.plot_item.removeItem(self.coord_label)
+
         self.clear_markers()
