@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.3.3 (2024-11-07)
+
+### Bug Fixes
+
+* fix(scan_control): DeviceLineEdit kwargs readings changed to get name of the positioner ([`5fabd4b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5fabd4bea95bafd2352102686357cc1db80813fd))
+
+### Documentation
+
+* docs: update outdated text in docs ([`4f0693c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4f0693cae34b391d75884837e1ae6353a0501868))
+
+
 ## v1.3.2 (2024-11-05)
 
 ### Bug Fixes
@@ -157,16 +168,3 @@ if the widget should expand in-place ([`e4121a0`](https://gitlab.psi.ch/bec/bec_
 
 
 ## v0.116.0 (2024-10-11)
-
-### Features
-
-* feat: UI changes to have top toolbar with compact popup widgets (fix issue #360) ([`499b6b9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/499b6b9a12efd931b5728b519404c41a7e29e4d6))
-
-* feat: adapt BECQueue and BECStatusBox widgets to use CompactPopupWidget ([`94ce92f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/94ce92f5b054d25ea3bb7976c1f75e14b78b9edc))
-
-* feat: add 'CompactPopupWidget' container widget
-
-Makes it easy to write widgets which can have a compact
-representation with LED-like global state indicator,
-with the possibility to display a popup dialog with more
-complete UI ([`49268e3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/49268e3829406d70b09e4d88989812f5578e46f4))
