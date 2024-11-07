@@ -29,16 +29,16 @@ In this example, we demonstrate how to add a `TextBox` widget to a `BECDockArea`
 text_box = gui.add_dock().add_widget("TextBox")
 
 # Set the text to display
-text_box.set_text("Hello, World!")
+text_box.set_plain_text("Hello, World!")
 ```
 
 ## Example 2 - Displaying HTML Content
 
-The `TextBox` widget can automatically detect and render HTML content. This example shows how to display formatted HTML text.
+The `TextBox` widget can also render HTML content. This example shows how to display formatted HTML text.
 
 ```python
 # Set the text to display as HTML
-text_box.set_text("<h1>Welcome to BEC Widgets</h1><p>This is an example of displaying <strong>HTML</strong> text.</p>")
+text_box.set_html_text("<h1>Welcome to BEC Widgets</h1><p>This is an example of displaying <strong>HTML</strong> text.</p>")
 ```
 
 ````
