@@ -321,7 +321,7 @@ class ScanGroupBox(QGroupBox):
         for i in range(self.layout.columnCount()):
             widget = self.layout.itemAtPosition(1, i).widget()
             if isinstance(widget, DeviceLineEdit) and device_object:
-                value = widget.get_device()
+                value = widget.get_current_device().name
             else:
                 value = WidgetIO.get_value(widget)
             kwargs[widget.arg_name] = value
