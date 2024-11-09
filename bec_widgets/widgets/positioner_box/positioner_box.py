@@ -240,11 +240,18 @@ class PositionerBox(BECWidget, CompactPopupWidget):
             signal = hinted_signals[0]
             readback_val = signals.get(signal, {}).get("value")
 
-        if f"{self.device}_setpoint" in signals:
-            setpoint_val = signals.get(f"{self.device}_setpoint", {}).get("value")
+        for setpoint_signal in ["setpoint", "user_setpoint"]:
+            setpoint_val = signals.get(f"{self.device}_{setpoint_signal}", {}).get("value")
+            if setpoint_val is not None:
+                break
 
-        if f"{self.device}_motor_is_moving" in signals:
-            is_moving = signals.get(f"{self.device}_motor_is_moving", {}).get("value")
+        for moving_signal in ["motor_done_move", "motor_is_moving"]:
+            is_moving = signals.get(f"{self.device}_{moving_signal}", {}).get("value")
+            if is_moving is not None:
+                break
+
+        if is_moving is not None:
+            self.ui.spinner_widget.setVisible(True)
             if is_moving:
                 self.ui.spinner_widget.start()
                 self.ui.spinner_widget.setToolTip("Device is moving")
@@ -253,6 +260,8 @@ class PositionerBox(BECWidget, CompactPopupWidget):
                 self.ui.spinner_widget.stop()
                 self.ui.spinner_widget.setToolTip("Device is idle")
                 self.set_global_state("success")
+        else:
+            self.ui.spinner_widget.setVisible(False)
 
         if readback_val is not None:
             self.ui.readback.setText(f"{readback_val:.{precision}f}")
