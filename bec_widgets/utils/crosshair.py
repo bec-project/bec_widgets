@@ -3,6 +3,7 @@ from collections import defaultdict
 import numpy as np
 import pyqtgraph as pg
 from qtpy.QtCore import QObject, Qt, Signal, Slot
+from qtpy.QtWidgets import QApplication
 
 
 class NonDownsamplingScatterPlotItem(pg.ScatterPlotItem):
@@ -75,6 +76,42 @@ class Crosshair(QObject):
         self.update_markers()
         self.check_log()
         self.check_derivatives()
+
+        self._connect_to_theme_change()
+
+    def _connect_to_theme_change(self):
+        """Connect to the theme change signal."""
+        qapp = QApplication.instance()
+        if hasattr(qapp, "theme_signal"):
+            qapp.theme_signal.theme_updated.connect(self._update_theme)
+            self._update_theme()
+
+    @Slot(str)
+    def _update_theme(self, theme: str | None = None):
+        """Update the theme."""
+        if theme is None:
+            qapp = QApplication.instance()
+            if hasattr(qapp, "theme"):
+                theme = qapp.theme.theme
+            else:
+                theme = "dark"
+        self.apply_theme(theme)
+
+    def apply_theme(self, theme: str):
+        """Apply the theme to the plot."""
+        if theme == "dark":
+            text_color = "w"
+            label_bg_color = (50, 50, 50, 150)
+        elif theme == "light":
+            text_color = "k"
+            label_bg_color = (240, 240, 240, 150)
+        else:
+            text_color = "w"
+            label_bg_color = (50, 50, 50, 150)
+
+        self.coord_label.setColor(text_color)
+        self.coord_label.fill = pg.mkBrush(label_bg_color)
+        self.coord_label.border = pg.mkPen(None)
 
     def update_markers(self):
         """Update the markers for the crosshair, creating new ones if necessary."""
