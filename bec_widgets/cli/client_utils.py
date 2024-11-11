@@ -92,11 +92,11 @@ def _start_plot_process(gui_id: str, gui_class: type, config: dict | str, logger
     process will not be captured.
     """
     # pylint: disable=subprocess-run-check
-    command = ["bec-gui-server", "--id", gui_id, "--gui_class", gui_class.__name__]
+    command = ["bec-gui-server", "--id", gui_id, "--gui_class", gui_class.__name__, "--hide"]
     if config:
         if isinstance(config, dict):
             config = json.dumps(config)
-        command.extend(["--config", config])
+        command.extend(["--config", str(config)])
 
     env_dict = os.environ.copy()
     env_dict["PYTHONUNBUFFERED"] = "1"
@@ -126,9 +126,17 @@ def _start_plot_process(gui_id: str, gui_class: type, config: dict | str, logger
     return process, process_output_processing_thread
 
 
+class RepeatTimer(threading.Timer):
+    def run(self):
+        while not self.finished.wait(self.interval):
+            self.function(*self.args, **self.kwargs)
+
+
 class BECGuiClientMixin:
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
+        self._gui_started_timer = None
+        self._gui_started_event = threading.Event()
         self._process = None
         self._process_output_processing_thread = None
         self.auto_updates = self._get_update_script()
@@ -182,29 +190,57 @@ class BECGuiClientMixin:
                 return
             self.auto_updates.msg_queue.put(msg)
 
-    def show(self) -> None:
+    def _gui_post_startup(self):
+        if self.auto_updates is None:
+            AutoUpdates.create_default_dock = True
+            AutoUpdates.enabled = True
+            self.auto_updates = AutoUpdates(gui=self)
+            if self.auto_updates.create_default_dock:
+                self.auto_updates.start_default_dock()
+            fig = self.auto_updates.get_default_figure()
+            self._gui_started_event.set()
+            self.show_all()
+
+    def start_server(self, wait=False) -> None:
         """
-        Show the figure.
+        Start the GUI server, and execute callback when it is launched
         """
         if self._process is None or self._process.poll() is not None:
+            logger.success("GUI starting...")
+            self._gui_started_event.clear()
             self._start_update_script()
             self._process, self._process_output_processing_thread = _start_plot_process(
                 self._gui_id, self.__class__, self._client._service_config.config, logger=logger
             )
-        while not self.gui_is_alive():
-            print("Waiting for GUI to start...")
-            time.sleep(1)
-        logger.success(f"GUI started with id: {self._gui_id}")
+
+            def gui_started_callback(callback):
+                try:
+                    if callable(callback):
+                        callback()
+                finally:
+                    threading.current_thread().cancel()
+
+            self._gui_started_timer = RepeatTimer(
+                1, lambda: self.gui_is_alive() and gui_started_callback(self._gui_post_startup)
+            )
+            self._gui_started_timer.start()
+
+        if wait:
+            self._gui_started_event.wait()
 
     def close(self) -> None:
         """
         Close the gui window.
         """
+        if self._gui_started_timer is not None:
+            self._gui_started_timer.cancel()
+            self._gui_started_timer.join()
+
         if self._process is None:
             return
 
-        self._client.shutdown()
         if self._process:
+            logger.success("Stopping GUI...")
             self._process.terminate()
             if self._process_output_processing_thread:
                 self._process_output_processing_thread.join()
@@ -212,6 +248,7 @@ class BECGuiClientMixin:
             self._process = None
         if self.auto_updates is not None:
             self.auto_updates.shutdown()
+            self.auto_updates = None
 
 
 class RPCResponseTimeoutError(Exception):
