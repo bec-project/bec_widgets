@@ -367,7 +367,7 @@ class Crosshair(QObject):
         x_scaled, y_scaled = self.scale_emitted_coordinates(x, y)
 
         # # Update coordinate label
-        self.coord_label.setText(f"({x_scaled:.{self.precision}f}, {y_scaled:.{self.precision}f})")
+        self.coord_label.setText(f"({x_scaled:.{self.precision}g}, {y_scaled:.{self.precision}g})")
         self.coord_label.setPos(x, y)
         self.coord_label.setVisible(True)
 
