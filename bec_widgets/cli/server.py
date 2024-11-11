@@ -199,6 +199,7 @@ def main():
         help="Name of the gui class to be rendered. Possible values: \n- BECFigure\n- BECDockArea",
     )
     parser.add_argument("--config", type=str, help="Config file or config string.")
+    parser.add_argument("--hide", action="store_true", help="Hide on startup")
 
     args = parser.parse_args()
 
@@ -233,7 +234,8 @@ def main():
             gui = server.gui
             win.setCentralWidget(gui)
             win.resize(800, 600)
-            win.show()
+            if not args.hide:
+                win.show()
 
             app.aboutToQuit.connect(server.shutdown)
 
