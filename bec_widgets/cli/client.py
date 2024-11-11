@@ -336,6 +336,13 @@ class BECDock(RPCBase):
         Detach the dock from the parent dock area.
         """
 
+    @rpc_call
+    def close(self):
+        """
+        Close the dock area and cleanup.
+        Has to be implemented to overwrite pyqtgraph event accept in Container close.
+        """
+
 
 class BECDockArea(RPCBase, BECGuiClientMixin):
     @property
@@ -394,6 +401,7 @@ class BECDockArea(RPCBase, BECGuiClientMixin):
         name: "str" = None,
         position: "Literal['bottom', 'top', 'left', 'right', 'above', 'below']" = None,
         relative_to: "BECDock | None" = None,
+        temporary: "bool" = False,
         closable: "bool" = True,
         floating: "bool" = False,
         prefix: "str" = "dock",
@@ -410,6 +418,7 @@ class BECDockArea(RPCBase, BECGuiClientMixin):
             name(str): The name of the dock to be displayed and for further references. Has to be unique.
             position(Literal["bottom", "top", "left", "right", "above", "below"]): The position of the dock.
             relative_to(BECDock): The dock to which the new dock should be added relative to.
+            temp(bool): Whether the dock is temporary. Upon closing the dock is not returned to the parent dock area.
             closable(bool): Whether the dock is closable.
             floating(bool): Whether the dock is detached after creating.
             prefix(str): The prefix for the dock name if no name is provided.

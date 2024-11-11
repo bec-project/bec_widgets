@@ -278,7 +278,7 @@ class BECDockArea(BECWidget, QWidget):
         name: str = None,
         position: Literal["bottom", "top", "left", "right", "above", "below"] = None,
         relative_to: BECDock | None = None,
-        temp: bool = False,
+        temporary: bool = False,
         closable: bool = True,
         floating: bool = False,
         prefix: str = "dock",
@@ -319,7 +319,7 @@ class BECDockArea(BECWidget, QWidget):
         if position is None:
             position = "bottom"
 
-        dock = BECDock(name=name, parent_dock_area=self, closable=closable, temp=temp)
+        dock = BECDock(name=name, parent_dock_area=self, closable=closable, temp=temporary)
         dock.config.position = position
         self.config.docks[name] = dock.config
 
@@ -340,7 +340,7 @@ class BECDockArea(BECWidget, QWidget):
         ):  # TODO still decide how initial instructions should be handled
             self._instructions_visible = False
             self.update()
-        if floating or temp:
+        if floating or temporary:
             dock.detach()
         print("dock added")
         return dock
@@ -349,6 +349,9 @@ class BECDockArea(BECWidget, QWidget):
     #     area = BECDockArea()
     #     area.show()
     #     area.add_dock("dock1", widget="BECFigure")
+
+    def addDock(self, *args, **kwargs):
+        return self.add_dock(*args, **kwargs)
 
     def detach_dock(self, dock_name: str) -> BECDock:
         """
@@ -415,6 +418,7 @@ class BECDockArea(BECWidget, QWidget):
         self.cleanup()
         super().closeEvent(event)
 
+
 if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
 
@@ -424,4 +428,5 @@ if __name__ == "__main__":
     set_theme("auto")
     dock_area = BECDockArea()
     dock_area.show()
+    dock_area.add_dock("dock1", widget="BECFigure", temporary=True)
     app.exec_()

@@ -11,7 +11,6 @@ from bec_widgets.cli.rpc_wigdet_handler import widget_handler
 from bec_widgets.utils import ConnectionConfig, GridLayoutManager
 from bec_widgets.utils.bec_widget import BECWidget
 
-
 if TYPE_CHECKING:
     from qtpy.QtWidgets import QWidget
 
@@ -185,12 +184,13 @@ class BECDock(BECWidget, Dock):
         """
         Make the dock temporary.
         """
-        from bec_widgets.widgets import BECDockArea
+
+        from bec_widgets.widgets.dock import BECDockArea
 
         self.orig_area.docks.pop(self.name(), None)
         self.orig_area = BECDockArea()
         self.area = self.orig_area
-        self.area.docks[self.name()] = self
+        self.area.panels[self.name()] = self
         self.config.parent_dock_area = self.area.gui_id
         self.area.temporary = False
         self.hide_title_bar()
