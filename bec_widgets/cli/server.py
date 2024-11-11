@@ -11,7 +11,7 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.service_config import ServiceConfig
 from bec_lib.utils.import_utils import lazy_import
-from qtpy.QtCore import QTimer
+from qtpy.QtCore import Qt, QTimer
 
 from bec_widgets.cli.rpc_register import RPCRegister
 from bec_widgets.utils import BECDispatcher
@@ -227,6 +227,7 @@ def main():
             app.setWindowIcon(icon)
 
             win = QMainWindow()
+            win.setAttribute(Qt.WA_ShowWithoutActivating)
             win.setWindowTitle("BEC Widgets")
 
             server = _start_server(args.id, gui_class, args.config)
