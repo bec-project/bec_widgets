@@ -40,6 +40,7 @@ class BECMultiWaveformConfig(SubplotConfig):
 
 class BECMultiWaveform(BECPlotBase):
     monitor_signal_updated = Signal()
+    highlighted_curve_index_changed = Signal(int)
     USER_ACCESS = [
         "_rpc_id",
         "_config_dict",
@@ -85,6 +86,7 @@ class BECMultiWaveform(BECPlotBase):
         self.connected = False
         self.current_highlight_index = 0
         self._curves = deque()
+        self.visible_curves = []
         self.number_of_visible_curves = 0
 
         # Get bec shortcuts dev, scans, queue, scan_storage, dap
@@ -159,8 +161,10 @@ class BECMultiWaveform(BECPlotBase):
 
         if current_scan_id != self.scan_id:
             self.scan_id = current_scan_id
-            self.plot_item.clear()
+            self.clear_curves()
             self.curves.clear()
+            if self.crosshair:
+                self.crosshair.clear_markers()
 
         # Always create a new curve and add it
         curve = pg.PlotDataItem()
@@ -181,8 +185,8 @@ class BECMultiWaveform(BECPlotBase):
         Args:
             index (int): The index of the curve to highlight among visible curves.
         """
-        visible_curves = [curve for curve in self.curves if curve.isVisible()]
-        num_visible_curves = len(visible_curves)
+        self.plot_item.visible_curves = [curve for curve in self.curves if curve.isVisible()]
+        num_visible_curves = len(self.plot_item.visible_curves)
         self.number_of_visible_curves = num_visible_curves
 
         if num_visible_curves == 0:
@@ -197,7 +201,7 @@ class BECMultiWaveform(BECPlotBase):
         colors = Colors.evenly_spaced_colors(
             colormap=self.config.color_palette, num=num_colors, format="HEX"
         )
-        for i, curve in enumerate(visible_curves):
+        for i, curve in enumerate(self.plot_item.visible_curves):
             curve.setPen()
             if i == self.current_highlight_index:
                 curve.setPen(pg.mkPen(color=colors[i], width=5))
@@ -207,6 +211,8 @@ class BECMultiWaveform(BECPlotBase):
                 curve.setPen(pg.mkPen(color=colors[i], width=1))
                 curve.setAlpha(alpha=self.config.opacity / 100, auto=False)
                 curve.setZValue(0)
+
+        self.highlighted_curve_index_changed.emit(self.current_highlight_index)
 
     @Slot(int)
     def set_opacity(self, opacity: int):
@@ -269,6 +275,13 @@ class BECMultiWaveform(BECPlotBase):
         self.config.color_palette = colormap
         self.set_curve_highlight(self.current_highlight_index)
 
+    def hook_crosshair(self) -> None:
+        super().hook_crosshair()
+        if self.crosshair:
+            self.highlighted_curve_index_changed.connect(self.crosshair.update_highlighted_curve)
+            if self.curves:
+                self.crosshair.update_highlighted_curve(self.current_highlight_index)
+
     def get_all_data(self, output: Literal["dict", "pandas"] = "dict") -> dict:
         """
         Extract all curve data into a dictionary or a pandas DataFrame.
@@ -309,6 +322,17 @@ class BECMultiWaveform(BECPlotBase):
             return combined_data
         return data
 
+    def clear_curves(self):
+        """
+        Remove all curves from the plot, excluding crosshair items.
+        """
+        items_to_remove = []
+        for item in self.plot_item.items:
+            if not getattr(item, "is_crosshair", False) and isinstance(item, pg.PlotDataItem):
+                items_to_remove.append(item)
+        for item in items_to_remove:
+            self.plot_item.removeItem(item)
+
     def export_to_matplotlib(self):
         """
         Export current waveform to matplotlib GUI. Available only if matplotlib is installed in the environment.
@@ -325,6 +349,5 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     widget = BECFigure()
-    widget.multi_waveform(monitor="waveform")
     widget.show()
     sys.exit(app.exec_())

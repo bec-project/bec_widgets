@@ -50,8 +50,14 @@ class Crosshair(QObject):
         self.v_line.skip_auto_range = True
         self.h_line = pg.InfiniteLine(angle=0, movable=False)
         self.h_line.skip_auto_range = True
+        # Add custom attribute to identify crosshair lines
+        self.v_line.is_crosshair = True
+        self.h_line.is_crosshair = True
         self.plot_item.addItem(self.v_line, ignoreBounds=True)
         self.plot_item.addItem(self.h_line, ignoreBounds=True)
+
+        # Initialize highlighted curve in a case of multiple curves
+        self.highlighted_curve_index = None
 
         # Add TextItem to display coordinates
         self.coord_label = pg.TextItem("", anchor=(1, 1), fill=(0, 0, 0, 100))
@@ -73,6 +79,7 @@ class Crosshair(QObject):
         self.plot_item.ctrl.downsampleSpin.valueChanged.connect(self.clear_markers)
 
         # Initialize markers
+        self.items = []
         self.marker_moved_1d = {}
         self.marker_clicked_1d = {}
         self.marker_2d = None
@@ -116,34 +123,74 @@ class Crosshair(QObject):
         self.coord_label.fill = pg.mkBrush(label_bg_color)
         self.coord_label.border = pg.mkPen(None)
 
+    @Slot(int)
+    def update_highlighted_curve(self, curve_index: int):
+        """
+        Update the highlighted curve in the case of multiple curves in a plot item.
+
+        Args:
+            curve_index(int): The index of curve to highlight
+        """
+        self.highlighted_curve_index = curve_index
+        self.clear_markers()
+        self.update_markers()
+
     def update_markers(self):
         """Update the markers for the crosshair, creating new ones if necessary."""
 
-        # Create new markers
-        for item in self.plot_item.items:
+        if self.highlighted_curve_index is not None and hasattr(self.plot_item, "visible_curves"):
+            # Focus on the highlighted curve only
+            self.items = [self.plot_item.visible_curves[self.highlighted_curve_index]]
+        else:
+            # Handle all curves
+            self.items = self.plot_item.items
+
+        # Create or update markers
+        for item in self.items:
             if isinstance(item, pg.PlotDataItem):  # 1D plot
-                if item.name() in self.marker_moved_1d:
-                    continue
                 pen = item.opts["pen"]
                 color = pen.color() if hasattr(pen, "color") else pg.mkColor(pen)
-                marker_moved = CrosshairScatterItem(
-                    size=10, pen=pg.mkPen(color), brush=pg.mkBrush(None)
-                )
-                marker_moved.skip_auto_range = True
-                self.marker_moved_1d[item.name()] = marker_moved
-                self.plot_item.addItem(marker_moved)
-
-                # Create glowing effect markers for clicked events
-                for size, alpha in [(18, 64), (14, 128), (10, 255)]:
-                    marker_clicked = CrosshairScatterItem(
-                        size=size,
-                        pen=pg.mkPen(None),
-                        brush=pg.mkBrush(color.red(), color.green(), color.blue(), alpha),
+                name = item.name() or str(id(item))
+                if name in self.marker_moved_1d:
+                    # Update existing markers
+                    marker_moved = self.marker_moved_1d[name]
+                    marker_moved.setPen(pg.mkPen(color))
+                    # Update clicked markers' brushes
+                    for marker_clicked in self.marker_clicked_1d[name]:
+                        alpha = marker_clicked.opts["brush"].color().alpha()
+                        marker_clicked.setBrush(
+                            pg.mkBrush(color.red(), color.green(), color.blue(), alpha)
+                        )
+                    # Update z-values
+                    marker_moved.setZValue(item.zValue() + 1)
+                    for marker_clicked in self.marker_clicked_1d[name]:
+                        marker_clicked.setZValue(item.zValue() + 1)
+                else:
+                    # Create new markers
+                    marker_moved = CrosshairScatterItem(
+                        size=10, pen=pg.mkPen(color), brush=pg.mkBrush(None)
                     )
-                    marker_clicked.skip_auto_range = True
-                    self.marker_clicked_1d[item.name()] = marker_clicked
-                    self.plot_item.addItem(marker_clicked)
+                    marker_moved.skip_auto_range = True
+                    marker_moved.is_crosshair = True
+                    self.marker_moved_1d[name] = marker_moved
+                    self.plot_item.addItem(marker_moved)
+                    # Set marker z-value higher than the curve
+                    marker_moved.setZValue(item.zValue() + 1)
 
+                    # Create glowing effect markers for clicked events
+                    marker_clicked_list = []
+                    for size, alpha in [(18, 64), (14, 128), (10, 255)]:
+                        marker_clicked = CrosshairScatterItem(
+                            size=size,
+                            pen=pg.mkPen(None),
+                            brush=pg.mkBrush(color.red(), color.green(), color.blue(), alpha),
+                        )
+                        marker_clicked.skip_auto_range = True
+                        marker_clicked.is_crosshair = True
+                        self.plot_item.addItem(marker_clicked)
+                        marker_clicked.setZValue(item.zValue() + 1)
+                        marker_clicked_list.append(marker_clicked)
+                    self.marker_clicked_1d[name] = marker_clicked_list
             elif isinstance(item, pg.ImageItem):  # 2D plot
                 if self.marker_2d is not None:
                     continue
@@ -165,12 +212,11 @@ class Crosshair(QObject):
         """
         y_values = defaultdict(list)
         x_values = defaultdict(list)
-        image_2d = None
 
         # Iterate through items in the plot
-        for item in self.plot_item.items:
+        for item in self.items:
             if isinstance(item, pg.PlotDataItem):  # 1D plot
-                name = item.name()
+                name = item.name() or str(id(item))
                 plot_data = item._getDisplayDataset()
                 if plot_data is None:
                     continue
@@ -191,7 +237,7 @@ class Crosshair(QObject):
             elif isinstance(item, pg.ImageItem):  # 2D plot
                 name = item.config.monitor
                 image_2d = item.image
-                # clip the x and y values to the image dimensions to avoid out of bounds errors
+                # Clip the x and y values to the image dimensions to avoid out of bounds errors
                 y_values[name] = int(np.clip(y, 0, image_2d.shape[1] - 1))
                 x_values[name] = int(np.clip(x, 0, image_2d.shape[0] - 1))
 
@@ -259,9 +305,9 @@ class Crosshair(QObject):
                 # not sure how we got here, but just to be safe...
                 return
 
-            for item in self.plot_item.items:
+            for item in self.items:
                 if isinstance(item, pg.PlotDataItem):
-                    name = item.name()
+                    name = item.name() or str(id(item))
                     x, y = x_snap_values[name], y_snap_values[name]
                     if x is None or y is None:
                         continue
@@ -312,13 +358,14 @@ class Crosshair(QObject):
                 # not sure how we got here, but just to be safe...
                 return
 
-            for item in self.plot_item.items:
+            for item in self.items:
                 if isinstance(item, pg.PlotDataItem):
-                    name = item.name()
+                    name = item.name() or str(id(item))
                     x, y = x_snap_values[name], y_snap_values[name]
                     if x is None or y is None:
                         continue
-                    self.marker_clicked_1d[name].setData([x], [y])
+                    for marker_clicked in self.marker_clicked_1d[name]:
+                        marker_clicked.setData([x], [y])
                     x_snapped_scaled, y_snapped_scaled = self.scale_emitted_coordinates(x, y)
                     coordinate_to_emit = (
                         name,
@@ -340,9 +387,12 @@ class Crosshair(QObject):
     def clear_markers(self):
         """Clears the markers from the plot."""
         for marker in self.marker_moved_1d.values():
-            marker.clear()
-        for marker in self.marker_clicked_1d.values():
-            marker.clear()
+            self.plot_item.removeItem(marker)
+        for markers in self.marker_clicked_1d.values():
+            for marker in markers:
+                self.plot_item.removeItem(marker)
+        self.marker_moved_1d.clear()
+        self.marker_clicked_1d.clear()
 
     def scale_emitted_coordinates(self, x, y):
         """Scales the emitted coordinates if the axes are in log scale.
@@ -369,7 +419,7 @@ class Crosshair(QObject):
         x, y = pos
         x_scaled, y_scaled = self.scale_emitted_coordinates(x, y)
 
-        # # Update coordinate label
+        # Update coordinate label
         self.coord_label.setText(f"({x_scaled:.{self.precision}g}, {y_scaled:.{self.precision}g})")
         self.coord_label.setPos(x, y)
         self.coord_label.setVisible(True)
