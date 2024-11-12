@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.4.1 (2024-11-12)
+
+### Bug Fixes
+
+- **positioner_box**: Adjusted default signals
+  ([`8e5c0ad`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8e5c0ad8c8eff5a9308169bc663d2b7230f0ebb1))
+
+
 ## v1.4.0 (2024-11-11)
 
 ### Bug Fixes
@@ -199,11 +207,3 @@ This property tells if expand should show a popup (by default), or if the widget
 
 - **image**: Image widget can take data from monitor_1d endpoint
   ([`9ef1d1c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9ef1d1c9ac2178d9fa2e655942208f8abbdf5c1b))
-
-
-## v0.117.1 (2024-10-11)
-
-### Bug Fixes
-
-- **FPS**: Qtimer cleanup leaking
-  ([`3a22392`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3a2239278075de7489ad10a58c31d7d89715e221))
