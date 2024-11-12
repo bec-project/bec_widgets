@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v1.5.0 (2024-11-12)
+
+### Bug Fixes
+
+- **crosshair**: Crosshair adapted for multi waveform widget
+  ([`0cd85ed`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0cd85ed9fa5b67a6ecce89985cd4f54b7bbe3a4b))
+
+### Documentation
+
+- **multi_waveform**: Docs added
+  ([`42d4f18`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/42d4f182f790a97687ca3b6d0e72866070a89767))
+
+### Features
+
+- **multi-waveform**: New widget added
+  ([`f3a39a6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f3a39a69e29d490b3023a508ced18028c4205772))
+
+
 ## v1.4.1 (2024-11-12)
 
 ### Bug Fixes
@@ -184,9 +202,6 @@ This property tells if expand should show a popup (by default), or if the widget
 - Emit 'device_selected' and 'scan_axis' from scan control widget
   ([`0b9b1a3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0b9b1a3c89a98505079f7d4078915b7bbfaa1e23))
 
-- New 'device_selected' signals to ScanControl, ScanGroupBox, DeviceLineEdit
-  ([`9801d27`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9801d2769eb0ee95c94ec0c011e1dac1407142ae))
-
 ### Refactoring
 
 - Redesign of scan selection and scan control boxes
@@ -194,16 +209,3 @@ This property tells if expand should show a popup (by default), or if the widget
 
 - Move add/remove bundle to scan group box
   ([`e3d0a7b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e3d0a7bbf9918dc16eb7227a178c310256ce570d))
-
-
-## v0.118.0 (2024-10-13)
-
-### Documentation
-
-- **sphinx-build**: Adjusted pyside verion
-  ([`b236951`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b23695167ab969f754a058ffdccca2b40f00a008))
-
-### Features
-
-- **image**: Image widget can take data from monitor_1d endpoint
-  ([`9ef1d1c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9ef1d1c9ac2178d9fa2e655942208f8abbdf5c1b))
