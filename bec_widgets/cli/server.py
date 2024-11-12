@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import inspect
 import json
 import signal
 import sys
@@ -95,11 +94,7 @@ class BECWidgetsCLIServer:
                 setattr(obj, method, args[0])
                 res = None
         else:
-            sig = inspect.signature(method_obj)
-            if sig.parameters:
-                res = method_obj(*args, **kwargs)
-            else:
-                res = method_obj()
+            res = method_obj(*args, **kwargs)
 
         if isinstance(res, list):
             res = [self.serialize_object(obj) for obj in res]
