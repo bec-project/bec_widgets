@@ -159,3 +159,94 @@ def test_toolbar_add_utils_progress_bar(bec_dock_area):
     assert (
         bec_dock_area.panels["progress_bar_1"].widgets[0].config.widget_class == "RingProgressBar"
     )
+
+
+###################################
+# Tests for Temporary Docks
+###################################
+def test_add_temporary_dock(bec_dock_area, qtbot):
+    # Add a temporary dock
+    temp_dock = bec_dock_area.add_dock(name="temp_dock_1", temporary=True)
+
+    # Check that tempAreas has one area
+    assert len(bec_dock_area.dock_area.tempAreas) == 1
+
+    # Check that the dock is in the tempArea's docks
+    temp_area = bec_dock_area.dock_area.tempAreas[0]
+    assert temp_dock.name() in temp_area.docks
+
+    # Close the temporary dock
+    temp_dock.close()
+    qtbot.wait(100)
+
+    # Check that tempAreas is now empty
+    assert len(bec_dock_area.dock_area.tempAreas) == 0
+
+    # Check that the dock is removed from docks
+    assert temp_dock.name() not in bec_dock_area.dock_area.docks
+
+    bec_dock_area.close()
+
+
+def test_clear_all_with_temporary_docks(bec_dock_area, qtbot):
+    # Add normal docks
+    d0 = bec_dock_area.add_dock(name="dock_0")
+    d1 = bec_dock_area.add_dock(name="dock_1")
+    # Add temporary docks
+    temp_dock_1 = bec_dock_area.add_dock(name="temp_dock_1", temporary=True)
+    temp_dock_2 = bec_dock_area.add_dock(name="temp_dock_2", temporary=True)
+
+    # Check that tempAreas have 2 areas
+    assert len(bec_dock_area.dock_area.tempAreas) == 2
+
+    # Clear all docks
+    bec_dock_area.clear_all()
+    qtbot.wait(100)
+
+    # Check that all docks are removed
+    assert len(bec_dock_area.dock_area.docks) == 0
+    assert len(bec_dock_area.dock_area.tempAreas) == 0
+
+
+def test_attach_all_removes_temporary_docks(bec_dock_area, qtbot):
+    # Add normal dock
+    d0 = bec_dock_area.add_dock(name="dock_0")
+    # Add temporary dock
+    temp_dock = bec_dock_area.add_dock(name="temp_dock", temporary=True)
+
+    # Detach normal dock
+    d0.detach()
+
+    # Check tempAreas
+    assert len(bec_dock_area.dock_area.tempAreas) == 2  # One for temp_dock, one for detached d0
+
+    # Call attach_all
+    bec_dock_area.attach_all()
+    qtbot.wait(100)
+
+    # Check that tempAreas is now empty
+    assert len(bec_dock_area.dock_area.tempAreas) == 0
+
+    # Check that temp_dock is not in docks
+    assert temp_dock.name() not in bec_dock_area.dock_area.docks
+
+
+def test_close_temporary_dock(bec_dock_area, qtbot):
+    # Add temporary dock
+    temp_dock = bec_dock_area.add_dock(name="temp_dock", temporary=True)
+
+    # Check tempAreas
+    assert len(bec_dock_area.dock_area.tempAreas) == 1
+
+    # Close the temporary dock
+    temp_dock.close()
+    qtbot.wait(100)
+
+    # Check that tempAreas is now empty
+    assert len(bec_dock_area.dock_area.tempAreas) == 0
+
+    # Check that the dock is removed from docks
+    assert temp_dock.name() not in bec_dock_area.dock_area.docks
+
+    # Close parent area
+    bec_dock_area.close()

@@ -280,6 +280,7 @@ class BECDockArea(BECWidget, QWidget):
         relative_to: BECDock | None = None,
         closable: bool = True,
         floating: bool = False,
+        temporary: bool = False,
         prefix: str = "dock",
         widget: str | QWidget | None = None,
         row: int = None,
@@ -296,6 +297,7 @@ class BECDockArea(BECWidget, QWidget):
             relative_to(BECDock): The dock to which the new dock should be added relative to.
             closable(bool): Whether the dock is closable.
             floating(bool): Whether the dock is detached after creating.
+            temporary(bool): Whether the dock is temporary. After closing the dock do not return to the parent DockArea.
             prefix(str): The prefix for the dock name if no name is provided.
             widget(str|QWidget|None): The widget to be added to the dock. While using RPC, only BEC RPC widgets from RPCWidgetHandler are allowed.
             row(int): The row of the added widget.
@@ -317,16 +319,21 @@ class BECDockArea(BECWidget, QWidget):
         if position is None:
             position = "bottom"
 
+        if temporary:
+            target_area = self.dock_area.addTempArea()
+        else:
+            target_area = self.dock_area
+
         dock = BECDock(name=name, parent_dock_area=self, closable=closable)
         dock.config.position = position
         self.config.docks[name] = dock.config
 
-        self.dock_area.addDock(dock=dock, position=position, relativeTo=relative_to)
+        target_area.addDock(dock=dock, position=position, relativeTo=relative_to)
 
-        if len(self.dock_area.docks) <= 1:
+        if len(target_area.docks) <= 1:
             dock.hide_title_bar()
-        elif len(self.dock_area.docks) > 1:
-            for dock in self.dock_area.docks.values():
+        elif len(target_area.docks) > 1:
+            for dock in target_area.docks.values():
                 dock.show_title_bar()
 
         if widget is not None and isinstance(widget, str):
