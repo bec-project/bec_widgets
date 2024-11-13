@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from bec_widgets.widgets.bec_progressbar.bec_progressbar import BECProgressBar
+from bec_widgets.widgets.progress.bec_progressbar.bec_progressbar import BECProgressBar
 
 
 @pytest.fixture

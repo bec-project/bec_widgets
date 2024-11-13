@@ -3,7 +3,7 @@ from pydantic import ValidationError
 from qtpy.QtGui import QColor
 
 from bec_widgets.utils import Colors
-from bec_widgets.widgets.figure.plots.waveform.waveform_curve import CurveConfig
+from bec_widgets.widgets.containers.figure.plots.waveform.waveform_curve import CurveConfig
 
 
 def test_color_validation_CSS():

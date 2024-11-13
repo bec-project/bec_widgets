@@ -6,8 +6,8 @@ from qtpy.QtWidgets import QApplication
 
 from bec_widgets.qt_utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.colors import apply_theme, get_theme_palette, set_theme
-from bec_widgets.widgets.figure.plots.axis_settings import AxisSettings
-from bec_widgets.widgets.multi_waveform.multi_waveform_widget import BECMultiWaveformWidget
+from bec_widgets.widgets.containers.figure.plots.axis_settings import AxisSettings
+from bec_widgets.widgets.plots.multi_waveform.multi_waveform_widget import BECMultiWaveformWidget
 
 from .client_mocks import mocked_client
 

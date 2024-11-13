@@ -1,8 +1,7 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
-import pytest
 
 from bec_widgets.utils.widget_io import WidgetIO
-from bec_widgets.widgets.scan_control.scan_group_box import ScanGroupBox
+from bec_widgets.widgets.control.scan_control.scan_group_box import ScanGroupBox
 
 
 def test_kwarg_box(qtbot):

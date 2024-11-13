@@ -1,7 +1,7 @@
 import pytest
 from qtpy.QtCore import QPointF, Qt
 
-from bec_widgets.widgets.toggle.toggle import ToggleSwitch
+from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
 
 
 @pytest.fixture

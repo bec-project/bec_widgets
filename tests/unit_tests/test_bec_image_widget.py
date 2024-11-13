@@ -1,10 +1,10 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pyqtgraph as pg
 import pytest
 
-from bec_widgets.widgets.base_classes.device_input_base import BECDeviceFilter
-from bec_widgets.widgets.image.image_widget import BECImageWidget
+from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
+from bec_widgets.widgets.plots.image.image_widget import BECImageWidget
 
 from .client_mocks import mocked_client
 

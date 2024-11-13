@@ -4,7 +4,7 @@ import pyqtgraph as pg
 import pytest
 
 from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
-from bec_widgets.widgets.dap_combo_box.dap_combo_box import DapComboBox
+from bec_widgets.widgets.dap.dap_combo_box.dap_combo_box import DapComboBox
 
 from .client_mocks import mocked_client
 from .conftest import create_widget
@@ -14,7 +14,7 @@ from .conftest import create_widget
 def dap_combo_box(qtbot, mocked_client):
     """Fixture for TextBox widget to test BECSignalProxy with a simple widget"""
     with mock.patch(
-        "bec_widgets.widgets.dap_combo_box.dap_combo_box.DapComboBox._validate_dap_model",
+        "bec_widgets.widgets.dap.dap_combo_box.dap_combo_box.DapComboBox._validate_dap_model",
         return_value=True,
     ):
         widget = create_widget(qtbot, DapComboBox, client=mocked_client)

@@ -1,8 +1,7 @@
-import pyqtgraph as pg
 import pytest
 from qtpy.QtCore import QPointF
 
-from bec_widgets.widgets.waveform.waveform_widget import BECWaveformWidget
+from bec_widgets.widgets.plots.waveform.waveform_widget import BECWaveformWidget
 
 from .client_mocks import mocked_client
 

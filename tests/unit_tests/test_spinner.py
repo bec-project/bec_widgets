@@ -2,7 +2,7 @@ import pytest
 
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.reference_utils import snap_and_compare
-from bec_widgets.widgets.spinner.spinner import SpinnerWidget
+from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 
 
 @pytest.fixture

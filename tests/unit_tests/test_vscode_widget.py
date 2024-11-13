@@ -5,14 +5,14 @@ from unittest import mock
 
 import pytest
 
-from bec_widgets.widgets.vscode.vscode import VSCodeEditor
+from bec_widgets.widgets.editors.vscode.vscode import VSCodeEditor
 
 from .client_mocks import mocked_client
 
 
 @pytest.fixture
 def vscode_widget(qtbot, mocked_client):
-    with mock.patch("bec_widgets.widgets.vscode.vscode.subprocess.Popen") as mock_popen:
+    with mock.patch("bec_widgets.widgets.editors.vscode.vscode.subprocess.Popen") as mock_popen:
         widget = VSCodeEditor(client=mocked_client)
         qtbot.addWidget(widget)
         qtbot.waitExposed(widget)
@@ -25,12 +25,16 @@ def test_vscode_widget(qtbot, vscode_widget):
 
 
 def test_start_server(qtbot, mocked_client):
-    with mock.patch("bec_widgets.widgets.vscode.vscode.os.killpg") as mock_killpg:
-        with mock.patch("bec_widgets.widgets.vscode.vscode.os.getpgid") as mock_getpgid:
-            with mock.patch("bec_widgets.widgets.vscode.vscode.subprocess.Popen") as mock_popen:
-                with mock.patch("bec_widgets.widgets.vscode.vscode.select.select") as mock_select:
+    with mock.patch("bec_widgets.widgets.editors.vscode.vscode.os.killpg") as mock_killpg:
+        with mock.patch("bec_widgets.widgets.editors.vscode.vscode.os.getpgid") as mock_getpgid:
+            with mock.patch(
+                "bec_widgets.widgets.editors.vscode.vscode.subprocess.Popen"
+            ) as mock_popen:
+                with mock.patch(
+                    "bec_widgets.widgets.editors.vscode.vscode.select.select"
+                ) as mock_select:
                     with mock.patch(
-                        "bec_widgets.widgets.vscode.vscode.get_free_port"
+                        "bec_widgets.widgets.editors.vscode.vscode.get_free_port"
                     ) as mock_get_free_port:
                         mock_get_free_port.return_value = 12345
                         mock_process = mock.Mock()
@@ -61,9 +65,9 @@ def test_start_server(qtbot, mocked_client):
 
 @pytest.fixture
 def patched_vscode_process(qtbot, vscode_widget):
-    with mock.patch("bec_widgets.widgets.vscode.vscode.os.killpg") as mock_killpg:
+    with mock.patch("bec_widgets.widgets.editors.vscode.vscode.os.killpg") as mock_killpg:
         mock_killpg.reset_mock()
-        with mock.patch("bec_widgets.widgets.vscode.vscode.os.getpgid") as mock_getpgid:
+        with mock.patch("bec_widgets.widgets.editors.vscode.vscode.os.getpgid") as mock_getpgid:
             mock_getpgid.return_value = 123
             vscode_widget.process = mock.Mock()
             yield vscode_widget, mock_killpg

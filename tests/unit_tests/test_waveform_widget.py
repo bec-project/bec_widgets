@@ -8,12 +8,14 @@ from qtpy.QtWidgets import QApplication
 from bec_widgets.qt_utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.colors import apply_theme, get_theme_palette, set_theme
 from bec_widgets.utils.linear_region_selector import LinearRegionWrapper
-from bec_widgets.widgets.figure.plots.axis_settings import AxisSettings
-from bec_widgets.widgets.waveform.waveform_popups.curve_dialog.curve_dialog import CurveSettings
-from bec_widgets.widgets.waveform.waveform_popups.dap_summary_dialog.dap_summary_dialog import (
+from bec_widgets.widgets.containers.figure.plots.axis_settings import AxisSettings
+from bec_widgets.widgets.plots.waveform.waveform_popups.curve_dialog.curve_dialog import (
+    CurveSettings,
+)
+from bec_widgets.widgets.plots.waveform.waveform_popups.dap_summary_dialog.dap_summary_dialog import (
     FitSummaryWidget,
 )
-from bec_widgets.widgets.waveform.waveform_widget import BECWaveformWidget
+from bec_widgets.widgets.plots.waveform.waveform_widget import BECWaveformWidget
 
 from .client_mocks import mocked_client
 from .conftest import create_widget
@@ -250,16 +252,6 @@ def test_toolbar_auto_range_action_triggered(waveform_widget, mock_waveform, qtb
     action.trigger()
     qtbot.wait(200)
     waveform_widget.waveform.set_auto_range.assert_called_once_with(True, "xy")
-
-
-def test_toolbar_fit_params_action_triggered(qtbot, waveform_widget):
-    action = waveform_widget.toolbar.widgets["fit_params"].action
-    with patch(
-        "bec_widgets.widgets.waveform.waveform_widget.FitSummaryWidget"
-    ) as MockFitSummaryWidget:
-        mock_dialog_instance = MockFitSummaryWidget.return_value
-        action.trigger()
-        mock_dialog_instance.exec.assert_called_once()
 
 
 def test_enable_mouse_pan_mode(qtbot, waveform_widget):

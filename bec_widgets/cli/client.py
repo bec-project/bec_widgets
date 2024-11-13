@@ -15,39 +15,6 @@ class Widgets(str, enum.Enum):
     Enum for the available widgets.
     """
 
-    AbortButton = "AbortButton"
-    BECColorMapWidget = "BECColorMapWidget"
-    BECDock = "BECDock"
-    BECDockArea = "BECDockArea"
-    BECFigure = "BECFigure"
-    BECImageWidget = "BECImageWidget"
-    BECMotorMapWidget = "BECMotorMapWidget"
-    BECMultiWaveformWidget = "BECMultiWaveformWidget"
-    BECProgressBar = "BECProgressBar"
-    BECQueue = "BECQueue"
-    BECStatusBox = "BECStatusBox"
-    BECWaveformWidget = "BECWaveformWidget"
-    DapComboBox = "DapComboBox"
-    DarkModeButton = "DarkModeButton"
-    DeviceBrowser = "DeviceBrowser"
-    DeviceComboBox = "DeviceComboBox"
-    DeviceLineEdit = "DeviceLineEdit"
-    LMFitDialog = "LMFitDialog"
-    PositionIndicator = "PositionIndicator"
-    PositionerBox = "PositionerBox"
-    PositionerControlLine = "PositionerControlLine"
-    PositionerGroup = "PositionerGroup"
-    ResetButton = "ResetButton"
-    ResumeButton = "ResumeButton"
-    RingProgressBar = "RingProgressBar"
-    ScanControl = "ScanControl"
-    SignalComboBox = "SignalComboBox"
-    SignalLineEdit = "SignalLineEdit"
-    StopButton = "StopButton"
-    TextBox = "TextBox"
-    VSCodeEditor = "VSCodeEditor"
-    WebsiteWidget = "WebsiteWidget"
-
 
 class AbortButton(RPCBase):
     @property
@@ -1641,10 +1608,10 @@ class BECMultiWaveform(RPCBase):
     @rpc_call
     def set_colormap(self, colormap: str):
         """
-        Set the colormap for the scatter plot z gradient.
+        Set the colormap for the curves.
 
         Args:
-            colormap(str): Colormap for the scatter plot.
+            colormap(str): Colormap for the curves.
         """
 
     @rpc_call
@@ -1757,10 +1724,10 @@ class BECMultiWaveform(RPCBase):
     @rpc_call
     def set_colormap(self, colormap: str):
         """
-        Set the colormap for the scatter plot z gradient.
+        Set the colormap for the curves.
 
         Args:
-            colormap(str): Colormap for the scatter plot.
+            colormap(str): Colormap for the curves.
         """
 
     @rpc_call
@@ -1782,6 +1749,12 @@ class BECMultiWaveform(RPCBase):
         """
 
     @rpc_call
+    def export(self):
+        """
+        Show the Export Dialog of the plot widget.
+        """
+
+    @rpc_call
     def get_all_data(self, output: Literal["dict", "pandas"] = "dict") -> dict:
         """
         Extract all curve data into a dictionary or a pandas DataFrame.
@@ -1791,12 +1764,6 @@ class BECMultiWaveform(RPCBase):
 
         Returns:
             dict | pd.DataFrame: Data of all curves in the specified format.
-        """
-
-    @rpc_call
-    def export(self):
-        """
-        Show the Export Dialog of the plot widget.
         """
 
     @rpc_call

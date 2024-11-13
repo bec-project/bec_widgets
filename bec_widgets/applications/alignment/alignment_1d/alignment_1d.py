@@ -5,36 +5,23 @@ It is a preliminary version of the GUI, which will be added to the main branch a
 import os
 from typing import Optional
 
-from bec_lib.device import Positioner as BECPositioner
 from bec_lib.device import Signal as BECSignal
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QSize, Signal
+from qtpy.QtCore import QSize
 from qtpy.QtGui import QIcon
-from qtpy.QtWidgets import (
-    QApplication,
-    QCheckBox,
-    QDoubleSpinBox,
-    QMainWindow,
-    QPushButton,
-    QSpinBox,
-)
+from qtpy.QtWidgets import QApplication
 
 import bec_widgets
 from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
-from bec_widgets.qt_utils.toolbar import WidgetAction
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
-from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_accent_colors
-from bec_widgets.widgets.bec_progressbar.bec_progressbar import BECProgressBar
-from bec_widgets.widgets.device_line_edit.device_line_edit import DeviceLineEdit
-from bec_widgets.widgets.lmfit_dialog.lmfit_dialog import LMFitDialog
-from bec_widgets.widgets.positioner_box.positioner_box import PositionerBox
-from bec_widgets.widgets.positioner_group.positioner_group import PositionerGroup
-from bec_widgets.widgets.stop_button.stop_button import StopButton
-from bec_widgets.widgets.toggle.toggle import ToggleSwitch
-from bec_widgets.widgets.waveform.waveform_widget import BECWaveformWidget
+from bec_widgets.widgets.control.buttons.stop_button.stop_button import StopButton
+from bec_widgets.widgets.control.device_control.positioner_group import PositionerGroup
+from bec_widgets.widgets.dap.lmfit_dialog import LMFitDialog
+from bec_widgets.widgets.plots.waveform import BECWaveformWidget
+from bec_widgets.widgets.progress.bec_progressbar.bec_progressbar import BECProgressBar
 
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 logger = bec_logger.logger

@@ -1,10 +1,9 @@
 import numpy as np
-import pytest
 from bec_lib.messages import DeviceMessage
 
-from bec_widgets.widgets.figure import BECFigure
-from bec_widgets.widgets.figure.plots.motor_map.motor_map import BECMotorMap, MotorMapConfig
-from bec_widgets.widgets.figure.plots.waveform.waveform_curve import SignalData
+from bec_widgets.widgets.containers.figure import BECFigure
+from bec_widgets.widgets.containers.figure.plots.motor_map.motor_map import MotorMapConfig
+from bec_widgets.widgets.containers.figure.plots.waveform.waveform_curve import SignalData
 
 from .client_mocks import mocked_client
 from .conftest import create_widget

@@ -4,8 +4,10 @@ import pytest
 from bec_lib.device import ReadoutPriority
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.tests.utils import FakePositioner
-from bec_widgets.widgets.base_classes.device_input_base import BECDeviceFilter, DeviceInputBase
+from bec_widgets.widgets.control.device_input.base_classes.device_input_base import (
+    BECDeviceFilter,
+    DeviceInputBase,
+)
 
 from .client_mocks import mocked_client
 from .conftest import create_widget

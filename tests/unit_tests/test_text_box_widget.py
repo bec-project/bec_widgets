@@ -1,6 +1,6 @@
 import pytest
 
-from bec_widgets.widgets.text_box.text_box import DEFAULT_TEXT, TextBox
+from bec_widgets.widgets.editors.text_box.text_box import DEFAULT_TEXT, TextBox
 
 from .client_mocks import mocked_client
 

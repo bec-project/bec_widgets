@@ -2,7 +2,7 @@ import pytest
 from qtpy.QtCore import Qt
 
 from bec_widgets.qt_utils.palette_viewer import PaletteViewer
-from bec_widgets.widgets.dark_mode_button.dark_mode_button import DarkModeButton
+from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
 
 @pytest.fixture

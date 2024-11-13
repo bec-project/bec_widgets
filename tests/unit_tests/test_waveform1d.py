@@ -5,8 +5,12 @@ import numpy as np
 import pytest
 from bec_lib.scan_items import ScanItem
 
-from bec_widgets.widgets.figure import BECFigure
-from bec_widgets.widgets.figure.plots.waveform.waveform_curve import CurveConfig, Signal, SignalData
+from bec_widgets.widgets.containers.figure import BECFigure
+from bec_widgets.widgets.containers.figure.plots.waveform.waveform_curve import (
+    CurveConfig,
+    Signal,
+    SignalData,
+)
 
 from .client_mocks import mocked_client
 from .conftest import create_widget

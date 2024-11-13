@@ -13,7 +13,7 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_accent_colors, get_theme_palette
-from bec_widgets.widgets.dark_mode_button.dark_mode_button import DarkModeButton
+from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
 
 class PaletteViewer(BECWidget, QWidget):

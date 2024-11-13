@@ -1,16 +1,19 @@
 from unittest import mock
 
 import pytest
-from bec_lib.device import Positioner
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.messages import ScanQueueMessage
 from qtpy.QtCore import Qt, QTimer
 from qtpy.QtGui import QValidator
 from qtpy.QtWidgets import QPushButton
 
-from bec_widgets.widgets.device_line_edit.device_line_edit import DeviceLineEdit
-from bec_widgets.widgets.positioner_box.positioner_box import PositionerBox
-from bec_widgets.widgets.positioner_box.positioner_control_line import PositionerControlLine
+from bec_widgets.widgets.control.device_control.positioner_box.positioner_box import PositionerBox
+from bec_widgets.widgets.control.device_control.positioner_box.positioner_control_line import (
+    PositionerControlLine,
+)
+from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit import (
+    DeviceLineEdit,
+)
 
 from .client_mocks import mocked_client
 from .conftest import create_widget
@@ -19,10 +22,12 @@ from .conftest import create_widget
 @pytest.fixture
 def positioner_box(qtbot, mocked_client):
     """Fixture for PositionerBox widget"""
-    with mock.patch("bec_widgets.widgets.positioner_box.positioner_box.uuid.uuid4") as mock_uuid:
+    with mock.patch(
+        "bec_widgets.widgets.control.device_control.positioner_box.positioner_box.uuid.uuid4"
+    ) as mock_uuid:
         mock_uuid.return_value = "fake_uuid"
         with mock.patch(
-            "bec_widgets.widgets.positioner_box.positioner_box.PositionerBox._check_device_is_valid",
+            "bec_widgets.widgets.control.device_control.positioner_box.positioner_box.PositionerBox._check_device_is_valid",
             return_value=True,
         ):
             db = create_widget(qtbot, PositionerBox, device="samx", client=mocked_client)
@@ -120,10 +125,12 @@ def test_positioner_control_line(qtbot, mocked_client):
     """Test PositionerControlLine.
     Inherits from PositionerBox, but the layout is changed. Check dimensions only
     """
-    with mock.patch("bec_widgets.widgets.positioner_box.positioner_box.uuid.uuid4") as mock_uuid:
+    with mock.patch(
+        "bec_widgets.widgets.control.device_control.positioner_box.positioner_box.uuid.uuid4"
+    ) as mock_uuid:
         mock_uuid.return_value = "fake_uuid"
         with mock.patch(
-            "bec_widgets.widgets.positioner_box.positioner_box.PositionerBox._check_device_is_valid",
+            "bec_widgets.widgets.control.device_control.positioner_box.positioner_box.PositionerBox._check_device_is_valid",
             return_value=True,
         ):
             db = PositionerControlLine(device="samx", client=mocked_client)

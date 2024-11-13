@@ -2,9 +2,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from bec_widgets.widgets.base_classes.device_input_base import BECDeviceFilter
-from bec_widgets.widgets.motor_map.motor_map_dialog.motor_map_settings import MotorMapSettings
-from bec_widgets.widgets.motor_map.motor_map_widget import BECMotorMapWidget
+from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
+from bec_widgets.widgets.plots.motor_map.motor_map_dialog.motor_map_settings import MotorMapSettings
+from bec_widgets.widgets.plots.motor_map.motor_map_widget import BECMotorMapWidget
 
 from .client_mocks import mocked_client
 

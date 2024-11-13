@@ -1,6 +1,8 @@
 import pytest
 
-from bec_widgets.widgets.position_indicator.position_indicator import PositionIndicator
+from bec_widgets.widgets.control.device_control.position_indicator.position_indicator import (
+    PositionIndicator,
+)
 
 
 @pytest.fixture

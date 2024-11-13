@@ -156,6 +156,10 @@ def get_custom_classes(repo_name: str) -> BECClassContainer:
                         class_info.is_connector = True
                     if issubclass(obj, BECWidget):
                         class_info.is_widget = True
+                    if len(subs) == 1 and (
+                        issubclass(obj, QWidget) or issubclass(obj, QGraphicsWidget)
+                    ):
+                        class_info.is_top_level = True
                     if hasattr(obj, "PLUGIN") and obj.PLUGIN:
                         class_info.is_plugin = True
                     collection.add_class(class_info)

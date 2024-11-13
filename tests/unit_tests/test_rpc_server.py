@@ -1,10 +1,9 @@
 from unittest import mock
 
 import pytest
-from bec_lib.service_config import ServiceConfig
 
 from bec_widgets.cli.server import _start_server
-from bec_widgets.widgets.figure import BECFigure
+from bec_widgets.widgets.containers.figure import BECFigure
 
 
 @pytest.fixture

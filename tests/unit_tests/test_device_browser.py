@@ -4,14 +4,14 @@ from unittest import mock
 import pytest
 from qtpy.QtCore import Qt
 
-from bec_widgets.widgets.device_browser.device_browser import DeviceBrowser
+from bec_widgets.widgets.services.device_browser.device_browser import DeviceBrowser
 
 from .client_mocks import mocked_client
 
 if TYPE_CHECKING:
     from qtpy.QtWidgets import QListWidgetItem
 
-    from bec_widgets.widgets.device_browser.device_item.device_item import DeviceItem
+    from bec_widgets.widgets.services.device_browser import DeviceItem
 
 
 @pytest.fixture

@@ -5,9 +5,7 @@ from unittest import mock
 
 import pytest
 import redis
-from bec_lib.connector import MessageObject
 from bec_lib.messages import ScanMessage
-from bec_lib.redis_connector import RedisConnector
 from bec_lib.serialization import MsgpackSerialization
 
 from bec_widgets.utils.bec_dispatcher import QtRedisConnector

@@ -5,9 +5,9 @@ from bec_lib.endpoints import MessageEndpoints
 from pydantic import ValidationError
 
 from bec_widgets.utils import Colors
-from bec_widgets.widgets.ring_progress_bar import RingProgressBar
-from bec_widgets.widgets.ring_progress_bar.ring import ProgressbarConnections, RingConfig
-from bec_widgets.widgets.ring_progress_bar.ring_progress_bar import RingProgressBarConfig
+from bec_widgets.widgets.progress.ring_progress_bar import RingProgressBar
+from bec_widgets.widgets.progress.ring_progress_bar.ring import ProgressbarConnections, RingConfig
+from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_bar import RingProgressBarConfig
 
 from .client_mocks import mocked_client
 

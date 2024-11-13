@@ -1,7 +1,7 @@
 import pytest
 from pyqtgraph.widgets.ColorMapButton import ColorMapButton
 
-from bec_widgets.widgets.colormap_widget.colormap_widget import BECColorMapWidget
+from bec_widgets.widgets.utility.visual.colormap_widget.colormap_widget import BECColorMapWidget
 
 
 @pytest.fixture

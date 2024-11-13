@@ -6,10 +6,9 @@ import pytest
 from bec_lib.endpoints import MessageEndpoints
 
 from bec_widgets.cli.client_utils import _start_plot_process
-from bec_widgets.cli.rpc_register import RPCRegister
 from bec_widgets.utils import BECDispatcher
-from bec_widgets.widgets.dock import BECDockArea
-from bec_widgets.widgets.figure import BECFigure
+from bec_widgets.widgets.containers.dock import BECDockArea
+from bec_widgets.widgets.containers.figure import BECFigure
 
 
 # make threads check in autouse, **will be executed at the end**; better than

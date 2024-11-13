@@ -3,8 +3,6 @@ import os
 import numpy as np
 import pyqtgraph as pg
 from bec_qthemes import material_icon
-from qtpy.QtCore import QSize
-from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import (
     QApplication,
     QGroupBox,
@@ -17,9 +15,9 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.colors import apply_theme
-from bec_widgets.widgets.dock.dock_area import BECDockArea
-from bec_widgets.widgets.figure import BECFigure
-from bec_widgets.widgets.jupyter_console.jupyter_console import BECJupyterConsole
+from bec_widgets.widgets.containers.dock import BECDockArea
+from bec_widgets.widgets.containers.figure import BECFigure
+from bec_widgets.widgets.editors.jupyter_console.jupyter_console import BECJupyterConsole
 
 
 class JupyterConsoleWindow(QWidget):  # pragma: no cover:

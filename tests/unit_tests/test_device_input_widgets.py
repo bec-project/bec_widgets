@@ -1,9 +1,11 @@
 import pytest
 from bec_lib.device import ReadoutPriority
 
-from bec_widgets.widgets.base_classes.device_input_base import BECDeviceFilter
-from bec_widgets.widgets.device_combobox.device_combobox import DeviceComboBox
-from bec_widgets.widgets.device_line_edit.device_line_edit import DeviceLineEdit
+from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
+from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
+from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit import (
+    DeviceLineEdit,
+)
 
 from .client_mocks import mocked_client
 

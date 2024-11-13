@@ -143,7 +143,7 @@ class DesignerPluginGenerator:
 
 if __name__ == "__main__":  # pragma: no cover
     # from bec_widgets.widgets.bec_queue.bec_queue import BECQueue
-    from bec_widgets.widgets.spinner.spinner import SpinnerWidget
+    from bec_widgets.widgets.utility.spinner import SpinnerWidget
 
     generator = DesignerPluginGenerator(SpinnerWidget)
     generator.run(validate=False)

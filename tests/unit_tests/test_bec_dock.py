@@ -1,11 +1,9 @@
 # pylint: disable=missing-function-docstring, missing-module-docstring, unused-import
-from unittest.mock import MagicMock, patch
 
 import pytest
 from bec_lib.endpoints import MessageEndpoints
-from bec_lib.messages import ScanQueueStatusMessage
 
-from bec_widgets.widgets.dock import BECDock, BECDockArea
+from bec_widgets.widgets.containers.dock import BECDockArea
 
 from .client_mocks import mocked_client
 from .test_bec_queue import bec_queue_msg_full

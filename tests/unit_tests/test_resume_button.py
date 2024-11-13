@@ -2,7 +2,7 @@
 
 import pytest
 
-from bec_widgets.widgets.button_resume.button_resume import ResumeButton
+from bec_widgets.widgets.control.buttons.button_resume.button_resume import ResumeButton
 
 from .client_mocks import mocked_client
 

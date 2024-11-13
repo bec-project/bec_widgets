@@ -2,9 +2,8 @@
 from unittest import mock
 
 import pytest
-from qtpy.QtGui import QFontInfo
 
-from bec_widgets.widgets.figure import BECFigure
+from bec_widgets.widgets.containers.figure import BECFigure
 
 from .client_mocks import mocked_client
 from .conftest import create_widget

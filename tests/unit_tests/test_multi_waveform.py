@@ -5,7 +5,7 @@ import pytest
 from bec_lib.endpoints import messages
 
 from bec_widgets.utils import Colors
-from bec_widgets.widgets.figure import BECFigure
+from bec_widgets.widgets.containers.figure import BECFigure
 
 from .client_mocks import mocked_client
 from .conftest import create_widget

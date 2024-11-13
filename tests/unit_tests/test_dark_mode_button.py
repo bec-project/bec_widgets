@@ -5,7 +5,7 @@ from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication
 
 from bec_widgets.utils.colors import set_theme
-from bec_widgets.widgets.dark_mode_button.dark_mode_button import DarkModeButton
+from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
 # pylint: disable=unused-import
 from .client_mocks import mocked_client
@@ -64,7 +64,7 @@ def test_dark_mode_button_changes_theme(dark_mode_button):
     Test that the dark mode button changes the theme correctly.
     """
     with mock.patch(
-        "bec_widgets.widgets.dark_mode_button.dark_mode_button.set_theme"
+        "bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button.set_theme"
     ) as mocked_set_theme:
         dark_mode_button.toggle_dark_mode()
         mocked_set_theme.assert_called_with("dark")

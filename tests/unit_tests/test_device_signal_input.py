@@ -4,11 +4,15 @@ import pytest
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.ophyd_kind_util import Kind
-from bec_widgets.widgets.base_classes.device_input_base import BECDeviceFilter
-from bec_widgets.widgets.base_classes.device_signal_input_base import DeviceSignalInputBase
-from bec_widgets.widgets.device_combobox.device_combobox import DeviceComboBox
-from bec_widgets.widgets.signal_combobox.signal_combobox import SignalComboBox
-from bec_widgets.widgets.signal_line_edit.signal_line_edit import SignalLineEdit
+from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
+from bec_widgets.widgets.control.device_input.base_classes.device_signal_input_base import (
+    DeviceSignalInputBase,
+)
+from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
+from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
+from bec_widgets.widgets.control.device_input.signal_line_edit.signal_line_edit import (
+    SignalLineEdit,
+)
 
 from .client_mocks import mocked_client
 from .conftest import create_widget
