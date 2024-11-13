@@ -53,7 +53,7 @@ class BECClassInfo:
     obj: type
     is_connector: bool = False
     is_widget: bool = False
-    is_top_level: bool = False
+    is_plugin: bool = False
 
 
 class BECClassContainer:
@@ -88,14 +88,14 @@ class BECClassContainer:
         """
         Get all top-level classes.
         """
-        return [info.obj for info in self.collection if info.is_top_level]
+        return [info.obj for info in self.collection if info.is_plugin]
 
     @property
     def plugins(self):
         """
         Get all plugins. These are all classes that are on the top level and are widgets.
         """
-        return [info.obj for info in self.collection if info.is_widget and info.is_top_level]
+        return [info.obj for info in self.collection if info.is_widget and info.is_plugin]
 
     @property
     def widgets(self):
@@ -109,10 +109,17 @@ class BECClassContainer:
         """
         Get all top-level classes that are RPC-enabled. These are all classes that users can choose from.
         """
-        return [info.obj for info in self.collection if info.is_top_level and info.is_connector]
+        return [info.obj for info in self.collection if info.is_plugin and info.is_connector]
+
+    @property
+    def classes(self):
+        """
+        Get all classes.
+        """
+        return [info.obj for info in self.collection]
 
 
-def get_rpc_classes(repo_name: str) -> BECClassContainer:
+def get_custom_classes(repo_name: str) -> BECClassContainer:
     """
     Get all RPC-enabled classes in the specified repository.
 
@@ -149,10 +156,8 @@ def get_rpc_classes(repo_name: str) -> BECClassContainer:
                         class_info.is_connector = True
                     if issubclass(obj, BECWidget):
                         class_info.is_widget = True
-                    if len(subs) == 1 and (
-                        issubclass(obj, QWidget) or issubclass(obj, QGraphicsWidget)
-                    ):
-                        class_info.is_top_level = True
+                    if hasattr(obj, "PLUGIN") and obj.PLUGIN:
+                        class_info.is_plugin = True
                     collection.add_class(class_info)
 
     return collection

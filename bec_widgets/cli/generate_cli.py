@@ -11,7 +11,7 @@ import isort
 from qtpy.QtCore import Property as QtProperty
 
 from bec_widgets.utils.generate_designer_plugin import DesignerPluginGenerator
-from bec_widgets.utils.plugin_utils import BECClassContainer, get_rpc_classes
+from bec_widgets.utils.plugin_utils import BECClassContainer, get_custom_classes
 
 if sys.version_info >= (3, 11):
     from typing import get_overloads
@@ -175,7 +175,7 @@ def main():
         current_path = os.path.dirname(__file__)
         client_path = os.path.join(current_path, "client.py")
 
-        rpc_classes = get_rpc_classes("bec_widgets")
+        rpc_classes = get_custom_classes("bec_widgets")
 
         generator = ClientGenerator()
         generator.generate_client(rpc_classes)

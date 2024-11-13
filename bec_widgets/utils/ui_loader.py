@@ -4,7 +4,7 @@ from qtpy import PYQT6, PYSIDE6, QT_VERSION
 from qtpy.QtCore import QFile, QIODevice
 
 from bec_widgets.utils.generate_designer_plugin import DesignerPluginInfo
-from bec_widgets.utils.plugin_utils import get_rpc_classes
+from bec_widgets.utils.plugin_utils import get_custom_classes
 
 if PYSIDE6:
     from PySide6.QtUiTools import QUiLoader
@@ -30,7 +30,7 @@ class UILoader:
     def __init__(self, parent=None):
         self.parent = parent
 
-        widgets = get_rpc_classes("bec_widgets").top_level_classes
+        widgets = get_custom_classes("bec_widgets").classes
 
         self.custom_widgets = {widget.__name__: widget for widget in widgets}
 

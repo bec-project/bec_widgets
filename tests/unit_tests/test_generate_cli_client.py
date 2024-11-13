@@ -43,7 +43,7 @@ def test_client_generator_with_black_formatting():
             obj=MockBECWaveform1D,
             is_connector=True,
             is_widget=True,
-            is_top_level=False,
+            is_plugin=False,
         )
     )
     container.add_class(
@@ -54,7 +54,7 @@ def test_client_generator_with_black_formatting():
             obj=MockBECFigure,
             is_connector=True,
             is_widget=True,
-            is_top_level=True,
+            is_plugin=True,
         )
     )
 
