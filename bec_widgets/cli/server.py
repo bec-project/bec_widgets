@@ -212,6 +212,7 @@ def main():
     with redirect_stdout(SimpleFileLikeFromLogOutputFunc(logger.info)):
         with redirect_stderr(SimpleFileLikeFromLogOutputFunc(logger.error)):
             app = QApplication(sys.argv)
+            app.setQuitOnLastWindowClosed(False)
             app.setApplicationName("BEC Figure")
             module_path = os.path.dirname(bec_widgets.__file__)
             icon = QIcon()

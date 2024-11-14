@@ -145,7 +145,6 @@ def test_dock_manipulations_e2e(rpc_server_dock):
 
     d2.remove()
     dock_config = dock._config_dict
-    assert len(dock_config["docks"]) == 2
 
     assert ["dock_0", "dock_1"] == list(dock_config["docks"])
 
