@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v1.5.1 (2024-11-14)
+
+### Bug Fixes
+
+- **plugin_utils**: Plugin utils are able to detect classes for plugin creation based on class
+  attribute rather than if it is top level widget
+  ([`7a1b874`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7a1b8748a433f854671ac95f2eaf4604e6b8df20))
+
+### Refactoring
+
+- **widgets**: Widget module structure reorganised
+  ([`aab0229`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/aab0229a4067ad626de919e38a5c8a2e9e7b03c2))
+
+
 ## v1.5.0 (2024-11-12)
 
 ### Bug Fixes
@@ -182,9 +196,6 @@
 - Alignment 1D update, make app window a main window (in .ui file)
   ([`0015f0e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0015f0e2d62adc02d3ef334e1f6dbb2d0288fec6))
 
-- Set (Minimum, Fixed) size policy on Stop button
-  ([`523cc43`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/523cc435725b10b7d59a4477a1aaa24a1f3e37a2))
-
 ### Features
 
 - New PositionerGroup widget
@@ -195,12 +206,6 @@
 
 This property tells if expand should show a popup (by default), or if the widget should expand
   in-place
-
-- Positionerbox with a popup view
-  ([`2615787`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/261578796f1de8ca9cab9b91659bc1484f7aa89d))
-
-- Emit 'device_selected' and 'scan_axis' from scan control widget
-  ([`0b9b1a3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0b9b1a3c89a98505079f7d4078915b7bbfaa1e23))
 
 ### Refactoring
 
