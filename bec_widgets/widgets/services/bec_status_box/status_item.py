@@ -23,7 +23,7 @@ MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 class IconsEnum(enum.Enum):
     """Enum class for icons in the status item widget."""
 
-    RUNNING = "done_outline"
+    RUNNING = "check_circle"
     BUSY = "progress_activity"
     IDLE = "progress_activity"
     ERROR = "emergency_home"

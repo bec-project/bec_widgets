@@ -124,15 +124,40 @@ class BECStatusBox(BECWidget, CompactPopupWidget):
         self.tree = QTreeWidget(self)
         self.tree.setHeaderHidden(True)
         # TODO probably here is a problem still with setting the stylesheet
+        # self.tree.setStyleSheet(
+        #     "QTreeWidget::item:!selected "
+        #     "{ "
+        #     "border: 1px solid gainsboro; "
+        #     "border-left: none; "
+        #     "border-top: none; "
+        #     "}"
+        #     "QTreeWidget::item:selected {}"
+        # )
         self.tree.setStyleSheet(
-            "QTreeWidget::item:!selected "
-            "{ "
+            "QTreeWidget::item:!selected { "
             "border: 1px solid gainsboro; "
             "border-left: none; "
             "border-top: none; "
+            "} "
+            "QTreeWidget::item:selected {} "
+            "QTreeView::branch { "
+            "border-image: none; "
+            "background: transparent; "
+            "} "
+            "QTreeView::branch:has-siblings:!adjoins-item { "
+            "border-image: none; "
+            "} "
+            "QTreeView::branch:has-children:!has-siblings:closed, "
+            "QTreeView::branch:closed:has-children:has-siblings { "
+            "border-image: none; "
+            "} "
+            "QTreeView::branch:open:has-children:!has-siblings, "
+            "QTreeView::branch:open:has-children:has-siblings { "
+            "border-image: none; "
             "}"
-            "QTreeWidget::item:selected {}"
         )
+
+        # self.tree.setRootIsDecorated(False)
 
     def _create_status_widget(
         self, service_name: str, status=BECStatus, info: dict = None, metrics: dict = None
