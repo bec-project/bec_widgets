@@ -10,9 +10,11 @@ import fcntl
 import html
 import os
 import pty
+import re
 import sys
 
 import pyte
+from pygments.token import Token
 from pyte.screens import History
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import Property as pyqtProperty
@@ -235,10 +237,14 @@ class BECConsole(QtWidgets.QWidget):
     PLUGIN = True
     ICON_NAME = "terminal"
 
+    prompt = pyqtSignal(bool)
+
     def __init__(self, parent=None, cols=132):
         super().__init__(parent)
 
         self.term = _TerminalWidget(self, cols, rows=43)
+        self.term.prompt.connect(self.prompt)  # forward signal from term to this widget
+
         self.scroll_bar = QScrollBar(Qt.Vertical, self)
         # self.scroll_bar.hide()
         layout = QHBoxLayout(self)
@@ -320,9 +326,29 @@ class BECConsole(QtWidgets.QWidget):
     def start(self, deactivate_ctrl_d=True):
         self.term.start(deactivate_ctrl_d=deactivate_ctrl_d)
 
-    def push(self, text):
+    def push(self, text, hit_return=False):
         """Push some text to the terminal"""
-        return self.term.push(text)
+        return self.term.push(text, hit_return=hit_return)
+
+    def execute_command(self, command):
+        self.push(command, hit_return=True)
+
+    def set_prompt_tokens(self, *tokens):
+        """Prepare regexp to identify prompt, based on tokens
+
+        Tokens are returned from get_ipython().prompts.in_prompt_tokens()
+        """
+        regex_parts = []
+        for token_type, token_value in tokens:
+            if token_type == Token.PromptNum:  # Handle dynamic prompt number
+                regex_parts.append(r"\d+")  # Match one or more digits
+            else:
+                # Escape other prompt parts (e.g., "In [", "]: ")
+                regex_parts.append(re.escape(token_value))
+
+        # Combine into a single regex
+        prompt_pattern = "".join(regex_parts)
+        self.term._prompt_re = re.compile(prompt_pattern + r"\s*$")
 
     cols = pyqtProperty(int, get_cols, set_cols)
     rows = pyqtProperty(int, get_rows, set_rows)
@@ -336,7 +362,13 @@ class _TerminalWidget(QtWidgets.QPlainTextEdit):
     Start ``Backend`` process and render Pyte output as text.
     """
 
+    prompt = pyqtSignal(bool)
+
     def __init__(self, parent, cols=125, rows=50, **kwargs):
+        # regexp to match prompt
+        self._prompt_re = None
+        # last prompt
+        self._prompt_str = None
         # file descriptor to communicate with the subprocess
         self.fd = None
         self.backend = None
@@ -540,11 +572,13 @@ class _TerminalWidget(QtWidgets.QPlainTextEdit):
         elif code is not None:
             self.write(code)
 
-    def push(self, text):
+    def push(self, text, hit_return=False):
         """
         Write 'text' to terminal
         """
         self.write(text.encode("utf-8"))
+        if hit_return:
+            self.write("\n")
 
     def contextMenuEvent(self, event):
         if self.fd is None:
@@ -650,6 +684,20 @@ class _TerminalWidget(QtWidgets.QPlainTextEdit):
                 self.output[line_no] = line
             # fill the text area with HTML contents in one go
             self.appendHtml(f"<pre>{chr(10).join(self.output)}</pre>")
+
+            if self._prompt_re is not None:
+                text_buf = self.toPlainText()
+                prompt = self._prompt_re.search(text_buf)
+                if prompt is None:
+                    if self._prompt_str:
+                        self.prompt.emit(False)
+                    self._prompt_str = None
+                else:
+                    prompt_str = prompt.string.rstrip()
+                    if prompt_str != self._prompt_str:
+                        self._prompt_str = prompt_str
+                        self.prompt.emit(True)
+
             # did updates, all clean
             screen.dirty.clear()
 
@@ -728,6 +776,24 @@ if __name__ == "__main__":
 
     console = BECConsole(mainwin)
     mainwin.setCentralWidget(console)
+
+    def check_prompt(at_prompt):
+        if at_prompt:
+            print("NEW PROMPT")
+        else:
+            print("EXECUTING SOMETHING...")
+
+    console.set_prompt_tokens(
+        (Token.OutPromptNum, "•"),
+        (Token.Prompt, " demo"),
+        (Token.Prompt, " ["),
+        (Token.PromptNum, "3"),
+        (Token.Prompt, "/"),
+        (Token.PromptNum, "1"),
+        (Token.Prompt, "] "),
+        (Token.Prompt, "❯❯ "),
+    )
+    console.prompt.connect(check_prompt)
     console.start()
 
     # Show widget and launch Qt's event loop.
