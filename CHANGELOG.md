@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.5.2 (2024-11-18)
+
+### Bug Fixes
+
+- Support for bec v3
+  ([`746359b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/746359b2cc07a317473907adfcabbe5fe5d1b64c))
+
+
 ## v1.5.1 (2024-11-14)
 
 ### Bug Fixes
@@ -206,11 +214,3 @@
 
 This property tells if expand should show a popup (by default), or if the widget should expand
   in-place
-
-### Refactoring
-
-- Redesign of scan selection and scan control boxes
-  ([`a69d287`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a69d2870e2b3539739781d741b27b8599c0f4abd))
-
-- Move add/remove bundle to scan group box
-  ([`e3d0a7b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e3d0a7bbf9918dc16eb7227a178c310256ce570d))
