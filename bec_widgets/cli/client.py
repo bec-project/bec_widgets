@@ -19,6 +19,7 @@ class Widgets(str, enum.Enum):
     BECColorMapWidget = "BECColorMapWidget"
     BECDockArea = "BECDockArea"
     BECImageWidget = "BECImageWidget"
+    BECMainWindow = "BECMainWindow"
     BECMotorMapWidget = "BECMotorMapWidget"
     BECMultiWaveformWidget = "BECMultiWaveformWidget"
     BECProgressBar = "BECProgressBar"
@@ -1384,6 +1385,23 @@ class BECImageWidget(RPCBase):
             lock(bool): Lock the aspect ratio.
         """
 
+
+class BECMainWindow(RPCBase):
+    @property
+    @rpc_call
+    def _config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def _get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
+        """
 
 class BECMotorMap(RPCBase):
     @property
