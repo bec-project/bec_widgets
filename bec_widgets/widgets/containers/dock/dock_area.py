@@ -53,6 +53,8 @@ class BECDockArea(BECWidget, QWidget):
         "attach_all",
         "_get_all_rpc",
         "temp_areas",
+        "show",
+        "hide",
     ]
 
     def __init__(
@@ -411,6 +413,18 @@ class BECDockArea(BECWidget, QWidget):
         """
         self.cleanup()
         super().close()
+
+    def show(self):
+        """Show all windows including floating docks."""
+        super().show()
+        for docks in self.panels.values():
+            docks.window().show()
+
+    def hide(self):
+        """Hide all windows including floating docks."""
+        super().hide()
+        for docks in self.panels.values():
+            docks.window().hide()
 
 
 if __name__ == "__main__":

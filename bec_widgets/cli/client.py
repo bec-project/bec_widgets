@@ -461,6 +461,18 @@ class BECDockArea(RPCBase, BECGuiClientMixin):
             list: The temporary areas in the dock area.
         """
 
+    @rpc_call
+    def show(self):
+        """
+        Show all windows including floating docks.
+        """
+
+    @rpc_call
+    def hide(self):
+        """
+        Hide all windows including floating docks.
+        """
+
 
 class BECFigure(RPCBase):
     @property
