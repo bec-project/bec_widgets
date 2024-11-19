@@ -7,6 +7,7 @@ from qtpy.QtWidgets import (
     QApplication,
     QGroupBox,
     QHBoxLayout,
+    QPushButton,
     QSplitter,
     QTabWidget,
     QVBoxLayout,
@@ -17,6 +18,7 @@ from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.containers.dock import BECDockArea
 from bec_widgets.widgets.containers.figure import BECFigure
+from bec_widgets.widgets.containers.layout_manager.layout_manager import LayoutManagerWidget
 from bec_widgets.widgets.editors.jupyter_console.jupyter_console import BECJupyterConsole
 
 
@@ -50,11 +52,16 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "d1": self.d1,
                     "d2": self.d2,
                     "wave": self.wf,
-                    # "bar": self.bar,
-                    # "cm": self.colormap,
                     "im": self.im,
                     "mm": self.mm,
                     "mw": self.mw,
+                    "lm": self.lm,
+                    "btn1": self.btn1,
+                    "btn2": self.btn2,
+                    "btn3": self.btn3,
+                    "btn4": self.btn4,
+                    "btn5": self.btn5,
+                    "btn6": self.btn6,
                 }
             )
 
@@ -79,10 +86,24 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         second_tab_layout.addWidget(self.figure)
         tab_widget.addTab(second_tab, "BEC Figure")
 
+        third_tab = QWidget()
+        third_tab_layout = QVBoxLayout(third_tab)
+        self.lm = LayoutManagerWidget()
+        third_tab_layout.addWidget(self.lm)
+        tab_widget.addTab(third_tab, "Layout Manager Widget")
+
         group_box = QGroupBox("Jupyter Console", splitter)
         group_box_layout = QVBoxLayout(group_box)
         self.console = BECJupyterConsole(inprocess=True)
         group_box_layout.addWidget(self.console)
+
+        # Some buttons for layout testing
+        self.btn1 = QPushButton("Button 1")
+        self.btn2 = QPushButton("Button 2")
+        self.btn3 = QPushButton("Button 3")
+        self.btn4 = QPushButton("Button 4")
+        self.btn5 = QPushButton("Button 5")
+        self.btn6 = QPushButton("Button 6")
 
         # add stuff to figure
         self._init_figure()
@@ -93,15 +114,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.setWindowTitle("Jupyter Console Window")
 
     def _init_figure(self):
-        self.w1 = self.figure.plot(
-            x_name="samx",
-            y_name="bpm4i",
-            # title="Standard Plot with sync device, custom labels - w1",
-            # x_label="Motor Position",
-            # y_label="Intensity (A.U.)",
-            row=0,
-            col=0,
-        )
+        self.w1 = self.figure.plot(x_name="samx", y_name="bpm4i", row=0, col=0)
         self.w1.set(
             title="Standard Plot with sync device, custom labels - w1",
             x_label="Motor Position",
@@ -169,14 +182,6 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.wf = self.d2.add_widget("BECFigure", row=0, col=0)
 
         self.mw = self.wf.multi_waveform(monitor="waveform")  # , config=config)
-        # self.wf.plot(x_name="samx", y_name="bpm3a")
-        # self.wf.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
-        # self.bar = self.d2.add_widget("RingProgressBar", row=0, col=1)
-        # self.bar.set_diameter(200)
-
-        # self.d3 = self.dock.add_dock(name="dock_3", position="bottom")
-        # self.colormap = pg.GradientWidget()
-        # self.d3.add_widget(self.colormap, row=0, col=0)
 
         self.dock.save_state()
 
