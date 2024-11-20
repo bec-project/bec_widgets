@@ -18,11 +18,11 @@ dependencies = [
     "black~=24.0",                       # needed for bw-generate-cli
     "isort~=5.13, >=5.13.2",             # needed for bw-generate-cli
     "pydantic~=2.0",
-    "pyqtgraph~=0.13",
+    "pyqtgraph~=0.13, >=0.13.7",
     "bec_qthemes~=0.7, >=0.7",
     "qtconsole~=5.5, >=5.5.1",           # needed for jupyter console
-    "qtpy~=2.4",
-    "pyte",                              # needed for vt100 console
+    "qtpy~=2.4, >=2.4.1",
+    "pyte~=0.8, >=0.8.1",                # needed for vt100 console
 ]
 
 
