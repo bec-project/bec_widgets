@@ -74,7 +74,6 @@ before_script:
     test -d bec_widgets || git clone --branch $CHILD_PIPELINE_BRANCH https://gitlab.psi.ch/bec/bec_widgets.git; cd bec_widgets;
     fi
   - *install-os-packages
-  - *install-qt-webengine-deps
 
 formatter:
   stage: Formatter
@@ -150,7 +149,7 @@ tests:
     - *clone-repos
     - *install-os-packages
     - *install-repos
-    - pip install -e .[dev,pyqt6]
+    - pip install -e .[dev,pyside6]
     - coverage run --source=./bec_widgets -m pytest -v --junitxml=report.xml --maxfail=2 --random-order --full-trace ./tests/unit_tests
     - coverage report
     - coverage xml
@@ -213,7 +212,7 @@ end-2-end-conda:
     - cd ../
     - pip install -e ./ophyd_devices
 
-    - pip install -e .[dev,pyqt6]
+    - pip install -e .[dev,pyside6]
     - cd ./tests/end-2-end
     - pytest -v --start-servers --flush-redis --random-order
 
