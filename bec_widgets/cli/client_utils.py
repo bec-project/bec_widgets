@@ -228,6 +228,16 @@ class BECGuiClientMixin:
         if wait:
             self._gui_started_event.wait()
 
+    def show_all(self):
+        self._gui_started_event.wait()
+        rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
+        rpc_client._run_rpc("show")
+
+    def hide_all(self):
+        self._gui_started_event.wait()
+        rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
+        rpc_client._run_rpc("hide")
+
     def close(self) -> None:
         """
         Close the gui window.
