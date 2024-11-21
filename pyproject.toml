@@ -17,7 +17,7 @@ dependencies = [
     "bec_lib>=2.21.4, <=4.0",
     "black~=24.0",                       # needed for bw-generate-cli
     "isort~=5.13, >=5.13.2",             # needed for bw-generate-cli
-    "pydantic~=2.0",
+    "pydantic~=2.8",
     "pyqtgraph~=0.13, >=0.13.7",
     "bec_qthemes~=0.7, >=0.7",
     "qtconsole~=5.5, >=5.5.1",           # needed for jupyter console
