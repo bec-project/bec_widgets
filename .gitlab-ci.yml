@@ -12,6 +12,9 @@ variables:
     description: ophyd_devices branch
     value: main
   CHILD_PIPELINE_BRANCH: $CI_DEFAULT_BRANCH
+  CHECK_PKG_VERSIONS:
+    description: Whether to run additional tests against min/max/random selection of dependencies. Set to 1 for running. 
+    value: 0
 
 workflow:
   rules:
@@ -31,8 +34,9 @@ include:
     inputs:
       stage: test
       path: "."
-      pytest_args: "-v --random-order tests/"
-      exclude_packages: ""
+      pytest_args: "-v,--random-order,tests/unit_tests"
+      ignore_dep_group: "pyqt6"
+      pip_args: ".[dev,pyside6]"
 
 # different stages in the pipeline
 stages:
