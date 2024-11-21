@@ -208,7 +208,7 @@ def main():
             "Please specify a valid gui_class to run. Use -h for help."
             "\n Starting with default gui_class BECFigure."
         )
-        gui_class = BECFigure
+        gui_class = BECDockArea
 
     with redirect_stdout(SimpleFileLikeFromLogOutputFunc(logger.info)):
         with redirect_stderr(SimpleFileLikeFromLogOutputFunc(logger.error)):
