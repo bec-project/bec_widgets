@@ -15,6 +15,36 @@ class Widgets(str, enum.Enum):
     Enum for the available widgets.
     """
 
+    AbortButton = "AbortButton"
+    BECColorMapWidget = "BECColorMapWidget"
+    BECDockArea = "BECDockArea"
+    BECImageWidget = "BECImageWidget"
+    BECMotorMapWidget = "BECMotorMapWidget"
+    BECMultiWaveformWidget = "BECMultiWaveformWidget"
+    BECProgressBar = "BECProgressBar"
+    BECQueue = "BECQueue"
+    BECStatusBox = "BECStatusBox"
+    BECWaveformWidget = "BECWaveformWidget"
+    DapComboBox = "DapComboBox"
+    DarkModeButton = "DarkModeButton"
+    DeviceBrowser = "DeviceBrowser"
+    DeviceComboBox = "DeviceComboBox"
+    DeviceLineEdit = "DeviceLineEdit"
+    LMFitDialog = "LMFitDialog"
+    PositionIndicator = "PositionIndicator"
+    PositionerBox = "PositionerBox"
+    PositionerControlLine = "PositionerControlLine"
+    ResetButton = "ResetButton"
+    ResumeButton = "ResumeButton"
+    RingProgressBar = "RingProgressBar"
+    ScanControl = "ScanControl"
+    SignalComboBox = "SignalComboBox"
+    SignalLineEdit = "SignalLineEdit"
+    StopButton = "StopButton"
+    TextBox = "TextBox"
+    VSCodeEditor = "VSCodeEditor"
+    WebsiteWidget = "WebsiteWidget"
+
 
 class AbortButton(RPCBase):
     @property
