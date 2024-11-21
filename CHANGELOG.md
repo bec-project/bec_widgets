@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.5.3 (2024-11-21)
+
+### Bug Fixes
+
+- **alignment_1d**: Fix imports after widget module refactor
+  ([`e71e3b2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e71e3b2956feb3f3051e538432133f6e85bbd5a8))
+
+### Continuous Integration
+
+- Fix ci syntax for package-dep-job
+  ([`6e39bdb`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6e39bdbf53b147c8ff163527b45691835ce9a2eb))
+
+
 ## v1.5.2 (2024-11-18)
 
 ### Bug Fixes
@@ -200,17 +213,3 @@
 
 - Rename 'compact' property -> 'compact_view'
   ([`6982711`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6982711fea5fb8a73845ed7c0692e3ec53ef7871))
-
-- Alignment 1D update, make app window a main window (in .ui file)
-  ([`0015f0e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0015f0e2d62adc02d3ef334e1f6dbb2d0288fec6))
-
-### Features
-
-- New PositionerGroup widget
-  ([`af9655d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/af9655de0c541092437accfbaa779628a2f48ccb))
-
-- Add 'expand_popup' property to CompactPopupWidget
-  ([`e4121a0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e4121a01cb6b8d496e630cd43bc642b994b8f310))
-
-This property tells if expand should show a popup (by default), or if the widget should expand
-  in-place
