@@ -18,9 +18,11 @@ from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.widgets.control.buttons.stop_button.stop_button import StopButton
-from bec_widgets.widgets.control.device_control.positioner_group import PositionerGroup
-from bec_widgets.widgets.dap.lmfit_dialog import LMFitDialog
-from bec_widgets.widgets.plots.waveform import BECWaveformWidget
+from bec_widgets.widgets.control.device_control.positioner_group.positioner_group import (
+    PositionerGroup,
+)
+from bec_widgets.widgets.dap.lmfit_dialog.lmfit_dialog import LMFitDialog
+from bec_widgets.widgets.plots.waveform.waveform_widget import BECWaveformWidget
 from bec_widgets.widgets.progress.bec_progressbar.bec_progressbar import BECProgressBar
 
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
