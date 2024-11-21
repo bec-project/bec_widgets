@@ -1403,6 +1403,14 @@ class BECMainWindow(RPCBase):
         Get all registered RPC objects.
         """
 
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
+        """
+
+
 class BECMotorMap(RPCBase):
     @property
     @rpc_call
@@ -2267,6 +2275,13 @@ class BECQueue(RPCBase):
         Get all registered RPC objects.
         """
 
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
+        """
+
 
 class BECStatusBox(RPCBase):
     @property
@@ -2283,6 +2298,13 @@ class BECStatusBox(RPCBase):
     def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
+        """
+
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
         """
 
 
@@ -3007,6 +3029,13 @@ class DeviceBrowser(RPCBase):
         Get all registered RPC objects.
         """
 
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
+        """
+
 
 class DeviceComboBox(RPCBase):
     @property
@@ -3023,6 +3052,13 @@ class DeviceComboBox(RPCBase):
     def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
+        """
+
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
         """
 
 
@@ -3043,6 +3079,13 @@ class DeviceInputBase(RPCBase):
         Get all registered RPC objects.
         """
 
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
+        """
+
 
 class DeviceLineEdit(RPCBase):
     @property
@@ -3059,6 +3102,13 @@ class DeviceLineEdit(RPCBase):
     def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
+        """
+
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
         """
 
 
@@ -3079,6 +3129,13 @@ class DeviceSignalInputBase(RPCBase):
         Get all registered RPC objects.
         """
 
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
+        """
+
 
 class LMFitDialog(RPCBase):
     @property
@@ -3095,6 +3152,13 @@ class LMFitDialog(RPCBase):
     def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
+        """
+
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
         """
 
 
@@ -3186,6 +3250,13 @@ class ResetButton(RPCBase):
         Get all registered RPC objects.
         """
 
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
+        """
+
 
 class ResumeButton(RPCBase):
     @property
@@ -3202,6 +3273,13 @@ class ResumeButton(RPCBase):
     def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
+        """
+
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
         """
 
 
@@ -3501,6 +3579,13 @@ class ScanControl(RPCBase):
         Get all registered RPC objects.
         """
 
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
+        """
+
 
 class SignalComboBox(RPCBase):
     @property
@@ -3517,6 +3602,13 @@ class SignalComboBox(RPCBase):
     def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
+        """
+
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
         """
 
 
@@ -3537,6 +3629,13 @@ class SignalLineEdit(RPCBase):
         Get all registered RPC objects.
         """
 
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
+        """
+
 
 class StopButton(RPCBase):
     @property
@@ -3553,6 +3652,13 @@ class StopButton(RPCBase):
     def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
+        """
+
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
         """
 
 

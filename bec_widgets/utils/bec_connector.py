@@ -69,7 +69,7 @@ class Worker(QRunnable):
 class BECConnector:
     """Connection mixin class to handle BEC client and device manager"""
 
-    USER_ACCESS = ["_config_dict", "_get_all_rpc"]
+    USER_ACCESS = ["_config_dict", "_get_all_rpc", "_rpc_id"]
     EXIT_HANDLERS = {}
 
     def __init__(self, client=None, config: ConnectionConfig = None, gui_id: str = None):
