@@ -17,6 +17,7 @@ from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.widgets.containers.dock import BECDockArea
 from bec_widgets.widgets.containers.figure import BECFigure
+from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
 messages = lazy_import("bec_lib.messages")
 logger = bec_logger.logger
@@ -176,7 +177,7 @@ def main():
 
     from qtpy.QtCore import QSize
     from qtpy.QtGui import QIcon
-    from qtpy.QtWidgets import QApplication, QMainWindow
+    from qtpy.QtWidgets import QApplication
 
     import bec_widgets
 
@@ -222,11 +223,13 @@ def main():
             )
             app.setWindowIcon(icon)
 
-            win = QMainWindow()
+            server = _start_server(args.id, gui_class, args.config)
+
+            win = BECMainWindow(gui_id=f"{server.gui_id}:window")
             win.setAttribute(Qt.WA_ShowWithoutActivating)
             win.setWindowTitle("BEC Widgets")
 
-            server = _start_server(args.id, gui_class, args.config)
+            RPCRegister().add_rpc(win)
 
             gui = server.gui
             win.setCentralWidget(gui)

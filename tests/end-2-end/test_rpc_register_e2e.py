@@ -24,7 +24,7 @@ def test_rpc_register_list_connections(rpc_server_figure):
     }
     curves_expected.update({curve._gui_id: type(curve).__name__ for curve in curve_1D.curves})
     curves_expected.update({curve._gui_id: type(curve).__name__ for curve in curve_2D.curves})
-    fig_expected = {fig._rpc_id: type(fig).__name__}
+    fig_expected = {fig._rpc_id: type(fig).__name__, fig._rpc_id + ":window": "BECMainWindow"}
     image_item_expected = {
         fig.widgets[im._rpc_id].images[0]._rpc_id: type(fig.widgets[im._rpc_id].images[0]).__name__
     }
@@ -36,5 +36,5 @@ def test_rpc_register_list_connections(rpc_server_figure):
         **image_item_expected,
     }
 
-    assert len(all_connections) == 8
+    assert len(all_connections) == 9
     assert all_connections == all_connections_expected
