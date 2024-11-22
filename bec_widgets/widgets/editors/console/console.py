@@ -11,7 +11,9 @@ import html
 import os
 import pty
 import re
+import signal
 import sys
+import time
 
 import pyte
 from pygments.token import Token
@@ -353,6 +355,12 @@ class BECConsole(QtWidgets.QWidget):
         prompt_pattern = "".join(regex_parts)
         self.term._prompt_re = re.compile(prompt_pattern + r"\s*$")
 
+    def terminate(self, timeout=10):
+        self.term.stop(timeout=timeout)
+
+    def send_ctrl_c(self, timeout=None):
+        self.term.send_ctrl_c(timeout)
+
     cols = pyqtProperty(int, get_cols, set_cols)
     rows = pyqtProperty(int, get_rows, set_rows)
     bgcolor = pyqtProperty(QColor, get_bgcolor, set_bgcolor)
@@ -372,6 +380,8 @@ class _TerminalWidget(QtWidgets.QPlainTextEdit):
         self._prompt_re = None
         # last prompt
         self._prompt_str = None
+        # process pid
+        self.pid = None
         # file descriptor to communicate with the subprocess
         self.fd = None
         self.backend = None
@@ -468,7 +478,7 @@ class _TerminalWidget(QtWidgets.QPlainTextEdit):
         self.update_term_size()
 
         # Start the Bash process
-        self.fd = self.fork_shell()
+        self.pid, self.fd = self.fork_shell()
 
         if self.fd:
             # Create the ``Backend`` object
@@ -483,6 +493,62 @@ class _TerminalWidget(QtWidgets.QPlainTextEdit):
         self.clear()
         self.appendHtml(f"<br><h2>{repr(self._cmd)} - Process exited.</h2>")
         self.setReadOnly(True)
+
+    def send_ctrl_c(self, wait_prompt=True, timeout=None):
+        """Send CTRL-C to the process
+
+        If wait_prompt=True (default), wait for a new prompt after CTRL-C
+        If no prompt is displayed after 'timeout' seconds, TimeoutError is raised
+        """
+        os.kill(self.pid, signal.SIGINT)
+        if wait_prompt:
+            timeout_error = False
+            if timeout:
+
+                def set_timeout_error():
+                    nonlocal timeout_error
+                    timeout_error = True
+
+                timeout_timer = QTimer()
+                timeout_timer.singleShot(timeout * 1000, set_timeout_error)
+            while self._prompt_str is None:
+                QApplication.instance().process_events()
+                if timeout_error:
+                    raise TimeoutError(
+                        f"CTRL-C: could not get back to prompt after {timeout} seconds."
+                    )
+
+    def _is_running(self):
+        if os.waitpid(self.pid, os.WNOHANG) == (0, 0):
+            return True
+        return False
+
+    def stop(self, kill=True, timeout=None):
+        """Stop the running process
+
+        SIGTERM is the default signal for terminating processes.
+
+        If kill=True (default), SIGKILL will be sent if the process does not exit after timeout
+        """
+        # try to exit gracefully
+        os.kill(self.pid, signal.SIGTERM)
+
+        # wait until process is truly dead
+        t0 = time.perf_counter()
+        while self._is_running():
+            time.sleep(1)
+            if timeout is not None and time.perf_counter() - t0 > timeout:
+                # still alive after 'timeout' seconds
+                if kill:
+                    # send SIGKILL and make a last check in loop
+                    os.kill(self.pid, signal.SIGKILL)
+                    kill = False
+                else:
+                    # still running after timeout...
+                    raise TimeoutError(
+                        f"Could not terminate process with pid: {self.pid} within timeout"
+                    )
+        self.process_exited()
 
     def data_ready(self, screen):
         """Handle new screen: redraw, set scroll bar max and slider, move cursor to its position
@@ -762,7 +828,7 @@ class _TerminalWidget(QtWidgets.QPlainTextEdit):
             # We are in the parent process.
             # Set file control
             fcntl.fcntl(fd, fcntl.F_SETFL, os.O_NONBLOCK)
-            return fd
+            return pid, fd
 
 
 if __name__ == "__main__":
