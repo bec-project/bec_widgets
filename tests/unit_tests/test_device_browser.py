@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 from unittest import mock
 
 import pytest
-from qtpy.QtCore import Qt
+from qtpy.QtCore import QPoint, Qt
 
 from bec_widgets.widgets.services.device_browser.device_browser import DeviceBrowser
 
@@ -55,10 +55,10 @@ def test_device_item_mouse_press_event(device_browser, qtbot):
     # Simulate a left mouse press event on the device item
     device_item: QListWidgetItem = device_browser.ui.device_list.itemAt(0, 0)
     widget: DeviceItem = device_browser.ui.device_list.itemWidget(device_item)
-    qtbot.mousePress(widget.label, Qt.MouseButton.LeftButton)
+    qtbot.mouseClick(widget.label, Qt.MouseButton.LeftButton)
 
 
-def test_device_item_mouse_press_event_creates_drag(device_browser, qtbot):
+def test_device_item_mouse_press_and_move_events_creates_drag(device_browser, qtbot):
     """
     Test that the mousePressEvent is triggered correctly and initiates a drag.
     """
@@ -67,7 +67,9 @@ def test_device_item_mouse_press_event_creates_drag(device_browser, qtbot):
     device_name = widget.device
     with mock.patch("qtpy.QtGui.QDrag.exec_") as mock_exec:
         with mock.patch("qtpy.QtGui.QDrag.setMimeData") as mock_set_mimedata:
-            qtbot.mousePress(widget.label, Qt.MouseButton.LeftButton)
+            qtbot.mousePress(widget.label, Qt.MouseButton.LeftButton, pos=QPoint(0, 0))
+            qtbot.mouseMove(widget, pos=QPoint(10, 10))
+            qtbot.mouseRelease(widget, Qt.MouseButton.LeftButton)
             mock_set_mimedata.assert_called_once()
             mock_exec.assert_called_once()
             assert mock_set_mimedata.call_args[0][0].text() == device_name
