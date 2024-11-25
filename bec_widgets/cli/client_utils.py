@@ -135,13 +135,26 @@ class RepeatTimer(threading.Timer):
 class BECGuiClientMixin:
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
+        self._auto_updates_enabled = True
+        self._auto_updates = None
         self._gui_started_timer = None
         self._gui_started_event = threading.Event()
         self._process = None
         self._process_output_processing_thread = None
-        self.auto_updates = self._get_update_script()
         self._target_endpoint = MessageEndpoints.scan_status()
         self._selected_device = None
+
+    @property
+    def auto_updates(self):
+        if self._auto_updates_enabled:
+            self._gui_started_event.wait()
+        return self._auto_updates
+
+    def shutdown_auto_updates(self):
+        if self._auto_updates_enabled:
+            if self._auto_updates is not None:
+                self._auto_updates.shutdown()
+                self._auto_updates = None
 
     def _get_update_script(self) -> AutoUpdates | None:
         eps = imd.entry_points(group="bec.widgets.auto_updates")
@@ -188,18 +201,23 @@ class BECGuiClientMixin:
         if isinstance(msg, messages.ScanStatusMessage):
             if not self.gui_is_alive():
                 return
-            self.auto_updates.msg_queue.put(msg)
+            if self._auto_updates_enabled:
+                self.auto_updates.msg_queue.put(msg)
 
     def _gui_post_startup(self):
-        if self.auto_updates is None:
-            AutoUpdates.create_default_dock = True
-            AutoUpdates.enabled = True
-            self.auto_updates = AutoUpdates(gui=self)
-            if self.auto_updates.create_default_dock:
-                self.auto_updates.start_default_dock()
-            fig = self.auto_updates.get_default_figure()
-            self._gui_started_event.set()
-            self.show_all()
+        if self._auto_updates_enabled:
+            if self._auto_updates is None:
+                auto_updates = self._get_update_script()
+                if auto_updates is None:
+                    AutoUpdates.create_default_dock = True
+                    AutoUpdates.enabled = True
+                    auto_updates = AutoUpdates(gui=self)
+                if auto_updates.create_default_dock:
+                    auto_updates.start_default_dock()
+                    # fig = auto_updates.get_default_figure()
+                self._auto_updates = auto_updates
+        self._gui_started_event.set()
+        self.show_all()
 
     def start_server(self, wait=False) -> None:
         """
@@ -256,9 +274,7 @@ class BECGuiClientMixin:
                 self._process_output_processing_thread.join()
             self._process.wait()
             self._process = None
-        if self.auto_updates is not None:
-            self.auto_updates.shutdown()
-            self.auto_updates = None
+        self.shutdown_auto_updates()
 
 
 class RPCResponseTimeoutError(Exception):
