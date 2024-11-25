@@ -14,7 +14,7 @@ from bec_widgets.utils import Colors
 
 def test_rpc_add_dock_with_figure_e2e(bec_client_lib, rpc_server_dock):
     # BEC client shortcuts
-    dock = BECDockArea(rpc_server_dock)
+    dock = rpc_server_dock
     client = bec_client_lib
     dev = client.device_manager.devices
     scans = client.scans
@@ -124,7 +124,7 @@ def test_rpc_add_dock_with_figure_e2e(bec_client_lib, rpc_server_dock):
 
 
 def test_dock_manipulations_e2e(rpc_server_dock):
-    dock = BECDockArea(rpc_server_dock)
+    dock = rpc_server_dock
 
     d0 = dock.add_dock("dock_0")
     d1 = dock.add_dock("dock_1")
@@ -156,7 +156,7 @@ def test_dock_manipulations_e2e(rpc_server_dock):
 
 
 def test_ring_bar(rpc_server_dock):
-    dock = BECDockArea(rpc_server_dock)
+    dock = rpc_server_dock
 
     d0 = dock.add_dock(name="dock_0")
 
@@ -183,7 +183,7 @@ def test_ring_bar(rpc_server_dock):
 
 
 def test_ring_bar_scan_update(bec_client_lib, rpc_server_dock):
-    dock = BECDockArea(rpc_server_dock)
+    dock = rpc_server_dock
 
     d0 = dock.add_dock("dock_0")
 
@@ -234,39 +234,30 @@ def test_ring_bar_scan_update(bec_client_lib, rpc_server_dock):
     assert bar_config["rings"][1]["max_value"] == final_samy
 
 
-def test_auto_update(bec_client_lib, rpc_server_dock, qtbot):
-    dock = BECDockArea(rpc_server_dock)
-
-    AutoUpdates.enabled = True
-    AutoUpdates.create_default_dock = True
-    dock.auto_updates = AutoUpdates(gui=dock)
-    dock.auto_updates.start_default_dock()
-
-    def get_default_figure():
-        return dock.auto_updates.get_default_figure()
-
-    qtbot.waitUntil(lambda: get_default_figure() is not None, timeout=10000)
-    plt = get_default_figure()
-
-    dock.selected_device = "bpm4i"
-
-    # we need to start the update script manually; normally this is done when the GUI is started
-    dock._start_update_script()
-
+def test_auto_update(bec_client_lib, rpc_server_dock_w_auto_updates, qtbot):
     client = bec_client_lib
     dev = client.device_manager.devices
     scans = client.scans
     queue = client.queue
+    dock = rpc_server_dock_w_auto_updates
+
+    def get_default_figure():
+        return dock.auto_updates.get_default_figure()
+
+    plt = get_default_figure()
+
+    dock.selected_device = "bpm4i"
 
     status = scans.line_scan(dev.samx, -5, 5, steps=10, exp_time=0.05, relative=False)
     status.wait()
 
-    item = queue.scan_storage.storage[-1]
-    last_scan_data = item.live_data if hasattr(item, "live_data") else item.data
-
     # get data from curves
     widgets = plt.widget_list
+    qtbot.waitUntil(lambda: len(plt.widget_list) > 0, timeout=5000)
     plt_data = widgets[0].get_all_data()
+
+    item = queue.scan_storage.storage[-1]
+    last_scan_data = item.live_data if hasattr(item, "live_data") else item.data
 
     # check plotted data
     assert (
@@ -300,4 +291,3 @@ def test_auto_update(bec_client_lib, rpc_server_dock, qtbot):
         plt_data[f"Scan {status.scan.scan_number} - {dock.selected_device}"]["y"]
         == last_scan_data["samy"]["samy"].val
     )
-    dock.auto_updates.shutdown()
