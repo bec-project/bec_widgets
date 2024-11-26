@@ -19,7 +19,6 @@ class Widgets(str, enum.Enum):
     BECColorMapWidget = "BECColorMapWidget"
     BECDockArea = "BECDockArea"
     BECImageWidget = "BECImageWidget"
-    BECMainWindow = "BECMainWindow"
     BECMotorMapWidget = "BECMotorMapWidget"
     BECMultiWaveformWidget = "BECMultiWaveformWidget"
     BECProgressBar = "BECProgressBar"
@@ -62,6 +61,13 @@ class AbortButton(RPCBase):
     def _get_all_rpc(self) -> "dict":
         """
         Get all registered RPC objects.
+        """
+
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
         """
 
 
