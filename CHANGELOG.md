@@ -1,6 +1,67 @@
 # CHANGELOG
 
 
+## v1.6.0 (2024-11-27)
+
+### Bug Fixes
+
+- **tests**: Make use of BECDockArea with client mixin to start server and use it in tests
+  ([`da18c2c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/da18c2ceecf9aeaf0e0ea9b78f4c867b27b9c314))
+
+Depending on the test, auto-updates are enabled or not.
+
+- Differentiate click and drag for DeviceItem, adapt tests accordingly
+  ([`cffcdf2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cffcdf292363249bcc7efa9d130431d0bc727fda))
+
+This fixes the blocking "QDrag.exec_()" on Linux, indeed before the drag'n'drop operation was
+  started with a simple click and it was waiting for drop forever. Now there are 2 different cases,
+  click or drag'n'drop - the drag'n'drop test actually moves the mouse and releases the button.
+
+- **server**: Use dock area by default
+  ([`2fe7f5e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2fe7f5e1510a5ea72676045e6ea3485e6b11c220))
+
+- **rpc**: Gui hide/show also hide/show all floating docks
+  ([`c27d058`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c27d058b01fe604eccec76454e39360122e48515))
+
+- Do not quit automatically when last window is "closed"
+  ([`96e255e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/96e255e4ef394eb79006a66d13e06775ae235667))
+
+Qt confuses closed and hidden
+
+- No need to call inspect.signature - it can fail on methods coming from C (like Qt methods)
+  ([`6029246`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/60292465e9e52d3248ae681c68c07298b9b3ce14))
+
+- Add back accidentally removed variables
+  ([`e998352`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e9983521ed2a1c04af048a55ece70a1943a84313))
+
+### Features
+
+- '._auto_updates_enabled' attribute can be used to activate auto updates installation in
+  BECDockArea
+  ([`31d8703`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/31d87036c9801e639a7ca6fc003c90e0c4edb19d))
+
+- Add rpc_id member to client objects
+  ([`3ba0b1d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3ba0b1daf5b83da840e90fbbc063ed7b86ebe99b))
+
+- **client**: Add show()/hide() methods to "gui" object
+  ([`e68e2b5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e68e2b5978339475b97555c3e20795807932fbc9))
+
+- **server**: Add main window, with proper gui_id derived from given id
+  ([`daf6ea0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/daf6ea0159c9ffc7b53bb7ae6b9abc16a302972c))
+
+- Add main window container widget
+  ([`f80ec33`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f80ec33ae5a261dbcab901ae30f4cc802316e554))
+
+- Asynchronous .start() for GUI
+  ([`2047e48`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2047e484d5a4b2f5ea494a1e49035b35b1bbde35))
+
+- Do not take focus when GUI is loaded
+  ([`1f71d8e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1f71d8e5eded9952f9b34bfc427e2ff44cf5fc18))
+
+- Add '--hide' argument to BEC GUI server
+  ([`1f60fec`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1f60fec7201ed252d7e49bf16f2166ee7f6bed6a))
+
+
 ## v1.5.3 (2024-11-21)
 
 ### Bug Fixes
@@ -147,69 +208,3 @@
 
 
 ## v1.1.0 (2024-10-25)
-
-### Features
-
-- Add filter i/o utility class
-  ([`0350833`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0350833f36e0a7cadce4173f9b1d1fbfdf985375))
-
-### Refactoring
-
-- Do not flush selection upon receiving config update; allow widgetIO to receive kwargs to be able
-  to use get_value to receive string instead of int for QComboBox
-  ([`91959e8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/91959e82de8586934af3ebb5aaa0923930effc51))
-
-- Allow to set selection in DeviceInput; automatic update of selection on device config update;
-  cleanup
-  ([`5eb15b7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5eb15b785f12e30eb8ccbc56d4ad9e759a4cf5eb))
-
-- Cleanup, added device_signal for signal inputs
-  ([`6fb2055`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6fb20552ff57978f4aeb79fd7f062f8d6b5581e7))
-
-### Testing
-
-- **scan_control**: Tests added for grid_scan to ensure scan_args signal validity
-  ([`acb7902`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/acb79020d4be546efc001ff47b6f5cdba2ee9375))
-
-
-## v1.0.2 (2024-10-22)
-
-### Bug Fixes
-
-- **scan_control**: Scan args signal fixed to emit list instead of hardcoded structure
-  ([`4f5448c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4f5448cf51a204e077af162c7f0aed1f1a60e57a))
-
-
-## v1.0.1 (2024-10-22)
-
-### Bug Fixes
-
-- **waveform**: Added support for live_data and data access
-  ([`7469c89`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7469c892c8076fc09e61f173df6920c551241cec))
-
-
-## v1.0.0 (2024-10-18)
-
-### Bug Fixes
-
-- **crosshair**: Downsample clear markers
-  ([`f9a889f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f9a889fc6d380b9e587edcb465203122ea0bffc1))
-
-### Features
-
-- Ability to disable scatter from waveform & compatible crosshair with down sampling
-  ([`2ab12ed`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2ab12ed60abb995abc381d9330fdcf399796d9e5))
-
-
-## v0.119.0 (2024-10-17)
-
-### Bug Fixes
-
-- Fix syntax due to change of api for simulated devices
-  ([`19f4e40`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/19f4e407e00ee242973ca4c3f90e4e41a4d3e315))
-
-- Remove wrongly scoped test
-  ([`a23841b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a23841b2553dc7162da943715d58275c7dc39ed9))
-
-- Rename 'compact' property -> 'compact_view'
-  ([`6982711`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6982711fea5fb8a73845ed7c0692e3ec53ef7871))
