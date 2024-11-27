@@ -261,6 +261,7 @@ class ExpandableMenuAction(ToolBarAction):
 
 class ModularToolBar(QToolBar):
     """Modular toolbar with optional automatic initialization.
+
     Args:
         parent (QWidget, optional): The parent widget of the toolbar. Defaults to None.
         actions (dict, optional): A dictionary of action creators to populate the toolbar. Defaults to None.
@@ -327,3 +328,57 @@ class ModularToolBar(QToolBar):
             self.setOrientation(Qt.Vertical)
         else:
             raise ValueError("Orientation must be 'horizontal' or 'vertical'.")
+
+    def update_material_icon_colors(self, new_color: str | tuple | QColor):
+        """
+        Updates the color of all MaterialIconAction icons in the toolbar.
+
+        Args:
+            new_color (str | tuple | QColor): The new color for the icons.
+        """
+        for action in self.widgets.values():
+            if isinstance(action, MaterialIconAction):
+                action.color = new_color
+                # Refresh the icon
+                updated_icon = action.get_icon()
+                action.action.setIcon(updated_icon)
+
+    def add_action(self, action_id: str, action: ToolBarAction, target_widget: QWidget):
+        """
+        Adds a new action to the toolbar dynamically.
+
+        Args:
+            action_id (str): Unique identifier for the action.
+            action (ToolBarAction): The action to add to the toolbar.
+            target_widget (QWidget): The target widget for the action.
+        """
+        if action_id in self.widgets:
+            raise ValueError(f"Action with ID '{action_id}' already exists.")
+        action.add_to_toolbar(self, target_widget)
+        self.widgets[action_id] = action
+
+    def hide_action(self, action_id: str):
+        """
+        Hides a specific action on the toolbar.
+
+        Args:
+            action_id (str): Unique identifier for the action to hide.
+        """
+        if action_id not in self.widgets:
+            raise ValueError(f"Action with ID '{action_id}' does not exist.")
+        action = self.widgets[action_id]
+        if hasattr(action, "action") and isinstance(action.action, QAction):
+            action.action.setVisible(False)
+
+    def show_action(self, action_id: str):
+        """
+        Shows a specific action on the toolbar.
+
+        Args:
+            action_id (str): Unique identifier for the action to show.
+        """
+        if action_id not in self.widgets:
+            raise ValueError(f"Action with ID '{action_id}' does not exist.")
+        action = self.widgets[action_id]
+        if hasattr(action, "action") and isinstance(action.action, QAction):
+            action.action.setVisible(True)
