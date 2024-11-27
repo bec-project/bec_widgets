@@ -263,15 +263,28 @@ class ModularToolBar(QToolBar):
     """Modular toolbar with optional automatic initialization.
     Args:
         parent (QWidget, optional): The parent widget of the toolbar. Defaults to None.
-        actions (list[ToolBarAction], optional): A list of action creators to populate the toolbar. Defaults to None.
+        actions (dict, optional): A dictionary of action creators to populate the toolbar. Defaults to None.
         target_widget (QWidget, optional): The widget that the actions will target. Defaults to None.
+        orientation (Literal["horizontal", "vertical"], optional): The initial orientation of the toolbar. Defaults to "horizontal".
+        background_color (str, optional): The background color of the toolbar. Defaults to "rgba(0, 0, 0, 0)" - transparent background.
     """
 
-    def __init__(self, parent=None, actions: dict | None = None, target_widget=None):
+    def __init__(
+        self,
+        parent=None,
+        actions: dict | None = None,
+        target_widget=None,
+        orientation: Literal["horizontal", "vertical"] = "horizontal",
+        background_color: str = "rgba(0, 0, 0, 0)",
+    ):
         super().__init__(parent)
 
         self.widgets = defaultdict(dict)
-        self.set_background_color()
+        self.background_color = background_color
+        self.set_background_color(self.background_color)
+
+        # Set the initial orientation
+        self.set_orientation(orientation)
 
         if actions is not None and target_widget is not None:
             self.populate_toolbar(actions, target_widget)
@@ -280,7 +293,7 @@ class ModularToolBar(QToolBar):
         """Populates the toolbar with a set of actions.
 
         Args:
-            actions (list[ToolBarAction]): A list of action creators to populate the toolbar.
+            actions (dict): A dictionary of action creators to populate the toolbar.
             target_widget (QWidget): The widget that the actions will target.
         """
         self.clear()
@@ -288,9 +301,29 @@ class ModularToolBar(QToolBar):
             action.add_to_toolbar(self, target_widget)
             self.widgets[action_id] = action
 
-    def set_background_color(self):
+    def set_background_color(self, color: str = "rgba(0, 0, 0, 0)"):
+        """
+        Sets the background color and other appearance settings.
+
+        Args:
+            color(str): The background color of the toolbar.
+        """
         self.setIconSize(QSize(20, 20))
         self.setMovable(False)
         self.setFloatable(False)
         self.setContentsMargins(0, 0, 0, 0)
-        self.setStyleSheet("QToolBar { background-color: rgba(0, 0, 0, 0); border: none; }")
+        self.background_color = color
+        self.setStyleSheet(f"QToolBar {{ background-color: {color}; border: none; }}")
+
+    def set_orientation(self, orientation: Literal["horizontal", "vertical"]):
+        """Sets the orientation of the toolbar.
+
+        Args:
+            orientation (Literal["horizontal", "vertical"]): The desired orientation of the toolbar.
+        """
+        if orientation == "horizontal":
+            self.setOrientation(Qt.Horizontal)
+        elif orientation == "vertical":
+            self.setOrientation(Qt.Vertical)
+        else:
+            raise ValueError("Orientation must be 'horizontal' or 'vertical'.")
