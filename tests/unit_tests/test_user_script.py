@@ -17,17 +17,20 @@ def dummy_script_with_args(arg1: str, arg2: int = 0):
     pass
 
 
-SCRIPTS = {
-    "dummy_script": {"cls": dummy_script, "fname": "/dummy_path_home_scripts/home_testing.py"},
-    "dummy_script_with_args": {
-        "cls": dummy_script_with_args,
-        "fname": "/dummy_path_bec_lib_scripts/bec_testing.py",
-    },
-}
+@pytest.fixture
+def SCRIPTS(tmp_path):
+    """Create dummy script files"""
+    home_script = f"{tmp_path}/dummy_path_home_scripts/home_testing.py"
+    bec_script = f"{tmp_path}/dummy_path_bec_lib_scripts/bec_testing.py"
+    rtr = {
+        "dummy_script": {"cls": dummy_script, "fname": home_script},
+        "dummy_script_with_args": {"cls": dummy_script_with_args, "fname": bec_script},
+    }
+    return rtr
 
 
 @pytest.fixture
-def user_script_widget(qtbot, mocked_client):
+def user_script_widget(SCRIPTS, qtbot, mocked_client):
     mocked_client._scripts = SCRIPTS
     files = {
         "USER": [SCRIPTS["dummy_script"]["fname"]],
@@ -43,7 +46,7 @@ def user_script_widget(qtbot, mocked_client):
         yield widget
 
 
-def test_user_script_widget_start_up(user_script_widget):
+def test_user_script_widget_start_up(SCRIPTS, user_script_widget):
     """Test init the user_script widget with dummy scripts from above"""
     assert user_script_widget.tree_widget.columnCount() == 2
     assert len(user_script_widget.tree_widget.children()[0].children()) == 6
@@ -71,11 +74,12 @@ def test_user_script_widget_start_up(user_script_widget):
         ]
 
 
-def test_handle_open_script(user_script_widget):
+def test_handle_open_script(SCRIPTS, user_script_widget):
     """Test handling open script"""
     with mock.patch.object(user_script_widget, "open_script") as mock_open_script:
         user_script_widget.handle_edit_button_clicked("home_testing")
-        mock_open_script.assert_called_once_with("/dummy_path_home_scripts/home_testing.py")
+        fp = SCRIPTS["dummy_script"]["fname"]
+        mock_open_script.assert_called_once_with(fp)
 
 
 def test_open_script(user_script_widget):

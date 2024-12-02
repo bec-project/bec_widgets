@@ -16,6 +16,7 @@ import sys
 import time
 
 import pyte
+from bec_lib.logger import bec_logger
 from pygments.token import Token
 from pyte.screens import History
 from qtpy import QtCore, QtGui, QtWidgets
@@ -26,6 +27,8 @@ from qtpy.QtGui import QClipboard, QColor, QPalette, QTextCursor
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QScrollBar, QSizePolicy
 
 from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
+
+logger = bec_logger.logger
 
 ansi_colors = {
     "black": "#000000",
@@ -360,6 +363,24 @@ class BECConsole(QtWidgets.QWidget):
 
     def send_ctrl_c(self, timeout=None):
         self.term.send_ctrl_c(timeout)
+
+    def cleanup(self):
+        """Cleanup the terminal"""
+        self.execute_command("\x03")  # Ctrl-C
+        self.execute_command("exit()")
+        timeout = 5
+        interval = 0.1
+        timer = 0
+        # os.close(self.term.fd)
+        while self.term.fd is not None:
+            time.sleep(interval)
+            timer += interval
+            if timer > 0.8 * timeout:
+                logger.warning(f"Terminal still cleaning up after {timer:.1f} seconds")
+            if timer > timeout:
+                logger.error(f"Terminal cleanup timed out after {timeout} seconds")
+                break
+        self.deleteLater()
 
     cols = pyqtProperty(int, get_cols, set_cols)
     rows = pyqtProperty(int, get_rows, set_rows)

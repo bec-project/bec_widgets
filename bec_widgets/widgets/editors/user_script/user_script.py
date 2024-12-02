@@ -11,8 +11,7 @@ import bec_lib
 from bec_qthemes import material_icon
 from pydantic import BaseModel
 from pygments.token import Token
-from qtpy.QtCore import QSize, Qt, Signal, Slot
-from qtpy.QtGui import QColor
+from qtpy.QtCore import QSize, Signal, Slot
 from qtpy.QtWidgets import (
     QDialog,
     QGridLayout,
@@ -71,7 +70,7 @@ class EnchancedQTreeWidget(QTreeWidget):
         """Update the style sheet"""
         name = __class__.__name__
         colors = get_accent_colors()
-        # pylint: ignore=protected-access
+        # pylint: disable=protected-access
         color = colors._palette.midlight().color().name()
         self.setStyleSheet(
             f"""
@@ -335,6 +334,7 @@ class UserScriptWidget(BECWidget, QWidget):
             (Token.Prompt, "❯❯"),
         )
         self._console.start()
+        # Comment to not hide the console for debugging
         self._console.hide()
 
     def init_ui(self):
@@ -347,6 +347,7 @@ class UserScriptWidget(BECWidget, QWidget):
         layout.addWidget(self.button_new_script)
         self.layout.addWidget(widget)
         self.layout.addWidget(self.tree_widget)
+        # Uncomment to show the console for debugging
         # self.layout.addWidget(self._console)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
@@ -409,7 +410,6 @@ class UserScriptWidget(BECWidget, QWidget):
                 name = name + ".py"
             fname = os.path.join(self._base_path, name)
             # Check if file exists on disk
-
             if os.path.exists(fname):
                 logger.error(f"File {fname} already exists")
                 raise FileExistsError(f"File {fname} already exists")
@@ -447,7 +447,7 @@ class UserScriptWidget(BECWidget, QWidget):
                     )
         return files
 
-    @SafeSlot(popup_error=True)
+    @SafeSlot()
     def reload_user_scripts(self, *args, **kwargs):
         """Reload the user scripts"""
         self.client.load_all_user_scripts()
@@ -536,7 +536,8 @@ if __name__ == "__main__":
     set_theme("dark")
     w = QWidget()
     layout = QVBoxLayout(w)
-    layout.addWidget(DarkModeButton())
     layout.addWidget(UserScriptWidget())
+    w.setFixedHeight(400)
+    w.setFixedWidth(400)
     w.show()
     app.exec_()
