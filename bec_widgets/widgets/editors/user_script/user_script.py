@@ -389,8 +389,9 @@ class UserScriptWidget(BECWidget, QWidget):
             self._vscode_editor.show()
             # Only works after show was called for the first time
             self._vscode_editor.zen_mode()
-        self._code_dialog.show()
-        self._vscode_editor.show()
+        else:
+            self._code_dialog.show()
+            self._vscode_editor.show()
         self._vscode_editor.open_file(fname)
 
     @SafeSlot(popup_error=True)
@@ -487,8 +488,15 @@ class UserScriptWidget(BECWidget, QWidget):
         info = self.client._scripts[text]
         caller_args = inspect.getfullargspec(info["cls"])
         args = caller_args.args + caller_args.kwonlyargs
-        # Default of args are ignored
+        if args:
+            self._handle_call_with_args(text, caller_args)
+        else:
+            self._console.execute_command(f"{text}()")
+
+    def _handle_call_with_args(self, text: str, caller_args: inspect.FullArgSpec) -> None:
+        """Handle the call with arguments"""
         defaults = []
+        args = caller_args.args + caller_args.kwonlyargs
         for value in args:
             if caller_args.kwonlydefaults is not None:
                 defaults.append(caller_args.kwonlydefaults.get(value, None))
@@ -498,14 +506,11 @@ class UserScriptWidget(BECWidget, QWidget):
         self._script_dialog = InputDialog(
             parent=self, header="Script Arguments", info=info, fields=fields
         )
-        if args:
-            if self._script_dialog.exec_():
-                args = self._script_dialog.get_inputs()
-                args = ", ".join([f"{k}={v}" for k, v in args.items()])
-                self._console.execute_command(f"{text}({args})")
-        else:
-            self._console.execute_command(f"{text}()")
-        self._script_dialog = None
+        if self._script_dialog.exec_():
+            args = self._script_dialog.get_inputs()
+            args = ", ".join([f"{k}={v}" for k, v in args.items()])
+            self._console.execute_command(f"{text}({args})")
+            self._script_dialog = None
 
     def cleanup(self):
         """Cleanup the widget"""
