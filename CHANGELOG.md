@@ -1,14 +1,32 @@
 # CHANGELOG
 
 
+## v1.7.0 (2024-12-02)
+
+### Bug Fixes
+
+- **tests**: Add test for Console widget
+  ([`da579b6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/da579b6d213bcdf28c40c1a9e4e2535fdde824fb))
+
+### Features
+
+- **console**: Add "prompt" signal to inform when shell is at prompt
+  ([`3aeb0b6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3aeb0b66fbeb03d3d0ee60e108cc6b98fd9aa9b9))
+
+- **console**: Add 'terminate' and 'send_ctrl_c' methods to Console
+  ([`02086ae`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/02086aeae09233ec4e6ccc0e6a17f2b078d500b8))
+
+.terminate() ends the started process, sending SIGTERM signal. If process is not dead after optional
+  timeout, SIGKILL is sent. .send_ctrl_c() sends SIGINT to the child process, and waits for prompt
+  until optional timeout is reached. Timeouts raise 'TimeoutError' exception.
+
+
 ## v1.6.0 (2024-11-27)
 
 ### Bug Fixes
 
-- **tests**: Make use of BECDockArea with client mixin to start server and use it in tests
-  ([`da18c2c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/da18c2ceecf9aeaf0e0ea9b78f4c867b27b9c314))
-
-Depending on the test, auto-updates are enabled or not.
+- Add back accidentally removed variables
+  ([`e998352`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e9983521ed2a1c04af048a55ece70a1943a84313))
 
 - Differentiate click and drag for DeviceItem, adapt tests accordingly
   ([`cffcdf2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cffcdf292363249bcc7efa9d130431d0bc727fda))
@@ -16,12 +34,6 @@ Depending on the test, auto-updates are enabled or not.
 This fixes the blocking "QDrag.exec_()" on Linux, indeed before the drag'n'drop operation was
   started with a simple click and it was waiting for drop forever. Now there are 2 different cases,
   click or drag'n'drop - the drag'n'drop test actually moves the mouse and releases the button.
-
-- **server**: Use dock area by default
-  ([`2fe7f5e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2fe7f5e1510a5ea72676045e6ea3485e6b11c220))
-
-- **rpc**: Gui hide/show also hide/show all floating docks
-  ([`c27d058`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c27d058b01fe604eccec76454e39360122e48515))
 
 - Do not quit automatically when last window is "closed"
   ([`96e255e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/96e255e4ef394eb79006a66d13e06775ae235667))
@@ -31,8 +43,16 @@ Qt confuses closed and hidden
 - No need to call inspect.signature - it can fail on methods coming from C (like Qt methods)
   ([`6029246`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/60292465e9e52d3248ae681c68c07298b9b3ce14))
 
-- Add back accidentally removed variables
-  ([`e998352`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e9983521ed2a1c04af048a55ece70a1943a84313))
+- **rpc**: Gui hide/show also hide/show all floating docks
+  ([`c27d058`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c27d058b01fe604eccec76454e39360122e48515))
+
+- **server**: Use dock area by default
+  ([`2fe7f5e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2fe7f5e1510a5ea72676045e6ea3485e6b11c220))
+
+- **tests**: Make use of BECDockArea with client mixin to start server and use it in tests
+  ([`da18c2c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/da18c2ceecf9aeaf0e0ea9b78f4c867b27b9c314))
+
+Depending on the test, auto-updates are enabled or not.
 
 ### Features
 
@@ -40,17 +60,14 @@ Qt confuses closed and hidden
   BECDockArea
   ([`31d8703`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/31d87036c9801e639a7ca6fc003c90e0c4edb19d))
 
-- Add rpc_id member to client objects
-  ([`3ba0b1d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3ba0b1daf5b83da840e90fbbc063ed7b86ebe99b))
-
-- **client**: Add show()/hide() methods to "gui" object
-  ([`e68e2b5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e68e2b5978339475b97555c3e20795807932fbc9))
-
-- **server**: Add main window, with proper gui_id derived from given id
-  ([`daf6ea0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/daf6ea0159c9ffc7b53bb7ae6b9abc16a302972c))
+- Add '--hide' argument to BEC GUI server
+  ([`1f60fec`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1f60fec7201ed252d7e49bf16f2166ee7f6bed6a))
 
 - Add main window container widget
   ([`f80ec33`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f80ec33ae5a261dbcab901ae30f4cc802316e554))
+
+- Add rpc_id member to client objects
+  ([`3ba0b1d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3ba0b1daf5b83da840e90fbbc063ed7b86ebe99b))
 
 - Asynchronous .start() for GUI
   ([`2047e48`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2047e484d5a4b2f5ea494a1e49035b35b1bbde35))
@@ -58,8 +75,11 @@ Qt confuses closed and hidden
 - Do not take focus when GUI is loaded
   ([`1f71d8e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1f71d8e5eded9952f9b34bfc427e2ff44cf5fc18))
 
-- Add '--hide' argument to BEC GUI server
-  ([`1f60fec`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1f60fec7201ed252d7e49bf16f2166ee7f6bed6a))
+- **client**: Add show()/hide() methods to "gui" object
+  ([`e68e2b5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e68e2b5978339475b97555c3e20795807932fbc9))
+
+- **server**: Add main window, with proper gui_id derived from given id
+  ([`daf6ea0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/daf6ea0159c9ffc7b53bb7ae6b9abc16a302972c))
 
 
 ## v1.5.3 (2024-11-21)
@@ -192,19 +212,3 @@ Qt confuses closed and hidden
 
 - **colormap_button**: Colormap button with menu to select colormap filtered by the colormap type
   ([`b039933`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b039933405e2fbe92bd81bd0748e79e8d443a741))
-
-
-## v1.2.0 (2024-10-25)
-
-### Features
-
-- **colors**: Evenly spaced color generation + new golden ratio calculation
-  ([`40c9fea`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/40c9fea35f869ef52e05948dd1989bcd99f602e0))
-
-### Refactoring
-
-- Add bec_lib version to statusbox
-  ([`5d4b86e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5d4b86e1c6e1800051afce4f991153e370767fa6))
-
-
-## v1.1.0 (2024-10-25)
