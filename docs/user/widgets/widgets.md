@@ -134,6 +134,15 @@ Display status of BEC services.
 
 Display current scan queue.
 ```
+
+```{grid-item-card} User Script Widget
+:link: user.widgets.user_script_widget
+:link-type: ref
+:img-top: /assets/widget_screenshots/user_script_widget.png
+
+Run user-defined scripts directly from the BEC GUI.
+```
+
 ````
 
 ## BEC Utility Widgets
@@ -238,6 +247,7 @@ Display DAP summaries of LMFit models in a window.
 
 Select DAP model from a list of DAP processes.
 ```
+
 ````
 
 ```{toctree}
@@ -270,5 +280,6 @@ signal_input/signal_input.md
 position_indicator/position_indicator.md
 lmfit_dialog/lmfit_dialog.md
 dap_combo_box/dap_combo_box.md
+user_script_widget/user_script_widget.md
 
 ```
