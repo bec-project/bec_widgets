@@ -40,10 +40,12 @@ def user_script_widget(SCRIPTS, qtbot, mocked_client):
         "bec_widgets.widgets.editors.user_script.user_script.UserScriptWidget.get_script_files",
         return_value=files,
     ):
-        widget = UserScriptWidget(client=mocked_client)
-        qtbot.addWidget(widget)
-        qtbot.waitExposed(widget)
-        yield widget
+        with mock.patch("bec_widgets.widgets.editors.user_script.user_script", "BECConsole"):
+            with mock.patch("bec_widgets.widgets.editors.user_script.user_script", "VSCodeEditor"):
+                widget = UserScriptWidget(client=mocked_client)
+                qtbot.addWidget(widget)
+                qtbot.waitExposed(widget)
+                yield widget
 
 
 def test_user_script_widget_start_up(SCRIPTS, user_script_widget):
