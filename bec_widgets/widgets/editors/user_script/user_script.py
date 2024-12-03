@@ -211,6 +211,10 @@ class VSCodeDialog(QDialog):
         self.setMinimumHeight(600)
         self.layout = QVBoxLayout(self)
         self.editor = editor
+        self.init_ui()
+
+    def init_ui(self):
+        """Initialize the UI. Note: this makes the code easier to test."""
         self.layout.addWidget(self.editor)
 
 
@@ -284,21 +288,43 @@ class ScriptBlock(BaseModel):
 
 
 class UserScriptWidget(BECWidget, QWidget):
-    """Dialog for displaying the fit summary and params for LMFit DAP processes"""
+    """Dialog for displaying the fit summary and params for LMFit DAP processes."""
 
     PLUGIN = True
 
     USER_ACCESS = []
     ICON_NAME = "manage_accounts"
 
-    def __init__(self, parent=None, client=None, config=None, gui_id: str | None = None):
-        """"""
+    def __init__(
+        self,
+        parent=None,
+        client=None,
+        config=None,
+        gui_id: str | None = None,
+        vs_code_editor=None,
+        bec_console=None,
+    ):
+        """
+        Initialize the widget
+
+        Args:
+            parent (QWidget): The parent widget
+            client (BECClient): The BEC client
+            config (dict): The configuration
+            gui_id (str): The GUI ID
+            vs_code_editor (VSCodeEditor): The VSCode editor, dep injection here makes makes testing easier, if None defaults to VSCodeEditor
+            bec_console (BECConsole): The BEC console, note this makes testing easier, if None defaults to BECConsole
+        """
         super().__init__(client=client, config=config, gui_id=gui_id, theme_update=True)
         QWidget.__init__(self, parent=parent)
         self.button_new_script = QPushButton(parent=self, text="New Script")
         self.button_new_script.setObjectName("button_new_script")
-        self._vscode_editor = VSCodeEditor(parent=self, client=self.client, gui_id=self.gui_id)
-        self._console = BECConsole(parent=self)
+        if vs_code_editor is None:
+            vs_code_editor = VSCodeEditor(parent=self, client=self.client, gui_id=self.gui_id)
+        self._vscode_editor = vs_code_editor
+        if bec_console is None:
+            bec_console = BECConsole(parent=self)
+        self._console = bec_console
         self.tree_widget = EnchancedQTreeWidget(parent=self)
         self.layout = QVBoxLayout(self)
         self.user_scripts = defaultdict(lambda: ScriptBlock)

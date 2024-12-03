@@ -36,16 +36,19 @@ def user_script_widget(SCRIPTS, qtbot, mocked_client):
         "USER": [SCRIPTS["dummy_script"]["fname"]],
         "BEC": [SCRIPTS["dummy_script_with_args"]["fname"]],
     }
+    mock_console = mock.MagicMock()
+    mock_vscode = mock.MagicMock()
     with mock.patch(
         "bec_widgets.widgets.editors.user_script.user_script.UserScriptWidget.get_script_files",
         return_value=files,
     ):
-        with mock.patch("bec_widgets.widgets.editors.user_script.user_script", "BECConsole"):
-            with mock.patch("bec_widgets.widgets.editors.user_script.user_script", "VSCodeEditor"):
-                widget = UserScriptWidget(client=mocked_client)
-                qtbot.addWidget(widget)
-                qtbot.waitExposed(widget)
-                yield widget
+        with mock.patch("bec_widgets.widgets.editors.user_script.user_script.VSCodeDialog.init_ui"):
+            widget = UserScriptWidget(
+                client=mocked_client, vs_code_editor=mock_vscode, bec_console=mock_console
+            )
+            qtbot.addWidget(widget)
+            qtbot.waitExposed(widget)
+            yield widget
 
 
 def test_user_script_widget_start_up(SCRIPTS, user_script_widget):
