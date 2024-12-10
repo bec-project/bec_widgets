@@ -93,17 +93,24 @@ def patch_designer():  # pragma: no cover
             _extend_path_var("PATH", os.fspath(Path(sys._base_executable).parent), True)
     else:
         if sys.platform == "linux":
-            suffix = f"{sys.abiflags}.so"
             env_var = "LD_PRELOAD"
+            current_pid = os.getpid()
+            with open(f"/proc/{current_pid}/maps", "rt") as f:
+                for line in f:
+                    if "libpython" in line:
+                        lib_path = line.split()[-1]
+                        os.environ[env_var] = lib_path
+                        break
+
         elif sys.platform == "darwin":
             suffix = ".dylib"
             env_var = "DYLD_INSERT_LIBRARIES"
+            version = f"{major_version}.{minor_version}"
+            library_name = f"libpython{version}{suffix}"
+            lib_path = str(Path(sysconfig.get_config_var("LIBDIR")) / library_name)
+            os.environ[env_var] = lib_path
         else:
             raise RuntimeError(f"Unsupported platform: {sys.platform}")
-        version = f"{major_version}.{minor_version}"
-        library_name = f"libpython{version}{suffix}"
-        lib_path = str(Path(sysconfig.get_config_var("LIBDIR")) / library_name)
-        os.environ[env_var] = lib_path
 
         if is_pyenv_python() or is_virtual_env():
             # append all editable packages to the PYTHONPATH
