@@ -408,9 +408,9 @@ class LayoutManagerWidget(QWidget):
 
     def remove(
         self,
-        row: Optional[int] = None,
-        col: Optional[int] = None,
-        coordinates: Optional[Tuple[int, int]] = None,
+        row: int | None = None,
+        col: int | None = None,
+        coordinates: Tuple[int, int] | None = None,
     ) -> None:
         """
         Remove a widget from the layout. Can be removed by widget ID or by coordinates.
