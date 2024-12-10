@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.9.1 (2024-12-10)
+
+### Bug Fixes
+
+- **designer**: General way to find python lib on linux
+  ([`6563abf`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6563abfddc9fc9baba6769022d6925545decdba9))
+
+
 ## v1.9.0 (2024-12-10)
 
 ### Features
@@ -200,13 +208,3 @@ Depending on the test, auto-updates are enabled or not.
 
 
 ## v1.3.3 (2024-11-07)
-
-### Bug Fixes
-
-- **scan_control**: Devicelineedit kwargs readings changed to get name of the positioner
-  ([`5fabd4b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5fabd4bea95bafd2352102686357cc1db80813fd))
-
-### Documentation
-
-- Update outdated text in docs
-  ([`4f0693c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4f0693cae34b391d75884837e1ae6353a0501868))
