@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.10.0 (2024-12-10)
+
+### Features
+
+- **layout_manager**: Grid layout manager widget
+  ([`17a63e3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/17a63e3b639ecf6b41c379717d81339b04ef10f8))
+
+
 ## v1.9.1 (2024-12-10)
 
 ### Bug Fixes
@@ -193,9 +201,6 @@ Depending on the test, auto-updates are enabled or not.
 - **crosshair**: Label of coordinates of TextItem is updated according to the current theme of qapp
   ([`4f31ea6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4f31ea655cf6190e141e6a2720a2d6da517a2b5b))
 
-- **crosshair**: Log is separately scaled for backend logic and for signal emit
-  ([`b2eb71a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b2eb71aae0b6a7c82158f2d150ae1e31411cfdeb))
-
 ### Features
 
 - **crosshair**: Textitem to display crosshair coordinates
@@ -205,6 +210,3 @@ Depending on the test, auto-updates are enabled or not.
 
 - **crosshair**: Tests extended
   ([`64df805`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/64df805a9ed92bb97e580ac3bc0a1bbd2b1cb81e))
-
-
-## v1.3.3 (2024-11-07)
