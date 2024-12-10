@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.9.0 (2024-12-10)
+
+### Features
+
+- **side_menu**: Side menu with stack widget added
+  ([`c7d7c6d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c7d7c6d9ed7c2dcc42b33fcd590f1f27499322c1))
+
+### Testing
+
+- **side_panel**: Tests added
+  ([`9b95b5d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9b95b5d6164ff42673dbbc3031e5b1f45fbcde0a))
+
+
 ## v1.8.0 (2024-12-10)
 
 ### Features
@@ -197,16 +210,3 @@ Depending on the test, auto-updates are enabled or not.
 
 - Update outdated text in docs
   ([`4f0693c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4f0693cae34b391d75884837e1ae6353a0501868))
-
-
-## v1.3.2 (2024-11-05)
-
-### Bug Fixes
-
-- **plot_base**: Legend text color is changed when changing dark-light theme
-  ([`2304c9f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2304c9f8497c1ab1492f3e6690bb79b0464c0df8))
-
-### Build System
-
-- Pyside6 version fixed 6.7.2
-  ([`c6e48ec`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c6e48ec1fe5aaee6a7c7a6f930f1520cd439cdb2))
