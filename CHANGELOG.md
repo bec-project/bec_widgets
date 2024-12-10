@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## v1.8.0 (2024-12-10)
+
+### Features
+
+- **modular_toolbar**: Material icons can be added/removed/hide/show/update dynamically
+  ([`a55134c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a55134c3bfcbda6dc2d33a17cf5a83df8be3fa7f))
+
+- **modular_toolbar**: Orientation setting
+  ([`5fdb232`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5fdb2325ae970a7ecf4e2f4960710029891ab943))
+
+- **round_frame**: Rounded frame for plot widgets and contrast adjustments
+  ([`6a36ca5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6a36ca512d88f2b4fe916ac991e4f17ae0baffab))
+
+### Testing
+
+- **modular_toolbar**: Tests added
+  ([`9370351`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9370351abbd7a151065ea9300c500d5bea8ee4f6))
+
+
 ## v1.7.0 (2024-12-02)
 
 ### Bug Fixes
@@ -191,24 +210,3 @@ Depending on the test, auto-updates are enabled or not.
 
 - Pyside6 version fixed 6.7.2
   ([`c6e48ec`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c6e48ec1fe5aaee6a7c7a6f930f1520cd439cdb2))
-
-
-## v1.3.1 (2024-10-31)
-
-### Bug Fixes
-
-- **ophyd_kind_util**: Kind enums are imported from the bec widget util class
-  ([`940ee65`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/940ee6552c1ee8d9b4e4a74c62351f2e133ab678))
-
-
-## v1.3.0 (2024-10-30)
-
-### Bug Fixes
-
-- **colors**: Extend color map validation for matplotlib and colorcet maps (if available)
-  ([`14dd8c5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/14dd8c5b2947c92f6643b888d71975e4e8d4ee88))
-
-### Features
-
-- **colormap_button**: Colormap button with menu to select colormap filtered by the colormap type
-  ([`b039933`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b039933405e2fbe92bd81bd0748e79e8d443a741))
