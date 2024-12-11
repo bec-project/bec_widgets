@@ -2,8 +2,44 @@ import functools
 import sys
 import traceback
 
-from qtpy.QtCore import QObject, Qt, Signal, Slot
+from qtpy.QtCore import Property, QObject, Qt, Signal, Slot
 from qtpy.QtWidgets import QApplication, QMessageBox, QPushButton, QVBoxLayout, QWidget
+
+
+def SafeProperty(prop_type, *prop_args, popup_error: bool = False, **prop_kwargs):
+    """
+    Decorator to create a Qt Property with a safe setter that won't crash Designer on errors.
+    Behaves similarly to SafeSlot, but for properties.
+
+    Args:
+        prop_type: The property type (e.g., str, bool, "QStringList", etc.)
+        popup_error (bool): If True, show popup on error, otherwise just handle it silently.
+        *prop_args, **prop_kwargs: Additional arguments and keyword arguments accepted by Property.
+    """
+
+    def decorator(getter):
+        class PropertyWrapper:
+            def __init__(self, getter_func):
+                self.getter_func = getter_func
+
+            def setter(self, setter_func):
+                @functools.wraps(setter_func)
+                def safe_setter(self_, value):
+                    try:
+                        return setter_func(self_, value)
+                    except Exception:
+                        if popup_error:
+                            ErrorPopupUtility().custom_exception_hook(
+                                *sys.exc_info(), popup_error=True
+                            )
+                        else:
+                            return
+
+                return Property(prop_type, self.getter_func, safe_setter, *prop_args, **prop_kwargs)
+
+        return PropertyWrapper(getter)
+
+    return decorator
 
 
 def SafeSlot(*slot_args, **slot_kwargs):  # pylint: disable=invalid-name
@@ -90,6 +126,12 @@ class _ErrorPopupUtility(QObject):
         msg.setMinimumWidth(600)
         msg.setMinimumHeight(400)
         msg.exec_()
+
+    def show_property_error(self, title, message, widget):
+        """
+        Show a property-specific error message.
+        """
+        self.error_occurred.emit(title, message, widget)
 
     def format_traceback(self, traceback_message: str) -> str:
         """
