@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v1.11.0 (2024-12-11)
+
+### Features
+
+- **collapsible_panel_manager**: Panel manager to handle collapsing and expanding widgets from the
+  main widget added
+  ([`a434d3e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a434d3ee574081356c32c096d2fd61f641e04542))
+
+### Testing
+
+- **collapsible_panel_manager**: Fixture changed to not use .show()
+  ([`ff654b5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ff654b56ae98388a2b707c040d51220be6cbce13))
+
+
 ## v1.10.0 (2024-12-10)
 
 ### Features
@@ -197,16 +211,3 @@ Depending on the test, auto-updates are enabled or not.
 
 - **crosshair**: Label of coordinates of TextItem displays numbers in general format
   ([`11e5937`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/11e5937ae0f3c1413acd4e66878a692ebe4ef7d0))
-
-- **crosshair**: Label of coordinates of TextItem is updated according to the current theme of qapp
-  ([`4f31ea6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4f31ea655cf6190e141e6a2720a2d6da517a2b5b))
-
-### Features
-
-- **crosshair**: Textitem to display crosshair coordinates
-  ([`035136d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/035136d5171ec5f4311d15a9aa5bad2bdbc1f6cb))
-
-### Testing
-
-- **crosshair**: Tests extended
-  ([`64df805`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/64df805a9ed92bb97e580ac3bc0a1bbd2b1cb81e))
