@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.12.0 (2024-12-12)
+
+### Features
+
+- **safe_property**: Added decorator to handle errors in Property decorator from qt to not crash
+  designer
+  ([`e380489`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e38048964f942f9f4edba225835ad0a937503dd4))
+
+
 ## v1.11.0 (2024-12-11)
 
 ### Features
@@ -203,11 +212,3 @@ Depending on the test, auto-updates are enabled or not.
 
 - **positioner_box**: Adjusted default signals
   ([`8e5c0ad`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8e5c0ad8c8eff5a9308169bc663d2b7230f0ebb1))
-
-
-## v1.4.0 (2024-11-11)
-
-### Bug Fixes
-
-- **crosshair**: Label of coordinates of TextItem displays numbers in general format
-  ([`11e5937`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/11e5937ae0f3c1413acd4e66878a692ebe4ef7d0))
