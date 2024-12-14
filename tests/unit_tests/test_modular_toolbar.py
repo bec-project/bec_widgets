@@ -5,6 +5,7 @@ from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QComboBox, QLabel, QToolButton, QWidget
 
 from bec_widgets.qt_utils.toolbar import (
+    Bundle,
     DeviceSelectionAction,
     ExpandableMenuAction,
     IconAction,
@@ -277,3 +278,36 @@ def test_show_action_nonexistent(toolbar_fixture):
     with pytest.raises(ValueError) as excinfo:
         toolbar.show_action("nonexistent_action")
     assert "Action with ID 'nonexistent_action' does not exist." in str(excinfo.value)
+
+
+def test_add_bundle(toolbar_fixture, dummy_widget, icon_action, material_icon_action):
+    toolbar = toolbar_fixture
+    bundle = Bundle(
+        bundle_id="test_bundle",
+        actions=[
+            ("icon_action_in_bundle", icon_action),
+            ("material_icon_in_bundle", material_icon_action),
+        ],
+    )
+    toolbar.add_bundle(bundle, dummy_widget)
+    assert "test_bundle" in toolbar.bundles
+    assert "icon_action_in_bundle" in toolbar.widgets
+    assert "material_icon_in_bundle" in toolbar.widgets
+    assert icon_action.action in toolbar.actions()
+    assert material_icon_action.action in toolbar.actions()
+
+
+def test_invalid_orientation(dummy_widget):
+    toolbar = ModularToolBar(target_widget=dummy_widget, orientation="horizontal")
+    with pytest.raises(ValueError):
+        toolbar.set_orientation("diagonal")
+
+
+def test_widgetaction_calculate_minimum_width(qtbot):
+    combo = QComboBox()
+    combo.addItems(["Short", "Longer Item", "The Longest Item In Combo"])
+    widget_action = WidgetAction(label="Test", widget=combo)
+    width = widget_action.calculate_minimum_width(combo)
+    assert width > 0
+    # Width should be large enough to accommodate the longest item plus additional space
+    assert width > 100
