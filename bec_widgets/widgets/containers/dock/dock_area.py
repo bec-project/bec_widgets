@@ -6,7 +6,7 @@ from weakref import WeakValueDictionary
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import Field
 from pyqtgraph.dockarea.DockArea import DockArea
-from qtpy.QtCore import Qt
+from qtpy.QtCore import QSize, Qt
 from qtpy.QtGui import QPainter, QPaintEvent
 from qtpy.QtWidgets import QApplication, QSizePolicy, QVBoxLayout, QWidget
 
@@ -159,6 +159,9 @@ class BECDockArea(BECWidget, QWidget):
         self.toolbar.addWidget(self.spacer)
         self.toolbar.addWidget(DarkModeButton(toolbar=True))
         self._hook_toolbar()
+
+    def minimumSizeHint(self):
+        return QSize(800, 600)
 
     def _hook_toolbar(self):
         # Menu Plot

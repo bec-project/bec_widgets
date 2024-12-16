@@ -245,7 +245,6 @@ def main():
 
             gui = server.gui
             win.setCentralWidget(gui)
-            win.resize(800, 600)
             if not args.hide:
                 win.show()
 
