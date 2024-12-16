@@ -430,12 +430,18 @@ class BECDockArea(BECWidget, QWidget):
         """Show all windows including floating docks."""
         super().show()
         for docks in self.panels.values():
+            if docks.window() is self:
+                # avoid recursion
+                continue
             docks.window().show()
 
     def hide(self):
         """Hide all windows including floating docks."""
         super().hide()
         for docks in self.panels.values():
+            if docks.window() is self:
+                # avoid recursion
+                continue
             docks.window().hide()
 
 
