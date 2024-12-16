@@ -181,14 +181,8 @@ def main():
 
     import bec_widgets
 
-    bec_logger.level = bec_logger.LOGLEVEL.DEBUG
-    if __name__ != "__main__":
-        # if not running as main, set the log level to critical
-        # pylint: disable=protected-access
-        bec_logger._stderr_log_level = bec_logger.LOGLEVEL.CRITICAL
-
     parser = argparse.ArgumentParser(description="BEC Widgets CLI Server")
-    parser.add_argument("--id", type=str, help="The id of the server")
+    parser.add_argument("--id", type=str, default="test", help="The id of the server")
     parser.add_argument(
         "--gui_class",
         type=str,
@@ -223,8 +217,10 @@ def main():
     with redirect_stdout(SimpleFileLikeFromLogOutputFunc(logger.info)):
         with redirect_stderr(SimpleFileLikeFromLogOutputFunc(logger.error)):
             app = QApplication(sys.argv)
-            app.setQuitOnLastWindowClosed(False)
-            app.setApplicationName("BEC Figure")
+            # set close on last window, only if not under control of client ;
+            # indeed, Qt considers a hidden window a closed window, so if all windows
+            # are hidden by default it exits
+            app.setQuitOnLastWindowClosed(not args.hide)
             module_path = os.path.dirname(bec_widgets.__file__)
             icon = QIcon()
             icon.addFile(
@@ -261,6 +257,5 @@ def main():
             sys.exit(app.exec())
 
 
-if __name__ == "__main__":  # pragma: no cover
-    sys.argv = ["bec_widgets.cli.server", "--id", "e2860", "--gui_class", "BECDockArea"]
+if __name__ == "__main__":
     main()
