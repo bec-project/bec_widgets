@@ -349,7 +349,7 @@ class RPCBase:
 
         if wait_for_rpc_response:
             try:
-                finished = self._msg_wait_event.wait(10)
+                finished = self._msg_wait_event.wait(timeout)
                 if not finished:
                     raise RPCResponseTimeoutError(request_id, timeout)
             finally:
