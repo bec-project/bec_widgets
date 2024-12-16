@@ -444,6 +444,12 @@ class BECGuiClient(RPCBase):
         with wait_for_server(self):
             return client.BECDockArea(gui_id=self._gui_id)
 
+    def new(self, name):
+        """Ask main window to create a new top-level dock area"""
+        with wait_for_server(self):
+            rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
+            return rpc_client._run_rpc("new_dock_area", name)
+
     def close(self) -> None:
         """
         Close the gui window.
