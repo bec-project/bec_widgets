@@ -5,7 +5,7 @@ from __future__ import annotations
 import enum
 from typing import Literal, Optional, overload
 
-from bec_widgets.cli.client_utils import BECGuiClientMixin, RPCBase, rpc_call
+from bec_widgets.cli.client_utils import RPCBase, rpc_call
 
 # pylint: skip-file
 
@@ -342,7 +342,7 @@ class BECDock(RPCBase):
         """
 
 
-class BECDockArea(RPCBase, BECGuiClientMixin):
+class BECDockArea(RPCBase):
     @property
     @rpc_call
     def _config_dict(self) -> "dict":
@@ -351,6 +351,13 @@ class BECDockArea(RPCBase, BECGuiClientMixin):
 
         Returns:
             dict: The configuration of the widget.
+        """
+
+    @property
+    @rpc_call
+    def selected_device(self) -> "str":
+        """
+        None
         """
 
     @property

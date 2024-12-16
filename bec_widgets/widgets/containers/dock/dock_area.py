@@ -3,11 +3,12 @@ from __future__ import annotations
 from typing import Literal, Optional
 from weakref import WeakValueDictionary
 
+from bec_lib.endpoints import MessageEndpoints
 from pydantic import Field
 from pyqtgraph.dockarea.DockArea import DockArea
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QPainter, QPaintEvent
-from qtpy.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QApplication, QSizePolicy, QVBoxLayout, QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeSlot
 from bec_widgets.qt_utils.toolbar import (
@@ -43,6 +44,7 @@ class BECDockArea(BECWidget, QWidget):
     PLUGIN = True
     USER_ACCESS = [
         "_config_dict",
+        "selected_device",
         "panels",
         "save_state",
         "remove_dock",
@@ -209,6 +211,13 @@ class BECDockArea(BECWidget, QWidget):
                 Qt.AlignCenter,
                 "Add docks using 'add_dock' method from CLI\n or \n Add widget docks using the toolbar",
             )
+
+    @property
+    def selected_device(self) -> str:
+        gui_id = QApplication.instance().gui_id
+        return self.client.connector.get(
+            MessageEndpoints.gui_auto_update_config(gui_id)
+        ).selected_device
 
     @property
     def panels(self) -> dict[str, BECDock]:

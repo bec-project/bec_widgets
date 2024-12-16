@@ -9,6 +9,7 @@ import subprocess
 import threading
 import time
 import uuid
+from contextlib import contextmanager
 from functools import wraps
 from typing import TYPE_CHECKING
 
@@ -130,151 +131,6 @@ class RepeatTimer(threading.Timer):
     def run(self):
         while not self.finished.wait(self.interval):
             self.function(*self.args, **self.kwargs)
-
-
-class BECGuiClientMixin:
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-        self._auto_updates_enabled = True
-        self._auto_updates = None
-        self._gui_started_timer = None
-        self._gui_started_event = threading.Event()
-        self._process = None
-        self._process_output_processing_thread = None
-        self._target_endpoint = MessageEndpoints.scan_status()
-        self._selected_device = None
-
-    @property
-    def auto_updates(self):
-        if self._auto_updates_enabled:
-            self._gui_started_event.wait()
-        return self._auto_updates
-
-    def shutdown_auto_updates(self):
-        if self._auto_updates_enabled:
-            if self._auto_updates is not None:
-                self._auto_updates.shutdown()
-                self._auto_updates = None
-
-    def _get_update_script(self) -> AutoUpdates | None:
-        eps = imd.entry_points(group="bec.widgets.auto_updates")
-        for ep in eps:
-            if ep.name == "plugin_widgets_update":
-                try:
-                    spec = importlib.util.find_spec(ep.module)
-                    # if the module is not found, we skip it
-                    if spec is None:
-                        continue
-                    return ep.load()(gui=self)
-                except Exception as e:
-                    logger.error(f"Error loading auto update script from plugin: {str(e)}")
-        return None
-
-    @property
-    def selected_device(self):
-        """
-        Selected device for the plot.
-        """
-        return self._selected_device
-
-    @selected_device.setter
-    def selected_device(self, device: str | DeviceBase):
-        if isinstance_based_on_class_name(device, "bec_lib.device.DeviceBase"):
-            self._selected_device = device.name
-        elif isinstance(device, str):
-            self._selected_device = device
-        else:
-            raise ValueError("Device must be a string or a device object")
-
-    def _start_update_script(self) -> None:
-        self._client.connector.register(
-            self._target_endpoint, cb=self._handle_msg_update, parent=self
-        )
-
-    @staticmethod
-    def _handle_msg_update(msg: MessageObject, parent: BECGuiClientMixin) -> None:
-        if parent.auto_updates is not None:
-            # pylint: disable=protected-access
-            parent._update_script_msg_parser(msg.value)
-
-    def _update_script_msg_parser(self, msg: messages.BECMessage) -> None:
-        if isinstance(msg, messages.ScanStatusMessage):
-            if not self.gui_is_alive():
-                return
-            if self._auto_updates_enabled:
-                self.auto_updates.msg_queue.put(msg)
-
-    def _gui_post_startup(self):
-        if self._auto_updates_enabled:
-            if self._auto_updates is None:
-                auto_updates = self._get_update_script()
-                if auto_updates is None:
-                    AutoUpdates.create_default_dock = True
-                    AutoUpdates.enabled = True
-                    auto_updates = AutoUpdates(gui=self)
-                if auto_updates.create_default_dock:
-                    auto_updates.start_default_dock()
-                    # fig = auto_updates.get_default_figure()
-                self._auto_updates = auto_updates
-        self._gui_started_event.set()
-        self.show_all()
-
-    def start_server(self, wait=False) -> None:
-        """
-        Start the GUI server, and execute callback when it is launched
-        """
-        if self._process is None or self._process.poll() is not None:
-            logger.success("GUI starting...")
-            self._gui_started_event.clear()
-            self._start_update_script()
-            self._process, self._process_output_processing_thread = _start_plot_process(
-                self._gui_id, self.__class__, self._client._service_config.config, logger=logger
-            )
-
-            def gui_started_callback(callback):
-                try:
-                    if callable(callback):
-                        callback()
-                finally:
-                    threading.current_thread().cancel()
-
-            self._gui_started_timer = RepeatTimer(
-                1, lambda: self.gui_is_alive() and gui_started_callback(self._gui_post_startup)
-            )
-            self._gui_started_timer.start()
-
-        if wait:
-            self._gui_started_event.wait()
-
-    def show_all(self):
-        self._gui_started_event.wait()
-        rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
-        rpc_client._run_rpc("show")
-
-    def hide_all(self):
-        self._gui_started_event.wait()
-        rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
-        rpc_client._run_rpc("hide")
-
-    def close(self) -> None:
-        """
-        Close the gui window.
-        """
-        if self._gui_started_timer is not None:
-            self._gui_started_timer.cancel()
-            self._gui_started_timer.join()
-
-        if self._process is None:
-            return
-
-        if self._process:
-            logger.success("Stopping GUI...")
-            self._process.terminate()
-            if self._process_output_processing_thread:
-                self._process_output_processing_thread.join()
-            self._process.wait()
-            self._process = None
-        self.shutdown_auto_updates()
 
 
 class RPCResponseTimeoutError(Exception):
@@ -401,3 +257,209 @@ class RPCBase:
         if heart.status == messages.BECStatus.RUNNING:
             return True
         return False
+
+
+class RepeatTimer(threading.Timer):
+    def run(self):
+        while not self.finished.wait(self.interval):
+            self.function(*self.args, **self.kwargs)
+
+
+@contextmanager
+def wait_for_server(client):
+    timeout = client._startup_timeout
+    if not timeout:
+        if client.gui_is_alive():
+            # there is hope, let's wait a bit
+            timeout = 1
+        else:
+            raise RuntimeError("GUI is not alive")
+    try:
+        if client._gui_started_event.wait(timeout=timeout):
+            client._gui_started_timer.cancel()
+            client._gui_started_timer.join()
+        else:
+            raise TimeoutError("Could not connect to GUI server")
+    finally:
+        # after initial waiting period, do not wait so much any more
+        # (only relevant if GUI didn't start)
+        client._startup_timeout = 0
+    yield
+
+
+class BECGuiClient(RPCBase):
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self._auto_updates_enabled = True
+        self._auto_updates = None
+        self._startup_timeout = 0
+        self._gui_started_timer = None
+        self._gui_started_event = threading.Event()
+        self._process = None
+        self._process_output_processing_thread = None
+        self._target_endpoint = MessageEndpoints.scan_status()
+
+    @property
+    def auto_updates(self):
+        if self._auto_updates_enabled:
+            with wait_for_server(self):
+                return self._auto_updates
+
+    def _shutdown_auto_updates(self):
+        if self._auto_updates_enabled:
+            if self._auto_updates is not None:
+                self._auto_updates.shutdown()
+                self._auto_updates = None
+
+    def _get_update_script(self) -> AutoUpdates | None:
+        eps = imd.entry_points(group="bec.widgets.auto_updates")
+        for ep in eps:
+            if ep.name == "plugin_widgets_update":
+                try:
+                    spec = importlib.util.find_spec(ep.module)
+                    # if the module is not found, we skip it
+                    if spec is None:
+                        continue
+                    return ep.load()(gui=self)
+                except Exception as e:
+                    logger.error(f"Error loading auto update script from plugin: {str(e)}")
+        return None
+
+    @property
+    def selected_device(self):
+        """
+        Selected device for the plot.
+        """
+        auto_update_config_ep = MessageEndpoints.gui_auto_update_config(self._gui_id)
+        auto_update_config = self._client.connector.get(auto_update_config_ep)
+        if auto_update_config:
+            return auto_update_config.selected_device
+        return None
+
+    @selected_device.setter
+    def selected_device(self, device: str | DeviceBase):
+        if isinstance_based_on_class_name(device, "bec_lib.device.DeviceBase"):
+            self._client.connector.set_and_publish(
+                MessageEndpoints.gui_auto_update_config(self._gui_id),
+                messages.GUIAutoUpdateConfigMessage(selected_device=device.name),
+            )
+        elif isinstance(device, str):
+            self._client.connector.set_and_publish(
+                MessageEndpoints.gui_auto_update_config(self._gui_id),
+                messages.GUIAutoUpdateConfigMessage(selected_device=device),
+            )
+        else:
+            raise ValueError("Device must be a string or a device object")
+
+    def _start_update_script(self) -> None:
+        self._client.connector.register(
+            self._target_endpoint, cb=self._handle_msg_update, parent=self
+        )
+
+    @staticmethod
+    def _handle_msg_update(msg: MessageObject, parent: BECGuiClient) -> None:
+        if parent.auto_updates is not None:
+            # pylint: disable=protected-access
+            parent._update_script_msg_parser(msg.value)
+
+    def _update_script_msg_parser(self, msg: messages.BECMessage) -> None:
+        if isinstance(msg, messages.ScanStatusMessage):
+            if not self.gui_is_alive():
+                return
+            if self._auto_updates_enabled:
+                self.auto_updates.msg_queue.put(msg)
+
+    def _gui_post_startup(self):
+        self._gui_started_event.set()
+        if self._auto_updates_enabled:
+            if self._auto_updates is None:
+                auto_updates = self._get_update_script()
+                if auto_updates is None:
+                    AutoUpdates.create_default_dock = True
+                    AutoUpdates.enabled = True
+                    auto_updates = AutoUpdates(gui=client.BECDockArea(gui_id=self._gui_id))
+                if auto_updates.create_default_dock:
+                    auto_updates.start_default_dock()
+                self._auto_updates = auto_updates
+        self._do_show_all()
+
+    def start_server(self, wait=False) -> None:
+        """
+        Start the GUI server, and execute callback when it is launched
+        """
+        if self._process is None or self._process.poll() is not None:
+            logger.success("GUI starting...")
+            self._startup_timeout = 5
+            self._gui_started_event.clear()
+            self._start_update_script()
+            self._process, self._process_output_processing_thread = _start_plot_process(
+                self._gui_id, self.__class__, self._client._service_config.config, logger=logger
+            )
+
+            def gui_started_callback(callback):
+                try:
+                    if callable(callback):
+                        callback()
+                finally:
+                    threading.current_thread().cancel()
+
+            self._gui_started_timer = RepeatTimer(
+                0.5, lambda: self.gui_is_alive() and gui_started_callback(self._gui_post_startup)
+            )
+            self._gui_started_timer.start()
+
+        if wait:
+            self._gui_started_event.wait()
+
+
+    def start(self):
+        return self.start_server()
+
+    def _do_show_all(self):
+        rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
+        rpc_client._run_rpc("show")
+
+    def show_all(self):
+        with wait_for_server(self):
+            return self._do_show_all()
+
+    def hide_all(self):
+        with wait_for_server(self):
+            rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
+            rpc_client._run_rpc("hide")
+
+    def show(self):
+        if self._process is not None:
+            return self.show_all()
+        else:
+            # backward compatibility: show() was also starting server
+            return self.start_server(wait=True)
+
+    def hide(self):
+        return self.hide_all()
+
+    @property
+    def main(self):
+        """Return client to main dock area (in main window)"""
+        with wait_for_server(self):
+            return client.BECDockArea(gui_id=self._gui_id)
+
+    def close(self) -> None:
+        """
+        Close the gui window.
+        """
+        if self._gui_started_timer is not None:
+            self._gui_started_timer.cancel()
+            self._gui_started_timer.join()
+
+        if self._process is None:
+            return
+
+        if self._process:
+            logger.success("Stopping GUI...")
+            self._process.terminate()
+            if self._process_output_processing_thread:
+                self._process_output_processing_thread.join()
+            self._process.wait()
+            self._process = None
+        self._shutdown_auto_updates()

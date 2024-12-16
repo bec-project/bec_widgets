@@ -5,8 +5,7 @@ from contextlib import contextmanager
 import pytest
 from bec_lib.endpoints import MessageEndpoints
 
-from bec_widgets.cli.client import BECDockArea
-from bec_widgets.cli.client_utils import _start_plot_process
+from bec_widgets.cli.client_utils import BECGuiClient, _start_plot_process
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.widgets.containers.figure import BECFigure
 
@@ -48,20 +47,20 @@ def rpc_server_figure(gui_id, bec_client_lib):
 
 @pytest.fixture
 def rpc_server_dock(gui_id, bec_client_lib):
-    dock_area = BECDockArea(gui_id=gui_id)
-    dock_area._auto_updates_enabled = False
+    gui = BECGuiClient(gui_id=gui_id)
+    gui._auto_updates_enabled = False
     try:
-        dock_area.start_server(wait=True)
-        yield dock_area
+        gui.start_server(wait=True)
+        yield gui.main
     finally:
-        dock_area.close()
+        gui.close()
 
 
 @pytest.fixture
 def rpc_server_dock_w_auto_updates(gui_id, bec_client_lib):
-    dock_area = BECDockArea(gui_id=gui_id)
+    gui = BECGuiClient(gui_id=gui_id)
     try:
-        dock_area.start_server(wait=True)
-        yield dock_area
+        gui.start_server(wait=True)
+        yield gui, gui.main
     finally:
-        dock_area.close()
+        gui.close()

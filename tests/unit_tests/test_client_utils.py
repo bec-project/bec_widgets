@@ -4,7 +4,7 @@ from unittest import mock
 import pytest
 
 from bec_widgets.cli.client import BECFigure
-from bec_widgets.cli.client_utils import BECGuiClientMixin, _start_plot_process
+from bec_widgets.cli.client_utils import BECGuiClient, _start_plot_process
 from bec_widgets.tests.utils import FakeDevice
 
 
@@ -63,7 +63,7 @@ def test_client_utils_passes_client_config_to_server(bec_dispatcher):
 
     @contextmanager
     def bec_client_mixin():
-        mixin = BECGuiClientMixin()
+        mixin = BECGuiClient()
         mixin._client = bec_dispatcher.client
         mixin._gui_id = "gui_id"
         mixin.gui_is_alive = mock.MagicMock()
@@ -82,6 +82,6 @@ def test_client_utils_passes_client_config_to_server(bec_dispatcher):
                 wait=False
             )  # the started event will not be set, wait=True would block forever
             mock_start_plot.assert_called_once_with(
-                "gui_id", BECGuiClientMixin, mixin._client._service_config.config, logger=mock.ANY
+                "gui_id", BECGuiClient, mixin._client._service_config.config, logger=mock.ANY
             )
             mixin._start_update_script.assert_called_once()

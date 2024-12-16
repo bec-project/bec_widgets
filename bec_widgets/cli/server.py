@@ -199,10 +199,20 @@ def main():
 
     args = parser.parse_args()
 
-    if args.gui_class == "BECFigure":
-        gui_class = BECFigure
-    elif args.gui_class == "BECDockArea":
+    if args.hide:
+        # if we start hidden, it means we are under control of the client
+        # -> set the log level to critical to not see all the messages
+        # pylint: disable=protected-access
+        # bec_logger._stderr_log_level = bec_logger.LOGLEVEL.CRITICAL
+        bec_logger.level = bec_logger.LOGLEVEL.CRITICAL
+    else:
+        # verbose log
+        bec_logger.level = bec_logger.LOGLEVEL.DEBUG
+
+    if args.gui_class == "BECDockArea":
         gui_class = BECDockArea
+    elif args.gui_class == "BECFigure":
+        gui_class = BECFigure
     else:
         print(
             "Please specify a valid gui_class to run. Use -h for help."
@@ -222,6 +232,8 @@ def main():
                 size=QSize(48, 48),
             )
             app.setWindowIcon(icon)
+            # store gui id within QApplication object, to make it available to all widgets
+            app.gui_id = args.id
 
             server = _start_server(args.id, gui_class, args.config)
 

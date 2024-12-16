@@ -239,14 +239,15 @@ def test_auto_update(bec_client_lib, rpc_server_dock_w_auto_updates, qtbot):
     dev = client.device_manager.devices
     scans = client.scans
     queue = client.queue
-    dock = rpc_server_dock_w_auto_updates
+    gui, dock = rpc_server_dock_w_auto_updates
+    auto_updates = gui.auto_updates
 
     def get_default_figure():
-        return dock.auto_updates.get_default_figure()
+        return auto_updates.get_default_figure()
 
     plt = get_default_figure()
 
-    dock.selected_device = "bpm4i"
+    gui.selected_device = "bpm4i"
 
     status = scans.line_scan(dev.samx, -5, 5, steps=10, exp_time=0.05, relative=False)
     status.wait()
@@ -274,7 +275,7 @@ def test_auto_update(bec_client_lib, rpc_server_dock_w_auto_updates, qtbot):
     )
     status.wait()
 
-    plt = dock.auto_updates.get_default_figure()
+    plt = auto_updates.get_default_figure()
     widgets = plt.widget_list
     qtbot.waitUntil(lambda: len(plt.widget_list) > 0, timeout=5000)
     plt_data = widgets[0].get_all_data()
