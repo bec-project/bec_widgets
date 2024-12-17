@@ -27,25 +27,17 @@ class AutoUpdates:
 
     def __init__(self, gui: BECDockArea):
         self.gui = gui
-        self.msg_queue = Queue()
-        self.auto_update_thread = None
-        self._shutdown_sentinel = object()
-        self.start()
-
-    def start(self):
-        """
-        Start the auto update thread.
-        """
-        self.auto_update_thread = threading.Thread(target=self.process_queue)
-        self.auto_update_thread.start()
+        self._default_dock = None
+        self._default_fig = None
 
     def start_default_dock(self):
         """
         Create a default dock for the auto updates.
         """
-        dock = self.gui.add_dock("default_figure")
-        dock.add_widget("BECFigure")
         self.dock_name = "default_figure"
+        self._default_dock = self.gui.add_dock(self.dock_name)
+        self._default_dock.add_widget("BECFigure")
+        self._default_fig = self._default_dock.widget_list[0]
 
     @staticmethod
     def get_scan_info(msg) -> ScanInfo:
@@ -73,13 +65,7 @@ class AutoUpdates:
         """
         Get the default figure from the GUI.
         """
-        dock = self.gui.panels.get(self.dock_name, [])
-        if not dock:
-            return None
-        widgets = dock.widget_list
-        if not widgets:
-            return None
-        return widgets[0]
+        return self._default_fig
 
     def run(self, msg):
         """
