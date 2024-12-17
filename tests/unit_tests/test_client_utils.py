@@ -70,8 +70,7 @@ def test_client_utils_passes_client_config_to_server(bec_dispatcher):
         mixin.gui_is_alive.side_effect = [True]
 
         try:
-            with mock.patch.object(mixin, "_start_update_script"):
-                yield mixin
+            yield mixin
         finally:
             mixin.close()
 
@@ -84,4 +83,3 @@ def test_client_utils_passes_client_config_to_server(bec_dispatcher):
             mock_start_plot.assert_called_once_with(
                 "gui_id", BECGuiClient, mixin._client._service_config.config, logger=mock.ANY
             )
-            mixin._start_update_script.assert_called_once()

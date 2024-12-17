@@ -340,12 +340,6 @@ class BECGuiClient(RPCBase):
             with wait_for_server(self):
                 return self._auto_updates
 
-    def _shutdown_auto_updates(self):
-        if self._auto_updates_enabled:
-            if self._auto_updates is not None:
-                self._auto_updates.shutdown()
-                self._auto_updates = None
-
     def _get_update_script(self) -> AutoUpdates | None:
         eps = imd.entry_points(group="bec.widgets.auto_updates")
         for ep in eps:
@@ -389,18 +383,17 @@ class BECGuiClient(RPCBase):
     def _start_update_script(self) -> None:
         self._client.connector.register(MessageEndpoints.scan_status(), cb=self._handle_msg_update)
 
-    @staticmethod
-    def _handle_msg_update(msg: MessageObject, parent: BECGuiClient) -> None:
-        if parent.auto_updates is not None:
+    def _handle_msg_update(self, msg: MessageObject) -> None:
+        if self.auto_updates is not None:
             # pylint: disable=protected-access
-            parent._update_script_msg_parser(msg.value)
+            return self._update_script_msg_parser(msg.value)
 
     def _update_script_msg_parser(self, msg: messages.BECMessage) -> None:
         if isinstance(msg, messages.ScanStatusMessage):
             if not self.gui_is_alive():
                 return
             if self._auto_updates_enabled:
-                self.auto_updates.msg_queue.put(msg)
+                return self.auto_updates.do_update(msg)
 
     def _gui_post_startup(self):
         self._top_level["main"] = WidgetDesc(
@@ -415,6 +408,7 @@ class BECGuiClient(RPCBase):
                     auto_updates = AutoUpdates(self._top_level["main"].widget)
                 if auto_updates.create_default_dock:
                     auto_updates.start_default_dock()
+                self._start_update_script()
                 self._auto_updates = auto_updates
         self._do_show_all()
         self._gui_started_event.set()
@@ -427,7 +421,6 @@ class BECGuiClient(RPCBase):
             logger.success("GUI starting...")
             self._startup_timeout = 5
             self._gui_started_event.clear()
-            self._start_update_script()
             self._process, self._process_output_processing_thread = _start_plot_process(
                 self._gui_id, self.__class__, self._client._service_config.config, logger=logger
             )
@@ -512,4 +505,3 @@ class BECGuiClient(RPCBase):
                 self._process_output_processing_thread.join()
             self._process.wait()
             self._process = None
-        self._shutdown_auto_updates()

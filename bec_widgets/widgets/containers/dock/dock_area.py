@@ -219,9 +219,13 @@ class BECDockArea(BECWidget, QWidget):
     @property
     def selected_device(self) -> str:
         gui_id = QApplication.instance().gui_id
-        return self.client.connector.get(
+        auto_update_config = self.client.connector.get(
             MessageEndpoints.gui_auto_update_config(gui_id)
-        ).selected_device
+        )
+        try:
+            return auto_update_config.selected_device
+        except AttributeError:
+            return None
 
     @property
     def panels(self) -> dict[str, BECDock]:

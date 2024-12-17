@@ -67,7 +67,7 @@ class AutoUpdates:
         """
         return self._default_fig
 
-    def run(self, msg):
+    def do_update(self, msg):
         """
         Run the update function if enabled.
         """
@@ -76,20 +76,9 @@ class AutoUpdates:
         if msg.status != "open":
             return
         info = self.get_scan_info(msg)
-        self.handler(info)
+        return self.handler(info)
 
-    def process_queue(self):
-        """
-        Process the message queue.
-        """
-        while True:
-            msg = self.msg_queue.get()
-            if msg is self._shutdown_sentinel:
-                break
-            self.run(msg)
-
-    @staticmethod
-    def get_selected_device(monitored_devices, selected_device):
+    def get_selected_device(self, monitored_devices, selected_device):
         """
         Get the selected device for the plot. If no device is selected, the first
         device in the monitored devices list is selected.
@@ -106,14 +95,11 @@ class AutoUpdates:
         Default update function.
         """
         if info.scan_name == "line_scan" and info.scan_report_devices:
-            self.simple_line_scan(info)
-            return
+            return self.simple_line_scan(info)
         if info.scan_name == "grid_scan" and info.scan_report_devices:
-            self.simple_grid_scan(info)
-            return
+            return self.simple_grid_scan(info)
         if info.scan_report_devices:
-            self.best_effort(info)
-            return
+            return self.best_effort(info)
 
     def simple_line_scan(self, info: ScanInfo) -> None:
         """
@@ -123,12 +109,19 @@ class AutoUpdates:
         if not fig:
             return
         dev_x = info.scan_report_devices[0]
-        dev_y = self.get_selected_device(info.monitored_devices, self.gui.selected_device)
+        selected_device = self.gui.selected_device
+        dev_y = self.get_selected_device(info.monitored_devices, selected_device)
         if not dev_y:
             return
         fig.clear_all()
-        plt = fig.plot(x_name=dev_x, y_name=dev_y, label=f"Scan {info.scan_number} - {dev_y}")
-        plt.set(title=f"Scan {info.scan_number}", x_label=dev_x, y_label=dev_y)
+        fig.plot(
+            x_name=dev_x,
+            y_name=dev_y,
+            label=f"Scan {info.scan_number} - {dev_y}",
+            title=f"Scan {info.scan_number}",
+            x_label=dev_x,
+            y_label=dev_y,
+        )
 
     def simple_grid_scan(self, info: ScanInfo) -> None:
         """
@@ -139,12 +132,18 @@ class AutoUpdates:
             return
         dev_x = info.scan_report_devices[0]
         dev_y = info.scan_report_devices[1]
-        dev_z = self.get_selected_device(info.monitored_devices, self.gui.selected_device)
+        selected_device = self.gui.selected_device
+        dev_z = self.get_selected_device(info.monitored_devices, selected_device)
         fig.clear_all()
-        plt = fig.plot(
-            x_name=dev_x, y_name=dev_y, z_name=dev_z, label=f"Scan {info.scan_number} - {dev_z}"
+        fig.plot(
+            x_name=dev_x,
+            y_name=dev_y,
+            z_name=dev_z,
+            label=f"Scan {info.scan_number} - {dev_z}",
+            title=f"Scan {info.scan_number}",
+            x_label=dev_x,
+            y_label=dev_y,
         )
-        plt.set(title=f"Scan {info.scan_number}", x_label=dev_x, y_label=dev_y)
 
     def best_effort(self, info: ScanInfo) -> None:
         """
@@ -154,17 +153,16 @@ class AutoUpdates:
         if not fig:
             return
         dev_x = info.scan_report_devices[0]
-        dev_y = self.get_selected_device(info.monitored_devices, self.gui.selected_device)
+        selected_device = self.gui.selected_device
+        dev_y = self.get_selected_device(info.monitored_devices, selected_device)
         if not dev_y:
             return
         fig.clear_all()
-        plt = fig.plot(x_name=dev_x, y_name=dev_y, label=f"Scan {info.scan_number} - {dev_y}")
-        plt.set(title=f"Scan {info.scan_number}", x_label=dev_x, y_label=dev_y)
-
-    def shutdown(self):
-        """
-        Shutdown the auto update thread.
-        """
-        self.msg_queue.put(self._shutdown_sentinel)
-        if self.auto_update_thread:
-            self.auto_update_thread.join()
+        fig.plot(
+            x_name=dev_x,
+            y_name=dev_y,
+            label=f"Scan {info.scan_number} - {dev_y}",
+            title=f"Scan {info.scan_number}",
+            x_label=dev_x,
+            y_label=dev_y,
+        )
