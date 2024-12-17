@@ -1,6 +1,5 @@
 # pylint: disable=no-name-in-module
 from abc import ABC, abstractmethod
-from typing import Literal
 
 from qtpy.QtWidgets import (
     QApplication,
@@ -28,6 +27,15 @@ class WidgetHandler(ABC):
     def set_value(self, widget: QWidget, value):
         """Set a value on the widget instance."""
 
+    def connect_change_signal(self, widget: QWidget, slot):
+        """
+        Connect a change signal from this widget to the given slot.
+        If the widget type doesn't have a known "value changed" signal, do nothing.
+
+        slot: a function accepting two arguments (widget, value)
+        """
+        pass
+
 
 class LineEditHandler(WidgetHandler):
     """Handler for QLineEdit widgets."""
@@ -37,6 +45,9 @@ class LineEditHandler(WidgetHandler):
 
     def set_value(self, widget: QLineEdit, value: str) -> None:
         widget.setText(value)
+
+    def connect_change_signal(self, widget: QLineEdit, slot):
+        widget.textChanged.connect(lambda text, w=widget: slot(w, text))
 
 
 class ComboBoxHandler(WidgetHandler):
@@ -52,6 +63,11 @@ class ComboBoxHandler(WidgetHandler):
             value = widget.findText(value)
         if isinstance(value, int):
             widget.setCurrentIndex(value)
+
+    def connect_change_signal(self, widget: QComboBox, slot):
+        # currentIndexChanged(int) or currentIndexChanged(str) both possible.
+        # We use currentIndexChanged(int) for a consistent behavior.
+        widget.currentIndexChanged.connect(lambda idx, w=widget: slot(w, self.get_value(w)))
 
 
 class TableWidgetHandler(WidgetHandler):
@@ -72,6 +88,16 @@ class TableWidgetHandler(WidgetHandler):
                 item = QTableWidgetItem(str(cell_value))
                 widget.setItem(row, col, item)
 
+    def connect_change_signal(self, widget: QTableWidget, slot):
+        # If desired, we could connect cellChanged(row, col) and then fetch all data.
+        # This might be noisy if table is large.
+        # For demonstration, connect cellChanged to update entire table value.
+        def on_cell_changed(row, col, w=widget):
+            val = self.get_value(w)
+            slot(w, val)
+
+        widget.cellChanged.connect(on_cell_changed)
+
 
 class SpinBoxHandler(WidgetHandler):
     """Handler for QSpinBox and QDoubleSpinBox widgets."""
@@ -81,6 +107,9 @@ class SpinBoxHandler(WidgetHandler):
 
     def set_value(self, widget, value):
         widget.setValue(value)
+
+    def connect_change_signal(self, widget: QSpinBox | QDoubleSpinBox, slot):
+        widget.valueChanged.connect(lambda val, w=widget: slot(w, val))
 
 
 class CheckBoxHandler(WidgetHandler):
@@ -92,6 +121,9 @@ class CheckBoxHandler(WidgetHandler):
     def set_value(self, widget, value):
         widget.setChecked(value)
 
+    def connect_change_signal(self, widget: QCheckBox, slot):
+        widget.toggled.connect(lambda val, w=widget: slot(w, val))
+
 
 class LabelHandler(WidgetHandler):
     """Handler for QLabel widgets."""
@@ -99,12 +131,15 @@ class LabelHandler(WidgetHandler):
     def get_value(self, widget, **kwargs):
         return widget.text()
 
-    def set_value(self, widget, value):
+    def set_value(self, widget: QLabel, value):
         widget.setText(value)
+
+    # QLabel typically doesn't have user-editable changes. No signal to connect.
+    # If needed, this can remain empty.
 
 
 class WidgetIO:
-    """Public interface for getting and setting values using handler mapping"""
+    """Public interface for getting, setting values and connecting signals using handler mapping"""
 
     _handlers = {
         QLineEdit: LineEditHandler,
@@ -147,6 +182,17 @@ class WidgetIO:
             handler_class().set_value(widget, value)  # Instantiate the handler
         elif not ignore_errors:
             raise ValueError(f"No handler for widget type: {type(widget)}")
+
+    @staticmethod
+    def connect_widget_change_signal(widget, slot):
+        """
+        Connect the widget's value-changed signal to a generic slot function (widget, value).
+        This now delegates the logic to the widget's handler.
+        """
+        handler_class = WidgetIO._find_handler(widget)
+        if handler_class:
+            handler = handler_class()
+            handler.connect_change_signal(widget, slot)
 
     @staticmethod
     def check_and_adjust_limits(spin_box: QDoubleSpinBox, number: float):
@@ -309,8 +355,8 @@ class WidgetHierarchy:
                 WidgetHierarchy.import_config_from_dict(child, widget_config, set_values)
 
 
-# Example application to demonstrate the usage of the functions
-if __name__ == "__main__":  # pragma: no cover
+# Example usage
+def hierarchy_example():  # pragma: no cover
     app = QApplication([])
 
     # Create instance of WidgetHierarchy
@@ -365,3 +411,37 @@ if __name__ == "__main__":  # pragma: no cover
     print(f"Config dict new REDUCED: {config_dict_new_reduced}")
 
     app.exec()
+
+
+def widget_io_signal_example():  # pragma: no cover
+    app = QApplication([])
+
+    main_widget = QWidget()
+    layout = QVBoxLayout(main_widget)
+    line_edit = QLineEdit(main_widget)
+    combo_box = QComboBox(main_widget)
+    spin_box = QSpinBox(main_widget)
+    combo_box.addItems(["Option 1", "Option 2", "Option 3"])
+
+    layout.addWidget(line_edit)
+    layout.addWidget(combo_box)
+    layout.addWidget(spin_box)
+
+    main_widget.show()
+
+    def universal_slot(w, val):
+        print(f"Widget {w.objectName() or w} changed, new value: {val}")
+
+    # Connect all supported widgets through their handlers
+    WidgetIO.connect_widget_change_signal(line_edit, universal_slot)
+    WidgetIO.connect_widget_change_signal(combo_box, universal_slot)
+    WidgetIO.connect_widget_change_signal(spin_box, universal_slot)
+
+    app.exec_()
+
+
+if __name__ == "__main__":  # pragma: no cover
+    # Change example function to test different scenarios
+
+    # hierarchy_example()
+    widget_io_signal_example()

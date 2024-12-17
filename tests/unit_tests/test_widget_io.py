@@ -1,8 +1,17 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 import pytest
-from qtpy.QtWidgets import QComboBox, QLineEdit, QSpinBox, QTableWidget, QVBoxLayout, QWidget
+from qtpy.QtCore import Qt
+from qtpy.QtWidgets import (
+    QComboBox,
+    QLineEdit,
+    QSpinBox,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
-from bec_widgets.utils.widget_io import WidgetHierarchy
+from bec_widgets.utils.widget_io import WidgetHierarchy, WidgetIO
 
 
 @pytest.fixture(scope="function")
@@ -21,6 +30,12 @@ def example_widget(qtbot):
 
     # Add text items to the combo box
     combo_box.addItems(["Option 1", "Option 2", "Option 3"])
+
+    # Populate the table widget
+    table_widget.setItem(0, 0, QTableWidgetItem("Initial A"))
+    table_widget.setItem(0, 1, QTableWidgetItem("Initial B"))
+    table_widget.setItem(1, 0, QTableWidgetItem("Initial C"))
+    table_widget.setItem(1, 1, QTableWidgetItem("Initial D"))
 
     qtbot.addWidget(main_widget)
     qtbot.waitExposed(main_widget)
@@ -88,3 +103,73 @@ def test_export_import_config(example_widget):
 
     assert exported_config_full == expected_full
     assert exported_config_reduced == expected_reduced
+
+
+def test_widget_io_get_set_value(example_widget):
+    # Extract widgets
+    line_edit = example_widget.findChild(QLineEdit)
+    combo_box = example_widget.findChild(QComboBox)
+    table_widget = example_widget.findChild(QTableWidget)
+    spin_box = example_widget.findChild(QSpinBox)
+
+    # Check initial values
+    assert WidgetIO.get_value(line_edit) == ""
+    assert WidgetIO.get_value(combo_box) == 0  # first index
+    assert WidgetIO.get_value(table_widget) == [
+        ["Initial A", "Initial B"],
+        ["Initial C", "Initial D"],
+    ]
+    assert WidgetIO.get_value(spin_box) == 0
+
+    # Set new values
+    WidgetIO.set_value(line_edit, "Hello")
+    WidgetIO.set_value(combo_box, "Option 2")
+    WidgetIO.set_value(table_widget, [["X", "Y"], ["Z", "W"]])
+    WidgetIO.set_value(spin_box, 5)
+
+    # Check updated values
+    assert WidgetIO.get_value(line_edit) == "Hello"
+    assert WidgetIO.get_value(combo_box, as_string=True) == "Option 2"
+    assert WidgetIO.get_value(table_widget) == [["X", "Y"], ["Z", "W"]]
+    assert WidgetIO.get_value(spin_box) == 5
+
+
+def test_widget_io_signal(qtbot, example_widget):
+    # Extract widgets
+    line_edit = example_widget.findChild(QLineEdit)
+    combo_box = example_widget.findChild(QComboBox)
+    spin_box = example_widget.findChild(QSpinBox)
+    table_widget = example_widget.findChild(QTableWidget)
+
+    # We'll store changes in a list to verify the slot is called
+    changes = []
+
+    def universal_slot(w, val):
+        changes.append((w, val))
+
+    # Connect signals
+    WidgetIO.connect_widget_change_signal(line_edit, universal_slot)
+    WidgetIO.connect_widget_change_signal(combo_box, universal_slot)
+    WidgetIO.connect_widget_change_signal(spin_box, universal_slot)
+    WidgetIO.connect_widget_change_signal(table_widget, universal_slot)
+
+    # Trigger changes
+    line_edit.setText("NewText")
+    qtbot.waitUntil(lambda: len(changes) > 0)
+    assert changes[-1][1] == "NewText"
+
+    combo_box.setCurrentIndex(2)
+    qtbot.waitUntil(lambda: len(changes) > 1)
+    # combo_box change should give the current index or value
+    # We set "Option 3" is index 2
+    assert changes[-1][1] == 2 or changes[-1][1] == "Option 3"
+
+    spin_box.setValue(42)
+    qtbot.waitUntil(lambda: len(changes) > 2)
+    assert changes[-1][1] == 42
+
+    # For the table widget, changing a cell triggers cellChanged
+    table_widget.setItem(0, 0, QTableWidgetItem("ChangedCell"))
+    qtbot.waitUntil(lambda: len(changes) > 3)
+    # The entire table value should be retrieved
+    assert changes[-1][1][0][0] == "ChangedCell"
