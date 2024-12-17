@@ -114,10 +114,12 @@ class RoundedFrame(BECWidget, QFrame):
 
             # Apply axis label and tick colors
             plot_item = self.content_widget.getPlotItem()
-            plot_item.getAxis("left").setPen(pg.mkPen(color=axis_color))
-            plot_item.getAxis("bottom").setPen(pg.mkPen(color=axis_color))
-            plot_item.getAxis("left").setTextPen(pg.mkPen(color=label_color))
-            plot_item.getAxis("bottom").setTextPen(pg.mkPen(color=label_color))
+            for axis in ["left", "right", "top", "bottom"]:
+                plot_item.getAxis(axis).setPen(pg.mkPen(color=axis_color))
+                plot_item.getAxis(axis).setTextPen(pg.mkPen(color=label_color))
+
+            # Change title color
+            plot_item.titleLabel.setText(plot_item.titleLabel.text, color=label_color)
 
             # Apply border style via stylesheet
             self.content_widget.setStyleSheet(

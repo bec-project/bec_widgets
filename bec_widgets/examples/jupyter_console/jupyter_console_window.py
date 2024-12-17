@@ -20,6 +20,7 @@ from bec_widgets.widgets.containers.dock import BECDockArea
 from bec_widgets.widgets.containers.figure import BECFigure
 from bec_widgets.widgets.containers.layout_manager.layout_manager import LayoutManagerWidget
 from bec_widgets.widgets.editors.jupyter_console.jupyter_console import BECJupyterConsole
+from bec_widgets.widgets.plots_next_gen.plot_base import PlotBase
 
 
 class JupyterConsoleWindow(QWidget):  # pragma: no cover:
@@ -62,6 +63,8 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "btn4": self.btn4,
                     "btn5": self.btn5,
                     "btn6": self.btn6,
+                    "pb": self.pb,
+                    "pi": self.pi,
                 }
             )
 
@@ -91,6 +94,15 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.lm = LayoutManagerWidget()
         third_tab_layout.addWidget(self.lm)
         tab_widget.addTab(third_tab, "Layout Manager Widget")
+
+        fourth_tab = QWidget()
+        fourth_tab_layout = QVBoxLayout(fourth_tab)
+        self.pb = PlotBase()
+        self.pi = self.pb.plot_item
+        fourth_tab_layout.addWidget(self.pb)
+        tab_widget.addTab(fourth_tab, "PltoBase")
+
+        tab_widget.setCurrentIndex(3)
 
         group_box = QGroupBox("Jupyter Console", splitter)
         group_box_layout = QVBoxLayout(group_box)

@@ -5,18 +5,18 @@ from qtpy.QtCore import Property, QEasingCurve, QPropertyAnimation
 from qtpy.QtGui import QAction
 from qtpy.QtWidgets import (
     QApplication,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QScrollArea,
     QSizePolicy,
-    QSpacerItem,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
 
 from bec_widgets.qt_utils.toolbar import MaterialIconAction, ModularToolBar
-from bec_widgets.widgets.plots.waveform.waveform_widget import BECWaveformWidget
 
 
 class SidePanel(QWidget):
@@ -41,7 +41,6 @@ class SidePanel(QWidget):
         self._panel_max_width = panel_max_width
         self._animation_duration = animation_duration
         self._animations_enabled = animations_enabled
-        self._orientation = orientation
 
         self._panel_width = 0
         self._panel_height = 0
@@ -71,6 +70,7 @@ class SidePanel(QWidget):
             self.stack_widget = QStackedWidget()
             self.stack_widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
             self.stack_widget.setMinimumWidth(5)
+            self.stack_widget.setMaximumWidth(self._panel_max_width)
 
             if self._orientation == "left":
                 self.main_layout.addWidget(self.toolbar)
@@ -80,7 +80,10 @@ class SidePanel(QWidget):
                 self.main_layout.addWidget(self.toolbar)
 
             self.container.layout.addWidget(self.stack_widget)
-            self.stack_widget.setMaximumWidth(self._panel_max_width)
+
+            self.menu_anim = QPropertyAnimation(self, b"panel_width")
+            self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+            self.panel_width = 0  # start hidden
 
         else:
             self.main_layout = QVBoxLayout(self)
@@ -97,6 +100,7 @@ class SidePanel(QWidget):
             self.stack_widget = QStackedWidget()
             self.stack_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             self.stack_widget.setMinimumHeight(5)
+            self.stack_widget.setMaximumHeight(self._panel_max_width)
 
             if self._orientation == "top":
                 self.main_layout.addWidget(self.toolbar)
@@ -106,74 +110,46 @@ class SidePanel(QWidget):
                 self.main_layout.addWidget(self.toolbar)
 
             self.container.layout.addWidget(self.stack_widget)
-            self.stack_widget.setMaximumHeight(self._panel_max_width)
 
-        if self._orientation in ("left", "right"):
-            self.menu_anim = QPropertyAnimation(self, b"panel_width")
-        else:
             self.menu_anim = QPropertyAnimation(self, b"panel_height")
+            self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            self.panel_height = 0  # start hidden
 
         self.menu_anim.setDuration(self._animation_duration)
         self.menu_anim.setEasingCurve(QEasingCurve.InOutQuad)
 
-        if self._orientation in ("left", "right"):
-            self.panel_width = 0
-        else:
-            self.panel_height = 0
-
     @Property(int)
     def panel_width(self):
-        """
-        Get the panel width.
-        """
+        """Get the panel width."""
         return self._panel_width
 
     @panel_width.setter
     def panel_width(self, width: int):
-        """
-        Set the panel width.
-
-        Args:
-            width(int): The width of the panel.
-        """
+        """Set the panel width."""
         self._panel_width = width
         if self._orientation in ("left", "right"):
             self.stack_widget.setFixedWidth(width)
 
     @Property(int)
     def panel_height(self):
-        """
-        Get the panel height.
-        """
+        """Get the panel height."""
         return self._panel_height
 
     @panel_height.setter
     def panel_height(self, height: int):
-        """
-        Set the panel height.
-
-        Args:
-            height(int): The height of the panel.
-        """
+        """Set the panel height."""
         self._panel_height = height
         if self._orientation in ("top", "bottom"):
             self.stack_widget.setFixedHeight(height)
 
     @Property(int)
     def panel_max_width(self):
-        """
-        Get the maximum width of the panel.
-        """
+        """Get the maximum width of the panel."""
         return self._panel_max_width
 
     @panel_max_width.setter
     def panel_max_width(self, size: int):
-        """
-        Set the maximum width of the panel.
-
-        Args:
-            size(int): The maximum width of the panel.
-        """
+        """Set the maximum width of the panel."""
         self._panel_max_width = size
         if self._orientation in ("left", "right"):
             self.stack_widget.setMaximumWidth(self._panel_max_width)
@@ -182,45 +158,28 @@ class SidePanel(QWidget):
 
     @Property(int)
     def animation_duration(self):
-        """
-        Get the duration of the animation.
-        """
+        """Get the duration of the animation."""
         return self._animation_duration
 
     @animation_duration.setter
     def animation_duration(self, duration: int):
-        """
-        Set the duration of the animation.
-
-        Args:
-            duration(int): The duration of the animation.
-        """
+        """Set the duration of the animation."""
         self._animation_duration = duration
         self.menu_anim.setDuration(duration)
 
     @Property(bool)
     def animations_enabled(self):
-        """
-        Get the status of the animations.
-        """
+        """Get the status of the animations."""
         return self._animations_enabled
 
     @animations_enabled.setter
     def animations_enabled(self, enabled: bool):
-        """
-        Set the status of the animations.
-
-        Args:
-            enabled(bool): The status of the animations.
-        """
+        """Set the status of the animations."""
         self._animations_enabled = enabled
 
     def show_panel(self, idx: int):
         """
         Show the side panel with animation and switch to idx.
-
-        Args:
-            idx(int): The index of the panel to show.
         """
         self.stack_widget.setCurrentIndex(idx)
         self.panel_visible = True
@@ -268,9 +227,6 @@ class SidePanel(QWidget):
     def switch_to(self, idx: int):
         """
         Switch to the specified index without animation.
-
-        Args:
-            idx(int): The index of the panel to switch to.
         """
         if self.current_index != idx:
             self.stack_widget.setCurrentIndex(idx)
@@ -287,20 +243,35 @@ class SidePanel(QWidget):
             widget(QWidget): The widget to add to the panel.
             title(str): The title of the panel.
         """
+        # container_widget: top-level container for the stacked page
         container_widget = QWidget()
         container_layout = QVBoxLayout(container_widget)
-        title_label = QLabel(f"<b>{title}</b>")
-        title_label.setStyleSheet("font-size: 16px;")
-        spacer = QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        container_layout.addWidget(title_label)
-        container_layout.addWidget(widget)
-        container_layout.addItem(spacer)
-        container_layout.setContentsMargins(5, 5, 5, 5)
+        container_layout.setContentsMargins(0, 0, 0, 0)
         container_layout.setSpacing(5)
 
+        title_label = QLabel(f"<b>{title}</b>")
+        title_label.setStyleSheet("font-size: 16px;")
+        container_layout.addWidget(title_label)
+
+        # Create a QScrollArea for the actual widget to ensure scrolling if the widget inside is too large
+        scroll_area = QScrollArea()
+        scroll_area.setFrameShape(QFrame.NoFrame)
+        scroll_area.setWidgetResizable(True)
+        # Let the scroll area expand in both directions if there's room
+        scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        scroll_area.setWidget(widget)
+
+        # Put the scroll area in the container layout
+        container_layout.addWidget(scroll_area)
+
+        # Optionally stretch the scroll area to fill vertical space
+        container_layout.setStretchFactor(scroll_area, 1)
+
+        # Add container_widget to the stacked widget
         index = self.stack_widget.count()
         self.stack_widget.addWidget(container_widget)
 
+        # Add an action to the toolbar
         action = MaterialIconAction(icon_name=icon_name, tooltip=tooltip, checkable=True)
         self.toolbar.add_action(action_id, action, target_widget=self)
 
@@ -328,6 +299,11 @@ class SidePanel(QWidget):
         action.action.toggled.connect(on_action_toggled)
 
 
+############################################
+# DEMO APPLICATION
+############################################
+
+
 class ExampleApp(QMainWindow):  # pragma: no cover
     def __init__(self):
         super().__init__()
@@ -335,20 +311,24 @@ class ExampleApp(QMainWindow):  # pragma: no cover
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-
-        self.side_panel = SidePanel(self, orientation="left")
-
         self.layout = QHBoxLayout(central_widget)
 
+        # Create side panel
+        self.side_panel = SidePanel(self, orientation="left", panel_max_width=250)
         self.layout.addWidget(self.side_panel)
+
+        from bec_widgets.widgets.plots.waveform.waveform_widget import BECWaveformWidget
+
         self.plot = BECWaveformWidget()
         self.layout.addWidget(self.plot)
+
         self.add_side_menus()
 
     def add_side_menus(self):
         widget1 = QWidget()
-        widget1_layout = QVBoxLayout(widget1)
-        widget1_layout.addWidget(QLabel("This is Widget 1"))
+        layout1 = QVBoxLayout(widget1)
+        for i in range(15):
+            layout1.addWidget(QLabel(f"Widget 1 label row {i}"))
         self.side_panel.add_menu(
             action_id="widget1",
             icon_name="counter_1",
@@ -358,8 +338,8 @@ class ExampleApp(QMainWindow):  # pragma: no cover
         )
 
         widget2 = QWidget()
-        widget2_layout = QVBoxLayout(widget2)
-        widget2_layout.addWidget(QLabel("This is Widget 2"))
+        layout2 = QVBoxLayout(widget2)
+        layout2.addWidget(QLabel("Short widget 2 content"))
         self.side_panel.add_menu(
             action_id="widget2",
             icon_name="counter_2",
@@ -369,8 +349,9 @@ class ExampleApp(QMainWindow):  # pragma: no cover
         )
 
         widget3 = QWidget()
-        widget3_layout = QVBoxLayout(widget3)
-        widget3_layout.addWidget(QLabel("This is Widget 3"))
+        layout3 = QVBoxLayout(widget3)
+        for i in range(10):
+            layout3.addWidget(QLabel(f"Line {i} for Widget 3"))
         self.side_panel.add_menu(
             action_id="widget3",
             icon_name="counter_3",
@@ -383,6 +364,6 @@ class ExampleApp(QMainWindow):  # pragma: no cover
 if __name__ == "__main__":  # pragma: no cover
     app = QApplication(sys.argv)
     window = ExampleApp()
-    window.resize(800, 600)
+    window.resize(1000, 700)
     window.show()
     sys.exit(app.exec())
