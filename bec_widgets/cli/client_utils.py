@@ -10,6 +10,7 @@ import threading
 import time
 import uuid
 from contextlib import contextmanager
+from dataclasses import dataclass
 from functools import wraps
 from typing import TYPE_CHECKING
 
@@ -287,7 +288,15 @@ def wait_for_server(client):
     yield
 
 
+@dataclass
+class WidgetDesc:
+    title: str
+    widget: BECDockArea
+
+
 class BECGuiClient(RPCBase):
+    _top_level = {}
+
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._auto_updates_enabled = True
@@ -297,6 +306,10 @@ class BECGuiClient(RPCBase):
         self._gui_started_event = threading.Event()
         self._process = None
         self._process_output_processing_thread = None
+
+    @property
+    def windows(self):
+        return self._top_level
 
     @property
     def auto_updates(self):
@@ -367,18 +380,21 @@ class BECGuiClient(RPCBase):
                 self.auto_updates.msg_queue.put(msg)
 
     def _gui_post_startup(self):
-        self._gui_started_event.set()
+        self._top_level["main"] = WidgetDesc(
+            title="BEC Widgets", widget=BECDockArea(gui_id=self._gui_id)
+        )
         if self._auto_updates_enabled:
             if self._auto_updates is None:
                 auto_updates = self._get_update_script()
                 if auto_updates is None:
                     AutoUpdates.create_default_dock = True
                     AutoUpdates.enabled = True
-                    auto_updates = AutoUpdates(gui=client.BECDockArea(gui_id=self._gui_id))
+                    auto_updates = AutoUpdates(self._top_level["main"].widget)
                 if auto_updates.create_default_dock:
                     auto_updates.start_default_dock()
                 self._auto_updates = auto_updates
         self._do_show_all()
+        self._gui_started_event.set()
 
     def start_server(self, wait=False) -> None:
         """
@@ -415,6 +431,8 @@ class BECGuiClient(RPCBase):
     def _do_show_all(self):
         rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
         rpc_client._run_rpc("show")
+        for window in self._top_level.values():
+            window.widget.show()
 
     def show_all(self):
         with wait_for_server(self):
@@ -424,6 +442,8 @@ class BECGuiClient(RPCBase):
         with wait_for_server(self):
             rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
             rpc_client._run_rpc("hide")
+            for window in self._top_level.values():
+                window.widget.hide()
 
     def show(self):
         if self._process is not None:
@@ -439,18 +459,22 @@ class BECGuiClient(RPCBase):
     def main(self):
         """Return client to main dock area (in main window)"""
         with wait_for_server(self):
-            return client.BECDockArea(gui_id=self._gui_id)
+            return self._top_level["main"].widget
 
-    def new(self, name):
+    def new(self, title):
         """Ask main window to create a new top-level dock area"""
         with wait_for_server(self):
             rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
-            return rpc_client._run_rpc("new_dock_area", name)
+            widget = rpc_client._run_rpc("new_dock_area", title)
+            self._top_level[widget._gui_id] = WidgetDesc(title=title, widget=widget)
+            return widget
 
     def close(self) -> None:
         """
         Close the gui window.
         """
+        self._top_level.clear()
+
         if self._gui_started_timer is not None:
             self._gui_started_timer.cancel()
             self._gui_started_timer.join()
