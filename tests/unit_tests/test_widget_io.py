@@ -12,6 +12,7 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils.widget_io import WidgetHierarchy, WidgetIO
+from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
 
 
 @pytest.fixture(scope="function")
@@ -23,10 +24,13 @@ def example_widget(qtbot):
     combo_box = QComboBox(main_widget)
     table_widget = QTableWidget(2, 2, main_widget)
     spin_box = QSpinBox(main_widget)
+    toggle = ToggleSwitch(main_widget)
+
     layout.addWidget(line_edit)
     layout.addWidget(combo_box)
     layout.addWidget(table_widget)
     layout.addWidget(spin_box)
+    layout.addWidget(toggle)
 
     # Add text items to the combo box
     combo_box.addItems(["Option 1", "Option 2", "Option 3"])
@@ -60,44 +64,46 @@ def test_export_import_config(example_widget):
 
     expected_full = {
         "QWidget ()": {
-            "QVBoxLayout ()": {},
-            "QLineEdit ()": {"value": "New Text", "QObject ()": {}},
-            "QComboBox ()": {"value": 1, "QStandardItemModel ()": {}},
+            "QComboBox ()": {"QStandardItemModel ()": {}, "value": 1},
+            "QLineEdit ()": {"QObject ()": {}, "value": "New Text"},
+            "QSpinBox ()": {
+                "QLineEdit (qt_spinbox_lineedit)": {"QObject ()": {}, "value": "10"},
+                "QValidator (qt_spinboxvalidator)": {},
+                "value": 10,
+            },
             "QTableWidget ()": {
-                "value": [["a", "b"], ["c", "d"]],
-                "QWidget (qt_scrollarea_viewport)": {},
-                "QStyledItemDelegate ()": {},
-                "QHeaderView ()": {
-                    "QWidget (qt_scrollarea_viewport)": {},
-                    "QWidget (qt_scrollarea_hcontainer)": {
-                        "QScrollBar ()": {},
-                        "QBoxLayout ()": {},
-                    },
-                    "QWidget (qt_scrollarea_vcontainer)": {
-                        "QScrollBar ()": {},
-                        "QBoxLayout ()": {},
-                    },
-                    "QItemSelectionModel ()": {},
-                },
                 "QAbstractButton ()": {},
                 "QAbstractTableModel ()": {},
+                "QHeaderView ()": {
+                    "QItemSelectionModel ()": {},
+                    "QWidget (qt_scrollarea_hcontainer)": {
+                        "QBoxLayout ()": {},
+                        "QScrollBar ()": {},
+                    },
+                    "QWidget (qt_scrollarea_vcontainer)": {
+                        "QBoxLayout ()": {},
+                        "QScrollBar ()": {},
+                    },
+                    "QWidget (qt_scrollarea_viewport)": {},
+                },
                 "QItemSelectionModel ()": {},
-                "QWidget (qt_scrollarea_hcontainer)": {"QScrollBar ()": {}, "QBoxLayout ()": {}},
-                "QWidget (qt_scrollarea_vcontainer)": {"QScrollBar ()": {}, "QBoxLayout ()": {}},
+                "QStyledItemDelegate ()": {},
+                "QWidget (qt_scrollarea_hcontainer)": {"QBoxLayout ()": {}, "QScrollBar ()": {}},
+                "QWidget (qt_scrollarea_vcontainer)": {"QBoxLayout ()": {}, "QScrollBar ()": {}},
+                "QWidget (qt_scrollarea_viewport)": {},
+                "value": [["a", "b"], ["c", "d"]],
             },
-            "QSpinBox ()": {
-                "value": 10,
-                "QLineEdit (qt_spinbox_lineedit)": {"value": "10", "QObject ()": {}},
-                "QValidator (qt_spinboxvalidator)": {},
-            },
+            "QVBoxLayout ()": {},
+            "ToggleSwitch ()": {"value": True},
         }
     }
     expected_reduced = {
         "QWidget ()": {
-            "QLineEdit ()": {"value": "New Text"},
             "QComboBox ()": {"value": 1},
+            "QLineEdit ()": {"value": "New Text"},
+            "QSpinBox ()": {"QLineEdit (qt_spinbox_lineedit)": {"value": "10"}, "value": 10},
             "QTableWidget ()": {"value": [["a", "b"], ["c", "d"]]},
-            "QSpinBox ()": {"value": 10, "QLineEdit (qt_spinbox_lineedit)": {"value": "10"}},
+            "ToggleSwitch ()": {"value": True},
         }
     }
 
@@ -111,6 +117,7 @@ def test_widget_io_get_set_value(example_widget):
     combo_box = example_widget.findChild(QComboBox)
     table_widget = example_widget.findChild(QTableWidget)
     spin_box = example_widget.findChild(QSpinBox)
+    toggle = example_widget.findChild(ToggleSwitch)
 
     # Check initial values
     assert WidgetIO.get_value(line_edit) == ""
@@ -120,18 +127,21 @@ def test_widget_io_get_set_value(example_widget):
         ["Initial C", "Initial D"],
     ]
     assert WidgetIO.get_value(spin_box) == 0
+    assert WidgetIO.get_value(toggle) == True
 
     # Set new values
     WidgetIO.set_value(line_edit, "Hello")
     WidgetIO.set_value(combo_box, "Option 2")
     WidgetIO.set_value(table_widget, [["X", "Y"], ["Z", "W"]])
     WidgetIO.set_value(spin_box, 5)
+    WidgetIO.set_value(toggle, False)
 
     # Check updated values
     assert WidgetIO.get_value(line_edit) == "Hello"
     assert WidgetIO.get_value(combo_box, as_string=True) == "Option 2"
     assert WidgetIO.get_value(table_widget) == [["X", "Y"], ["Z", "W"]]
     assert WidgetIO.get_value(spin_box) == 5
+    assert WidgetIO.get_value(toggle) == False
 
 
 def test_widget_io_signal(qtbot, example_widget):
@@ -140,6 +150,7 @@ def test_widget_io_signal(qtbot, example_widget):
     combo_box = example_widget.findChild(QComboBox)
     spin_box = example_widget.findChild(QSpinBox)
     table_widget = example_widget.findChild(QTableWidget)
+    toggle = example_widget.findChild(ToggleSwitch)
 
     # We'll store changes in a list to verify the slot is called
     changes = []
@@ -152,6 +163,7 @@ def test_widget_io_signal(qtbot, example_widget):
     WidgetIO.connect_widget_change_signal(combo_box, universal_slot)
     WidgetIO.connect_widget_change_signal(spin_box, universal_slot)
     WidgetIO.connect_widget_change_signal(table_widget, universal_slot)
+    WidgetIO.connect_widget_change_signal(toggle, universal_slot)
 
     # Trigger changes
     line_edit.setText("NewText")
@@ -173,3 +185,8 @@ def test_widget_io_signal(qtbot, example_widget):
     qtbot.waitUntil(lambda: len(changes) > 3)
     # The entire table value should be retrieved
     assert changes[-1][1][0][0] == "ChangedCell"
+
+    # Test the toggle switch
+    toggle.checked = False
+    qtbot.waitUntil(lambda: len(changes) > 4)
+    assert changes[-1][1] == False

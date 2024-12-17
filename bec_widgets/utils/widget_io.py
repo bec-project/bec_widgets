@@ -15,6 +15,8 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
+
 
 class WidgetHandler(ABC):
     """Abstract base class for all widget handlers."""
@@ -125,6 +127,19 @@ class CheckBoxHandler(WidgetHandler):
         widget.toggled.connect(lambda val, w=widget: slot(w, val))
 
 
+class ToggleSwitchHandler(WidgetHandler):
+    """Handler for ToggleSwitch widgets."""
+
+    def get_value(self, widget, **kwargs):
+        return widget.checked
+
+    def set_value(self, widget, value):
+        widget.checked = value
+
+    def connect_change_signal(self, widget: ToggleSwitch, slot):
+        widget.enabled.connect(lambda val, w=widget: slot(w, val))
+
+
 class LabelHandler(WidgetHandler):
     """Handler for QLabel widgets."""
 
@@ -149,6 +164,7 @@ class WidgetIO:
         QDoubleSpinBox: SpinBoxHandler,
         QCheckBox: CheckBoxHandler,
         QLabel: LabelHandler,
+        ToggleSwitch: ToggleSwitchHandler,
     }
 
     @staticmethod
