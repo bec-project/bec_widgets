@@ -109,12 +109,12 @@ class AutoUpdates:
         if not fig:
             return
         dev_x = info.scan_report_devices[0]
-        selected_device = self.gui.selected_device
+        selected_device = yield self.gui.selected_device
         dev_y = self.get_selected_device(info.monitored_devices, selected_device)
         if not dev_y:
             return
-        fig.clear_all()
-        fig.plot(
+        yield fig.clear_all()
+        yield fig.plot(
             x_name=dev_x,
             y_name=dev_y,
             label=f"Scan {info.scan_number} - {dev_y}",
@@ -132,10 +132,10 @@ class AutoUpdates:
             return
         dev_x = info.scan_report_devices[0]
         dev_y = info.scan_report_devices[1]
-        selected_device = self.gui.selected_device
+        selected_device = yield self.gui.selected_device
         dev_z = self.get_selected_device(info.monitored_devices, selected_device)
-        fig.clear_all()
-        fig.plot(
+        yield fig.clear_all()
+        yield fig.plot(
             x_name=dev_x,
             y_name=dev_y,
             z_name=dev_z,
@@ -153,12 +153,12 @@ class AutoUpdates:
         if not fig:
             return
         dev_x = info.scan_report_devices[0]
-        selected_device = self.gui.selected_device
+        selected_device = yield self.gui.selected_device
         dev_y = self.get_selected_device(info.monitored_devices, selected_device)
         if not dev_y:
             return
-        fig.clear_all()
-        fig.plot(
+        yield fig.clear_all()
+        yield fig.plot(
             x_name=dev_x,
             y_name=dev_y,
             label=f"Scan {info.scan_number} - {dev_y}",
