@@ -297,7 +297,6 @@ class BECGuiClient(RPCBase):
         self._gui_started_event = threading.Event()
         self._process = None
         self._process_output_processing_thread = None
-        self._target_endpoint = MessageEndpoints.scan_status()
 
     @property
     def auto_updates(self):
@@ -352,9 +351,7 @@ class BECGuiClient(RPCBase):
             raise ValueError("Device must be a string or a device object")
 
     def _start_update_script(self) -> None:
-        self._client.connector.register(
-            self._target_endpoint, cb=self._handle_msg_update, parent=self
-        )
+        self._client.connector.register(MessageEndpoints.scan_status(), cb=self._handle_msg_update)
 
     @staticmethod
     def _handle_msg_update(msg: MessageObject, parent: BECGuiClient) -> None:
