@@ -40,13 +40,23 @@ def plot_server(gui_id, klass, client_lib):
 
 
 @pytest.fixture
-def rpc_server_figure(gui_id, bec_client_lib):
+def connected_client_figure(gui_id, bec_client_lib):
     with plot_server(gui_id, BECFigure, bec_client_lib) as server:
         yield server
 
 
 @pytest.fixture
-def rpc_server_dock(gui_id, bec_client_lib):
+def connected_client_gui_obj(gui_id, bec_client_lib):
+    gui = BECGuiClient(gui_id=gui_id)
+    try:
+        gui.start_server(wait=True)
+        yield gui
+    finally:
+        gui.close()
+
+
+@pytest.fixture
+def connected_client_dock(gui_id, bec_client_lib):
     gui = BECGuiClient(gui_id=gui_id)
     gui._auto_updates_enabled = False
     try:
@@ -57,7 +67,7 @@ def rpc_server_dock(gui_id, bec_client_lib):
 
 
 @pytest.fixture
-def rpc_server_dock_w_auto_updates(gui_id, bec_client_lib):
+def connected_client_dock_w_auto_updates(gui_id, bec_client_lib):
     gui = BECGuiClient(gui_id=gui_id)
     try:
         gui.start_server(wait=True)

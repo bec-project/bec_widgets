@@ -7,8 +7,8 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_widgets.cli.client import BECFigure, BECImageShow, BECMotorMap, BECWaveform
 
 
-def test_rpc_waveform1d_custom_curve(rpc_server_figure):
-    fig = BECFigure(rpc_server_figure)
+def test_rpc_waveform1d_custom_curve(connected_client_figure):
+    fig = BECFigure(connected_client_figure)
 
     ax = fig.plot()
     curve = ax.plot(x=[1, 2, 3], y=[1, 2, 3])
@@ -20,8 +20,8 @@ def test_rpc_waveform1d_custom_curve(rpc_server_figure):
     assert len(fig.widgets[ax._rpc_id].curves) == 1
 
 
-def test_rpc_plotting_shortcuts_init_configs(rpc_server_figure, qtbot):
-    fig = BECFigure(rpc_server_figure)
+def test_rpc_plotting_shortcuts_init_configs(connected_client_figure, qtbot):
+    fig = BECFigure(connected_client_figure)
 
     plt = fig.plot(x_name="samx", y_name="bpm4i")
     im = fig.image("eiger")
@@ -78,8 +78,8 @@ def test_rpc_plotting_shortcuts_init_configs(rpc_server_figure, qtbot):
     }
 
 
-def test_rpc_waveform_scan(rpc_server_figure, bec_client_lib):
-    fig = BECFigure(rpc_server_figure)
+def test_rpc_waveform_scan(connected_client_figure, bec_client_lib):
+    fig = BECFigure(connected_client_figure)
 
     # add 3 different curves to track
     plt = fig.plot(x_name="samx", y_name="bpm4i")
@@ -109,8 +109,8 @@ def test_rpc_waveform_scan(rpc_server_figure, bec_client_lib):
     assert plt_data["bpm4d-bpm4d"]["y"] == last_scan_data["bpm4d"]["bpm4d"].val
 
 
-def test_rpc_image(rpc_server_figure, bec_client_lib):
-    fig = BECFigure(rpc_server_figure)
+def test_rpc_image(connected_client_figure, bec_client_lib):
+    fig = BECFigure(connected_client_figure)
 
     im = fig.image("eiger")
 
@@ -130,8 +130,8 @@ def test_rpc_image(rpc_server_figure, bec_client_lib):
     np.testing.assert_equal(last_image_device, last_image_plot)
 
 
-def test_rpc_motor_map(rpc_server_figure, bec_client_lib):
-    fig = BECFigure(rpc_server_figure)
+def test_rpc_motor_map(connected_client_figure, bec_client_lib):
+    fig = BECFigure(connected_client_figure)
 
     motor_map = fig.motor_map("samx", "samy")
 
@@ -159,9 +159,9 @@ def test_rpc_motor_map(rpc_server_figure, bec_client_lib):
     )
 
 
-def test_dap_rpc(rpc_server_figure, bec_client_lib, qtbot):
+def test_dap_rpc(connected_client_figure, bec_client_lib, qtbot):
 
-    fig = BECFigure(rpc_server_figure)
+    fig = BECFigure(connected_client_figure)
     plt = fig.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
 
     client = bec_client_lib
@@ -199,8 +199,8 @@ def test_dap_rpc(rpc_server_figure, bec_client_lib, qtbot):
     qtbot.waitUntil(wait_for_fit, timeout=10000)
 
 
-def test_removing_subplots(rpc_server_figure, bec_client_lib):
-    fig = BECFigure(rpc_server_figure)
+def test_removing_subplots(connected_client_figure, bec_client_lib):
+    fig = BECFigure(connected_client_figure)
     plt = fig.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
     im = fig.image(monitor="eiger")
     mm = fig.motor_map(motor_x="samx", motor_y="samy")

@@ -12,9 +12,9 @@ from bec_widgets.utils import Colors
 # pylint: disable=too-many-locals
 
 
-def test_rpc_add_dock_with_figure_e2e(bec_client_lib, rpc_server_dock):
+def test_rpc_add_dock_with_figure_e2e(bec_client_lib, connected_client_dock):
     # BEC client shortcuts
-    dock = rpc_server_dock
+    dock = connected_client_dock
     client = bec_client_lib
     dev = client.device_manager.devices
     scans = client.scans
@@ -123,8 +123,8 @@ def test_rpc_add_dock_with_figure_e2e(bec_client_lib, rpc_server_dock):
     )
 
 
-def test_dock_manipulations_e2e(rpc_server_dock):
-    dock = rpc_server_dock
+def test_dock_manipulations_e2e(connected_client_dock):
+    dock = connected_client_dock
 
     d0 = dock.add_dock("dock_0")
     d1 = dock.add_dock("dock_1")
@@ -155,8 +155,8 @@ def test_dock_manipulations_e2e(rpc_server_dock):
     assert len(dock.temp_areas) == 0
 
 
-def test_ring_bar(rpc_server_dock):
-    dock = rpc_server_dock
+def test_ring_bar(connected_client_dock):
+    dock = connected_client_dock
 
     d0 = dock.add_dock(name="dock_0")
 
@@ -182,8 +182,8 @@ def test_ring_bar(rpc_server_dock):
     assert bar_colors == expected_colors_light or bar_colors == expected_colors_dark
 
 
-def test_ring_bar_scan_update(bec_client_lib, rpc_server_dock):
-    dock = rpc_server_dock
+def test_ring_bar_scan_update(bec_client_lib, connected_client_dock):
+    dock = connected_client_dock
 
     d0 = dock.add_dock("dock_0")
 
@@ -234,12 +234,12 @@ def test_ring_bar_scan_update(bec_client_lib, rpc_server_dock):
     assert bar_config["rings"][1]["max_value"] == final_samy
 
 
-def test_auto_update(bec_client_lib, rpc_server_dock_w_auto_updates, qtbot):
+def test_auto_update(bec_client_lib, connected_client_dock_w_auto_updates, qtbot):
     client = bec_client_lib
     dev = client.device_manager.devices
     scans = client.scans
     queue = client.queue
-    gui, dock = rpc_server_dock_w_auto_updates
+    gui, dock = connected_client_dock_w_auto_updates
     auto_updates = gui.auto_updates
 
     def get_default_figure():

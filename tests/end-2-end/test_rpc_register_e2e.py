@@ -3,8 +3,8 @@ import pytest
 from bec_widgets.cli.client import BECFigure, BECImageShow, BECMotorMap, BECWaveform
 
 
-def test_rpc_register_list_connections(rpc_server_figure):
-    fig = BECFigure(rpc_server_figure)
+def test_rpc_register_list_connections(connected_client_figure):
+    fig = BECFigure(connected_client_figure)
 
     plt = fig.plot(x_name="samx", y_name="bpm4i")
     im = fig.image("eiger")
