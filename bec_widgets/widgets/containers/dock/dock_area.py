@@ -423,6 +423,17 @@ class BECDockArea(BECWidget, QWidget):
         self.dock_area.deleteLater()
         super().cleanup()
 
+    def closeEvent(self, event):
+        if self.parent() is None:
+            # we are at top-level (independent window)
+            if self.isVisible():
+                # we are visible => user clicked on [X]
+                # (when closeEvent is called from shutdown procedure,
+                # everything is hidden first)
+                # so, let's ignore "close", and do hide instead
+                event.ignore()
+                self.setVisible(False)
+
     def close(self):
         """
         Close the dock area and cleanup.
