@@ -1,4 +1,4 @@
-from bec_widgets.cli.rpc_wigdet_handler import RPCWidgetHandler
+from bec_widgets.cli.rpc.rpc_widget_handler import RPCWidgetHandler
 
 
 def test_rpc_widget_handler():

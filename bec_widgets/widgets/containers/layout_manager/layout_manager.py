@@ -20,7 +20,7 @@ from qtpy.QtWidgets import (
 )
 from typeguard import typechecked
 
-from bec_widgets.cli.rpc_wigdet_handler import widget_handler
+from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 
 
 class LayoutManagerWidget(QWidget):

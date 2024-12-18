@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field, field_validator
 from qtpy.QtCore import QObject, QRunnable, QThreadPool, Signal
 from qtpy.QtWidgets import QApplication
 
-from bec_widgets.cli.rpc_register import RPCRegister
+from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.qt_utils.error_popups import ErrorPopupUtility
 from bec_widgets.qt_utils.error_popups import SafeSlot as pyqtSlot
 from bec_widgets.utils.yaml_dialog import load_yaml, load_yaml_gui, save_yaml, save_yaml_gui

@@ -5,7 +5,7 @@ from pytestqt.exceptions import TimeoutError as QtBotTimeoutError
 from qtpy.QtCore import QTimer
 from qtpy.QtWidgets import QApplication
 
-from bec_widgets.cli.rpc_register import RPCRegister
+from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.qt_utils import error_popups
 from bec_widgets.utils import bec_dispatcher as bec_dispatcher_module
 

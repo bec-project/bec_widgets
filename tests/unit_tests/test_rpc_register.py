@@ -1,4 +1,4 @@
-from bec_widgets.cli.rpc_register import RPCRegister
+from bec_widgets.cli.rpc.rpc_register import RPCRegister
 
 
 class FakeObject:

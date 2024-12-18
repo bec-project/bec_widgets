@@ -35,7 +35,7 @@ from __future__ import annotations
 import enum
 from typing import Literal, Optional, overload
 
-from bec_widgets.cli.client_utils import RPCBase, rpc_call
+from bec_widgets.cli.rpc.rpc_base import RPCBase, rpc_call
 
 # pylint: skip-file"""
 

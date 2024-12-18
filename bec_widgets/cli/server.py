@@ -12,7 +12,7 @@ from bec_lib.service_config import ServiceConfig
 from bec_lib.utils.import_utils import lazy_import
 from qtpy.QtCore import Qt, QTimer
 
-from bec_widgets.cli.rpc_register import RPCRegister
+from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.widgets.containers.dock import BECDockArea
