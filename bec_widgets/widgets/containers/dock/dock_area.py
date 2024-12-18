@@ -57,6 +57,7 @@ class BECDockArea(BECWidget, QWidget):
         "temp_areas",
         "show",
         "hide",
+        "delete",
     ]
 
     def __init__(
@@ -443,6 +444,10 @@ class BECDockArea(BECWidget, QWidget):
                 # avoid recursion
                 continue
             docks.window().hide()
+
+    def delete(self):
+        self.hide()
+        self.deleteLater()
 
 
 if __name__ == "__main__":

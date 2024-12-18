@@ -487,6 +487,12 @@ class BECDockArea(RPCBase):
         Hide all windows including floating docks.
         """
 
+    @rpc_call
+    def delete(self):
+        """
+        None
+        """
+
 
 class BECFigure(RPCBase):
     @property

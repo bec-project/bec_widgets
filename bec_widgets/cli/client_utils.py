@@ -288,6 +288,29 @@ def wait_for_server(client):
     yield
 
 
+### ----------------------------
+### NOTE
+### it is far easier to extend the 'delete' method on the client side,
+### to know when the client is deleted, rather than listening to server
+### to get notified. However, 'generate_cli.py' cannot add extra stuff
+### in the generated client module. So, here a class with the same name
+### is created, and client module is patched.
+class BECDockArea(client.BECDockArea):
+    def delete(self):
+        if self is BECGuiClient._top_level["main"].widget:
+            raise RuntimeError("Cannot delete main window")
+        super().delete()
+        try:
+            del BECGuiClient._top_level[self._gui_id]
+        except KeyError:
+            # if a dock area is not at top level
+            pass
+
+
+client.BECDockArea = BECDockArea
+### ----------------------------
+
+
 @dataclass
 class WidgetDesc:
     title: str
