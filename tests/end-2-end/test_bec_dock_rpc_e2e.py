@@ -1,9 +1,9 @@
 import time
 
 import numpy as np
+import pytest
 from bec_lib.endpoints import MessageEndpoints
 
-from bec_widgets.cli.auto_updates import AutoUpdates
 from bec_widgets.cli.client import BECDockArea, BECFigure, BECImageShow, BECMotorMap, BECWaveform
 from bec_widgets.utils import Colors
 
@@ -292,3 +292,60 @@ def test_auto_update(bec_client_lib, connected_client_dock_w_auto_updates, qtbot
         plt_data[f"Scan {status.scan.scan_number} - {dock.selected_device}"]["y"]
         == last_scan_data["samy"]["samy"].val
     )
+
+
+def test_rpc_gui_obj(connected_client_gui_obj, qtbot):
+    gui = connected_client_gui_obj
+
+    assert gui.selected_device is None
+    assert len(gui.windows) == 1
+    assert gui.windows["main"].widget is gui.main
+    assert gui.windows["main"].title == "BEC Widgets"
+    mw = gui.main
+    assert mw.__class__.__name__ == "BECDockArea"
+
+    xw = gui.new("X")
+    assert xw.__class__.__name__ == "BECDockArea"
+    assert len(gui.windows) == 2
+
+    gui_info = gui._dump()
+    mw_info = gui_info[mw._gui_id]
+    assert mw_info["title"] == "BEC Widgets"
+    assert mw_info["visible"]
+    xw_info = gui_info[xw._gui_id]
+    assert xw_info["title"] == "X"
+    assert xw_info["visible"]
+
+    gui.hide()
+    gui_info = gui._dump()
+    assert not any(windows["visible"] for windows in gui_info.values())
+
+    gui.show()
+    gui_info = gui._dump()
+    assert all(windows["visible"] for windows in gui_info.values())
+
+    assert gui.gui_is_alive()
+    gui.close()
+    assert not gui.gui_is_alive()
+    gui.start_server(wait=True)
+    assert gui.gui_is_alive()
+    # calling start multiple times should not change anything
+    gui.start_server(wait=True)
+    gui.start()
+    # gui.windows should have main, and main dock area should have same gui_id as before
+    assert len(gui.windows) == 1
+    assert gui.windows["main"].widget._gui_id == mw._gui_id
+    # communication should work, main dock area should have same id and be visible
+    gui_info = gui._dump()
+    assert gui_info[mw._gui_id]["visible"]
+
+    with pytest.raises(RuntimeError):
+        gui.main.delete()
+
+    yw = gui.new("Y")
+    assert len(gui.windows) == 2
+    yw.delete()
+    assert len(gui.windows) == 1
+    # check it is really deleted on server
+    gui_info = gui._dump()
+    assert yw._gui_id not in gui_info
