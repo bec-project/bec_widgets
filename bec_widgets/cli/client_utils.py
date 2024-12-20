@@ -20,12 +20,16 @@ from bec_widgets.cli.auto_updates import AutoUpdates
 from bec_widgets.cli.rpc.rpc_base import RPCBase
 
 if TYPE_CHECKING:
+    from bec_lib import messages
+    from bec_lib.connector import MessageObject
     from bec_lib.device import DeviceBase
 
-messages = lazy_import("bec_lib.messages")
-# from bec_lib.connector import MessageObject
-MessageObject = lazy_import_from("bec_lib.connector", ("MessageObject",))
-BECDispatcher = lazy_import_from("bec_widgets.utils.bec_dispatcher", ("BECDispatcher",))
+    from bec_widgets.utils.bec_dispatcher import BECDispatcher
+else:
+    messages = lazy_import("bec_lib.messages")
+    # from bec_lib.connector import MessageObject
+    MessageObject = lazy_import_from("bec_lib.connector", ("MessageObject",))
+    BECDispatcher = lazy_import_from("bec_widgets.utils.bec_dispatcher", ("BECDispatcher",))
 
 logger = bec_logger.logger
 
@@ -301,9 +305,8 @@ class BECGuiClient(RPCBase):
     def show(self):
         if self._process is not None:
             return self.show_all()
-        else:
-            # backward compatibility: show() was also starting server
-            return self.start_server(wait=True)
+        # backward compatibility: show() was also starting server
+        return self.start_server(wait=True)
 
     def hide(self):
         return self.hide_all()

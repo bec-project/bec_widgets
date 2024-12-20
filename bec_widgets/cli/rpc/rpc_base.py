@@ -3,6 +3,7 @@ from __future__ import annotations
 import threading
 import uuid
 from functools import wraps
+from typing import TYPE_CHECKING
 
 from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
@@ -10,9 +11,13 @@ from bec_lib.utils.import_utils import lazy_import, lazy_import_from
 
 import bec_widgets.cli.client as client
 
-messages = lazy_import("bec_lib.messages")
-# from bec_lib.connector import MessageObject
-MessageObject = lazy_import_from("bec_lib.connector", ("MessageObject",))
+if TYPE_CHECKING:
+    from bec_lib import messages
+    from bec_lib.connector import MessageObject
+else:
+    messages = lazy_import("bec_lib.messages")
+    # from bec_lib.connector import MessageObject
+    MessageObject = lazy_import_from("bec_lib.connector", ("MessageObject",))
 
 
 def rpc_call(func):
