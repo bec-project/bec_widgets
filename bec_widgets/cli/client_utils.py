@@ -16,7 +16,6 @@ from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import isinstance_based_on_class_name, lazy_import, lazy_import_from
 
 import bec_widgets.cli.client as client
-from bec_widgets.cli.auto_updates import AutoUpdates
 from bec_widgets.cli.rpc.rpc_base import RPCBase
 
 if TYPE_CHECKING:
@@ -160,8 +159,7 @@ class BECGuiClient(RPCBase):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-        self._auto_updates_enabled = True
-        self._auto_updates = None
+        self._auto_update_enabled = True
         self._startup_timeout = 0
         self._gui_started_timer = None
         self._gui_started_event = threading.Event()
@@ -172,30 +170,25 @@ class BECGuiClient(RPCBase):
     def windows(self):
         return self._top_level
 
-    @property
-    def auto_updates(self):
-        if self._auto_updates_enabled:
-            with wait_for_server(self):
-                return self._auto_updates
-
-    def _get_update_script(self) -> AutoUpdates | None:
-        eps = imd.entry_points(group="bec.widgets.auto_updates")
-        for ep in eps:
-            if ep.name == "plugin_widgets_update":
-                try:
-                    spec = importlib.util.find_spec(ep.module)
-                    # if the module is not found, we skip it
-                    if spec is None:
-                        continue
-                    return ep.load()(gui=self)
-                except Exception as e:
-                    logger.error(f"Error loading auto update script from plugin: {str(e)}")
-        return None
+    # TODO: needs review
+    # def _get_update_script(self) -> AutoUpdates | None:
+    #    eps = imd.entry_points(group="bec.widgets.auto_updates")
+    #    for ep in eps:
+    #        if ep.name == "plugin_widgets_update":
+    #            try:
+    #                spec = importlib.util.find_spec(ep.module)
+    #                # if the module is not found, we skip it
+    #                if spec is None:
+    #                    continue
+    #                return ep.load()(gui=self)
+    #            except Exception as e:
+    #                logger.error(f"Error loading auto update script from plugin: {str(e)}")
+    #    return None
 
     @property
     def selected_device(self):
         """
-        Selected device for the plot.
+        Selected device for the auto update plot.
         """
         auto_update_config_ep = MessageEndpoints.gui_auto_update_config(self._gui_id)
         auto_update_config = self._client.connector.get(auto_update_config_ep)
@@ -218,36 +211,12 @@ class BECGuiClient(RPCBase):
         else:
             raise ValueError("Device must be a string or a device object")
 
-    def _start_update_script(self) -> None:
-        self._client.connector.register(MessageEndpoints.scan_status(), cb=self._handle_msg_update)
-
-    def _handle_msg_update(self, msg: MessageObject) -> None:
-        if self.auto_updates is not None:
-            # pylint: disable=protected-access
-            return self._update_script_msg_parser(msg.value)
-
-    def _update_script_msg_parser(self, msg: messages.BECMessage) -> None:
-        if isinstance(msg, messages.ScanStatusMessage):
-            if not self.gui_is_alive():
-                return
-            if self._auto_updates_enabled:
-                return self.auto_updates.do_update(msg)
-
     def _gui_post_startup(self):
         self._top_level["main"] = WidgetDesc(
             title="BEC Widgets", widget=BECDockArea(gui_id=self._gui_id)
         )
-        if self._auto_updates_enabled:
-            if self._auto_updates is None:
-                auto_updates = self._get_update_script()
-                if auto_updates is None:
-                    AutoUpdates.create_default_dock = True
-                    AutoUpdates.enabled = True
-                    auto_updates = AutoUpdates(self._top_level["main"].widget)
-                if auto_updates.create_default_dock:
-                    auto_updates.start_default_dock()
-                self._start_update_script()
-                self._auto_updates = auto_updates
+        if self._auto_update_enabled:
+            self._do_install_auto_update()
         self._do_show_all()
         self._gui_started_event.set()
 
@@ -324,6 +293,14 @@ class BECGuiClient(RPCBase):
             widget = rpc_client._run_rpc("new_dock_area", title)
             self._top_level[widget._gui_id] = WidgetDesc(title=title, widget=widget)
             return widget
+
+    def _do_install_auto_update(self):
+        rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
+        return rpc_client._run_rpc("install_auto_update")
+
+    def install_auto_update(self):
+        with wait_for_server(self):
+            return self._do_install_auto_update()
 
     def close(self) -> None:
         """

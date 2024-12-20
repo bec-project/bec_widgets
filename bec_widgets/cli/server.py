@@ -264,8 +264,8 @@ def main():
 
             RPCRegister().add_rpc(win)
 
-            gui = server.gui
-            win.setCentralWidget(gui)
+            win.setCentralWidget(server.gui)
+
             if not args.hide:
                 win.show()
 

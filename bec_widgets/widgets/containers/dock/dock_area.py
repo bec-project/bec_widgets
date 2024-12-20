@@ -44,7 +44,6 @@ class BECDockArea(BECWidget, QWidget):
     PLUGIN = True
     USER_ACCESS = [
         "_config_dict",
-        "selected_device",
         "panels",
         "save_state",
         "remove_dock",
@@ -215,17 +214,6 @@ class BECDockArea(BECWidget, QWidget):
                 Qt.AlignCenter,
                 "Add docks using 'add_dock' method from CLI\n or \n Add widget docks using the toolbar",
             )
-
-    @property
-    def selected_device(self) -> str:
-        gui_id = QApplication.instance().gui_id
-        auto_update_config = self.client.connector.get(
-            MessageEndpoints.gui_auto_update_config(gui_id)
-        )
-        try:
-            return auto_update_config.selected_device
-        except AttributeError:
-            return None
 
     @property
     def panels(self) -> dict[str, BECDock]:
