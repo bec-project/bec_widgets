@@ -349,3 +349,12 @@ def test_rpc_gui_obj(connected_client_gui_obj, qtbot):
     # check it is really deleted on server
     gui_info = gui._dump()
     assert yw._gui_id not in gui_info
+
+
+def test_rpc_call_with_exception_in_safeslot_error_popup(connected_client_gui_obj, qtbot):
+    gui = connected_client_gui_obj
+
+    gui.main.add_dock("test")
+    with pytest.raises(ValueError):
+        gui.main.add_dock("test")
+        # time.sleep(0.1)

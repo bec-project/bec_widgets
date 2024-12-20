@@ -169,12 +169,14 @@ class _ErrorPopupUtility(QObject):
             error_message = " ".join(captured_message)
         return error_message
 
+    def get_error_message(self, exctype, value, tb):
+        return "".join(traceback.format_exception(exctype, value, tb))
+
     def custom_exception_hook(self, exctype, value, tb, popup_error=False):
         if popup_error or self.enable_error_popup:
-            error_message = traceback.format_exception(exctype, value, tb)
             self.error_occurred.emit(
                 "Method error" if popup_error else "Application Error",
-                "".join(error_message),
+                self.get_error_message(exctype, value, tb),
                 self.parent(),
             )
         else:
