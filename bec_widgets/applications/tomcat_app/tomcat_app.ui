@@ -16,7 +16,7 @@
         <widget class="QWidget" name="centralwidget">
             <layout class="QVBoxLayout" name="verticalLayout_2">
                 <item>
-                    <widget class="BECImageWidget" name="bec_image_widget"/>
+                    <widget class="BECImageWidget" name="image_widget"/>
                 </item>
             </layout>
         </widget>
@@ -48,7 +48,7 @@
                         </widget>
                     </item>
                     <item row="0" column="1">
-                        <widget class="QRadioButton" name="radioButton">
+                        <widget class="QRadioButton" name="radio_dataset">
                             <property name="text">
                                 <string/>
                             </property>
@@ -62,7 +62,7 @@
                         </widget>
                     </item>
                     <item row="1" column="1">
-                        <widget class="QRadioButton" name="radioButton_2">
+                        <widget class="QRadioButton" name="radio_io">
                             <property name="text">
                                 <string/>
                             </property>
@@ -179,6 +179,9 @@
                     </item>
                     <item>
                         <widget class="QSlider" name="slider_select">
+                            <property name="maximum">
+                                <number>500</number>
+                            </property>
                             <property name="orientation">
                                 <enum>Qt::Orientation::Horizontal</enum>
                             </property>
@@ -254,5 +257,22 @@
         </customwidget>
     </customwidgets>
     <resources/>
-    <connections/>
+    <connections>
+        <connection>
+            <sender>slider_select</sender>
+            <signal>valueChanged(int)</signal>
+            <receiver>label_4</receiver>
+            <slot>setNum(int)</slot>
+            <hints>
+                <hint type="sourcelabel">
+                    <x>61</x>
+                    <y>396</y>
+                </hint>
+                <hint type="destinationlabel">
+                    <x>73</x>
+                    <y>425</y>
+                </hint>
+            </hints>
+        </connection>
+    </connections>
 </ui>
