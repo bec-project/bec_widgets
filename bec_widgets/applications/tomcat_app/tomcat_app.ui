@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+    <class>MainWindow</class>
+    <widget class="QMainWindow" name="MainWindow">
+        <property name="geometry">
+            <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>800</width>
+                <height>631</height>
+            </rect>
+        </property>
+        <property name="windowTitle">
+            <string>MainWindow</string>
+        </property>
+        <widget class="QWidget" name="centralwidget">
+            <layout class="QVBoxLayout" name="verticalLayout_2">
+                <item>
+                    <widget class="BECImageWidget" name="bec_image_widget"/>
+                </item>
+            </layout>
+        </widget>
+        <widget class="QMenuBar" name="menubar">
+            <property name="geometry">
+                <rect>
+                    <x>0</x>
+                    <y>0</y>
+                    <width>800</width>
+                    <height>29</height>
+                </rect>
+            </property>
+        </widget>
+        <widget class="QStatusBar" name="statusbar"/>
+        <widget class="QDockWidget" name="status_dock">
+            <property name="windowTitle">
+                <string>Status</string>
+            </property>
+            <attribute name="dockWidgetArea">
+                <number>1</number>
+            </attribute>
+            <widget class="QWidget" name="dockWidgetContents">
+                <layout class="QGridLayout" name="gridLayout">
+                    <item row="0" column="0">
+                        <widget class="QLabel" name="label_7">
+                            <property name="text">
+                                <string>Dataset loaded</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="0" column="1">
+                        <widget class="QRadioButton" name="radioButton">
+                            <property name="text">
+                                <string/>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="1" column="0">
+                        <widget class="QLabel" name="label_8">
+                            <property name="text">
+                                <string>I/O Service</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="1" column="1">
+                        <widget class="QRadioButton" name="radioButton_2">
+                            <property name="text">
+                                <string/>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="1" column="2">
+                        <widget class="QLineEdit" name="lineEdit_2"/>
+                    </item>
+                    <item row="2" column="0">
+                        <widget class="QLabel" name="label_10">
+                            <property name="text">
+                                <string>Reco Service</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="2" column="1">
+                        <widget class="QRadioButton" name="radioButton_4">
+                            <property name="text">
+                                <string/>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="2" column="2">
+                        <widget class="QLabel" name="label_11">
+                            <property name="text">
+                                <string>reco-adress</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="3" column="0">
+                        <widget class="QLabel" name="label_9">
+                            <property name="text">
+                                <string>Streaming Service</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="3" column="1">
+                        <widget class="QRadioButton" name="radioButton_3">
+                            <property name="text">
+                                <string/>
+                            </property>
+                        </widget>
+                    </item>
+                    <item row="3" column="2">
+                        <widget class="QLabel" name="label_12">
+                            <property name="text">
+                                <string>stream-adress</string>
+                            </property>
+                        </widget>
+                    </item>
+                </layout>
+            </widget>
+        </widget>
+        <widget class="QDockWidget" name="dock_data">
+            <property name="windowTitle">
+                <string>Dataset</string>
+            </property>
+            <attribute name="dockWidgetArea">
+                <number>1</number>
+            </attribute>
+            <widget class="QWidget" name="dockWidgetContents_2">
+                <layout class="QVBoxLayout" name="verticalLayout">
+                    <item>
+                        <widget class="QLabel" name="label_2">
+                            <property name="text">
+                                <string>Input Dataset (full HDF5 path)</string>
+                            </property>
+                            <property name="alignment">
+                                <set>Qt::AlignmentFlag::AlignCenter</set>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <widget class="QLineEdit" name="line_edit_dataset"/>
+                    </item>
+                    <item>
+                        <layout class="QHBoxLayout" name="horizontalLayout">
+                            <item>
+                                <widget class="QPushButton" name="button_load">
+                                    <property name="text">
+                                        <string>Load Dataset</string>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="QPushButton" name="button_close">
+                                    <property name="text">
+                                        <string>Close Dataset</string>
+                                    </property>
+                                </widget>
+                            </item>
+                        </layout>
+                    </item>
+                    <item>
+                        <layout class="QHBoxLayout" name="horizontalLayout_2">
+                            <item>
+                                <widget class="QLabel" name="label">
+                                    <property name="text">
+                                        <string>Single Slice Live Preview</string>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="ToggleSwitch" name="toggle_preview"/>
+                            </item>
+                        </layout>
+                    </item>
+                    <item>
+                        <widget class="QLabel" name="label_3">
+                            <property name="text">
+                                <string>Select Slice</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <widget class="QSlider" name="slider_select">
+                            <property name="orientation">
+                                <enum>Qt::Orientation::Horizontal</enum>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <widget class="QLabel" name="label_4">
+                            <property name="text">
+                                <string>Current Index</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <widget class="QLabel" name="label_5">
+                            <property name="text">
+                                <string>Rotation center (offset from center)</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <widget class="QSlider" name="slider_rotation">
+                            <property name="orientation">
+                                <enum>Qt::Orientation::Horizontal</enum>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <widget class="QLabel" name="label_6">
+                            <property name="text">
+                                <string>Rotation Index</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <layout class="QHBoxLayout" name="horizontalLayout_3">
+                            <item>
+                                <widget class="QPushButton" name="button_reconstruct">
+                                    <property name="text">
+                                        <string>Reconstruct</string>
+                                    </property>
+                                </widget>
+                            </item>
+                            <item>
+                                <widget class="QPushButton" name="button_single">
+                                    <property name="text">
+                                        <string>Single Slice</string>
+                                    </property>
+                                </widget>
+                            </item>
+                        </layout>
+                    </item>
+                    <item>
+                        <widget class="QPushButton" name="button_async">
+                            <property name="text">
+                                <string>Sample Async task</string>
+                            </property>
+                        </widget>
+                    </item>
+                </layout>
+            </widget>
+        </widget>
+    </widget>
+    <customwidgets>
+        <customwidget>
+            <class>BECImageWidget</class>
+            <extends>QWidget</extends>
+            <header>bec_image_widget</header>
+        </customwidget>
+        <customwidget>
+            <class>ToggleSwitch</class>
+            <extends>QWidget</extends>
+            <header>toggle_switch</header>
+        </customwidget>
+    </customwidgets>
+    <resources/>
+    <connections/>
+</ui>
