@@ -634,7 +634,7 @@ class BECImageShow(BECPlotBase):
             )
             image_item.connected = False
         if monitor and image_item.connected is False:
-            self.entry_validator.validate_monitor(monitor)
+            # self.entry_validator.validate_monitor(monitor)
             if self.image_type == "device_monitor_1d":
                 self.bec_dispatcher.connect_slot(
                     self.on_image_update, MessageEndpoints.device_monitor_1d(monitor)

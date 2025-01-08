@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import pyqtgraph as pg
 import requests
 import sys
@@ -38,6 +39,8 @@ class TomcatApp(QMainWindow, BECWidget):
 
         self.ui.slider_select.valueChanged.connect(self.select_slice_from_slider)
         self.proxy_slider = pg.SignalProxy(self.select_slice, rateLimit=2, slot=self.send_slice)
+
+        self.image_widget = self.ui.image_widget
 
     def load_ui(self, ui_file):
         loader = UILoader(self)
@@ -87,6 +90,9 @@ def main():  # pragma: no cover
 
     main_window = TomcatApp(client=client)
     main_window.show()
+    main_window.image_widget.image("RecoPreview")
+    # custom_data = np.random.rand(100, 100)
+    # main_window.image_widget._image.add_custom_image("custom", custom_data)
     sys.exit(app.exec_())
 
 

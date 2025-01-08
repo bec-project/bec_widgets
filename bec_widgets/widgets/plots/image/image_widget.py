@@ -190,7 +190,7 @@ class BECImageWidget(BECWidget, QWidget):
     ###################################
     # User Access Methods from image
     ###################################
-    @SafeSlot(popup_error=True)
+    @SafeSlot(popup_error=False)
     def image(
         self,
         monitor: str,
