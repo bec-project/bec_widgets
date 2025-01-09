@@ -3235,6 +3235,31 @@ class PositionerBox(RPCBase):
         """
 
 
+class PositionerBoxBase(RPCBase):
+    @property
+    @rpc_call
+    def _config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def _get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
+        """
+
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
+        """
+
+
 class PositionerControlLine(RPCBase):
     @rpc_call
     def set_positioner(self, positioner: "str | Positioner"):
