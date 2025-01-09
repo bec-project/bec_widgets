@@ -7,8 +7,8 @@ from qtpy.QtCore import Qt, QTimer
 from qtpy.QtGui import QValidator
 from qtpy.QtWidgets import QPushButton
 
-from bec_widgets.widgets.control.device_control.positioner_box.positioner_box import PositionerBox
-from bec_widgets.widgets.control.device_control.positioner_box.positioner_control_line import (
+from bec_widgets.widgets.control.device_control.positioner_box import (
+    PositionerBox,
     PositionerControlLine,
 )
 from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit import (
@@ -23,11 +23,11 @@ from .conftest import create_widget
 def positioner_box(qtbot, mocked_client):
     """Fixture for PositionerBox widget"""
     with mock.patch(
-        "bec_widgets.widgets.control.device_control.positioner_box.positioner_box.uuid.uuid4"
+        "bec_widgets.widgets.control.device_control.positioner_box.positioner_box.positioner_box.uuid.uuid4"
     ) as mock_uuid:
         mock_uuid.return_value = "fake_uuid"
         with mock.patch(
-            "bec_widgets.widgets.control.device_control.positioner_box.positioner_box.PositionerBox._check_device_is_valid",
+            "bec_widgets.widgets.control.device_control.positioner_box.positioner_box.positioner_box.PositionerBox._check_device_is_valid",
             return_value=True,
         ):
             db = create_widget(qtbot, PositionerBox, device="samx", client=mocked_client)
@@ -126,11 +126,11 @@ def test_positioner_control_line(qtbot, mocked_client):
     Inherits from PositionerBox, but the layout is changed. Check dimensions only
     """
     with mock.patch(
-        "bec_widgets.widgets.control.device_control.positioner_box.positioner_box.uuid.uuid4"
+        "bec_widgets.widgets.control.device_control.positioner_box.positioner_box.positioner_box.uuid.uuid4"
     ) as mock_uuid:
         mock_uuid.return_value = "fake_uuid"
         with mock.patch(
-            "bec_widgets.widgets.control.device_control.positioner_box.positioner_box.PositionerBox._check_device_is_valid",
+            "bec_widgets.widgets.control.device_control.positioner_box.positioner_box.positioner_box.PositionerBox._check_device_is_valid",
             return_value=True,
         ):
             db = PositionerControlLine(device="samx", client=mocked_client)

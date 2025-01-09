@@ -6,24 +6,24 @@ import os
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 
 from bec_widgets.utils.bec_designer import designer_material_icon
-from bec_widgets.widgets.control.device_control.positioner_box.positioner_box import PositionerBox
+from bec_widgets.widgets.control.device_control.positioner_box import PositionerControlLine
 
 DOM_XML = """
 <ui language='c++'>
-    <widget class='PositionerBox' name='positioner_box'>
+    <widget class='PositionerControlLine' name='positioner_control_line'>
     </widget>
 </ui>
 """
 MODULE_PATH = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 
-class PositionerBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
+class PositionerControlLinePlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
     def __init__(self):
         super().__init__()
         self._form_editor = None
 
     def createWidget(self, parent):
-        t = PositionerBox(parent)
+        t = PositionerControlLine(parent)
         return t
 
     def domXml(self):
@@ -33,10 +33,10 @@ class PositionerBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "Device Control"
 
     def icon(self):
-        return designer_material_icon(PositionerBox.ICON_NAME)
+        return designer_material_icon(PositionerControlLine.ICON_NAME)
 
     def includeFile(self):
-        return "positioner_box"
+        return "positioner_control_line"
 
     def initialize(self, form_editor):
         self._form_editor = form_editor
@@ -48,10 +48,10 @@ class PositionerBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return self._form_editor is not None
 
     def name(self):
-        return "PositionerBox"
+        return "PositionerControlLine"
 
     def toolTip(self):
-        return "Simple Widget to control a positioner in box form"
+        return "A widget that controls a single positioner in line form."
 
     def whatsThis(self):
         return self.toolTip()

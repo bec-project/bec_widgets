@@ -8,7 +8,7 @@ from qtpy.QtCore import Property, QSize, Signal, Slot
 from qtpy.QtWidgets import QGridLayout, QGroupBox, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.widgets.control.device_control.positioner_box.positioner_box import PositionerBox
+from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox
 
 logger = bec_logger.logger
 

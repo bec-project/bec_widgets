@@ -23,6 +23,7 @@ from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit 
     DeviceLineEdit,
 )
 
+
 logger = bec_logger.logger
 
 MODULE_PATH = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -31,6 +32,7 @@ MODULE_PATH = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 class PositionerBox(BECWidget, CompactPopupWidget):
     """Simple Widget to control a positioner in box form"""
 
+    current_path = ""
     ui_file = "positioner_box.ui"
     dimensions = (234, 224)
 
@@ -54,7 +56,8 @@ class PositionerBox(BECWidget, CompactPopupWidget):
         self._device = ""
         self._limits = None
         self._dialog = None
-
+        if self.current_path == "":
+            self.current_path = os.path.dirname(__file__)
         self.init_ui()
 
         if device is not None:
@@ -65,8 +68,7 @@ class PositionerBox(BECWidget, CompactPopupWidget):
         """Init the ui"""
         self.device_changed.connect(self.on_device_change)
 
-        current_path = os.path.dirname(__file__)
-        self.ui = UILoader(self).loader(os.path.join(current_path, self.ui_file))
+        self.ui = UILoader(self).loader(os.path.join(self.current_path, self.ui_file))
 
         self.addWidget(self.ui)
         self.layout.setSpacing(0)

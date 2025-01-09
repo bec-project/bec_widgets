@@ -1,6 +1,7 @@
+import os
 from bec_lib.device import Positioner
 
-from bec_widgets.widgets.control.device_control.positioner_box.positioner_box import PositionerBox
+from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox
 
 
 class PositionerControlLine(PositionerBox):
@@ -12,13 +13,14 @@ class PositionerControlLine(PositionerBox):
     PLUGIN = True
     ICON_NAME = "switch_left"
 
-    def __init__(self, parent=None, device: Positioner = None, *args, **kwargs):
+    def __init__(self, parent=None, device: Positioner | str | None = None, *args, **kwargs):
         """Initialize the DeviceControlLine.
 
         Args:
             parent: The parent widget.
             device (Positioner): The device to control.
         """
+        self.current_path = os.path.dirname(__file__)
         super().__init__(parent=parent, device=device, *args, **kwargs)
 
 

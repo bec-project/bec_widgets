@@ -20,7 +20,7 @@ from bec_widgets.qt_utils.toolbar import (
 from bec_widgets.utils import ConnectionConfig, WidgetContainerUtils
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.containers.dock.dock import BECDock, DockConfig
-from bec_widgets.widgets.control.device_control.positioner_box.positioner_box import PositionerBox
+from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox
 from bec_widgets.widgets.control.scan_control.scan_control import ScanControl
 from bec_widgets.widgets.editors.vscode.vscode import VSCodeEditor
 from bec_widgets.widgets.plots.image.image_widget import BECImageWidget
