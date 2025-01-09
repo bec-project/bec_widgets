@@ -371,6 +371,7 @@ def test_rpc_call_with_exception_in_safeslot_error_popup(connected_client_gui_ob
     gui = connected_client_gui_obj
 
     gui.main.add_dock("test")
+    qtbot.waitUntil(lambda: len(gui.main.panels) == 2)  # default_figure + test
     with pytest.raises(ValueError):
         gui.main.add_dock("test")
         # time.sleep(0.1)
