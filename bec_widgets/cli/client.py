@@ -31,6 +31,7 @@ class Widgets(str, enum.Enum):
     DeviceComboBox = "DeviceComboBox"
     DeviceLineEdit = "DeviceLineEdit"
     LMFitDialog = "LMFitDialog"
+    Minesweeper = "Minesweeper"
     PositionIndicator = "PositionIndicator"
     PositionerBox = "PositionerBox"
     PositionerControlLine = "PositionerControlLine"
@@ -3179,6 +3180,9 @@ class LMFitDialog(RPCBase):
         """
         Get the RPC ID of the widget.
         """
+
+
+class Minesweeper(RPCBase): ...
 
 
 class PositionIndicator(RPCBase):

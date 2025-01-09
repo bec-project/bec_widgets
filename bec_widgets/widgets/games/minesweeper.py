@@ -16,6 +16,8 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_widgets.utils.bec_widget import BECWidget
+
 NUM_COLORS = {
     1: QColor("#f44336"),
     2: QColor("#9C27B0"),
@@ -137,13 +139,16 @@ class Pos(QWidget):
                 self.ohno.emit()
 
 
-class Minesweeper(QWidget):
+class Minesweeper(BECWidget, QWidget):
 
     PLUGIN = True
     ICON_NAME = "videogame_asset"
+    USER_ACCESS = []
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, parent=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        QWidget.__init__(self, parent=parent)
+
         self._ui_initialised = False
         self._timer_start_num_seconds = 0
         self._set_level_params(LEVELS["1"])
