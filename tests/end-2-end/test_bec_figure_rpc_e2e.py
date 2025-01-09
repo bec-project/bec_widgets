@@ -1,10 +1,10 @@
 import time
 
 import numpy as np
-import pytest
 from bec_lib.endpoints import MessageEndpoints
 
 from bec_widgets.cli.client import BECFigure, BECImageShow, BECMotorMap, BECWaveform
+from bec_widgets.tests.utils import check_remote_data_size
 
 
 def test_rpc_waveform1d_custom_curve(connected_client_figure):
@@ -78,7 +78,7 @@ def test_rpc_plotting_shortcuts_init_configs(connected_client_figure, qtbot):
     }
 
 
-def test_rpc_waveform_scan(connected_client_figure, bec_client_lib):
+def test_rpc_waveform_scan(qtbot, connected_client_figure, bec_client_lib):
     fig = BECFigure(connected_client_figure)
 
     # add 3 different curves to track
@@ -96,6 +96,11 @@ def test_rpc_waveform_scan(connected_client_figure, bec_client_lib):
 
     item = queue.scan_storage.storage[-1]
     last_scan_data = item.live_data if hasattr(item, "live_data") else item.data
+
+    num_elements = len(last_scan_data["samx"]["samx"].val)
+
+    for plot_name in ["bpm4i-bpm4i", "bpm3a-bpm3a", "bpm4d-bpm4d"]:
+        qtbot.waitUntil(lambda: check_remote_data_size(plt, plot_name, num_elements))
 
     # get data from curves
     plt_data = plt.get_all_data()

@@ -224,3 +224,11 @@ DEVICES = [
     Positioner("test", limits=[-10, 10], read_value=2.0),
     Device("test_device"),
 ]
+
+
+def check_remote_data_size(widget, plot_name, num_elements):
+    """
+    Check if the remote data has the correct number of elements.
+    Used in the qtbot.waitUntil function.
+    """
+    return len(widget.get_all_data()[plot_name]["x"]) == num_elements
