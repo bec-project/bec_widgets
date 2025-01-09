@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v1.14.0 (2025-01-09)
+
+### Documentation
+
+- Add docs for games/minesweeper
+  ([`e2c7dc9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e2c7dc98d2f1c627fcc1aac045fa32dc94057bb0))
+
+### Features
+
+- **widget**: Make Minesweeper into BEC widget
+  ([`507d46f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/507d46f88bd06a3e77b1e60a6ce56c80f622cb6c))
+
+- **widgets**: Added minesweeper widget
+  ([`57dc1a3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/57dc1a3afc60b6c27b42c258a6fd1ea1ddb24637))
+
+
 ## v1.13.0 (2025-01-09)
 
 ### Bug Fixes
