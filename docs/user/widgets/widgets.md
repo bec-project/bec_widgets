@@ -270,5 +270,6 @@ signal_input/signal_input.md
 position_indicator/position_indicator.md
 lmfit_dialog/lmfit_dialog.md
 dap_combo_box/dap_combo_box.md
+games/games.md
 
 ```
