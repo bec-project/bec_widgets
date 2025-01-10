@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.14.1 (2025-01-10)
+
+### Bug Fixes
+
+- Cast spinner widget angle to int when using for arc
+  ([`fa9ecaf`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fa9ecaf43347f6a07f86075d7ea54463684344f1))
+
+
 ## v1.14.0 (2025-01-09)
 
 ### Documentation
