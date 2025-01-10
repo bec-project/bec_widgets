@@ -19,6 +19,12 @@ def test_spinner_widget_paint_event(spinner_widget, qtbot):
     spinner_widget.paintEvent(None)
 
 
+def test_spinnner_with_float_angle(spinner_widget, qtbot):
+    spinner_widget.start()
+    spinner_widget.angle = 0.123453453453453
+    spinner_widget.paintEvent(None)
+
+
 def test_spinner_widget_rendered(spinner_widget, qtbot, tmpdir):
     spinner_widget.update()
     qtbot.wait(200)

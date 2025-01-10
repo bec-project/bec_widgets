@@ -75,7 +75,7 @@ class SpinnerWidget(QWidget):
             proportion = 1 / 4
             angle_span = int(proportion * 360 * 16)
             angle_span += angle_span * ease_in_out_sine(self.time / self.duration)
-            painter.drawArc(adjusted_rect, self.angle * 16, int(angle_span))
+            painter.drawArc(adjusted_rect, int(self.angle * 16), int(angle_span))
         painter.end()
 
     def closeEvent(self, event):
