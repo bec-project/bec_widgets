@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.15.0 (2025-01-10)
+
+### Features
+
+- **widget_state_manager**: Example app added
+  ([`a00d368`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a00d368c25a19b04d6fbc8a07cff330d1a232e21))
+
+- **widget_state_manager**: State manager for single widget
+  ([`01b4608`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/01b4608331f375aeeeb692328b693f2d2802dc9c))
+
+
 ## v1.14.1 (2025-01-10)
 
 ### Bug Fixes
