@@ -5,24 +5,19 @@ from __future__ import annotations
 import os
 
 from bec_lib.device import Positioner
-from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
-from qtpy.QtCore import Property, Signal, Slot
+from qtpy.QtCore import Signal
 from qtpy.QtGui import QDoubleValidator
-from qtpy.QtWidgets import QDialog, QDoubleSpinBox, QPushButton, QVBoxLayout
+from qtpy.QtWidgets import QDoubleSpinBox
 
-from bec_widgets.widgets.control.device_control.positioner_box._base import PositionerBoxBase
+from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.colors import get_accent_colors, set_theme
+from bec_widgets.widgets.control.device_control.positioner_box._base import PositionerBoxBase
 from bec_widgets.widgets.control.device_control.positioner_box._base.positioner_box_base import (
     DeviceUpdateUIComponents,
 )
-from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
-from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit import (
-    DeviceLineEdit,
-)
-
 
 logger = bec_logger.logger
 
@@ -53,7 +48,6 @@ class PositionerBox(PositionerBoxBase):
 
         self._device = ""
         self._limits = None
-        self._dialog = None
         if self.current_path == "":
             self.current_path = os.path.dirname(__file__)
 
@@ -91,40 +85,14 @@ class PositionerBox(PositionerBoxBase):
         self.setpoint_validator = QDoubleValidator()
         self.ui.setpoint.setValidator(self.setpoint_validator)
         self.ui.spinner_widget.start()
-        self.ui.tool_button.clicked.connect(self._open_dialog_selection)
+        self.ui.tool_button.clicked.connect(self._open_dialog_selection(self.set_positioner))
         icon = material_icon(icon_name="edit_note", size=(16, 16), convert_to_pixmap=False)
         self.ui.tool_button.setIcon(icon)
 
-    def _open_dialog_selection(self):
-        """Open dialog window for positioner selection"""
-        self._dialog = QDialog(self)
-        self._dialog.setWindowTitle("Positioner Selection")
-        layout = QVBoxLayout()
-        line_edit = DeviceLineEdit(
-            self, client=self.client, device_filter=[BECDeviceFilter.POSITIONER]
-        )
-        line_edit.textChanged.connect(self.set_positioner)
-        layout.addWidget(line_edit)
-        close_button = QPushButton("Close")
-        close_button.clicked.connect(self._dialog.accept)
-        layout.addWidget(close_button)
-        self._dialog.setLayout(layout)
-        self._dialog.exec()
-        self._dialog = None
+    def force_update_readback(self):
+        self._init_device(self.device, self.position_update.emit, self.update_limits)
 
-    def _toogle_enable_buttons(self, enable: bool) -> None:
-        """Toogle enable/disable on available buttons
-
-        Args:
-            enable (bool): Enable buttons
-        """
-        self.ui.tweak_left.setEnabled(enable)
-        self.ui.tweak_right.setEnabled(enable)
-        self.ui.stop.setEnabled(enable)
-        self.ui.setpoint.setEnabled(enable)
-        self.ui.step_size.setEnabled(enable)
-
-    @Property(str)
+    @SafeProperty(str)
     def device(self):
         """Property to set the device"""
         return self._device
@@ -142,7 +110,7 @@ class PositionerBox(PositionerBoxBase):
             self.label = value
         self.device_changed.emit(old_device, value)
 
-    @Property(bool)
+    @SafeProperty(bool)
     def hide_device_selection(self):
         """Hide the device selection"""
         return not self.ui.tool_button.isVisible()
@@ -152,7 +120,7 @@ class PositionerBox(PositionerBoxBase):
         """Set the device selection visibility"""
         self.ui.tool_button.setVisible(not value)
 
-    @Slot(bool)
+    @SafeSlot(bool)
     def show_device_selection(self, value: bool):
         """Show the device selection
 
@@ -161,7 +129,7 @@ class PositionerBox(PositionerBoxBase):
         """
         self.hide_device_selection = not value
 
-    @Slot(str)
+    @SafeSlot(str)
     def set_positioner(self, positioner: str | Positioner):
         """Set the device
 
@@ -172,7 +140,7 @@ class PositionerBox(PositionerBoxBase):
             positioner = positioner.name
         self.device = positioner
 
-    @Slot(str, str)
+    @SafeSlot(str, str)
     def on_device_change(self, old_device: str, new_device: str):
         """Upon changing the device, a check will be performed if the device is a Positioner.
 
@@ -182,11 +150,14 @@ class PositionerBox(PositionerBoxBase):
         """
         if not self._check_device_is_valid(new_device):
             return
-        logger.info(f"Device changed from {old_device} to {new_device}")
-        self._toogle_enable_buttons(True)
-        self._init_device(new_device, self.position_update.emit, self.update_limits)
-        self._swap_readback_signal_connection(self.on_device_readback, old_device, new_device)
-        self._update_device_ui(new_device, self._device_ui_components(new_device))
+        self._on_device_change(
+            old_device,
+            new_device,
+            self.position_update.emit,
+            self.update_limits,
+            self.on_device_readback,
+            self._device_ui_components(new_device),
+        )
 
     def _device_ui_components(self, device: str) -> DeviceUpdateUIComponents:
         return {
@@ -196,9 +167,12 @@ class PositionerBox(PositionerBoxBase):
             "setpoint": self.ui.setpoint,
             "step_size": self.ui.step_size,
             "device_box": self.ui.device_box,
+            "stop": self.ui.stop,
+            "tweak_increase": self.ui.tweak_right,
+            "tweak_decrease": self.ui.tweak_left,
         }
 
-    @Slot(dict, dict)
+    @SafeSlot(dict, dict)
     def on_device_readback(self, msg_content: dict, metadata: dict):
         """Callback for device readback.
 
@@ -226,7 +200,7 @@ class PositionerBox(PositionerBoxBase):
         self._limits = limits
         self._update_limits_ui(limits, self.ui.position_indicator, self.setpoint_validator)
 
-    @Slot()
+    @SafeSlot()
     def on_stop(self):
         self._stop_device(self.device)
 
@@ -235,17 +209,17 @@ class PositionerBox(PositionerBoxBase):
         """Step size for tweak"""
         return self.ui.step_size.value()
 
-    @Slot()
+    @SafeSlot()
     def on_tweak_right(self):
         """Tweak motor right"""
         self.dev[self.device].move(self.step_size, relative=True)
 
-    @Slot()
+    @SafeSlot()
     def on_tweak_left(self):
         """Tweak motor left"""
         self.dev[self.device].move(-self.step_size, relative=True)
 
-    @Slot()
+    @SafeSlot()
     def on_setpoint_change(self):
         """Change the setpoint for the motor"""
         self.ui.setpoint.clearFocus()

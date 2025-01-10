@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from bec_lib.device import Positioner
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import Property, QSize, Signal, Slot
+from qtpy.QtCore import QSize, Signal
 from qtpy.QtWidgets import QGridLayout, QGroupBox, QVBoxLayout, QWidget
 
+from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox
 
@@ -32,7 +33,7 @@ class PositionerGroupBox(QGroupBox):
         self.widget.position_update.connect(self._on_position_update)
         self.widget.expand.connect(self._on_expand)
         self.setTitle(self.device_name)
-        self.widget.init_device()  # force readback
+        self.widget.force_update_readback()
 
     def _on_expand(self, expand):
         if expand:
@@ -82,7 +83,7 @@ class PositionerGroup(BECWidget, QWidget):
     def minimumSizeHint(self):
         return QSize(300, 30)
 
-    @Slot(str)
+    @SafeSlot(str)
     def set_positioners(self, device_names: str):
         """Redraw grid with positioners from device_names string
 
@@ -130,7 +131,7 @@ class PositionerGroup(BECWidget, QWidget):
         widget = self.sender()
         self.device_position_update.emit(widget.title(), pos)
 
-    @Property(str)
+    @SafeProperty(str)
     def devices_list(self):
         """Device names string separated by space"""
         return " ".join(self._device_widgets)
@@ -144,7 +145,7 @@ class PositionerGroup(BECWidget, QWidget):
                 return
         self.set_positioners(device_names)
 
-    @Property(int)
+    @SafeProperty(int)
     def grid_max_cols(self):
         """Max number of columns for widgets grid"""
         return self._grid_ncols

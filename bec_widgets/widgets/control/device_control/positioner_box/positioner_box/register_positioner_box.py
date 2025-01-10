@@ -6,7 +6,7 @@ def main():  # pragma: no cover
         return
     from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
 
-    from bec_widgets.widgets.control.device_control.positioner_box.positioner_box_plugin import (
+    from bec_widgets.widgets.control.device_control.positioner_box.positioner_box.positioner_box_plugin import (
         PositionerBoxPlugin,
     )
 

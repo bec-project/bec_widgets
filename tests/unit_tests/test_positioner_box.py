@@ -158,3 +158,10 @@ def test_positioner_box_open_dialog_selection(qtbot, positioner_box):
     QTimer.singleShot(100, close_dialog)
     qtbot.mouseClick(positioner_box.ui.tool_button, Qt.LeftButton)
     assert positioner_box.device == "samy"
+
+
+def test_device_validity_check_rejects_non_positioner():
+    # isinstance checks for PositionerBox are mocked out in the mock client
+    positioner_box = mock.MagicMock(spec=PositionerBox)
+    positioner_box.dev = {"test": 5.123}
+    assert not PositionerBox._check_device_is_valid(positioner_box, "test")

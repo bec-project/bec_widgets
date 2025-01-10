@@ -1,18 +1,30 @@
-from ast import Tuple
 import uuid
 from abc import abstractmethod
+from ast import Tuple
 from typing import Callable, TypedDict
 
 from bec_lib.device import Positioner
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.messages import ScanQueueMessage
-from qtpy.QtWidgets import QGroupBox, QDoubleSpinBox, QPushButton, QVBoxLayout, QLabel, QLineEdit
+from qtpy.QtWidgets import (
+    QDialog,
+    QDoubleSpinBox,
+    QGroupBox,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+)
 
 from bec_widgets.qt_utils.compact_popup import CompactPopupWidget
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.control.device_control.position_indicator.position_indicator import (
     PositionIndicator,
+)
+from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
+from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit import (
+    DeviceLineEdit,
 )
 from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 
@@ -26,6 +38,9 @@ class DeviceUpdateUIComponents(TypedDict):
     position_indicator: PositionIndicator
     step_size: QDoubleSpinBox
     device_box: QGroupBox
+    stop: QPushButton
+    tweak_increase: QPushButton
+    tweak_decrease: QPushButton
 
 
 class PositionerBoxBase(BECWidget, CompactPopupWidget):
@@ -43,6 +58,7 @@ class PositionerBoxBase(BECWidget, CompactPopupWidget):
         """
         super().__init__(**kwargs)
         CompactPopupWidget.__init__(self, parent=parent, layout=QVBoxLayout)
+        self._dialog = None
         self.get_bec_shortcuts()
 
     def _check_device_is_valid(self, device: str):
@@ -178,3 +194,50 @@ class PositionerBoxBase(BECWidget, CompactPopupWidget):
     def _swap_readback_signal_connection(self, slot, old_device, new_device):
         self.bec_dispatcher.disconnect_slot(slot, MessageEndpoints.device_readback(old_device))
         self.bec_dispatcher.connect_slot(slot, MessageEndpoints.device_readback(new_device))
+
+    def _toggle_enable_buttons(self, ui: DeviceUpdateUIComponents, enable: bool) -> None:
+        """Toogle enable/disable on available buttons
+
+        Args:
+            enable (bool): Enable buttons
+        """
+        ui["tweak_increase"].setEnabled(enable)
+        ui["tweak_decrease"].setEnabled(enable)
+        ui["stop"].setEnabled(enable)
+        ui["setpoint"].setEnabled(enable)
+        ui["step_size"].setEnabled(enable)
+
+    def _on_device_change(
+        self,
+        old_device: str,
+        new_device: str,
+        position_emit: Callable[[float], None],
+        limit_update: Callable[[tuple[float, float]], None],
+        on_device_readback: Callable,
+        ui: DeviceUpdateUIComponents,
+    ):
+        logger.info(f"Device changed from {old_device} to {new_device}")
+        self._toggle_enable_buttons(ui, True)
+        self._init_device(new_device, position_emit, limit_update)
+        self._swap_readback_signal_connection(on_device_readback, old_device, new_device)
+        self._update_device_ui(new_device, ui)
+
+    def _open_dialog_selection(self, set_positioner: Callable):
+        def _ods():
+            """Open dialog window for positioner selection"""
+            self._dialog = QDialog(self)
+            self._dialog.setWindowTitle("Positioner Selection")
+            layout = QVBoxLayout()
+            line_edit = DeviceLineEdit(
+                self, client=self.client, device_filter=[BECDeviceFilter.POSITIONER]
+            )
+            line_edit.textChanged.connect(set_positioner)
+            layout.addWidget(line_edit)
+            close_button = QPushButton("Close")
+            close_button.clicked.connect(self._dialog.accept)
+            layout.addWidget(close_button)
+            self._dialog.setLayout(layout)
+            self._dialog.exec()
+            self._dialog = None
+
+        return _ods

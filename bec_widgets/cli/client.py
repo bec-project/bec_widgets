@@ -34,6 +34,7 @@ class Widgets(str, enum.Enum):
     Minesweeper = "Minesweeper"
     PositionIndicator = "PositionIndicator"
     PositionerBox = "PositionerBox"
+    PositionerBox2D = "PositionerBox2D"
     PositionerControlLine = "PositionerControlLine"
     ResetButton = "ResetButton"
     ResumeButton = "ResumeButton"
@@ -3227,6 +3228,26 @@ class PositionIndicator(RPCBase):
 class PositionerBox(RPCBase):
     @rpc_call
     def set_positioner(self, positioner: "str | Positioner"):
+        """
+        Set the device
+
+        Args:
+            positioner (Positioner | str) : Positioner to set, accepts str or the device
+        """
+
+
+class PositionerBox2D(RPCBase):
+    @rpc_call
+    def set_positioner_hor(self, positioner: "str | Positioner"):
+        """
+        Set the device
+
+        Args:
+            positioner (Positioner | str) : Positioner to set, accepts str or the device
+        """
+
+    @rpc_call
+    def set_positioner_ver(self, positioner: "str | Positioner"):
         """
         Set the device
 

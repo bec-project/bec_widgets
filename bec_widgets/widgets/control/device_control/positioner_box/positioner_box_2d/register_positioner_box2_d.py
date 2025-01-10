@@ -6,11 +6,11 @@ def main():  # pragma: no cover
         return
     from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
 
-    from bec_widgets.widgets.control.device_input.signal_combobox.signal_combo_box_plugin import (
-        SignalComboBoxPlugin,
+    from bec_widgets.widgets.control.device_control.positioner_box.positioner_box_2d.positioner_box2_d_plugin import (
+        PositionerBox2DPlugin,
     )
 
-    QPyDesignerCustomWidgetCollection.addCustomWidget(SignalComboBoxPlugin())
+    QPyDesignerCustomWidgetCollection.addCustomWidget(PositionerBox2DPlugin())
 
 
 if __name__ == "__main__":  # pragma: no cover
