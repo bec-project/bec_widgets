@@ -1,7 +1,17 @@
 from __future__ import annotations
 
 from qtpy.QtCore import QSettings
-from qtpy.QtWidgets import QFileDialog, QWidget
+from qtpy.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QFileDialog,
+    QHBoxLayout,
+    QLineEdit,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
+)
 
 
 class WidgetStateManager:
@@ -89,3 +99,53 @@ class WidgetStateManager:
         for child in widget.findChildren(QWidget):
             if child.objectName():
                 self._load_widget_state_qsettings(child, settings)
+
+
+class ExampleApp(QWidget):  # pragma: no cover
+    def __init__(self):
+        super().__init__()
+        self.setObjectName("MainWindow")
+        self.setWindowTitle("State Manager Example")
+
+        layout = QVBoxLayout(self)
+
+        # A line edit to store some user text
+        self.line_edit = QLineEdit(self)
+        self.line_edit.setObjectName("MyLineEdit")
+        self.line_edit.setPlaceholderText("Enter some text here...")
+        layout.addWidget(self.line_edit)
+
+        # A spin box to hold a numeric value
+        self.spin_box = QSpinBox(self)
+        self.spin_box.setObjectName("MySpinBox")
+        self.spin_box.setRange(0, 100)
+        layout.addWidget(self.spin_box)
+
+        # A checkbox to hold a boolean value
+        self.check_box = QCheckBox("Enable feature?", self)
+        self.check_box.setObjectName("MyCheckBox")
+        layout.addWidget(self.check_box)
+
+        # Buttons to save and load state
+        button_layout = QHBoxLayout()
+        self.save_button = QPushButton("Save State", self)
+        self.load_button = QPushButton("Load State", self)
+        button_layout.addWidget(self.save_button)
+        button_layout.addWidget(self.load_button)
+        layout.addLayout(button_layout)
+
+        # Create the state manager
+        self.state_manager = WidgetStateManager(self)
+
+        # Connect buttons
+        self.save_button.clicked.connect(lambda: self.state_manager.save_state())
+        self.load_button.clicked.connect(lambda: self.state_manager.load_state())
+
+
+if __name__ == "__main__":  # pragma: no cover:
+    import sys
+
+    app = QApplication(sys.argv)
+    w = ExampleApp()
+    w.show()
+    sys.exit(app.exec_())
