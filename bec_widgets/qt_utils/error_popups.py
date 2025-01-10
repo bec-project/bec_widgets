@@ -2,25 +2,52 @@ import functools
 import sys
 import traceback
 
+from bec_lib.logger import bec_logger
 from qtpy.QtCore import Property, QObject, Qt, Signal, Slot
 from qtpy.QtWidgets import QApplication, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
 
-def SafeProperty(prop_type, *prop_args, popup_error: bool = False, **prop_kwargs):
+def SafeProperty(prop_type, *prop_args, popup_error: bool = False, default=None, **prop_kwargs):
     """
-    Decorator to create a Qt Property with a safe setter that won't crash Designer on errors.
-    Behaves similarly to SafeSlot, but for properties.
+    Decorator to create a Qt Property with safe getter and setter so that
+    Qt Designer won't crash if an exception occurs in either method.
 
     Args:
-        prop_type: The property type (e.g., str, bool, "QStringList", etc.)
-        popup_error (bool): If True, show popup on error, otherwise just handle it silently.
-        *prop_args, **prop_kwargs: Additional arguments and keyword arguments accepted by Property.
+        prop_type: The property type (e.g., str, bool, int, custom classes, etc.)
+        popup_error (bool): If True, show a popup for any error; otherwise, ignore or log silently.
+        default: Any default/fallback value to return if the getter raises an exception.
+        *prop_args, **prop_kwargs: Passed along to the underlying Qt Property constructor.
+
+    Usage:
+        @SafeProperty(int, default=-1)
+        def some_value(self) -> int:
+            # your getter logic
+            return ...   # if an exception is raised, returns -1
+
+        @some_value.setter
+        def some_value(self, val: int):
+            # your setter logic
+            ...
     """
 
-    def decorator(getter):
+    def decorator(py_getter):
+        @functools.wraps(py_getter)
+        def safe_getter(self_):
+            try:
+                return py_getter(self_)
+            except Exception:
+                if popup_error:
+                    ErrorPopupUtility().custom_exception_hook(*sys.exc_info(), popup_error=True)
+                # Return the user-defined default (which might be anything, including None).
+                else:
+                    error_msg = traceback.format_exc()
+                    bec_logger.error(error_msg)
+                return default
+
         class PropertyWrapper:
             def __init__(self, getter_func):
-                self.getter_func = getter_func
+                # We store only our safe_getter in the wrapper
+                self.getter_func = safe_getter
 
             def setter(self, setter_func):
                 @functools.wraps(setter_func)
@@ -32,12 +59,20 @@ def SafeProperty(prop_type, *prop_args, popup_error: bool = False, **prop_kwargs
                             ErrorPopupUtility().custom_exception_hook(
                                 *sys.exc_info(), popup_error=True
                             )
+                        # Swallow the exception; no crash in Designer
                         else:
-                            return
+                            error_msg = traceback.format_exc()
+                            bec_logger.error(error_msg)
+                        return
 
+                # Return the full read/write Property
                 return Property(prop_type, self.getter_func, safe_setter, *prop_args, **prop_kwargs)
 
-        return PropertyWrapper(getter)
+            def __call__(self):
+                # If the user never chains a .setter(...) call, we produce a read-only property
+                return Property(prop_type, self.getter_func, None, *prop_args, **prop_kwargs)
+
+        return PropertyWrapper(py_getter)
 
     return decorator
 
