@@ -1,19 +1,21 @@
 from typing import Literal
 
 import pytest
-from qtpy.QtCore import Qt
-from qtpy.QtWidgets import QComboBox, QLabel, QToolButton, QWidget
+from qtpy.QtCore import QPoint, Qt
+from qtpy.QtGui import QContextMenuEvent
+from qtpy.QtWidgets import QComboBox, QLabel, QMenu, QToolButton, QWidget
 
 from bec_widgets.qt_utils.toolbar import (
-    Bundle,
     DeviceSelectionAction,
     ExpandableMenuAction,
     IconAction,
     MaterialIconAction,
     ModularToolBar,
     SeparatorAction,
+    ToolbarBundle,
     WidgetAction,
 )
+from tests.unit_tests.conftest import create_widget
 
 
 @pytest.fixture
@@ -281,8 +283,9 @@ def test_show_action_nonexistent(toolbar_fixture):
 
 
 def test_add_bundle(toolbar_fixture, dummy_widget, icon_action, material_icon_action):
+    """Test adding a bundle of actions to the toolbar."""
     toolbar = toolbar_fixture
-    bundle = Bundle(
+    bundle = ToolbarBundle(
         bundle_id="test_bundle",
         actions=[
             ("icon_action_in_bundle", icon_action),
@@ -298,12 +301,14 @@ def test_add_bundle(toolbar_fixture, dummy_widget, icon_action, material_icon_ac
 
 
 def test_invalid_orientation(dummy_widget):
+    """Test that an invalid orientation raises a ValueError."""
     toolbar = ModularToolBar(target_widget=dummy_widget, orientation="horizontal")
     with pytest.raises(ValueError):
         toolbar.set_orientation("diagonal")
 
 
-def test_widgetaction_calculate_minimum_width(qtbot):
+def test_widget_action_calculate_minimum_width(qtbot):
+    """Test calculate_minimum_width with various combo box items."""
     combo = QComboBox()
     combo.addItems(["Short", "Longer Item", "The Longest Item In Combo"])
     widget_action = WidgetAction(label="Test", widget=combo)
@@ -311,3 +316,81 @@ def test_widgetaction_calculate_minimum_width(qtbot):
     assert width > 0
     # Width should be large enough to accommodate the longest item plus additional space
     assert width > 100
+
+
+# FIXME test is stucking CI, works locally
+# def test_context_menu_contains_added_actions(
+#     qtbot, icon_action, material_icon_action, dummy_widget
+# ):
+#     """
+#     Test that the toolbar's context menu lists all added toolbar actions.
+#     """
+#     toolbar = create_widget(
+#         qtbot, widget=ModularToolBar, target_widget=dummy_widget, orientation="horizontal"
+#     )
+#
+#     # Add two different actions
+#     toolbar.add_action("icon_action", icon_action, dummy_widget)
+#     toolbar.add_action("material_icon_action", material_icon_action, dummy_widget)
+#
+#     # Manually trigger the context menu event
+#     event = QContextMenuEvent(QContextMenuEvent.Mouse, QPoint(10, 10))
+#     toolbar.contextMenuEvent(event)
+#
+#     # The QMenu is executed in contextMenuEvent, so we can fetch all possible actions
+#     # from the displayed menu by searching for QMenu in the immediate children of the toolbar.
+#     menus = toolbar.findChildren(QMenu)
+#     assert len(menus) > 0
+#     menu = menus[-1]  # The most recently created menu
+#
+#     menu_action_texts = [action.text() for action in menu.actions()]
+#     # Check if the menu contains entries for both added actions
+#     assert any(icon_action.tooltip in text or "icon_action" in text for text in menu_action_texts)
+#     assert any(
+#         material_icon_action.tooltip in text or "material_icon_action" in text
+#         for text in menu_action_texts
+#     )
+#     menu.actions()[0].trigger()  # Trigger the first action to close the menu
+#     toolbar.close()
+
+
+# FIXME test is stucking CI, works locally
+# def test_context_menu_toggle_action_visibility(qtbot, icon_action, dummy_widget):
+#     """
+#     Test that toggling action visibility works correctly through the toolbar's context menu.
+#     """
+#     toolbar = create_widget(
+#         qtbot, widget=ModularToolBar, target_widget=dummy_widget, orientation="horizontal"
+#     )
+#     # Add an action
+#     toolbar.add_action("icon_action", icon_action, dummy_widget)
+#     assert icon_action.action.isVisible()
+#
+#     # Manually trigger the context menu event
+#     event = QContextMenuEvent(QContextMenuEvent.Mouse, QPoint(10, 10))
+#     toolbar.contextMenuEvent(event)
+#
+#     # Grab the menu that was created
+#     menus = toolbar.findChildren(QMenu)
+#     assert len(menus) > 0
+#     menu = menus[-1]
+#
+#     # Locate the QAction in the menu
+#     matching_actions = [m for m in menu.actions() if m.text() == icon_action.tooltip]
+#     assert len(matching_actions) == 1
+#     action_in_menu = matching_actions[0]
+#
+#     # Toggle it off (uncheck)
+#     action_in_menu.setChecked(False)
+#     menu.triggered.emit(action_in_menu)
+#     # The action on the toolbar should now be hidden
+#     assert not icon_action.action.isVisible()
+#
+#     # Toggle it on (check)
+#     action_in_menu.setChecked(True)
+#     menu.triggered.emit(action_in_menu)
+#     # The action on the toolbar should be visible again
+#     assert icon_action.action.isVisible()
+#
+#     menu.actions()[0].trigger()  # Trigger the first action to close the menu
+#     toolbar.close()

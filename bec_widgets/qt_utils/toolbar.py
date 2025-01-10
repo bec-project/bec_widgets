@@ -5,7 +5,7 @@ import os
 import sys
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import List, Literal, Tuple
+from typing import Dict, List, Literal, Tuple
 
 from bec_qthemes._icon.material_icons import material_icon
 from qtpy.QtCore import QSize, Qt
@@ -95,6 +95,7 @@ class MaterialIconAction(ToolBarAction):
         filled (bool, optional): Whether the icon is filled. Defaults to False.
         color (str | tuple | QColor | dict[Literal["dark", "light"], str] | None, optional): The color of the icon.
             Defaults to None.
+        parent (QWidget or None, optional): Parent widget for the underlying QAction.
     """
 
     def __init__(
@@ -104,27 +105,42 @@ class MaterialIconAction(ToolBarAction):
         checkable: bool = False,
         filled: bool = False,
         color: str | tuple | QColor | dict[Literal["dark", "light"], str] | None = None,
+        parent=None,
     ):
         super().__init__(icon_path=None, tooltip=tooltip, checkable=checkable)
         self.icon_name = icon_name
         self.filled = filled
         self.color = color
-
-    def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
-        icon = self.get_icon()
-        self.action = QAction(icon, self.tooltip, target)
-        self.action.setCheckable(self.checkable)
-        toolbar.addAction(self.action)
-
-    def get_icon(self):
-        icon = material_icon(
+        # Generate the icon
+        self.icon = material_icon(
             self.icon_name,
             size=(20, 20),
             convert_to_pixmap=False,
             filled=self.filled,
             color=self.color,
         )
-        return icon
+        # Immediately create an QAction with the given parent
+        self.action = QAction(self.icon, self.tooltip, parent=parent)
+        self.action.setCheckable(self.checkable)
+
+    def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
+        """
+        Adds the action to the toolbar.
+
+        Args:
+            toolbar(QToolBar): The toolbar to add the action to.
+            target(QWidget): The target widget for the action.
+        """
+        toolbar.addAction(self.action)
+
+    def get_icon(self):
+        """
+        Returns the icon for the action.
+
+        Returns:
+            QIcon: The icon for the action.
+        """
+        return self.icon
 
 
 class DeviceSelectionAction(ToolBarAction):
@@ -258,18 +274,53 @@ class ExpandableMenuAction(ToolBarAction):
         toolbar.addWidget(button)
 
 
-class Bundle:
+class ToolbarBundle:
     """
-    Represents a bundle of toolbar actions.
-
-    Args:
-        bundle_id (str): Unique identifier for the bundle.
-        actions (List[Tuple[str, ToolBarAction]]): List of tuples containing action IDs and their corresponding ToolBarAction instances.
+    Represents a bundle of toolbar actions, keyed by action_id.
+    Allows direct dictionary-like access: self.actions["some_id"] -> ToolBarAction object.
     """
 
-    def __init__(self, bundle_id: str, actions: List[Tuple[str, ToolBarAction]]):
+    def __init__(self, bundle_id: str = None, actions=None):
+        """
+        Args:
+            bundle_id (str): Unique identifier for the bundle.
+            actions: Either None or a list of (action_id, ToolBarAction) tuples.
+        """
         self.bundle_id = bundle_id
-        self.actions = actions  # List of tuples (action_id, ToolBarAction)
+        self._actions: dict[str, ToolBarAction] = {}
+
+        # If you passed in a list of tuples, load them into the dictionary
+        if actions is not None:
+            for action_id, action in actions:
+                self._actions[action_id] = action
+
+    def add_action(self, action_id: str, action: ToolBarAction):
+        """
+        Adds or replaces an action in the bundle.
+
+        Args:
+            action_id (str): Unique identifier for the action.
+            action (ToolBarAction): The action to add.
+        """
+        self._actions[action_id] = action
+
+    def remove_action(self, action_id: str):
+        """
+        Removes an action from the bundle by ID.
+        Ignores if not present.
+
+        Args:
+            action_id (str): Unique identifier for the action to remove.
+        """
+        self._actions.pop(action_id, None)
+
+    @property
+    def actions(self) -> dict[str, ToolBarAction]:
+        """
+        Return the internal dictionary of actions so that you can do
+        bundle.actions["drag_mode"] -> ToolBarAction instance.
+        """
+        return self._actions
 
 
 class ModularToolBar(QToolBar):
@@ -407,29 +458,30 @@ class ModularToolBar(QToolBar):
             action.action.setVisible(True)
             self.update_separators()  # Update separators after showing the action
 
-    def add_bundle(self, bundle: Bundle, target_widget: QWidget):
+    def add_bundle(self, bundle: ToolbarBundle, target_widget: QWidget):
         """
         Adds a bundle of actions to the toolbar, separated by a separator.
 
         Args:
-            bundle (Bundle): The bundle to add.
+            bundle (ToolbarBundle): The bundle to add.
             target_widget (QWidget): The target widget for the actions.
         """
         if bundle.bundle_id in self.bundles:
-            raise ValueError(f"Bundle with ID '{bundle.bundle_id}' already exists.")
+            raise ValueError(f"ToolbarBundle with ID '{bundle.bundle_id}' already exists.")
 
-        # Add a separator before the bundle
-        separator = SeparatorAction()
-        separator.add_to_toolbar(self, target_widget)
-        self.toolbar_items.append(("separator", None))
+        # Add a separator before the bundle (but not to first one)
+        if self.toolbar_items:
+            sep = SeparatorAction()
+            sep.add_to_toolbar(self, target_widget)
+            self.toolbar_items.append(("separator", None))
 
         # Add each action in the bundle
-        for action_id, action in bundle.actions:
-            action.add_to_toolbar(self, target_widget)
-            self.widgets[action_id] = action
+        for action_id, action_obj in bundle.actions.items():
+            action_obj.add_to_toolbar(self, target_widget)
+            self.widgets[action_id] = action_obj
 
         # Register the bundle
-        self.bundles[bundle.bundle_id] = [action_id for action_id, _ in bundle.actions]
+        self.bundles[bundle.bundle_id] = list(bundle.actions.keys())
         self.toolbar_items.append(("bundle", bundle.bundle_id))
 
         self.update_separators()  # Update separators after adding the bundle
@@ -448,47 +500,69 @@ class ModularToolBar(QToolBar):
             if item_type == "separator":
                 menu.addSeparator()
             elif item_type == "bundle":
-                # Get actions in the bundle
-                action_ids = self.bundles.get(identifier, [])
-                for action_id in action_ids:
-                    toolbar_action = self.widgets.get(action_id)
-                    if isinstance(toolbar_action, ToolBarAction) and hasattr(
-                        toolbar_action, "action"
-                    ):
-                        qaction = toolbar_action.action
-                        if isinstance(qaction, QAction):
-                            display_name = qaction.text() or toolbar_action.tooltip or action_id
-                            menu_action = QAction(display_name, self)
-                            menu_action.setCheckable(True)
-                            menu_action.setChecked(qaction.isVisible())
-                            menu_action.setData(action_id)  # Store the action_id
-
-                            # Set the icon if available
-                            if qaction.icon() and not qaction.icon().isNull():
-                                menu_action.setIcon(qaction.icon())
-
-                            menu.addAction(menu_action)
+                self.handle_bundle_context_menu(menu, identifier)
             elif item_type == "action":
-                # Standalone action
-                toolbar_action = self.widgets.get(identifier)
-                if isinstance(toolbar_action, ToolBarAction) and hasattr(toolbar_action, "action"):
-                    qaction = toolbar_action.action
-                    if isinstance(qaction, QAction):
-                        display_name = qaction.text() or toolbar_action.tooltip or identifier
-                        menu_action = QAction(display_name, self)
-                        menu_action.setCheckable(True)
-                        menu_action.setChecked(qaction.isVisible())
-                        menu_action.setData(identifier)  # Store the action_id
-
-                        # Set the icon if available
-                        if qaction.icon() and not qaction.icon().isNull():
-                            menu_action.setIcon(qaction.icon())
-
-                        menu.addAction(menu_action)
+                self.handle_action_context_menu(menu, identifier)
 
         # Connect the triggered signal after all actions are added
         menu.triggered.connect(self.handle_menu_triggered)
         menu.exec_(event.globalPos())
+
+    def handle_bundle_context_menu(self, menu: QMenu, bundle_id: str):
+        """
+        Adds a set of bundle actions to the context menu.
+
+        Args:
+            menu (QMenu): The context menu to which the actions are added.
+            bundle_id (str): The identifier for the bundle.
+        """
+        action_ids = self.bundles.get(bundle_id, [])
+        for act_id in action_ids:
+            toolbar_action = self.widgets.get(act_id)
+            if not isinstance(toolbar_action, ToolBarAction) or not hasattr(
+                toolbar_action, "action"
+            ):
+                continue
+            qaction = toolbar_action.action
+            if not isinstance(qaction, QAction):
+                continue
+            display_name = qaction.text() or toolbar_action.tooltip or act_id
+            menu_action = QAction(display_name, self)
+            menu_action.setCheckable(True)
+            menu_action.setChecked(qaction.isVisible())
+            menu_action.setData(act_id)  # Store the action_id
+
+            # Set the icon if available
+            if qaction.icon() and not qaction.icon().isNull():
+                menu_action.setIcon(qaction.icon())
+
+            menu.addAction(menu_action)
+
+    def handle_action_context_menu(self, menu: QMenu, action_id: str):
+        """
+        Adds a single toolbar action to the context menu.
+
+        Args:
+            menu (QMenu): The context menu to which the action is added.
+            action_id (str): Unique identifier for the action.
+        """
+        toolbar_action = self.widgets.get(action_id)
+        if not isinstance(toolbar_action, ToolBarAction) or not hasattr(toolbar_action, "action"):
+            return
+        qaction = toolbar_action.action
+        if not isinstance(qaction, QAction):
+            return
+        display_name = qaction.text() or toolbar_action.tooltip or action_id
+        menu_action = QAction(display_name, self)
+        menu_action.setCheckable(True)
+        menu_action.setChecked(qaction.isVisible())
+        menu_action.setData(action_id)  # Store the action_id
+
+        # Set the icon if available
+        if qaction.icon() and not qaction.icon().isNull():
+            menu_action.setIcon(qaction.icon())
+
+        menu.addAction(menu_action)
 
     def handle_menu_triggered(self, action):
         """Handles the toggling of toolbar actions from the context menu."""
@@ -504,13 +578,13 @@ class ModularToolBar(QToolBar):
             action_id(str): Unique identifier for the action to toggle.
             visible(bool): Whether the action should be visible.
         """
-        try:
-            action = self.widgets[action_id]
-            if hasattr(action, "action") and isinstance(action.action, QAction):
-                action.action.setVisible(visible)
-                self.update_separators()  # Update separators after toggling visibility
-        except KeyError:
-            pass
+        if action_id not in self.widgets:
+            return
+
+        tool_action = self.widgets[action_id]
+        if hasattr(tool_action, "action") and isinstance(tool_action.action, QAction):
+            tool_action.action.setVisible(visible)
+            self.update_separators()
 
     def update_separators(self):
         """
@@ -519,50 +593,55 @@ class ModularToolBar(QToolBar):
         toolbar_actions = self.actions()
 
         for i, action in enumerate(toolbar_actions):
-            if action.isSeparator():
-                # Find the previous visible action
-                prev_visible = None
-                for j in range(i - 1, -1, -1):
-                    if toolbar_actions[j].isVisible():
-                        prev_visible = toolbar_actions[j]
-                        break
+            if not action.isSeparator():
+                continue
+            # Find the previous visible action
+            prev_visible = None
+            for j in range(i - 1, -1, -1):
+                if toolbar_actions[j].isVisible():
+                    prev_visible = toolbar_actions[j]
+                    break
 
-                # Find the next visible action
-                next_visible = None
-                for j in range(i + 1, len(toolbar_actions)):
-                    if toolbar_actions[j].isVisible():
-                        next_visible = toolbar_actions[j]
-                        break
+            # Find the next visible action
+            next_visible = None
+            for j in range(i + 1, len(toolbar_actions)):
+                if toolbar_actions[j].isVisible():
+                    next_visible = toolbar_actions[j]
+                    break
 
-                # Determine if the separator should be hidden
-                # Hide if both previous and next visible actions are separators or non-existent
-                if (prev_visible is None or prev_visible.isSeparator()) and (
-                    next_visible is None or next_visible.isSeparator()
-                ):
-                    action.setVisible(False)
-                else:
-                    action.setVisible(True)
+            # Determine if the separator should be hidden
+            # Hide if both previous and next visible actions are separators or non-existent
+            if (prev_visible is None or prev_visible.isSeparator()) and (
+                next_visible is None or next_visible.isSeparator()
+            ):
+                action.setVisible(False)
+            else:
+                action.setVisible(True)
 
 
 class MainWindow(QMainWindow):  # pragma: no cover
     def __init__(self):
         super().__init__()
+        self.setWindowTitle("Toolbar / ToolbarBundle Demo")
+
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
 
-        # Initialize the ModularToolBar
+        # Create a modular toolbar
         self.toolbar = ModularToolBar(parent=self, target_widget=self)
         self.addToolBar(self.toolbar)
 
-        # Define individual MaterialIconActions for the first bundle
-        home_action = MaterialIconAction(icon_name="home", tooltip="Home", checkable=True)
-        settings_action = MaterialIconAction(
-            icon_name="settings", tooltip="Settings", checkable=True
+        # Example: Add a single bundle
+        home_action = MaterialIconAction(
+            icon_name="home", tooltip="Home", checkable=True, parent=self
         )
-        profile_action = MaterialIconAction(icon_name="person", tooltip="Profile", checkable=True)
-
-        # Create the first Bundle with these actions
-        main_actions_bundle = Bundle(
+        settings_action = MaterialIconAction(
+            icon_name="settings", tooltip="Settings", checkable=True, parent=self
+        )
+        profile_action = MaterialIconAction(
+            icon_name="person", tooltip="Profile", checkable=True, parent=self
+        )
+        main_actions_bundle = ToolbarBundle(
             bundle_id="main_actions",
             actions=[
                 ("home_action", home_action),
@@ -570,26 +649,20 @@ class MainWindow(QMainWindow):  # pragma: no cover
                 ("profile_action", profile_action),
             ],
         )
-
-        # Add the first bundle to the toolbar
         self.toolbar.add_bundle(main_actions_bundle, target_widget=self)
 
-        # Define individual MaterialIconActions for the second bundle
-        search_action = MaterialIconAction(icon_name="search", tooltip="Search", checkable=True)
-        help_action = MaterialIconAction(icon_name="help", tooltip="Help", checkable=True)
-
-        # Create the second Bundle with these actions
-        secondary_actions_bundle = Bundle(
+        # Another bundle
+        search_action = MaterialIconAction(
+            icon_name="search", tooltip="Search", checkable=True, parent=self
+        )
+        help_action = MaterialIconAction(
+            icon_name="help", tooltip="Help", checkable=True, parent=self
+        )
+        second_bundle = ToolbarBundle(
             bundle_id="secondary_actions",
             actions=[("search_action", search_action), ("help_action", help_action)],
         )
-
-        # Add the second bundle to the toolbar
-        self.toolbar.add_bundle(secondary_actions_bundle, target_widget=self)
-
-        # Define a standalone action
-        info_action = MaterialIconAction(icon_name="info", tooltip="Info", checkable=True)
-        self.toolbar.add_action("info_action", info_action, target_widget=self)
+        self.toolbar.add_bundle(second_bundle, target_widget=self)
 
 
 if __name__ == "__main__":  # pragma: no cover
