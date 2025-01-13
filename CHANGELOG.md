@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.15.1 (2025-01-13)
+
+### Bug Fixes
+
+- **error_popups**: Safeproperty wrapper extended to catch more errors and not crash Designer
+  ([`3b04b98`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3b04b985b66a7237703a87f6a53610171eb9ffa5))
+
+
 ## v1.15.0 (2025-01-10)
 
 ### Features
