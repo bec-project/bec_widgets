@@ -1,20 +1,14 @@
 """
 waveform_plot_plugin.py
-
-Registers WaveformPlot with Qt Designer and installs the task-menu extension factory.
+Registers WaveformPlot with Qt Designer,
+including the WaveformPlotTaskMenu extension.
 """
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 from qtpy.QtGui import QIcon
 
 from .waveform_demo import WaveformPlot
-
-# Import your classes
 from .waveform_plot_taskmenu import WaveformPlotTaskMenuFactory
-
-# If you have an icon in resources or a function:
-# from .some_icon_provider import get_designer_icon
-
 
 DOM_XML = """
 <ui language='c++'>
@@ -27,10 +21,14 @@ DOM_XML = """
                 <height>200</height>
             </rect>
         </property>
+        <property name='deviceName'>
+            <string>MyDevice</string>
+        </property>
+        <property name='someFlag'>
+            <bool>false</bool>
+        </property>
         <property name='curvesJson'>
-            <stringlist>
-                <string>[{"label":"DefaultCurve","color":"red"}]</string>
-            </stringlist>
+            <string>[{"label": "DefaultCurve", "color": "red"}]</string>
         </property>
     </widget>
 </ui>
@@ -39,8 +37,8 @@ DOM_XML = """
 
 class WaveformPlotPlugin(QDesignerCustomWidgetInterface):
     """
-    Minimal plugin that exposes WaveformPlot to Qt Designer,
-    plus sets up the WaveformPlotTaskMenu extension.
+    Exposes WaveformPlot to Designer, plus sets up the Task Menu extension
+    for "Edit Configuration..." popup.
     """
 
     def __init__(self):
@@ -52,7 +50,7 @@ class WaveformPlotPlugin(QDesignerCustomWidgetInterface):
             return
         self._initialized = True
 
-        # Register the Task Menu extension factory
+        # Register the TaskMenu extension
         manager = form_editor.extensionManager()
         if manager:
             factory = WaveformPlotTaskMenuFactory(manager)
@@ -70,8 +68,12 @@ class WaveformPlotPlugin(QDesignerCustomWidgetInterface):
     def group(self):
         return "Waveform Widgets"
 
+    def icon(self):
+        # If you have a real icon, load it here
+        return QIcon()
+
     def toolTip(self):
-        return "WaveformPlot with multiple curves"
+        return "A multi-property WaveformPlot example"
 
     def whatsThis(self):
         return self.toolTip()
@@ -83,10 +85,6 @@ class WaveformPlotPlugin(QDesignerCustomWidgetInterface):
         return DOM_XML
 
     def includeFile(self):
-        # The module path that Qt Designer uses in generated .ui -> .py code
-        # e.g. "my_package.waveform_plot"
+        # The Python import path for your waveforms
+        # E.g. "my_widgets.waveform.waveform_plot"
         return __name__
-
-    def icon(self):
-        # If you have an icon, return QIcon(":/myicon.png") or similar
-        return QIcon()

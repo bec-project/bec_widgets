@@ -1,42 +1,62 @@
 """
 waveform_plot.py
+A minimal demonstration widget with multiple properties:
+  - deviceName (str)
+  - curvesJson (str)
+  - someFlag (bool)
 
-Minimal WaveformPlot widget that has:
-  - a 'curvesJson' property
-  - a pyqtgraph PlotItem
-  - dummy data for each curve
+It uses pyqtgraph to show dummy curves from 'curvesJson'.
 """
 
 import json
 
 import pyqtgraph as pg
-from qtpy.QtCore import Property
+from qtpy.QtCore import Property, QPointF
 from qtpy.QtWidgets import QWidget, QVBoxLayout
 
 
 class WaveformPlot(QWidget):
     """
-    Minimal demonstration widget with a 'curvesJson' property.
-    In your real code, you'd subclass your PlotBase, but let's keep it plain.
+    Minimal demonstration of a multi-property widget:
+      - deviceName   (string)
+      - curvesJson   (string containing JSON)
+      - someFlag     (boolean)
     """
 
-    ICON_NAME = "multiline_chart"  # If you want to set an icon in the plugin
+    ICON_NAME = "multiline_chart"  # For a designer icon, if desired
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._curves_json = "[]"  # Start with empty array
+        self._device_name = "MyDevice"
+        self._curves_json = "[]"
+        self._some_flag = False
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        # A PyQtGraph PlotItem inside a PlotWidget
         self.plot_item = pg.PlotItem()
         self.plot_widget = pg.PlotWidget(plotItem=self.plot_item)
         layout.addWidget(self.plot_widget)
-        self.plot_item.addLegend()
 
-        # Keep track of the actual PlotDataItems
         self._plot_curves = []
 
+    # ------------------------------------------------------------------------
+    # Property #1: deviceName
+    # ------------------------------------------------------------------------
+    def getDeviceName(self) -> str:
+        return self._device_name
+
+    def setDeviceName(self, val: str):
+        if self._device_name != val:
+            self._device_name = val
+            # You might do something in your real code
+            # e.g. re-subscribe to a device, etc.
+
+    deviceName = Property(str, fget=getDeviceName, fset=setDeviceName)
+
+    # ------------------------------------------------------------------------
+    # Property #2: curvesJson
+    # ------------------------------------------------------------------------
     def getCurvesJson(self) -> str:
         return self._curves_json
 
@@ -47,30 +67,42 @@ class WaveformPlot(QWidget):
 
     curvesJson = Property(str, fget=getCurvesJson, fset=setCurvesJson)
 
+    # ------------------------------------------------------------------------
+    # Property #3: someFlag
+    # ------------------------------------------------------------------------
+    def getSomeFlag(self) -> bool:
+        return self._some_flag
+
+    def setSomeFlag(self, val: bool):
+        if self._some_flag != val:
+            self._some_flag = val
+            # React to the flag in your real code if needed
+
+    someFlag = Property(bool, fget=getSomeFlag, fset=setSomeFlag)
+
+    # ------------------------------------------------------------------------
+    # Re-build the curves from the JSON
+    # ------------------------------------------------------------------------
     def _rebuild_curves(self):
-        """
-        Parse the JSON, remove old plot items, create new ones with dummy data.
-        """
-        # Remove old
+        # Remove existing PlotDataItems
         for c in self._plot_curves:
             self.plot_item.removeItem(c)
         self._plot_curves.clear()
 
-        # Parse the JSON
+        # Try parse JSON
         try:
-            data = json.loads(self._curves_json)
-            if not isinstance(data, list):
+            arr = json.loads(self._curves_json)
+            if not isinstance(arr, list):
                 raise ValueError("curvesJson must be a JSON list.")
         except Exception:
-            # If parse fails, just do nothing
+            # If parsing fails, do nothing
             return
 
-        # Create new PlotDataItems
-        for idx, cdef in enumerate(data):
+        # Create new PlotDataItems from the JSON
+        for idx, cdef in enumerate(arr):
             label = cdef.get("label", f"Curve{idx + 1}")
             color = cdef.get("color", "blue")
 
-            # Dummy data
             x = [0, 1, 2, 3, 4]
             y = [val + idx for val in x]
 
@@ -79,6 +111,7 @@ class WaveformPlot(QWidget):
             self._plot_curves.append(item)
 
 
+# Optional standalone test
 if __name__ == "__main__":
     import sys
     from qtpy.QtWidgets import QApplication
@@ -86,8 +119,8 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     w = WaveformPlot()
-    w.curvesJson = json.dumps(
-        [{"label": "FirstCurve", "color": "red"}, {"label": "SecondCurve", "color": "green"}]
-    )
+    w.deviceName = "TestDevice"
+    w.curvesJson = json.dumps([{"label": "A", "color": "red"}, {"label": "B", "color": "green"}])
+    w.someFlag = True
     w.show()
     sys.exit(app.exec_())
