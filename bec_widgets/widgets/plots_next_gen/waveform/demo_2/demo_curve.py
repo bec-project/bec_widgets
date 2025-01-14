@@ -1,8 +1,8 @@
-from typing import Optional, Literal
+from typing import Literal, Optional
 
 import pyqtgraph as pg
-from qtpy.QtCore import Qt
 from pydantic import BaseModel, Field
+from qtpy.QtCore import Qt
 
 
 class CurveConfig(BaseModel):

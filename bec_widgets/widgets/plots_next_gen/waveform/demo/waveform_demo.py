@@ -12,7 +12,7 @@ import json
 
 import pyqtgraph as pg
 from qtpy.QtCore import Property, QPointF
-from qtpy.QtWidgets import QWidget, QVBoxLayout
+from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 
 class WaveformPlot(QWidget):
@@ -65,7 +65,7 @@ class WaveformPlot(QWidget):
             self._curves_json = new_json
             self._rebuild_curves()
 
-    curvesJson = Property(str, fget=getCurvesJson, fset=setCurvesJson)
+    curvesJson = Property(str, fget=getCurvesJson, fset=setCurvesJson, designable=False)
 
     # ------------------------------------------------------------------------
     # Property #3: someFlag
@@ -113,9 +113,10 @@ class WaveformPlot(QWidget):
 
 # Optional standalone test
 if __name__ == "__main__":
-    import sys
-    from qtpy.QtWidgets import QApplication
     import json
+    import sys
+
+    from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
     w = WaveformPlot()

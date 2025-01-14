@@ -17,16 +17,16 @@ import json
 
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
+    QCheckBox,
+    QColorDialog,
     QDialog,
-    QVBoxLayout,
-    QHBoxLayout,
-    QWidget,
     QDialogButtonBox,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
-    QCheckBox,
-    QColorDialog,
+    QVBoxLayout,
+    QWidget,
 )
 
 

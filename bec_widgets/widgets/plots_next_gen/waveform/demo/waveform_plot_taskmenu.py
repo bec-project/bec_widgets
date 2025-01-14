@@ -5,9 +5,9 @@ It attaches "Edit Configuration..." to the WaveformPlot,
 launching WaveformPlotConfigDialog.
 """
 
+from qtpy.QtCore import Slot
 from qtpy.QtDesigner import QExtensionFactory, QPyDesignerTaskMenuExtension
 from qtpy.QtGui import QAction
-from qtpy.QtCore import Slot
 
 from bec_widgets.widgets.plots_next_gen.waveform.demo.waveform_demo import WaveformPlot
 from bec_widgets.widgets.plots_next_gen.waveform.demo.waveform_plot_config_dialog import (

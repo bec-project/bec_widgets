@@ -1,9 +1,9 @@
 import json
 from typing import List
-from qtpy.QtWidgets import QWidget, QVBoxLayout
-from qtpy.QtCore import Property
 
 import pyqtgraph as pg
+from qtpy.QtCore import Property
+from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.widgets.plots_next_gen.waveform.demo_2.demo_curve import BECCurve, CurveConfig
 
