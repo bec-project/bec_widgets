@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 import time
 import uuid
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
@@ -16,6 +16,9 @@ from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.qt_utils.error_popups import ErrorPopupUtility
 from bec_widgets.qt_utils.error_popups import SafeSlot as pyqtSlot
 from bec_widgets.utils.yaml_dialog import load_yaml, load_yaml_gui, save_yaml, save_yaml_gui
+
+if TYPE_CHECKING:
+    from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 logger = bec_logger.logger
 BECDispatcher = lazy_import_from("bec_widgets.utils.bec_dispatcher", ("BECDispatcher",))
