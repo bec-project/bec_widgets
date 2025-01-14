@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v1.16.0 (2025-01-14)
+
+### Bug Fixes
+
+- **e2e**: Num of elements to wait for scan fixed to steps requested in the scan
+  ([`0fd5dd5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0fd5dd5a264beb93690365ad8befa34cfdd296d0))
+
+- **toolbar**: Adjusted to future plot base
+  ([`508abfa`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/508abfa8a5a31829bdfd5853e967f5ac668d8d8d))
+
+### Features
+
+- **modular_toolbar**: Context menu and action bundles
+  ([`001e6fc`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/001e6fc807667187807656a55ab58e3b2f17c9ca))
+
+
 ## v1.15.1 (2025-01-13)
 
 ### Bug Fixes
