@@ -97,7 +97,7 @@ def test_rpc_waveform_scan(qtbot, connected_client_figure, bec_client_lib):
     item = queue.scan_storage.storage[-1]
     last_scan_data = item.live_data if hasattr(item, "live_data") else item.data
 
-    num_elements = len(last_scan_data["samx"]["samx"].val)
+    num_elements = 10
 
     for plot_name in ["bpm4i-bpm4i", "bpm3a-bpm3a", "bpm4d-bpm4d"]:
         qtbot.waitUntil(lambda: check_remote_data_size(plt, plot_name, num_elements))

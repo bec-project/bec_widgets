@@ -94,7 +94,7 @@ def test_rpc_add_dock_with_figure_e2e(qtbot, bec_client_lib, connected_client_do
     # plot
     item = queue.scan_storage.storage[-1]
     plt_last_scan_data = item.live_data if hasattr(item, "live_data") else item.data
-    num_elements = len(plt_last_scan_data["samx"]["samx"].val)
+    num_elements = 10
 
     plot_name = "bpm4i-bpm4i"
 
@@ -263,7 +263,7 @@ def test_auto_update(bec_client_lib, connected_client_dock_w_auto_updates, qtbot
     item = queue.scan_storage.storage[-1]
     last_scan_data = item.live_data if hasattr(item, "live_data") else item.data
 
-    num_elements = len(last_scan_data["samx"]["samx"].val)
+    num_elements = 10
 
     plot_name = f"Scan {status.scan.scan_number} - {dock.selected_device}"
 
@@ -295,7 +295,7 @@ def test_auto_update(bec_client_lib, connected_client_dock_w_auto_updates, qtbot
 
     plot_name = f"Scan {status.scan.scan_number} - bpm4i"
 
-    num_elements_bec = len(last_scan_data["samx"]["samx"].val)
+    num_elements_bec = 25
     qtbot.waitUntil(lambda: check_remote_data_size(widgets[0], plot_name, num_elements_bec))
     plt_data = widgets[0].get_all_data()
 
