@@ -31,6 +31,7 @@ class Widgets(str, enum.Enum):
     DeviceComboBox = "DeviceComboBox"
     DeviceLineEdit = "DeviceLineEdit"
     LMFitDialog = "LMFitDialog"
+    LogPanel = "LogPanel"
     Minesweeper = "Minesweeper"
     PositionIndicator = "PositionIndicator"
     PositionerBox = "PositionerBox"
@@ -3180,6 +3181,26 @@ class LMFitDialog(RPCBase):
     def _rpc_id(self) -> "str":
         """
         Get the RPC ID of the widget.
+        """
+
+
+class LogPanel(RPCBase):
+    @rpc_call
+    def set_plain_text(self, text: str) -> None:
+        """
+        Set the plain text of the widget.
+
+        Args:
+            text (str): The text to set.
+        """
+
+    @rpc_call
+    def set_html_text(self, text: str) -> None:
+        """
+        Set the HTML text of the widget.
+
+        Args:
+            text (str): The text to set.
         """
 
 
