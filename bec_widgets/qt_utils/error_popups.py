@@ -6,6 +6,8 @@ from bec_lib.logger import bec_logger
 from qtpy.QtCore import Property, QObject, Qt, Signal, Slot
 from qtpy.QtWidgets import QApplication, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
+logger = bec_logger.logger
+
 
 def SafeProperty(prop_type, *prop_args, popup_error: bool = False, default=None, **prop_kwargs):
     """
@@ -41,7 +43,7 @@ def SafeProperty(prop_type, *prop_args, popup_error: bool = False, default=None,
                 # Return the user-defined default (which might be anything, including None).
                 else:
                     error_msg = traceback.format_exc()
-                    bec_logger.error(error_msg)
+                    logger.error(str(error_msg))
                 return default
 
         class PropertyWrapper:
@@ -62,7 +64,7 @@ def SafeProperty(prop_type, *prop_args, popup_error: bool = False, default=None,
                         # Swallow the exception; no crash in Designer
                         else:
                             error_msg = traceback.format_exc()
-                            bec_logger.error(error_msg)
+                            logger.error(str(error_msg))
                         return
 
                 # Return the full read/write Property
