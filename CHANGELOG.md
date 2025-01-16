@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.16.1 (2025-01-16)
+
+### Bug Fixes
+
+- **error_popups**: Safeproperty logger import fixed
+  ([`b40d2c5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b40d2c5f0b55853323b1c71d90b3d91c4b41140f))
+
+
 ## v1.16.0 (2025-01-14)
 
 ### Bug Fixes
