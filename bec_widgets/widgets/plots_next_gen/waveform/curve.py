@@ -4,10 +4,9 @@ from typing import TYPE_CHECKING, Literal, Optional
 
 import numpy as np
 import pyqtgraph as pg
-from qtpy import QtCore
-
 from bec_lib import bec_logger
 from pydantic import BaseModel, Field, field_validator
+from qtpy import QtCore
 
 from bec_widgets.utils import BECConnector, Colors, ConnectionConfig
 
