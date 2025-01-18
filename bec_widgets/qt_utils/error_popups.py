@@ -33,45 +33,60 @@ def SafeProperty(prop_type, *prop_args, popup_error: bool = False, default=None,
     """
 
     def decorator(py_getter):
+        """Decorator for the user's property getter function."""
+
         @functools.wraps(py_getter)
         def safe_getter(self_):
             try:
                 return py_getter(self_)
             except Exception:
+                # Identify which property function triggered error
+                prop_name = f"{py_getter.__module__}.{py_getter.__qualname__}"
+                error_msg = traceback.format_exc()
+
                 if popup_error:
                     ErrorPopupUtility().custom_exception_hook(*sys.exc_info(), popup_error=True)
-                # Return the user-defined default (which might be anything, including None).
                 else:
-                    error_msg = traceback.format_exc()
-                    logger.error(str(error_msg))
+                    logger.error(f"SafeProperty error in GETTER of '{prop_name}':\n{error_msg}")
                 return default
 
         class PropertyWrapper:
+            """
+            Intermediate wrapper used so that the user can optionally chain .setter(...).
+            """
+
             def __init__(self, getter_func):
                 # We store only our safe_getter in the wrapper
                 self.getter_func = safe_getter
 
             def setter(self, setter_func):
+                """Wraps the user-defined setter to handle errors safely."""
+
                 @functools.wraps(setter_func)
                 def safe_setter(self_, value):
                     try:
                         return setter_func(self_, value)
                     except Exception:
+                        prop_name = f"{setter_func.__module__}.{setter_func.__qualname__}"
+                        error_msg = traceback.format_exc()
+
                         if popup_error:
                             ErrorPopupUtility().custom_exception_hook(
                                 *sys.exc_info(), popup_error=True
                             )
-                        # Swallow the exception; no crash in Designer
                         else:
-                            error_msg = traceback.format_exc()
-                            logger.error(str(error_msg))
+                            logger.error(
+                                f"SafeProperty error in SETTER of '{prop_name}':\n{error_msg}"
+                            )
                         return
 
                 # Return the full read/write Property
                 return Property(prop_type, self.getter_func, safe_setter, *prop_args, **prop_kwargs)
 
             def __call__(self):
-                # If the user never chains a .setter(...) call, we produce a read-only property
+                """
+                If user never calls `.setter(...)`, produce a read-only property.
+                """
                 return Property(prop_type, self.getter_func, None, *prop_args, **prop_kwargs)
 
         return PropertyWrapper(py_getter)
@@ -95,7 +110,14 @@ def SafeSlot(*slot_args, **slot_kwargs):  # pylint: disable=invalid-name
             try:
                 return method(*args, **kwargs)
             except Exception:
-                ErrorPopupUtility().custom_exception_hook(*sys.exc_info(), popup_error=popup_error)
+                slot_name = f"{method.__module__}.{method.__qualname__}"
+                error_msg = traceback.format_exc()
+                if popup_error:
+                    ErrorPopupUtility().custom_exception_hook(
+                        *sys.exc_info(), popup_error=popup_error
+                    )
+                else:
+                    logger.error(f"SafeSlot error in slot '{slot_name}':\n{error_msg}")
 
         return wrapper
 
