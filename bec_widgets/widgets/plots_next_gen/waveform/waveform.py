@@ -122,6 +122,7 @@ class Waveform(PlotBase):
     def x_mode(self) -> str:
         return self._x_axis_mode["name"]
 
+    # TODO implement automatic x mode suffix update according to mode
     @x_mode.setter
     def x_mode(self, value: str):
         self._x_axis_mode["name"] = value
@@ -243,10 +244,17 @@ class Waveform(PlotBase):
             raise ValueError("y_name must be provided.")  # TODO provide logger
 
         # 2. BEC device curve logic
+        # TODO make more robust
+        if y_entry is None:
+            y_entry = y_name
         self._add_device_curve(y_name, y_entry)  # TODO change y_name and y_entry
 
         # 3. X mode logic if provided
-        # if x_name is not None:
+        # TODO double check the x_mode logic
+        if x_name is not None:
+            self._x_axis_mode["name"] = x_name
+            if x_entry is not None:
+                self._x_axis_mode["entry"] = x_entry
 
         # TODO implement x_mode change if putted by user
 
@@ -509,7 +517,8 @@ class Waveform(PlotBase):
             if self._mode == "sync":
                 self.scan_signal_update.emit()
             elif self._mode == "async":
-                # TODO sync should be setup to new scan id
+                for curve in self._async_curves:
+                    self._setup_async_curve(curve)
                 self.async_signal_update.emit()
             else:
                 self.scan_signal_update.emit()
@@ -546,6 +555,59 @@ class Waveform(PlotBase):
                 curve.setData(x_data, device_data)
             if device_data is not None and x_data is None:
                 curve.setData(device_data)
+
+    def _setup_async_curve(self, curve: Curve):
+        name = curve.config.signal.name
+        self.bec_dispatcher.disconnect_slot(
+            self.on_async_readback, MessageEndpoints.device_async_readback(self.old_scan_id, name)
+        )
+        try:
+            curve.clear_data()
+        except KeyError:
+            pass
+        self.bec_dispatcher.connect_slot(
+            self.on_async_readback,
+            MessageEndpoints.device_async_readback(self.scan_id, name),
+            from_start=True,
+        )
+
+    @SafeSlot(dict, dict)
+    def on_async_readback(self, msg, metadata):
+        """
+        Get async data readback.
+
+        Args:
+            msg(dict): Message with the async data.
+            metadata(dict): Metadata of the message.
+        """
+        instruction = metadata.get("async_update")
+        for curve in self._async_curves:
+            y_name = curve.config.signal.name
+            y_entry = curve.config.signal.entry
+            x_name = self._x_axis_mode["name"]
+            for device, async_data in msg["signals"].items():
+                if device == y_entry:
+                    data_plot = async_data["value"]
+                    if instruction == "extend":
+                        x_data, y_data = curve.get_data()
+                        if y_data is not None:
+                            new_data = np.hstack((y_data, data_plot))
+                        else:
+                            new_data = data_plot
+                        if x_name == "timestamp":
+                            if x_data is not None:
+                                x_data = np.hstack((x_data, async_data["timestamp"]))
+                            else:
+                                x_data = async_data["timestamp"]
+                            curve.setData(x_data, new_data)
+                        else:
+                            curve.setData(new_data)
+                    elif instruction == "replace":
+                        if x_name == "timestamp":
+                            x_data = async_data["timestamp"]
+                            curve.setData(x_data, data_plot)
+                        else:
+                            curve.setData(data_plot)
 
     def _get_x_data(self, device_name: str, device_entry: str):
         """
@@ -592,6 +654,7 @@ class Waveform(PlotBase):
         self._update_x_label_suffix(new_suffix)
         return x_data
 
+    # TODO reuse somehow in the x_mode setter
     def _update_x_label_suffix(self, new_suffix: str):
         """
         Update x_label so it ends with `new_suffix`, removing any old suffix.
@@ -668,6 +731,7 @@ if __name__ == "__main__":
     set_theme("dark")
     widget = Waveform()
     widget.show()
-    widget.plot(y_name="bpm4i", y_entry="bpm4i")
-    widget.plot(y_name="bpm3a", y_entry="bpm3a")
+    widget.plot("monitor_async")
+    # widget.plot(y_name="bpm4i", y_entry="bpm4i")
+    # widget.plot(y_name="bpm3a", y_entry="bpm3a")
     sys.exit(app.exec_())
