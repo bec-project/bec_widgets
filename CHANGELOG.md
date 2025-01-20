@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v1.16.3 (2025-01-20)
+
+### Bug Fixes
+
+- **error_popups**: Logger message in SafeSlot for errors; identification in error log from which
+  property or signal errors comes from
+  ([`02a4862`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/02a4862afdbbb5d343f798a086395e1596d1239a))
+
+### Testing
+
+- **error_popups**: Safeslot tests adjusted; tests extended to cover SafeProperty
+  ([`dfa2908`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/dfa2908c3de39802d40a2dee3e77cd5ca2ccad3b))
+
+
 ## v1.16.2 (2025-01-20)
 
 ### Bug Fixes
