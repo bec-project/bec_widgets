@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.16.2 (2025-01-20)
+
+### Bug Fixes
+
+- **widget_io**: Toggleswitchhandler added
+  ([`889ea86`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/889ea8629fabdc8afe2211103f8b63dfa52cc262))
+
+
 ## v1.16.1 (2025-01-16)
 
 ### Bug Fixes
