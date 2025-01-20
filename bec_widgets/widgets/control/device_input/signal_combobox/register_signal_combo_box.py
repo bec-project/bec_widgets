@@ -6,7 +6,7 @@ def main():  # pragma: no cover
         return
     from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
 
-    from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox_plugin import (
+    from bec_widgets.widgets.control.device_input.signal_combobox.signal_combo_box_plugin import (
         SignalComboBoxPlugin,
     )
 

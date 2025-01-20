@@ -8,7 +8,7 @@ from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox im
 
 DOM_XML = """
 <ui language='c++'>
-    <widget class='SignalComboBox' name='signal_combobox'>
+    <widget class='SignalComboBox' name='signal_combo_box'>
     </widget>
 </ui>
 """
@@ -33,7 +33,7 @@ class SignalComboBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return designer_material_icon(SignalComboBox.ICON_NAME)
 
     def includeFile(self):
-        return "signal_combobox"
+        return "signal_combo_box"
 
     def initialize(self, form_editor):
         self._form_editor = form_editor
