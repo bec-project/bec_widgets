@@ -102,6 +102,14 @@ Find and drag devices.
 Control individual device.
 ```
 
+```{grid-item-card}  Positioner Box 2D
+:link: user.widgets.positioner_box_2d
+:link-type: ref
+:img-top: /assets/widget_screenshots/positioner_box_2d.png
+
+Control two individual devices on perpendicular axes.
+```
+
 ```{grid-item-card} Ring Progress Bar 
 :link: user.widgets.ring_progress_bar
 :link-type: ref
@@ -260,6 +268,7 @@ buttons_appearance/buttons_appearance.md
 buttons_queue/button_queue.md
 device_browser/device_browser.md
 positioner_box/positioner_box.md
+positioner_box/positioner_box_2d.md
 text_box/text_box.md
 website/website.md
 toggle/toggle.md
