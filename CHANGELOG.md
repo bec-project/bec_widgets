@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.16.4 (2025-01-21)
+
+### Bug Fixes
+
+- Make combo box plugin files conform to autogen name
+  ([`141e1a3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/141e1a34c999756adc0f00f6a989251ba24cf42c))
+
+
 ## v1.16.3 (2025-01-20)
 
 ### Bug Fixes
