@@ -46,8 +46,7 @@ def SafeProperty(prop_type, *prop_args, popup_error: bool = False, default=None,
 
                 if popup_error:
                     ErrorPopupUtility().custom_exception_hook(*sys.exc_info(), popup_error=True)
-                else:
-                    logger.error(f"SafeProperty error in GETTER of '{prop_name}':\n{error_msg}")
+                logger.error(f"SafeProperty error in GETTER of '{prop_name}':\n{error_msg}")
                 return default
 
         class PropertyWrapper:
@@ -74,10 +73,7 @@ def SafeProperty(prop_type, *prop_args, popup_error: bool = False, default=None,
                             ErrorPopupUtility().custom_exception_hook(
                                 *sys.exc_info(), popup_error=True
                             )
-                        else:
-                            logger.error(
-                                f"SafeProperty error in SETTER of '{prop_name}':\n{error_msg}"
-                            )
+                        logger.error(f"SafeProperty error in SETTER of '{prop_name}':\n{error_msg}")
                         return
 
                 # Return the full read/write Property
@@ -116,8 +112,7 @@ def SafeSlot(*slot_args, **slot_kwargs):  # pylint: disable=invalid-name
                     ErrorPopupUtility().custom_exception_hook(
                         *sys.exc_info(), popup_error=popup_error
                     )
-                else:
-                    logger.error(f"SafeSlot error in slot '{slot_name}':\n{error_msg}")
+                logger.error(f"SafeSlot error in slot '{slot_name}':\n{error_msg}")
 
         return wrapper
 
