@@ -218,15 +218,11 @@ def main():
 
     args = parser.parse_args()
 
+    bec_logger.level = bec_logger.LOGLEVEL.INFO
     if args.hide:
-        # if we start hidden, it means we are under control of the client
-        # -> set the log level to critical to not see all the messages
         # pylint: disable=protected-access
-        # bec_logger._stderr_log_level = bec_logger.LOGLEVEL.CRITICAL
-        bec_logger.level = bec_logger.LOGLEVEL.CRITICAL
-    else:
-        # verbose log
-        bec_logger.level = bec_logger.LOGLEVEL.DEBUG
+        bec_logger._stderr_log_level = bec_logger.LOGLEVEL.ERROR
+        bec_logger._update_sinks()
 
     if args.gui_class == "BECDockArea":
         gui_class = BECDockArea
