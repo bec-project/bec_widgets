@@ -1,6 +1,18 @@
 # CHANGELOG
 
 
+## v1.16.5 (2025-01-22)
+
+### Bug Fixes
+
+- **cli**: Server log level info and error
+  ([`df961a9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/df961a9b885fa996e0ef44a36c937690670637c8))
+
+- **error_popups**: Errors in SafeProperty and in SafeSlot are always logged, even with error
+  message popup enabled
+  ([`219d43d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/219d43d325260569e17a8eb7d56f63267d6e9649))
+
+
 ## v1.16.4 (2025-01-21)
 
 ### Bug Fixes
