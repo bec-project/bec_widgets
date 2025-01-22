@@ -137,9 +137,11 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.setWindowTitle("Jupyter Console Window")
 
     def _init_waveform(self):
-        self.wfng.add_curve_custom(x=np.arange(10), y=np.random.rand(10), label="curve1")
-        self.wfng.add_curve_custom(x=np.arange(10), y=np.random.rand(10), label="curve2")
-        self.wfng.add_curve_custom(x=np.arange(10), y=np.random.rand(10), label="curve3")
+        # self.wfng._add_curve_custom(x=np.arange(10), y=np.random.rand(10), label="curve1")
+        # self.wfng._add_curve_custom(x=np.arange(10), y=np.random.rand(10), label="curve2")
+        # self.wfng._add_curve_custom(x=np.arange(10), y=np.random.rand(10), label="curve3")
+        self.wfng.plot(y_name="bpm4i", y_entry="bpm4i", dap="GaussianModel")
+        self.wfng.plot(y_name="bpm3a", y_entry="bpm3a", dap="GaussianModel")
 
     def _init_figure(self):
         self.w1 = self.figure.plot(x_name="samx", y_name="bpm4i", row=0, col=0)
@@ -207,9 +209,11 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.im.image("waveform", "1d")
 
         self.d2 = self.dock.add_dock(name="dock_2", position="bottom")
-        self.wf = self.d2.add_widget("BECFigure", row=0, col=0)
+        self.wf = self.d2.add_widget("BECWaveformWidget", row=0, col=0)
+        self.wf.plot("bpm4i")
+        self.wf.plot("bpm3a")
 
-        self.mw = self.wf.multi_waveform(monitor="waveform")  # , config=config)
+        self.mw = None  # self.wf.multi_waveform(monitor="waveform")  # , config=config)
 
         self.dock.save_state()
 
@@ -235,7 +239,7 @@ if __name__ == "__main__":  # pragma: no cover
     app.setApplicationName("Jupyter Console")
     app.setApplicationDisplayName("Jupyter Console")
     apply_theme("dark")
-    icon = material_icon("terminal", color="#434343", filled=True)
+    icon = material_icon("terminal", color=(255, 255, 255, 255), filled=True)
     app.setWindowIcon(icon)
 
     bec_dispatcher = BECDispatcher()

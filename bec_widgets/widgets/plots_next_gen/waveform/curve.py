@@ -40,7 +40,7 @@ class DeviceSignal(BaseModel):
     # x: Optional[SignalData] = None  # TODO maybe not needed
     # y: SignalData
     # z: Optional[SignalData] = None  # TODO maybe not needed
-    # dap: Optional[str] = None  # TODO utilize differently than in past
+    dap: Optional[str] = None  # TODO utilize differently than in past
     model_config: dict = {"validate_assignment": True}
 
 
@@ -65,6 +65,10 @@ class CurveConfig(ConnectionConfig):
     # color_map_z: Optional[str] = Field(
     #     "magma", description="The colormap of the curves z gradient.", validate_default=True
     # ) #TODO remove, the gradient curves wil be separate
+    # TODO do validator for parent_label
+    parent_label: Optional[str] = Field(
+        None, description="The label of the parent plot, only relevant for dap curves."
+    )
 
     model_config: dict = {"validate_assignment": True}
 

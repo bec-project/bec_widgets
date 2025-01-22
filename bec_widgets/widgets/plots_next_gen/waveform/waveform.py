@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import Literal, Optional
 
 import numpy as np
@@ -16,6 +17,7 @@ from qtpy.QtWidgets import QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils import ConnectionConfig
+from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
 from bec_widgets.utils.colors import Colors, set_theme
 from bec_widgets.widgets.plots_next_gen.plot_base import PlotBase
 from bec_widgets.widgets.plots_next_gen.waveform.curve import Curve, CurveConfig, DeviceSignal
@@ -46,11 +48,13 @@ class Waveform(PlotBase):
     }
 
     # TODO implement signals
-    scan_signal_update = Signal()  # TODO maybe rename to async_signal_update
+    scan_signal_update = Signal()  # TODO maybe rename to sync_signal_update
     async_signal_update = Signal()
+    request_dap_update = Signal()
+    unblock_dap_proxy = Signal()
     dap_signal_update = Signal()
-    # dap_params_update = Signal(dict, dict)
-    # dap_summary_update = Signal(dict, dict)
+    dap_params_update = Signal(dict, dict)
+    dap_summary_update = Signal(dict, dict)
     # autorange_signal = Signal()
     new_scan = Signal()
     new_scan_id = Signal(str)
@@ -100,12 +104,12 @@ class Waveform(PlotBase):
         self.proxy_update_plot = pg.SignalProxy(
             self.scan_signal_update, rateLimit=25, slot=self.update_sync_curves
         )
-        self.proxy_dap_update = pg.SignalProxy(
-            self.dap_signal_update, rateLimit=10, slot=self._update_dap
+        self.proxy_dap_request = BECSignalProxy(
+            self.request_dap_update, rateLimit=25, slot=self.request_dap
         )
-        # self.proxy_update_dap = pg.SignalProxy(
-        #     self.scan_signal_update, rateLimit=25, slot=self.refresh_dap
-        # )
+        self.unblock_dap_proxy.connect(self.proxy_dap_request.unblock_proxy)
+
+        # TODO implement bec proxy to request dap update
         # self.async_signal_update.connect(self.replot_async_curve)
         # self.autorange_signal.connect(self.auto_range)
         # self.proxy_dap_update = pg.SignalProxy(
@@ -130,6 +134,7 @@ class Waveform(PlotBase):
         # self._update_x_label_suffix() #TODO update straight away or wait for the next scan??
         self.async_signal_update.emit()
         self.scan_signal_update.emit()
+        self.request_dap_update.emit()
         self.plot_item.enableAutoRange(x=True)
 
     @SafeProperty(str)
@@ -274,10 +279,7 @@ class Waveform(PlotBase):
             raise ValueError("y_name must be provided if not using custom data")
 
         # TODO decide if to use logger or raise
-        # try:
         y_entry = self.entry_validator.validate_signal(name=y_name, entry=y_entry)
-        # except ValueError:
-        #     self.notification_label()
 
         # device curve
         curve = self._add_curve(
@@ -299,6 +301,7 @@ class Waveform(PlotBase):
                 )
 
         if dap is not None:
+            # self.add_dap_curve(device_label=label, dap_name=dap, color=color, **kwargs) #TODO adapt to use this function
             self._add_curve(
                 source="dap", device_name=y_name, device_entry=y_entry, dap=dap, **kwargs
             )
@@ -307,7 +310,60 @@ class Waveform(PlotBase):
 
     ################################################################################
     # Curve Management Methods
-    def _add_dap_curve(self): ...
+    # TODO has to be tested
+    def add_dap_curve(
+        self, device_label: str, dap_name: str, color: str | None = None, **kwargs
+    ) -> Curve:
+        """
+        Create a new DAP curve referencing the existing device curve `device_label`,
+        with the data processing model `dap_name`.
+
+        Args:
+            device_label(str): The label of the device curve to add DAP to.
+            dap_name(str): The name of the DAP model to use.
+            color(str): The color of the curve.
+            **kwargs
+
+        Returns:
+            Curve: The new DAP curve.
+        """
+
+        # 1) Find the existing device curve by label
+        device_curve = self._find_curve_by_label(device_label)
+        if not device_curve:
+            raise ValueError(f"No existing curve found with label '{device_label}'.")
+        if device_curve.config.source != "device":
+            raise ValueError(
+                f"Curve '{device_label}' is not a device curve. Only device curves can have DAP."
+            )
+
+        dev_name = device_curve.config.signal.name
+        dev_entry = device_curve.config.signal.entry
+
+        # 2) Build a label for the new DAP curve
+        dap_label = f"{dev_name}-{dev_entry}-{dap_name}"
+
+        # 3) Possibly raise if the DAP curve already exists
+        if self._check_curve_id(dap_label):
+            raise ValueError(f"DAP curve '{dap_label}' already exists.")
+
+        # 4) Create the DAP curve config using `_add_curve(...)`
+        new_curve = self._add_curve(
+            source="dap",
+            label=dap_label,
+            color=color,
+            device_name=dev_name,
+            device_entry=dev_entry,
+            dap=dap_name,
+            parent_label=device_label,  # link back to the device curve
+            symbol="*",
+            **kwargs,
+        )
+
+        # 5) Immediately request a DAP update (this can trigger the pipeline)
+        self.request_dap_update.emit()
+
+        return new_curve
 
     def _add_curve(
         self,
@@ -367,7 +423,7 @@ class Waveform(PlotBase):
             final_data = (x_data, y_data)
 
         if source == "dap":  # TODO change logic
-            config.signal.dap = dap
+            config.signal = DeviceSignal(name=device_name, entry=device_entry, dap=dap)
 
         # Finally, create the curve item
         curve = self._add_curve_object(name=label, source=source, config=config, data=final_data)
@@ -461,6 +517,7 @@ class Waveform(PlotBase):
             curve = self.plot_item.curves[N]
             self.plot_item.removeItem(curve)
             self._curve_clean_up(curve)
+
         else:
             raise IndexError(f"Curve order {N} out of range.")  # TODO can be logged
 
@@ -475,6 +532,12 @@ class Waveform(PlotBase):
             self.on_async_readback,
             MessageEndpoints.device_async_readback(self.scan_id, curve.name()),
         )
+
+        # find a corresponding dap curve and remove it
+        for c in self.curves:
+            if c.config.parent_label == curve.name():
+                self.plot_item.removeItem(c)
+                self._curve_clean_up(c)
 
     def _check_curve_id(self, curve_id: str) -> bool:
         """
@@ -567,6 +630,7 @@ class Waveform(PlotBase):
                     self._setup_async_curve(curve)
                 self.async_signal_update.emit()
                 print("Mixed mode")  # TODO change to logger
+        self.setup_dap_for_scan()
 
     @SafeSlot(dict, dict)
     def on_scan_progress(self, msg: dict, meta: dict):
@@ -579,7 +643,7 @@ class Waveform(PlotBase):
         """
         self.scan_signal_update.emit()
 
-    # @SafeSlot()
+    # @SafeSlot() #TODO from some reason TypeError: Waveform.update_sync_curves() takes 1 positional argument but 2 were given
     def update_sync_curves(self):
         try:
             data = (
@@ -601,6 +665,7 @@ class Waveform(PlotBase):
                 curve.setData(x_data, device_data)
             if device_data is not None and x_data is None:
                 curve.setData(device_data)
+        self.request_dap_update.emit()
 
     def _setup_async_curve(self, curve: Curve):
         name = curve.config.signal.name
@@ -656,11 +721,26 @@ class Waveform(PlotBase):
                             curve.setData(x_data, data_plot)
                         else:
                             curve.setData(data_plot)
+        self.request_dap_update.emit()
 
-    @SafeSlot()
-    def _update_dap(self):
+    def setup_dap_for_scan(self):
+        """Setup DAP updates for the new scan."""
+        self.bec_dispatcher.disconnect_slot(
+            self.update_dap_curves,
+            MessageEndpoints.dap_response(f"{self.old_scan_id}-{self.gui_id}"),
+        )
+        if len(self._dap_curves) > 0:
+            self.bec_dispatcher.connect_slot(
+                self.update_dap_curves,
+                MessageEndpoints.dap_response(f"{self.scan_id}-{self.gui_id}"),
+            )
+
+    # @SafeSlot() #FIXME type error
+    def request_dap(self):
+        """Request new fit for data"""
+
         for dap_curve in self._dap_curves:
-            parent_label = getattr(dap_curve.config, "dap_parent_label", None)
+            parent_label = getattr(dap_curve.config, "parent_label", None)
             if not parent_label:
                 continue
             # find the device curve
@@ -670,7 +750,7 @@ class Waveform(PlotBase):
                 continue
 
             x_data, y_data = parent_curve.get_data()
-            model_name = dap_curve.config.signals.dap
+            model_name = dap_curve.config.signal.dap
             model = getattr(self.dap, model_name)
 
             # TODO implement DAP logic
@@ -682,39 +762,33 @@ class Waveform(PlotBase):
                     "kwargs": {"data_x": x_data, "data_y": y_data},  # TODO add xmin,xmax as before
                     "class_args": model._plugin_info["class_args"],
                     "class_kwargs": model._plugin_info["class_kwargs"],
+                    "curve_label": dap_curve.name(),
                 },
                 metadata={"RID": f"{self.scan_id}-{self.gui_id}"},
             )
             self.client.connector.set_and_publish(MessageEndpoints.dap_request(), msg)
 
-        # TODO get data from corresponding curves
-        # for curve in self._dap_curves:
-        #     corresponding_curve =
-
     @SafeSlot(dict, dict)
-    def update_dap(self, msg, metadata):
+    def update_dap_curves(self, msg, metadata):
         """Callback for DAP response message."""
-        ...
+        msg_config = msg.get("dap_request", None).content.get("config", {})
 
-        # pylint: disable=unused-variable
-        # scan_id, x_name, x_entry, y_name, y_entry = msg["dap_request"].content["config"]["args"]
-        # model = msg["dap_request"].content["config"]["class_kwargs"]["model"]
-        #
-        # curve_id_request = f"{y_name}-{y_entry}-{model}"
-        #
-        # for curve_id, curve in self._curves_data["DAP"].items():
-        #     if curve_id == curve_id_request:
-        #         if msg["data"] is not None:
-        #             x = msg["data"][0]["x"]
-        #             y = msg["data"][0]["y"]
-        #             curve.setData(x, y)
-        #             curve.dap_params = msg["data"][1]["fit_parameters"]
-        #             curve.dap_summary = msg["data"][1]["fit_summary"]
-        #             metadata.update({"curve_id": curve_id_request})
-        #             self.dap_params_update.emit(curve.dap_params, metadata)
-        #             self.dap_summary_update.emit(curve.dap_summary, metadata)
-        #         break
-        #
+        curve_id = msg_config.get("curve_label", None)
+        curve = self._find_curve_by_label(curve_id)
+
+        try:
+            x = msg.get("data", None)[0].get("x", None)
+            y = msg.get("data", None)[0].get("y", None)
+        except:
+            self.unblock_dap_proxy.emit()
+            return
+        curve.setData(x, y)
+        curve.dap_params = msg["data"][1]["fit_parameters"]
+        curve.dap_summary = msg["data"][1]["fit_summary"]
+        metadata.update({"curve_id": curve_id})
+        self.dap_params_update.emit(curve.dap_params, metadata)
+        self.dap_summary_update.emit(curve.dap_summary, metadata)
+        self.unblock_dap_proxy.emit()
 
     def _get_x_data(self, device_name: str, device_entry: str):
         """
