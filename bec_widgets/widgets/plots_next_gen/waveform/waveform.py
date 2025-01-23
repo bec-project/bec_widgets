@@ -310,7 +310,7 @@ class Waveform(PlotBase):
         curve = self._add_curve(config=config, x_data=x_data, y_data=y_data)
 
         if dap is not None and source == "device":
-            self.add_dap_curve(device_label=curve.name(), dap_name=dap, color=color, **kwargs)
+            self.add_dap_curve(device_label=curve.name(), dap_name=dap, **kwargs)
 
         return curve
 
@@ -375,7 +375,8 @@ class Waveform(PlotBase):
         dap_curve = self._add_curve(config=config)
 
         # 5) Immediately request a DAP update (this can trigger the pipeline)
-        self.request_dap_update.emit()
+        # self.request_dap_update.emit() #FIXME implement this again when blocking proxy will have timeout limit
+        print(f"Added DAP curve '{dap_label}'")  # TODO change to logger
 
         return dap_curve
 
