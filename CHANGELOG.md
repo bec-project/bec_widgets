@@ -1,6 +1,35 @@
 # CHANGELOG
 
 
+## v1.17.0 (2025-01-23)
+
+### Bug Fixes
+
+- Focus policy and tab order for positioner_box_2d
+  ([`6df5710`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6df57103bb57c97bedda570b07a31a3cc6e57d5d))
+
+### Documentation
+
+- Add documentation for 2D positioner box
+  ([`9a8cc31`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9a8cc31f6c1fa5595f73c2a60372ef10d4c8eabb))
+
+### Features
+
+- **widget**: Add 2d positioner box widget
+  ([`d2ffddb`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d2ffddb6d8d2473d8718f5aa650559902067ff12))
+
+### Refactoring
+
+- Move positioner_box and line into submodule
+  ([`2419521`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2419521f5f05d8ff8ce975219629f77efb7fe6be))
+
+PositionerBox and PositionerControlLine are now exported from from
+  bec_widgets.widgets.control.device_control.positioner_box, removing one level of hierarchy
+
+- Move positioner_box logic to base class
+  ([`3770db5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3770db51be68a5f3fa65e0a67a4ed3efd1c7d6fe))
+
+
 ## v1.16.5 (2025-01-22)
 
 ### Bug Fixes
