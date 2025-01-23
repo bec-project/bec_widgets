@@ -232,80 +232,85 @@ class Waveform(PlotBase):
         Returns:
             Curve: The curve object.
         """
+        # 0) preallocate
+        source = "custom"
+        x_data = None
+        y_data = None
+
         # 1. Custom curve logic
         if x is not None and y is not None:
-            return self._add_curve(
-                source="custom", label=label, color=color, x_data=x, y_data=y, **kwargs
-            )
+            # 1.1 both x and y defined
+            if x is not None and y is not None:
+                source = "custom"
+                x_data = np.asarray(x)
+                y_data = np.asarray(y)
 
-        # Another custom case if user put 'arg1' as data
-        if isinstance(arg1, list) or isinstance(arg1, np.ndarray):
-            # if user also gave 'y' => custom
-            if isinstance(y, list) or isinstance(y, np.ndarray):
-                return self._add_curve(
-                    source="custom",
-                    label=label,
-                    color=color,
-                    x_data=np.asarray(arg1),
-                    y_data=np.asarray(y),
-                    **kwargs,
-                )
-            # if user did not pass 'y', we guess we want to do x=..., y=...
-            if y is None:
-                x_ary = np.arange(len(arg1))
-                return self._add_curve(
-                    source="custom",
-                    label=label,
-                    color=color,
-                    x_data=x_ary,
-                    y_data=np.asarray(arg1),
-                    **kwargs,
-                )
+            # 1.2 If user gave only arg1 + y, interpret arg1 as x_data
+            elif isinstance(arg1, (list, np.ndarray)) and isinstance(y, (list, np.ndarray)):
+                source = "custom"
+                x_data = np.asarray(arg1)
+                y_data = np.asarray(y)
 
-            # if it's a 2D array
-            if isinstance(arg1, np.ndarray) and arg1.ndim == 2 and y is None:
-                x_ary = arg1[:, 0]
-                y_ary = arg1[:, 1]
-                return self._add_curve(
-                    source="custom", label=label, color=color, x_data=x_ary, y_data=y_ary, **kwargs
-                )
+            # 1.3 If user gave only arg1 as array => treat as y_data with x=range(len(y_data))
+            elif isinstance(arg1, (list, np.ndarray)) and y is None:
+                source = "custom"
+                arr = np.asarray(arg1)
+                x_data = np.arange(len(arr))
+                y_data = arr
 
-        # 2) If user gave 'arg1' as str => interpret as y_name
+            # 1.4 If user gave arg1 as a 2D array => interpret columns as x_data, y_data
+            if isinstance(arg1, np.ndarray) and arg1.ndim == 2 and arg1.shape[1] == 2 and y is None:
+                source = "custom"
+                x_data = arg1[:, 0]
+                y_data = arg1[:, 1]
+
+        # 2. If arg1 is a string => interpret as y_name => device data
         if isinstance(arg1, str):
             y_name = arg1
 
-        # 3) If y_name => device
-        if y_name is None:
-            logger.error("y_name must be provided if not using custom data")
-            raise ValueError("y_name must be provided if not using custom data")
+        # If y_name is set => device data
+        if y_name is not None and x_data is None and y_data is None:
+            source = "device"
+            # Validate or obtain entry
+            y_entry = self.entry_validator.validate_signal(name=y_name, entry=y_entry)
 
-        # TODO decide if to use logger or raise
-        y_entry = self.entry_validator.validate_signal(name=y_name, entry=y_entry)
-
-        # device curve
-        curve = self._add_curve(
-            source="device",
-            label=label,
-            color=color,
-            device_name=y_name,
-            device_entry=y_entry,
-            **kwargs,
-        )
-
-        # 4) If user gave x_name => store in x_axis_mode
-        # TODO double check the logic
+        # If user gave x_name => store in x_axis_mode, but do not set data here
+        # TODO check logic if legit
         if x_name is not None:
             self._x_axis_mode["name"] = x_name
             if x_name not in ["timestamp", "index", "auto"]:
-                self._x_axis_mode["entry"] = self.entry_validator.validate_signal(
-                    name=x_name, entry=x_entry
-                )
+                self._x_axis_mode["entry"] = self.entry_validator.validate_signal(x_name, x_entry)
 
-        if dap is not None:
-            # self.add_dap_curve(device_label=label, dap_name=dap, color=color, **kwargs) #TODO adapt to use this function
-            self._add_curve(
-                source="dap", device_name=y_name, device_entry=y_entry, dap=dap, **kwargs
-            )
+        # Decide label if not provided
+        if label is None:
+            if source == "custom":
+                label = f"Curve {len(self.plot_item.curves) + 1}"
+            else:
+                label = f"{y_name}-{y_entry}"
+
+        # If color not provided, generate from palette
+        if color is None:
+            color = self._generate_color_from_palette()
+
+        # Build the config
+        config = CurveConfig(
+            widget_class="Curve",
+            parent_id=self.gui_id,
+            label=label,
+            color=color,
+            source=source,
+            **kwargs,
+        )
+
+        # If it's device-based, attach DeviceSignal
+        if source == "device":
+            config.signal = DeviceSignal(name=y_name, entry=y_entry)
+
+        # CREATE THE CURVE
+        curve = self._add_curve(config=config, x_data=x_data, y_data=y_data)
+
+        if dap is not None and source == "device":
+            self.add_dap_curve(device_label=curve.name(), dap_name=dap, color=color, **kwargs)
 
         return curve
 
@@ -348,105 +353,100 @@ class Waveform(PlotBase):
         if self._check_curve_id(dap_label):
             raise ValueError(f"DAP curve '{dap_label}' already exists.")
 
-        # 4) Create the DAP curve config using `_add_curve(...)`
-        new_curve = self._add_curve(
-            source="dap",
+        if color is None:
+            color = self._generate_color_from_palette()
+
+        # Build config for DAP
+        config = CurveConfig(
+            widget_class="Curve",
+            parent_id=self.gui_id,
             label=dap_label,
             color=color,
-            device_name=dev_name,
-            device_entry=dev_entry,
-            dap=dap_name,
-            parent_label=device_label,  # link back to the device curve
-            symbol="*",
+            source="dap",
+            parent_label=device_label,
+            symbol="star",
             **kwargs,
         )
+
+        # Attach device signal with DAP
+        config.signal = DeviceSignal(name=dev_name, entry=dev_entry, dap=dap_name)
+
+        # 4) Create the DAP curve config using `_add_curve(...)`
+        dap_curve = self._add_curve(config=config)
 
         # 5) Immediately request a DAP update (this can trigger the pipeline)
         self.request_dap_update.emit()
 
-        return new_curve
+        return dap_curve
 
     def _add_curve(
         self,
-        source: Literal["custom", "device", "dap"],
-        label: str | None = None,
-        color: str | None = None,
-        device_name: str | None = None,
-        device_entry: str | None = None,
+        config: CurveConfig,
         x_data: np.ndarray | None = None,
         y_data: np.ndarray | None = None,
-        dap: str | None = None,
-        **kwargs,
     ) -> Curve:
-        # TODO check the label logic
-        # TODO parent_label has to be done better with consideration of custom labels
-        parent_label = None
-        if not label:
-            # Generate fallback
-            if source == "custom":
-                label = f"Curve {len(self.plot_item.curves) + 1}"
-            if source == "device":
-                label = f"{device_name}-{device_entry}"
-            if source == "dap":
-                label = f"{device_name}-{device_entry}-{dap}"
-                parent_label = f"{device_name}-{device_entry}"
+        """
+        Private method to finalize creation of a new Curve in this Waveform widget
+        based on an already-built `CurveConfig`.
 
+        Args:
+            config (CurveConfig): A fully populated pydantic model describing how to create and style the curve.
+            x_data (np.ndarray | None): If this is a custom curve (config.source == "custom"), optional x data array.
+            y_data (np.ndarray | None): If this is a custom curve (config.source == "custom"), optional y data array.
+
+        Returns:
+            Curve: The newly created curve object.
+
+        Raises:
+            ValueError: If a duplicate curve label/config is found, or if
+                        custom data is missing for `source='custom'`.
+        """
+        label = config.label
+        if not label:
+            # Fallback label
+            label = f"Curve {len(self.plot_item.curves) + 1}"
+            config.label = label
+
+        # Check for duplicates
         if self._check_curve_id(label):
             raise ValueError(f"Curve with ID '{label}' already exists in widget '{self.gui_id}'.")
 
-        # If color not provided, pick from the palette
-        if not color:
-            color = self._generate_color_from_palette()
+        # If user did not provide color in config, pick from palette
+        if not config.color:
+            config.color = self._generate_color_from_palette()
 
-        # Build the config
-        config = CurveConfig(
-            widget_class="Curve",
-            parent_id=self.gui_id,
-            label=label,
-            color=color,
-            source=source,
-            parent_label=parent_label,
-            **kwargs,
-        )
-
-        # If device-based, add device signal
-        if source == "device":
-            self.entry_validator.validate_signal(device_name, device_entry)  # TODO notify user
-            # if not device_name or not device_entry:
-            #     raise ValueError("device_name and device_entry are required for 'device' source.")
-            config.signal = DeviceSignal(name=device_name, entry=device_entry)
-
-        # If custom, we might want x_data, y_data
-        final_data = None
-        if source == "custom":
+        # For custom data, ensure x_data, y_data
+        if config.source == "custom":
             if x_data is None or y_data is None:
-                raise ValueError("x_data,y_data must be provided for 'custom' source.")
-            final_data = (x_data, y_data)
+                raise ValueError("For 'custom' curves, x_data and y_data must be provided.")
 
-        if source == "dap":  # TODO change logic
-            config.signal = DeviceSignal(name=device_name, entry=device_entry, dap=dap)
+        # Actually create the Curve item
+        curve = self._add_curve_object(name=label, config=config)
 
-        # Finally, create the curve item
-        curve = self._add_curve_object(name=label, source=source, config=config, data=final_data)
-        return curve
+        # If custom => set initial data
+        if config.source == "custom" and x_data is not None and y_data is not None:
+            curve.setData(x_data, y_data)
 
-    def _add_curve_object(
-        self,
-        name: str,
-        source: str,
-        config: CurveConfig,
-        data: tuple[list | np.ndarray, list | np.ndarray] = None,
-    ) -> Curve:
-        curve = Curve(config=config, name=name, parent_item=self)
-        # self._curves_by_class[source][name] = curve
-        self.plot_item.addItem(curve)
-
-        if data is not None:
-            curve.setData(data[0], data[1])
-        if source == "device":
+        # If device => schedule BEC updates
+        if config.source == "device":
             self.async_signal_update.emit()
             self.scan_signal_update.emit()
 
+        return curve
+
+    def _add_curve_object(self, name: str, config: CurveConfig) -> Curve:
+        """
+        Low-level creation of the PlotDataItem (Curve) from a `CurveConfig`.
+
+        Args:
+            name (str): The name/label of the curve.
+            config (CurveConfig): Configuration model describing the curve.
+
+        Returns:
+            Curve: The newly created curve object, added to the plot.
+        """
+        curve = Curve(config=config, name=name, parent_item=self)
+        self.plot_item.addItem(curve)
         return curve
 
     def _generate_color_from_palette(self) -> str:
@@ -726,6 +726,7 @@ class Waveform(PlotBase):
 
     def setup_dap_for_scan(self):
         """Setup DAP updates for the new scan."""
+        print(f"Setup DAP for scan {self.scan_id}")  # TODO change to logger
         self.bec_dispatcher.disconnect_slot(
             self.update_dap_curves,
             MessageEndpoints.dap_response(f"{self.old_scan_id}-{self.gui_id}"),
@@ -739,6 +740,7 @@ class Waveform(PlotBase):
     # @SafeSlot() #FIXME type error
     def request_dap(self):
         """Request new fit for data"""
+        print("Request DAP")  # TODO change to logger
 
         for dap_curve in self._dap_curves:
             parent_label = getattr(dap_curve.config, "parent_label", None)
@@ -772,6 +774,8 @@ class Waveform(PlotBase):
     @SafeSlot(dict, dict)
     def update_dap_curves(self, msg, metadata):
         """Callback for DAP response message."""
+        print("Update DAP curves")  # TODO change to logger
+        self.unblock_dap_proxy.emit()
         msg_config = msg.get("dap_request", None).content.get("config", {})
 
         curve_id = msg_config.get("curve_label", None)
@@ -781,7 +785,6 @@ class Waveform(PlotBase):
             x = msg.get("data", None)[0].get("x", None)
             y = msg.get("data", None)[0].get("y", None)
         except:
-            self.unblock_dap_proxy.emit()
             return
         curve.setData(x, y)
         curve.dap_params = msg["data"][1]["fit_parameters"]
@@ -789,7 +792,6 @@ class Waveform(PlotBase):
         metadata.update({"curve_id": curve_id})
         self.dap_params_update.emit(curve.dap_params, metadata)
         self.dap_summary_update.emit(curve.dap_summary, metadata)
-        self.unblock_dap_proxy.emit()
 
     def _get_x_data(self, device_name: str, device_entry: str):
         """
@@ -948,7 +950,7 @@ class Waveform(PlotBase):
         elif found_sync:
             mode = "sync"
 
-        logger.info(f"Curve acquisition mode: {mode}")
+        logger.info(f"Curve acquisition mode for scan {self.scan_id}: {mode}")
 
         return mode
 
