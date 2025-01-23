@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import time
 from typing import Literal, Optional
 
 import numpy as np
@@ -164,6 +163,8 @@ class Waveform(PlotBase):
         """
         raw_list = []
         for c in self.plot_item.curves:
+            if c.config.source == "custom":  # Do not serialize custom curves
+                continue
             cfg_dict = c.config.dict()
             raw_list.append(cfg_dict)
         return json.dumps(raw_list, indent=2)
