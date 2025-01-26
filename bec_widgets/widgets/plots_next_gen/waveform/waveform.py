@@ -18,6 +18,7 @@ from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
 from bec_widgets.utils.colors import Colors, set_theme
 from bec_widgets.widgets.plots_next_gen.plot_base import PlotBase
 from bec_widgets.widgets.plots_next_gen.waveform.curve import Curve, CurveConfig, DeviceSignal
+from bec_widgets.widgets.plots_next_gen.waveform.utils.roi_manager import WaveformROIManager
 
 logger = bec_logger.logger
 
@@ -56,8 +57,9 @@ class Waveform(PlotBase):
     new_scan = Signal()
     new_scan_id = Signal(str)
 
-    # roi_changed = Signal(tuple)
-    # roi_active = Signal(bool)
+    roi_changed = Signal(tuple)
+    roi_active = Signal(bool)
+
     # request_dap_refresh = Signal() #TODO probably replaced by request_dap_update
     def __init__(
         self,
@@ -93,6 +95,9 @@ class Waveform(PlotBase):
             "label_suffix": "",
         }  # TODO decide which one to use
 
+        # Specific GUI elements
+        self._init_roi_manager()
+
         # Scan status update loop
         self.bec_dispatcher.connect_slot(self.on_scan_status, MessageEndpoints.scan_status())
         self.bec_dispatcher.connect_slot(self.on_scan_progress, MessageEndpoints.scan_progress())
@@ -117,6 +122,53 @@ class Waveform(PlotBase):
         #     self.async_signal_update, self.update_async_curves
         # )  # TODO implement
         self.scan_history(-1)
+
+    ################################################################################
+    # Widget Specific GUI interactions
+    ################################################################################
+
+    def _init_roi_manager(self):
+        """
+        Initialize the ROI manager for the Waveform widget.
+        """
+        self._roi_manager = WaveformROIManager(self.plot_item, parent=self)
+
+        # Connect manager signals -> forward them via Waveform's own signals
+        self._roi_manager.roi_changed.connect(self.roi_changed)
+        self._roi_manager.roi_active.connect(self.roi_active)
+
+        # Example: connect ROI changed to re-request DAP
+        self.roi_changed.connect(self._on_roi_changed_for_dap)
+        self.toolbar.widgets["roi_linear"].action.toggled.connect(self._roi_manager.toggle_roi)
+
+    @property
+    def roi_region(self) -> tuple[float, float] | None:
+        """
+        Allows external code to get/set the ROI region easily via Waveform.
+        """
+        return self._roi_manager.roi_region
+
+    @roi_region.setter
+    def roi_region(self, value: tuple[float, float] | None):
+        self._roi_manager.roi_region = value
+
+    def select_roi(self, region: tuple[float, float]):
+        """
+        Public method if you want the old `select_roi` style.
+        """
+        self._roi_manager.select_roi(region)
+
+    # If you want the old toggle_roi style:
+    def toggle_roi(self, enabled: bool):
+        self._roi_manager.toggle_roi(enabled)
+
+    def _on_roi_changed_for_dap(self, region: tuple[float, float]):
+        """
+        Whenever the ROI changes, you might want to re-request DAP with the new x_min, x_max.
+        """
+        logger.info(f"ROI region changed to {region}, requesting new DAP fit.")
+        # Example: you could store these in a local property, or directly call request_dap_update
+        self.request_dap_update.emit()
 
     ################################################################################
     # Widget Specific Properties
@@ -810,8 +862,6 @@ class Waveform(PlotBase):
     # @SafeSlot() #FIXME type error
     def request_dap(self):
         """Request new fit for data"""
-        print("Request DAP")  # TODO change to logger
-
         for dap_curve in self._dap_curves:
             parent_label = getattr(dap_curve.config, "parent_label", None)
             if not parent_label:
@@ -825,6 +875,13 @@ class Waveform(PlotBase):
             x_data, y_data = parent_curve.get_data()
             model_name = dap_curve.config.signal.dap
             model = getattr(self.dap, model_name)
+            try:
+                x_min, x_max = self.roi_region
+            except TypeError:
+                x_min = None
+                x_max = None
+
+            print(f"x_min: {x_min}, x_max: {x_max}")
 
             # TODO implement DAP logic
             msg = messages.DAPRequestMessage(
@@ -832,7 +889,12 @@ class Waveform(PlotBase):
                 dap_type="on_demand",
                 config={
                     "args": [],
-                    "kwargs": {"data_x": x_data, "data_y": y_data},  # TODO add xmin,xmax as before
+                    "kwargs": {
+                        "data_x": x_data,
+                        "data_y": y_data,
+                        "x_min": x_min,
+                        "x_max": x_max,
+                    },  # TODO add xmin,xmax as before -> so far do not work
                     "class_args": model._plugin_info["class_args"],
                     "class_kwargs": model._plugin_info["class_kwargs"],
                     "curve_label": dap_curve.name(),

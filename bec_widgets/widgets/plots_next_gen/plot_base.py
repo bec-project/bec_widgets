@@ -20,6 +20,7 @@ from bec_widgets.widgets.plots_next_gen.toolbar_bundles.mouse_interactions impor
     MouseInteractionToolbarBundle,
 )
 from bec_widgets.widgets.plots_next_gen.toolbar_bundles.plot_export import PlotExportBundle
+from bec_widgets.widgets.plots_next_gen.toolbar_bundles.roi_bundle import ROIBundle
 from bec_widgets.widgets.plots_next_gen.toolbar_bundles.save_state import SaveStateBundle
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
@@ -118,18 +119,14 @@ class PlotBase(BECWidget, QWidget):
         self.plot_export_bundle = PlotExportBundle("plot_export", target_widget=self)
         self.mouse_bundle = MouseInteractionToolbarBundle("mouse_interaction", target_widget=self)
         self.state_export_bundle = SaveStateBundle("state_export", target_widget=self)
+        self.roi_bundle = ROIBundle("roi", target_widget=self)
 
         # Add elements to toolbar
         self.toolbar.add_bundle(self.plot_export_bundle, target_widget=self)
         self.toolbar.add_bundle(self.state_export_bundle, target_widget=self)
         self.toolbar.add_bundle(self.mouse_bundle, target_widget=self)
+        self.toolbar.add_bundle(self.roi_bundle, target_widget=self)
 
-        self.toolbar.add_action("separator_0", SeparatorAction(), target_widget=self)
-        self.toolbar.add_action(
-            "crosshair",
-            MaterialIconAction(icon_name="point_scan", tooltip="Show Crosshair", checkable=True),
-            target_widget=self,
-        )
         self.toolbar.add_action("separator_1", SeparatorAction(), target_widget=self)
         self.toolbar.add_action(
             "fps_monitor",
@@ -141,7 +138,6 @@ class PlotBase(BECWidget, QWidget):
         self.toolbar.widgets["fps_monitor"].action.toggled.connect(
             lambda checked: setattr(self, "enable_fps_monitor", checked)
         )
-        self.toolbar.widgets["crosshair"].action.toggled.connect(self.toggle_crosshair)
 
     def add_side_menus(self):
         """Adds multiple menus to the side panel."""
