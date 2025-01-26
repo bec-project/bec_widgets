@@ -489,10 +489,9 @@ class Waveform(PlotBase):
 
         # 4) Create the DAP curve config using `_add_curve(...)`
         dap_curve = self._add_curve(config=config)
-        # self._dap_curves.append(dap_curve)
 
         # 5) Immediately request a DAP update (this can trigger the pipeline)
-        # self.request_dap_update.emit()  # FIXME implement this again when blocking proxy will have timeout limit
+        self.request_dap_update.emit()
 
         return dap_curve
 
@@ -930,6 +929,7 @@ class Waveform(PlotBase):
             model = getattr(self.dap, model_name)
             try:
                 x_min, x_max = self.roi_region
+                x_data, y_data = self._crop_data(x_data, y_data, x_min, x_max)
             except TypeError:
                 x_min = None
                 x_max = None
@@ -945,8 +945,6 @@ class Waveform(PlotBase):
                     "kwargs": {
                         "data_x": x_data,
                         "data_y": y_data,
-                        "x_min": x_min,
-                        "x_max": x_max,
                     },  # TODO add xmin,xmax as before -> so far do not work
                     "class_args": model._plugin_info["class_args"],
                     "class_kwargs": model._plugin_info["class_kwargs"],
@@ -1199,7 +1197,8 @@ class Waveform(PlotBase):
         else:
             return [self._to_str(entries)]
 
-    def _to_str(self, x):
+    @staticmethod
+    def _to_str(x):
         """
         Convert a single object x (which may be a Python string, bytes, or something else)
         into a plain Python string.
@@ -1207,6 +1206,29 @@ class Waveform(PlotBase):
         if isinstance(x, bytes):
             return x.decode("utf-8", errors="replace")
         return str(x)
+
+    @staticmethod
+    def _crop_data(x_data, y_data, x_min=None, x_max=None):
+        """
+        Utility function to crop x_data and y_data based on x_min and x_max.
+
+        Args:
+            x_data (np.ndarray): The array of x-values.
+            y_data (np.ndarray): The array of y-values corresponding to x_data.
+            x_min (float, optional): The lower bound for cropping. Defaults to None.
+            x_max (float, optional): The upper bound for cropping. Defaults to None.
+
+        Returns:
+            tuple: (cropped_x_data, cropped_y_data)
+        """
+        # If either bound is None, skip cropping
+        if x_min is None or x_max is None:
+            return x_data, y_data
+
+        # Create a boolean mask to select only those points within [x_min, x_max]
+        mask = (x_data >= x_min) & (x_data <= x_max)
+
+        return x_data[mask], y_data[mask]
 
     ################################################################################
     # Export Methods
