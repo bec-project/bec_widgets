@@ -171,8 +171,19 @@ class Waveform(PlotBase):
 
     @curve_json.setter
     def curve_json(self, json_data: str):
-        # TODO implement setter
-        pass
+        """
+        Load curves from a JSON string and add them to the plot, omitting custom source curves.
+        """
+        try:
+            curve_configs = json.loads(json_data)
+            for cfg_dict in curve_configs:
+                if cfg_dict.get("source") == "custom":
+                    logger.warning(f"Custom source curve '{cfg_dict['label']}' not loaded.")
+                    continue
+                config = CurveConfig(**cfg_dict)
+                self._add_curve(config=config)
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to decode JSON: {e}")
 
     @property
     def curves(self) -> list[Curve]:
