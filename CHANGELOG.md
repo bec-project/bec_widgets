@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.17.1 (2025-01-26)
+
+### Bug Fixes
+
+- **bec_signal_proxy**: Timeout for blocking implemented
+  ([`6f2f2aa`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6f2f2aa06ae9b50f0451029caa1d8d83890a5b30))
+
+
 ## v1.17.0 (2025-01-23)
 
 ### Bug Fixes
