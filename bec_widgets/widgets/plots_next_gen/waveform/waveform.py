@@ -16,6 +16,7 @@ from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
 from bec_widgets.utils.colors import Colors, set_theme
+from bec_widgets.widgets.dap.lmfit_dialog.lmfit_dialog import LMFitDialog
 from bec_widgets.widgets.plots_next_gen.plot_base import PlotBase
 from bec_widgets.widgets.plots_next_gen.waveform.curve import Curve, CurveConfig, DeviceSignal
 from bec_widgets.widgets.plots_next_gen.waveform.utils.roi_manager import WaveformROIManager
@@ -60,7 +61,6 @@ class Waveform(PlotBase):
     roi_changed = Signal(tuple)
     roi_active = Signal(bool)
 
-    # request_dap_refresh = Signal() #TODO probably replaced by request_dap_update
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -97,6 +97,7 @@ class Waveform(PlotBase):
 
         # Specific GUI elements
         self._init_roi_manager()
+        self._add_dap_summary_side_menu()
 
         # Scan status update loop
         self.bec_dispatcher.connect_slot(self.on_scan_status, MessageEndpoints.scan_status())
@@ -126,6 +127,9 @@ class Waveform(PlotBase):
     ################################################################################
     # Widget Specific GUI interactions
     ################################################################################
+
+    ################################################################################
+    # Roi manager
 
     def _init_roi_manager(self):
         """
@@ -169,6 +173,55 @@ class Waveform(PlotBase):
         logger.info(f"ROI region changed to {region}, requesting new DAP fit.")
         # Example: you could store these in a local property, or directly call request_dap_update
         self.request_dap_update.emit()
+
+    ################################################################################
+    # Dap Summary
+
+    def _add_dap_summary_side_menu(self):
+        self.dap_summary = LMFitDialog(parent=self)
+        self.side_panel.add_menu(
+            action_id="fit_params",
+            icon_name="monitoring",
+            tooltip="Open Fit Parameters",
+            widget=self.dap_summary,
+            title="Fit Parameters",
+        )
+        self.dap_summary_update.connect(self.dap_summary.update_summary_tree)
+
+    def _get_dap_from_target_widget(self) -> None:
+        """Get the DAP data from the target widget and update the DAP dialog manually on creation."""
+        dap_summary = self.get_dap_summary()
+        for curve_id, data in dap_summary.items():
+            md = {"curve_id": curve_id}
+            self.dap_summary.update_summary_tree(data=data, metadata=md)
+
+    def _update_dap_curves(self): ...
+
+    @SafeSlot()
+    def get_dap_params(self) -> dict:
+        """
+        Get the DAP parameters of all DAP curves.
+
+        Returns:
+            dict: DAP parameters of all DAP curves.
+        """
+        params = {}
+        for curve in self._dap_curves:
+            params[curve.name()] = curve.dap_params
+        return params
+
+    @SafeSlot()
+    def get_dap_summary(self) -> dict:
+        """
+        Get the DAP summary of all DAP curves.
+
+        Returns:
+            dict: DAP summary of all DAP curves.
+        """
+        summary = {}
+        for curve in self._dap_curves:
+            summary[curve.name()] = curve.dap_summary
+        return summary
 
     ################################################################################
     # Widget Specific Properties
