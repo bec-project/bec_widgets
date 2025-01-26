@@ -16,30 +16,12 @@ if TYPE_CHECKING:
 logger = bec_logger.logger
 
 
-# TODO maybe whole SignalData class is not needed
-# class SignalData(BaseModel):
-#     """The data configuration of a signal in the 1D waveform widget for x and y axis."""
-#
-#     name: str
-#     entry: str
-#     unit: Optional[str] = None  # todo implement later
-#     modifier: Optional[str] = None  # todo implement later
-#     limits: Optional[list[float]] = None  # todo implement later
-#     model_config: dict = {"validate_assignment": True}
-
-
 # noinspection PyDataclass
 class DeviceSignal(BaseModel):
     """The configuration of a signal in the 1D waveform widget."""
 
     name: str
     entry: str
-
-    # TODO decide which parts will be still needed
-    # source: Optional[str] = None  # TODO probably not needed
-    # x: Optional[SignalData] = None  # TODO maybe not needed
-    # y: SignalData
-    # z: Optional[SignalData] = None  # TODO maybe not needed
     dap: Optional[str] = None  # TODO utilize differently than in past
     model_config: dict = {"validate_assignment": True}
 
@@ -60,11 +42,8 @@ class CurveConfig(ConnectionConfig):
     )
     source: Literal["device", "dap", "custom"] = Field(
         "custom", description="The source of the curve."
-    )  # TODO not needed probably
+    )
     signal: Optional[DeviceSignal] = Field(None, description="The signal of the curve.")
-    # color_map_z: Optional[str] = Field(
-    #     "magma", description="The colormap of the curves z gradient.", validate_default=True
-    # ) #TODO remove, the gradient curves wil be separate
     # TODO do validator for parent_label
     parent_label: Optional[str] = Field(
         None, description="The label of the parent plot, only relevant for dap curves."
@@ -72,9 +51,6 @@ class CurveConfig(ConnectionConfig):
 
     model_config: dict = {"validate_assignment": True}
 
-    # _validate_color_map_z = field_validator("color_map_z")(
-    #     Colors.validate_color_map
-    # )  # TODO not needed probably
     _validate_color = field_validator("color")(Colors.validate_color)
     _validate_symbol_color = field_validator("symbol_color")(Colors.validate_color)
 
