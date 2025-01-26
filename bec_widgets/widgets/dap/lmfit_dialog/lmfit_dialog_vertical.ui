@@ -6,12 +6,12 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>303</width>
-    <height>457</height>
+       <width>337</width>
+       <height>552</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+      <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
@@ -35,11 +35,17 @@
    <item>
     <widget class="QGroupBox" name="group_curve_selection">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
+        <property name="minimumSize">
+            <size>
+                <width>0</width>
+                <height>100</height>
+            </size>
+        </property>
      <property name="title">
       <string>Select Curve</string>
      </property>
@@ -60,7 +66,7 @@
    <item>
     <widget class="QGroupBox" name="group_summary">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -68,7 +74,7 @@
      <property name="minimumSize">
       <size>
        <width>0</width>
-       <height>0</height>
+          <height>200</height>
       </size>
      </property>
      <property name="title">
@@ -113,7 +119,7 @@
    <item>
     <widget class="QGroupBox" name="group_parameters">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+         <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -121,7 +127,7 @@
      <property name="minimumSize">
       <size>
        <width>0</width>
-       <height>0</height>
+          <height>200</height>
       </size>
      </property>
      <property name="title">
