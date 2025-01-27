@@ -631,6 +631,10 @@ class Waveform(PlotBase):
             MessageEndpoints.device_async_readback(self.scan_id, curve.name()),
         )
 
+        # Remove itself from the DAP summary
+        if curve.config.source == "dap":
+            self.dap_summary.remove_dap_data(curve.name())
+
         # find a corresponding dap curve and remove it
         for c in self.curves:
             if c.config.parent_label == curve.name():
@@ -1070,7 +1074,6 @@ class Waveform(PlotBase):
 
         # Iterate over all curves
         for curve in self.curves:
-            print(curve)
             # categorise dap curves firsts
             if curve.config.source == "dap":
                 self._dap_curves.append(curve)
@@ -1198,5 +1201,5 @@ if __name__ == "__main__":
     widget.show()
     widget.plot(y_name="bpm4i", y_entry="bpm4i", dap="GaussianModel")
     # widget.plot(y_name="bpm4i", y_entry="bpm4i")
-    # widget.plot(y_name="bpm3a", y_entry="bpm3a")
+    widget.plot(y_name="bpm3a", y_entry="bpm3a")
     sys.exit(app.exec_())
