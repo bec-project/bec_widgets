@@ -1,17 +1,21 @@
 from __future__ import annotations
 
+from bec_lib import bec_logger
 from qtpy.QtCore import QSettings
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
     QFileDialog,
     QHBoxLayout,
+    QLabel,
     QLineEdit,
     QPushButton,
     QSpinBox,
     QVBoxLayout,
     QWidget,
 )
+
+logger = bec_logger.logger
 
 
 class WidgetStateManager:
@@ -27,7 +31,7 @@ class WidgetStateManager:
 
     def save_state(self, filename: str = None):
         """
-        Save the state of the widget to a INI file.
+        Save the state of the widget to an INI file.
 
         Args:
             filename(str): The filename to save the state to.
@@ -42,7 +46,7 @@ class WidgetStateManager:
 
     def load_state(self, filename: str = None):
         """
-        Load the state of the widget from a INI file.
+        Load the state of the widget from an INI file.
 
         Args:
             filename(str): The filename to load the state from.
@@ -63,18 +67,33 @@ class WidgetStateManager:
             widget(QWidget): The widget to save the state for.
             settings(QSettings): The QSettings object to save the state to.
         """
+        if widget.property("skip_settings") is True:
+            return
+
         meta = widget.metaObject()
-        settings.beginGroup(widget.objectName())
+        widget_name = self._get_full_widget_name(widget)
+        settings.beginGroup(widget_name)
         for i in range(meta.propertyCount()):
             prop = meta.property(i)
             name = prop.name()
+            if (
+                name == "objectName"
+                or not prop.isReadable()
+                or not prop.isWritable()
+                or not prop.isStored()  # can be extended to fine filter
+            ):
+                continue
             value = widget.property(name)
             settings.setValue(name, value)
         settings.endGroup()
 
-        # Recursively save child widgets
-        for child in widget.findChildren(QWidget):
-            if child.objectName():
+        # Recursively process children (only if they aren't skipped)
+        for child in widget.children():
+            if (
+                child.objectName()
+                and child.property("skip_settings") is not True
+                and not isinstance(child, QLabel)
+            ):
                 self._save_widget_state_qsettings(child, settings)
 
     def _load_widget_state_qsettings(self, widget: QWidget, settings: QSettings):
@@ -85,8 +104,12 @@ class WidgetStateManager:
             widget(QWidget): The widget to load the state for.
             settings(QSettings): The QSettings object to load the state from.
         """
+        if widget.property("skip_settings") is True:
+            return
+
         meta = widget.metaObject()
-        settings.beginGroup(widget.objectName())
+        widget_name = self._get_full_widget_name(widget)
+        settings.beginGroup(widget_name)
         for i in range(meta.propertyCount()):
             prop = meta.property(i)
             name = prop.name()
@@ -95,13 +118,35 @@ class WidgetStateManager:
                 widget.setProperty(name, value)
         settings.endGroup()
 
-        # Recursively load child widgets
-        for child in widget.findChildren(QWidget):
-            if child.objectName():
+        # Recursively process children (only if they aren't skipped)
+        for child in widget.children():
+            if (
+                child.objectName()
+                and child.property("skip_settings") is not True
+                and not isinstance(child, QLabel)
+            ):
                 self._load_widget_state_qsettings(child, settings)
 
+    def _get_full_widget_name(self, widget: QWidget):
+        """
+        Get the full name of the widget including its parent names.
 
-class ExampleApp(QWidget):  # pragma: no cover
+        Args:
+            widget(QWidget): The widget to get the full name for.
+
+        Returns:
+            str: The full name of the widget.
+        """
+        name = widget.objectName()
+        parent = widget.parent()
+        while parent:
+            obj_name = parent.objectName() or parent.metaObject().className()
+            name = obj_name + "." + name
+            parent = parent.parent()
+        return name
+
+
+class ExampleApp(QWidget):  # pragma: no cover:
     def __init__(self):
         super().__init__()
         self.setObjectName("MainWindow")
@@ -126,7 +171,34 @@ class ExampleApp(QWidget):  # pragma: no cover
         self.check_box.setObjectName("MyCheckBox")
         layout.addWidget(self.check_box)
 
-        # Buttons to save and load state
+        # A checkbox that we want to skip
+        self.check_box_skip = QCheckBox("Enable feature - skip save?", self)
+        self.check_box_skip.setProperty("skip_state", True)
+        self.check_box_skip.setObjectName("MyCheckBoxSkip")
+        layout.addWidget(self.check_box_skip)
+
+        #  CREATE A "SIDE PANEL" with nested structure and skip all what is inside
+        self.side_panel = QWidget(self)
+        self.side_panel.setObjectName("SidePanel")
+        self.side_panel.setProperty("skip_settings", True)  # skip the ENTIRE panel
+        layout.addWidget(self.side_panel)
+
+        # Put some sub-widgets inside side_panel
+        panel_layout = QVBoxLayout(self.side_panel)
+        self.panel_label = QLabel("Label in side panel", self.side_panel)
+        self.panel_label.setObjectName("PanelLabel")
+        panel_layout.addWidget(self.panel_label)
+
+        self.panel_edit = QLineEdit(self.side_panel)
+        self.panel_edit.setObjectName("PanelLineEdit")
+        self.panel_edit.setPlaceholderText("I am inside side panel")
+        panel_layout.addWidget(self.panel_edit)
+
+        self.panel_checkbox = QCheckBox("Enable feature in side panel?", self.side_panel)
+        self.panel_checkbox.setObjectName("PanelCheckBox")
+        panel_layout.addWidget(self.panel_checkbox)
+
+        # Save/Load buttons
         button_layout = QHBoxLayout()
         self.save_button = QPushButton("Save State", self)
         self.load_button = QPushButton("Load State", self)

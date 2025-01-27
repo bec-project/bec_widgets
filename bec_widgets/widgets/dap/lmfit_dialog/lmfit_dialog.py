@@ -1,9 +1,10 @@
 import os
 
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import Property, Signal, Slot
+from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QPushButton, QTreeWidgetItem, QVBoxLayout, QWidget
 
+from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_accent_colors
@@ -43,6 +44,8 @@ class LMFitDialog(BECWidget, QWidget):
         """
         super().__init__(client=client, config=config, gui_id=gui_id)
         QWidget.__init__(self, parent=parent)
+        self.setProperty("skip_settings", True)
+        self.setObjectName("LMFitDialog")
         self._ui_file = ui_file
         self.target_widget = target_widget
 
@@ -65,7 +68,7 @@ class LMFitDialog(BECWidget, QWidget):
 
     @property
     def enable_actions(self) -> bool:
-        """Property to enable the move to buttons."""
+        """SafeProperty to enable the move to buttons."""
         return self._enable_actions
 
     @enable_actions.setter
@@ -74,37 +77,37 @@ class LMFitDialog(BECWidget, QWidget):
         for button in self.action_buttons.values():
             button.setEnabled(enable)
 
-    @Property(list)
+    @SafeProperty(list)
     def active_action_list(self) -> list[str]:
-        """Property to list the names of the fit parameters for which actions should be enabled."""
+        """SafeProperty to list the names of the fit parameters for which actions should be enabled."""
         return self._active_actions
 
     @active_action_list.setter
     def active_action_list(self, actions: list[str]):
         self._active_actions = actions
 
-    # This slot needed?
-    @Slot(bool)
+    # This SafeSlot needed?
+    @SafeSlot(bool)
     def set_actions_enabled(self, enable: bool) -> bool:
-        """Slot to enable the move to buttons.
+        """SafeSlot to enable the move to buttons.
 
         Args:
             enable (bool): Whether to enable the action buttons.
         """
         self.enable_actions = enable
 
-    @Property(bool)
+    @SafeProperty(bool)
     def always_show_latest(self):
-        """Property to indicate if always the latest DAP update is displayed."""
+        """SafeProperty to indicate if always the latest DAP update is displayed."""
         return self._always_show_latest
 
     @always_show_latest.setter
     def always_show_latest(self, show: bool):
         self._always_show_latest = show
 
-    @Property(bool)
+    @SafeProperty(bool)
     def hide_curve_selection(self):
-        """Property for showing the curve selection."""
+        """SafeProperty for showing the curve selection."""
         return not self.ui.group_curve_selection.isVisible()
 
     @hide_curve_selection.setter
@@ -116,9 +119,9 @@ class LMFitDialog(BECWidget, QWidget):
         """
         self.ui.group_curve_selection.setVisible(not show)
 
-    @Property(bool)
+    @SafeProperty(bool)
     def hide_summary(self) -> bool:
-        """Property for showing the summary."""
+        """SafeProperty for showing the summary."""
         return not self.ui.group_summary.isVisible()
 
     @hide_summary.setter
@@ -130,9 +133,9 @@ class LMFitDialog(BECWidget, QWidget):
         """
         self.ui.group_summary.setVisible(not show)
 
-    @Property(bool)
+    @SafeProperty(bool)
     def hide_parameters(self) -> bool:
-        """Property for showing the parameters."""
+        """SafeProperty for showing the parameters."""
         return not self.ui.group_parameters.isVisible()
 
     @hide_parameters.setter
@@ -146,7 +149,7 @@ class LMFitDialog(BECWidget, QWidget):
 
     @property
     def fit_curve_id(self) -> str:
-        """Property for the currently displayed fit curve_id."""
+        """SafeProperty for the currently displayed fit curve_id."""
         return self._fit_curve_id
 
     @fit_curve_id.setter
@@ -159,7 +162,7 @@ class LMFitDialog(BECWidget, QWidget):
         self._fit_curve_id = curve_id
         self.selected_fit.emit(curve_id)
 
-    @Slot(str)
+    @SafeSlot(str)
     def remove_dap_data(self, curve_id: str):
         """Remove the DAP data for the given curve_id.
 
@@ -169,7 +172,7 @@ class LMFitDialog(BECWidget, QWidget):
         self.summary_data.pop(curve_id, None)
         self.refresh_curve_list()
 
-    @Slot(str)
+    @SafeSlot(str)
     def select_curve(self, curve_id: str):
         """Select active curve_id in the curve list.
 
@@ -178,7 +181,7 @@ class LMFitDialog(BECWidget, QWidget):
         """
         self.fit_curve_id = curve_id
 
-    @Slot(dict, dict)
+    @SafeSlot(dict, dict)
     def update_summary_tree(self, data: dict, metadata: dict):
         """Update the summary tree with the given data.
 

@@ -29,6 +29,7 @@ class RoundedFrame(BECWidget, QFrame):
         self._radius = radius
 
         # Apply rounded frame styling
+        self.setProperty("skip_settings", True)
         self.setObjectName("roundedFrame")
         self.update_style()
 

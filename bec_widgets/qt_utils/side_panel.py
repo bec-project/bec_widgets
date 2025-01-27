@@ -34,6 +34,9 @@ class SidePanel(QWidget):
     ):
         super().__init__(parent=parent)
 
+        self.setProperty("skip_settings", True)
+        self.setObjectName("SidePanel")
+
         self._orientation = orientation
         self._panel_max_width = panel_max_width
         self._animation_duration = animation_duration
@@ -286,7 +289,6 @@ class SidePanel(QWidget):
         """
         container_widget = QWidget()
         container_layout = QVBoxLayout(container_widget)
-        container_widget.setStyleSheet("background-color: rgba(0,0,0,0);")
         title_label = QLabel(f"<b>{title}</b>")
         title_label.setStyleSheet("font-size: 16px;")
         spacer = QSpacerItem(0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)
