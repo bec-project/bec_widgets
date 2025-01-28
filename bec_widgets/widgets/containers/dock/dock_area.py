@@ -8,7 +8,7 @@ from pydantic import Field
 from pyqtgraph.dockarea.DockArea import DockArea
 from qtpy.QtCore import QSize, Qt
 from qtpy.QtGui import QPainter, QPaintEvent
-from qtpy.QtWidgets import QApplication, QSizePolicy, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeSlot
 from bec_widgets.qt_utils.toolbar import (
@@ -27,6 +27,7 @@ from bec_widgets.widgets.plots.image.image_widget import BECImageWidget
 from bec_widgets.widgets.plots.motor_map.motor_map_widget import BECMotorMapWidget
 from bec_widgets.widgets.plots.multi_waveform.multi_waveform_widget import BECMultiWaveformWidget
 from bec_widgets.widgets.plots.waveform.waveform_widget import BECWaveformWidget
+from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
 from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_bar import RingProgressBar
 from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
 from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECStatusBox
@@ -106,6 +107,13 @@ class BECDockArea(BECWidget, QWidget):
                             tooltip="Add Motor Map",
                             filled=True,
                         ),
+                        "separator_next_gen": SeparatorAction(),
+                        "waveform_ng": MaterialIconAction(
+                            icon_name=Waveform.ICON_NAME,
+                            color="#FFD700",
+                            tooltip="Add Waveform Next Gen",
+                            filled=True,
+                        ),
                     },
                 ),
                 "separator_0": SeparatorAction(),
@@ -181,6 +189,9 @@ class BECDockArea(BECWidget, QWidget):
         )
         self.toolbar.widgets["menu_plots"].widgets["motor_map"].triggered.connect(
             lambda: self.add_dock(widget="BECMotorMapWidget", prefix="motor_map")
+        )
+        self.toolbar.widgets["menu_plots"].widgets["waveform_ng"].triggered.connect(
+            lambda: self.add_dock(widget="Waveform", prefix="waveform_ng")
         )
 
         # Menu Devices
