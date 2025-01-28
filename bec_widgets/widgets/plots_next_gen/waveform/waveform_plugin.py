@@ -27,7 +27,7 @@ class WaveformPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return ""
+        return "Plot Widgets Next Gen"
 
     def icon(self):
         return designer_material_icon(Waveform.ICON_NAME)
