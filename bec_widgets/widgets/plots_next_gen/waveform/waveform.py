@@ -6,7 +6,6 @@ from typing import Literal, Optional
 import numpy as np
 import pyqtgraph as pg
 from bec_lib import bec_logger, messages
-from bec_lib.device import ReadoutPriority
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import Field, field_validator
 from qtpy.QtCore import Signal
@@ -244,7 +243,7 @@ class Waveform(PlotBase):
             return
 
     # TODO for loading and setting json rpc_register has to be double checked
-    @SafeProperty(str)
+    @SafeProperty(str, designable=False)
     def curve_json(self) -> str:
         """
         A JSON string property that serializes all curves' pydantic configs.
@@ -1200,6 +1199,5 @@ if __name__ == "__main__":
     widget = Waveform()
     widget.show()
     widget.plot(y_name="bpm4i", y_entry="bpm4i", dap="GaussianModel")
-    # widget.plot(y_name="bpm4i", y_entry="bpm4i")
     widget.plot(y_name="bpm3a", y_entry="bpm3a")
     sys.exit(app.exec_())
