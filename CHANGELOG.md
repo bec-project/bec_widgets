@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.17.2 (2025-01-28)
+
+### Bug Fixes
+
+- **widget_state_manager**: Skip QLabel saving; skip_setting property widget excluded from INI;
+  stored=False property excluded from INI
+  ([`b2b0450`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b2b0450bcb07c974e5f8002e084b350599c32d39))
+
+
 ## v1.17.1 (2025-01-26)
 
 ### Bug Fixes
