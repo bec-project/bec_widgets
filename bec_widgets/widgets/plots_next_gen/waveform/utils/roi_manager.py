@@ -1,7 +1,8 @@
 import pyqtgraph as pg
 from qtpy.QtCore import QObject, Signal, Slot
-from bec_widgets.utils.linear_region_selector import LinearRegionWrapper
+
 from bec_widgets.utils.colors import get_accent_colors
+from bec_widgets.utils.linear_region_selector import LinearRegionWrapper
 
 
 class WaveformROIManager(QObject):
