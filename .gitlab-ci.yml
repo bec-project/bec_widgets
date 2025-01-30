@@ -148,7 +148,7 @@ tests:
     - *clone-repos
     - *install-os-packages
     - *install-repos
-    - pip install -e .[dev,pyqt6]
+    - pip install -e .[dev,pyside6]
     - coverage run --source=./bec_widgets -m pytest -v --junitxml=report.xml --maxfail=2 --random-order --full-trace ./tests/unit_tests
     - coverage report
     - coverage xml
@@ -172,7 +172,6 @@ test-matrix:
           - "3.12"
         QT_PCKG:
           - "pyside6"
-          - "pyqt6"
 
   stage: AdditionalTests
   needs: []
@@ -211,7 +210,7 @@ end-2-end-conda:
     - cd ../
     - pip install -e ./ophyd_devices
 
-    - pip install -e .[dev,pyqt6]
+    - pip install -e .[dev,pyside6]
     - cd ./tests/end-2-end
     - pytest -v --start-servers --flush-redis --random-order
 
