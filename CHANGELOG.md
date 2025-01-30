@@ -1,6 +1,30 @@
 # CHANGELOG
 
 
+## v1.18.0 (2025-01-30)
+
+### Bug Fixes
+
+- **generate_cli**: Widgets can be tagged with RPC=False, then they are excluded from client.py for
+  RPC
+  ([`48fc63d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/48fc63d83e26889843b09b1eb4792612b53200ec))
+
+### Build System
+
+- Pyqt6 support dropped
+  ([`a20935e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a20935e8625a9490e6c451a3b4012476e19317e5))
+
+### Continuous Integration
+
+- Fix formatter 2024 versions
+  ([`4f8e683`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4f8e6835fe2312151dc2b40f0ab9eb50a9173f7c))
+
+### Features
+
+- **plot_base_next_gen**: New type of plot base inherited from QWidget
+  ([`e7c9729`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e7c97290cd783d19128625567835d7ae9a414989))
+
+
 ## v1.17.2 (2025-01-28)
 
 ### Bug Fixes
