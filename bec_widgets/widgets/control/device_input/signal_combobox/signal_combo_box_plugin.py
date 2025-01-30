@@ -4,25 +4,23 @@
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 
 from bec_widgets.utils.bec_designer import designer_material_icon
-from bec_widgets.widgets.control.device_input.signal_line_edit.signal_line_edit import (
-    SignalLineEdit,
-)
+from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
 
 DOM_XML = """
 <ui language='c++'>
-    <widget class='SignalLineEdit' name='signal_line_edit'>
+    <widget class='SignalComboBox' name='signal_combo_box'>
     </widget>
 </ui>
 """
 
 
-class SignalLineEditPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
+class SignalComboBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
     def __init__(self):
         super().__init__()
         self._form_editor = None
 
     def createWidget(self, parent):
-        t = SignalLineEdit(parent)
+        t = SignalComboBox(parent)
         return t
 
     def domXml(self):
@@ -32,10 +30,10 @@ class SignalLineEditPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "BEC Input Widgets"
 
     def icon(self):
-        return designer_material_icon(SignalLineEdit.ICON_NAME)
+        return designer_material_icon(SignalComboBox.ICON_NAME)
 
     def includeFile(self):
-        return "signal_line_edit"
+        return "signal_combo_box"
 
     def initialize(self, form_editor):
         self._form_editor = form_editor
@@ -47,10 +45,10 @@ class SignalLineEditPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return self._form_editor is not None
 
     def name(self):
-        return "SignalLineEdit"
+        return "SignalComboBox"
 
     def toolTip(self):
-        return "Signal LineEdit Example for BEC Widgets with autocomplete."
+        return "Signal ComboBox Example for BEC Widgets with autocomplete."
 
     def whatsThis(self):
         return self.toolTip()
