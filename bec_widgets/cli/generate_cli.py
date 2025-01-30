@@ -43,14 +43,21 @@ from bec_widgets.cli.rpc.rpc_base import RPCBase, rpc_call
 
     def generate_client(self, class_container: BECClassContainer):
         """
-        Generate the client for the published classes.
+        Generate the client for the published classes, skipping any classes
+        that have `RPC = False`.
 
         Args:
             class_container: The class container with the classes to generate the client for.
         """
-        rpc_top_level_classes = class_container.rpc_top_level_classes
+        # Filter out classes that explicitly have RPC=False
+        rpc_top_level_classes = [
+            cls for cls in class_container.rpc_top_level_classes if getattr(cls, "RPC", True)
+        ]
         rpc_top_level_classes.sort(key=lambda x: x.__name__)
-        connector_classes = class_container.connector_classes
+
+        connector_classes = [
+            cls for cls in class_container.connector_classes if getattr(cls, "RPC", True)
+        ]
         connector_classes.sort(key=lambda x: x.__name__)
 
         self.write_client_enum(rpc_top_level_classes)
@@ -81,13 +88,13 @@ class Widgets(str, enum.Enum):
 
         class_name = cls.__name__
 
-        # Generate the content
-        if cls.__name__ == "BECDockArea":
+        if class_name == "BECDockArea":
             self.content += f"""
 class {class_name}(RPCBase):"""
         else:
             self.content += f"""
 class {class_name}(RPCBase):"""
+
         if not cls.USER_ACCESS:
             self.content += """...
     """
@@ -100,8 +107,10 @@ class {class_name}(RPCBase):"""
                 method = method.split(".setter")[0]
             if obj is None:
                 raise AttributeError(
-                    f"Method {method} not found in class {cls.__name__}. Please check the USER_ACCESS list."
+                    f"Method {method} not found in class {cls.__name__}. "
+                    f"Please check the USER_ACCESS list."
                 )
+
             if isinstance(obj, (property, QtProperty)):
                 # for the cli, we can map qt properties to regular properties
                 if is_property_setter:
