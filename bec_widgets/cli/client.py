@@ -2996,6 +2996,140 @@ class BECWaveformWidget(RPCBase):
         """
 
 
+class Curve(RPCBase):
+    @rpc_call
+    def remove(self):
+        """
+        Remove the curve from the plot.
+        """
+
+    @property
+    @rpc_call
+    def dap_params(self):
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
+        """
+
+    @property
+    @rpc_call
+    def _config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def set(self, **kwargs):
+        """
+        Set the properties of the curve.
+
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+
+        Possible properties:
+            - color: str
+            - symbol: str
+            - symbol_color: str
+            - symbol_size: int
+            - pen_width: int
+            - pen_style: Literal["solid", "dash", "dot", "dashdot"]
+        """
+
+    @rpc_call
+    def set_data(self, x, y):
+        """
+        None
+        """
+
+    @rpc_call
+    def set_color(self, color: "str", symbol_color: "Optional[str]" = None):
+        """
+        Change the color of the curve.
+
+        Args:
+            color(str): Color of the curve.
+            symbol_color(str, optional): Color of the symbol. Defaults to None.
+        """
+
+    @rpc_call
+    def set_color_map_z(self, colormap: "str"):
+        """
+        Set the colormap for the scatter plot z gradient.
+
+        Args:
+            colormap(str): Colormap for the scatter plot.
+        """
+
+    @rpc_call
+    def set_symbol(self, symbol: "str"):
+        """
+        Change the symbol of the curve.
+
+        Args:
+            symbol(str): Symbol of the curve.
+        """
+
+    @rpc_call
+    def set_symbol_color(self, symbol_color: "str"):
+        """
+        Change the symbol color of the curve.
+
+        Args:
+            symbol_color(str): Color of the symbol.
+        """
+
+    @rpc_call
+    def set_symbol_size(self, symbol_size: "int"):
+        """
+        Change the symbol size of the curve.
+
+        Args:
+            symbol_size(int): Size of the symbol.
+        """
+
+    @rpc_call
+    def set_pen_width(self, pen_width: "int"):
+        """
+        Change the pen width of the curve.
+
+        Args:
+            pen_width(int): Width of the pen.
+        """
+
+    @rpc_call
+    def set_pen_style(self, pen_style: "Literal['solid', 'dash', 'dot', 'dashdot']"):
+        """
+        Change the pen style of the curve.
+
+        Args:
+            pen_style(Literal["solid", "dash", "dot", "dashdot"]): Style of the pen.
+        """
+
+    @rpc_call
+    def get_data(self) -> "tuple[np.ndarray, np.ndarray]":
+        """
+        Get the data of the curve.
+        Returns:
+            tuple[np.ndarray,np.ndarray]: X and Y data of the curve.
+        """
+
+    @property
+    @rpc_call
+    def dap_params(self):
+        """
+        None
+        """
+
+
 class DapComboBox(RPCBase):
     @rpc_call
     def select_y_axis(self, y_axis: str):

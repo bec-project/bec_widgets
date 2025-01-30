@@ -35,8 +35,56 @@ class WaveformConfig(ConnectionConfig):
 
 class Waveform(PlotBase):
     PLUGIN = True
-    INI_SETTING = True
     ICON_NAME = "show_chart"
+    USER_ACCESS = [
+        # General PlotBase Settings
+        "enable_toolbar",
+        "enable_toolbar.setter",
+        "enable_side_panel",
+        "enable_side_panel.setter",
+        "enable_fps_monitor",
+        "enable_fps_monitor.setter",
+        "set",
+        "title",
+        "title.setter",
+        "x_label",
+        "x_label.setter",
+        "y_label",
+        "y_label.setter",
+        "x_limits",
+        "x_limits.setter",
+        "y_limits",
+        "y_limits.setter",
+        "x_grid",
+        "x_grid.setter",
+        "y_grid",
+        "y_grid.setter",
+        "inner_axes",
+        "inner_axes.setter",
+        "outer_axes",
+        "outer_axes.setter",
+        "lock_aspect_ratio",
+        "lock_aspect_ratio.setter",
+        "auto_range_x",
+        "auto_range_x.setter",
+        "auto_range_y",
+        "auto_range_y.setter",
+        "x_log",
+        "x_log.setter",
+        "y_log",
+        "y_log.setter",
+        "legend_label_size",
+        "legend_label_size.setter",
+        # Waveform Specific RPC Access
+        "x_mode",
+        "x_mode.setter",
+        "color_palette",
+        "color_palette.setter",
+        "plot",
+        "add_dap_curve",
+        "remove_curve",
+        "scan_history",
+    ]
 
     sync_signal_update = Signal()
     async_signal_update = Signal()
