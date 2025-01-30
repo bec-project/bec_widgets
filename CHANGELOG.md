@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.18.1 (2025-01-30)
+
+### Bug Fixes
+
+- **signal_combo_box**: Added missing plugin modules for signal line_edit/combobox
+  ([`db70442`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/db70442cc21247d20e6f6ad78ad0e1d3aca24bf7))
+
+### Documentation
+
+- Add screenshots for device and signal input
+  ([`f0c4efe`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f0c4efefa03bf36ae57bf1a17f6a1b2e4d32c6c4))
+
+
 ## v1.18.0 (2025-01-30)
 
 ### Bug Fixes
