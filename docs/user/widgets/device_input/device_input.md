@@ -21,6 +21,10 @@ The `DeviceComboBox` widget offers a dropdown interface for device selection, pr
 - **Dropdown Selection (ComboBox)**: The `DeviceComboBox` widget displays devices in a dropdown list, making selection straightforward.
 - **QtDesigner Integration**: Both widgets can be added as custom widgets in `QtDesigner` or instantiated directly in code.
 
+## Screenshot
+```{figure} /assets/widget_screenshots/device_inputs.png
+```
+
 ````
 
 ````{tab} Examples

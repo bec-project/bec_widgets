@@ -18,6 +18,11 @@ The `SignalComboBox` widget offers a dropdown interface for choosing a signal fr
 - **Dropdown Selection (SignalComboBox)**: The `SignalComboBox` widget displays the sorted signals of the device 
 - **QtDesigner Integration**: Both widgets can be added as custom widgets in `QtDesigner` or instantiated directly in code.
 
+## Screenshot
+
+```{figure} /assets/widget_screenshots/signal_inputs.png
+```
+
 ````
 
 ````{tab} Examples
