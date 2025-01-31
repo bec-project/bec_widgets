@@ -97,6 +97,7 @@ class Waveform(PlotBase):
 
     roi_changed = Signal(tuple)
     roi_active = Signal(bool)
+    roi_enable = Signal(bool)  # enable toolbar icon
 
     def __init__(
         self,
@@ -135,6 +136,7 @@ class Waveform(PlotBase):
         # Specific GUI elements
         self._init_roi_manager()
         self._add_dap_summary_side_menu()
+        self._enable_roi_toolbar_action(False)  # default state where are no dap curves
 
         # Scan status update loop
         self.bec_dispatcher.connect_slot(self.on_scan_status, MessageEndpoints.scan_status())
@@ -151,6 +153,7 @@ class Waveform(PlotBase):
             self.request_dap_update, rateLimit=25, slot=self.request_dap, timeout=10.0
         )
         self.unblock_dap_proxy.connect(self.proxy_dap_request.unblock_proxy)
+        self.roi_enable.connect(self._enable_roi_toolbar_action)
 
         self.scan_history(-1)
 
@@ -204,6 +207,18 @@ class Waveform(PlotBase):
         logger.info(f"ROI region changed to {region}, requesting new DAP fit.")
         # Example: you could store these in a local property, or directly call request_dap_update
         self.request_dap_update.emit()
+
+    def _enable_roi_toolbar_action(self, enable: bool):
+        """
+        Enable or disable the ROI toolbar action.
+
+        Args:
+            enable(bool): Enable or disable the ROI toolbar action.
+        """
+        self.toolbar.widgets["roi_linear"].action.setEnabled(enable)
+        if enable is False:
+            self.toolbar.widgets["roi_linear"].action.setChecked(False)
+            self._roi_manager.toggle_roi(False)
 
     ################################################################################
     # Dap Summary
@@ -637,6 +652,7 @@ class Waveform(PlotBase):
             self._remove_curve_by_name(curve)
 
         self._refresh_colors()
+        self._categorise_device_curves()
 
     def _remove_curve_by_name(self, name: str):
         """
@@ -1115,6 +1131,7 @@ class Waveform(PlotBase):
         self._dap_curves.clear()
         found_async = False
         found_sync = False
+        found_dap = False
         mode = "sync"
 
         readout_priority_async = self._ensure_str_list(readout_priority.get("async", []))
@@ -1125,6 +1142,7 @@ class Waveform(PlotBase):
             # categorise dap curves firsts
             if curve.config.source == "dap":
                 self._dap_curves.append(curve)
+                found_dap = True
                 continue
             dev_name = curve.config.signal.name
             if dev_name in readout_priority_async:
@@ -1146,6 +1164,8 @@ class Waveform(PlotBase):
             mode = "async"
         elif found_sync:
             mode = "sync"
+
+        self.roi_enable.emit(found_dap)
 
         logger.info(f"Scan {self.scan_id} => mode={self._mode}")
         return mode
@@ -1247,6 +1267,6 @@ if __name__ == "__main__":
     set_theme("dark")
     widget = Waveform()
     widget.show()
-    widget.plot(y_name="bpm4i", y_entry="bpm4i", dap="GaussianModel")
+    # widget.plot(y_name="bpm4i", y_entry="bpm4i", dap="GaussianModel")
     widget.plot(y_name="bpm3a", y_entry="bpm3a")
     sys.exit(app.exec_())
