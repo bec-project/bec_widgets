@@ -95,6 +95,8 @@ class PlotBase(BECWidget, QWidget):
         self.crosshair = None
         self.fps_monitor = None
         self.fps_label = QLabel(alignment=Qt.AlignmentFlag.AlignRight)
+        self._user_x_label = ""
+        self._x_label_suffix = ""
 
         self._init_ui()
 
@@ -252,12 +254,45 @@ class PlotBase(BECWidget, QWidget):
 
     @SafeProperty(str, doc="The text of the x label")
     def x_label(self) -> str:
-        return self.plot_item.getAxis("bottom").labelText
+        return self._user_x_label
 
     @x_label.setter
     def x_label(self, value: str):
-        self.plot_item.setLabel("bottom", text=value)
-        self.property_changed.emit("x_label", value)
+        self._user_x_label = value
+        self._apply_x_label()
+        self.property_changed.emit("x_label", self._user_x_label)
+
+    @property
+    def x_label_suffix(self) -> str:
+        """
+        A read-only (or internal) suffix automatically appended to the user label.
+        Not settable by the user directly from the UI.
+        """
+        return self._x_label_suffix
+
+    def set_x_label_suffix(self, suffix: str):
+        """
+        Public or protected method to update the suffix.
+        The user code or subclass (Waveform) can call this
+        when x_mode changes, but the AxisSettings won't show it.
+        """
+        self._x_label_suffix = suffix
+        self._apply_x_label()
+
+    @property
+    def x_label_combined(self) -> str:
+        """
+        The final label shown on the axis = user portion + suffix.
+        """
+        return self._user_x_label + self._x_label_suffix
+
+    def _apply_x_label(self):
+        """
+        Actually updates the pyqtgraph axis label text to
+        the combined label. Called whenever user label or suffix changes.
+        """
+        final_label = self.x_label_combined
+        self.plot_item.setLabel("bottom", text=final_label)
 
     @SafeProperty(str, doc="The text of the y label")
     def y_label(self) -> str:
