@@ -204,8 +204,6 @@ class Waveform(PlotBase):
         """
         Whenever the ROI changes, you might want to re-request DAP with the new x_min, x_max.
         """
-        logger.info(f"ROI region changed to {region}, requesting new DAP fit.")
-        # Example: you could store these in a local property, or directly call request_dap_update
         self.request_dap_update.emit()
 
     def _enable_roi_toolbar_action(self, enable: bool):
@@ -279,13 +277,12 @@ class Waveform(PlotBase):
 
     @x_mode.setter
     def x_mode(self, value: str):
-        # FIXME wrong update of the label
         self._x_axis_mode["name"] = value
         self._switch_x_axis_item(mode=value)
-        # self._update_x_label_suffix()  # TODO update straight away or wait for the next scan??
         self.async_signal_update.emit()
         self.sync_signal_update.emit()
         self.plot_item.enableAutoRange(x=True)
+        self.round_plot_widget.apply_plot_widget_style()  # To keep the correct theme
 
     @SafeProperty(str)
     def color_palette(self) -> str:
@@ -1051,7 +1048,6 @@ class Waveform(PlotBase):
             if len(self._async_curves) > 0:
                 x_data = None
                 new_suffix = " [auto: index]"
-                self._update_x_label_suffix(new_suffix)
             # 4.2 If there are sync curves, use the first device from the scan report
             else:
                 try:
@@ -1077,22 +1073,11 @@ class Waveform(PlotBase):
         Args:
             new_suffix(str): The new suffix to add to the x_label.
         """
-
         if new_suffix == self._x_axis_mode["label_suffix"]:
             return
 
-        old_label = self.x_label
-        if self._x_axis_mode["label_suffix"] and old_label.endswith(
-            self._x_axis_mode["label_suffix"]
-        ):
-            old_label = old_label[: -len(self._x_axis_mode["label_suffix"])]
-
-        updated_label = old_label
-        if new_suffix:
-            updated_label += new_suffix
-
-        self.x_label = updated_label
         self._x_axis_mode["label_suffix"] = new_suffix
+        self.set_x_label_suffix(new_suffix)
 
     def _switch_x_axis_item(self, mode: str):
         """
@@ -1267,6 +1252,6 @@ if __name__ == "__main__":
     set_theme("dark")
     widget = Waveform()
     widget.show()
-    # widget.plot(y_name="bpm4i", y_entry="bpm4i", dap="GaussianModel")
+    widget.plot(y_name="bpm4i", y_entry="bpm4i", dap="GaussianModel")
     widget.plot(y_name="bpm3a", y_entry="bpm3a")
     sys.exit(app.exec_())
