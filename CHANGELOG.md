@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v1.19.0 (2025-01-31)
+
+### Bug Fixes
+
+- Enable type checking for BECDispatcher in BECConnector
+  ([`50a572d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/50a572dacd5dfc29a9ecf1b567aac6822b632f60))
+
+### Documentation
+
+- Add docs for LogPanel
+  ([`f219c6f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f219c6fb573cf42964f6a7c6f4a0b0b9946fb98d))
+
+### Features
+
+- **widget**: Add LogPanel widget
+  ([`f048880`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f0488802775401319a54a51d05a0ad534292af09))
+
+
 ## v1.18.1 (2025-01-30)
 
 ### Bug Fixes
