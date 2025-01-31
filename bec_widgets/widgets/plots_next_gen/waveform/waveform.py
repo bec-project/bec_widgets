@@ -173,6 +173,7 @@ class Waveform(PlotBase):
 
         # Example: connect ROI changed to re-request DAP
         self.roi_changed.connect(self._on_roi_changed_for_dap)
+        self._roi_manager.roi_active.connect(self.request_dap_update)
         self.toolbar.widgets["roi_linear"].action.toggled.connect(self._roi_manager.toggle_roi)
 
     @property
