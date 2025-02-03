@@ -52,7 +52,7 @@ from bec_widgets.widgets.utility.logpanel._util import (
 )
 
 if TYPE_CHECKING:
-    from qtpy.QtCore import pyqtBoundSignal  # type: ignore
+    from PySide6.QtCore import SignalInstance
 
 logger = bec_logger.logger
 
@@ -74,14 +74,14 @@ class BecLogsQueue:
     def __init__(
         self,
         conn: ConnectorBase,
-        new_message_signal: pyqtBoundSignal,
+        new_message_signal: SignalInstance,
         maxlen: int = 1000,
         line_formatter: LineFormatter = noop_format,
     ) -> None:
         self._timestamp_start: QDateTime | None = None
         self._timestamp_end: QDateTime | None = None
         self._conn = conn
-        self._new_message_signal: pyqtBoundSignal | None = new_message_signal
+        self._new_message_signal: SignalInstance | None = new_message_signal
         self._max_length = maxlen
         self._data: deque[LogMessage] = deque([], self._max_length)
         self._display_queue: deque[str] = deque([], self._max_length)
@@ -93,15 +93,18 @@ class BecLogsQueue:
 
     def disconnect(self):
         self._conn.unregister([MessageEndpoints.log()], None, self._process_incoming_log_msg)
-        self._new_message_signal = None
+        self._new_message_signal.disconnect()
 
     def _process_incoming_log_msg(self, msg: dict):
-        _msg: LogMessage = msg["data"]
-        self._data.append(_msg)
-        if self.filter is None or self.filter(_msg):
-            self._display_queue.append(self._line_formatter(_msg))
-            if self._new_message_signal:
-                self._new_message_signal.emit()
+        try:
+            _msg: LogMessage = msg["data"]
+            self._data.append(_msg)
+            if self.filter is None or self.filter(_msg):
+                self._display_queue.append(self._line_formatter(_msg))
+                if self._new_message_signal:
+                    self._new_message_signal.emit()
+        except Exception:
+            logger.warning("Error in LogPanel incoming message callback!")
 
     def _set_formatter_and_update_filter(self, line_formatter: LineFormatter = noop_format):
         self._line_formatter: LineFormatter = line_formatter
@@ -266,20 +269,21 @@ class LogPanelToolbar(QWidget):
         self._dt_dialog = QDialog(self)
         self._dt_dialog.setWindowTitle("Time range selection")
         layout = QVBoxLayout()
+        self._dt_dialog.setLayout(layout)
 
-        label_start = QLabel()
-        label_end = QLabel()
+        label_start = QLabel(parent=self._dt_dialog)
+        label_end = QLabel(parent=self._dt_dialog)
 
         def date_button_set(selection_type: Literal["start", "end"], label: QLabel):
             dt = self._current_ts(selection_type)
             _layout = QHBoxLayout()
             layout.addLayout(_layout)
-            date_button = QPushButton(f"Time {selection_type}")
+            date_button = QPushButton(f"Time {selection_type}", parent=self._dt_dialog)
             _layout.addWidget(date_button)
             label.setText(dt.toString() if dt else "not selected")
             _layout.addWidget(label)
             date_button.clicked.connect(partial(self._open_cal_dialog, selection_type, label))
-            date_clear_button = QPushButton("clear")
+            date_clear_button = QPushButton("clear", parent=self._dt_dialog)
             date_clear_button.clicked.connect(
                 lambda: (
                     partial(self._update_time, selection_type)(None),
@@ -291,12 +295,12 @@ class LogPanelToolbar(QWidget):
         for v in [("start", label_start), ("end", label_end)]:
             date_button_set(*v)
 
-        close_button = QPushButton("Close")
+        close_button = QPushButton("Close", parent=self._dt_dialog)
         close_button.clicked.connect(self._dt_dialog.accept)
         layout.addWidget(close_button)
-        self._dt_dialog.setLayout(layout)
+
         self._dt_dialog.exec()
-        self._dt_dialog = None
+        self._dt_dialog.deleteLater()
 
     def _open_cal_dialog(self, selection_type: Literal["start", "end"], label: QLabel):
         """Open dialog window for timestamp filter selection"""
@@ -309,18 +313,19 @@ class LogPanelToolbar(QWidget):
         self._cal_dialog = QDialog(self)
         self._cal_dialog.setWindowTitle(f"Select time range {selection_type}")
         layout = QVBoxLayout()
-        cal = QDateTimeEdit()
+        self._cal_dialog.setLayout(layout)
+        cal = QDateTimeEdit(parent=self._cal_dialog)
         cal.setCalendarPopup(True)
         cal.setDateTime(dt)
         cal.setDisplayFormat("yyyy-MM-dd HH:mm:ss.zzz")
         cal.dateTimeChanged.connect(partial(self._update_time, selection_type))
         layout.addWidget(cal)
-        close_button = QPushButton("Close")
+        close_button = QPushButton("Close", parent=self._cal_dialog)
         close_button.clicked.connect(self._cal_dialog.accept)
         layout.addWidget(close_button)
-        self._cal_dialog.setLayout(layout)
+
         self._cal_dialog.exec()
-        self._cal_dialog = None
+        self._cal_dialog.deleteLater()
 
     def _update_time(self, selection_type: Literal["start", "end"], dt: QDateTime | None):
         if selection_type == "start":
@@ -344,7 +349,9 @@ class LogPanelToolbar(QWidget):
         self._svc_dialog = QDialog(self)
         self._svc_dialog.setWindowTitle(f"Select services to show logs from")
         layout = QVBoxLayout()
-        service_cb_grid = QGridLayout(parent=self)
+        self._svc_dialog.setLayout(layout)
+
+        service_cb_grid = QGridLayout(parent=self._svc_dialog)
         layout.addLayout(service_cb_grid)
 
         def check_box(name: str, checked: Qt.CheckState):
@@ -356,18 +363,18 @@ class LogPanelToolbar(QWidget):
             self.services_selected.emit(self._services_selected)
 
         for i, svc in enumerate(self._unique_service_names):
-            service_cb_grid.addWidget(QLabel(svc), i, 0)
-            cb = QCheckBox()
+            service_cb_grid.addWidget(QLabel(svc, parent=self._svc_dialog), i, 0)
+            cb = QCheckBox(parent=self._svc_dialog)
             cb.setChecked(svc in self._services_selected)
             cb.checkStateChanged.connect(partial(check_box, svc))
             service_cb_grid.addWidget(cb, i, 1)
 
-        close_button = QPushButton("Close")
+        close_button = QPushButton("Close", parent=self._svc_dialog)
         close_button.clicked.connect(self._svc_dialog.accept)
         layout.addWidget(close_button)
-        self._svc_dialog.setLayout(layout)
+
         self._svc_dialog.exec()
-        self._svc_dialog = None
+        self._svc_dialog.deleteLater()
 
 
 class LogPanel(TextBox):
@@ -377,11 +384,17 @@ class LogPanel(TextBox):
     _new_messages = Signal()
     service_list_update = Signal(dict, set)
 
-    def __init__(self, parent=None, client: BECClient | None = None, **kwargs):
+    def __init__(
+        self,
+        parent=None,
+        client: BECClient | None = None,
+        service_status: BECServiceStatusMixin | None = None,
+        **kwargs,
+    ):
         """Initialize the LogPanel widget."""
         super().__init__(parent=parent, client=client, **kwargs)
         self._update_colors()
-        self._service_status = BECServiceStatusMixin(self, client=self.client)  # type: ignore
+        self._service_status = service_status or BECServiceStatusMixin(self, client=self.client)  # type: ignore
         self._log_manager = BecLogsQueue(
             self.client.connector,  # type: ignore
             new_message_signal=self._new_messages,
@@ -500,7 +513,6 @@ class LogPanel(TextBox):
 
     def cleanup(self):
         self._log_manager.disconnect()
-        self._new_messages.disconnect(self._on_append)
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -5,8 +5,13 @@ from unittest.mock import MagicMock
 
 import pytest
 from bec_lib.messages import LogMessage
+from qtpy.QtCore import QDateTime, Qt, Signal  # type: ignore
 
-from bec_widgets.widgets.utility.logpanel._util import replace_escapes, simple_color_format
+from bec_widgets.widgets.utility.logpanel._util import (
+    log_time,
+    replace_escapes,
+    simple_color_format,
+)
 from bec_widgets.widgets.utility.logpanel.logpanel import DEFAULT_LOG_COLORS, LogPanel
 
 from .client_mocks import mocked_client
@@ -19,7 +24,7 @@ TEST_LOG_MESSAGES = [
         log_type="debug",
         log_msg={
             "text": "datetime | debug | test log message",
-            "record": {},
+            "record": {"time": {"timestamp": 123456789.000}},
             "service_name": "ScanServer",
         },
     ),
@@ -28,7 +33,7 @@ TEST_LOG_MESSAGES = [
         log_type="info",
         log_msg={
             "text": "datetime | info | test log message",
-            "record": {},
+            "record": {"time": {"timestamp": 123456789.007}},
             "service_name": "ScanServer",
         },
     ),
@@ -37,7 +42,7 @@ TEST_LOG_MESSAGES = [
         log_type="success",
         log_msg={
             "text": "datetime | success | test log message",
-            "record": {},
+            "record": {"time": {"timestamp": 123456789.012}},
             "service_name": "ScanServer",
         },
     ),
@@ -53,7 +58,7 @@ def raw_queue():
 
 @pytest.fixture
 def log_panel(qtbot, mocked_client: MagicMock):
-    widget = LogPanel(client=mocked_client)
+    widget = LogPanel(client=mocked_client, service_status=MagicMock())
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
@@ -115,3 +120,14 @@ def test_clear_button(log_panel: LogPanel):
     log_panel._log_manager._data = deque(TEST_LOG_MESSAGES)
     log_panel.toolbar.clear_button.click()
     assert log_panel._log_manager._data == deque([])
+
+
+def test_timestamp_filter(log_panel: LogPanel):
+    log_panel._log_manager._timestamp_start = QDateTime(1973, 11, 29, 21, 33, 9, 5, 1)
+    pytest.approx(log_panel._log_manager._timestamp_start.toMSecsSinceEpoch() / 1000, 123456789.005)
+    log_panel._log_manager._timestamp_end = QDateTime(1973, 11, 29, 21, 33, 9, 10, 1)
+    pytest.approx(log_panel._log_manager._timestamp_end.toMSecsSinceEpoch() / 1000, 123456789.010)
+    filter_ = log_panel._log_manager._create_timestamp_filter()
+    assert not filter_(TEST_LOG_MESSAGES[0])
+    assert filter_(TEST_LOG_MESSAGES[1])
+    assert not filter_(TEST_LOG_MESSAGES[2])
