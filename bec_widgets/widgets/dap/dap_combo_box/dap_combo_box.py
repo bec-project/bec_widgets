@@ -1,15 +1,17 @@
 """ Module for DapComboBox widget class to select a DAP model from a combobox. """
 
+from PySide6.QtWidgets import QSizePolicy
+
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import Property, Signal, Slot
-from qtpy.QtWidgets import QComboBox, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QComboBox
 
 from bec_widgets.utils.bec_widget import BECWidget
 
 logger = bec_logger.logger
 
 
-class DapComboBox(BECWidget, QWidget):
+class DapComboBox(BECWidget, QComboBox):
     """
     The DAPComboBox widget is an extension to the QComboBox with all avaialble DAP model from BEC.
 
@@ -39,17 +41,13 @@ class DapComboBox(BECWidget, QWidget):
     def __init__(
         self, parent=None, client=None, gui_id: str | None = None, default_fit: str | None = None
     ):
-        super().__init__(client=client, gui_id=gui_id)
-        QWidget.__init__(self, parent=parent)
-        self.layout = QVBoxLayout(self)
-        self.fit_model_combobox = QComboBox(self)
-        self.layout.addWidget(self.fit_model_combobox)
-        self.layout.setContentsMargins(0, 0, 0, 0)
+        BECWidget.__init__(self, client=client, gui_id=gui_id)
+        QComboBox.__init__(self, parent=parent)
         self._available_models = None
         self._x_axis = None
         self._y_axis = None
         self.populate_fit_model_combobox()
-        self.fit_model_combobox.currentTextChanged.connect(self._update_current_fit)
+        self.currentTextChanged.connect(self._update_current_fit)
         # Set default fit model
         self.select_default_fit(default_fit)
 
@@ -124,7 +122,7 @@ class DapComboBox(BECWidget, QWidget):
             x_axis(str): X axis.
         """
         self.x_axis = x_axis
-        self._update_current_fit(self.fit_model_combobox.currentText())
+        self._update_current_fit(self.currentText())
 
     @Slot(str)
     def select_y_axis(self, y_axis: str):
@@ -134,7 +132,7 @@ class DapComboBox(BECWidget, QWidget):
             y_axis(str): Y axis.
         """
         self.y_axis = y_axis
-        self._update_current_fit(self.fit_model_combobox.currentText())
+        self._update_current_fit(self.currentText())
 
     @Slot(str)
     def select_fit_model(self, fit_name: str | None):
@@ -145,14 +143,14 @@ class DapComboBox(BECWidget, QWidget):
         """
         if not self._validate_dap_model(fit_name):
             raise ValueError(f"Fit {fit_name} is not valid.")
-        self.fit_model_combobox.setCurrentText(fit_name)
+        self.setCurrentText(fit_name)
 
     def populate_fit_model_combobox(self):
         """Populate the fit_model_combobox with the devices."""
         # pylint: disable=protected-access
         self.available_models = [model for model in self.client.dap._available_dap_plugins.keys()]
-        self.fit_model_combobox.clear()
-        self.fit_model_combobox.addItems(self.available_models)
+        self.clear()
+        self.addItems(self.available_models)
 
     def _validate_dap_model(self, model: str | None) -> bool:
         """Validate the DAP model.
@@ -169,14 +167,14 @@ class DapComboBox(BECWidget, QWidget):
 
 if __name__ == "__main__":  # pragma: no cover
     # pylint: disable=import-outside-toplevel
-    from qtpy.QtWidgets import QApplication
+    from qtpy.QtWidgets import QApplication, QWidget, QVBoxLayout
 
     from bec_widgets.utils.colors import set_theme
 
     app = QApplication([])
     set_theme("dark")
     widget = QWidget()
-    widget.setFixedSize(200, 200)
+    # widget.setFixedSize(200, 200)
     layout = QVBoxLayout()
     widget.setLayout(layout)
     layout.addWidget(DapComboBox())
