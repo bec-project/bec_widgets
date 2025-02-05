@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.19.1 (2025-02-05)
+
+### Bug Fixes
+
+- **macos**: Suppress IMKClient warning on macos
+  ([`5e3289f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5e3289f5bdd2af02423b9975749e53c011b8dcfa))
+
+
 ## v1.19.0 (2025-01-31)
 
 ### Bug Fixes
