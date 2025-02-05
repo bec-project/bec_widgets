@@ -34,6 +34,17 @@ else:
 logger = bec_logger.logger
 
 
+def _filter_output(output: str) -> str:
+    """
+    Filter out the output from the process.
+    """
+    if "IMKClient" in output:
+        # only relevant on macOS
+        # see https://discussions.apple.com/thread/255761734?sortBy=rank
+        return ""
+    return output
+
+
 def _get_output(process, logger) -> None:
     log_func = {process.stdout: logger.debug, process.stderr: logger.error}
     stream_buffer = {process.stdout: [], process.stderr: []}
@@ -47,6 +58,7 @@ def _get_output(process, logger) -> None:
                 if stream in readylist:
                     buf.append(stream.read(4096))
                 output, _, remaining = "".join(buf).rpartition("\n")
+                output = _filter_output(output)
                 if output:
                     log_func[stream](output)
                     buf.clear()
