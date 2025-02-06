@@ -1,6 +1,18 @@
 # CHANGELOG
 
 
+## v1.20.0 (2025-02-06)
+
+### Features
+
+- **widget**: Add LogPanel widget
+  ([`b3217b7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b3217b7ca5cabe8798f06787de4ae3f3ec1af3b6))
+
+hopefully without segfaults - compared to first implementation: - explicitly set parent of all
+  dialog components - try/except and log for redis new message callback - pass in ServiceStatusMixin
+  and explicitly clean it up
+
+
 ## v1.19.2 (2025-02-06)
 
 ### Bug Fixes
