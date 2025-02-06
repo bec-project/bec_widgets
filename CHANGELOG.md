@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.19.2 (2025-02-06)
+
+### Bug Fixes
+
+- Cleanup timer in Minesweeper
+  ([`fc6d7c0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fc6d7c0824be841f1bff23c8dd66b203f5798333))
+
+- Mock QTimer, improve timeout message
+  ([`fb05186`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fb051865d5fe44150a9c3599f13e2473530970bc))
+
+
 ## v1.19.1 (2025-02-05)
 
 ### Bug Fixes
