@@ -5,9 +5,9 @@ from html.parser import HTMLParser
 
 from bec_lib.logger import bec_logger
 from pydantic import Field
-from qtpy.QtCore import Property, Slot
 from qtpy.QtWidgets import QTextEdit, QVBoxLayout, QWidget
 
+from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 
@@ -66,7 +66,7 @@ class TextBox(BECWidget, QWidget):
         else:
             self.set_html_text(DEFAULT_TEXT)
 
-    @Slot(str)
+    @SafeSlot(str)
     def set_plain_text(self, text: str) -> None:
         """Set the plain text of the widget.
 
@@ -77,7 +77,7 @@ class TextBox(BECWidget, QWidget):
         self.config.text = text
         self.config.is_html = False
 
-    @Slot(str)
+    @SafeSlot(str)
     def set_html_text(self, text: str) -> None:
         """Set the HTML text of the widget.
 
@@ -88,7 +88,7 @@ class TextBox(BECWidget, QWidget):
         self.config.text = text
         self.config.is_html = True
 
-    @Property(str)
+    @SafeProperty(str)
     def plain_text(self) -> str:
         """Get the text of the widget.
 
@@ -106,7 +106,7 @@ class TextBox(BECWidget, QWidget):
         """
         self.set_plain_text(text)
 
-    @Property(str)
+    @SafeProperty(str)
     def html_text(self) -> str:
         """Get the HTML text of the widget.
 

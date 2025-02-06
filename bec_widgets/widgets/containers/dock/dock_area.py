@@ -30,6 +30,7 @@ from bec_widgets.widgets.plots.waveform.waveform_widget import BECWaveformWidget
 from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_bar import RingProgressBar
 from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
 from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECStatusBox
+from bec_widgets.widgets.utility.logpanel.logpanel import LogPanel
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
 
@@ -139,6 +140,9 @@ class BECDockArea(BECWidget, QWidget):
                             tooltip="Add Circular ProgressBar",
                             filled=True,
                         ),
+                        "log_panel": MaterialIconAction(
+                            icon_name=LogPanel.ICON_NAME, tooltip="Add LogPanel", filled=True
+                        ),
                     },
                 ),
                 "separator_2": SeparatorAction(),
@@ -199,6 +203,9 @@ class BECDockArea(BECWidget, QWidget):
         )
         self.toolbar.widgets["menu_utils"].widgets["progress_bar"].triggered.connect(
             lambda: self.add_dock(widget="RingProgressBar", prefix="progress_bar")
+        )
+        self.toolbar.widgets["menu_utils"].widgets["log_panel"].triggered.connect(
+            lambda: self.add_dock(widget="LogPanel", prefix="log_panel")
         )
 
         # Icons
