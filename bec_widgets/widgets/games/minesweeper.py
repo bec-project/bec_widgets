@@ -401,6 +401,9 @@ class Minesweeper(BECWidget, QWidget):
     def _set_level_params(self, level: tuple[int, int]):
         self.b_size, self.num_mines = level
 
+    def cleanup(self):
+        self._timer.stop()
+
 
 if __name__ == "__main__":
     from bec_widgets.utils.colors import set_theme
