@@ -1,9 +1,9 @@
 import os
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QComboBox, QPushButton
-from pyqtgraph import ColorMapWidget
-
 from bec_qthemes import material_icon
+from pyqtgraph import ColorMapWidget
+from PySide6.QtWidgets import QComboBox, QPushButton, QVBoxLayout, QWidget
+
 from bec_widgets.utils import UILoader
 from bec_widgets.widgets.containers.expantion_panel.expansion_panel import ExpansionPanel
 from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit import (
@@ -66,6 +66,7 @@ class CurveSettingWidget(QWidget):
 
 if __name__ == "__main__":
     import sys
+
     from PySide6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)

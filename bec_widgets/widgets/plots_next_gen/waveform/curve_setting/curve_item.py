@@ -1,6 +1,6 @@
 import os
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.utils import UILoader
 
