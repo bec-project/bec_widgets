@@ -135,6 +135,7 @@ class Waveform(PlotBase):
 
         # Specific GUI elements
         self._init_roi_manager()
+        self._add_curve_setting()
         self._add_dap_summary_side_menu()
         self._enable_roi_toolbar_action(False)  # default state where are no dap curves
 
@@ -238,8 +239,6 @@ class Waveform(PlotBase):
         for curve_id, data in dap_summary.items():
             md = {"curve_id": curve_id}
             self.dap_summary.update_summary_tree(data=data, metadata=md)
-
-    def _update_dap_curves(self): ...
 
     @SafeSlot()
     def get_dap_params(self) -> dict:
