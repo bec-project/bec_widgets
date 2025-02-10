@@ -1,8 +1,7 @@
 """ Module for DapComboBox widget class to select a DAP model from a combobox. """
 
-from PySide6.QtWidgets import QSizePolicy
-
 from bec_lib.logger import bec_logger
+from PySide6.QtWidgets import QSizePolicy
 from qtpy.QtCore import Property, Signal, Slot
 from qtpy.QtWidgets import QComboBox
 
@@ -167,7 +166,7 @@ class DapComboBox(BECWidget, QComboBox):
 
 if __name__ == "__main__":  # pragma: no cover
     # pylint: disable=import-outside-toplevel
-    from qtpy.QtWidgets import QApplication, QWidget, QVBoxLayout
+    from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
     from bec_widgets.utils.colors import set_theme
 
