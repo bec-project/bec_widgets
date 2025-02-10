@@ -9,7 +9,7 @@ from bec_widgets.utils import UILoader
 from bec_widgets.utils.widget_io import WidgetIO
 
 
-class CurveSettingWidget(QWidget):
+class CurveSettingWidgetOld(QWidget):
     """
         Widget that lets a user set up curves for the Waveform widget.
     It allows:
