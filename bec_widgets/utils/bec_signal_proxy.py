@@ -80,3 +80,11 @@ class BECSignalProxy(SignalProxy):
         """
         if self.blocked:
             self.unblock_proxy()
+
+    def cleanup(self):
+        """
+        Cleanup the proxy by stopping the timer and disconnecting the timeout signal.
+        """
+        self._timer.stop()
+        self._timer.timeout.disconnect(self._timeout_unblock)
+        self._timer.deleteLater()
