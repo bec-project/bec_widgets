@@ -3,13 +3,13 @@ import sys
 from qtpy.QtCore import QEvent, Qt
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
     QFrame,
-    QPushButton,
+    QHBoxLayout,
     QLabel,
+    QPushButton,
     QSizePolicy,
+    QVBoxLayout,
+    QWidget,
 )
 
 from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
@@ -203,7 +203,7 @@ class ExpansionPanel(BECWidget, QWidget):
 
 if __name__ == "__main__":
     # Quick test if not using Designer
-    from qtpy.QtWidgets import QApplication, QVBoxLayout, QPushButton
+    from qtpy.QtWidgets import QApplication, QPushButton, QVBoxLayout
 
     app = QApplication(sys.argv)
 
