@@ -78,26 +78,26 @@ class ExpansionPanel(BECWidget, QWidget):
         self.header_frame.setStyleSheet(
             """
             #headerFrame {
-                border: 1px solid #C0C0C0;
+                background-color: "#141414";
                 border-radius: 4px;
             }
             """
         )
 
-        header_layout = QHBoxLayout(self.header_frame)
-        header_layout.setContentsMargins(3, 2, 3, 2)
-        header_layout.setSpacing(5)
+        self._header_layout = QHBoxLayout(self.header_frame)
+        self._header_layout.setContentsMargins(3, 2, 3, 2)
+        self._header_layout.setSpacing(5)
 
         self.btn_toggle = QPushButton("▼" if self._expanded else "►", self.header_frame)
         self.btn_toggle.setFixedSize(25, 25)
         self.btn_toggle.setStyleSheet("border: none; font-weight: bold;")
         self.btn_toggle.clicked.connect(self.toggle)
-        header_layout.addWidget(self.btn_toggle, alignment=Qt.AlignVCenter)
+        self._header_layout.addWidget(self.btn_toggle, alignment=Qt.AlignVCenter)
 
         self.label_title = QLabel(title, self.header_frame)
         self.label_title.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-        header_layout.addWidget(self.label_title, alignment=Qt.AlignVCenter | Qt.AlignLeft)
-        header_layout.addStretch()
+        self._header_layout.addWidget(self.label_title, alignment=Qt.AlignVCenter | Qt.AlignLeft)
+        self._header_layout.addStretch()
 
         self._main_layout.addWidget(self.header_frame)
 
@@ -105,7 +105,13 @@ class ExpansionPanel(BECWidget, QWidget):
         """Create the collapsible content frame (with its own layout)."""
         self.content_frame = QFrame(self)
         self.content_frame.setObjectName("ContentFrame")
-
+        self.content_frame.setStyleSheet(
+            """
+            #ContentFrame {
+                border-radius: 4px;
+            }
+            """
+        )
         self.content_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         self._content_layout = QVBoxLayout(self.content_frame)
         self._content_layout.setContentsMargins(5, 5, 5, 5)
@@ -174,6 +180,11 @@ class ExpansionPanel(BECWidget, QWidget):
     def content_layout(self) -> QVBoxLayout:
         """Layout of the content frame for programmatic additions."""
         return self._content_layout
+
+    @property
+    def header_layout(self) -> QHBoxLayout:
+        """Layout of the content frame for programmatic additions."""
+        return self._header_layout
 
     def event(self, e):
         """
