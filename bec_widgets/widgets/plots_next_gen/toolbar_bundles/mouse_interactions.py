@@ -55,6 +55,27 @@ class MouseInteractionToolbarBundle(ToolbarBundle):
         auto.action.triggered.connect(self.autorange_plot)
         aspect_ratio.action.toggled.connect(self.lock_aspect_ratio)
 
+        mode = self.get_viewbox_mode()
+        if mode == "PanMode":
+            drag.action.setChecked(True)
+        elif mode == "RectMode":
+            rect.action.setChecked(True)
+
+    def get_viewbox_mode(self) -> str:
+        """
+        Returns the current interaction mode of a PyQtGraph ViewBox.
+
+        Returns:
+            str: "PanMode" if pan is enabled, "RectMode" if zoom is enabled, "Unknown" otherwise.
+        """
+        if self.target_widget:
+            viewbox = self.target_widget.plot_item.getViewBox()
+            if viewbox.getState()["mouseMode"] == 3:
+                return "PanMode"
+            elif viewbox.getState()["mouseMode"] == 1:
+                return "RectMode"
+        return "Unknown"
+
     @SafeSlot(bool)
     def enable_mouse_rectangle_mode(self, checked: bool):
         """
