@@ -14,6 +14,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_widgets.widgets.containers.expantion_panel.expansion_panel import ExpansionPanel
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.containers.dock import BECDockArea
@@ -67,6 +68,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "pb": self.pb,
                     "pi": self.pi,
                     "wfng": self.wfng,
+                    "ep": self.ep,
                 }
             )
 
@@ -127,6 +129,17 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         tab_widget.setCurrentIndex(4)
         # add stuff to the new Waveform widget
         self._init_waveform()
+
+        six_tab = QWidget()
+        six_tab_layout = QVBoxLayout(six_tab)
+        self.ep = ExpansionPanel()
+        self.ep.content_layout.addWidget(self.btn1)
+        self.ep.content_layout.addWidget(self.btn2)
+        self.ep.content_layout.addWidget(self.btn3)
+        self.ep.content_layout.addWidget(self.btn4)
+        six_tab_layout.addWidget(self.ep)
+        tab_widget.addTab(six_tab, "Exp Panel")
+        tab_widget.setCurrentIndex(5)
 
         # add stuff to figure
         self._init_figure()
