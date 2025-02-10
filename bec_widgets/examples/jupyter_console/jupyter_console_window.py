@@ -14,10 +14,10 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.widgets.containers.expantion_panel.expansion_panel import ExpansionPanel
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.containers.dock import BECDockArea
+from bec_widgets.widgets.containers.expantion_panel.expansion_panel import ExpansionPanel
 from bec_widgets.widgets.containers.figure import BECFigure
 from bec_widgets.widgets.containers.layout_manager.layout_manager import LayoutManagerWidget
 from bec_widgets.widgets.editors.jupyter_console.jupyter_console import BECJupyterConsole
