@@ -271,7 +271,8 @@ def test_multi_waveform_widget_theme_update(qtbot, multi_waveform_widget):
     palette = get_theme_palette()
     waveform_color_dark = multi_waveform_widget.waveform.plot_item.getAxis("left").pen().color()
     bg_color = multi_waveform_widget.fig.backgroundBrush().color()
-    assert bg_color == QColor("black")
+
+    assert bg_color == QColor(20, 20, 20)
     assert waveform_color_dark == palette.text().color()
 
     # Set the theme to light
@@ -279,7 +280,7 @@ def test_multi_waveform_widget_theme_update(qtbot, multi_waveform_widget):
     palette = get_theme_palette()
     waveform_color_light = multi_waveform_widget.waveform.plot_item.getAxis("left").pen().color()
     bg_color = multi_waveform_widget.fig.backgroundBrush().color()
-    assert bg_color == QColor("white")
+    assert bg_color == QColor(233, 236, 239)
     assert waveform_color_light == palette.text().color()
 
     assert waveform_color_dark != waveform_color_light
@@ -291,5 +292,5 @@ def test_multi_waveform_widget_theme_update(qtbot, multi_waveform_widget):
 
     waveform_color = multi_waveform_widget.waveform.plot_item.getAxis("left").pen().color()
     bg_color = multi_waveform_widget.fig.backgroundBrush().color()
-    assert bg_color == QColor("black")
+    assert bg_color == QColor(20, 20, 20)
     assert waveform_color == waveform_color_dark

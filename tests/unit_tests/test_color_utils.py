@@ -1,9 +1,15 @@
+import pyqtgraph as pg
 import pytest
 from pydantic import ValidationError
 from qtpy.QtGui import QColor
+from qtpy.QtWidgets import QVBoxLayout, QWidget
 
-from bec_widgets.utils import Colors
+from bec_widgets.utils import Colors, ConnectionConfig
+from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.containers.figure.plots.waveform.waveform_curve import CurveConfig
+from tests.unit_tests.client_mocks import mocked_client
+from tests.unit_tests.conftest import create_widget
 
 
 def test_color_validation_CSS():
@@ -110,3 +116,55 @@ def test_golder_angle_colors(num):
 
     assert all(color.isValid() for color in colors_qcolor)
     assert all(color.startswith("#") for color in colors_hex)
+
+
+##################################################
+# Testing of the ExamplePlotWidget theme change
+##################################################
+
+
+class ExamplePlotWidget(BECWidget, QWidget):
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        config: ConnectionConfig | None = None,
+        client=None,
+        gui_id: str | None = None,
+    ) -> None:
+        if config is None:
+            config = ConnectionConfig(widget_class=self.__class__.__name__)
+        super().__init__(client=client, gui_id=gui_id, config=config)
+        QWidget.__init__(self, parent=parent)
+
+        self.layout = QVBoxLayout(self)
+        self.glw = pg.GraphicsLayoutWidget()
+        self.pi = pg.PlotItem()
+
+        self.layout.addWidget(self.glw)
+        self.glw.addItem(self.pi)
+        self.pi.plot([1, 2, 3, 4, 5], pen="r")
+
+
+def test_apply_theme(qtbot, mocked_client):
+    widget = create_widget(qtbot, ExamplePlotWidget, client=mocked_client)
+    apply_theme("dark")
+
+    # Get the default state of dark theme
+    dark_bg = widget.glw.backgroundBrush().color().name()
+    dark_axis_color = widget.pi.getAxis("left").pen().color().name()
+    dark_label_color = widget.pi.getAxis("left").textPen().color().name()
+
+    assert dark_bg == "#141414"
+    assert dark_axis_color == "#cccccc"
+    assert dark_label_color == "#ffffff"
+
+    apply_theme("light")
+
+    # Get the default state of light theme
+    light_bg = widget.glw.backgroundBrush().color().name()
+    light_axis_color = widget.pi.getAxis("left").pen().color().name()
+    light_label_color = widget.pi.getAxis("left").textPen().color().name()
+
+    assert light_bg == "#e9ecef"
+    assert light_axis_color == "#666666"
+    assert light_label_color == "#000000"

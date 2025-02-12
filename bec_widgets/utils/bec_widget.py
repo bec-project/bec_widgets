@@ -66,7 +66,7 @@ class BECWidget(BECConnector):
         if hasattr(qapp, "theme_signal"):
             qapp.theme_signal.theme_updated.connect(self._update_theme)
 
-    def _update_theme(self, theme: str):
+    def _update_theme(self, theme: str | None = None):
         """Update the theme."""
         if theme is None:
             qapp = QApplication.instance()
