@@ -486,6 +486,52 @@ class ModularToolBar(QToolBar):
 
         self.update_separators()  # Update separators after adding the bundle
 
+    def add_action_to_bundle(self, bundle_id: str, action_id: str, action, target_widget: QWidget):
+        """
+        Dynamically adds a new action to an existing toolbar bundle.
+
+        Args:
+            bundle_id (str): The ID of the bundle to extend.
+            action_id (str): Unique identifier for the new action.
+            action (ToolBarAction): The action instance to add.
+            target_widget (QWidget): The target widget for the action.
+        """
+        if bundle_id not in self.bundles:
+            raise ValueError(f"Bundle '{bundle_id}' does not exist.")
+        if action_id in self.widgets:
+            raise ValueError(f"Action with ID '{action_id}' already exists.")
+
+        # Add the new action temporarily to create its QAction
+        action.add_to_toolbar(self, target_widget)
+        new_qaction = action.action
+
+        # Remove the newly added action from its default position
+        self.removeAction(new_qaction)
+
+        # Find the last action in the existing bundle to determine insertion point
+        bundle_action_ids = self.bundles[bundle_id]
+        if bundle_action_ids:
+            last_bundle_action = self.widgets[bundle_action_ids[-1]].action
+            actions_list = self.actions()
+            try:
+                index = actions_list.index(last_bundle_action)
+            except ValueError:
+                self.addAction(new_qaction)
+            else:
+                if index + 1 < len(actions_list):
+                    before_action = actions_list[index + 1]
+                    self.insertAction(before_action, new_qaction)
+                else:
+                    self.addAction(new_qaction)
+        else:
+            # If bundle is empty, simply add the action at the end
+            self.addAction(new_qaction)
+
+        # Update internal tracking
+        self.widgets[action_id] = action
+        self.bundles[bundle_id].append(action_id)
+        self.update_separators()
+
     def contextMenuEvent(self, event):
         """
         Overrides the context menu event to show a list of toolbar actions with checkboxes and icons, including separators.
@@ -663,6 +709,13 @@ class MainWindow(QMainWindow):  # pragma: no cover
             actions=[("search_action", search_action), ("help_action", help_action)],
         )
         self.toolbar.add_bundle(second_bundle, target_widget=self)
+
+        new_action = MaterialIconAction(
+            icon_name="counter_1", tooltip="New Action", checkable=True, parent=self
+        )
+        self.toolbar.add_action_to_bundle(
+            "main_actions", "new_action", new_action, target_widget=self
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

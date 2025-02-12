@@ -318,6 +318,38 @@ def test_widget_action_calculate_minimum_width(qtbot):
     assert width > 100
 
 
+def test_add_action_to_bundle(toolbar_fixture, dummy_widget, material_icon_action):
+    # Create an initial bundle with one action
+    bundle = ToolbarBundle(
+        bundle_id="test_bundle", actions=[("initial_action", material_icon_action)]
+    )
+    toolbar_fixture.add_bundle(bundle, dummy_widget)
+
+    # Create a new action to add to the existing bundle
+    new_action = MaterialIconAction(
+        icon_name="counter_1", tooltip="New Action", checkable=True, parent=dummy_widget
+    )
+    toolbar_fixture.add_action_to_bundle("test_bundle", "new_action", new_action, dummy_widget)
+
+    # Verify the new action is registered in the toolbar's widgets
+    assert "new_action" in toolbar_fixture.widgets
+    assert toolbar_fixture.widgets["new_action"] == new_action
+
+    # Verify the new action is included in the bundle tracking
+    assert "new_action" in toolbar_fixture.bundles["test_bundle"]
+    assert toolbar_fixture.bundles["test_bundle"][-1] == "new_action"
+
+    # Verify the new action's QAction is present in the toolbar's action list
+    actions_list = toolbar_fixture.actions()
+    assert new_action.action in actions_list
+
+    # Verify that the new action is inserted immediately after the last action of the bundle
+    last_bundle_action = material_icon_action.action
+    index_last = actions_list.index(last_bundle_action)
+    index_new = actions_list.index(new_action.action)
+    assert index_new == index_last + 1
+
+
 # FIXME test is stucking CI, works locally
 # def test_context_menu_contains_added_actions(
 #     qtbot, icon_action, material_icon_action, dummy_widget
