@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from collections import defaultdict
+from typing import Any
 
 import numpy as np
 import pyqtgraph as pg
@@ -197,15 +200,18 @@ class Crosshair(QObject):
                 self.marker_2d = pg.ROI(
                     [0, 0], size=[1, 1], pen=pg.mkPen("r", width=2), movable=False
                 )
+                self.marker_2d.skip_auto_range = True
                 self.plot_item.addItem(self.marker_2d)
 
-    def snap_to_data(self, x, y) -> tuple[defaultdict[list], defaultdict[list]]:
+    def snap_to_data(
+        self, x: float, y: float
+    ) -> tuple[None, None] | tuple[defaultdict[Any, list], defaultdict[Any, list]]:
         """
         Finds the nearest data points to the given x and y coordinates.
 
         Args:
-            x: The x-coordinate of the mouse cursor
-            y: The y-coordinate of the mouse cursor
+            x(float): The x-coordinate of the mouse cursor
+            y(float): The y-coordinate of the mouse cursor
 
         Returns:
             tuple: x and y values snapped to the nearest data
@@ -235,7 +241,7 @@ class Crosshair(QObject):
                     y_values[name] = closest_y
                     x_values[name] = closest_x
             elif isinstance(item, pg.ImageItem):  # 2D plot
-                name = item.config.monitor
+                name = item.config.monitor or str(id(item))
                 image_2d = item.image
                 # Clip the x and y values to the image dimensions to avoid out of bounds errors
                 y_values[name] = int(np.clip(y, 0, image_2d.shape[1] - 1))
@@ -320,7 +326,7 @@ class Crosshair(QObject):
                     )
                     self.coordinatesChanged1D.emit(coordinate_to_emit)
                 elif isinstance(item, pg.ImageItem):
-                    name = item.config.monitor
+                    name = item.config.monitor or str(id(item))
                     x, y = x_snap_values[name], y_snap_values[name]
                     if x is None or y is None:
                         continue
@@ -374,7 +380,7 @@ class Crosshair(QObject):
                     )
                     self.coordinatesClicked1D.emit(coordinate_to_emit)
                 elif isinstance(item, pg.ImageItem):
-                    name = item.config.monitor
+                    name = item.config.monitor or str(id(item))
                     x, y = x_snap_values[name], y_snap_values[name]
                     if x is None or y is None:
                         continue
@@ -418,9 +424,17 @@ class Crosshair(QObject):
         """
         x, y = pos
         x_scaled, y_scaled = self.scale_emitted_coordinates(x, y)
-
+        text = f"({x_scaled:.{self.precision}g}, {y_scaled:.{self.precision}g})"
+        for item in self.items:
+            if isinstance(item, pg.ImageItem):
+                image = item.image
+                ix = int(np.clip(x, 0, image.shape[0] - 1))
+                iy = int(np.clip(y, 0, image.shape[1] - 1))
+                intensity = image[ix, iy]
+                text += f"\nIntensity: {intensity:.{self.precision}g}"
+                break
         # Update coordinate label
-        self.coord_label.setText(f"({x_scaled:.{self.precision}g}, {y_scaled:.{self.precision}g})")
+        self.coord_label.setText(text)
         self.coord_label.setPos(x, y)
         self.coord_label.setVisible(True)
 
@@ -436,6 +450,9 @@ class Crosshair(QObject):
         self.clear_markers()
 
     def cleanup(self):
+        if self.marker_2d is not None:
+            self.plot_item.removeItem(self.marker_2d)
+            self.marker_2d = None
         self.plot_item.removeItem(self.v_line)
         self.plot_item.removeItem(self.h_line)
         self.plot_item.removeItem(self.coord_label)
