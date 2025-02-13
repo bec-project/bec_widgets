@@ -33,6 +33,7 @@ class ImageConfig(SubplotConfig):
     )
 
 
+# TODO old version will be deprecated
 class BECImageShow(BECPlotBase):
     USER_ACCESS = [
         "_rpc_id",

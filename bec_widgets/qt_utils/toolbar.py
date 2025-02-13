@@ -316,13 +316,24 @@ class SwitchableToolBarAction(ToolBarAction):
             new_action.action.setChecked(True)
             self.main_button.setChecked(True)
 
-    def uncheck_all(self):
+    def block_all_signals(self, block: bool = True):
+        """
+        Blocks or unblocks all signals for the actions in the toolbar.
+
+        Args:
+            block (bool): Whether to block signals. Defaults to True.
+        """
+        self.main_button.blockSignals(block)
+        for action in self.actions.values():
+            action.action.blockSignals(block)
+
+    def set_state_all(self, state: bool):
         """
         Uncheck all actions in the toolbar.
         """
         for action in self.actions.values():
-            action.action.setChecked(False)
-        self.main_button.setChecked(False)
+            action.action.setChecked(state)
+        self.main_button.setChecked(state)
 
     def get_icon(self) -> QIcon:
         return self.actions[self.current_key].get_icon()
@@ -337,11 +348,18 @@ class WidgetAction(ToolBarAction):
         widget (QWidget): The widget to be added to the toolbar.
     """
 
-    def __init__(self, label: str | None = None, widget: QWidget = None, parent=None):
+    def __init__(
+        self,
+        label: str | None = None,
+        widget: QWidget = None,
+        adjust_size: bool = True,
+        parent=None,
+    ):
         super().__init__(icon_path=None, tooltip=label, checkable=False)
         self.label = label
         self.widget = widget
         self.container = None
+        self.adjust_size = adjust_size
 
     def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
         """
@@ -362,7 +380,7 @@ class WidgetAction(ToolBarAction):
             label_widget.setAlignment(Qt.AlignVCenter | Qt.AlignRight)
             layout.addWidget(label_widget)
 
-        if isinstance(self.widget, QComboBox):
+        if isinstance(self.widget, QComboBox) and self.adjust_size:
             self.widget.setSizeAdjustPolicy(QComboBox.AdjustToContents)
 
             size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -863,7 +881,7 @@ class MainWindow(QMainWindow):  # pragma: no cover
             ],
         )
         self.toolbar.add_bundle(main_actions_bundle, target_widget=self)
-        home_action.action.triggered.connect(self.switchable_action.uncheck_all)
+        home_action.action.triggered.connect(lambda: self.switchable_action.set_state_all(False))
 
         search_action = MaterialIconAction(
             icon_name="search", tooltip="Search", checkable=False, parent=self
