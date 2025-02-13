@@ -929,9 +929,10 @@ class PlotBase(BECWidget, QWidget):
         self.cleanup_pyqtgraph()
         super().cleanup()
 
-    def cleanup_pyqtgraph(self):
+    def cleanup_pyqtgraph(self, item: pg.PlotItem | None = None):
         """Cleanup pyqtgraph items."""
-        item = self.plot_item
+        if item is None:
+            item = self.plot_item
         item.vb.menu.close()
         item.vb.menu.deleteLater()
         item.ctrlMenu.close()

@@ -1,13 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 import numpy as np
 from pydantic import BaseModel, Field
-from qtpy.QtCore import QObject, Signal, Slot
-
-# TODO will be deleted
+from qtpy.QtCore import QObject, Signal
 
 
 @dataclass
@@ -19,35 +16,51 @@ class ImageStats:
     mean: float
     std: float
 
+    @classmethod
+    def from_data(cls, data: np.ndarray) -> ImageStats:
+        """
+        Get the statistics of the image data.
 
+        Args:
+            data(np.ndarray): The image data.
+
+        Returns:
+            ImageStats: The statistics of the image data.
+        """
+        return cls(maximum=np.max(data), minimum=np.min(data), mean=np.mean(data), std=np.std(data))
+
+
+# noinspection PyDataclass
 class ProcessingConfig(BaseModel):
-    fft: Optional[bool] = Field(False, description="Whether to perform FFT on the monitor data.")
-    log: Optional[bool] = Field(False, description="Whether to perform log on the monitor data.")
-    center_of_mass: Optional[bool] = Field(
-        False, description="Whether to calculate the center of mass of the monitor data."
-    )
-    transpose: Optional[bool] = Field(
+    fft: bool = Field(False, description="Whether to perform FFT on the monitor data.")
+    log: bool = Field(False, description="Whether to perform log on the monitor data.")
+    transpose: bool = Field(
         False, description="Whether to transpose the monitor data before displaying."
     )
-    rotation: Optional[int] = Field(
-        None, description="The rotation angle of the monitor data before displaying."
+    rotation: int = Field(
+        0, description="The rotation angle of the monitor data before displaying."
     )
-    model_config: dict = {"validate_assignment": True}
     stats: ImageStats = Field(
         ImageStats(maximum=0, minimum=0, mean=0, std=0),
         description="The statistics of the image data.",
     )
 
+    model_config: dict = {"validate_assignment": True}
 
-class ImageProcessor:
+
+class ImageProcessor(QObject):
     """
     Class for processing the image data.
     """
 
-    def __init__(self, config: ProcessingConfig = None):
+    image_processed = Signal(np.ndarray)
+
+    def __init__(self, parent=None, config: ProcessingConfig = None):
+        super().__init__(parent=parent)
         if config is None:
             config = ProcessingConfig()
         self.config = config
+        self._current_thread = None
 
     def set_config(self, config: ProcessingConfig):
         """
@@ -111,9 +124,6 @@ class ImageProcessor:
         data_offset = data + offset
         return np.log10(data_offset)
 
-    # def center_of_mass(self, data: np.ndarray) -> tuple:  # TODO check functionality
-    #     return np.unravel_index(np.argmax(data), data.shape)
-
     def update_image_stats(self, data: np.ndarray) -> None:
         """Get the statistics of the image data.
 
@@ -127,15 +137,7 @@ class ImageProcessor:
         self.config.stats.std = np.std(data)
 
     def process_image(self, data: np.ndarray) -> np.ndarray:
-        """
-        Process the data according to the configuration.
-
-        Args:
-            data(np.ndarray): The data to be processed.
-
-        Returns:
-            np.ndarray: The processed data.
-        """
+        """Core processing logic without threading overhead."""
         if self.config.fft:
             data = self.FFT(data)
         if self.config.rotation is not None:
@@ -146,40 +148,3 @@ class ImageProcessor:
             data = self.log(data)
         self.update_image_stats(data)
         return data
-
-
-class ProcessorWorker(QObject):
-    """
-    Worker for processing the image data.
-    """
-
-    processed = Signal(str, np.ndarray)
-    stats = Signal(str, ImageStats)
-    stopRequested = Signal()
-    finished = Signal()
-
-    def __init__(self, processor):
-        super().__init__()
-        self.processor = processor
-        self._isRunning = False
-        self.stopRequested.connect(self.stop)
-
-    @Slot(str, np.ndarray)
-    def process_image(self, device: str, image: np.ndarray):
-        """
-        Process the image data.
-
-        Args:
-            device(str): The name of the device.
-            image(np.ndarray): The image data.
-        """
-        self._isRunning = True
-        processed_image = self.processor.process_image(image)
-        self._isRunning = False
-        if not self._isRunning:
-            self.processed.emit(device, processed_image)
-            self.stats.emit(self.processor.config.stats)
-            self.finished.emit()
-
-    def stop(self):
-        self._isRunning = False
