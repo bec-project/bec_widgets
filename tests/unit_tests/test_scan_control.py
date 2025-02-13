@@ -2,6 +2,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+from bec_lib.endpoints import MessageEndpoints
 from bec_lib.messages import AvailableResourceMessage, ScanQueueHistoryMessage, ScanQueueMessage
 
 from bec_widgets.utils.widget_io import WidgetIO
@@ -286,8 +287,8 @@ scan_history = ScanQueueHistoryMessage(
 
 @pytest.fixture(scope="function")
 def scan_control(qtbot, mocked_client):  # , mock_dev):
-    mocked_client.connector.set("scans/available_scans", available_scans_message)
-    mocked_client.connector.lpush("internal/queue/queue_history", scan_history)
+    mocked_client.connector.set(MessageEndpoints.available_scans(), available_scans_message)
+    mocked_client.connector.lpush(MessageEndpoints.scan_queue_history(), scan_history)
     widget = ScanControl(client=mocked_client)
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
