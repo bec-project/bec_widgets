@@ -4,9 +4,6 @@ import pytest
 from qtpy.QtCore import QPointF, Qt
 
 from bec_widgets.utils import Crosshair
-from bec_widgets.widgets.plots.image.image_widget import BECImageWidget
-
-from .client_mocks import mocked_client
 
 # pylint: disable = redefined-outer-name
 
@@ -25,14 +22,20 @@ def plot_widget_with_crosshair(qtbot):
 
 
 @pytest.fixture
-def image_widget_with_crosshair(qtbot, mocked_client):
-    widget = BECImageWidget(client=mocked_client())
-    widget._image.add_custom_image(name="test", data=np.random.random((100, 200)))
-    widget._image.hook_crosshair()
+def image_widget_with_crosshair(qtbot):
+    widget = pg.PlotWidget()
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
 
-    yield widget._image.crosshair, widget._image.plot_item
+    image_item = pg.ImageItem()
+    image_item.setImage(np.random.rand(100, 100))
+    image_item.config = type("obj", (object,), {"monitor": "test"})
+
+    widget.addItem(image_item)
+    plot_item = widget.getPlotItem()
+    crosshair = Crosshair(plot_item=plot_item, precision=3)
+
+    yield crosshair, plot_item
 
 
 def test_mouse_moved_lines(plot_widget_with_crosshair):
@@ -104,13 +107,13 @@ def test_mouse_moved_signals_2D(image_widget_with_crosshair):
 
     crosshair.coordinatesChanged2D.connect(slot)
 
-    pos_in_view = QPointF(22.0, 55.0)
+    pos_in_view = QPointF(21.0, 55.0)
     pos_in_scene = plot_item.vb.mapViewToScene(pos_in_view)
     event_mock = [pos_in_scene]
 
     crosshair.mouse_moved(event_mock)
 
-    assert emitted_values_2D == [("test", 22.0, 55.0)]
+    assert emitted_values_2D == [("test", 21, 55)]
 
 
 def test_mouse_moved_signals_2D_outside(image_widget_with_crosshair):
@@ -226,3 +229,41 @@ def test_crosshair_clicked_signal(qtbot, plot_widget_with_crosshair):
 
     assert np.isclose(round(x, 1), 2)
     assert np.isclose(round(y, 1), 5)
+
+
+def test_update_coord_label_1D(plot_widget_with_crosshair):
+    crosshair, _ = plot_widget_with_crosshair
+    # Provide a test position
+    pos = (10, 20)
+    crosshair.update_coord_label(pos)
+    expected_text = f"({10:.3g}, {20:.3g})"
+    # Verify that the coordinate label shows only the 1D coordinates (no intensity line)
+    assert crosshair.coord_label.toPlainText() == expected_text
+    label_pos = crosshair.coord_label.pos()
+    assert np.isclose(label_pos.x(), 10)
+    assert np.isclose(label_pos.y(), 20)
+    assert crosshair.coord_label.isVisible()
+
+
+def test_update_coord_label_2D(image_widget_with_crosshair):
+    crosshair, plot_item = image_widget_with_crosshair
+
+    known_image = np.array([[10, 20], [30, 40]], dtype=float)
+
+    for item in plot_item.items:
+        if isinstance(item, pg.ImageItem):
+            item.setImage(known_image)
+
+    pos = (0.5, 1.2)
+    crosshair.update_coord_label(pos)
+
+    ix = int(np.clip(0.5, 0, known_image.shape[0] - 1))  # 0
+    iy = int(np.clip(1.2, 0, known_image.shape[1] - 1))  # 1
+    intensity = known_image[ix, iy]  # Expected: 20
+    expected_text = f"({0.5:.3g}, {1.2:.3g})\nIntensity: {intensity:.3g}"
+
+    assert crosshair.coord_label.toPlainText() == expected_text
+    label_pos = crosshair.coord_label.pos()
+    assert np.isclose(label_pos.x(), 0.5)
+    assert np.isclose(label_pos.y(), 1.2)
+    assert crosshair.coord_label.isVisible()
