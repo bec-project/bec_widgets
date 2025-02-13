@@ -15,11 +15,12 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils import BECDispatcher
-from bec_widgets.utils.colors import apply_theme
+from bec_widgets.utils.widget_io import WidgetHierarchy as wh
 from bec_widgets.widgets.containers.dock import BECDockArea
 from bec_widgets.widgets.containers.figure import BECFigure
 from bec_widgets.widgets.containers.layout_manager.layout_manager import LayoutManagerWidget
 from bec_widgets.widgets.editors.jupyter_console.jupyter_console import BECJupyterConsole
+from bec_widgets.widgets.plots_next_gen.image.image import Image
 from bec_widgets.widgets.plots_next_gen.plot_base import PlotBase
 from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
 
@@ -38,6 +39,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                 {
                     "np": np,
                     "pg": pg,
+                    "wh": wh,
                     "fig": self.figure,
                     "dock": self.dock,
                     "w1": self.w1,
@@ -53,6 +55,9 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "d0": self.d0,
                     "d1": self.d1,
                     "im": self.im,
+                    "im_old": self.im_old,
+                    "it_old": self.it_old,
+                    "mi": self.mi,
                     "mm": self.mm,
                     "mw": self.mw,
                     "lm": self.lm,
@@ -123,6 +128,15 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         fifth_tab_layout.addWidget(self.wf)
         tab_widget.addTab(fifth_tab, "Waveform Next Gen")
         tab_widget.setCurrentIndex(4)
+
+        sixth_tab = QWidget()
+        sixth_tab_layout = QVBoxLayout(sixth_tab)
+        self.im = Image()
+        self.mi = self.im.main_image
+        sixth_tab_layout.addWidget(self.im)
+        tab_widget.addTab(sixth_tab, "Image Next Gen")
+        tab_widget.setCurrentIndex(5)
+
         # add stuff to the new Waveform widget
         self._init_waveform()
 
@@ -203,13 +217,10 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.mm.change_motors("samx", "samy")
 
         self.d1 = self.dock.new(name="dock_1", position="right")
-        self.im = self.d1.new("BECImageWidget")
-        self.im.image("waveform", "1d")
+        self.im_old = self.d1.new("BECImageWidget")
+        self.im_old.image("waveform", "1d")
+        self.it_old = self.im_old._image._images["device_monitor_1d"]["waveform"]
 
-        self.d2 = self.dock.new(name="dock_2", position="bottom")
-        self.wf = self.d2.new("BECFigure", row=0, col=0)
-
-        self.mw = self.wf.multi_waveform(monitor="waveform")  # , config=config)
         self.mw = None  # self.wf.multi_waveform(monitor="waveform")  # , config=config)
 
         self.dock.save_state()
@@ -235,7 +246,6 @@ if __name__ == "__main__":  # pragma: no cover
     app = QApplication(sys.argv)
     app.setApplicationName("Jupyter Console")
     app.setApplicationDisplayName("Jupyter Console")
-    apply_theme("dark")
     icon = material_icon("terminal", color=(255, 255, 255, 255), filled=True)
     app.setWindowIcon(icon)
 
@@ -245,7 +255,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     win = JupyterConsoleWindow()
     win.show()
-    win.resize(1200, 800)
+    win.resize(1500, 800)
 
     app.aboutToQuit.connect(win.close)
     sys.exit(app.exec_())

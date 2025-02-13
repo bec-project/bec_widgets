@@ -25,6 +25,7 @@ from bec_widgets.widgets.control.device_input.base_classes.device_input_base imp
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 
 
+# TODO will be deprecated
 class BECImageWidget(BECWidget, QWidget):
     PLUGIN = True
     ICON_NAME = "image"

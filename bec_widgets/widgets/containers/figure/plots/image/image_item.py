@@ -41,6 +41,7 @@ class ImageItemConfig(ConnectionConfig):
     )
 
 
+# TODO old version will be deprecated
 class BECImageItem(BECConnector, pg.ImageItem):
     USER_ACCESS = [
         "_rpc_id",
