@@ -219,6 +219,10 @@ class PlotBase(BECWidget, QWidget):
         self.axis_settings_dialog = None
         self.toolbar.widgets["axis"].action.setChecked(False)
 
+    def reset_legend(self):
+        """In the case that the legend is not visible, reset it to be visible to top left corner"""
+        self.plot_item.legend.autoAnchor(50)
+
     ################################################################################
     # Toggle UI Elements
     ################################################################################
