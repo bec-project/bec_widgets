@@ -26,7 +26,7 @@ from bec_widgets.widgets.editors.vscode.vscode import VSCodeEditor
 from bec_widgets.widgets.plots.image.image_widget import BECImageWidget
 from bec_widgets.widgets.plots.motor_map.motor_map_widget import BECMotorMapWidget
 from bec_widgets.widgets.plots.multi_waveform.multi_waveform_widget import BECMultiWaveformWidget
-from bec_widgets.widgets.plots.waveform.waveform_widget import BECWaveformWidget
+from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
 from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_bar import RingProgressBar
 from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
 from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECStatusBox
@@ -89,9 +89,7 @@ class BECDockArea(BECWidget, QWidget):
                     label="Add Plot ",
                     actions={
                         "waveform": MaterialIconAction(
-                            icon_name=BECWaveformWidget.ICON_NAME,
-                            tooltip="Add Waveform",
-                            filled=True,
+                            icon_name=Waveform.ICON_NAME, tooltip="Add Waveform", filled=True
                         ),
                         "multi_waveform": MaterialIconAction(
                             icon_name=BECMultiWaveformWidget.ICON_NAME,
@@ -171,7 +169,7 @@ class BECDockArea(BECWidget, QWidget):
     def _hook_toolbar(self):
         # Menu Plot
         self.toolbar.widgets["menu_plots"].widgets["waveform"].triggered.connect(
-            lambda: self.add_dock(widget="BECWaveformWidget", prefix="waveform")
+            lambda: self.add_dock(widget="Waveform", prefix="waveform")
         )
         self.toolbar.widgets["menu_plots"].widgets["multi_waveform"].triggered.connect(
             lambda: self.add_dock(widget="BECMultiWaveformWidget", prefix="multi_waveform")
@@ -472,8 +470,7 @@ class BECDockArea(BECWidget, QWidget):
         self.deleteLater()
 
 
-if __name__ == "__main__":
-    from qtpy.QtWidgets import QApplication
+if __name__ == "__main__":  # pragma: no cover
 
     from bec_widgets.utils.colors import set_theme
 
