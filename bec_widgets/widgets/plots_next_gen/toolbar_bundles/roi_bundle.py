@@ -18,9 +18,14 @@ class ROIBundle(ToolbarBundle):
         crosshair = MaterialIconAction(
             icon_name="point_scan", tooltip="Show Crosshair", checkable=True
         )
+        reset_legend = MaterialIconAction(
+            icon_name="restart_alt", tooltip="Reset the position of legend.", checkable=False
+        )
 
         # Add them to the bundle
         self.add_action("crosshair", crosshair)
+        self.add_action("reset_legend", reset_legend)
 
         # Immediately connect signals
         crosshair.action.toggled.connect(self.target_widget.toggle_crosshair)
+        reset_legend.action.triggered.connect(self.target_widget.reset_legend)

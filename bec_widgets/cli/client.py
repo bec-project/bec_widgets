@@ -46,6 +46,7 @@ class Widgets(str, enum.Enum):
     StopButton = "StopButton"
     TextBox = "TextBox"
     VSCodeEditor = "VSCodeEditor"
+    Waveform = "Waveform"
     WebsiteWidget = "WebsiteWidget"
 
 
@@ -2996,6 +2997,161 @@ class BECWaveformWidget(RPCBase):
         """
 
 
+class Curve(RPCBase):
+    @rpc_call
+    def remove(self):
+        """
+        Remove the curve from the plot.
+        """
+
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
+        """
+
+    @property
+    @rpc_call
+    def _config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def set(self, **kwargs):
+        """
+        Set the properties of the curve.
+
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+
+        Possible properties:
+            - color: str
+            - symbol: str
+            - symbol_color: str
+            - symbol_size: int
+            - pen_width: int
+            - pen_style: Literal["solid", "dash", "dot", "dashdot"]
+        """
+
+    @rpc_call
+    def set_data(self, x: "list | np.ndarray", y: "list | np.ndarray"):
+        """
+        Set the data of the curve.
+
+        Args:
+            x(list|np.ndarray): The x data.
+            y(list|np.ndarray): The y data.
+
+        Raises:
+            ValueError: If the source is not custom.
+        """
+
+    @rpc_call
+    def set_color(self, color: "str", symbol_color: "str | None" = None):
+        """
+        Change the color of the curve.
+
+        Args:
+            color(str): Color of the curve.
+            symbol_color(str, optional): Color of the symbol. Defaults to None.
+        """
+
+    @rpc_call
+    def set_color_map_z(self, colormap: "str"):
+        """
+        Set the colormap for the scatter plot z gradient.
+
+        Args:
+            colormap(str): Colormap for the scatter plot.
+        """
+
+    @rpc_call
+    def set_symbol(self, symbol: "str"):
+        """
+        Change the symbol of the curve.
+
+        Args:
+            symbol(str): Symbol of the curve.
+        """
+
+    @rpc_call
+    def set_symbol_color(self, symbol_color: "str"):
+        """
+        Change the symbol color of the curve.
+
+        Args:
+            symbol_color(str): Color of the symbol.
+        """
+
+    @rpc_call
+    def set_symbol_size(self, symbol_size: "int"):
+        """
+        Change the symbol size of the curve.
+
+        Args:
+            symbol_size(int): Size of the symbol.
+        """
+
+    @rpc_call
+    def set_pen_width(self, pen_width: "int"):
+        """
+        Change the pen width of the curve.
+
+        Args:
+            pen_width(int): Width of the pen.
+        """
+
+    @rpc_call
+    def set_pen_style(self, pen_style: "Literal['solid', 'dash', 'dot', 'dashdot']"):
+        """
+        Change the pen style of the curve.
+
+        Args:
+            pen_style(Literal["solid", "dash", "dot", "dashdot"]): Style of the pen.
+        """
+
+    @rpc_call
+    def get_data(self) -> "tuple[np.ndarray, np.ndarray]":
+        """
+        Get the data of the curve.
+        Returns:
+            tuple[np.ndarray,np.ndarray]: X and Y data of the curve.
+        """
+
+    @property
+    @rpc_call
+    def dap_params(self):
+        """
+        Get the dap parameters.
+        """
+
+    @property
+    @rpc_call
+    def dap_summary(self):
+        """
+        Get the dap summary.
+        """
+
+    @property
+    @rpc_call
+    def dap_oversample(self):
+        """
+        Get the dap oversample.
+        """
+
+    @dap_oversample.setter
+    @rpc_call
+    def dap_oversample(self):
+        """
+        Get the dap oversample.
+        """
+
+
 class DapComboBox(RPCBase):
     @rpc_call
     def select_y_axis(self, y_axis: str):
@@ -3773,6 +3929,417 @@ class TextBox(RPCBase):
 
 
 class VSCodeEditor(RPCBase): ...
+
+
+class Waveform(RPCBase):
+    @property
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        None
+        """
+
+    @enable_toolbar.setter
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        None
+        """
+
+    @enable_side_panel.setter
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        None
+        """
+
+    @enable_fps_monitor.setter
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        None
+        """
+
+    @rpc_call
+    def set(self, **kwargs):
+        """
+        Set the properties of the plot widget.
+
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+
+        Possible properties:
+        """
+
+    @property
+    @rpc_call
+    def title(self) -> "str":
+        """
+        None
+        """
+
+    @title.setter
+    @rpc_call
+    def title(self) -> "str":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        None
+        """
+
+    @x_label.setter
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        None
+        """
+
+    @y_label.setter
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        None
+        """
+
+    @x_limits.setter
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        None
+        """
+
+    @y_limits.setter
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        None
+        """
+
+    @x_grid.setter
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        None
+        """
+
+    @y_grid.setter
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        None
+        """
+
+    @inner_axes.setter
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        None
+        """
+
+    @outer_axes.setter
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        None
+        """
+
+    @lock_aspect_ratio.setter
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        None
+        """
+
+    @auto_range_x.setter
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        None
+        """
+
+    @auto_range_y.setter
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        None
+        """
+
+    @x_log.setter
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        None
+        """
+
+    @y_log.setter
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        None
+        """
+
+    @legend_label_size.setter
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        None
+        """
+
+    @rpc_call
+    def __getitem__(self, key: "int | str"):
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def curves(self) -> "list[Curve]":
+        """
+        Get the curves of the plot widget as a list.
+
+        Returns:
+            list: List of curves.
+        """
+
+    @property
+    @rpc_call
+    def x_mode(self) -> "str":
+        """
+        None
+        """
+
+    @x_mode.setter
+    @rpc_call
+    def x_mode(self) -> "str":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def color_palette(self) -> "str":
+        """
+        The color palette of the figure widget.
+        """
+
+    @color_palette.setter
+    @rpc_call
+    def color_palette(self) -> "str":
+        """
+        The color palette of the figure widget.
+        """
+
+    @rpc_call
+    def plot(
+        self,
+        arg1: "list | np.ndarray | str | None" = None,
+        y: "list | np.ndarray | None" = None,
+        x: "list | np.ndarray | None" = None,
+        x_name: "str | None" = None,
+        y_name: "str | None" = None,
+        x_entry: "str | None" = None,
+        y_entry: "str | None" = None,
+        color: "str | None" = None,
+        label: "str | None" = None,
+        dap: "str | None" = None,
+        **kwargs,
+    ) -> "Curve":
+        """
+        Plot a curve to the plot widget.
+
+        Args:
+            arg1(list | np.ndarray | str | None): First argument, which can be x data, y data, or y_name.
+            y(list | np.ndarray): Custom y data to plot.
+            x(list | np.ndarray): Custom y data to plot.
+            x_name(str): Name of the x signal.
+                - "auto": Use the best effort signal.
+                - "timestamp": Use the timestamp signal.
+                - "index": Use the index signal.
+                - Custom signal name of a device from BEC.
+            y_name(str): The name of the device for the y-axis.
+            x_entry(str): The name of the entry for the x-axis.
+            y_entry(str): The name of the entry for the y-axis.
+            color(str): The color of the curve.
+            label(str): The label of the curve.
+            dap(str): The dap model to use for the curve, only available for sync devices.
+            If not specified, none will be added.
+            Use the same string as is the name of the LMFit model.
+
+        Returns:
+            Curve: The curve object.
+        """
+
+    @rpc_call
+    def add_dap_curve(
+        self,
+        device_label: "str",
+        dap_name: "str",
+        color: "str | None" = None,
+        dap_oversample: "int" = 1,
+        **kwargs,
+    ) -> "Curve":
+        """
+        Create a new DAP curve referencing the existing device curve `device_label`,
+        with the data processing model `dap_name`.
+
+        Args:
+            device_label(str): The label of the device curve to add DAP to.
+            dap_name(str): The name of the DAP model to use.
+            color(str): The color of the curve.
+            dap_oversample(int): The oversampling factor for the DAP curve.
+            **kwargs
+
+        Returns:
+            Curve: The new DAP curve.
+        """
+
+    @rpc_call
+    def remove_curve(self, curve: "int | str"):
+        """
+        Remove a curve from the plot widget.
+
+        Args:
+            curve(int|str): The curve to remove. Can be the order of the curve or the name of the curve.
+        """
+
+    @rpc_call
+    def update_with_scan_history(self, scan_index: "int" = None, scan_id: "str" = None):
+        """
+        Update the scan curves with the data from the scan storage.
+        Provide only one of scan_id or scan_index.
+
+        Args:
+            scan_id(str, optional): ScanID of the scan to be updated. Defaults to None.
+            scan_index(int, optional): Index of the scan to be updated. Defaults to None.
+        """
+
+    @rpc_call
+    def get_dap_params(self) -> "dict[str, dict]":
+        """
+        Get the DAP parameters of all DAP curves.
+
+        Returns:
+            dict[str, dict]: DAP parameters of all DAP curves.
+        """
+
+    @rpc_call
+    def get_dap_summary(self) -> "dict[str, dict]":
+        """
+        Get the DAP summary of all DAP curves.
+
+        Returns:
+            dict[str, dict]: DAP summary of all DAP curves.
+        """
 
 
 class WebsiteWidget(RPCBase):
