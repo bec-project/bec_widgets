@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.21.0 (2025-02-17)
+
+### Features
+
+- Generated form for scan metadata
+  ([`1708bd4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1708bd405f86b1353828b01fbf5f98383a19ec2a))
+
+
 ## v1.20.0 (2025-02-06)
 
 ### Features
