@@ -1,18 +1,19 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from types import NoneType
 from typing import TYPE_CHECKING
 
-from PySide6.QtWidgets import QHBoxLayout, QToolButton
 from bec_lib.logger import bec_logger
 from bec_lib.metadata_schema import get_metadata_schema_for_scan
 from bec_qthemes import material_icon
 from pydantic import Field, ValidationError
+from qtpy.QtCore import Signal  # type: ignore
 from qtpy.QtWidgets import (
     QApplication,
     QComboBox,
-    QFrame,
     QGridLayout,
+    QHBoxLayout,
     QLabel,
     QLayout,
     QVBoxLayout,
@@ -20,7 +21,7 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.qt_utils.compact_popup import CompactPopupWidget
-from bec_widgets.qt_utils.error_popups import SafeSlot
+from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.qt_utils.expandable_frame import ExpandableGroupFrame
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.editors.scan_metadata._metadata_widgets import widget_from_type
@@ -39,6 +40,9 @@ class ScanMetadata(BECWidget, QWidget):
     metadata schema registry supplied in the plugin repo to find pydantic models
     associated with the scan type. Sets limits for numerical values if specified."""
 
+    metadata_updated = Signal(dict)
+    metadata_cleared = Signal(NoneType)
+
     def __init__(
         self,
         parent=None,
@@ -55,7 +59,7 @@ class ScanMetadata(BECWidget, QWidget):
         self._layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self._layout)
 
-        self._required_md_box = ExpandableGroupFrame("Required scan metadata")
+        self._required_md_box = ExpandableGroupFrame("Scan schema metadata")
         self._layout.addWidget(self._required_md_box)
         self._required_md_box_layout = QHBoxLayout()
         self._required_md_box.set_layout(self._required_md_box_layout)
@@ -93,14 +97,20 @@ class ScanMetadata(BECWidget, QWidget):
         self.populate()
         self.validate_form()
 
-    def validate_form(self, *_):
+    def validate_form(self, *_) -> bool:
+        """validate the currently entered metadata against the pydantic schema.
+        If successful, returns on metadata_emitted and returns true.
+        Otherwise, emits on metadata_cleared and returns false."""
         try:
-            self._md_schema.model_validate(self.get_full_model_dict())
+            metadata_dict = self.get_full_model_dict()
+            self._md_schema.model_validate(metadata_dict)
             self._validity.set_global_state("success")
             self._validity_message.setText("No errors!")
+            self.metadata_updated.emit(metadata_dict)
         except ValidationError as e:
             self._validity.set_global_state("emergency")
             self._validity_message.setText(str(e))
+            self.metadata_cleared.emit(None)
 
     def get_full_model_dict(self):
         """Get the entered metadata as a dict"""
@@ -152,6 +162,20 @@ class ScanMetadata(BECWidget, QWidget):
         self._md_grid_layout = QGridLayout()
         self._md_grid_layout.setContentsMargins(0, 0, 0, 0)
         self._md_grid_layout.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
+
+    @SafeProperty(bool)
+    def hide_optional_metadata(self):  # type: ignore
+        """Property to hide the optional metadata table."""
+        return not self._additional_md_box.isVisible()
+
+    @hide_optional_metadata.setter
+    def hide_optional_metadata(self, hide: bool):
+        """Setter for the hide_optional_metadata property.
+
+        Args:
+            hide(bool): Hide or show the optional metadata table.
+        """
+        self._additional_md_box.setVisible(not hide)
 
 
 if __name__ == "__main__":  # pragma: no cover

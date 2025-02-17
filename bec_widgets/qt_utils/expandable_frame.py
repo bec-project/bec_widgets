@@ -1,8 +1,16 @@
 from __future__ import annotations
 
 from bec_qthemes import material_icon
-from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QToolButton
-from qtpy.QtWidgets import QFrame, QLabel, QLayout, QVBoxLayout, QWidget
+from qtpy.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLayout,
+    QSizePolicy,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
 

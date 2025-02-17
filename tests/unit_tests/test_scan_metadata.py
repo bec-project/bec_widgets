@@ -5,11 +5,9 @@ import pytest
 from bec_lib.metadata_schema import BasicScanMetadata
 from pydantic import Field
 from pydantic.types import Json
-from PySide6.QtCore import QItemSelectionModel, QModelIndex, QRect
-from qtpy.QtCore import QPoint, Qt
-from qtpy.QtWidgets import QCheckBox, QDoubleSpinBox, QLineEdit, QSpinBox, QWidget
+from qtpy.QtCore import QItemSelectionModel, QPoint, Qt
 
-from bec_widgets.widgets.editors.scan_metadata import AdditionalMetadataTableModel, ScanMetadata
+from bec_widgets.widgets.editors.scan_metadata import ScanMetadata
 from bec_widgets.widgets.editors.scan_metadata._metadata_widgets import (
     BoolMetadataField,
     FloatDecimalMetadataField,
@@ -191,7 +189,8 @@ def test_additional_metadata_table_add_row(table: AdditionalMetadataTable):
 def test_additional_metadata_table_delete_row(table: AdditionalMetadataTable):
     assert table._table_model.rowCount() == 3
     m = table._table_view.selectionModel()
-    m.select(table._table_view.indexAt(QPoint(40, 30)), QItemSelectionModel.SelectionFlag.Select)
+    item = table._table_view.indexAt(QPoint(0, 0)).siblingAtRow(1)
+    m.select(item, QItemSelectionModel.SelectionFlag.Select)
     table.delete_selected_rows()
     assert table._table_model.rowCount() == 2
     assert list(table.dump_dict().keys()) == ["key1", "key3"]

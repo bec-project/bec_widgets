@@ -1,10 +1,10 @@
 from collections import defaultdict
-from types import SimpleNamespace
+from types import NoneType, SimpleNamespace
 from typing import Optional
 
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import BaseModel, Field
-from qtpy.QtCore import Property, Signal, Slot
+from qtpy.QtCore import Signal
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import (
     QApplication,
@@ -18,12 +18,13 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.qt_utils.error_popups import SafeSlot
+from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.widgets.control.buttons.stop_button.stop_button import StopButton
 from bec_widgets.widgets.control.scan_control.scan_group_box import ScanGroupBox
+from bec_widgets.widgets.editors.scan_metadata.scan_metadata import ScanMetadata
 from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
 
 
@@ -42,6 +43,7 @@ class ScanControlConfig(ConnectionConfig):
 class ScanControl(BECWidget, QWidget):
     PLUGIN = True
     ICON_NAME = "tune"
+    ARG_BOX_POSITION: int = 2
 
     scan_started = Signal()
     scan_selected = Signal(str)
@@ -82,6 +84,8 @@ class ScanControl(BECWidget, QWidget):
         # Widget Default Parameters
         self.config.default_scan = default_scan
         self.config.allowed_scans = allowed_scans
+
+        self._scan_metadata: dict | None = None
 
         # Create and set main layout
         self._init_UI()
@@ -152,6 +156,20 @@ class ScanControl(BECWidget, QWidget):
         # Initialize scan selection
         self.populate_scans()
 
+        # Append metadata form
+        self._add_metadata_form()
+
+        self.layout.addStretch()
+
+    def _add_metadata_form(self):
+        self._metadata_form = ScanMetadata()
+        self.layout.addWidget(self._metadata_form)
+        self._metadata_form.update_with_new_scan(self.comboBox_scan_selection.currentText())
+        self.scan_selected.connect(self._metadata_form.update_with_new_scan)
+        self._metadata_form.metadata_updated.connect(self.update_scan_metadata)
+        self._metadata_form.metadata_cleared.connect(self.update_scan_metadata)
+        self._metadata_form.validate_form()
+
     def populate_scans(self):
         """Populates the scan selection combo box with available scans from BEC session."""
         self.available_scans = self.client.connector.get(
@@ -176,8 +194,9 @@ class ScanControl(BECWidget, QWidget):
         self.request_last_executed_scan_parameters()
         self.restore_scan_parameters(selected_scan_name)
 
-    @Slot()
-    def request_last_executed_scan_parameters(self):
+    @SafeSlot()
+    @SafeSlot(bool)
+    def request_last_executed_scan_parameters(self, *_):
         """
         Requests the last executed scan parameters from BEC and restores them to the scan control widget.
         """
@@ -211,7 +230,7 @@ class ScanControl(BECWidget, QWidget):
         else:
             self.last_scan_found = False
 
-    @Property(str)
+    @SafeProperty(str)
     def current_scan(self):
         """Returns the scan name for the currently selected scan."""
         return self.comboBox_scan_selection.currentText()
@@ -227,7 +246,7 @@ class ScanControl(BECWidget, QWidget):
             return
         self.comboBox_scan_selection.setCurrentText(scan_name)
 
-    @Slot(str)
+    @SafeSlot(str)
     def set_current_scan(self, scan_name: str):
         """Slot for setting the current scan to the given scan name.
 
@@ -236,7 +255,7 @@ class ScanControl(BECWidget, QWidget):
         """
         self.current_scan = scan_name
 
-    @Property(bool)
+    @SafeProperty(bool)
     def hide_arg_box(self):
         """Property to hide the argument box."""
         if self.arg_box is None:
@@ -253,7 +272,7 @@ class ScanControl(BECWidget, QWidget):
         if self.arg_box is not None:
             self.arg_box.setVisible(not hide)
 
-    @Property(bool)
+    @SafeProperty(bool)
     def hide_kwarg_boxes(self):
         """Property to hide the keyword argument boxes."""
         if len(self.kwarg_boxes) == 0:
@@ -274,7 +293,7 @@ class ScanControl(BECWidget, QWidget):
             for box in self.kwarg_boxes:
                 box.setVisible(not hide)
 
-    @Property(bool)
+    @SafeProperty(bool)
     def hide_scan_control_buttons(self):
         """Property to hide the scan control buttons."""
         return not self.button_run_scan.isVisible()
@@ -288,12 +307,40 @@ class ScanControl(BECWidget, QWidget):
         """
         self.show_scan_control_buttons(not hide)
 
-    @Slot(bool)
+    @SafeProperty(bool)
+    def hide_metadata(self):
+        """Property to hide the metadata form."""
+        return not self._metadata_form.isVisible()
+
+    @hide_metadata.setter
+    def hide_metadata(self, hide: bool):
+        """Setter for the hide_metadata property.
+
+        Args:
+            hide(bool): Hide or show the metadata form.
+        """
+        self._metadata_form.setVisible(not hide)
+
+    @SafeProperty(bool)
+    def hide_optional_metadata(self):
+        """Property to hide the optional metadata form."""
+        return self._metadata_form.hide_optional_metadata
+
+    @hide_optional_metadata.setter
+    def hide_optional_metadata(self, hide: bool):
+        """Setter for the hide_optional_metadata property.
+
+        Args:
+            hide(bool): Hide or show the optional metadata form.
+        """
+        self._metadata_form.hide_optional_metadata = hide
+
+    @SafeSlot(bool)
     def show_scan_control_buttons(self, show: bool):
         """Shows or hides the scan control buttons."""
         self.scan_control_group.setVisible(show)
 
-    @Property(bool)
+    @SafeProperty(bool)
     def hide_scan_selection_combobox(self):
         """Property to hide the scan selection combobox."""
         return not self.comboBox_scan_selection.isVisible()
@@ -307,12 +354,12 @@ class ScanControl(BECWidget, QWidget):
         """
         self.show_scan_selection_combobox(not hide)
 
-    @Slot(bool)
+    @SafeSlot(bool)
     def show_scan_selection_combobox(self, show: bool):
         """Shows or hides the scan selection combobox."""
         self.scan_selection_group.setVisible(show)
 
-    @Slot(str)
+    @SafeSlot(str)
     def scan_select(self, scan_name: str):
         """
         Slot for scan selection. Updates the scan control layout based on the selected scan.
@@ -335,7 +382,7 @@ class ScanControl(BECWidget, QWidget):
         self.update()
         self.adjustSize()
 
-    @Property(bool)
+    @SafeProperty(bool)
     def hide_add_remove_buttons(self):
         """Property to hide the add_remove buttons."""
         return self._hide_add_remove_buttons
@@ -358,10 +405,11 @@ class ScanControl(BECWidget, QWidget):
         Args:
             groups(list): List of dictionaries containing the gui_group information.
         """
+        position = self.ARG_BOX_POSITION + (1 if self.arg_box is not None else 0)
         for group in groups:
             box = ScanGroupBox(box_type="kwargs", config=group)
             box.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-            self.layout.addWidget(box)
+            self.layout.insertWidget(position + len(self.kwarg_boxes), box)
             self.kwarg_boxes.append(box)
 
     def add_arg_group(self, group: dict):
@@ -374,9 +422,9 @@ class ScanControl(BECWidget, QWidget):
         self.arg_box.device_selected.connect(self.emit_device_selected)
         self.arg_box.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.arg_box.hide_add_remove_buttons = self._hide_add_remove_buttons
-        self.layout.addWidget(self.arg_box)
+        self.layout.insertWidget(self.ARG_BOX_POSITION, self.arg_box)
 
-    @Slot(str)
+    @SafeSlot(str)
     def emit_device_selected(self, dev_names):
         """
         Emit the signal to inform about selected device(s)
@@ -454,10 +502,20 @@ class ScanControl(BECWidget, QWidget):
         scan_params = ScanParameterConfig(name=scan_name, args=args, kwargs=kwargs)
         self.config.scans[scan_name] = scan_params
 
+    @SafeSlot(dict)
+    @SafeSlot(NoneType)
+    def update_scan_metadata(self, md: dict | None):
+        self._scan_metadata = md
+        if md is None:
+            self.button_run_scan.setEnabled(False)
+        else:
+            self.button_run_scan.setEnabled(True)
+
     @SafeSlot(popup_error=True)
     def run_scan(self):
         """Starts the selected scan with the given parameters."""
         args, kwargs = self.get_scan_parameters()
+        kwargs["metadata"] = self._scan_metadata
         self.scan_args.emit(args)
         scan_function = getattr(self.scans, self.comboBox_scan_selection.currentText())
         if callable(scan_function):

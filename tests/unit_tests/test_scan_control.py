@@ -7,6 +7,7 @@ from bec_lib.messages import AvailableResourceMessage, ScanQueueHistoryMessage, 
 
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.control.scan_control import ScanControl
+from bec_widgets.widgets.editors.scan_metadata._metadata_widgets import StrMetadataField
 
 from .client_mocks import mocked_client
 
@@ -403,7 +404,7 @@ def test_run_line_scan_with_parameters(scan_control, mocked_client):
     expected_device = mocked_client.device_manager.devices.samx
     expected_args_list = [expected_device, args["start"], args["stop"]]
     assert called_args == tuple(expected_args_list)
-    assert called_kwargs == kwargs
+    assert called_kwargs == kwargs | {"metadata": {"sample_name": ""}}
 
     # Check the emitted signal
     mock_slot.assert_called_once()
@@ -479,7 +480,7 @@ def test_run_grid_scan_with_parameters(scan_control, mocked_client):
         args_row2["steps"],
     ]
     assert called_args == tuple(expected_args_list)
-    assert called_kwargs == kwargs
+    assert called_kwargs == kwargs | {"metadata": {"sample_name": ""}}
 
     # Check the emitted signal
     mock_slot.assert_called_once()
@@ -532,3 +533,22 @@ def test_get_scan_parameters_from_redis(scan_control, mocked_client):
 
     assert args == ["samx", 0.0, 2.0]
     assert kwargs == {"steps": 10, "relative": False, "exp_time": 2.0, "burst_at_each_point": 1}
+
+
+def test_scan_metadata_is_connected(scan_control):
+    assert scan_control._metadata_form._scan_name == "line_scan"
+    scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
+    assert scan_control._metadata_form._scan_name == "grid_scan"
+    sample_name = scan_control._metadata_form._md_grid_layout.itemAtPosition(0, 1).widget()
+    assert isinstance(sample_name, StrMetadataField)
+    sample_name._main_widget.setText("Test Sample")
+    scan_control._metadata_form._additional_metadata._table_model._data = [
+        ["test key 1", "test value 1"],
+        ["test key 2", "test value 2"],
+    ]
+    scan_control._metadata_form.validate_form()
+    assert scan_control._scan_metadata == {
+        "sample_name": "Test Sample",
+        "test key 1": "test value 1",
+        "test key 2": "test value 2",
+    }

@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from PySide6.QtWidgets import QSizePolicy
 from qtpy.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal  # type: ignore
 from qtpy.QtWidgets import (
     QApplication,
     QHBoxLayout,
-    QLabel,
     QPushButton,
+    QSizePolicy,
     QTreeView,
     QVBoxLayout,
     QWidget,
@@ -111,6 +110,7 @@ class AdditionalMetadataTable(QWidget):
         self._table_view.setSizePolicy(
             QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         )
+        self._table_view.setAlternatingRowColors(True)
         self._layout.addWidget(self._table_view)
 
         self._buttons = QVBoxLayout()
