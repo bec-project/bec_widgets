@@ -1,6 +1,6 @@
 import pyqtgraph as pg
 from qtpy.QtCore import Property
-from qtpy.QtWidgets import QApplication, QFrame, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QApplication, QFrame, QHBoxLayout, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
@@ -31,22 +31,20 @@ class RoundedFrame(BECWidget, QFrame):
         # Apply rounded frame styling
         self.setProperty("skip_settings", True)
         self.setObjectName("roundedFrame")
-        self.update_style()
 
         # Create a layout for the frame
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(5, 5, 5, 5)  # Set 5px margin
+        self.layout = QHBoxLayout(self)
+        self.layout.setContentsMargins(5, 5, 5, 5)  # Set 5px margin
 
         # Add the content widget to the layout
         if content_widget:
-            layout.addWidget(content_widget)
+            self.layout.addWidget(content_widget)
 
         # Store reference to the content widget
         self.content_widget = content_widget
 
-        # Automatically apply initial styles to the PlotWidget if applicable
-        if isinstance(content_widget, pg.PlotWidget):
-            self.apply_plot_widget_style()
+        # Automatically apply initial styles to the GraphicalLayoutWidget if applicable
+        self.apply_plot_widget_style()
 
         self._connect_to_theme_change()
 
@@ -64,10 +62,6 @@ class RoundedFrame(BECWidget, QFrame):
             self.background_color = "#141414"  # Dark mode
 
         self.update_style()
-
-        # Update PlotWidget's background color and axis styles if applicable
-        if isinstance(self.content_widget, pg.PlotWidget):
-            self.apply_plot_widget_style()
 
     @Property(int)
     def radius(self):
@@ -92,6 +86,7 @@ class RoundedFrame(BECWidget, QFrame):
                 }}
             """
             )
+        self.apply_plot_widget_style()
 
     def apply_plot_widget_style(self, border: str = "none"):
         """
@@ -100,35 +95,16 @@ class RoundedFrame(BECWidget, QFrame):
         Args:
             border (str): Border style (e.g., 'none', '1px solid red').
         """
-        if isinstance(self.content_widget, pg.PlotWidget):
-            # Sync PlotWidget's background color with the RoundedFrame's background color
-            self.content_widget.setBackground(self.background_color)
-
-            # Calculate contrast-optimized axis and label colors
-            if self.background_color == "#e9ecef":  # Light mode
-                label_color = "#000000"
-                axis_color = "#666666"
-            else:  # Dark mode
-                label_color = "#FFFFFF"
-                axis_color = "#CCCCCC"
-
-            # Apply axis label and tick colors
-            plot_item = self.content_widget.getPlotItem()
-            for axis in ["left", "right", "top", "bottom"]:
-                plot_item.getAxis(axis).setPen(pg.mkPen(color=axis_color))
-                plot_item.getAxis(axis).setTextPen(pg.mkPen(color=label_color))
-
-            # Change title color
-            plot_item.titleLabel.setText(plot_item.titleLabel.text, color=label_color)
-
+        if isinstance(self.content_widget, pg.GraphicsLayoutWidget):
             # Apply border style via stylesheet
             self.content_widget.setStyleSheet(
                 f"""
-                PlotWidget {{
+                GraphicsLayoutWidget {{
                     border: {border}; /* Explicitly set the border */
                 }}
             """
             )
+            self.content_widget.setBackground(self.background_color)
 
 
 class ExampleApp(QWidget):  # pragma: no cover
@@ -142,26 +118,27 @@ class ExampleApp(QWidget):  # pragma: no cover
         dark_button = DarkModeButton()
 
         # Create PlotWidgets
-        plot1 = pg.PlotWidget()
-        plot1.plot([1, 3, 2, 4, 6, 5], pen="r")
+        plot1 = pg.GraphicsLayoutWidget()
+        plot_item_1 = pg.PlotItem()
+        plot_item_1.plot([1, 3, 2, 4, 6, 5], pen="r")
+        plot1.plot_item = plot_item_1
 
-        plot2 = pg.PlotWidget()
-        plot2.plot([1, 2, 4, 8, 16, 32], pen="r")
+        plot2 = pg.GraphicsLayoutWidget()
+        plot_item_2 = pg.PlotItem()
+        plot_item_2.plot([1, 2, 4, 8, 16, 32], pen="r")
+        plot2.plot_item = plot_item_2
 
         # Wrap PlotWidgets in RoundedFrame
         rounded_plot1 = RoundedFrame(content_widget=plot1, theme_update=True)
         rounded_plot2 = RoundedFrame(content_widget=plot2, theme_update=True)
-        round = RoundedFrame()
 
         # Add to layout
         layout.addWidget(dark_button)
         layout.addWidget(rounded_plot1)
         layout.addWidget(rounded_plot2)
-        layout.addWidget(round)
 
         self.setLayout(layout)
 
-        # Simulate theme change after 2 seconds
         from qtpy.QtCore import QTimer
 
         def change_theme():

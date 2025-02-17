@@ -11,7 +11,6 @@ from bec_widgets.qt_utils.side_panel import SidePanel
 from bec_widgets.qt_utils.toolbar import MaterialIconAction, ModularToolBar, SeparatorAction
 from bec_widgets.utils import ConnectionConfig, Crosshair, EntryValidator
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import set_theme
 from bec_widgets.utils.fps_counter import FPSCounter
 from bec_widgets.utils.widget_state_manager import WidgetStateManager
 from bec_widgets.widgets.containers.layout_manager.layout_manager import LayoutManagerWidget
@@ -20,7 +19,7 @@ from bec_widgets.widgets.plots_next_gen.toolbar_bundles.mouse_interactions impor
     MouseInteractionToolbarBundle,
 )
 from bec_widgets.widgets.plots_next_gen.toolbar_bundles.plot_export import PlotExportBundle
-from bec_widgets.widgets.plots_next_gen.toolbar_bundles.save_state import SaveStateBundle
+from bec_widgets.widgets.plots_next_gen.toolbar_bundles.roi_bundle import ROIBundle
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
 logger = bec_logger.logger
@@ -83,8 +82,9 @@ class PlotBase(BECWidget, QWidget):
         self.entry_validator = EntryValidator(self.dev)
 
         # Base widgets elements
+        self.plot_widget = pg.GraphicsLayoutWidget(parent=self)
         self.plot_item = pg.PlotItem(viewBox=BECViewBox(enableMenu=True))
-        self.plot_widget = pg.PlotWidget(plotItem=self.plot_item)
+        self.plot_widget.addItem(self.plot_item)
         self.side_panel = SidePanel(self, orientation="left", panel_max_width=280)
         self.toolbar = ModularToolBar(target_widget=self, orientation="horizontal")
         self.init_toolbar()
@@ -94,13 +94,20 @@ class PlotBase(BECWidget, QWidget):
         self.crosshair = None
         self.fps_monitor = None
         self.fps_label = QLabel(alignment=Qt.AlignmentFlag.AlignRight)
+        self._user_x_label = ""
+        self._x_label_suffix = ""
 
         self._init_ui()
+
+        self._connect_to_theme_change()
+        self._update_theme()
+
+    def apply_theme(self, theme: str):
+        self.round_plot_widget.apply_theme(theme)
 
     def _init_ui(self):
         self.layout.addWidget(self.layout_manager)
         self.round_plot_widget = RoundedFrame(content_widget=self.plot_widget, theme_update=True)
-        self.round_plot_widget.apply_theme("dark")
 
         self.layout_manager.add_widget(self.round_plot_widget)
         self.layout_manager.add_widget_relative(self.fps_label, self.round_plot_widget, "top")
@@ -117,19 +124,15 @@ class PlotBase(BECWidget, QWidget):
 
         self.plot_export_bundle = PlotExportBundle("plot_export", target_widget=self)
         self.mouse_bundle = MouseInteractionToolbarBundle("mouse_interaction", target_widget=self)
-        self.state_export_bundle = SaveStateBundle("state_export", target_widget=self)
+        # self.state_export_bundle = SaveStateBundle("state_export", target_widget=self) #TODO ATM disabled, cannot be used in DockArea, which is exposed to the user
+        self.roi_bundle = ROIBundle("roi", target_widget=self)
 
         # Add elements to toolbar
         self.toolbar.add_bundle(self.plot_export_bundle, target_widget=self)
-        self.toolbar.add_bundle(self.state_export_bundle, target_widget=self)
+        # self.toolbar.add_bundle(self.state_export_bundle, target_widget=self) #TODO ATM disabled, cannot be used in DockArea, which is exposed to the user
         self.toolbar.add_bundle(self.mouse_bundle, target_widget=self)
+        self.toolbar.add_bundle(self.roi_bundle, target_widget=self)
 
-        self.toolbar.add_action("separator_0", SeparatorAction(), target_widget=self)
-        self.toolbar.add_action(
-            "crosshair",
-            MaterialIconAction(icon_name="point_scan", tooltip="Show Crosshair", checkable=True),
-            target_widget=self,
-        )
         self.toolbar.add_action("separator_1", SeparatorAction(), target_widget=self)
         self.toolbar.add_action(
             "fps_monitor",
@@ -141,7 +144,6 @@ class PlotBase(BECWidget, QWidget):
         self.toolbar.widgets["fps_monitor"].action.toggled.connect(
             lambda checked: setattr(self, "enable_fps_monitor", checked)
         )
-        self.toolbar.widgets["crosshair"].action.toggled.connect(self.toggle_crosshair)
 
     def add_side_menus(self):
         """Adds multiple menus to the side panel."""
@@ -256,12 +258,45 @@ class PlotBase(BECWidget, QWidget):
 
     @SafeProperty(str, doc="The text of the x label")
     def x_label(self) -> str:
-        return self.plot_item.getAxis("bottom").labelText
+        return self._user_x_label
 
     @x_label.setter
     def x_label(self, value: str):
-        self.plot_item.setLabel("bottom", text=value)
-        self.property_changed.emit("x_label", value)
+        self._user_x_label = value
+        self._apply_x_label()
+        self.property_changed.emit("x_label", self._user_x_label)
+
+    @property
+    def x_label_suffix(self) -> str:
+        """
+        A read-only (or internal) suffix automatically appended to the user label.
+        Not settable by the user directly from the UI.
+        """
+        return self._x_label_suffix
+
+    def set_x_label_suffix(self, suffix: str):
+        """
+        Public or protected method to update the suffix.
+        The user code or subclass (Waveform) can call this
+        when x_mode changes, but the AxisSettings won't show it.
+        """
+        self._x_label_suffix = suffix
+        self._apply_x_label()
+
+    @property
+    def x_label_combined(self) -> str:
+        """
+        The final label shown on the axis = user portion + suffix.
+        """
+        return self._user_x_label + self._x_label_suffix
+
+    def _apply_x_label(self):
+        """
+        Actually updates the pyqtgraph axis label text to
+        the combined label. Called whenever user label or suffix changes.
+        """
+        final_label = self.x_label_combined
+        self.plot_item.setLabel("bottom", text=final_label)
 
     @SafeProperty(str, doc="The text of the y label")
     def y_label(self) -> str:
@@ -545,6 +580,7 @@ class PlotBase(BECWidget, QWidget):
         self.unhook_crosshair()
         self.unhook_fps_monitor(delete_label=True)
         self.cleanup_pyqtgraph()
+        self.rpc_register.remove_rpc(self)
 
     def cleanup_pyqtgraph(self):
         """Cleanup pyqtgraph items."""
@@ -561,7 +597,6 @@ if __name__ == "__main__":  # pragma: no cover:
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    set_theme("dark")
     widget = PlotBase()
     widget.show()
     # Just some example data and parameters to test
