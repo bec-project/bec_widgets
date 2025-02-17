@@ -111,7 +111,7 @@ class BECConnector:
 
         # register widget to rpc register
         # be careful: when registering, and the object is not a BECWidget,
-        # cleanup has to called manually since there is no 'closeEvent'
+        # cleanup has to be called manually since there is no 'closeEvent'
         self.rpc_register = RPCRegister()
         self.rpc_register.add_rpc(self)
 
@@ -119,6 +119,8 @@ class BECConnector:
         self.error_utility = ErrorPopupUtility()
 
         self._thread_pool = QThreadPool.globalInstance()
+        # Store references to running workers so they're not garbage collected prematurely.
+        self._workers = []
 
     def submit_task(self, fn, *args, on_complete: pyqtSlot = None, **kwargs) -> Worker:
         """
@@ -147,11 +149,14 @@ class BECConnector:
             >>> def on_complete():
             >>>     print("Task complete")
             >>> self.submit_task(my_function, 1, 2, on_complete=on_complete)
-
         """
         worker = Worker(fn, *args, **kwargs)
         if on_complete:
             worker.signals.completed.connect(on_complete)
+        # Keep a reference to the worker so it is not garbage collected.
+        self._workers.append(worker)
+        # When the worker is done, remove it from our list.
+        worker.signals.completed.connect(lambda: self._workers.remove(worker))
         self._thread_pool.start(worker)
         return worker
 
@@ -183,10 +188,10 @@ class BECConnector:
     @_config_dict.setter
     def _config_dict(self, config: BaseModel) -> None:
         """
-        Get the configuration of the widget.
+        Set the configuration of the widget.
 
-        Returns:
-            dict: The configuration of the widget.
+        Args:
+            config (BaseModel): The new configuration model.
         """
         self.config = config
 
@@ -195,8 +200,8 @@ class BECConnector:
         Apply the configuration to the widget.
 
         Args:
-            config(dict): Configuration settings.
-            generate_new_id(bool): If True, generate a new GUI ID for the widget.
+            config (dict): Configuration settings.
+            generate_new_id (bool): If True, generate a new GUI ID for the widget.
         """
         self.config = ConnectionConfig(**config)
         if generate_new_id is True:
@@ -212,8 +217,8 @@ class BECConnector:
         Load the configuration of the widget from YAML.
 
         Args:
-            path(str): Path to the configuration file for non-GUI dialog mode.
-            gui(bool): If True, use the GUI dialog to load the configuration file.
+            path (str | None): Path to the configuration file for non-GUI dialog mode.
+            gui (bool): If True, use the GUI dialog to load the configuration file.
         """
         if gui is True:
             config = load_yaml_gui(self)
@@ -232,8 +237,8 @@ class BECConnector:
         Save the configuration of the widget to YAML.
 
         Args:
-            path(str): Path to save the configuration file for non-GUI dialog mode.
-            gui(bool): If True, use the GUI dialog to save the configuration file.
+            path (str | None): Path to save the configuration file for non-GUI dialog mode.
+            gui (bool): If True, use the GUI dialog to save the configuration file.
         """
         if gui is True:
             save_yaml_gui(self, self._config_dict)
@@ -241,7 +246,6 @@ class BECConnector:
             if path is None:
                 path = os.getcwd()
             file_path = os.path.join(path, f"{self.__class__.__name__}_config.yaml")
-
             save_yaml(file_path, self._config_dict)
 
     @pyqtSlot(str)
@@ -250,7 +254,7 @@ class BECConnector:
         Set the GUI ID for the widget.
 
         Args:
-            gui_id(str): GUI ID
+            gui_id (str): GUI ID.
         """
         self.config.gui_id = gui_id
         self.gui_id = gui_id
@@ -271,7 +275,7 @@ class BECConnector:
         """Update the client and device manager from BEC and create object for BEC shortcuts.
 
         Args:
-            client: BEC client
+            client: BEC client.
         """
         self.client = client
         self.get_bec_shortcuts()
@@ -282,12 +286,10 @@ class BECConnector:
         Update the configuration for the widget.
 
         Args:
-            config(ConnectionConfig): Configuration settings.
+            config (ConnectionConfig | dict): Configuration settings.
         """
         if isinstance(config, dict):
             config = ConnectionConfig(**config)
-            # TODO add error handler
-
         self.config = config
 
     def get_config(self, dict_output: bool = True) -> dict | BaseModel:
@@ -295,12 +297,45 @@ class BECConnector:
         Get the configuration of the widget.
 
         Args:
-            dict_output(bool): If True, return the configuration as a dictionary. If False, return the configuration as a pydantic model.
+            dict_output (bool): If True, return the configuration as a dictionary.
+                                If False, return the configuration as a pydantic model.
 
         Returns:
-            dict: The configuration of the plot widget.
+            dict | BaseModel: The configuration of the widget.
         """
         if dict_output:
             return self.config.model_dump()
         else:
             return self.config
+
+
+# --- Example usage of BECConnector: running a simple task ---
+if __name__ == "__main__":  # pragma: no cover
+    import sys
+
+    # Create a QApplication instance (required for QThreadPool)
+    app = QApplication(sys.argv)
+
+    connector = BECConnector()
+
+    def print_numbers():
+        """
+        Task function that prints numbers 1 to 10 with a 0.5 second delay between each.
+        """
+        for i in range(1, 11):
+            print(i)
+            time.sleep(0.5)
+
+    def task_complete():
+        """
+        Called when the task is complete.
+        """
+        print("Task complete")
+        # Exit the application after the task completes.
+        app.quit()
+
+    # Submit the task using the connector's submit_task method.
+    connector.submit_task(print_numbers, on_complete=task_complete)
+
+    # Start the Qt event loop.
+    sys.exit(app.exec_())
