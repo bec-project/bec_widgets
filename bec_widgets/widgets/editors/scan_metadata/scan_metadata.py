@@ -3,6 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+from PySide6.QtWidgets import QHBoxLayout, QToolButton
 from bec_lib.logger import bec_logger
 from bec_lib.metadata_schema import get_metadata_schema_for_scan
 from bec_qthemes import material_icon
@@ -10,6 +11,7 @@ from pydantic import Field, ValidationError
 from qtpy.QtWidgets import (
     QApplication,
     QComboBox,
+    QFrame,
     QGridLayout,
     QLabel,
     QLayout,
@@ -19,6 +21,7 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.qt_utils.compact_popup import CompactPopupWidget
 from bec_widgets.qt_utils.error_popups import SafeSlot
+from bec_widgets.qt_utils.expandable_frame import ExpandableGroupFrame
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.editors.scan_metadata._metadata_widgets import widget_from_type
 from bec_widgets.widgets.editors.scan_metadata.additional_metadata_table import (
@@ -49,22 +52,32 @@ class ScanMetadata(BECWidget, QWidget):
         self.set_schema(scan_name)
 
         self._layout = QVBoxLayout()
-        self._layout.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
+        self._layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self._layout)
-        self._layout.addWidget(QLabel("<b>Required scan metadata:</b>"))
+
+        self._required_md_box = ExpandableGroupFrame("Required scan metadata")
+        self._layout.addWidget(self._required_md_box)
+        self._required_md_box_layout = QHBoxLayout()
+        self._required_md_box.set_layout(self._required_md_box_layout)
+
         self._md_grid = QWidget()
-        self._layout.addWidget(self._md_grid)
+        self._required_md_box_layout.addWidget(self._md_grid)
         self._grid_container = QVBoxLayout()
         self._md_grid.setLayout(self._grid_container)
         self._new_grid_layout()
         self._grid_container.addLayout(self._md_grid_layout)
-        self._layout.addWidget(QLabel("<b>Additional metadata:</b>"))
+
+        self._additional_md_box = ExpandableGroupFrame("Additional metadata", expanded=False)
+        self._layout.addWidget(self._additional_md_box)
+        self._additional_md_box_layout = QHBoxLayout()
+        self._additional_md_box.set_layout(self._additional_md_box_layout)
+
         self._additional_metadata = AdditionalMetadataTable(initial_extras or [])
-        self._layout.addWidget(self._additional_metadata)
+        self._additional_md_box_layout.addWidget(self._additional_metadata)
 
         self._validity = CompactPopupWidget()
         self._validity.compact_view = True  # type: ignore
-        self._validity.label = "Validity"  # type: ignore
+        self._validity.label = "Metadata validity"  # type: ignore
         self._validity.compact_show_popup.setIcon(
             material_icon(icon_name="info", size=(10, 10), convert_to_pixmap=False)
         )
