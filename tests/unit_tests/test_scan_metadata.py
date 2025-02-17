@@ -1,11 +1,12 @@
 from decimal import Decimal
 from typing import Annotated
 
+from PySide6.QtCore import QItemSelectionModel, QModelIndex, QRect
 import pytest
 from bec_lib.metadata_schema import BasicScanMetadata
 from pydantic import Field
 from pydantic.types import Json
-from qtpy.QtCore import Qt
+from qtpy.QtCore import QPoint, Qt
 from qtpy.QtWidgets import QCheckBox, QDoubleSpinBox, QLineEdit, QSpinBox, QWidget
 
 from bec_widgets.widgets.editors.scan_metadata import AdditionalMetadataTableModel, ScanMetadata
@@ -189,7 +190,8 @@ def test_additional_metadata_table_add_row(table: AdditionalMetadataTable):
 
 def test_additional_metadata_table_delete_row(table: AdditionalMetadataTable):
     assert table._table_model.rowCount() == 3
-    table._table_view.selectRow(1)
+    m = table._table_view.selectionModel()
+    m.select(table._table_view.indexAt(QPoint(40, 30)), QItemSelectionModel.SelectionFlag.Select)
     table.delete_selected_rows()
     assert table._table_model.rowCount() == 2
     assert list(table.dump_dict().keys()) == ["key1", "key3"]

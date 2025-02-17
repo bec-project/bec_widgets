@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from PySide6.QtWidgets import QSizePolicy
 from qtpy.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal  # type: ignore
 from qtpy.QtWidgets import (
     QApplication,
     QHBoxLayout,
     QLabel,
     QPushButton,
-    QTableView,
+    QTreeView,
     QVBoxLayout,
     QWidget,
 )
@@ -105,9 +106,11 @@ class AdditionalMetadataTable(QWidget):
         self._layout = QHBoxLayout()
         self.setLayout(self._layout)
         self._table_model = AdditionalMetadataTableModel(initial_data)
-        self._table_view = QTableView()
+        self._table_view = QTreeView()
         self._table_view.setModel(self._table_model)
-        self._table_view.horizontalHeader().setStretchLastSection(True)
+        self._table_view.setSizePolicy(
+            QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        )
         self._layout.addWidget(self._table_view)
 
         self._buttons = QVBoxLayout()
