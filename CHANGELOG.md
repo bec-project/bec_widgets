@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.21.1 (2025-02-17)
+
+### Bug Fixes
+
+- **bec_connector**: Workers stored in reference to not be cleaned up with garbage collector
+  ([`383936f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/383936ffc2bd7d2e088d3367c76b14efa3d1732c))
+
+
 ## v1.21.0 (2025-02-17)
 
 ### Features
