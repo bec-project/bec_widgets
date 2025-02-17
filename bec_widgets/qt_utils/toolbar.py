@@ -18,6 +18,7 @@ from qtpy.QtWidgets import (
     QMainWindow,
     QMenu,
     QSizePolicy,
+    QStyle,
     QToolBar,
     QToolButton,
     QWidget,
@@ -26,6 +27,9 @@ from qtpy.QtWidgets import (
 import bec_widgets
 
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
+
+# Ensure that icons are shown in menus (especially on macOS)
+QApplication.setAttribute(Qt.AA_DontShowIconsInMenus, False)
 
 
 class ToolBarAction(ABC):
@@ -84,6 +88,21 @@ class IconAction(ToolBarAction):
         toolbar.addAction(self.action)
 
 
+class QtIconAction(ToolBarAction):
+    def __init__(self, standard_icon, tooltip=None, checkable=False, parent=None):
+        super().__init__(icon_path=None, tooltip=tooltip, checkable=checkable)
+        self.standard_icon = standard_icon
+        self.icon = QApplication.style().standardIcon(standard_icon)
+        self.action = QAction(self.icon, self.tooltip, parent)
+        self.action.setCheckable(self.checkable)
+
+    def add_to_toolbar(self, toolbar, target):
+        toolbar.addAction(self.action)
+
+    def get_icon(self):
+        return self.icon
+
+
 class MaterialIconAction(ToolBarAction):
     """
     Action with a Material icon for the toolbar.
@@ -111,7 +130,7 @@ class MaterialIconAction(ToolBarAction):
         self.icon_name = icon_name
         self.filled = filled
         self.color = color
-        # Generate the icon
+        # Generate the icon using the material_icon helper
         self.icon = material_icon(
             self.icon_name,
             size=(20, 20),
@@ -119,7 +138,6 @@ class MaterialIconAction(ToolBarAction):
             filled=self.filled,
             color=self.color,
         )
-        # Immediately create an QAction with the given parent
         self.action = QAction(self.icon, self.tooltip, parent=parent)
         self.action.setCheckable(self.checkable)
 
@@ -261,12 +279,15 @@ class ExpandableMenuAction(ToolBarAction):
         menu = QMenu(button)
         for action_id, action in self.actions.items():
             sub_action = QAction(action.tooltip, target)
-            if hasattr(action, "icon_path"):
+            sub_action.setIconVisibleInMenu(True)
+            if action.icon_path:
                 icon = QIcon()
                 icon.addFile(action.icon_path, size=QSize(20, 20))
                 sub_action.setIcon(icon)
-            elif hasattr(action, "get_icon"):
-                sub_action.setIcon(action.get_icon())
+            elif hasattr(action, "get_icon") and callable(action.get_icon):
+                sub_icon = action.get_icon()
+                if sub_icon and not sub_icon.isNull():
+                    sub_action.setIcon(sub_icon)
             sub_action.setCheckable(action.checkable)
             menu.addAction(sub_action)
             self.widgets[action_id] = sub_action
@@ -716,6 +737,35 @@ class MainWindow(QMainWindow):  # pragma: no cover
         self.toolbar.add_action_to_bundle(
             "main_actions", "new_action", new_action, target_widget=self
         )
+        menu_material_actions = {
+            "mat1": MaterialIconAction(
+                icon_name="home", tooltip="Material Home", checkable=True, parent=self
+            ),
+            "mat2": MaterialIconAction(
+                icon_name="settings", tooltip="Material Settings", checkable=True, parent=self
+            ),
+            "mat3": MaterialIconAction(
+                icon_name="info", tooltip="Material Info", checkable=True, parent=self
+            ),
+        }
+        menu_qt_actions = {
+            "qt1": QtIconAction(
+                standard_icon=QStyle.SP_FileIcon, tooltip="Qt File", checkable=True, parent=self
+            ),
+            "qt2": QtIconAction(
+                standard_icon=QStyle.SP_DirIcon, tooltip="Qt Directory", checkable=True, parent=self
+            ),
+            "qt3": QtIconAction(
+                standard_icon=QStyle.SP_TrashIcon, tooltip="Qt Trash", checkable=True, parent=self
+            ),
+        }
+        expandable_menu_material = ExpandableMenuAction(
+            label="Material Menu", actions=menu_material_actions
+        )
+        expandable_menu_qt = ExpandableMenuAction(label="Qt Menu", actions=menu_qt_actions)
+
+        self.toolbar.add_action("material_menu", expandable_menu_material, self)
+        self.toolbar.add_action("qt_menu", expandable_menu_qt, self)
 
 
 if __name__ == "__main__":  # pragma: no cover
