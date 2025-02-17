@@ -1,11 +1,11 @@
 from decimal import Decimal
 from typing import Annotated
 
-from PySide6.QtCore import QItemSelectionModel, QModelIndex, QRect
 import pytest
 from bec_lib.metadata_schema import BasicScanMetadata
 from pydantic import Field
 from pydantic.types import Json
+from PySide6.QtCore import QItemSelectionModel, QModelIndex, QRect
 from qtpy.QtCore import QPoint, Qt
 from qtpy.QtWidgets import QCheckBox, QDoubleSpinBox, QLineEdit, QSpinBox, QWidget
 
