@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.21.2 (2025-02-18)
+
+### Bug Fixes
+
+- **client_utils**: Autoupdate has correct propagation of BECDockArea to plugin repos
+  ([`056731c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/056731c9add7d92f7da7fa833343cf65e8f383a8))
+
+
 ## v1.21.1 (2025-02-17)
 
 ### Bug Fixes
