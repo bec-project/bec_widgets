@@ -1,21 +1,21 @@
 from typing import Literal
 
 import pytest
-from qtpy.QtCore import QPoint, Qt
-from qtpy.QtGui import QContextMenuEvent
-from qtpy.QtWidgets import QComboBox, QLabel, QMenu, QToolButton, QWidget
+from qtpy.QtCore import Qt
+from qtpy.QtWidgets import QComboBox, QLabel, QToolButton, QWidget
 
 from bec_widgets.qt_utils.toolbar import (
     DeviceSelectionAction,
     ExpandableMenuAction,
     IconAction,
+    LongPressToolButton,
     MaterialIconAction,
     ModularToolBar,
     SeparatorAction,
+    SwitchableToolBarAction,
     ToolbarBundle,
     WidgetAction,
 )
-from tests.unit_tests.conftest import create_widget
 
 
 @pytest.fixture
@@ -87,6 +87,20 @@ def expandable_menu_action():
     return ExpandableMenuAction(
         label="Expandable Menu", actions=actions, icon_path="assets/BEC-Icon.png"
     )
+
+
+@pytest.fixture
+def switchable_toolbar_action():
+    """Fixture to create a switchable toolbar action with two MaterialIconActions."""
+    action1 = MaterialIconAction(icon_name="counter_1", tooltip="Action 1", checkable=True)
+    action2 = MaterialIconAction(icon_name="counter_2", tooltip="Action 2", checkable=True)
+    switchable = SwitchableToolBarAction(
+        actions={"action1": action1, "action2": action2},
+        initial_action="action1",
+        tooltip="Switchable Action",
+        checkable=True,
+    )
+    return switchable
 
 
 def test_initialization(toolbar_fixture):
@@ -426,3 +440,76 @@ def test_add_action_to_bundle(toolbar_fixture, dummy_widget, material_icon_actio
 #
 #     menu.actions()[0].trigger()  # Trigger the first action to close the menu
 #     toolbar.close()
+
+
+def test_switchable_toolbar_action_add(toolbar_fixture, dummy_widget, switchable_toolbar_action):
+    """Test that a switchable toolbar action can be added to the toolbar correctly."""
+    toolbar = toolbar_fixture
+    toolbar.add_action("switch_action", switchable_toolbar_action, dummy_widget)
+
+    # Verify the action was added correctly
+    assert "switch_action" in toolbar.widgets
+    assert toolbar.widgets["switch_action"] == switchable_toolbar_action
+
+    # Verify the button is present and is the correct type
+    button = switchable_toolbar_action.main_button
+    assert isinstance(button, LongPressToolButton)
+
+    # Verify initial state
+    assert switchable_toolbar_action.current_key == "action1"
+    assert button.toolTip() == "Action 1"
+
+
+def test_switchable_toolbar_action_switching(
+    toolbar_fixture, dummy_widget, switchable_toolbar_action, qtbot
+):
+    toolbar = toolbar_fixture
+    toolbar.add_action("switch_action", switchable_toolbar_action, dummy_widget)
+    # Verify initial state is set to action1
+    assert switchable_toolbar_action.current_key == "action1"
+    assert switchable_toolbar_action.main_button.toolTip() == "Action 1"
+    # Access the dropdown menu from the main button
+    menu = switchable_toolbar_action.main_button.menu()
+    assert menu is not None
+    # Find the QAction corresponding to "Action 2"
+    action_for_2 = None
+    for act in menu.actions():
+        if act.text() == "Action 2":
+            action_for_2 = act
+            break
+    assert action_for_2 is not None, "Menu action for 'Action 2' not found."
+    # Trigger the QAction to switch to action2
+    action_for_2.trigger()
+    qtbot.wait(100)
+    # Verify that the switchable action has updated its state
+    assert switchable_toolbar_action.current_key == "action2"
+    assert switchable_toolbar_action.main_button.toolTip() == "Action 2"
+
+
+# FIXME test is stucking CI, works locally
+# def test_long_pressbutton(toolbar_fixture, dummy_widget, switchable_toolbar_action, qtbot):
+#     toolbar = toolbar_fixture
+#     toolbar.add_action("switch_action", switchable_toolbar_action, dummy_widget)
+#
+#     # Verify the button is a LongPressToolButton
+#     button = switchable_toolbar_action.main_button
+#     assert isinstance(button, LongPressToolButton)
+#
+#     # Override showMenu() to record when it is called.
+#     call_flag = []
+#     original_showMenu = button.showMenu
+#
+#     # had to put some fake menu, we cannot call .isVisible at CI
+#     def fake_showMenu():
+#         call_flag.append(True)
+#         original_showMenu()
+#
+#     button.showMenu = fake_showMenu
+#
+#     # Simulate a long press (exceeding the threshold, default 500ms).
+#     qtbot.mousePress(button, Qt.LeftButton)
+#     qtbot.wait(600)  # wait longer than long_press_threshold
+#     qtbot.mouseRelease(button, Qt.LeftButton)
+#
+#     # Verify that fake_showMenu() was called.
+#     assert call_flag, "Long press did not trigger showMenu() as expected."

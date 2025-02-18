@@ -8,7 +8,7 @@ from collections import defaultdict
 from typing import Dict, List, Literal, Tuple
 
 from bec_qthemes._icon.material_icons import material_icon
-from qtpy.QtCore import QSize, Qt
+from qtpy.QtCore import QSize, Qt, QTimer
 from qtpy.QtGui import QAction, QColor, QIcon
 from qtpy.QtWidgets import (
     QApplication,
@@ -21,6 +21,7 @@ from qtpy.QtWidgets import (
     QStyle,
     QToolBar,
     QToolButton,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -30,6 +31,38 @@ MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 # Ensure that icons are shown in menus (especially on macOS)
 QApplication.setAttribute(Qt.AA_DontShowIconsInMenus, False)
+
+
+class LongPressToolButton(QToolButton):
+    def __init__(self, *args, long_press_threshold=500, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.long_press_threshold = long_press_threshold
+        self._long_press_timer = QTimer(self)
+        self._long_press_timer.setSingleShot(True)
+        self._long_press_timer.timeout.connect(self.handleLongPress)
+        self._pressed = False
+        self._longPressed = False
+
+    def mousePressEvent(self, event):
+        self._pressed = True
+        self._longPressed = False
+        self._long_press_timer.start(self.long_press_threshold)
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self._pressed = False
+        if self._longPressed:
+            self._longPressed = False
+            self._long_press_timer.stop()
+            event.accept()  # Prevent normal click action after a long press
+            return
+        self._long_press_timer.stop()
+        super().mouseReleaseEvent(event)
+
+    def handleLongPress(self):
+        if self._pressed:
+            self._longPressed = True
+            self.showMenu()
 
 
 class ToolBarAction(ABC):
@@ -190,6 +223,86 @@ class DeviceSelectionAction(ToolBarAction):
 
     def set_combobox_style(self, color: str):
         self.device_combobox.setStyleSheet(f"QComboBox {{ background-color: {color}; }}")
+
+
+class SwitchableToolBarAction(ToolBarAction):
+    """
+    A split toolbar action that combines a main action and a drop-down menu for additional actions.
+
+    The main button displays the currently selected action's icon and tooltip. Clicking on the main button
+    triggers that action. Clicking on the drop-down arrow displays a menu with alternative actions. When an
+    alternative action is selected, it becomes the new default and its callback is immediately executed.
+
+    This design mimics the behavior seen in Adobe Photoshop or Affinity Designer toolbars.
+
+    Args:
+        actions (dict): A dictionary mapping a unique key to a ToolBarAction instance.
+        initial_action (str, optional): The key of the initial default action. If not provided, the first action is used.
+        tooltip (str, optional): An optional tooltip for the split action; if provided, it overrides the default action's tooltip.
+        checkable (bool, optional): Whether the action is checkable. Defaults to True.
+        parent (QWidget, optional): Parent widget for the underlying QAction.
+    """
+
+    def __init__(
+        self,
+        actions: Dict[str, ToolBarAction],
+        initial_action: str = None,
+        tooltip: str = None,
+        checkable: bool = True,
+        parent=None,
+    ):
+        super().__init__(icon_path=None, tooltip=tooltip, checkable=checkable)
+        self.actions = actions
+        self.current_key = initial_action if initial_action is not None else next(iter(actions))
+        self.parent = parent
+        self.checkable = checkable
+        self.main_button = None
+        self.menu_actions: Dict[str, QAction] = {}
+
+    def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
+        """
+        Adds the split action to the toolbar.
+
+        Args:
+            toolbar (QToolBar): The toolbar to add the action to.
+            target (QWidget): The target widget for the action.
+        """
+        self.main_button = LongPressToolButton(toolbar)
+        self.main_button.setPopupMode(QToolButton.MenuButtonPopup)
+        self.main_button.setCheckable(self.checkable)
+        default_action = self.actions[self.current_key]
+        self.main_button.setIcon(default_action.get_icon())
+        self.main_button.setToolTip(default_action.tooltip)
+        self.main_button.clicked.connect(self._trigger_current_action)
+        menu = QMenu(self.main_button)
+        self.menu_actions = {}
+        for key, action_obj in self.actions.items():
+            menu_action = QAction(action_obj.get_icon(), action_obj.tooltip, self.main_button)
+            menu_action.setIconVisibleInMenu(True)
+            menu_action.setCheckable(self.checkable)
+            menu_action.setChecked(key == self.current_key)
+            menu_action.triggered.connect(lambda checked, k=key: self._set_default_action(k))
+            menu.addAction(menu_action)
+            self.menu_actions[key] = menu_action
+        self.main_button.setMenu(menu)
+        toolbar.addWidget(self.main_button)
+
+    def _trigger_current_action(self):
+        action_obj = self.actions[self.current_key]
+        action_obj.action.trigger()
+
+    def _set_default_action(self, key: str):
+        self.current_key = key
+        new_action = self.actions[self.current_key]
+        self.main_button.setIcon(new_action.get_icon())
+        self.main_button.setToolTip(new_action.tooltip)
+        # Update check state of menu items
+        for k, menu_act in self.menu_actions.items():
+            menu_act.setChecked(k == key)
+        new_action.action.trigger()
+
+    def get_icon(self) -> QIcon:
+        return self.actions[self.current_key].get_icon()
 
 
 class WidgetAction(ToolBarAction):
@@ -677,10 +790,20 @@ class MainWindow(QMainWindow):  # pragma: no cover
         self.setWindowTitle("Toolbar / ToolbarBundle Demo")
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
+        self.test_label = QLabel(text="This is a test label.")
+        self.central_widget.layout = QVBoxLayout(self.central_widget)
+        self.central_widget.layout.addWidget(self.test_label)
 
         self.toolbar = ModularToolBar(parent=self, target_widget=self)
         self.addToolBar(self.toolbar)
 
+        self.add_switchable_button_checkable()
+        self.add_switchable_button_non_checkable()
+        self.add_widget_actions()
+        self.add_bundles()
+        self.add_menus()
+
+    def add_bundles(self):
         home_action = MaterialIconAction(
             icon_name="home", tooltip="Home", checkable=True, parent=self
         )
@@ -701,10 +824,10 @@ class MainWindow(QMainWindow):  # pragma: no cover
         self.toolbar.add_bundle(main_actions_bundle, target_widget=self)
 
         search_action = MaterialIconAction(
-            icon_name="search", tooltip="Search", checkable=True, parent=self
+            icon_name="search", tooltip="Search", checkable=False, parent=self
         )
         help_action = MaterialIconAction(
-            icon_name="help", tooltip="Help", checkable=True, parent=self
+            icon_name="help", tooltip="Help", checkable=False, parent=self
         )
         second_bundle = ToolbarBundle(
             bundle_id="secondary_actions",
@@ -718,6 +841,8 @@ class MainWindow(QMainWindow):  # pragma: no cover
         self.toolbar.add_action_to_bundle(
             "main_actions", "new_action", new_action, target_widget=self
         )
+
+    def add_menus(self):
         menu_material_actions = {
             "mat1": MaterialIconAction(
                 icon_name="home", tooltip="Material Home", checkable=True, parent=self
@@ -748,6 +873,55 @@ class MainWindow(QMainWindow):  # pragma: no cover
         self.toolbar.add_action("material_menu", expandable_menu_material, self)
         self.toolbar.add_action("qt_menu", expandable_menu_qt, self)
 
+    def add_switchable_button_checkable(self):
+        action1 = MaterialIconAction(
+            icon_name="counter_1", tooltip="Action 1", checkable=True, parent=self
+        )
+        action2 = MaterialIconAction(
+            icon_name="counter_2", tooltip="Action 2", checkable=True, parent=self
+        )
+
+        switchable_action = SwitchableToolBarAction(
+            actions={"action1": action1, "action2": action2},
+            initial_action="action1",
+            tooltip="Switchable Action",
+            checkable=True,
+            parent=self,
+        )
+        self.toolbar.add_action("switchable_action", switchable_action, self)
+
+        action1.action.toggled.connect(
+            lambda checked: self.test_label.setText(f"Action 1 triggered, checked = {checked}")
+        )
+        action2.action.toggled.connect(
+            lambda checked: self.test_label.setText(f"Action 2 triggered, checked = {checked}")
+        )
+
+    def add_switchable_button_non_checkable(self):
+        action1 = MaterialIconAction(
+            icon_name="counter_1", tooltip="Action 1", checkable=False, parent=self
+        )
+        action2 = MaterialIconAction(
+            icon_name="counter_2", tooltip="Action 2", checkable=False, parent=self
+        )
+
+        switchable_action = SwitchableToolBarAction(
+            actions={"action1": action1, "action2": action2},
+            initial_action="action1",
+            tooltip="Switchable Action",
+            checkable=False,
+            parent=self,
+        )
+        self.toolbar.add_action("switchable_action_no_toggle", switchable_action, self)
+
+        action1.action.triggered.connect(
+            lambda checked: self.test_label.setText(f"Action 1 triggered, checked = {checked}")
+        )
+        action2.action.triggered.connect(
+            lambda checked: self.test_label.setText(f"Action 2 triggered, checked = {checked}")
+        )
+
+    def add_widget_actions(self):
         combo = QComboBox()
         combo.addItems(["Option 1", "Option 2", "Option 3"])
         self.toolbar.add_action("device_combo", WidgetAction(label="Device:", widget=combo), self)
