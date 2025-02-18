@@ -199,7 +199,7 @@ class BECGuiClient(RPCBase):
                     # if the module is not found, we skip it
                     if spec is None:
                         continue
-                    return ep.load()(gui=self)
+                    return ep.load()(gui=self._top_level["main"].widget)
                 except Exception as e:
                     logger.error(f"Error loading auto update script from plugin: {str(e)}")
         return None
