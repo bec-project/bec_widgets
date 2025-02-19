@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v1.21.4 (2025-02-19)
+
+### Bug Fixes
+
+- **colors**: Pyqtgraph styling updated on the app level
+  ([`ae18279`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ae182796855719437bdf911c2e969e3f438d6982))
+
+- **plot_base**: Mouse interactions default state fetch to toolbar
+  ([`97c0ed5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/97c0ed53df21053fef9811c3dea3b79020137030))
+
+### Refactoring
+
+- **plot_base**: Change the PlotWidget to GraphicalLayoutWidget
+  ([`ff8e282`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ff8e282034f0970b69cf0447fc5f88b4f30bf470))
+
+
 ## v1.21.3 (2025-02-19)
 
 ### Bug Fixes
