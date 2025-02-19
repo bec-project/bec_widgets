@@ -760,9 +760,10 @@ class ModularToolBar(QToolBar):
 
     def update_separators(self):
         """
-        Hide separators adjacent to another separator or with no actions nearby.
+        Hide separators that are adjacent to another separator or have no non-separator actions between them.
         """
         toolbar_actions = self.actions()
+        # First pass: set visibility based on surrounding non-separator actions.
         for i, action in enumerate(toolbar_actions):
             if not action.isSeparator():
                 continue
@@ -782,6 +783,17 @@ class ModularToolBar(QToolBar):
                 action.setVisible(False)
             else:
                 action.setVisible(True)
+        # Second pass: ensure no two visible separators are adjacent.
+        prev = None
+        for action in toolbar_actions:
+            if action.isVisible() and action.isSeparator():
+                if prev and prev.isSeparator():
+                    action.setVisible(False)
+                else:
+                    prev = action
+            else:
+                if action.isVisible():
+                    prev = action
 
 
 class MainWindow(QMainWindow):  # pragma: no cover
