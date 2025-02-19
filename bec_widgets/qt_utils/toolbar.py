@@ -26,6 +26,8 @@ from qtpy.QtWidgets import (
 )
 
 import bec_widgets
+from bec_widgets.utils.colors import set_theme
+from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
@@ -815,6 +817,12 @@ class MainWindow(QMainWindow):  # pragma: no cover
         self.add_bundles()
         self.add_menus()
 
+        # For theme testing
+
+        self.dark_button = DarkModeButton(toolbar=True)
+        dark_mode_action = WidgetAction(label=None, widget=self.dark_button)
+        self.toolbar.add_action("dark_mode", dark_mode_action, self)
+
     def add_bundles(self):
         home_action = MaterialIconAction(
             icon_name="home", tooltip="Home", checkable=True, parent=self
@@ -941,6 +949,7 @@ class MainWindow(QMainWindow):  # pragma: no cover
 
 if __name__ == "__main__":  # pragma: no cover
     app = QApplication(sys.argv)
+    set_theme("light")
     main_window = MainWindow()
     main_window.show()
     sys.exit(app.exec_())
