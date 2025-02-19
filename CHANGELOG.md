@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.21.3 (2025-02-19)
+
+### Bug Fixes
+
+- **bec_signal_proxy**: Unblock signal timer cleanup added
+  ([`0addef5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0addef5f172a7cc1412ac146a6eec2a2caa8ad9c))
+
+
 ## v1.21.2 (2025-02-18)
 
 ### Bug Fixes
