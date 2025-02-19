@@ -1,8 +1,9 @@
 from typing import Literal
 
 import pytest
-from qtpy.QtCore import Qt
-from qtpy.QtWidgets import QComboBox, QLabel, QToolButton, QWidget
+from qtpy.QtCore import QPoint, Qt
+from qtpy.QtGui import QContextMenuEvent
+from qtpy.QtWidgets import QComboBox, QLabel, QMenu, QToolButton, QWidget
 
 from bec_widgets.qt_utils.toolbar import (
     DeviceSelectionAction,
@@ -364,82 +365,71 @@ def test_add_action_to_bundle(toolbar_fixture, dummy_widget, material_icon_actio
     assert index_new == index_last + 1
 
 
-# FIXME test is stucking CI, works locally
-# def test_context_menu_contains_added_actions(
-#     qtbot, icon_action, material_icon_action, dummy_widget
-# ):
-#     """
-#     Test that the toolbar's context menu lists all added toolbar actions.
-#     """
-#     toolbar = create_widget(
-#         qtbot, widget=ModularToolBar, target_widget=dummy_widget, orientation="horizontal"
-#     )
-#
-#     # Add two different actions
-#     toolbar.add_action("icon_action", icon_action, dummy_widget)
-#     toolbar.add_action("material_icon_action", material_icon_action, dummy_widget)
-#
-#     # Manually trigger the context menu event
-#     event = QContextMenuEvent(QContextMenuEvent.Mouse, QPoint(10, 10))
-#     toolbar.contextMenuEvent(event)
-#
-#     # The QMenu is executed in contextMenuEvent, so we can fetch all possible actions
-#     # from the displayed menu by searching for QMenu in the immediate children of the toolbar.
-#     menus = toolbar.findChildren(QMenu)
-#     assert len(menus) > 0
-#     menu = menus[-1]  # The most recently created menu
-#
-#     menu_action_texts = [action.text() for action in menu.actions()]
-#     # Check if the menu contains entries for both added actions
-#     assert any(icon_action.tooltip in text or "icon_action" in text for text in menu_action_texts)
-#     assert any(
-#         material_icon_action.tooltip in text or "material_icon_action" in text
-#         for text in menu_action_texts
-#     )
-#     menu.actions()[0].trigger()  # Trigger the first action to close the menu
-#     toolbar.close()
+def test_context_menu_contains_added_actions(
+    toolbar_fixture, icon_action, material_icon_action, dummy_widget, monkeypatch
+):
+    """
+    Test that the toolbar's context menu lists all added toolbar actions.
+    """
+    toolbar = toolbar_fixture
+
+    # Add two different actions
+    toolbar.add_action("icon_action", icon_action, dummy_widget)
+    toolbar.add_action("material_icon_action", material_icon_action, dummy_widget)
+
+    # Mock the QMenu.exec_ method to prevent the context menu from being displayed and block CI pipeline
+    monkeypatch.setattr(QMenu, "exec_", lambda self, pos=None: None)
+    event = QContextMenuEvent(QContextMenuEvent.Mouse, QPoint(10, 10))
+    toolbar.contextMenuEvent(event)
+    menus = toolbar.findChildren(QMenu)
+
+    assert len(menus) > 0
+    menu = menus[-1]
+    menu_action_texts = [action.text() for action in menu.actions()]
+    assert any(icon_action.tooltip in text or "icon_action" in text for text in menu_action_texts)
+    assert any(
+        material_icon_action.tooltip in text or "material_icon_action" in text
+        for text in menu_action_texts
+    )
 
 
-# FIXME test is stucking CI, works locally
-# def test_context_menu_toggle_action_visibility(qtbot, icon_action, dummy_widget):
-#     """
-#     Test that toggling action visibility works correctly through the toolbar's context menu.
-#     """
-#     toolbar = create_widget(
-#         qtbot, widget=ModularToolBar, target_widget=dummy_widget, orientation="horizontal"
-#     )
-#     # Add an action
-#     toolbar.add_action("icon_action", icon_action, dummy_widget)
-#     assert icon_action.action.isVisible()
-#
-#     # Manually trigger the context menu event
-#     event = QContextMenuEvent(QContextMenuEvent.Mouse, QPoint(10, 10))
-#     toolbar.contextMenuEvent(event)
-#
-#     # Grab the menu that was created
-#     menus = toolbar.findChildren(QMenu)
-#     assert len(menus) > 0
-#     menu = menus[-1]
-#
-#     # Locate the QAction in the menu
-#     matching_actions = [m for m in menu.actions() if m.text() == icon_action.tooltip]
-#     assert len(matching_actions) == 1
-#     action_in_menu = matching_actions[0]
-#
-#     # Toggle it off (uncheck)
-#     action_in_menu.setChecked(False)
-#     menu.triggered.emit(action_in_menu)
-#     # The action on the toolbar should now be hidden
-#     assert not icon_action.action.isVisible()
-#
-#     # Toggle it on (check)
-#     action_in_menu.setChecked(True)
-#     menu.triggered.emit(action_in_menu)
-#     # The action on the toolbar should be visible again
-#     assert icon_action.action.isVisible()
-#
-#     menu.actions()[0].trigger()  # Trigger the first action to close the menu
-#     toolbar.close()
+def test_context_menu_toggle_action_visibility(
+    toolbar_fixture, icon_action, dummy_widget, monkeypatch
+):
+    """
+    Test that toggling action visibility works correctly through the toolbar's context menu.
+    """
+    toolbar = toolbar_fixture
+    # Add an action
+    toolbar.add_action("icon_action", icon_action, dummy_widget)
+    assert icon_action.action.isVisible()
+
+    # Manually trigger the context menu event
+    monkeypatch.setattr(QMenu, "exec_", lambda self, pos=None: None)
+    event = QContextMenuEvent(QContextMenuEvent.Mouse, QPoint(10, 10))
+    toolbar.contextMenuEvent(event)
+
+    # Grab the menu that was created
+    menus = toolbar.findChildren(QMenu)
+    assert len(menus) > 0
+    menu = menus[-1]
+
+    # Locate the QAction in the menu
+    matching_actions = [m for m in menu.actions() if m.text() == icon_action.tooltip]
+    assert len(matching_actions) == 1
+    action_in_menu = matching_actions[0]
+
+    # Toggle it off (uncheck)
+    action_in_menu.setChecked(False)
+    menu.triggered.emit(action_in_menu)
+    # The action on the toolbar should now be hidden
+    assert not icon_action.action.isVisible()
+
+    # Toggle it on (check)
+    action_in_menu.setChecked(True)
+    menu.triggered.emit(action_in_menu)
+    # The action on the toolbar should be visible again
+    assert icon_action.action.isVisible()
 
 
 def test_switchable_toolbar_action_add(toolbar_fixture, dummy_widget, switchable_toolbar_action):
@@ -486,30 +476,27 @@ def test_switchable_toolbar_action_switching(
     assert switchable_toolbar_action.main_button.toolTip() == "Action 2"
 
 
-# FIXME test is stucking CI, works locally
-# def test_long_pressbutton(toolbar_fixture, dummy_widget, switchable_toolbar_action, qtbot):
-#     toolbar = toolbar_fixture
-#     toolbar.add_action("switch_action", switchable_toolbar_action, dummy_widget)
-#
-#     # Verify the button is a LongPressToolButton
-#     button = switchable_toolbar_action.main_button
-#     assert isinstance(button, LongPressToolButton)
-#
-#     # Override showMenu() to record when it is called.
-#     call_flag = []
-#     original_showMenu = button.showMenu
-#
-#     # had to put some fake menu, we cannot call .isVisible at CI
-#     def fake_showMenu():
-#         call_flag.append(True)
-#         original_showMenu()
-#
-#     button.showMenu = fake_showMenu
-#
-#     # Simulate a long press (exceeding the threshold, default 500ms).
-#     qtbot.mousePress(button, Qt.LeftButton)
-#     qtbot.wait(600)  # wait longer than long_press_threshold
-#     qtbot.mouseRelease(button, Qt.LeftButton)
-#
-#     # Verify that fake_showMenu() was called.
-#     assert call_flag, "Long press did not trigger showMenu() as expected."
+def test_long_pressbutton(toolbar_fixture, dummy_widget, switchable_toolbar_action, qtbot):
+    toolbar = toolbar_fixture
+    toolbar.add_action("switch_action", switchable_toolbar_action, dummy_widget)
+
+    # Verify the button is a LongPressToolButton
+    button = switchable_toolbar_action.main_button
+    assert isinstance(button, LongPressToolButton)
+
+    # Override showMenu() to record when it is called.
+    call_flag = []
+
+    # had to put some fake menu, we cannot call .isVisible at CI
+    def fake_showMenu():
+        call_flag.append(True)
+
+    button.showMenu = fake_showMenu
+
+    # Simulate a long press (exceeding the threshold, default 500ms).
+    qtbot.mousePress(button, Qt.LeftButton)
+    qtbot.wait(600)  # wait longer than long_press_threshold
+    qtbot.mouseRelease(button, Qt.LeftButton)
+
+    # Verify that fake_showMenu() was called.
+    assert call_flag, "Long press did not trigger showMenu() as expected."
