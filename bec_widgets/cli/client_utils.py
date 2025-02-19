@@ -147,7 +147,7 @@ def wait_for_server(client):
 ### is created, and client module is patched.
 class BECDockArea(client.BECDockArea):
     def delete(self):
-        if self is BECGuiClient._top_level["main"].widget:
+        if self is BECGuiClient._top_level["main"]:
             raise RuntimeError("Cannot delete main window")
         super().delete()
         try:
@@ -159,12 +159,6 @@ class BECDockArea(client.BECDockArea):
 
 client.BECDockArea = BECDockArea
 ### ----------------------------
-
-
-@dataclass
-class WidgetDesc:
-    title: str
-    widget: BECDockArea
 
 
 class BECGuiClient(RPCBase):
@@ -200,7 +194,7 @@ class BECGuiClient(RPCBase):
                     # if the module is not found, we skip it
                     if spec is None:
                         continue
-                    return ep.load()(gui=self._top_level["main"].widget)
+                    return ep.load()(gui=self._top_level["main"])
                 except Exception as e:
                     logger.error(f"Error loading auto update script from plugin: {str(e)}")
         return None
@@ -247,16 +241,14 @@ class BECGuiClient(RPCBase):
                 return self.auto_updates.do_update(msg)
 
     def _gui_post_startup(self):
-        self._top_level["main"] = WidgetDesc(
-            title="BEC Widgets", widget=BECDockArea(gui_id=self._gui_id)
-        )
+        self._top_level["main"] = BECDockArea(gui_id=self._gui_id)
         if self._auto_updates_enabled:
             if self._auto_updates is None:
                 auto_updates = self._get_update_script()
                 if auto_updates is None:
                     AutoUpdates.create_default_dock = True
                     AutoUpdates.enabled = True
-                    auto_updates = AutoUpdates(self._top_level["main"].widget)
+                    auto_updates = AutoUpdates(self._top_level["main"])
                 if auto_updates.create_default_dock:
                     auto_updates.start_default_dock()
                 self._start_update_script()
@@ -302,7 +294,7 @@ class BECGuiClient(RPCBase):
         rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
         rpc_client._run_rpc("show")
         for window in self._top_level.values():
-            window.widget.show()
+            window.show()
 
     def show_all(self):
         with wait_for_server(self):
@@ -313,7 +305,7 @@ class BECGuiClient(RPCBase):
             rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
             rpc_client._run_rpc("hide")
             for window in self._top_level.values():
-                window.widget.hide()
+                window.hide()
 
     def show(self):
         if self._process is not None:
@@ -328,7 +320,7 @@ class BECGuiClient(RPCBase):
     def main(self):
         """Return client to main dock area (in main window)"""
         with wait_for_server(self):
-            return self._top_level["main"].widget
+            return self._top_level["main"]
 
     def new(self, title: str = None) -> BECDockArea:
         """Ask main window to create a new top-level dock area"""

@@ -315,8 +315,7 @@ def test_rpc_gui_obj(connected_client_gui_obj, qtbot):
 
     assert gui.selected_device is None
     assert len(gui.windows) == 1
-    assert gui.windows["main"].widget is gui.main
-    assert gui.windows["main"].title == "BEC Widgets"
+    assert gui.windows["main"] is gui.main
     mw = gui.main
     assert mw.__class__.__name__ == "BECDockArea"
 
@@ -350,7 +349,7 @@ def test_rpc_gui_obj(connected_client_gui_obj, qtbot):
     gui.start()
     # gui.windows should have main, and main dock area should have same gui_id as before
     assert len(gui.windows) == 1
-    assert gui.windows["main"].widget._gui_id == mw._gui_id
+    assert gui.windows["main"]._gui_id == mw._gui_id
     # communication should work, main dock area should have same id and be visible
     gui_info = gui._dump()
     assert gui_info[mw._gui_id]["visible"]
