@@ -9,7 +9,7 @@ from bec_widgets.utils.widget_io import WidgetIO
 
 
 class AxisSettings(SettingWidget):
-    def __init__(self, parent=None, target_widget=None, *args, **kwargs):
+    def __init__(self, parent=None, target_widget=None, popup=False, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
 
         # This is a settings widget that depends on the target widget
@@ -18,9 +18,15 @@ class AxisSettings(SettingWidget):
         self.setProperty("skip_settings", True)
         self.setObjectName("AxisSettings")
         current_path = os.path.dirname(__file__)
-        form = UILoader().load_ui(os.path.join(current_path, "axis_settings_vertical.ui"), self)
+        if popup:
+            form = UILoader().load_ui(
+                os.path.join(current_path, "axis_settings_horizontal.ui"), self
+            )
+        else:
+            form = UILoader().load_ui(os.path.join(current_path, "axis_settings_vertical.ui"), self)
 
         self.target_widget = target_widget
+        self.popup = popup
 
         # # Scroll area
         self.scroll_area = QScrollArea(self)
@@ -34,9 +40,12 @@ class AxisSettings(SettingWidget):
         # self.layout.addWidget(self.ui)
         self.ui = form
 
-        self.connect_all_signals()
-        if self.target_widget is not None:
+        if self.target_widget is not None and self.popup is False:
+            self.connect_all_signals()
             self.target_widget.property_changed.connect(self.update_property)
+
+        if self.popup is True:
+            self.fetch_all_properties()
 
     def connect_all_signals(self):
         for widget in [
@@ -93,3 +102,49 @@ class AxisSettings(SettingWidget):
         was_blocked = widget_to_set.blockSignals(True)
         WidgetIO.set_value(widget_to_set, value)
         widget_to_set.blockSignals(was_blocked)
+
+    def fetch_all_properties(self):
+        """
+        Fetch all properties from the target widget and update the settings widget.
+        """
+        for widget in [
+            self.ui.title,
+            self.ui.inner_axes,
+            self.ui.outer_axes,
+            self.ui.x_label,
+            self.ui.x_min,
+            self.ui.x_max,
+            self.ui.x_log,
+            self.ui.x_grid,
+            self.ui.y_label,
+            self.ui.y_min,
+            self.ui.y_max,
+            self.ui.y_log,
+            self.ui.y_grid,
+        ]:
+            property_name = widget.objectName()
+            value = getattr(self.target_widget, property_name)
+            WidgetIO.set_value(widget, value)
+
+    def accept_changes(self):
+        """
+        Apply all properties from the settings widget to the target widget.
+        """
+        for widget in [
+            self.ui.title,
+            self.ui.inner_axes,
+            self.ui.outer_axes,
+            self.ui.x_label,
+            self.ui.x_min,
+            self.ui.x_max,
+            self.ui.x_log,
+            self.ui.x_grid,
+            self.ui.y_label,
+            self.ui.y_min,
+            self.ui.y_max,
+            self.ui.y_log,
+            self.ui.y_grid,
+        ]:
+            property_name = widget.objectName()
+            value = WidgetIO.get_value(widget)
+            setattr(self.target_widget, property_name, value)

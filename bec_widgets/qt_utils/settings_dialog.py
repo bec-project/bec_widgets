@@ -1,6 +1,6 @@
 from qtpy.QtWidgets import QDialog, QDialogButtonBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
-from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
+from bec_widgets.qt_utils.error_popups import SafeSlot
 
 
 class SettingWidget(QWidget):
@@ -20,14 +20,14 @@ class SettingWidget(QWidget):
     def set_target_widget(self, target_widget: QWidget):
         self.target_widget = target_widget
 
-    @Slot()
+    @SafeSlot()
     def accept_changes(self):
         """
         Accepts the changes made in the settings widget and applies them to the target widget.
         """
         pass
 
-    @Slot(dict)
+    @SafeSlot(dict)
     def display_current_settings(self, config_dict: dict):
         """
         Displays the current settings of the target widget in the settings widget.
@@ -54,12 +54,13 @@ class SettingsDialog(QDialog):
         settings_widget: SettingWidget = None,
         window_title: str = "Settings",
         config: dict = None,
+        modal: bool = False,
         *args,
         **kwargs,
     ):
         super().__init__(parent, *args, **kwargs)
 
-        self.setModal(False)
+        self.setModal(modal)
 
         self.setWindowTitle(window_title)
 
@@ -92,7 +93,7 @@ class SettingsDialog(QDialog):
         ok_button.setDefault(True)
         ok_button.setAutoDefault(True)
 
-    @Slot()
+    @SafeSlot()
     def accept(self):
         """
         Accept the changes made in the settings widget and close the dialog.
@@ -100,7 +101,7 @@ class SettingsDialog(QDialog):
         self.widget.accept_changes()
         super().accept()
 
-    @Slot()
+    @SafeSlot()
     def apply_changes(self):
         """
         Apply the changes made in the settings widget without closing the dialog.

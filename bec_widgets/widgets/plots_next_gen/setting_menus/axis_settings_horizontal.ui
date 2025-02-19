@@ -6,67 +6,131 @@
             <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>427</width>
-                <height>270</height>
+                <width>486</width>
+                <height>300</height>
             </rect>
-        </property>
-        <property name="minimumSize">
-            <size>
-                <width>0</width>
-                <height>250</height>
-            </size>
-        </property>
-        <property name="maximumSize">
-            <size>
-                <width>16777215</width>
-                <height>278</height>
-            </size>
         </property>
         <property name="windowTitle">
             <string>Form</string>
         </property>
         <layout class="QGridLayout" name="gridLayout">
-            <item row="0" column="0" colspan="2">
-                <layout class="QHBoxLayout" name="horizontalLayout">
-                    <item>
-                        <widget class="QLabel" name="plot_title_label">
-                            <property name="text">
-                                <string>Plot Title</string>
-                            </property>
-                        </widget>
-                    </item>
-                    <item>
-                        <widget class="QLineEdit" name="plot_title"/>
-                    </item>
-                </layout>
-            </item>
             <item row="1" column="0">
+                <widget class="QLabel" name="label">
+                    <property name="text">
+                        <string>Inner Axes</string>
+                    </property>
+                </widget>
+            </item>
+            <item row="1" column="1">
+                <widget class="ToggleSwitch" name="inner_axes"/>
+            </item>
+            <item row="1" column="2">
                 <widget class="QLabel" name="label_outer_axes">
                     <property name="text">
                         <string>Outer Axes</string>
                     </property>
                 </widget>
             </item>
-            <item row="2" column="1">
+            <item row="1" column="3">
+                <widget class="ToggleSwitch" name="outer_axes">
+                    <property name="checked" stdset="0">
+                        <bool>false</bool>
+                    </property>
+                </widget>
+            </item>
+            <item row="2" column="0" colspan="2">
+                <widget class="QGroupBox" name="x_axis_box">
+                    <property name="title">
+                        <string>X Axis</string>
+                    </property>
+                    <layout class="QGridLayout" name="gridLayout_4">
+                        <item row="5" column="0">
+                            <widget class="QLabel" name="x_grid_label">
+                                <property name="text">
+                                    <string>Grid</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="3" column="2">
+                            <widget class="ToggleSwitch" name="x_log">
+                                <property name="checked" stdset="0">
+                                    <bool>false</bool>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="2" column="2">
+                            <widget class="QDoubleSpinBox" name="x_max">
+                                <property name="alignment">
+                                    <set>Qt::AlignmentFlag::AlignCenter</set>
+                                </property>
+                                <property name="minimum">
+                                    <double>-9999.000000000000000</double>
+                                </property>
+                                <property name="maximum">
+                                    <double>9999.000000000000000</double>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="2" column="0">
+                            <widget class="QLabel" name="x_max_label">
+                                <property name="text">
+                                    <string>Max</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="5" column="2">
+                            <widget class="ToggleSwitch" name="x_grid">
+                                <property name="checked" stdset="0">
+                                    <bool>false</bool>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="1" column="2">
+                            <widget class="QDoubleSpinBox" name="x_min">
+                                <property name="alignment">
+                                    <set>Qt::AlignmentFlag::AlignCenter</set>
+                                </property>
+                                <property name="minimum">
+                                    <double>-9999.000000000000000</double>
+                                </property>
+                                <property name="maximum">
+                                    <double>9999.000000000000000</double>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="3" column="0">
+                            <widget class="QLabel" name="x_scale_label">
+                                <property name="text">
+                                    <string>Log</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="1" column="0" colspan="2">
+                            <widget class="QLabel" name="x_min_label">
+                                <property name="text">
+                                    <string>Min</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="0" column="0">
+                            <widget class="QLabel" name="x_label_label">
+                                <property name="text">
+                                    <string>Label</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="0" column="2">
+                            <widget class="QLineEdit" name="x_label"/>
+                        </item>
+                    </layout>
+                </widget>
+            </item>
+            <item row="2" column="2" colspan="2">
                 <widget class="QGroupBox" name="y_axis_box">
                     <property name="title">
                         <string>Y Axis</string>
                     </property>
                     <layout class="QGridLayout" name="gridLayout_5">
-                        <item row="3" column="2">
-                            <widget class="QComboBox" name="y_scale">
-                                <item>
-                                    <property name="text">
-                                        <string>linear</string>
-                                    </property>
-                                </item>
-                                <item>
-                                    <property name="text">
-                                        <string>log</string>
-                                    </property>
-                                </item>
-                            </widget>
-                        </item>
                         <item row="2" column="2">
                             <widget class="QDoubleSpinBox" name="y_max">
                                 <property name="alignment">
@@ -106,7 +170,7 @@
                         <item row="3" column="0">
                             <widget class="QLabel" name="y_scale_label">
                                 <property name="text">
-                                    <string>Scale</string>
+                                    <string>Log</string>
                                 </property>
                             </widget>
                         </item>
@@ -124,13 +188,6 @@
                                 </property>
                             </widget>
                         </item>
-                        <item row="4" column="2">
-                            <widget class="QCheckBox" name="y_grid">
-                                <property name="text">
-                                    <string/>
-                                </property>
-                            </widget>
-                        </item>
                         <item row="4" column="0">
                             <widget class="QLabel" name="y_grid_label">
                                 <property name="text">
@@ -138,109 +195,36 @@
                                 </property>
                             </widget>
                         </item>
-                    </layout>
-                </widget>
-            </item>
-            <item row="2" column="0">
-                <widget class="QGroupBox" name="x_axis_box">
-                    <property name="title">
-                        <string>X Axis</string>
-                    </property>
-                    <layout class="QGridLayout" name="gridLayout_4">
-                        <item row="3" column="0">
-                            <widget class="QLabel" name="x_scale_label">
-                                <property name="text">
-                                    <string>Scale</string>
-                                </property>
-                            </widget>
-                        </item>
-                        <item row="1" column="2">
-                            <widget class="QDoubleSpinBox" name="x_min">
-                                <property name="alignment">
-                                    <set>Qt::AlignmentFlag::AlignCenter</set>
-                                </property>
-                                <property name="minimum">
-                                    <double>-9999.000000000000000</double>
-                                </property>
-                                <property name="maximum">
-                                    <double>9999.000000000000000</double>
-                                </property>
-                            </widget>
-                        </item>
-                        <item row="1" column="0" colspan="2">
-                            <widget class="QLabel" name="x_min_label">
-                                <property name="text">
-                                    <string>Min</string>
-                                </property>
-                            </widget>
-                        </item>
-                        <item row="2" column="2">
-                            <widget class="QDoubleSpinBox" name="x_max">
-                                <property name="alignment">
-                                    <set>Qt::AlignmentFlag::AlignCenter</set>
-                                </property>
-                                <property name="minimum">
-                                    <double>-9999.000000000000000</double>
-                                </property>
-                                <property name="maximum">
-                                    <double>9999.000000000000000</double>
-                                </property>
-                            </widget>
-                        </item>
                         <item row="3" column="2">
-                            <widget class="QComboBox" name="x_scale">
-                                <item>
-                                    <property name="text">
-                                        <string>linear</string>
-                                    </property>
-                                </item>
-                                <item>
-                                    <property name="text">
-                                        <string>log</string>
-                                    </property>
-                                </item>
-                            </widget>
-                        </item>
-                        <item row="2" column="0">
-                            <widget class="QLabel" name="x_max_label">
-                                <property name="text">
-                                    <string>Max</string>
-                                </property>
-                            </widget>
-                        </item>
-                        <item row="0" column="2">
-                            <widget class="QLineEdit" name="x_label"/>
-                        </item>
-                        <item row="0" column="0">
-                            <widget class="QLabel" name="x_label_label">
-                                <property name="text">
-                                    <string>Label</string>
+                            <widget class="ToggleSwitch" name="y_log">
+                                <property name="checked" stdset="0">
+                                    <bool>false</bool>
                                 </property>
                             </widget>
                         </item>
                         <item row="4" column="2">
-                            <widget class="QCheckBox" name="x_grid">
-                                <property name="text">
-                                    <string/>
-                                </property>
-                            </widget>
-                        </item>
-                        <item row="4" column="0">
-                            <widget class="QLabel" name="x_grid_label">
-                                <property name="text">
-                                    <string>Grid</string>
+                            <widget class="ToggleSwitch" name="y_grid">
+                                <property name="checked" stdset="0">
+                                    <bool>false</bool>
                                 </property>
                             </widget>
                         </item>
                     </layout>
                 </widget>
             </item>
-            <item row="1" column="1">
-                <widget class="ToggleSwitch" name="switch_outer_axes">
-                    <property name="checked" stdset="0">
-                        <bool>false</bool>
-                    </property>
-                </widget>
+            <item row="0" column="0" colspan="4">
+                <layout class="QHBoxLayout" name="horizontalLayout">
+                    <item>
+                        <widget class="QLabel" name="plot_title_label">
+                            <property name="text">
+                                <string>Plot Title</string>
+                            </property>
+                        </widget>
+                    </item>
+                    <item>
+                        <widget class="QLineEdit" name="title"/>
+                    </item>
+                </layout>
             </item>
         </layout>
     </widget>
