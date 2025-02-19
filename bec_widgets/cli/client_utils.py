@@ -200,7 +200,7 @@ class BECGuiClient(RPCBase):
         return None
 
     @property
-    def selected_device(self):
+    def selected_device(self) -> str | None:
         """
         Selected device for the plot.
         """
@@ -256,7 +256,7 @@ class BECGuiClient(RPCBase):
         self._do_show_all()
         self._gui_started_event.set()
 
-    def start_server(self, wait=False) -> None:
+    def _start_server(self, wait=False) -> None:
         """
         Start the GUI server, and execute callback when it is launched
         """
@@ -287,8 +287,12 @@ class BECGuiClient(RPCBase):
         rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
         return rpc_client._run_rpc("_dump")
 
+    def _start(self):
+        return self._start_server()
+
     def start(self):
-        return self.start_server()
+        # FIXME keeping backwards compatibility for now
+        return self._start()
 
     def _do_show_all(self):
         rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
@@ -311,7 +315,7 @@ class BECGuiClient(RPCBase):
         if self._process is not None:
             return self.show_all()
         # backward compatibility: show() was also starting server
-        return self.start_server(wait=True)
+        return self._start_server(wait=True)
 
     def hide(self):
         return self.hide_all()

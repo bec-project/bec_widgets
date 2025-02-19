@@ -77,7 +77,7 @@ def test_client_utils_passes_client_config_to_server(bec_dispatcher):
     with bec_client_mixin() as mixin:
         with mock.patch("bec_widgets.cli.client_utils._start_plot_process") as mock_start_plot:
             mock_start_plot.return_value = [mock.MagicMock(), mock.MagicMock()]
-            mixin.start_server(
+            mixin._start_server(
                 wait=False
             )  # the started event will not be set, wait=True would block forever
             mock_start_plot.assert_called_once_with(

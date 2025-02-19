@@ -342,10 +342,10 @@ def test_rpc_gui_obj(connected_client_gui_obj, qtbot):
     assert gui.gui_is_alive()
     gui.close()
     assert not gui.gui_is_alive()
-    gui.start_server(wait=True)
+    gui._start_server(wait=True)
     assert gui.gui_is_alive()
     # calling start multiple times should not change anything
-    gui.start_server(wait=True)
+    gui._start_server(wait=True)
     gui.start()
     # gui.windows should have main, and main dock area should have same gui_id as before
     assert len(gui.windows) == 1
