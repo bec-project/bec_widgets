@@ -1,5 +1,6 @@
 from qtpy.QtWidgets import QApplication, QMainWindow
 
+from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils import BECConnector
 from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
 
@@ -33,8 +34,15 @@ class BECMainWindow(QMainWindow, BECConnector):
         }
         return info
 
-    def new_dock_area(self, name):
-        dock_area = BECDockArea()
+    def new_dock_area(self, name=None):
+        name = name or "BEC Widgets"
+        self.rpc_register = RPCRegister()
+        gui_id = name.replace(" ", "_")
+        existing_widgets = self.rpc_register.get_rpc_by_type(gui_id)
+        if existing_widgets:
+            name = f"{name} {len(existing_widgets) + 1}"
+
+        dock_area = BECDockArea(gui_id=name.replace(" ", "_"))
         dock_area.resize(dock_area.minimumSizeHint())
         dock_area.window().setWindowTitle(name)
         dock_area.show()

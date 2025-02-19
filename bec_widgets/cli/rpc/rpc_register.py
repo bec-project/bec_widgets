@@ -1,9 +1,25 @@
 from __future__ import annotations
 
+from functools import wraps
 from threading import Lock
+from typing import Callable
 from weakref import WeakValueDictionary
 
 from qtpy.QtCore import QObject
+
+
+def broadcast_update(func):
+    """
+    Decorator to broadcast updates to the RPCRegister whenever a new RPC object is added or removed.
+    """
+
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        result = func(self, *args, **kwargs)
+        self.broadcast()
+        return result
+
+    return wrapper
 
 
 class RPCRegister:
@@ -26,7 +42,9 @@ class RPCRegister:
             return
         self._rpc_register = WeakValueDictionary()
         self._initialized = True
+        self.callbacks = []
 
+    @broadcast_update
     def add_rpc(self, rpc: QObject):
         """
         Add an RPC object to the register.
@@ -38,6 +56,7 @@ class RPCRegister:
             raise ValueError("RPC object must have a 'gui_id' attribute.")
         self._rpc_register[rpc.gui_id] = rpc
 
+    @broadcast_update
     def remove_rpc(self, rpc: str):
         """
         Remove an RPC object from the register.
@@ -72,6 +91,38 @@ class RPCRegister:
         with self._lock:
             connections = dict(self._rpc_register)
         return connections
+
+    def get_rpc_by_type(self, type_name) -> list[str]:
+        """
+        Get all RPC objects of a certain type.
+
+        Args:
+            type_name(str): The type of the RPC object to be retrieved.
+
+        Returns:
+            list: A list of RPC objects of the given type.
+        """
+        rpc_objects = [rpc for rpc in self._rpc_register if rpc.startswith(type_name)]
+        return rpc_objects
+
+    def broadcast(self):
+        """
+        Broadcast the update to all the callbacks.
+        """
+        print("Broadcasting")
+        connections = self.list_all_connections()
+        for callback in self.callbacks:
+            callback(connections)
+
+    def add_callback(self, callback: Callable[[dict], None]):
+        """
+        Add a callback that will be called whenever the registry is updated.
+
+        Args:
+            callback(Callable[[dict], None]): The callback to be added. It should accept a dictionary of all the
+            registered RPC objects as an argument.
+        """
+        self.callbacks.append(callback)
 
     @classmethod
     def reset_singleton(cls):

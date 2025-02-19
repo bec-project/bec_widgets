@@ -179,6 +179,7 @@ class BECGuiClient(RPCBase):
         self._gui_started_event = threading.Event()
         self._process = None
         self._process_output_processing_thread = None
+        self._exposed_widgets = []
 
     @property
     def windows(self):
@@ -329,19 +330,31 @@ class BECGuiClient(RPCBase):
         with wait_for_server(self):
             return self._top_level["main"].widget
 
-    def new(self, title):
+    def new(self, title: str = None) -> BECDockArea:
         """Ask main window to create a new top-level dock area"""
         with wait_for_server(self):
             rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
             widget = rpc_client._run_rpc("new_dock_area", title)
-            self._top_level[widget._gui_id] = WidgetDesc(title=title, widget=widget)
+            self._top_level[widget._gui_id] = widget
+            setattr(self, widget._gui_id, widget)
+            self._exposed_widgets.append(widget._gui_id)
             return widget
+
+    def _update_top_level_widgets(self):
+        for widget_id in self._exposed_widgets:
+            delattr(self, widget_id)
+        self._exposed_widgets.clear()
+
+        for widget_id, widget in self._top_level.items():
+            setattr(self, widget_id, widget)
+            self._exposed_widgets.append(widget_id)
 
     def close(self) -> None:
         """
         Close the gui window.
         """
         self._top_level.clear()
+        self._update_top_level_widgets()
 
         if self._gui_started_timer is not None:
             self._gui_started_timer.cancel()

@@ -152,6 +152,24 @@ class BECWidgetsCLIServer:
         except RedisError as exc:
             logger.error(f"Error while emitting heartbeat: {exc}")
 
+    def broadcast_registry_update(self, connections: dict):
+        """
+        Broadcast the updated registry to all clients.
+        """
+
+        # We only need to broadcast the dock areas
+        data = {
+            key: self.serialize_object(val)
+            for key, val in connections.items()
+            if val.__class__.__name__ == "BECDockArea"
+        }
+        logger.info(f"Broadcasting registry update: {data}")
+        # self.client.connector.set(
+        #     MessageEndpoints.gui_registry_update(self.gui_id),
+        #     messages.RegistryUpdateMessage(connections=connections),
+        #     expire=10,
+        # )
+
     def shutdown(self):  # TODO not sure if needed when cleanup is done at level of BECConnector
         logger.info(f"Shutting down server with gui_id: {self.gui_id}")
         self.status = messages.BECStatus.IDLE
@@ -263,6 +281,7 @@ def main():
             win.setWindowTitle("BEC Widgets")
 
             RPCRegister().add_rpc(win)
+            RPCRegister().add_callback(server.broadcast_registry_update)
 
             gui = server.gui
             win.setCentralWidget(gui)
