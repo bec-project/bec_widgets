@@ -1,6 +1,38 @@
 # CHANGELOG
 
 
+## v1.22.0 (2025-02-19)
+
+### Bug Fixes
+
+- **modular_toolbar**: Add action to an already existing bundle
+  ([`4c4f159`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4c4f1592c29974bb095c3c8325e93a1383efa289))
+
+- **toolbar**: Qmenu Icons are visible
+  ([`c2c0221`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c2c022154bddc15d81eb55aad912d8fe1e34c698))
+
+- **toolbar**: Update_separators logic updated, there cannot be two separators next to each other
+  ([`facb8c3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/facb8c30ffa3b12a97c7c68f8594b0354372ca17))
+
+- **toolbar**: Widget actions are more compact
+  ([`ef36a71`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ef36a7124d54319c2cd592433c95e4f7513e982e))
+
+### Features
+
+- **toolbar**: Switchabletoolbarbutton
+  ([`333570b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/333570ba2fe67cb51fdbab17718003dfdb7f7b55))
+
+### Refactoring
+
+- **toolbar**: Added dark mode button for testing appearance for the toolbar example
+  ([`6b08f7c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6b08f7cfb2115609a6dc6f681631ecfae23fa899))
+
+### Testing
+
+- **toolbar**: Blocking tests fixed
+  ([`6ae33a2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6ae33a23a62eafb7c820e1fde9d6d91ec1796e55))
+
+
 ## v1.21.4 (2025-02-19)
 
 ### Bug Fixes
