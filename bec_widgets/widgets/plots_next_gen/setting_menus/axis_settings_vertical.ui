@@ -20,19 +20,6 @@
                         <string>X Axis</string>
                     </property>
                     <layout class="QGridLayout" name="gridLayout_4">
-                        <item row="2" column="2">
-                            <widget class="QDoubleSpinBox" name="x_max">
-                                <property name="alignment">
-                                    <set>Qt::AlignmentFlag::AlignCenter</set>
-                                </property>
-                                <property name="minimum">
-                                    <double>-9999.000000000000000</double>
-                                </property>
-                                <property name="maximum">
-                                    <double>9999.000000000000000</double>
-                                </property>
-                            </widget>
-                        </item>
                         <item row="3" column="0">
                             <widget class="QLabel" name="x_scale_label">
                                 <property name="text">
@@ -64,19 +51,6 @@
                                 </property>
                             </widget>
                         </item>
-                        <item row="1" column="2">
-                            <widget class="QDoubleSpinBox" name="x_min">
-                                <property name="alignment">
-                                    <set>Qt::AlignmentFlag::AlignCenter</set>
-                                </property>
-                                <property name="minimum">
-                                    <double>-9999.000000000000000</double>
-                                </property>
-                                <property name="maximum">
-                                    <double>9999.000000000000000</double>
-                                </property>
-                            </widget>
-                        </item>
                         <item row="1" column="0" colspan="2">
                             <widget class="QLabel" name="x_min_label">
                                 <property name="text">
@@ -97,6 +71,12 @@
                                     <bool>false</bool>
                                 </property>
                             </widget>
+                        </item>
+                        <item row="1" column="2">
+                            <widget class="BECSpinBox" name="x_min"/>
+                        </item>
+                        <item row="2" column="2">
+                            <widget class="BECSpinBox" name="x_max"/>
                         </item>
                     </layout>
                 </widget>
@@ -128,36 +108,10 @@
                         <string>Y Axis</string>
                     </property>
                     <layout class="QGridLayout" name="gridLayout_5">
-                        <item row="2" column="2">
-                            <widget class="QDoubleSpinBox" name="y_max">
-                                <property name="alignment">
-                                    <set>Qt::AlignmentFlag::AlignCenter</set>
-                                </property>
-                                <property name="minimum">
-                                    <double>-9999.000000000000000</double>
-                                </property>
-                                <property name="maximum">
-                                    <double>9999.000000000000000</double>
-                                </property>
-                            </widget>
-                        </item>
                         <item row="1" column="0" colspan="2">
                             <widget class="QLabel" name="y_min_label">
                                 <property name="text">
                                     <string>Min</string>
-                                </property>
-                            </widget>
-                        </item>
-                        <item row="1" column="2">
-                            <widget class="QDoubleSpinBox" name="y_min">
-                                <property name="alignment">
-                                    <set>Qt::AlignmentFlag::AlignCenter</set>
-                                </property>
-                                <property name="minimum">
-                                    <double>-9999.000000000000000</double>
-                                </property>
-                                <property name="maximum">
-                                    <double>9999.000000000000000</double>
                                 </property>
                             </widget>
                         </item>
@@ -206,6 +160,12 @@
                                 </property>
                             </widget>
                         </item>
+                        <item row="1" column="2">
+                            <widget class="BECSpinBox" name="y_min"/>
+                        </item>
+                        <item row="2" column="2">
+                            <widget class="BECSpinBox" name="y_max"/>
+                        </item>
                     </layout>
                 </widget>
             </item>
@@ -229,6 +189,11 @@
         </layout>
     </widget>
     <customwidgets>
+        <customwidget>
+            <class>BECSpinBox</class>
+            <extends>QDoubleSpinBox</extends>
+            <header>bec_spin_box</header>
+        </customwidget>
         <customwidget>
             <class>ToggleSwitch</class>
             <extends>QWidget</extends>
