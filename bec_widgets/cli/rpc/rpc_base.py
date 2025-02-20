@@ -44,7 +44,7 @@ def rpc_call(func):
         for key, val in kwargs.items():
             if hasattr(val, "name"):
                 kwargs[key] = val.name
-        if not self.gui_is_alive():
+        if not self._root._gui_is_alive():
             raise RuntimeError("GUI is not alive")
         return self._run_rpc(func.__name__, *args, **kwargs)
 
@@ -165,7 +165,7 @@ class RPCBase:
             return cls(parent=self, **msg_result)
         return msg_result
 
-    def gui_is_alive(self):
+    def _gui_is_alive(self):
         """
         Check if the GUI is alive.
         """

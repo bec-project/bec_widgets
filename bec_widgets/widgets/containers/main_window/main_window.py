@@ -34,15 +34,17 @@ class BECMainWindow(QMainWindow, BECConnector):
         }
         return info
 
-    def new_dock_area(self, name=None):
-        name = name or "BEC Widgets"
+    def new_dock_area(self, name: str | None = None):
+        if name is None:
+            name = "BEC"
+        else:
+            name = "BEC - " + name
         self.rpc_register = RPCRegister()
-        gui_id = name.replace(" ", "_")
+        gui_id = name.replace(" - ", "_").replace(" ", "_").lower()
         existing_widgets = self.rpc_register.get_rpc_by_type(gui_id)
         if existing_widgets:
             name = f"{name} {len(existing_widgets) + 1}"
-
-        dock_area = BECDockArea(gui_id=name.replace(" ", "_"))
+        dock_area = BECDockArea(gui_id=name.replace(" - ", "_").replace(" ", "_").lower())
         dock_area.resize(dock_area.minimumSizeHint())
         dock_area.window().setWindowTitle(name)
         dock_area.show()

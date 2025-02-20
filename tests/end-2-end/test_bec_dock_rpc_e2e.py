@@ -315,8 +315,8 @@ def test_rpc_gui_obj(connected_client_gui_obj, qtbot):
 
     assert gui.selected_device is None
     assert len(gui.windows) == 1
-    assert gui.windows["main"] is gui.main
-    mw = gui.main
+    assert gui.windows["bec"] is gui.bec
+    mw = gui.bec
     assert mw.__class__.__name__ == "BECDockArea"
 
     xw = gui.new("X")
@@ -325,10 +325,10 @@ def test_rpc_gui_obj(connected_client_gui_obj, qtbot):
 
     gui_info = gui._dump()
     mw_info = gui_info[mw._gui_id]
-    assert mw_info["title"] == "BEC Widgets"
+    assert mw_info["title"] == "BEC"
     assert mw_info["visible"]
     xw_info = gui_info[xw._gui_id]
-    assert xw_info["title"] == "X"
+    assert xw_info["title"] == "BEC - X"
     assert xw_info["visible"]
 
     gui.hide()
@@ -339,23 +339,23 @@ def test_rpc_gui_obj(connected_client_gui_obj, qtbot):
     gui_info = gui._dump()
     assert all(windows["visible"] for windows in gui_info.values())
 
-    assert gui.gui_is_alive()
-    gui.close()
-    assert not gui.gui_is_alive()
+    assert gui._gui_is_alive()
+    gui._close()
+    assert not gui._gui_is_alive()
     gui._start_server(wait=True)
-    assert gui.gui_is_alive()
+    assert gui._gui_is_alive()
     # calling start multiple times should not change anything
     gui._start_server(wait=True)
-    gui.start()
-    # gui.windows should have main, and main dock area should have same gui_id as before
+    gui._start()
+    # gui.windows should have bec with gui_id 'bec'
     assert len(gui.windows) == 1
-    assert gui.windows["main"]._gui_id == mw._gui_id
+    assert gui.windows["bec"]._gui_id == mw._gui_id
     # communication should work, main dock area should have same id and be visible
     gui_info = gui._dump()
     assert gui_info[mw._gui_id]["visible"]
 
     with pytest.raises(RuntimeError):
-        gui.main.delete()
+        gui.bec.delete()
 
     yw = gui.new("Y")
     assert len(gui.windows) == 2
@@ -373,5 +373,5 @@ def test_rpc_call_with_exception_in_safeslot_error_popup(connected_client_gui_ob
     qtbot.waitUntil(lambda: len(gui.main.panels) == 2)  # default_figure + test
     qtbot.wait(500)
     with pytest.raises(ValueError):
-        gui.main.add_dock("test")
+        gui.bec.add_dock("test")
         # time.sleep(0.1)

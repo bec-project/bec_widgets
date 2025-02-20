@@ -27,7 +27,9 @@ def gui_id():
 @contextmanager
 def plot_server(gui_id, klass, client_lib):
     dispatcher = BECDispatcher(client=client_lib)  # Has to init singleton with fixture client
-    process, _ = _start_plot_process(gui_id, klass, client_lib._client._service_config.config_path)
+    process, _ = _start_plot_process(
+        gui_id, klass, gui_class_id="bec", config=client_lib._client._service_config.config_path
+    )
     try:
         while client_lib._client.connector.get(MessageEndpoints.gui_heartbeat(gui_id)) is None:
             time.sleep(0.3)
@@ -52,7 +54,7 @@ def connected_client_gui_obj(gui_id, bec_client_lib):
         gui._start_server(wait=True)
         yield gui
     finally:
-        gui.close()
+        gui._close()
 
 
 @pytest.fixture
@@ -61,9 +63,10 @@ def connected_client_dock(gui_id, bec_client_lib):
     gui._auto_updates_enabled = False
     try:
         gui._start_server(wait=True)
-        yield gui.main
+        gui.window_list[0]
+        yield gui.window_list[0]
     finally:
-        gui.close()
+        gui._close()
 
 
 @pytest.fixture
@@ -71,6 +74,6 @@ def connected_client_dock_w_auto_updates(gui_id, bec_client_lib):
     gui = BECGuiClient(gui_id=gui_id)
     try:
         gui._start_server(wait=True)
-        yield gui, gui.main
+        yield gui, gui.window_list[0]
     finally:
-        gui.close()
+        gui._close()

@@ -66,13 +66,13 @@ def test_client_utils_passes_client_config_to_server(bec_dispatcher):
         mixin = BECGuiClient()
         mixin._client = bec_dispatcher.client
         mixin._gui_id = "gui_id"
-        mixin.gui_is_alive = mock.MagicMock()
-        mixin.gui_is_alive.side_effect = [True]
+        mixin._gui_is_alive = mock.MagicMock()
+        mixin._gui_is_alive.side_effect = [True]
 
         try:
             yield mixin
         finally:
-            mixin.close()
+            mixin._close()
 
     with bec_client_mixin() as mixin:
         with mock.patch("bec_widgets.cli.client_utils._start_plot_process") as mock_start_plot:
