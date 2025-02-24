@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.23.1 (2025-02-24)
+
+### Bug Fixes
+
+- Update redis mock for changes in bec
+  ([`6a43554`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6a43554f3b57045325f57bdd5079d7f91af40bb6))
+
+
 ## v1.23.0 (2025-02-24)
 
 ### Features
