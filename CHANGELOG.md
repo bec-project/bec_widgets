@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.23.0 (2025-02-24)
+
+### Features
+
+- **bec_spin_box**: Double spin box with setting inside for defining decimals
+  ([`f19d948`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f19d9485df403cb755315ac1a0ff4402d7a85f77))
+
+
 ## v1.22.0 (2025-02-19)
 
 ### Bug Fixes
