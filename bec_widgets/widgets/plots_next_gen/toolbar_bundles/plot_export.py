@@ -1,7 +1,7 @@
 from pyqtgraph.exporters import MatplotlibExporter
 
 from bec_widgets.qt_utils.error_popups import SafeSlot, WarningPopupUtility
-from bec_widgets.qt_utils.toolbar import MaterialIconAction, ToolbarBundle
+from bec_widgets.qt_utils.toolbar import MaterialIconAction, SwitchableToolBarAction, ToolbarBundle
 
 
 class PlotExportBundle(ToolbarBundle):
@@ -25,9 +25,16 @@ class PlotExportBundle(ToolbarBundle):
             icon_name="photo_library", tooltip="Open Matplotlib Dialog", parent=self.target_widget
         )
 
+        switch_export_action = SwitchableToolBarAction(
+            actions={"save": save, "matplotlib": matplotlib},
+            initial_action="save",
+            tooltip="Switchable Action",
+            checkable=False,
+            parent=self,
+        )
+
         # Add them to the bundle
-        self.add_action("save", save)
-        self.add_action("matplotlib", matplotlib)
+        self.add_action("export_switch", switch_export_action)
 
         # Immediately connect signals
         save.action.triggered.connect(self.export_dialog)

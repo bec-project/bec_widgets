@@ -1,7 +1,8 @@
 import pyqtgraph as pg
+from qtpy.QtCore import QTimer
 
 from bec_widgets.qt_utils.error_popups import SafeSlot
-from bec_widgets.qt_utils.toolbar import MaterialIconAction, ToolbarBundle
+from bec_widgets.qt_utils.toolbar import MaterialIconAction, SwitchableToolBarAction, ToolbarBundle
 
 
 class MouseInteractionToolbarBundle(ToolbarBundle):
@@ -15,6 +16,7 @@ class MouseInteractionToolbarBundle(ToolbarBundle):
     def __init__(self, bundle_id="mouse_interaction", target_widget=None, **kwargs):
         super().__init__(bundle_id=bundle_id, actions=[], **kwargs)
         self.target_widget = target_widget
+        self.mouse_mode = None
 
         # Create each MaterialIconAction with a parent
         # so the signals can fire even if the toolbar isn't added yet.
@@ -43,9 +45,16 @@ class MouseInteractionToolbarBundle(ToolbarBundle):
             parent=self.target_widget,
         )
 
+        self.switch_mouse_action = SwitchableToolBarAction(
+            actions={"drag_mode": drag, "rectangle_mode": rect},
+            initial_action="drag_mode",
+            tooltip="Mouse Modes",
+            checkable=True,
+            parent=self,
+        )
+
         # Add them to the bundle
-        self.add_action("drag_mode", drag)
-        self.add_action("rectangle_mode", rect)
+        self.add_action("switch_mouse", self.switch_mouse_action)
         self.add_action("auto_range", auto)
         self.add_action("aspect_ratio", aspect_ratio)
 
@@ -55,33 +64,34 @@ class MouseInteractionToolbarBundle(ToolbarBundle):
         auto.action.triggered.connect(self.autorange_plot)
         aspect_ratio.action.toggled.connect(self.lock_aspect_ratio)
 
-        mode = self.get_viewbox_mode()
-        if mode == "PanMode":
-            drag.action.setChecked(True)
-        elif mode == "RectMode":
-            rect.action.setChecked(True)
+        # Give some time to check the state
+        QTimer.singleShot(10, self.get_viewbox_mode)
 
-    def get_viewbox_mode(self) -> str:
+    def get_viewbox_mode(self):
         """
-        Returns the current interaction mode of a PyQtGraph ViewBox.
+        Returns the current interaction mode of a PyQtGraph ViewBox and sets the corresponding action.
+        """
 
-        Returns:
-            str: "PanMode" if pan is enabled, "RectMode" if zoom is enabled, "Unknown" otherwise.
-        """
         if self.target_widget:
             viewbox = self.target_widget.plot_item.getViewBox()
             if viewbox.getState()["mouseMode"] == 3:
-                return "PanMode"
+                self.switch_mouse_action.set_default_action("drag_mode")
+                self.switch_mouse_action.main_button.setChecked(True)
+                self.mouse_mode = "PanMode"
             elif viewbox.getState()["mouseMode"] == 1:
-                return "RectMode"
-        return "Unknown"
+                self.switch_mouse_action.set_default_action("rectangle_mode")
+                self.switch_mouse_action.main_button.setChecked(True)
+                self.mouse_mode = "RectMode"
 
     @SafeSlot(bool)
     def enable_mouse_rectangle_mode(self, checked: bool):
         """
         Enable the rectangle zoom mode on the plot widget.
         """
-        self.actions["drag_mode"].action.setChecked(not checked)
+        if self.mouse_mode == "RectMode":
+            self.switch_mouse_action.main_button.setChecked(True)
+            return
+        self.actions["switch_mouse"].actions["drag_mode"].action.setChecked(not checked)
         if self.target_widget and checked:
             self.target_widget.plot_item.getViewBox().setMouseMode(pg.ViewBox.RectMode)
 
@@ -90,7 +100,10 @@ class MouseInteractionToolbarBundle(ToolbarBundle):
         """
         Enable the pan mode on the plot widget.
         """
-        self.actions["rectangle_mode"].action.setChecked(not checked)
+        if self.mouse_mode == "PanMode":
+            self.switch_mouse_action.main_button.setChecked(True)
+            return
+        self.actions["switch_mouse"].actions["rectangle_mode"].action.setChecked(not checked)
         if self.target_widget and checked:
             self.target_widget.plot_item.getViewBox().setMouseMode(pg.ViewBox.PanMode)
 
