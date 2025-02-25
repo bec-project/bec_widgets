@@ -251,6 +251,7 @@ class SwitchableToolBarAction(ToolBarAction):
         initial_action: str = None,
         tooltip: str = None,
         checkable: bool = True,
+        default_state_checked: bool = False,
         parent=None,
     ):
         super().__init__(icon_path=None, tooltip=tooltip, checkable=checkable)
@@ -258,6 +259,7 @@ class SwitchableToolBarAction(ToolBarAction):
         self.current_key = initial_action if initial_action is not None else next(iter(actions))
         self.parent = parent
         self.checkable = checkable
+        self.default_state_checked = default_state_checked
         self.main_button = None
         self.menu_actions: Dict[str, QAction] = {}
 
@@ -283,7 +285,7 @@ class SwitchableToolBarAction(ToolBarAction):
             menu_action.setIconVisibleInMenu(True)
             menu_action.setCheckable(self.checkable)
             menu_action.setChecked(key == self.current_key)
-            menu_action.triggered.connect(lambda checked, k=key: self._set_default_action(k))
+            menu_action.triggered.connect(lambda checked, k=key: self.set_default_action(k))
             menu.addAction(menu_action)
             self.menu_actions[key] = menu_action
         self.main_button.setMenu(menu)
@@ -293,7 +295,7 @@ class SwitchableToolBarAction(ToolBarAction):
         action_obj = self.actions[self.current_key]
         action_obj.action.trigger()
 
-    def _set_default_action(self, key: str):
+    def set_default_action(self, key: str):
         self.current_key = key
         new_action = self.actions[self.current_key]
         self.main_button.setIcon(new_action.get_icon())
@@ -929,7 +931,7 @@ class MainWindow(QMainWindow):  # pragma: no cover
             actions={"action1": action1, "action2": action2},
             initial_action="action1",
             tooltip="Switchable Action",
-            checkable=False,
+            checkable=True,
             parent=self,
         )
         self.toolbar.add_action("switchable_action_no_toggle", switchable_action, self)
@@ -940,6 +942,7 @@ class MainWindow(QMainWindow):  # pragma: no cover
         action2.action.triggered.connect(
             lambda checked: self.test_label.setText(f"Action 2 triggered, checked = {checked}")
         )
+        switchable_action.actions["action1"].action.setChecked(True)
 
     def add_widget_actions(self):
         combo = QComboBox()
