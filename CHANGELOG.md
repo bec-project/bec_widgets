@@ -1,6 +1,30 @@
 # CHANGELOG
 
 
+## v1.24.0 (2025-02-26)
+
+### Bug Fixes
+
+- Make scan metadata use collapsible frame
+  ([`1c0021f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1c0021f98b8e0419dba883b891a6035653c0ba0d))
+
+- Replace add'l md table w/ tree view
+  ([`42665b6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/42665b69c5cca60a9e5f2d7bd43dbfe5da5a7eb3))
+
+### Code Style
+
+- Isort
+  ([`d32952a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d32952a0d590b03007271427bd85f00b88ef0851))
+
+### Features
+
+- Add expandable/collapsible frame
+  ([`5206528`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5206528feccaf192f3d5872ac785470562b493f9))
+
+- Add metadata widget to scan control
+  ([`7309c1d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7309c1dede2ec93bf08f84f13596ce18dfdb1476))
+
+
 ## v1.23.1 (2025-02-24)
 
 ### Bug Fixes
