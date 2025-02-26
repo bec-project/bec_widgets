@@ -29,6 +29,8 @@ def test_axis_settings_init(axis_settings_fixture):
     assert axis_settings.layout.count() == 1  # scroll area
     # Check the target
     assert axis_settings.target_widget == plot_base
+    # Check the object name
+    assert axis_settings.objectName() == "AxisSettings"
 
 
 def test_change_ui_updates_plot_base(axis_settings_fixture, qtbot):
@@ -103,3 +105,76 @@ def test_scroll_area_behavior(axis_settings_fixture, qtbot):
     axis_settings, plot_base = axis_settings_fixture
     scroll_area = axis_settings.scroll_area
     assert scroll_area.widgetResizable() is True
+
+
+def test_fetch_all_properties(axis_settings_fixture, qtbot):
+    """
+    Tests the `fetch_all_properties` method ensuring that all the properties set on
+    the `plot_base` instance are correctly synchronized with the user interface (UI)
+    elements of the `axis_settings` instance.
+    """
+    axis_settings, plot_base = axis_settings_fixture
+
+    # Set all properties on plot_base
+    plot_base.title = "Plot Title from Code"
+    plot_base.x_min = 0
+    plot_base.x_max = 100
+    plot_base.x_label = "X Label"
+    plot_base.x_log = True
+    plot_base.x_grid = True
+
+    plot_base.y_min = -50
+    plot_base.y_max = 50
+    plot_base.y_label = "Y Label"
+    plot_base.y_log = False
+    plot_base.y_grid = False
+
+    plot_base.outer_axes = True
+
+    # Fetch properties into the UI
+    axis_settings.fetch_all_properties()
+
+    # Verify all properties were correctly fetched
+    assert axis_settings.ui.title.text() == "Plot Title from Code"
+
+    # X axis properties
+    assert axis_settings.ui.x_min.value() == 0
+    assert axis_settings.ui.x_max.value() == 100
+    assert axis_settings.ui.x_label.text() == "X Label"
+    assert axis_settings.ui.x_log.checked is True
+    assert axis_settings.ui.x_grid.checked is True
+
+    # Y axis properties
+    assert axis_settings.ui.y_min.value() == -50
+    assert axis_settings.ui.y_max.value() == 50
+    assert axis_settings.ui.y_label.text() == "Y Label"
+    assert axis_settings.ui.y_log.checked is False
+    assert axis_settings.ui.y_grid.checked is False
+
+    # Other properties
+    assert axis_settings.ui.outer_axes.checked is True
+
+
+def test_accept_changes(axis_settings_fixture, qtbot):
+    """
+    Tests the functionality of applying user-defined changes to the axis settings
+    UI and verifying the reflected changes in the plot object's properties.
+    """
+    axis_settings, plot_base = axis_settings_fixture
+
+    axis_settings.ui.title.setText("New Title")
+    axis_settings.ui.x_max.setValue(20)
+    axis_settings.ui.x_min.setValue(10)
+    axis_settings.ui.x_label.setText("New X Label")
+    axis_settings.ui.x_log.checked = True
+    axis_settings.ui.x_grid.checked = True
+
+    axis_settings.accept_changes()
+    qtbot.wait(200)
+
+    assert plot_base.title == "New Title"
+    assert plot_base.x_min == 10
+    assert plot_base.x_max == 20
+    assert plot_base.x_label == "New X Label"
+    assert plot_base.x_log is True
+    assert plot_base.x_grid is True

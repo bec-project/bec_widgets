@@ -1,4 +1,4 @@
-from bec_widgets.widgets.plots_next_gen.plot_base import PlotBase
+from bec_widgets.widgets.plots_next_gen.plot_base import PlotBase, UIMode
 
 from .client_mocks import mocked_client
 from .conftest import create_widget
@@ -247,3 +247,96 @@ def test_set_method(qtbot, mocked_client):
     assert pb.y_grid is True
     assert pb.x_log is True
     assert pb.outer_axes is True
+
+
+def test_ui_mode_popup(qtbot, mocked_client):
+    """
+    Test that setting ui_mode to POPUP creates a popup bundle with visible actions
+    and hides the side panel.
+    """
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    pb.ui_mode = UIMode.POPUP
+    # The popup bundle should be created and its actions made visible.
+    assert "popup_bundle" in pb.toolbar.bundles
+    for action_id in pb.toolbar.bundles["popup_bundle"]:
+        assert pb.toolbar.widgets[action_id].action.isVisible() is True
+    # The side panel should be hidden.
+    assert not pb.side_panel.isVisible()
+
+
+def test_ui_mode_side(qtbot, mocked_client):
+    """
+    Test that setting ui_mode to SIDE shows the side panel and ensures any popup actions
+    are hidden.
+    """
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    pb.ui_mode = UIMode.SIDE
+    # If a popup bundle exists, its actions should be hidden.
+    if "popup_bundle" in pb.toolbar.bundles:
+        for action_id in pb.toolbar.bundles["popup_bundle"]:
+            assert pb.toolbar.widgets[action_id].action.isVisible() is False
+
+
+def test_enable_popups_property(qtbot, mocked_client):
+    """
+    Test the enable_popups property: when enabled, ui_mode should be POPUP,
+    and when disabled, ui_mode should change to NONE.
+    """
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    pb.enable_popups = True
+    assert pb.ui_mode == UIMode.POPUP
+    # The popup bundle actions should be visible.
+    assert "popup_bundle" in pb.toolbar.bundles
+    for action_id in pb.toolbar.bundles["popup_bundle"]:
+        assert pb.toolbar.widgets[action_id].action.isVisible() is True
+
+    pb.enable_popups = False
+    assert pb.ui_mode == UIMode.NONE
+
+
+def test_enable_side_panel_property(qtbot, mocked_client):
+    """
+    Test the enable_side_panel property: when enabled, ui_mode should be SIDE,
+    and when disabled, ui_mode should change to NONE.
+    """
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    pb.enable_side_panel = True
+    assert pb.ui_mode == UIMode.SIDE
+
+    pb.enable_side_panel = False
+    assert pb.ui_mode == UIMode.NONE
+
+
+def test_switching_between_popup_and_side_panel_closes_dialog(qtbot, mocked_client):
+    """
+    Test that if a popup dialog is open (via the axis settings popup) then switching
+    to side-panel mode closes the dialog.
+    """
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    pb.ui_mode = UIMode.POPUP
+    # Open the axis settings popup.
+    pb.show_axis_settings_popup()
+    qtbot.wait(100)
+    # The dialog should now exist and be visible.
+    assert pb.axis_settings_dialog is not None
+    assert pb.axis_settings_dialog.isVisible() is True
+
+    # Switch to side panel mode.
+    pb.ui_mode = UIMode.SIDE
+    qtbot.wait(100)
+    # The axis settings dialog should be closed (and reference cleared).
+    assert pb.axis_settings_dialog is None or pb.axis_settings_dialog.isVisible() is False
+
+
+def test_enable_fps_monitor_property(qtbot, mocked_client):
+    """
+    Test the enable_fps_monitor property: when enabled, the FPS monitor should be hooked
+    (resulting in a non-None fps_monitor and visible fps_label), and when disabled, the FPS
+    monitor should be unhooked and the label hidden.
+    """
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    pb.enable_fps_monitor = True
+    assert pb.fps_monitor is not None
+
+    pb.enable_fps_monitor = False
+    assert pb.fps_monitor is None

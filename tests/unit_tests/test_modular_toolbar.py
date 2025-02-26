@@ -3,7 +3,7 @@ from typing import Literal
 import pytest
 from qtpy.QtCore import QPoint, Qt
 from qtpy.QtGui import QContextMenuEvent
-from qtpy.QtWidgets import QComboBox, QLabel, QMenu, QToolButton, QWidget
+from qtpy.QtWidgets import QComboBox, QLabel, QMenu, QStyle, QToolButton, QWidget
 
 from bec_widgets.qt_utils.toolbar import (
     DeviceSelectionAction,
@@ -12,6 +12,7 @@ from bec_widgets.qt_utils.toolbar import (
     LongPressToolButton,
     MaterialIconAction,
     ModularToolBar,
+    QtIconAction,
     SeparatorAction,
     SwitchableToolBarAction,
     ToolbarBundle,
@@ -61,6 +62,12 @@ def material_icon_action():
     return MaterialIconAction(
         icon_name="home", tooltip="Test Material Icon Action", checkable=False
     )
+
+
+@pytest.fixture
+def qt_icon_action():
+    """Fixture to create a QtIconAction."""
+    return QtIconAction(standard_icon=QStyle.SP_FileIcon, tooltip="Qt File", checkable=True)
 
 
 @pytest.fixture
@@ -146,7 +153,12 @@ def test_set_orientation(toolbar_fixture, qtbot, dummy_widget):
 
 
 def test_add_action(
-    toolbar_fixture, icon_action, separator_action, material_icon_action, dummy_widget
+    toolbar_fixture,
+    icon_action,
+    separator_action,
+    material_icon_action,
+    qt_icon_action,
+    dummy_widget,
 ):
     """Test adding different types of actions to the toolbar."""
     toolbar = toolbar_fixture
@@ -167,6 +179,12 @@ def test_add_action(
     assert "material_icon_action" in toolbar.widgets
     assert toolbar.widgets["material_icon_action"] == material_icon_action
     assert material_icon_action.action in toolbar.actions()
+
+    # Add QtIconAction
+    toolbar.add_action("qt_icon_action", qt_icon_action, dummy_widget)
+    assert "qt_icon_action" in toolbar.widgets
+    assert toolbar.widgets["qt_icon_action"] == qt_icon_action
+    assert qt_icon_action.action in toolbar.actions()
 
 
 def test_hide_show_action(toolbar_fixture, icon_action, qtbot, dummy_widget):
