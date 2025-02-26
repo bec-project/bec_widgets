@@ -1,6 +1,31 @@
 # CHANGELOG
 
 
+## v1.24.1 (2025-02-26)
+
+### Bug Fixes
+
+- **plot_base**: Ability to choose between popup or side panel gui mode
+  ([`3aa2f22`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3aa2f2225fba499b648d191ea27553b6db303c18))
+
+- **toolbar**: Switch Actions for default checked actions fixed
+  ([`6d1106e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6d1106e33e1fc3839244b11a601fb71e81a65e61))
+
+### Refactoring
+
+- **axis_settings**: Spinbox migrated to new BECSpinBoxes
+  ([`90a1846`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/90a184643aaaaabaa4feb02d2f406fe2bb9daecc))
+
+- **plot_base**: Toolbar buttons adapted for the Switch actions from toolbar; plot export and mouse
+  modes consolidated into one switch button
+  ([`6f2c240`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6f2c2401ac99b2b8a9af9af76854669a248b516b))
+
+### Testing
+
+- Extended test coverage for axis settings, plot base and qt toolbar action
+  ([`8679b5f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8679b5f08bef8a4a2b6338d9bee4cd70d564f288))
+
+
 ## v1.24.0 (2025-02-26)
 
 ### Bug Fixes
