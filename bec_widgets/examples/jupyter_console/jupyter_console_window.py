@@ -52,8 +52,6 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "w10": self.w10,
                     "d0": self.d0,
                     "d1": self.d1,
-                    "d2": self.d2,
-                    "wave": self.wf,
                     "im": self.im,
                     "mm": self.mm,
                     "mw": self.mw,
@@ -66,7 +64,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "btn6": self.btn6,
                     "pb": self.pb,
                     "pi": self.pi,
-                    "wfng": self.wfng,
+                    "wf": self.wf,
                 }
             )
 
@@ -121,8 +119,8 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
 
         fifth_tab = QWidget()
         fifth_tab_layout = QVBoxLayout(fifth_tab)
-        self.wfng = Waveform()
-        fifth_tab_layout.addWidget(self.wfng)
+        self.wf = Waveform()
+        fifth_tab_layout.addWidget(self.wf)
         tab_widget.addTab(fifth_tab, "Waveform Next Gen")
         tab_widget.setCurrentIndex(4)
         # add stuff to the new Waveform widget
@@ -140,8 +138,8 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         # self.wfng._add_curve_custom(x=np.arange(10), y=np.random.rand(10), label="curve1")
         # self.wfng._add_curve_custom(x=np.arange(10), y=np.random.rand(10), label="curve2")
         # self.wfng._add_curve_custom(x=np.arange(10), y=np.random.rand(10), label="curve3")
-        self.wfng.plot(y_name="bpm4i", y_entry="bpm4i", dap="GaussianModel")
-        self.wfng.plot(y_name="bpm3a", y_entry="bpm3a", dap="GaussianModel")
+        self.wf.plot(y_name="bpm4i", y_entry="bpm4i", dap="GaussianModel")
+        self.wf.plot(y_name="bpm3a", y_entry="bpm3a", dap="GaussianModel")
 
     def _init_figure(self):
         self.w1 = self.figure.plot(x_name="samx", y_name="bpm4i", row=0, col=0)
@@ -207,11 +205,6 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.d1 = self.dock.add_dock(name="dock_1", position="right")
         self.im = self.d1.add_widget("BECImageWidget")
         self.im.image("waveform", "1d")
-
-        self.d2 = self.dock.add_dock(name="dock_2", position="bottom")
-        self.wf = self.d2.add_widget("BECWaveformWidget", row=0, col=0)
-        self.wf.plot("bpm4i")
-        self.wf.plot("bpm3a")
 
         self.mw = None  # self.wf.multi_waveform(monitor="waveform")  # , config=config)
 

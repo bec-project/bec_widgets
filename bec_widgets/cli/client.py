@@ -24,7 +24,6 @@ class Widgets(str, enum.Enum):
     BECProgressBar = "BECProgressBar"
     BECQueue = "BECQueue"
     BECStatusBox = "BECStatusBox"
-    BECWaveformWidget = "BECWaveformWidget"
     DapComboBox = "DapComboBox"
     DarkModeButton = "DarkModeButton"
     DeviceBrowser = "DeviceBrowser"
@@ -2690,313 +2689,6 @@ class BECWaveform(RPCBase):
         """
 
 
-class BECWaveformWidget(RPCBase):
-    @property
-    @rpc_call
-    def curves(self) -> "list[BECCurve]":
-        """
-        Get the curves of the plot widget as a list
-        Returns:
-            list: List of curves.
-        """
-
-    @rpc_call
-    def plot(
-        self,
-        arg1: "list | np.ndarray | str | None" = None,
-        x: "list | np.ndarray | None" = None,
-        y: "list | np.ndarray | None" = None,
-        x_name: "str | None" = None,
-        y_name: "str | None" = None,
-        z_name: "str | None" = None,
-        x_entry: "str | None" = None,
-        y_entry: "str | None" = None,
-        z_entry: "str | None" = None,
-        color: "str | None" = None,
-        color_map_z: "str | None" = "magma",
-        label: "str | None" = None,
-        validate: "bool" = True,
-        dap: "str | None" = None,
-        **kwargs,
-    ) -> "BECCurve":
-        """
-        Plot a curve to the plot widget.
-        Args:
-            arg1(list | np.ndarray | str | None): First argument which can be x data(list | np.ndarray), y data(list | np.ndarray), or y_name(str).
-            x(list | np.ndarray): Custom x data to plot.
-            y(list | np.ndarray): Custom y data to plot.
-            x_name(str): The name of the device for the x-axis.
-            y_name(str): The name of the device for the y-axis.
-            z_name(str): The name of the device for the z-axis.
-            x_entry(str): The name of the entry for the x-axis.
-            y_entry(str): The name of the entry for the y-axis.
-            z_entry(str): The name of the entry for the z-axis.
-            color(str): The color of the curve.
-            color_map_z(str): The color map to use for the z-axis.
-            label(str): The label of the curve.
-            validate(bool): If True, validate the device names and entries.
-            dap(str): The dap model to use for the curve. If not specified, none will be added.
-
-        Returns:
-            BECCurve: The curve object.
-        """
-
-    @rpc_call
-    def add_dap(
-        self,
-        x_name: "str",
-        y_name: "str",
-        dap: "str",
-        x_entry: "str | None" = None,
-        y_entry: "str | None" = None,
-        color: "str | None" = None,
-        validate_bec: "bool" = True,
-        **kwargs,
-    ) -> "BECCurve":
-        """
-        Add LMFIT dap model curve to the plot widget.
-
-        Args:
-            x_name(str): Name of the x signal.
-            x_entry(str): Entry of the x signal.
-            y_name(str): Name of the y signal.
-            y_entry(str): Entry of the y signal.
-            color(str, optional): Color of the curve. Defaults to None.
-            dap(str): The dap model to use for the curve.
-            validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
-            **kwargs: Additional keyword arguments for the curve configuration.
-
-        Returns:
-            BECCurve: The curve object.
-        """
-
-    @rpc_call
-    def get_dap_params(self) -> "dict":
-        """
-        Get the DAP parameters of all DAP curves.
-
-        Returns:
-            dict: DAP parameters of all DAP curves.
-        """
-
-    @rpc_call
-    def remove_curve(self, *identifiers):
-        """
-        Remove a curve from the plot widget.
-
-        Args:
-            *identifiers: Identifier of the curve to be removed. Can be either an integer (index) or a string (curve_id).
-        """
-
-    @rpc_call
-    def scan_history(self, scan_index: "int" = None, scan_id: "str" = None):
-        """
-        Update the scan curves with the data from the scan storage.
-        Provide only one of scan_id or scan_index.
-
-        Args:
-            scan_id(str, optional): ScanID of the scan to be updated. Defaults to None.
-            scan_index(int, optional): Index of the scan to be updated. Defaults to None.
-        """
-
-    @rpc_call
-    def get_all_data(self, output: "Literal['dict', 'pandas']" = "dict") -> "dict | pd.DataFrame":
-        """
-        Extract all curve data into a dictionary or a pandas DataFrame.
-
-        Args:
-            output (Literal["dict", "pandas"]): Format of the output data.
-
-        Returns:
-            dict | pd.DataFrame: Data of all curves in the specified format.
-        """
-
-    @rpc_call
-    def set(self, **kwargs):
-        """
-        Set the properties of the plot widget.
-
-        Args:
-            **kwargs: Keyword arguments for the properties to be set.
-
-        Possible properties:
-            - title: str
-            - x_label: str
-            - y_label: str
-            - x_scale: Literal["linear", "log"]
-            - y_scale: Literal["linear", "log"]
-            - x_lim: tuple
-            - y_lim: tuple
-            - legend_label_size: int
-        """
-
-    @rpc_call
-    def set_x(self, x_name: "str", x_entry: "str | None" = None):
-        """
-        Change the x axis of the plot widget.
-
-        Args:
-            x_name(str): Name of the x signal.
-                - "best_effort": Use the best effort signal.
-                - "timestamp": Use the timestamp signal.
-                - "index": Use the index signal.
-                - Custom signal name of device from BEC.
-            x_entry(str): Entry of the x signal.
-        """
-
-    @rpc_call
-    def set_title(self, title: "str"):
-        """
-        Set the title of the plot widget.
-
-        Args:
-            title(str): Title of the plot.
-        """
-
-    @rpc_call
-    def set_x_label(self, x_label: "str"):
-        """
-        Set the x-axis label of the plot widget.
-
-        Args:
-            x_label(str): Label of the x-axis.
-        """
-
-    @rpc_call
-    def set_y_label(self, y_label: "str"):
-        """
-        Set the y-axis label of the plot widget.
-
-        Args:
-            y_label(str): Label of the y-axis.
-        """
-
-    @rpc_call
-    def set_x_scale(self, x_scale: "Literal['linear', 'log']"):
-        """
-        Set the scale of the x-axis of the plot widget.
-
-        Args:
-            x_scale(Literal["linear", "log"]): Scale of the x-axis.
-        """
-
-    @rpc_call
-    def set_y_scale(self, y_scale: "Literal['linear', 'log']"):
-        """
-        Set the scale of the y-axis of the plot widget.
-
-        Args:
-            y_scale(Literal["linear", "log"]): Scale of the y-axis.
-        """
-
-    @rpc_call
-    def set_x_lim(self, x_lim: "tuple"):
-        """
-        Set the limits of the x-axis of the plot widget.
-
-        Args:
-            x_lim(tuple): Limits of the x-axis.
-        """
-
-    @rpc_call
-    def set_y_lim(self, y_lim: "tuple"):
-        """
-        Set the limits of the y-axis of the plot widget.
-
-        Args:
-            y_lim(tuple): Limits of the y-axis.
-        """
-
-    @rpc_call
-    def set_legend_label_size(self, legend_label_size: "int"):
-        """
-        Set the size of the legend labels of the plot widget.
-
-        Args:
-            legend_label_size(int): Size of the legend labels.
-        """
-
-    @rpc_call
-    def set_auto_range(self, enabled: "bool", axis: "str" = "xy"):
-        """
-        Set the auto range of the plot widget.
-
-        Args:
-            enabled(bool): If True, enable the auto range.
-            axis(str, optional): The axis to enable the auto range.
-                - "xy": Enable auto range for both x and y axis.
-                - "x": Enable auto range for x axis.
-                - "y": Enable auto range for y axis.
-        """
-
-    @rpc_call
-    def set_grid(self, x_grid: "bool", y_grid: "bool"):
-        """
-        Set the grid visibility of the plot widget.
-
-        Args:
-            x_grid(bool): Visibility of the x-axis grid.
-            y_grid(bool): Visibility of the y-axis grid.
-        """
-
-    @rpc_call
-    def enable_fps_monitor(self, enabled: "bool"):
-        """
-        Enable the FPS monitor of the plot widget.
-
-        Args:
-            enabled(bool): If True, enable the FPS monitor.
-        """
-
-    @rpc_call
-    def enable_scatter(self, enabled: "bool"):
-        """
-        Enable the scatter plot of the plot widget.
-
-        Args:
-            enabled(bool): If True, enable the scatter plot.
-        """
-
-    @rpc_call
-    def lock_aspect_ratio(self, lock: "bool"):
-        """
-        Lock the aspect ratio of the plot widget.
-
-        Args:
-            lock(bool): Lock the aspect ratio.
-        """
-
-    @rpc_call
-    def export(self):
-        """
-        Show the export dialog for the plot widget.
-        """
-
-    @rpc_call
-    def export_to_matplotlib(self):
-        """
-        Export the plot widget to Matplotlib.
-        """
-
-    @rpc_call
-    def toggle_roi(self, checked: "bool"):
-        """
-        Toggle the linear region selector.
-
-        Args:
-            checked(bool): If True, enable the linear region selector.
-        """
-
-    @rpc_call
-    def select_roi(self, region: "tuple"):
-        """
-        Set the region of interest of the plot widget.
-
-        Args:
-            region(tuple): Region of interest.
-        """
-
-
 class Curve(RPCBase):
     @rpc_call
     def remove(self):
@@ -3833,6 +3525,31 @@ class ScanControl(RPCBase):
         """
 
 
+class ScanMetadata(RPCBase):
+    @property
+    @rpc_call
+    def _config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @rpc_call
+    def _get_all_rpc(self) -> "dict":
+        """
+        Get all registered RPC objects.
+        """
+
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
+        """
+
+
 class SignalComboBox(RPCBase):
     @property
     @rpc_call
@@ -4309,7 +4026,7 @@ class Waveform(RPCBase):
         Remove a curve from the plot widget.
 
         Args:
-            curve(int|str): The curve to remove. Can be the order of the curve or the name of the curve.
+            curve(int|str): The curve to remove. It Can be the order of the curve or the name of the curve.
         """
 
     @rpc_call
