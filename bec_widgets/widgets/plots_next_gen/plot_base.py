@@ -95,6 +95,7 @@ class PlotBase(BECWidget, QWidget):
         self.entry_validator = EntryValidator(self.dev)
 
         # Base widgets elements
+        self._popups = popups
         self._ui_mode = UIMode.POPUP if popups else UIMode.SIDE
         self.axis_settings_dialog = None
         self.plot_widget = pg.GraphicsLayoutWidget(parent=self)
@@ -699,6 +700,9 @@ class PlotBase(BECWidget, QWidget):
     def cleanup(self):
         self.unhook_crosshair()
         self.unhook_fps_monitor(delete_label=True)
+        if self.axis_settings_dialog is not None:
+            self.axis_settings_dialog.close()
+            self.axis_settings_dialog = None
         self.cleanup_pyqtgraph()
         self.rpc_register.remove_rpc(self)
 
