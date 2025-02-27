@@ -1,9 +1,10 @@
 import numpy as np
+import pyqtgraph as pg
 import pytest
 from qtpy.QtCore import QPointF, Qt
 
+from bec_widgets.utils import Crosshair
 from bec_widgets.widgets.plots.image.image_widget import BECImageWidget
-from bec_widgets.widgets.plots.waveform.waveform_widget import BECWaveformWidget
 
 from .client_mocks import mocked_client
 
@@ -11,14 +12,16 @@ from .client_mocks import mocked_client
 
 
 @pytest.fixture
-def plot_widget_with_crosshair(qtbot, mocked_client):
-    widget = BECWaveformWidget(client=mocked_client())
-    widget.plot(x=[1, 2, 3], y=[4, 5, 6])
-    widget.waveform.hook_crosshair()
+def plot_widget_with_crosshair(qtbot):
+    widget = pg.PlotWidget()
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
 
-    yield widget.waveform.crosshair, widget.waveform.plot_item
+    widget.plot(x=[1, 2, 3], y=[4, 5, 6], name="Curve 1")
+    plot_item = widget.getPlotItem()
+    crosshair = Crosshair(plot_item=plot_item, precision=3)
+
+    yield crosshair, plot_item
 
 
 @pytest.fixture
@@ -35,15 +38,14 @@ def image_widget_with_crosshair(qtbot, mocked_client):
 def test_mouse_moved_lines(plot_widget_with_crosshair):
     crosshair, plot_item = plot_widget_with_crosshair
 
-    # Simulate a mouse moved event at a specific position
     pos_in_view = QPointF(2, 5)
     pos_in_scene = plot_item.vb.mapViewToScene(pos_in_view)
     event_mock = [pos_in_scene]
 
-    # Call the mouse_moved method
+    # Simulate mouse movement
     crosshair.mouse_moved(event_mock)
 
-    # Assert the expected behavior
+    # Check that the vertical line is indeed at x=2
     assert np.isclose(crosshair.v_line.pos().x(), 2)
     assert np.isclose(crosshair.h_line.pos().y(), 5)
 

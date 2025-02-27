@@ -115,7 +115,7 @@ def test_undock_and_dock_docks(bec_dock_area, qtbot):
 def test_toolbar_add_plot_waveform(bec_dock_area):
     bec_dock_area.toolbar.widgets["menu_plots"].widgets["waveform"].trigger()
     assert "waveform_1" in bec_dock_area.panels
-    assert bec_dock_area.panels["waveform_1"].widgets[0].config.widget_class == "BECWaveformWidget"
+    assert bec_dock_area.panels["waveform_1"].widgets[0].config.widget_class == "Waveform"
 
 
 def test_toolbar_add_plot_image(bec_dock_area):
