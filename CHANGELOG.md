@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.24.2 (2025-02-27)
+
+### Bug Fixes
+
+- **e2e**: Added wait time to flaky e2e
+  ([`46b1a22`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/46b1a228be4ef5eb21ecf6c7020a2cd05d06b61a))
+
+
 ## v1.24.1 (2025-02-26)
 
 ### Bug Fixes
