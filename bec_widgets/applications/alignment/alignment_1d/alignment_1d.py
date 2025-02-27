@@ -29,6 +29,7 @@ MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 logger = bec_logger.logger
 
 
+# FIXME BECWaveFormWidget is gone, this app will not work until adapted to new Waveform
 class Alignment1D:
     """Alignment GUI to perform 1D scans"""
 
