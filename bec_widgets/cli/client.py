@@ -10,44 +10,48 @@ from bec_widgets.cli.rpc.rpc_base import RPCBase, rpc_call
 # pylint: skip-file
 
 
-class Widgets(str, enum.Enum):
-    """
-    Enum for the available widgets.
-    """
+class _WidgetsEnumType(str, enum.Enum):
+    """Enum for the available widgets, to be generated programatically"""
 
-    AbortButton = "AbortButton"
-    BECColorMapWidget = "BECColorMapWidget"
-    BECDockArea = "BECDockArea"
-    BECProgressBar = "BECProgressBar"
-    BECQueue = "BECQueue"
-    BECStatusBox = "BECStatusBox"
-    DapComboBox = "DapComboBox"
-    DarkModeButton = "DarkModeButton"
-    DeviceBrowser = "DeviceBrowser"
-    DeviceComboBox = "DeviceComboBox"
-    DeviceLineEdit = "DeviceLineEdit"
-    Image = "Image"
-    LMFitDialog = "LMFitDialog"
-    LogPanel = "LogPanel"
-    Minesweeper = "Minesweeper"
-    MotorMap = "MotorMap"
-    MultiWaveform = "MultiWaveform"
-    PositionIndicator = "PositionIndicator"
-    PositionerBox = "PositionerBox"
-    PositionerBox2D = "PositionerBox2D"
-    PositionerControlLine = "PositionerControlLine"
-    ResetButton = "ResetButton"
-    ResumeButton = "ResumeButton"
-    RingProgressBar = "RingProgressBar"
-    ScanControl = "ScanControl"
-    ScatterWaveform = "ScatterWaveform"
-    SignalComboBox = "SignalComboBox"
-    SignalLineEdit = "SignalLineEdit"
-    StopButton = "StopButton"
-    TextBox = "TextBox"
-    VSCodeEditor = "VSCodeEditor"
-    Waveform = "Waveform"
-    WebsiteWidget = "WebsiteWidget"
+    ...
+
+
+_Widgets = {
+    "AbortButton": "AbortButton",
+    "BECColorMapWidget": "BECColorMapWidget",
+    "BECDockArea": "BECDockArea",
+    "BECMultiWaveformWidget": "BECMultiWaveformWidget",
+    "BECProgressBar": "BECProgressBar",
+    "BECQueue": "BECQueue",
+    "BECStatusBox": "BECStatusBox",
+    "DapComboBox": "DapComboBox",
+    "DarkModeButton": "DarkModeButton",
+    "DeviceBrowser": "DeviceBrowser",
+    "DeviceComboBox": "DeviceComboBox",
+    "DeviceLineEdit": "DeviceLineEdit",
+    "Image": "Image",
+    "LMFitDialog": "LMFitDialog",
+    "LogPanel": "LogPanel",
+    "Minesweeper": "Minesweeper",
+    "MotorMap": "MotorMap",
+    "PositionIndicator": "PositionIndicator",
+    "PositionerBox": "PositionerBox",
+    "PositionerBox2D": "PositionerBox2D",
+    "PositionerControlLine": "PositionerControlLine",
+    "ResetButton": "ResetButton",
+    "ResumeButton": "ResumeButton",
+    "RingProgressBar": "RingProgressBar",
+    "ScanControl": "ScanControl",
+    "ScatterWaveform": "ScatterWaveform",
+    "SignalComboBox": "SignalComboBox",
+    "SignalLineEdit": "SignalLineEdit",
+    "StopButton": "StopButton",
+    "TextBox": "TextBox",
+    "VSCodeEditor": "VSCodeEditor",
+    "Waveform": "Waveform",
+    "WebsiteWidget": "WebsiteWidget",
+}
+Widgets = _WidgetsEnumType("Widgets", _Widgets)
 
 
 class AbortButton(RPCBase):

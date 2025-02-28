@@ -70,13 +70,18 @@ from bec_widgets.cli.rpc.rpc_base import RPCBase, rpc_call
         Write the client enum to the content.
         """
         self.content += """
-class Widgets(str, enum.Enum):
-    \"\"\"
-    Enum for the available widgets.
-    \"\"\"
+class _WidgetsEnumType(str, enum.Enum):
+    \"\"\" Enum for the available widgets, to be generated programatically  \"\"\"
+    ...
+
+_Widgets = {
     """
         for cls in published_classes:
-            self.content += f'{cls.__name__} = "{cls.__name__}"\n    '
+            self.content += f'"{cls.__name__}": "{cls.__name__}",\n    '
+
+        self.content += """}
+Widgets = _WidgetsEnumType("Widgets", _Widgets)
+        """
 
     def generate_content_for_class(self, cls):
         """
