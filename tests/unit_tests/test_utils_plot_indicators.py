@@ -1,27 +1,29 @@
 import pytest
 from qtpy.QtCore import QPointF
 
-from bec_widgets.widgets.plots.waveform.waveform_widget import BECWaveformWidget
+from bec_widgets.widgets.containers.figure import BECFigure
 
 from .client_mocks import mocked_client
 
 
 @pytest.fixture
 def plot_widget_with_arrow_item(qtbot, mocked_client):
-    widget = BECWaveformWidget(client=mocked_client())
+    widget = BECFigure(client=mocked_client())
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
+    waveform = widget.plot()
 
-    yield widget.waveform.arrow_item, widget.waveform.plot_item
+    yield waveform.arrow_item, waveform.plot_item
 
 
 @pytest.fixture
 def plot_widget_with_tick_item(qtbot, mocked_client):
-    widget = BECWaveformWidget(client=mocked_client())
+    widget = BECFigure(client=mocked_client())
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
+    waveform = widget.plot()
 
-    yield widget.waveform.tick_item, widget.waveform.plot_item
+    yield waveform.tick_item, waveform.plot_item
 
 
 def test_arrow_item_add_to_plot(plot_widget_with_arrow_item):
@@ -31,6 +33,7 @@ def test_arrow_item_add_to_plot(plot_widget_with_arrow_item):
     assert arrow_item.plot_item.items == []
     arrow_item.add_to_plot()
     assert arrow_item.plot_item.items == [arrow_item.arrow_item]
+    arrow_item.remove_from_plot()
 
 
 def test_arrow_item_set_position(plot_widget_with_arrow_item):
@@ -50,6 +53,7 @@ def test_arrow_item_set_position(plot_widget_with_arrow_item):
     point = QPointF(2.0, 2.0)
     assert arrow_item.arrow_item.pos() == point
     assert container == [(1, 1), (2, 2)]
+    arrow_item.remove_from_plot()
 
 
 def test_arrow_item_cleanup(plot_widget_with_arrow_item):
@@ -75,6 +79,7 @@ def test_tick_item_add_to_plot(plot_widget_with_tick_item):
     pos = tick_item.tick.pos()
     new_pos = tick_item.tick_item.mapFromParent(QPointF(pos.x(), new_pos))
     assert new_pos.y() == pos.y()
+    tick_item.remove_from_plot()
 
 
 def test_tick_item_set_position(plot_widget_with_tick_item):
@@ -93,6 +98,7 @@ def test_tick_item_set_position(plot_widget_with_tick_item):
     tick_item.set_position(pos=2)
     assert tick_item._pos == 2
     assert container == [1.0, 2.0]
+    tick_item.remove_from_plot()
 
 
 def test_tick_item_cleanup(plot_widget_with_tick_item):
