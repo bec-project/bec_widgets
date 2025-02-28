@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import enum
+import inspect
 from typing import Literal, Optional
 
 from bec_widgets.cli.rpc.rpc_base import RPCBase, rpc_call
@@ -20,21 +21,20 @@ _Widgets = {
     "AbortButton": "AbortButton",
     "BECColorMapWidget": "BECColorMapWidget",
     "BECDockArea": "BECDockArea",
-    "BECImageWidget": "BECImageWidget",
-    "BECMotorMapWidget": "BECMotorMapWidget",
-    "BECMultiWaveformWidget": "BECMultiWaveformWidget",
     "BECProgressBar": "BECProgressBar",
     "BECQueue": "BECQueue",
     "BECStatusBox": "BECStatusBox",
-    "BECWaveformWidget": "BECWaveformWidget",
     "DapComboBox": "DapComboBox",
     "DarkModeButton": "DarkModeButton",
     "DeviceBrowser": "DeviceBrowser",
     "DeviceComboBox": "DeviceComboBox",
     "DeviceLineEdit": "DeviceLineEdit",
+    "Image": "Image",
     "LMFitDialog": "LMFitDialog",
     "LogPanel": "LogPanel",
     "Minesweeper": "Minesweeper",
+    "MotorMap": "MotorMap",
+    "MultiWaveform": "MultiWaveform",
     "PositionIndicator": "PositionIndicator",
     "PositionerBox": "PositionerBox",
     "PositionerBox2D": "PositionerBox2D",
@@ -43,13 +43,16 @@ _Widgets = {
     "ResumeButton": "ResumeButton",
     "RingProgressBar": "RingProgressBar",
     "ScanControl": "ScanControl",
+    "ScatterWaveform": "ScatterWaveform",
     "SignalComboBox": "SignalComboBox",
     "SignalLineEdit": "SignalLineEdit",
     "StopButton": "StopButton",
     "TextBox": "TextBox",
     "VSCodeEditor": "VSCodeEditor",
+    "Waveform": "Waveform",
     "WebsiteWidget": "WebsiteWidget",
 }
+Widgets = _WidgetsEnumType("Widgets", _Widgets)
 
 _plugin_widgets = get_all_plugin_widgets()
 
@@ -62,6 +65,163 @@ for plugin_name, plugin_class in inspect.getmembers(plugin_client, inspect.iscla
 
 
 class AbortButton(RPCBase):
+    """A button that abort the scan."""
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+
+class BECColorMapWidget(RPCBase):
+    @property
+    @rpc_call
+    def colormap(self):
+        """
+        Get the current colormap name.
+        """
+
+
+class BECDock(RPCBase):
+    @property
+    @rpc_call
+    def _config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @property
+    @rpc_call
+    def element_list(self) -> "list[BECWidget]":
+        """
+        Get the widgets in the dock.
+
+        Returns:
+            widgets(list): The widgets in the dock.
+        """
+
+    @property
+    @rpc_call
+    def elements(self) -> "dict[str, BECWidget]":
+        """
+        Get the widgets in the dock.
+
+        Returns:
+            widgets(dict): The widgets in the dock.
+        """
+
+    @rpc_call
+    def new(
+        self,
+        widget: "BECWidget | str",
+        name: "str | None" = None,
+        row: "int | None" = None,
+        col: "int" = 0,
+        rowspan: "int" = 1,
+        colspan: "int" = 1,
+        shift: "Literal['down', 'up', 'left', 'right']" = "down",
+    ) -> "BECWidget":
+        """
+        Add a widget to the dock.
+
+        Args:
+            widget(QWidget): The widget to add. It can not be BECDock or BECDockArea.
+            name(str): The name of the widget.
+            row(int): The row to add the widget to. If None, the widget will be added to the next available row.
+            col(int): The column to add the widget to.
+            rowspan(int): The number of rows the widget should span.
+            colspan(int): The number of columns the widget should span.
+            shift(Literal["down", "up", "left", "right"]): The direction to shift the widgets if the position is occupied.
+        """
+
+    @rpc_call
+    def show(self):
+        """
+        Show the dock.
+        """
+
+    @rpc_call
+    def hide(self):
+        """
+        Hide the dock.
+        """
+
+    @rpc_call
+    def show_title_bar(self):
+        """
+        Hide the title bar of the dock.
+        """
+
+    @rpc_call
+    def set_title(self, title: "str"):
+        """
+        Set the title of the dock.
+
+        Args:
+            title(str): The title of the dock.
+        """
+
+    @rpc_call
+    def hide_title_bar(self):
+        """
+        Hide the title bar of the dock.
+        """
+
+    @rpc_call
+    def available_widgets(self) -> "list":
+        """
+        List all widgets that can be added to the dock.
+
+        Returns:
+            list: The list of eligible widgets.
+        """
+
+    @rpc_call
+    def delete(self, widget_name: "str") -> "None":
+        """
+        Remove a widget from the dock.
+
+        Args:
+            widget_name(str): Delete the widget with the given name.
+        """
+
+    @rpc_call
+    def delete_all(self):
+        """
+        Remove all widgets from the dock.
+        """
+
+    @rpc_call
+    def remove(self):
+        """
+        Remove the dock from the parent dock area.
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        Attach the dock to the parent dock area.
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the dock from the parent dock area.
+        """
+
+
+class BECDockArea(RPCBase):
+    @property
+    @rpc_call
+    def _rpc_id(self) -> "str":
+        """
+        Get the RPC ID of the widget.
+        """
+
     @property
     @rpc_call
     def _config_dict(self) -> "dict":
@@ -78,35 +238,226 @@ class AbortButton(RPCBase):
         Get all registered RPC objects.
         """
 
+    @rpc_call
+    def new(
+        self,
+        name: "str | None" = None,
+        widget: "str | QWidget | None" = None,
+        widget_name: "str | None" = None,
+        position: "Literal['bottom', 'top', 'left', 'right', 'above', 'below']" = "bottom",
+        relative_to: "BECDock | None" = None,
+        closable: "bool" = True,
+        floating: "bool" = False,
+        row: "int | None" = None,
+        col: "int" = 0,
+        rowspan: "int" = 1,
+        colspan: "int" = 1,
+    ) -> "BECDock":
+        """
+        Add a dock to the dock area. Dock has QGridLayout as layout manager by default.
+
+        Args:
+            name(str): The name of the dock to be displayed and for further references. Has to be unique.
+            widget(str|QWidget|None): The widget to be added to the dock. While using RPC, only BEC RPC widgets from RPCWidgetHandler are allowed.
+            position(Literal["bottom", "top", "left", "right", "above", "below"]): The position of the dock.
+            relative_to(BECDock): The dock to which the new dock should be added relative to.
+            closable(bool): Whether the dock is closable.
+            floating(bool): Whether the dock is detached after creating.
+            row(int): The row of the added widget.
+            col(int): The column of the added widget.
+            rowspan(int): The rowspan of the added widget.
+            colspan(int): The colspan of the added widget.
+
+        Returns:
+            BECDock: The created dock.
+        """
+
+    @rpc_call
+    def show(self):
+        """b
+        Show all windows including floating docks.
+        """
+
+    @rpc_call
+    def hide(self):
+        """
+        Hide all windows including floating docks.
+        """
+
     @property
     @rpc_call
-    def _rpc_id(self) -> "str":
+    def panels(self) -> "dict[str, BECDock]":
         """
-        Get the RPC ID of the widget.
+        Get the docks in the dock area.
+        Returns:
+            dock_dict(dict): The docks in the dock area.
         """
 
-
-class BECColorMapWidget(RPCBase):
     @property
     @rpc_call
-    def colormap(self):
+    def panel_list(self) -> "list[BECDock]":
         """
-        Get the current colormap name.
+        Get the docks in the dock area.
+
+        Returns:
+            list: The docks in the dock area.
+        """
+
+    @rpc_call
+    def delete(self, dock_name: "str"):
+        """
+        Delete a dock by name.
+
+        Args:
+            dock_name(str): The name of the dock to delete.
+        """
+
+    @rpc_call
+    def delete_all(self) -> "None":
+        """
+        Delete all docks.
+        """
+
+    @rpc_call
+    def remove(self) -> "None":
+        """
+        Remove the dock area.
+        """
+
+    @rpc_call
+    def detach_dock(self, dock_name: "str") -> "BECDock":
+        """
+        Undock a dock from the dock area.
+
+        Args:
+            dock_name(str): The dock to undock.
+
+        Returns:
+            BECDock: The undocked dock.
+        """
+
+    @rpc_call
+    def attach_all(self):
+        """
+        Return all floating docks to the dock area.
+        """
+
+    @property
+    @rpc_call
+    def selected_device(self) -> "str":
+        """
+        None
+        """
+
+    @rpc_call
+    def save_state(self) -> "dict":
+        """
+        Save the state of the dock area.
+
+        Returns:
+            dict: The state of the dock area.
+        """
+
+    @rpc_call
+    def restore_state(
+        self, state: "dict" = None, missing: "Literal['ignore', 'error']" = "ignore", extra="bottom"
+    ):
+        """
+        Restore the state of the dock area. If no state is provided, the last state is restored.
+
+        Args:
+            state(dict): The state to restore.
+            missing(Literal['ignore','error']): What to do if a dock is missing.
+            extra(str): Extra docks that are in the dockarea but that are not mentioned in state will be added to the bottom of the dockarea, unless otherwise specified by the extra argument.
         """
 
 
-class BECCurve(RPCBase):
+class BECMainWindow(RPCBase):
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+
+class BECProgressBar(RPCBase):
+    """A custom progress bar with smooth transitions. The displayed text can be customized using a template."""
+
+    @rpc_call
+    def set_value(self, value):
+        """
+        Set the value of the progress bar.
+
+        Args:
+            value (float): The value to set.
+        """
+
+    @rpc_call
+    def set_maximum(self, maximum: float):
+        """
+        Set the maximum value of the progress bar.
+
+        Args:
+            maximum (float): The maximum value.
+        """
+
+    @rpc_call
+    def set_minimum(self, minimum: float):
+        """
+        Set the minimum value of the progress bar.
+
+        Args:
+            minimum (float): The minimum value.
+        """
+
+    @property
+    @rpc_call
+    def label_template(self):
+        """
+        The template for the center label. Use $value, $maximum, and $percentage to insert the values.
+
+        Examples:
+        >>> progressbar.label_template = "$value / $maximum - $percentage %"
+        >>> progressbar.label_template = "$value / $percentage %"
+        """
+
+    @label_template.setter
+    @rpc_call
+    def label_template(self):
+        """
+        The template for the center label. Use $value, $maximum, and $percentage to insert the values.
+
+        Examples:
+        >>> progressbar.label_template = "$value / $maximum - $percentage %"
+        >>> progressbar.label_template = "$value / $percentage %"
+        """
+
+
+class BECQueue(RPCBase):
+    """Widget to display the BEC queue."""
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+
+class BECStatusBox(RPCBase):
+    """An autonomous widget to display the status of BEC services."""
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+
+class Curve(RPCBase):
     @rpc_call
     def remove(self):
         """
         Remove the curve from the plot.
-        """
-
-    @property
-    @rpc_call
-    def dap_params(self):
-        """
-        None
         """
 
     @property
@@ -144,13 +495,20 @@ class BECCurve(RPCBase):
         """
 
     @rpc_call
-    def set_data(self, x, y):
+    def set_data(self, x: "list | np.ndarray", y: "list | np.ndarray"):
         """
-        None
+        Set the data of the curve.
+
+        Args:
+            x(list|np.ndarray): The x data.
+            y(list|np.ndarray): The y data.
+
+        Raises:
+            ValueError: If the source is not custom.
         """
 
     @rpc_call
-    def set_color(self, color: "str", symbol_color: "Optional[str]" = None):
+    def set_color(self, color: "str", symbol_color: "str | None" = None):
         """
         Change the color of the curve.
 
@@ -225,2790 +583,34 @@ class BECCurve(RPCBase):
     @rpc_call
     def dap_params(self):
         """
-        None
-        """
-
-
-class BECDock(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
+        Get the dap parameters.
         """
 
     @property
     @rpc_call
-    def _rpc_id(self) -> "str":
+    def dap_summary(self):
         """
-        Get the RPC ID of the widget.
-        """
-
-    @property
-    @rpc_call
-    def widget_list(self) -> "list[BECWidget]":
-        """
-        Get the widgets in the dock.
-
-        Returns:
-            widgets(list): The widgets in the dock.
-        """
-
-    @rpc_call
-    def show_title_bar(self):
-        """
-        Hide the title bar of the dock.
-        """
-
-    @rpc_call
-    def hide_title_bar(self):
-        """
-        Hide the title bar of the dock.
-        """
-
-    @rpc_call
-    def get_widgets_positions(self) -> "dict":
-        """
-        Get the positions of the widgets in the dock.
-
-        Returns:
-            dict: The positions of the widgets in the dock as dict -> {(row, col, rowspan, colspan):widget}
-        """
-
-    @rpc_call
-    def set_title(self, title: "str"):
-        """
-        Set the title of the dock.
-
-        Args:
-            title(str): The title of the dock.
-        """
-
-    @rpc_call
-    def add_widget(
-        self,
-        widget: "BECWidget | str",
-        row=None,
-        col=0,
-        rowspan=1,
-        colspan=1,
-        shift: "Literal['down', 'up', 'left', 'right']" = "down",
-    ) -> "BECWidget":
-        """
-        Add a widget to the dock.
-
-        Args:
-            widget(QWidget): The widget to add.
-            row(int): The row to add the widget to. If None, the widget will be added to the next available row.
-            col(int): The column to add the widget to.
-            rowspan(int): The number of rows the widget should span.
-            colspan(int): The number of columns the widget should span.
-            shift(Literal["down", "up", "left", "right"]): The direction to shift the widgets if the position is occupied.
-        """
-
-    @rpc_call
-    def list_eligible_widgets(self) -> "list":
-        """
-        List all widgets that can be added to the dock.
-
-        Returns:
-            list: The list of eligible widgets.
-        """
-
-    @rpc_call
-    def move_widget(self, widget: "QWidget", new_row: "int", new_col: "int"):
-        """
-        Move a widget to a new position in the layout.
-
-        Args:
-            widget(QWidget): The widget to move.
-            new_row(int): The new row to move the widget to.
-            new_col(int): The new column to move the widget to.
-        """
-
-    @rpc_call
-    def remove_widget(self, widget_rpc_id: "str"):
-        """
-        Remove a widget from the dock.
-
-        Args:
-            widget_rpc_id(str): The ID of the widget to remove.
-        """
-
-    @rpc_call
-    def remove(self):
-        """
-        Remove the dock from the parent dock area.
-        """
-
-    @rpc_call
-    def attach(self):
-        """
-        Attach the dock to the parent dock area.
-        """
-
-    @rpc_call
-    def detach(self):
-        """
-        Detach the dock from the parent dock area.
-        """
-
-
-class BECDockArea(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
+        Get the dap summary.
         """
 
     @property
     @rpc_call
-    def selected_device(self) -> "str":
+    def dap_oversample(self):
         """
-        None
+        Get the dap oversample.
         """
 
-    @property
+    @dap_oversample.setter
     @rpc_call
-    def panels(self) -> "dict[str, BECDock]":
+    def dap_oversample(self):
         """
-        Get the docks in the dock area.
-        Returns:
-            dock_dict(dict): The docks in the dock area.
-        """
-
-    @rpc_call
-    def save_state(self) -> "dict":
-        """
-        Save the state of the dock area.
-
-        Returns:
-            dict: The state of the dock area.
-        """
-
-    @rpc_call
-    def remove_dock(self, name: "str"):
-        """
-        Remove a dock by name and ensure it is properly closed and cleaned up.
-
-        Args:
-            name(str): The name of the dock to remove.
-        """
-
-    @rpc_call
-    def restore_state(
-        self, state: "dict" = None, missing: "Literal['ignore', 'error']" = "ignore", extra="bottom"
-    ):
-        """
-        Restore the state of the dock area. If no state is provided, the last state is restored.
-
-        Args:
-            state(dict): The state to restore.
-            missing(Literal['ignore','error']): What to do if a dock is missing.
-            extra(str): Extra docks that are in the dockarea but that are not mentioned in state will be added to the bottom of the dockarea, unless otherwise specified by the extra argument.
-        """
-
-    @rpc_call
-    def add_dock(
-        self,
-        name: "str" = None,
-        position: "Literal['bottom', 'top', 'left', 'right', 'above', 'below']" = None,
-        relative_to: "BECDock | None" = None,
-        closable: "bool" = True,
-        floating: "bool" = False,
-        prefix: "str" = "dock",
-        widget: "str | QWidget | None" = None,
-        row: "int" = None,
-        col: "int" = 0,
-        rowspan: "int" = 1,
-        colspan: "int" = 1,
-    ) -> "BECDock":
-        """
-        Add a dock to the dock area. Dock has QGridLayout as layout manager by default.
-
-        Args:
-            name(str): The name of the dock to be displayed and for further references. Has to be unique.
-            position(Literal["bottom", "top", "left", "right", "above", "below"]): The position of the dock.
-            relative_to(BECDock): The dock to which the new dock should be added relative to.
-            closable(bool): Whether the dock is closable.
-            floating(bool): Whether the dock is detached after creating.
-            prefix(str): The prefix for the dock name if no name is provided.
-            widget(str|QWidget|None): The widget to be added to the dock. While using RPC, only BEC RPC widgets from RPCWidgetHandler are allowed.
-            row(int): The row of the added widget.
-            col(int): The column of the added widget.
-            rowspan(int): The rowspan of the added widget.
-            colspan(int): The colspan of the added widget.
-
-        Returns:
-            BECDock: The created dock.
-        """
-
-    @rpc_call
-    def clear_all(self):
-        """
-        Close all docks and remove all temp areas.
-        """
-
-    @rpc_call
-    def detach_dock(self, dock_name: "str") -> "BECDock":
-        """
-        Undock a dock from the dock area.
-
-        Args:
-            dock_name(str): The dock to undock.
-
-        Returns:
-            BECDock: The undocked dock.
-        """
-
-    @rpc_call
-    def attach_all(self):
-        """
-        Return all floating docks to the dock area.
-        """
-
-    @rpc_call
-    def _get_all_rpc(self) -> "dict":
-        """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def temp_areas(self) -> "list":
-        """
-        Get the temporary areas in the dock area.
-
-        Returns:
-            list: The temporary areas in the dock area.
-        """
-
-    @rpc_call
-    def show(self):
-        """
-        Show all windows including floating docks.
-        """
-
-    @rpc_call
-    def hide(self):
-        """
-        Hide all windows including floating docks.
-        """
-
-    @rpc_call
-    def delete(self):
-        """
-        None
-        """
-
-
-class BECFigure(RPCBase):
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
-        """
-
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @rpc_call
-    def _get_all_rpc(self) -> "dict":
-        """
-        Get all registered RPC objects.
-        """
-
-    @rpc_call
-    def axes(self, row: "int", col: "int") -> "BECPlotBase":
-        """
-        Get widget by its coordinates in the figure.
-
-        Args:
-            row(int): the row coordinate
-            col(int): the column coordinate
-
-        Returns:
-            BECPlotBase: the widget at the given coordinates
-        """
-
-    @property
-    @rpc_call
-    def widgets(self) -> "dict":
-        """
-        All widgets within the figure with gui ids as keys.
-        Returns:
-            dict: All widgets within the figure.
-        """
-
-    @rpc_call
-    def plot(
-        self,
-        arg1: "list | np.ndarray | str | None" = None,
-        y: "list | np.ndarray | None" = None,
-        x: "list | np.ndarray | None" = None,
-        x_name: "str | None" = None,
-        y_name: "str | None" = None,
-        z_name: "str | None" = None,
-        x_entry: "str | None" = None,
-        y_entry: "str | None" = None,
-        z_entry: "str | None" = None,
-        color: "str | None" = None,
-        color_map_z: "str | None" = "magma",
-        label: "str | None" = None,
-        validate: "bool" = True,
-        new: "bool" = False,
-        row: "int | None" = None,
-        col: "int | None" = None,
-        dap: "str | None" = None,
-        config: "dict | None" = None,
-        **axis_kwargs,
-    ) -> "BECWaveform":
-        """
-        Add a 1D waveform plot to the figure. Always access the first waveform widget in the figure.
-
-        Args:
-            arg1(list | np.ndarray | str | None): First argument which can be x data, y data, or y_name.
-            y(list | np.ndarray): Custom y data to plot.
-            x(list | np.ndarray): Custom x data to plot.
-            x_name(str): The name of the device for the x-axis.
-            y_name(str): The name of the device for the y-axis.
-            z_name(str): The name of the device for the z-axis.
-            x_entry(str): The name of the entry for the x-axis.
-            y_entry(str): The name of the entry for the y-axis.
-            z_entry(str): The name of the entry for the z-axis.
-            color(str): The color of the curve.
-            color_map_z(str): The color map to use for the z-axis.
-            label(str): The label of the curve.
-            validate(bool): If True, validate the device names and entries.
-            new(bool): If True, create a new plot instead of using the first plot.
-            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
-            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
-            dap(str): The DAP model to use for the curve.
-            config(dict): Recreates the whole BECWaveform widget from provided configuration.
-            **axis_kwargs: Additional axis properties to set on the widget after creation.
-
-        Returns:
-            BECWaveform: The waveform plot widget.
-        """
-
-    @rpc_call
-    def image(
-        self,
-        monitor: "str" = None,
-        monitor_type: "Literal['1d', '2d']" = "2d",
-        color_bar: "Literal['simple', 'full']" = "full",
-        color_map: "str" = "magma",
-        data: "np.ndarray" = None,
-        vrange: "tuple[float, float]" = None,
-        new: "bool" = False,
-        row: "int | None" = None,
-        col: "int | None" = None,
-        config: "dict | None" = None,
-        **axis_kwargs,
-    ) -> "BECImageShow":
-        """
-        Add an image to the figure. Always access the first image widget in the figure.
-
-        Args:
-            monitor(str): The name of the monitor to display.
-            color_bar(Literal["simple","full"]): The type of color bar to display.
-            color_map(str): The color map to use for the image.
-            data(np.ndarray): Custom data to display.
-            vrange(tuple[float, float]): The range of values to display.
-            new(bool): If True, create a new plot instead of using the first plot.
-            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
-            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
-            config(dict): Recreates the whole BECImageShow widget from provided configuration.
-            **axis_kwargs: Additional axis properties to set on the widget after creation.
-
-        Returns:
-            BECImageShow: The image widget.
-        """
-
-    @rpc_call
-    def motor_map(
-        self,
-        motor_x: "str" = None,
-        motor_y: "str" = None,
-        new: "bool" = False,
-        row: "int | None" = None,
-        col: "int | None" = None,
-        config: "dict | None" = None,
-        **axis_kwargs,
-    ) -> "BECMotorMap":
-        """
-        Add a motor map to the figure. Always access the first motor map widget in the figure.
-
-        Args:
-            motor_x(str): The name of the motor for the X axis.
-            motor_y(str): The name of the motor for the Y axis.
-            new(bool): If True, create a new plot instead of using the first plot.
-            row(int): The row coordinate of the widget in the figure. If not provided, the next empty row will be used.
-            col(int): The column coordinate of the widget in the figure. If not provided, the next empty column will be used.
-            config(dict): Recreates the whole BECImageShow widget from provided configuration.
-            **axis_kwargs: Additional axis properties to set on the widget after creation.
-
-        Returns:
-            BECMotorMap: The motor map widget.
-        """
-
-    @rpc_call
-    def remove(
-        self,
-        row: "int" = None,
-        col: "int" = None,
-        widget_id: "str" = None,
-        coordinates: "tuple[int, int]" = None,
-    ) -> "None":
-        """
-        Remove a widget from the figure. Can be removed by its unique identifier or by its coordinates.
-
-        Args:
-            row(int): The row coordinate of the widget to remove.
-            col(int): The column coordinate of the widget to remove.
-            widget_id(str): The unique identifier of the widget to remove.
-            coordinates(tuple[int, int], optional): The coordinates of the widget to remove.
-        """
-
-    @rpc_call
-    def change_layout(self, max_columns=None, max_rows=None):
-        """
-        Reshuffle the layout of the figure to adjust to a new number of max_columns or max_rows.
-        If both max_columns and max_rows are provided, max_rows is ignored.
-
-        Args:
-            max_columns (Optional[int]): The new maximum number of columns in the figure.
-            max_rows (Optional[int]): The new maximum number of rows in the figure.
-        """
-
-    @rpc_call
-    def change_theme(self, theme: "Literal['dark', 'light']") -> "None":
-        """
-        Change the theme of the figure widget.
-
-        Args:
-            theme(Literal["dark","light"]): The theme to set for the figure widget.
-        """
-
-    @rpc_call
-    def export(self):
-        """
-        Export the plot widget.
-        """
-
-    @rpc_call
-    def clear_all(self):
-        """
-        Clear all widgets from the figure and reset to default state
-        """
-
-    @property
-    @rpc_call
-    def widget_list(self) -> "list[BECPlotBase]":
-        """
-        Access all widget in BECFigure as a list
-        Returns:
-            list[BECPlotBase]: List of all widgets in the figure.
-        """
-
-
-class BECImageItem(RPCBase):
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
-        """
-
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @rpc_call
-    def set(self, **kwargs):
-        """
-        Set the properties of the image.
-
-        Args:
-            **kwargs: Keyword arguments for the properties to be set.
-
-        Possible properties:
-            - downsample
-            - color_map
-            - monitor
-            - opacity
-            - vrange
-            - fft
-            - log
-            - rot
-            - transpose
-            - autorange_mode
-        """
-
-    @rpc_call
-    def set_fft(self, enable: "bool" = False):
-        """
-        Set the FFT of the image.
-
-        Args:
-            enable(bool): Whether to perform FFT on the monitor data.
-        """
-
-    @rpc_call
-    def set_log(self, enable: "bool" = False):
-        """
-        Set the log of the image.
-
-        Args:
-            enable(bool): Whether to perform log on the monitor data.
-        """
-
-    @rpc_call
-    def set_rotation(self, deg_90: "int" = 0):
-        """
-        Set the rotation of the image.
-
-        Args:
-            deg_90(int): The rotation angle of the monitor data before displaying.
-        """
-
-    @rpc_call
-    def set_transpose(self, enable: "bool" = False):
-        """
-        Set the transpose of the image.
-
-        Args:
-            enable(bool): Whether to transpose the image.
-        """
-
-    @rpc_call
-    def set_opacity(self, opacity: "float" = 1.0):
-        """
-        Set the opacity of the image.
-
-        Args:
-            opacity(float): The opacity of the image.
-        """
-
-    @rpc_call
-    def set_autorange(self, autorange: "bool" = False):
-        """
-        Set the autorange of the color bar.
-
-        Args:
-            autorange(bool): Whether to autorange the color bar.
-        """
-
-    @rpc_call
-    def set_autorange_mode(self, mode: "Literal['max', 'mean']" = "mean"):
-        """
-        Set the autorange mode to scale the vrange of the color bar. Choose between min/max or mean +/- std.
-
-        Args:
-            mode(Literal["max","mean"]): Max for min/max or mean for mean +/- std.
-        """
-
-    @rpc_call
-    def set_color_map(self, cmap: "str" = "magma"):
-        """
-        Set the color map of the image.
-
-        Args:
-            cmap(str): The color map of the image.
-        """
-
-    @rpc_call
-    def set_auto_downsample(self, auto: "bool" = True):
-        """
-        Set the auto downsample of the image.
-
-        Args:
-            auto(bool): Whether to downsample the image.
-        """
-
-    @rpc_call
-    def set_monitor(self, monitor: "str"):
-        """
-        Set the monitor of the image.
-
-        Args:
-            monitor(str): The name of the monitor.
-        """
-
-    @rpc_call
-    def set_vrange(
-        self,
-        vmin: "float" = None,
-        vmax: "float" = None,
-        vrange: "tuple[float, float]" = None,
-        change_autorange: "bool" = True,
-    ):
-        """
-        Set the range of the color bar.
-
-        Args:
-            vmin(float): Minimum value of the color bar.
-            vmax(float): Maximum value of the color bar.
-        """
-
-    @rpc_call
-    def get_data(self) -> "np.ndarray":
-        """
-        Get the data of the image.
-        Returns:
-            np.ndarray: The data of the image.
-        """
-
-
-class BECImageShow(RPCBase):
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
-        """
-
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @rpc_call
-    def add_image_by_config(self, config: "ImageItemConfig | dict") -> "BECImageItem":
-        """
-        Add an image to the widget by configuration.
-
-        Args:
-            config(ImageItemConfig|dict): The configuration of the image.
-
-        Returns:
-            BECImageItem: The image object.
-        """
-
-    @rpc_call
-    def image(
-        self,
-        monitor: "str",
-        monitor_type: "Literal['1d', '2d']" = "2d",
-        color_map: "Optional[str]" = "magma",
-        color_bar: "Optional[Literal['simple', 'full']]" = "full",
-        downsample: "Optional[bool]" = True,
-        opacity: "Optional[float]" = 1.0,
-        vrange: "Optional[tuple[int, int]]" = None,
-        **kwargs,
-    ) -> "BECImageItem":
-        """
-        Add an image to the figure. Always access the first image widget in the figure.
-
-        Args:
-            monitor(str): The name of the monitor to display.
-            monitor_type(Literal["1d","2d"]): The type of monitor to display.
-            color_bar(Literal["simple","full"]): The type of color bar to display.
-            color_map(str): The color map to use for the image.
-            data(np.ndarray): Custom data to display.
-            vrange(tuple[float, float]): The range of values to display.
-
-        Returns:
-            BECImageItem: The image item.
-        """
-
-    @rpc_call
-    def add_custom_image(
-        self,
-        name: "str",
-        data: "Optional[np.ndarray]" = None,
-        color_map: "Optional[str]" = "magma",
-        color_bar: "Optional[Literal['simple', 'full']]" = "full",
-        downsample: "Optional[bool]" = True,
-        opacity: "Optional[float]" = 1.0,
-        vrange: "Optional[tuple[int, int]]" = None,
-        **kwargs,
-    ):
-        """
-        None
-        """
-
-    @rpc_call
-    def set_vrange(self, vmin: "float", vmax: "float", name: "str" = None):
-        """
-        Set the range of the color bar.
-        If name is not specified, then set vrange for all images.
-
-        Args:
-            vmin(float): Minimum value of the color bar.
-            vmax(float): Maximum value of the color bar.
-            name(str): The name of the image. If None, apply to all images.
-        """
-
-    @rpc_call
-    def set_color_map(self, cmap: "str", name: "str" = None):
-        """
-        Set the color map of the image.
-        If name is not specified, then set color map for all images.
-
-        Args:
-            cmap(str): The color map of the image.
-            name(str): The name of the image. If None, apply to all images.
-        """
-
-    @rpc_call
-    def set_autorange(self, enable: "bool" = False, name: "str" = None):
-        """
-        Set the autoscale of the image.
-
-        Args:
-            enable(bool): Whether to autoscale the color bar.
-            name(str): The name of the image. If None, apply to all images.
-        """
-
-    @rpc_call
-    def set_autorange_mode(self, mode: "Literal['max', 'mean']", name: "str" = None):
-        """
-        Set the autoscale mode of the image, that decides how the vrange of the color bar is scaled.
-        Choose betwen 'max' -> min/max of the data, 'mean' -> mean +/- fudge_factor*std of the data (fudge_factor~2).
-
-        Args:
-            mode(str): The autoscale mode of the image.
-            name(str): The name of the image. If None, apply to all images.
-        """
-
-    @rpc_call
-    def set_monitor(self, monitor: "str", name: "str" = None):
-        """
-        Set the monitor of the image.
-        If name is not specified, then set monitor for all images.
-
-        Args:
-            monitor(str): The name of the monitor.
-            name(str): The name of the image. If None, apply to all images.
-        """
-
-    @rpc_call
-    def set_processing(self, name: "str" = None, **kwargs):
-        """
-        Set the post processing of the image.
-        If name is not specified, then set post processing for all images.
-
-        Args:
-            name(str): The name of the image. If None, apply to all images.
-            **kwargs: Keyword arguments for the properties to be set.
-        Possible properties:
-            - fft: bool
-            - log: bool
-            - rot: int
-            - transpose: bool
-        """
-
-    @rpc_call
-    def set_image_properties(self, name: "str" = None, **kwargs):
-        """
-        Set the properties of the image.
-
-        Args:
-            name(str): The name of the image. If None, apply to all images.
-            **kwargs: Keyword arguments for the properties to be set.
-        Possible properties:
-            - downsample: bool
-            - color_map: str
-            - monitor: str
-            - opacity: float
-            - vrange: tuple[int,int]
-            - fft: bool
-            - log: bool
-            - rot: int
-            - transpose: bool
-        """
-
-    @rpc_call
-    def set_fft(self, enable: "bool" = False, name: "str" = None):
-        """
-        Set the FFT of the image.
-        If name is not specified, then set FFT for all images.
-
-        Args:
-            enable(bool): Whether to perform FFT on the monitor data.
-            name(str): The name of the image. If None, apply to all images.
-        """
-
-    @rpc_call
-    def set_log(self, enable: "bool" = False, name: "str" = None):
-        """
-        Set the log of the image.
-        If name is not specified, then set log for all images.
-
-        Args:
-            enable(bool): Whether to perform log on the monitor data.
-            name(str): The name of the image. If None, apply to all images.
-        """
-
-    @rpc_call
-    def set_rotation(self, deg_90: "int" = 0, name: "str" = None):
-        """
-        Set the rotation of the image.
-        If name is not specified, then set rotation for all images.
-
-        Args:
-            deg_90(int): The rotation angle of the monitor data before displaying.
-            name(str): The name of the image. If None, apply to all images.
-        """
-
-    @rpc_call
-    def set_transpose(self, enable: "bool" = False, name: "str" = None):
-        """
-        Set the transpose of the image.
-        If name is not specified, then set transpose for all images.
-
-        Args:
-            enable(bool): Whether to transpose the monitor data before displaying.
-            name(str): The name of the image. If None, apply to all images.
-        """
-
-    @rpc_call
-    def set(self, **kwargs) -> "None":
-        """
-        Set the properties of the plot widget.
-
-        Args:
-            **kwargs: Keyword arguments for the properties to be set.
-
-        Possible properties:
-            - title: str
-            - x_label: str
-            - y_label: str
-            - x_scale: Literal["linear", "log"]
-            - y_scale: Literal["linear", "log"]
-            - x_lim: tuple
-            - y_lim: tuple
-            - legend_label_size: int
-        """
-
-    @rpc_call
-    def set_title(self, title: "str", size: "int" = None):
-        """
-        Set the title of the plot widget.
-
-        Args:
-            title(str): Title of the plot widget.
-            size(int): Font size of the title.
-        """
-
-    @rpc_call
-    def set_x_label(self, label: "str", size: "int" = None):
-        """
-        Set the label of the x-axis.
-
-        Args:
-            label(str): Label of the x-axis.
-            size(int): Font size of the label.
-        """
-
-    @rpc_call
-    def set_y_label(self, label: "str", size: "int" = None):
-        """
-        Set the label of the y-axis.
-
-        Args:
-            label(str): Label of the y-axis.
-            size(int): Font size of the label.
-        """
-
-    @rpc_call
-    def set_x_scale(self, scale: "Literal['linear', 'log']" = "linear"):
-        """
-        Set the scale of the x-axis.
-
-        Args:
-            scale(Literal["linear", "log"]): Scale of the x-axis.
-        """
-
-    @rpc_call
-    def set_y_scale(self, scale: "Literal['linear', 'log']" = "linear"):
-        """
-        Set the scale of the y-axis.
-
-        Args:
-            scale(Literal["linear", "log"]): Scale of the y-axis.
-        """
-
-    @rpc_call
-    def set_x_lim(self, *args) -> "None":
-        """
-        Set the limits of the x-axis. This method can accept either two separate arguments
-        for the minimum and maximum x-axis values, or a single tuple containing both limits.
-
-        Usage:
-            set_x_lim(x_min, x_max)
-            set_x_lim((x_min, x_max))
-
-        Args:
-            *args: A variable number of arguments. Can be two integers (x_min and x_max)
-                   or a single tuple with two integers.
-        """
-
-    @rpc_call
-    def set_y_lim(self, *args) -> "None":
-        """
-        Set the limits of the y-axis. This method can accept either two separate arguments
-        for the minimum and maximum y-axis values, or a single tuple containing both limits.
-
-        Usage:
-            set_y_lim(y_min, y_max)
-            set_y_lim((y_min, y_max))
-
-        Args:
-            *args: A variable number of arguments. Can be two integers (y_min and y_max)
-                   or a single tuple with two integers.
-        """
-
-    @rpc_call
-    def set_grid(self, x: "bool" = False, y: "bool" = False):
-        """
-        Set the grid of the plot widget.
-
-        Args:
-            x(bool): Show grid on the x-axis.
-            y(bool): Show grid on the y-axis.
-        """
-
-    @rpc_call
-    def enable_fps_monitor(self, enable: "bool" = True):
-        """
-        Enable the FPS monitor.
-
-        Args:
-            enable(bool): True to enable, False to disable.
-        """
-
-    @rpc_call
-    def lock_aspect_ratio(self, lock):
-        """
-        Lock aspect ratio.
-
-        Args:
-            lock(bool): True to lock, False to unlock.
-        """
-
-    @rpc_call
-    def export(self):
-        """
-        Show the Export Dialog of the plot widget.
-        """
-
-    @rpc_call
-    def remove(self):
-        """
-        Remove the plot widget from the figure.
-        """
-
-    @property
-    @rpc_call
-    def images(self) -> "list[BECImageItem]":
-        """
-        Get the list of images.
-        Returns:
-            list[BECImageItem]: The list of images.
-        """
-
-
-class BECImageWidget(RPCBase):
-    @rpc_call
-    def image(
-        self,
-        monitor: "str",
-        monitor_type: "Optional[Literal['1d', '2d']]" = "2d",
-        color_map: "Optional[str]" = "magma",
-        color_bar: "Optional[Literal['simple', 'full']]" = "full",
-        downsample: "Optional[bool]" = True,
-        opacity: "Optional[float]" = 1.0,
-        vrange: "Optional[tuple[int, int]]" = None,
-        **kwargs,
-    ) -> "BECImageItem":
-        """
-        None
-        """
-
-    @rpc_call
-    def set(self, **kwargs):
-        """
-        Set the properties of the plot widget.
-
-        Args:
-            **kwargs: Keyword arguments for the properties to be set.
-
-        Possible properties:
-            - title: str
-            - x_label: str
-            - y_label: str
-            - x_scale: Literal["linear", "log"]
-            - y_scale: Literal["linear", "log"]
-            - x_lim: tuple
-            - y_lim: tuple
-            - legend_label_size: int
-        """
-
-    @rpc_call
-    def set_title(self, title: "str"):
-        """
-        Set the title of the plot widget.
-
-        Args:
-            title(str): Title of the plot.
-        """
-
-    @rpc_call
-    def set_x_label(self, x_label: "str"):
-        """
-        Set the x-axis label of the plot widget.
-
-        Args:
-            x_label(str): Label of the x-axis.
-        """
-
-    @rpc_call
-    def set_y_label(self, y_label: "str"):
-        """
-        Set the y-axis label of the plot widget.
-
-        Args:
-            y_label(str): Label of the y-axis.
-        """
-
-    @rpc_call
-    def set_x_scale(self, x_scale: "Literal['linear', 'log']"):
-        """
-        Set the scale of the x-axis of the plot widget.
-
-        Args:
-            x_scale(Literal["linear", "log"]): Scale of the x-axis.
-        """
-
-    @rpc_call
-    def set_y_scale(self, y_scale: "Literal['linear', 'log']"):
-        """
-        Set the scale of the y-axis of the plot widget.
-
-        Args:
-            y_scale(Literal["linear", "log"]): Scale of the y-axis.
-        """
-
-    @rpc_call
-    def set_x_lim(self, x_lim: "tuple"):
-        """
-        Set the limits of the x-axis of the plot widget.
-
-        Args:
-            x_lim(tuple): Limits of the x-axis.
-        """
-
-    @rpc_call
-    def set_y_lim(self, y_lim: "tuple"):
-        """
-        Set the limits of the y-axis of the plot widget.
-
-        Args:
-            y_lim(tuple): Limits of the y-axis.
-        """
-
-    @rpc_call
-    def set_vrange(self, vmin: "float", vmax: "float", name: "str" = None):
-        """
-        Set the range of the color bar.
-        If name is not specified, then set vrange for all images.
-
-        Args:
-            vmin(float): Minimum value of the color bar.
-            vmax(float): Maximum value of the color bar.
-            name(str): The name of the image. If None, apply to all images.
-        """
-
-    @rpc_call
-    def set_fft(self, enable: "bool" = False, name: "str" = None):
-        """
-        Set the FFT of the image.
-        If name is not specified, then set FFT for all images.
-
-        Args:
-            enable(bool): Whether to perform FFT on the monitor data.
-            name(str): The name of the image. If None, apply to all images.
-        """
-
-    @rpc_call
-    def set_transpose(self, enable: "bool" = False, name: "str" = None):
-        """
-        Set the transpose of the image.
-        If name is not specified, then set transpose for all images.
-
-        Args:
-            enable(bool): Whether to transpose the monitor data before displaying.
-            name(str): The name of the image. If None, apply to all images.
-        """
-
-    @rpc_call
-    def set_rotation(self, deg_90: "int" = 0, name: "str" = None):
-        """
-        Set the rotation of the image.
-        If name is not specified, then set rotation for all images.
-
-        Args:
-            deg_90(int): The rotation angle of the monitor data before displaying.
-            name(str): The name of the image. If None, apply to all images.
-        """
-
-    @rpc_call
-    def set_log(self, enable: "bool" = False, name: "str" = None):
-        """
-        Set the log of the image.
-        If name is not specified, then set log for all images.
-
-        Args:
-            enable(bool): Whether to perform log on the monitor data.
-            name(str): The name of the image. If None, apply to all images.
-        """
-
-    @rpc_call
-    def set_grid(self, x_grid: "bool", y_grid: "bool"):
-        """
-        Set the grid visibility of the plot widget.
-
-        Args:
-            x_grid(bool): Visibility of the x-axis grid.
-            y_grid(bool): Visibility of the y-axis grid.
-        """
-
-    @rpc_call
-    def enable_fps_monitor(self, enabled: "bool"):
-        """
-        Enable the FPS monitor of the plot widget.
-
-        Args:
-            enabled(bool): If True, enable the FPS monitor.
-        """
-
-    @rpc_call
-    def lock_aspect_ratio(self, lock: "bool"):
-        """
-        Lock the aspect ratio of the plot widget.
-
-        Args:
-            lock(bool): Lock the aspect ratio.
-        """
-
-
-class BECMainWindow(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @rpc_call
-    def _get_all_rpc(self) -> "dict":
-        """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
-        """
-
-
-class BECMotorMap(RPCBase):
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
-        """
-
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @rpc_call
-    def change_motors(
-        self,
-        motor_x: "str",
-        motor_y: "str",
-        motor_x_entry: "str" = None,
-        motor_y_entry: "str" = None,
-        validate_bec: "bool" = True,
-    ) -> "None":
-        """
-        Change the active motors for the plot.
-
-        Args:
-            motor_x(str): Motor name for the X axis.
-            motor_y(str): Motor name for the Y axis.
-            motor_x_entry(str): Motor entry for the X axis.
-            motor_y_entry(str): Motor entry for the Y axis.
-            validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
-        """
-
-    @rpc_call
-    def set_max_points(self, max_points: "int") -> "None":
-        """
-        Set the maximum number of points to display.
-
-        Args:
-            max_points(int): Maximum number of points to display.
-        """
-
-    @rpc_call
-    def set_precision(self, precision: "int") -> "None":
-        """
-        Set the decimal precision of the motor position.
-
-        Args:
-            precision(int): Decimal precision of the motor position.
-        """
-
-    @rpc_call
-    def set_num_dim_points(self, num_dim_points: "int") -> "None":
-        """
-        Set the number of dim points for the motor map.
-
-        Args:
-            num_dim_points(int): Number of dim points.
-        """
-
-    @rpc_call
-    def set_background_value(self, background_value: "int") -> "None":
-        """
-        Set the background value of the motor map.
-
-        Args:
-            background_value(int): Background value of the motor map.
-        """
-
-    @rpc_call
-    def set_scatter_size(self, scatter_size: "int") -> "None":
-        """
-        Set the scatter size of the motor map plot.
-
-        Args:
-            scatter_size(int): Size of the scatter points.
-        """
-
-    @rpc_call
-    def get_data(self) -> "dict":
-        """
-        Get the data of the motor map.
-
-        Returns:
-            dict: Data of the motor map.
-        """
-
-    @rpc_call
-    def export(self):
-        """
-        Show the Export Dialog of the plot widget.
-        """
-
-    @rpc_call
-    def remove(self):
-        """
-        Remove the plot widget from the figure.
-        """
-
-    @rpc_call
-    def reset_history(self):
-        """
-        Reset the history of the motor map.
-        """
-
-
-class BECMotorMapWidget(RPCBase):
-    @rpc_call
-    def change_motors(
-        self,
-        motor_x: "str",
-        motor_y: "str",
-        motor_x_entry: "str" = None,
-        motor_y_entry: "str" = None,
-        validate_bec: "bool" = True,
-    ) -> "None":
-        """
-        Change the active motors for the plot.
-
-        Args:
-            motor_x(str): Motor name for the X axis.
-            motor_y(str): Motor name for the Y axis.
-            motor_x_entry(str): Motor entry for the X axis.
-            motor_y_entry(str): Motor entry for the Y axis.
-            validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
-        """
-
-    @rpc_call
-    def set_max_points(self, max_points: "int") -> "None":
-        """
-        Set the maximum number of points to display on the motor map.
-
-        Args:
-            max_points(int): Maximum number of points to display.
-        """
-
-    @rpc_call
-    def set_precision(self, precision: "int") -> "None":
-        """
-        Set the precision of the motor map.
-
-        Args:
-            precision(int): Precision to set.
-        """
-
-    @rpc_call
-    def set_num_dim_points(self, num_dim_points: "int") -> "None":
-        """
-        Set the number of points to display on the motor map.
-
-        Args:
-            num_dim_points(int): Number of points to display.
-        """
-
-    @rpc_call
-    def set_background_value(self, background_value: "int") -> "None":
-        """
-        Set the background value of the motor map.
-
-        Args:
-            background_value(int): Background value of the motor map.
-        """
-
-    @rpc_call
-    def set_scatter_size(self, scatter_size: "int") -> "None":
-        """
-        Set the scatter size of the motor map.
-
-        Args:
-            scatter_size(int): Scatter size of the motor map.
-        """
-
-    @rpc_call
-    def get_data(self) -> "dict":
-        """
-        Get the data of the motor map.
-
-        Returns:
-            dict: Data of the motor map.
-        """
-
-    @rpc_call
-    def reset_history(self) -> "None":
-        """
-        Reset the history of the motor map.
-        """
-
-    @rpc_call
-    def export(self):
-        """
-        Show the export dialog for the motor map.
-        """
-
-
-class BECMultiWaveform(RPCBase):
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
-        """
-
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @property
-    @rpc_call
-    def curves(self) -> collections.deque:
-        """
-        Get the curves of the plot widget as a deque.
-        Returns:
-            deque: Deque of curves.
-        """
-
-    @rpc_call
-    def set_monitor(self, monitor: str):
-        """
-        Set the monitor for the plot widget.
-        Args:
-            monitor (str): The monitor to set.
-        """
-
-    @rpc_call
-    def set_opacity(self, opacity: int):
-        """
-        Set the opacity of the curve on the plot.
-
-        Args:
-            opacity(int): The opacity of the curve. 0-100.
-        """
-
-    @rpc_call
-    def set_curve_limit(self, max_trace: int, flush_buffer: bool = False):
-        """
-        Set the maximum number of traces to display on the plot.
-
-        Args:
-            max_trace (int): The maximum number of traces to display.
-            flush_buffer (bool): Flush the buffer.
-        """
-
-    @rpc_call
-    def set_curve_highlight(self, index: int):
-        """
-        Set the curve highlight based on visible curves.
-
-        Args:
-            index (int): The index of the curve to highlight among visible curves.
-        """
-
-    @rpc_call
-    def set_colormap(self, colormap: str):
-        """
-        Set the colormap for the curves.
-
-        Args:
-            colormap(str): Colormap for the curves.
-        """
-
-    @rpc_call
-    def set(self, **kwargs) -> "None":
-        """
-        Set the properties of the plot widget.
-
-        Args:
-            **kwargs: Keyword arguments for the properties to be set.
-
-        Possible properties:
-            - title: str
-            - x_label: str
-            - y_label: str
-            - x_scale: Literal["linear", "log"]
-            - y_scale: Literal["linear", "log"]
-            - x_lim: tuple
-            - y_lim: tuple
-            - legend_label_size: int
-        """
-
-    @rpc_call
-    def set_title(self, title: "str", size: "int" = None):
-        """
-        Set the title of the plot widget.
-
-        Args:
-            title(str): Title of the plot widget.
-            size(int): Font size of the title.
-        """
-
-    @rpc_call
-    def set_x_label(self, label: "str", size: "int" = None):
-        """
-        Set the label of the x-axis.
-
-        Args:
-            label(str): Label of the x-axis.
-            size(int): Font size of the label.
-        """
-
-    @rpc_call
-    def set_y_label(self, label: "str", size: "int" = None):
-        """
-        Set the label of the y-axis.
-
-        Args:
-            label(str): Label of the y-axis.
-            size(int): Font size of the label.
-        """
-
-    @rpc_call
-    def set_x_scale(self, scale: "Literal['linear', 'log']" = "linear"):
-        """
-        Set the scale of the x-axis.
-
-        Args:
-            scale(Literal["linear", "log"]): Scale of the x-axis.
-        """
-
-    @rpc_call
-    def set_y_scale(self, scale: "Literal['linear', 'log']" = "linear"):
-        """
-        Set the scale of the y-axis.
-
-        Args:
-            scale(Literal["linear", "log"]): Scale of the y-axis.
-        """
-
-    @rpc_call
-    def set_x_lim(self, *args) -> "None":
-        """
-        Set the limits of the x-axis. This method can accept either two separate arguments
-        for the minimum and maximum x-axis values, or a single tuple containing both limits.
-
-        Usage:
-            set_x_lim(x_min, x_max)
-            set_x_lim((x_min, x_max))
-
-        Args:
-            *args: A variable number of arguments. Can be two integers (x_min and x_max)
-                   or a single tuple with two integers.
-        """
-
-    @rpc_call
-    def set_y_lim(self, *args) -> "None":
-        """
-        Set the limits of the y-axis. This method can accept either two separate arguments
-        for the minimum and maximum y-axis values, or a single tuple containing both limits.
-
-        Usage:
-            set_y_lim(y_min, y_max)
-            set_y_lim((y_min, y_max))
-
-        Args:
-            *args: A variable number of arguments. Can be two integers (y_min and y_max)
-                   or a single tuple with two integers.
-        """
-
-    @rpc_call
-    def set_grid(self, x: "bool" = False, y: "bool" = False):
-        """
-        Set the grid of the plot widget.
-
-        Args:
-            x(bool): Show grid on the x-axis.
-            y(bool): Show grid on the y-axis.
-        """
-
-    @rpc_call
-    def set_colormap(self, colormap: str):
-        """
-        Set the colormap for the curves.
-
-        Args:
-            colormap(str): Colormap for the curves.
-        """
-
-    @rpc_call
-    def enable_fps_monitor(self, enable: "bool" = True):
-        """
-        Enable the FPS monitor.
-
-        Args:
-            enable(bool): True to enable, False to disable.
-        """
-
-    @rpc_call
-    def lock_aspect_ratio(self, lock):
-        """
-        Lock aspect ratio.
-
-        Args:
-            lock(bool): True to lock, False to unlock.
-        """
-
-    @rpc_call
-    def export(self):
-        """
-        Show the Export Dialog of the plot widget.
-        """
-
-    @rpc_call
-    def get_all_data(self, output: Literal["dict", "pandas"] = "dict") -> dict:
-        """
-        Extract all curve data into a dictionary or a pandas DataFrame.
-
-        Args:
-            output (Literal["dict", "pandas"]): Format of the output data.
-
-        Returns:
-            dict | pd.DataFrame: Data of all curves in the specified format.
-        """
-
-    @rpc_call
-    def remove(self):
-        """
-        Remove the plot widget from the figure.
-        """
-
-
-class BECMultiWaveformWidget(RPCBase):
-    @property
-    @rpc_call
-    def curves(self) -> list[pyqtgraph.graphicsItems.PlotDataItem.PlotDataItem]:
-        """
-        Get the curves of the plot widget as a list
-        Returns:
-            list: List of curves.
-        """
-
-    @rpc_call
-    def set_monitor(self, monitor: str) -> None:
-        """
-        Set the monitor of the plot widget.
-
-        Args:
-            monitor(str): The monitor to set.
-        """
-
-    @rpc_call
-    def set_curve_highlight(self, index: int) -> None:
-        """
-        Set the curve highlight of the plot widget by index
-
-        Args:
-            index(int): The index of the curve to highlight.
-        """
-
-    @rpc_call
-    def set_opacity(self, opacity: int) -> None:
-        """
-        Set the opacity of the plot widget.
-
-        Args:
-            opacity(int): The opacity to set.
-        """
-
-    @rpc_call
-    def set_curve_limit(self, curve_limit: int) -> None:
-        """
-        Set the maximum number of traces to display on the plot widget.
-
-        Args:
-            curve_limit(int): The maximum number of traces to display.
-        """
-
-    @rpc_call
-    def set_buffer_flush(self, flush_buffer: bool) -> None:
-        """
-        Set the buffer flush property of the plot widget.
-
-        Args:
-            flush_buffer(bool): True to flush the buffer, False to not flush the buffer.
-        """
-
-    @rpc_call
-    def set_highlight_last_curve(self, enable: bool) -> None:
-        """
-        Enable or disable highlighting of the last curve.
-
-        Args:
-            enable(bool): True to enable highlighting of the last curve, False to disable.
-        """
-
-    @rpc_call
-    def set_colormap(self, colormap: str) -> None:
-        """
-        Set the colormap of the plot widget.
-
-        Args:
-            colormap(str): The colormap to set.
-        """
-
-    @rpc_call
-    def set(self, **kwargs):
-        """
-        Set the properties of the plot widget.
-
-        Args:
-            **kwargs: Keyword arguments for the properties to be set.
-
-        Possible properties:
-            - title: str
-            - x_label: str
-            - y_label: str
-            - x_scale: Literal["linear", "log"]
-            - y_scale: Literal["linear", "log"]
-            - x_lim: tuple
-            - y_lim: tuple
-            - legend_label_size: int
-        """
-
-    @rpc_call
-    def set_title(self, title: str):
-        """
-        Set the title of the plot widget.
-
-        Args:
-            title(str): The title to set.
-        """
-
-    @rpc_call
-    def set_x_label(self, x_label: str):
-        """
-        Set the x-axis label of the plot widget.
-
-        Args:
-            x_label(str): The x-axis label to set.
-        """
-
-    @rpc_call
-    def set_y_label(self, y_label: str):
-        """
-        Set the y-axis label of the plot widget.
-
-        Args:
-            y_label(str): The y-axis label to set.
-        """
-
-    @rpc_call
-    def set_x_scale(self, x_scale: Literal["linear", "log"]):
-        """
-        Set the x-axis scale of the plot widget.
-
-        Args:
-            x_scale(str): The x-axis scale to set.
-        """
-
-    @rpc_call
-    def set_y_scale(self, y_scale: Literal["linear", "log"]):
-        """
-        Set the y-axis scale of the plot widget.
-
-        Args:
-            y_scale(str): The y-axis scale to set.
-        """
-
-    @rpc_call
-    def set_x_lim(self, x_lim: tuple):
-        """
-        Set x-axis limits of the plot widget.
-
-        Args:
-            x_lim(tuple): The x-axis limits to set.
-        """
-
-    @rpc_call
-    def set_y_lim(self, y_lim: tuple):
-        """
-        Set y-axis limits of the plot widget.
-
-        Args:
-            y_lim(tuple): The y-axis limits to set.
-        """
-
-    @rpc_call
-    def set_grid(self, x_grid: bool, y_grid: bool):
-        """
-        Set the grid of the plot widget.
-
-        Args:
-            x_grid(bool): True to enable the x-grid, False to disable.
-            y_grid(bool): True to enable the y-grid, False to disable.
-        """
-
-    @rpc_call
-    def set_colormap(self, colormap: str) -> None:
-        """
-        Set the colormap of the plot widget.
-
-        Args:
-            colormap(str): The colormap to set.
-        """
-
-    @rpc_call
-    def enable_fps_monitor(self, enabled: bool):
-        """
-        Enable or disable the FPS monitor
-
-        Args:
-            enabled(bool): True to enable the FPS monitor, False to disable.
-        """
-
-    @rpc_call
-    def lock_aspect_ratio(self, lock: bool):
-        """
-        Lock the aspect ratio of the plot widget.
-
-        Args:
-            lock(bool): True to lock the aspect ratio, False to unlock.
-        """
-
-    @rpc_call
-    def export(self):
-        """
-        Export the plot widget.
-        """
-
-
-class BECPlotBase(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @rpc_call
-    def set(self, **kwargs) -> "None":
-        """
-        Set the properties of the plot widget.
-
-        Args:
-            **kwargs: Keyword arguments for the properties to be set.
-
-        Possible properties:
-            - title: str
-            - x_label: str
-            - y_label: str
-            - x_scale: Literal["linear", "log"]
-            - y_scale: Literal["linear", "log"]
-            - x_lim: tuple
-            - y_lim: tuple
-            - legend_label_size: int
-        """
-
-    @rpc_call
-    def set_title(self, title: "str", size: "int" = None):
-        """
-        Set the title of the plot widget.
-
-        Args:
-            title(str): Title of the plot widget.
-            size(int): Font size of the title.
-        """
-
-    @rpc_call
-    def set_x_label(self, label: "str", size: "int" = None):
-        """
-        Set the label of the x-axis.
-
-        Args:
-            label(str): Label of the x-axis.
-            size(int): Font size of the label.
-        """
-
-    @rpc_call
-    def set_y_label(self, label: "str", size: "int" = None):
-        """
-        Set the label of the y-axis.
-
-        Args:
-            label(str): Label of the y-axis.
-            size(int): Font size of the label.
-        """
-
-    @rpc_call
-    def set_x_scale(self, scale: "Literal['linear', 'log']" = "linear"):
-        """
-        Set the scale of the x-axis.
-
-        Args:
-            scale(Literal["linear", "log"]): Scale of the x-axis.
-        """
-
-    @rpc_call
-    def set_y_scale(self, scale: "Literal['linear', 'log']" = "linear"):
-        """
-        Set the scale of the y-axis.
-
-        Args:
-            scale(Literal["linear", "log"]): Scale of the y-axis.
-        """
-
-    @rpc_call
-    def set_x_lim(self, *args) -> "None":
-        """
-        Set the limits of the x-axis. This method can accept either two separate arguments
-        for the minimum and maximum x-axis values, or a single tuple containing both limits.
-
-        Usage:
-            set_x_lim(x_min, x_max)
-            set_x_lim((x_min, x_max))
-
-        Args:
-            *args: A variable number of arguments. Can be two integers (x_min and x_max)
-                   or a single tuple with two integers.
-        """
-
-    @rpc_call
-    def set_y_lim(self, *args) -> "None":
-        """
-        Set the limits of the y-axis. This method can accept either two separate arguments
-        for the minimum and maximum y-axis values, or a single tuple containing both limits.
-
-        Usage:
-            set_y_lim(y_min, y_max)
-            set_y_lim((y_min, y_max))
-
-        Args:
-            *args: A variable number of arguments. Can be two integers (y_min and y_max)
-                   or a single tuple with two integers.
-        """
-
-    @rpc_call
-    def set_grid(self, x: "bool" = False, y: "bool" = False):
-        """
-        Set the grid of the plot widget.
-
-        Args:
-            x(bool): Show grid on the x-axis.
-            y(bool): Show grid on the y-axis.
-        """
-
-    @rpc_call
-    def set_outer_axes(self, show: "bool" = True):
-        """
-        Set the outer axes of the plot widget.
-
-        Args:
-            show(bool): Show the outer axes.
-        """
-
-    @rpc_call
-    def enable_fps_monitor(self, enable: "bool" = True):
-        """
-        Enable the FPS monitor.
-
-        Args:
-            enable(bool): True to enable, False to disable.
-        """
-
-    @rpc_call
-    def lock_aspect_ratio(self, lock):
-        """
-        Lock aspect ratio.
-
-        Args:
-            lock(bool): True to lock, False to unlock.
-        """
-
-    @rpc_call
-    def export(self):
-        """
-        Show the Export Dialog of the plot widget.
-        """
-
-    @rpc_call
-    def remove(self):
-        """
-        Remove the plot widget from the figure.
-        """
-
-    @rpc_call
-    def set_legend_label_size(self, size: "int" = None):
-        """
-        Set the font size of the legend.
-
-        Args:
-            size(int): Font size of the legend.
-        """
-
-
-class BECProgressBar(RPCBase):
-    @rpc_call
-    def set_value(self, value):
-        """
-        Set the value of the progress bar.
-
-        Args:
-            value (float): The value to set.
-        """
-
-    @rpc_call
-    def set_maximum(self, maximum: float):
-        """
-        Set the maximum value of the progress bar.
-
-        Args:
-            maximum (float): The maximum value.
-        """
-
-    @rpc_call
-    def set_minimum(self, minimum: float):
-        """
-        Set the minimum value of the progress bar.
-
-        Args:
-            minimum (float): The minimum value.
-        """
-
-    @property
-    @rpc_call
-    def label_template(self):
-        """
-        The template for the center label. Use $value, $maximum, and $percentage to insert the values.
-
-        Examples:
-        >>> progressbar.label_template = "$value / $maximum - $percentage %"
-        >>> progressbar.label_template = "$value / $percentage %"
-        """
-
-    @label_template.setter
-    @rpc_call
-    def label_template(self):
-        """
-        The template for the center label. Use $value, $maximum, and $percentage to insert the values.
-
-        Examples:
-        >>> progressbar.label_template = "$value / $maximum - $percentage %"
-        >>> progressbar.label_template = "$value / $percentage %"
-        """
-
-
-class BECQueue(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @rpc_call
-    def _get_all_rpc(self) -> "dict":
-        """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
-        """
-
-
-class BECStatusBox(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @rpc_call
-    def _get_all_rpc(self) -> "dict":
-        """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
-        """
-
-
-class BECWaveform(RPCBase):
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
-        """
-
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @rpc_call
-    def plot(
-        self,
-        arg1: "list | np.ndarray | str | None" = None,
-        y: "list | np.ndarray | None" = None,
-        x: "list | np.ndarray | None" = None,
-        x_name: "str | None" = None,
-        y_name: "str | None" = None,
-        z_name: "str | None" = None,
-        x_entry: "str | None" = None,
-        y_entry: "str | None" = None,
-        z_entry: "str | None" = None,
-        color: "str | None" = None,
-        color_map_z: "str | None" = "magma",
-        label: "str | None" = None,
-        validate: "bool" = True,
-        dap: "str | None" = None,
-        **kwargs,
-    ) -> "BECCurve":
-        """
-        Plot a curve to the plot widget.
-
-        Args:
-            arg1(list | np.ndarray | str | None): First argument which can be x data, y data, or y_name.
-            y(list | np.ndarray): Custom y data to plot.
-            x(list | np.ndarray): Custom y data to plot.
-            x_name(str): Name of the x signal.
-                - "best_effort": Use the best effort signal.
-                - "timestamp": Use the timestamp signal.
-                - "index": Use the index signal.
-                - Custom signal name of device from BEC.
-            y_name(str): The name of the device for the y-axis.
-            z_name(str): The name of the device for the z-axis.
-            x_entry(str): The name of the entry for the x-axis.
-            y_entry(str): The name of the entry for the y-axis.
-            z_entry(str): The name of the entry for the z-axis.
-            color(str): The color of the curve.
-            color_map_z(str): The color map to use for the z-axis.
-            label(str): The label of the curve.
-            validate(bool): If True, validate the device names and entries.
-            dap(str): The dap model to use for the curve, only available for sync devices. If not specified, none will be added.
-
-        Returns:
-            BECCurve: The curve object.
-        """
-
-    @rpc_call
-    def add_dap(
-        self,
-        x_name: "str | None" = None,
-        y_name: "str | None" = None,
-        x_entry: "Optional[str]" = None,
-        y_entry: "Optional[str]" = None,
-        color: "Optional[str]" = None,
-        dap: "str" = "GaussianModel",
-        validate_bec: "bool" = True,
-        **kwargs,
-    ) -> "BECCurve":
-        """
-        Add LMFIT dap model curve to the plot widget.
-
-        Args:
-            x_name(str): Name of the x signal.
-            x_entry(str): Entry of the x signal.
-            y_name(str): Name of the y signal.
-            y_entry(str): Entry of the y signal.
-            color(str, optional): Color of the curve. Defaults to None.
-            dap(str): The dap model to use for the curve.
-            validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
-            **kwargs: Additional keyword arguments for the curve configuration.
-
-        Returns:
-            BECCurve: The curve object.
-        """
-
-    @rpc_call
-    def get_dap_params(self) -> "dict":
-        """
-        Get the DAP parameters of all DAP curves.
-
-        Returns:
-            dict: DAP parameters of all DAP curves.
-        """
-
-    @rpc_call
-    def set_x(self, x_name: "str", x_entry: "str | None" = None):
-        """
-        Change the x axis of the plot widget.
-
-        Args:
-            x_name(str): Name of the x signal.
-                - "best_effort": Use the best effort signal.
-                - "timestamp": Use the timestamp signal.
-                - "index": Use the index signal.
-                - Custom signal name of device from BEC.
-            x_entry(str): Entry of the x signal.
-        """
-
-    @rpc_call
-    def remove_curve(self, *identifiers):
-        """
-        Remove a curve from the plot widget.
-
-        Args:
-            *identifiers: Identifier of the curve to be removed. Can be either an integer (index) or a string (curve_id).
-        """
-
-    @rpc_call
-    def scan_history(self, scan_index: "int" = None, scan_id: "str" = None):
-        """
-        Update the scan curves with the data from the scan storage.
-        Provide only one of scan_id or scan_index.
-
-        Args:
-            scan_id(str, optional): ScanID of the scan to be updated. Defaults to None.
-            scan_index(int, optional): Index of the scan to be updated. Defaults to None.
-        """
-
-    @property
-    @rpc_call
-    def curves(self) -> "list[BECCurve]":
-        """
-        Get the curves of the plot widget as a list
-        Returns:
-            list: List of curves.
-        """
-
-    @rpc_call
-    def get_curve(self, identifier) -> "BECCurve":
-        """
-        Get the curve by its index or ID.
-
-        Args:
-            identifier(int|str): Identifier of the curve. Can be either an integer (index) or a string (curve_id).
-
-        Returns:
-            BECCurve: The curve object.
-        """
-
-    @rpc_call
-    def get_all_data(self, output: "Literal['dict', 'pandas']" = "dict") -> "dict":
-        """
-        Extract all curve data into a dictionary or a pandas DataFrame.
-
-        Args:
-            output (Literal["dict", "pandas"]): Format of the output data.
-
-        Returns:
-            dict | pd.DataFrame: Data of all curves in the specified format.
-        """
-
-    @rpc_call
-    def set(self, **kwargs) -> "None":
-        """
-        Set the properties of the plot widget.
-
-        Args:
-            **kwargs: Keyword arguments for the properties to be set.
-
-        Possible properties:
-            - title: str
-            - x_label: str
-            - y_label: str
-            - x_scale: Literal["linear", "log"]
-            - y_scale: Literal["linear", "log"]
-            - x_lim: tuple
-            - y_lim: tuple
-            - legend_label_size: int
-        """
-
-    @rpc_call
-    def set_title(self, title: "str", size: "int" = None):
-        """
-        Set the title of the plot widget.
-
-        Args:
-            title(str): Title of the plot widget.
-            size(int): Font size of the title.
-        """
-
-    @rpc_call
-    def set_x_label(self, label: "str", size: "int" = None):
-        """
-        Set the label of the x-axis.
-
-        Args:
-            label(str): Label of the x-axis.
-            size(int): Font size of the label.
-        """
-
-    @rpc_call
-    def set_y_label(self, label: "str", size: "int" = None):
-        """
-        Set the label of the y-axis.
-
-        Args:
-            label(str): Label of the y-axis.
-            size(int): Font size of the label.
-        """
-
-    @rpc_call
-    def set_x_scale(self, scale: "Literal['linear', 'log']" = "linear"):
-        """
-        Set the scale of the x-axis.
-
-        Args:
-            scale(Literal["linear", "log"]): Scale of the x-axis.
-        """
-
-    @rpc_call
-    def set_y_scale(self, scale: "Literal['linear', 'log']" = "linear"):
-        """
-        Set the scale of the y-axis.
-
-        Args:
-            scale(Literal["linear", "log"]): Scale of the y-axis.
-        """
-
-    @rpc_call
-    def set_x_lim(self, *args) -> "None":
-        """
-        Set the limits of the x-axis. This method can accept either two separate arguments
-        for the minimum and maximum x-axis values, or a single tuple containing both limits.
-
-        Usage:
-            set_x_lim(x_min, x_max)
-            set_x_lim((x_min, x_max))
-
-        Args:
-            *args: A variable number of arguments. Can be two integers (x_min and x_max)
-                   or a single tuple with two integers.
-        """
-
-    @rpc_call
-    def set_y_lim(self, *args) -> "None":
-        """
-        Set the limits of the y-axis. This method can accept either two separate arguments
-        for the minimum and maximum y-axis values, or a single tuple containing both limits.
-
-        Usage:
-            set_y_lim(y_min, y_max)
-            set_y_lim((y_min, y_max))
-
-        Args:
-            *args: A variable number of arguments. Can be two integers (y_min and y_max)
-                   or a single tuple with two integers.
-        """
-
-    @rpc_call
-    def set_grid(self, x: "bool" = False, y: "bool" = False):
-        """
-        Set the grid of the plot widget.
-
-        Args:
-            x(bool): Show grid on the x-axis.
-            y(bool): Show grid on the y-axis.
-        """
-
-    @rpc_call
-    def set_colormap(self, colormap: "str | None" = None):
-        """
-        Set the colormap of the plot widget.
-
-        Args:
-            colormap(str, optional): Scale the colors of curves to colormap. If None, use the default color palette.
-        """
-
-    @rpc_call
-    def enable_scatter(self, enable: "bool"):
-        """
-        Enable/Disable scatter plot on all curves.
-
-        Args:
-            enable(bool): If True, enable scatter markers; if False, disable them.
-        """
-
-    @rpc_call
-    def enable_fps_monitor(self, enable: "bool" = True):
-        """
-        Enable the FPS monitor.
-
-        Args:
-            enable(bool): True to enable, False to disable.
-        """
-
-    @rpc_call
-    def lock_aspect_ratio(self, lock):
-        """
-        Lock aspect ratio.
-
-        Args:
-            lock(bool): True to lock, False to unlock.
-        """
-
-    @rpc_call
-    def export(self):
-        """
-        Show the Export Dialog of the plot widget.
-        """
-
-    @rpc_call
-    def remove(self):
-        """
-        Remove the plot widget from the figure.
-        """
-
-    @rpc_call
-    def clear_all(self):
-        """
-        None
-        """
-
-    @rpc_call
-    def set_legend_label_size(self, size: "int" = None):
-        """
-        Set the font size of the legend.
-
-        Args:
-            size(int): Font size of the legend.
-        """
-
-    @rpc_call
-    def toggle_roi(self, toggled: "bool") -> "None":
-        """
-        Toggle the linear region selector on the plot.
-
-        Args:
-            toggled(bool): If True, enable the linear region selector.
-        """
-
-    @rpc_call
-    def select_roi(self, region: "tuple[float, float]"):
-        """
-        Set the fit region of the plot widget. At the moment only a single region is supported.
-        To remove the roi region again, use toggle_roi_region
-
-        Args:
-            region(tuple[float, float]): The fit region.
-        """
-
-
-class BECWaveformWidget(RPCBase):
-    @property
-    @rpc_call
-    def curves(self) -> "list[BECCurve]":
-        """
-        Get the curves of the plot widget as a list
-        Returns:
-            list: List of curves.
-        """
-
-    @rpc_call
-    def plot(
-        self,
-        arg1: "list | np.ndarray | str | None" = None,
-        x: "list | np.ndarray | None" = None,
-        y: "list | np.ndarray | None" = None,
-        x_name: "str | None" = None,
-        y_name: "str | None" = None,
-        z_name: "str | None" = None,
-        x_entry: "str | None" = None,
-        y_entry: "str | None" = None,
-        z_entry: "str | None" = None,
-        color: "str | None" = None,
-        color_map_z: "str | None" = "magma",
-        label: "str | None" = None,
-        validate: "bool" = True,
-        dap: "str | None" = None,
-        **kwargs,
-    ) -> "BECCurve":
-        """
-        Plot a curve to the plot widget.
-        Args:
-            arg1(list | np.ndarray | str | None): First argument which can be x data(list | np.ndarray), y data(list | np.ndarray), or y_name(str).
-            x(list | np.ndarray): Custom x data to plot.
-            y(list | np.ndarray): Custom y data to plot.
-            x_name(str): The name of the device for the x-axis.
-            y_name(str): The name of the device for the y-axis.
-            z_name(str): The name of the device for the z-axis.
-            x_entry(str): The name of the entry for the x-axis.
-            y_entry(str): The name of the entry for the y-axis.
-            z_entry(str): The name of the entry for the z-axis.
-            color(str): The color of the curve.
-            color_map_z(str): The color map to use for the z-axis.
-            label(str): The label of the curve.
-            validate(bool): If True, validate the device names and entries.
-            dap(str): The dap model to use for the curve. If not specified, none will be added.
-
-        Returns:
-            BECCurve: The curve object.
-        """
-
-    @rpc_call
-    def add_dap(
-        self,
-        x_name: "str",
-        y_name: "str",
-        dap: "str",
-        x_entry: "str | None" = None,
-        y_entry: "str | None" = None,
-        color: "str | None" = None,
-        validate_bec: "bool" = True,
-        **kwargs,
-    ) -> "BECCurve":
-        """
-        Add LMFIT dap model curve to the plot widget.
-
-        Args:
-            x_name(str): Name of the x signal.
-            x_entry(str): Entry of the x signal.
-            y_name(str): Name of the y signal.
-            y_entry(str): Entry of the y signal.
-            color(str, optional): Color of the curve. Defaults to None.
-            dap(str): The dap model to use for the curve.
-            validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
-            **kwargs: Additional keyword arguments for the curve configuration.
-
-        Returns:
-            BECCurve: The curve object.
-        """
-
-    @rpc_call
-    def get_dap_params(self) -> "dict":
-        """
-        Get the DAP parameters of all DAP curves.
-
-        Returns:
-            dict: DAP parameters of all DAP curves.
-        """
-
-    @rpc_call
-    def remove_curve(self, *identifiers):
-        """
-        Remove a curve from the plot widget.
-
-        Args:
-            *identifiers: Identifier of the curve to be removed. Can be either an integer (index) or a string (curve_id).
-        """
-
-    @rpc_call
-    def scan_history(self, scan_index: "int" = None, scan_id: "str" = None):
-        """
-        Update the scan curves with the data from the scan storage.
-        Provide only one of scan_id or scan_index.
-
-        Args:
-            scan_id(str, optional): ScanID of the scan to be updated. Defaults to None.
-            scan_index(int, optional): Index of the scan to be updated. Defaults to None.
-        """
-
-    @rpc_call
-    def get_all_data(self, output: "Literal['dict', 'pandas']" = "dict") -> "dict | pd.DataFrame":
-        """
-        Extract all curve data into a dictionary or a pandas DataFrame.
-
-        Args:
-            output (Literal["dict", "pandas"]): Format of the output data.
-
-        Returns:
-            dict | pd.DataFrame: Data of all curves in the specified format.
-        """
-
-    @rpc_call
-    def set(self, **kwargs):
-        """
-        Set the properties of the plot widget.
-
-        Args:
-            **kwargs: Keyword arguments for the properties to be set.
-
-        Possible properties:
-            - title: str
-            - x_label: str
-            - y_label: str
-            - x_scale: Literal["linear", "log"]
-            - y_scale: Literal["linear", "log"]
-            - x_lim: tuple
-            - y_lim: tuple
-            - legend_label_size: int
-        """
-
-    @rpc_call
-    def set_x(self, x_name: "str", x_entry: "str | None" = None):
-        """
-        Change the x axis of the plot widget.
-
-        Args:
-            x_name(str): Name of the x signal.
-                - "best_effort": Use the best effort signal.
-                - "timestamp": Use the timestamp signal.
-                - "index": Use the index signal.
-                - Custom signal name of device from BEC.
-            x_entry(str): Entry of the x signal.
-        """
-
-    @rpc_call
-    def set_title(self, title: "str"):
-        """
-        Set the title of the plot widget.
-
-        Args:
-            title(str): Title of the plot.
-        """
-
-    @rpc_call
-    def set_x_label(self, x_label: "str"):
-        """
-        Set the x-axis label of the plot widget.
-
-        Args:
-            x_label(str): Label of the x-axis.
-        """
-
-    @rpc_call
-    def set_y_label(self, y_label: "str"):
-        """
-        Set the y-axis label of the plot widget.
-
-        Args:
-            y_label(str): Label of the y-axis.
-        """
-
-    @rpc_call
-    def set_x_scale(self, x_scale: "Literal['linear', 'log']"):
-        """
-        Set the scale of the x-axis of the plot widget.
-
-        Args:
-            x_scale(Literal["linear", "log"]): Scale of the x-axis.
-        """
-
-    @rpc_call
-    def set_y_scale(self, y_scale: "Literal['linear', 'log']"):
-        """
-        Set the scale of the y-axis of the plot widget.
-
-        Args:
-            y_scale(Literal["linear", "log"]): Scale of the y-axis.
-        """
-
-    @rpc_call
-    def set_x_lim(self, x_lim: "tuple"):
-        """
-        Set the limits of the x-axis of the plot widget.
-
-        Args:
-            x_lim(tuple): Limits of the x-axis.
-        """
-
-    @rpc_call
-    def set_y_lim(self, y_lim: "tuple"):
-        """
-        Set the limits of the y-axis of the plot widget.
-
-        Args:
-            y_lim(tuple): Limits of the y-axis.
-        """
-
-    @rpc_call
-    def set_legend_label_size(self, legend_label_size: "int"):
-        """
-        Set the size of the legend labels of the plot widget.
-
-        Args:
-            legend_label_size(int): Size of the legend labels.
-        """
-
-    @rpc_call
-    def set_auto_range(self, enabled: "bool", axis: "str" = "xy"):
-        """
-        Set the auto range of the plot widget.
-
-        Args:
-            enabled(bool): If True, enable the auto range.
-            axis(str, optional): The axis to enable the auto range.
-                - "xy": Enable auto range for both x and y axis.
-                - "x": Enable auto range for x axis.
-                - "y": Enable auto range for y axis.
-        """
-
-    @rpc_call
-    def set_grid(self, x_grid: "bool", y_grid: "bool"):
-        """
-        Set the grid visibility of the plot widget.
-
-        Args:
-            x_grid(bool): Visibility of the x-axis grid.
-            y_grid(bool): Visibility of the y-axis grid.
-        """
-
-    @rpc_call
-    def enable_fps_monitor(self, enabled: "bool"):
-        """
-        Enable the FPS monitor of the plot widget.
-
-        Args:
-            enabled(bool): If True, enable the FPS monitor.
-        """
-
-    @rpc_call
-    def enable_scatter(self, enabled: "bool"):
-        """
-        Enable the scatter plot of the plot widget.
-
-        Args:
-            enabled(bool): If True, enable the scatter plot.
-        """
-
-    @rpc_call
-    def lock_aspect_ratio(self, lock: "bool"):
-        """
-        Lock the aspect ratio of the plot widget.
-
-        Args:
-            lock(bool): Lock the aspect ratio.
-        """
-
-    @rpc_call
-    def export(self):
-        """
-        Show the export dialog for the plot widget.
-        """
-
-    @rpc_call
-    def export_to_matplotlib(self):
-        """
-        Export the plot widget to Matplotlib.
-        """
-
-    @rpc_call
-    def toggle_roi(self, checked: "bool"):
-        """
-        Toggle the linear region selector.
-
-        Args:
-            checked(bool): If True, enable the linear region selector.
-        """
-
-    @rpc_call
-    def select_roi(self, region: "tuple"):
-        """
-        Set the region of interest of the plot widget.
-
-        Args:
-            region(tuple): Region of interest.
+        Get the dap oversample.
         """
 
 
 class DapComboBox(RPCBase):
+    """The DAPComboBox widget is an extension to the QComboBox with all avaialble DAP model from BEC."""
+
     @rpc_call
     def select_y_axis(self, y_axis: str):
         """
@@ -3047,156 +649,725 @@ class DarkModeButton(RPCBase):
 
 
 class DeviceBrowser(RPCBase):
-    @property
     @rpc_call
-    def _config_dict(self) -> "dict":
+    def remove(self):
         """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @rpc_call
-    def _get_all_rpc(self) -> "dict":
-        """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class DeviceComboBox(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """Combobox widget for device input with autocomplete for device names."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class DeviceInputBase(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """Mixin base class for device input widgets."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class DeviceLineEdit(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """Line edit widget for device input with autocomplete for device names."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class DeviceSignalInputBase(RPCBase):
+    """Mixin base class for device signal input widgets."""
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+
+class Image(RPCBase):
     @property
     @rpc_call
-    def _config_dict(self) -> "dict":
+    def enable_toolbar(self) -> "bool":
         """
-        Get the configuration of the widget.
+        Show Toolbar.
+        """
+
+    @enable_toolbar.setter
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @property
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @enable_side_panel.setter
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @property
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @enable_fps_monitor.setter
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @rpc_call
+    def set(self, **kwargs):
+        """
+        Set the properties of the plot widget.
+
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+
+        Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+            - legend_label_size: int
+        """
+
+    @property
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @title.setter
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @x_label.setter
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @y_label.setter
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @x_limits.setter
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @y_limits.setter
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @x_grid.setter
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @y_grid.setter
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @inner_axes.setter
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @outer_axes.setter
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @auto_range_x.setter
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @auto_range_y.setter
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @x_log.setter
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @y_log.setter
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @legend_label_size.setter
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @property
+    @rpc_call
+    def color_map(self) -> "str":
+        """
+        Set the color map of the image.
+        """
+
+    @color_map.setter
+    @rpc_call
+    def color_map(self) -> "str":
+        """
+        Set the color map of the image.
+        """
+
+    @property
+    @rpc_call
+    def vrange(self) -> "tuple":
+        """
+        Get the vrange of the image.
+        """
+
+    @vrange.setter
+    @rpc_call
+    def vrange(self) -> "tuple":
+        """
+        Get the vrange of the image.
+        """
+
+    @property
+    @rpc_call
+    def v_min(self) -> "float":
+        """
+        Get the minimum value of the v_range.
+        """
+
+    @v_min.setter
+    @rpc_call
+    def v_min(self) -> "float":
+        """
+        Get the minimum value of the v_range.
+        """
+
+    @property
+    @rpc_call
+    def v_max(self) -> "float":
+        """
+        Get the maximum value of the v_range.
+        """
+
+    @v_max.setter
+    @rpc_call
+    def v_max(self) -> "float":
+        """
+        Get the maximum value of the v_range.
+        """
+
+    @property
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Whether the aspect ratio is locked.
+        """
+
+    @lock_aspect_ratio.setter
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Whether the aspect ratio is locked.
+        """
+
+    @property
+    @rpc_call
+    def autorange(self) -> "bool":
+        """
+        Whether autorange is enabled.
+        """
+
+    @autorange.setter
+    @rpc_call
+    def autorange(self) -> "bool":
+        """
+        Whether autorange is enabled.
+        """
+
+    @property
+    @rpc_call
+    def autorange_mode(self) -> "str":
+        """
+        Autorange mode.
+
+        Options:
+            - "max": Use the maximum value of the image for autoranging.
+            - "mean": Use the mean value of the image for autoranging.
+        """
+
+    @autorange_mode.setter
+    @rpc_call
+    def autorange_mode(self) -> "str":
+        """
+        Autorange mode.
+
+        Options:
+            - "max": Use the maximum value of the image for autoranging.
+            - "mean": Use the mean value of the image for autoranging.
+        """
+
+    @property
+    @rpc_call
+    def monitor(self) -> "str":
+        """
+        The name of the monitor to use for the image.
+        """
+
+    @monitor.setter
+    @rpc_call
+    def monitor(self) -> "str":
+        """
+        The name of the monitor to use for the image.
+        """
+
+    @rpc_call
+    def enable_colorbar(
+        self,
+        enabled: "bool",
+        style: "Literal['full', 'simple']" = "full",
+        vrange: "tuple[int, int] | None" = None,
+    ):
+        """
+        Enable the colorbar and switch types of colorbars.
+
+        Args:
+            enabled(bool): Whether to enable the colorbar.
+            style(Literal["full", "simple"]): The type of colorbar to enable.
+            vrange(tuple): The range of values to use for the colorbar.
+        """
+
+    @property
+    @rpc_call
+    def enable_simple_colorbar(self) -> "bool":
+        """
+        Enable the simple colorbar.
+        """
+
+    @enable_simple_colorbar.setter
+    @rpc_call
+    def enable_simple_colorbar(self) -> "bool":
+        """
+        Enable the simple colorbar.
+        """
+
+    @property
+    @rpc_call
+    def enable_full_colorbar(self) -> "bool":
+        """
+        Enable the full colorbar.
+        """
+
+    @enable_full_colorbar.setter
+    @rpc_call
+    def enable_full_colorbar(self) -> "bool":
+        """
+        Enable the full colorbar.
+        """
+
+    @property
+    @rpc_call
+    def fft(self) -> "bool":
+        """
+        Whether FFT postprocessing is enabled.
+        """
+
+    @fft.setter
+    @rpc_call
+    def fft(self) -> "bool":
+        """
+        Whether FFT postprocessing is enabled.
+        """
+
+    @property
+    @rpc_call
+    def log(self) -> "bool":
+        """
+        Whether logarithmic scaling is applied.
+        """
+
+    @log.setter
+    @rpc_call
+    def log(self) -> "bool":
+        """
+        Whether logarithmic scaling is applied.
+        """
+
+    @property
+    @rpc_call
+    def rotation(self) -> "int":
+        """
+        The number of 90° rotations to apply.
+        """
+
+    @rotation.setter
+    @rpc_call
+    def rotation(self) -> "int":
+        """
+        The number of 90° rotations to apply.
+        """
+
+    @property
+    @rpc_call
+    def transpose(self) -> "bool":
+        """
+        Whether the image is transposed.
+        """
+
+    @transpose.setter
+    @rpc_call
+    def transpose(self) -> "bool":
+        """
+        Whether the image is transposed.
+        """
+
+    @rpc_call
+    def image(
+        self,
+        monitor: "str | None" = None,
+        monitor_type: "Literal['auto', '1d', '2d']" = "auto",
+        color_map: "str | None" = None,
+        color_bar: "Literal['simple', 'full'] | None" = None,
+        vrange: "tuple[int, int] | None" = None,
+    ) -> "ImageItem":
+        """
+        Set the image source and update the image.
+
+        Args:
+            monitor(str): The name of the monitor to use for the image.
+            monitor_type(str): The type of monitor to use. Options are "1d", "2d", or "auto".
+            color_map(str): The color map to use for the image.
+            color_bar(str): The type of color bar to use. Options are "simple" or "full".
+            vrange(tuple): The range of values to use for the color map.
 
         Returns:
-            dict: The configuration of the widget.
-        """
-
-    @rpc_call
-    def _get_all_rpc(self) -> "dict":
-        """
-        Get all registered RPC objects.
+            ImageItem: The image object.
         """
 
     @property
     @rpc_call
-    def _rpc_id(self) -> "str":
+    def main_image(self) -> "ImageItem":
         """
-        Get the RPC ID of the widget.
+        Access the main image item.
+        """
+
+
+class ImageItem(RPCBase):
+    @property
+    @rpc_call
+    def color_map(self) -> "str":
+        """
+        Get the current color map.
+        """
+
+    @color_map.setter
+    @rpc_call
+    def color_map(self) -> "str":
+        """
+        Get the current color map.
+        """
+
+    @property
+    @rpc_call
+    def v_range(self) -> "tuple[float, float]":
+        """
+        Get the color intensity range of the image.
+        """
+
+    @v_range.setter
+    @rpc_call
+    def v_range(self) -> "tuple[float, float]":
+        """
+        Get the color intensity range of the image.
+        """
+
+    @property
+    @rpc_call
+    def v_min(self) -> "float":
+        """
+        None
+        """
+
+    @v_min.setter
+    @rpc_call
+    def v_min(self) -> "float":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def v_max(self) -> "float":
+        """
+        None
+        """
+
+    @v_max.setter
+    @rpc_call
+    def v_max(self) -> "float":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def autorange(self) -> "bool":
+        """
+        None
+        """
+
+    @autorange.setter
+    @rpc_call
+    def autorange(self) -> "bool":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def autorange_mode(self) -> "str":
+        """
+        None
+        """
+
+    @autorange_mode.setter
+    @rpc_call
+    def autorange_mode(self) -> "str":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def fft(self) -> "bool":
+        """
+        Get or set whether FFT postprocessing is enabled.
+        """
+
+    @fft.setter
+    @rpc_call
+    def fft(self) -> "bool":
+        """
+        Get or set whether FFT postprocessing is enabled.
+        """
+
+    @property
+    @rpc_call
+    def log(self) -> "bool":
+        """
+        Get or set whether logarithmic scaling is applied.
+        """
+
+    @log.setter
+    @rpc_call
+    def log(self) -> "bool":
+        """
+        Get or set whether logarithmic scaling is applied.
+        """
+
+    @property
+    @rpc_call
+    def rotation(self) -> "Optional[int]":
+        """
+        Get or set the number of 90° rotations to apply.
+        """
+
+    @rotation.setter
+    @rpc_call
+    def rotation(self) -> "Optional[int]":
+        """
+        Get or set the number of 90° rotations to apply.
+        """
+
+    @property
+    @rpc_call
+    def transpose(self) -> "bool":
+        """
+        Get or set whether the image is transposed.
+        """
+
+    @transpose.setter
+    @rpc_call
+    def transpose(self) -> "bool":
+        """
+        Get or set whether the image is transposed.
+        """
+
+    @rpc_call
+    def get_data(self) -> "np.ndarray":
+        """
+        Get the data of the image.
+        Returns:
+            np.ndarray: The data of the image.
         """
 
 
 class LMFitDialog(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """Dialog for displaying the fit summary and params for LMFit DAP processes"""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class LogPanel(RPCBase):
+    """Displays a log panel"""
+
     @rpc_call
     def set_plain_text(self, text: str) -> None:
         """
@@ -3217,6 +1388,804 @@ class LogPanel(RPCBase):
 
 
 class Minesweeper(RPCBase): ...
+
+
+class MotorMap(RPCBase):
+    @property
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @enable_toolbar.setter
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @property
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @enable_side_panel.setter
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @property
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @enable_fps_monitor.setter
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @rpc_call
+    def set(self, **kwargs):
+        """
+        Set the properties of the plot widget.
+
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+
+        Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+            - legend_label_size: int
+        """
+
+    @property
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @title.setter
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @x_label.setter
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @y_label.setter
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @x_limits.setter
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @y_limits.setter
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @x_grid.setter
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @y_grid.setter
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @inner_axes.setter
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @outer_axes.setter
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Lock aspect ratio of the plot widget.
+        """
+
+    @lock_aspect_ratio.setter
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Lock aspect ratio of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @auto_range_x.setter
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @auto_range_y.setter
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @x_log.setter
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @y_log.setter
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @legend_label_size.setter
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @property
+    @rpc_call
+    def color(self) -> "tuple":
+        """
+        Get the color of the motor trace.
+
+        Returns:
+            tuple: Color of the motor trace.
+        """
+
+    @color.setter
+    @rpc_call
+    def color(self) -> "tuple":
+        """
+        Get the color of the motor trace.
+
+        Returns:
+            tuple: Color of the motor trace.
+        """
+
+    @property
+    @rpc_call
+    def max_points(self) -> "int":
+        """
+        Get the maximum number of points to display.
+        """
+
+    @max_points.setter
+    @rpc_call
+    def max_points(self) -> "int":
+        """
+        Get the maximum number of points to display.
+        """
+
+    @property
+    @rpc_call
+    def precision(self) -> "int":
+        """
+        Set the decimal precision of the motor position.
+        """
+
+    @precision.setter
+    @rpc_call
+    def precision(self) -> "int":
+        """
+        Set the decimal precision of the motor position.
+        """
+
+    @property
+    @rpc_call
+    def num_dim_points(self) -> "int":
+        """
+        Get the number of dim points for the motor map.
+        """
+
+    @num_dim_points.setter
+    @rpc_call
+    def num_dim_points(self) -> "int":
+        """
+        Get the number of dim points for the motor map.
+        """
+
+    @property
+    @rpc_call
+    def background_value(self) -> "int":
+        """
+        Get the background value of the motor map.
+        """
+
+    @background_value.setter
+    @rpc_call
+    def background_value(self) -> "int":
+        """
+        Get the background value of the motor map.
+        """
+
+    @property
+    @rpc_call
+    def scatter_size(self) -> "int":
+        """
+        Get the scatter size of the motor map plot.
+        """
+
+    @scatter_size.setter
+    @rpc_call
+    def scatter_size(self) -> "int":
+        """
+        Get the scatter size of the motor map plot.
+        """
+
+    @rpc_call
+    def map(self, x_name: "str", y_name: "str", validate_bec: "bool" = True) -> "None":
+        """
+        Set the x and y motor names.
+
+        Args:
+            x_name(str): The name of the x motor.
+            y_name(str): The name of the y motor.
+            validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
+        """
+
+    @rpc_call
+    def reset_history(self):
+        """
+        Reset the history of the motor map.
+        """
+
+    @rpc_call
+    def get_data(self) -> "dict":
+        """
+        Get the data of the motor map.
+
+        Returns:
+            dict: Data of the motor map.
+        """
+
+
+class MultiWaveform(RPCBase):
+    @property
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @enable_toolbar.setter
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @property
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @enable_side_panel.setter
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @property
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @enable_fps_monitor.setter
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @rpc_call
+    def set(self, **kwargs):
+        """
+        Set the properties of the plot widget.
+
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+
+        Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+            - legend_label_size: int
+        """
+
+    @property
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @title.setter
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @x_label.setter
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @y_label.setter
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @x_limits.setter
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @y_limits.setter
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @x_grid.setter
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @y_grid.setter
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @inner_axes.setter
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @outer_axes.setter
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Lock aspect ratio of the plot widget.
+        """
+
+    @lock_aspect_ratio.setter
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Lock aspect ratio of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @auto_range_x.setter
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @auto_range_y.setter
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @x_log.setter
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @y_log.setter
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @legend_label_size.setter
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @property
+    @rpc_call
+    def highlighted_index(self):
+        """
+        None
+        """
+
+    @highlighted_index.setter
+    @rpc_call
+    def highlighted_index(self):
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def highlight_last_curve(self) -> "bool":
+        """
+        Get the highlight_last_curve property.
+        Returns:
+            bool: The highlight_last_curve property.
+        """
+
+    @highlight_last_curve.setter
+    @rpc_call
+    def highlight_last_curve(self) -> "bool":
+        """
+        Get the highlight_last_curve property.
+        Returns:
+            bool: The highlight_last_curve property.
+        """
+
+    @property
+    @rpc_call
+    def color_palette(self) -> "str":
+        """
+        The color palette of the figure widget.
+        """
+
+    @color_palette.setter
+    @rpc_call
+    def color_palette(self) -> "str":
+        """
+        The color palette of the figure widget.
+        """
+
+    @property
+    @rpc_call
+    def opacity(self) -> "int":
+        """
+        The opacity of the figure widget.
+        """
+
+    @opacity.setter
+    @rpc_call
+    def opacity(self) -> "int":
+        """
+        The opacity of the figure widget.
+        """
+
+    @property
+    @rpc_call
+    def flush_buffer(self) -> "bool":
+        """
+        The flush_buffer property.
+        """
+
+    @flush_buffer.setter
+    @rpc_call
+    def flush_buffer(self) -> "bool":
+        """
+        The flush_buffer property.
+        """
+
+    @property
+    @rpc_call
+    def max_trace(self) -> "int":
+        """
+        The maximum number of traces to display on the plot.
+        """
+
+    @max_trace.setter
+    @rpc_call
+    def max_trace(self) -> "int":
+        """
+        The maximum number of traces to display on the plot.
+        """
+
+    @property
+    @rpc_call
+    def monitor(self) -> "str":
+        """
+        The monitor of the figure widget.
+        """
+
+    @monitor.setter
+    @rpc_call
+    def monitor(self) -> "str":
+        """
+        The monitor of the figure widget.
+        """
+
+    @rpc_call
+    def set_curve_limit(self, max_trace: "int", flush_buffer: "bool"):
+        """
+        Set the maximum number of traces to display on the plot.
+
+        Args:
+            max_trace (int): The maximum number of traces to display.
+            flush_buffer (bool): Flush the buffer.
+        """
+
+    @rpc_call
+    def plot(self, monitor: "str", color_palette: "str | None" = "magma"):
+        """
+        Create a plot for the given monitor.
+        Args:
+            monitor (str): The monitor to set.
+            color_palette (str|None): The color palette to use for the plot.
+        """
+
+    @rpc_call
+    def set_curve_highlight(self, index: "int"):
+        """
+        Set the curve highlight based on visible curves.
+
+        Args:
+            index (int): The index of the curve to highlight among visible curves.
+        """
+
+    @rpc_call
+    def clear_curves(self):
+        """
+        Remove all curves from the plot, excluding crosshair items.
+        """
 
 
 class PositionIndicator(RPCBase):
@@ -3259,6 +2228,8 @@ class PositionIndicator(RPCBase):
 
 
 class PositionerBox(RPCBase):
+    """Simple Widget to control a positioner in box form"""
+
     @rpc_call
     def set_positioner(self, positioner: "str | Positioner"):
         """
@@ -3270,6 +2241,8 @@ class PositionerBox(RPCBase):
 
 
 class PositionerBox2D(RPCBase):
+    """Simple Widget to control two positioners in box form"""
+
     @rpc_call
     def set_positioner_hor(self, positioner: "str | Positioner"):
         """
@@ -3290,31 +2263,18 @@ class PositionerBox2D(RPCBase):
 
 
 class PositionerBoxBase(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """Contains some core logic for positioner box widgets"""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class PositionerControlLine(RPCBase):
+    """A widget that controls a single device."""
+
     @rpc_call
     def set_positioner(self, positioner: "str | Positioner"):
         """
@@ -3326,6 +2286,8 @@ class PositionerControlLine(RPCBase):
 
 
 class PositionerGroup(RPCBase):
+    """Simple Widget to control a positioner in box form"""
+
     @rpc_call
     def set_positioners(self, device_names: "str"):
         """
@@ -3336,52 +2298,22 @@ class PositionerGroup(RPCBase):
 
 
 class ResetButton(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """A button that resets the scan queue."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class ResumeButton(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """A button that continue scan queue."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
@@ -3665,131 +2597,409 @@ class RingProgressBar(RPCBase):
 
 
 class ScanControl(RPCBase):
-    @property
     @rpc_call
-    def _config_dict(self) -> "dict":
+    def remove(self):
         """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @rpc_call
-    def _get_all_rpc(self) -> "dict":
-        """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class ScanMetadata(RPCBase):
+    """Dynamically generates a form for inclusion of metadata for a scan. Uses the"""
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+
+class ScatterCurve(RPCBase):
+    """Scatter curve item for the scatter waveform widget."""
+
     @property
     @rpc_call
-    def _config_dict(self) -> "dict":
+    def color_map(self) -> "str":
         """
-        Get the configuration of the widget.
+        The color map of the scatter curve.
+        """
+
+
+class ScatterWaveform(RPCBase):
+    @property
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @enable_toolbar.setter
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @property
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @enable_side_panel.setter
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @property
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @enable_fps_monitor.setter
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @rpc_call
+    def set(self, **kwargs):
+        """
+        Set the properties of the plot widget.
+
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+
+        Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+            - legend_label_size: int
+        """
+
+    @property
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @title.setter
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @x_label.setter
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @y_label.setter
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @x_limits.setter
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @y_limits.setter
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @x_grid.setter
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @y_grid.setter
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @inner_axes.setter
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @outer_axes.setter
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Lock aspect ratio of the plot widget.
+        """
+
+    @lock_aspect_ratio.setter
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Lock aspect ratio of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @auto_range_x.setter
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @auto_range_y.setter
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @x_log.setter
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @y_log.setter
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @legend_label_size.setter
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @property
+    @rpc_call
+    def main_curve(self) -> "ScatterCurve":
+        """
+        The main scatter curve item.
+        """
+
+    @property
+    @rpc_call
+    def color_map(self) -> "str":
+        """
+        The color map of the scatter waveform.
+        """
+
+    @color_map.setter
+    @rpc_call
+    def color_map(self) -> "str":
+        """
+        The color map of the scatter waveform.
+        """
+
+    @rpc_call
+    def plot(
+        self,
+        x_name: "str",
+        y_name: "str",
+        z_name: "str",
+        x_entry: "None | str" = None,
+        y_entry: "None | str" = None,
+        z_entry: "None | str" = None,
+        color_map: "str | None" = "magma",
+        label: "str | None" = None,
+        validate_bec: "bool" = True,
+    ) -> "ScatterCurve":
+        """
+        Plot the data from the device signals.
+
+        Args:
+            x_name (str): The name of the x device signal.
+            y_name (str): The name of the y device signal.
+            z_name (str): The name of the z device signal.
+            x_entry (None | str): The x entry of the device signal.
+            y_entry (None | str): The y entry of the device signal.
+            z_entry (None | str): The z entry of the device signal.
+            color_map (str | None): The color map of the scatter waveform.
+            label (str | None): The label of the curve.
+            validate_bec (bool): Whether to validate the device signals with current BEC instance.
 
         Returns:
-            dict: The configuration of the widget.
+            ScatterCurve: The scatter curve object.
         """
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def update_with_scan_history(self, scan_index: "int" = None, scan_id: "str" = None):
         """
-        Get all registered RPC objects.
+        Update the scan curves with the data from the scan storage.
+        Provide only one of scan_id or scan_index.
+
+        Args:
+            scan_id(str, optional): ScanID of the scan to be updated. Defaults to None.
+            scan_index(int, optional): Index of the scan to be updated. Defaults to None.
         """
 
-    @property
     @rpc_call
-    def _rpc_id(self) -> "str":
+    def clear_all(self):
         """
-        Get the RPC ID of the widget.
+        Clear all the curves from the plot.
         """
 
 
 class SignalComboBox(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """Line edit widget for device input with autocomplete for device names."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class SignalLineEdit(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """Line edit widget for device input with autocomplete for device names."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class StopButton(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """A button that stops the current scan."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class TextBox(RPCBase):
+    """A widget that displays text in plain and HTML format"""
+
     @rpc_call
     def set_plain_text(self, text: str) -> None:
         """
@@ -3809,10 +3019,479 @@ class TextBox(RPCBase):
         """
 
 
-class VSCodeEditor(RPCBase): ...
+class VSCodeEditor(RPCBase):
+    """A widget to display the VSCode editor."""
+
+    ...
+
+
+class Waveform(RPCBase):
+    @property
+    @rpc_call
+    def _config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
+        """
+
+    @property
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @enable_toolbar.setter
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @property
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @enable_side_panel.setter
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @property
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @enable_fps_monitor.setter
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @rpc_call
+    def set(self, **kwargs):
+        """
+        Set the properties of the plot widget.
+
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+
+        Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+            - legend_label_size: int
+        """
+
+    @property
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @title.setter
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @x_label.setter
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @y_label.setter
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @x_limits.setter
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @y_limits.setter
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @x_grid.setter
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @y_grid.setter
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @inner_axes.setter
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @outer_axes.setter
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Lock aspect ratio of the plot widget.
+        """
+
+    @lock_aspect_ratio.setter
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Lock aspect ratio of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @auto_range_x.setter
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @auto_range_y.setter
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @x_log.setter
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @y_log.setter
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @legend_label_size.setter
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @rpc_call
+    def __getitem__(self, key: "int | str"):
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def curves(self) -> "list[Curve]":
+        """
+        Get the curves of the plot widget as a list.
+
+        Returns:
+            list: List of curves.
+        """
+
+    @property
+    @rpc_call
+    def x_mode(self) -> "str":
+        """
+        None
+        """
+
+    @x_mode.setter
+    @rpc_call
+    def x_mode(self) -> "str":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def color_palette(self) -> "str":
+        """
+        The color palette of the figure widget.
+        """
+
+    @color_palette.setter
+    @rpc_call
+    def color_palette(self) -> "str":
+        """
+        The color palette of the figure widget.
+        """
+
+    @rpc_call
+    def plot(
+        self,
+        arg1: "list | np.ndarray | str | None" = None,
+        y: "list | np.ndarray | None" = None,
+        x: "list | np.ndarray | None" = None,
+        x_name: "str | None" = None,
+        y_name: "str | None" = None,
+        x_entry: "str | None" = None,
+        y_entry: "str | None" = None,
+        color: "str | None" = None,
+        label: "str | None" = None,
+        dap: "str | None" = None,
+        **kwargs,
+    ) -> "Curve":
+        """
+        Plot a curve to the plot widget.
+
+        Args:
+            arg1(list | np.ndarray | str | None): First argument, which can be x data, y data, or y_name.
+            y(list | np.ndarray): Custom y data to plot.
+            x(list | np.ndarray): Custom y data to plot.
+            x_name(str): Name of the x signal.
+                - "auto": Use the best effort signal.
+                - "timestamp": Use the timestamp signal.
+                - "index": Use the index signal.
+                - Custom signal name of a device from BEC.
+            y_name(str): The name of the device for the y-axis.
+            x_entry(str): The name of the entry for the x-axis.
+            y_entry(str): The name of the entry for the y-axis.
+            color(str): The color of the curve.
+            label(str): The label of the curve.
+            dap(str): The dap model to use for the curve, only available for sync devices.
+            If not specified, none will be added.
+            Use the same string as is the name of the LMFit model.
+
+        Returns:
+            Curve: The curve object.
+        """
+
+    @rpc_call
+    def add_dap_curve(
+        self,
+        device_label: "str",
+        dap_name: "str",
+        color: "str | None" = None,
+        dap_oversample: "int" = 1,
+        **kwargs,
+    ) -> "Curve":
+        """
+        Create a new DAP curve referencing the existing device curve `device_label`,
+        with the data processing model `dap_name`.
+
+        Args:
+            device_label(str): The label of the device curve to add DAP to.
+            dap_name(str): The name of the DAP model to use.
+            color(str): The color of the curve.
+            dap_oversample(int): The oversampling factor for the DAP curve.
+            **kwargs
+
+        Returns:
+            Curve: The new DAP curve.
+        """
+
+    @rpc_call
+    def remove_curve(self, curve: "int | str"):
+        """
+        Remove a curve from the plot widget.
+
+        Args:
+            curve(int|str): The curve to remove. It Can be the order of the curve or the name of the curve.
+        """
+
+    @rpc_call
+    def update_with_scan_history(self, scan_index: "int" = None, scan_id: "str" = None):
+        """
+        Update the scan curves with the data from the scan storage.
+        Provide only one of scan_id or scan_index.
+
+        Args:
+            scan_id(str, optional): ScanID of the scan to be updated. Defaults to None.
+            scan_index(int, optional): Index of the scan to be updated. Defaults to None.
+        """
+
+    @rpc_call
+    def get_dap_params(self) -> "dict[str, dict]":
+        """
+        Get the DAP parameters of all DAP curves.
+
+        Returns:
+            dict[str, dict]: DAP parameters of all DAP curves.
+        """
+
+    @rpc_call
+    def get_dap_summary(self) -> "dict[str, dict]":
+        """
+        Get the DAP summary of all DAP curves.
+
+        Returns:
+            dict[str, dict]: DAP summary of all DAP curves.
+        """
+
+    @rpc_call
+    def get_all_data(self, output: "Literal['dict', 'pandas']" = "dict") -> "dict":
+        """
+        Extract all curve data into a dictionary or a pandas DataFrame.
+
+        Args:
+            output (Literal["dict", "pandas"]): Format of the output data.
+
+        Returns:
+            dict | pd.DataFrame: Data of all curves in the specified format.
+        """
+
+    @rpc_call
+    def get_curve(self, curve: "int | str") -> "Curve | None":
+        """
+        Get a curve from the plot widget.
+
+        Args:
+            curve(int|str): The curve to get. It Can be the order of the curve or the name of the curve.
+
+        Return(Curve|None): The curve object if found, None otherwise.
+        """
+
+    @rpc_call
+    def select_roi(self, region: "tuple[float, float]"):
+        """
+        Public method if you want the old `select_roi` style.
+        """
+
+    @rpc_call
+    def clear_all(self):
+        """
+        Clear all curves from the plot widget.
+        """
 
 
 class WebsiteWidget(RPCBase):
+    """A simple widget to display a website"""
+
     @rpc_call
     def set_url(self, url: str) -> None:
         """

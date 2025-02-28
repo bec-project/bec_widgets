@@ -2,16 +2,21 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 import inspect
 import os
 import sys
+from pathlib import Path
 
 import black
 import isort
+from bec_lib.logger import bec_logger
 from qtpy.QtCore import Property as QtProperty
 
-from bec_widgets.utils.generate_designer_plugin import DesignerPluginGenerator
+from bec_widgets.utils.generate_designer_plugin import DesignerPluginGenerator, plugin_filenames
 from bec_widgets.utils.plugin_utils import BECClassContainer, get_custom_classes
+
+logger = bec_logger.logger
 
 if sys.version_info >= (3, 11):
     from typing import get_overloads
@@ -193,41 +198,52 @@ def main():
     """
 
     parser = argparse.ArgumentParser(description="Auto-generate the client for RPC widgets")
-    parser.add_argument("--core", action="store_true", help="Whether to generate the core client")
+    parser.add_argument(
+        "--module-name",
+        action="store",
+        type=str,
+        default="bec_widgets",
+        help="Which module to generate plugin files for (default: bec_widgets, example: my_plugin_repo.bec_widgets)",
+    )
 
     args = parser.parse_args()
 
-    if args.core:
-        current_path = os.path.dirname(__file__)
-        client_path = os.path.join(current_path, "client.py")
+    logger.info(f"BEC Widget code generation tool started with args: {args}")
 
-        rpc_classes = get_custom_classes("bec_widgets")
+    try:
+        module = importlib.import_module(args.module_name)
+        assert module.__file__ is not None
+        module_file = Path(module.__file__)
+        module_dir = module_file.parent if module_file.is_file() else module_file
+    except Exception as e:
+        logger.error(f"Failed to load module {args.module_name} for code generation: {e}")
+        return
 
-        generator = ClientGenerator()
-        generator.generate_client(rpc_classes)
-        generator.write(client_path)
+    client_path = module_dir / "client.py"
 
-        for cls in rpc_classes.plugins:
-            plugin = DesignerPluginGenerator(cls)
-            if not hasattr(plugin, "info"):
-                continue
+    rpc_classes = get_custom_classes(args.module_name)
+    logger.info(f"Obtained classes with RPC objects: {rpc_classes!r}")
 
-            # if the class directory already has a register, plugin and pyproject file, skip
-            if os.path.exists(
-                os.path.join(plugin.info.base_path, f"register_{plugin.info.plugin_name_snake}.py")
-            ):
-                continue
-            if os.path.exists(
-                os.path.join(plugin.info.base_path, f"{plugin.info.plugin_name_snake}_plugin.py")
-            ):
-                continue
-            if os.path.exists(
-                os.path.join(plugin.info.base_path, f"{plugin.info.plugin_name_snake}.pyproject")
-            ):
-                continue
-            plugin.run()
+    generator = ClientGenerator(base=args.module_name == "bec_widgets")
+    logger.info(f"Generating client.py")
+    generator.generate_client(rpc_classes)
+    generator.write(str(client_path))
+
+    for cls in rpc_classes.plugins:
+        logger.info(f"Writing plugins for: {cls}")
+        plugin = DesignerPluginGenerator(cls)
+        if not hasattr(plugin, "info"):
+            continue
+
+        def _exists(file: str):
+            return os.path.exists(os.path.join(plugin.info.base_path, file))
+
+        if any(_exists(file) for file in plugin_filenames(plugin.info.plugin_name_snake)):
+            logger.debug(f"Skipping {plugin.info.plugin_name_snake} - a file already exists.")
+            continue
+
+        plugin.run()
 
 
 if __name__ == "__main__":  # pragma: no cover
-    sys.argv = ["generate_cli.py", "--core"]
     main()

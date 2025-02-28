@@ -1,10 +1,21 @@
 import inspect
 import os
 import re
+from typing import NamedTuple
 
 from qtpy.QtCore import QObject
 
 EXCLUDED_PLUGINS = ["BECConnector", "BECDockArea", "BECDock", "BECFigure"]
+
+
+class PluginFilenames(NamedTuple):
+    register: str
+    plugin: str
+    pyproj: str
+
+
+def plugin_filenames(name: str) -> PluginFilenames:
+    return PluginFilenames(f"register_{name}.py", f"{name}_plugin.py", f"{name}.pyproject")
 
 
 class DesignerPluginInfo:
@@ -53,10 +64,14 @@ class DesignerPluginGenerator:
             self._excluded = True
             return
 
-        self.templates = {}
+        self.templates: dict[str, str] = {}
         self.template_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "plugin_templates"
         )
+
+    @property
+    def filenames(self):
+        return plugin_filenames(self.info.plugin_name_snake)
 
     def run(self, validate=True):
         if self._excluded:
@@ -112,26 +127,18 @@ class DesignerPluginGenerator:
                 f"Widget class {self.widget.__name__} must call the super constructor with parent."
             )
 
+    def _write_file(self, name: str, contents: str):
+        with open(os.path.join(self.info.base_path, name), "w", encoding="utf-8") as f:
+            f.write(contents)
+
+    def _format(self, name: str):
+        return self.templates[name].format(**self.info.__dict__)
+
     def _write_templates(self):
-        self._write_register()
-        self._write_plugin()
-        self._write_pyproject()
-
-    def _write_register(self):
-        file_path = os.path.join(self.info.base_path, f"register_{self.info.plugin_name_snake}.py")
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(self.templates["register"].format(**self.info.__dict__))
-
-    def _write_plugin(self):
-        file_path = os.path.join(self.info.base_path, f"{self.info.plugin_name_snake}_plugin.py")
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(self.templates["plugin"].format(**self.info.__dict__))
-
-    def _write_pyproject(self):
-        file_path = os.path.join(self.info.base_path, f"{self.info.plugin_name_snake}.pyproject")
-        out = {"files": [f"{self.info.plugin_class.__module__.split('.')[-1]}.py"]}
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(str(out))
+        self._write_file(self.filenames.register, self._format("register"))
+        self._write_file(self.filenames.plugin, self._format("plugin"))
+        pyproj = str({"files": [f"{self.info.plugin_class.__module__.split('.')[-1]}.py"]})
+        self._write_file(self.filenames.pyproj, pyproj)
 
     def _load_templates(self):
         for file in os.listdir(self.template_path):

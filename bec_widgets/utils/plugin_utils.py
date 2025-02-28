@@ -58,7 +58,10 @@ class BECClassInfo:
 
 class BECClassContainer:
     def __init__(self):
-        self._collection = []
+        self._collection: list[BECClassInfo] = []
+
+    def __repr__(self):
+        return str(list(cl.name for cl in self.collection))
 
     def add_class(self, class_info: BECClassInfo):
         """
