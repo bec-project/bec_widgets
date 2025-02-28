@@ -148,10 +148,7 @@ class BECTickItem(BECIndicatorItem):
     def cleanup(self) -> None:
         """Cleanup the item"""
         self.remove_from_plot()
-        if self.tick_item is not None:
-            self.tick_item.close()
-            self.tick_item.deleteLater()
-            self.tick_item = None
+        self.tick_item = None
 
 
 class BECArrowItem(BECIndicatorItem):
