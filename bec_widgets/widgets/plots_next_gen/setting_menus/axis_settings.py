@@ -37,7 +37,6 @@ class AxisSettings(SettingWidget):
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.addWidget(self.scroll_area)
-        # self.layout.addWidget(self.ui)
         self.ui = form
 
         if self.target_widget is not None and self.popup is False:
@@ -50,8 +49,6 @@ class AxisSettings(SettingWidget):
     def connect_all_signals(self):
         for widget in [
             self.ui.title,
-            self.ui.inner_axes,
-            self.ui.outer_axes,
             self.ui.x_label,
             self.ui.x_min,
             self.ui.x_max,
@@ -62,6 +59,8 @@ class AxisSettings(SettingWidget):
             self.ui.y_max,
             self.ui.y_log,
             self.ui.y_grid,
+            self.ui.inner_axes,
+            self.ui.outer_axes,
         ]:
             WidgetIO.connect_widget_change_signal(widget, self.set_property)
 
@@ -132,8 +131,6 @@ class AxisSettings(SettingWidget):
         """
         for widget in [
             self.ui.title,
-            self.ui.inner_axes,
-            self.ui.outer_axes,
             self.ui.x_label,
             self.ui.x_min,
             self.ui.x_max,
@@ -144,6 +141,8 @@ class AxisSettings(SettingWidget):
             self.ui.y_max,
             self.ui.y_log,
             self.ui.y_grid,
+            self.ui.outer_axes,
+            self.ui.inner_axes,
         ]:
             property_name = widget.objectName()
             value = WidgetIO.get_value(widget)
