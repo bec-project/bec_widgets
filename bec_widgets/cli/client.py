@@ -3653,42 +3653,42 @@ class Waveform(RPCBase):
     @rpc_call
     def enable_toolbar(self) -> "bool":
         """
-        None
+        Show Toolbar.
         """
 
     @enable_toolbar.setter
     @rpc_call
     def enable_toolbar(self) -> "bool":
         """
-        None
+        Show Toolbar.
         """
 
     @property
     @rpc_call
     def enable_side_panel(self) -> "bool":
         """
-        None
+        Show Side Panel
         """
 
     @enable_side_panel.setter
     @rpc_call
     def enable_side_panel(self) -> "bool":
         """
-        None
+        Show Side Panel
         """
 
     @property
     @rpc_call
     def enable_fps_monitor(self) -> "bool":
         """
-        None
+        Enable the FPS monitor.
         """
 
     @enable_fps_monitor.setter
     @rpc_call
     def enable_fps_monitor(self) -> "bool":
         """
-        None
+        Enable the FPS monitor.
         """
 
     @rpc_call
@@ -3706,210 +3706,210 @@ class Waveform(RPCBase):
     @rpc_call
     def title(self) -> "str":
         """
-        None
+        Set title of the plot.
         """
 
     @title.setter
     @rpc_call
     def title(self) -> "str":
         """
-        None
+        Set title of the plot.
         """
 
     @property
     @rpc_call
     def x_label(self) -> "str":
         """
-        None
+        The set label for the x-axis.
         """
 
     @x_label.setter
     @rpc_call
     def x_label(self) -> "str":
         """
-        None
+        The set label for the x-axis.
         """
 
     @property
     @rpc_call
     def y_label(self) -> "str":
         """
-        None
+        The set label for the y-axis.
         """
 
     @y_label.setter
     @rpc_call
     def y_label(self) -> "str":
         """
-        None
+        The set label for the y-axis.
         """
 
     @property
     @rpc_call
     def x_limits(self) -> "QPointF":
         """
-        None
+        Get the x limits of the plot.
         """
 
     @x_limits.setter
     @rpc_call
     def x_limits(self) -> "QPointF":
         """
-        None
+        Get the x limits of the plot.
         """
 
     @property
     @rpc_call
     def y_limits(self) -> "QPointF":
         """
-        None
+        Get the y limits of the plot.
         """
 
     @y_limits.setter
     @rpc_call
     def y_limits(self) -> "QPointF":
         """
-        None
+        Get the y limits of the plot.
         """
 
     @property
     @rpc_call
     def x_grid(self) -> "bool":
         """
-        None
+        Show grid on the x-axis.
         """
 
     @x_grid.setter
     @rpc_call
     def x_grid(self) -> "bool":
         """
-        None
+        Show grid on the x-axis.
         """
 
     @property
     @rpc_call
     def y_grid(self) -> "bool":
         """
-        None
+        Show grid on the y-axis.
         """
 
     @y_grid.setter
     @rpc_call
     def y_grid(self) -> "bool":
         """
-        None
+        Show grid on the y-axis.
         """
 
     @property
     @rpc_call
     def inner_axes(self) -> "bool":
         """
-        None
+        Show inner axes of the plot widget.
         """
 
     @inner_axes.setter
     @rpc_call
     def inner_axes(self) -> "bool":
         """
-        None
+        Show inner axes of the plot widget.
         """
 
     @property
     @rpc_call
     def outer_axes(self) -> "bool":
         """
-        None
+        Show the outer axes of the plot widget.
         """
 
     @outer_axes.setter
     @rpc_call
     def outer_axes(self) -> "bool":
         """
-        None
+        Show the outer axes of the plot widget.
         """
 
     @property
     @rpc_call
     def lock_aspect_ratio(self) -> "bool":
         """
-        None
+        Lock aspect ratio of the plot widget.
         """
 
     @lock_aspect_ratio.setter
     @rpc_call
     def lock_aspect_ratio(self) -> "bool":
         """
-        None
+        Lock aspect ratio of the plot widget.
         """
 
     @property
     @rpc_call
     def auto_range_x(self) -> "bool":
         """
-        None
+        Set auto range for the x-axis.
         """
 
     @auto_range_x.setter
     @rpc_call
     def auto_range_x(self) -> "bool":
         """
-        None
+        Set auto range for the x-axis.
         """
 
     @property
     @rpc_call
     def auto_range_y(self) -> "bool":
         """
-        None
+        Set auto range for the y-axis.
         """
 
     @auto_range_y.setter
     @rpc_call
     def auto_range_y(self) -> "bool":
         """
-        None
+        Set auto range for the y-axis.
         """
 
     @property
     @rpc_call
     def x_log(self) -> "bool":
         """
-        None
+        Set X-axis to log scale if True, linear if False.
         """
 
     @x_log.setter
     @rpc_call
     def x_log(self) -> "bool":
         """
-        None
+        Set X-axis to log scale if True, linear if False.
         """
 
     @property
     @rpc_call
     def y_log(self) -> "bool":
         """
-        None
+        Set Y-axis to log scale if True, linear if False.
         """
 
     @y_log.setter
     @rpc_call
     def y_log(self) -> "bool":
         """
-        None
+        Set Y-axis to log scale if True, linear if False.
         """
 
     @property
     @rpc_call
     def legend_label_size(self) -> "int":
         """
-        None
+        The font size of the legend font.
         """
 
     @legend_label_size.setter
     @rpc_call
     def legend_label_size(self) -> "int":
         """
-        None
+        The font size of the legend font.
         """
 
     @rpc_call
