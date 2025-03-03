@@ -86,6 +86,7 @@ class MouseInteractionToolbarBundle(ToolbarBundle):
         self.actions["switch_mouse"].actions["drag_mode"].action.setChecked(not checked)
         if self.target_widget and checked:
             self.target_widget.plot_item.getViewBox().setMouseMode(pg.ViewBox.RectMode)
+            self.mouse_mode = "RectMode"
 
     @SafeSlot(bool)
     def enable_mouse_pan_mode(self, checked: bool):
@@ -98,6 +99,7 @@ class MouseInteractionToolbarBundle(ToolbarBundle):
         self.actions["switch_mouse"].actions["rectangle_mode"].action.setChecked(not checked)
         if self.target_widget and checked:
             self.target_widget.plot_item.getViewBox().setMouseMode(pg.ViewBox.PanMode)
+            self.mouse_mode = "PanMode"
 
     @SafeSlot()
     def autorange_plot(self):
