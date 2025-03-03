@@ -38,12 +38,6 @@ class MouseInteractionToolbarBundle(ToolbarBundle):
             checkable=False,
             parent=self.target_widget,
         )
-        aspect_ratio = MaterialIconAction(
-            icon_name="aspect_ratio",
-            tooltip="Lock image aspect ratio",
-            checkable=True,
-            parent=self.target_widget,
-        )
 
         self.switch_mouse_action = SwitchableToolBarAction(
             actions={"drag_mode": drag, "rectangle_mode": rect},
@@ -56,13 +50,11 @@ class MouseInteractionToolbarBundle(ToolbarBundle):
         # Add them to the bundle
         self.add_action("switch_mouse", self.switch_mouse_action)
         self.add_action("auto_range", auto)
-        self.add_action("aspect_ratio", aspect_ratio)
 
         # Immediately connect signals
         drag.action.toggled.connect(self.enable_mouse_pan_mode)
         rect.action.toggled.connect(self.enable_mouse_rectangle_mode)
         auto.action.triggered.connect(self.autorange_plot)
-        aspect_ratio.action.toggled.connect(self.lock_aspect_ratio)
 
         # Give some time to check the state
         QTimer.singleShot(10, self.get_viewbox_mode)
@@ -115,8 +107,3 @@ class MouseInteractionToolbarBundle(ToolbarBundle):
         if self.target_widget:
             self.target_widget.auto_range_x = True
             self.target_widget.auto_range_y = True
-
-    @SafeSlot(bool)
-    def lock_aspect_ratio(self, checked: bool):
-        if self.target_widget:
-            self.target_widget.lock_aspect_ratio = checked
