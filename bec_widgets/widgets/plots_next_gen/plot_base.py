@@ -228,10 +228,19 @@ class PlotBase(BECWidget, QWidget):
     ################################################################################
     @property
     def ui_mode(self) -> UIMode:
+        """
+        Get the UI mode.
+        """
         return self._ui_mode
 
     @ui_mode.setter
     def ui_mode(self, mode: UIMode):
+        """
+        Set the UI mode.
+
+        Args:
+            mode(UIMode): The UI mode to set.
+        """
         if not isinstance(mode, UIMode):
             raise ValueError("ui_mode must be an instance of UIMode")
         self._ui_mode = mode
@@ -257,10 +266,19 @@ class PlotBase(BECWidget, QWidget):
 
     @SafeProperty(bool, doc="Enable popups setting dialogs for the plot widget.")
     def enable_popups(self):
+        """
+        Enable popups setting dialogs for the plot widget.
+        """
         return self.ui_mode == UIMode.POPUP
 
     @enable_popups.setter
     def enable_popups(self, value: bool):
+        """
+        Set the popups setting dialogs for the plot widget.
+
+        Args:
+            value(bool): The value to set.
+        """
         if value:
             self.ui_mode = UIMode.POPUP
         else:
@@ -269,10 +287,19 @@ class PlotBase(BECWidget, QWidget):
 
     @SafeProperty(bool, doc="Show Side Panel")
     def enable_side_panel(self) -> bool:
+        """
+        Show Side Panel
+        """
         return self.ui_mode == UIMode.SIDE
 
     @enable_side_panel.setter
     def enable_side_panel(self, value: bool):
+        """
+        Show Side Panel
+
+        Args:
+            value(bool): The value to set.
+        """
         if value:
             self.ui_mode = UIMode.SIDE
         else:
@@ -281,10 +308,19 @@ class PlotBase(BECWidget, QWidget):
 
     @SafeProperty(bool, doc="Show Toolbar")
     def enable_toolbar(self) -> bool:
+        """
+        Show Toolbar.
+        """
         return self.toolbar.isVisible()
 
     @enable_toolbar.setter
     def enable_toolbar(self, value: bool):
+        """
+        Show Toolbar.
+
+        Args:
+            value(bool): The value to set.
+        """
         if value:
             # Disable popup mode
             if self._popups:
@@ -304,10 +340,19 @@ class PlotBase(BECWidget, QWidget):
 
     @SafeProperty(bool, doc="Enable the FPS monitor.")
     def enable_fps_monitor(self) -> bool:
+        """
+        Enable the FPS monitor.
+        """
         return self.fps_label.isVisible()
 
     @enable_fps_monitor.setter
     def enable_fps_monitor(self, value: bool):
+        """
+        Enable the FPS monitor.
+
+        Args:
+            value(bool): The value to set.
+        """
         if value and self.fps_monitor is None:
             self.hook_fps_monitor()
         elif not value and self.fps_monitor is not None:
@@ -374,19 +419,37 @@ class PlotBase(BECWidget, QWidget):
 
     @SafeProperty(str, doc="The title of the axes.")
     def title(self) -> str:
+        """
+        Set title of the plot.
+        """
         return self.plot_item.titleLabel.text
 
     @title.setter
     def title(self, value: str):
+        """
+        Set title of the plot.
+
+        Args:
+            value(str): The title to set.
+        """
         self.plot_item.setTitle(value)
         self.property_changed.emit("title", value)
 
     @SafeProperty(str, doc="The text of the x label")
     def x_label(self) -> str:
+        """
+        The set label for the x-axis.
+        """
         return self._user_x_label
 
     @x_label.setter
     def x_label(self, value: str):
+        """
+        The set label for the x-axis.
+
+        Args:
+            value(str): The label to set.
+        """
         self._user_x_label = value
         self._apply_x_label()
         self.property_changed.emit("x_label", self._user_x_label)
@@ -425,10 +488,18 @@ class PlotBase(BECWidget, QWidget):
 
     @SafeProperty(str, doc="The text of the y label")
     def y_label(self) -> str:
+        """
+        The set label for the y-axis.
+        """
         return self.plot_item.getAxis("left").labelText
 
     @y_label.setter
     def y_label(self, value: str):
+        """
+        The set label for the y-axis.
+        Args:
+            value(str): The label to set.
+        """
         self.plot_item.setLabel("left", text=value)
         self.property_changed.emit("y_label", value)
 
@@ -457,37 +528,74 @@ class PlotBase(BECWidget, QWidget):
 
     @SafeProperty("QPointF")
     def x_limits(self) -> QPointF:
+        """
+        Get the x limits of the plot.
+        """
         current_lim = self.plot_item.vb.viewRange()[0]
         return QPointF(current_lim[0], current_lim[1])
 
     @x_limits.setter
     def x_limits(self, value):
+        """
+        Set the x limits of the plot.
+
+        Args:
+            value(QPointF|tuple|list): The x limits to set.
+        """
         if isinstance(value, (tuple, list)):
             value = self._tuple_to_qpointf(value)
         self.plot_item.vb.setXRange(value.x(), value.y(), padding=0)
 
     @property
     def x_lim(self) -> tuple:
+        """
+        Get the x limits of the plot.
+        """
         return (self.x_limits.x(), self.x_limits.y())
 
     @x_lim.setter
     def x_lim(self, value):
+        """
+        Set the x limits of the plot.
+
+        Args:
+            value(tuple): The x limits to set.
+        """
         self.x_limits = value
 
     @property
     def x_min(self) -> float:
+        """
+        Get the minimum x limit of the plot.
+
+        """
         return self.x_limits.x()
 
     @x_min.setter
     def x_min(self, value: float):
+        """
+        Set the minimum x limit of the plot.
+
+        Args:
+            value(float): The minimum x limit to set.
+        """
         self.x_limits = (value, self.x_lim[1])
 
     @property
     def x_max(self) -> float:
+        """
+        Get the maximum x limit of the plot.
+        """
         return self.x_limits.y()
 
     @x_max.setter
     def x_max(self, value: float):
+        """
+        Set the maximum x limit of the plot.
+
+        Args:
+            value(float): The maximum x limit to set.
+        """
         self.x_limits = (self.x_lim[0], value)
 
     ################################################################################
@@ -496,121 +604,241 @@ class PlotBase(BECWidget, QWidget):
 
     @SafeProperty("QPointF")
     def y_limits(self) -> QPointF:
+        """
+        Get the y limits of the plot.
+        """
         current_lim = self.plot_item.vb.viewRange()[1]
         return QPointF(current_lim[0], current_lim[1])
 
     @y_limits.setter
     def y_limits(self, value):
+        """
+        Set the y limits of the plot.
+
+        Args:
+            value(QPointF|tuple|list): The y limits to set.
+        """
         if isinstance(value, (tuple, list)):
             value = self._tuple_to_qpointf(value)
         self.plot_item.vb.setYRange(value.x(), value.y(), padding=0)
 
     @property
     def y_lim(self) -> tuple:
+        """
+        Get the y limits of the plot.
+        """
         return (self.y_limits.x(), self.y_limits.y())
 
     @y_lim.setter
     def y_lim(self, value):
+        """
+        Set the y limits of the plot.
+
+        Args:
+            value(tuple): The y limits to set.
+        """
         self.y_limits = value
 
     @property
     def y_min(self) -> float:
+        """
+        Get the minimum y limit of the plot.
+        """
         return self.y_limits.x()
 
     @y_min.setter
     def y_min(self, value: float):
+        """
+        Set the minimum y limit of the plot.
+
+        Args:
+            value(float): The minimum y limit to set.
+        """
         self.y_limits = (value, self.y_lim[1])
 
     @property
     def y_max(self) -> float:
+        """
+        Get the maximum y limit of the plot.
+        """
         return self.y_limits.y()
 
     @y_max.setter
     def y_max(self, value: float):
+        """
+        Set the maximum y limit of the plot.
+
+        Args:
+            value(float): The maximum y limit to set.
+        """
         self.y_limits = (self.y_lim[0], value)
 
     @SafeProperty(bool, doc="Show grid on the x-axis.")
     def x_grid(self) -> bool:
+        """
+        Show grid on the x-axis.
+        """
         return self.plot_item.ctrl.xGridCheck.isChecked()
 
     @x_grid.setter
     def x_grid(self, value: bool):
+        """
+        Show grid on the x-axis.
+
+        Args:
+            value(bool): The value to set.
+        """
         self.plot_item.showGrid(x=value)
         self.property_changed.emit("x_grid", value)
 
     @SafeProperty(bool, doc="Show grid on the y-axis.")
     def y_grid(self) -> bool:
+        """
+        Show grid on the y-axis.
+        """
         return self.plot_item.ctrl.yGridCheck.isChecked()
 
     @y_grid.setter
     def y_grid(self, value: bool):
+        """
+        Show grid on the y-axis.
+
+        Args:
+            value(bool): The value to set.
+        """
         self.plot_item.showGrid(y=value)
         self.property_changed.emit("y_grid", value)
 
     @SafeProperty(bool, doc="Set X-axis to log scale if True, linear if False.")
     def x_log(self) -> bool:
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
         return bool(self.plot_item.vb.state.get("logMode", [False, False])[0])
 
     @x_log.setter
     def x_log(self, value: bool):
+        """
+        Set X-axis to log scale if True, linear if False.
+
+        Args:
+            value(bool): The value to set.
+        """
         self.plot_item.setLogMode(x=value)
         self.property_changed.emit("x_log", value)
 
     @SafeProperty(bool, doc="Set Y-axis to log scale if True, linear if False.")
     def y_log(self) -> bool:
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
         return bool(self.plot_item.vb.state.get("logMode", [False, False])[1])
 
     @y_log.setter
     def y_log(self, value: bool):
+        """
+        Set Y-axis to log scale if True, linear if False.
+
+        Args:
+            value(bool): The value to set.
+        """
         self.plot_item.setLogMode(y=value)
         self.property_changed.emit("y_log", value)
 
     @SafeProperty(bool, doc="Show the outer axes of the plot widget.")
     def outer_axes(self) -> bool:
+        """
+        Show the outer axes of the plot widget.
+        """
         return self.plot_item.getAxis("top").isVisible()
 
     @outer_axes.setter
     def outer_axes(self, value: bool):
+        """
+        Show the outer axes of the plot widget.
+
+        Args:
+            value(bool): The value to set.
+        """
         self.plot_item.showAxis("top", value)
         self.plot_item.showAxis("right", value)
         self.property_changed.emit("outer_axes", value)
 
     @SafeProperty(bool, doc="Show inner axes of the plot widget.")
     def inner_axes(self) -> bool:
+        """
+        Show inner axes of the plot widget.
+        """
         return self.plot_item.getAxis("bottom").isVisible()
 
     @inner_axes.setter
     def inner_axes(self, value: bool):
+        """
+        Show inner axes of the plot widget.
+
+        Args:
+            value(bool): The value to set.
+        """
         self.plot_item.showAxis("bottom", value)
         self.plot_item.showAxis("left", value)
         self.property_changed.emit("inner_axes", value)
 
     @SafeProperty(bool, doc="Lock aspect ratio of the plot widget.")
     def lock_aspect_ratio(self) -> bool:
+        """
+        Lock aspect ratio of the plot widget.
+        """
         return bool(self.plot_item.vb.getState()["aspectLocked"])
 
     @lock_aspect_ratio.setter
     def lock_aspect_ratio(self, value: bool):
+        """
+        Lock aspect ratio of the plot widget.
+
+        Args:
+            value(bool): The value to set.
+        """
         self.plot_item.setAspectLocked(value)
 
     @SafeProperty(bool, doc="Set auto range for the x-axis.")
     def auto_range_x(self) -> bool:
+        """
+        Set auto range for the x-axis.
+        """
         return bool(self.plot_item.vb.getState()["autoRange"][0])
 
     @auto_range_x.setter
     def auto_range_x(self, value: bool):
+        """
+        Set auto range for the x-axis.
+
+        Args:
+            value(bool): The value to set.
+        """
         self.plot_item.enableAutoRange(x=value)
 
     @SafeProperty(bool, doc="Set auto range for the y-axis.")
     def auto_range_y(self) -> bool:
+        """
+        Set auto range for the y-axis.
+        """
         return bool(self.plot_item.vb.getState()["autoRange"][1])
 
     @auto_range_y.setter
     def auto_range_y(self, value: bool):
+        """
+        Set auto range for the y-axis.
+
+        Args:
+            value(bool): The value to set.
+        """
         self.plot_item.enableAutoRange(y=value)
 
     @SafeProperty(int, doc="The font size of the legend font.")
     def legend_label_size(self) -> int:
+        """
+        The font size of the legend font.
+        """
         if not self.plot_item.legend:
             return
         scale = self.plot_item.legend.scale() * 9
@@ -618,6 +846,12 @@ class PlotBase(BECWidget, QWidget):
 
     @legend_label_size.setter
     def legend_label_size(self, value: int):
+        """
+        The font size of the legend font.
+
+        Args:
+            value(int): The font size to set.
+        """
         if not self.plot_item.legend:
             return
         scale = (
