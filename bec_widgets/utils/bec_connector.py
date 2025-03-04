@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import time
 import uuid
+from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 from bec_lib.logger import bec_logger
@@ -15,6 +16,7 @@ from qtpy.QtWidgets import QApplication
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.qt_utils.error_popups import ErrorPopupUtility
 from bec_widgets.qt_utils.error_popups import SafeSlot as pyqtSlot
+from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.yaml_dialog import load_yaml, load_yaml_gui, save_yaml, save_yaml_gui
 
 if TYPE_CHECKING:
@@ -39,8 +41,7 @@ class ConnectionConfig(BaseModel):
         """Generate a GUI ID if none is provided."""
         if v is None:
             widget_class = values.data["widget_class"]
-            v = f"{widget_class}_{str(time.time())}"
-            return v
+            v = f"{widget_class}_{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')}"
         return v
 
 
@@ -75,7 +76,13 @@ class BECConnector:
     USER_ACCESS = ["_config_dict", "_get_all_rpc", "_rpc_id"]
     EXIT_HANDLERS = {}
 
-    def __init__(self, client=None, config: ConnectionConfig = None, gui_id: str = None):
+    def __init__(
+        self,
+        client=None,
+        config: ConnectionConfig | None = None,
+        gui_id: str | None = None,
+        name: str | None = None,
+    ):
         # BEC related connections
         self.bec_dispatcher = BECDispatcher(client=client)
         self.client = self.bec_dispatcher.client if client is None else client
@@ -103,15 +110,22 @@ class BECConnector:
             )
             self.config = ConnectionConfig(widget_class=self.__class__.__name__)
 
+        # I feel that we should not allow BECConnector to be created with a custom gui_id
+        # because this would break with the logic in the RPCRegister of retrieving widgets by type
+        # iterating over all widgets and checkinf if the register widget starts with the string that is passsed.
+        # If the gui_id is randomly generated, this would break since that widget would have a
+        # gui_id that is generated in a different way.
         if gui_id:
             self.config.gui_id = gui_id
-            self.gui_id = gui_id
+            self.gui_id: str = gui_id
         else:
-            self.gui_id = self.config.gui_id
-
-        # register widget to rpc register
-        # be careful: when registering, and the object is not a BECWidget,
-        # cleanup has to be called manually since there is no 'closeEvent'
+            self.gui_id: str = self.config.gui_id  # type: ignore
+        if name is None:
+            name = self.__class__.__name__
+        else:
+            if not WidgetContainerUtils.has_name_valid_chars(name):
+                raise ValueError(f"Name {name} contains invalid characters.")
+        self._name = name if name else self.__class__.__name__
         self.rpc_register = RPCRegister()
         self.rpc_register.add_rpc(self)
 
@@ -288,9 +302,12 @@ class BECConnector:
         Args:
             config (ConnectionConfig | dict): Configuration settings.
         """
+        gui_id = getattr(config, "gui_id", None)
         if isinstance(config, dict):
             config = ConnectionConfig(**config)
         self.config = config
+        if gui_id and config.gui_id != gui_id:  # Recreating config should not overwrite the gui_id
+            self.config.gui_id = gui_id
 
     def get_config(self, dict_output: bool = True) -> dict | BaseModel:
         """

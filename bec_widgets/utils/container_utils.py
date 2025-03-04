@@ -1,30 +1,55 @@
 from __future__ import annotations
 
 import itertools
-from typing import Type
+from typing import Literal, Type
 
 from qtpy.QtWidgets import QWidget
+
+from bec_widgets.cli.rpc.rpc_register import RPCRegister
 
 
 class WidgetContainerUtils:
 
+    # We need one handler that checks if a WIDGET of a given name is already created for that DOCKAREA
+    # 1. If the name exists, then it depends whether the name was auto-generated -> add _1 to the name
+    #    or alternatively raise an error that it can't be added again ( just raise an error)
+    # 2. Dock names in between docks should also be unique
+
     @staticmethod
-    def generate_unique_widget_id(container: dict, prefix: str = "widget") -> str:
-        """
-        Generate a unique widget ID.
+    def has_name_valid_chars(name: str) -> bool:
+        """Check if the name is valid.
 
         Args:
-            container(dict): The container of widgets.
-            prefix(str): The prefix of the widget ID.
+            name(str): The name to be checked.
 
         Returns:
-            widget_id(str): The unique widget ID.
+            bool: True if the name is valid, False otherwise.
         """
-        existing_ids = set(container.keys())
-        for i in itertools.count(1):
-            widget_id = f"{prefix}_{i}"
-            if widget_id not in existing_ids:
-                return widget_id
+        if not name or len(name) > 256:
+            return False  # Don't accept empty names or names longer than 256 characters
+        check_value = name.replace("_", "").replace("-", "")
+        if not check_value.isalnum() or not check_value.isascii():
+            return False
+        return True
+
+    @staticmethod
+    def generate_unique_name(name: str, list_of_names: list[str] | None = None) -> str:
+        """Generate a unique ID.
+
+        Args:
+            name(str): The name of the widget.
+        Returns:
+            tuple (str): The unique name
+        """
+        if list_of_names is None:
+            list_of_names = []
+        ii = 0
+        while ii < 1000:  # 1000 is arbritrary!
+            name_candidate = f"{name}_{ii}"
+            if name_candidate not in list_of_names:
+                return name_candidate
+            ii += 1
+        raise ValueError("Could not generate a unique name after within 1000 attempts.")
 
     @staticmethod
     def find_first_widget_by_class(

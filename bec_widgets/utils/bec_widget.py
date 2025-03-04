@@ -7,6 +7,7 @@ from qtpy.QtWidgets import QApplication, QWidget
 
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
 from bec_widgets.utils.colors import set_theme
+from bec_widgets.utils.container_utils import WidgetContainerUtils
 
 logger = bec_logger.logger
 
@@ -22,8 +23,9 @@ class BECWidget(BECConnector):
         self,
         client=None,
         config: ConnectionConfig = None,
-        gui_id: str = None,
+        gui_id: str | None = None,
         theme_update: bool = False,
+        name: str | None = None,
         **kwargs,
     ):
         """
@@ -45,9 +47,14 @@ class BECWidget(BECConnector):
         """
         if not isinstance(self, QWidget):
             raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")
-        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
-
-        # Set the theme to auto if it is not set yet
+        # Create a default name if None is provided
+        if name is None:
+            name = "bec_widget_init_without_name"
+            # name = self.__class__.__name__
+        # Check for invalid chars in the name
+        if not WidgetContainerUtils.has_name_valid_chars(name):
+            raise ValueError(f"Name {name} contains invalid characters.")
+        super().__init__(client=client, config=config, gui_id=gui_id, name=name)
         app = QApplication.instance()
         if not hasattr(app, "theme"):
             # DO NOT SET THE THEME TO AUTO! Otherwise, the qwebengineview will segfault

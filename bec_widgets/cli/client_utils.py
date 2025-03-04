@@ -7,6 +7,7 @@ import os
 import select
 import subprocess
 import threading
+import time
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
@@ -22,13 +23,12 @@ if TYPE_CHECKING:
     from bec_lib import messages
     from bec_lib.connector import MessageObject
     from bec_lib.device import DeviceBase
-
-    from bec_widgets.utils.bec_dispatcher import BECDispatcher
+    from bec_lib.redis_connector import StreamMessage
 else:
     messages = lazy_import("bec_lib.messages")
     # from bec_lib.connector import MessageObject
     MessageObject = lazy_import_from("bec_lib.connector", ("MessageObject",))
-    BECDispatcher = lazy_import_from("bec_widgets.utils.bec_dispatcher", ("BECDispatcher",))
+    StreamMessage = lazy_import_from("bec_lib.redis_connector", ("StreamMessage",))
 
 logger = bec_logger.logger
 
@@ -156,10 +156,11 @@ def wait_for_server(client):
 ### in the generated client module. So, here a class with the same name
 ### is created, and client module is patched.
 class BECDockArea(client.BECDockArea):
+    # FIXME fix the delete method
     def delete(self):
         if self is BECGuiClient._top_level["bec"]:
             raise RuntimeError("Cannot delete bec window")
-        super().delete()
+        super().delete_all()
         try:
             del BECGuiClient._top_level[self._gui_id]
         except KeyError:
@@ -185,6 +186,7 @@ class BECGuiClient(RPCBase):
         self._process = None
         self._process_output_processing_thread = None
         self._exposed_widgets = []
+        self._registry_state = {}
 
     @property
     def windows(self):
@@ -243,7 +245,7 @@ class BECGuiClient(RPCBase):
     def _start_update_script(self) -> None:
         self._client.connector.register(MessageEndpoints.scan_status(), cb=self._handle_msg_update)
 
-    def _handle_msg_update(self, msg: MessageObject) -> None:
+    def _handle_msg_update(self, msg: StreamMessage) -> None:
         if self.auto_updates is not None:
             # pylint: disable=protected-access
             return self._update_script_msg_parser(msg.value)
@@ -256,19 +258,28 @@ class BECGuiClient(RPCBase):
                 return self.auto_updates.do_update(msg)
 
     def _gui_post_startup(self):
-        widget = BECDockArea(gui_id=self._default_dock_name, parent=self)
-        self._add_widget_to_top_level(self._default_dock_name, widget)
-        if self._auto_updates_enabled:
-            if self._auto_updates is None:
-                auto_updates = self._get_update_script()
-                if auto_updates is None:
-                    AutoUpdates.create_default_dock = True
-                    AutoUpdates.enabled = True
-                    auto_updates = AutoUpdates(self._top_level[self._default_dock_name])
-                if auto_updates.create_default_dock:
-                    auto_updates.start_default_dock()
-                self._start_update_script()
-                self._auto_updates = auto_updates
+        timeout = 10
+        while time.time() < time.time() + timeout:
+            if len(list(self._registry_state.keys())) == 0:
+                time.sleep(0.1)
+            else:
+                break
+        key = list(self._registry_state.keys())[0]
+        gui_id = self._registry_state[key]["gui_id"]
+        name = self._registry_state[key]["name"]
+        widget = BECDockArea(gui_id=gui_id, name=name, parent=self)
+        self._add_widget_to_top_level(name, widget)
+        # if self._auto_updates_enabled:
+        #     if self._auto_updates is None:
+        #         auto_updates = self._get_update_script()
+        #         if auto_updates is None:
+        #             AutoUpdates.create_default_dock = True
+        #             AutoUpdates.enabled = True
+        #             auto_updates = AutoUpdates(self._top_level[name])
+        #         if auto_updates.create_default_dock:
+        #             auto_updates.start_default_dock()
+        #         self._start_update_script()
+        #         self._auto_updates = auto_updates
         self._do_show_all()
         self._gui_started_event.set()
 
@@ -308,11 +319,17 @@ class BECGuiClient(RPCBase):
         return rpc_client._run_rpc("_dump")
 
     def _start(self):
+        self._client.connector.register(
+            MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
+        )
         return self._start_server()
 
     def start(self):
         # FIXME keeping backwards compatibility for now
         return self._start()
+
+    def _handle_registry_update(self, msg: StreamMessage) -> None:
+        self._registry_state = msg["data"].state
 
     def _do_show_all(self):
         rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
@@ -340,23 +357,31 @@ class BECGuiClient(RPCBase):
     def hide(self):
         return self._hide_all()
 
-    def new(self, title: str = None, wait: bool = True) -> BECDockArea:
-        """Create a new top-level dock area"""
+    def new(self, name: str | None = None, wait: bool = True) -> BECDockArea:
+        """Create a new top-level dock area.
+
+        Args:
+            name(str, optional): The name of the dock area. Defaults to None.
+            wait(bool, optional): Whether to wait for the server to start. Defaults to True.
+        Returns:
+            BECDockArea: The new dock area.
+        """
         if wait:
             with wait_for_server(self):
                 rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
-                widget = rpc_client._run_rpc("new_dock_area", title)
-                self._add_widget_to_top_level(widget._gui_id, widget)
+                widget = rpc_client._run_rpc(
+                    "new_dock_area", name
+                )  # pylint: disable=protected-access
+                self._add_widget_to_top_level(widget._name, widget)
                 return widget
+        widget = rpc_client._run_rpc("new_dock_area", name)  # pylint: disable=protected-access
         rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
-        widget = rpc_client._run_rpc("new_dock_area", title)
-        self._add_widget_to_top_level(widget._gui_id, widget)
+        self._add_widget_to_top_level(widget._name, widget)
         return widget
 
     def _add_widget_to_top_level(self, widget_id: str, widget: BECDockArea) -> None:
         self._top_level[widget_id] = widget
-        setattr(self, widget_id, widget)
-        self._exposed_widgets.append(widget_id)
+        self._update_top_level_widgets()
 
     def _update_top_level_widgets(self):
         for widget_id in self._exposed_widgets:
@@ -367,8 +392,11 @@ class BECGuiClient(RPCBase):
             setattr(self, widget_id, widget)
             self._exposed_widgets.append(widget_id)
 
-    def close(self) -> None:
-        # FIXME: keeping backwards compatibility for now
+    def close(self):
+        # Needed to shut down gui for IPythonClient, will be remove in  future
+        self.kill()
+
+    def kill(self) -> None:
         self._close()
 
     def _close(self) -> None:

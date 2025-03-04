@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 import uuid
 from functools import wraps
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
@@ -61,10 +61,17 @@ class RPCResponseTimeoutError(Exception):
 
 
 class RPCBase:
-    def __init__(self, gui_id: str = None, config: dict = None, parent=None) -> None:
+    def __init__(
+        self,
+        gui_id: str | None = None,
+        config: dict | None = None,
+        name: str | None = None,
+        parent=None,
+    ) -> None:
         self._client = BECClient()  # BECClient is a singleton; here, we simply get the instance
         self._config = config if config is not None else {}
         self._gui_id = gui_id if gui_id is not None else str(uuid.uuid4())[:5]
+        self._name = name if name is not None else str(uuid.uuid4())[:5]
         self._parent = parent
         self._msg_wait_event = threading.Event()
         self._rpc_response = None
@@ -88,7 +95,7 @@ class RPCBase:
             parent = parent._parent
         return parent
 
-    def _run_rpc(self, method, *args, wait_for_rpc_response=True, timeout=3, **kwargs):
+    def _run_rpc(self, method, *args, wait_for_rpc_response=True, timeout=3, **kwargs) -> Any:
         """
         Run the RPC call.
 
@@ -162,7 +169,8 @@ class RPCBase:
 
             cls = getattr(client, cls)
             # print(msg_result)
-            return cls(parent=self, **msg_result)
+            ret = cls(parent=self, **msg_result)
+            return ret
         return msg_result
 
     def _gui_is_alive(self):

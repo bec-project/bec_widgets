@@ -2,10 +2,19 @@ from __future__ import annotations
 
 from functools import wraps
 from threading import Lock
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 from weakref import WeakValueDictionary
 
+from bec_lib.logger import bec_logger
 from qtpy.QtCore import QObject
+
+if TYPE_CHECKING:
+    from bec_widgets.utils.bec_connector import BECConnector
+    from bec_widgets.utils.bec_widget import BECWidget
+    from bec_widgets.widgets.containers.dock.dock import BECDock
+    from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
+
+logger = bec_logger.logger
 
 
 def broadcast_update(func):
@@ -68,7 +77,7 @@ class RPCRegister:
             raise ValueError(f"RPC object {rpc} must have a 'gui_id' attribute.")
         self._rpc_register.pop(rpc.gui_id, None)
 
-    def get_rpc_by_id(self, gui_id: str) -> QObject:
+    def get_rpc_by_id(self, gui_id: str) -> QObject | None:
         """
         Get an RPC object by its ID.
 
@@ -76,9 +85,23 @@ class RPCRegister:
             gui_id(str): The ID of the RPC object to be retrieved.
 
         Returns:
-            QObject: The RPC object with the given ID.
+            QObject | None: The RPC object with the given ID or None
         """
         rpc_object = self._rpc_register.get(gui_id, None)
+        return rpc_object
+
+    def get_rpc_by_name(self, name: str) -> QObject | None:
+        """
+        Get an RPC object by its name.
+
+        Args:
+            name(str): The name of the RPC object to be retrieved.
+
+        Returns:
+            QObject | None: The RPC object with the given name.
+        """
+        rpc_object = [rpc for rpc in self._rpc_register if rpc._name == name]
+        rpc_object = rpc_object[0] if len(rpc_object) > 0 else None
         return rpc_object
 
     def list_all_connections(self) -> dict:
@@ -92,24 +115,41 @@ class RPCRegister:
             connections = dict(self._rpc_register)
         return connections
 
-    def get_rpc_by_type(self, type_name) -> list[str]:
-        """
-        Get all RPC objects of a certain type.
+    def get_names_of_rpc_by_class_type(
+        self, cls: BECWidget | BECConnector | BECDock | BECDockArea
+    ) -> list[str]:
+        """Get all the names of the widgets.
 
         Args:
-            type_name(str): The type of the RPC object to be retrieved.
-
-        Returns:
-            list: A list of RPC objects of the given type.
+            cls(BECWidget | BECConnector): The class of the RPC object to be retrieved.
         """
-        rpc_objects = [rpc for rpc in self._rpc_register if rpc.startswith(type_name)]
-        return rpc_objects
+        # This retrieves any rpc objects that are subclass of BECWidget,
+        # i.e. curve and image items are excluded
+        widgets = [rpc for rpc in self._rpc_register.values() if isinstance(rpc, cls)]
+        return [widget._name for widget in widgets]
+
+    # def get_names_by_class_name(self, class_name: str) -> list[str]:
+    #     """
+    #     Get all RPC objects of a class, i.e. BECDockArea, BECDock.
+
+    #     Args:
+    #         class_name(str): The type of the RPC object to be retrieved.
+
+    #     Returns:
+    #         list: A list of names of RPC objects of the given type.
+    #     """
+    #     rpc_objects = [
+    #         rpc._name
+    #         for name, rpc in self._rpc_register.items()
+    #         if rpc.__class__.__name__ == class_name
+    #     ]
+    #     return rpc_objects
 
     def broadcast(self):
         """
         Broadcast the update to all the callbacks.
         """
-        print("Broadcasting")
+        # print("Broadcasting")
         connections = self.list_all_connections()
         for callback in self.callbacks:
             callback(connections)

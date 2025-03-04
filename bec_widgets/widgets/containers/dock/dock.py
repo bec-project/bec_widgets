@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Optional
+from typing import TYPE_CHECKING, Any, Literal, Optional, cast
+from weakref import WeakValueDictionary
 
+from bec_lib.logger import bec_logger
 from pydantic import Field
 from pyqtgraph.dockarea import Dock, DockLabel
 from qtpy import QtCore, QtGui
@@ -9,9 +11,14 @@ from qtpy import QtCore, QtGui
 from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 from bec_widgets.utils import ConnectionConfig, GridLayoutManager
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.container_utils import WidgetContainerUtils
+
+logger = bec_logger.logger
 
 if TYPE_CHECKING:
     from qtpy.QtWidgets import QWidget
+
+    from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
 
 
 class DockConfig(ConnectionConfig):
@@ -19,7 +26,7 @@ class DockConfig(ConnectionConfig):
     position: Literal["bottom", "top", "left", "right", "above", "below"] = Field(
         "bottom", description="The position of the dock."
     )
-    parent_dock_area: Optional[str] = Field(
+    parent_dock_area: Optional[str] | None = Field(
         None, description="The GUI ID of parent dock area of the dock."
     )
 
@@ -103,17 +110,19 @@ class BECDock(BECWidget, Dock):
     ICON_NAME = "widgets"
     USER_ACCESS = [
         "_config_dict",
-        "_rpc_id",
-        "widget_list",
+        "element_list",
+        "elements",
+        "new",
+        "show",
+        "hide",
         "show_title_bar",
+        "set_title",
         "hide_title_bar",
         "get_widgets_positions",
-        "set_title",
-        "add_widget",
-        "list_eligible_widgets",
+        "available_widgets",
         "move_widget",
-        "remove_widget",
-        "remove",
+        "delete",
+        "delete_all",
         "attach",
         "detach",
     ]
@@ -121,7 +130,7 @@ class BECDock(BECWidget, Dock):
     def __init__(
         self,
         parent: QWidget | None = None,
-        parent_dock_area: QWidget | None = None,
+        parent_dock_area: BECDockArea | None = None,
         config: DockConfig | None = None,
         name: str | None = None,
         client=None,
@@ -131,19 +140,20 @@ class BECDock(BECWidget, Dock):
     ) -> None:
         if config is None:
             config = DockConfig(
-                widget_class=self.__class__.__name__, parent_dock_area=parent_dock_area.gui_id
+                widget_class=self.__class__.__name__, parent_dock_area=parent_dock_area._name
             )
         else:
             if isinstance(config, dict):
                 config = DockConfig(**config)
             self.config = config
-        super().__init__(client=client, config=config, gui_id=gui_id)
+        super().__init__(
+            client=client, config=config, gui_id=gui_id, name=name
+        )  # Name was checked and created in BEC Widget
         label = CustomDockLabel(text=name, closable=closable)
         Dock.__init__(self, name=name, label=label, **kwargs)
         # Dock.__init__(self, name=name, **kwargs)
 
         self.parent_dock_area = parent_dock_area
-
         # Layout Manager
         self.layout_manager = GridLayoutManager(self.layout)
 
@@ -173,7 +183,18 @@ class BECDock(BECWidget, Dock):
             super().float()
 
     @property
-    def widget_list(self) -> list[BECWidget]:
+    def elements(self) -> dict[str, BECWidget]:
+        """
+        Get the widgets in the dock.
+
+        Returns:
+            widgets(dict): The widgets in the dock.
+        """
+        # pylint: disable=protected-access
+        return dict((widget._name, widget) for widget in self.element_list)
+
+    @property
+    def element_list(self) -> list[BECWidget]:
         """
         Get the widgets in the dock.
 
@@ -182,10 +203,6 @@ class BECDock(BECWidget, Dock):
         """
         return self.widgets
 
-    @widget_list.setter
-    def widget_list(self, value: list[BECWidget]):
-        self.widgets = value
-
     def hide_title_bar(self):
         """
         Hide the title bar of the dock.
@@ -193,6 +210,20 @@ class BECDock(BECWidget, Dock):
         # self.hideTitleBar() #TODO pyqtgraph looks bugged ATM, doing my implementation
         self.label.hide()
         self.labelHidden = True
+
+    def show(self):
+        """
+        Show the dock.
+        """
+        super().show()
+        self.show_title_bar()
+
+    def hide(self):
+        """
+        Hide the dock.
+        """
+        self.hide_title_bar()
+        super().hide()
 
     def show_title_bar(self):
         """
@@ -211,7 +242,6 @@ class BECDock(BECWidget, Dock):
         """
         self.orig_area.docks[title] = self.orig_area.docks.pop(self.name())
         self.setTitle(title)
-        self._name = title
 
     def get_widgets_positions(self) -> dict:
         """
@@ -222,7 +252,7 @@ class BECDock(BECWidget, Dock):
         """
         return self.layout_manager.get_widgets_positions()
 
-    def list_eligible_widgets(
+    def available_widgets(
         self,
     ) -> list:  # TODO can be moved to some util mixin like container class for rpc widgets
         """
@@ -233,13 +263,21 @@ class BECDock(BECWidget, Dock):
         """
         return list(widget_handler.widget_classes.keys())
 
-    def add_widget(
+    def _get_list_of_widget_name_of_parent_dock_area(self):
+        docks = self.parent_dock_area.panel_list
+        widgets = []
+        for dock in docks:
+            widgets.extend(dock.elements.keys())
+        return widgets
+
+    def new(
         self,
         widget: BECWidget | str,
-        row=None,
-        col=0,
-        rowspan=1,
-        colspan=1,
+        name: str | None = None,
+        row: int | None = None,
+        col: int = 0,
+        rowspan: int = 1,
+        colspan: int = 1,
         shift: Literal["down", "up", "left", "right"] = "down",
     ) -> BECWidget:
         """
@@ -254,21 +292,37 @@ class BECDock(BECWidget, Dock):
             shift(Literal["down", "up", "left", "right"]): The direction to shift the widgets if the position is occupied.
         """
         if row is None:
+            # row = cast(int, self.layout.rowCount())  # type:ignore
             row = self.layout.rowCount()
+            # row = cast(int, row)
 
         if self.layout_manager.is_position_occupied(row, col):
             self.layout_manager.shift_widgets(shift, start_row=row)
 
+        existing_widgets_parent_dock = self._get_list_of_widget_name_of_parent_dock_area()
+
+        if name is not None:  # Name is provided
+            if name in existing_widgets_parent_dock:
+                # pylint: disable=protected-access
+                raise ValueError(
+                    f"Name {name} must be unique for widgets, but already exists in DockArea "
+                    f"with name: {self.parent_dock_area._name} and id {self.parent_dock_area.gui_id}."
+                )
+        else:  # Name is not provided
+            name = WidgetContainerUtils.generate_unique_name(
+                name=(
+                    widget if isinstance(widget, str) else widget._name
+                ),  # pylint: disable=protected-access
+                list_of_names=existing_widgets_parent_dock,
+            )
         if isinstance(widget, str):
-            widget = widget_handler.create_widget(widget)
+            widget = cast(BECWidget, widget_handler.create_widget(widget_type=widget, name=name))
         else:
-            widget = widget
+            widget._name = name  # pylint: disable=protected-access
 
         self.addWidget(widget, row=row, col=col, rowspan=rowspan, colspan=colspan)
-
         if hasattr(widget, "config"):
-            self.config.widgets[widget.gui_id] = widget.config
-
+            self.config.widgets[widget._name] = widget.config
         return widget
 
     def move_widget(self, widget: QWidget, new_row: int, new_col: int):
@@ -294,32 +348,51 @@ class BECDock(BECWidget, Dock):
         """
         self.float()
 
-    def remove_widget(self, widget_rpc_id: str):
-        """
-        Remove a widget from the dock.
-
-        Args:
-            widget_rpc_id(str): The ID of the widget to remove.
-        """
-        widget = self.rpc_register.get_rpc_by_id(widget_rpc_id)
-        self.layout.removeWidget(widget)
-        self.config.widgets.pop(widget_rpc_id, None)
-        widget.close()
-
     def remove(self):
         """
         Remove the dock from the parent dock area.
         """
-        # self.cleanup()
-        self.parent_dock_area.remove_dock(self.name())
+        self.parent_dock_area.delete(self.gui_id)
+
+    def delete(self, widget_name: str) -> None:
+        """
+        Remove a widget from the dock.
+
+        Args:
+            widget_name(str): Delete the widget with the given name.
+        """
+        widget = [widget for widget in self.widgets if widget._name == widget_name]
+        if not widget:
+            logger.warning(
+                f"Widget with name {widget_name} not found in dock {self.name()}. "
+                f"Checking if gui_id was passed as widget_name."
+            )
+            # Try to find the widget in the RPC register
+            widget = self.rpc_register.get_rpc_by_id(widget_name)
+            if widget is None:
+                logger.warning(
+                    f"Widget not found for name or gui_id: {widget_name} in dock {self.name()}"
+                )
+                return
+        widget = widget[0]
+        self.layout.removeWidget(widget)
+        self.config.widgets.pop(widget._name, None)
+        if widget in self.widgets:
+            self.widgets.remove(widget)
+        widget.close()
+
+    def delete_all(self):
+        """
+        Remove all widgets from the dock.
+        """
+        for widget in self.widgets:
+            self.delete(widget._name)
 
     def cleanup(self):
         """
         Clean up the dock, including all its widgets.
         """
-        for widget in self.widgets:
-            if hasattr(widget, "cleanup"):
-                widget.cleanup()
+        self.delete_all()
         self.widgets.clear()
         self.label.close()
         self.label.deleteLater()
@@ -333,3 +406,12 @@ class BECDock(BECWidget, Dock):
         self.cleanup()
         super().close()
         self.parent_dock_area.dock_area.docks.pop(self.name(), None)
+
+
+if __name__ == "__main__":
+    from qtpy.QtWidgets import QApplication
+
+    app = QApplication([])
+    dock = BECDock(name="dock")
+    dock.show()
+    app.exec_()

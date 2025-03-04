@@ -2,6 +2,7 @@ from qtpy.QtWidgets import QApplication, QMainWindow
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils import BECConnector
+from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
 
 
@@ -34,18 +35,20 @@ class BECMainWindow(QMainWindow, BECConnector):
         }
         return info
 
-    def new_dock_area(self, name: str | None = None):
-        if name is None:
-            name = "BEC"
+    def new_dock_area(self, name: str | None = None) -> BECDockArea:
+        rpc_register = RPCRegister()
+        existing_dock_areas = rpc_register.get_names_of_rpc_by_class_type(BECDockArea)
+        if name is not None:
+            if name in existing_dock_areas:
+                raise ValueError(
+                    f"Name {name} must be unique for dock areas, but already exists: {existing_dock_areas}."
+                )
         else:
-            name = "BEC - " + name
-        self.rpc_register = RPCRegister()
-        gui_id = name.replace(" - ", "_").replace(" ", "_").lower()
-        existing_widgets = self.rpc_register.get_rpc_by_type(gui_id)
-        if existing_widgets:
-            name = f"{name} {len(existing_widgets) + 1}"
-        dock_area = BECDockArea(gui_id=name.replace(" - ", "_").replace(" ", "_").lower())
+            name = "dock_area"
+            name = WidgetContainerUtils.generate_unique_name(name, existing_dock_areas)
+        dock_area = BECDockArea(name=name)
         dock_area.resize(dock_area.minimumSizeHint())
-        dock_area.window().setWindowTitle(name)
+        # TODO Should we simply use the specified name as title here?
+        dock_area.window().setWindowTitle(f"BEC - {name}")
         dock_area.show()
         return dock_area

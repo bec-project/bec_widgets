@@ -15,6 +15,7 @@ from bec_lib.utils.import_utils import lazy_import
 from qtpy.QtCore import Qt, QTimer
 from redis.exceptions import RedisError
 
+from bec_widgets.cli.rpc import rpc_register
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.qt_utils.error_popups import ErrorPopupUtility
 from bec_widgets.utils import BECDispatcher
@@ -36,6 +37,8 @@ def rpc_exception_hook(err_func):
     old_exception_hook = popup.custom_exception_hook
 
     # install err_func, if it is a callable
+    # IMPORTANT, Keep self here, because this method is overwriting the custom_exception_hook
+    # of the ErrorPopupUtility (popup instance) class.
     def custom_exception_hook(self, exc_type, value, tb, **kwargs):
         err_func({"error": popup.get_error_message(exc_type, value, tb)})
 
@@ -64,10 +67,9 @@ class BECWidgetsCLIServer:
         self.client = self.dispatcher.client if client is None else client
         self.client.start()
         self.gui_id = gui_id
-        self.gui = gui_class(gui_id=gui_class_id)
+        # register broadcast callback
         self.rpc_register = RPCRegister()
-        self.rpc_register.add_rpc(self.gui)
-
+        self.rpc_register.add_callback(self.broadcast_registry_update)
         self.dispatcher.connect_slot(
             self.on_rpc_update, MessageEndpoints.gui_instructions(self.gui_id)
         )
@@ -79,6 +81,8 @@ class BECWidgetsCLIServer:
 
         self.status = messages.BECStatus.RUNNING
         logger.success(f"Server started with gui_id: {self.gui_id}")
+        # Create initial object -> BECFigure or BECDockArea
+        self.gui = gui_class(parent=None, name=gui_class_id)
 
     def on_rpc_update(self, msg: dict, metadata: dict):
         request_id = metadata.get("request_id")
@@ -136,6 +140,9 @@ class BECWidgetsCLIServer:
         if isinstance(obj, BECConnector):
             return {
                 "gui_id": obj.gui_id,
+                "name": (
+                    obj._name if hasattr(obj, "_name") else obj.__class__.__name__
+                ),  # pylint: disable=protected-access
                 "widget_class": obj.__class__.__name__,
                 "config": obj.config.model_dump(),
                 "__rpc__": True,
@@ -165,11 +172,14 @@ class BECWidgetsCLIServer:
             if val.__class__.__name__ == "BECDockArea"
         }
         logger.info(f"Broadcasting registry update: {data}")
-        # self.client.connector.set(
-        #     MessageEndpoints.gui_registry_update(self.gui_id),
-        #     messages.RegistryUpdateMessage(connections=connections),
-        #     expire=10,
-        # )
+        for key, val in data.items():
+            logger.info(f"DockArea: {key} - docks: {len(val['config']['docks'])}")
+        logger.warning(f"Broadcasting registry update: {data}")
+        self.client.connector.xadd(
+            MessageEndpoints.gui_registry_state(self.gui_id),
+            msg_dict={"data": messages.GUIRegistryStateMessage(state=data)},
+            max_size=1,  # only single message in stream
+        )
 
     def shutdown(self):  # TODO not sure if needed when cleanup is done at level of BECConnector
         logger.info(f"Shutting down server with gui_id: {self.gui_id}")
@@ -288,7 +298,7 @@ def main():
             # store gui id within QApplication object, to make it available to all widgets
             app.gui_id = args.id
 
-            # args.id = "52e70"
+            # args.id = "abff6"
             server = _start_server(args.id, gui_class, args.gui_class_id, args.config)
 
             win = BECMainWindow(gui_id=f"{server.gui_id}:window")
@@ -296,8 +306,6 @@ def main():
             win.setWindowTitle("BEC")
 
             RPCRegister().add_rpc(win)
-            RPCRegister().add_callback(server.broadcast_registry_update)
-
             gui = server.gui
             win.setCentralWidget(gui)
             if not args.hide:
