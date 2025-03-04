@@ -17,6 +17,7 @@ from bec_lib.utils.import_utils import isinstance_based_on_class_name, lazy_impo
 
 import bec_widgets.cli.client as client
 from bec_widgets.cli.auto_updates import AutoUpdates
+from bec_widgets.cli.client import BECDockArea
 from bec_widgets.cli.rpc.rpc_base import RPCBase
 
 if TYPE_CHECKING:
@@ -146,30 +147,6 @@ def wait_for_server(client):
         # (only relevant if GUI didn't start)
         client._startup_timeout = 0
     yield
-
-
-### ----------------------------
-### NOTE
-### it is far easier to extend the 'delete' method on the client side,
-### to know when the client is deleted, rather than listening to server
-### to get notified. However, 'generate_cli.py' cannot add extra stuff
-### in the generated client module. So, here a class with the same name
-### is created, and client module is patched.
-class BECDockArea(client.BECDockArea):
-    # FIXME fix the delete method
-    def delete(self):
-        if self is BECGuiClient._top_level["bec"]:
-            raise RuntimeError("Cannot delete bec window")
-        super().delete_all()
-        try:
-            del BECGuiClient._top_level[self._gui_id]
-        except KeyError:
-            # if a dock area is not at top level
-            pass
-
-
-client.BECDockArea = BECDockArea
-### ----------------------------
 
 
 class BECGuiClient(RPCBase):
