@@ -1242,16 +1242,22 @@ class BECWaveform(BECPlotBase):
             msg(dict): Message with the async data.
             metadata(dict): Metadata of the message.
         """
-        instruction = metadata.get("async_update")
+        y_data = None
+        x_data = None
+        instruction = metadata.get("async_update", {}).get("type")
+        max_shape = metadata.get("async_update", {}).get("max_shape", [])
         for curve in self._curves_data["async"].values():
-            y_name = curve.config.signals.y.name
             y_entry = curve.config.signals.y.entry
             x_name = self._x_axis_mode["name"]
             for device, async_data in msg["signals"].items():
                 if device == y_entry:
                     data_plot = async_data["value"]
-                    if instruction == "extend":
-                        x_data, y_data = curve.get_data()
+                    if instruction == "add":
+                        if len(max_shape) > 1:
+                            if len(data_plot.shape) > 1:
+                                data_plot = data_plot[-1, :]
+                        else:
+                            x_data, y_data = curve.get_data()
                         if y_data is not None:
                             new_data = np.hstack((y_data, data_plot))
                         else:

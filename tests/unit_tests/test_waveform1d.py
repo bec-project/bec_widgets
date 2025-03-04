@@ -694,7 +694,8 @@ def test_waveform_async_data_update(qtbot, mocked_client):
     # w1.queue.scan_storage.find_scan_by_ID.return_value = scan_item_mock
 
     msg_1 = {"signals": {"async_device": {"value": [7, 8, 9]}}}
-    w1.on_async_readback(msg_1, {"async_update": "extend"})
+    metadata_1 = {"async_update": {"max_shape": [None], "type": "add"}}
+    w1.on_async_readback(msg_1, metadata_1)
 
     qtbot.wait(200)
     x_data, y_data = w1.curves[0].get_data()
@@ -703,7 +704,7 @@ def test_waveform_async_data_update(qtbot, mocked_client):
     assert w1.plot_item.getAxis("bottom").labelText == custom_label + " [best_effort]"
 
     msg_2 = {"signals": {"async_device": {"value": [10, 11, 12]}}}
-    w1.on_async_readback(msg_2, {"async_update": "extend"})
+    w1.on_async_readback(msg_2, metadata_1)
 
     qtbot.wait(200)
     x_data, y_data = w1.curves[0].get_data()
@@ -712,7 +713,8 @@ def test_waveform_async_data_update(qtbot, mocked_client):
     assert w1.plot_item.getAxis("bottom").labelText == custom_label + " [best_effort]"
 
     msg_3 = {"signals": {"async_device": {"value": [20, 21, 22]}}}
-    w1.on_async_readback(msg_3, {"async_update": "replace"})
+    metadata_3 = {"async_update": {"max_shape": [None], "type": "replace"}}
+    w1.on_async_readback(msg_3, metadata_3)
 
     qtbot.wait(200)
     x_data, y_data = w1.curves[0].get_data()

@@ -338,16 +338,3 @@ class BECMultiWaveform(BECPlotBase):
         Export current waveform to matplotlib GUI. Available only if matplotlib is installed in the environment.
         """
         MatplotlibExporter(self.plot_item).export()
-
-
-if __name__ == "__main__":
-    import sys
-
-    from qtpy.QtWidgets import QApplication
-
-    from bec_widgets.widgets.containers.figure import BECFigure
-
-    app = QApplication(sys.argv)
-    widget = BECFigure()
-    widget.show()
-    sys.exit(app.exec_())
