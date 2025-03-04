@@ -22,7 +22,9 @@ class EntryValidator:
         if entry is None or entry == "":
             entry = next(iter(device._hints), name) if hasattr(device, "_hints") else name
         if entry not in description:
-            raise ValueError(f"Entry '{entry}' not found in device '{name}' signals")
+            raise ValueError(
+                f"Entry '{entry}' not found in device '{name}' signals. Available signals: {description.keys()}"
+            )
 
         return entry
 
