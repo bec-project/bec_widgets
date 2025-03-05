@@ -217,7 +217,7 @@ class BECDockArea(BECWidget, QWidget):
     @SafeSlot()
     def _create_widget_from_toolbar(self, widget_name: str) -> None:
         dock_name = WidgetContainerUtils.generate_unique_name(widget_name, self.panels.keys())
-        dock: BECDock = self.new(name=dock_name, widget=widget_name)
+        self.new(name=dock_name, widget=widget_name)
 
     def paintEvent(self, event: QPaintEvent):  # TODO decide if we want any default instructions
         super().paintEvent(event)

@@ -20,7 +20,6 @@ from bec_lib.utils.import_utils import lazy_import, lazy_import_from
 import bec_widgets.cli.client as client
 from bec_widgets.cli.auto_updates import AutoUpdates
 from bec_widgets.cli.rpc.rpc_base import RPCBase
-from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 
 if TYPE_CHECKING:
     from bec_lib import messages
@@ -185,6 +184,7 @@ class BECGuiClient(RPCBase):
         self._process_output_processing_thread = None
         self._exposed_dock_areas = []
         self._registry_state = {}
+        self.available_widgets = client.Widgets
 
     def connect_to_gui_server(self, gui_id: str) -> None:
         """Connect to a GUI server"""
