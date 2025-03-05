@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.24.3 (2025-03-05)
+
+### Bug Fixes
+
+- **multi_waveform**: Update on_async_readback to use structured metadata for async updates with
+  "add" instead of "extend"
+  ([`fa91366`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fa91366dcbb383319dc0a0f26400aa93ee445299))
+
+
 ## v1.24.2 (2025-02-27)
 
 ### Bug Fixes
