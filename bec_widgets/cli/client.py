@@ -305,15 +305,6 @@ class BECDock(RPCBase):
         """
 
     @rpc_call
-    def get_widgets_positions(self) -> "dict":
-        """
-        Get the positions of the widgets in the dock.
-
-        Returns:
-            dict: The positions of the widgets in the dock as dict -> {(row, col, rowspan, colspan):widget}
-        """
-
-    @rpc_call
     def available_widgets(self) -> "list":
         """
         List all widgets that can be added to the dock.

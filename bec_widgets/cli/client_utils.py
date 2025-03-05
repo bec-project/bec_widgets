@@ -20,6 +20,7 @@ from bec_lib.utils.import_utils import lazy_import, lazy_import_from
 import bec_widgets.cli.client as client
 from bec_widgets.cli.auto_updates import AutoUpdates
 from bec_widgets.cli.rpc.rpc_base import RPCBase
+from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 
 if TYPE_CHECKING:
     from bec_lib import messages
@@ -432,6 +433,8 @@ class BECGuiClient(RPCBase):
         self, widget_info: dict[str, dict], dock_area: client.BECDockArea, dock: client.BECDock
     ):
         for widget_name, info in widget_info.items():
+            # FIXME use widget_handler instead
+            # widget_class = widget_handler.widget_classes[info["widget_class"]]
             widget_class = getattr(client, info["widget_class"])
             widget = widget_class(gui_id=info["gui_id"], name=widget_name, parent=dock)
             obj = getattr(dock_area, "elements")

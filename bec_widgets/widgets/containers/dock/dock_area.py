@@ -410,6 +410,11 @@ class BECDockArea(BECWidget, QWidget):
         Remove a temporary area from the dock area.
         This is a patched method of pyqtgraph's removeTempArea
         """
+        if area not in self.dock_area.tempAreas:
+            # FIXME add some context for the logging, I am not sure which object is passed.
+            # It looks like a pyqtgraph.DockArea
+            logger.info(f"Attempted to remove dock_area, but was not floating.")
+            return
         self.dock_area.tempAreas.remove(area)
         area.window().close()
         area.window().deleteLater()
