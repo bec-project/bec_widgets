@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v1.24.4 (2025-03-05)
+
+### Bug Fixes
+
+- **cli/server**: Handle RedisError during heartbeat emission to properly close the app even if the
+  Redis connection is lost
+  ([`2c506ee`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2c506ee3c8bcf924c651fddffe4f3f9a2ffd19a4))
+
+
 ## v1.24.3 (2025-03-05)
 
 ### Bug Fixes
