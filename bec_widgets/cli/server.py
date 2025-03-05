@@ -13,6 +13,7 @@ from bec_lib.logger import bec_logger
 from bec_lib.service_config import ServiceConfig
 from bec_lib.utils.import_utils import lazy_import
 from qtpy.QtCore import Qt, QTimer
+from redis.exceptions import RedisError
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.qt_utils.error_popups import ErrorPopupUtility
@@ -142,11 +143,14 @@ class BECWidgetsCLIServer:
 
     def emit_heartbeat(self):
         logger.trace(f"Emitting heartbeat for {self.gui_id}")
-        self.client.connector.set(
-            MessageEndpoints.gui_heartbeat(self.gui_id),
-            messages.StatusMessage(name=self.gui_id, status=self.status, info={}),
-            expire=10,
-        )
+        try:
+            self.client.connector.set(
+                MessageEndpoints.gui_heartbeat(self.gui_id),
+                messages.StatusMessage(name=self.gui_id, status=self.status, info={}),
+                expire=10,
+            )
+        except RedisError as exc:
+            logger.error(f"Error while emitting heartbeat: {exc}")
 
     def shutdown(self):  # TODO not sure if needed when cleanup is done at level of BECConnector
         logger.info(f"Shutting down server with gui_id: {self.gui_id}")
