@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal, Optional, cast
-from weakref import WeakValueDictionary
 
 from bec_lib.logger import bec_logger
 from pydantic import Field
 from pyqtgraph.dockarea import Dock, DockLabel
 from qtpy import QtCore, QtGui
 
+from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 from bec_widgets.utils import ConnectionConfig, GridLayoutManager
 from bec_widgets.utils.bec_widget import BECWidget
@@ -140,7 +140,7 @@ class BECDock(BECWidget, Dock):
     ) -> None:
         if config is None:
             config = DockConfig(
-                widget_class=self.__class__.__name__, parent_dock_area=parent_dock_area._name
+                widget_class=self.__class__.__name__, parent_dock_area=parent_dock_area.gui_id
             )
         else:
             if isinstance(config, dict):
@@ -309,11 +309,9 @@ class BECDock(BECWidget, Dock):
                     f"with name: {self.parent_dock_area._name} and id {self.parent_dock_area.gui_id}."
                 )
         else:  # Name is not provided
+            widget_class_name = widget if isinstance(widget, str) else widget.__class__.__name__
             name = WidgetContainerUtils.generate_unique_name(
-                name=(
-                    widget if isinstance(widget, str) else widget._name
-                ),  # pylint: disable=protected-access
-                list_of_names=existing_widgets_parent_dock,
+                name=widget_class_name, list_of_names=existing_widgets_parent_dock
             )
         if isinstance(widget, str):
             widget = cast(BECWidget, widget_handler.create_widget(widget_type=widget, name=name))
@@ -322,8 +320,14 @@ class BECDock(BECWidget, Dock):
 
         self.addWidget(widget, row=row, col=col, rowspan=rowspan, colspan=colspan)
         if hasattr(widget, "config"):
-            self.config.widgets[widget._name] = widget.config
+            widget.config.gui_id = widget.gui_id
+            self.config.widgets[widget._name] = widget.config  # pylint: disable=protected-access
+        self._broadcast_update()
         return widget
+
+    def _broadcast_update(self):
+        rpc_register = RPCRegister()
+        rpc_register.broadcast()
 
     def move_widget(self, widget: QWidget, new_row: int, new_col: int):
         """
@@ -361,6 +365,7 @@ class BECDock(BECWidget, Dock):
         Args:
             widget_name(str): Delete the widget with the given name.
         """
+        # pylint: disable=protected-access
         widget = [widget for widget in self.widgets if widget._name == widget_name]
         if not widget:
             logger.warning(
@@ -380,13 +385,14 @@ class BECDock(BECWidget, Dock):
         if widget in self.widgets:
             self.widgets.remove(widget)
         widget.close()
+        self._broadcast_update()
 
     def delete_all(self):
         """
         Remove all widgets from the dock.
         """
         for widget in self.widgets:
-            self.delete(widget._name)
+            self.delete(widget._name)  # pylint: disable=protected-access
 
     def cleanup(self):
         """

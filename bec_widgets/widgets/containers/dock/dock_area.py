@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from typing import Literal, Optional
-from unittest.mock import NonCallableMagicMock
 from weakref import WeakValueDictionary
 
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.logger import bec_logger
 from pydantic import Field
 from pyqtgraph.dockarea.DockArea import DockArea
 from qtpy.QtCore import QSize, Qt
@@ -34,6 +34,8 @@ from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
 from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECStatusBox
 from bec_widgets.widgets.utility.logpanel.logpanel import LogPanel
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
+
+logger = bec_logger.logger
 
 
 class DockAreaConfig(ConnectionConfig):
@@ -345,7 +347,7 @@ class BECDockArea(BECWidget, QWidget):
                 )
         else:  # Name is not provided
             name = WidgetContainerUtils.generate_unique_name(
-                name=self.__class__.__name__, list_of_names=dock_names
+                name=BECDock.__name__, list_of_names=dock_names
             )
 
         dock = BECDock(name=name, parent_dock_area=self, closable=closable)
@@ -372,7 +374,13 @@ class BECDockArea(BECWidget, QWidget):
             self.update()
         if floating:
             dock.detach()
+        # Run broadcast update
+        self._broadcast_update()
         return dock
+
+    def _broadcast_update(self):
+        rpc_register = RPCRegister()
+        rpc_register.broadcast()
 
     def detach_dock(self, dock_name: str) -> BECDock:
         """
@@ -479,6 +487,7 @@ class BECDockArea(BECWidget, QWidget):
                     dock.hide_title_bar()
         else:
             raise ValueError(f"Dock with name {dock_name} does not exist.")
+        self._broadcast_update()
 
 
 if __name__ == "__main__":  # pragma: no cover

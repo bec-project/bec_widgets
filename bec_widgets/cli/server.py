@@ -172,9 +172,6 @@ class BECWidgetsCLIServer:
             if val.__class__.__name__ == "BECDockArea"
         }
         logger.info(f"Broadcasting registry update: {data}")
-        for key, val in data.items():
-            logger.info(f"DockArea: {key} - docks: {len(val['config']['docks'])}")
-        logger.warning(f"Broadcasting registry update: {data}")
         self.client.connector.xadd(
             MessageEndpoints.gui_registry_state(self.gui_id),
             msg_dict={"data": messages.GUIRegistryStateMessage(state=data)},
