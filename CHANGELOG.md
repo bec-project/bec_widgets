@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.24.5 (2025-03-06)
+
+### Bug Fixes
+
+- Add support for additional keyword arguments in widget constructors
+  ([`66c6c7f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/66c6c7fa5075dcd5b6729fa3c2166aa821a6c51d))
+
+
 ## v1.24.4 (2025-03-05)
 
 ### Bug Fixes
