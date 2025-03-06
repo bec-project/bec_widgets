@@ -42,14 +42,14 @@ class TextBox(BECWidget, QWidget):
     USER_ACCESS = ["set_plain_text", "set_html_text"]
     ICON_NAME = "chat"
 
-    def __init__(self, parent=None, client=None, config=None, gui_id=None):
+    def __init__(self, parent=None, client=None, config=None, gui_id=None, **kwargs):
         if config is None:
             config = TextBoxConfig(widget_class=self.__class__.__name__)
         else:
             if isinstance(config, dict):
                 config = TextBoxConfig(**config)
             self.config = config
-        super().__init__(client=client, config=config, gui_id=gui_id)
+        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         QWidget.__init__(self, parent)
         self.layout = QVBoxLayout(self)
         self.text_box_text_edit = QTextEdit(parent=self)

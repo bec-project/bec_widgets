@@ -59,7 +59,7 @@ class DeviceInputBase(BECWidget):
         ReadoutPriority.ON_REQUEST: "readout_on_request",
     }
 
-    def __init__(self, client=None, config=None, gui_id: str = None):
+    def __init__(self, client=None, config=None, gui_id: str | None = None, **kwargs):
 
         if config is None:
             config = DeviceInputConfig(widget_class=self.__class__.__name__)
@@ -67,7 +67,7 @@ class DeviceInputBase(BECWidget):
             if isinstance(config, dict):
                 config = DeviceInputConfig(**config)
             self.config = config
-        super().__init__(client=client, config=config, gui_id=gui_id, theme_update=True)
+        super().__init__(client=client, config=config, gui_id=gui_id, theme_update=True, **kwargs)
         self.get_bec_shortcuts()
         self._device_filter = []
         self._readout_filter = []

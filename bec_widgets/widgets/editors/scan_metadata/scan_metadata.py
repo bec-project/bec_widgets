@@ -49,8 +49,9 @@ class ScanMetadata(BECWidget, QWidget):
         client=None,
         scan_name: str | None = None,
         initial_extras: list[list[str]] | None = None,
+        **kwargs,
     ):
-        super().__init__(client=client)
+        super().__init__(client=client, **kwargs)
         QWidget.__init__(self, parent=parent)
 
         self.set_schema(scan_name)

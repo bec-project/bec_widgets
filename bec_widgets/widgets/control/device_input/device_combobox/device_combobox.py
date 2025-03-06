@@ -45,8 +45,9 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         available_devices: list[str] | None = None,
         default: str | None = None,
         arg_name: str | None = None,
+        **kwargs,
     ):
-        super().__init__(client=client, config=config, gui_id=gui_id)
+        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         QComboBox.__init__(self, parent=parent)
         if arg_name is not None:
             self.config.arg_name = arg_name

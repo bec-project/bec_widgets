@@ -23,8 +23,9 @@ class DeviceBrowser(BECWidget, QWidget):
         config=None,
         client=None,
         gui_id: Optional[str] = None,
+        **kwargs,
     ) -> None:
-        super().__init__(client=client, config=config, gui_id=gui_id)
+        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         QWidget.__init__(self, parent)
 
         self.get_bec_shortcuts()

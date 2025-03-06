@@ -23,8 +23,10 @@ class WebsiteWidget(BECWidget, QWidget):
     ICON_NAME = "travel_explore"
     USER_ACCESS = ["set_url", "get_url", "reload", "back", "forward"]
 
-    def __init__(self, parent=None, url: str = None, config=None, client=None, gui_id=None):
-        super().__init__(client=client, config=config, gui_id=gui_id)
+    def __init__(
+        self, parent=None, url: str = None, config=None, client=None, gui_id=None, **kwargs
+    ):
+        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         QWidget.__init__(self, parent=parent)
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)

@@ -20,8 +20,9 @@ class DarkModeButton(BECWidget, QWidget):
         client=None,
         gui_id: str | None = None,
         toolbar: bool = False,
+        **kwargs,
     ) -> None:
-        super().__init__(client=client, gui_id=gui_id, theme_update=True)
+        super().__init__(client=client, gui_id=gui_id, theme_update=True, **kwargs)
         QWidget.__init__(self, parent)
 
         self._dark_mode_enabled = False

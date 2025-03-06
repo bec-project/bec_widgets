@@ -48,11 +48,12 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
         available_devices: list[str] | None = None,
         default: str | None = None,
         arg_name: str | None = None,
+        **kwargs,
     ):
         self._callback_id = None
         self._is_valid_input = False
         self._accent_colors = get_accent_colors()
-        super().__init__(client=client, config=config, gui_id=gui_id)
+        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         QLineEdit.__init__(self, parent=parent)
         self.completer = QCompleter(self)
         self.setCompleter(self.completer)

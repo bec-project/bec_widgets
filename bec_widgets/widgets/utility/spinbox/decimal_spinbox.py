@@ -26,10 +26,11 @@ class BECSpinBox(BECWidget, QDoubleSpinBox):
         config: ConnectionConfig | None = None,
         client=None,
         gui_id: str | None = None,
+        **kwargs,
     ) -> None:
         if config is None:
             config = ConnectionConfig(widget_class=self.__class__.__name__)
-        super().__init__(client=client, gui_id=gui_id, config=config)
+        super().__init__(client=client, gui_id=gui_id, config=config, **kwargs)
         QDoubleSpinBox.__init__(self, parent=parent)
 
         self.setObjectName("BECSpinBox")

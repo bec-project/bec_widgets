@@ -87,8 +87,9 @@ class BECStatusBox(BECWidget, CompactPopupWidget):
         client: BECClient = None,
         bec_service_status_mixin: BECServiceStatusMixin = None,
         gui_id: str = None,
+        **kwargs,
     ):
-        super().__init__(client=client, gui_id=gui_id)
+        super().__init__(client=client, gui_id=gui_id, **kwargs)
         CompactPopupWidget.__init__(self, parent=parent, layout=QHBoxLayout)
 
         self.box_name = box_name

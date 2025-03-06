@@ -101,6 +101,7 @@ class RingProgressBar(BECWidget, QWidget):
         client=None,
         gui_id: str | None = None,
         num_bars: int | None = None,
+        **kwargs,
     ):
         if config is None:
             config = RingProgressBarConfig(widget_class=self.__class__.__name__)
@@ -109,7 +110,7 @@ class RingProgressBar(BECWidget, QWidget):
             if isinstance(config, dict):
                 config = RingProgressBarConfig(**config, widget_class=self.__class__.__name__)
             self.config = config
-        super().__init__(client=client, config=config, gui_id=gui_id)
+        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         QWidget.__init__(self, parent=parent)
 
         self.get_bec_shortcuts()

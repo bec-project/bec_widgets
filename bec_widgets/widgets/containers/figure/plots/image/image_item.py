@@ -72,7 +72,7 @@ class BECImageItem(BECConnector, pg.ImageItem):
             self.config = config
         else:
             self.config = config
-        super().__init__(config=config, gui_id=gui_id)
+        super().__init__(config=config, gui_id=gui_id, **kwargs)
         pg.ImageItem.__init__(self)
 
         self.parent_image = parent_image

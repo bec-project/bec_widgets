@@ -45,12 +45,12 @@ class VSCodeEditor(WebsiteWidget):
     USER_ACCESS = []
     ICON_NAME = "developer_mode_tv"
 
-    def __init__(self, parent=None, config=None, client=None, gui_id=None):
+    def __init__(self, parent=None, config=None, client=None, gui_id=None, **kwargs):
 
         self.process = None
         self.port = get_free_port()
         self._url = f"http://{self.host}:{self.port}?tkn={self.token}"
-        super().__init__(parent=parent, config=config, client=client, gui_id=gui_id)
+        super().__init__(parent=parent, config=config, client=client, gui_id=gui_id, **kwargs)
         self.start_server()
         self.bec_dispatcher.connect_slot(self.on_vscode_event, f"vscode-events/{self.gui_id}")
 

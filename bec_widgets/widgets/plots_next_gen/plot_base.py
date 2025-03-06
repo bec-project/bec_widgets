@@ -69,10 +69,11 @@ class PlotBase(BECWidget, QWidget):
         client=None,
         gui_id: str | None = None,
         popups: bool = False,
+        **kwargs,
     ) -> None:
         if config is None:
             config = ConnectionConfig(widget_class=self.__class__.__name__)
-        super().__init__(client=client, gui_id=gui_id, config=config)
+        super().__init__(client=client, gui_id=gui_id, config=config, **kwargs)
         QWidget.__init__(self, parent=parent)
 
         # For PropertyManager identification

@@ -30,6 +30,7 @@ class LMFitDialog(BECWidget, QWidget):
         target_widget=None,
         gui_id: str | None = None,
         ui_file="lmfit_dialog_vertical.ui",
+        **kwargs,
     ):
         """
         Initialises the LMFitDialog widget.
@@ -42,7 +43,7 @@ class LMFitDialog(BECWidget, QWidget):
             gui_id (str): GUI ID.
             ui_file (str): The UI file to be loaded.
         """
-        super().__init__(client=client, config=config, gui_id=gui_id)
+        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         QWidget.__init__(self, parent=parent)
         self.setProperty("skip_settings", True)
         self.setObjectName("LMFitDialog")

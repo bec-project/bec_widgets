@@ -37,9 +37,14 @@ class DapComboBox(BECWidget, QWidget):
     fit_model_updated = Signal(str)
 
     def __init__(
-        self, parent=None, client=None, gui_id: str | None = None, default_fit: str | None = None
+        self,
+        parent=None,
+        client=None,
+        gui_id: str | None = None,
+        default_fit: str | None = None,
+        **kwargs,
     ):
-        super().__init__(client=client, gui_id=gui_id)
+        super().__init__(client=client, gui_id=gui_id, **kwargs)
         QWidget.__init__(self, parent=parent)
         self.layout = QVBoxLayout(self)
         self.fit_model_combobox = QComboBox(self)

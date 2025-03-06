@@ -99,6 +99,7 @@ class Ring(BECConnector):
         config: RingConfig | dict | None = None,
         client=None,
         gui_id: Optional[str] = None,
+        **kwargs,
     ):
         if config is None:
             config = RingConfig(widget_class=self.__class__.__name__)
@@ -107,7 +108,7 @@ class Ring(BECConnector):
             if isinstance(config, dict):
                 config = RingConfig(**config)
             self.config = config
-        super().__init__(client=client, config=config, gui_id=gui_id)
+        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
 
         self.parent_progress_widget = parent_progress_widget
         self.color = None

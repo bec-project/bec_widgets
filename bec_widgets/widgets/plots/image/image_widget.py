@@ -54,13 +54,14 @@ class BECImageWidget(BECWidget, QWidget):
         config: ImageConfig | dict = None,
         client=None,
         gui_id: str | None = None,
+        **kwargs,
     ) -> None:
         if config is None:
             config = ImageConfig(widget_class=self.__class__.__name__)
         else:
             if isinstance(config, dict):
                 config = ImageConfig(**config)
-        super().__init__(client=client, gui_id=gui_id)
+        super().__init__(client=client, gui_id=gui_id, **kwargs)
         QWidget.__init__(self, parent)
         self.layout = QVBoxLayout(self)
         self.layout.setSpacing(0)

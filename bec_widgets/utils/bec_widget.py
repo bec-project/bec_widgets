@@ -24,6 +24,7 @@ class BECWidget(BECConnector):
         config: ConnectionConfig = None,
         gui_id: str = None,
         theme_update: bool = False,
+        **kwargs,
     ):
         """
         Base class for all BEC widgets. This class should be used as a mixin class for all BEC widgets, e.g.:
@@ -44,7 +45,7 @@ class BECWidget(BECConnector):
         """
         if not isinstance(self, QWidget):
             raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")
-        super().__init__(client=client, config=config, gui_id=gui_id)
+        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
 
         # Set the theme to auto if it is not set yet
         app = QApplication.instance()

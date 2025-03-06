@@ -98,10 +98,11 @@ class BECPlotBase(BECConnector, pg.GraphicsLayout):
         config: Optional[SubplotConfig] = None,
         client=None,
         gui_id: Optional[str] = None,
+        **kwargs,
     ):
         if config is None:
             config = SubplotConfig(widget_class=self.__class__.__name__)
-        super().__init__(client=client, config=config, gui_id=gui_id)
+        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         pg.GraphicsLayout.__init__(self, parent)
 
         self.figure = parent_figure

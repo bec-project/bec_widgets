@@ -12,8 +12,8 @@ class ResetButton(BECWidget, QWidget):
     PLUGIN = True
     ICON_NAME = "restart_alt"
 
-    def __init__(self, parent=None, client=None, config=None, gui_id=None, toolbar=False):
-        super().__init__(client=client, config=config, gui_id=gui_id)
+    def __init__(self, parent=None, client=None, config=None, gui_id=None, toolbar=False, **kwargs):
+        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         QWidget.__init__(self, parent=parent)
 
         self.get_bec_shortcuts()

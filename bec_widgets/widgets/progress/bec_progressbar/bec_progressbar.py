@@ -24,8 +24,8 @@ class BECProgressBar(BECWidget, QWidget):
     ]
     ICON_NAME = "page_control"
 
-    def __init__(self, parent=None, client=None, config=None, gui_id=None):
-        super().__init__(client=client, config=config, gui_id=gui_id)
+    def __init__(self, parent=None, client=None, config=None, gui_id=None, **kwargs):
+        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         QWidget.__init__(self, parent=parent)
 
         accent_colors = get_accent_colors()

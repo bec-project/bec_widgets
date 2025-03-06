@@ -162,13 +162,14 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
         config: Optional[FigureConfig] = None,
         client=None,
         gui_id: Optional[str] = None,
+        **kwargs,
     ) -> None:
         if config is None:
             config = FigureConfig(widget_class=self.__class__.__name__)
         else:
             if isinstance(config, dict):
                 config = FigureConfig(**config)
-        super().__init__(client=client, gui_id=gui_id)
+        super().__init__(client=client, gui_id=gui_id, config=config, **kwargs)
         pg.GraphicsLayoutWidget.__init__(self, parent)
 
         self.widget_handler = WidgetHandler()
@@ -573,10 +574,7 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
             config=config,
             **axis_kwargs,
         )
-        # has to be changed manually to ensure unique id, if config is copied from existing widget, the id could be
-        # used otherwise multiple times
         widget.set_gui_id(widget_id)
-
         widget.config.row = row
         widget.config.col = col
 
@@ -588,6 +586,7 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
         self.config.num_cols = max(self.config.num_cols, col + 1)
 
         # Saving config for future referencing
+
         self.config.widgets[widget_id] = widget.config
         self._widgets[widget_id] = widget
 

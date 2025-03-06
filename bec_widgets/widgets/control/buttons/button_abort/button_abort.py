@@ -13,9 +13,16 @@ class AbortButton(BECWidget, QWidget):
     ICON_NAME = "cancel"
 
     def __init__(
-        self, parent=None, client=None, config=None, gui_id=None, toolbar=False, scan_id=None
+        self,
+        parent=None,
+        client=None,
+        config=None,
+        gui_id=None,
+        toolbar=False,
+        scan_id=None,
+        **kwargs,
     ):
-        super().__init__(client=client, config=config, gui_id=gui_id)
+        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         QWidget.__init__(self, parent=parent)
 
         self.get_bec_shortcuts()

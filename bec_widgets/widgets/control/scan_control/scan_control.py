@@ -58,13 +58,14 @@ class ScanControl(BECWidget, QWidget):
         gui_id: str | None = None,
         allowed_scans: list | None = None,
         default_scan: str | None = None,
+        **kwargs,
     ):
 
         if config is None:
             config = ScanControlConfig(
                 widget_class=self.__class__.__name__, allowed_scans=allowed_scans
             )
-        super().__init__(client=client, gui_id=gui_id, config=config)
+        super().__init__(client=client, gui_id=gui_id, config=config, **kwargs)
         QWidget.__init__(self, parent=parent)
 
         self._hide_add_remove_buttons = False

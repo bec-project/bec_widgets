@@ -35,14 +35,14 @@ class DeviceSignalInputBase(BECWidget):
         Kind.config: "include_config_signals",
     }
 
-    def __init__(self, client=None, config=None, gui_id: str = None):
+    def __init__(self, client=None, config=None, gui_id: str = None, **kwargs):
         if config is None:
             config = DeviceSignalInputBaseConfig(widget_class=self.__class__.__name__)
         else:
             if isinstance(config, dict):
                 config = DeviceSignalInputBaseConfig(**config)
             self.config = config
-        super().__init__(client=client, config=config, gui_id=gui_id)
+        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
 
         self._device = None
         self.get_bec_shortcuts()

@@ -42,8 +42,9 @@ class BECQueue(BECWidget, CompactPopupWidget):
         config: ConnectionConfig = None,
         gui_id: str = None,
         refresh_upon_start: bool = True,
+        **kwargs,
     ):
-        super().__init__(client, config, gui_id)
+        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         CompactPopupWidget.__init__(self, parent=parent, layout=QVBoxLayout)
         self.layout.setSpacing(0)
         self.layout.setContentsMargins(0, 0, 0, 0)

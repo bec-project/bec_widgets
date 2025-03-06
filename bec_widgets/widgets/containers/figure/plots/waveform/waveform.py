@@ -99,11 +99,17 @@ class BECWaveform(BECPlotBase):
         config: Optional[Waveform1DConfig] = None,
         client=None,
         gui_id: Optional[str] = None,
+        **kwargs,
     ):
         if config is None:
             config = Waveform1DConfig(widget_class=self.__class__.__name__)
         super().__init__(
-            parent=parent, parent_figure=parent_figure, config=config, client=client, gui_id=gui_id
+            parent=parent,
+            parent_figure=parent_figure,
+            config=config,
+            client=client,
+            gui_id=gui_id,
+            **kwargs,
         )
 
         self._curves_data = defaultdict(dict)

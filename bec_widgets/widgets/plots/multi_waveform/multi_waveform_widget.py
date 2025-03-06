@@ -63,13 +63,14 @@ class BECMultiWaveformWidget(BECWidget, QWidget):
         config: BECMultiWaveformConfig | dict = None,
         client=None,
         gui_id: str | None = None,
+        **kwargs,
     ) -> None:
         if config is None:
             config = BECMultiWaveformConfig(widget_class=self.__class__.__name__)
         else:
             if isinstance(config, dict):
                 config = BECMultiWaveformConfig(**config)
-        super().__init__(client=client, gui_id=gui_id)
+        super().__init__(client=client, gui_id=gui_id, **kwargs)
         QWidget.__init__(self, parent)
 
         self.layout = QVBoxLayout(self)
