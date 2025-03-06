@@ -321,22 +321,7 @@ class PlotBase(BECWidget, QWidget):
         Args:
             value(bool): The value to set.
         """
-        if value:
-            # Disable popup mode
-            if self._popups:
-                # Directly update the internal flag to avoid recursion
-                self._popups = False
-            # Hide the popup bundle if it exists and close any open dialogs
-            if self.popup_bundle is not None:
-                for action in self.toolbar.bundles["popup_bundle"].actions:
-                    action.setVisible(False)
-                if self.axis_settings_dialog is not None and self.axis_settings_dialog.isVisible():
-                    self.axis_settings_dialog.close()
-            self.side_panel.show()
-            # Add side menus if not already added
-            self.add_side_menus()
-        else:
-            self.side_panel.hide()
+        self.toolbar.setVisible(value)
 
     @SafeProperty(bool, doc="Enable the FPS monitor.")
     def enable_fps_monitor(self) -> bool:
