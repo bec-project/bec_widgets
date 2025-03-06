@@ -279,7 +279,6 @@ class SwitchableToolBarAction(ToolBarAction):
         self.main_button.setToolTip(default_action.tooltip)
         self.main_button.clicked.connect(self._trigger_current_action)
         menu = QMenu(self.main_button)
-        self.menu_actions = {}
         for key, action_obj in self.actions.items():
             menu_action = QAction(action_obj.get_icon(), action_obj.tooltip, self.main_button)
             menu_action.setIconVisibleInMenu(True)
@@ -287,23 +286,43 @@ class SwitchableToolBarAction(ToolBarAction):
             menu_action.setChecked(key == self.current_key)
             menu_action.triggered.connect(lambda checked, k=key: self.set_default_action(k))
             menu.addAction(menu_action)
-            self.menu_actions[key] = menu_action
         self.main_button.setMenu(menu)
         toolbar.addWidget(self.main_button)
 
     def _trigger_current_action(self):
+        """
+        Triggers the current action associated with the main button.
+        """
         action_obj = self.actions[self.current_key]
         action_obj.action.trigger()
 
     def set_default_action(self, key: str):
+        """
+        Sets the default action for the split action.
+
+        Args:
+            key(str): The key of the action to set as default.
+        """
         self.current_key = key
         new_action = self.actions[self.current_key]
         self.main_button.setIcon(new_action.get_icon())
         self.main_button.setToolTip(new_action.tooltip)
         # Update check state of menu items
-        for k, menu_act in self.menu_actions.items():
-            menu_act.setChecked(k == key)
+        for k, menu_act in self.actions.items():
+            menu_act.action.setChecked(False)
         new_action.action.trigger()
+        # Active action chosen from menu is always checked, uncheck through main button
+        if self.checkable:
+            new_action.action.setChecked(True)
+            self.main_button.setChecked(True)
+
+    def uncheck_all(self):
+        """
+        Uncheck all actions in the toolbar.
+        """
+        for action in self.actions.values():
+            action.action.setChecked(False)
+        self.main_button.setChecked(False)
 
     def get_icon(self) -> QIcon:
         return self.actions[self.current_key].get_icon()
@@ -827,7 +846,7 @@ class MainWindow(QMainWindow):  # pragma: no cover
 
     def add_bundles(self):
         home_action = MaterialIconAction(
-            icon_name="home", tooltip="Home", checkable=True, parent=self
+            icon_name="home", tooltip="Home", checkable=False, parent=self
         )
         settings_action = MaterialIconAction(
             icon_name="settings", tooltip="Settings", checkable=True, parent=self
@@ -844,6 +863,7 @@ class MainWindow(QMainWindow):  # pragma: no cover
             ],
         )
         self.toolbar.add_bundle(main_actions_bundle, target_widget=self)
+        home_action.action.triggered.connect(self.switchable_action.uncheck_all)
 
         search_action = MaterialIconAction(
             icon_name="search", tooltip="Search", checkable=False, parent=self
@@ -897,20 +917,20 @@ class MainWindow(QMainWindow):  # pragma: no cover
 
     def add_switchable_button_checkable(self):
         action1 = MaterialIconAction(
-            icon_name="counter_1", tooltip="Action 1", checkable=True, parent=self
+            icon_name="hdr_auto", tooltip="Action 1", checkable=True, parent=self
         )
         action2 = MaterialIconAction(
-            icon_name="counter_2", tooltip="Action 2", checkable=True, parent=self
+            icon_name="hdr_auto", tooltip="Action 2", checkable=True, filled=True, parent=self
         )
 
-        switchable_action = SwitchableToolBarAction(
+        self.switchable_action = SwitchableToolBarAction(
             actions={"action1": action1, "action2": action2},
             initial_action="action1",
             tooltip="Switchable Action",
             checkable=True,
             parent=self,
         )
-        self.toolbar.add_action("switchable_action", switchable_action, self)
+        self.toolbar.add_action("switchable_action", self.switchable_action, self)
 
         action1.action.toggled.connect(
             lambda checked: self.test_label.setText(f"Action 1 triggered, checked = {checked}")
@@ -931,16 +951,20 @@ class MainWindow(QMainWindow):  # pragma: no cover
             actions={"action1": action1, "action2": action2},
             initial_action="action1",
             tooltip="Switchable Action",
-            checkable=True,
+            checkable=False,
             parent=self,
         )
         self.toolbar.add_action("switchable_action_no_toggle", switchable_action, self)
 
         action1.action.triggered.connect(
-            lambda checked: self.test_label.setText(f"Action 1 triggered, checked = {checked}")
+            lambda checked: self.test_label.setText(
+                f"Action 1 (non-checkable) triggered, checked = {checked}"
+            )
         )
         action2.action.triggered.connect(
-            lambda checked: self.test_label.setText(f"Action 2 triggered, checked = {checked}")
+            lambda checked: self.test_label.setText(
+                f"Action 2 (non-checkable) triggered, checked = {checked}"
+            )
         )
         switchable_action.actions["action1"].action.setChecked(True)
 
