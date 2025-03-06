@@ -117,10 +117,13 @@ class Waveform(PlotBase):
         client=None,
         gui_id: str | None = None,
         popups: bool = True,
+        **kwargs,
     ):
         if config is None:
             config = WaveformConfig(widget_class=self.__class__.__name__)
-        super().__init__(parent=parent, config=config, client=client, gui_id=gui_id, popups=popups)
+        super().__init__(
+            parent=parent, config=config, client=client, gui_id=gui_id, popups=popups, **kwargs
+        )
 
         # For PropertyManager identification
         self.setObjectName("Waveform")
