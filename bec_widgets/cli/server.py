@@ -2,16 +2,19 @@ from __future__ import annotations
 
 import functools
 import json
+import os
 import signal
 import sys
 import types
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from typing import Union
 
+import msgpack
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.service_config import ServiceConfig
 from bec_lib.utils.import_utils import lazy_import
+from cryptography.fernet import Fernet
 from qtpy.QtCore import Qt, QTimer
 from redis.exceptions import RedisError
 
@@ -57,7 +60,10 @@ class BECWidgetsCLIServer:
         client=None,
         config=None,
         gui_class: Union[BECFigure, BECDockArea] = BECFigure,
+        token: str = None,
     ) -> None:
+        self._fernet = Fernet(token) if token else None
+        self._init_acls(config)
         self.status = messages.BECStatus.BUSY
         self.dispatcher = BECDispatcher(config=config) if dispatcher is None else dispatcher
         self.client = self.dispatcher.client if client is None else client
@@ -66,6 +72,8 @@ class BECWidgetsCLIServer:
         self.gui = gui_class(gui_id=self.gui_id)
         self.rpc_register = RPCRegister()
         self.rpc_register.add_rpc(self.gui)
+
+        # self.dispatcher.connect_slot(self.on_acl_update, MessageEndpoints.gui_acl(self.gui_id))
 
         self.dispatcher.connect_slot(
             self.on_rpc_update, MessageEndpoints.gui_instructions(self.gui_id)
@@ -78,6 +86,13 @@ class BECWidgetsCLIServer:
 
         self.status = messages.BECStatus.RUNNING
         logger.success(f"Server started with gui_id: {self.gui_id}")
+
+    def _init_acls(self, config: ServiceConfig):
+        acl_data = os.getenv("BEC_GUI_ACL")
+        if not acl_data:
+            return
+        acl_data = msgpack.loads(self._fernet.decrypt(acl_data))
+        config.config["acl"] = acl_data
 
     def on_rpc_update(self, msg: dict, metadata: dict):
         request_id = metadata.get("request_id")
@@ -95,6 +110,9 @@ class BECWidgetsCLIServer:
             else:
                 logger.debug(f"RPC instruction executed successfully: {res}")
                 self.send_response(request_id, True, {"result": res})
+
+    def on_acl_update(self, msg: dict, metadata: dict):
+        logger.debug(f"Received ACL update: {msg}, metadata: {metadata}")
 
     def send_response(self, request_id: str, accepted: bool, msg: dict):
         self.client.connector.set_and_publish(
@@ -190,13 +208,10 @@ def _start_server(gui_id: str, gui_class: Union[BECFigure, BECDockArea], config:
         # if no config is provided, use the default config
         service_config = ServiceConfig()
 
-    # bec_logger.configure(
-    #     service_config.redis,
-    #     QtRedisConnector,
-    #     service_name="BECWidgetsCLIServer",
-    #     service_config=service_config.service_config,
-    # )
-    server = BECWidgetsCLIServer(gui_id=gui_id, config=service_config, gui_class=gui_class)
+    token = os.getenv("BEC_GUI_TOKEN")
+    server = BECWidgetsCLIServer(
+        gui_id=gui_id, config=service_config, gui_class=gui_class, token=token
+    )
     return server
 
 

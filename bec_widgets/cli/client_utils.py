@@ -11,9 +11,11 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+import msgpack
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import isinstance_based_on_class_name, lazy_import, lazy_import_from
+from cryptography.fernet import Fernet
 
 import bec_widgets.cli.client as client
 from bec_widgets.cli.auto_updates import AutoUpdates
@@ -67,7 +69,14 @@ def _get_output(process, logger) -> None:
         logger.error(f"Error reading process output: {str(e)}")
 
 
-def _start_plot_process(gui_id: str, gui_class: type, config: dict | str, logger=None) -> None:
+def _start_plot_process(
+    gui_id: str,
+    gui_class: type,
+    config: dict | str,
+    acl_data: bytes | None = None,
+    token: bytes | None = None,
+    logger=None,
+) -> None:
     """
     Start the plot in a new process.
 
@@ -84,6 +93,8 @@ def _start_plot_process(gui_id: str, gui_class: type, config: dict | str, logger
 
     env_dict = os.environ.copy()
     env_dict["PYTHONUNBUFFERED"] = "1"
+    env_dict["BEC_GUI_ACL"] = acl_data or b""
+    env_dict["BEC_GUI_TOKEN"] = token or b""
 
     if logger is None:
         stdout_redirect = subprocess.DEVNULL
@@ -179,6 +190,7 @@ class BECGuiClient(RPCBase):
         self._gui_started_event = threading.Event()
         self._process = None
         self._process_output_processing_thread = None
+        self._fernet = None
 
     @property
     def windows(self):
@@ -263,6 +275,18 @@ class BECGuiClient(RPCBase):
         self._do_show_all()
         self._gui_started_event.set()
 
+    # def _update_gui_acls(self, username: str, password: str | None):
+    #     self._client.connector.send(
+    #         MessageEndpoints.gui_acls(self._gui_id),
+    #         messages.CredentialsMessage(
+    #             credentials={
+    #                 "token": self._fernet.encrypt(
+    #                     msgpack.dumps({"username": username, "password": password})
+    #                 )
+    #             }
+    #         ),
+    #     )
+
     def start_server(self, wait=False) -> None:
         """
         Start the GUI server, and execute callback when it is launched
@@ -271,8 +295,18 @@ class BECGuiClient(RPCBase):
             logger.success("GUI starting...")
             self._startup_timeout = 5
             self._gui_started_event.clear()
+            encr_token = Fernet.generate_key()
+            self._fernet = Fernet(encr_token)
+            conn = self._client.connector._redis_conn.connection_pool.connection_kwargs
+            acl_data = {"username": conn.get("username"), "password": conn.get("password")}
+            acl_data = self._fernet.encrypt(msgpack.dumps(acl_data))
             self._process, self._process_output_processing_thread = _start_plot_process(
-                self._gui_id, self.__class__, self._client._service_config.config, logger=logger
+                self._gui_id,
+                self.__class__,
+                self._client._service_config.config,
+                acl_data=acl_data,
+                token=encr_token,
+                logger=logger,
             )
 
             def gui_started_callback(callback):
