@@ -126,6 +126,8 @@ class BECWaveform(BECPlotBase):
             "label_suffix": "",
         }
 
+        self._slice_index = None
+
         # Scan segment update proxy
         self.proxy_update_plot = pg.SignalProxy(
             self.scan_signal_update, rateLimit=25, slot=self._update_scan_curves
@@ -1252,7 +1254,9 @@ class BECWaveform(BECPlotBase):
         x_data = None
         instruction = metadata.get("async_update", {}).get("type")
         max_shape = metadata.get("async_update", {}).get("max_shape", [])
-        for curve in self._curves_data["async"].values():
+        all_async_curves = self._curves_data["async"].values()
+        # for curve in self._curves_data["async"].values():
+        for curve in all_async_curves:
             y_entry = curve.config.signals.y.entry
             x_name = self._x_axis_mode["name"]
             for device, async_data in msg["signals"].items():
@@ -1276,6 +1280,18 @@ class BECWaveform(BECPlotBase):
                             curve.setData(x_data, new_data)
                         else:
                             curve.setData(new_data)
+                    elif instruction == "add_slice":
+                        current_slice_id = metadata.get("async_update", {}).get("index")
+                        data_plot = async_data["value"]
+                        if current_slice_id != self._slice_index:
+                            self._slice_index = current_slice_id
+                            new_data = data_plot
+                        else:
+                            x_data, y_data = curve.get_data()
+                            new_data = np.hstack((y_data, data_plot))
+
+                        curve.setData(new_data)
+
                     elif instruction == "replace":
                         if x_name == "timestamp":
                             x_data = async_data["timestamp"]
@@ -1523,6 +1539,10 @@ class BECWaveform(BECPlotBase):
         curve_ids_to_remove = list(curves_data[source].keys())
         for curve_id in curve_ids_to_remove:
             self.remove_curve(curve_id)
+
+    def reset(self):
+        self._slice_index = None
+        super().reset()
 
     def clear_all(self):
         sources = list(self._curves_data.keys())
