@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.25.0 (2025-03-07)
+
+### Features
+
+- **waveform**: Add slice handling and reset functionality for async updates
+  ([`7cbebbb`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7cbebbb1f00ea2e2b3678c96b183a877e59c5240))
+
+
 ## v1.24.5 (2025-03-06)
 
 ### Bug Fixes
