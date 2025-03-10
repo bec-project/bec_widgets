@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from bec_widgets.cli.client_utils import IGNORE_WIDGETS
 from bec_widgets.utils.bec_widget import BECWidget
 
 
@@ -34,10 +35,7 @@ class RPCWidgetHandler:
 
         clss = get_custom_classes("bec_widgets")
         self._widget_classes = {
-            cls.__name__: cls
-            for cls in clss.widgets
-            if cls.__name__
-            not in ["BECDockArea", "BECDock"]  # Exclude these classes due to hierarchy
+            cls.__name__: cls for cls in clss.widgets if cls.__name__ not in IGNORE_WIDGETS
         }
 
     def create_widget(self, widget_type, name: str | None = None, **kwargs) -> BECWidget:

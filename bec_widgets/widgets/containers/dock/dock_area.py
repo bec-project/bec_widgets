@@ -482,6 +482,8 @@ class BECDockArea(BECWidget, QWidget):
 
 if __name__ == "__main__":  # pragma: no cover
 
+    import sys
+
     from bec_widgets.utils.colors import set_theme
 
     app = QApplication([])
@@ -491,5 +493,7 @@ if __name__ == "__main__":  # pragma: no cover
     # dock_1 = dock_area.new(name="dock_0", widget="Waveform")
     dock_area.new(widget="Waveform")
     dock_area.show()
+    dock_area.setGeometry(100, 100, 800, 600)
     app.topLevelWidgets()
     app.exec_()
+    sys.exit(app.exec_())

@@ -7,6 +7,7 @@ from pydantic import Field
 from pyqtgraph.dockarea import Dock, DockLabel
 from qtpy import QtCore, QtGui
 
+from bec_widgets.cli.client_utils import IGNORE_WIDGETS
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 from bec_widgets.utils import ConnectionConfig, GridLayoutManager
@@ -317,7 +318,7 @@ class BECDock(BECWidget, Dock):
             )
         # Check that Widget is not BECDock or BECDockArea
         widget_class_name = widget if isinstance(widget, str) else widget.__class__.__name__
-        if widget_class_name in ["BECDock", "BECDockArea"]:
+        if widget_class_name in IGNORE_WIDGETS:
             raise ValueError(f"Widget {widget} can not be added to dock.")
 
         if isinstance(widget, str):
