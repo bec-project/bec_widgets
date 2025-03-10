@@ -95,9 +95,21 @@ class {class_name}(RPCBase):"""
             self.content += f"""
 class {class_name}(RPCBase):"""
 
+        if cls.__doc__:
+            # We only want the first line of the docstring
+            # But skip the first line if it's a blank line
+            first_line = cls.__doc__.split("\n")[0]
+            if first_line:
+                class_docs = first_line
+            else:
+                class_docs = cls.__doc__.split("\n")[1]
+            self.content += f"""
+    \"\"\"{class_docs}\"\"\"
+    """
         if not cls.USER_ACCESS:
             self.content += """...
     """
+
         for method in cls.USER_ACCESS:
             is_property_setter = False
             obj = getattr(cls, method, None)

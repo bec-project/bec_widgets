@@ -55,6 +55,7 @@ class BECDockArea(BECWidget, QWidget):
         "panel_list",
         "delete",
         "delete_all",
+        "remove",
         "detach_dock",
         "attach_all",
         "selected_device",
@@ -79,6 +80,7 @@ class BECDockArea(BECWidget, QWidget):
             self.config = config
         super().__init__(client=client, config=config, gui_id=gui_id, name=name, **kwargs)
         QWidget.__init__(self, parent=parent)
+        self._parent = parent
         self.layout = QVBoxLayout(self)
         self.layout.setSpacing(5)
         self.layout.setContentsMargins(0, 0, 0, 0)
@@ -346,9 +348,7 @@ class BECDockArea(BECWidget, QWidget):
                     f"with name: {self._name} and id {self.gui_id}."
                 )
         else:  # Name is not provided
-            name = WidgetContainerUtils.generate_unique_name(
-                name=BECDock.__name__, list_of_names=dock_names
-            )
+            name = WidgetContainerUtils.generate_unique_name(name="dock", list_of_names=dock_names)
 
         dock = BECDock(name=name, parent_dock_area=self, closable=closable)
         dock.config.position = position
@@ -430,25 +430,6 @@ class BECDockArea(BECWidget, QWidget):
         self.dock_area.deleteLater()
         super().cleanup()
 
-    def closeEvent(self, event):
-        if self.parent() is None:
-            # we are at top-level (independent window)
-            if self.isVisible():
-                # we are visible => user clicked on [X]
-                # (when closeEvent is called from shutdown procedure,
-                # everything is hidden first)
-                # so, let's ignore "close", and do hide instead
-                event.ignore()
-                self.setVisible(False)
-
-    def close(self):
-        """
-        Close the dock area and cleanup.
-        Has to be implemented to overwrite pyqtgraph event accept in Container close.
-        """
-        self.cleanup()
-        super().close()
-
     def show(self):
         """Show all windows including floating docks."""
         super().show()
@@ -493,6 +474,10 @@ class BECDockArea(BECWidget, QWidget):
         else:
             raise ValueError(f"Dock with name {dock_name} does not exist.")
         self._broadcast_update()
+
+    def remove(self) -> None:
+        """Remove the dock area."""
+        self.close()
 
 
 if __name__ == "__main__":  # pragma: no cover

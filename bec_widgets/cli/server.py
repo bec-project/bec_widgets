@@ -171,7 +171,7 @@ class BECWidgetsCLIServer:
             for key, val in connections.items()
             if val.__class__.__name__ == "BECDockArea"
         }
-        logger.info(f"Broadcasting registry update: {data}")
+        logger.info(f"All registered connections: {list(connections.keys())}")
         self.client.connector.xadd(
             MessageEndpoints.gui_registry_state(self.gui_id),
             msg_dict={"data": messages.GUIRegistryStateMessage(state=data)},

@@ -1,4 +1,4 @@
-""" Client utilities for the BEC GUI. """
+"""Client utilities for the BEC GUI."""
 
 from __future__ import annotations
 
@@ -16,6 +16,8 @@ from typing import TYPE_CHECKING
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import, lazy_import_from
+from rich.console import Console
+from rich.table import Table
 
 import bec_widgets.cli.client as client
 from bec_widgets.cli.auto_updates import AutoUpdates
@@ -155,7 +157,40 @@ def wait_for_server(client: BECGuiClient):
 
 
 class WidgetNameSpace:
-    pass
+    def __repr__(self):
+        console = Console()
+        table = Table(title="Available widgets for BEC CLI usage")
+        table.add_column("Widget Name", justify="left", style="magenta")
+        table.add_column("Description", justify="left")
+        for attr, value in self.__dict__.items():
+            docs = value.__doc__
+            docs = docs if docs else "No description available"
+            table.add_row(attr, docs)
+        console.print(table)
+        return f""
+
+
+class AvailableWidgetsNamespace:
+    """Namespace for available widgets in the BEC GUI."""
+
+    def __init__(self):
+        for widget in client.Widgets:
+            name = widget.value
+            if name in ["BECDockArea", "BECDock"]:
+                continue
+            setattr(self, name, name)
+
+    def __repr__(self):
+        console = Console()
+        table = Table(title="Available widgets for BEC CLI usage")
+        table.add_column("Widget Name", justify="left", style="magenta")
+        table.add_column("Description", justify="left")
+        for attr_name, _ in self.__dict__.items():
+            docs = getattr(client, attr_name).__doc__
+            docs = docs if docs else "No description available"
+            table.add_row(attr_name, docs if len(docs.strip()) > 0 else "No description available")
+        console.print(table)
+        return ""  # f"<{self.__class__.__name__}>"
 
 
 class BECDockArea(client.BECDockArea):
@@ -165,6 +200,17 @@ class BECDockArea(client.BECDockArea):
         super().__init__(gui_id, config, name, parent)
         # Add namespaces for DockArea
         self.elements = WidgetNameSpace()
+
+    def delete(self, dock_name):
+        # Don't close the bec dock area
+        if dock_name == "bec":
+            raise ValueError("Cannot delete the bec dock area")
+        super().delete(dock_name)
+
+    def remove(self):
+        if self._name == "bec":
+            raise ValueError("Cannot delete the bec dock area")
+        super().remove()
 
 
 class BECGuiClient(RPCBase):
@@ -177,6 +223,7 @@ class BECGuiClient(RPCBase):
         self._default_dock_name = "bec"
         self._auto_updates_enabled = True
         self._auto_updates = None
+        self._killed = False
         self._startup_timeout = 0
         self._gui_started_timer = None
         self._gui_started_event = threading.Event()
@@ -184,7 +231,7 @@ class BECGuiClient(RPCBase):
         self._process_output_processing_thread = None
         self._exposed_dock_areas = []
         self._registry_state = {}
-        self.available_widgets = client.Widgets
+        self.available_widgets = AvailableWidgetsNamespace()
 
     def connect_to_gui_server(self, gui_id: str) -> None:
         """Connect to a GUI server"""
@@ -336,6 +383,7 @@ class BECGuiClient(RPCBase):
         return rpc_client._run_rpc("_dump")
 
     def _start(self):
+        self._killed = False
         self._client.connector.register(
             MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
         )
@@ -365,8 +413,12 @@ class BECGuiClient(RPCBase):
         with wait_for_server(self):
             rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
             rpc_client._run_rpc("hide")  # pylint: disable=protected-access
-            for window in self._top_level.values():
-                window.hide()
+            # because of the registry callbacks, we may have
+            # dock areas that are already killed, but not yet
+            # removed from the registry state
+            if not self._killed:
+                for window in self._top_level.values():
+                    window.hide()
 
     def show(self):
         """Show the GUI window."""
@@ -398,6 +450,22 @@ class BECGuiClient(RPCBase):
         rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
         widget = rpc_client._run_rpc("new_dock_area", name)  # pylint: disable=protected-access
         return widget
+
+    def delete(self, name: str) -> None:
+        """Delete a dock area.
+
+        Args:
+            name(str): The name of the dock area.
+        """
+        widget = self.windows.get(name)
+        if widget is None:
+            raise ValueError(f"Dock area {name} not found.")
+        widget._run_rpc("close")  # pylint: disable=protected-access
+
+    def delete_all(self) -> None:
+        """Delete all dock areas."""
+        for widget_name in self.windows.keys():
+            self.delete(widget_name)
 
     def _clear_top_level_widgets(self):
         self._top_level.clear()
@@ -447,19 +515,14 @@ class BECGuiClient(RPCBase):
         self._add_dock_areas_from_registry()
 
     def close(self):
-        """Deprecated. Use kill() instead."""
+        """Deprecated. Use kill_server() instead."""
         # FIXME, deprecated in favor of kill, will be removed in the future
-        self.kill()
+        self.kill_server()
 
-    def kill(self) -> None:
+    def kill_server(self) -> None:
         """Kill the GUI server."""
-        self._close()
-
-    def _close(self) -> None:
-        """
-        Close the gui window.
-        """
         self._top_level.clear()
+        self._killed = True
 
         if self._gui_started_timer is not None:
             self._gui_started_timer.cancel()

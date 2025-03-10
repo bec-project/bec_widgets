@@ -33,9 +33,14 @@ class RPCWidgetHandler:
         from bec_widgets.utils.plugin_utils import get_custom_classes
 
         clss = get_custom_classes("bec_widgets")
-        self._widget_classes = {cls.__name__: cls for cls in clss.widgets}
+        self._widget_classes = {
+            cls.__name__: cls
+            for cls in clss.widgets
+            if cls.__name__
+            not in ["BECDockArea", "BECDock"]  # Exclude these classes due to hierarchy
+        }
 
-    def create_widget(self, widget_type, name: str, **kwargs) -> BECWidget:
+    def create_widget(self, widget_type, name: str | None = None, **kwargs) -> BECWidget:
         """
         Create a widget from an RPC message.
 

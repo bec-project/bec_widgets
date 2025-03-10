@@ -209,6 +209,7 @@ class BECConnector:
         """
         self.config = config
 
+    # FIXME some thoughts are required to decide how thhis should work with rpc registry
     def apply_config(self, config: dict, generate_new_id: bool = True) -> None:
         """
         Apply the configuration to the widget.
@@ -221,11 +222,12 @@ class BECConnector:
         if generate_new_id is True:
             gui_id = str(uuid.uuid4())
             self.rpc_register.remove_rpc(self)
-            self.set_gui_id(gui_id)
+            self._set_gui_id(gui_id)
             self.rpc_register.add_rpc(self)
         else:
             self.gui_id = self.config.gui_id
 
+    # FIXME some thoughts are required to decide how thhis should work with rpc registry
     def load_config(self, path: str | None = None, gui: bool = False):
         """
         Load the configuration of the widget from YAML.
@@ -262,8 +264,8 @@ class BECConnector:
             file_path = os.path.join(path, f"{self.__class__.__name__}_config.yaml")
             save_yaml(file_path, self._config_dict)
 
-    @pyqtSlot(str)
-    def set_gui_id(self, gui_id: str) -> None:
+    # @pyqtSlot(str)
+    def _set_gui_id(self, gui_id: str) -> None:
         """
         Set the GUI ID for the widget.
 
@@ -308,6 +310,15 @@ class BECConnector:
         self.config = config
         if gui_id and config.gui_id != gui_id:  # Recreating config should not overwrite the gui_id
             self.config.gui_id = gui_id
+
+    def remove(self):
+        """Cleanup the BECConnector"""
+        if hasattr(self, "close"):
+            self.close()
+            if hasattr(self, "deleteLater"):
+                self.deleteLater()
+        else:
+            self.rpc_register.remove_rpc(self)
 
     def get_config(self, dict_output: bool = True) -> dict | BaseModel:
         """

@@ -81,7 +81,20 @@ class RPCBase:
     def __repr__(self):
         type_ = type(self)
         qualname = type_.__qualname__
-        return f"<{qualname} object at {hex(id(self))}>"
+        return f"<{qualname} with name: {self.widget_name}>"
+
+    def remove(self):
+        """
+        Remove the widget.
+        """
+        self._run_rpc("remove")
+
+    @property
+    def widget_name(self):
+        """
+        Get the widget name.
+        """
+        return self._name
 
     @property
     def _root(self):

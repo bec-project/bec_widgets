@@ -50,27 +50,12 @@ class Widgets(str, enum.Enum):
 
 
 class AbortButton(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """A button that abort the scan."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
@@ -263,7 +248,8 @@ class BECDock(RPCBase):
         Add a widget to the dock.
 
         Args:
-            widget(QWidget): The widget to add.
+            widget(QWidget): The widget to add. It can not be BECDock or BECDockArea.
+            name(str): The name of the widget.
             row(int): The row to add the widget to. If None, the widget will be added to the next available row.
             col(int): The column to add the widget to.
             rowspan(int): The number of rows the widget should span.
@@ -314,17 +300,6 @@ class BECDock(RPCBase):
         """
 
     @rpc_call
-    def move_widget(self, widget: "QWidget", new_row: "int", new_col: "int"):
-        """
-        Move a widget to a new position in the layout.
-
-        Args:
-            widget(QWidget): The widget to move.
-            new_row(int): The new row to move the widget to.
-            new_col(int): The new column to move the widget to.
-        """
-
-    @rpc_call
     def delete(self, widget_name: "str") -> "None":
         """
         Remove a widget from the dock.
@@ -337,6 +312,12 @@ class BECDock(RPCBase):
     def delete_all(self):
         """
         Remove all widgets from the dock.
+        """
+
+    @rpc_call
+    def remove(self):
+        """
+        Remove the dock from the parent dock area.
         """
 
     @rpc_call
@@ -431,6 +412,12 @@ class BECDockArea(RPCBase):
     def delete_all(self) -> "None":
         """
         Delete all docks.
+        """
+
+    @rpc_call
+    def remove(self) -> "None":
+        """
+        Remove the dock area.
         """
 
     @rpc_call
@@ -2214,6 +2201,8 @@ class BECPlotBase(RPCBase):
 
 
 class BECProgressBar(RPCBase):
+    """A custom progress bar with smooth transitions. The displayed text can be customized using a template."""
+
     @rpc_call
     def set_value(self, value):
         """
@@ -2265,52 +2254,22 @@ class BECProgressBar(RPCBase):
 
 
 class BECQueue(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """Widget to display the BEC queue."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class BECStatusBox(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """An autonomous widget to display the status of BEC services."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
@@ -2829,6 +2788,8 @@ class Curve(RPCBase):
 
 
 class DapComboBox(RPCBase):
+    """The DAPComboBox widget is an extension to the QComboBox with all avaialble DAP model from BEC."""
+
     @rpc_call
     def select_y_axis(self, y_axis: str):
         """
@@ -2867,156 +2828,66 @@ class DarkModeButton(RPCBase):
 
 
 class DeviceBrowser(RPCBase):
-    @property
     @rpc_call
-    def _config_dict(self) -> "dict":
+    def remove(self):
         """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @rpc_call
-    def _get_all_rpc(self) -> "dict":
-        """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class DeviceComboBox(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """Combobox widget for device input with autocomplete for device names."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class DeviceInputBase(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """Mixin base class for device input widgets."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class DeviceLineEdit(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """Line edit widget for device input with autocomplete for device names."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class DeviceSignalInputBase(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """Mixin base class for device signal input widgets."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class LMFitDialog(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """Dialog for displaying the fit summary and params for LMFit DAP processes"""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class LogPanel(RPCBase):
+    """Displays a log panel"""
+
     @rpc_call
     def set_plain_text(self, text: str) -> None:
         """
@@ -3079,6 +2950,8 @@ class PositionIndicator(RPCBase):
 
 
 class PositionerBox(RPCBase):
+    """Simple Widget to control a positioner in box form"""
+
     @rpc_call
     def set_positioner(self, positioner: "str | Positioner"):
         """
@@ -3090,6 +2963,8 @@ class PositionerBox(RPCBase):
 
 
 class PositionerBox2D(RPCBase):
+    """Simple Widget to control two positioners in box form"""
+
     @rpc_call
     def set_positioner_hor(self, positioner: "str | Positioner"):
         """
@@ -3110,31 +2985,18 @@ class PositionerBox2D(RPCBase):
 
 
 class PositionerBoxBase(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """Contains some core logic for positioner box widgets"""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class PositionerControlLine(RPCBase):
+    """A widget that controls a single device."""
+
     @rpc_call
     def set_positioner(self, positioner: "str | Positioner"):
         """
@@ -3146,6 +3008,8 @@ class PositionerControlLine(RPCBase):
 
 
 class PositionerGroup(RPCBase):
+    """Simple Widget to control a positioner in box form"""
+
     @rpc_call
     def set_positioners(self, device_names: "str"):
         """
@@ -3156,52 +3020,22 @@ class PositionerGroup(RPCBase):
 
 
 class ResetButton(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """A button that resets the scan queue."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class ResumeButton(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """A button that continue scan queue."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
@@ -3485,131 +3319,56 @@ class RingProgressBar(RPCBase):
 
 
 class ScanControl(RPCBase):
-    @property
     @rpc_call
-    def _config_dict(self) -> "dict":
+    def remove(self):
         """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
-
-    @rpc_call
-    def _get_all_rpc(self) -> "dict":
-        """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class ScanMetadata(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """Dynamically generates a form for inclusion of metadata for a scan. Uses the"""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class SignalComboBox(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """Line edit widget for device input with autocomplete for device names."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class SignalLineEdit(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """Line edit widget for device input with autocomplete for device names."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class StopButton(RPCBase):
-    @property
-    @rpc_call
-    def _config_dict(self) -> "dict":
-        """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
-        """
+    """A button that stops the current scan."""
 
     @rpc_call
-    def _get_all_rpc(self) -> "dict":
+    def remove(self):
         """
-        Get all registered RPC objects.
-        """
-
-    @property
-    @rpc_call
-    def _rpc_id(self) -> "str":
-        """
-        Get the RPC ID of the widget.
+        Cleanup the BECConnector
         """
 
 
 class TextBox(RPCBase):
+    """A widget that displays text in plain and HTML format"""
+
     @rpc_call
     def set_plain_text(self, text: str) -> None:
         """
@@ -3629,7 +3388,10 @@ class TextBox(RPCBase):
         """
 
 
-class VSCodeEditor(RPCBase): ...
+class VSCodeEditor(RPCBase):
+    """A widget to display the VSCode editor."""
+
+    ...
 
 
 class Waveform(RPCBase):
@@ -4044,6 +3806,8 @@ class Waveform(RPCBase):
 
 
 class WebsiteWidget(RPCBase):
+    """A simple widget to display a website"""
+
     @rpc_call
     def set_url(self, url: str) -> None:
         """
