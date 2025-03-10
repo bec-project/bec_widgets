@@ -44,6 +44,7 @@ def plot_server(gui_id, klass, client_lib):
 @pytest.fixture
 def connected_client_figure(gui_id, bec_client_lib):
     with plot_server(gui_id, BECFigure, bec_client_lib) as server:
+
         yield server
 
 
@@ -51,10 +52,11 @@ def connected_client_figure(gui_id, bec_client_lib):
 def connected_client_gui_obj(gui_id, bec_client_lib):
     gui = BECGuiClient(gui_id=gui_id)
     try:
-        gui._start_server(wait=True)
+        gui.start(wait=True)
+        # gui._start_server(wait=True)
         yield gui
     finally:
-        gui._close()
+        gui.kill_server()
 
 
 @pytest.fixture
@@ -62,11 +64,11 @@ def connected_client_dock(gui_id, bec_client_lib):
     gui = BECGuiClient(gui_id=gui_id)
     gui._auto_updates_enabled = False
     try:
-        gui._start_server(wait=True)
+        gui.start(wait=True)
         gui.window_list[0]
         yield gui.window_list[0]
     finally:
-        gui._close()
+        gui.kill_server()
 
 
 @pytest.fixture
@@ -76,4 +78,4 @@ def connected_client_dock_w_auto_updates(gui_id, bec_client_lib):
         gui._start_server(wait=True)
         yield gui, gui.window_list[0]
     finally:
-        gui._close()
+        gui.kill_server()

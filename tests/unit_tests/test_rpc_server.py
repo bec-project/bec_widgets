@@ -20,8 +20,10 @@ def test_rpc_server_start_server_without_service_config(mocked_cli_server):
     """
     mock_server, mock_config, _ = mocked_cli_server
 
-    _start_server("gui_id", BECFigure, None)
-    mock_server.assert_called_once_with(gui_id="gui_id", config=mock_config(), gui_class=BECFigure)
+    _start_server("gui_id", BECFigure, config=None)
+    mock_server.assert_called_once_with(
+        gui_id="gui_id", config=mock_config(), gui_class=BECFigure, gui_class_id="bec"
+    )
 
 
 @pytest.mark.parametrize(
@@ -37,5 +39,7 @@ def test_rpc_server_start_server_with_service_config(mocked_cli_server, config, 
     """
     mock_server, mock_config, _ = mocked_cli_server
     config = mock_config(**call_config)
-    _start_server("gui_id", BECFigure, config)
-    mock_server.assert_called_once_with(gui_id="gui_id", config=config, gui_class=BECFigure)
+    _start_server("gui_id", BECFigure, config=config)
+    mock_server.assert_called_once_with(
+        gui_id="gui_id", config=config, gui_class=BECFigure, gui_class_id="bec"
+    )
