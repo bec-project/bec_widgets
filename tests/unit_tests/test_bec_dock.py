@@ -120,10 +120,8 @@ def test_toolbar_add_plot_waveform(bec_dock_area):
 
 def test_toolbar_add_plot_image(bec_dock_area):
     bec_dock_area.toolbar.widgets["menu_plots"].widgets["image"].trigger()
-    assert "BECImageWidget_0" in bec_dock_area.panels
-    assert (
-        bec_dock_area.panels["BECImageWidget_0"].widgets[0].config.widget_class == "BECImageWidget"
-    )
+    assert "Image_0" in bec_dock_area.panels
+    assert bec_dock_area.panels["Image_0"].widgets[0].config.widget_class == "Image"
 
 
 def test_toolbar_add_plot_motor_map(bec_dock_area):

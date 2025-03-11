@@ -25,9 +25,9 @@ from bec_widgets.widgets.containers.dock.dock import BECDock, DockConfig
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox
 from bec_widgets.widgets.control.scan_control.scan_control import ScanControl
 from bec_widgets.widgets.editors.vscode.vscode import VSCodeEditor
-from bec_widgets.widgets.plots.image.image_widget import BECImageWidget
 from bec_widgets.widgets.plots.motor_map.motor_map_widget import BECMotorMapWidget
 from bec_widgets.widgets.plots.multi_waveform.multi_waveform_widget import BECMultiWaveformWidget
+from bec_widgets.widgets.plots_next_gen.image.image import Image
 from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
 from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_bar import RingProgressBar
 from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
@@ -102,7 +102,7 @@ class BECDockArea(BECWidget, QWidget):
                             filled=True,
                         ),
                         "image": MaterialIconAction(
-                            icon_name=BECImageWidget.ICON_NAME, tooltip="Add Image", filled=True
+                            icon_name=Image.ICON_NAME, tooltip="Add Image", filled=True
                         ),
                         "motor_map": MaterialIconAction(
                             icon_name=BECMotorMapWidget.ICON_NAME,
@@ -180,7 +180,7 @@ class BECDockArea(BECWidget, QWidget):
             lambda: self._create_widget_from_toolbar(widget_name="BECMultiWaveformWidget")
         )
         self.toolbar.widgets["menu_plots"].widgets["image"].triggered.connect(
-            lambda: self._create_widget_from_toolbar(widget_name="BECImageWidget")
+            lambda: self._create_widget_from_toolbar(widget_name="Image")
         )
         self.toolbar.widgets["menu_plots"].widgets["motor_map"].triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="BECMotorMapWidget")

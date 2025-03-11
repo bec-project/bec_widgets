@@ -53,10 +53,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "w9": self.w9,
                     "w10": self.w10,
                     "d0": self.d0,
-                    "d1": self.d1,
                     "im": self.im,
-                    "im_old": self.im_old,
-                    "it_old": self.it_old,
                     "mi": self.mi,
                     "mm": self.mm,
                     "mw": self.mw,
@@ -215,11 +212,6 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.d0 = self.dock.new(name="dock_0")
         self.mm = self.d0.new("BECMotorMapWidget")
         self.mm.change_motors("samx", "samy")
-
-        self.d1 = self.dock.new(name="dock_1", position="right")
-        self.im_old = self.d1.new("BECImageWidget")
-        self.im_old.image("waveform", "1d")
-        self.it_old = self.im_old._image._images["device_monitor_1d"]["waveform"]
 
         self.mw = None  # self.wf.multi_waveform(monitor="waveform")  # , config=config)
 
