@@ -18,8 +18,6 @@ class Widgets(str, enum.Enum):
     AbortButton = "AbortButton"
     BECColorMapWidget = "BECColorMapWidget"
     BECDockArea = "BECDockArea"
-    BECImageView = "BECImageView"
-    BECImageWidget = "BECImageWidget"
     BECMotorMapWidget = "BECMotorMapWidget"
     BECMultiWaveformWidget = "BECMultiWaveformWidget"
     BECProgressBar = "BECProgressBar"
@@ -30,6 +28,7 @@ class Widgets(str, enum.Enum):
     DeviceBrowser = "DeviceBrowser"
     DeviceComboBox = "DeviceComboBox"
     DeviceLineEdit = "DeviceLineEdit"
+    Image = "Image"
     LMFitDialog = "LMFitDialog"
     LogPanel = "LogPanel"
     Minesweeper = "Minesweeper"
@@ -687,148 +686,6 @@ class BECFigure(RPCBase):
         """
 
 
-class BECImage(RPCBase):
-    @property
-    @rpc_call
-    def color_map(self) -> "str":
-        """
-        Get the current color map.
-        """
-
-    @color_map.setter
-    @rpc_call
-    def color_map(self) -> "str":
-        """
-        Get the current color map.
-        """
-
-    @property
-    @rpc_call
-    def v_range(self) -> "tuple[float, float]":
-        """
-        Get the color intensity range of the image.
-        """
-
-    @v_range.setter
-    @rpc_call
-    def v_range(self) -> "tuple[float, float]":
-        """
-        Get the color intensity range of the image.
-        """
-
-    @property
-    @rpc_call
-    def v_min(self) -> "float":
-        """
-        None
-        """
-
-    @v_min.setter
-    @rpc_call
-    def v_min(self) -> "float":
-        """
-        None
-        """
-
-    @property
-    @rpc_call
-    def v_max(self) -> "float":
-        """
-        None
-        """
-
-    @v_max.setter
-    @rpc_call
-    def v_max(self) -> "float":
-        """
-        None
-        """
-
-    @property
-    @rpc_call
-    def autorange(self) -> "bool":
-        """
-        None
-        """
-
-    @autorange.setter
-    @rpc_call
-    def autorange(self) -> "bool":
-        """
-        None
-        """
-
-    @property
-    @rpc_call
-    def autorange_mode(self) -> "Literal['max', 'mean']":
-        """
-        None
-        """
-
-    @autorange_mode.setter
-    @rpc_call
-    def autorange_mode(self) -> "Literal['max', 'mean']":
-        """
-        None
-        """
-
-    @property
-    @rpc_call
-    def fft(self) -> "bool":
-        """
-        Get or set whether FFT postprocessing is enabled.
-        """
-
-    @fft.setter
-    @rpc_call
-    def fft(self) -> "bool":
-        """
-        Get or set whether FFT postprocessing is enabled.
-        """
-
-    @property
-    @rpc_call
-    def log(self) -> "bool":
-        """
-        Get or set whether logarithmic scaling is applied.
-        """
-
-    @log.setter
-    @rpc_call
-    def log(self) -> "bool":
-        """
-        Get or set whether logarithmic scaling is applied.
-        """
-
-    @property
-    @rpc_call
-    def rotation(self) -> "Optional[int]":
-        """
-        Get or set the number of 90° rotations to apply.
-        """
-
-    @rotation.setter
-    @rpc_call
-    def rotation(self) -> "Optional[int]":
-        """
-        Get or set the number of 90° rotations to apply.
-        """
-
-    @property
-    @rpc_call
-    def transpose(self) -> "bool":
-        """
-        Get or set whether the image is transposed.
-        """
-
-    @transpose.setter
-    @rpc_call
-    def transpose(self) -> "bool":
-        """
-        Get or set whether the image is transposed.
-        """
-
-
 class BECImageItem(RPCBase):
     @property
     @rpc_call
@@ -1335,705 +1192,6 @@ class BECImageShow(RPCBase):
         Get the list of images.
         Returns:
             list[BECImageItem]: The list of images.
-        """
-
-
-class BECImageView(RPCBase):
-    @property
-    @rpc_call
-    def enable_toolbar(self) -> "bool":
-        """
-        Show Toolbar.
-        """
-
-    @enable_toolbar.setter
-    @rpc_call
-    def enable_toolbar(self) -> "bool":
-        """
-        Show Toolbar.
-        """
-
-    @property
-    @rpc_call
-    def enable_side_panel(self) -> "bool":
-        """
-        Show Side Panel
-        """
-
-    @enable_side_panel.setter
-    @rpc_call
-    def enable_side_panel(self) -> "bool":
-        """
-        Show Side Panel
-        """
-
-    @property
-    @rpc_call
-    def enable_fps_monitor(self) -> "bool":
-        """
-        Enable the FPS monitor.
-        """
-
-    @enable_fps_monitor.setter
-    @rpc_call
-    def enable_fps_monitor(self) -> "bool":
-        """
-        Enable the FPS monitor.
-        """
-
-    @rpc_call
-    def set(self, **kwargs):
-        """
-        Set the properties of the plot widget.
-
-        Args:
-            **kwargs: Keyword arguments for the properties to be set.
-
-        Possible properties:
-        """
-
-    @property
-    @rpc_call
-    def title(self) -> "str":
-        """
-        Set title of the plot.
-        """
-
-    @title.setter
-    @rpc_call
-    def title(self) -> "str":
-        """
-        Set title of the plot.
-        """
-
-    @property
-    @rpc_call
-    def x_label(self) -> "str":
-        """
-        The set label for the x-axis.
-        """
-
-    @x_label.setter
-    @rpc_call
-    def x_label(self) -> "str":
-        """
-        The set label for the x-axis.
-        """
-
-    @property
-    @rpc_call
-    def y_label(self) -> "str":
-        """
-        The set label for the y-axis.
-        """
-
-    @y_label.setter
-    @rpc_call
-    def y_label(self) -> "str":
-        """
-        The set label for the y-axis.
-        """
-
-    @property
-    @rpc_call
-    def x_limits(self) -> "QPointF":
-        """
-        Get the x limits of the plot.
-        """
-
-    @x_limits.setter
-    @rpc_call
-    def x_limits(self) -> "QPointF":
-        """
-        Get the x limits of the plot.
-        """
-
-    @property
-    @rpc_call
-    def y_limits(self) -> "QPointF":
-        """
-        Get the y limits of the plot.
-        """
-
-    @y_limits.setter
-    @rpc_call
-    def y_limits(self) -> "QPointF":
-        """
-        Get the y limits of the plot.
-        """
-
-    @property
-    @rpc_call
-    def x_grid(self) -> "bool":
-        """
-        Show grid on the x-axis.
-        """
-
-    @x_grid.setter
-    @rpc_call
-    def x_grid(self) -> "bool":
-        """
-        Show grid on the x-axis.
-        """
-
-    @property
-    @rpc_call
-    def y_grid(self) -> "bool":
-        """
-        Show grid on the y-axis.
-        """
-
-    @y_grid.setter
-    @rpc_call
-    def y_grid(self) -> "bool":
-        """
-        Show grid on the y-axis.
-        """
-
-    @property
-    @rpc_call
-    def inner_axes(self) -> "bool":
-        """
-        Show inner axes of the plot widget.
-        """
-
-    @inner_axes.setter
-    @rpc_call
-    def inner_axes(self) -> "bool":
-        """
-        Show inner axes of the plot widget.
-        """
-
-    @property
-    @rpc_call
-    def outer_axes(self) -> "bool":
-        """
-        Show the outer axes of the plot widget.
-        """
-
-    @outer_axes.setter
-    @rpc_call
-    def outer_axes(self) -> "bool":
-        """
-        Show the outer axes of the plot widget.
-        """
-
-    @property
-    @rpc_call
-    def lock_aspect_ratio(self) -> "bool":
-        """
-        Whether the aspect ratio is locked.
-        """
-
-    @lock_aspect_ratio.setter
-    @rpc_call
-    def lock_aspect_ratio(self) -> "bool":
-        """
-        Whether the aspect ratio is locked.
-        """
-
-    @property
-    @rpc_call
-    def auto_range_x(self) -> "bool":
-        """
-        Set auto range for the x-axis.
-        """
-
-    @auto_range_x.setter
-    @rpc_call
-    def auto_range_x(self) -> "bool":
-        """
-        Set auto range for the x-axis.
-        """
-
-    @property
-    @rpc_call
-    def auto_range_y(self) -> "bool":
-        """
-        Set auto range for the y-axis.
-        """
-
-    @auto_range_y.setter
-    @rpc_call
-    def auto_range_y(self) -> "bool":
-        """
-        Set auto range for the y-axis.
-        """
-
-    @property
-    @rpc_call
-    def x_log(self) -> "bool":
-        """
-        Set X-axis to log scale if True, linear if False.
-        """
-
-    @x_log.setter
-    @rpc_call
-    def x_log(self) -> "bool":
-        """
-        Set X-axis to log scale if True, linear if False.
-        """
-
-    @property
-    @rpc_call
-    def y_log(self) -> "bool":
-        """
-        Set Y-axis to log scale if True, linear if False.
-        """
-
-    @y_log.setter
-    @rpc_call
-    def y_log(self) -> "bool":
-        """
-        Set Y-axis to log scale if True, linear if False.
-        """
-
-    @property
-    @rpc_call
-    def legend_label_size(self) -> "int":
-        """
-        The font size of the legend font.
-        """
-
-    @legend_label_size.setter
-    @rpc_call
-    def legend_label_size(self) -> "int":
-        """
-        The font size of the legend font.
-        """
-
-    @property
-    @rpc_call
-    def color_map(self) -> "str":
-        """
-        Set the color map of the image.
-        """
-
-    @color_map.setter
-    @rpc_call
-    def color_map(self) -> "str":
-        """
-        Set the color map of the image.
-        """
-
-    @property
-    @rpc_call
-    def vrange(self) -> "tuple":
-        """
-        Get the vrange of the image.
-        """
-
-    @vrange.setter
-    @rpc_call
-    def vrange(self) -> "tuple":
-        """
-        Get the vrange of the image.
-        """
-
-    @property
-    @rpc_call
-    def v_min(self) -> "float":
-        """
-        Get the minimum value of the v_range.
-        """
-
-    @v_min.setter
-    @rpc_call
-    def v_min(self) -> "float":
-        """
-        Get the minimum value of the v_range.
-        """
-
-    @property
-    @rpc_call
-    def v_max(self) -> "float":
-        """
-        Get the maximum value of the v_range.
-        """
-
-    @v_max.setter
-    @rpc_call
-    def v_max(self) -> "float":
-        """
-        Get the maximum value of the v_range.
-        """
-
-    @property
-    @rpc_call
-    def lock_aspect_ratio(self) -> "bool":
-        """
-        Whether the aspect ratio is locked.
-        """
-
-    @lock_aspect_ratio.setter
-    @rpc_call
-    def lock_aspect_ratio(self) -> "bool":
-        """
-        Whether the aspect ratio is locked.
-        """
-
-    @property
-    @rpc_call
-    def autorange(self) -> "bool":
-        """
-        Whether autorange is enabled.
-        """
-
-    @autorange.setter
-    @rpc_call
-    def autorange(self) -> "bool":
-        """
-        Whether autorange is enabled.
-        """
-
-    @property
-    @rpc_call
-    def autorange_mode(self) -> "str":
-        """
-        Autorange mode.
-
-        Options:
-            - "max": Use the maximum value of the image for autoranging.
-            - "mean": Use the mean value of the image for autoranging.
-        """
-
-    @autorange_mode.setter
-    @rpc_call
-    def autorange_mode(self) -> "str":
-        """
-        Autorange mode.
-
-        Options:
-            - "max": Use the maximum value of the image for autoranging.
-            - "mean": Use the mean value of the image for autoranging.
-        """
-
-    @property
-    @rpc_call
-    def monitor(self) -> "str":
-        """
-        The name of the monitor to use for the image.
-        """
-
-    @monitor.setter
-    @rpc_call
-    def monitor(self) -> "str":
-        """
-        The name of the monitor to use for the image.
-        """
-
-    @rpc_call
-    def enable_colorbar(
-        self,
-        enabled: "bool",
-        style: "Literal['full', 'simple']" = "full",
-        vrange: "tuple[int, int] | None" = None,
-    ):
-        """
-        Enable the colorbar and switch types of colorbars.
-
-        Args:
-            enabled(bool): Whether to enable the colorbar.
-            style(Literal["full", "simple"]): The type of colorbar to enable.
-            vrange(tuple): The range of values to use for the colorbar.
-        """
-
-    @property
-    @rpc_call
-    def enable_simple_colorbar(self) -> "bool":
-        """
-        Enable the simple colorbar.
-        """
-
-    @enable_simple_colorbar.setter
-    @rpc_call
-    def enable_simple_colorbar(self) -> "bool":
-        """
-        Enable the simple colorbar.
-        """
-
-    @property
-    @rpc_call
-    def enable_full_colorbar(self) -> "bool":
-        """
-        Enable the full colorbar.
-        """
-
-    @enable_full_colorbar.setter
-    @rpc_call
-    def enable_full_colorbar(self) -> "bool":
-        """
-        Enable the full colorbar.
-        """
-
-    @property
-    @rpc_call
-    def fft(self) -> "bool":
-        """
-        Whether FFT postprocessing is enabled.
-        """
-
-    @fft.setter
-    @rpc_call
-    def fft(self) -> "bool":
-        """
-        Whether FFT postprocessing is enabled.
-        """
-
-    @property
-    @rpc_call
-    def log(self) -> "bool":
-        """
-        Whether logarithmic scaling is applied.
-        """
-
-    @log.setter
-    @rpc_call
-    def log(self) -> "bool":
-        """
-        Whether logarithmic scaling is applied.
-        """
-
-    @property
-    @rpc_call
-    def rotation(self) -> "int":
-        """
-        The number of 90° rotations to apply.
-        """
-
-    @rotation.setter
-    @rpc_call
-    def rotation(self) -> "int":
-        """
-        The number of 90° rotations to apply.
-        """
-
-    @property
-    @rpc_call
-    def transpose(self) -> "bool":
-        """
-        Whether the image is transposed.
-        """
-
-    @transpose.setter
-    @rpc_call
-    def transpose(self) -> "bool":
-        """
-        Whether the image is transposed.
-        """
-
-    @rpc_call
-    def image(
-        self,
-        monitor: "str | None" = None,
-        monitor_type: "Literal['auto', '1d', '2d']" = "auto",
-        color_map: "str | None" = None,
-        color_bar: "Literal['simple', 'full'] | None" = None,
-        vrange: "tuple[int, int] | None" = None,
-    ) -> "BECImage":
-        """
-        Set the image source and update the image.
-
-        Args:
-            monitor(str): The name of the monitor to use for the image.
-            monitor_type(str): The type of monitor to use. Options are "1d", "2d", or "auto".
-            color_map(str): The color map to use for the image.
-            color_bar(str): The type of color bar to use. Options are "simple" or "full".
-            vrange(tuple): The range of values to use for the color map.
-
-        Returns:
-            BECImage: The image object.
-        """
-
-    @property
-    @rpc_call
-    def main_image(self) -> "BECImage":
-        """
-        Access the main image item.
-        """
-
-
-class BECImageWidget(RPCBase):
-    @rpc_call
-    def image(
-        self,
-        monitor: "str",
-        monitor_type: "Optional[Literal['1d', '2d']]" = "2d",
-        color_map: "Optional[str]" = "magma",
-        color_bar: "Optional[Literal['simple', 'full']]" = "full",
-        downsample: "Optional[bool]" = True,
-        opacity: "Optional[float]" = 1.0,
-        vrange: "Optional[tuple[int, int]]" = None,
-        **kwargs,
-    ) -> "BECImageItem":
-        """
-        None
-        """
-
-    @rpc_call
-    def set(self, **kwargs):
-        """
-        Set the properties of the plot widget.
-
-        Args:
-            **kwargs: Keyword arguments for the properties to be set.
-
-        Possible properties:
-            - title: str
-            - x_label: str
-            - y_label: str
-            - x_scale: Literal["linear", "log"]
-            - y_scale: Literal["linear", "log"]
-            - x_lim: tuple
-            - y_lim: tuple
-            - legend_label_size: int
-        """
-
-    @rpc_call
-    def set_title(self, title: "str"):
-        """
-        Set the title of the plot widget.
-
-        Args:
-            title(str): Title of the plot.
-        """
-
-    @rpc_call
-    def set_x_label(self, x_label: "str"):
-        """
-        Set the x-axis label of the plot widget.
-
-        Args:
-            x_label(str): Label of the x-axis.
-        """
-
-    @rpc_call
-    def set_y_label(self, y_label: "str"):
-        """
-        Set the y-axis label of the plot widget.
-
-        Args:
-            y_label(str): Label of the y-axis.
-        """
-
-    @rpc_call
-    def set_x_scale(self, x_scale: "Literal['linear', 'log']"):
-        """
-        Set the scale of the x-axis of the plot widget.
-
-        Args:
-            x_scale(Literal["linear", "log"]): Scale of the x-axis.
-        """
-
-    @rpc_call
-    def set_y_scale(self, y_scale: "Literal['linear', 'log']"):
-        """
-        Set the scale of the y-axis of the plot widget.
-
-        Args:
-            y_scale(Literal["linear", "log"]): Scale of the y-axis.
-        """
-
-    @rpc_call
-    def set_x_lim(self, x_lim: "tuple"):
-        """
-        Set the limits of the x-axis of the plot widget.
-
-        Args:
-            x_lim(tuple): Limits of the x-axis.
-        """
-
-    @rpc_call
-    def set_y_lim(self, y_lim: "tuple"):
-        """
-        Set the limits of the y-axis of the plot widget.
-
-        Args:
-            y_lim(tuple): Limits of the y-axis.
-        """
-
-    @rpc_call
-    def set_vrange(self, vmin: "float", vmax: "float", name: "str" = None):
-        """
-        Set the range of the color bar.
-        If name is not specified, then set vrange for all images.
-
-        Args:
-            vmin(float): Minimum value of the color bar.
-            vmax(float): Maximum value of the color bar.
-            name(str): The name of the image. If None, apply to all images.
-        """
-
-    @rpc_call
-    def set_fft(self, enable: "bool" = False, name: "str" = None):
-        """
-        Set the FFT of the image.
-        If name is not specified, then set FFT for all images.
-
-        Args:
-            enable(bool): Whether to perform FFT on the monitor data.
-            name(str): The name of the image. If None, apply to all images.
-        """
-
-    @rpc_call
-    def set_transpose(self, enable: "bool" = False, name: "str" = None):
-        """
-        Set the transpose of the image.
-        If name is not specified, then set transpose for all images.
-
-        Args:
-            enable(bool): Whether to transpose the monitor data before displaying.
-            name(str): The name of the image. If None, apply to all images.
-        """
-
-    @rpc_call
-    def set_rotation(self, deg_90: "int" = 0, name: "str" = None):
-        """
-        Set the rotation of the image.
-        If name is not specified, then set rotation for all images.
-
-        Args:
-            deg_90(int): The rotation angle of the monitor data before displaying.
-            name(str): The name of the image. If None, apply to all images.
-        """
-
-    @rpc_call
-    def set_log(self, enable: "bool" = False, name: "str" = None):
-        """
-        Set the log of the image.
-        If name is not specified, then set log for all images.
-
-        Args:
-            enable(bool): Whether to perform log on the monitor data.
-            name(str): The name of the image. If None, apply to all images.
-        """
-
-    @rpc_call
-    def set_grid(self, x_grid: "bool", y_grid: "bool"):
-        """
-        Set the grid visibility of the plot widget.
-
-        Args:
-            x_grid(bool): Visibility of the x-axis grid.
-            y_grid(bool): Visibility of the y-axis grid.
-        """
-
-    @rpc_call
-    def enable_fps_monitor(self, enabled: "bool"):
-        """
-        Enable the FPS monitor of the plot widget.
-
-        Args:
-            enabled(bool): If True, enable the FPS monitor.
-        """
-
-    @rpc_call
-    def lock_aspect_ratio(self, lock: "bool"):
-        """
-        Lock the aspect ratio of the plot widget.
-
-        Args:
-            lock(bool): Lock the aspect ratio.
         """
 
 
@@ -3513,6 +2671,649 @@ class DeviceSignalInputBase(RPCBase):
     def remove(self):
         """
         Cleanup the BECConnector
+        """
+
+
+class Image(RPCBase):
+    @property
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @enable_toolbar.setter
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @property
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @enable_side_panel.setter
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @property
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @enable_fps_monitor.setter
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @rpc_call
+    def set(self, **kwargs):
+        """
+        Set the properties of the plot widget.
+
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+
+        Possible properties:
+        """
+
+    @property
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @title.setter
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @x_label.setter
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @y_label.setter
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @x_limits.setter
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @y_limits.setter
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @x_grid.setter
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @y_grid.setter
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @inner_axes.setter
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @outer_axes.setter
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @auto_range_x.setter
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @auto_range_y.setter
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @x_log.setter
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @y_log.setter
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @legend_label_size.setter
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @property
+    @rpc_call
+    def color_map(self) -> "str":
+        """
+        Set the color map of the image.
+        """
+
+    @color_map.setter
+    @rpc_call
+    def color_map(self) -> "str":
+        """
+        Set the color map of the image.
+        """
+
+    @property
+    @rpc_call
+    def vrange(self) -> "tuple":
+        """
+        Get the vrange of the image.
+        """
+
+    @vrange.setter
+    @rpc_call
+    def vrange(self) -> "tuple":
+        """
+        Get the vrange of the image.
+        """
+
+    @property
+    @rpc_call
+    def v_min(self) -> "float":
+        """
+        Get the minimum value of the v_range.
+        """
+
+    @v_min.setter
+    @rpc_call
+    def v_min(self) -> "float":
+        """
+        Get the minimum value of the v_range.
+        """
+
+    @property
+    @rpc_call
+    def v_max(self) -> "float":
+        """
+        Get the maximum value of the v_range.
+        """
+
+    @v_max.setter
+    @rpc_call
+    def v_max(self) -> "float":
+        """
+        Get the maximum value of the v_range.
+        """
+
+    @property
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Whether the aspect ratio is locked.
+        """
+
+    @lock_aspect_ratio.setter
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Whether the aspect ratio is locked.
+        """
+
+    @property
+    @rpc_call
+    def autorange(self) -> "bool":
+        """
+        Whether autorange is enabled.
+        """
+
+    @autorange.setter
+    @rpc_call
+    def autorange(self) -> "bool":
+        """
+        Whether autorange is enabled.
+        """
+
+    @property
+    @rpc_call
+    def autorange_mode(self) -> "str":
+        """
+        Autorange mode.
+
+        Options:
+            - "max": Use the maximum value of the image for autoranging.
+            - "mean": Use the mean value of the image for autoranging.
+        """
+
+    @autorange_mode.setter
+    @rpc_call
+    def autorange_mode(self) -> "str":
+        """
+        Autorange mode.
+
+        Options:
+            - "max": Use the maximum value of the image for autoranging.
+            - "mean": Use the mean value of the image for autoranging.
+        """
+
+    @property
+    @rpc_call
+    def monitor(self) -> "str":
+        """
+        The name of the monitor to use for the image.
+        """
+
+    @monitor.setter
+    @rpc_call
+    def monitor(self) -> "str":
+        """
+        The name of the monitor to use for the image.
+        """
+
+    @rpc_call
+    def enable_colorbar(
+        self,
+        enabled: "bool",
+        style: "Literal['full', 'simple']" = "full",
+        vrange: "tuple[int, int] | None" = None,
+    ):
+        """
+        Enable the colorbar and switch types of colorbars.
+
+        Args:
+            enabled(bool): Whether to enable the colorbar.
+            style(Literal["full", "simple"]): The type of colorbar to enable.
+            vrange(tuple): The range of values to use for the colorbar.
+        """
+
+    @property
+    @rpc_call
+    def enable_simple_colorbar(self) -> "bool":
+        """
+        Enable the simple colorbar.
+        """
+
+    @enable_simple_colorbar.setter
+    @rpc_call
+    def enable_simple_colorbar(self) -> "bool":
+        """
+        Enable the simple colorbar.
+        """
+
+    @property
+    @rpc_call
+    def enable_full_colorbar(self) -> "bool":
+        """
+        Enable the full colorbar.
+        """
+
+    @enable_full_colorbar.setter
+    @rpc_call
+    def enable_full_colorbar(self) -> "bool":
+        """
+        Enable the full colorbar.
+        """
+
+    @property
+    @rpc_call
+    def fft(self) -> "bool":
+        """
+        Whether FFT postprocessing is enabled.
+        """
+
+    @fft.setter
+    @rpc_call
+    def fft(self) -> "bool":
+        """
+        Whether FFT postprocessing is enabled.
+        """
+
+    @property
+    @rpc_call
+    def log(self) -> "bool":
+        """
+        Whether logarithmic scaling is applied.
+        """
+
+    @log.setter
+    @rpc_call
+    def log(self) -> "bool":
+        """
+        Whether logarithmic scaling is applied.
+        """
+
+    @property
+    @rpc_call
+    def rotation(self) -> "int":
+        """
+        The number of 90° rotations to apply.
+        """
+
+    @rotation.setter
+    @rpc_call
+    def rotation(self) -> "int":
+        """
+        The number of 90° rotations to apply.
+        """
+
+    @property
+    @rpc_call
+    def transpose(self) -> "bool":
+        """
+        Whether the image is transposed.
+        """
+
+    @transpose.setter
+    @rpc_call
+    def transpose(self) -> "bool":
+        """
+        Whether the image is transposed.
+        """
+
+    @rpc_call
+    def image(
+        self,
+        monitor: "str | None" = None,
+        monitor_type: "Literal['auto', '1d', '2d']" = "auto",
+        color_map: "str | None" = None,
+        color_bar: "Literal['simple', 'full'] | None" = None,
+        vrange: "tuple[int, int] | None" = None,
+    ) -> "ImageItem":
+        """
+        Set the image source and update the image.
+
+        Args:
+            monitor(str): The name of the monitor to use for the image.
+            monitor_type(str): The type of monitor to use. Options are "1d", "2d", or "auto".
+            color_map(str): The color map to use for the image.
+            color_bar(str): The type of color bar to use. Options are "simple" or "full".
+            vrange(tuple): The range of values to use for the color map.
+
+        Returns:
+            ImageItem: The image object.
+        """
+
+    @property
+    @rpc_call
+    def main_image(self) -> "ImageItem":
+        """
+        Access the main image item.
+        """
+
+
+class ImageItem(RPCBase):
+    @property
+    @rpc_call
+    def color_map(self) -> "str":
+        """
+        Get the current color map.
+        """
+
+    @color_map.setter
+    @rpc_call
+    def color_map(self) -> "str":
+        """
+        Get the current color map.
+        """
+
+    @property
+    @rpc_call
+    def v_range(self) -> "tuple[float, float]":
+        """
+        Get the color intensity range of the image.
+        """
+
+    @v_range.setter
+    @rpc_call
+    def v_range(self) -> "tuple[float, float]":
+        """
+        Get the color intensity range of the image.
+        """
+
+    @property
+    @rpc_call
+    def v_min(self) -> "float":
+        """
+        None
+        """
+
+    @v_min.setter
+    @rpc_call
+    def v_min(self) -> "float":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def v_max(self) -> "float":
+        """
+        None
+        """
+
+    @v_max.setter
+    @rpc_call
+    def v_max(self) -> "float":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def autorange(self) -> "bool":
+        """
+        None
+        """
+
+    @autorange.setter
+    @rpc_call
+    def autorange(self) -> "bool":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def autorange_mode(self) -> "Literal['max', 'mean']":
+        """
+        None
+        """
+
+    @autorange_mode.setter
+    @rpc_call
+    def autorange_mode(self) -> "Literal['max', 'mean']":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def fft(self) -> "bool":
+        """
+        Get or set whether FFT postprocessing is enabled.
+        """
+
+    @fft.setter
+    @rpc_call
+    def fft(self) -> "bool":
+        """
+        Get or set whether FFT postprocessing is enabled.
+        """
+
+    @property
+    @rpc_call
+    def log(self) -> "bool":
+        """
+        Get or set whether logarithmic scaling is applied.
+        """
+
+    @log.setter
+    @rpc_call
+    def log(self) -> "bool":
+        """
+        Get or set whether logarithmic scaling is applied.
+        """
+
+    @property
+    @rpc_call
+    def rotation(self) -> "Optional[int]":
+        """
+        Get or set the number of 90° rotations to apply.
+        """
+
+    @rotation.setter
+    @rpc_call
+    def rotation(self) -> "Optional[int]":
+        """
+        Get or set the number of 90° rotations to apply.
+        """
+
+    @property
+    @rpc_call
+    def transpose(self) -> "bool":
+        """
+        Get or set whether the image is transposed.
+        """
+
+    @transpose.setter
+    @rpc_call
+    def transpose(self) -> "bool":
+        """
+        Get or set whether the image is transposed.
         """
 
 
