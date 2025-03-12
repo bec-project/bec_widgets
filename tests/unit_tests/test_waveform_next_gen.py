@@ -10,11 +10,11 @@ from bec_widgets.widgets.plots_next_gen.plot_base import UIMode
 from bec_widgets.widgets.plots_next_gen.waveform.curve import DeviceSignal
 from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
 from tests.unit_tests.client_mocks import (
+    DummyData,
+    create_dummy_scan_item,
     dap_plugin_message,
     mocked_client,
     mocked_client_with_dap,
-    create_dummy_scan_item,
-    DummyData,
 )
 
 from .conftest import create_widget
