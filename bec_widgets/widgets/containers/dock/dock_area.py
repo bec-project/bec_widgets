@@ -28,6 +28,7 @@ from bec_widgets.widgets.editors.vscode.vscode import VSCodeEditor
 from bec_widgets.widgets.plots.motor_map.motor_map_widget import BECMotorMapWidget
 from bec_widgets.widgets.plots.multi_waveform.multi_waveform_widget import BECMultiWaveformWidget
 from bec_widgets.widgets.plots_next_gen.image.image import Image
+from bec_widgets.widgets.plots_next_gen.scatter_waveform.scatter_waveform import ScatterWaveform
 from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
 from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_bar import RingProgressBar
 from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
@@ -95,6 +96,11 @@ class BECDockArea(BECWidget, QWidget):
                     actions={
                         "waveform": MaterialIconAction(
                             icon_name=Waveform.ICON_NAME, tooltip="Add Waveform", filled=True
+                        ),
+                        "scatter_waveform": MaterialIconAction(
+                            icon_name=ScatterWaveform.ICON_NAME,
+                            tooltip="Add Scatter Waveform",
+                            filled=True,
                         ),
                         "multi_waveform": MaterialIconAction(
                             icon_name=BECMultiWaveformWidget.ICON_NAME,
@@ -175,6 +181,9 @@ class BECDockArea(BECWidget, QWidget):
         # Menu Plot
         self.toolbar.widgets["menu_plots"].widgets["waveform"].triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="Waveform")
+        )
+        self.toolbar.widgets["menu_plots"].widgets["scatter_waveform"].triggered.connect(
+            lambda: self._create_widget_from_toolbar(widget_name="ScatterWaveform")
         )
         self.toolbar.widgets["menu_plots"].widgets["multi_waveform"].triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="BECMultiWaveformWidget")

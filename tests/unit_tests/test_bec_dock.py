@@ -118,6 +118,15 @@ def test_toolbar_add_plot_waveform(bec_dock_area):
     assert bec_dock_area.panels["Waveform_0"].widgets[0].config.widget_class == "Waveform"
 
 
+def test_toolbar_add_plot_scatter_waveform(bec_dock_area):
+    bec_dock_area.toolbar.widgets["menu_plots"].widgets["scatter_waveform"].trigger()
+    assert "ScatterWaveform_0" in bec_dock_area.panels
+    assert (
+        bec_dock_area.panels["ScatterWaveform_0"].widgets[0].config.widget_class
+        == "ScatterWaveform"
+    )
+
+
 def test_toolbar_add_plot_image(bec_dock_area):
     bec_dock_area.toolbar.widgets["menu_plots"].widgets["image"].trigger()
     assert "Image_0" in bec_dock_area.panels
@@ -130,6 +139,15 @@ def test_toolbar_add_plot_motor_map(bec_dock_area):
     assert (
         bec_dock_area.panels["BECMotorMapWidget_0"].widgets[0].config.widget_class
         == "BECMotorMapWidget"
+    )
+
+
+def test_toolbar_add_multi_waveform(bec_dock_area):
+    bec_dock_area.toolbar.widgets["menu_plots"].widgets["multi_waveform"].trigger()
+    assert "BECMultiWaveformWidget_0" in bec_dock_area.panels
+    assert (
+        bec_dock_area.panels["BECMultiWaveformWidget_0"].widgets[0].config.widget_class
+        == "BECMultiWaveformWidget"
     )
 
 

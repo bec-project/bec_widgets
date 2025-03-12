@@ -22,6 +22,7 @@ from bec_widgets.widgets.containers.layout_manager.layout_manager import LayoutM
 from bec_widgets.widgets.editors.jupyter_console.jupyter_console import BECJupyterConsole
 from bec_widgets.widgets.plots_next_gen.image.image import Image
 from bec_widgets.widgets.plots_next_gen.plot_base import PlotBase
+from bec_widgets.widgets.plots_next_gen.scatter_waveform.scatter_waveform import ScatterWaveform
 from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
 
 
@@ -67,6 +68,8 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "pb": self.pb,
                     "pi": self.pi,
                     "wf": self.wf,
+                    "scatter": self.scatter,
+                    "scatter_mi": self.scatter,
                 }
             )
 
@@ -133,6 +136,15 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         sixth_tab_layout.addWidget(self.im)
         tab_widget.addTab(sixth_tab, "Image Next Gen")
         tab_widget.setCurrentIndex(5)
+
+        seventh_tab = QWidget()
+        seventh_tab_layout = QVBoxLayout(seventh_tab)
+        self.scatter = ScatterWaveform()
+        self.scatter_mi = self.scatter.main_curve
+        self.scatter.plot("samx", "samy", "bpm4i")
+        seventh_tab_layout.addWidget(self.scatter)
+        tab_widget.addTab(seventh_tab, "Scatter Waveform")
+        tab_widget.setCurrentIndex(6)
 
         # add stuff to the new Waveform widget
         self._init_waveform()

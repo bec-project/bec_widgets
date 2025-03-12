@@ -40,6 +40,7 @@ class Widgets(str, enum.Enum):
     ResumeButton = "ResumeButton"
     RingProgressBar = "RingProgressBar"
     ScanControl = "ScanControl"
+    ScatterWaveform = "ScatterWaveform"
     SignalComboBox = "SignalComboBox"
     SignalLineEdit = "SignalLineEdit"
     StopButton = "StopButton"
@@ -3775,6 +3776,349 @@ class ScanMetadata(RPCBase):
     def remove(self):
         """
         Cleanup the BECConnector
+        """
+
+
+class ScatterCurve(RPCBase):
+    @property
+    @rpc_call
+    def color_map(self) -> "str":
+        """
+        The color map of the scatter curve.
+        """
+
+
+class ScatterWaveform(RPCBase):
+    @property
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @enable_toolbar.setter
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @property
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @enable_side_panel.setter
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @property
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @enable_fps_monitor.setter
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @rpc_call
+    def set(self, **kwargs):
+        """
+        Set the properties of the plot widget.
+
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+
+        Possible properties:
+        """
+
+    @property
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @title.setter
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @x_label.setter
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @y_label.setter
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @x_limits.setter
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @y_limits.setter
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @x_grid.setter
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @y_grid.setter
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @inner_axes.setter
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @outer_axes.setter
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Lock aspect ratio of the plot widget.
+        """
+
+    @lock_aspect_ratio.setter
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Lock aspect ratio of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @auto_range_x.setter
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @auto_range_y.setter
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @x_log.setter
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @y_log.setter
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @legend_label_size.setter
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @property
+    @rpc_call
+    def main_curve(self) -> "ScatterCurve":
+        """
+        The main scatter curve item.
+        """
+
+    @property
+    @rpc_call
+    def color_map(self) -> "str":
+        """
+        The color map of the scatter waveform.
+        """
+
+    @color_map.setter
+    @rpc_call
+    def color_map(self) -> "str":
+        """
+        The color map of the scatter waveform.
+        """
+
+    @rpc_call
+    def plot(
+        self,
+        x_name: "str",
+        y_name: "str",
+        z_name: "str",
+        x_entry: "None | str" = None,
+        y_entry: "None | str" = None,
+        z_entry: "None | str" = None,
+        color_map: "str | None" = "magma",
+        label: "str | None" = None,
+        validate_bec: "bool" = True,
+    ) -> "ScatterCurve":
+        """
+        Plot the data from the device signals.
+
+        Args:
+            x_name (str): The name of the x device signal.
+            y_name (str): The name of the y device signal.
+            z_name (str): The name of the z device signal.
+            x_entry (None | str): The x entry of the device signal.
+            y_entry (None | str): The y entry of the device signal.
+            z_entry (None | str): The z entry of the device signal.
+            color_map (str | None): The color map of the scatter waveform.
+            label (str | None): The label of the curve.
+            validate_bec (bool): Whether to validate the device signals with current BEC instance.
+
+        Returns:
+            ScatterCurve: The scatter curve object.
+        """
+
+    @rpc_call
+    def update_with_scan_history(self, scan_index: "int" = None, scan_id: "str" = None):
+        """
+        Update the scan curves with the data from the scan storage.
+        Provide only one of scan_id or scan_index.
+
+        Args:
+            scan_id(str, optional): ScanID of the scan to be updated. Defaults to None.
+            scan_index(int, optional): Index of the scan to be updated. Defaults to None.
+        """
+
+    @rpc_call
+    def clear_all(self):
+        """
+        Clear all the curves from the plot.
         """
 
 

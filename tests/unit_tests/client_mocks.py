@@ -219,6 +219,7 @@ def create_dummy_scan_item():
     """
     dummy_live_data = {
         "samx": {"samx": DummyData(val=[10, 20, 30], timestamps=[100, 200, 300])},
+        "samy": {"samy": DummyData(val=[5, 10, 15], timestamps=[100, 200, 300])},
         "bpm4i": {"bpm4i": DummyData(val=[5, 6, 7], timestamps=[101, 201, 301])},
         "async_device": {"async_device": DummyData(val=[1, 2, 3], timestamps=[11, 21, 31])},
     }
