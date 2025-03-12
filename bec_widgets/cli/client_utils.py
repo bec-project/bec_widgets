@@ -21,7 +21,7 @@ from rich.table import Table
 
 import bec_widgets.cli.client as client
 from bec_widgets.cli.auto_updates import AutoUpdates
-from bec_widgets.cli.rpc.rpc_base import RPCBase
+from bec_widgets.cli.rpc.rpc_base import RPCBase, RPCReference
 
 if TYPE_CHECKING:
     from bec_lib import messages
@@ -447,13 +447,15 @@ class BECGuiClient(RPCBase):
                     "new_dock_area", name, geometry
                 )  # pylint: disable=protected-access
                 self._ipython_registry[widget._gui_id] = widget
-                return widget
+                obj = RPCReference(registry=self._ipython_registry, gui_id=widget._gui_id)
+                return obj
         rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
         widget = rpc_client._run_rpc(
             "new_dock_area", name, geometry
         )  # pylint: disable=protected-access
         self._ipython_registry[widget._gui_id] = widget
-        return widget
+        obj = RPCReference(registry=self._ipython_registry, gui_id=widget._gui_id)
+        return obj
 
     def delete(self, name: str) -> None:
         """Delete a dock area.
@@ -478,6 +480,7 @@ class BECGuiClient(RPCBase):
         self._exposed_dock_areas.clear()
 
     def _add_dock_areas_from_registry(self):
+        existing_gui_ids = []
         for dock_area_info in self._registry_state.values():
             name = dock_area_info["name"]
             gui_id = dock_area_info["gui_id"]
@@ -490,6 +493,7 @@ class BECGuiClient(RPCBase):
             else:
                 # update namespace
                 dock_area = obj
+            existing_gui_ids.append(gui_id)
 
             self._top_level[name] = dock_area
             self._exposed_dock_areas.append(name)
@@ -497,29 +501,58 @@ class BECGuiClient(RPCBase):
 
             dock_info = dock_area_info["config"].get("docks", None)
             if dock_info:
-                self._add_docks_from_registry(dock_info, dock_area)
+                self._add_docks_from_registry(dock_info, dock_area, gui_ids=existing_gui_ids)
 
-    def _add_docks_from_registry(self, dock_info: dict[str, dict], dock_area: BECDockArea):
+        remove_ids = []
+        for widget_id in self._ipython_registry:
+            if widget_id not in existing_gui_ids:
+                remove_ids.append(widget_id)
+        for widget_id in remove_ids:
+            self._ipython_registry.pop(widget_id)
+
+    def _add_docks_from_registry(
+        self, dock_info: dict[str, dict], dock_area: BECDockArea, gui_ids: list[str]
+    ):
         for dock_name, info in dock_info.items():
+            # add the gui_id to the list of existing gui_ids
+            gui_ids.append(info["gui_id"])
+
+            # create new rpc object
             dock = client.BECDock(gui_id=info["gui_id"], name=dock_name, parent=dock_area)
-            setattr(dock_area, dock_name, dock)
+
+            # add reference to the registry
+            self._ipython_registry[info["gui_id"]] = dock
+
+            # create weak reference for the namespace
+            obj = RPCReference(registry=self._ipython_registry, gui_id=info["gui_id"])
+
+            # add the dock to the dock area
+            setattr(dock_area, dock_name, obj)
+
             widget_info = info["widgets"]
             if widget_info:
                 self._add_widgets_from_registry(
-                    widget_info=widget_info, dock_area=dock_area, dock=dock
+                    widget_info=widget_info, dock_area=dock_area, dock=dock, gui_ids=gui_ids
                 )
 
     def _add_widgets_from_registry(
-        self, widget_info: dict[str, dict], dock_area: client.BECDockArea, dock: client.BECDock
+        self,
+        widget_info: dict[str, dict],
+        dock_area: client.BECDockArea,
+        dock: client.BECDock,
+        gui_ids: list[str],
     ):
         for widget_name, info in widget_info.items():
             # FIXME use widget_handler instead
             # widget_class = widget_handler.widget_classes[info["widget_class"]]
+            gui_ids.append(info["gui_id"])
             widget_class = getattr(client, info["widget_class"])
             widget = widget_class(gui_id=info["gui_id"], name=widget_name, parent=dock)
-            obj = getattr(dock_area, "elements")
-            setattr(obj, widget_name, widget)
-            setattr(dock, widget_name, widget)
+            self._ipython_registry[info["gui_id"]] = widget
+            dock_area_elements = getattr(dock_area, "elements")
+            obj = RPCReference(registry=self._ipython_registry, gui_id=info["gui_id"])
+            setattr(dock_area_elements, widget_name, obj)
+            setattr(dock, widget_name, obj)
 
     def _update_dynamic_namespace(self):
         """Update the dynamic name space"""

@@ -60,6 +60,50 @@ class RPCResponseTimeoutError(Exception):
         )
 
 
+class DeletedWidgetError(Exception): ...
+
+
+def check_for_deleted_widget(func):
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if self._gui_id not in self._registry:
+            raise DeletedWidgetError(f"Widget with gui_id {self._gui_id} has been deleted")
+        return func(self, *args, **kwargs)
+
+    return wrapper
+
+
+class RPCReference:
+    def __init__(self, registry: dict, gui_id: str) -> None:
+        self._registry = registry
+        self._gui_id = gui_id
+
+    @check_for_deleted_widget
+    def __getattr__(self, name):
+        if name in ["_registry", "_gui_id"]:
+            return super().__getattribute__(name)
+        return self._registry[self._gui_id].__getattribute__(name)
+
+    @check_for_deleted_widget
+    def __getitem__(self, key):
+        return self._registry[self._gui_id].__getitem__(key)
+
+    def __repr__(self):
+        if self._gui_id not in self._registry:
+            return f"<Deleted widget with gui_id {self._gui_id}>"
+        return self._registry[self._gui_id].__repr__()
+
+    def __str__(self):
+        if self._gui_id not in self._registry:
+            return f"<Deleted widget with gui_id {self._gui_id}>"
+        return self._registry[self._gui_id].__str__()
+
+    def __dir__(self):
+        if self._gui_id not in self._registry:
+            return []
+        return self._registry[self._gui_id].__dir__()
+
+
 class RPCBase:
     def __init__(
         self,
@@ -183,7 +227,10 @@ class RPCBase:
             cls = getattr(client, cls)
             # print(msg_result)
             ret = cls(parent=self, **msg_result)
-            return ret
+            self._root._ipython_registry[self._gui_id] = ret
+            obj = RPCReference(self._root._ipython_registry, self._gui_id)
+            return obj
+            # return ret
         return msg_result
 
     def _gui_is_alive(self):
