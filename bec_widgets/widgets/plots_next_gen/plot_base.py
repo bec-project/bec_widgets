@@ -112,6 +112,8 @@ class PlotBase(BECWidget, QWidget):
         self.fps_label = QLabel(alignment=Qt.AlignmentFlag.AlignRight)
         self._user_x_label = ""
         self._x_label_suffix = ""
+        self._user_y_label = ""
+        self._y_label_suffix = ""
 
         self._init_ui()
 
@@ -476,7 +478,7 @@ class PlotBase(BECWidget, QWidget):
         """
         The set label for the y-axis.
         """
-        return self.plot_item.getAxis("left").labelText
+        return self._user_y_label
 
     @y_label.setter
     def y_label(self, value: str):
@@ -485,8 +487,38 @@ class PlotBase(BECWidget, QWidget):
         Args:
             value(str): The label to set.
         """
-        self.plot_item.setLabel("left", text=value)
+        self._user_y_label = value
+        self._apply_y_label()
         self.property_changed.emit("y_label", value)
+
+    @property
+    def y_label_suffix(self) -> str:
+        """
+        A read-only suffix automatically appended to the y label.
+        """
+        return self._y_label_suffix
+
+    def set_y_label_suffix(self, suffix: str):
+        """
+        Public method to update the y label suffix.
+        """
+        self._y_label_suffix = suffix
+        self._apply_y_label()
+
+    @property
+    def y_label_combined(self) -> str:
+        """
+        The final y label shown on the axis = user portion + suffix.
+        """
+        return self._user_y_label + self._y_label_suffix
+
+    def _apply_y_label(self):
+        """
+        Actually updates the pyqtgraph y axis label text to
+        the combined y label. Called whenever y label or suffix changes.
+        """
+        final_label = self.y_label_combined
+        self.plot_item.setLabel("left", text=final_label)
 
     def _tuple_to_qpointf(self, tuple: tuple | list):
         """
