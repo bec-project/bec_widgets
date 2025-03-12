@@ -516,19 +516,18 @@ class BECGuiClient(RPCBase):
         for dock_name, info in dock_info.items():
             # add the gui_id to the list of existing gui_ids
             gui_ids.append(info["gui_id"])
-
-            # create new rpc object
-            dock = client.BECDock(gui_id=info["gui_id"], name=dock_name, parent=dock_area)
-
-            # add reference to the registry
-            self._ipython_registry[info["gui_id"]] = dock
-
+            obj = self._ipython_registry.get(info["gui_id"])
+            if obj is None:
+                # create new rpc object
+                dock = client.BECDock(gui_id=info["gui_id"], name=dock_name, parent=dock_area)
+                # add reference to the registry
+                self._ipython_registry[info["gui_id"]] = dock
+            else:
+                dock = obj
             # create weak reference for the namespace
             obj = RPCReference(registry=self._ipython_registry, gui_id=info["gui_id"])
-
             # add the dock to the dock area
             setattr(dock_area, dock_name, obj)
-
             widget_info = info["widgets"]
             if widget_info:
                 self._add_widgets_from_registry(
@@ -543,12 +542,14 @@ class BECGuiClient(RPCBase):
         gui_ids: list[str],
     ):
         for widget_name, info in widget_info.items():
-            # FIXME use widget_handler instead
-            # widget_class = widget_handler.widget_classes[info["widget_class"]]
             gui_ids.append(info["gui_id"])
-            widget_class = getattr(client, info["widget_class"])
-            widget = widget_class(gui_id=info["gui_id"], name=widget_name, parent=dock)
-            self._ipython_registry[info["gui_id"]] = widget
+            obj = self._ipython_registry.get(info["gui_id"])
+            if obj is None:
+                widget_class = getattr(client, info["widget_class"])
+                widget = widget_class(gui_id=info["gui_id"], name=widget_name, parent=dock)
+                self._ipython_registry[info["gui_id"]] = widget
+            else:
+                widget = obj
             dock_area_elements = getattr(dock_area, "elements")
             obj = RPCReference(registry=self._ipython_registry, gui_id=info["gui_id"])
             setattr(dock_area_elements, widget_name, obj)
