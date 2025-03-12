@@ -227,8 +227,8 @@ class RPCBase:
             cls = getattr(client, cls)
             # print(msg_result)
             ret = cls(parent=self, **msg_result)
-            self._root._ipython_registry[self._gui_id] = ret
-            obj = RPCReference(self._root._ipython_registry, self._gui_id)
+            self._root._ipython_registry[ret._gui_id] = ret
+            obj = RPCReference(self._root._ipython_registry, ret._gui_id)
             return obj
             # return ret
         return msg_result

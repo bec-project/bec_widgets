@@ -446,16 +446,12 @@ class BECGuiClient(RPCBase):
                 widget = rpc_client._run_rpc(
                     "new_dock_area", name, geometry
                 )  # pylint: disable=protected-access
-                self._ipython_registry[widget._gui_id] = widget
-                obj = RPCReference(registry=self._ipython_registry, gui_id=widget._gui_id)
-                return obj
+                return widget
         rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
         widget = rpc_client._run_rpc(
             "new_dock_area", name, geometry
         )  # pylint: disable=protected-access
-        self._ipython_registry[widget._gui_id] = widget
-        obj = RPCReference(registry=self._ipython_registry, gui_id=widget._gui_id)
-        return obj
+        return widget
 
     def delete(self, name: str) -> None:
         """Delete a dock area.
@@ -495,9 +491,10 @@ class BECGuiClient(RPCBase):
                 dock_area = obj
             existing_gui_ids.append(gui_id)
 
-            self._top_level[name] = dock_area
+            obj = RPCReference(registry=self._ipython_registry, gui_id=gui_id)
+            self._top_level[name] = obj
             self._exposed_dock_areas.append(name)
-            setattr(self, name, dock_area)
+            setattr(self, name, obj)
 
             dock_info = dock_area_info["config"].get("docks", None)
             if dock_info:
