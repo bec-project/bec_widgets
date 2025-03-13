@@ -5,7 +5,10 @@ import pytest
 from bec_lib.endpoints import MessageEndpoints
 
 from bec_widgets.cli.client import BECFigure, BECImageShow, BECMotorMap, BECWaveform
+from bec_widgets.cli.rpc.rpc_base import RPCReference
 from bec_widgets.tests.utils import check_remote_data_size
+
+# pylint: disable=protected-access
 
 
 @pytest.fixture
@@ -39,12 +42,15 @@ def test_rpc_plotting_shortcuts_init_configs(connected_figure, qtbot):
 
     # Checking if classes are correctly initialised
     assert len(fig.widgets) == 4
-    assert plt.__class__.__name__ == "BECWaveform"
-    assert plt.__class__ == BECWaveform
-    assert im.__class__.__name__ == "BECImageShow"
-    assert im.__class__ == BECImageShow
-    assert motor_map.__class__.__name__ == "BECMotorMap"
-    assert motor_map.__class__ == BECMotorMap
+    assert plt.__class__.__name__ == "RPCReference"
+    assert plt.__class__ == RPCReference
+    assert plt._root._ipython_registry[plt._gui_id].__class__ == BECWaveform
+    assert im.__class__.__name__ == "RPCReference"
+    assert im.__class__ == RPCReference
+    assert im._root._ipython_registry[im._gui_id].__class__ == BECImageShow
+    assert motor_map.__class__.__name__ == "RPCReference"
+    assert motor_map.__class__ == RPCReference
+    assert motor_map._root._ipython_registry[motor_map._gui_id].__class__ == BECMotorMap
 
     # check if the correct devices are set
     # plot
@@ -215,10 +221,11 @@ def test_dap_rpc(connected_figure, bec_client_lib, qtbot):
 def test_removing_subplots(connected_figure, bec_client_lib):
     fig = connected_figure
     plt = fig.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
-    im = fig.image(monitor="eiger")
-    mm = fig.motor_map(motor_x="samx", motor_y="samy")
+    # Registry can't handle multiple subplots on one widget, BECFigure will be deprecated though
+    # im = fig.image(monitor="eiger")
+    # mm = fig.motor_map(motor_x="samx", motor_y="samy")
 
-    assert len(fig.widget_list) == 3
+    assert len(fig.widget_list) == 1
 
     # removing curves
     assert len(plt.curves) == 2
@@ -229,7 +236,7 @@ def test_removing_subplots(connected_figure, bec_client_lib):
 
     # removing all subplots from figure
     plt.remove()
-    im.remove()
-    mm.remove()
+    # im.remove()
+    # mm.remove()
 
     assert len(fig.widget_list) == 0

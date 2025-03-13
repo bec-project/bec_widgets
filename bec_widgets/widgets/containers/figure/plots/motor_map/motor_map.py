@@ -76,6 +76,7 @@ class BECMotorMap(BECPlotBase):
         config: Optional[MotorMapConfig] = None,
         client=None,
         gui_id: Optional[str] = None,
+        **kwargs,
     ):
         if config is None:
             config = MotorMapConfig(widget_class=self.__class__.__name__)

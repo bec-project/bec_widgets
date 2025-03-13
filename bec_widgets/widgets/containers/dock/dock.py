@@ -131,6 +131,7 @@ class BECDock(BECWidget, Dock):
         self,
         parent: QWidget | None = None,
         parent_dock_area: BECDockArea | None = None,
+        parent_id: str | None = None,
         config: DockConfig | None = None,
         name: str | None = None,
         client=None,
@@ -149,7 +150,7 @@ class BECDock(BECWidget, Dock):
                 config = DockConfig(**config)
             self.config = config
         super().__init__(
-            client=client, config=config, gui_id=gui_id, name=name
+            client=client, config=config, gui_id=gui_id, name=name, parent_id=parent_id
         )  # Name was checked and created in BEC Widget
         label = CustomDockLabel(text=name, closable=closable)
         Dock.__init__(self, name=name, label=label, parent=self, **kwargs)
@@ -324,17 +325,23 @@ class BECDock(BECWidget, Dock):
         if isinstance(widget, str):
             widget = cast(
                 BECWidget,
-                widget_handler.create_widget(widget_type=widget, name=name, parent_dock=self),
+                widget_handler.create_widget(
+                    widget_type=widget, name=name, parent_dock=self, parent_id=self.gui_id
+                ),
             )
         else:
             widget._name = name  # pylint: disable=protected-access
 
         self.addWidget(widget, row=row, col=col, rowspan=rowspan, colspan=colspan)
-
         if hasattr(widget, "config"):
-            self.config.widgets[widget.gui_id] = widget.config
-
+            widget.config.gui_id = widget.gui_id
+            self.config.widgets[widget._name] = widget.config  # pylint: disable=protected-access
+        self._broadcast_update()
         return widget
+
+    def _broadcast_update(self):
+        rpc_register = RPCRegister()
+        rpc_register.broadcast()
 
     def move_widget(self, widget: QWidget, new_row: int, new_col: int):
         """

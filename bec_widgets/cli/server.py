@@ -69,6 +69,7 @@ class BECWidgetsCLIServer:
         self.gui_id = gui_id
         # register broadcast callback
         self.rpc_register = RPCRegister()
+        self.rpc_register.add_callback(self.broadcast_registry_update)
         self.gui = gui_class(parent=None, name=gui_class_id, gui_id=gui_class_id)
         # self.rpc_register.add_rpc(self.gui)
 
@@ -139,13 +140,15 @@ class BECWidgetsCLIServer:
 
     def serialize_object(self, obj):
         if isinstance(obj, BECConnector):
+            config = {}  # obj.config.model_dump()
+            config["parent_id"] = obj.parent_id
             return {
                 "gui_id": obj.gui_id,
                 "name": (
                     obj._name if hasattr(obj, "_name") else obj.__class__.__name__
                 ),  # pylint: disable=protected-access
                 "widget_class": obj.__class__.__name__,
-                "config": obj.config.model_dump(),
+                "config": config,
                 "__rpc__": True,
             }
         return obj
@@ -160,6 +163,22 @@ class BECWidgetsCLIServer:
             )
         except RedisError as exc:
             logger.error(f"Error while emitting heartbeat: {exc}")
+
+    def broadcast_registry_update(self, connections: dict):
+        """
+        Broadcast the updated registry to all clients.
+        """
+
+        # We only need to broadcast the dock areas
+        data = {key: self.serialize_object(val) for key, val in connections.items()}
+        # logger.info(f"All registered connections: {list(connections.keys())}")
+        for k, v in data.items():
+            logger.info(f"key: {k}, value: {v}")
+        self.client.connector.xadd(
+            MessageEndpoints.gui_registry_state(self.gui_id),
+            msg_dict={"data": messages.GUIRegistryStateMessage(state=data)},
+            max_size=1,  # only single message in stream
+        )
 
     def shutdown(self):  # TODO not sure if needed when cleanup is done at level of BECConnector
         logger.info(f"Shutting down server with gui_id: {self.gui_id}")

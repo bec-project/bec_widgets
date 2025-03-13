@@ -82,6 +82,7 @@ class BECConnector:
         config: ConnectionConfig | None = None,
         gui_id: str | None = None,
         name: str | None = None,
+        parent_id: str | None = None,
     ):
         # BEC related connections
         self.bec_dispatcher = BECDispatcher(client=client)
@@ -110,14 +111,12 @@ class BECConnector:
             )
             self.config = ConnectionConfig(widget_class=self.__class__.__name__)
 
-        # I feel that we should not allow BECConnector to be created with a custom gui_id
-        # because this would break with the logic in the RPCRegister of retrieving widgets by type
-        # iterating over all widgets and checkinf if the register widget starts with the string that is passsed.
-        # If the gui_id is randomly generated, this would break since that widget would have a
-        # gui_id that is generated in a different way.
+        self.parent_id = parent_id
+        # If the gui_id is passed, it should be respected. However, this should be revisted since
+        # the gui_id has to be unique, and may no longer be.
         if gui_id:
             self.config.gui_id = gui_id
-            self.gui_id: str = gui_id
+            self.gui_id: str = gui_id  # Keep namespace in sync
         else:
             self.gui_id: str = self.config.gui_id  # type: ignore
         if name is None:
@@ -319,6 +318,7 @@ class BECConnector:
                 self.deleteLater()
         else:
             self.rpc_register.remove_rpc(self)
+            self.rpc_register.broadcast()
 
     def get_config(self, dict_output: bool = True) -> dict | BaseModel:
         """
