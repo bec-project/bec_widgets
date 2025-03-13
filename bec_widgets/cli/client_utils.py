@@ -345,8 +345,9 @@ class BECGuiClient(RPCBase):
         rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
         return rpc_client._run_rpc("_dump")
 
-    def start(self):
-        return self._start_server()
+    def start(self, wait: bool = True) -> None:
+        """Start the server and show the GUI window."""
+        return self._start_server(wait=wait)
 
     def _do_show_all(self):
         rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)

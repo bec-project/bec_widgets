@@ -11,7 +11,7 @@ from bec_widgets.tests.utils import check_remote_data_size
 @pytest.fixture
 def connected_figure(connected_client_gui_obj):
     gui = connected_client_gui_obj
-    dock = gui.bec.new("dock")
+    dock = gui.window_list[0].new("dock")
     fig = dock.new(name="fig", widget="BECFigure")
     return fig
 
