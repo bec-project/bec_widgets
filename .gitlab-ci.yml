@@ -233,6 +233,7 @@ end-2-end-conda:
     - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "production"'
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^pre_release.*$/'
 
 semver:
   stage: Deploy
