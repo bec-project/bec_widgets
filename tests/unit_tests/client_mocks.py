@@ -200,3 +200,40 @@ def mocked_client_with_dap(mocked_client, dap_plugin_message):
     client.dap._available_dap_plugins = patched_models
 
     yield client
+
+
+class DummyData:
+    def __init__(self, val, timestamps):
+        self.val = val
+        self.timestamps = timestamps
+
+    def get(self, key, default=None):
+        if key == "val":
+            return self.val
+        return default
+
+
+def create_dummy_scan_item():
+    """
+    Helper to create a dummy scan item with both live_data and metadata/status_message info.
+    """
+    dummy_live_data = {
+        "samx": {"samx": DummyData(val=[10, 20, 30], timestamps=[100, 200, 300])},
+        "bpm4i": {"bpm4i": DummyData(val=[5, 6, 7], timestamps=[101, 201, 301])},
+        "async_device": {"async_device": DummyData(val=[1, 2, 3], timestamps=[11, 21, 31])},
+    }
+    dummy_scan = MagicMock()
+    dummy_scan.live_data = dummy_live_data
+    dummy_scan.metadata = {
+        "bec": {
+            "scan_id": "dummy",
+            "scan_report_devices": ["samx"],
+            "readout_priority": {"monitored": ["bpm4i"], "async": ["async_device"]},
+        }
+    }
+    dummy_scan.status_message = MagicMock()
+    dummy_scan.status_message.info = {
+        "readout_priority": {"monitored": ["bpm4i"], "async": ["async_device"]},
+        "scan_report_devices": ["samx"],
+    }
+    return dummy_scan
