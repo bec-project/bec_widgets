@@ -9,7 +9,13 @@ from pyqtgraph.graphicsItems.DateAxisItem import DateAxisItem
 from bec_widgets.widgets.plots_next_gen.plot_base import UIMode
 from bec_widgets.widgets.plots_next_gen.waveform.curve import DeviceSignal
 from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
-from tests.unit_tests.client_mocks import dap_plugin_message, mocked_client, mocked_client_with_dap
+from tests.unit_tests.client_mocks import (
+    dap_plugin_message,
+    mocked_client,
+    mocked_client_with_dap,
+    create_dummy_scan_item,
+    DummyData,
+)
 
 from .conftest import create_widget
 
@@ -314,43 +320,6 @@ def test_curve_json_setter_ignores_custom(qtbot, mocked_client):
 ##################################################
 # Waveform widget scan logic tests
 ##################################################
-
-
-class DummyData:
-    def __init__(self, val, timestamps):
-        self.val = val
-        self.timestamps = timestamps
-
-    def get(self, key, default=None):
-        if key == "val":
-            return self.val
-        return default
-
-
-def create_dummy_scan_item():
-    """
-    Helper to create a dummy scan item with both live_data and metadata/status_message info.
-    """
-    dummy_live_data = {
-        "samx": {"samx": DummyData(val=[10, 20, 30], timestamps=[100, 200, 300])},
-        "bpm4i": {"bpm4i": DummyData(val=[5, 6, 7], timestamps=[101, 201, 301])},
-        "async_device": {"async_device": DummyData(val=[1, 2, 3], timestamps=[11, 21, 31])},
-    }
-    dummy_scan = MagicMock()
-    dummy_scan.live_data = dummy_live_data
-    dummy_scan.metadata = {
-        "bec": {
-            "scan_id": "dummy",
-            "scan_report_devices": ["samx"],
-            "readout_priority": {"monitored": ["bpm4i"], "async": ["async_device"]},
-        }
-    }
-    dummy_scan.status_message = MagicMock()
-    dummy_scan.status_message.info = {
-        "readout_priority": {"monitored": ["bpm4i"], "async": ["async_device"]},
-        "scan_report_devices": ["samx"],
-    }
-    return dummy_scan
 
 
 def test_update_sync_curves(monkeypatch, qtbot, mocked_client):
