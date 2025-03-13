@@ -21,7 +21,7 @@ from rich.table import Table
 
 import bec_widgets.cli.client as client
 from bec_widgets.cli.auto_updates import AutoUpdates
-from bec_widgets.cli.rpc.rpc_base import RPCBase, RPCReference
+from bec_widgets.cli.rpc.rpc_base import RPCBase
 
 if TYPE_CHECKING:
     from bec_lib import messages
@@ -428,6 +428,7 @@ class BECGuiClient(RPCBase):
         """Delete all dock areas."""
         for widget_name in self.windows.keys():
             self.delete(widget_name)
+
     def close(self):
         """Deprecated. Use kill_server() instead."""
         # FIXME, deprecated in favor of kill, will be removed in the future
