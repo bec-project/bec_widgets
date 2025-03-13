@@ -1,10 +1,20 @@
 from __future__ import annotations
 
+from functools import wraps
 from threading import Lock
+from typing import TYPE_CHECKING, Callable
 from weakref import WeakValueDictionary
 
+from bec_lib.logger import bec_logger
 from qtpy.QtCore import QObject
 
+if TYPE_CHECKING:
+    from bec_widgets.utils.bec_connector import BECConnector
+    from bec_widgets.utils.bec_widget import BECWidget
+    from bec_widgets.widgets.containers.dock.dock import BECDock
+    from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
+
+logger = bec_logger.logger
 
 class RPCRegister:
     """
@@ -49,7 +59,7 @@ class RPCRegister:
             raise ValueError(f"RPC object {rpc} must have a 'gui_id' attribute.")
         self._rpc_register.pop(rpc.gui_id, None)
 
-    def get_rpc_by_id(self, gui_id: str) -> QObject:
+    def get_rpc_by_id(self, gui_id: str) -> QObject | None:
         """
         Get an RPC object by its ID.
 
@@ -57,9 +67,23 @@ class RPCRegister:
             gui_id(str): The ID of the RPC object to be retrieved.
 
         Returns:
-            QObject: The RPC object with the given ID.
+            QObject | None: The RPC object with the given ID or None
         """
         rpc_object = self._rpc_register.get(gui_id, None)
+        return rpc_object
+
+    def get_rpc_by_name(self, name: str) -> QObject | None:
+        """
+        Get an RPC object by its name.
+
+        Args:
+            name(str): The name of the RPC object to be retrieved.
+
+        Returns:
+            QObject | None: The RPC object with the given name.
+        """
+        rpc_object = [rpc for rpc in self._rpc_register if rpc._name == name]
+        rpc_object = rpc_object[0] if len(rpc_object) > 0 else None
         return rpc_object
 
     def list_all_connections(self) -> dict:
@@ -73,6 +97,18 @@ class RPCRegister:
             connections = dict(self._rpc_register)
         return connections
 
+    def get_names_of_rpc_by_class_type(
+        self, cls: BECWidget | BECConnector | BECDock | BECDockArea
+    ) -> list[str]:
+        """Get all the names of the widgets.
+
+        Args:
+            cls(BECWidget | BECConnector): The class of the RPC object to be retrieved.
+        """
+        # This retrieves any rpc objects that are subclass of BECWidget,
+        # i.e. curve and image items are excluded
+        widgets = [rpc for rpc in self._rpc_register.values() if isinstance(rpc, cls)]
+        return [widget._name for widget in widgets]
     @classmethod
     def reset_singleton(cls):
         """
