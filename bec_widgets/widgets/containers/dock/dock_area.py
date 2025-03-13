@@ -357,7 +357,7 @@ class BECDockArea(BECWidget, QWidget):
         else:  # Name is not provided
             name = WidgetContainerUtils.generate_unique_name(name="dock", list_of_names=dock_names)
 
-        dock = BECDock(name=name, parent_dock_area=self, closable=closable)
+        dock = BECDock(name=name, parent_dock_area=self, parent_id=self.gui_id, closable=closable)
         dock.config.position = position
         self.config.docks[dock.name()] = dock.config
         # The dock.name is equal to the name passed to BECDock
@@ -381,7 +381,13 @@ class BECDockArea(BECWidget, QWidget):
             self.update()
         if floating:
             dock.detach()
+        # Run broadcast update
+        self._broadcast_update()
         return dock
+
+    def _broadcast_update(self):
+        rpc_register = RPCRegister()
+        rpc_register.broadcast()
 
     def detach_dock(self, dock_name: str) -> BECDock:
         """

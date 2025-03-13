@@ -34,6 +34,7 @@ class BECWidget(BECConnector):
         theme_update: bool = False,
         name: str | None = None,
         parent_dock: BECDock | None = None,
+        parent_id: str | None = None,
         **kwargs,
     ):
         """
@@ -56,7 +57,9 @@ class BECWidget(BECConnector):
         if not isinstance(self, QWidget):
             raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")
 
-        super().__init__(client=client, config=config, gui_id=gui_id, name=name)
+        super().__init__(
+            client=client, config=config, gui_id=gui_id, name=name, parent_id=parent_id
+        )
         self._parent_dock = parent_dock
         app = QApplication.instance()
         if not hasattr(app, "theme"):

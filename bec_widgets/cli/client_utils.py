@@ -9,17 +9,20 @@ import os
 import select
 import subprocess
 import threading
+import time
 from contextlib import contextmanager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
+from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import, lazy_import_from
 from rich.console import Console
 from rich.table import Table
 
 import bec_widgets.cli.client as client
-from bec_widgets.cli.auto_updates import AutoUpdates
-from bec_widgets.cli.rpc.rpc_base import RPCBase
+
+# from bec_widgets.cli.auto_updates import AutoUpdates
+from bec_widgets.cli.rpc.rpc_base import RPCBase, RPCReference
 
 if TYPE_CHECKING:
     from bec_lib import messages
@@ -166,7 +169,7 @@ class WidgetNameSpace:
             docs = docs if docs else "No description available"
             table.add_row(attr, docs)
         console.print(table)
-        return f""
+        return ""
 
 
 class AvailableWidgetsNamespace:
@@ -189,22 +192,13 @@ class AvailableWidgetsNamespace:
             docs = docs if docs else "No description available"
             table.add_row(attr_name, docs if len(docs.strip()) > 0 else "No description available")
         console.print(table)
-        return ""  # f"<{self.__class__.__name__}>"
-
-
-class BECDockArea(client.BECDockArea):
-    """Extend the BECDockArea class and add namespaces to access widgets of docks."""
-
-    def __init__(self, gui_id=None, config=None, name=None, parent=None):
-        super().__init__(gui_id, config, name, parent)
-        # Add namespaces for DockArea
-        self.elements = WidgetNameSpace()
+        return ""
 
 
 class BECGuiClient(RPCBase):
     """BEC GUI client class. Container for GUI applications within Python."""
 
-    _top_level: dict[str, BECDockArea] = {}
+    _top_level: dict[str, client.BECDockArea] = {}
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -217,6 +211,32 @@ class BECGuiClient(RPCBase):
         self._gui_started_event = threading.Event()
         self._process = None
         self._process_output_processing_thread = None
+        self._exposed_dock_areas = []
+        self._registry_state = {}
+        self._ipython_registry = {}
+        self.available_widgets = AvailableWidgetsNamespace()
+
+    ####################
+    #### Client API ####
+    ####################
+
+    def connect_to_gui_server(self, gui_id: str) -> None:
+        """Connect to a GUI server"""
+        # Unregister the old callback
+        self._client.connector.unregister(
+            MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
+        )
+        self._gui_id = gui_id
+        # Get the registry state
+        msgs = self._client.connector.xread(
+            MessageEndpoints.gui_registry_state(self._gui_id), count=1
+        )
+        if msgs:
+            self._handle_registry_update(msgs[0])
+        # Register the new callback
+        self._client.connector.register(
+            MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
+        )
 
     @property
     def windows(self) -> dict:
@@ -228,6 +248,282 @@ class BECGuiClient(RPCBase):
         """List with dock areas in the GUI."""
         return list(self._top_level.values())
 
+    def start(self, wait: bool = False) -> None:
+        """Start the GUI server."""
+        return self._start(wait=wait)
+
+    def show(self):
+        """Show the GUI window."""
+        if self._process is not None:
+            return self._show_all()
+        # backward compatibility: show() was also starting server
+        return self._start_server(wait=True)
+
+    def hide(self):
+        """Hide the GUI window."""
+        return self._hide_all()
+
+    def new(
+        self,
+        name: str | None = None,
+        wait: bool = True,
+        geometry: tuple[int, int, int, int] | None = None,
+    ) -> client.BECDockArea:
+        """Create a new top-level dock area.
+
+        Args:
+            name(str, optional): The name of the dock area. Defaults to None.
+            wait(bool, optional): Whether to wait for the server to start. Defaults to True.
+            geometry(tuple[int, int, int, int] | None): The geometry of the dock area (pos_x, pos_y, w, h)
+        Returns:
+            client.BECDockArea: The new dock area.
+        """
+        if len(self.window_list) == 0:
+            self.show()
+        if wait:
+            with wait_for_server(self):
+                rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
+                widget = rpc_client._run_rpc(
+                    "new_dock_area", name, geometry
+                )  # pylint: disable=protected-access
+                self._top_level[widget.widget_name] = widget
+                return widget
+        rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
+        widget = rpc_client._run_rpc(
+            "new_dock_area", name, geometry
+        )  # pylint: disable=protected-access
+        self._top_level[widget.widget_name] = widget
+        return widget
+
+    def delete(self, name: str) -> None:
+        """Delete a dock area.
+
+        Args:
+            name(str): The name of the dock area.
+        """
+        widget = self.windows.get(name)
+        if widget is None:
+            raise ValueError(f"Dock area {name} not found.")
+        widget._run_rpc("close")  # pylint: disable=protected-access
+
+    def delete_all(self) -> None:
+        """Delete all dock areas."""
+        for widget_name in self.windows:
+            self.delete(widget_name)
+
+    def kill_server(self) -> None:
+        """Kill the GUI server."""
+        self._top_level.clear()
+        self._killed = True
+
+        if self._gui_started_timer is not None:
+            self._gui_started_timer.cancel()
+            self._gui_started_timer.join()
+
+        if self._process is None:
+            return
+
+        if self._process:
+            logger.success("Stopping GUI...")
+            self._process.terminate()
+            if self._process_output_processing_thread:
+                self._process_output_processing_thread.join()
+            self._process.wait()
+            self._process = None
+
+        # Unregister the registry state
+        self._client.connector.unregister(
+            MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
+        )
+
+    def close(self):
+        """Deprecated. Use kill_server() instead."""
+        # FIXME, deprecated in favor of kill, will be removed in the future
+        self.kill_server()
+
+    #########################
+    #### Private methods ####
+    #########################
+
+    def _gui_post_startup(self):
+        timeout = 10
+        while time.time() < time.time() + timeout:
+            if len(list(self._registry_state.keys())) == 0:
+                time.sleep(0.1)
+            else:
+                break
+        # FIXME AUTO UPDATES
+        # if self._auto_updates_enabled:
+        #     if self._auto_updates is None:
+        #         auto_updates = self._get_update_script()
+        #         if auto_updates is None:
+        #             AutoUpdates.create_default_dock = True
+        #             AutoUpdates.enabled = True
+        #             auto_updates = AutoUpdates(self._top_level["main"].widget)
+        #         if auto_updates.create_default_dock:
+        #             auto_updates.start_default_dock()
+        #         self._start_update_script()
+        #         self._auto_updates = auto_updates
+        self._do_show_all()
+        self._gui_started_event.set()
+
+    def _start_server(self, wait: bool = False) -> None:
+        """
+        Start the GUI server, and execute callback when it is launched
+        """
+        if self._process is None or self._process.poll() is not None:
+            logger.success("GUI starting...")
+            self._startup_timeout = 5
+            self._gui_started_event.clear()
+            self._process, self._process_output_processing_thread = _start_plot_process(
+                self._gui_id,
+                self.__class__,
+                gui_class_id=self._default_dock_name,
+                config=self._client._service_config.config,  # pylint: disable=protected-access
+                logger=logger,
+            )
+
+            def gui_started_callback(callback):
+                try:
+                    if callable(callback):
+                        callback()
+                finally:
+                    threading.current_thread().cancel()
+
+            self._gui_started_timer = RepeatTimer(
+                0.5, lambda: self._gui_is_alive() and gui_started_callback(self._gui_post_startup)
+            )
+            self._gui_started_timer.start()
+
+        if wait:
+            self._gui_started_event.wait()
+
+    def _dump(self):
+        rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
+        return rpc_client._run_rpc("_dump")
+
+    def _start(self, wait: bool = False) -> None:
+        self._killed = False
+        self._client.connector.register(
+            MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
+        )
+        return self._start_server(wait=wait)
+
+    def _handle_registry_update(self, msg: StreamMessage) -> None:
+        self._registry_state = msg["data"].state
+        self._update_dynamic_namespace()
+
+    def _do_show_all(self):
+        rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
+        rpc_client._run_rpc("show")  # pylint: disable=protected-access
+        for window in self._top_level.values():
+            window.show()
+
+    def _show_all(self):
+        with wait_for_server(self):
+            return self._do_show_all()
+
+    def _hide_all(self):
+        with wait_for_server(self):
+            rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
+            rpc_client._run_rpc("hide")  # pylint: disable=protected-access
+            # because of the registry callbacks, we may have
+            # dock areas that are already killed, but not yet
+            # removed from the registry state
+            if not self._killed:
+                for window in self._top_level.values():
+                    window.hide()
+
+    def _update_dynamic_namespace(self):
+        """Update the dynamic name space"""
+        self._clear_exposed_dock_areas()
+        self._cleanup_ipython_registry()
+        self._add_registry_to_namespace()
+
+    def _clear_exposed_dock_areas(self):
+        """Clear the exposed dock areas"""
+        self._top_level.clear()
+        for widget_id in self._exposed_dock_areas:
+            delattr(self, widget_id)
+        self._exposed_dock_areas.clear()
+
+    def _cleanup_ipython_registry(self):
+        """Cleanup the ipython registry"""
+        remove_ids = []
+        for widget_id in self._ipython_registry:
+            if widget_id not in self._registry_state:
+                remove_ids.append(widget_id)
+        for widget_id in remove_ids:
+            self._ipython_registry.pop(widget_id)
+
+    def _set_dynamic_attributes(self, obj: object, name: str, value: Any) -> None:
+        """Add an object to the namespace"""
+        setattr(obj, name, value)
+
+    def _add_registry_to_namespace(self) -> None:
+        """Add registry to namespace"""
+        # Add dock areas
+        dock_area_states = [
+            state
+            for state in self._registry_state.values()
+            if state["widget_class"] == "BECDockArea"
+        ]
+        for state in dock_area_states:
+            # obj is an RPC reference to the RPCBase object
+            dock_area_obj = self._add_widget(state, self)
+            self._set_dynamic_attributes(self, dock_area_obj.widget_name, dock_area_obj)
+            # Add dock_area to the top level
+            self._top_level[dock_area_obj.widget_name] = dock_area_obj
+            self._exposed_dock_areas.append(dock_area_obj.widget_name)
+
+            # Add docks
+            dock_states = [
+                state
+                for state in self._registry_state.values()
+                if state["config"].get("parent_id", "") == dock_area_obj._gui_id
+            ]
+            for state in dock_states:
+                dock_obj = self._add_widget(state, dock_area_obj)
+                self._set_dynamic_attributes(dock_area_obj, dock_obj.widget_name, dock_obj)
+
+                # Add widgets
+                widget_states = [
+                    state
+                    for state in self._registry_state.values()
+                    if state["config"].get("parent_id", "") == dock_obj._gui_id
+                ]
+                for state in widget_states:
+                    widget = self._add_widget(state, dock_obj)
+                    self._set_dynamic_attributes(dock_obj, widget.widget_name, widget)
+                    self._set_dynamic_attributes(dock_area_obj.elements, widget.widget_name, widget)
+
+    def _add_widget(self, state: dict, parent: object) -> RPCReference:
+        """Add a widget to the namespace
+
+        Args:
+            state (dict): The state of the widget from the _registry_state.
+            parent (object): The parent object.
+        """
+        name = state["name"]
+        gui_id = state["gui_id"]
+        widget_class = getattr(client, state["widget_class"])
+        obj = self._ipython_registry.get(gui_id)
+        if obj is None:
+            widget = widget_class(gui_id=gui_id, name=name, parent=parent)
+            self._ipython_registry[gui_id] = widget
+        else:
+            widget = obj
+        if widget_class == client.BECDockArea:
+            # Add elements to dynamic namespace
+            self._set_dynamic_attributes(widget, "elements", WidgetNameSpace())
+        obj = RPCReference(registry=self._ipython_registry, gui_id=gui_id)
+        return obj
+
+    ################################
+    ####      Auto updates      ####
+    #### potentially deprecated ####
+    ################################
+
     # FIXME AUTO UPDATES
     # @property
     # def auto_updates(self):
@@ -235,19 +531,19 @@ class BECGuiClient(RPCBase):
     #         with wait_for_server(self):
     #             return self._auto_updates
 
-    def _get_update_script(self) -> AutoUpdates | None:
-        eps = imd.entry_points(group="bec.widgets.auto_updates")
-        for ep in eps:
-            if ep.name == "plugin_widgets_update":
-                try:
-                    spec = importlib.util.find_spec(ep.module)
-                    # if the module is not found, we skip it
-                    if spec is None:
-                        continue
-                    return ep.load()(gui=self._top_level["main"])
-                except Exception as e:
-                    logger.error(f"Error loading auto update script from plugin: {str(e)}")
-        return None
+    # def _get_update_script(self) -> AutoUpdates | None:
+    #     eps = imd.entry_points(group="bec.widgets.auto_updates")
+    #     for ep in eps:
+    #         if ep.name == "plugin_widgets_update":
+    #             try:
+    #                 spec = importlib.util.find_spec(ep.module)
+    #                 # if the module is not found, we skip it
+    #                 if spec is None:
+    #                     continue
+    #                 return ep.load()(gui=self._top_level["main"])
+    #             except Exception as e:
+    #                 logger.error(f"Error loading auto update script from plugin: {str(e)}")
+    #     return None
 
     # FIXME AUTO UPDATES
     # @property
@@ -292,176 +588,14 @@ class BECGuiClient(RPCBase):
     #         if self._auto_updates_enabled:
     #             return self.auto_updates.do_update(msg)
 
-    def _gui_post_startup(self):
-        # if self._auto_updates_enabled:
-        #     if self._auto_updates is None:
-        #         auto_updates = self._get_update_script()
-        #         if auto_updates is None:
-        #             AutoUpdates.create_default_dock = True
-        #             AutoUpdates.enabled = True
-        #             auto_updates = AutoUpdates(self._top_level["main"].widget)
-        #         if auto_updates.create_default_dock:
-        #             auto_updates.start_default_dock()
-        #         self._start_update_script()
-        #         self._auto_updates = auto_updates
-        self._top_level[self._default_dock_name] = BECDockArea(
-            gui_id=f"{self._default_dock_name}", name=self._default_dock_name, parent=self
-        )
-        self._do_show_all()
-        self._gui_started_event.set()
-
-    def _start_server(self, wait: bool = False) -> None:
-        """
-        Start the GUI server, and execute callback when it is launched
-        """
-        if self._process is None or self._process.poll() is not None:
-            logger.success("GUI starting...")
-            self._startup_timeout = 5
-            self._gui_started_event.clear()
-            self._process, self._process_output_processing_thread = _start_plot_process(
-                self._gui_id,
-                self.__class__,
-                gui_class_id=self._default_dock_name,
-                config=self._client._service_config.config,  # pylint: disable=protected-access
-                logger=logger,
-            )
-
-            def gui_started_callback(callback):
-                try:
-                    if callable(callback):
-                        callback()
-                finally:
-                    threading.current_thread().cancel()
-
-            self._gui_started_timer = RepeatTimer(
-                0.5, lambda: self._gui_is_alive() and gui_started_callback(self._gui_post_startup)
-            )
-            self._gui_started_timer.start()
-
-        if wait:
-            self._gui_started_event.wait()
-
-    def _dump(self):
-        rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
-        return rpc_client._run_rpc("_dump")
-
-    def start(self, wait: bool = True) -> None:
-        """Start the server and show the GUI window."""
-        return self._start_server(wait=wait)
-
-    def _do_show_all(self):
-        rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
-        rpc_client._run_rpc("show")  # pylint: disable=protected-access
-        for window in self._top_level.values():
-            window.show()
-
-    def _show_all(self):
-        with wait_for_server(self):
-            return self._do_show_all()
-
-    def _hide_all(self):
-        with wait_for_server(self):
-            rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
-            rpc_client._run_rpc("hide")  # pylint: disable=protected-access
-            # because of the registry callbacks, we may have
-            # dock areas that are already killed, but not yet
-            # removed from the registry state
-            if not self._killed:
-                for window in self._top_level.values():
-                    window.hide()
-
-    def show(self):
-        """Show the GUI window."""
-        if self._process is not None:
-            return self._show_all()
-        # backward compatibility: show() was also starting server
-        return self._start_server(wait=True)
-
-    def hide(self):
-        """Hide the GUI window."""
-        return self._hide_all()
-
-    def new(
-        self,
-        name: str | None = None,
-        wait: bool = True,
-        geometry: tuple[int, int, int, int] | None = None,
-    ) -> BECDockArea:
-        """Create a new top-level dock area.
-
-        Args:
-            name(str, optional): The name of the dock area. Defaults to None.
-            wait(bool, optional): Whether to wait for the server to start. Defaults to True.
-            geometry(tuple[int, int, int, int] | None): The geometry of the dock area (pos_x, pos_y, w, h)
-        Returns:
-            BECDockArea: The new dock area.
-        """
-        if len(self.window_list) == 0:
-            self.show()
-        if wait:
-            with wait_for_server(self):
-                rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
-                widget = rpc_client._run_rpc(
-                    "new_dock_area", name, geometry
-                )  # pylint: disable=protected-access
-                self._top_level[widget.widget_name] = widget
-                return widget
-        rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
-        widget = rpc_client._run_rpc(
-            "new_dock_area", name, geometry
-        )  # pylint: disable=protected-access
-        self._top_level[widget.widget_name] = widget
-        return widget
-
-    def delete(self, name: str) -> None:
-        """Delete a dock area.
-
-        Args:
-            name(str): The name of the dock area.
-        """
-        widget = self.windows.get(name)
-        if widget is None:
-            raise ValueError(f"Dock area {name} not found.")
-        widget._run_rpc("close")  # pylint: disable=protected-access
-
-    def delete_all(self) -> None:
-        """Delete all dock areas."""
-        for widget_name in self.windows.keys():
-            self.delete(widget_name)
-
-    def close(self):
-        """Deprecated. Use kill_server() instead."""
-        # FIXME, deprecated in favor of kill, will be removed in the future
-        self.kill_server()
-
-    def kill_server(self) -> None:
-        """Kill the GUI server."""
-        self._top_level.clear()
-        self._killed = True
-
-        if self._gui_started_timer is not None:
-            self._gui_started_timer.cancel()
-            self._gui_started_timer.join()
-
-        if self._process is None:
-            return
-
-        if self._process:
-            logger.success("Stopping GUI...")
-            self._process.terminate()
-            if self._process_output_processing_thread:
-                self._process_output_processing_thread.join()
-            self._process.wait()
-            self._process = None
-
 
 if __name__ == "__main__":  # pragma: no cover
     from bec_lib.client import BECClient
     from bec_lib.service_config import ServiceConfig
 
     config = ServiceConfig()
-    client = BECClient(config)
-    client.start()
+    bec_client = BECClient(config)
+    bec_client.start()
 
     # Test the client_utils.py module
     gui = BECGuiClient()

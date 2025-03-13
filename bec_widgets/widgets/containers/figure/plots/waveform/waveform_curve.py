@@ -274,4 +274,4 @@ class BECCurve(BECConnector, pg.PlotDataItem):
         """Remove the curve from the plot."""
         # self.parent_item.removeItem(self)
         self.parent_item.remove_curve(self.name())
-        self.rpc_register.remove_rpc(self)
+        super().remove()
