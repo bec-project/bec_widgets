@@ -18,7 +18,6 @@ def connected_figure(connected_client_gui_obj):
 
 def test_rpc_waveform1d_custom_curve(connected_figure):
     fig = connected_figure
-    # fig = BECFigure(connected_client_figure)
 
     ax = fig.plot()
     curve = ax.plot(x=[1, 2, 3], y=[1, 2, 3])
@@ -32,7 +31,6 @@ def test_rpc_waveform1d_custom_curve(connected_figure):
 
 def test_rpc_plotting_shortcuts_init_configs(connected_figure, qtbot):
     fig = connected_figure
-    # fig = BECFigure(connected_client_figure)
 
     plt = fig.plot(x_name="samx", y_name="bpm4i")
     im = fig.image("eiger")
@@ -90,7 +88,6 @@ def test_rpc_plotting_shortcuts_init_configs(connected_figure, qtbot):
 
 
 def test_rpc_waveform_scan(qtbot, connected_figure, bec_client_lib):
-    # fig = BECFigure(connected_client_figure)
     fig = connected_figure
     # add 3 different curves to track
     plt = fig.plot(x_name="samx", y_name="bpm4i")
@@ -126,7 +123,6 @@ def test_rpc_waveform_scan(qtbot, connected_figure, bec_client_lib):
 
 
 def test_rpc_image(connected_figure, bec_client_lib):
-    # fig = BECFigure(connected_client_figure)
     fig = connected_figure
 
     im = fig.image("eiger")
@@ -148,7 +144,6 @@ def test_rpc_image(connected_figure, bec_client_lib):
 
 
 def test_rpc_motor_map(connected_figure, bec_client_lib):
-    # fig = BECFigure(connected_client_figure)
     fig = connected_figure
 
     motor_map = fig.motor_map("samx", "samy")
@@ -180,7 +175,6 @@ def test_rpc_motor_map(connected_figure, bec_client_lib):
 def test_dap_rpc(connected_figure, bec_client_lib, qtbot):
 
     fig = connected_figure
-    # fig = BECFigure(connected_client_figure)
     plt = fig.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
 
     client = bec_client_lib
@@ -219,7 +213,6 @@ def test_dap_rpc(connected_figure, bec_client_lib, qtbot):
 
 
 def test_removing_subplots(connected_figure, bec_client_lib):
-    # fig = BECFigure(connected_client_figure)
     fig = connected_figure
     plt = fig.plot(x_name="samx", y_name="bpm4i", dap="GaussianModel")
     im = fig.image(monitor="eiger")
