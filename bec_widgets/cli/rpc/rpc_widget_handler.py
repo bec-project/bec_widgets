@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from bec_widgets.utils import BECConnector
+from typing import Any
+
+from bec_widgets.cli.client_utils import IGNORE_WIDGETS
+from bec_widgets.utils.bec_widget import BECWidget
 
 
 class RPCWidgetHandler:
@@ -10,7 +13,7 @@ class RPCWidgetHandler:
         self._widget_classes = None
 
     @property
-    def widget_classes(self):
+    def widget_classes(self) -> dict[str, Any]:
         """
         Get the available widget classes.
 
@@ -19,7 +22,7 @@ class RPCWidgetHandler:
         """
         if self._widget_classes is None:
             self.update_available_widgets()
-        return self._widget_classes
+        return self._widget_classes  # type: ignore
 
     def update_available_widgets(self):
         """
@@ -31,24 +34,27 @@ class RPCWidgetHandler:
         from bec_widgets.utils.plugin_utils import get_custom_classes
 
         clss = get_custom_classes("bec_widgets")
-        self._widget_classes = {cls.__name__: cls for cls in clss.widgets}
+        self._widget_classes = {
+            cls.__name__: cls for cls in clss.widgets if cls.__name__ not in IGNORE_WIDGETS
+        }
 
-    def create_widget(self, widget_type, **kwargs) -> BECConnector:
+    def create_widget(self, widget_type, name: str | None = None, **kwargs) -> BECWidget:
         """
         Create a widget from an RPC message.
 
         Args:
             widget_type(str): The type of the widget.
+            name (str): The name of the widget.
             **kwargs: The keyword arguments for the widget.
 
         Returns:
-            widget(BECConnector): The created widget.
+            widget(BECWidget): The created widget.
         """
         if self._widget_classes is None:
             self.update_available_widgets()
-        widget_class = self._widget_classes.get(widget_type)
+        widget_class = self._widget_classes.get(widget_type)  # type: ignore
         if widget_class:
-            return widget_class(**kwargs)
+            return widget_class(name=name, **kwargs)
         raise ValueError(f"Unknown widget type: {widget_type}")
 
 
