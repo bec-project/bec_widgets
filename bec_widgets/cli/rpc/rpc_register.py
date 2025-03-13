@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 logger = bec_logger.logger
 
+
 class RPCRegister:
     """
     A singleton class that keeps track of all the RPC objects registered in the system for CLI usage.
@@ -109,6 +110,7 @@ class RPCRegister:
         # i.e. curve and image items are excluded
         widgets = [rpc for rpc in self._rpc_register.values() if isinstance(rpc, cls)]
         return [widget._name for widget in widgets]
+
     @classmethod
     def reset_singleton(cls):
         """
