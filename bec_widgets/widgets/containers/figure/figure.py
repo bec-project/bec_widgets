@@ -78,13 +78,7 @@ class WidgetHandler:
         }
 
     def create_widget(
-        self,
-        widget_type: str,
-        widget_id: str,
-        parent_figure,
-        parent_id: str,
-        config: dict = None,
-        **axis_kwargs,
+        self, widget_type: str, parent_figure, parent_id: str, config: dict = None, **axis_kwargs
     ) -> BECPlotBase:
         """
         Create and configure a widget based on its type.
@@ -109,7 +103,6 @@ class WidgetHandler:
         widget_config_dict = {
             "widget_class": widget_class.__name__,
             "parent_id": parent_id,
-            "gui_id": widget_id,
             **(config if config is not None else {}),
         }
         widget_config = config_class(**widget_config_dict)
@@ -568,13 +561,13 @@ class BECFigure(BECWidget, pg.GraphicsLayoutWidget):
 
         widget = self.widget_handler.create_widget(
             widget_type=widget_type,
-            widget_id=widget_id,
             parent_figure=self,
             parent_id=self.gui_id,
             config=config,
             **axis_kwargs,
         )
-        widget.set_gui_id(widget_id)
+        widget_id = widget.gui_id
+
         widget.config.row = row
         widget.config.col = col
 
