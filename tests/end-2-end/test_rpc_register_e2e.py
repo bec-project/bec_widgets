@@ -5,7 +5,7 @@ from bec_widgets.cli.client import BECFigure, BECImageShow, BECMotorMap, BECWave
 
 def test_rpc_register_list_connections(connected_client_gui_obj):
     gui = connected_client_gui_obj
-    fig = gui.bec.new("fig").new(name="fig", widget="BECFigure")
+    fig = gui.window_list[0].new("fig").new(name="fig", widget="BECFigure")
 
     plt = fig.plot(x_name="samx", y_name="bpm4i")
     im = fig.image("eiger")
