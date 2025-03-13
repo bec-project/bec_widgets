@@ -197,7 +197,13 @@ end-2-end-conda:
   script:
     - *clone-repos
     - *install-os-packages
-    - conda config --prepend channels conda-forge
+    - conda config --show-sources
+    - conda config --add channels conda-forge
+    - conda config --system --remove channels https://repo.anaconda.com/pkgs/main
+    - conda config --system --remove channels https://repo.anaconda.com/pkgs/r
+    - conda config --remove channels https://repo.anaconda.com/pkgs/main
+    - conda config --remove channels https://repo.anaconda.com/pkgs/r
+    - conda config --show-sources
     - conda config --set channel_priority strict
     - conda config --set always_yes yes --set changeps1 no
     - conda create -q -n test-environment python=3.11
