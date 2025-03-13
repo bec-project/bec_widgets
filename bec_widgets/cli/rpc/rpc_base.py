@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 import uuid
 from functools import wraps
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
@@ -44,7 +44,7 @@ def rpc_call(func):
         for key, val in kwargs.items():
             if hasattr(val, "name"):
                 kwargs[key] = val.name
-        if not self.gui_is_alive():
+        if not self._root._gui_is_alive():
             raise RuntimeError("GUI is not alive")
         return self._run_rpc(func.__name__, *args, **kwargs)
 
@@ -61,10 +61,17 @@ class RPCResponseTimeoutError(Exception):
 
 
 class RPCBase:
-    def __init__(self, gui_id: str = None, config: dict = None, parent=None) -> None:
+    def __init__(
+        self,
+        gui_id: str | None = None,
+        config: dict | None = None,
+        name: str | None = None,
+        parent=None,
+    ) -> None:
         self._client = BECClient()  # BECClient is a singleton; here, we simply get the instance
         self._config = config if config is not None else {}
         self._gui_id = gui_id if gui_id is not None else str(uuid.uuid4())[:5]
+        self._name = name if name is not None else str(uuid.uuid4())[:5]
         self._parent = parent
         self._msg_wait_event = threading.Event()
         self._rpc_response = None
@@ -74,7 +81,20 @@ class RPCBase:
     def __repr__(self):
         type_ = type(self)
         qualname = type_.__qualname__
-        return f"<{qualname} object at {hex(id(self))}>"
+        return f"<{qualname} with name: {self.widget_name}>"
+
+    def remove(self):
+        """
+        Remove the widget.
+        """
+        self._run_rpc("remove")
+
+    @property
+    def widget_name(self):
+        """
+        Get the widget name.
+        """
+        return self._name
 
     @property
     def _root(self):
@@ -88,7 +108,7 @@ class RPCBase:
             parent = parent._parent
         return parent
 
-    def _run_rpc(self, method, *args, wait_for_rpc_response=True, timeout=3, **kwargs):
+    def _run_rpc(self, method, *args, wait_for_rpc_response=True, timeout=3, **kwargs) -> Any:
         """
         Run the RPC call.
 
@@ -165,7 +185,7 @@ class RPCBase:
             return cls(parent=self, **msg_result)
         return msg_result
 
-    def gui_is_alive(self):
+    def _gui_is_alive(self):
         """
         Check if the GUI is alive.
         """

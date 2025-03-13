@@ -35,9 +35,9 @@ class AutoUpdates:
         Create a default dock for the auto updates.
         """
         self.dock_name = "default_figure"
-        self._default_dock = self.gui.add_dock(self.dock_name)
-        self._default_dock.add_widget("BECFigure")
-        self._default_fig = self._default_dock.widget_list[0]
+        self._default_dock = self.gui.new(self.dock_name)
+        self._default_dock.new("BECFigure")
+        self._default_fig = self._default_dock.elements_list[0]
 
     @staticmethod
     def get_scan_info(msg) -> ScanInfo:

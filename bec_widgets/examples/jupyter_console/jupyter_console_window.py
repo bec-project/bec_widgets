@@ -198,14 +198,18 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
 
     def _init_dock(self):
 
-        self.d0 = self.dock.add_dock(name="dock_0")
-        self.mm = self.d0.add_widget("BECMotorMapWidget")
+        self.d0 = self.dock.new(name="dock_0")
+        self.mm = self.d0.new("BECMotorMapWidget")
         self.mm.change_motors("samx", "samy")
 
-        self.d1 = self.dock.add_dock(name="dock_1", position="right")
-        self.im = self.d1.add_widget("BECImageWidget")
+        self.d1 = self.dock.new(name="dock_1", position="right")
+        self.im = self.d1.new("BECImageWidget")
         self.im.image("waveform", "1d")
 
+        self.d2 = self.dock.new(name="dock_2", position="bottom")
+        self.wf = self.d2.new("BECFigure", row=0, col=0)
+
+        self.mw = self.wf.multi_waveform(monitor="waveform")  # , config=config)
         self.mw = None  # self.wf.multi_waveform(monitor="waveform")  # , config=config)
 
         self.dock.save_state()
