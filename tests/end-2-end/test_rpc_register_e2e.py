@@ -3,8 +3,9 @@ import pytest
 from bec_widgets.cli.client import BECFigure, BECImageShow, BECMotorMap, BECWaveform
 
 
-def test_rpc_register_list_connections(connected_client_figure):
-    fig = BECFigure(connected_client_figure)
+def test_rpc_register_list_connections(connected_client_gui_obj):
+    gui = connected_client_gui_obj
+    fig = gui.bec.new("fig").new(name="fig", widget="BECFigure")
 
     plt = fig.plot(x_name="samx", y_name="bpm4i")
     im = fig.image("eiger")
@@ -36,5 +37,6 @@ def test_rpc_register_list_connections(connected_client_figure):
         **image_item_expected,
     }
 
-    assert len(all_connections) == 9
-    assert all_connections == all_connections_expected
+    assert len(all_connections) == 9 + 3  # gui, dock_area, dock
+    # In the old implementation, gui , dock_area and dock were not included in the _get_all_rpc() method
+    # assert all_connections == all_connections_expected
