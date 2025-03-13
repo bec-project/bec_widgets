@@ -73,20 +73,6 @@ class RPCRegister:
         rpc_object = self._rpc_register.get(gui_id, None)
         return rpc_object
 
-    def get_rpc_by_name(self, name: str) -> QObject | None:
-        """
-        Get an RPC object by its name.
-
-        Args:
-            name(str): The name of the RPC object to be retrieved.
-
-        Returns:
-            QObject | None: The RPC object with the given name.
-        """
-        rpc_object = [rpc for rpc in self._rpc_register if rpc._name == name]
-        rpc_object = rpc_object[0] if len(rpc_object) > 0 else None
-        return rpc_object
-
     def list_all_connections(self) -> dict:
         """
         List all the registered RPC objects.

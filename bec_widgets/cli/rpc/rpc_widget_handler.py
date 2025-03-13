@@ -13,7 +13,7 @@ class RPCWidgetHandler:
         self._widget_classes = None
 
     @property
-    def widget_classes(self) -> dict[str, Any]:
+    def widget_classes(self) -> dict[str, type[BECWidget]]:
         """
         Get the available widget classes.
 
@@ -50,9 +50,7 @@ class RPCWidgetHandler:
         Returns:
             widget(BECWidget): The created widget.
         """
-        if self._widget_classes is None:
-            self.update_available_widgets()
-        widget_class = self._widget_classes.get(widget_type)  # type: ignore
+        widget_class = self.widget_classes.get(widget_type)  # type: ignore
         if widget_class:
             return widget_class(name=name, **kwargs)
         raise ValueError(f"Unknown widget type: {widget_type}")

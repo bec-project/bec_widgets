@@ -55,13 +55,7 @@ class BECWidget(BECConnector):
         """
         if not isinstance(self, QWidget):
             raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")
-        # Create a default name if None is provided
-        if name is None:
-            name = "bec_widget_init_without_name"
-            # name = self.__class__.__name__
-        # Check for invalid chars in the name
-        if not WidgetContainerUtils.has_name_valid_chars(name):
-            raise ValueError(f"Name {name} contains invalid characters.")
+
         super().__init__(client=client, config=config, gui_id=gui_id, name=name)
         self._parent_dock = parent_dock
         app = QApplication.instance()
@@ -104,8 +98,7 @@ class BECWidget(BECConnector):
 
     def cleanup(self):
         """Cleanup the widget."""
-        # needed here instead of closeEvent, to be checked why
-        # However, all widgets need to call super().cleanup() in their cleanup method
+        # All widgets need to call super().cleanup() in their cleanup method
         self.rpc_register.remove_rpc(self)
 
     def closeEvent(self, event):
