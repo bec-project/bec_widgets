@@ -1,3 +1,5 @@
+import traceback
+
 from pyqtgraph.exporters import MatplotlibExporter
 
 from bec_widgets.qt_utils.error_popups import SafeSlot, WarningPopupUtility
@@ -60,11 +62,20 @@ class PlotExportBundle(ToolbarBundle):
                 import matplotlib as mpl
 
                 MatplotlibExporter(self.target_widget.plot_item).export()
-            except:
+            except ModuleNotFoundError:
                 warning_util = WarningPopupUtility()
                 warning_util.show_warning(
                     title="Matplotlib not installed",
                     message="Matplotlib is required for this feature.",
                     detailed_text="Please install matplotlib in your Python environment by using 'pip install matplotlib'.",
+                )
+                return
+            except TypeError:
+                warning_util = WarningPopupUtility()
+                error_msg = traceback.format_exc()
+                warning_util.show_warning(
+                    title="Matplotlib TypeError",
+                    message="Matplotlib exporter could not resolve the plot item.",
+                    detailed_text=error_msg,
                 )
                 return
