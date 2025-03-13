@@ -10,6 +10,8 @@ from bec_qthemes import material_icon
 from qtpy import PYSIDE6
 from qtpy.QtGui import QIcon
 
+from bec_widgets.utils.bec_plugin_helper import user_widget_plugin
+
 if PYSIDE6:
     from PySide6.scripts.pyside_tool import (
         _extend_path_var,
@@ -150,7 +152,12 @@ def main():  # pragma: no cover
         print("PYSIDE6 is not available in the environment. Exiting...")
         return
     base_dir = Path(os.path.dirname(bec_widgets.__file__)).resolve()
+
     plugin_paths = find_plugin_paths(base_dir)
+    if (plugin_repo := user_widget_plugin()) and isinstance(plugin_repo.__file__, str):
+        plugin_repo_dir = Path(os.path.dirname(plugin_repo.__file__)).resolve()
+        plugin_paths.extend(find_plugin_paths(plugin_repo_dir))
+
     set_plugin_environment_variable(plugin_paths)
 
     patch_designer()

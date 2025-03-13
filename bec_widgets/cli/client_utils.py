@@ -533,7 +533,12 @@ class BECGuiClient(RPCBase):
         """
         name = state["name"]
         gui_id = state["gui_id"]
-        widget_class = getattr(client, state["widget_class"])
+        try:
+            widget_class = getattr(client, state["widget_class"])
+        except AttributeError as e:
+            raise AttributeError(
+                f"Failed to find user widget {state['widget_class']} in the client - did you run bw-generate-cli to generate the plugin files?"
+            ) from e
         obj = self._ipython_registry.get(gui_id)
         if obj is None:
             widget = widget_class(gui_id=gui_id, name=name, parent=parent)

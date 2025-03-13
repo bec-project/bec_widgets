@@ -1,6 +1,6 @@
 import pytest
 
-from bec_widgets.cli import Image, MotorMap, Waveform
+from bec_widgets.cli.client import Image, MotorMap, Waveform
 from bec_widgets.cli.rpc.rpc_base import RPCReference
 
 # pylint: disable=unused-argument

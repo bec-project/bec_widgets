@@ -4,6 +4,7 @@ import functools
 import json
 import signal
 import sys
+import traceback
 import types
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from typing import Union
@@ -95,7 +96,7 @@ class BECWidgetsCLIServer:
                 kwargs = msg["parameter"].get("kwargs", {})
                 res = self.run_rpc(obj, method, args, kwargs)
             except Exception as e:
-                logger.error(f"Error while executing RPC instruction: {e}")
+                logger.error(f"Error while executing RPC instruction: {traceback.format_exc()}")
                 self.send_response(request_id, False, {"error": str(e)})
             else:
                 logger.debug(f"RPC instruction executed successfully: {res}")

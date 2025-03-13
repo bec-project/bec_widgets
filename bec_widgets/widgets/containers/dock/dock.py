@@ -265,8 +265,9 @@ class BECDock(BECWidget, Dock):
         """
         return list(widget_handler.widget_classes.keys())
 
-    def _get_list_of_widget_name_of_parent_dock_area(self):
-        docks = self.parent_dock_area.panel_list
+    def _get_list_of_widget_name_of_parent_dock_area(self) -> list[str]:
+        if (docks := self.parent_dock_area.panel_list) is None:
+            return []
         widgets = []
         for dock in docks:
             widgets.extend(dock.elements.keys())
