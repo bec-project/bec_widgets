@@ -55,7 +55,6 @@ class BECWidget(BECConnector):
         """
         if not isinstance(self, QWidget):
             raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")
-
         super().__init__(client=client, config=config, gui_id=gui_id, name=name)
         self._parent_dock = parent_dock
         app = QApplication.instance()

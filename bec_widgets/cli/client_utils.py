@@ -9,6 +9,7 @@ import os
 import select
 import subprocess
 import threading
+import time
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 

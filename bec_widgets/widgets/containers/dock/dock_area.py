@@ -467,7 +467,7 @@ class BECDockArea(BECWidget, QWidget):
                     dock.hide_title_bar()
         else:
             raise ValueError(f"Dock with name {dock_name} does not exist.")
-        # self._broadcast_update()
+        self._broadcast_update()
 
     def remove(self) -> None:
         """Remove the dock area."""

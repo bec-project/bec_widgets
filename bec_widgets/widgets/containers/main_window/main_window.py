@@ -71,4 +71,4 @@ class BECMainWindow(BECWidget, QMainWindow):
         return dock_area
 
     def cleanup(self):
-        super().close()
+        super().cleanup()
