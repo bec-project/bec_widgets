@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
-
 from bec_widgets.cli.client_utils import IGNORE_WIDGETS
+from bec_widgets.utils.bec_plugin_helper import get_all_plugin_widgets
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.plugin_utils import get_custom_classes
 
 
 class RPCWidgetHandler:
@@ -31,10 +31,8 @@ class RPCWidgetHandler:
         Returns:
             None
         """
-        from bec_widgets.utils.plugin_utils import get_custom_classes
-
         clss = get_custom_classes("bec_widgets")
-        self._widget_classes = {
+        self._widget_classes = get_all_plugin_widgets() | {
             cls.__name__: cls for cls in clss.widgets if cls.__name__ not in IGNORE_WIDGETS
         }
 

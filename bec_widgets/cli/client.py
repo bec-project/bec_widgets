@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 import enum
-from typing import Literal, Optional, overload
+import inspect
+from typing import Literal, Optional
+
+from bec_lib.logger import bec_logger
 
 from bec_widgets.cli.rpc.rpc_base import RPCBase, rpc_call
+from bec_widgets.utils.bec_plugin_helper import get_all_plugin_widgets, get_plugin_client_module
+
+logger = bec_logger.logger
 
 # pylint: skip-file
 
@@ -20,7 +26,6 @@ _Widgets = {
     "AbortButton": "AbortButton",
     "BECColorMapWidget": "BECColorMapWidget",
     "BECDockArea": "BECDockArea",
-    "BECMultiWaveformWidget": "BECMultiWaveformWidget",
     "BECProgressBar": "BECProgressBar",
     "BECQueue": "BECQueue",
     "BECStatusBox": "BECStatusBox",
@@ -34,6 +39,7 @@ _Widgets = {
     "LogPanel": "LogPanel",
     "Minesweeper": "Minesweeper",
     "MotorMap": "MotorMap",
+    "MultiWaveform": "MultiWaveform",
     "PositionIndicator": "PositionIndicator",
     "PositionerBox": "PositionerBox",
     "PositionerBox2D": "PositionerBox2D",
@@ -52,7 +58,31 @@ _Widgets = {
     "Waveform": "Waveform",
     "WebsiteWidget": "WebsiteWidget",
 }
-Widgets = _WidgetsEnumType("Widgets", _Widgets)
+
+
+_plugin_widgets = get_all_plugin_widgets()
+plugin_client = get_plugin_client_module()
+Widgets = _WidgetsEnumType("Widgets", {name: name for name in _plugin_widgets} | _Widgets)
+
+if (_overlap := _Widgets.keys() & _plugin_widgets.keys()) != set():
+    for _widget in _overlap:
+        logger.warning(
+            f"Detected duplicate widget {_widget} in plugin repo file: {inspect.getfile(_plugin_widgets[_widget])} !"
+        )
+for plugin_name, plugin_class in inspect.getmembers(plugin_client, inspect.isclass):
+    if issubclass(plugin_class, RPCBase) and plugin_class is not RPCBase:
+        if plugin_name in globals():
+            conflicting_file = (
+                inspect.getfile(_plugin_widgets[plugin_name])
+                if plugin_name in _plugin_widgets
+                else f"{plugin_client}"
+            )
+            logger.warning(
+                f"Plugin widget {plugin_name} from {conflicting_file} conflicts with a built-in class!"
+            )
+            continue
+        if plugin_name not in _overlap:
+            globals()[plugin_name] = plugin_class
 
 
 class AbortButton(RPCBase):

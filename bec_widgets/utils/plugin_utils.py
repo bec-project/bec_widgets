@@ -63,6 +63,9 @@ class BECClassContainer:
     def __repr__(self):
         return str(list(cl.name for cl in self.collection))
 
+    def __iter__(self):
+        return self._collection.__iter__()
+
     def add_class(self, class_info: BECClassInfo):
         """
         Add a class to the collection.

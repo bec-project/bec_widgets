@@ -10,14 +10,14 @@ from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.utils.import_utils import lazy_import, lazy_import_from
 
-import bec_widgets.cli.client as client
-
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib import messages
     from bec_lib.connector import MessageObject
+
+    import bec_widgets.cli.client as client
 else:
+    client = lazy_import("bec_widgets.cli.client")  # avoid circular import
     messages = lazy_import("bec_lib.messages")
-    # from bec_lib.connector import MessageObject
     MessageObject = lazy_import_from("bec_lib.connector", ("MessageObject",))
 
 # pylint: disable=protected-access
