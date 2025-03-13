@@ -8,7 +8,7 @@ from weakref import WeakValueDictionary
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import QObject
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from bec_widgets.utils.bec_connector import BECConnector
     from bec_widgets.utils.bec_widget import BECWidget
     from bec_widgets.widgets.containers.dock.dock import BECDock
@@ -71,20 +71,6 @@ class RPCRegister:
             QObject | None: The RPC object with the given ID or None
         """
         rpc_object = self._rpc_register.get(gui_id, None)
-        return rpc_object
-
-    def get_rpc_by_name(self, name: str) -> QObject | None:
-        """
-        Get an RPC object by its name.
-
-        Args:
-            name(str): The name of the RPC object to be retrieved.
-
-        Returns:
-            QObject | None: The RPC object with the given name.
-        """
-        rpc_object = [rpc for rpc in self._rpc_register if rpc._name == name]
-        rpc_object = rpc_object[0] if len(rpc_object) > 0 else None
         return rpc_object
 
     def list_all_connections(self) -> dict:

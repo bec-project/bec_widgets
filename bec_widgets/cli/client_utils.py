@@ -9,11 +9,9 @@ import os
 import select
 import subprocess
 import threading
-import time
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
-from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import, lazy_import_from
 from rich.console import Console
@@ -30,7 +28,6 @@ if TYPE_CHECKING:
     from bec_lib.redis_connector import StreamMessage
 else:
     messages = lazy_import("bec_lib.messages")
-    # from bec_lib.connector import MessageObject
     MessageObject = lazy_import_from("bec_lib.connector", ("MessageObject",))
     StreamMessage = lazy_import_from("bec_lib.redis_connector", ("StreamMessage",))
 
@@ -74,7 +71,7 @@ def _get_output(process, logger) -> None:
 
 def _start_plot_process(
     gui_id: str, gui_class: type, gui_class_id: str, config: dict | str, logger=None
-) -> None:
+) -> tuple[subprocess.Popen[str], threading.Thread | None]:
     """
     Start the plot in a new process.
 
@@ -207,7 +204,7 @@ class BECDockArea(client.BECDockArea):
 class BECGuiClient(RPCBase):
     """BEC GUI client class. Container for GUI applications within Python."""
 
-    _top_level = {}
+    _top_level: dict[str, BECDockArea] = {}
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -223,7 +220,7 @@ class BECGuiClient(RPCBase):
 
     @property
     def windows(self) -> dict:
-        """Dictionary with dock ares in the GUI."""
+        """Dictionary with dock areas in the GUI."""
         return self._top_level
 
     @property
@@ -457,7 +454,7 @@ class BECGuiClient(RPCBase):
             self._process = None
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     from bec_lib.client import BECClient
     from bec_lib.service_config import ServiceConfig
 
