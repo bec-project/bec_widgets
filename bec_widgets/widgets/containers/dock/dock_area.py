@@ -4,12 +4,14 @@ from typing import Literal, Optional
 from weakref import WeakValueDictionary
 
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.logger import bec_logger
 from pydantic import Field
 from pyqtgraph.dockarea.DockArea import DockArea
 from qtpy.QtCore import QSize, Qt
 from qtpy.QtGui import QPainter, QPaintEvent
 from qtpy.QtWidgets import QApplication, QSizePolicy, QVBoxLayout, QWidget
 
+from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.qt_utils.error_popups import SafeSlot
 from bec_widgets.qt_utils.toolbar import (
     ExpandableMenuAction,
@@ -33,6 +35,8 @@ from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECStatus
 from bec_widgets.widgets.utility.logpanel.logpanel import LogPanel
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
+logger = bec_logger.logger
+
 
 class DockAreaConfig(ConnectionConfig):
     docks: dict[str, DockConfig] = Field({}, description="The docks in the dock area.")
@@ -44,21 +48,19 @@ class DockAreaConfig(ConnectionConfig):
 class BECDockArea(BECWidget, QWidget):
     PLUGIN = True
     USER_ACCESS = [
-        "_config_dict",
-        "selected_device",
-        "panels",
-        "save_state",
-        "remove_dock",
-        "restore_state",
-        "add_dock",
-        "clear_all",
-        "detach_dock",
-        "attach_all",
-        "_get_all_rpc",
-        "temp_areas",
+        "new",
         "show",
         "hide",
+        "panels",
+        "panel_list",
         "delete",
+        "delete_all",
+        "remove",
+        "detach_dock",
+        "attach_all",
+        "selected_device",
+        "save_state",
+        "restore_state",
     ]
 
     def __init__(
@@ -67,6 +69,8 @@ class BECDockArea(BECWidget, QWidget):
         config: DockAreaConfig | None = None,
         client=None,
         gui_id: str = None,
+        name: str | None = None,
+        **kwargs,
     ) -> None:
         if config is None:
             config = DockAreaConfig(widget_class=self.__class__.__name__)
@@ -74,8 +78,9 @@ class BECDockArea(BECWidget, QWidget):
             if isinstance(config, dict):
                 config = DockAreaConfig(**config)
             self.config = config
-        super().__init__(client=client, config=config, gui_id=gui_id)
+        super().__init__(client=client, config=config, gui_id=gui_id, name=name, **kwargs)
         QWidget.__init__(self, parent=parent)
+        self._parent = parent
         self.layout = QVBoxLayout(self)
         self.layout.setSpacing(5)
         self.layout.setContentsMargins(0, 0, 0, 0)
@@ -169,47 +174,52 @@ class BECDockArea(BECWidget, QWidget):
     def _hook_toolbar(self):
         # Menu Plot
         self.toolbar.widgets["menu_plots"].widgets["waveform"].triggered.connect(
-            lambda: self.add_dock(widget="Waveform", prefix="waveform")
+            lambda: self._create_widget_from_toolbar(widget_name="Waveform")
         )
         self.toolbar.widgets["menu_plots"].widgets["multi_waveform"].triggered.connect(
-            lambda: self.add_dock(widget="BECMultiWaveformWidget", prefix="multi_waveform")
+            lambda: self._create_widget_from_toolbar(widget_name="BECMultiWaveformWidget")
         )
         self.toolbar.widgets["menu_plots"].widgets["image"].triggered.connect(
-            lambda: self.add_dock(widget="BECImageWidget", prefix="image")
+            lambda: self._create_widget_from_toolbar(widget_name="BECImageWidget")
         )
         self.toolbar.widgets["menu_plots"].widgets["motor_map"].triggered.connect(
-            lambda: self.add_dock(widget="BECMotorMapWidget", prefix="motor_map")
+            lambda: self._create_widget_from_toolbar(widget_name="BECMotorMapWidget")
         )
 
         # Menu Devices
         self.toolbar.widgets["menu_devices"].widgets["scan_control"].triggered.connect(
-            lambda: self.add_dock(widget="ScanControl", prefix="scan_control")
+            lambda: self._create_widget_from_toolbar(widget_name="ScanControl")
         )
         self.toolbar.widgets["menu_devices"].widgets["positioner_box"].triggered.connect(
-            lambda: self.add_dock(widget="PositionerBox", prefix="positioner_box")
+            lambda: self._create_widget_from_toolbar(widget_name="PositionerBox")
         )
 
         # Menu Utils
         self.toolbar.widgets["menu_utils"].widgets["queue"].triggered.connect(
-            lambda: self.add_dock(widget="BECQueue", prefix="queue")
+            lambda: self._create_widget_from_toolbar(widget_name="BECQueue")
         )
         self.toolbar.widgets["menu_utils"].widgets["status"].triggered.connect(
-            lambda: self.add_dock(widget="BECStatusBox", prefix="status")
+            lambda: self._create_widget_from_toolbar(widget_name="BECStatusBox")
         )
         self.toolbar.widgets["menu_utils"].widgets["vs_code"].triggered.connect(
-            lambda: self.add_dock(widget="VSCodeEditor", prefix="vs_code")
+            lambda: self._create_widget_from_toolbar(widget_name="VSCodeEditor")
         )
         self.toolbar.widgets["menu_utils"].widgets["progress_bar"].triggered.connect(
-            lambda: self.add_dock(widget="RingProgressBar", prefix="progress_bar")
+            lambda: self._create_widget_from_toolbar(widget_name="RingProgressBar")
         )
         self.toolbar.widgets["menu_utils"].widgets["log_panel"].triggered.connect(
-            lambda: self.add_dock(widget="LogPanel", prefix="log_panel")
+            lambda: self._create_widget_from_toolbar(widget_name="LogPanel")
         )
 
         # Icons
         self.toolbar.widgets["attach_all"].action.triggered.connect(self.attach_all)
         self.toolbar.widgets["save_state"].action.triggered.connect(self.save_state)
         self.toolbar.widgets["restore_state"].action.triggered.connect(self.restore_state)
+
+    @SafeSlot()
+    def _create_widget_from_toolbar(self, widget_name: str) -> None:
+        dock_name = WidgetContainerUtils.generate_unique_name(widget_name, self.panels.keys())
+        self.new(name=dock_name, widget=widget_name)
 
     def paintEvent(self, event: QPaintEvent):  # TODO decide if we want any default instructions
         super().paintEvent(event)
@@ -218,7 +228,7 @@ class BECDockArea(BECWidget, QWidget):
             painter.drawText(
                 self.rect(),
                 Qt.AlignCenter,
-                "Add docks using 'add_dock' method from CLI\n or \n Add widget docks using the toolbar",
+                "Add docks using 'new' method from CLI\n or \n Add widget docks using the toolbar",
             )
 
     @property
@@ -243,7 +253,17 @@ class BECDockArea(BECWidget, QWidget):
 
     @panels.setter
     def panels(self, value: dict[str, BECDock]):
-        self.dock_area.docks = WeakValueDictionary(value)
+        self.dock_area.docks = WeakValueDictionary(value)  # This can not work can it?
+
+    @property
+    def panel_list(self) -> list[BECDock]:
+        """
+        Get the docks in the dock area.
+
+        Returns:
+            list: The docks in the dock area.
+        """
+        return list(self.dock_area.docks.values())
 
     @property
     def temp_areas(self) -> list:
@@ -287,36 +307,17 @@ class BECDockArea(BECWidget, QWidget):
         self.config.docks_state = last_state
         return last_state
 
-    def remove_dock(self, name: str):
-        """
-        Remove a dock by name and ensure it is properly closed and cleaned up.
-
-        Args:
-            name(str): The name of the dock to remove.
-        """
-        dock = self.dock_area.docks.pop(name, None)
-        self.config.docks.pop(name, None)
-        if dock:
-            dock.close()
-            dock.deleteLater()
-            if len(self.dock_area.docks) <= 1:
-                for dock in self.dock_area.docks.values():
-                    dock.hide_title_bar()
-
-        else:
-            raise ValueError(f"Dock with name {name} does not exist.")
-
     @SafeSlot(popup_error=True)
-    def add_dock(
+    def new(
         self,
-        name: str = None,
-        position: Literal["bottom", "top", "left", "right", "above", "below"] = None,
+        name: str | None = None,
+        widget: str | QWidget | None = None,
+        widget_name: str | None = None,
+        position: Literal["bottom", "top", "left", "right", "above", "below"] = "bottom",
         relative_to: BECDock | None = None,
         closable: bool = True,
         floating: bool = False,
-        prefix: str = "dock",
-        widget: str | QWidget | None = None,
-        row: int = None,
+        row: int | None = None,
         col: int = 0,
         rowspan: int = 1,
         colspan: int = 1,
@@ -326,12 +327,11 @@ class BECDockArea(BECWidget, QWidget):
 
         Args:
             name(str): The name of the dock to be displayed and for further references. Has to be unique.
+            widget(str|QWidget|None): The widget to be added to the dock. While using RPC, only BEC RPC widgets from RPCWidgetHandler are allowed.
             position(Literal["bottom", "top", "left", "right", "above", "below"]): The position of the dock.
             relative_to(BECDock): The dock to which the new dock should be added relative to.
             closable(bool): Whether the dock is closable.
             floating(bool): Whether the dock is detached after creating.
-            prefix(str): The prefix for the dock name if no name is provided.
-            widget(str|QWidget|None): The widget to be added to the dock. While using RPC, only BEC RPC widgets from RPCWidgetHandler are allowed.
             row(int): The row of the added widget.
             col(int): The column of the added widget.
             rowspan(int): The rowspan of the added widget.
@@ -340,21 +340,20 @@ class BECDockArea(BECWidget, QWidget):
         Returns:
             BECDock: The created dock.
         """
-        if name is None:
-            name = WidgetContainerUtils.generate_unique_widget_id(
-                container=self.dock_area.docks, prefix=prefix
-            )
-
-        if name in set(self.dock_area.docks.keys()):
-            raise ValueError(f"Dock with name {name} already exists.")
-
-        if position is None:
-            position = "bottom"
+        dock_names = [dock._name for dock in self.panel_list]  # pylint: disable=protected-access
+        if name is not None:  # Name is provided
+            if name in dock_names:
+                raise ValueError(
+                    f"Name {name} must be unique for docks, but already exists in DockArea "
+                    f"with name: {self._name} and id {self.gui_id}."
+                )
+        else:  # Name is not provided
+            name = WidgetContainerUtils.generate_unique_name(name="dock", list_of_names=dock_names)
 
         dock = BECDock(name=name, parent_dock_area=self, closable=closable)
         dock.config.position = position
-        self.config.docks[name] = dock.config
-
+        self.config.docks[dock.name()] = dock.config
+        # The dock.name is equal to the name passed to BECDock
         self.dock_area.addDock(dock=dock, position=position, relativeTo=relative_to)
 
         if len(self.dock_area.docks) <= 1:
@@ -363,10 +362,11 @@ class BECDockArea(BECWidget, QWidget):
             for dock in self.dock_area.docks.values():
                 dock.show_title_bar()
 
-        if widget is not None and isinstance(widget, str):
-            dock.add_widget(widget=widget, row=row, col=col, rowspan=rowspan, colspan=colspan)
-        elif widget is not None and isinstance(widget, QWidget):
-            dock.addWidget(widget, row=row, col=col, rowspan=rowspan, colspan=colspan)
+        if widget is not None:
+            # Check if widget name exists.
+            dock.new(
+                widget=widget, name=widget_name, row=row, col=col, rowspan=rowspan, colspan=colspan
+            )
         if (
             self._instructions_visible
         ):  # TODO still decide how initial instructions should be handled
@@ -404,48 +404,25 @@ class BECDockArea(BECWidget, QWidget):
         Remove a temporary area from the dock area.
         This is a patched method of pyqtgraph's removeTempArea
         """
+        if area not in self.dock_area.tempAreas:
+            # FIXME add some context for the logging, I am not sure which object is passed.
+            # It looks like a pyqtgraph.DockArea
+            logger.info(f"Attempted to remove dock_area, but was not floating.")
+            return
         self.dock_area.tempAreas.remove(area)
         area.window().close()
         area.window().deleteLater()
-
-    def clear_all(self):
-        """
-        Close all docks and remove all temp areas.
-        """
-        self.attach_all()
-        for dock in dict(self.dock_area.docks).values():
-            dock.remove()
-        self.dock_area.docks.clear()
 
     def cleanup(self):
         """
         Cleanup the dock area.
         """
-        self.clear_all()
+        self.delete_all()
         self.toolbar.close()
         self.toolbar.deleteLater()
         self.dock_area.close()
         self.dock_area.deleteLater()
         super().cleanup()
-
-    def closeEvent(self, event):
-        if self.parent() is None:
-            # we are at top-level (independent window)
-            if self.isVisible():
-                # we are visible => user clicked on [X]
-                # (when closeEvent is called from shutdown procedure,
-                # everything is hidden first)
-                # so, let's ignore "close", and do hide instead
-                event.ignore()
-                self.setVisible(False)
-
-    def close(self):
-        """
-        Close the dock area and cleanup.
-        Has to be implemented to overwrite pyqtgraph event accept in Container close.
-        """
-        self.cleanup()
-        super().close()
 
     def show(self):
         """Show all windows including floating docks."""
@@ -465,17 +442,52 @@ class BECDockArea(BECWidget, QWidget):
                 continue
             docks.window().hide()
 
-    def delete(self):
-        self.hide()
-        self.deleteLater()
+    def delete_all(self) -> None:
+        """
+        Delete all docks.
+        """
+        self.attach_all()
+        for dock_name in self.panels.keys():
+            self.delete(dock_name)
+
+    def delete(self, dock_name: str):
+        """
+        Delete a dock by name.
+
+        Args:
+            dock_name(str): The name of the dock to delete.
+        """
+        dock = self.dock_area.docks.pop(dock_name, None)
+        self.config.docks.pop(dock_name, None)
+        if dock:
+            dock.close()
+            dock.deleteLater()
+            if len(self.dock_area.docks) <= 1:
+                for dock in self.dock_area.docks.values():
+                    dock.hide_title_bar()
+        else:
+            raise ValueError(f"Dock with name {dock_name} does not exist.")
+        # self._broadcast_update()
+
+    def remove(self) -> None:
+        """Remove the dock area."""
+        self.close()
 
 
 if __name__ == "__main__":  # pragma: no cover
+
+    import sys
 
     from bec_widgets.utils.colors import set_theme
 
     app = QApplication([])
     set_theme("auto")
     dock_area = BECDockArea()
+    dock_1 = dock_area.new(name="dock_0", widget="Waveform")
+    # dock_1 = dock_area.new(name="dock_0", widget="Waveform")
+    dock_area.new(widget="Waveform")
     dock_area.show()
+    dock_area.setGeometry(100, 100, 800, 600)
+    app.topLevelWidgets()
     app.exec_()
+    sys.exit(app.exec_())

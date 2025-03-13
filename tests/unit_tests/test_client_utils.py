@@ -12,7 +12,7 @@ from bec_widgets.tests.utils import FakeDevice
 def cli_figure():
     fig = BECFigure(gui_id="test")
     with mock.patch.object(fig, "_run_rpc") as mock_rpc_call:
-        with mock.patch.object(fig, "gui_is_alive", return_value=True):
+        with mock.patch.object(fig, "_gui_is_alive", return_value=True):
             yield fig, mock_rpc_call
 
 
@@ -40,8 +40,17 @@ def test_rpc_call_accepts_device_as_input(cli_figure):
 )
 def test_client_utils_start_plot_process(config, call_config):
     with mock.patch("bec_widgets.cli.client_utils.subprocess.Popen") as mock_popen:
-        _start_plot_process("gui_id", BECFigure, config)
-        command = ["bec-gui-server", "--id", "gui_id", "--gui_class", "BECFigure", "--hide"]
+        _start_plot_process("gui_id", BECFigure, "bec", config)
+        command = [
+            "bec-gui-server",
+            "--id",
+            "gui_id",
+            "--gui_class",
+            "BECFigure",
+            "--gui_class_id",
+            "bec",
+            "--hide",
+        ]
         if call_config:
             command.extend(["--config", call_config])
         mock_popen.assert_called_once_with(
@@ -66,20 +75,24 @@ def test_client_utils_passes_client_config_to_server(bec_dispatcher):
         mixin = BECGuiClient()
         mixin._client = bec_dispatcher.client
         mixin._gui_id = "gui_id"
-        mixin.gui_is_alive = mock.MagicMock()
-        mixin.gui_is_alive.side_effect = [True]
+        mixin._gui_is_alive = mock.MagicMock()
+        mixin._gui_is_alive.side_effect = [True]
 
         try:
             yield mixin
         finally:
-            mixin.close()
+            mixin.kill_server()
 
     with bec_client_mixin() as mixin:
         with mock.patch("bec_widgets.cli.client_utils._start_plot_process") as mock_start_plot:
             mock_start_plot.return_value = [mock.MagicMock(), mock.MagicMock()]
-            mixin.start_server(
+            mixin._start_server(
                 wait=False
             )  # the started event will not be set, wait=True would block forever
             mock_start_plot.assert_called_once_with(
-                "gui_id", BECGuiClient, mixin._client._service_config.config, logger=mock.ANY
+                "gui_id",
+                BECGuiClient,
+                gui_class_id="bec",
+                config=mixin._client._service_config.config,
+                logger=mock.ANY,
             )

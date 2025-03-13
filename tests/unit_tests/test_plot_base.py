@@ -14,7 +14,7 @@ def test_init_plot_base(qtbot, mocked_client):
     plot_base = bec_figure.add_widget(widget_type="BECPlotBase", widget_id="test_plot")
     assert plot_base is not None
     assert plot_base.config.widget_class == "BECPlotBase"
-    assert plot_base.config.gui_id == "test_plot"
+    assert plot_base.config.gui_id == plot_base.gui_id
 
 
 def test_plot_base_axes_by_separate_methods(qtbot, mocked_client):

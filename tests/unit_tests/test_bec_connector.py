@@ -30,7 +30,7 @@ def test_bec_connector_init_with_gui_id(mocked_client):
 
 
 def test_bec_connector_set_gui_id(bec_connector):
-    bec_connector.set_gui_id("test_gui_id")
+    bec_connector._set_gui_id("test_gui_id")
     assert bec_connector.config.gui_id == "test_gui_id"
 
 
@@ -40,7 +40,7 @@ def test_bec_connector_change_config(bec_connector):
 
 
 def test_bec_connector_get_obj_by_id(bec_connector):
-    bec_connector.set_gui_id("test_gui_id")
+    bec_connector._set_gui_id("test_gui_id")
     assert bec_connector.get_obj_by_id("test_gui_id") == bec_connector
     assert bec_connector.get_obj_by_id("test_gui_id_2") is None
 

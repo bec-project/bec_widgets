@@ -942,7 +942,7 @@ class PlotBase(BECWidget, QWidget):
             self.axis_settings_dialog.close()
             self.axis_settings_dialog = None
         self.cleanup_pyqtgraph()
-        self.rpc_register.remove_rpc(self)
+        super().cleanup()
 
     def cleanup_pyqtgraph(self):
         """Cleanup pyqtgraph items."""
