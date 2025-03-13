@@ -434,7 +434,7 @@ class BECDock(BECWidget, Dock):
         super().close()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import sys
 
     from qtpy.QtWidgets import QApplication
