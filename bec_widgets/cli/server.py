@@ -15,6 +15,7 @@ from bec_lib.utils.import_utils import lazy_import
 from qtpy.QtCore import Qt, QTimer
 from redis.exceptions import RedisError
 
+from bec_widgets.cli.rpc import rpc_register
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.qt_utils.error_popups import ErrorPopupUtility
 from bec_widgets.utils import BECDispatcher
@@ -36,6 +37,8 @@ def rpc_exception_hook(err_func):
     old_exception_hook = popup.custom_exception_hook
 
     # install err_func, if it is a callable
+    # IMPORTANT, Keep self here, because this method is overwriting the custom_exception_hook
+    # of the ErrorPopupUtility (popup instance) class.
     def custom_exception_hook(self, exc_type, value, tb, **kwargs):
         err_func({"error": popup.get_error_message(exc_type, value, tb)})
 
@@ -56,14 +59,15 @@ class BECWidgetsCLIServer:
         dispatcher: BECDispatcher = None,
         client=None,
         config=None,
-        gui_class: Union[BECFigure, BECDockArea] = BECFigure,
+        gui_class: Union[BECFigure, BECDockArea] = BECDockArea,
+        gui_class_id: str = "bec",
     ) -> None:
         self.status = messages.BECStatus.BUSY
         self.dispatcher = BECDispatcher(config=config) if dispatcher is None else dispatcher
         self.client = self.dispatcher.client if client is None else client
         self.client.start()
         self.gui_id = gui_id
-        self.gui = gui_class(gui_id=self.gui_id)
+        # register broadcast callback
         self.rpc_register = RPCRegister()
         self.rpc_register.add_rpc(self.gui)
 
@@ -78,6 +82,8 @@ class BECWidgetsCLIServer:
 
         self.status = messages.BECStatus.RUNNING
         logger.success(f"Server started with gui_id: {self.gui_id}")
+        # Create initial object -> BECFigure or BECDockArea
+        self.gui = gui_class(parent=None, name=gui_class_id)
 
     def on_rpc_update(self, msg: dict, metadata: dict):
         request_id = metadata.get("request_id")
@@ -135,6 +141,9 @@ class BECWidgetsCLIServer:
         if isinstance(obj, BECConnector):
             return {
                 "gui_id": obj.gui_id,
+                "name": (
+                    obj._name if hasattr(obj, "_name") else obj.__class__.__name__
+                ),  # pylint: disable=protected-access
                 "widget_class": obj.__class__.__name__,
                 "config": obj.config.model_dump(),
                 "__rpc__": True,
@@ -179,7 +188,12 @@ class SimpleFileLikeFromLogOutputFunc:
         return
 
 
-def _start_server(gui_id: str, gui_class: Union[BECFigure, BECDockArea], config: str | None = None):
+def _start_server(
+    gui_id: str,
+    gui_class: Union[BECFigure, BECDockArea],
+    gui_class_id: str = "bec",
+    config: str | None = None,
+):
     if config:
         try:
             config = json.loads(config)
@@ -196,7 +210,9 @@ def _start_server(gui_id: str, gui_class: Union[BECFigure, BECDockArea], config:
     #     service_name="BECWidgetsCLIServer",
     #     service_config=service_config.service_config,
     # )
-    server = BECWidgetsCLIServer(gui_id=gui_id, config=service_config, gui_class=gui_class)
+    server = BECWidgetsCLIServer(
+        gui_id=gui_id, config=service_config, gui_class=gui_class, gui_class_id=gui_class_id
+    )
     return server
 
 
@@ -216,6 +232,12 @@ def main():
         "--gui_class",
         type=str,
         help="Name of the gui class to be rendered. Possible values: \n- BECFigure\n- BECDockArea",
+    )
+    parser.add_argument(
+        "--gui_class_id",
+        type=str,
+        default="bec",
+        help="The id of the gui class that is added to the QApplication",
     )
     parser.add_argument("--config", type=str, help="Config file or config string.")
     parser.add_argument("--hide", action="store_true", help="Hide on startup")
@@ -256,14 +278,14 @@ def main():
             # store gui id within QApplication object, to make it available to all widgets
             app.gui_id = args.id
 
-            server = _start_server(args.id, gui_class, args.config)
+            # args.id = "abff6"
+            server = _start_server(args.id, gui_class, args.gui_class_id, args.config)
 
             win = BECMainWindow(gui_id=f"{server.gui_id}:window")
             win.setAttribute(Qt.WA_ShowWithoutActivating)
-            win.setWindowTitle("BEC Widgets")
+            win.setWindowTitle("BEC")
 
             RPCRegister().add_rpc(win)
-
             gui = server.gui
             win.setCentralWidget(gui)
             if not args.hide:
