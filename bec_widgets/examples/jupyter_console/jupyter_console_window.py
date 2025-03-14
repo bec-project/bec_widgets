@@ -21,6 +21,7 @@ from bec_widgets.widgets.containers.figure import BECFigure
 from bec_widgets.widgets.containers.layout_manager.layout_manager import LayoutManagerWidget
 from bec_widgets.widgets.editors.jupyter_console.jupyter_console import BECJupyterConsole
 from bec_widgets.widgets.plots_next_gen.image.image import Image
+from bec_widgets.widgets.plots_next_gen.motor_map.motor_map import MotorMap
 from bec_widgets.widgets.plots_next_gen.plot_base import PlotBase
 from bec_widgets.widgets.plots_next_gen.scatter_waveform.scatter_waveform import ScatterWaveform
 from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
@@ -53,11 +54,9 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "w8": self.w8,
                     "w9": self.w9,
                     "w10": self.w10,
-                    "d0": self.d0,
                     "im": self.im,
                     "mi": self.mi,
                     "mm": self.mm,
-                    "mw": self.mw,
                     "lm": self.lm,
                     "btn1": self.btn1,
                     "btn2": self.btn2,
@@ -146,14 +145,18 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         tab_widget.addTab(seventh_tab, "Scatter Waveform")
         tab_widget.setCurrentIndex(6)
 
+        eighth_tab = QWidget()
+        eighth_tab_layout = QVBoxLayout(eighth_tab)
+        self.mm = MotorMap()
+        eighth_tab_layout.addWidget(self.mm)
+        tab_widget.addTab(eighth_tab, "Motor Map")
+        tab_widget.setCurrentIndex(7)
+
         # add stuff to the new Waveform widget
         self._init_waveform()
 
         # add stuff to figure
         self._init_figure()
-
-        # init dock for testing
-        self._init_dock()
 
         self.setWindowTitle("Jupyter Console Window")
 
@@ -218,16 +221,6 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
             row=2,
             col=2,
         )
-
-    def _init_dock(self):
-
-        self.d0 = self.dock.new(name="dock_0")
-        self.mm = self.d0.new("BECMotorMapWidget")
-        self.mm.change_motors("samx", "samy")
-
-        self.mw = None  # self.wf.multi_waveform(monitor="waveform")  # , config=config)
-
-        self.dock.save_state()
 
     def closeEvent(self, event):
         """Override to handle things when main window is closed."""
