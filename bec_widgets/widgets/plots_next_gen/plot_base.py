@@ -378,6 +378,14 @@ class PlotBase(BECWidget, QWidget):
             **kwargs: Keyword arguments for the properties to be set.
 
         Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+            - legend_label_size: int
 
         """
         property_map = {

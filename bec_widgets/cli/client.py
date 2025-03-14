@@ -32,6 +32,7 @@ class Widgets(str, enum.Enum):
     LMFitDialog = "LMFitDialog"
     LogPanel = "LogPanel"
     Minesweeper = "Minesweeper"
+    MotorMap = "MotorMap"
     PositionIndicator = "PositionIndicator"
     PositionerBox = "PositionerBox"
     PositionerBox2D = "PositionerBox2D"
@@ -2727,6 +2728,14 @@ class Image(RPCBase):
             **kwargs: Keyword arguments for the properties to be set.
 
         Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+            - legend_label_size: int
         """
 
     @property
@@ -3353,6 +3362,395 @@ class LogPanel(RPCBase):
 class Minesweeper(RPCBase): ...
 
 
+class MotorMap(RPCBase):
+    @property
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @enable_toolbar.setter
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @property
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @enable_side_panel.setter
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @property
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @enable_fps_monitor.setter
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @rpc_call
+    def set(self, **kwargs):
+        """
+        Set the properties of the plot widget.
+
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+
+        Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+            - legend_label_size: int
+        """
+
+    @property
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @title.setter
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @x_label.setter
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @y_label.setter
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @x_limits.setter
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @y_limits.setter
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @x_grid.setter
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @y_grid.setter
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @inner_axes.setter
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @outer_axes.setter
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Lock aspect ratio of the plot widget.
+        """
+
+    @lock_aspect_ratio.setter
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Lock aspect ratio of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @auto_range_x.setter
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @auto_range_y.setter
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @x_log.setter
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @y_log.setter
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @legend_label_size.setter
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @property
+    @rpc_call
+    def color(self) -> "tuple":
+        """
+        Get the color of the motor trace.
+
+        Returns:
+            tuple: Color of the motor trace.
+        """
+
+    @color.setter
+    @rpc_call
+    def color(self) -> "tuple":
+        """
+        Get the color of the motor trace.
+
+        Returns:
+            tuple: Color of the motor trace.
+        """
+
+    @property
+    @rpc_call
+    def max_points(self) -> "int":
+        """
+        Get the maximum number of points to display.
+        """
+
+    @max_points.setter
+    @rpc_call
+    def max_points(self) -> "int":
+        """
+        Get the maximum number of points to display.
+        """
+
+    @property
+    @rpc_call
+    def precision(self) -> "int":
+        """
+        Set the decimal precision of the motor position.
+        """
+
+    @precision.setter
+    @rpc_call
+    def precision(self) -> "int":
+        """
+        Set the decimal precision of the motor position.
+        """
+
+    @property
+    @rpc_call
+    def num_dim_points(self) -> "int":
+        """
+        Get the number of dim points for the motor map.
+        """
+
+    @num_dim_points.setter
+    @rpc_call
+    def num_dim_points(self) -> "int":
+        """
+        Get the number of dim points for the motor map.
+        """
+
+    @property
+    @rpc_call
+    def background_value(self) -> "int":
+        """
+        Get the background value of the motor map.
+        """
+
+    @background_value.setter
+    @rpc_call
+    def background_value(self) -> "int":
+        """
+        Get the background value of the motor map.
+        """
+
+    @property
+    @rpc_call
+    def scatter_size(self) -> "int":
+        """
+        Get the scatter size of the motor map plot.
+        """
+
+    @scatter_size.setter
+    @rpc_call
+    def scatter_size(self) -> "int":
+        """
+        Get the scatter size of the motor map plot.
+        """
+
+    @rpc_call
+    def map(self, x_name: "str", y_name: "str", validate_bec: "bool" = True) -> "None":
+        """
+        Set the x and y motor names.
+
+        Args:
+            x_name(str): The name of the x motor.
+            y_name(str): The name of the y motor.
+            validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
+        """
+
+    @rpc_call
+    def reset_history(self):
+        """
+        Reset the history of the motor map.
+        """
+
+    @rpc_call
+    def get_data(self) -> "dict":
+        """
+        Get the data of the motor map.
+
+        Returns:
+            dict: Data of the motor map.
+        """
+
+
 class PositionIndicator(RPCBase):
     @rpc_call
     def set_value(self, position: float):
@@ -3780,6 +4178,8 @@ class ScanMetadata(RPCBase):
 
 
 class ScatterCurve(RPCBase):
+    """Scatter curve item for the scatter waveform widget."""
+
     @property
     @rpc_call
     def color_map(self) -> "str":
@@ -3840,6 +4240,14 @@ class ScatterWaveform(RPCBase):
             **kwargs: Keyword arguments for the properties to be set.
 
         Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+            - legend_label_size: int
         """
 
     @property
@@ -4232,6 +4640,14 @@ class Waveform(RPCBase):
             **kwargs: Keyword arguments for the properties to be set.
 
         Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+            - legend_label_size: int
         """
 
     @property
