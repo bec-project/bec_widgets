@@ -1239,9 +1239,18 @@ class Waveform(PlotBase):
 
         # Retrieve and store the fit parameters and summary from the DAP server response
         try:
-            curve.dap_params = msg["data"][1]["fit_parameters"]
-            curve.dap_summary = msg["data"][1]["fit_summary"]
-        except TypeError:
+            if curve.dap_params is None:
+                curve.dap_params = msg["data"][1]["fit_parameters"]
+                curve.dap_summary = msg["data"][1]["fit_summary"]
+                print("set first time")
+            else:
+                old_redchi = curve.dap_summary.get("redchi", 0)
+                new_redchi = msg["data"][1]["fit_summary"]["redchi"]
+                if old_redchi < new_redchi:
+                    curve.dap_params = msg["data"][1]["fit_parameters"]
+                    curve.dap_summary = msg["data"][1]["fit_summary"]
+                    print(f"updating from {old_redchi} to {new_redchi}")
+        except (TypeError, AttributeError):
             logger.warning(f"Failed to retrieve DAP data for curve '{curve.name()}'")
             return
 
