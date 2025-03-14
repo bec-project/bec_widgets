@@ -315,12 +315,6 @@ def main():
             def sigint_handler(*args):
                 # display message, for people to let it terminate gracefully
                 print("Caught SIGINT, exiting")
-                # first hide all top level windows
-                # this is to discriminate the cases between "user clicks on [X]"
-                # (which should be filtered, to not close -see BECDockArea-)
-                # or "app is asked to close"
-                for window in app.topLevelWidgets():
-                    window.hide()  # so, we know we can exit because it is hidden
                 app.quit()
 
             signal.signal(signal.SIGINT, sigint_handler)
