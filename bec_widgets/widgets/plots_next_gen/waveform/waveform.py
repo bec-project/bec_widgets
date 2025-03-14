@@ -9,7 +9,7 @@ import pyqtgraph as pg
 from bec_lib import bec_logger, messages
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import Field, ValidationError, field_validator
-from qtpy.QtCore import Signal
+from qtpy.QtCore import QTimer, Signal
 from qtpy.QtWidgets import QDialog, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget
 
 from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
@@ -973,6 +973,10 @@ class Waveform(PlotBase):
             meta(dict): The message metadata.
         """
         self.sync_signal_update.emit()
+        status = msg.get("done")
+        if status:
+            QTimer.singleShot(100, self.update_sync_curves)
+            QTimer.singleShot(300, self.update_sync_curves)
 
     def _fetch_scan_data_and_access(self):
         """
