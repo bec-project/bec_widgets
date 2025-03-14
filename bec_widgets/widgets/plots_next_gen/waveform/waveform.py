@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from bec_lib.lmfit_serializer import serialize_lmfit_params
+
 import json
 from typing import Literal
 
@@ -1152,8 +1154,8 @@ class Waveform(PlotBase):
                 MessageEndpoints.dap_response(f"{self.scan_id}-{self.gui_id}"),
             )
 
-    # @SafeSlot() #FIXME type error
-    def request_dap(self):
+    @SafeSlot()
+    def request_dap(self, _=None):
         """Request new fit for data"""
 
         for dap_curve in self._dap_curves:
@@ -1176,12 +1178,32 @@ class Waveform(PlotBase):
                 x_min = None
                 x_max = None
 
+            dice_roll = np.random.randint(0, 11)
+            if dap_curve.dap_params is not None:
+                fit_success = dap_curve.dap_summary.get("success", False)
+            else:
+                fit_success = False
+
+            params_serialized = {}
+            if fit_success and dice_roll < 9:
+                amplitude = dap_curve.dap_params.get("amplitude")
+                center = dap_curve.dap_params.get("center")
+                sigma = dap_curve.dap_params.get("sigma")
+
+                amplitude_param = lmfit.Parameter(name="amplitude", value=amplitude)
+                center_param = lmfit.Parameter(name="center", value=center)
+                sigma_param = lmfit.Parameter(name="sigma", value=sigma)
+
+                params_serialized = serialize_lmfit_params(
+                    [amplitude_param, center_param, sigma_param]
+                )
+
             msg = messages.DAPRequestMessage(
                 dap_cls="LmfitService1D",
                 dap_type="on_demand",
                 config={
                     "args": [],
-                    "kwargs": {"data_x": x_data, "data_y": y_data},
+                    "kwargs": {"data_x": x_data, "data_y": y_data, **params_serialized},
                     "class_args": model._plugin_info["class_args"],
                     "class_kwargs": model._plugin_info["class_kwargs"],
                     "curve_label": dap_curve.name(),
