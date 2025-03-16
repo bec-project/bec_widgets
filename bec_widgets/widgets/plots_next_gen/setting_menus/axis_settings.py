@@ -97,6 +97,8 @@ class AxisSettings(SettingWidget):
             widget_to_set = self.ui.findChild(QWidget, property_name)
         except RuntimeError:
             return
+        if widget_to_set is None:
+            return
         # Block signals to avoid triggering set_property again
         was_blocked = widget_to_set.blockSignals(True)
         WidgetIO.set_value(widget_to_set, value)
