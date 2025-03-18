@@ -471,7 +471,8 @@ class PlotBase(BECWidget, QWidget):
         the combined label. Called whenever user label or suffix changes.
         """
         final_label = self.x_label_combined
-        self.plot_item.setLabel("bottom", text=final_label)
+        if self.plot_item.getAxis("bottom").isVisible():
+            self.plot_item.setLabel("bottom", text=final_label)
 
     @SafeProperty(str, doc="The text of the y label")
     def y_label(self) -> str:
@@ -518,7 +519,8 @@ class PlotBase(BECWidget, QWidget):
         the combined y label. Called whenever y label or suffix changes.
         """
         final_label = self.y_label_combined
-        self.plot_item.setLabel("left", text=final_label)
+        if self.plot_item.getAxis("bottom").isVisible():
+            self.plot_item.setLabel("left", text=final_label)
 
     def _tuple_to_qpointf(self, tuple: tuple | list):
         """
@@ -798,6 +800,8 @@ class PlotBase(BECWidget, QWidget):
         """
         self.plot_item.showAxis("bottom", value)
         self.plot_item.showAxis("left", value)
+        self._apply_x_label()
+        self._apply_y_label()
         self.property_changed.emit("inner_axes", value)
 
     @SafeProperty(bool, doc="Lock aspect ratio of the plot widget.")
