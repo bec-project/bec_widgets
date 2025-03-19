@@ -5,6 +5,7 @@ import enum
 from bec_lib.device import ComputedSignal, Device, Positioner, ReadoutPriority
 from bec_lib.device import Signal as BECSignal
 from bec_lib.logger import bec_logger
+from pydantic import field_validator
 from qtpy.QtCore import Property, Signal, Slot
 
 from bec_widgets.utils import ConnectionConfig
@@ -25,12 +26,34 @@ class BECDeviceFilter(enum.Enum):
 
 
 class DeviceInputConfig(ConnectionConfig):
-    device_filter: list[BECDeviceFilter] = []
-    readout_filter: list[ReadoutPriority] = []
+    device_filter: list[str] = []
+    readout_filter: list[str] = []
     devices: list[str] = []
     default: str | None = None
     arg_name: str | None = None
     apply_filter: bool = True
+
+    @field_validator("device_filter")
+    @classmethod
+    def check_device_filter(cls, v, values):
+        valid_device_filters = [entry.value for entry in BECDeviceFilter]
+        for filt in v:
+            if filt not in valid_device_filters:
+                raise ValueError(
+                    f"Device filter {filt} is not a valid device filter {valid_device_filters}."
+                )
+        return v
+
+    @field_validator("readout_filter")
+    @classmethod
+    def check_readout_filter(cls, v, values):
+        valid_device_filters = [entry.value for entry in ReadoutPriority]
+        for filt in v:
+            if filt not in valid_device_filters:
+                raise ValueError(
+                    f"Device filter {filt} is not a valid device filter {valid_device_filters}."
+                )
+        return v
 
 
 class DeviceInputBase(BECWidget):
