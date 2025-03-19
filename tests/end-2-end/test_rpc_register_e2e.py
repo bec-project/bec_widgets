@@ -1,42 +1,30 @@
 import pytest
 
-from bec_widgets.cli.client import BECFigure, BECImageShow, BECMotorMap, BECWaveform
+from bec_widgets.cli.client import ImageItem
+from bec_widgets.cli.rpc.rpc_base import RPCReference
+
+# pylint: disable=unused-argument
+# pylint: disable=protected-access
 
 
-def test_rpc_register_list_connections(connected_client_gui_obj):
+def test_rpc_reference_objects(connected_client_gui_obj):
     gui = connected_client_gui_obj
-    fig = gui.window_list[0].new("fig").new(name="fig", widget="BECFigure")
+    dock = gui.window_list[0].new("dock")
+    plt = dock.new(name="fig", widget="Waveform")
 
-    plt = fig.plot(x_name="samx", y_name="bpm4i")
-    im = fig.image("eiger")
-    motor_map = fig.motor_map("samx", "samy")
-    plt_z = fig.plot(x_name="samx", y_name="samy", z_name="bpm4i", new=True)
+    plt.plot(x_name="samx", y_name="bpm4i")
 
-    # keep only class names from objects, since objects on server and client are different
-    # so the best we can do is to compare types (rpc register is unit-tested elsewhere)
-    all_connections = {obj_id: type(obj).__name__ for obj_id, obj in fig._get_all_rpc().items()}
+    im = dock.new("Image")
+    im.image("eiger")
+    motor_map = dock.new("MotorMap")
+    motor_map.map("samx", "samy")
+    plt_z = dock.new("Waveform")
+    plt_z.plot(x_name="samx", y_name="samy", z_name="bpm4i")
 
-    all_subwidgets_expected = {wid: type(widget).__name__ for wid, widget in fig.widgets.items()}
-    curve_1D = fig.widgets[plt._rpc_id]
-    curve_2D = fig.widgets[plt_z._rpc_id]
-    curves_expected = {
-        curve_1D._rpc_id: type(curve_1D).__name__,
-        curve_2D._rpc_id: type(curve_2D).__name__,
-    }
-    curves_expected.update({curve._gui_id: type(curve).__name__ for curve in curve_1D.curves})
-    curves_expected.update({curve._gui_id: type(curve).__name__ for curve in curve_2D.curves})
-    fig_expected = {fig._rpc_id: type(fig).__name__, fig._rpc_id + ":window": "BECMainWindow"}
-    image_item_expected = {
-        fig.widgets[im._rpc_id].images[0]._rpc_id: type(fig.widgets[im._rpc_id].images[0]).__name__
-    }
+    assert len(plt_z.curves) == 1
+    assert len(plt.curves) == 1
+    assert im.monitor == "eiger"
 
-    all_connections_expected = {
-        **all_subwidgets_expected,
-        **curves_expected,
-        **fig_expected,
-        **image_item_expected,
-    }
-
-    assert len(all_connections) == 9 + 3  # gui, dock_area, dock
-    # In the old implementation, gui , dock_area and dock were not included in the _get_all_rpc() method
-    # assert all_connections == all_connections_expected
+    assert isinstance(im.main_image, RPCReference)
+    image_item = gui._ipython_registry.get(im.main_image._gui_id, None)
+    assert isinstance(image_item, ImageItem)
