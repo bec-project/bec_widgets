@@ -12,6 +12,7 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.service_config import ServiceConfig
 from bec_lib.utils.import_utils import lazy_import
+from bec_widgets.examples.qapp_custom.bec_qapp import BECQApplication
 from qtpy.QtCore import Qt, QTimer
 from redis.exceptions import RedisError
 
@@ -263,7 +264,7 @@ def main():
 
     with redirect_stdout(SimpleFileLikeFromLogOutputFunc(logger.info)):
         with redirect_stderr(SimpleFileLikeFromLogOutputFunc(logger.error)):
-            app = QApplication(sys.argv)
+            app = BECQApplication(sys.argv)
             # set close on last window, only if not under control of client ;
             # indeed, Qt considers a hidden window a closed window, so if all windows
             # are hidden by default it exits
