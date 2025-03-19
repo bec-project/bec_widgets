@@ -78,7 +78,10 @@ def test_motor_map_properties(qtbot, mocked_client):
     qtbot.wait(200)
     assert mm.background_value == 40
     assert mm.config.background_value == 40
-    np.all(mm._limit_map.image == 40.0)
+    filled_rect = mm._limit_map
+    rect_color = filled_rect._brush.color().getRgb()
+    expected = (40, 40, 40, 150)
+    assert rect_color == expected
 
 
 def test_motor_map_get_limits(qtbot, mocked_client):
@@ -205,13 +208,14 @@ def test_motor_map_limit_map(qtbot, mocked_client):
     # Create a limit map
     limit_map = mm._make_limit_map([0, 10], [0, 5])
 
-    # Check that the limit map was created with the right type
-    assert isinstance(limit_map, pg.ImageItem)
+    from qtpy import QtCore
 
-    # Check the dimensions of the image data
-    image_data = limit_map.image
-    assert image_data.shape[0] == 11  # 0 to 10 inclusive
-    assert image_data.shape[1] == 6  # 0 to 5 inclusive
+    from bec_widgets.widgets.plots_next_gen.motor_map.motor_map import FilledRectItem
+
+    assert isinstance(limit_map, FilledRectItem)
+    rect = limit_map.boundingRect()
+    # For [0,10] on x and [0,5] on y, width=10, height=5
+    assert rect == QtCore.QRectF(0, 0, 10, 5)
 
 
 def test_motor_map_change_limits(qtbot, mocked_client):
@@ -223,8 +227,9 @@ def test_motor_map_change_limits(qtbot, mocked_client):
     # samy: [-5, 5]
 
     # Original Limits Map
-    assert mm._limit_map.image.shape[0] == 21  # -10 to 10 inclusive
-    assert mm._limit_map.image.shape[1] == 11  # -5 to 5 inclusive
+    rect = mm._limit_map.boundingRect()
+    assert rect.width() == 20  # -10 to 10 inclusive
+    assert rect.height() == 10  # -5 to 5 inclusive
     assert mm.config.x_motor.limits == [-10, 10]
     assert mm.config.y_motor.limits == [-5, 5]
 
@@ -237,8 +242,9 @@ def test_motor_map_change_limits(qtbot, mocked_client):
     # Check that the limits map was updated
     assert mm.config.x_motor.limits == [-20, 20]
     assert mm.config.y_motor.limits == [-5, 5]
-    assert mm._limit_map.image.shape[0] == 41  # -20 to 20 inclusive
-    assert mm._limit_map.image.shape[1] == 11  # -5 to 5 inclusive -> same as before
+    rect = mm._limit_map.boundingRect()
+    assert rect.width() == 40  # -20 to 20 inclusive
+    assert rect.height() == 10  # -5 to 5 inclusive -> same as before
 
     # Change back the limits
     mm.dev["samx"].limits = [-10, 10]
