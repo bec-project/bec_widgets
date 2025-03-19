@@ -21,11 +21,18 @@ logger = bec_logger.logger
 
 
 class BECMainWindow(BECWidget, QMainWindow):
+    USER_ACCESS = ["new_dock_area", "change_theme", "show_gui_id"]
+
     def __init__(self, gui_id: str = None, default_widget=QWidget, *args, **kwargs):
         BECWidget.__init__(self, gui_id=gui_id, **kwargs)
         QMainWindow.__init__(self, *args, **kwargs)
         # Upgrade qApp if necessary
         self.app = QApplication.instance()
+
+        self._upgrade_qapp()
+        self._init_ui()
+
+    def _upgrade_qapp(self):
         if not getattr(self.app, "is_bec_app", False):
             print("[BECWidget]: Upgrading QApplication instance to BECQApplication.")
             self.app = upgrade_to_becqapp()
@@ -33,8 +40,6 @@ class BECMainWindow(BECWidget, QMainWindow):
             print("[BECWidget]: BECQApplication already active.")
 
         self.app.inject_property("widget_initialized", True)
-
-        self._init_ui()
 
     def _init_ui(self):
         # Set the window title
@@ -142,15 +147,17 @@ class BECMainWindow(BECWidget, QMainWindow):
         else:
             name = "dock_area"
             name = WidgetContainerUtils.generate_unique_name(name, existing_dock_areas)
+        new_q_main_window = BECMainWindow(gui_id=name)
         dock_area = BECDockArea(name=name)
-        dock_area.resize(dock_area.minimumSizeHint())
+        new_q_main_window.setCentralWidget(dock_area)
+        new_q_main_window.resize(dock_area.minimumSizeHint())
         # TODO Should we simply use the specified name as title here?
-        dock_area.window().setWindowTitle(f"BEC - {name}")
+        new_q_main_window.window().setWindowTitle(f"BEC - {name}")
         logger.info(f"Created new dock area: {name}")
         logger.info(f"Existing dock areas: {geometry}")
         if geometry is not None:
-            dock_area.setGeometry(*geometry)
-        dock_area.show()
+            new_q_main_window.setGeometry(*geometry)
+        new_q_main_window.show()
         return dock_area
 
     def cleanup(self):
