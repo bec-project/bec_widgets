@@ -4,6 +4,7 @@ from bec_lib.logger import bec_logger
 from PySide6.QtCore import QSize
 from PySide6.QtGui import QAction, QActionGroup, QIcon
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QStyle, QWidget
+from bec_widgets.examples.qapp_custom.bec_qapp import upgrade_to_becqapp
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication, QMainWindow
 
@@ -23,7 +24,15 @@ class BECMainWindow(BECWidget, QMainWindow):
     def __init__(self, gui_id: str = None, default_widget=QWidget, *args, **kwargs):
         BECWidget.__init__(self, gui_id=gui_id, **kwargs)
         QMainWindow.__init__(self, *args, **kwargs)
+        # Upgrade qApp if necessary
         self.app = QApplication.instance()
+        if not getattr(self.app, "is_bec_app", False):
+            print("[BECWidget]: Upgrading QApplication instance to BECQApplication.")
+            self.app = upgrade_to_becqapp()
+        else:
+            print("[BECWidget]: BECQApplication already active.")
+
+        self.app.inject_property("widget_initialized", True)
 
         self._init_ui()
 

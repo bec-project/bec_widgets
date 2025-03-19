@@ -30,7 +30,13 @@ class BECQApplication(QApplication):
         self.client = self.dispatcher.client
         self.gui_id = "1234"
         self.rpc_register.add_rpc(self)
-        self.setup_icon()
+        icon = QIcon()
+        icon.addFile(
+            os.path.join(MODULE_PATH, "assets", "app_icons", "bec_widgets_icon.png"),
+            size=QSize(48, 48),
+        )
+        self.setWindowIcon(icon)
+        # self.setup_icon()
         print("[BECQApplication]: Features initialized with BECDispatcher singleton.")
 
     def inject_property(self, name, value):
