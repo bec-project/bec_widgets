@@ -254,10 +254,9 @@ class BECGuiClient(RPCBase):
 
     def show(self):
         """Show the GUI window."""
-        if self._process is not None:
+        if self._check_if_server_is_alive():
             return self._show_all()
-        # backward compatibility: show() was also starting server
-        return self._start_server(wait=True)
+        return self._start(wait=True)
 
     def hide(self):
         """Hide the GUI window."""
@@ -278,8 +277,7 @@ class BECGuiClient(RPCBase):
         Returns:
             client.BECDockArea: The new dock area.
         """
-        if len(self.window_list) == 0:
-            self.show()
+        self.show()
         if wait:
             with wait_for_server(self):
                 rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
@@ -344,6 +342,14 @@ class BECGuiClient(RPCBase):
     #########################
     #### Private methods ####
     #########################
+
+    def _check_if_server_is_alive(self):
+        """Checks if the process is alive"""
+        if self._process is None:
+            return False
+        if self._process.poll() is not None:
+            return False
+        return True
 
     def _gui_post_startup(self):
         timeout = 10
