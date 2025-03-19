@@ -15,8 +15,7 @@ from bec_lib.utils.import_utils import lazy_import
 from qtpy.QtCore import Qt, QTimer
 from redis.exceptions import RedisError
 
-from bec_widgets.cli.rpc import rpc_register
-from bec_widgets.cli.rpc.rpc_register import RPCRegister
+from bec_widgets.cli.rpc.rpc_register import RPCRegister, rpc_register_broadcast
 from bec_widgets.qt_utils.error_popups import ErrorPopupUtility
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
@@ -70,8 +69,6 @@ class BECWidgetsCLIServer:
         # register broadcast callback
         self.rpc_register = RPCRegister()
         self.rpc_register.add_callback(self.broadcast_registry_update)
-        self.gui = gui_class(parent=None, name=gui_class_id, gui_id=gui_class_id)
-        # self.rpc_register.add_rpc(self.gui)
 
         self.dispatcher.connect_slot(
             self.on_rpc_update, MessageEndpoints.gui_instructions(self.gui_id)
@@ -83,6 +80,8 @@ class BECWidgetsCLIServer:
         self._heartbeat_timer.start(200)
 
         self.status = messages.BECStatus.RUNNING
+        with rpc_register_broadcast(self.rpc_register):
+            self.gui = gui_class(parent=None, name=gui_class_id, gui_id=gui_class_id)
         logger.success(f"Server started with gui_id: {self.gui_id}")
         # Create initial object -> BECFigure or BECDockArea
 
@@ -118,30 +117,31 @@ class BECWidgetsCLIServer:
         return obj
 
     def run_rpc(self, obj, method, args, kwargs):
-        logger.debug(f"Running RPC instruction: {method} with args: {args}, kwargs: {kwargs}")
-        method_obj = getattr(obj, method)
-        # check if the method accepts args and kwargs
-        if not callable(method_obj):
-            if not args:
-                res = method_obj
+        with rpc_register_broadcast(self.rpc_register):
+            logger.debug(f"Running RPC instruction: {method} with args: {args}, kwargs: {kwargs}")
+            method_obj = getattr(obj, method)
+            # check if the method accepts args and kwargs
+            if not callable(method_obj):
+                if not args:
+                    res = method_obj
+                else:
+                    setattr(obj, method, args[0])
+                    res = None
             else:
-                setattr(obj, method, args[0])
-                res = None
-        else:
-            res = method_obj(*args, **kwargs)
+                res = method_obj(*args, **kwargs)
 
-        if isinstance(res, list):
-            res = [self.serialize_object(obj) for obj in res]
-        elif isinstance(res, dict):
-            res = {key: self.serialize_object(val) for key, val in res.items()}
-        else:
-            res = self.serialize_object(res)
-        return res
+            if isinstance(res, list):
+                res = [self.serialize_object(obj) for obj in res]
+            elif isinstance(res, dict):
+                res = {key: self.serialize_object(val) for key, val in res.items()}
+            else:
+                res = self.serialize_object(res)
+            return res
 
     def serialize_object(self, obj):
         if isinstance(obj, BECConnector):
-            config = {}  # obj.config.model_dump()
-            config["parent_id"] = obj.parent_id
+            config = obj.config.model_dump()
+            config["parent_id"] = obj.parent_id  # add parent_id to config
             return {
                 "gui_id": obj.gui_id,
                 "name": (
