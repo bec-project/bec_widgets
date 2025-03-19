@@ -1,5 +1,6 @@
 import os
 
+from bec_widgets.utils.bec_widget import BECWidget
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QApplication
@@ -54,6 +55,25 @@ class BECQApplication(QApplication):
         )
         self.setWindowIcon(icon)
         print("[BECQApplication]: Window icon set.")
+
+    def register_all(self):
+        widgets = self.allWidgets()
+        all_connections = self.rpc_register.list_all_connections()
+        for widget in widgets:
+            gui_id = getattr(widget, "gui_id", None)
+            if gui_id and widget not in all_connections:
+                self.rpc_register.add_rpc(widget)
+                print(
+                    f"[BECQApplication]: Registered widget {widget.__class__} with GUI ID: {gui_id}"
+                )
+
+    def list_all_bec_widgets(self):
+        widgets = self.allWidgets()
+        bec_widgets = []
+        for widget in widgets:
+            if isinstance(widget, BECWidget):
+                bec_widgets.append(widget)
+        return bec_widgets
 
     def shutdown(self):
         self.dispatcher.disconnect_all()

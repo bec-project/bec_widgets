@@ -1,10 +1,13 @@
+from __future__ import annotations
 import os
+import sys
 
 from bec_lib.logger import bec_logger
 from PySide6.QtCore import QSize
 from PySide6.QtGui import QAction, QActionGroup, QIcon
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QStyle, QWidget
-from bec_widgets.examples.qapp_custom.bec_qapp import upgrade_to_becqapp
+from bec_widgets.examples.qapp_custom.bec_qapp import upgrade_to_becqapp, BECQApplication
+from bec_widgets.utils import UILoader
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication, QMainWindow
 
@@ -21,10 +24,12 @@ logger = bec_logger.logger
 
 
 class BECMainWindow(BECWidget, QMainWindow):
-    USER_ACCESS = ["new_dock_area", "change_theme", "show_gui_id"]
+    USER_ACCESS = ["new_dock_area", "change_theme", "list_all_rpc"]
 
-    def __init__(self, gui_id: str = None, default_widget=QWidget, *args, **kwargs):
-        BECWidget.__init__(self, gui_id=gui_id, **kwargs)
+    def __init__(
+        self, gui_id: str = None, name: str = None, default_widget=QWidget, *args, **kwargs
+    ):
+        BECWidget.__init__(self, gui_id=gui_id, name=name, **kwargs)
         QMainWindow.__init__(self, *args, **kwargs)
         # Upgrade qApp if necessary
         self.app = QApplication.instance()
@@ -160,5 +165,75 @@ class BECMainWindow(BECWidget, QMainWindow):
         new_q_main_window.show()
         return dock_area
 
+    def list_all_rpc(self) -> list:
+        """
+        List all the registered RPC objects.
+
+        Returns:
+            dict: A dictionary containing all the registered RPC objects.
+        """
+        all_connections = self.rpc_register.list_all_connections()
+        all_connections_keys = list(all_connections.keys())
+        return all_connections_keys
+
     def cleanup(self):
         super().close()
+
+
+class WindowWithUi(BECMainWindow):
+    """
+    A class that represents a window with a user interface.
+    It inherits from BECMainWindow and provides additional functionality.
+    """
+
+    USER_ACCESS = [
+        "new_dock_area",
+        "all_connections",
+        "change_theme",
+        "list_all_rpc",
+        "dock_area",
+        "register_all_rpc",
+        "widget_list",
+    ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        ui_file_path = os.path.join(os.path.dirname(__file__), "general_app.ui")
+        self.load_ui(ui_file_path)
+
+    def load_ui(self, ui_file):
+        loader = UILoader(self)
+        self.ui = loader.loader(ui_file)
+        self.setCentralWidget(self.ui)
+
+    @property
+    def dock_area(self):
+        dock_area = self.ui.dock_area
+        return dock_area
+
+    @property
+    def all_connections(self) -> list:
+        all_connections = self.rpc_register.list_all_connections()
+        all_connections_keys = list(all_connections.keys())
+        return all_connections_keys
+
+    def register_all_rpc(self):
+        app = QApplication.instance()
+        app.register_all()
+
+    @property
+    def widget_list(self) -> list:
+        """Return a list of all widgets in the application."""
+        app = QApplication.instance()
+        all_widgets = app.list_all_bec_widgets()
+        return all_widgets
+
+
+if __name__ == "__main__":
+    app = BECQApplication(sys.argv)
+
+    window = WindowWithUi()
+    window.resize(1280, 720)
+    window.show()
+    sys.exit(app.exec())

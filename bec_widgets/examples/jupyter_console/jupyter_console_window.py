@@ -3,6 +3,8 @@ import os
 import numpy as np
 import pyqtgraph as pg
 from bec_qthemes import material_icon
+from bec_widgets.examples.qapp_custom.bec_qapp import BECQApplication
+from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 from qtpy.QtWidgets import (
     QApplication,
     QGroupBox,
@@ -240,7 +242,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     module_path = os.path.dirname(bec_widgets.__file__)
 
-    app = QApplication(sys.argv)
+    app = BECQApplication(sys.argv)
     app.setApplicationName("Jupyter Console")
     app.setApplicationDisplayName("Jupyter Console")
     icon = material_icon("terminal", color=(255, 255, 255, 255), filled=True)
@@ -250,7 +252,9 @@ if __name__ == "__main__":  # pragma: no cover
     client = bec_dispatcher.client
     client.start()
 
-    win = JupyterConsoleWindow()
+    win = BECMainWindow()
+    widget = JupyterConsoleWindow()
+    win.setCentralWidget(widget)
     win.show()
     win.resize(1500, 800)
 

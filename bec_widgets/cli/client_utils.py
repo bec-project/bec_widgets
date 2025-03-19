@@ -249,6 +249,12 @@ class BECGuiClient(RPCBase):
             raise RuntimeError("No GUI connected. Call 'connect_gui(gui_id)' first.")
         return self._run_rpc(action, *(args or []), timeout=timeout, **(kwargs or {}))
 
+    # @property
+    # def all_connections(self):
+    #     """Get all connections to the GUI."""
+    #     all_connections = self.
+    #     # pylint: disable=protected-access
+    #     return client.RPCRegister()._rpc_register
     @property
     def windows(self) -> dict:
         """Dictionary with dock areas in the GUI."""
@@ -443,6 +449,11 @@ class BECGuiClient(RPCBase):
         )  # pylint: disable=protected-access
         self._top_level[widget.widget_name] = widget
         return widget
+
+    def list_all_rpc(self) -> dict:
+        """List all RPC connections."""
+        rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
+        list = rpc_client._run_rpc("list_all_rpc")  # pylint: disable=protected-access
 
     def delete(self, name: str) -> None:
         """Delete a dock area.

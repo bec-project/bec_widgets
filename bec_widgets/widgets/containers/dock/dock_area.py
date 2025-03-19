@@ -49,6 +49,7 @@ class DockAreaConfig(ConnectionConfig):
 class BECDockArea(BECWidget, QWidget):
     PLUGIN = True
     USER_ACCESS = [
+        "all_connections",
         "new",
         "show",
         "hide",
@@ -62,6 +63,8 @@ class BECDockArea(BECWidget, QWidget):
         "selected_device",
         "save_state",
         "restore_state",
+        "list_all_rpc",
+        "widget_list",
     ]
 
     def __init__(
@@ -250,6 +253,12 @@ class BECDockArea(BECWidget, QWidget):
             return None
 
     @property
+    def all_connections(self) -> list:
+        all_connections = self.rpc_register.list_all_connections()
+        all_connections_keys = list(all_connections.keys())
+        return all_connections_keys
+
+    @property
     def panels(self) -> dict[str, BECDock]:
         """
         Get the docks in the dock area.
@@ -271,6 +280,13 @@ class BECDockArea(BECWidget, QWidget):
             list: The docks in the dock area.
         """
         return list(self.dock_area.docks.values())
+
+    @property
+    def widget_list(self) -> list:
+        """Return a list of all widgets in the application."""
+        app = QApplication.instance()
+        all_widgets = app.list_all_bec_widgets()
+        return all_widgets
 
     @property
     def temp_areas(self) -> list:
@@ -475,6 +491,16 @@ class BECDockArea(BECWidget, QWidget):
         else:
             raise ValueError(f"Dock with name {dock_name} does not exist.")
         # self._broadcast_update()
+
+    def list_all_rpc(self) -> dict:
+        """
+        List all the registered RPC objects.
+        Returns:
+            dict: A dictionary containing all the registered RPC objects.
+        """
+        rpc_register = RPCRegister()
+        all_connections = rpc_register.list_all_connections()
+        return all_connections
 
     def remove(self) -> None:
         """Remove the dock area."""
