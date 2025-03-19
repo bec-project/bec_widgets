@@ -1,5 +1,5 @@
-from qtpy.QtWidgets import QWidget, QLabel, QVBoxLayout, QApplication
 from bec_qapp import upgrade_to_becqapp
+from qtpy.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
 
 
 class BECWidget(QWidget):

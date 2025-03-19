@@ -1,18 +1,89 @@
+import os
+
 from bec_lib.logger import bec_logger
+from PySide6.QtCore import QSize
+from PySide6.QtGui import QAction, QActionGroup, QIcon
+from PySide6.QtWidgets import QFileDialog, QMessageBox, QStyle, QWidget
+from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication, QMainWindow
 
+import bec_widgets
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
+from bec_widgets.qt_utils.toolbar import MaterialIconAction
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
+from bec_widgets.widgets.containers.main_window.web_links import BECWebLinksMixin
 
 logger = bec_logger.logger
 
 
 class BECMainWindow(BECWidget, QMainWindow):
-    def __init__(self, gui_id: str = None, *args, **kwargs):
+    def __init__(self, gui_id: str = None, default_widget=QWidget, *args, **kwargs):
         BECWidget.__init__(self, gui_id=gui_id, **kwargs)
         QMainWindow.__init__(self, *args, **kwargs)
+        self.app = QApplication.instance()
+
+        self._init_ui()
+
+    def _init_ui(self):
+        # Set the window title
+        self.setWindowTitle("BEC")
+
+        # Set Menu and Status bar
+        self._setup_menu_bar()
+        self.statusBar().showMessage(f"App ID: {self.app.gui_id}")
+
+    def _setup_menu_bar(self):
+        """
+        Setup the menu bar for the main window.
+        """
+        menu_bar = self.menuBar()
+
+        ########################################
+        # Theme menu
+        theme_menu = menu_bar.addMenu("Theme")
+
+        theme_group = QActionGroup(self)
+        light_theme_action = QAction("Light Theme", self, checkable=True)
+        dark_theme_action = QAction("Dark Theme", self, checkable=True)
+        theme_group.addAction(light_theme_action)
+        theme_group.addAction(dark_theme_action)
+        theme_group.setExclusive(True)
+
+        theme_menu.addAction(light_theme_action)
+        theme_menu.addAction(dark_theme_action)
+
+        # Connect theme actions
+        light_theme_action.triggered.connect(lambda: self.change_theme("light"))
+        dark_theme_action.triggered.connect(lambda: self.change_theme("dark"))
+
+        # Set the default theme
+        # TODO can be fetched from app
+        light_theme_action.setChecked(True)
+
+        ########################################
+        # Help menu
+        help_menu = menu_bar.addMenu("Help")
+
+        help_icon = QApplication.style().standardIcon(QStyle.SP_MessageBoxQuestion)
+        bug_icon = QApplication.style().standardIcon(QStyle.SP_MessageBoxInformation)
+
+        bec_docs = QAction("BEC Docs", self)
+        bec_docs.setIcon(help_icon)
+        widgets_docs = QAction("BEC Widgets Docs", self)
+        widgets_docs.setIcon(help_icon)
+        bug_report = QAction("Bug Report", self)
+        bug_report.setIcon(bug_icon)
+
+        bec_docs.triggered.connect(BECWebLinksMixin.open_bec_docs)
+        widgets_docs.triggered.connect(BECWebLinksMixin.open_bec_widgets_docs)
+        bug_report.triggered.connect(BECWebLinksMixin.open_bec_bug_report)
+
+        help_menu.addAction(bec_docs)
+        help_menu.addAction(widgets_docs)
+        help_menu.addAction(bug_report)
 
     def _dump(self):
         """Return a dictionary with informations about the application state, for use in tests"""
@@ -37,6 +108,9 @@ class BECMainWindow(BECWidget, QMainWindow):
             "class": str(type(self.centralWidget())),
         }
         return info
+
+    def change_theme(self, theme):
+        apply_theme(theme)
 
     def new_dock_area(
         self, name: str | None = None, geometry: tuple[int, int, int, int] | None = None

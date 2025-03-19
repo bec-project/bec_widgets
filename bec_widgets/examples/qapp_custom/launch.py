@@ -1,20 +1,19 @@
 import sys
-import os
 
-from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout
+from PySide6.QtWidgets import QApplication
 
-# Set this early!
-# os.environ["PYSIDE_DISABLE_INTERNAL_QT_WARNINGS"] = "1"
-
-from qtpy.QtWidgets import QApplication
 from bec_widget import BECWidget
+from qtpy.QtWidgets import QMainWindow, QVBoxLayout, QWidget
+
+from bec_widgets.examples.qapp_custom.bec_qapp import BECQApplication
+from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
 
-class DemoApp(QMainWindow):
+class DemoApp(BECMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Demo Application")
-        self.setGeometry(100, 100, 600, 400)
+        # self.setWindowTitle("Demo Application")
+        # self.setGeometry(100, 100, 600, 400)
 
         # Create an instance of BECWidget
         self.main_widget = QWidget(self)
@@ -31,9 +30,12 @@ class DemoApp(QMainWindow):
         self.main_widget.layout.addWidget(self.bec_widget_1)
         self.main_widget.layout.addWidget(self.bec_widget_2)
 
+        self.setWindowIcon(self.windowIcon())
+
 
 def main():
     app = QApplication(sys.argv)
+    # app = BECQApplication(sys.argv)
     widget = DemoApp()
     widget.resize(400, 200)
     widget.show()
