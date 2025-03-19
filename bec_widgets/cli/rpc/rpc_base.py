@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import threading
 import uuid
 from functools import wraps
@@ -35,6 +36,13 @@ def rpc_call(func):
     def wrapper(self, *args, **kwargs):
         # we could rely on a strict type check here, but this is more flexible
         # moreover, it would anyway crash for objects...
+        caller_frame = inspect.currentframe().f_back
+        while caller_frame:
+            if "jedi" in caller_frame.f_globals:
+                # Jedi module is present, likely tab completion
+                return None  # func(*args, **kwargs)
+            caller_frame = caller_frame.f_back
+
         out = []
         for arg in args:
             if hasattr(arg, "name"):
@@ -120,7 +128,7 @@ class RPCBase:
         self._msg_wait_event = threading.Event()
         self._rpc_response = None
         super().__init__()
-        # print(f"RPCBase: {self._gui_id}")
+        self._rpc_references: dict[str, str] = {}
 
     def __repr__(self):
         type_ = type(self)
@@ -171,7 +179,7 @@ class RPCBase:
             parameter={"args": args, "kwargs": kwargs, "gui_id": self._gui_id},
             metadata={"request_id": request_id},
         )
-
+        print(f"running and rpc {method}")
         # pylint: disable=protected-access
         receiver = self._root._gui_id
         if wait_for_rpc_response:

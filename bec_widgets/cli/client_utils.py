@@ -11,6 +11,7 @@ import subprocess
 import threading
 import time
 from contextlib import contextmanager
+from threading import Lock
 from typing import TYPE_CHECKING, Any
 
 from bec_lib.endpoints import MessageEndpoints
@@ -202,6 +203,7 @@ class BECGuiClient(RPCBase):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
+        self._lock = Lock()
         self._default_dock_name = "bec"
         self._auto_updates_enabled = True
         self._auto_updates = None
@@ -211,7 +213,7 @@ class BECGuiClient(RPCBase):
         self._gui_started_event = threading.Event()
         self._process = None
         self._process_output_processing_thread = None
-        self._exposed_dock_areas = []
+        self._exposed_widgets = []
         self._registry_state = {}
         self._ipython_registry = {}
         self.available_widgets = AvailableWidgetsNamespace()
@@ -312,6 +314,10 @@ class BECGuiClient(RPCBase):
     def kill_server(self) -> None:
         """Kill the GUI server."""
         self._top_level.clear()
+        # Unregister the registry state
+        self._client.connector.unregister(
+            MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
+        )
         self._killed = True
 
         if self._gui_started_timer is not None:
@@ -416,6 +422,7 @@ class BECGuiClient(RPCBase):
         return self._start_server(wait=wait)
 
     def _handle_registry_update(self, msg: StreamMessage) -> None:
+        # with self._lock:
         self._registry_state = msg["data"].state
         self._update_dynamic_namespace()
 
@@ -433,38 +440,50 @@ class BECGuiClient(RPCBase):
         with wait_for_server(self):
             rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
             rpc_client._run_rpc("hide")  # pylint: disable=protected-access
-            # because of the registry callbacks, we may have
-            # dock areas that are already killed, but not yet
-            # removed from the registry state
             if not self._killed:
                 for window in self._top_level.values():
                     window.hide()
 
     def _update_dynamic_namespace(self):
         """Update the dynamic name space"""
-        self._clear_exposed_dock_areas()
-        self._cleanup_ipython_registry()
+        # First we update the name space based on the new registry state
         self._add_registry_to_namespace()
-
-    def _clear_exposed_dock_areas(self):
-        """Clear the exposed dock areas"""
-        self._top_level.clear()
-        for widget_id in self._exposed_dock_areas:
-            delattr(self, widget_id)
-        self._exposed_dock_areas.clear()
+        # Then we clear the ipython registry from old objects
+        self._cleanup_ipython_registry()
 
     def _cleanup_ipython_registry(self):
         """Cleanup the ipython registry"""
-        remove_ids = []
-        for widget_id in self._ipython_registry:
-            if widget_id not in self._registry_state:
-                remove_ids.append(widget_id)
+        names_in_registry = list(self._ipython_registry.keys())
+        remove_ids = list(set(names_in_registry) - set(self._exposed_widgets))
         for widget_id in remove_ids:
             self._ipython_registry.pop(widget_id)
+        self._cleanup_rpc_references_on_rpc_base(remove_ids)
+        # Clear the exposed widgets
+        self._exposed_widgets.clear()
+
+    def _cleanup_rpc_references_on_rpc_base(self, remove_ids: list[str]) -> None:
+        """Cleanup the rpc references on the RPCBase object"""
+        if not remove_ids:
+            return
+        for widget in self._ipython_registry.values():
+            to_delete = []
+            for attr_name, gui_id in widget._rpc_references.items():
+                if gui_id in remove_ids:
+                    to_delete.append(attr_name)
+            for attr_name in to_delete:
+                if hasattr(widget, attr_name):
+                    delattr(widget, attr_name)
+                if attr_name.startswith("elements."):
+                    delattr(widget.elements, attr_name.split(".")[1])
+                widget._rpc_references.pop(attr_name)
 
     def _set_dynamic_attributes(self, obj: object, name: str, value: Any) -> None:
         """Add an object to the namespace"""
         setattr(obj, name, value)
+
+    def _update_rpc_references(self, widget: RPCBase, name: str, gui_id: str) -> None:
+        """Update the RPC references"""
+        widget._rpc_references[name] = gui_id
 
     def _add_registry_to_namespace(self) -> None:
         """Add registry to namespace"""
@@ -475,33 +494,51 @@ class BECGuiClient(RPCBase):
             if state["widget_class"] == "BECDockArea"
         ]
         for state in dock_area_states:
-            # obj is an RPC reference to the RPCBase object
-            dock_area_obj = self._add_widget(state, self)
-            self._set_dynamic_attributes(self, dock_area_obj.widget_name, dock_area_obj)
+            dock_area_ref = self._add_widget(state, self)
+            dock_area = self._ipython_registry.get(dock_area_ref._gui_id)
+            if not hasattr(dock_area, "elements"):
+                self._set_dynamic_attributes(dock_area, "elements", WidgetNameSpace())
+            self._set_dynamic_attributes(self, dock_area.widget_name, dock_area_ref)
+            # Keep track of rpc references on RPCBase object
+            self._update_rpc_references(self, dock_area.widget_name, dock_area_ref._gui_id)
             # Add dock_area to the top level
-            self._top_level[dock_area_obj.widget_name] = dock_area_obj
-            self._exposed_dock_areas.append(dock_area_obj.widget_name)
+            self._top_level[dock_area_ref.widget_name] = dock_area_ref
+            self._exposed_widgets.append(dock_area_ref._gui_id)
 
             # Add docks
             dock_states = [
                 state
                 for state in self._registry_state.values()
-                if state["config"].get("parent_id", "") == dock_area_obj._gui_id
+                if state["config"].get("parent_id", "") == dock_area_ref._gui_id
             ]
             for state in dock_states:
-                dock_obj = self._add_widget(state, dock_area_obj)
-                self._set_dynamic_attributes(dock_area_obj, dock_obj.widget_name, dock_obj)
+                dock_ref = self._add_widget(state, dock_area)
+                dock = self._ipython_registry.get(dock_ref._gui_id)
+                self._set_dynamic_attributes(dock_area, dock_ref.widget_name, dock_ref)
+                # Keep track of rpc references on RPCBase object
+                self._update_rpc_references(dock_area, dock_ref.widget_name, dock_ref._gui_id)
+                # Keep track of exposed docks
+                self._exposed_widgets.append(dock_ref._gui_id)
 
                 # Add widgets
                 widget_states = [
                     state
                     for state in self._registry_state.values()
-                    if state["config"].get("parent_id", "") == dock_obj._gui_id
+                    if state["config"].get("parent_id", "") == dock_ref._gui_id
                 ]
                 for state in widget_states:
-                    widget = self._add_widget(state, dock_obj)
-                    self._set_dynamic_attributes(dock_obj, widget.widget_name, widget)
-                    self._set_dynamic_attributes(dock_area_obj.elements, widget.widget_name, widget)
+                    widget_ref = self._add_widget(state, dock)
+                    self._set_dynamic_attributes(dock, widget_ref.widget_name, widget_ref)
+                    self._set_dynamic_attributes(
+                        dock_area.elements, widget_ref.widget_name, widget_ref
+                    )
+                    # Keep track of rpc references on RPCBase object
+                    self._update_rpc_references(
+                        dock_area, f"elements.{widget_ref.widget_name}", widget_ref._gui_id
+                    )
+                    self._update_rpc_references(dock, widget_ref.widget_name, widget_ref._gui_id)
+                    # Keep track of exposed widgets
+                    self._exposed_widgets.append(widget_ref._gui_id)
 
     def _add_widget(self, state: dict, parent: object) -> RPCReference:
         """Add a widget to the namespace
@@ -519,9 +556,6 @@ class BECGuiClient(RPCBase):
             self._ipython_registry[gui_id] = widget
         else:
             widget = obj
-        if widget_class == client.BECDockArea:
-            # Add elements to dynamic namespace
-            self._set_dynamic_attributes(widget, "elements", WidgetNameSpace())
         obj = RPCReference(registry=self._ipython_registry, gui_id=gui_id)
         return obj
 
@@ -599,11 +633,17 @@ if __name__ == "__main__":  # pragma: no cover
     from bec_lib.client import BECClient
     from bec_lib.service_config import ServiceConfig
 
-    config = ServiceConfig()
-    bec_client = BECClient(config)
-    bec_client.start()
+    try:
+        config = ServiceConfig()
+        bec_client = BECClient(config)
+        bec_client.start()
 
-    # Test the client_utils.py module
-    gui = BECGuiClient()
-    gui.start()
-    print(gui.window_list)
+        # Test the client_utils.py module
+        gui = BECGuiClient()
+
+        gui.start(wait=True)
+        print(gui.window_list)
+        gui.new()
+        time.sleep(10)
+    finally:
+        gui.kill_server()

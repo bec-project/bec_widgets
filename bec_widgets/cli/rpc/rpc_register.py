@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from functools import wraps
 from threading import Lock
 from typing import TYPE_CHECKING, Callable
@@ -15,6 +16,17 @@ if TYPE_CHECKING:  # pragma: no cover
     from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
 
 logger = bec_logger.logger
+
+
+@contextmanager
+def rpc_register_broadcast(rpc_register):
+    """
+    Context manager to broadcast updates to the RPCRegister whenever a new RPC object is added or removed.
+    """
+    try:
+        yield rpc_register
+    finally:
+        rpc_register.broadcast()
 
 
 def broadcast_update(func):
