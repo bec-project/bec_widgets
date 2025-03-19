@@ -218,6 +218,37 @@ class BECGuiClient(RPCBase):
         self._process = None
         self._process_output_processing_thread = None
 
+        self._connected_gui_id = None
+
+    def connect_gui(self, gui_id: str, timeout: int = 3):
+        """Connect to a running GUI by gui_id."""
+        self._connected_gui_id = gui_id
+        self._gui_id = gui_id
+        if not self._gui_is_alive():
+            self._connected_gui_id = None
+            raise RuntimeError(f"No running GUI found with gui_id '{gui_id}'.")
+        logger.success(f"Connected successfully to GUI '{gui_id}'.")
+
+    def disconnect_gui(self):
+        """Disconnect from currently connected GUI."""
+        if self._connected_gui_id:
+            logger.info(f"Disconnected from GUI '{self._connected_gui_id}'.")
+            self._connected_gui_id = None
+            self._gui_id = None
+        else:
+            logger.warning("No GUI is currently connected.")
+
+    def switch_gui(self, new_gui_id: str):
+        """Convenience method to quickly switch between GUI instances."""
+        self.disconnect_gui()
+        self.connect_gui(new_gui_id)
+
+    def run_rpc_on_gui(self, action, args=None, kwargs=None, timeout=3):
+        """Run an RPC action on the connected GUI."""
+        if not self._connected_gui_id:
+            raise RuntimeError("No GUI connected. Call 'connect_gui(gui_id)' first.")
+        return self._run_rpc(action, *(args or []), timeout=timeout, **(kwargs or {}))
+
     @property
     def windows(self) -> dict:
         """Dictionary with dock areas in the GUI."""
