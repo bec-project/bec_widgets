@@ -27,6 +27,27 @@ from bec_widgets.widgets.plots_next_gen.plot_base import PlotBase
 logger = bec_logger.logger
 
 
+class FilledRectItem(pg.GraphicsObject):
+    """
+    Custom rectangle item for the motor map plot defined by 4 points and a brush.
+    """
+
+    def __init__(self, x: float, y: float, width: float, height: float, brush: QtGui.QBrush):
+        super().__init__()
+        self._rect = QtCore.QRectF(x, y, width, height)
+        self._brush = brush
+        self._pen = pg.mkPen(None)
+
+    def boundingRect(self):
+        return self._rect
+
+    def paint(self, painter, *args):
+        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
+        painter.setBrush(self._brush)
+        painter.setPen(self._pen)
+        painter.drawRect(self.boundingRect())
+
+
 class MotorConfig(BaseModel):
     name: str | None = Field(None, description="Motor name.")
     limits: list[float] | None = Field(None, description="Motor limits.")
@@ -592,10 +613,9 @@ class MotorMap(PlotBase):
         motor_x_limit = self.config.x_motor.limits
         motor_y_limit = self.config.y_motor.limits
 
-        if motor_x_limit is not None or motor_y_limit is not None:
-            self._limit_map = self._make_limit_map(motor_x_limit, motor_y_limit)
-            self.plot_item.addItem(self._limit_map)
-            self._limit_map.setZValue(-1)
+        self._limit_map = self._make_limit_map(motor_x_limit, motor_y_limit)
+        self.plot_item.addItem(self._limit_map)
+        self._limit_map.setZValue(-1)
 
         # Create scatter plot
         scatter_size = self.config.scatter_size
@@ -672,35 +692,51 @@ class MotorMap(PlotBase):
         self.coord_label.setText(text)
         self.coord_label.setPos(x, y)
 
-    def _make_limit_map(self, limits_x: list, limits_y: list) -> pg.ImageItem:
+    def _make_limit_map(self, limits_x: list | None, limits_y: list | None) -> FilledRectItem:
         """
-        Create a limit map for the motor map plot.
+        Create a limit map for the motor map plot. Each limit can be:
+          - [int, int]
+          - [None, None]
+          - [int, None]
+          - [None, int]
+          - or None
+        If any element of a limit list is None, it is treated as unbounded,
+        and replaced with ±1e6 (or any large float of your choice).
 
         Args:
-            limits_x(list): Motor limits for the x axis.
-            limits_y(list): Motor limits for the y axis.
+            limits_x(list): Motor limits for the x-axis.
+            limits_y(list): Motor limits for the y-axis.
 
         Returns:
-            pg.ImageItem: Limit map.
+            FilledRectItem: Limit map.
         """
+
+        def fix_limit_pair(limits):
+            if not limits:
+                return [-1e6, 1e6]
+            low, high = limits
+            if low is None:
+                low = -1e6
+            if high is None:
+                high = 1e6
+            return [low, high]
+
+        limits_x = fix_limit_pair(limits_x)
+        limits_y = fix_limit_pair(limits_y)
+
         limit_x_min, limit_x_max = limits_x
         limit_y_min, limit_y_max = limits_y
 
-        map_width = int(limit_x_max - limit_x_min + 1)
-        map_height = int(limit_y_max - limit_y_min + 1)
-
-        # Create limits map
+        rect_width = limit_x_max - limit_x_min
+        rect_height = limit_y_max - limit_y_min
         background_value = self.config.background_value
-        limit_map_data = np.full((map_width, map_height), background_value, dtype=np.float32)
-        limit_map = pg.ImageItem()
-        limit_map.setImage(limit_map_data)
 
-        # Translate and scale the image item to match the motor coordinates
-        tr = QtGui.QTransform()
-        tr.translate(limit_x_min, limit_y_min)
-        limit_map.setTransform(tr)
+        brush_color = pg.mkBrush(background_value, background_value, background_value, 150)
 
-        return limit_map
+        filled_rect = FilledRectItem(
+            x=limit_x_min, y=limit_y_min, width=rect_width, height=rect_height, brush=brush_color
+        )
+        return filled_rect
 
     def _swap_limit_map(self):
         """Swap the limit map."""
