@@ -20,7 +20,7 @@ class BECColorMapWidget(BECWidget, QWidget):
         self.button = ColorMapButton()
 
         # Set the size policy and minimum width
-        size_policy = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        size_policy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.button.setSizePolicy(size_policy)
         self.button.setMinimumWidth(100)
         self.button.setMinimumHeight(30)
