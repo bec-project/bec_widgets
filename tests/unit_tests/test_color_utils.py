@@ -7,7 +7,7 @@ from qtpy.QtWidgets import QVBoxLayout, QWidget
 from bec_widgets.utils import Colors, ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
-from bec_widgets.widgets.containers.figure.plots.waveform.waveform_curve import CurveConfig
+from bec_widgets.widgets.plots_next_gen.waveform.curve import CurveConfig
 from tests.unit_tests.client_mocks import mocked_client
 from tests.unit_tests.conftest import create_widget
 

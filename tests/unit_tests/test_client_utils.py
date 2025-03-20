@@ -3,31 +3,22 @@ from unittest import mock
 
 import pytest
 
-from bec_widgets.cli.client import BECFigure
+from bec_widgets.cli.client import BECDockArea
 from bec_widgets.cli.client_utils import BECGuiClient, _start_plot_process
-from bec_widgets.tests.utils import FakeDevice
 
 
 @pytest.fixture
-def cli_figure():
-    fig = BECFigure(gui_id="test")
-    with mock.patch.object(fig, "_run_rpc") as mock_rpc_call:
-        with mock.patch.object(fig, "_gui_is_alive", return_value=True):
-            yield fig, mock_rpc_call
+def cli_dock_area():
+    dock_area = BECDockArea(gui_id="test")
+    with mock.patch.object(dock_area, "_run_rpc") as mock_rpc_call:
+        with mock.patch.object(dock_area, "_gui_is_alive", return_value=True):
+            yield dock_area, mock_rpc_call
 
 
-def test_rpc_call_plot(cli_figure):
-    fig, mock_rpc_call = cli_figure
-    fig.plot(x_name="samx", y_name="bpm4i")
-    mock_rpc_call.assert_called_with("plot", x_name="samx", y_name="bpm4i")
-
-
-def test_rpc_call_accepts_device_as_input(cli_figure):
-    dev1 = FakeDevice("samx")
-    dev2 = FakeDevice("bpm4i")
-    fig, mock_rpc_call = cli_figure
-    fig.plot(x_name=dev1, y_name=dev2)
-    mock_rpc_call.assert_called_with("plot", x_name="samx", y_name="bpm4i")
+def test_rpc_call_new_dock(cli_dock_area):
+    dock_area, mock_rpc_call = cli_dock_area
+    dock_area.new(name="test")
+    mock_rpc_call.assert_called_with("new", name="test")
 
 
 @pytest.mark.parametrize(
@@ -40,13 +31,13 @@ def test_rpc_call_accepts_device_as_input(cli_figure):
 )
 def test_client_utils_start_plot_process(config, call_config):
     with mock.patch("bec_widgets.cli.client_utils.subprocess.Popen") as mock_popen:
-        _start_plot_process("gui_id", BECFigure, "bec", config)
+        _start_plot_process("gui_id", BECDockArea, "bec", config)
         command = [
             "bec-gui-server",
             "--id",
             "gui_id",
             "--gui_class",
-            "BECFigure",
+            "BECDockArea",
             "--gui_class_id",
             "bec",
             "--hide",
