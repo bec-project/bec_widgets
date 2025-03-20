@@ -6,7 +6,7 @@ def test_client_generator_classes():
     connector_cls_names = [cls.__name__ for cls in out.connector_classes]
     plugins = [cls.__name__ for cls in out.plugins]
 
-    assert "BECFigure" in connector_cls_names
-    assert "BECWaveform" in connector_cls_names
+    assert "Image" in connector_cls_names
+    assert "Waveform" in connector_cls_names
     assert "BECDockArea" in plugins
-    assert "BECWaveform" not in plugins
+    assert "NonExisting" not in plugins

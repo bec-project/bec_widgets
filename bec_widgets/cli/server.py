@@ -20,7 +20,6 @@ from bec_widgets.qt_utils.error_popups import ErrorPopupUtility
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.widgets.containers.dock import BECDockArea
-from bec_widgets.widgets.containers.figure import BECFigure
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
 messages = lazy_import("bec_lib.messages")
@@ -58,7 +57,7 @@ class BECWidgetsCLIServer:
         dispatcher: BECDispatcher = None,
         client=None,
         config=None,
-        gui_class: Union[BECFigure, BECDockArea] = BECDockArea,
+        gui_class: BECDockArea = BECDockArea,
         gui_class_id: str = "bec",
     ) -> None:
         self.status = messages.BECStatus.BUSY
@@ -205,10 +204,7 @@ class SimpleFileLikeFromLogOutputFunc:
 
 
 def _start_server(
-    gui_id: str,
-    gui_class: Union[BECFigure, BECDockArea],
-    gui_class_id: str = "bec",
-    config: str | None = None,
+    gui_id: str, gui_class: BECDockArea, gui_class_id: str = "bec", config: str | None = None
 ):
     if config:
         try:
@@ -268,8 +264,6 @@ def main():
 
     if args.gui_class == "BECDockArea":
         gui_class = BECDockArea
-    elif args.gui_class == "BECFigure":
-        gui_class = BECFigure
     else:
         print(
             "Please specify a valid gui_class to run. Use -h for help."
