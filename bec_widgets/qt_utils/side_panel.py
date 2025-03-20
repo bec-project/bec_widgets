@@ -232,7 +232,14 @@ class SidePanel(QWidget):
             self.stack_widget.setCurrentIndex(idx)
             self.current_index = idx
 
-    def add_menu(self, action_id: str, icon_name: str, tooltip: str, widget: QWidget, title: str):
+    def add_menu(
+        self,
+        action_id: str,
+        icon_name: str,
+        tooltip: str,
+        widget: QWidget,
+        title: str | None = None,
+    ):
         """
         Add a menu to the side panel.
 
@@ -249,9 +256,10 @@ class SidePanel(QWidget):
         container_layout.setContentsMargins(0, 0, 0, 0)
         container_layout.setSpacing(5)
 
-        title_label = QLabel(f"<b>{title}</b>")
-        title_label.setStyleSheet("font-size: 16px;")
-        container_layout.addWidget(title_label)
+        if title is not None:
+            title_label = QLabel(f"<b>{title}</b>")
+            title_label.setStyleSheet("font-size: 16px;")
+            container_layout.addWidget(title_label)
 
         # Create a QScrollArea for the actual widget to ensure scrolling if the widget inside is too large
         scroll_area = QScrollArea()
