@@ -22,6 +22,7 @@ from bec_widgets.widgets.containers.layout_manager.layout_manager import LayoutM
 from bec_widgets.widgets.editors.jupyter_console.jupyter_console import BECJupyterConsole
 from bec_widgets.widgets.plots_next_gen.image.image import Image
 from bec_widgets.widgets.plots_next_gen.motor_map.motor_map import MotorMap
+from bec_widgets.widgets.plots_next_gen.multi_waveform.multi_waveform import MultiWaveform
 from bec_widgets.widgets.plots_next_gen.plot_base import PlotBase
 from bec_widgets.widgets.plots_next_gen.scatter_waveform.scatter_waveform import ScatterWaveform
 from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
@@ -69,6 +70,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "wf": self.wf,
                     "scatter": self.scatter,
                     "scatter_mi": self.scatter,
+                    "mwf": self.mwf,
                 }
             )
 
@@ -151,6 +153,13 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         eighth_tab_layout.addWidget(self.mm)
         tab_widget.addTab(eighth_tab, "Motor Map")
         tab_widget.setCurrentIndex(7)
+
+        ninth_tab = QWidget()
+        ninth_tab_layout = QVBoxLayout(ninth_tab)
+        self.mwf = MultiWaveform()
+        ninth_tab_layout.addWidget(self.mwf)
+        tab_widget.addTab(ninth_tab, "MultiWaveform")
+        tab_widget.setCurrentIndex(8)
 
         # add stuff to the new Waveform widget
         self._init_waveform()

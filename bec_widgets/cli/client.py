@@ -32,6 +32,7 @@ class Widgets(str, enum.Enum):
     LogPanel = "LogPanel"
     Minesweeper = "Minesweeper"
     MotorMap = "MotorMap"
+    MultiWaveform = "MultiWaveform"
     PositionIndicator = "PositionIndicator"
     PositionerBox = "PositionerBox"
     PositionerBox2D = "PositionerBox2D"
@@ -3659,6 +3660,415 @@ class MotorMap(RPCBase):
 
         Returns:
             dict: Data of the motor map.
+        """
+
+
+class MultiWaveform(RPCBase):
+    @property
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @enable_toolbar.setter
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @property
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @enable_side_panel.setter
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @property
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @enable_fps_monitor.setter
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @rpc_call
+    def set(self, **kwargs):
+        """
+        Set the properties of the plot widget.
+
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+
+        Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+            - legend_label_size: int
+        """
+
+    @property
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @title.setter
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @x_label.setter
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @y_label.setter
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @x_limits.setter
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @y_limits.setter
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @x_grid.setter
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @y_grid.setter
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @inner_axes.setter
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @outer_axes.setter
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Lock aspect ratio of the plot widget.
+        """
+
+    @lock_aspect_ratio.setter
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Lock aspect ratio of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @auto_range_x.setter
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @auto_range_y.setter
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @x_log.setter
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @y_log.setter
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @legend_label_size.setter
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @property
+    @rpc_call
+    def highlighted_index(self):
+        """
+        None
+        """
+
+    @highlighted_index.setter
+    @rpc_call
+    def highlighted_index(self):
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def highlight_last_curve(self) -> "bool":
+        """
+        Get the highlight_last_curve property.
+        Returns:
+            bool: The highlight_last_curve property.
+        """
+
+    @highlight_last_curve.setter
+    @rpc_call
+    def highlight_last_curve(self) -> "bool":
+        """
+        Get the highlight_last_curve property.
+        Returns:
+            bool: The highlight_last_curve property.
+        """
+
+    @property
+    @rpc_call
+    def color_palette(self) -> "str":
+        """
+        The color palette of the figure widget.
+        """
+
+    @color_palette.setter
+    @rpc_call
+    def color_palette(self) -> "str":
+        """
+        The color palette of the figure widget.
+        """
+
+    @property
+    @rpc_call
+    def opacity(self) -> "int":
+        """
+        The opacity of the figure widget.
+        """
+
+    @opacity.setter
+    @rpc_call
+    def opacity(self) -> "int":
+        """
+        The opacity of the figure widget.
+        """
+
+    @property
+    @rpc_call
+    def flush_buffer(self) -> "bool":
+        """
+        The flush_buffer property.
+        """
+
+    @flush_buffer.setter
+    @rpc_call
+    def flush_buffer(self) -> "bool":
+        """
+        The flush_buffer property.
+        """
+
+    @property
+    @rpc_call
+    def max_trace(self) -> "int":
+        """
+        The maximum number of traces to display on the plot.
+        """
+
+    @max_trace.setter
+    @rpc_call
+    def max_trace(self) -> "int":
+        """
+        The maximum number of traces to display on the plot.
+        """
+
+    @property
+    @rpc_call
+    def monitor(self) -> "str":
+        """
+        The monitor of the figure widget.
+        """
+
+    @monitor.setter
+    @rpc_call
+    def monitor(self) -> "str":
+        """
+        The monitor of the figure widget.
+        """
+
+    @rpc_call
+    def set_curve_limit(self, max_trace: "int", flush_buffer: "bool"):
+        """
+        Set the maximum number of traces to display on the plot.
+
+        Args:
+            max_trace (int): The maximum number of traces to display.
+            flush_buffer (bool): Flush the buffer.
+        """
+
+    @rpc_call
+    def plot(self, monitor: "str", color_palette: "str | None" = "magma"):
+        """
+        Create a plot for the given monitor.
+        Args:
+            monitor (str): The monitor to set.
+            color_palette (str|None): The color palette to use for the plot.
+        """
+
+    @rpc_call
+    def set_curve_highlight(self, index: "int"):
+        """
+        Set the curve highlight based on visible curves.
+
+        Args:
+            index (int): The index of the curve to highlight among visible curves.
+        """
+
+    @rpc_call
+    def clear_curves(self):
+        """
+        Remove all curves from the plot, excluding crosshair items.
         """
 
 
