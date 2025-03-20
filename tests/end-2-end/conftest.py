@@ -5,6 +5,8 @@ import random
 import pytest
 
 from bec_widgets.cli.client_utils import BECGuiClient
+from bec_widgets.cli.client_utils import BECGuiClient, _start_plot_process
+from bec_widgets.utils import BECDispatcher
 
 # pylint: disable=unused-argument
 # pylint: disable=redefined-outer-name
@@ -23,6 +25,26 @@ def threads_check_fixture(threads_check):
 
 @pytest.fixture
 def gui_id():
+    return f"figure_{random.randint(0,100)}"  # make a new gui id each time, to ensure no 'gui is alive' zombie key can perturbate
+
+
+@contextmanager
+def plot_server(gui_id, klass, client_lib):
+    dispatcher = BECDispatcher(client=client_lib)  # Has to init singleton with fixture client
+    process, _ = _start_plot_process(
+        gui_id, klass, gui_class_id="bec", config=client_lib._client._service_config.config_path
+    )
+    try:
+        while client_lib._client.connector.get(MessageEndpoints.gui_heartbeat(gui_id)) is None:
+            time.sleep(0.3)
+        yield gui_id
+    finally:
+        process.terminate()
+        process.wait()
+        dispatcher.disconnect_all()
+        dispatcher.reset_singleton()
+
+
     """New gui id each time, to ensure no 'gui is alive' zombie key can perturbate"""
     return f"figure_{random.randint(0,100)}"
 
