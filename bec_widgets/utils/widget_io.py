@@ -1,4 +1,6 @@
 # pylint: disable=no-name-in-module
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 
 from qtpy.QtWidgets import (
@@ -8,6 +10,7 @@ from qtpy.QtWidgets import (
     QDoubleSpinBox,
     QLabel,
     QLineEdit,
+    QSlider,
     QSpinBox,
     QTableWidget,
     QTableWidgetItem,
@@ -104,10 +107,10 @@ class TableWidgetHandler(WidgetHandler):
 class SpinBoxHandler(WidgetHandler):
     """Handler for QSpinBox and QDoubleSpinBox widgets."""
 
-    def get_value(self, widget, **kwargs):
+    def get_value(self, widget: QSpinBox | QDoubleSpinBox, **kwargs):
         return widget.value()
 
-    def set_value(self, widget, value):
+    def set_value(self, widget: QSpinBox | QDoubleSpinBox, value):
         widget.setValue(value)
 
     def connect_change_signal(self, widget: QSpinBox | QDoubleSpinBox, slot):
@@ -117,23 +120,36 @@ class SpinBoxHandler(WidgetHandler):
 class CheckBoxHandler(WidgetHandler):
     """Handler for QCheckBox widgets."""
 
-    def get_value(self, widget, **kwargs):
+    def get_value(self, widget: QCheckBox, **kwargs):
         return widget.isChecked()
 
-    def set_value(self, widget, value):
+    def set_value(self, widget: QCheckBox, value):
         widget.setChecked(value)
 
     def connect_change_signal(self, widget: QCheckBox, slot):
         widget.toggled.connect(lambda val, w=widget: slot(w, val))
 
 
+class SlideHandler(WidgetHandler):
+    """Handler for QCheckBox widgets."""
+
+    def get_value(self, widget: QSlider, **kwargs):
+        return widget.value()
+
+    def set_value(self, widget: QSlider, value):
+        widget.setValue(value)
+
+    def connect_change_signal(self, widget: QSlider, slot):
+        widget.valueChanged.connect(lambda val, w=widget: slot(w, val))
+
+
 class ToggleSwitchHandler(WidgetHandler):
     """Handler for ToggleSwitch widgets."""
 
-    def get_value(self, widget, **kwargs):
+    def get_value(self, widget: ToggleSwitch, **kwargs):
         return widget.checked
 
-    def set_value(self, widget, value):
+    def set_value(self, widget: ToggleSwitch, value):
         widget.checked = value
 
     def connect_change_signal(self, widget: ToggleSwitch, slot):
@@ -143,7 +159,7 @@ class ToggleSwitchHandler(WidgetHandler):
 class LabelHandler(WidgetHandler):
     """Handler for QLabel widgets."""
 
-    def get_value(self, widget, **kwargs):
+    def get_value(self, widget: QLabel, **kwargs):
         return widget.text()
 
     def set_value(self, widget: QLabel, value):
@@ -165,6 +181,7 @@ class WidgetIO:
         QCheckBox: CheckBoxHandler,
         QLabel: LabelHandler,
         ToggleSwitch: ToggleSwitchHandler,
+        QSlider: SlideHandler,
     }
 
     @staticmethod
