@@ -141,11 +141,8 @@ def test_toolbar_add_plot_motor_map(bec_dock_area):
 
 def test_toolbar_add_multi_waveform(bec_dock_area):
     bec_dock_area.toolbar.widgets["menu_plots"].widgets["multi_waveform"].trigger()
-    assert "BECMultiWaveformWidget_0" in bec_dock_area.panels
-    assert (
-        bec_dock_area.panels["BECMultiWaveformWidget_0"].widgets[0].config.widget_class
-        == "BECMultiWaveformWidget"
-    )
+    assert "MultiWaveform_0" in bec_dock_area.panels
+    assert bec_dock_area.panels["MultiWaveform_0"].widgets[0].config.widget_class == "MultiWaveform"
 
 
 def test_toolbar_add_device_positioner_box(bec_dock_area):
