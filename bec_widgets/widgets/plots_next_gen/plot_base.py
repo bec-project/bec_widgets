@@ -16,6 +16,7 @@ from bec_widgets.qt_utils.toolbar import MaterialIconAction, ModularToolBar, Too
 from bec_widgets.utils import ConnectionConfig, Crosshair, EntryValidator
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.fps_counter import FPSCounter
+from bec_widgets.utils.plot_indicator_items import BECArrowItem, BECTickItem
 from bec_widgets.utils.widget_state_manager import WidgetStateManager
 from bec_widgets.widgets.containers.layout_manager.layout_manager import LayoutManagerWidget
 from bec_widgets.widgets.plots_next_gen.setting_menus.axis_settings import AxisSettings
@@ -114,6 +115,10 @@ class PlotBase(BECWidget, QWidget):
         self._x_label_suffix = ""
         self._user_y_label = ""
         self._y_label_suffix = ""
+
+        # Plot Indicator Items
+        self.tick_item = BECTickItem(parent=self, plot_item=self.plot_item)
+        self.arrow_item = BECArrowItem(parent=self, plot_item=self.plot_item)
 
         self._init_ui()
 
@@ -967,6 +972,8 @@ class PlotBase(BECWidget, QWidget):
     def cleanup(self):
         self.unhook_crosshair()
         self.unhook_fps_monitor(delete_label=True)
+        self.tick_item.cleanup()
+        self.arrow_item.cleanup()
         if self.axis_settings_dialog is not None:
             self.axis_settings_dialog.close()
             self.axis_settings_dialog = None
