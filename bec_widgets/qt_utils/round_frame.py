@@ -2,11 +2,10 @@ import pyqtgraph as pg
 from qtpy.QtCore import Property
 from qtpy.QtWidgets import QApplication, QFrame, QHBoxLayout, QVBoxLayout, QWidget
 
-from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
 
-class RoundedFrame(BECWidget, QFrame):
+class RoundedFrame(QFrame):
     """
     A custom QFrame with rounded corners and optional theme updates.
     The frame can contain any QWidget, however it is mainly designed to wrap PlotWidgets to provide a consistent look and feel with other BEC Widgets.
@@ -17,15 +16,11 @@ class RoundedFrame(BECWidget, QFrame):
         parent=None,
         content_widget: QWidget = None,
         background_color: str = None,
-        theme_update: bool = True,
         radius: int = 10,
-        **kwargs,
     ):
-        super().__init__(**kwargs)
         QFrame.__init__(self, parent)
 
         self.background_color = background_color
-        self.theme_update = theme_update if background_color is None else False
         self._radius = radius
 
         # Apply rounded frame styling
@@ -46,14 +41,14 @@ class RoundedFrame(BECWidget, QFrame):
         # Automatically apply initial styles to the GraphicalLayoutWidget if applicable
         self.apply_plot_widget_style()
 
-        self._connect_to_theme_change()
-
     def apply_theme(self, theme: str):
         """
         Apply the theme to the frame and its content if theme updates are enabled.
         """
-        if not self.theme_update:
-            return
+        if self.content_widget is not None and isinstance(
+            self.content_widget, pg.GraphicsLayoutWidget
+        ):
+            self.content_widget.setBackground(self.background_color)
 
         # Update background color based on the theme
         if theme == "light":
@@ -129,8 +124,8 @@ class ExampleApp(QWidget):  # pragma: no cover
         plot2.plot_item = plot_item_2
 
         # Wrap PlotWidgets in RoundedFrame
-        rounded_plot1 = RoundedFrame(content_widget=plot1, theme_update=True)
-        rounded_plot2 = RoundedFrame(content_widget=plot2, theme_update=True)
+        rounded_plot1 = RoundedFrame(parent=self, content_widget=plot1)
+        rounded_plot2 = RoundedFrame(parent=self, content_widget=plot2)
 
         # Add to layout
         layout.addWidget(dark_button)

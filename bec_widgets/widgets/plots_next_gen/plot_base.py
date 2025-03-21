@@ -130,7 +130,7 @@ class PlotBase(BECWidget, QWidget):
 
     def _init_ui(self):
         self.layout.addWidget(self.layout_manager)
-        self.round_plot_widget = RoundedFrame(content_widget=self.plot_widget, theme_update=True)
+        self.round_plot_widget = RoundedFrame(parent=self, content_widget=self.plot_widget)
 
         self.layout_manager.add_widget(self.round_plot_widget)
         self.layout_manager.add_widget_relative(self.fps_label, self.round_plot_widget, "top")

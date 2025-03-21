@@ -24,7 +24,7 @@ def basic_rounded_frame(qtbot):
 def plot_rounded_frame(qtbot):
     plot_widget = pg.PlotWidget()
     plot_widget.plot([0, 1, 2], [2, 1, 0])
-    frame = RoundedFrame(content_widget=plot_widget, theme_update=True)
+    frame = RoundedFrame(content_widget=plot_widget)
     qtbot.addWidget(frame)
     qtbot.waitExposed(frame)
     yield frame
@@ -35,7 +35,6 @@ def test_basic_rounded_frame_initialization(basic_rounded_frame):
     assert basic_rounded_frame.radius == 10
     assert basic_rounded_frame.content_widget is None
     assert basic_rounded_frame.background_color is None
-    assert basic_rounded_frame.theme_update is True
 
 
 def test_set_radius(basic_rounded_frame):
