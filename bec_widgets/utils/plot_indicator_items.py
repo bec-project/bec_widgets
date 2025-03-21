@@ -171,7 +171,7 @@ class BECArrowItem(BECIndicatorItem):
 
     def __init__(self, plot_item: pg.PlotItem = None, parent=None):
         super().__init__(plot_item=plot_item, parent=parent)
-        self.arrow_item = pg.ArrowItem(parent=parent)
+        self.arrow_item = pg.ArrowItem()
         self.arrow_item.skip_auto_range = True
         self._pos = (0, 0)
         self.arrow_item.setVisible(False)
