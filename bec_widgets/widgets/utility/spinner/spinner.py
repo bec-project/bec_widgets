@@ -23,8 +23,8 @@ class SpinnerWidget(QWidget):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.rotate)
         self.time = 0
-        self.duration = 50
-        self.speed = 50
+        self.duration = 40
+        self.speed = 40
         self._started = False
 
     def start(self):

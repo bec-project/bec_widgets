@@ -1,6 +1,5 @@
 import uuid
 from abc import abstractmethod
-from ast import Tuple
 from typing import Callable, TypedDict
 
 from bec_lib.device import Positioner
@@ -140,10 +139,12 @@ class PositionerBoxBase(BECWidget, CompactPopupWidget):
             if setpoint_val is not None:
                 break
 
-        for moving_signal in ["motor_done_move", "motor_is_moving"]:
-            is_moving = signals.get(f"{device}_{moving_signal}", {}).get("value")
-            if is_moving is not None:
-                break
+        if f"{device}_motor_done_move" in signals:
+            is_moving = not signals[f"{device}_motor_done_move"].get("value")
+        elif f"{device}_motor_is_moving" in signals:
+            is_moving = signals[f"{device}_motor_is_moving"].get("value")
+        else:
+            is_moving = None
 
         if is_moving is not None:
             spinner.setVisible(True)
