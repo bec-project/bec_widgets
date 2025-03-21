@@ -166,11 +166,11 @@ class ImageItem(BECConnector, pg.ImageItem):
             self.apply_autorange()
 
     @property
-    def autorange_mode(self) -> Literal["max", "mean"]:
+    def autorange_mode(self) -> str:
         return self.config.autorange_mode
 
     @autorange_mode.setter
-    def autorange_mode(self, mode: Literal["max", "mean"]):
+    def autorange_mode(self, mode: str):
         self.config.autorange_mode = mode
         if self.autorange:
             self.apply_autorange()

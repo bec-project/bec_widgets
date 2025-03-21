@@ -45,6 +45,7 @@ class Waveform(PlotBase):
     ICON_NAME = "show_chart"
     USER_ACCESS = [
         # General PlotBase Settings
+        "_config_dict",
         "enable_toolbar",
         "enable_toolbar.setter",
         "enable_side_panel",
