@@ -49,6 +49,9 @@ class DockAreaConfig(ConnectionConfig):
 class BECDockArea(BECWidget, QWidget):
     PLUGIN = True
     USER_ACCESS = [
+        "_rpc_id",
+        "_config_dict",
+        "_get_all_rpc",
         "new",
         "show",
         "hide",
