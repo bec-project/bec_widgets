@@ -8,7 +8,6 @@ from pyqtgraph.dockarea import Dock, DockLabel
 from qtpy import QtCore, QtGui
 
 from bec_widgets.cli.client_utils import IGNORE_WIDGETS
-from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 from bec_widgets.utils import ConnectionConfig, GridLayoutManager
 from bec_widgets.utils.bec_widget import BECWidget
@@ -336,12 +335,7 @@ class BECDock(BECWidget, Dock):
         if hasattr(widget, "config"):
             widget.config.gui_id = widget.gui_id
             self.config.widgets[widget._name] = widget.config  # pylint: disable=protected-access
-        self._broadcast_update()
         return widget
-
-    def _broadcast_update(self):
-        rpc_register = RPCRegister()
-        rpc_register.broadcast()
 
     def move_widget(self, widget: QWidget, new_row: int, new_col: int):
         """
@@ -400,7 +394,6 @@ class BECDock(BECWidget, Dock):
         if widget in self.widgets:
             self.widgets.remove(widget)
         widget.close()
-        # self._broadcast_update()
 
     def delete_all(self):
         """
@@ -422,15 +415,6 @@ class BECDock(BECWidget, Dock):
         self.label.close()
         self.label.deleteLater()
         super().cleanup()
-
-    # def closeEvent(self, event):  # pylint: disable=uselsess-parent-delegation
-    #     """Close Event for dock and cleanup.
-
-    #     This wrapper ensures that the BECWidget close event is triggered.
-    #     If removed, the closeEvent from pyqtgraph will be triggered, which
-    #     is not calling super().closeEvent(event) and will not trigger the BECWidget close event.
-    #     """
-    #     return super().closeEvent(event)
 
     def close(self):
         """

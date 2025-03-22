@@ -37,7 +37,7 @@ def broadcast_update(func):
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         result = func(self, *args, **kwargs)
-        self.broadcast()
+        # self.broadcast()
         return result
 
     return wrapper
@@ -130,7 +130,6 @@ class RPCRegister:
         """
         Broadcast the update to all the callbacks.
         """
-        # print("Broadcasting")
         connections = self.list_all_connections()
         for callback in self.callbacks:
             callback(connections)

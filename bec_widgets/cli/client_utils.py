@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import importlib
-import importlib.metadata as imd
 import json
 import os
 import select
@@ -21,23 +19,18 @@ from rich.console import Console
 from rich.table import Table
 
 import bec_widgets.cli.client as client
-
-# from bec_widgets.cli.auto_updates import AutoUpdates
 from bec_widgets.cli.rpc.rpc_base import RPCBase, RPCReference
 
-if TYPE_CHECKING:
-    from bec_lib import messages
-    from bec_lib.connector import MessageObject
-    from bec_lib.device import DeviceBase
+if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.redis_connector import StreamMessage
 else:
-    messages = lazy_import("bec_lib.messages")
-    MessageObject = lazy_import_from("bec_lib.connector", ("MessageObject",))
     StreamMessage = lazy_import_from("bec_lib.redis_connector", ("StreamMessage",))
 
 logger = bec_logger.logger
 
 IGNORE_WIDGETS = ["BECDockArea", "BECDock"]
+
+# pylint: disable=redefined-outer-scope
 
 
 def _filter_output(output: str) -> str:
@@ -258,7 +251,7 @@ class BECGuiClient(RPCBase):
         """Show the GUI window."""
         if self._check_if_server_is_alive():
             return self._show_all()
-        return self._start(wait=True)
+        return self.start(wait=True)
 
     def hide(self):
         """Hide the GUI window."""
@@ -279,7 +272,8 @@ class BECGuiClient(RPCBase):
         Returns:
             client.BECDockArea: The new dock area.
         """
-        self.show()
+        if not self._check_if_server_is_alive():
+            self.start(wait=True)
         if wait:
             with wait_for_server(self):
                 rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
@@ -313,11 +307,7 @@ class BECGuiClient(RPCBase):
 
     def kill_server(self) -> None:
         """Kill the GUI server."""
-        self._top_level.clear()
         # Unregister the registry state
-        self._client.connector.unregister(
-            MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
-        )
         self._killed = True
 
         if self._gui_started_timer is not None:
@@ -339,6 +329,9 @@ class BECGuiClient(RPCBase):
         self._client.connector.unregister(
             MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
         )
+        # Remove all reference from top level
+        self._top_level.clear()
+        self._registry_state.clear()
 
     def close(self):
         """Deprecated. Use kill_server() instead."""
@@ -358,24 +351,14 @@ class BECGuiClient(RPCBase):
         return True
 
     def _gui_post_startup(self):
-        timeout = 10
+        timeout = 60
+        # Wait for 'bec' gui to be registered, this may take some time
+        # After 60s timeout. Should this raise an exception on timeout?
         while time.time() < time.time() + timeout:
             if len(list(self._registry_state.keys())) == 0:
                 time.sleep(0.1)
             else:
                 break
-        # FIXME AUTO UPDATES
-        # if self._auto_updates_enabled:
-        #     if self._auto_updates is None:
-        #         auto_updates = self._get_update_script()
-        #         if auto_updates is None:
-        #             AutoUpdates.create_default_dock = True
-        #             AutoUpdates.enabled = True
-        #             auto_updates = AutoUpdates(self._top_level["main"].widget)
-        #         if auto_updates.create_default_dock:
-        #             auto_updates.start_default_dock()
-        #         self._start_update_script()
-        #         self._auto_updates = auto_updates
         self._do_show_all()
         self._gui_started_event.set()
 
@@ -416,15 +399,19 @@ class BECGuiClient(RPCBase):
 
     def _start(self, wait: bool = False) -> None:
         self._killed = False
+        # Clear the registry state
+        self._registry_state.clear()
+        # Clear top level
+        self._top_level.clear()
         self._client.connector.register(
             MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
         )
         return self._start_server(wait=wait)
 
     def _handle_registry_update(self, msg: StreamMessage) -> None:
-        # with self._lock:
-        self._registry_state = msg["data"].state
-        self._update_dynamic_namespace()
+        with self._lock:
+            self._registry_state = msg["data"].state
+            self._update_dynamic_namespace()
 
     def _do_show_all(self):
         rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
@@ -446,6 +433,8 @@ class BECGuiClient(RPCBase):
 
     def _update_dynamic_namespace(self):
         """Update the dynamic name space"""
+        # Clear the top level
+        self._top_level.clear()
         # First we update the name space based on the new registry state
         self._add_registry_to_namespace()
         # Then we clear the ipython registry from old objects
@@ -559,75 +548,6 @@ class BECGuiClient(RPCBase):
         obj = RPCReference(registry=self._ipython_registry, gui_id=gui_id)
         return obj
 
-    ################################
-    ####      Auto updates      ####
-    #### potentially deprecated ####
-    ################################
-
-    # FIXME AUTO UPDATES
-    # @property
-    # def auto_updates(self):
-    #     if self._auto_updates_enabled:
-    #         with wait_for_server(self):
-    #             return self._auto_updates
-
-    # def _get_update_script(self) -> AutoUpdates | None:
-    #     eps = imd.entry_points(group="bec.widgets.auto_updates")
-    #     for ep in eps:
-    #         if ep.name == "plugin_widgets_update":
-    #             try:
-    #                 spec = importlib.util.find_spec(ep.module)
-    #                 # if the module is not found, we skip it
-    #                 if spec is None:
-    #                     continue
-    #                 return ep.load()(gui=self._top_level["main"])
-    #             except Exception as e:
-    #                 logger.error(f"Error loading auto update script from plugin: {str(e)}")
-    #     return None
-
-    # FIXME AUTO UPDATES
-    # @property
-    # def selected_device(self) -> str | None:
-    #     """
-    #     Selected device for the plot.
-    #     """
-    #     auto_update_config_ep = MessageEndpoints.gui_auto_update_config(self._gui_id)
-    #     auto_update_config = self._client.connector.get(auto_update_config_ep)
-    #     if auto_update_config:
-    #         return auto_update_config.selected_device
-    #     return None
-
-    # @selected_device.setter
-    # def selected_device(self, device: str | DeviceBase):
-    #     if isinstance_based_on_class_name(device, "bec_lib.device.DeviceBase"):
-    #         self._client.connector.set_and_publish(
-    #             MessageEndpoints.gui_auto_update_config(self._gui_id),
-    #             messages.GUIAutoUpdateConfigMessage(selected_device=device.name),
-    #         )
-    #     elif isinstance(device, str):
-    #         self._client.connector.set_and_publish(
-    #             MessageEndpoints.gui_auto_update_config(self._gui_id),
-    #             messages.GUIAutoUpdateConfigMessage(selected_device=device),
-    #         )
-    #     else:
-    #         raise ValueError("Device must be a string or a device object")
-
-    # FIXME AUTO UPDATES
-    # def _start_update_script(self) -> None:
-    #     self._client.connector.register(MessageEndpoints.scan_status(), cb=self._handle_msg_update)
-
-    # def _handle_msg_update(self, msg: StreamMessage) -> None:
-    #     if self.auto_updates is not None:
-    #         # pylint: disable=protected-access
-    #         return self._update_script_msg_parser(msg.value)
-
-    # def _update_script_msg_parser(self, msg: messages.BECMessage) -> None:
-    #     if isinstance(msg, messages.ScanStatusMessage):
-    #         if not self._gui_is_alive():
-    #             return
-    #         if self._auto_updates_enabled:
-    #             return self.auto_updates.do_update(msg)
-
 
 if __name__ == "__main__":  # pragma: no cover
     from bec_lib.client import BECClient
@@ -642,8 +562,7 @@ if __name__ == "__main__":  # pragma: no cover
         gui = BECGuiClient()
 
         gui.start(wait=True)
-        print(gui.window_list)
-        gui.new()
+        gui.new().new(widget="Waveform")
         time.sleep(10)
     finally:
         gui.kill_server()

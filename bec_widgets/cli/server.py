@@ -117,6 +117,7 @@ class BECWidgetsCLIServer:
         return obj
 
     def run_rpc(self, obj, method, args, kwargs):
+        # Run with rpc registry broadcast, but only once
         with rpc_register_broadcast(self.rpc_register):
             logger.debug(f"Running RPC instruction: {method} with args: {args}, kwargs: {kwargs}")
             method_obj = getattr(obj, method)
@@ -315,6 +316,12 @@ def main():
             def sigint_handler(*args):
                 # display message, for people to let it terminate gracefully
                 print("Caught SIGINT, exiting")
+                # Close all widgets
+                rpc_register = RPCRegister()
+                with rpc_register_broadcast(rpc_register):
+                    for widget in QApplication.instance().topLevelWidgets():
+                        widget.close()
+
                 app.quit()
 
             signal.signal(signal.SIGINT, sigint_handler)

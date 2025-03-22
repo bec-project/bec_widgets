@@ -7,9 +7,9 @@ from bec_lib.logger import bec_logger
 from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QApplication, QWidget
 
+from bec_widgets.cli.rpc.rpc_register import rpc_register_broadcast
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
 from bec_widgets.utils.colors import set_theme
-from bec_widgets.utils.container_utils import WidgetContainerUtils
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_widgets.widgets.containers.dock import BECDock
@@ -101,8 +101,9 @@ class BECWidget(BECConnector):
 
     def cleanup(self):
         """Cleanup the widget."""
-        # All widgets need to call super().cleanup() in their cleanup method
-        self.rpc_register.remove_rpc(self)
+        with rpc_register_broadcast(self.rpc_register):
+            # All widgets need to call super().cleanup() in their cleanup method
+            self.rpc_register.remove_rpc(self)
 
     def closeEvent(self, event):
         """Wrap the close even to ensure the rpc_register is cleaned up."""
