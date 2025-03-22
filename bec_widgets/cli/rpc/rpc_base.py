@@ -4,7 +4,7 @@ import inspect
 import threading
 import uuid
 from functools import wraps
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
@@ -19,6 +19,8 @@ else:
     messages = lazy_import("bec_lib.messages")
     # from bec_lib.connector import MessageObject
     MessageObject = lazy_import_from("bec_lib.connector", ("MessageObject",))
+
+# pylint: disable=protected-access
 
 
 def rpc_call(func):
@@ -40,6 +42,7 @@ def rpc_call(func):
         while caller_frame:
             if "jedi" in caller_frame.f_globals:
                 # Jedi module is present, likely tab completion
+                # Do not run the RPC call
                 return None  # func(*args, **kwargs)
             caller_frame = caller_frame.f_back
 
@@ -160,7 +163,7 @@ class RPCBase:
             parent = parent._parent
         return parent
 
-    def _run_rpc(self, method, *args, wait_for_rpc_response=True, timeout=3, **kwargs) -> Any:
+    def _run_rpc(self, method, *args, wait_for_rpc_response=True, timeout=300, **kwargs) -> Any:
         """
         Run the RPC call.
 
@@ -179,7 +182,6 @@ class RPCBase:
             parameter={"args": args, "kwargs": kwargs, "gui_id": self._gui_id},
             metadata={"request_id": request_id},
         )
-        print(f"running and rpc {method}")
         # pylint: disable=protected-access
         receiver = self._root._gui_id
         if wait_for_rpc_response:
@@ -233,7 +235,12 @@ class RPCBase:
                 return msg_result
 
             cls = getattr(client, cls)
-            # print(msg_result)
+            # The namespace of the object will be updated dynamically on the client side
+            # Therefor it is important to check if the object is already in the registry
+            # If yes, we return the reference to the object, otherwise we create a new object
+            # pylint: disable=protected-access
+            if msg_result["gui_id"] in self._root._ipython_registry:
+                return RPCReference(self._root._ipython_registry, msg_result["gui_id"])
             ret = cls(parent=self, **msg_result)
             self._root._ipython_registry[ret._gui_id] = ret
             obj = RPCReference(self._root._ipython_registry, ret._gui_id)

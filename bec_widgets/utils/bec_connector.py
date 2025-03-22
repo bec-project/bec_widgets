@@ -318,7 +318,6 @@ class BECConnector:
                 self.deleteLater()
         else:
             self.rpc_register.remove_rpc(self)
-            self.rpc_register.broadcast()
 
     def get_config(self, dict_output: bool = True) -> dict | BaseModel:
         """
