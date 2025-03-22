@@ -53,14 +53,14 @@ def test_device_input_base_init_with_config(mocked_client):
     }
     widget = DeviceInputWidget(client=mocked_client, config=config)
     assert widget.config.gui_id == "test_gui_id"
-    assert widget.config.device_filter == [BECDeviceFilter.POSITIONER]
+    assert widget.config.device_filter == ["Positioner"]
     assert widget.config.default == "samx"
 
 
 def test_device_input_base_set_device_filter(device_input_base):
     """Test device filter setter."""
     device_input_base.set_device_filter(BECDeviceFilter.POSITIONER)
-    assert device_input_base.config.device_filter == [BECDeviceFilter.POSITIONER]
+    assert device_input_base.config.device_filter == ["Positioner"]
 
 
 def test_device_input_base_set_device_filter_error(device_input_base):

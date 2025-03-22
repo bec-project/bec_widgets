@@ -280,13 +280,11 @@ class BECGuiClient(RPCBase):
                 widget = rpc_client._run_rpc(
                     "new_dock_area", name, geometry
                 )  # pylint: disable=protected-access
-                self._top_level[widget.widget_name] = widget
                 return widget
         rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
         widget = rpc_client._run_rpc(
             "new_dock_area", name, geometry
         )  # pylint: disable=protected-access
-        self._top_level[widget.widget_name] = widget
         return widget
 
     def delete(self, name: str) -> None:
@@ -399,10 +397,6 @@ class BECGuiClient(RPCBase):
 
     def _start(self, wait: bool = False) -> None:
         self._killed = False
-        # Clear the registry state
-        self._registry_state.clear()
-        # Clear top level
-        self._top_level.clear()
         self._client.connector.register(
             MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
         )

@@ -60,7 +60,7 @@ def test_device_input_combobox_init(device_input_combobox):
 
 def test_device_input_combobox_init_with_kwargs(device_input_combobox_with_kwargs):
     assert device_input_combobox_with_kwargs.config.gui_id == "test_gui_id"
-    assert device_input_combobox_with_kwargs.config.device_filter == [BECDeviceFilter.POSITIONER]
+    assert device_input_combobox_with_kwargs.config.device_filter == ["Positioner"]
     assert device_input_combobox_with_kwargs.config.default == "samx"
     assert device_input_combobox_with_kwargs.config.arg_name == "test_arg_name"
 
@@ -132,7 +132,7 @@ def test_device_input_line_edit_init(device_input_line_edit):
 
 def test_device_input_line_edit_init_with_kwargs(device_input_line_edit_with_kwargs):
     assert device_input_line_edit_with_kwargs.config.gui_id == "test_gui_id"
-    assert device_input_line_edit_with_kwargs.config.device_filter == [BECDeviceFilter.POSITIONER]
+    assert device_input_line_edit_with_kwargs.config.device_filter == ["Positioner"]
     assert device_input_line_edit_with_kwargs.config.default == "samx"
     assert device_input_line_edit_with_kwargs.config.arg_name == "test_arg_name"
 
