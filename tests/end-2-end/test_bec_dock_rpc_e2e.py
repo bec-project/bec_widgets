@@ -177,13 +177,18 @@ def test_rpc_gui_obj(connected_client_gui_obj, qtbot):
     assert all(windows["visible"] for windows in gui_info.values())
 
     assert gui._gui_is_alive()
-    gui.close()
+    gui.kill_server()
     assert not gui._gui_is_alive()
-    gui._start(wait=True)
+    gui.start(wait=True)
     assert gui._gui_is_alive()
     # calling start multiple times should not change anything
     gui.start(wait=True)
     gui.start(wait=True)
+
+    def wait_for_gui_started():
+        return "bec" in gui.windows
+
+    qtbot.waitUntil(wait_for_gui_started, timeout=3000)
     # gui.windows should have bec with gui_id 'bec'
     assert len(gui.windows) == 1
     assert gui.windows["bec"]._gui_id == mw._gui_id
