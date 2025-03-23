@@ -1,13 +1,7 @@
-import time
-
-import numpy as np
 import pytest
-from bec_lib.endpoints import MessageEndpoints
 
-from bec_widgets.cli.client import BECFigure, BECImageShow, BECMotorMap, BECWaveform
+from bec_widgets.cli import Image, MotorMap, Waveform
 from bec_widgets.cli.rpc.rpc_base import RPCReference
-from bec_widgets.tests.utils import check_remote_data_size
-from bec_widgets.utils import Colors
 
 # pylint: disable=unused-argument
 # pylint: disable=redefined-outer-name
@@ -34,7 +28,7 @@ def test_gui_rpc_registry(qtbot, connected_client_gui_obj):
     assert hasattr(gui.cool_dock_area, "dock_0")
 
 
-def test_rpc_add_dock_with_figure_e2e(qtbot, bec_client_lib, connected_client_gui_obj):
+def test_rpc_add_dock_with_plots_e2e(qtbot, bec_client_lib, connected_client_gui_obj):
 
     gui = connected_client_gui_obj
     # BEC client shortcuts
@@ -62,16 +56,13 @@ def test_rpc_add_dock_with_figure_e2e(qtbot, bec_client_lib, connected_client_gu
     assert hasattr(gui.bec, "dock_0")
 
     # Add 3 figures with some widgets
-    fig0 = d0.new("BECFigure")
-    fig1 = d1.new("BECFigure")
-    fig2 = d2.new("BECFigure")
+    wf = d0.new("Waveform")
+    im = d1.new("Image")
+    mm = d2.new("MotorMap")
 
     def check_figs_registered():
         return all(
-            [
-                gui_id in gui._server_registry
-                for gui_id in [fig0._gui_id, fig1._gui_id, fig2._gui_id]
-            ]
+            [gui_id in gui._server_registry for gui_id in [wf._gui_id, im._gui_id, mm._gui_id]]
         )
 
     qtbot.waitUntil(check_figs_registered, timeout=5000)
@@ -80,23 +71,24 @@ def test_rpc_add_dock_with_figure_e2e(qtbot, bec_client_lib, connected_client_gu
     assert len(d1.element_list) == 1
     assert len(d2.element_list) == 1
 
-    assert fig1.__class__.__name__ == "RPCReference"
-    assert fig1.__class__ == RPCReference
-    assert gui._ipython_registry[fig1._gui_id].__class__ == BECFigure
-    assert fig2.__class__.__name__ == "RPCReference"
-    assert fig2.__class__ == RPCReference
-    assert gui._ipython_registry[fig2._gui_id].__class__ == BECFigure
-
-    mm = fig0.motor_map("samx", "samy")
-    plt = fig1.plot(x_name="samx", y_name="bpm4i")
-    im = fig2.image("eiger")
-
-    assert mm.__class__.__name__ == "RPCReference"
-    assert mm.__class__ == RPCReference
-    assert plt.__class__.__name__ == "RPCReference"
-    assert plt.__class__ == RPCReference
+    assert wf.__class__.__name__ == "RPCReference"
+    assert wf.__class__ == RPCReference
+    assert gui._ipython_registry[wf._gui_id].__class__ == Waveform
     assert im.__class__.__name__ == "RPCReference"
     assert im.__class__ == RPCReference
+    assert gui._ipython_registry[im._gui_id].__class__ == Image
+    assert mm.__class__.__name__ == "RPCReference"
+    assert mm.__class__ == RPCReference
+    assert gui._ipython_registry[mm._gui_id].__class__ == MotorMap
+
+    mm.map("samx", "samy")
+    curve = wf.plot(x_name="samx", y_name="bpm4i")
+    im_item = im.image("eiger")
+
+    assert curve.__class__.__name__ == "RPCReference"
+    assert curve.__class__ == RPCReference
+    assert im_item.__class__.__name__ == "RPCReference"
+    assert im_item.__class__ == RPCReference
 
 
 def test_dock_manipulations_e2e(qtbot, connected_client_gui_obj):
