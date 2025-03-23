@@ -1332,6 +1332,14 @@ class ImageItem(RPCBase):
         Get or set whether the image is transposed.
         """
 
+    @rpc_call
+    def get_data(self) -> "np.ndarray":
+        """
+        Get the data of the image.
+        Returns:
+            np.ndarray: The data of the image.
+        """
+
 
 class LMFitDialog(RPCBase):
     """Dialog for displaying the fit summary and params for LMFit DAP processes"""
@@ -3429,6 +3437,35 @@ class Waveform(RPCBase):
 
         Returns:
             dict[str, dict]: DAP summary of all DAP curves.
+        """
+
+    @rpc_call
+    def get_all_data(self, output: "Literal['dict', 'pandas']" = "dict") -> "dict":
+        """
+        Extract all curve data into a dictionary or a pandas DataFrame.
+
+        Args:
+            output (Literal["dict", "pandas"]): Format of the output data.
+
+        Returns:
+            dict | pd.DataFrame: Data of all curves in the specified format.
+        """
+
+    @rpc_call
+    def get_curve(self, curve: "int | str") -> "Curve | None":
+        """
+        Get a curve from the plot widget.
+
+        Args:
+            curve(int|str): The curve to get. It Can be the order of the curve or the name of the curve.
+
+        Return(Curve|None): The curve object if found, None otherwise.
+        """
+
+    @rpc_call
+    def select_roi(self, region: "tuple[float, float]"):
+        """
+        Public method if you want the old `select_roi` style.
         """
 
 

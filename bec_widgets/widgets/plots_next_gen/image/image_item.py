@@ -65,6 +65,7 @@ class ImageItem(BECConnector, pg.ImageItem):
         "rotation.setter",
         "transpose",
         "transpose.setter",
+        "get_data",
     ]
 
     vRangeChangedManually = Signal(tuple)
@@ -251,7 +252,14 @@ class ImageItem(BECConnector, pg.ImageItem):
         self._process_image()
 
     ################################################################################
-    # Data Update Logic
+    # Export
+    def get_data(self) -> np.ndarray:
+        """
+        Get the data of the image.
+        Returns:
+            np.ndarray: The data of the image.
+        """
+        return self.image
 
     def clear(self):
         super().clear()

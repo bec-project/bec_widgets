@@ -96,6 +96,9 @@ class Waveform(PlotBase):
         "update_with_scan_history",
         "get_dap_params",
         "get_dap_summary",
+        "get_all_data",
+        "get_curve",
+        "select_roi",
     ]
 
     sync_signal_update = Signal()
