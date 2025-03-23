@@ -325,7 +325,7 @@ class ExampleApp(QMainWindow):  # pragma: no cover
         self.side_panel = SidePanel(self, orientation="left", panel_max_width=250)
         self.layout.addWidget(self.side_panel)
 
-        from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
+        from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
         self.plot = Waveform()
         self.layout.addWidget(self.plot)

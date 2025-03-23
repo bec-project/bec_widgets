@@ -29,11 +29,11 @@ from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit 
     DeviceLineEdit,
 )
 from bec_widgets.widgets.dap.dap_combo_box.dap_combo_box import DapComboBox
-from bec_widgets.widgets.plots_next_gen.waveform.curve import CurveConfig, DeviceSignal
+from bec_widgets.widgets.plots.waveform.curve import CurveConfig, DeviceSignal
 from bec_widgets.widgets.utility.visual.colormap_widget.colormap_widget import BECColorMapWidget
 
 if TYPE_CHECKING:  # pragma: no cover
-    from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
+    from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
 
 class ColorButton(QPushButton):

@@ -4,11 +4,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from qtpy.QtWidgets import QComboBox, QVBoxLayout
 
-from bec_widgets.widgets.plots_next_gen.waveform.settings.curve_settings.curve_setting import (
-    CurveSetting,
-)
-from bec_widgets.widgets.plots_next_gen.waveform.settings.curve_settings.curve_tree import CurveTree
-from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
+from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_setting import CurveSetting
+from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_tree import CurveTree
+from bec_widgets.widgets.plots.waveform.waveform import Waveform
 from tests.unit_tests.client_mocks import dap_plugin_message, mocked_client, mocked_client_with_dap
 from tests.unit_tests.conftest import create_widget
 

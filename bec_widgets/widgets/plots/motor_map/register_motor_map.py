@@ -6,9 +6,9 @@ def main():  # pragma: no cover
         return
     from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
 
-    from bec_widgets.widgets.plots_next_gen.image.image_plugin import ImagePlugin
+    from bec_widgets.widgets.plots.motor_map.motor_map_plugin import MotorMapPlugin
 
-    QPyDesignerCustomWidgetCollection.addCustomWidget(ImagePlugin())
+    QPyDesignerCustomWidgetCollection.addCustomWidget(MotorMapPlugin())
 
 
 if __name__ == "__main__":  # pragma: no cover

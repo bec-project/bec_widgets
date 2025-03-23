@@ -6,9 +6,9 @@ def main():  # pragma: no cover
         return
     from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
 
-    from bec_widgets.widgets.plots_next_gen.waveform.waveform_plugin import WaveformPlugin
+    from bec_widgets.widgets.plots.multi_waveform.multi_waveform_plugin import MultiWaveformPlugin
 
-    QPyDesignerCustomWidgetCollection.addCustomWidget(WaveformPlugin())
+    QPyDesignerCustomWidgetCollection.addCustomWidget(MultiWaveformPlugin())
 
 
 if __name__ == "__main__":  # pragma: no cover

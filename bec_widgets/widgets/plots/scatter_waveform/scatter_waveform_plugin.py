@@ -4,7 +4,7 @@
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 
 from bec_widgets.utils.bec_designer import designer_material_icon
-from bec_widgets.widgets.plots_next_gen.scatter_waveform.scatter_waveform import ScatterWaveform
+from bec_widgets.widgets.plots.scatter_waveform.scatter_waveform import ScatterWaveform
 
 DOM_XML = """
 <ui language='c++'>
@@ -27,7 +27,7 @@ class ScatterWaveformPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return "Plot Widgets Next Gen"
+        return "Plot Widgets"
 
     def icon(self):
         return designer_material_icon(ScatterWaveform.ICON_NAME)

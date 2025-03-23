@@ -14,13 +14,13 @@ from bec_widgets.qt_utils.settings_dialog import SettingsDialog
 from bec_widgets.qt_utils.toolbar import MaterialIconAction
 from bec_widgets.utils import Colors, ConnectionConfig
 from bec_widgets.utils.colors import set_theme
-from bec_widgets.widgets.plots_next_gen.plot_base import PlotBase
-from bec_widgets.widgets.plots_next_gen.scatter_waveform.scatter_curve import (
+from bec_widgets.widgets.plots.plot_base import PlotBase
+from bec_widgets.widgets.plots.scatter_waveform.scatter_curve import (
     ScatterCurve,
     ScatterCurveConfig,
     ScatterDeviceSignal,
 )
-from bec_widgets.widgets.plots_next_gen.scatter_waveform.settings.scatter_curve_setting import (
+from bec_widgets.widgets.plots.scatter_waveform.settings.scatter_curve_setting import (
     ScatterCurveSettings,
 )
 

@@ -1,7 +1,7 @@
 import numpy as np
 import pyqtgraph as pg
 
-from bec_widgets.widgets.plots_next_gen.motor_map.motor_map import MotorMap
+from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
 from tests.unit_tests.client_mocks import mocked_client
 
 from .conftest import create_widget
@@ -210,7 +210,7 @@ def test_motor_map_limit_map(qtbot, mocked_client):
 
     from qtpy import QtCore
 
-    from bec_widgets.widgets.plots_next_gen.motor_map.motor_map import FilledRectItem
+    from bec_widgets.widgets.plots.motor_map.motor_map import FilledRectItem
 
     assert isinstance(limit_map, FilledRectItem)
     rect = limit_map.boundingRect()

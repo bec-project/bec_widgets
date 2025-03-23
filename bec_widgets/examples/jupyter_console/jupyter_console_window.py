@@ -19,12 +19,12 @@ from bec_widgets.utils.widget_io import WidgetHierarchy as wh
 from bec_widgets.widgets.containers.dock import BECDockArea
 from bec_widgets.widgets.containers.layout_manager.layout_manager import LayoutManagerWidget
 from bec_widgets.widgets.editors.jupyter_console.jupyter_console import BECJupyterConsole
-from bec_widgets.widgets.plots_next_gen.image.image import Image
-from bec_widgets.widgets.plots_next_gen.motor_map.motor_map import MotorMap
-from bec_widgets.widgets.plots_next_gen.multi_waveform.multi_waveform import MultiWaveform
-from bec_widgets.widgets.plots_next_gen.plot_base import PlotBase
-from bec_widgets.widgets.plots_next_gen.scatter_waveform.scatter_waveform import ScatterWaveform
-from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
+from bec_widgets.widgets.plots.image.image import Image
+from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
+from bec_widgets.widgets.plots.multi_waveform.multi_waveform import MultiWaveform
+from bec_widgets.widgets.plots.plot_base import PlotBase
+from bec_widgets.widgets.plots.scatter_waveform.scatter_waveform import ScatterWaveform
+from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
 
 class JupyterConsoleWindow(QWidget):  # pragma: no cover:

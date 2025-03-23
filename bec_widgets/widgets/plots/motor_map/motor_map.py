@@ -16,13 +16,11 @@ from bec_widgets.qt_utils.settings_dialog import SettingsDialog
 from bec_widgets.qt_utils.toolbar import MaterialIconAction
 from bec_widgets.utils import Colors, ConnectionConfig
 from bec_widgets.utils.colors import set_theme
-from bec_widgets.widgets.plots_next_gen.motor_map.settings.motor_map_settings import (
-    MotorMapSettings,
-)
-from bec_widgets.widgets.plots_next_gen.motor_map.toolbar_bundles.motor_selection import (
+from bec_widgets.widgets.plots.motor_map.settings.motor_map_settings import MotorMapSettings
+from bec_widgets.widgets.plots.motor_map.toolbar_bundles.motor_selection import (
     MotorSelectionToolbarBundle,
 )
-from bec_widgets.widgets.plots_next_gen.plot_base import PlotBase
+from bec_widgets.widgets.plots.plot_base import PlotBase
 
 logger = bec_logger.logger
 

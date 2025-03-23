@@ -4,36 +4,36 @@
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 
 from bec_widgets.utils.bec_designer import designer_material_icon
-from bec_widgets.widgets.plots_next_gen.multi_waveform.multi_waveform import MultiWaveform
+from bec_widgets.widgets.plots.image.image import Image
 
 DOM_XML = """
 <ui language='c++'>
-    <widget class='MultiWaveform' name='multi_waveform'>
+    <widget class='Image' name='image'>
     </widget>
 </ui>
 """
 
 
-class MultiWaveformPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
+class ImagePlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
     def __init__(self):
         super().__init__()
         self._form_editor = None
 
     def createWidget(self, parent):
-        t = MultiWaveform(parent)
+        t = Image(parent)
         return t
 
     def domXml(self):
         return DOM_XML
 
     def group(self):
-        return "Plot Widgets Next Gen"
+        return "Plot Widgets"
 
     def icon(self):
-        return designer_material_icon(MultiWaveform.ICON_NAME)
+        return designer_material_icon(Image.ICON_NAME)
 
     def includeFile(self):
-        return "multi_waveform"
+        return "image"
 
     def initialize(self, form_editor):
         self._form_editor = form_editor
@@ -45,10 +45,10 @@ class MultiWaveformPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return self._form_editor is not None
 
     def name(self):
-        return "MultiWaveform"
+        return "Image"
 
     def toolTip(self):
-        return "MultiWaveform"
+        return "Image"
 
     def whatsThis(self):
         return self.toolTip()
