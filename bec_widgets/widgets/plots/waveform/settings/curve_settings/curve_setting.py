@@ -17,10 +17,10 @@ from bec_widgets.qt_utils.settings_dialog import SettingWidget
 from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit import (
     DeviceLineEdit,
 )
-from bec_widgets.widgets.plots_next_gen.waveform.settings.curve_settings.curve_tree import CurveTree
+from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_tree import CurveTree
 
 if TYPE_CHECKING:  # pragma: no cover
-    from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
+    from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
 
 class CurveSetting(SettingWidget):

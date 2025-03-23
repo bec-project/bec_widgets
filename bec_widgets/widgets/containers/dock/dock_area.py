@@ -25,11 +25,11 @@ from bec_widgets.widgets.containers.dock.dock import BECDock, DockConfig
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox
 from bec_widgets.widgets.control.scan_control.scan_control import ScanControl
 from bec_widgets.widgets.editors.vscode.vscode import VSCodeEditor
-from bec_widgets.widgets.plots_next_gen.image.image import Image
-from bec_widgets.widgets.plots_next_gen.motor_map.motor_map import MotorMap
-from bec_widgets.widgets.plots_next_gen.multi_waveform.multi_waveform import MultiWaveform
-from bec_widgets.widgets.plots_next_gen.scatter_waveform.scatter_waveform import ScatterWaveform
-from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
+from bec_widgets.widgets.plots.image.image import Image
+from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
+from bec_widgets.widgets.plots.multi_waveform.multi_waveform import MultiWaveform
+from bec_widgets.widgets.plots.scatter_waveform.scatter_waveform import ScatterWaveform
+from bec_widgets.widgets.plots.waveform.waveform import Waveform
 from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_bar import RingProgressBar
 from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
 from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECStatusBox

@@ -6,9 +6,9 @@ import pyqtgraph as pg
 import pytest
 from pyqtgraph.graphicsItems.DateAxisItem import DateAxisItem
 
-from bec_widgets.widgets.plots_next_gen.plot_base import UIMode
-from bec_widgets.widgets.plots_next_gen.waveform.curve import DeviceSignal
-from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
+from bec_widgets.widgets.plots.plot_base import UIMode
+from bec_widgets.widgets.plots.waveform.curve import DeviceSignal
+from bec_widgets.widgets.plots.waveform.waveform import Waveform
 from tests.unit_tests.client_mocks import (
     DummyData,
     create_dummy_scan_item,

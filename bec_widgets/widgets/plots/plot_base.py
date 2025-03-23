@@ -19,12 +19,12 @@ from bec_widgets.utils.fps_counter import FPSCounter
 from bec_widgets.utils.plot_indicator_items import BECArrowItem, BECTickItem
 from bec_widgets.utils.widget_state_manager import WidgetStateManager
 from bec_widgets.widgets.containers.layout_manager.layout_manager import LayoutManagerWidget
-from bec_widgets.widgets.plots_next_gen.setting_menus.axis_settings import AxisSettings
-from bec_widgets.widgets.plots_next_gen.toolbar_bundles.mouse_interactions import (
+from bec_widgets.widgets.plots.setting_menus.axis_settings import AxisSettings
+from bec_widgets.widgets.plots.toolbar_bundles.mouse_interactions import (
     MouseInteractionToolbarBundle,
 )
-from bec_widgets.widgets.plots_next_gen.toolbar_bundles.plot_export import PlotExportBundle
-from bec_widgets.widgets.plots_next_gen.toolbar_bundles.roi_bundle import ROIBundle
+from bec_widgets.widgets.plots.toolbar_bundles.plot_export import PlotExportBundle
+from bec_widgets.widgets.plots.toolbar_bundles.roi_bundle import ROIBundle
 
 logger = bec_logger.logger
 

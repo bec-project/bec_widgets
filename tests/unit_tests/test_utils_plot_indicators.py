@@ -1,7 +1,7 @@
 import pytest
 from qtpy.QtCore import QPointF
 
-from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
+from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
 from .client_mocks import mocked_client
 

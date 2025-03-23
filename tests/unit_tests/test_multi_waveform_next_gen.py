@@ -1,6 +1,6 @@
 import numpy as np
 
-from bec_widgets.widgets.plots_next_gen.multi_waveform.multi_waveform import MultiWaveform
+from bec_widgets.widgets.plots.multi_waveform.multi_waveform import MultiWaveform
 from tests.unit_tests.client_mocks import mocked_client
 
 from .conftest import create_widget

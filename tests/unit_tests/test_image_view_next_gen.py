@@ -2,7 +2,7 @@ import numpy as np
 import pyqtgraph as pg
 import pytest
 
-from bec_widgets.widgets.plots_next_gen.image.image import Image
+from bec_widgets.widgets.plots.image.image import Image
 from tests.unit_tests.client_mocks import mocked_client
 from tests.unit_tests.conftest import create_widget
 

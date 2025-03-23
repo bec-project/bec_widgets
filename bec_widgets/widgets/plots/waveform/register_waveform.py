@@ -6,9 +6,9 @@ def main():  # pragma: no cover
         return
     from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
 
-    from bec_widgets.widgets.plots_next_gen.motor_map.motor_map_plugin import MotorMapPlugin
+    from bec_widgets.widgets.plots.waveform.waveform_plugin import WaveformPlugin
 
-    QPyDesignerCustomWidgetCollection.addCustomWidget(MotorMapPlugin())
+    QPyDesignerCustomWidgetCollection.addCustomWidget(WaveformPlugin())
 
 
 if __name__ == "__main__":  # pragma: no cover

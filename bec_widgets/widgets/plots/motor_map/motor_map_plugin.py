@@ -4,36 +4,36 @@
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 
 from bec_widgets.utils.bec_designer import designer_material_icon
-from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
+from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
 
 DOM_XML = """
 <ui language='c++'>
-    <widget class='Waveform' name='waveform'>
+    <widget class='MotorMap' name='motor_map'>
     </widget>
 </ui>
 """
 
 
-class WaveformPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
+class MotorMapPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
     def __init__(self):
         super().__init__()
         self._form_editor = None
 
     def createWidget(self, parent):
-        t = Waveform(parent)
+        t = MotorMap(parent)
         return t
 
     def domXml(self):
         return DOM_XML
 
     def group(self):
-        return "Plot Widgets Next Gen"
+        return "Plot Widgets"
 
     def icon(self):
-        return designer_material_icon(Waveform.ICON_NAME)
+        return designer_material_icon(MotorMap.ICON_NAME)
 
     def includeFile(self):
-        return "waveform"
+        return "motor_map"
 
     def initialize(self, form_editor):
         self._form_editor = form_editor
@@ -45,10 +45,10 @@ class WaveformPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return self._form_editor is not None
 
     def name(self):
-        return "Waveform"
+        return "MotorMap"
 
     def toolTip(self):
-        return "Waveform"
+        return "MotorMap"
 
     def whatsThis(self):
         return self.toolTip()

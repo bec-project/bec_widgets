@@ -6,7 +6,7 @@ def main():  # pragma: no cover
         return
     from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
 
-    from bec_widgets.widgets.plots_next_gen.scatter_waveform.scatter_waveform_plugin import (
+    from bec_widgets.widgets.plots.scatter_waveform.scatter_waveform_plugin import (
         ScatterWaveformPlugin,
     )
 

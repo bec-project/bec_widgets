@@ -11,7 +11,7 @@ from qtpy import QtCore
 from bec_widgets.utils import BECConnector, Colors, ConnectionConfig
 
 if TYPE_CHECKING:  # pragma: no cover
-    from bec_widgets.widgets.plots_next_gen.waveform.waveform import Waveform
+    from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
 logger = bec_logger.logger
 

@@ -1,4 +1,4 @@
-from bec_widgets.widgets.plots_next_gen.plot_base import PlotBase, UIMode
+from bec_widgets.widgets.plots.plot_base import PlotBase, UIMode
 
 from .client_mocks import mocked_client
 from .conftest import create_widget

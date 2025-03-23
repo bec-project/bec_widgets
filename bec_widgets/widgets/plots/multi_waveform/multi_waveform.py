@@ -12,13 +12,13 @@ from qtpy.QtWidgets import QWidget
 from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.qt_utils.side_panel import SidePanel
 from bec_widgets.utils import Colors, ConnectionConfig
-from bec_widgets.widgets.plots_next_gen.multi_waveform.settings.control_panel import (
+from bec_widgets.widgets.plots.multi_waveform.settings.control_panel import (
     MultiWaveformControlPanel,
 )
-from bec_widgets.widgets.plots_next_gen.multi_waveform.toolbar_bundles.monitor_selection import (
+from bec_widgets.widgets.plots.multi_waveform.toolbar_bundles.monitor_selection import (
     MultiWaveformSelectionToolbarBundle,
 )
-from bec_widgets.widgets.plots_next_gen.plot_base import PlotBase
+from bec_widgets.widgets.plots.plot_base import PlotBase
 
 logger = bec_logger.logger
 
