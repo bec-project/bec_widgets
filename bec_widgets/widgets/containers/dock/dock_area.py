@@ -11,7 +11,7 @@ from qtpy.QtCore import QSize, Qt
 from qtpy.QtGui import QPainter, QPaintEvent
 from qtpy.QtWidgets import QApplication, QSizePolicy, QVBoxLayout, QWidget
 
-from bec_widgets.cli.rpc.rpc_register import RPCRegister, rpc_register_broadcast
+from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.qt_utils.error_popups import SafeSlot
 from bec_widgets.qt_utils.toolbar import (
     ExpandableMenuAction,
@@ -225,9 +225,8 @@ class BECDockArea(BECWidget, QWidget):
 
     @SafeSlot()
     def _create_widget_from_toolbar(self, widget_name: str) -> None:
-        rpc_register = RPCRegister()
         # Run with RPC broadcast to namespace of all widgets
-        with rpc_register_broadcast(rpc_register):
+        with RPCRegister.delayed_broadcast():
             dock_name = WidgetContainerUtils.generate_unique_name(widget_name, self.panels.keys())
             self.new(name=dock_name, widget=widget_name)
 

@@ -20,7 +20,7 @@ def test_gui_rpc_registry(qtbot, connected_client_gui_obj):
     dock_area = gui.new("cool_dock_area")
 
     def check_dock_area_registered():
-        return dock_area._gui_id in gui._registry_state
+        return dock_area._gui_id in gui._server_registry
 
     qtbot.waitUntil(check_dock_area_registered, timeout=5000)
     assert hasattr(gui, "cool_dock_area")
@@ -28,7 +28,7 @@ def test_gui_rpc_registry(qtbot, connected_client_gui_obj):
     dock = dock_area.new("dock_0")
 
     def check_dock_registered():
-        return dock._gui_id in gui._registry_state
+        return dock._gui_id in gui._server_registry
 
     qtbot.waitUntil(check_dock_registered, timeout=5000)
     assert hasattr(gui.cool_dock_area, "dock_0")
@@ -52,7 +52,7 @@ def test_rpc_add_dock_with_figure_e2e(qtbot, bec_client_lib, connected_client_gu
     # Check that callback for dock_registry is done
     def check_docks_registered():
         return all(
-            [gui_id in gui._registry_state for gui_id in [d0._gui_id, d1._gui_id, d2._gui_id]]
+            [gui_id in gui._server_registry for gui_id in [d0._gui_id, d1._gui_id, d2._gui_id]]
         )
 
     # Waii until docks are registered
@@ -68,7 +68,10 @@ def test_rpc_add_dock_with_figure_e2e(qtbot, bec_client_lib, connected_client_gu
 
     def check_figs_registered():
         return all(
-            [gui_id in gui._registry_state for gui_id in [fig0._gui_id, fig1._gui_id, fig2._gui_id]]
+            [
+                gui_id in gui._server_registry
+                for gui_id in [fig0._gui_id, fig1._gui_id, fig2._gui_id]
+            ]
         )
 
     qtbot.waitUntil(check_figs_registered, timeout=5000)

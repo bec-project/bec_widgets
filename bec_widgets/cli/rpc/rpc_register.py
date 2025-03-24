@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
 from functools import wraps
 from threading import Lock
 from typing import TYPE_CHECKING, Callable
@@ -18,26 +17,16 @@ if TYPE_CHECKING:  # pragma: no cover
 logger = bec_logger.logger
 
 
-@contextmanager
-def rpc_register_broadcast(rpc_register):
-    """
-    Context manager to broadcast updates to the RPCRegister whenever a new RPC object is added or removed.
-    """
-    try:
-        yield rpc_register
-    finally:
-        rpc_register.broadcast()
-
-
 def broadcast_update(func):
     """
     Decorator to broadcast updates to the RPCRegister whenever a new RPC object is added or removed.
+    If class attribute _skip_broadcast is set to True, the broadcast will be skipped
     """
 
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         result = func(self, *args, **kwargs)
-        # self.broadcast()
+        self.broadcast()
         return result
 
     return wrapper
@@ -51,6 +40,7 @@ class RPCRegister:
     _instance = None
     _initialized = False
     _lock = Lock()
+    _skip_broadcast = False
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -62,8 +52,17 @@ class RPCRegister:
         if self._initialized:
             return
         self._rpc_register = WeakValueDictionary()
+        self._broadcast_on_hold = RPCRegisterBroadcast(self)
         self._initialized = True
         self.callbacks = []
+
+    @classmethod
+    def delayed_broadcast(cls):
+        """
+        Delay the broadcast of the update to all the callbacks.
+        """
+        register = cls()
+        return register._broadcast_on_hold
 
     @broadcast_update
     def add_rpc(self, rpc: QObject):
@@ -130,6 +129,9 @@ class RPCRegister:
         """
         Broadcast the update to all the callbacks.
         """
+
+        if self._skip_broadcast:
+            return
         connections = self.list_all_connections()
         for callback in self.callbacks:
             callback(connections)
@@ -151,3 +153,24 @@ class RPCRegister:
         """
         cls._instance = None
         cls._initialized = False
+
+
+class RPCRegisterBroadcast:
+    """Context manager for RPCRegister broadcast."""
+
+    def __init__(self, rpc_register: RPCRegister) -> None:
+        self.rpc_register = rpc_register
+        self._call_depth = 0
+
+    def __enter__(self):
+        """Enter the context manager"""
+        self._call_depth += 1  # Needed for nested calls
+        self.rpc_register._skip_broadcast = True
+        return self.rpc_register
+
+    def __exit__(self, *exc):
+        """Exit the context manager"""
+        self._call_depth -= 1  # Remove nested calls
+        if self._call_depth == 0:  # Last one to exit is repsonsible for broadcasting
+            self.rpc_register._skip_broadcast = False
+        self.rpc_register.broadcast()

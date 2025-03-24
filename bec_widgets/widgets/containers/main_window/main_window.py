@@ -1,7 +1,7 @@
 from bec_lib.logger import bec_logger
 from qtpy.QtWidgets import QApplication, QMainWindow
 
-from bec_widgets.cli.rpc.rpc_register import RPCRegister, rpc_register_broadcast
+from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
@@ -49,8 +49,7 @@ class BECMainWindow(BECWidget, QMainWindow):
         Returns:
             BECDockArea: The newly created dock area.
         """
-        rpc_register = RPCRegister()
-        with rpc_register_broadcast(rpc_register):
+        with RPCRegister.delayed_broadcast() as rpc_register:
             existing_dock_areas = rpc_register.get_names_of_rpc_by_class_type(BECDockArea)
             if name is not None:
                 if name in existing_dock_areas:
