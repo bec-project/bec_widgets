@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## v1.25.1 (2025-03-24)
+
+### Bug Fixes
+
+- **positioner_box**: Fixed motor moving flags for spinner
+  ([`be274a1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/be274a10fc76528e1e5d6b309678c7fb4e9b890e))
+
+- **positioner_box**: If possible tweak should use the current setpoint instead of the readback
+  ([`e5c9dd2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e5c9dd288c571d29722497a2d40b000d1cffb475))
+
+### Continuous Integration
+
+- Add e2e job for pre_release branches
+  ([`d86ef4e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d86ef4e763b321b1c82be71c9f275abb610fed06))
+
+- Fix conda channels for PSI policy change
+  ([`6cf39b3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6cf39b3796f850294705465adfaf6ad25a71461f))
+
+
 ## v1.25.0 (2025-03-07)
 
 ### Features
