@@ -15,7 +15,7 @@ from bec_lib.utils.import_utils import lazy_import
 from qtpy.QtCore import Qt, QTimer
 from redis.exceptions import RedisError
 
-from bec_widgets.cli.rpc.rpc_register import RPCRegister, rpc_register_broadcast
+from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.qt_utils.error_popups import ErrorPopupUtility
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
@@ -80,7 +80,7 @@ class BECWidgetsCLIServer:
         self._heartbeat_timer.start(200)
 
         self.status = messages.BECStatus.RUNNING
-        with rpc_register_broadcast(self.rpc_register):
+        with RPCRegister.delayed_broadcast():
             self.gui = gui_class(parent=None, name=gui_class_id, gui_id=gui_class_id)
         logger.success(f"Server started with gui_id: {self.gui_id}")
         # Create initial object -> BECFigure or BECDockArea
@@ -118,7 +118,7 @@ class BECWidgetsCLIServer:
 
     def run_rpc(self, obj, method, args, kwargs):
         # Run with rpc registry broadcast, but only once
-        with rpc_register_broadcast(self.rpc_register):
+        with RPCRegister.delayed_broadcast():
             logger.debug(f"Running RPC instruction: {method} with args: {args}, kwargs: {kwargs}")
             method_obj = getattr(obj, method)
             # check if the method accepts args and kwargs
@@ -186,7 +186,9 @@ class BECWidgetsCLIServer:
         self.status = messages.BECStatus.IDLE
         self._heartbeat_timer.stop()
         self.emit_heartbeat()
+        logger.info(f"Shutting down app with {self.gui.gui_id}")
         self.gui.close()
+        logger.info("Succeded in shutting down gui")
         self.client.shutdown()
 
 
@@ -317,13 +319,14 @@ def main():
                 # display message, for people to let it terminate gracefully
                 print("Caught SIGINT, exiting")
                 # Close all widgets
-                rpc_register = RPCRegister()
-                with rpc_register_broadcast(rpc_register):
+                with RPCRegister.delayed_broadcast():
                     for widget in QApplication.instance().topLevelWidgets():
                         widget.close()
 
                 app.quit()
 
+            # gui.bec.close()
+            # win.shutdown()
             signal.signal(signal.SIGINT, sigint_handler)
             signal.signal(signal.SIGTERM, sigint_handler)
 

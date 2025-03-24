@@ -7,7 +7,7 @@ from bec_lib.logger import bec_logger
 from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QApplication, QWidget
 
-from bec_widgets.cli.rpc.rpc_register import rpc_register_broadcast
+from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
 from bec_widgets.utils.colors import set_theme
 
@@ -105,7 +105,7 @@ class BECWidget(BECConnector):
 
     def cleanup(self):
         """Cleanup the widget."""
-        with rpc_register_broadcast(self.rpc_register):
+        with RPCRegister.delayed_broadcast():
             # All widgets need to call super().cleanup() in their cleanup method
             self.rpc_register.remove_rpc(self)
 

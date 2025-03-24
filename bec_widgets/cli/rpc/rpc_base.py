@@ -12,7 +12,7 @@ from bec_lib.utils.import_utils import lazy_import, lazy_import_from
 
 import bec_widgets.cli.client as client
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from bec_lib import messages
     from bec_lib.connector import MessageObject
 else:
