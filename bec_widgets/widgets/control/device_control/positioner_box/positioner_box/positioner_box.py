@@ -1,4 +1,4 @@
-""" Module for a PositionerBox widget to control a positioner device."""
+"""Module for a PositionerBox widget to control a positioner device."""
 
 from __future__ import annotations
 
@@ -212,12 +212,34 @@ class PositionerBox(PositionerBoxBase):
     @SafeSlot()
     def on_tweak_right(self):
         """Tweak motor right"""
-        self.dev[self.device].move(self.step_size, relative=True)
+        setpoint = self._get_setpoint()
+        if setpoint is None:
+            self.dev[self.device].move(self.step_size, relative=True)
+            return
+        target = setpoint + self.step_size
+        self.dev[self.device].move(target, relative=False)
 
     @SafeSlot()
     def on_tweak_left(self):
         """Tweak motor left"""
-        self.dev[self.device].move(-self.step_size, relative=True)
+        setpoint = self._get_setpoint()
+        if setpoint is None:
+            self.dev[self.device].move(-self.step_size, relative=True)
+            return
+        target = setpoint - self.step_size
+        self.dev[self.device].move(target, relative=False)
+
+    def _get_setpoint(self) -> float | None:
+        """Get the setpoint of the motor"""
+        setpoint = getattr(self.dev[self.device], "setpoint", None)
+        if not setpoint:
+            setpoint = getattr(self.dev[self.device], "user_setpoint", None)
+        if not setpoint:
+            return None
+        try:
+            return float(setpoint.get())
+        except Exception:
+            return None
 
     @SafeSlot()
     def on_setpoint_change(self):
