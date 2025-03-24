@@ -1,8 +1,8 @@
 import pyqtgraph as pg
 from qtpy.QtCore import QTimer
 
-from bec_widgets.qt_utils.error_popups import SafeSlot
-from bec_widgets.qt_utils.toolbar import MaterialIconAction, SwitchableToolBarAction, ToolbarBundle
+from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.toolbar import MaterialIconAction, SwitchableToolBarAction, ToolbarBundle
 
 
 class MouseInteractionToolbarBundle(ToolbarBundle):

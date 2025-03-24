@@ -1,5 +1,5 @@
-from bec_widgets.qt_utils.error_popups import SafeSlot
-from bec_widgets.qt_utils.toolbar import MaterialIconAction, ToolbarBundle
+from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.toolbar import MaterialIconAction, ToolbarBundle
 
 
 class SaveStateBundle(ToolbarBundle):

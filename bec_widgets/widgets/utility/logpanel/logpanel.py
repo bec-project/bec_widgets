@@ -34,8 +34,8 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.qt_utils.error_popups import SafeSlot
 from bec_widgets.utils.colors import get_theme_palette, set_theme
+from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.editors.text_box.text_box import TextBox
 from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECServiceStatusMixin
 from bec_widgets.widgets.utility.logpanel._util import (

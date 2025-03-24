@@ -16,7 +16,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.qt_utils.toolbar import MaterialIconAction, ModularToolBar
+from bec_widgets.utils.toolbar import MaterialIconAction, ModularToolBar
 
 
 class SidePanel(QWidget):

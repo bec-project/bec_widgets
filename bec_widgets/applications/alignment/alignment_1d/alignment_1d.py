@@ -13,10 +13,10 @@ from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QApplication
 
 import bec_widgets
-from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 from bec_widgets.utils.colors import get_accent_colors
+from bec_widgets.utils.error_popups import SafeSlot as Slot
 from bec_widgets.widgets.control.buttons.stop_button.stop_button import StopButton
 from bec_widgets.widgets.control.device_control.positioner_group.positioner_group import (
     PositionerGroup,

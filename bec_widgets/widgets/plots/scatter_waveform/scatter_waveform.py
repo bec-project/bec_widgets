@@ -9,11 +9,11 @@ from pydantic import Field, ValidationError, field_validator
 from qtpy.QtCore import QTimer, Signal
 from qtpy.QtWidgets import QHBoxLayout, QMainWindow, QWidget
 
-from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
-from bec_widgets.qt_utils.settings_dialog import SettingsDialog
-from bec_widgets.qt_utils.toolbar import MaterialIconAction
 from bec_widgets.utils import Colors, ConnectionConfig
 from bec_widgets.utils.colors import set_theme
+from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.settings_dialog import SettingsDialog
+from bec_widgets.utils.toolbar import MaterialIconAction
 from bec_widgets.widgets.plots.plot_base import PlotBase
 from bec_widgets.widgets.plots.scatter_waveform.scatter_curve import (
     ScatterCurve,

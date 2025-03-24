@@ -6,7 +6,7 @@ import pyqtgraph as pg
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import QHBoxLayout, QWidget
 
-from bec_widgets.qt_utils.error_popups import SafeSlot
+from bec_widgets.utils.error_popups import SafeSlot
 
 
 class ColorButton(QWidget):

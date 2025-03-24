@@ -12,12 +12,12 @@ from pydantic import Field, ValidationError, field_validator
 from qtpy.QtCore import QTimer, Signal
 from qtpy.QtWidgets import QDialog, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget
 
-from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
-from bec_widgets.qt_utils.settings_dialog import SettingsDialog
-from bec_widgets.qt_utils.toolbar import MaterialIconAction
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
 from bec_widgets.utils.colors import Colors, set_theme
+from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.settings_dialog import SettingsDialog
+from bec_widgets.utils.toolbar import MaterialIconAction
 from bec_widgets.widgets.dap.lmfit_dialog.lmfit_dialog import LMFitDialog
 from bec_widgets.widgets.plots.plot_base import PlotBase
 from bec_widgets.widgets.plots.waveform.curve import Curve, CurveConfig, DeviceSignal

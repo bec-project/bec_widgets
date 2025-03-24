@@ -4,10 +4,10 @@ from bec_lib.logger import bec_logger
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QPushButton, QTreeWidgetItem, QVBoxLayout, QWidget
 
-from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_accent_colors
+from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 
 logger = bec_logger.logger
 

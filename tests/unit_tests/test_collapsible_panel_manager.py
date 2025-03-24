@@ -2,10 +2,7 @@ import pytest
 from qtpy.QtCore import QEasingCurve
 from qtpy.QtWidgets import QPushButton, QVBoxLayout, QWidget
 
-from bec_widgets.qt_utils.collapsible_panel_manager import (
-    CollapsiblePanelManager,
-    DimensionAnimator,
-)
+from bec_widgets.utils.collapsible_panel_manager import CollapsiblePanelManager, DimensionAnimator
 from bec_widgets.widgets.containers.layout_manager.layout_manager import LayoutManagerWidget
 
 

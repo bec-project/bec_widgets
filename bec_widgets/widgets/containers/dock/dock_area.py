@@ -12,15 +12,15 @@ from qtpy.QtGui import QPainter, QPaintEvent
 from qtpy.QtWidgets import QApplication, QSizePolicy, QVBoxLayout, QWidget
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
-from bec_widgets.qt_utils.error_popups import SafeSlot
-from bec_widgets.qt_utils.toolbar import (
+from bec_widgets.utils import ConnectionConfig, WidgetContainerUtils
+from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.toolbar import (
     ExpandableMenuAction,
     MaterialIconAction,
     ModularToolBar,
     SeparatorAction,
 )
-from bec_widgets.utils import ConnectionConfig, WidgetContainerUtils
-from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.containers.dock.dock import BECDock, DockConfig
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox
 from bec_widgets.widgets.control.scan_control.scan_control import ScanControl

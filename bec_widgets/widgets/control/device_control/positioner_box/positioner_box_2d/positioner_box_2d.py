@@ -12,9 +12,9 @@ from qtpy.QtCore import Signal
 from qtpy.QtGui import QDoubleValidator
 from qtpy.QtWidgets import QDoubleSpinBox
 
-from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.colors import set_theme
+from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.widgets.control.device_control.positioner_box._base import PositionerBoxBase
 from bec_widgets.widgets.control.device_control.positioner_box._base.positioner_box_base import (
     DeviceUpdateUIComponents,

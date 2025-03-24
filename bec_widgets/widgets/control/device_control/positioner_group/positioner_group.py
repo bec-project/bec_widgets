@@ -7,8 +7,8 @@ from bec_lib.logger import bec_logger
 from qtpy.QtCore import QSize, Signal
 from qtpy.QtWidgets import QGridLayout, QGroupBox, QVBoxLayout, QWidget
 
-from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox
 
 logger = bec_logger.logger

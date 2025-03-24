@@ -2,8 +2,8 @@ from bec_qthemes import material_icon
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QHBoxLayout, QPushButton, QToolButton, QWidget
 
-from bec_widgets.qt_utils.error_popups import SafeSlot
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.error_popups import SafeSlot
 
 
 class ResumeButton(BECWidget, QWidget):

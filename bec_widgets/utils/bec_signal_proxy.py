@@ -7,7 +7,7 @@ will allow you to decide by yourself when to unblock and execute the callback ag
 from pyqtgraph import SignalProxy
 from qtpy.QtCore import QTimer, Signal
 
-from bec_widgets.qt_utils.error_popups import SafeSlot
+from bec_widgets.utils.error_popups import SafeSlot
 
 
 class BECSignalProxy(SignalProxy):

@@ -4,7 +4,7 @@ import pytest
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
-from bec_widgets.qt_utils.side_panel import SidePanel
+from bec_widgets.utils.side_panel import SidePanel
 
 
 @pytest.fixture(params=["left", "right", "top", "bottom"])

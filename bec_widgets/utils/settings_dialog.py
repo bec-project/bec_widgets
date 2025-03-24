@@ -1,6 +1,6 @@
 from qtpy.QtWidgets import QDialog, QDialogButtonBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
-from bec_widgets.qt_utils.error_popups import SafeSlot
+from bec_widgets.utils.error_popups import SafeSlot
 
 
 class SettingWidget(QWidget):

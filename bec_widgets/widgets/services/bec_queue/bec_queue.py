@@ -6,10 +6,10 @@ from qtpy.QtCore import Property, Qt, Signal, Slot
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QHeaderView, QLabel, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 
-from bec_widgets.qt_utils.compact_popup import CompactPopupWidget
-from bec_widgets.qt_utils.toolbar import ModularToolBar, SeparatorAction, WidgetAction
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.compact_popup import CompactPopupWidget
+from bec_widgets.utils.toolbar import ModularToolBar, SeparatorAction, WidgetAction
 from bec_widgets.widgets.control.buttons.button_abort.button_abort import AbortButton
 from bec_widgets.widgets.control.buttons.button_reset.button_reset import ResetButton
 from bec_widgets.widgets.control.buttons.button_resume.button_resume import ResumeButton

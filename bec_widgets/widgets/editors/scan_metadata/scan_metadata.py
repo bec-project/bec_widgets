@@ -20,10 +20,10 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.qt_utils.compact_popup import CompactPopupWidget
-from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
-from bec_widgets.qt_utils.expandable_frame import ExpandableGroupFrame
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.compact_popup import CompactPopupWidget
+from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.expandable_frame import ExpandableGroupFrame
 from bec_widgets.widgets.editors.scan_metadata._metadata_widgets import widget_from_type
 from bec_widgets.widgets.editors.scan_metadata.additional_metadata_table import (
     AdditionalMetadataTable,
