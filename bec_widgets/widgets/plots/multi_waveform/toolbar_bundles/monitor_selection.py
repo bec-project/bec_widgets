@@ -2,8 +2,8 @@ from bec_lib.device import ReadoutPriority
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QStyledItemDelegate
 
-from bec_widgets.qt_utils.error_popups import SafeSlot
-from bec_widgets.qt_utils.toolbar import ToolbarBundle, WidgetAction
+from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.toolbar import ToolbarBundle, WidgetAction
 from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.utility.visual.colormap_widget.colormap_widget import BECColorMapWidget

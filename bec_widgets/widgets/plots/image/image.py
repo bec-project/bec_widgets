@@ -10,10 +10,10 @@ from pydantic import Field, ValidationError, field_validator
 from qtpy.QtCore import QPointF, Signal
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
-from bec_widgets.qt_utils.toolbar import MaterialIconAction, SwitchableToolBarAction
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.colors import Colors
+from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.toolbar import MaterialIconAction, SwitchableToolBarAction
 from bec_widgets.widgets.plots.image.image_item import ImageItem
 from bec_widgets.widgets.plots.image.toolbar_bundles.image_selection import (
     MonitorSelectionToolbarBundle,

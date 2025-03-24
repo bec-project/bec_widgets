@@ -11,11 +11,11 @@ from qtpy.QtCore import Signal
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QHBoxLayout, QMainWindow, QWidget
 
-from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
-from bec_widgets.qt_utils.settings_dialog import SettingsDialog
-from bec_widgets.qt_utils.toolbar import MaterialIconAction
 from bec_widgets.utils import Colors, ConnectionConfig
 from bec_widgets.utils.colors import set_theme
+from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.settings_dialog import SettingsDialog
+from bec_widgets.utils.toolbar import MaterialIconAction
 from bec_widgets.widgets.plots.motor_map.settings.motor_map_settings import MotorMapSettings
 from bec_widgets.widgets.plots.motor_map.toolbar_bundles.motor_selection import (
     MotorSelectionToolbarBundle,

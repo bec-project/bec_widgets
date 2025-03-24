@@ -21,10 +21,10 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.qt_utils.toolbar import MaterialIconAction, ModularToolBar
 from bec_widgets.utils import ConnectionConfig, EntryValidator
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import Colors
+from bec_widgets.utils.toolbar import MaterialIconAction, ModularToolBar
 from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit import (
     DeviceLineEdit,
 )

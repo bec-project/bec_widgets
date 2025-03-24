@@ -8,15 +8,15 @@ from bec_lib import bec_logger
 from qtpy.QtCore import QPoint, QPointF, Qt, Signal
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QMainWindow, QVBoxLayout, QWidget
 
-from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
-from bec_widgets.qt_utils.round_frame import RoundedFrame
-from bec_widgets.qt_utils.settings_dialog import SettingsDialog
-from bec_widgets.qt_utils.side_panel import SidePanel
-from bec_widgets.qt_utils.toolbar import MaterialIconAction, ModularToolBar, ToolbarBundle
 from bec_widgets.utils import ConnectionConfig, Crosshair, EntryValidator
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.fps_counter import FPSCounter
 from bec_widgets.utils.plot_indicator_items import BECArrowItem, BECTickItem
+from bec_widgets.utils.round_frame import RoundedFrame
+from bec_widgets.utils.settings_dialog import SettingsDialog
+from bec_widgets.utils.side_panel import SidePanel
+from bec_widgets.utils.toolbar import MaterialIconAction, ModularToolBar, ToolbarBundle
 from bec_widgets.utils.widget_state_manager import WidgetStateManager
 from bec_widgets.widgets.containers.layout_manager.layout_manager import LayoutManagerWidget
 from bec_widgets.widgets.plots.setting_menus.axis_settings import AxisSettings

@@ -25,7 +25,7 @@ from qtpy.QtCore import Signal as pyqtSignal
 from qtpy.QtGui import QClipboard, QColor, QPalette, QTextCursor
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QScrollBar, QSizePolicy
 
-from bec_widgets.qt_utils.error_popups import SafeSlot as Slot
+from bec_widgets.utils.error_popups import SafeSlot as Slot
 
 ansi_colors = {
     "black": "#000000",

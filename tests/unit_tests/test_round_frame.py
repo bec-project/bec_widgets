@@ -1,7 +1,7 @@
 import pyqtgraph as pg
 import pytest
 
-from bec_widgets.qt_utils.round_frame import RoundedFrame
+from bec_widgets.utils.round_frame import RoundedFrame
 
 
 def cleanup_pyqtgraph(plot_widget):

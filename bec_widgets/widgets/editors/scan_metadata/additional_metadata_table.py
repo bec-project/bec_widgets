@@ -13,7 +13,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.qt_utils.error_popups import SafeSlot
+from bec_widgets.utils.error_popups import SafeSlot
 
 
 class AdditionalMetadataTableModel(QAbstractTableModel):

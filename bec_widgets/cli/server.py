@@ -16,9 +16,9 @@ from qtpy.QtCore import Qt, QTimer
 from redis.exceptions import RedisError
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
-from bec_widgets.qt_utils.error_popups import ErrorPopupUtility
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
+from bec_widgets.utils.error_popups import ErrorPopupUtility
 from bec_widgets.widgets.containers.dock import BECDockArea
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 

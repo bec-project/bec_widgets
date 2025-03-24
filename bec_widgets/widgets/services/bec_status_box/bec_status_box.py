@@ -12,8 +12,8 @@ from bec_lib.utils.import_utils import lazy_import_from
 from qtpy.QtCore import QObject, QTimer, Signal, Slot
 from qtpy.QtWidgets import QHBoxLayout, QTreeWidget, QTreeWidgetItem
 
-from bec_widgets.qt_utils.compact_popup import CompactPopupWidget
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.compact_popup import CompactPopupWidget
 from bec_widgets.widgets.services.bec_status_box.status_item import StatusItem
 
 if TYPE_CHECKING:

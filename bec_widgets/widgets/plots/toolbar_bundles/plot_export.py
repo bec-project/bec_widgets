@@ -2,8 +2,8 @@ import traceback
 
 from pyqtgraph.exporters import MatplotlibExporter
 
-from bec_widgets.qt_utils.error_popups import SafeSlot, WarningPopupUtility
-from bec_widgets.qt_utils.toolbar import MaterialIconAction, SwitchableToolBarAction, ToolbarBundle
+from bec_widgets.utils.error_popups import SafeSlot, WarningPopupUtility
+from bec_widgets.utils.toolbar import MaterialIconAction, SwitchableToolBarAction, ToolbarBundle
 
 
 class PlotExportBundle(ToolbarBundle):

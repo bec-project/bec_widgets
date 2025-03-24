@@ -9,9 +9,9 @@ from pydantic import Field, ValidationError, field_validator
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.qt_utils.error_popups import SafeProperty, SafeSlot
-from bec_widgets.qt_utils.side_panel import SidePanel
 from bec_widgets.utils import Colors, ConnectionConfig
+from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.side_panel import SidePanel
 from bec_widgets.widgets.plots.multi_waveform.settings.control_panel import (
     MultiWaveformControlPanel,
 )

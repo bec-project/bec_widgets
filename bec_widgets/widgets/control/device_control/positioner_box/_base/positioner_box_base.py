@@ -16,8 +16,8 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
 )
 
-from bec_widgets.qt_utils.compact_popup import CompactPopupWidget
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.compact_popup import CompactPopupWidget
 from bec_widgets.widgets.control.device_control.position_indicator.position_indicator import (
     PositionIndicator,
 )

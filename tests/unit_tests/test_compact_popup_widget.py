@@ -5,7 +5,7 @@ import pytest
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 
-from bec_widgets.qt_utils.compact_popup import CompactPopupWidget
+from bec_widgets.utils.compact_popup import CompactPopupWidget
 
 
 class ContainedWidget(QWidget):

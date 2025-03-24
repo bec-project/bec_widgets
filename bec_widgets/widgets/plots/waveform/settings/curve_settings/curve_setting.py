@@ -12,8 +12,8 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.qt_utils.error_popups import SafeSlot
-from bec_widgets.qt_utils.settings_dialog import SettingWidget
+from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.settings_dialog import SettingWidget
 from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit import (
     DeviceLineEdit,
 )

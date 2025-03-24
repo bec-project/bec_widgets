@@ -5,7 +5,7 @@ from qtpy.QtCore import QPoint, Qt
 from qtpy.QtGui import QContextMenuEvent
 from qtpy.QtWidgets import QComboBox, QLabel, QMenu, QStyle, QToolButton, QWidget
 
-from bec_widgets.qt_utils.toolbar import (
+from bec_widgets.utils.toolbar import (
     DeviceSelectionAction,
     ExpandableMenuAction,
     IconAction,

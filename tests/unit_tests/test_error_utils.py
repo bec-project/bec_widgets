@@ -7,7 +7,7 @@ from bec_lib.logger import bec_logger
 from qtpy.QtCore import QObject
 from qtpy.QtWidgets import QMessageBox
 
-from bec_widgets.qt_utils.error_popups import ErrorPopupUtility, ExampleWidget, SafeProperty
+from bec_widgets.utils.error_popups import ErrorPopupUtility, ExampleWidget, SafeProperty
 
 
 class TestSafePropertyClass(QObject):
