@@ -1,4 +1,4 @@
-""" Module for a LogPanel widget to display BEC log messages """
+"""Module for a LogPanel widget to display BEC log messages"""
 
 from __future__ import annotations
 
@@ -514,6 +514,7 @@ class LogPanel(TextBox):
     def cleanup(self):
         self._service_status.cleanup()
         self._log_manager.disconnect()
+        super().cleanup()
 
 
 if __name__ == "__main__":  # pragma: no cover

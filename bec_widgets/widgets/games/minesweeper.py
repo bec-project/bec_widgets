@@ -403,6 +403,7 @@ class Minesweeper(BECWidget, QWidget):
 
     def cleanup(self):
         self._timer.stop()
+        super().cleanup()
 
 
 if __name__ == "__main__":
