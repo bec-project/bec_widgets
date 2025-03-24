@@ -58,9 +58,13 @@ class BECWidget(BECConnector):
             raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")
 
         super().__init__(
-            client=client, config=config, gui_id=gui_id, name=name, parent_id=parent_id
+            client=client,
+            config=config,
+            gui_id=gui_id,
+            name=name,
+            parent_dock=parent_dock,
+            parent_id=parent_id,
         )
-        self._parent_dock = parent_dock
         app = QApplication.instance()
         if not hasattr(app, "theme"):
             # DO NOT SET THE THEME TO AUTO! Otherwise, the qwebengineview will segfault
