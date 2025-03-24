@@ -207,7 +207,7 @@ class BECGuiClient(RPCBase):
         self._process = None
         self._process_output_processing_thread = None
         self._exposed_widgets = []
-        self._registry_state = {}
+        self._server_registry = {}
         self._ipython_registry = {}
         self.available_widgets = AvailableWidgetsNamespace()
 
@@ -329,7 +329,7 @@ class BECGuiClient(RPCBase):
         )
         # Remove all reference from top level
         self._top_level.clear()
-        self._registry_state.clear()
+        self._server_registry.clear()
 
     def close(self):
         """Deprecated. Use kill_server() instead."""
@@ -353,7 +353,7 @@ class BECGuiClient(RPCBase):
         # Wait for 'bec' gui to be registered, this may take some time
         # After 60s timeout. Should this raise an exception on timeout?
         while time.time() < time.time() + timeout:
-            if len(list(self._registry_state.keys())) == 0:
+            if len(list(self._server_registry.keys())) == 0:
                 time.sleep(0.1)
             else:
                 break
@@ -403,9 +403,10 @@ class BECGuiClient(RPCBase):
         return self._start_server(wait=wait)
 
     def _handle_registry_update(self, msg: StreamMessage) -> None:
-        with self._lock:
-            self._registry_state = msg["data"].state
-            self._update_dynamic_namespace()
+        # This was causing a deadlock during shutdown, not sure why.
+        # with self._lock:
+        self._server_registry = msg["data"].state
+        self._update_dynamic_namespace()
 
     def _do_show_all(self):
         rpc_client = RPCBase(gui_id=f"{self._gui_id}:window", parent=self)
@@ -437,12 +438,13 @@ class BECGuiClient(RPCBase):
     def _cleanup_ipython_registry(self):
         """Cleanup the ipython registry"""
         names_in_registry = list(self._ipython_registry.keys())
-        remove_ids = list(set(names_in_registry) - set(self._exposed_widgets))
+        names_in_server_state = list(self._server_registry.keys())
+        remove_ids = list(set(names_in_registry) - set(names_in_server_state))
         for widget_id in remove_ids:
             self._ipython_registry.pop(widget_id)
         self._cleanup_rpc_references_on_rpc_base(remove_ids)
         # Clear the exposed widgets
-        self._exposed_widgets.clear()
+        self._exposed_widgets.clear()  # No longer needed I think
 
     def _cleanup_rpc_references_on_rpc_base(self, remove_ids: list[str]) -> None:
         """Cleanup the rpc references on the RPCBase object"""
@@ -473,7 +475,7 @@ class BECGuiClient(RPCBase):
         # Add dock areas
         dock_area_states = [
             state
-            for state in self._registry_state.values()
+            for state in self._server_registry.values()
             if state["widget_class"] == "BECDockArea"
         ]
         for state in dock_area_states:
@@ -491,7 +493,7 @@ class BECGuiClient(RPCBase):
             # Add docks
             dock_states = [
                 state
-                for state in self._registry_state.values()
+                for state in self._server_registry.values()
                 if state["config"].get("parent_id", "") == dock_area_ref._gui_id
             ]
             for state in dock_states:
@@ -506,7 +508,7 @@ class BECGuiClient(RPCBase):
                 # Add widgets
                 widget_states = [
                     state
-                    for state in self._registry_state.values()
+                    for state in self._server_registry.values()
                     if state["config"].get("parent_id", "") == dock_ref._gui_id
                 ]
                 for state in widget_states:
@@ -527,7 +529,7 @@ class BECGuiClient(RPCBase):
         """Add a widget to the namespace
 
         Args:
-            state (dict): The state of the widget from the _registry_state.
+            state (dict): The state of the widget from the _server_registry.
             parent (object): The parent object.
         """
         name = state["name"]

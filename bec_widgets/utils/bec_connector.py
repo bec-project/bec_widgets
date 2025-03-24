@@ -19,8 +19,9 @@ from bec_widgets.qt_utils.error_popups import SafeSlot as pyqtSlot
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.yaml_dialog import load_yaml, load_yaml_gui, save_yaml, save_yaml_gui
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from bec_widgets.utils.bec_dispatcher import BECDispatcher
+    from bec_widgets.widgets.containers.dock import BECDock
 
 logger = bec_logger.logger
 BECDispatcher = lazy_import_from("bec_widgets.utils.bec_dispatcher", ("BECDispatcher",))
@@ -82,11 +83,13 @@ class BECConnector:
         config: ConnectionConfig | None = None,
         gui_id: str | None = None,
         name: str | None = None,
+        parent_dock: BECDock | None = None,
         parent_id: str | None = None,
     ):
         # BEC related connections
         self.bec_dispatcher = BECDispatcher(client=client)
         self.client = self.bec_dispatcher.client if client is None else client
+        self._parent_dock = parent_dock
 
         if not self.client in BECConnector.EXIT_HANDLERS:
             # register function to clean connections at exit;
@@ -312,10 +315,14 @@ class BECConnector:
 
     def remove(self):
         """Cleanup the BECConnector"""
-        if hasattr(self, "close"):
+        # If the widget is attached to a dock, remove it from the dock.
+        if self._parent_dock is not None:
+            self._parent_dock.delete(self._name)
+        # If the widget is from Qt, trigger its close method.
+        elif hasattr(self, "close"):
             self.close()
-            if hasattr(self, "deleteLater"):
-                self.deleteLater()
+        # If the widget is neither from a Dock nor from Qt, remove it from the RPC registry.
+        # i.e. Curve Item from Waveform
         else:
             self.rpc_register.remove_rpc(self)
 
