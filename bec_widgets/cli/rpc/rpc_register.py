@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from threading import Lock
+from threading import Lock, RLock
 from typing import TYPE_CHECKING, Callable
 from weakref import WeakValueDictionary
 
@@ -39,7 +39,7 @@ class RPCRegister:
 
     _instance = None
     _initialized = False
-    _lock = Lock()
+    _lock = RLock()
     _skip_broadcast = False
 
     def __new__(cls, *args, **kwargs):
