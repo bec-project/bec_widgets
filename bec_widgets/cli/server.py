@@ -172,9 +172,6 @@ class BECWidgetsCLIServer:
 
         # We only need to broadcast the dock areas
         data = {key: self.serialize_object(val) for key, val in connections.items()}
-        # logger.info(f"All registered connections: {list(connections.keys())}")
-        for k, v in data.items():
-            logger.info(f"key: {k}, value: {v}")
         self.client.connector.xadd(
             MessageEndpoints.gui_registry_state(self.gui_id),
             msg_dict={"data": messages.GUIRegistryStateMessage(state=data)},
@@ -182,12 +179,9 @@ class BECWidgetsCLIServer:
         )
 
     def shutdown(self):  # TODO not sure if needed when cleanup is done at level of BECConnector
-        logger.info(f"Shutting down server with gui_id: {self.gui_id}")
         self.status = messages.BECStatus.IDLE
         self._heartbeat_timer.stop()
         self.emit_heartbeat()
-        logger.info(f"Shutting down app with {self.gui.gui_id}")
-        self.gui.close()
         logger.info("Succeded in shutting down gui")
         self.client.shutdown()
 
@@ -318,11 +312,10 @@ def main():
             def sigint_handler(*args):
                 # display message, for people to let it terminate gracefully
                 print("Caught SIGINT, exiting")
-                # Close all widgets
+                # Widgets should be all closed.
                 with RPCRegister.delayed_broadcast():
                     for widget in QApplication.instance().topLevelWidgets():
                         widget.close()
-
                 app.quit()
 
             # gui.bec.close()

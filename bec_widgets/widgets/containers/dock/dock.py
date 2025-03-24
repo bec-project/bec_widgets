@@ -406,14 +406,20 @@ class BECDock(BECWidget, Dock):
         """
         Clean up the dock, including all its widgets.
         """
+        # # FIXME Cleanup might be called twice
+        try:
+            logger.info(f"Cleaning up dock {self.name()}")
+            self.label.close()
+            self.label.deleteLater()
+        except Exception as e:
+            logger.error(f"Error while closing dock label: {e}")
+
         # Remove the dock from the parent dock area
         if self.parent_dock_area:
             self.parent_dock_area.dock_area.docks.pop(self.name(), None)
             self.parent_dock_area.config.docks.pop(self.name(), None)
         self.delete_all()
         self.widgets.clear()
-        self.label.close()
-        self.label.deleteLater()
         super().cleanup()
 
     def close(self):
