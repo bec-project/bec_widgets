@@ -104,6 +104,7 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         """Cleanup the widget."""
         if self._callback_id is not None:
             self.bec_dispatcher.client.callbacks.remove(self._callback_id)
+        super().cleanup()
 
     def get_current_device(self) -> object:
         """
