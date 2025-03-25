@@ -738,7 +738,9 @@ class Waveform(PlotBase):
             self.async_signal_update.emit()
             self.sync_signal_update.emit()
         if config.source == "dap":
+            self._dap_curves.append(curve)
             self.setup_dap_for_scan()
+            self.roi_enable.emit(True)  # Enable the ROI toolbar action
             self.request_dap()  # Request DAP update directly without blocking proxy
 
         return curve
@@ -1023,7 +1025,7 @@ class Waveform(PlotBase):
                 )
             x_data = self._get_x_data(device_name, device_entry)
             if x_data is not None:
-                if isinstance(x_data, int) or (np.isscalar(x_data) and np.size(x_data) == 1):
+                if len(x_data) == 1:
                     self.clear_data()
                     return
             if device_data is not None and x_data is not None:
@@ -1154,8 +1156,8 @@ class Waveform(PlotBase):
                 MessageEndpoints.dap_response(f"{self.scan_id}-{self.gui_id}"),
             )
 
-    # @SafeSlot() #FIXME type error
-    def request_dap(self):
+    @SafeSlot()
+    def request_dap(self, _=None):
         """Request new fit for data"""
 
         for dap_curve in self._dap_curves:
@@ -1280,9 +1282,9 @@ class Waveform(PlotBase):
                 x_entry = self.entry_validator.validate_signal(x_name, None)
             # if the motor was not scanned, an empty list is returned and curves are not updated
             if access_key == "val":  # live data
-                x_data = data.get(x_name, {}).get(x_entry, {}).get(access_key, 0)
+                x_data = data.get(x_name, {}).get(x_entry, {}).get(access_key, [0])
             else:  # history data
-                x_data = data.get(x_name, {}).get(x_entry, {}).read().get("value", 0)
+                x_data = data.get(x_name, {}).get(x_entry, {}).read().get("value", [0])
             new_suffix = f" [custom: {x_name}-{x_entry}]"
 
         # 2 User wants timestamp
@@ -1290,7 +1292,7 @@ class Waveform(PlotBase):
             if access_key == "val":  # live
                 timestamps = data[device_name][device_entry].timestamps
             else:  # history data
-                timestamps = data[device_name][device_entry].read().get("timestamp", 0)
+                timestamps = data[device_name][device_entry].read().get("timestamp", [0])
             x_data = timestamps
             new_suffix = " [timestamp]"
 
@@ -1383,10 +1385,8 @@ class Waveform(PlotBase):
         # Reset sync/async curve lists
         self._async_curves.clear()
         self._sync_curves.clear()
-        self._dap_curves.clear()
         found_async = False
         found_sync = False
-        found_dap = False
         mode = "sync"
 
         readout_priority_async = self._ensure_str_list(readout_priority.get("async", []))
@@ -1394,12 +1394,7 @@ class Waveform(PlotBase):
 
         # Iterate over all curves
         for curve in self.curves:
-            # categorise dap curves firsts
             if curve.config.source == "custom":
-                continue
-            if curve.config.source == "dap":
-                self._dap_curves.append(curve)
-                found_dap = True
                 continue
             dev_name = curve.config.signal.name
             if dev_name in readout_priority_async:
@@ -1421,8 +1416,6 @@ class Waveform(PlotBase):
             mode = "async"
         elif found_sync:
             mode = "sync"
-
-        self.roi_enable.emit(found_dap)
 
         logger.info(f"Scan {self.scan_id} => mode={self._mode}")
         return mode
