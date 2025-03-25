@@ -217,8 +217,7 @@ end-2-end-conda:
     - pip install -e ./ophyd_devices
 
     - pip install -e .[dev,pyside6]
-    - cd ./tests/end-2-end
-    - pytest -v --start-servers --flush-redis --random-order
+    - pytest -v --files-path ./ --start-servers --flush-redis --random-order  ./tests/end-2-end
 
   artifacts:
     when: on_failure
