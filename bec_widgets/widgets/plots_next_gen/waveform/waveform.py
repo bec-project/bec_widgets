@@ -260,7 +260,7 @@ class Waveform(PlotBase):
         curve_action = self.toolbar.widgets["curve"].action
 
         if self.curve_settings_dialog is None or not self.curve_settings_dialog.isVisible():
-            curve_setting = CurveSetting(target_widget=self)
+            curve_setting = CurveSetting(parent=self, target_widget=self)
             self.curve_settings_dialog = SettingsDialog(
                 self, settings_widget=curve_setting, window_title="Curve Settings", modal=False
             )
