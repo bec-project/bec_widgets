@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import collections
+import random
+import string
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Union
 
@@ -16,6 +18,8 @@ logger = bec_logger.logger
 
 if TYPE_CHECKING:
     from bec_lib.endpoints import EndpointInfo
+
+    from bec_widgets.utils.cli_server import CLIServer
 
 
 class QtThreadSafeCallback(QObject):
@@ -73,14 +77,16 @@ class BECDispatcher:
 
     _instance = None
     _initialized = False
+    client: BECClient
+    cli_server: CLIServer | None = None
 
-    def __new__(cls, client=None, config: str = None, *args, **kwargs):
+    def __new__(cls, client=None, config: str | ServiceConfig | None = None, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super(BECDispatcher, cls).__new__(cls)
             cls._initialized = False
         return cls._instance
 
-    def __init__(self, client=None, config: str | ServiceConfig = None):
+    def __init__(self, client=None, config: str | ServiceConfig | None = None):
         if self._initialized:
             return
 
@@ -112,6 +118,9 @@ class BECDispatcher:
 
     @classmethod
     def reset_singleton(cls):
+        """
+        Reset the singleton instance of the BECDispatcher.
+        """
         cls._instance = None
         cls._initialized = False
 
@@ -178,4 +187,49 @@ class BECDispatcher:
             *args: Arbitrary positional arguments
             **kwargs: Arbitrary keyword arguments
         """
+        # pylint: disable=protected-access
         self.disconnect_topics(self.client.connector._topics_cb)
+
+    def start_cli_server(self, gui_id: str | None = None):
+        """
+        Start the CLI server.
+
+        Args:
+            gui_id(str, optional): The GUI ID. Defaults to None. If None, a unique identifier will be generated.
+        """
+        # pylint: disable=import-outside-toplevel
+        from bec_widgets.utils.cli_server import CLIServer
+
+        if gui_id is None:
+            gui_id = self.generate_unique_identifier()
+
+        if not self.client.started:
+            logger.error("Cannot start CLI server without a running client")
+            return
+        self.cli_server = CLIServer(gui_id, dispatcher=self, client=self.client)
+        logger.success("Started CLI server with gui_id: {gui_id}")
+
+    def stop_cli_server(self):
+        """
+        Stop the CLI server.
+        """
+        if self.cli_server is None:
+            logger.error("Cannot stop CLI server without starting it first")
+            return
+        self.cli_server.shutdown()
+        self.cli_server = None
+        logger.success("Stopped CLI server")
+
+    @staticmethod
+    def generate_unique_identifier(length: int = 4) -> str:
+        """
+        Generate a unique identifier for the application.
+
+        Args:
+            length: The length of the identifier. Defaults to 4.
+
+        Returns:
+            str: The unique identifier.
+        """
+        allowed_chars = string.ascii_lowercase + string.digits
+        return "".join(random.choices(allowed_chars, k=length))

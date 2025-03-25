@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+    <class>Form</class>
+    <widget class="QWidget" name="Form">
+        <property name="geometry">
+            <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>824</width>
+                <height>1234</height>
+            </rect>
+        </property>
+        <property name="windowTitle">
+            <string>Form</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout">
+            <item>
+                <widget class="Waveform" name="waveform"/>
+            </item>
+            <item>
+                <widget class="BECDockArea" name="dock_area_2"/>
+            </item>
+            <item>
+                <widget class="BECDockArea" name="dock_area"/>
+            </item>
+        </layout>
+    </widget>
+    <customwidgets>
+        <customwidget>
+            <class>BECDockArea</class>
+            <extends>QWidget</extends>
+            <header>dock_area</header>
+        </customwidget>
+        <customwidget>
+            <class>Waveform</class>
+            <extends>QWidget</extends>
+            <header>waveform</header>
+        </customwidget>
+    </customwidgets>
+    <resources/>
+    <connections/>
+</ui>

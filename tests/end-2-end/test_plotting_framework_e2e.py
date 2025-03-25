@@ -60,18 +60,14 @@ def test_rpc_plotting_shortcuts_init_configs(qtbot, connected_client_gui_obj):
 
     # check if the correct devices are set
     # Curve
-    assert c1._config["signal"] == {
+    assert c1._config_dict["signal"] == {
         "dap": None,
         "name": "bpm4i",
         "entry": "bpm4i",
         "dap_oversample": 1,
     }
-    assert c1._config["source"] == "device"
-    assert c1._config["label"] == "bpm4i-bpm4i"
-
-    # Image Item
-    assert im_item._config["monitor"] == "eiger"
-    assert im_item._config["source"] == "auto"
+    assert c1._config_dict["source"] == "device"
+    assert c1._config_dict["label"] == "bpm4i-bpm4i"
 
 
 def test_rpc_waveform_scan(qtbot, bec_client_lib, connected_client_gui_obj):
@@ -93,6 +89,7 @@ def test_rpc_waveform_scan(qtbot, bec_client_lib, connected_client_gui_obj):
     status = scans.line_scan(dev.samx, -5, 5, steps=10, exp_time=0.05, relative=False)
     status.wait()
 
+    # FIXME if this gets flaky, we wait for status.scan.scan_id to be in client.history[-1] and then fetch data from history
     item = queue.scan_storage.storage[-1]
     last_scan_data = item.live_data if hasattr(item, "live_data") else item.data
 

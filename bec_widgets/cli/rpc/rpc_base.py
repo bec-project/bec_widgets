@@ -14,6 +14,9 @@ if TYPE_CHECKING:  # pragma: no cover
     from bec_lib import messages
     from bec_lib.connector import MessageObject
 
+    from bec_widgets.cli.client_utils import BECGuiClient
+
+
     import bec_widgets.cli.client as client
 else:
     client = lazy_import("bec_widgets.cli.client")  # avoid circular import
@@ -88,10 +91,11 @@ class RPCReference:
     def __init__(self, registry: dict, gui_id: str) -> None:
         self._registry = registry
         self._gui_id = gui_id
+        self._name = self._registry[self._gui_id]._name
 
     @check_for_deleted_widget
     def __getattr__(self, name):
-        if name in ["_registry", "_gui_id"]:
+        if name in ["_registry", "_gui_id", "_is_deleted", "_name"]:
             return super().__getattribute__(name)
         return self._registry[self._gui_id].__getattribute__(name)
 
@@ -113,6 +117,9 @@ class RPCReference:
         if self._gui_id not in self._registry:
             return []
         return self._registry[self._gui_id].__dir__()
+
+    def _is_deleted(self) -> bool:
+        return self._gui_id not in self._registry
 
 
 class RPCBase:
@@ -152,7 +159,7 @@ class RPCBase:
         return self._name
 
     @property
-    def _root(self):
+    def _root(self) -> BECGuiClient:
         """
         Get the root widget. This is the BECFigure widget that holds
         the anchor gui_id.
@@ -163,7 +170,7 @@ class RPCBase:
             parent = parent._parent
         return parent
 
-    def _run_rpc(self, method, *args, wait_for_rpc_response=True, timeout=3, **kwargs) -> Any:
+    def _run_rpc(self, method, *args, wait_for_rpc_response=True, timeout=300, **kwargs) -> Any:
         """
         Run the RPC call.
 
@@ -236,13 +243,14 @@ class RPCBase:
 
             cls = getattr(client, cls)
             # The namespace of the object will be updated dynamically on the client side
-            # Therefor it is important to check if the object is already in the registry
+            # Therefore it is important to check if the object is already in the registry
             # If yes, we return the reference to the object, otherwise we create a new object
             # pylint: disable=protected-access
             if msg_result["gui_id"] in self._root._ipython_registry:
                 return RPCReference(self._root._ipython_registry, msg_result["gui_id"])
             ret = cls(parent=self, **msg_result)
             self._root._ipython_registry[ret._gui_id] = ret
+            self._refresh_references()
             obj = RPCReference(self._root._ipython_registry, ret._gui_id)
             return obj
             # return ret
@@ -258,3 +266,22 @@ class RPCBase:
         if heart.status == messages.BECStatus.RUNNING:
             return True
         return False
+
+    def _refresh_references(self):
+        """
+        Refresh the references.
+        """
+        with self._root._lock:
+            references = {}
+            for key, val in self._root._server_registry.items():
+                parent_id = val["config"].get("parent_id")
+                if parent_id == self._gui_id:
+                    references[key] = {"gui_id": val["config"]["gui_id"], "name": val["name"]}
+            removed_references = set(self._rpc_references.keys()) - set(references.keys())
+            for key in removed_references:
+                delattr(self, self._rpc_references[key]["name"])
+            self._rpc_references = references
+            for key, val in references.items():
+                setattr(
+                    self, val["name"], RPCReference(self._root._ipython_registry, val["gui_id"])
+                )

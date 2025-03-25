@@ -678,6 +678,14 @@ class DarkModeButton(RPCBase):
         """
 
 
+class DemoApp(RPCBase):
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+
 class DeviceBrowser(RPCBase):
     @rpc_call
     def remove(self):
@@ -3556,4 +3564,61 @@ class WebsiteWidget(RPCBase):
     def forward(self):
         """
         Go forward in the history
+        """
+
+
+class WindowWithUi(RPCBase):
+    """This is just testing app wiht UI file which could be connected to RPC."""
+
+    @rpc_call
+    def new_dock_area(
+        self, name: str | None = None, geometry: tuple[int, int, int, int] | None = None
+    ) -> "BECDockArea":
+        """
+        Create a new dock area.
+
+        Args:
+            name(str): The name of the dock area.
+            geometry(tuple): The geometry parameters to be passed to the dock area.
+        Returns:
+            BECDockArea: The newly created dock area.
+        """
+
+    @property
+    @rpc_call
+    def all_connections(self) -> list:
+        """
+        None
+        """
+
+    @rpc_call
+    def change_theme(self, theme):
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def dock_area(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def register_all_rpc(self):
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def widget_list(self) -> list:
+        """
+        Return a list of all widgets in the application.
+        """
+
+    @rpc_call
+    def list_app_hierarchy(self):
+        """
+        List the hierarchy of the application.
         """

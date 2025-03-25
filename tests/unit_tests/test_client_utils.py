@@ -31,7 +31,7 @@ def test_rpc_call_new_dock(cli_dock_area):
 )
 def test_client_utils_start_plot_process(config, call_config):
     with mock.patch("bec_widgets.cli.client_utils.subprocess.Popen") as mock_popen:
-        _start_plot_process("gui_id", BECDockArea, "bec", config)
+        _start_plot_process("gui_id", "bec", config, gui_class="BECDockArea")
         command = [
             "bec-gui-server",
             "--id",
@@ -82,7 +82,6 @@ def test_client_utils_passes_client_config_to_server(bec_dispatcher):
             )  # the started event will not be set, wait=True would block forever
             mock_start_plot.assert_called_once_with(
                 "gui_id",
-                BECGuiClient,
                 gui_class_id="bec",
                 config=mixin._client._service_config.config,
                 logger=mock.ANY,

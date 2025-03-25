@@ -1,10 +1,13 @@
-import os
+import inspect
 
+from bec_lib.logger import bec_logger
 from qtpy import PYQT6, PYSIDE6, QT_VERSION
 from qtpy.QtCore import QFile, QIODevice
 
 from bec_widgets.utils.generate_designer_plugin import DesignerPluginInfo
 from bec_widgets.utils.plugin_utils import get_custom_classes
+
+logger = bec_logger.logger
 
 if PYSIDE6:
     from PySide6.QtUiTools import QUiLoader
@@ -18,10 +21,19 @@ if PYSIDE6:
 
         def createWidget(self, class_name, parent=None, name=""):
             if class_name in self.custom_widgets:
-                widget = self.custom_widgets[class_name](parent)
+
+                # check if the custom widget has a parent_id argument
+                if "parent_id" in inspect.signature(self.custom_widgets[class_name]).parameters:
+                    gui_id = getattr(self.baseinstance, "gui_id", None)
+                    widget = self.custom_widgets[class_name](self.baseinstance, parent_id=gui_id)
+                else:
+                    logger.warning(
+                        f"Custom widget {class_name} does not have a parent_id argument. "
+                    )
+                    widget = self.custom_widgets[class_name](self.baseinstance)
                 widget.setObjectName(name)
                 return widget
-            return super().createWidget(class_name, parent, name)
+            return super().createWidget(class_name, self.baseinstance, name)
 
 
 class UILoader:
@@ -51,7 +63,7 @@ class UILoader:
         Returns:
             QWidget: The loaded widget.
         """
-
+        parent = parent or self.parent
         loader = CustomUiLoader(parent, self.custom_widgets)
         file = QFile(ui_file)
         if not file.open(QIODevice.ReadOnly):

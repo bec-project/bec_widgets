@@ -1,55 +1,59 @@
 import os
-from typing import TYPE_CHECKING
 
 from bec_lib.logger import bec_logger
+from qtpy.QtCore import QSize
 from qtpy.QtGui import QAction, QActionGroup
-from qtpy.QtWidgets import QApplication, QMainWindow, QStyle
+from qtpy.QtWidgets import QApplication, QMainWindow, QSizePolicy, QStyle
 
+import bec_widgets
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils import UILoader
-from bec_widgets.utils.bec_qapp import BECApplication
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.container_utils import WidgetContainerUtils
+from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
 
-if TYPE_CHECKING:
-    from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
-
 logger = bec_logger.logger
+MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
-class BECMainWindow(BECWidget, QMainWindow):
+class LaunchWindow(BECWidget, QMainWindow):
     def __init__(self, gui_id: str = None, *args, **kwargs):
         BECWidget.__init__(self, gui_id=gui_id, **kwargs)
         QMainWindow.__init__(self, *args, **kwargs)
 
         self.app = QApplication.instance()
 
-        # self._upgrade_qapp() #TODO consider to make upgrade function to any QApplication to BECQApplication
+        self.resize(500, 300)
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
         self._init_ui()
 
     def _init_ui(self):
         # Set the window title
-        self.setWindowTitle("BEC")
+        self.setWindowTitle("BEC Launcher")
+
+        # Load ui file
+        ui_file_path = os.path.join(MODULE_PATH, "applications/launch_dialog.ui")
+        self.load_ui(ui_file_path)
 
         # Set Menu and Status bar
         self._setup_menu_bar()
 
         # BEC Specific UI
         self._init_bec_specific_ui()
-        # self.ui = UILoader
-        # ui_file_path = os.path.join(os.path.dirname(__file__), "general_app.ui")
-        # self.load_ui(ui_file_path)
 
     # TODO can be implemented for toolbar
     def load_ui(self, ui_file):
         loader = UILoader(self)
         self.ui = loader.loader(ui_file)
         self.setCentralWidget(self.ui)
+        self.ui.open_dock_area.setText("Open Dock Area")
+        self.ui.open_dock_area.clicked.connect(lambda: self.launch("dock_area"))
 
     def _init_bec_specific_ui(self):
-        if getattr(self.app, "is_bec_app", False):
+        if getattr(self.app, "gui_id", None):
             self.statusBar().showMessage(f"App ID: {self.app.gui_id}")
         else:
             logger.warning(
@@ -120,32 +124,11 @@ class BECMainWindow(BECWidget, QMainWindow):
     def change_theme(self, theme):
         apply_theme(theme)
 
-    def _dump(self):
-        """Return a dictionary with informations about the application state, for use in tests"""
-        # TODO: ModularToolBar and something else leak top-level widgets (3 or 4 QMenu + 2 QWidget);
-        # so, a filtering based on title is applied here, but the solution is to not have those widgets
-        # as top-level (so for now, a window with no title does not appear in _dump() result)
-
-        # NOTE: the main window itself is excluded, since we want to dump dock areas
-        info = {
-            tlw.gui_id: {
-                "title": tlw.windowTitle(),
-                "visible": tlw.isVisible(),
-                "class": str(type(tlw)),
-            }
-            for tlw in QApplication.instance().topLevelWidgets()
-            if tlw is not self and tlw.windowTitle()
-        }
-        # Add the main window dock area
-        info[self.centralWidget().gui_id] = {
-            "title": self.windowTitle(),
-            "visible": self.isVisible(),
-            "class": str(type(self.centralWidget())),
-        }
-        return info
-
-    def new_dock_area(
-        self, name: str | None = None, geometry: tuple[int, int, int, int] | None = None
+    def launch(
+        self,
+        launch_script: str,
+        name: str | None = None,
+        geometry: tuple[int, int, int, int] | None = None,
     ) -> "BECDockArea":
         """Create a new dock area.
 
@@ -155,7 +138,7 @@ class BECMainWindow(BECWidget, QMainWindow):
         Returns:
             BECDockArea: The newly created dock area.
         """
-        from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
+        from bec_widgets.applications.bw_launch import dock_area
 
         with RPCRegister.delayed_broadcast() as rpc_register:
             existing_dock_areas = rpc_register.get_names_of_rpc_by_class_type(BECDockArea)
@@ -167,7 +150,7 @@ class BECMainWindow(BECWidget, QMainWindow):
             else:
                 name = "dock_area"
                 name = WidgetContainerUtils.generate_unique_name(name, existing_dock_areas)
-            dock_area = WindowWithUi()  # BECDockArea(name=name)
+            dock_area = dock_area(name)  # BECDockArea(name=name)
             dock_area.resize(dock_area.minimumSizeHint())
             # TODO Should we simply use the specified name as title here?
             dock_area.window().setWindowTitle(f"BEC - {name}")
@@ -178,73 +161,11 @@ class BECMainWindow(BECWidget, QMainWindow):
             dock_area.show()
             return dock_area
 
+    def show_launcher(self):
+        self.show()
+
+    def hide_launcher(self):
+        self.hide()
+
     def cleanup(self):
         super().close()
-
-
-class WindowWithUi(BECMainWindow):
-    """
-    This is just testing app wiht UI file which could be connected to RPC.
-
-    """
-
-    USER_ACCESS = [
-        "new_dock_area",
-        "all_connections",
-        "change_theme",
-        "dock_area",
-        "register_all_rpc",
-        "widget_list",
-        "list_app_hierarchy",
-    ]
-
-    def __init__(self, *args, name: str = None, **kwargs):
-        super().__init__(*args, **kwargs)
-        if name is None:
-            name = self.__class__.__name__
-        else:
-            if not WidgetContainerUtils.has_name_valid_chars(name):
-                raise ValueError(f"Name {name} contains invalid characters.")
-        self._name = name if name else self.__class__.__name__
-        ui_file_path = os.path.join(os.path.dirname(__file__), "example_app.ui")
-        self.load_ui(ui_file_path)
-
-    def load_ui(self, ui_file):
-        loader = UILoader(self)
-        self.ui = loader.loader(ui_file)
-        self.setCentralWidget(self.ui)
-
-    # TODO actually these propertiers are not much exposed now in the real CLI
-    @property
-    def dock_area(self):
-        dock_area = self.ui.dock_area
-        return dock_area
-
-    @property
-    def all_connections(self) -> list:
-        all_connections = self.rpc_register.list_all_connections()
-        all_connections_keys = list(all_connections.keys())
-        return all_connections_keys
-
-    def register_all_rpc(self):
-        app = QApplication.instance()
-        app.register_all()
-
-    @property
-    def widget_list(self) -> list:
-        """Return a list of all widgets in the application."""
-        app = QApplication.instance()
-        all_widgets = app.list_all_bec_widgets()
-        return all_widgets
-
-
-if __name__ == "__main__":
-    import sys
-
-    app = QApplication(sys.argv)
-    print(id(app))
-    # app = BECApplication(sys.argv)
-    # print(id(app))
-    main_window = WindowWithUi()
-    main_window.show()
-    sys.exit(app.exec())
