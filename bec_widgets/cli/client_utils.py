@@ -199,7 +199,7 @@ class BECGuiClient(RPCBase):
         self._auto_updates_enabled = True
         self._auto_updates = None
         self._killed = False
-        self._top_level: dict[str, client.BECDockArea] = {}
+        self._top_level: dict[str, RPCBase] = {}  # TODO should be more general than just DockArea
         self._startup_timeout = 0
         self._gui_started_timer = None
         self._gui_started_event = threading.Event()
@@ -231,6 +231,8 @@ class BECGuiClient(RPCBase):
         self._client.connector.register(
             MessageEndpoints.gui_registry_state(self._gui_id), cb=self._handle_registry_update
         )
+        self._update_dynamic_namespace()  # FIXME don't refresh the namespace
+        # TODO do a cleanup of the previous server...
 
     @property
     def windows(self) -> dict:

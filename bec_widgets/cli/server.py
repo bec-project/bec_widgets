@@ -18,9 +18,10 @@ from redis.exceptions import RedisError
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
+from bec_widgets.utils.bec_qapp import BECApplication
 from bec_widgets.utils.error_popups import ErrorPopupUtility
 from bec_widgets.widgets.containers.dock import BECDockArea
-from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
+from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow, WindowWithUi
 
 messages = lazy_import("bec_lib.messages")
 logger = bec_logger.logger
@@ -57,7 +58,7 @@ class BECWidgetsCLIServer:
         dispatcher: BECDispatcher = None,
         client=None,
         config=None,
-        gui_class: type[BECDockArea] = BECDockArea,
+        gui_class: type[BECDockArea, WindowWithUi] = BECDockArea,
         gui_class_id: str = "bec",
     ) -> None:
         self.status = messages.BECStatus.BUSY
@@ -204,7 +205,10 @@ class SimpleFileLikeFromLogOutputFunc:
 
 
 def _start_server(
-    gui_id: str, gui_class: BECDockArea, gui_class_id: str = "bec", config: str | None = None
+    gui_id: str,
+    gui_class: BECDockArea | WindowWithUi,
+    gui_class_id: str = "bec",
+    config: str | None = None,
 ):
     if config:
         try:
@@ -230,13 +234,7 @@ def _start_server(
 
 def main():
     import argparse
-    import os
-
-    from qtpy.QtCore import QSize
-    from qtpy.QtGui import QIcon
     from qtpy.QtWidgets import QApplication
-
-    import bec_widgets
 
     parser = argparse.ArgumentParser(description="BEC Widgets CLI Server")
     parser.add_argument("--id", type=str, default="test", help="The id of the server")
@@ -264,6 +262,8 @@ def main():
 
     if args.gui_class == "BECDockArea":
         gui_class = BECDockArea
+    elif args.gui_class == "MainWindow":
+        gui_class = WindowWithUi
     else:
         print(
             "Please specify a valid gui_class to run. Use -h for help."
@@ -273,27 +273,21 @@ def main():
 
     with redirect_stdout(SimpleFileLikeFromLogOutputFunc(logger.info)):
         with redirect_stderr(SimpleFileLikeFromLogOutputFunc(logger.error)):
-            app = QApplication(sys.argv)
+            app = BECApplication(sys.argv)
             # set close on last window, only if not under control of client ;
             # indeed, Qt considers a hidden window a closed window, so if all windows
             # are hidden by default it exits
             app.setQuitOnLastWindowClosed(not args.hide)
-            module_path = os.path.dirname(bec_widgets.__file__)
-            icon = QIcon()
-            icon.addFile(
-                os.path.join(module_path, "assets", "app_icons", "bec_widgets_icon.png"),
-                size=QSize(48, 48),
-            )
-            app.setWindowIcon(icon)
-            # store gui id within QApplication object, to make it available to all widgets
+            # store gui id within QApplication object, to make it available to all widgets #TODO not needed probably
             app.gui_id = args.id
 
             # args.id = "abff6"
-            server = _start_server(args.id, gui_class, args.gui_class_id, args.config)
+            # TODO to test other gui just change gui_class to something else such as WindowWithUi
+            server = _start_server(args.id, WindowWithUi, args.gui_class_id, args.config)
 
             win = BECMainWindow(gui_id=f"{server.gui_id}:window")
             win.setAttribute(Qt.WA_ShowWithoutActivating)
-            win.setWindowTitle("BEC")
+            # win.setWindowTitle("BEC")
 
             RPCRegister().add_rpc(win)
             gui = server.gui
