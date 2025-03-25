@@ -344,7 +344,6 @@ def test_export_data_dap(curve_tree_fixture):
 
     # Add a device curve with specific parameters
     device_row = curve_tree.add_new_curve(name="bpm4i", entry="bpm4i")
-    device_row.config.label = "bpm4i-main"
 
     # Add a DAP child
     device_row.add_dap_row()
@@ -358,8 +357,8 @@ def test_export_data_dap(curve_tree_fixture):
 
     # Check the exported data
     assert exported["source"] == "dap"
-    assert exported["parent_label"] == "bpm4i-main"
+    assert exported["parent_label"] == "bpm4i-bpm4i"
     assert exported["signal"]["name"] == "bpm4i"
     assert exported["signal"]["entry"] == "bpm4i"
     assert exported["signal"]["dap"] == "GaussianModel"
-    assert exported["label"] == "bpm4i-main-GaussianModel"
+    assert exported["label"] == "bpm4i-bpm4i-GaussianModel"

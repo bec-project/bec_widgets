@@ -97,6 +97,7 @@ class Waveform(PlotBase):
         "get_all_data",
         "get_curve",
         "select_roi",
+        "clear_all",
     ]
 
     sync_signal_update = Signal()
