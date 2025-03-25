@@ -156,7 +156,7 @@ class MultiWaveform(PlotBase):
         self.layout_manager.add_widget_relative(
             self.control_panel, self.round_plot_widget, "bottom"
         )
-        self.controls = MultiWaveformControlPanel(target_widget=self)
+        self.controls = MultiWaveformControlPanel(parent=self, target_widget=self)
         self.control_panel.add_menu(
             action_id="control",
             icon_name="tune",

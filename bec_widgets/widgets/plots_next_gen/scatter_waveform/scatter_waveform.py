@@ -142,7 +142,7 @@ class ScatterWaveform(PlotBase):
         Initialize the scatter curve settings menu.
         """
 
-        scatter_curve_settings = ScatterCurveSettings(target_widget=self, popup=False)
+        scatter_curve_settings = ScatterCurveSettings(parent=self, target_widget=self, popup=False)
         self.side_panel.add_menu(
             action_id="scatter_curve",
             icon_name="scatter_plot",
@@ -178,7 +178,7 @@ class ScatterWaveform(PlotBase):
         """
         scatter_settings_action = self.toolbar.widgets["scatter_waveform_settings"].action
         if self.scatter_dialog is None or not self.scatter_dialog.isVisible():
-            scatter_settings = ScatterCurveSettings(target_widget=self, popup=True)
+            scatter_settings = ScatterCurveSettings(parent=self, target_widget=self, popup=True)
             self.scatter_dialog = SettingsDialog(
                 self,
                 settings_widget=scatter_settings,

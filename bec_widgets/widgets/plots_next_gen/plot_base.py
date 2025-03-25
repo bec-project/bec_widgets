@@ -171,7 +171,7 @@ class PlotBase(BECWidget, QWidget):
         """Adds multiple menus to the side panel."""
         # Setting Axis Widget
         try:
-            axis_setting = AxisSettings(target_widget=self)
+            axis_setting = AxisSettings(parent=self, target_widget=self)
             self.side_panel.add_menu(
                 action_id="axis",
                 icon_name="settings",
@@ -200,7 +200,7 @@ class PlotBase(BECWidget, QWidget):
         """
         settings_action = self.toolbar.widgets["axis"].action
         if self.axis_settings_dialog is None or not self.axis_settings_dialog.isVisible():
-            axis_setting = AxisSettings(target_widget=self, popup=True)
+            axis_setting = AxisSettings(parent=self, target_widget=self, popup=True)
             self.axis_settings_dialog = SettingsDialog(
                 self, settings_widget=axis_setting, window_title="Axis Settings", modal=False
             )

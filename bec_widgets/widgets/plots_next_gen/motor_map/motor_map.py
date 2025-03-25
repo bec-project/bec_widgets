@@ -213,7 +213,7 @@ class MotorMap(PlotBase):
 
     def _add_motor_map_settings(self):
         """Add the motor map settings to the side panel."""
-        motor_map_settings = MotorMapSettings(target_widget=self, popup=False)
+        motor_map_settings = MotorMapSettings(parent=self, target_widget=self, popup=False)
         self.side_panel.add_menu(
             action_id="motor_map_settings",
             icon_name="settings_brightness",
@@ -249,7 +249,7 @@ class MotorMap(PlotBase):
         """
         action = self.toolbar.widgets["motor_map_settings"].action
         if self.motor_map_settings is None or not self.motor_map_settings.isVisible():
-            motor_map_settings = MotorMapSettings(target_widget=self, popup=True)
+            motor_map_settings = MotorMapSettings(parent=self, target_widget=self, popup=True)
             self.motor_map_settings = SettingsDialog(
                 self,
                 settings_widget=motor_map_settings,
