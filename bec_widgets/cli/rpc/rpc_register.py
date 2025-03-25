@@ -39,8 +39,6 @@ class RPCRegister:
 
     _instance = None
     _initialized = False
-    _lock = RLock()
-    _skip_broadcast = False
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -53,6 +51,8 @@ class RPCRegister:
             return
         self._rpc_register = WeakValueDictionary()
         self._broadcast_on_hold = RPCRegisterBroadcast(self)
+        self._lock = RLock()
+        self._skip_broadcast = False
         self._initialized = True
         self.callbacks = []
 
