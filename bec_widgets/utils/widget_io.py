@@ -17,6 +17,7 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from bec_widgets.utils.bec_widget import BECWidget
 
 from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
 
@@ -275,38 +276,80 @@ class WidgetHierarchy:
         grab_values: bool = False,
         prefix: str = "",
         exclude_internal_widgets: bool = True,
+        only_bec_widgets: bool = False,
+        show_parent: bool = True,
     ) -> None:
         """
         Print the widget hierarchy to the console.
 
         Args:
-            widget: Widget to print the hierarchy of
+            widget: Widget to print the hierarchy of.
             indent(int, optional): Level of indentation.
             grab_values(bool,optional): Whether to grab the values of the widgets.
-            prefix(stc,optional): Custom string prefix for indentation.
+            prefix(str,optional): Custom string prefix for indentation.
             exclude_internal_widgets(bool,optional): Whether to exclude internal widgets (e.g. QComboBox in PyQt6).
+            only_bec_widgets(bool, optional): Whether to print only widgets that are instances of BECWidget.
+            show_parent(bool, optional): Whether to display which BECWidget is the parent of each discovered BECWidget.
         """
-        widget_info = f"{widget.__class__.__name__} ({widget.objectName()})"
-        if grab_values:
-            value = WidgetIO.get_value(widget, ignore_errors=True)
-            value_str = f" [value: {value}]" if value is not None else ""
-            widget_info += value_str
+        # Decide if this particular widget is to be printed
+        is_bec = isinstance(widget, BECWidget)
+        print_this = (not only_bec_widgets) or is_bec
 
-        print(prefix + widget_info)
+        # If it is a BECWidget and we're showing the parent, climb the chain to find the nearest BECWidget ancestor
+        if show_parent and is_bec:
+            ancestor = WidgetHierarchy._get_becwidget_ancestor(widget)
+            if ancestor is not None:
+                parent_info = f" parent={ancestor.__class__.__name__}"
+            else:
+                parent_info = " parent=None"
+        else:
+            parent_info = ""
 
+        if print_this:
+            widget_info = f"{widget.__class__.__name__} ({widget.objectName()}){parent_info}"
+            if grab_values:
+                value = WidgetIO.get_value(widget, ignore_errors=True)
+                value_str = f" [value: {value}]" if value is not None else ""
+                widget_info += value_str
+            print(prefix + widget_info)
+
+        # Always recurse so we can discover deeper BECWidgets even if the current widget is not a BECWidget
         children = widget.children()
-        for child in children:
+        for i, child in enumerate(children):
+            # Possibly skip known internal child widgets of a QComboBox
             if (
                 exclude_internal_widgets
                 and isinstance(widget, QComboBox)
                 and child.__class__.__name__ in ["QFrame", "QBoxLayout", "QListView"]
             ):
                 continue
+
             child_prefix = prefix + "  "
             arrow = "├─ " if child != children[-1] else "└─ "
+
+            # Regardless of whether child is BECWidget or not, keep recursing, or we might miss deeper BECWidgets
             WidgetHierarchy.print_widget_hierarchy(
-                child, indent + 1, grab_values, prefix=child_prefix + arrow
+                child,
+                indent + 1,
+                grab_values=grab_values,
+                prefix=child_prefix + arrow,
+                exclude_internal_widgets=exclude_internal_widgets,
+                only_bec_widgets=only_bec_widgets,
+                show_parent=show_parent,
             )
+
+    @staticmethod
+    def _get_becwidget_ancestor(widget):
+        """
+        Climb the parent chain to find the nearest BECWidget above this widget.
+        Returns None if none is found.
+        """
+        parent = widget.parent()
+        while parent is not None:
+            if isinstance(parent, BECWidget):
+                return parent
+            parent = parent.parent()
+        return None
 
     @staticmethod
     def export_config_to_dict(
