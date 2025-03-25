@@ -290,8 +290,7 @@ class CurveRow(QTreeWidgetItem):
                 self.entry_edit.setText(device_entry)
             self.config.signal = DeviceSignal(name=device_name, entry=device_entry)
             self.config.source = "device"
-            if not self.config.label:
-                self.config.label = f"{device_name}-{device_entry}".strip("-")
+            self.config.label = f"{device_name}-{device_entry}"
         else:
             # DAP logic
             parent_conf_dict = {}
@@ -310,7 +309,7 @@ class CurveRow(QTreeWidgetItem):
             self.config.signal = DeviceSignal(name=dev_name, entry=dev_entry, dap=new_dap)
             self.config.source = "dap"
             self.config.parent_label = parent_conf.label
-            self.config.label = f"{parent_conf.label}-{new_dap}".strip("-")
+            self.config.label = f"{parent_conf.label}-{new_dap}"
 
         # Common style fields
         self.config.color = self.color_button.color()

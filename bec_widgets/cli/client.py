@@ -3468,6 +3468,12 @@ class Waveform(RPCBase):
         Public method if you want the old `select_roi` style.
         """
 
+    @rpc_call
+    def clear_all(self):
+        """
+        Clear all curves from the plot widget.
+        """
+
 
 class WebsiteWidget(RPCBase):
     """A simple widget to display a website"""
