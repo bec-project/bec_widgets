@@ -307,9 +307,9 @@ def main():
                 # display message, for people to let it terminate gracefully
                 print("Caught SIGINT, exiting")
                 # Widgets should be all closed.
-                with RPCRegister.delayed_broadcast():
-                    for widget in QApplication.instance().topLevelWidgets():
-                        widget.close()
+                # with RPCRegister.delayed_broadcast():
+                #     for widget in QApplication.instance().topLevelWidgets():
+                #         widget.close()
                 app.quit()
 
             # gui.bec.close()
