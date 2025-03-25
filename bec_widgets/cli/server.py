@@ -57,7 +57,7 @@ class BECWidgetsCLIServer:
         dispatcher: BECDispatcher = None,
         client=None,
         config=None,
-        gui_class: BECDockArea = BECDockArea,
+        gui_class: type[BECDockArea] = BECDockArea,
         gui_class_id: str = "bec",
     ) -> None:
         self.status = messages.BECStatus.BUSY
