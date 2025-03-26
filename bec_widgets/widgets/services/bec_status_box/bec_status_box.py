@@ -80,6 +80,8 @@ class BECStatusBox(BECWidget, CompactPopupWidget):
     service_update = Signal(BECServiceInfoContainer)
     bec_core_state = Signal(str)
 
+    USER_ACCESS = ["get_server_state"]
+
     def __init__(
         self,
         parent=None,
@@ -167,6 +169,10 @@ class BECStatusBox(BECWidget, CompactPopupWidget):
         self.status_container[self.box_name]["info"].status = status
         self.set_global_state("emergency" if status == "NOTCONNECTED" else "success")
         self.service_update.emit(self.status_container[self.box_name]["info"])
+
+    def get_server_state(self) -> str:
+        """Get the state ("RUNNING", "BUSY", "IDLE", "ERROR") of the BEC server"""
+        return self.status_container[self.box_name]["info"].status
 
     def _update_status_container(
         self, service_name: str, status: BECStatus, info: dict, metrics: dict = None

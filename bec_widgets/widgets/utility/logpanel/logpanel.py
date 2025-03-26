@@ -380,6 +380,8 @@ class LogPanelToolbar(QWidget):
 class LogPanel(TextBox):
     """Displays a log panel"""
 
+    USER_ACCESS = []  # Overwrite user access from TextBox
+
     ICON_NAME = "terminal"
     _new_messages = Signal()
     service_list_update = Signal(dict, set)

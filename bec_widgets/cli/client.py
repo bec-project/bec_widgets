@@ -418,6 +418,12 @@ class BECProgressBar(RPCBase):
         >>> progressbar.label_template = "$value / $percentage %"
         """
 
+    @rpc_call
+    def _get_label(self) -> str:
+        """
+        Return the label text. mostly used for testing rpc.
+        """
+
 
 class BECQueue(RPCBase):
     """Widget to display the BEC queue."""
@@ -433,9 +439,9 @@ class BECStatusBox(RPCBase):
     """An autonomous widget to display the status of BEC services."""
 
     @rpc_call
-    def remove(self):
+    def get_server_state(self) -> "str":
         """
-        Cleanup the BECConnector
+        Get the state ("RUNNING", "BUSY", "IDLE", "ERROR") of the BEC server
         """
 
 
@@ -1354,23 +1360,7 @@ class LMFitDialog(RPCBase):
 class LogPanel(RPCBase):
     """Displays a log panel"""
 
-    @rpc_call
-    def set_plain_text(self, text: str) -> None:
-        """
-        Set the plain text of the widget.
-
-        Args:
-            text (str): The text to set.
-        """
-
-    @rpc_call
-    def set_html_text(self, text: str) -> None:
-        """
-        Set the HTML text of the widget.
-
-        Args:
-            text (str): The text to set.
-        """
+    ...
 
 
 class Minesweeper(RPCBase): ...
