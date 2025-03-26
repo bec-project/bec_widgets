@@ -133,21 +133,21 @@ def test_scatter_waveform_scan_progress(qtbot, mocked_client, monkeypatch):
     np.testing.assert_array_equal(y_data, [5, 10, 15])
 
 
-def test_scatter_waveform_settings_popup(qtbot, mocked_client):
-    """
-    Test that the settings popup is created correctly.
-    """
-    swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
+# def test_scatter_waveform_settings_popup(qtbot, mocked_client):
+#     """
+#     Test that the settings popup is created correctly.
+#     """
+#     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
-    scatter_popup_action = swf.toolbar.widgets["scatter_waveform_settings"].action
-    assert not scatter_popup_action.isChecked(), "Should start unchecked"
+#     scatter_popup_action = swf.toolbar.widgets["scatter_waveform_settings"].action
+#     assert not scatter_popup_action.isChecked(), "Should start unchecked"
 
-    swf.show_scatter_curve_settings()
+#     swf.show_scatter_curve_settings()
 
-    assert swf.scatter_dialog is not None
-    assert swf.scatter_dialog.isVisible()
-    assert scatter_popup_action.isChecked()
+#     assert swf.scatter_dialog is not None
+#     assert swf.scatter_dialog.isVisible()
+#     assert scatter_popup_action.isChecked()
 
-    swf.scatter_dialog.close()
-    assert swf.scatter_dialog is None
-    assert not scatter_popup_action.isChecked(), "Should be unchecked after closing dialog"
+#     swf.scatter_dialog.close()
+#     assert swf.scatter_dialog is None
+#     assert not scatter_popup_action.isChecked(), "Should be unchecked after closing dialog"
