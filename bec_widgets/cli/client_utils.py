@@ -439,9 +439,12 @@ class BECGuiClient(RPCBase):
         names_in_registry = list(self._ipython_registry.keys())
         names_in_server_state = list(self._server_registry.keys())
         remove_ids = list(set(names_in_registry) - set(names_in_server_state))
+        # First we clean up the rpc references on the RPCBase objects and the namespace
+        self._cleanup_rpc_references_on_rpc_base(remove_ids)
+        # Next we drop them from the registry
         for widget_id in remove_ids:
             self._ipython_registry.pop(widget_id)
-        self._cleanup_rpc_references_on_rpc_base(remove_ids)
+
         # Clear the exposed widgets
         self._exposed_widgets.clear()  # No longer needed I think
 
@@ -449,6 +452,7 @@ class BECGuiClient(RPCBase):
         """Cleanup the rpc references on the RPCBase object"""
         if not remove_ids:
             return
+        # Loop over all widgets in the ipython registry
         for widget in self._ipython_registry.values():
             to_delete = []
             for attr_name, gui_id in widget._rpc_references.items():
@@ -460,6 +464,14 @@ class BECGuiClient(RPCBase):
                 if attr_name.startswith("elements."):
                     delattr(widget.elements, attr_name.split(".")[1])
                 widget._rpc_references.pop(attr_name)
+        # Loop over gui main window, this is not stored in the ipython registry due to recursive references
+        for attr_name, gui_id in self._rpc_references.items():
+            to_delete = []
+            if gui_id in remove_ids:
+                to_delete.append(attr_name)
+        for attr_name in to_delete:
+            delattr(self, attr_name)
+            self._rpc_references.pop(attr_name)
 
     def _set_dynamic_attributes(self, obj: object, name: str, value: Any) -> None:
         """Add an object to the namespace"""
@@ -471,6 +483,7 @@ class BECGuiClient(RPCBase):
 
     def _add_registry_to_namespace(self) -> None:
         """Add registry to namespace"""
+
         # Add dock areas
         dock_area_states = [
             state
