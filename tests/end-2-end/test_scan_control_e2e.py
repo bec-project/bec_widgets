@@ -62,7 +62,26 @@ def test_run_line_scan_with_parameters_e2e(scan_control, bec_client_lib, qtbot):
 
     # Run the scan
     scan_control.button_run_scan.click()
-    time.sleep(2)
+    # Wait for scan to start
+    qtbot.waitUntil(
+        lambda: len(queue.queue_storage.current_scan_queue["primary"]["info"]) > 0, timeout=3000
+    )
+    # Get scan_id
+    scan_id = queue.queue_storage.current_scan_queue["primary"]["info"][0]["scan_id"][0]
+    # Wait until scan finishes, queue empty
+    qtbot.waitUntil(
+        lambda: len(queue.queue_storage.current_scan_queue["primary"]["info"]) == 0, timeout=3000
+    )
+
+    # Wait until scan_id is in history
+    def _wait_for_scan_in_hisotry():
+        if len(queue.scan_storage.storage) == 0:
+            return False
+        # Once items appear in storage, the last one hast to be the one we just scanned
+        return queue.scan_storage.storage[-1].status_message.info["scan_id"] == scan_id
+
+    qtbot.waitUntil(_wait_for_scan_in_hisotry, timeout=3000)
+    # time.sleep(2)
 
     last_scan = queue.scan_storage.storage[-1]
     assert last_scan.status_message.info["scan_name"] == scan_name
