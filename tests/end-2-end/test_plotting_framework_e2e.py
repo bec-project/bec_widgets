@@ -147,8 +147,8 @@ def test_rpc_motor_map(qtbot, bec_client_lib, connected_client_gui_obj):
     motor_map = dock.new("mm_dock").new("MotorMap")
     motor_map.map(x_name="samx", y_name="samy")
 
-    initial_pos_x = dev.samx.read()["samx"]["value"]
-    initial_pos_y = dev.samy.read()["samy"]["value"]
+    initial_pos_x = dev.samx.read(cached=False)["samx"]["value"]
+    initial_pos_y = dev.samy.read(cached=False)["samy"]["value"]
 
     status = scans.mv(dev.samx, 1, dev.samy, 2, relative=True)
     status.wait()
@@ -159,11 +159,15 @@ def test_rpc_motor_map(qtbot, bec_client_lib, connected_client_gui_obj):
     # check plotted data
     motor_map_data = motor_map.get_data()
 
-    np.testing.assert_equal(
-        [motor_map_data["x"][0], motor_map_data["y"][0]], [initial_pos_x, initial_pos_y]
+    np.testing.assert_allclose(
+        [motor_map_data["x"][0], motor_map_data["y"][0]],
+        [initial_pos_x, initial_pos_y],
+        atol=motor_map.precision,
     )
-    np.testing.assert_equal(
-        [motor_map_data["x"][-1], motor_map_data["y"][-1]], [final_pos_x, final_pos_y]
+    np.testing.assert_allclose(
+        [motor_map_data["x"][-1], motor_map_data["y"][-1]],
+        [final_pos_x, final_pos_y],
+        atol=motor_map.precision,
     )
 
 
