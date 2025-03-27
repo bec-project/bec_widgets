@@ -858,7 +858,7 @@ class MainWindow(QMainWindow):  # pragma: no cover
 
         # For theme testing
 
-        self.dark_button = DarkModeButton(toolbar=True)
+        self.dark_button = DarkModeButton(parent=self, toolbar=True)
         dark_mode_action = WidgetAction(label=None, widget=self.dark_button)
         self.toolbar.add_action("dark_mode", dark_mode_action, self)
 
