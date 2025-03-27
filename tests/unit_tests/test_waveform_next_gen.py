@@ -529,16 +529,14 @@ def test_setup_async_curve(qtbot, mocked_client, monkeypatch):
 
 
 @pytest.mark.parametrize("x_mode", ("timestamp", "index"))
-def test_on_async_readback(qtbot, mocked_client, x_mode):
+def test_on_async_readback_add_update(qtbot, mocked_client, x_mode):
     """
     Test that on_async_readback extends or replaces async data depending on metadata instruction.
     For 'timestamp' mode, new timestamps are appended to x_data.
     For 'index' mode, x_data simply increases by integer index.
     """
     wf = create_widget(qtbot, Waveform, client=mocked_client)
-    dummy_scan = create_dummy_scan_item()
-    wf.scan_item = dummy_scan
-
+    wf.scan_item = create_dummy_scan_item()
     c = wf.plot(arg1="async_device", label="async_device-async_device")
     wf._async_curves = [c]
     # Suppose existing data
@@ -547,7 +545,8 @@ def test_on_async_readback(qtbot, mocked_client, x_mode):
     # Set the x_axis_mode
     wf.x_axis_mode["name"] = x_mode
 
-    # Extend readback
+    ############# Test add ################
+
     msg = {"signals": {"async_device": {"value": [100, 200], "timestamp": [1001, 1002]}}}
     metadata = {"async_update": {"max_shape": [None], "type": "add"}}
     wf.on_async_readback(msg, metadata)
@@ -574,6 +573,72 @@ def test_on_async_readback(qtbot, mocked_client, x_mode):
         np.testing.assert_array_equal(x_data2, [0])
 
     np.testing.assert_array_equal(y_data2, [999])
+
+    ############# Test add_slice ################
+
+    # Few updates, no downsampling, no symbol removed
+    waveform_shape = 10
+    for ii in range(10):
+        msg = {"signals": {"async_device": {"value": [100], "timestamp": [1001]}}}
+        metadata = {
+            "async_update": {"max_shape": [None, waveform_shape], "index": 0, "type": "add_slice"}
+        }
+        wf.on_async_readback(msg, metadata)
+
+    # Old data should be deleted since the slice_index did not match
+    x_data, y_data = c.get_data()
+    assert len(y_data) == 10
+    assert len(x_data) == 10
+    assert c.opts["symbol"] == "o"
+
+    # Clear data from curve
+    c.setData([], [])
+
+    # Test large updates, limit 1000 to deactivate symbols, downsampling for 8000 should be factor 2.
+    waveform_shape = 12000
+    for ii in range(12):
+        msg = {
+            "signals": {
+                "async_device": {
+                    "value": np.array(range(1000)),
+                    "timestamp": (ii + 1) * np.linspace(0, 1000 - 1, 1000),
+                }
+            }
+        }
+        metadata = {
+            "async_update": {"max_shape": [None, waveform_shape], "index": 0, "type": "add_slice"}
+        }
+        wf.on_async_readback(msg, metadata)
+    x_data, y_data = c.get_data()
+    assert len(y_data) == waveform_shape
+    assert len(x_data) == waveform_shape
+    assert c.opts["symbol"] == None
+    # Get displayed data
+    displayed_x, displayed_y = c.getData()
+    assert len(displayed_y) == waveform_shape / 2
+    assert len(displayed_x) == waveform_shape / 2
+    assert displayed_x[-1] == waveform_shape - 1  # Should be the correct index stil.
+
+    ############# Test replace ################
+    waveform_shape = 10
+    for ii in range(10):
+        msg = {
+            "signals": {
+                "async_device": {
+                    "value": np.array(range(waveform_shape)),
+                    "timestamp": np.array(range(waveform_shape)),
+                }
+            }
+        }
+        metadata = {"async_update": {"type": "replace"}}
+        wf.on_async_readback(msg, metadata)
+
+    x_data, y_data = c.get_data()
+    assert np.array_equal(y_data, np.array(range(waveform_shape)))
+    assert len(x_data) == waveform_shape
+    assert c.opts["symbol"] == "o"
+    y_displayed, x_displayed = c.getData()
+    assert len(y_displayed) == waveform_shape
 
 
 def test_get_x_data(qtbot, mocked_client, monkeypatch):

@@ -134,6 +134,7 @@ class Waveform(PlotBase):
         # Curve data
         self._sync_curves = []
         self._async_curves = []
+        self._slice_index = None
         self._dap_curves = []
         self._mode: Literal["none", "sync", "async", "mixed"] = "none"
 
@@ -947,6 +948,7 @@ class Waveform(PlotBase):
             self.old_scan_id = self.scan_id
             self.scan_id = current_scan_id
             self.scan_item = self.queue.scan_storage.find_scan_by_ID(self.scan_id)  # live scan
+            self._slice_index = None  # Reset the slice index
 
             self._mode = self._categorise_device_curves()
 
@@ -1069,6 +1071,7 @@ class Waveform(PlotBase):
 
             # If there's actual data, set it
             if device_data is not None:
+                self._auto_adjust_async_curve_settings(curve, len(device_data))
                 if x_data is not None:
                     curve.setData(x_data, device_data)
                 else:
@@ -1107,16 +1110,18 @@ class Waveform(PlotBase):
             msg(dict): Message with the async data.
             metadata(dict): Metadata of the message.
         """
-        y_data = None
-        x_data = None
         instruction = metadata.get("async_update", {}).get("type")
         max_shape = metadata.get("async_update", {}).get("max_shape", [])
         for curve in self._async_curves:
+            new_data = None
+            y_data = None
+            x_data = None
             y_entry = curve.config.signal.entry
             x_name = self.x_axis_mode["name"]
             for device, async_data in msg["signals"].items():
                 if device == y_entry:
                     data_plot = async_data["value"]
+                    # Add
                     if instruction == "add":
                         if len(max_shape) > 1:
                             if len(data_plot.shape) > 1:
@@ -1134,16 +1139,69 @@ class Waveform(PlotBase):
                             else:
                                 x_data = async_data["timestamp"]
                                 # FIXME x axis wrong if timestamp switched during scan
-                            curve.setData(x_data, new_data)
-                        else:  # this means index as x
-                            curve.setData(new_data)
+                    # Add slice
+                    elif instruction == "add_slice":
+                        current_slice_id = metadata.get("async_update", {}).get("index")
+                        data_plot = async_data["value"]
+                        if current_slice_id != curve.slice_index:
+                            curve.slice_index = current_slice_id
+                        else:
+                            x_data, y_data = curve.get_data()
+                        if y_data is not None:
+                            new_data = np.hstack((y_data, data_plot))
+                        else:
+                            new_data = data_plot
+                    # Replace
                     elif instruction == "replace":
                         if x_name == "timestamp":
                             x_data = async_data["timestamp"]
-                            curve.setData(x_data, data_plot)
-                        else:
-                            curve.setData(data_plot)
+                        new_data = data_plot
+
+                    # If update is not add, add_slice or replace, continue.
+                    if new_data is None:
+                        continue
+                    # Hide symbol, activate downsampling if data >1000
+                    self._auto_adjust_async_curve_settings(curve, len(new_data))
+                    # Set data on the curve
+                    if x_name == "timestamp" and instruction != "add_slice":
+                        curve.setData(x_data, new_data)
+                    else:
+                        curve.setData(np.linspace(0, len(new_data) - 1, len(new_data)), new_data)
+
         self.request_dap_update.emit()
+
+    def _auto_adjust_async_curve_settings(
+        self,
+        curve: Curve,
+        data_length: int,
+        limit: int = 1000,
+        method: Literal["subsample", "mean", "peak"] | None = "mean",
+    ) -> None:
+        """
+        Based on the length of the data this method will adjust the plotting settings of
+        Curve items, by deactivating the symbol and activating downsampling auto, method='mean',
+        if the data length exceeds N points. If the data length is less than N points, the
+        symbol will be activated and downsampling will be deactivated. Maximum points will be
+        5x the limit.
+
+        Args:
+            curve(Curve): The curve to adjust.
+            data_length(int): The length of the data.
+            limit(int): The limit of the data length to activate the downsampling.
+
+        """
+        if limit <= 1:
+            logger.warning("Limit must be greater than 1.")
+            return
+        if data_length > limit:
+            if curve.config.symbol is not None:
+                curve.set_symbol(None)
+            sampling_factor = int(data_length / (5 * limit))  # increase by limit 5x
+            curve.setDownsampling(ds=sampling_factor, auto=None, method=method)
+        elif data_length <= limit:
+            curve.set_symbol("o")
+            sampling_factor = 1
+            curve.setDownsampling(ds=sampling_factor, auto=None, method=method)
 
     def setup_dap_for_scan(self):
         """Setup DAP updates for the new scan."""

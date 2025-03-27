@@ -97,6 +97,7 @@ class Curve(BECConnector, pg.PlotDataItem):
         self.apply_config()
         self.dap_params = None
         self.dap_summary = None
+        self.slice_index = None
         if kwargs:
             self.set(**kwargs)
 
@@ -303,14 +304,14 @@ class Curve(BECConnector, pg.PlotDataItem):
         self.apply_config()
         self.parent_item.update_with_scan_history(-1)
 
-    def get_data(self) -> tuple[np.ndarray, np.ndarray]:
+    def get_data(self) -> tuple[np.ndarray | None, np.ndarray | None]:
         """
         Get the data of the curve.
         Returns:
             tuple[np.ndarray,np.ndarray]: X and Y data of the curve.
         """
         try:
-            x_data, y_data = self.getData()
+            x_data, y_data = self.getOriginalDataset()
         except TypeError:
             x_data, y_data = np.array([]), np.array([])
         return x_data, y_data
