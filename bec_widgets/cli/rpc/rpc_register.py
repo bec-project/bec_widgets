@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from threading import Lock, RLock
+from threading import RLock
 from typing import TYPE_CHECKING, Callable
 from weakref import WeakValueDictionary
 
@@ -77,7 +77,7 @@ class RPCRegister:
         self._rpc_register[rpc.gui_id] = rpc
 
     @broadcast_update
-    def remove_rpc(self, rpc: str):
+    def remove_rpc(self, rpc: BECConnector):
         """
         Remove an RPC object from the register.
 
@@ -113,7 +113,7 @@ class RPCRegister:
         return connections
 
     def get_names_of_rpc_by_class_type(
-        self, cls: BECWidget | BECConnector | BECDock | BECDockArea
+        self, cls: type[BECWidget] | type[BECConnector] | type[BECDock] | type[BECDockArea]
     ) -> list[str]:
         """Get all the names of the widgets.
 
@@ -170,6 +170,7 @@ class RPCRegisterBroadcast:
 
     def __exit__(self, *exc):
         """Exit the context manager"""
+
         self._call_depth -= 1  # Remove nested calls
         if self._call_depth == 0:  # Last one to exit is repsonsible for broadcasting
             self.rpc_register._skip_broadcast = False
