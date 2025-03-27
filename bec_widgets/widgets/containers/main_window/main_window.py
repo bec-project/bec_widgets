@@ -1,11 +1,9 @@
 import os
 from typing import TYPE_CHECKING
 
-from qtpy.QtGui import QActionGroup, QAction
-from qtpy.QtWidgets import QStyle
-
 from bec_lib.logger import bec_logger
-from qtpy.QtWidgets import QApplication, QMainWindow
+from qtpy.QtGui import QAction, QActionGroup
+from qtpy.QtWidgets import QApplication, QMainWindow, QStyle
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils import UILoader
@@ -51,7 +49,7 @@ class BECMainWindow(BECWidget, QMainWindow):
         self.setCentralWidget(self.ui)
 
     def _init_bec_specific_ui(self):
-        if isinstance(self.app, BECApplication):
+        if getattr(self.app, "is_bec_app", False):
             self.statusBar().showMessage(f"App ID: {self.app.gui_id}")
         else:
             logger.warning(
@@ -114,7 +112,7 @@ class BECMainWindow(BECWidget, QMainWindow):
         help_menu.addAction(widgets_docs)
         help_menu.addAction(bug_report)
 
-        debug_bar = menu_bar.addMenu("DEBUG")
+        debug_bar = menu_bar.addMenu(f"DEBUG {self.__class__.__name__}")
         list_hierarchy = QAction("List App Hierarchy", self)
         list_hierarchy.triggered.connect(self.list_app_hierarchy)
         debug_bar.addAction(list_hierarchy)
@@ -169,7 +167,7 @@ class BECMainWindow(BECWidget, QMainWindow):
             else:
                 name = "dock_area"
                 name = WidgetContainerUtils.generate_unique_name(name, existing_dock_areas)
-            dock_area = BECDockArea(name=name)
+            dock_area = WindowWithUi()  # BECDockArea(name=name)
             dock_area.resize(dock_area.minimumSizeHint())
             # TODO Should we simply use the specified name as title here?
             dock_area.window().setWindowTitle(f"BEC - {name}")
@@ -243,7 +241,10 @@ class WindowWithUi(BECMainWindow):
 if __name__ == "__main__":
     import sys
 
-    app = BECApplication(sys.argv)
+    app = QApplication(sys.argv)
+    print(id(app))
+    # app = BECApplication(sys.argv)
+    # print(id(app))
     main_window = WindowWithUi()
     main_window.show()
     sys.exit(app.exec())

@@ -73,14 +73,15 @@ class BECDispatcher:
 
     _instance = None
     _initialized = False
+    client: BECClient
 
-    def __new__(cls, client=None, config: str = None, *args, **kwargs):
+    def __new__(cls, client=None, config: str | ServiceConfig | None = None, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super(BECDispatcher, cls).__new__(cls)
             cls._initialized = False
         return cls._instance
 
-    def __init__(self, client=None, config: str | ServiceConfig = None):
+    def __init__(self, client=None, config: str | ServiceConfig | None = None):
         if self._initialized:
             return
 

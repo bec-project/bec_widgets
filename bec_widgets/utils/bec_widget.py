@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import darkdetect
 from bec_lib.logger import bec_logger
@@ -56,7 +56,6 @@ class BECWidget(BECConnector):
         """
         if not isinstance(self, QWidget):
             raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")
-
         super().__init__(
             client=client,
             config=config,
@@ -65,7 +64,7 @@ class BECWidget(BECConnector):
             parent_dock=parent_dock,
             parent_id=parent_id,
         )
-        app = QApplication.instance()
+        app = self._ensure_bec_app()
         if not hasattr(app, "theme"):
             # DO NOT SET THE THEME TO AUTO! Otherwise, the qwebengineview will segfault
             # Instead, we will set the theme to the system setting on startup
@@ -77,6 +76,13 @@ class BECWidget(BECConnector):
         if theme_update:
             logger.debug(f"Subscribing to theme updates for {self.__class__.__name__}")
             self._connect_to_theme_change()
+
+    def _ensure_bec_app(self):
+        # pylint: disable=import-outside-toplevel
+        from bec_widgets.utils.bec_qapp import BECApplication
+
+        app = BECApplication.from_qapplication()
+        return app
 
     def _connect_to_theme_change(self):
         """Connect to the theme change signal."""
