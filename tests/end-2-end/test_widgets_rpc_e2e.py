@@ -86,20 +86,6 @@ def create_widget(
     return dock_area, dock, widget
 
 
-def check_widget_removed_from_registry(qtbot, gui: object, widget_gui_id: str, timeout: int = 5000):
-    """Utility method to wait for the namespace to be removed in the widget."""
-
-    def check_object_removed_from_registry():
-        obj = gui._ipython_registry.get(widget_gui_id, None)
-        if obj is None:
-            return True
-        return False
-
-    # Object removed from registry
-    qtbot.waitUntil(check_object_removed_from_registry, timeout=timeout)
-    qtbot.wait(200)  # Wait for the namespace update to be propagated
-
-
 def maybe_remove_widget(
     qtbot, gui: RPCBase, dock: RPCReference, widget: RPCReference, random_int_gen: random.Random
 ):
@@ -116,7 +102,8 @@ def test_widgets_e2e_abort_button(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the AbortButton widget."""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.AbortButton)
 
@@ -131,7 +118,8 @@ def test_widgets_e2e_bec_color_map_widget(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the BECColorMapWidget widget."""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.BECColorMapWidget)
 
@@ -147,7 +135,8 @@ def test_widgets_e2e_bec_progress_bar(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the BECProgressBar widget."""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.BECProgressBar)
 
@@ -168,7 +157,8 @@ def test_widgets_e2e_bec_queue(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the BECQueue widget."""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.BECQueue)
 
@@ -184,7 +174,8 @@ def test_widgets_e2e_bec_status_box(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the BECStatusBox widget."""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.BECStatusBox)
 
@@ -200,7 +191,8 @@ def test_widgets_e2e_dap_combo_box(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the DAPComboBox widget."""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.DapComboBox)
 
@@ -218,7 +210,8 @@ def test_widgets_e2e_dark_mode_button(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the GUIDarkModeButton widget."""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.DarkModeButton)
 
@@ -234,7 +227,8 @@ def test_widgets_e2e_device_browser(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the DeviceBrowser widget."""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.DeviceBrowser)
 
@@ -249,7 +243,8 @@ def test_widgets_e2e_device_combo_box(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the DeviceComboBox widget."""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.DeviceComboBox)
 
@@ -264,7 +259,8 @@ def test_widgets_e2e_device_line_edit(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the DeviceLineEdit widget."""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.DeviceLineEdit)
 
@@ -282,7 +278,8 @@ def test_widgets_e2e_image(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the Image widget."""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.Image)
 
@@ -309,7 +306,8 @@ def test_widgets_e2e_lmfit_dialog(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the LMFITDialog widget."""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.LMFitDialog)
 
@@ -324,7 +322,8 @@ def test_widgets_e2e_log_panel(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the LogPanel widget."""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.LogPanel)
 
@@ -339,7 +338,8 @@ def test_widgets_e2e_minesweeper(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the MineSweeper widget."""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.Minesweeper)
 
@@ -354,7 +354,8 @@ def test_widgets_e2e_motor_map(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the MotorMap widget."""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.MotorMap)
 
@@ -383,7 +384,8 @@ def test_widgets_e2e_multi_waveform(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test MultiWaveform widget."""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.MultiWaveform)
 
@@ -409,7 +411,8 @@ def test_widgets_e2e_positioner_indicator(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the PositionIndicator widget."""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.PositionIndicator)
 
@@ -425,7 +428,8 @@ def test_widgets_e2e_positioner_box(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the PositionerBox widget."""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.PositionerBox)
 
@@ -447,7 +451,8 @@ def test_widgets_e2e_positioner_box_2d(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the PositionerBox2D widget."""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.PositionerBox2D)
 
@@ -471,7 +476,8 @@ def test_widgets_e2e_positioner_control_line(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the positioner control line widget"""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.PositionerControlLine)
 
@@ -493,7 +499,8 @@ def test_widgets_e2e_reset_button(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the reset button widget"""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.ResetButton)
 
@@ -508,7 +515,8 @@ def test_widgets_e2e_resume_button(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the reset button widget"""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.ResumeButton)
 
@@ -523,7 +531,8 @@ def test_widgets_e2e_ring_progress_bar(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the RingProgressBar widget"""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.RingProgressBar)
 
@@ -543,7 +552,8 @@ def test_widgets_e2e_scan_control(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the ScanControl widget"""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.ScanControl)
 
@@ -558,7 +568,8 @@ def test_widgets_e2e_scatter_waveform(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the ScatterWaveform widget"""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.ScatterWaveform)
 
@@ -577,7 +588,8 @@ def test_widgets_e2e_signal_line_edit(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the SignalComboBox widget"""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.SignalComboBox)
 
@@ -592,7 +604,8 @@ def test_widgets_e2e_signal_combo_box(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the SignalLineEdit widget"""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.SignalLineEdit)
 
@@ -607,7 +620,8 @@ def test_widgets_e2e_stop_button(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the StopButton widget"""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.StopButton)
 
@@ -622,7 +636,8 @@ def test_widgets_e2e_text_box(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the TextBox widget"""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.TextBox)
 
@@ -639,7 +654,8 @@ def test_widgets_e2e_vs_code_editor(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the VSCodeEditor widget"""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.VSCodeEditor)
 
@@ -654,7 +670,8 @@ def test_widgets_e2e_waveform(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the Waveform widget"""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.Waveform)
 
@@ -696,7 +713,8 @@ def test_widgets_e2e_website_widget(
     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
 ):
     """Test the WebsiteWidget widget"""
-    gui, bec = connected_gui_and_bec_with_scope_session
+    gui = connected_gui_and_bec_with_scope_session
+    bec = gui._client
     # Create dock_area, dock, widget
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.WebsiteWidget)
 
@@ -713,35 +731,35 @@ def test_widgets_e2e_website_widget(
     maybe_remove_widget(qtbot, gui, dock, widget, random_generator_from_seed)
 
 
-# AbortButton            │ A button that abort the scan.                                                                         │
-# │ BECColorMapWidget      │ No description available                                                                              │
-# │ BECMultiWaveformWidget │ No description available                                                                              │
-# │ BECProgressBar         │ A custom progress bar with smooth transitions. The displayed text can be customized using a template. │
-# │ BECQueue               │ Widget to display the BEC queue.                                                                      │
-# │ BECStatusBox           │ An autonomous widget to display the status of BEC services.                                           │
-# │ DapComboBox            │ The DAPComboBox widget is an extension to the QComboBox with all avaialble DAP model from BEC.        │
-# │ DarkModeButton         │ No description available                                                                              │
-# │ DeviceBrowser          │ No description available                                                                              │
-# │ DeviceComboBox         │ Combobox widget for device input with autocomplete for device names.                                  │
-# │ DeviceLineEdit         │ Line edit widget for device input with autocomplete for device names.                                 │
-# │ Image                  │ No description available                                                                              │
-# │ LMFitDialog            │ Dialog for displaying the fit summary and params for LMFit DAP processes                              │
-# │ LogPanel               │ Displays a log panel                                                                                  │
-# │ Minesweeper            │ No description available                                                                              │
-# │ MotorMap               │ No description available                                                                              │
-# │ PositionIndicator      │ No description available                                                                              │
-# │ PositionerBox          │ Simple Widget to control a positioner in box form                                                     │
-# │ PositionerBox2D        │ Simple Widget to control two positioners in box form                                                  │
-# │ PositionerControlLine  │ A widget that controls a single device.                                                               │
-# │ ResetButton            │ A button that resets the scan queue.                                                                  │
-# │ ResumeButton           │ A button that continue scan queue.                                                                    │
-# │ RingProgressBar        │ No description available                                                                              │
-# │ ScanControl            │ No description available                                                                              │
-# │ ScatterWaveform        │ No description available                                                                              │
-# │ SignalComboBox         │ Line edit widget for device input with autocomplete for device names.                                 │
-# │ SignalLineEdit         │ Line edit widget for device input with autocomplete for device names.                                 │
-# │ StopButton             │ A button that stops the current scan.                                                                 │
-# │ TextBox                │ A widget that displays text in plain and HTML format                                                  │
-# │ VSCodeEditor           │ A widget to display the VSCode editor.                                                                │
-# │ Waveform               │ No description available                                                                              │
-# │ WebsiteWidget          │ A simple widget to display a website
+# # AbortButton            │ A button that abort the scan.                                                                         │
+# # │ BECColorMapWidget      │ No description available                                                                              │
+# # │ BECMultiWaveformWidget │ No description available                                                                              │
+# # │ BECProgressBar         │ A custom progress bar with smooth transitions. The displayed text can be customized using a template. │
+# # │ BECQueue               │ Widget to display the BEC queue.                                                                      │
+# # │ BECStatusBox           │ An autonomous widget to display the status of BEC services.                                           │
+# # │ DapComboBox            │ The DAPComboBox widget is an extension to the QComboBox with all avaialble DAP model from BEC.        │
+# # │ DarkModeButton         │ No description available                                                                              │
+# # │ DeviceBrowser          │ No description available                                                                              │
+# # │ DeviceComboBox         │ Combobox widget for device input with autocomplete for device names.                                  │
+# # │ DeviceLineEdit         │ Line edit widget for device input with autocomplete for device names.                                 │
+# # │ Image                  │ No description available                                                                              │
+# # │ LMFitDialog            │ Dialog for displaying the fit summary and params for LMFit DAP processes                              │
+# # │ LogPanel               │ Displays a log panel                                                                                  │
+# # │ Minesweeper            │ No description available                                                                              │
+# # │ MotorMap               │ No description available                                                                              │
+# # │ PositionIndicator      │ No description available                                                                              │
+# # │ PositionerBox          │ Simple Widget to control a positioner in box form                                                     │
+# # │ PositionerBox2D        │ Simple Widget to control two positioners in box form                                                  │
+# # │ PositionerControlLine  │ A widget that controls a single device.                                                               │
+# # │ ResetButton            │ A button that resets the scan queue.                                                                  │
+# # │ ResumeButton           │ A button that continue scan queue.                                                                    │
+# # │ RingProgressBar        │ No description available                                                                              │
+# # │ ScanControl            │ No description available                                                                              │
+# # │ ScatterWaveform        │ No description available                                                                              │
+# # │ SignalComboBox         │ Line edit widget for device input with autocomplete for device names.                                 │
+# # │ SignalLineEdit         │ Line edit widget for device input with autocomplete for device names.                                 │
+# # │ StopButton             │ A button that stops the current scan.                                                                 │
+# # │ TextBox                │ A widget that displays text in plain and HTML format                                                  │
+# # │ VSCodeEditor           │ A widget to display the VSCode editor.                                                                │
+# # │ Waveform               │ No description available                                                                              │
+# # │ WebsiteWidget          │ A simple widget to display a website

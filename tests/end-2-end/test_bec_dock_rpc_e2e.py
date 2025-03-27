@@ -192,7 +192,7 @@ def test_rpc_gui_obj(connected_client_gui_obj, qtbot):
     assert gui_info[mw._gui_id]["visible"]
 
     yw = gui.new("Y")
-    assert len(gui.windows) == 2
+    qtbot.waitUntil(lambda: len(gui.windows) == 2, timeout=3000)
     yw.remove()
     assert len(gui.windows) == 1  # only bec is left
 

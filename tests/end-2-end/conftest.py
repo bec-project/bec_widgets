@@ -61,7 +61,6 @@ def bec_client_lib_with_demo_config_session(
         yield bec
     finally:
         bec.shutdown()
-        bec._client._reset_singleton()
 
 
 @pytest.fixture(scope="session")
@@ -88,9 +87,8 @@ def connected_gui_and_bec_with_scope_session(bec_client_lib_session):
     """
     gui_id = "GUIMainWindow_TEST"
     gui = BECGuiClient(gui_id=gui_id)
-    bec = bec_client_lib_session
     try:
         gui.start(wait=True)
-        yield gui, bec
+        yield gui
     finally:
         gui.kill_server()
