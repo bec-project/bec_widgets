@@ -68,7 +68,6 @@ class BECApplication:
             config: The ServiceConfig instance to use for configuration.
             gui_id: The unique identifier for this application.
         """
-
         self.app.gui_id = gui_id or BECApplication.generate_unique_identifier()
         self.app.dispatcher = BECDispatcher(client=client, config=config)
         self.app.rpc_register = RPCRegister()
@@ -82,6 +81,7 @@ class BECApplication:
         )
 
         self.app.is_bec_app = True
+        self.app.aboutToQuit.connect(self.shutdown)
 
         self.setup_bec_icon()
 
@@ -91,7 +91,7 @@ class BECApplication:
     def __getattr__(self, name: str) -> Any:
         if hasattr(self.app, name):
             return getattr(self.app, name)
-        return super().__getattr__(name)
+        return super().__getattribute__(name)
 
     def __new__(cls, *args, **kwargs) -> BECApplication:
         if not hasattr(cls, "_instance"):
@@ -222,4 +222,12 @@ class BECApplication:
     def shutdown(self):
         self.dispatcher.disconnect_all()
         self.cli_server.shutdown()
-        super().shutdown()
+        self.rpc_register.reset_singleton()
+        delattr(self.app, "gui_id")
+        delattr(self.app, "dispatcher")
+        delattr(self.app, "rpc_register")
+        delattr(self.app, "client")
+        delattr(self.app, "is_bec_app")
+        delattr(self.app, "cli_server")
+        self._initialized = False
+        self._instance = None

@@ -7,6 +7,7 @@ from qtpy.QtWidgets import QApplication
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils import bec_dispatcher as bec_dispatcher_module
 from bec_widgets.utils import error_popups
+from bec_widgets.utils.bec_qapp import BECApplication
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
@@ -28,9 +29,11 @@ def qapplication(qtbot, request, testable_qtimer_class):  # pylint: disable=unus
         print("Test failed, skipping cleanup checks")
         return
 
+    qapp = BECApplication()
+    qapp.shutdown()
+
     testable_qtimer_class.check_all_stopped(qtbot)
 
-    qapp = QApplication.instance()
     qapp.processEvents()
     if hasattr(qapp, "os_listener") and qapp.os_listener:
         qapp.removeEventFilter(qapp.os_listener)
