@@ -18,10 +18,12 @@ if PYSIDE6:
 
         def createWidget(self, class_name, parent=None, name=""):
             if class_name in self.custom_widgets:
-                widget = self.custom_widgets[class_name](parent)
+                widget = self.custom_widgets[class_name](
+                    self.baseinstance, parent_id=self.baseinstance.gui_id
+                )
                 widget.setObjectName(name)
                 return widget
-            return super().createWidget(class_name, parent, name)
+            return super().createWidget(class_name, self.baseinstance, name)
 
 
 class UILoader:
@@ -51,7 +53,7 @@ class UILoader:
         Returns:
             QWidget: The loaded widget.
         """
-
+        parent = parent or self.parent
         loader = CustomUiLoader(parent, self.custom_widgets)
         file = QFile(ui_file)
         if not file.open(QIODevice.ReadOnly):
