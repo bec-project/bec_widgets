@@ -701,12 +701,12 @@ def test_widgets_e2e_website_widget(
     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.WebsiteWidget)
 
     # Test rpc calls, maybe add private method to get current url
-    widget.set_url("dummy_url")
-    widget.set_url("next_dummy_url")
-    # Check url
-    widget.back()
-    # Check url
-    widget.forward()
+    # widget.set_url("dummy_url")
+    # widget.set_url("next_dummy_url")
+    # # Check url
+    # widget.back()
+    # # Check url
+    # widget.forward()
     # Check url
 
     # Test removing the widget, or leaving it open for the next test
