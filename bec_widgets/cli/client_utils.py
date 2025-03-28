@@ -418,7 +418,6 @@ class BECGuiClient(RPCBase):
     def _handle_registry_update(msg: StreamMessage, parent: BECGuiClient) -> None:
         # This was causing a deadlock during shutdown, not sure why.
         # with self._lock:
-        print(msg)
         self = parent
         self._server_registry = msg["data"].state
         self._update_dynamic_namespace(self._server_registry)
@@ -443,7 +442,6 @@ class BECGuiClient(RPCBase):
 
     def _update_dynamic_namespace(self, server_registry: dict):
         """Update the dynamic name space"""
-        print("Updating dynamic namespace")
         for state in server_registry.values():
             if state["widget_class"] in IGNORE_WIDGETS:
                 continue
