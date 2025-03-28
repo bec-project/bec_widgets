@@ -21,8 +21,8 @@ class Launcher(BECWidget, QMainWindow):
         self.setCentralWidget(self.ui)
 
 
-def dock_area():
-    dock_area = BECDockArea()
+def dock_area(name: str | None = None):
+    dock_area = BECDockArea(name=name)
     return dock_area
 
 

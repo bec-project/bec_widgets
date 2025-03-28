@@ -165,7 +165,7 @@ class LaunchWindow(BECWidget, QMainWindow):
             else:
                 name = "dock_area"
                 name = WidgetContainerUtils.generate_unique_name(name, existing_dock_areas)
-            dock_area = dock_area()  # BECDockArea(name=name)
+            dock_area = dock_area(name)  # BECDockArea(name=name)
             dock_area.resize(dock_area.minimumSizeHint())
             # TODO Should we simply use the specified name as title here?
             dock_area.window().setWindowTitle(f"BEC - {name}")

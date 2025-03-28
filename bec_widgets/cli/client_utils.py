@@ -456,7 +456,7 @@ class BECGuiClient(RPCBase):
             if not state["config"].get("parent_id") and state["widget_class"] not in IGNORE_WIDGETS
         ]
         removed_widgets = set(self._top_level.keys()) - set(
-            [state["name"] for state in top_level_widgets]
+            state["name"] for state in top_level_widgets
         )
 
         for widget_name in removed_widgets:
