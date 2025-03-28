@@ -247,7 +247,7 @@ class BECGuiClient(RPCBase):
     @property
     def windows(self) -> dict:
         """Dictionary with dock areas in the GUI."""
-        return self._top_level
+        return {widget._name: widget for widget in self._top_level.values()}
 
     @property
     def window_list(self) -> list:
@@ -400,10 +400,6 @@ class BECGuiClient(RPCBase):
         if wait:
             self._gui_started_event.wait()
 
-    def _dump(self):
-        rpc_client = RPCBase(gui_id=f"{self._gui_id}:launcher", parent=self)
-        return rpc_client._run_rpc("_dump")
-
     def _start(self, wait: bool = False) -> None:
         self._killed = False
         self._client.connector.register(
@@ -440,34 +436,42 @@ class BECGuiClient(RPCBase):
                     window.hide()
 
     def _update_dynamic_namespace(self, server_registry: dict):
-        """Update the dynamic name space"""
-        for state in server_registry.values():
-            if state["widget_class"] in IGNORE_WIDGETS:
+        """
+        Update the dynamic name space with the given server registry.
+        Setting the server registry to an empty dictionary will remove all widgets from the namespace.
+
+        Args:
+            server_registry (dict): The server registry
+        """
+        top_level_widgets: dict[str, RPCReference] = {}
+        for gui_id, state in server_registry.items():
+            widget = self._add_widget(state, self)
+            if widget is None:
+                # ignore widgets that are not supported
                 continue
-            self._add_widget(state, self)
+            # get all top-level widgets. These are widgets that have no parent
+            if not state["config"].get("parent_id"):
+                top_level_widgets[gui_id] = widget
 
-        for widget in self._ipython_registry.values():
+        remove_from_registry = []
+        for gui_id, widget in self._ipython_registry.items():
+            if gui_id not in server_registry:
+                remove_from_registry.append(gui_id)
             widget._refresh_references()
+        for gui_id in remove_from_registry:
+            self._ipython_registry.pop(gui_id)
 
-        # get all top-level widgets. These are widgets that have no parent
-        top_level_widgets = [
-            state
-            for state in server_registry.values()
-            if not state["config"].get("parent_id") and state["widget_class"] not in IGNORE_WIDGETS
+        removed_widgets = [
+            widget._name for widget in self._top_level.values() if widget._is_deleted()
         ]
-        removed_widgets = set(self._top_level.keys()) - set(
-            state["name"] for state in top_level_widgets
-        )
 
         for widget_name in removed_widgets:
             delattr(self, widget_name)
 
-        for state in top_level_widgets:
-            setattr(self, state["name"], self._ipython_registry[state["gui_id"]])
+        for gui_id, widget_ref in top_level_widgets.items():
+            setattr(self, widget_ref._name, widget_ref)
 
-        self._top_level = {
-            state["name"]: self._ipython_registry[state["gui_id"]] for state in top_level_widgets
-        }
+        self._top_level = top_level_widgets
 
     def _add_widget(self, state: dict, parent: object) -> RPCReference | None:
         """Add a widget to the namespace

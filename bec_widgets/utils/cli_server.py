@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import traceback
 import types
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
@@ -10,7 +11,6 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import
 from qtpy.QtCore import QTimer
-from qtpy.QtWidgets import QApplication
 from redis.exceptions import RedisError
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
@@ -95,8 +95,9 @@ class CLIServer:
                 kwargs = msg["parameter"].get("kwargs", {})
                 res = self.run_rpc(obj, method, args, kwargs)
             except Exception as e:
-                logger.error(f"Error while executing RPC instruction: {e}")
-                self.send_response(request_id, False, {"error": str(e)})
+                content = traceback.format_exc()
+                logger.error(f"Error while executing RPC instruction: {content}")
+                self.send_response(request_id, False, {"error": content})
             else:
                 logger.debug(f"RPC instruction executed successfully: {res}")
                 self.send_response(request_id, True, {"result": res})

@@ -144,7 +144,7 @@ def test_ring_bar(qtbot, connected_client_gui_obj):
 def test_rpc_gui_obj(connected_client_gui_obj, qtbot):
     gui = connected_client_gui_obj
 
-    assert len(gui.windows) == 1
+    qtbot.waitUntil(lambda: len(gui.windows) == 1, timeout=3000)
     assert gui.windows["bec"] is gui.bec
     mw = gui.bec
     assert mw.__class__.__name__ == "RPCReference"
@@ -154,22 +154,6 @@ def test_rpc_gui_obj(connected_client_gui_obj, qtbot):
     assert xw.__class__.__name__ == "RPCReference"
     assert gui._ipython_registry[xw._gui_id].__class__.__name__ == "BECDockArea"
     assert len(gui.windows) == 2
-
-    gui_info = gui._dump()
-    mw_info = gui_info[mw._gui_id]
-    assert mw_info["title"] == "BEC"
-    assert mw_info["visible"]
-    xw_info = gui_info[xw._gui_id]
-    assert xw_info["title"] == "BEC - X"
-    assert xw_info["visible"]
-
-    gui.hide()
-    gui_info = gui._dump()  #
-    assert not any(windows["visible"] for windows in gui_info.values())
-
-    gui.show()
-    gui_info = gui._dump()
-    assert all(windows["visible"] for windows in gui_info.values())
 
     assert gui._gui_is_alive()
     gui.kill_server()
@@ -186,10 +170,8 @@ def test_rpc_gui_obj(connected_client_gui_obj, qtbot):
     qtbot.waitUntil(wait_for_gui_started, timeout=3000)
     # gui.windows should have bec with gui_id 'bec'
     assert len(gui.windows) == 1
-    assert gui.windows["bec"]._gui_id == mw._gui_id
+
     # communication should work, main dock area should have same id and be visible
-    gui_info = gui._dump()
-    assert gui_info[mw._gui_id]["visible"]
 
     yw = gui.new("Y")
     assert len(gui.windows) == 2

@@ -91,10 +91,11 @@ class RPCReference:
     def __init__(self, registry: dict, gui_id: str) -> None:
         self._registry = registry
         self._gui_id = gui_id
+        self._name = self._registry[self._gui_id]._name
 
     @check_for_deleted_widget
     def __getattr__(self, name):
-        if name in ["_registry", "_gui_id"]:
+        if name in ["_registry", "_gui_id", "_is_deleted", "_name"]:
             return super().__getattribute__(name)
         return self._registry[self._gui_id].__getattribute__(name)
 
@@ -116,6 +117,9 @@ class RPCReference:
         if self._gui_id not in self._registry:
             return []
         return self._registry[self._gui_id].__dir__()
+
+    def _is_deleted(self) -> bool:
+        return self._gui_id not in self._registry
 
 
 class RPCBase:
