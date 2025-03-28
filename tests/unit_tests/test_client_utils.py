@@ -31,7 +31,7 @@ def test_rpc_call_new_dock(cli_dock_area):
 )
 def test_client_utils_start_plot_process(config, call_config):
     with mock.patch("bec_widgets.cli.client_utils.subprocess.Popen") as mock_popen:
-        _start_plot_process("gui_id", BECDockArea, "bec", config)
+        _start_plot_process("gui_id", "bec", config, gui_class="BECDockArea")
         command = [
             "bec-gui-server",
             "--id",

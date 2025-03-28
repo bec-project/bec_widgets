@@ -71,7 +71,7 @@ def _get_output(process, logger) -> None:
 
 
 def _start_plot_process(
-    gui_id: str, gui_class: type, gui_class_id: str, config: dict | str, logger=None
+    gui_id: str, gui_class_id: str, config: dict | str, gui_class: str = "launcher", logger=None
 ) -> tuple[subprocess.Popen[str], threading.Thread | None]:
     """
     Start the plot in a new process.
@@ -86,7 +86,7 @@ def _start_plot_process(
         "--id",
         gui_id,
         "--gui_class",
-        "launcher",
+        gui_class,
         "--gui_class_id",
         gui_class_id,
         "--hide",
@@ -380,7 +380,6 @@ class BECGuiClient(RPCBase):
             self._gui_started_event.clear()
             self._process, self._process_output_processing_thread = _start_plot_process(
                 self._gui_id,
-                self.__class__,
                 gui_class_id=self._default_dock_name,
                 config=self._client._service_config.config,  # pylint: disable=protected-access
                 logger=logger,
