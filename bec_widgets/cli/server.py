@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import signal
 import sys
 from contextlib import redirect_stderr, redirect_stdout
@@ -9,14 +10,18 @@ from typing import cast
 
 from bec_lib.logger import bec_logger
 from bec_lib.service_config import ServiceConfig
-from qtpy.QtCore import Qt
+from qtpy.QtCore import QSize, Qt
+from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QApplication
 
+import bec_widgets
 from bec_widgets.applications.launch_window import LaunchWindow
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 logger = bec_logger.logger
+
+MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
 class SimpleFileLikeFromLogOutputFunc:
@@ -103,6 +108,7 @@ class GUIServer:
         self.app = QApplication(sys.argv)
         self.app.setApplicationName("BEC")
         self.app.gui_id = self.gui_id  # type: ignore
+        self.setup_bec_icon()
 
         service_config = self._get_service_config()
         self.dispatcher = BECDispatcher(config=service_config)
@@ -137,6 +143,17 @@ class GUIServer:
         signal.signal(signal.SIGTERM, sigint_handler)
 
         sys.exit(self.app.exec())
+
+    def setup_bec_icon(self):
+        """
+        Set the BEC icon for the application
+        """
+        icon = QIcon()
+        icon.addFile(
+            os.path.join(MODULE_PATH, "assets", "app_icons", "bec_widgets_icon.png"),
+            size=QSize(48, 48),
+        )
+        self.app.setWindowIcon(icon)
 
     def shutdown(self):
         """

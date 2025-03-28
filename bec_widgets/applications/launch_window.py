@@ -4,7 +4,6 @@ from qtpy.QtWidgets import QApplication, QMainWindow, QStyle
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils import UILoader
-from bec_widgets.utils.bec_qapp import BECApplication
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.container_utils import WidgetContainerUtils
@@ -33,9 +32,6 @@ class LaunchWindow(BECWidget, QMainWindow):
 
         # BEC Specific UI
         self._init_bec_specific_ui()
-        # self.ui = UILoader
-        # ui_file_path = os.path.join(os.path.dirname(__file__), "general_app.ui")
-        # self.load_ui(ui_file_path)
 
     # TODO can be implemented for toolbar
     def load_ui(self, ui_file):
