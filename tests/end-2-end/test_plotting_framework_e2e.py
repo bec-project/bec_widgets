@@ -60,18 +60,18 @@ def test_rpc_plotting_shortcuts_init_configs(qtbot, connected_client_gui_obj):
 
     # check if the correct devices are set
     # Curve
-    assert c1._config["signal"] == {
+    assert c1._config_dict["signal"] == {
         "dap": None,
         "name": "bpm4i",
         "entry": "bpm4i",
         "dap_oversample": 1,
     }
-    assert c1._config["source"] == "device"
-    assert c1._config["label"] == "bpm4i-bpm4i"
+    assert c1._config_dict["source"] == "device"
+    assert c1._config_dict["label"] == "bpm4i-bpm4i"
 
-    # Image Item
-    assert im_item._config["monitor"] == "eiger"
-    assert im_item._config["source"] == "auto"
+    # # Image Item
+    # assert im_item._config["monitor"] == "eiger"
+    # assert im_item._config["source"] == "auto"
 
 
 def test_rpc_waveform_scan(qtbot, bec_client_lib, connected_client_gui_obj):

@@ -364,10 +364,13 @@ class BECGuiClient(RPCBase):
         # Wait for 'bec' gui to be registered, this may take some time
         # After 60s timeout. Should this raise an exception on timeout?
         while time.time() < time.time() + timeout:
-            if len(list(self._server_registry.keys())) == 0:
+            if len(list(self._server_registry.keys())) < 2 or not hasattr(
+                self, self._default_dock_name
+            ):
                 time.sleep(0.1)
             else:
                 break
+
         self._gui_started_event.set()
 
     def _start_server(self, wait: bool = False) -> None:
@@ -466,7 +469,10 @@ class BECGuiClient(RPCBase):
         ]
 
         for widget_name in removed_widgets:
-            delattr(self, widget_name)
+            # the check is not strictly necessary, but better safe
+            # than sorry; who knows what the user has done
+            if hasattr(self, widget_name):
+                delattr(self, widget_name)
 
         for gui_id, widget_ref in top_level_widgets.items():
             setattr(self, widget_ref._name, widget_ref)
