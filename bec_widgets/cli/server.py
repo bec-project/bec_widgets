@@ -120,7 +120,9 @@ class GUIServer:
         self.app.aboutToQuit.connect(self.shutdown)
         self.app.setQuitOnLastWindowClosed(False)
 
-        RPCRegister().callbacks.append(self._turn_off_the_lights)
+        register = RPCRegister()
+        register.callbacks.append(self._turn_off_the_lights)
+        register.broadcast()
 
         if self.gui_class:
             # If the server is started with a specific gui class, we launch it.

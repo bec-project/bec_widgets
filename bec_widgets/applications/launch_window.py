@@ -1,7 +1,11 @@
-from bec_lib.logger import bec_logger
-from qtpy.QtGui import QAction, QActionGroup
-from qtpy.QtWidgets import QApplication, QMainWindow, QStyle
+import os
 
+from bec_lib.logger import bec_logger
+from qtpy.QtCore import QSize
+from qtpy.QtGui import QAction, QActionGroup
+from qtpy.QtWidgets import QApplication, QMainWindow, QSizePolicy, QStyle
+
+import bec_widgets
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
@@ -11,6 +15,7 @@ from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
 
 logger = bec_logger.logger
+MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
 class LaunchWindow(BECWidget, QMainWindow):
@@ -20,12 +25,18 @@ class LaunchWindow(BECWidget, QMainWindow):
 
         self.app = QApplication.instance()
 
-        # self._upgrade_qapp() #TODO consider to make upgrade function to any QApplication to BECQApplication
+        self.resize(500, 300)
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
         self._init_ui()
 
     def _init_ui(self):
         # Set the window title
         self.setWindowTitle("BEC Launcher")
+
+        # Load ui file
+        ui_file_path = os.path.join(MODULE_PATH, "applications/launch_dialog.ui")
+        self.load_ui(ui_file_path)
 
         # Set Menu and Status bar
         self._setup_menu_bar()
@@ -38,6 +49,8 @@ class LaunchWindow(BECWidget, QMainWindow):
         loader = UILoader(self)
         self.ui = loader.loader(ui_file)
         self.setCentralWidget(self.ui)
+        self.ui.open_dock_area.setText("Open Dock Area")
+        self.ui.open_dock_area.clicked.connect(lambda: self.launch("dock_area"))
 
     def _init_bec_specific_ui(self):
         if getattr(self.app, "gui_id", None):
