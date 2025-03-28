@@ -29,11 +29,11 @@ def qapplication(qtbot, request, testable_qtimer_class):  # pylint: disable=unus
         print("Test failed, skipping cleanup checks")
         return
 
-    qapp = BECApplication()
-    qapp.shutdown()
+    # qapp = BECApplication()
+    # qapp.shutdown()
 
     testable_qtimer_class.check_all_stopped(qtbot)
-
+    qapp = QApplication.instance()
     qapp.processEvents()
     if hasattr(qapp, "os_listener") and qapp.os_listener:
         qapp.removeEventFilter(qapp.os_listener)

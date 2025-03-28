@@ -72,14 +72,6 @@ class BECApplication:
         self.app.dispatcher = BECDispatcher(client=client, config=config)
         self.app.rpc_register = RPCRegister()
         self.app.client = self.app.dispatcher.client  # type: ignore
-
-        self.app.cli_server = CLIServer(
-            gui_id=self.app.gui_id,
-            dispatcher=self.app.dispatcher,
-            client=self.app.client,
-            config=config,
-        )
-
         self.app.is_bec_app = True
         self.app.aboutToQuit.connect(self.shutdown)
 

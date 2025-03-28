@@ -182,5 +182,5 @@ class CLIServer:
         self.status = messages.BECStatus.IDLE
         self._heartbeat_timer.stop()
         self.emit_heartbeat()
-        logger.info("Succeded in shutting down gui")
+        logger.info("Succeded in shutting down CLI server")
         self.client.shutdown()

@@ -64,7 +64,7 @@ class BECWidget(BECConnector):
             parent_dock=parent_dock,
             parent_id=parent_id,
         )
-        app = self._ensure_bec_app()
+        app = QApplication.instance()
         if not hasattr(app, "theme"):
             # DO NOT SET THE THEME TO AUTO! Otherwise, the qwebengineview will segfault
             # Instead, we will set the theme to the system setting on startup

@@ -14,7 +14,7 @@ from qtpy.QtWidgets import QApplication
 
 from bec_widgets.applications.launch_window import LaunchWindow
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
-from bec_widgets.utils.bec_qapp import BECApplication
+from bec_widgets.utils.bec_dispatcher import BECDispatcher
 
 logger = bec_logger.logger
 
@@ -39,7 +39,7 @@ class SimpleFileLikeFromLogOutputFunc:
 
 class GUIServer:
     """
-    Class that starts the GUI server.
+    This class is used to start the BEC GUI and is the main entry point for launching BEC Widgets in a subprocess.
     """
 
     def __init__(self, args):
@@ -48,8 +48,9 @@ class GUIServer:
         self.gui_class = args.gui_class
         self.gui_class_id = args.gui_class_id
         self.hide = args.hide
-        self.app: BECApplication | None = None
+        self.app: QApplication | None = None
         self.launcher_window: LaunchWindow | None = None
+        self.dispatcher: BECDispatcher | None = None
 
     def start(self):
         """
@@ -61,9 +62,9 @@ class GUIServer:
             bec_logger._stderr_log_level = bec_logger.LOGLEVEL.ERROR
             bec_logger._update_sinks()
 
-        with redirect_stdout(SimpleFileLikeFromLogOutputFunc(logger.info)):  # type: ignore
-            with redirect_stderr(SimpleFileLikeFromLogOutputFunc(logger.error)):  # type: ignore
-                self._run()
+        # with redirect_stdout(SimpleFileLikeFromLogOutputFunc(logger.info)):  # type: ignore
+        # with redirect_stderr(SimpleFileLikeFromLogOutputFunc(logger.error)):  # type: ignore
+        self._run()
 
     def _get_service_config(self) -> ServiceConfig:
         if self.config:
@@ -82,30 +83,37 @@ class GUIServer:
         If there is only one connection remaining, it is the launcher, so we show it.
         Once the launcher is closed as the last window, we quit the application.
         """
-        self.app = cast(BECApplication, self.app)
         self.launcher_window = cast(LaunchWindow, self.launcher_window)
 
         if len(connections) <= 1:
             self.launcher_window.show()
             self.launcher_window.activateWindow()
             self.launcher_window.raise_()
-            self.app.setQuitOnLastWindowClosed(True)
+            if self.app:
+                self.app.setQuitOnLastWindowClosed(True)
         else:
             self.launcher_window.hide()
-            self.app.setQuitOnLastWindowClosed(False)
+            if self.app:
+                self.app.setQuitOnLastWindowClosed(False)
 
     def _run(self):
         """
         Run the GUI server.
         """
+        self.app = QApplication(sys.argv)
+        self.app.setApplicationName("BEC")
+
         service_config = self._get_service_config()
-        self.app = BECApplication(sys.argv, config=service_config, gui_id=self.gui_id)
-        self.app.setQuitOnLastWindowClosed(False)
+        self.dispatcher = BECDispatcher(config=service_config)
+        self.dispatcher.start_cli_server(gui_id=self.gui_id)
 
         self.launcher_window = LaunchWindow(gui_id=f"{self.gui_id}:launcher")
         self.launcher_window.setAttribute(Qt.WA_ShowWithoutActivating)  # type: ignore
 
-        RPCRegister().callbacks.append(self._turn_off_the_lights)
+        self.app.aboutToQuit.connect(self.shutdown)
+        self.app.setQuitOnLastWindowClosed(False)
+
+        # RPCRegister().callbacks.append(self._turn_off_the_lights)
 
         if self.gui_class:
             # If the server is started with a specific gui class, we launch it.
@@ -119,7 +127,8 @@ class GUIServer:
             with RPCRegister.delayed_broadcast():
                 for widget in QApplication.instance().topLevelWidgets():  # type: ignore
                     widget.close()
-            self.app.quit()
+            if self.app:
+                self.app.quit()
 
         # gui.bec.close()
         # win.shutdown()
@@ -127,6 +136,14 @@ class GUIServer:
         signal.signal(signal.SIGTERM, sigint_handler)
 
         sys.exit(self.app.exec())
+
+    def shutdown(self):
+        """
+        Shutdown the GUI server.
+        """
+        if self.dispatcher:
+            self.dispatcher.stop_cli_server()
+            self.dispatcher.disconnect_all()
 
 
 def main():
@@ -157,7 +174,7 @@ def main():
 
 
 if __name__ == "__main__":
-    import sys
+    # import sys
 
-    sys.argv = ["bec_widgets", "--gui_class", "MainWindow"]
+    # sys.argv = ["bec_widgets", "--gui_class", "MainWindow"]
     main()
