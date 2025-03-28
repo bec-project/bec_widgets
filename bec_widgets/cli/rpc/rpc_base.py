@@ -272,10 +272,12 @@ class RPCBase:
             for key, val in self._root._server_registry.items():
                 parent_id = val["config"].get("parent_id")
                 if parent_id == self._gui_id:
-                    references[key] = val["config"]["gui_id"]
+                    references[key] = {"gui_id": val["config"]["gui_id"], "name": val["name"]}
             removed_references = set(self._rpc_references.keys()) - set(references.keys())
-            self._rpc_references = references
             for key in removed_references:
-                delattr(self, key)
+                delattr(self, self._rpc_references[key]["name"])
+            self._rpc_references = references
             for key, val in references.items():
-                setattr(self, key, RPCReference(self._root._ipython_registry, val))
+                setattr(
+                    self, val["name"], RPCReference(self._root._ipython_registry, val["gui_id"])
+                )

@@ -44,7 +44,7 @@ class LaunchWindow(BECWidget, QMainWindow):
         self.setCentralWidget(self.ui)
 
     def _init_bec_specific_ui(self):
-        if isinstance(self.app, BECApplication):
+        if getattr(self.app, "gui_id", None):
             self.statusBar().showMessage(f"App ID: {self.app.gui_id}")
         else:
             logger.warning(

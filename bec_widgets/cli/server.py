@@ -102,6 +102,7 @@ class GUIServer:
         """
         self.app = QApplication(sys.argv)
         self.app.setApplicationName("BEC")
+        self.app.gui_id = self.gui_id  # type: ignore
 
         service_config = self._get_service_config()
         self.dispatcher = BECDispatcher(config=service_config)
