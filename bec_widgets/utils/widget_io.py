@@ -17,8 +17,8 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from bec_widgets.utils.bec_widget import BECWidget
 
+from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
 
 
