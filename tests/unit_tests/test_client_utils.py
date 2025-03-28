@@ -82,7 +82,6 @@ def test_client_utils_passes_client_config_to_server(bec_dispatcher):
             )  # the started event will not be set, wait=True would block forever
             mock_start_plot.assert_called_once_with(
                 "gui_id",
-                BECGuiClient,
                 gui_class_id="bec",
                 config=mixin._client._service_config.config,
                 logger=mock.ANY,
