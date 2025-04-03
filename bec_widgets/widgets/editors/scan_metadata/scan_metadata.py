@@ -40,6 +40,9 @@ class ScanMetadata(BECWidget, QWidget):
     metadata schema registry supplied in the plugin repo to find pydantic models
     associated with the scan type. Sets limits for numerical values if specified."""
 
+    PLUGIN = True
+    ICON_NAME = "list_alt"
+
     metadata_updated = Signal(dict)
     metadata_cleared = Signal(NoneType)
 

@@ -42,6 +42,7 @@ _Widgets = {
     "ResumeButton": "ResumeButton",
     "RingProgressBar": "RingProgressBar",
     "ScanControl": "ScanControl",
+    "ScanMetadata": "ScanMetadata",
     "ScatterWaveform": "ScatterWaveform",
     "SignalComboBox": "SignalComboBox",
     "SignalLineEdit": "SignalLineEdit",
