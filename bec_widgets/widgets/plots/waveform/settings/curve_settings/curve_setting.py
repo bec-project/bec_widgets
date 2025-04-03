@@ -7,6 +7,7 @@ from qtpy.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -53,6 +54,9 @@ class CurveSetting(SettingWidget):
         self.device_x_label = QLabel("Device")
         self.device_x = DeviceLineEdit()
 
+        self.signal_x_label = QLabel("Signal")
+        self.signal_x = QLineEdit()
+
         self._get_x_mode_from_waveform()
         self.switch_x_device_selection()
 
@@ -63,6 +67,8 @@ class CurveSetting(SettingWidget):
         self.x_axis_box.layout.addWidget(self.spacer)
         self.x_axis_box.layout.addWidget(self.device_x_label)
         self.x_axis_box.layout.addWidget(self.device_x)
+        self.x_axis_box.layout.addWidget(self.signal_x_label)
+        self.x_axis_box.layout.addWidget(self.signal_x)
 
         self.x_axis_box.setFixedHeight(80)
         self.layout.addWidget(self.x_axis_box)
@@ -77,6 +83,7 @@ class CurveSetting(SettingWidget):
         if self.mode_combo.currentText() == "device":
             self.device_x.setEnabled(True)
             self.device_x.setText(self.target_widget.x_axis_mode["name"])
+            self.signal_x.setText(self.target_widget.x_axis_mode["entry"])
         else:
             self.device_x.setEnabled(False)
 
@@ -98,6 +105,9 @@ class CurveSetting(SettingWidget):
         """
         if self.mode_combo.currentText() == "device":
             self.target_widget.x_mode = self.device_x.text()
+            signal_x = self.signal_x.text()
+            if signal_x != "":
+                self.target_widget.x_entry = signal_x
         else:
             self.target_widget.x_mode = self.mode_combo.currentText()
         self.curve_manager.send_curve_json()

@@ -454,11 +454,40 @@ class Waveform(PlotBase):
     @x_mode.setter
     def x_mode(self, value: str):
         self.x_axis_mode["name"] = value
+        if value not in ["timestamp", "index", "auto"]:
+            self.x_axis_mode["entry"] = self.entry_validator.validate_signal(value, None)
         self._switch_x_axis_item(mode=value)
         self.async_signal_update.emit()
         self.sync_signal_update.emit()
         self.plot_item.enableAutoRange(x=True)
         self.round_plot_widget.apply_plot_widget_style()  # To keep the correct theme
+
+    @SafeProperty(str)
+    def x_entry(self) -> str | None:
+        """
+        The x signal name.
+        """
+        return self.x_axis_mode["entry"]
+
+    @x_entry.setter
+    def x_entry(self, value: str | None):
+        """
+        Set the x signal name.
+
+        Args:
+            value(str|None): The x signal name to set.
+        """
+        if value is None:
+            return
+        if self.x_axis_mode["name"] in ["auto", "index", "timestamp"]:
+            logger.warning("Cannot set x_entry when x_mode is not 'device'.")
+            return
+        self.x_axis_mode["entry"] = self.entry_validator.validate_signal(self.x_mode, value)
+        self._switch_x_axis_item(mode="device")
+        self.async_signal_update.emit()
+        self.sync_signal_update.emit()
+        self.plot_item.enableAutoRange(x=True)
+        self.round_plot_widget.apply_plot_widget_style()
 
     @SafeProperty(str)
     def color_palette(self) -> str:
@@ -1491,9 +1520,6 @@ class Waveform(PlotBase):
             if isinstance(current_axis, pg.graphicsItems.DateAxisItem.DateAxisItem):
                 default_axis = pg.AxisItem(orientation="bottom")
                 self.plot_item.setAxisItems({"bottom": default_axis})
-
-        if mode not in ["timestamp", "index", "auto"]:
-            self.x_axis_mode["entry"] = self.entry_validator.validate_signal(mode, None)
 
         self.set_x_label_suffix(self.x_axis_mode["label_suffix"])
 

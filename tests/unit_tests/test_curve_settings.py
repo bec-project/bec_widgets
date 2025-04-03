@@ -119,6 +119,20 @@ def test_curve_setting_refresh(curve_setting_fixture, qtbot):
     assert curve_setting.mode_combo.currentText() == "timestamp"
 
 
+def test_change_device_from_target_widget(curve_setting_fixture, qtbot):
+    curve_setting, wf = curve_setting_fixture
+
+    wf.x_mode = "samx"
+
+    # Call refresh
+    curve_setting.refresh()
+
+    assert curve_setting.mode_combo.currentText() == "device"
+    assert curve_setting.device_x.isEnabled()
+    assert curve_setting.device_x.text() == wf.x_axis_mode["name"]
+    assert curve_setting.signal_x.text() == wf.x_axis_mode["entry"]
+
+
 ##################################################
 # CurveTree
 ##################################################
