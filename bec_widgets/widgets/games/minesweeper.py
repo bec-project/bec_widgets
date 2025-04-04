@@ -146,8 +146,8 @@ class Minesweeper(BECWidget, QWidget):
     USER_ACCESS = []
 
     def __init__(self, parent=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         QWidget.__init__(self, parent=parent)
+        BECWidget.__init__(self, *args, **kwargs)
 
         self._ui_initialised = False
         self._timer_start_num_seconds = 0

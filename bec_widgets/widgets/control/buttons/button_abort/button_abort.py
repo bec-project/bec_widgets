@@ -23,8 +23,8 @@ class AbortButton(BECWidget, QWidget):
         scan_id=None,
         **kwargs,
     ):
-        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         QWidget.__init__(self, parent=parent)
+        BECWidget.__init__(self, client=client, config=config, gui_id=gui_id, **kwargs)
 
         self.get_bec_shortcuts()
 

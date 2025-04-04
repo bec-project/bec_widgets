@@ -149,9 +149,10 @@ class CLIServer:
             config["parent_id"] = obj.parent_id  # add parent_id to config
             return {
                 "gui_id": obj.gui_id,
-                "name": (
-                    obj._name if hasattr(obj, "_name") else obj.__class__.__name__
-                ),  # pylint: disable=protected-access
+                # "name": (
+                #     obj._name if hasattr(obj, "_name") else obj.__class__.__name__
+                # ),  # pylint: disable=protected-access
+                "name": obj.objectName() if obj.objectName() else obj.__class__.__name__,
                 "widget_class": obj.__class__.__name__,
                 "config": config,
                 "__rpc__": True,

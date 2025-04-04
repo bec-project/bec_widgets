@@ -121,16 +121,23 @@ class Waveform(PlotBase):
         client=None,
         gui_id: str | None = None,
         popups: bool = True,
+        name=None,
         **kwargs,
     ):
         if config is None:
             config = WaveformConfig(widget_class=self.__class__.__name__)
         super().__init__(
-            parent=parent, config=config, client=client, gui_id=gui_id, popups=popups, **kwargs
+            parent=parent,
+            config=config,
+            client=client,
+            gui_id=gui_id,
+            popups=popups,
+            name=name,
+            **kwargs,
         )
 
         # For PropertyManager identification
-        self.setObjectName("Waveform")
+        # self.setObjectName("Waveform")
 
         # Curve data
         self._sync_curves = []
@@ -758,7 +765,7 @@ class Waveform(PlotBase):
         Returns:
             Curve: The newly created curve object, added to the plot.
         """
-        curve = Curve(config=config, name=name, parent_item=self)
+        curve = Curve(parent=self, config=config, name=name, parent_item=self)
         self.plot_item.addItem(curve)
         self._categorise_device_curves()
         return curve

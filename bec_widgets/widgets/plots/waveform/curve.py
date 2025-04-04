@@ -79,6 +79,7 @@ class Curve(BECConnector, pg.PlotDataItem):
 
     def __init__(
         self,
+        parent=None,
         name: str | None = None,
         config: CurveConfig | None = None,
         gui_id: str | None = None,
@@ -90,9 +91,9 @@ class Curve(BECConnector, pg.PlotDataItem):
             self.config = config
         else:
             self.config = config
-        super().__init__(config=config, gui_id=gui_id)
-        pg.PlotDataItem.__init__(self, name=name)
-
+        pg.PlotDataItem.__init__(self, parent=parent, name=name)
+        BECConnector.__init__(self, config=config, gui_id=gui_id)
+        self.parent_id = parent_item.config.gui_id
         self.parent_item = parent_item
         self.apply_config()
         self.dap_params = None

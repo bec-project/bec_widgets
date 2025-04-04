@@ -89,8 +89,8 @@ class BECStatusBox(BECWidget, CompactPopupWidget):
         gui_id: str = None,
         **kwargs,
     ):
-        super().__init__(client=client, gui_id=gui_id, **kwargs)
         CompactPopupWidget.__init__(self, parent=parent, layout=QHBoxLayout)
+        BECWidget.__init__(self, client=client, gui_id=gui_id, **kwargs)
 
         self.box_name = box_name
         self.status_container = defaultdict(lambda: {"info": None, "item": None, "widget": None})

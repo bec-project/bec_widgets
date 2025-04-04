@@ -40,8 +40,8 @@ class SignalComboBox(DeviceSignalInputBase, QComboBox):
         arg_name: str | None = None,
         **kwargs,
     ):
-        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         QComboBox.__init__(self, parent=parent)
+        DeviceSignalInputBase.__init__(self, client=client, config=config, gui_id=gui_id, **kwargs)
         if arg_name is not None:
             self.config.arg_name = arg_name
             self.arg_name = arg_name

@@ -148,11 +148,11 @@ class BECDock(BECWidget, Dock):
             if isinstance(config, dict):
                 config = DockConfig(**config)
             self.config = config
-        super().__init__(
-            client=client, config=config, gui_id=gui_id, name=name, parent_id=parent_id
-        )  # Name was checked and created in BEC Widget
         label = CustomDockLabel(text=name, closable=closable)
         Dock.__init__(self, name=name, label=label, parent=self, **kwargs)
+        BECWidget.__init__(
+            self, client=client, config=config, gui_id=gui_id, name=name, parent_id=parent_id
+        )  # Name was checked and created in BEC Widget
         # Dock.__init__(self, name=name, **kwargs)
 
         self.parent_dock_area = parent_dock_area

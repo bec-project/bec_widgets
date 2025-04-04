@@ -72,6 +72,7 @@ class ImageItem(BECConnector, pg.ImageItem):
 
     def __init__(
         self,
+        parent=None,
         config: Optional[ImageItemConfig] = None,
         gui_id: Optional[str] = None,
         parent_image=None,
@@ -82,8 +83,8 @@ class ImageItem(BECConnector, pg.ImageItem):
             self.config = config
         else:
             self.config = config
-        super().__init__(config=config, gui_id=gui_id)
-        pg.ImageItem.__init__(self)
+        pg.ImageItem.__init__(self, parent=parent)
+        BECConnector.__init__(self, config=config, gui_id=gui_id)
 
         self.parent_image = parent_image
 

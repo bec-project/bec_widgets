@@ -337,8 +337,8 @@ class CurveTree(BECWidget, QWidget):
     ) -> None:
         if config is None:
             config = ConnectionConfig(widget_class=self.__class__.__name__)
-        super().__init__(client=client, gui_id=gui_id, config=config)
         QWidget.__init__(self, parent=parent)
+        BECWidget.__init__(self, client=client, gui_id=gui_id, config=config)
 
         self.waveform = waveform
         if self.waveform and hasattr(self.waveform, "color_palette"):

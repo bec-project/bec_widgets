@@ -43,10 +43,10 @@ class LMFitDialog(BECWidget, QWidget):
             gui_id (str): GUI ID.
             ui_file (str): The UI file to be loaded.
         """
-        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         QWidget.__init__(self, parent=parent)
+        BECWidget.__init__(self, client=client, config=config, gui_id=gui_id, **kwargs)
         self.setProperty("skip_settings", True)
-        self.setObjectName("LMFitDialog")
+        # self.setObjectName("LMFitDialog")
         self._ui_file = ui_file
         self.target_widget = target_widget
 

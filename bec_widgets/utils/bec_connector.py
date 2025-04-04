@@ -127,7 +127,13 @@ class BECConnector:
         else:
             if not WidgetContainerUtils.has_name_valid_chars(name):
                 raise ValueError(f"Name {name} contains invalid characters.")
-        self._name = name if name else self.__class__.__name__
+        # TODO Hierarchy can be refreshed upon creation
+        if isinstance(self, QObject):
+            if not self.objectName():
+                self.setObjectName(name if name else self.__class__.__name__)
+                self._name = self.objectName()
+        else:
+            self._name = name if name else self.__class__.__name__
         self.rpc_register = RPCRegister()
         self.rpc_register.add_rpc(self)
 

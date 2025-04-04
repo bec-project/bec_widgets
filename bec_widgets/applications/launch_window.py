@@ -20,8 +20,10 @@ MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 class LaunchWindow(BECWidget, QMainWindow):
     def __init__(self, gui_id: str = None, *args, **kwargs):
-        BECWidget.__init__(self, gui_id=gui_id, **kwargs)
-        QMainWindow.__init__(self, *args, **kwargs)
+        QMainWindow.__init__(self, *args, **kwargs)  # FIRST
+        BECWidget.__init__(self, gui_id=gui_id, **kwargs)  # SECOND
+
+        self.setObjectName("LaunchWindow")
 
         self.app = QApplication.instance()
 

@@ -53,8 +53,8 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
         self._callback_id = None
         self._is_valid_input = False
         self._accent_colors = get_accent_colors()
-        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         QLineEdit.__init__(self, parent=parent)
+        DeviceInputBase.__init__(self, client=client, config=config, gui_id=gui_id, **kwargs)
         self.completer = QCompleter(self)
         self.setCompleter(self.completer)
 

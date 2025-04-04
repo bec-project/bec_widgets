@@ -14,8 +14,8 @@ class ResumeButton(BECWidget, QWidget):
     ICON_NAME = "resume"
 
     def __init__(self, parent=None, client=None, config=None, gui_id=None, toolbar=False, **kwargs):
-        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
         QWidget.__init__(self, parent=parent)
+        BECWidget.__init__(self, client=client, config=config, gui_id=gui_id, **kwargs)
 
         self.get_bec_shortcuts()
 

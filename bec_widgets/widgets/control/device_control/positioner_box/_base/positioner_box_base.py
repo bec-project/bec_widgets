@@ -55,8 +55,8 @@ class PositionerBoxBase(BECWidget, CompactPopupWidget):
             parent: The parent widget.
             device (Positioner): The device to control.
         """
-        super().__init__(**kwargs)
         CompactPopupWidget.__init__(self, parent=parent, layout=QVBoxLayout)
+        BECWidget.__init__(self, **kwargs)
         self._dialog = None
         self.get_bec_shortcuts()
 

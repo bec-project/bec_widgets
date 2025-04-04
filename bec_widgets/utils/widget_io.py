@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
+from PySide6.QtCore import Qt
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -18,6 +19,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_widgets.utils import BECConnector
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
 
@@ -295,13 +297,9 @@ class WidgetHierarchy:
         is_bec = isinstance(widget, BECWidget)
         print_this = (not only_bec_widgets) or is_bec
 
-        # If it is a BECWidget and we're showing the parent, climb the chain to find the nearest BECWidget ancestor
         if show_parent and is_bec:
             ancestor = WidgetHierarchy._get_becwidget_ancestor(widget)
-            if ancestor is not None:
-                parent_info = f" parent={ancestor.__class__.__name__}"
-            else:
-                parent_info = " parent=None"
+            parent_info = f" parent={ancestor.__class__.__name__}" if ancestor else " parent=None"
         else:
             parent_info = ""
 
@@ -313,21 +311,11 @@ class WidgetHierarchy:
                 widget_info += value_str
             print(prefix + widget_info)
 
-        # Always recurse so we can discover deeper BECWidgets even if the current widget is not a BECWidget
-        children = widget.children()
-        for i, child in enumerate(children):
-            # Possibly skip known internal child widgets of a QComboBox
-            if (
-                exclude_internal_widgets
-                and isinstance(widget, QComboBox)
-                and child.__class__.__name__ in ["QFrame", "QBoxLayout", "QListView"]
-            ):
-                continue
-
-            child_prefix = prefix + "  "
+        # Explicitly include all children widgets
+        children = widget.findChildren(QWidget, options=Qt.FindDirectChildrenOnly)
+        for child in children:
             arrow = "├─ " if child != children[-1] else "└─ "
-
-            # Regardless of whether child is BECWidget or not, keep recursing, or we might miss deeper BECWidgets
+            child_prefix = prefix + "  "
             WidgetHierarchy.print_widget_hierarchy(
                 child,
                 indent + 1,
@@ -346,7 +334,7 @@ class WidgetHierarchy:
         """
         parent = widget.parent()
         while parent is not None:
-            if isinstance(parent, BECWidget):
+            if isinstance(parent, BECConnector):
                 return parent
             parent = parent.parent()
         return None
