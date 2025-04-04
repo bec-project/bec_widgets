@@ -141,6 +141,10 @@ class CLIServer:
 
     def serialize_object(self, obj):
         if isinstance(obj, BECConnector):
+            # Check if RPC attribute exists and is explicitly set to False
+            if hasattr(obj, "RPC") and obj.RPC is False:
+                return None  # Skip objects explicitly marked as RPC=False
+
             config = obj.config.model_dump()
             config["parent_id"] = obj.parent_id  # add parent_id to config
             return {
@@ -171,7 +175,11 @@ class CLIServer:
         """
 
         # We only need to broadcast the dock areas
-        data = {key: self.serialize_object(val) for key, val in connections.items()}
+        data = {
+            key: serialized
+            for key, val in connections.items()
+            if (serialized := self.serialize_object(val)) is not None
+        }
         logger.info(f"Broadcasting registry update: {data} for {self.gui_id}")
         self.client.connector.xadd(
             MessageEndpoints.gui_registry_state(self.gui_id),
