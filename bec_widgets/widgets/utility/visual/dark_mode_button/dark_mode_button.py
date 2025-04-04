@@ -9,10 +9,11 @@ from bec_widgets.utils.colors import set_theme
 
 
 class DarkModeButton(BECWidget, QWidget):
-    USER_ACCESS = ["toggle_dark_mode"]
+    USER_ACCESS = []
 
     ICON_NAME = "dark_mode"
     PLUGIN = True
+    RPC = False
 
     def __init__(
         self,

@@ -10,6 +10,7 @@ class AbortButton(BECWidget, QWidget):
     """A button that abort the scan."""
 
     PLUGIN = True
+    RPC = False
     ICON_NAME = "cancel"
 
     def __init__(

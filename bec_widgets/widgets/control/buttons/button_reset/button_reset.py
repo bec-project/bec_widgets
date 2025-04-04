@@ -10,6 +10,7 @@ class ResetButton(BECWidget, QWidget):
     """A button that resets the scan queue."""
 
     PLUGIN = True
+    RPC = False
     ICON_NAME = "restart_alt"
 
     def __init__(self, parent=None, client=None, config=None, gui_id=None, toolbar=False, **kwargs):

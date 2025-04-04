@@ -15,14 +15,11 @@ class Widgets(str, enum.Enum):
     Enum for the available widgets.
     """
 
-    AbortButton = "AbortButton"
-    BECColorMapWidget = "BECColorMapWidget"
     BECDockArea = "BECDockArea"
     BECProgressBar = "BECProgressBar"
     BECQueue = "BECQueue"
     BECStatusBox = "BECStatusBox"
     DapComboBox = "DapComboBox"
-    DarkModeButton = "DarkModeButton"
     DeviceBrowser = "DeviceBrowser"
     DeviceComboBox = "DeviceComboBox"
     DeviceLineEdit = "DeviceLineEdit"
@@ -36,37 +33,15 @@ class Widgets(str, enum.Enum):
     PositionerBox = "PositionerBox"
     PositionerBox2D = "PositionerBox2D"
     PositionerControlLine = "PositionerControlLine"
-    ResetButton = "ResetButton"
-    ResumeButton = "ResumeButton"
     RingProgressBar = "RingProgressBar"
     ScanControl = "ScanControl"
     ScatterWaveform = "ScatterWaveform"
     SignalComboBox = "SignalComboBox"
     SignalLineEdit = "SignalLineEdit"
-    StopButton = "StopButton"
     TextBox = "TextBox"
     VSCodeEditor = "VSCodeEditor"
     Waveform = "Waveform"
     WebsiteWidget = "WebsiteWidget"
-
-
-class AbortButton(RPCBase):
-    """A button that abort the scan."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
-class BECColorMapWidget(RPCBase):
-    @property
-    @rpc_call
-    def colormap(self):
-        """
-        Get the current colormap name.
-        """
 
 
 class BECDock(RPCBase):
@@ -622,15 +597,6 @@ class DapComboBox(RPCBase):
 
         Args:
             default_device(str): Default device name.
-        """
-
-
-class DarkModeButton(RPCBase):
-    @rpc_call
-    def toggle_dark_mode(self) -> "None":
-        """
-        Toggle the dark mode state. This will change the theme of the entire
-        application to dark or light mode.
         """
 
 
@@ -2291,26 +2257,6 @@ class PositionerGroup(RPCBase):
         """
 
 
-class ResetButton(RPCBase):
-    """A button that resets the scan queue."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
-class ResumeButton(RPCBase):
-    """A button that continue scan queue."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
 class Ring(RPCBase):
     @rpc_call
     def _get_all_rpc(self) -> "dict":
@@ -2973,16 +2919,6 @@ class SignalComboBox(RPCBase):
 
 class SignalLineEdit(RPCBase):
     """Line edit widget for device input with autocomplete for device names."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
-class StopButton(RPCBase):
-    """A button that stops the current scan."""
 
     @rpc_call
     def remove(self):

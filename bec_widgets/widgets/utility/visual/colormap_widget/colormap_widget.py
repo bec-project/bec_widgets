@@ -11,6 +11,7 @@ class BECColorMapWidget(BECWidget, QWidget):
     ICON_NAME = "palette"
     USER_ACCESS = ["colormap"]
     PLUGIN = True
+    RPC = False
 
     def __init__(self, parent=None, cmap: str = "magma", **kwargs):
         super().__init__(**kwargs)

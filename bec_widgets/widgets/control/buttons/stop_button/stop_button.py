@@ -10,6 +10,7 @@ class StopButton(BECWidget, QWidget):
     """A button that stops the current scan."""
 
     PLUGIN = True
+    RPC = False
     ICON_NAME = "dangerous"
 
     def __init__(self, parent=None, client=None, config=None, gui_id=None, toolbar=False, **kwargs):

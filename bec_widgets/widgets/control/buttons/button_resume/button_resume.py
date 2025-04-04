@@ -10,6 +10,7 @@ class ResumeButton(BECWidget, QWidget):
     """A button that continue scan queue."""
 
     PLUGIN = True
+    RPC = False
     ICON_NAME = "resume"
 
     def __init__(self, parent=None, client=None, config=None, gui_id=None, toolbar=False, **kwargs):
