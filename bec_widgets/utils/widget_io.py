@@ -294,40 +294,48 @@ class WidgetHierarchy:
             only_bec_widgets(bool, optional): Whether to print only widgets that are instances of BECWidget.
             show_parent(bool, optional): Whether to display which BECWidget is the parent of each discovered BECWidget.
         """
-        from bec_widgets.widgets.plots.waveform.waveform import Waveform
-
-        is_bec = isinstance(widget, BECConnector)
-        if only_bec_widgets and not is_bec:
+        # Only process items that are instances of BECConnector.
+        if not isinstance(widget, BECConnector):
             return
 
-        parent_info = ""
-        if show_parent and is_bec:
-            ancestor = WidgetHierarchy._get_becwidget_ancestor(widget)
-            parent_info = f" parent={ancestor.__class__.__name__}" if ancestor else " parent=None"
+        # Always print parent's information.
+        parent_obj = widget.parent()
+        if parent_obj is not None and hasattr(parent_obj, "objectName"):
+            parent_name = parent_obj.objectName() or parent_obj.__class__.__name__
+        else:
+            parent_name = "None"
+        parent_info = f" parent={parent_name}"
 
         widget_info = f"{widget.__class__.__name__} ({widget.objectName()}){parent_info}"
         print(prefix + widget_info)
 
-        # Explicitly print curves if this is a Waveform widget
-        if isinstance(widget, Waveform):
-            for curve in widget.curves:
-                curve_prefix = prefix + "  └─ "
-                print(
-                    f"{curve_prefix}{curve.__class__.__name__} ({curve.objectName()}) parent={widget.objectName()}"
-                )
+        # If this widget is a PlotBase, skip printing its internal PlotItem.
+        # Instead, if there are data items (curves) that are BECConnector, print them.
+        from bec_widgets.widgets.plots.plot_base import PlotBase
 
-        # Regular Qt child traversal
+        if isinstance(widget, PlotBase) and hasattr(widget, "plot_item"):
+            if hasattr(widget.plot_item, "listDataItems"):
+                for data_item in widget.plot_item.listDataItems():
+                    if isinstance(data_item, BECConnector):
+                        item_prefix = prefix + "  └─ "
+                        # Use the widget's objectName as the parent for data items.
+                        print(
+                            f"{item_prefix}{data_item.__class__.__name__} ({data_item.objectName()}) parent={widget.objectName()}"
+                        )
+
+        # Traverse direct QWidget children that are BECConnector instances.
         for child in widget.findChildren(QWidget, options=Qt.FindDirectChildrenOnly):
-            child_prefix = prefix + "  └─ "
-            WidgetHierarchy.print_widget_hierarchy(
-                child,
-                indent + 1,
-                grab_values,
-                prefix=child_prefix,
-                exclude_internal_widgets=exclude_internal_widgets,
-                only_bec_widgets=only_bec_widgets,
-                show_parent=show_parent,
-            )
+            if isinstance(child, BECConnector):
+                child_prefix = prefix + "  └─ "
+                WidgetHierarchy.print_widget_hierarchy(
+                    child,
+                    indent + 1,
+                    grab_values,
+                    prefix=child_prefix,
+                    exclude_internal_widgets=exclude_internal_widgets,
+                    only_bec_widgets=only_bec_widgets,
+                    show_parent=show_parent,
+                )
 
     @staticmethod
     def _get_becwidget_ancestor(widget):
