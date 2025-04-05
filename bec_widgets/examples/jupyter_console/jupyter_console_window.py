@@ -74,6 +74,9 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         first_tab = QWidget()
         first_tab_layout = QVBoxLayout(first_tab)
         self.dock = BECDockArea(gui_id="dock")
+        wf0 = self.dock.new(widget="Waveform")
+        wf1 = self.dock.new(widget="Waveform")
+        wf0.element_list[0].plot("samx")
         first_tab_layout.addWidget(self.dock)
         tab_widget.addTab(first_tab, "Dock Area")
 
