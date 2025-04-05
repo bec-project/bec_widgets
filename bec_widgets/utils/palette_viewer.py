@@ -24,8 +24,8 @@ class PaletteViewer(BECWidget, QWidget):
     ICON_NAME = "palette"
 
     def __init__(self, *args, parent=None, **kwargs):
-        super().__init__(*args, theme_update=True, **kwargs)
         QWidget.__init__(self, parent=parent)
+        BECWidget.__init__(self, *args, theme_update=True, **kwargs)
         self.setFixedSize(400, 600)
         layout = QVBoxLayout(self)
         dark_mode_button = DarkModeButton(self)
