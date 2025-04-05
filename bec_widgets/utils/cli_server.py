@@ -140,6 +140,7 @@ class CLIServer:
             return res
 
     def serialize_object(self, obj):
+        # TODO here is broadcast from the server
         if isinstance(obj, BECConnector):
             # Check if RPC attribute exists and is explicitly set to False
             if hasattr(obj, "RPC") and obj.RPC is False:
@@ -149,9 +150,6 @@ class CLIServer:
             config["parent_id"] = obj.parent_id  # add parent_id to config
             return {
                 "gui_id": obj.gui_id,
-                # "name": (
-                #     obj._name if hasattr(obj, "_name") else obj.__class__.__name__
-                # ),  # pylint: disable=protected-access
                 "name": obj.objectName() if obj.objectName() else obj.__class__.__name__,
                 "widget_class": obj.__class__.__name__,
                 "config": config,
@@ -176,6 +174,9 @@ class CLIServer:
         """
 
         # We only need to broadcast the dock areas
+        # TODO here the registry is getting update
+        logger.error("Broadcasting registry update")
+        # TODO HERE SHOULD BE WHOLE PARENT - Child logic handled
         data = {
             key: serialized
             for key, val in connections.items()

@@ -24,6 +24,7 @@ class BECMainWindow(BECWidget, QMainWindow):
         QMainWindow.__init__(self, *args, **kwargs)
         BECWidget.__init__(self, gui_id=gui_id, **kwargs)
 
+        self.bec_dispatcher.start_cli_server("test")
         self.app = QApplication.instance()
 
         # self._upgrade_qapp() #TODO consider to make upgrade function to any QApplication to BECQApplication
@@ -49,12 +50,14 @@ class BECMainWindow(BECWidget, QMainWindow):
         self.setCentralWidget(self.ui)
 
     def _init_bec_specific_ui(self):
-        if getattr(self.app, "is_bec_app", False):
-            self.statusBar().showMessage(f"App ID: {self.app.gui_id}")
-        else:
-            logger.warning(
-                "Application is not a BECApplication instance. Status bar will not show App ID. Please initialize the application with BECApplication."
-            )
+        # if getattr(self.app, "is_bec_app", False):
+        #     self.statusBar().showMessage(f"App ID: {self.app.gui_id}")
+        # else:
+        #     logger.warning(
+        #         "Application is not a BECApplication instance. Status bar will not show App ID. Please initialize the application with BECApplication."
+        #     )
+        server_id = self.bec_dispatcher.cli_server.gui_id
+        self.statusBar().showMessage(f"App ID: {server_id}")
 
     def list_app_hierarchy(self):
         """

@@ -446,6 +446,7 @@ class BECGuiClient(RPCBase):
         Args:
             server_registry (dict): The server registry
         """
+        logger.error("Updating dynamic namespace with server registry")
         top_level_widgets: dict[str, RPCReference] = {}
         for gui_id, state in server_registry.items():
             widget = self._add_widget(state, self)

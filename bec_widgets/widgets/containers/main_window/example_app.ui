@@ -7,21 +7,45 @@
                 <x>0</x>
                 <y>0</y>
                 <width>824</width>
-                <height>1234</height>
+                <height>1320</height>
             </rect>
         </property>
         <property name="windowTitle">
             <string>Form</string>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout">
+        <layout class="QVBoxLayout" name="verticalLayout_3">
             <item>
-                <widget class="Waveform" name="waveform"/>
-            </item>
-            <item>
-                <widget class="BECDockArea" name="dock_area_2"/>
-            </item>
-            <item>
-                <widget class="BECDockArea" name="dock_area"/>
+                <widget class="QTabWidget" name="tabWidget">
+                    <property name="currentIndex">
+                        <number>1</number>
+                    </property>
+                    <widget class="QWidget" name="tab">
+                        <attribute name="title">
+                            <string>Tab 1</string>
+                        </attribute>
+                        <layout class="QVBoxLayout" name="verticalLayout">
+                            <item>
+                                <widget class="Waveform" name="waveform"/>
+                            </item>
+                            <item>
+                                <widget class="Waveform" name="waveform_2"/>
+                            </item>
+                        </layout>
+                    </widget>
+                    <widget class="QWidget" name="tab_2">
+                        <attribute name="title">
+                            <string>Tab 2</string>
+                        </attribute>
+                        <layout class="QVBoxLayout" name="verticalLayout_2">
+                            <item>
+                                <widget class="BECDockArea" name="dock_area"/>
+                            </item>
+                            <item>
+                                <widget class="BECDockArea" name="dock_area_2"/>
+                            </item>
+                        </layout>
+                    </widget>
+                </widget>
             </item>
         </layout>
     </widget>
