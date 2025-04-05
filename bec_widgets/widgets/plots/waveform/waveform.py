@@ -290,6 +290,8 @@ class Waveform(PlotBase):
         """
         Slot for when the axis settings dialog is closed.
         """
+        self.curve_settings_dialog.close()
+        self.curve_settings_dialog.deleteLater()
         self.curve_settings_dialog = None
         self.toolbar.widgets["curve"].action.setChecked(False)
 
@@ -766,6 +768,7 @@ class Waveform(PlotBase):
             Curve: The newly created curve object, added to the plot.
         """
         curve = Curve(parent=self, config=config, name=name, parent_item=self)
+        curve.setParentItem(self.plot_item)
         self.plot_item.addItem(curve)
         self._categorise_device_curves()
         return curve

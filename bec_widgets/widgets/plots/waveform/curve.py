@@ -93,6 +93,7 @@ class Curve(BECConnector, pg.PlotDataItem):
             self.config = config
         pg.PlotDataItem.__init__(self, parent=parent, name=name)
         BECConnector.__init__(self, config=config, gui_id=gui_id)
+
         self.parent_id = parent_item.config.gui_id
         self.parent_item = parent_item
         self.apply_config()
@@ -100,6 +101,9 @@ class Curve(BECConnector, pg.PlotDataItem):
         self.dap_summary = None
         if kwargs:
             self.set(**kwargs)
+
+    def parent(self):
+        return self.parent_item
 
     def apply_config(self, config: dict | CurveConfig | None = None, **kwargs) -> None:
         """

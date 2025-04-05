@@ -1,5 +1,6 @@
 # pylint: disable=no-name-in-module
 from __future__ import annotations
+import pyqtgraph as pg
 
 from abc import ABC, abstractmethod
 
@@ -293,34 +294,36 @@ class WidgetHierarchy:
             only_bec_widgets(bool, optional): Whether to print only widgets that are instances of BECWidget.
             show_parent(bool, optional): Whether to display which BECWidget is the parent of each discovered BECWidget.
         """
-        # Decide if this particular widget is to be printed
-        is_bec = isinstance(widget, BECWidget)
-        print_this = (not only_bec_widgets) or is_bec
+        from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
+        is_bec = isinstance(widget, BECConnector)
+        if only_bec_widgets and not is_bec:
+            return
+
+        parent_info = ""
         if show_parent and is_bec:
             ancestor = WidgetHierarchy._get_becwidget_ancestor(widget)
             parent_info = f" parent={ancestor.__class__.__name__}" if ancestor else " parent=None"
-        else:
-            parent_info = ""
 
-        if print_this:
-            widget_info = f"{widget.__class__.__name__} ({widget.objectName()}){parent_info}"
-            if grab_values:
-                value = WidgetIO.get_value(widget, ignore_errors=True)
-                value_str = f" [value: {value}]" if value is not None else ""
-                widget_info += value_str
-            print(prefix + widget_info)
+        widget_info = f"{widget.__class__.__name__} ({widget.objectName()}){parent_info}"
+        print(prefix + widget_info)
 
-        # Explicitly include all children widgets
-        children = widget.findChildren(QWidget, options=Qt.FindDirectChildrenOnly)
-        for child in children:
-            arrow = "├─ " if child != children[-1] else "└─ "
-            child_prefix = prefix + "  "
+        # Explicitly print curves if this is a Waveform widget
+        if isinstance(widget, Waveform):
+            for curve in widget.curves:
+                curve_prefix = prefix + "  └─ "
+                print(
+                    f"{curve_prefix}{curve.__class__.__name__} ({curve.objectName()}) parent={widget.objectName()}"
+                )
+
+        # Regular Qt child traversal
+        for child in widget.findChildren(QWidget, options=Qt.FindDirectChildrenOnly):
+            child_prefix = prefix + "  └─ "
             WidgetHierarchy.print_widget_hierarchy(
                 child,
                 indent + 1,
-                grab_values=grab_values,
-                prefix=child_prefix + arrow,
+                grab_values,
+                prefix=child_prefix,
                 exclude_internal_widgets=exclude_internal_widgets,
                 only_bec_widgets=only_bec_widgets,
                 show_parent=show_parent,

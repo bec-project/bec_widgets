@@ -222,6 +222,8 @@ class PlotBase(BECWidget, QWidget):
         """
         Slot for when the axis settings dialog is closed.
         """
+        self.axis_settings_dialog.close()
+        self.axis_settings_dialog.deleteLater()
         self.axis_settings_dialog = None
         self.toolbar.widgets["axis"].action.setChecked(False)
 

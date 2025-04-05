@@ -80,6 +80,7 @@ class ScatterCurve(BECConnector, pg.PlotDataItem):
         pg.PlotDataItem.__init__(self, **kwargs, name=name)
         BECConnector.__init__(self, config=config, gui_id=gui_id)
         self.parent_item = parent_item
+        self.parent = parent_item
         self.data_z = None  # color scaling needs to be cashed for changing colormap
         self.apply_config()
 
