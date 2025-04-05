@@ -6,6 +6,8 @@ import types
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
+from PySide6.QtWidgets import QApplication
+
 from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
@@ -17,6 +19,8 @@ from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.error_popups import ErrorPopupUtility
+from bec_widgets.utils.widget_io import WidgetHierarchy
+from bec_widgets.widgets.plots.plot_base import PlotBase
 
 if TYPE_CHECKING:
     from bec_lib import messages
@@ -77,6 +81,7 @@ class CLIServer:
         self._heartbeat_timer = QTimer()
         self._heartbeat_timer.timeout.connect(self.emit_heartbeat)
         self._heartbeat_timer.start(200)
+        self._registry_update_callbacks = []
 
         self.status = messages.BECStatus.RUNNING
         logger.success(f"Server started with gui_id: {self.gui_id}")
@@ -168,26 +173,84 @@ class CLIServer:
         except RedisError as exc:
             logger.error(f"Error while emitting heartbeat: {exc}")
 
+    # def broadcast_registry_update(self, connections: dict):
+    #     """
+    #     Broadcast the updated registry to all clients.
+    #     """
+    #
+    #     # We only need to broadcast the dock areas
+    #     # TODO here the registry is getting update
+    #     logger.error("Broadcasting registry update")
+    #     # TODO HERE SHOULD BE WHOLE PARENT - Child logic handled
+    #     data = {
+    #         key: serialized
+    #         for key, val in connections.items()
+    #         if (serialized := self.serialize_object(val)) is not None
+    #     }
+    #     logger.info(f"Broadcasting registry update: {data} for {self.gui_id}")
+    #     self.client.connector.xadd(
+    #         MessageEndpoints.gui_registry_state(self.gui_id),
+    #         msg_dict={"data": messages.GUIRegistryStateMessage(state=data)},
+    #         max_size=1,  # only single message in stream
+    #     )
     def broadcast_registry_update(self, connections: dict):
         """
-        Broadcast the updated registry to all clients.
+        Build a dictionary of all BECConnectors in the app, setting 'parent_id' to the
+        parent's 'gui_id' if one exists, and then broadcast to all clients.
         """
-
-        # We only need to broadcast the dock areas
-        # TODO here the registry is getting update
         logger.error("Broadcasting registry update")
-        # TODO HERE SHOULD BE WHOLE PARENT - Child logic handled
-        data = {
-            key: serialized
-            for key, val in connections.items()
-            if (serialized := self.serialize_object(val)) is not None
-        }
-        logger.info(f"Broadcasting registry update: {data} for {self.gui_id}")
+        # 1) Gather ALL BECConnector-based widgets
+        all_qwidgets = QApplication.allWidgets()
+        bec_widgets = set(w for w in all_qwidgets if isinstance(w, BECConnector))
+        bec_widgets = {c for c in bec_widgets if not (hasattr(c, "RPC") and c.RPC is False)}
+
+        # 2) Also gather BECConnector-based data items from PlotBase
+        for w in all_qwidgets:
+            if isinstance(w, PlotBase) and hasattr(w, "plot_item"):
+                if hasattr(w.plot_item, "listDataItems"):
+                    for data_item in w.plot_item.listDataItems():
+                        if isinstance(data_item, BECConnector):
+                            bec_widgets.add(data_item)
+
+        # 3) Convert each BECConnector to a JSON-like dict
+        registry_data = {}
+        for connector in bec_widgets:
+            serialized = self._serialize_bec_connector(connector)
+            registry_data[serialized["gui_id"]] = serialized
+
+        # 4) Broadcast the final dictionary to all interested callbacks
+        for callback in self._registry_update_callbacks:
+            callback(registry_data)
+
+        logger.info(f"Broadcasting registry update: {registry_data} for {self.gui_id}")
         self.client.connector.xadd(
             MessageEndpoints.gui_registry_state(self.gui_id),
-            msg_dict={"data": messages.GUIRegistryStateMessage(state=data)},
+            msg_dict={"data": messages.GUIRegistryStateMessage(state=registry_data)},
             max_size=1,  # only single message in stream
         )
+
+    def _serialize_bec_connector(self, connector: BECConnector) -> dict:
+        """
+        Create the serialization dict for a single BECConnector,
+        setting 'parent_id' via the real nearest BECConnector parent.
+        """
+        parent = WidgetHierarchy._get_becwidget_ancestor(connector)
+        parent_id = parent.gui_id if parent else None
+
+        config_dict = connector.config.model_dump()
+        config_dict["parent_id"] = parent_id
+
+        return {
+            "gui_id": connector.gui_id,
+            "name": connector.objectName() or connector.__class__.__name__,
+            "widget_class": connector.__class__.__name__,
+            "config": config_dict,
+            "__rpc__": True,
+        }
+
+    # Suppose clients register callbacks to receive updates
+    def add_registry_update_callback(self, cb):
+        self._registry_update_callbacks.append(cb)
 
     def shutdown(self):  # TODO not sure if needed when cleanup is done at level of BECConnector
         self.status = messages.BECStatus.IDLE
