@@ -94,6 +94,7 @@ class Curve(BECConnector, pg.PlotDataItem):
         pg.PlotDataItem.__init__(self, parent=parent, name=name)
         BECConnector.__init__(self, config=config, gui_id=gui_id)
 
+        self.setObjectName(name.replace("-", "_"))
         self.parent_id = parent_item.config.gui_id
         self.parent_item = parent_item
         self.apply_config()
