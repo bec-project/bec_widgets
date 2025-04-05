@@ -349,60 +349,72 @@ class WidgetHierarchy:
     @staticmethod
     def print_becconnector_hierarchy_from_app():
         """
-        Enumerate ALL widgets in the QApplication, pick only BECConnector objects,
-        then build a parent->child graph where each child's 'parent' is the closest
-        BECConnector ancestor. Finally, print the entire hierarchy from the root(s).
+        Enumerate ALL BECConnector objects in the QApplication.
+        Also detect if a widget is a PlotBase, and add any data items
+        (PlotDataItem-like) that are also BECConnector objects.
 
-        The result is a single, consolidated hierarchy for your entire running GUI.
+        Build a parent->children graph where each child's 'parent'
+        is its closest BECConnector ancestor. Print the entire hierarchy
+        from the root(s).
+
+        The result is a single, consolidated tree for your entire
+        running GUI, including PlotBase data items that are BECConnector.
         """
-        # 1. Gather ALL widgets from the running QApplication
-        all_widgets = QApplication.allWidgets()
+        import sys
+        from collections import defaultdict
+        from qtpy.QtWidgets import QApplication
+        from bec_widgets.utils import BECConnector
+        from bec_widgets.widgets.plots.plot_base import PlotBase
 
-        # 2. Filter out those which are BECConnector
-        bec_widgets = [w for w in all_widgets if isinstance(w, BECConnector)]
+        # 1) Gather ALL QWidget-based BECConnector objects
+        all_qwidgets = QApplication.allWidgets()
+        bec_widgets = set(w for w in all_qwidgets if isinstance(w, BECConnector))
 
-        # 3. Build a mapping parent -> list of children,
-        #    where 'parent' is the nearest BECConnector ancestor
+        # 2) Also gather any BECConnector-based data items from PlotBase widgets
+        for w in all_qwidgets:
+            if isinstance(w, PlotBase) and hasattr(w, "plot_item"):
+                plot_item = w.plot_item
+                if hasattr(plot_item, "listDataItems"):
+                    for data_item in plot_item.listDataItems():
+                        if isinstance(data_item, BECConnector):
+                            bec_widgets.add(data_item)
+
+        # 3) Build a map of (closest BECConnector parent) -> list of children
         parent_map = defaultdict(list)
-
         for w in bec_widgets:
             parent_bec = WidgetHierarchy._get_becwidget_ancestor(w)
             parent_map[parent_bec].append(w)
 
-        # 4. Recursively print the hierarchy (DFS or BFS).
-        #    Start from items whose nearest BECConnector parent is None.
+        # 4) Define a recursive printer to show each object's children
         def print_tree(parent, prefix=""):
             children = parent_map[parent]
             for i, child in enumerate(children):
-                # Figure out indentation/prefix
-                # We'll do a "└─" for the last child at that level, "├─" otherwise
                 connector_class = child.__class__.__name__
                 connector_name = child.objectName() or connector_class
-                # The parent label
+
                 if parent is None:
                     parent_label = "None"
                 else:
                     parent_label = parent.objectName() or parent.__class__.__name__
 
-                # Print the line for this child
                 line = f"{connector_class} ({connector_name}) parent={parent_label}"
-                if i == len(children) - 1:
-                    print(prefix + "└─ " + line)
-                    next_prefix = prefix + "   "
-                else:
-                    print(prefix + "├─ " + line)
-                    next_prefix = prefix + "│  "
+                # Determine tree-branch symbols
+                is_last = i == len(children) - 1
+                branch_str = "└─ " if is_last else "├─ "
+                print(prefix + branch_str + line)
 
-                # Recurse
+                # Recurse deeper
+                next_prefix = prefix + ("   " if is_last else "│  ")
                 print_tree(child, prefix=next_prefix)
 
-        # 5. Print top-level roots (those whose parent is None)
-        #    Each top-level root is printed without indentation/prefix.
-        for root in parent_map[None]:
+        # 5) Print top-level items (roots) whose BECConnector parent is None
+        roots = parent_map[None]
+        for r_i, root in enumerate(roots):
             root_class = root.__class__.__name__
             root_name = root.objectName() or root_class
-            print(f"{root_class} ({root_name}) parent=None")
-
+            line = f"{root_class} ({root_name}) parent=None"
+            is_last_root = r_i == len(roots) - 1
+            print(line)
             # Recurse into its children
             print_tree(root, prefix="   ")
 
@@ -412,6 +424,8 @@ class WidgetHierarchy:
         Traverse up the parent chain to find the nearest BECConnector.
         Returns None if none is found.
         """
+        from bec_widgets.utils import BECConnector
+
         parent = widget.parent()
         while parent is not None:
             if isinstance(parent, BECConnector):
