@@ -84,7 +84,6 @@ class BECDockArea(BECWidget, QWidget):
             self.config = config
         QWidget.__init__(self, parent=parent)
         BECWidget.__init__(self, client=client, config=config, gui_id=gui_id, name=name, **kwargs)
-        self.setObjectName("bec")
         self._parent = parent
         self.layout = QVBoxLayout(self)
         self.layout.setSpacing(5)
