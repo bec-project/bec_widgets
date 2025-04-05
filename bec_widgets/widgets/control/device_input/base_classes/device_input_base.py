@@ -81,6 +81,7 @@ class DeviceInputBase(BECWidget):
         ReadoutPriority.CONTINUOUS: "readout_continuous",
         ReadoutPriority.ON_REQUEST: "readout_on_request",
     }
+    RPC = False
 
     def __init__(self, client=None, config=None, gui_id: str | None = None, **kwargs):
 

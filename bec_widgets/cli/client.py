@@ -21,8 +21,6 @@ class Widgets(str, enum.Enum):
     BECStatusBox = "BECStatusBox"
     DapComboBox = "DapComboBox"
     DeviceBrowser = "DeviceBrowser"
-    DeviceComboBox = "DeviceComboBox"
-    DeviceLineEdit = "DeviceLineEdit"
     Image = "Image"
     LMFitDialog = "LMFitDialog"
     LogPanel = "LogPanel"
@@ -36,8 +34,6 @@ class Widgets(str, enum.Enum):
     RingProgressBar = "RingProgressBar"
     ScanControl = "ScanControl"
     ScatterWaveform = "ScatterWaveform"
-    SignalComboBox = "SignalComboBox"
-    SignalLineEdit = "SignalLineEdit"
     TextBox = "TextBox"
     VSCodeEditor = "VSCodeEditor"
     Waveform = "Waveform"
@@ -609,46 +605,6 @@ class DemoApp(RPCBase):
 
 
 class DeviceBrowser(RPCBase):
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
-class DeviceComboBox(RPCBase):
-    """Combobox widget for device input with autocomplete for device names."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
-class DeviceInputBase(RPCBase):
-    """Mixin base class for device input widgets."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
-class DeviceLineEdit(RPCBase):
-    """Line edit widget for device input with autocomplete for device names."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
-class DeviceSignalInputBase(RPCBase):
-    """Mixin base class for device signal input widgets."""
-
     @rpc_call
     def remove(self):
         """
@@ -2907,26 +2863,6 @@ class ScatterWaveform(RPCBase):
         """
 
 
-class SignalComboBox(RPCBase):
-    """Line edit widget for device input with autocomplete for device names."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
-class SignalLineEdit(RPCBase):
-    """Line edit widget for device input with autocomplete for device names."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
 class TextBox(RPCBase):
     """A widget that displays text in plain and HTML format"""
 
@@ -3489,28 +3425,8 @@ class WindowWithUi(RPCBase):
         None
         """
 
-    @property
     @rpc_call
-    def dock_area(self):
+    def hierarchy(self):
         """
         None
-        """
-
-    @rpc_call
-    def register_all_rpc(self):
-        """
-        None
-        """
-
-    @property
-    @rpc_call
-    def widget_list(self) -> list:
-        """
-        Return a list of all widgets in the application.
-        """
-
-    @rpc_call
-    def list_app_hierarchy(self):
-        """
-        List the hierarchy of the application.
         """
