@@ -165,7 +165,6 @@ class CLIServer:
 
     # FIXME signature should be changed on all levels, connection dict is no longer needed
     def broadcast_registry_update(self, _):
-        logger.error("Broadcasting registry update")
         # 1) Gather ALL BECConnector-based widgets
         all_qwidgets = QApplication.allWidgets()
         bec_widgets = set(w for w in all_qwidgets if isinstance(w, BECConnector))
