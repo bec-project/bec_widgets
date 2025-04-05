@@ -20,8 +20,8 @@ MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 class LaunchWindow(BECWidget, QMainWindow):
     def __init__(self, gui_id: str = None, *args, **kwargs):
-        QMainWindow.__init__(self, *args, **kwargs)  # FIRST
-        BECWidget.__init__(self, gui_id=gui_id, **kwargs)  # SECOND
+        QMainWindow.__init__(self, *args, **kwargs)
+        BECWidget.__init__(self, gui_id=gui_id, **kwargs)
 
         self.setObjectName("LaunchWindow")
 
@@ -160,6 +160,7 @@ class LaunchWindow(BECWidget, QMainWindow):
             logger.info(f"Existing dock areas: {geometry}")
             if geometry is not None:
                 dock_area.setGeometry(*geometry)
+
             dock_area.show()
             return dock_area
 
