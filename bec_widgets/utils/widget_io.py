@@ -294,43 +294,49 @@ class WidgetHierarchy:
             only_bec_widgets(bool, optional): Whether to print only widgets that are instances of BECWidget.
             show_parent(bool, optional): Whether to display which BECWidget is the parent of each discovered BECWidget.
         """
-        # Only process items that are instances of BECConnector.
-        if not isinstance(widget, BECConnector):
+        from bec_widgets.widgets.plots.waveform.waveform import Waveform
+
+        # 1) Filter out widgets that are not BECConnectors (if 'only_bec_widgets' is True)
+        is_bec = isinstance(widget, BECConnector)
+        if only_bec_widgets and not is_bec:
             return
 
-        # Always print parent's information.
-        parent_obj = widget.parent()
-        if parent_obj is not None and hasattr(parent_obj, "objectName"):
-            parent_name = parent_obj.objectName() or parent_obj.__class__.__name__
-        else:
-            parent_name = "None"
-        parent_info = f" parent={parent_name}"
+        # 2) Determine and print the parent's info (closest BECConnector)
+        parent_info = ""
+        if show_parent and is_bec:
+            ancestor = WidgetHierarchy._get_becwidget_ancestor(widget)
+            if ancestor:
+                parent_label = ancestor.objectName() or ancestor.__class__.__name__
+                parent_info = f" parent={parent_label}"
+            else:
+                parent_info = " parent=None"
 
         widget_info = f"{widget.__class__.__name__} ({widget.objectName()}){parent_info}"
         print(prefix + widget_info)
 
-        # If this widget is a PlotBase, skip printing its internal PlotItem.
-        # Instead, if there are data items (curves) that are BECConnector, print them.
-        from bec_widgets.widgets.plots.plot_base import PlotBase
+        # 3) If it's a Waveform, explicitly print the curves
+        if isinstance(widget, Waveform):
+            for curve in widget.curves:
+                curve_prefix = prefix + "  └─ "
+                print(
+                    f"{curve_prefix}{curve.__class__.__name__} ({curve.objectName()}) "
+                    f"parent={widget.objectName()}"
+                )
 
-        if isinstance(widget, PlotBase) and hasattr(widget, "plot_item"):
-            if hasattr(widget.plot_item, "listDataItems"):
-                for data_item in widget.plot_item.listDataItems():
-                    if isinstance(data_item, BECConnector):
-                        item_prefix = prefix + "  └─ "
-                        # Use the widget's objectName as the parent for data items.
-                        print(
-                            f"{item_prefix}{data_item.__class__.__name__} ({data_item.objectName()}) parent={widget.objectName()}"
-                        )
+        # 4) Recursively handle each child if:
+        #    - It's a QWidget
+        #    - It is a BECConnector (or we don't care about filtering)
+        #    - Its closest BECConnector parent is the current widget
+        for child in widget.findChildren(QWidget):
+            if only_bec_widgets and not isinstance(child, BECConnector):
+                continue
 
-        # Traverse direct QWidget children that are BECConnector instances.
-        for child in widget.findChildren(QWidget, options=Qt.FindDirectChildrenOnly):
-            if isinstance(child, BECConnector):
+            if WidgetHierarchy._get_becwidget_ancestor(child) == widget:
                 child_prefix = prefix + "  └─ "
                 WidgetHierarchy.print_widget_hierarchy(
                     child,
-                    indent + 1,
-                    grab_values,
+                    indent=indent + 1,
+                    grab_values=grab_values,
                     prefix=child_prefix,
                     exclude_internal_widgets=exclude_internal_widgets,
                     only_bec_widgets=only_bec_widgets,
@@ -340,7 +346,7 @@ class WidgetHierarchy:
     @staticmethod
     def _get_becwidget_ancestor(widget):
         """
-        Climb the parent chain to find the nearest BECWidget above this widget.
+        Traverse up the parent chain to find the nearest BECConnector.
         Returns None if none is found.
         """
         parent = widget.parent()
