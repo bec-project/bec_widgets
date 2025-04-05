@@ -177,8 +177,9 @@ class _ErrorPopupUtility(QObject):
         msg.setStandardButtons(QMessageBox.Ok)
         msg.setDetailedText(detailed_text)
         msg.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        msg.setMinimumWidth(600)
-        msg.setMinimumHeight(400)
+        msg.resize(800, 800)
+        # msg.setMinimumWidth(600)
+        # msg.setMinimumHeight(400)
         msg.exec_()
 
     def show_property_error(self, title, message, widget):

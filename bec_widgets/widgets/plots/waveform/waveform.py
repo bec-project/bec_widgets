@@ -1607,7 +1607,7 @@ class DemoApp(QMainWindow):  # pragma: no cover
         self.waveform_popup = Waveform(popups=True)
         self.waveform_popup.plot(y_name="monitor_async")
 
-        self.waveform_side = Waveform(popups=False, parent=self.main_widget)
+        self.waveform_side = Waveform(popups=False)
         self.waveform_side.plot(y_name="bpm4i", y_entry="bpm4i", dap="GaussianModel")
         self.waveform_side.plot(y_name="bpm3a", y_entry="bpm3a")
 
@@ -1622,9 +1622,10 @@ class DemoApp(QMainWindow):  # pragma: no cover
     def hierarchy(self):
         print("getting app")
         WidgetHierarchy.print_becconnector_hierarchy_from_app()  # , only_bec_widgets=True)
-
-        print("getting of side waveform")
-        WidgetHierarchy.print_widget_hierarchy(self.waveform_side, only_bec_widgets=True)
+        print("Waveform popup")
+        print(self.waveform_popup.objectName())
+        print("Waveform side")
+        print(self.waveform_side.objectName())
 
 
 if __name__ == "__main__":  # pragma: no cover

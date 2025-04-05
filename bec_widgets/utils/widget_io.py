@@ -23,8 +23,6 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.utils import BECConnector
-from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
 
 
@@ -298,6 +296,8 @@ class WidgetHierarchy:
             show_parent(bool, optional): Whether to display which BECWidget is the parent of each discovered BECWidget.
         """
         from bec_widgets.widgets.plots.waveform.waveform import Waveform
+
+        from bec_widgets.utils import BECConnector
 
         # 1) Filter out widgets that are not BECConnectors (if 'only_bec_widgets' is True)
         is_bec = isinstance(widget, BECConnector)
