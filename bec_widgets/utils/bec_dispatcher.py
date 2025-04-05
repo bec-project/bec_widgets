@@ -114,6 +114,8 @@ class BECDispatcher:
             logger.warning("Could not connect to Redis, skipping start of BECClient.")
 
         logger.success("Initialized BECDispatcher")
+
+        self.start_cli_server()
         self._initialized = True
 
     @classmethod
@@ -207,7 +209,7 @@ class BECDispatcher:
             logger.error("Cannot start CLI server without a running client")
             return
         self.cli_server = CLIServer(gui_id, dispatcher=self, client=self.client)
-        logger.success("Started CLI server with gui_id: {gui_id}")
+        logger.success(f"Started CLI server with gui_id: {gui_id}")
 
     def stop_cli_server(self):
         """
