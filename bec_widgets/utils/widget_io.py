@@ -1,5 +1,8 @@
 # pylint: disable=no-name-in-module
 from __future__ import annotations
+
+from collections import defaultdict
+
 import pyqtgraph as pg
 
 from abc import ABC, abstractmethod
@@ -331,17 +334,77 @@ class WidgetHierarchy:
             if only_bec_widgets and not isinstance(child, BECConnector):
                 continue
 
-            if WidgetHierarchy._get_becwidget_ancestor(child) == widget:
-                child_prefix = prefix + "  └─ "
-                WidgetHierarchy.print_widget_hierarchy(
-                    child,
-                    indent=indent + 1,
-                    grab_values=grab_values,
-                    prefix=child_prefix,
-                    exclude_internal_widgets=exclude_internal_widgets,
-                    only_bec_widgets=only_bec_widgets,
-                    show_parent=show_parent,
-                )
+            # if WidgetHierarchy._get_becwidget_ancestor(child) == widget:
+            child_prefix = prefix + "  └─ "
+            WidgetHierarchy.print_widget_hierarchy(
+                child,
+                indent=indent + 1,
+                grab_values=grab_values,
+                prefix=child_prefix,
+                exclude_internal_widgets=exclude_internal_widgets,
+                only_bec_widgets=only_bec_widgets,
+                show_parent=show_parent,
+            )
+
+    @staticmethod
+    def print_becconnector_hierarchy_from_app():
+        """
+        Enumerate ALL widgets in the QApplication, pick only BECConnector objects,
+        then build a parent->child graph where each child's 'parent' is the closest
+        BECConnector ancestor. Finally, print the entire hierarchy from the root(s).
+
+        The result is a single, consolidated hierarchy for your entire running GUI.
+        """
+        # 1. Gather ALL widgets from the running QApplication
+        all_widgets = QApplication.allWidgets()
+
+        # 2. Filter out those which are BECConnector
+        bec_widgets = [w for w in all_widgets if isinstance(w, BECConnector)]
+
+        # 3. Build a mapping parent -> list of children,
+        #    where 'parent' is the nearest BECConnector ancestor
+        parent_map = defaultdict(list)
+
+        for w in bec_widgets:
+            parent_bec = WidgetHierarchy._get_becwidget_ancestor(w)
+            parent_map[parent_bec].append(w)
+
+        # 4. Recursively print the hierarchy (DFS or BFS).
+        #    Start from items whose nearest BECConnector parent is None.
+        def print_tree(parent, prefix=""):
+            children = parent_map[parent]
+            for i, child in enumerate(children):
+                # Figure out indentation/prefix
+                # We'll do a "└─" for the last child at that level, "├─" otherwise
+                connector_class = child.__class__.__name__
+                connector_name = child.objectName() or connector_class
+                # The parent label
+                if parent is None:
+                    parent_label = "None"
+                else:
+                    parent_label = parent.objectName() or parent.__class__.__name__
+
+                # Print the line for this child
+                line = f"{connector_class} ({connector_name}) parent={parent_label}"
+                if i == len(children) - 1:
+                    print(prefix + "└─ " + line)
+                    next_prefix = prefix + "   "
+                else:
+                    print(prefix + "├─ " + line)
+                    next_prefix = prefix + "│  "
+
+                # Recurse
+                print_tree(child, prefix=next_prefix)
+
+        # 5. Print top-level roots (those whose parent is None)
+        #    Each top-level root is printed without indentation/prefix.
+        for root in parent_map[None]:
+            root_class = root.__class__.__name__
+            root_name = root.objectName() or root_class
+            print(f"{root_class} ({root_name}) parent=None")
+
+            # Recurse into its children
+            print_tree(root, prefix="   ")
 
     @staticmethod
     def _get_becwidget_ancestor(widget):
@@ -355,6 +418,19 @@ class WidgetHierarchy:
                 return parent
             parent = parent.parent()
         return None
+
+    # @staticmethod
+    # def _get_becwidget_ancestor(widget):
+    #     """
+    #     Traverse up the parent chain to find the nearest BECConnector.
+    #     Returns None if none is found.
+    #     """
+    #     parent = widget.parent()
+    #     while parent is not None:
+    #         if isinstance(parent, BECConnector):
+    #             return parent
+    #         parent = parent.parent()
+    #     return None
 
     @staticmethod
     def export_config_to_dict(
