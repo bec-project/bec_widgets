@@ -22,8 +22,8 @@ class DeviceInputWidget(DeviceSignalInputBase, QWidget):
     """Thin wrapper around DeviceInputBase to make it a QWidget"""
 
     def __init__(self, parent=None, client=None, config=None, gui_id=None):
-        super().__init__(client=client, config=config, gui_id=gui_id)
         QWidget.__init__(self, parent=parent)
+        DeviceSignalInputBase.__init__(self, client=client, config=config, gui_id=gui_id)
 
 
 @pytest.fixture
