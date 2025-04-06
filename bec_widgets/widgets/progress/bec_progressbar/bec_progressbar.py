@@ -26,7 +26,7 @@ class BECProgressBar(BECWidget, QWidget):
 
     def __init__(self, parent=None, client=None, config=None, gui_id=None, **kwargs):
         QWidget.__init__(self, parent=parent)
-        BECWidget.__init__(client=client, config=config, gui_id=gui_id, **kwargs)
+        BECWidget.__init__(self, client=client, config=config, gui_id=gui_id, **kwargs)
 
         accent_colors = get_accent_colors()
 
