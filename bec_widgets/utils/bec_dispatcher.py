@@ -80,13 +80,21 @@ class BECDispatcher:
     client: BECClient
     cli_server: CLIServer | None = None
 
-    def __new__(cls, client=None, config: str | ServiceConfig | None = None, *args, **kwargs):
+    # TODO add custom gui id for server
+    def __new__(
+        cls,
+        client=None,
+        config: str | ServiceConfig | None = None,
+        gui_id: str = None,
+        *args,
+        **kwargs,
+    ):
         if cls._instance is None:
             cls._instance = super(BECDispatcher, cls).__new__(cls)
             cls._initialized = False
         return cls._instance
 
-    def __init__(self, client=None, config: str | ServiceConfig | None = None):
+    def __init__(self, client=None, config: str | ServiceConfig | None = None, gui_id: str = None):
         if self._initialized:
             return
 
@@ -115,7 +123,7 @@ class BECDispatcher:
 
         logger.success("Initialized BECDispatcher")
 
-        self.start_cli_server()
+        self.start_cli_server(gui_id=gui_id)
         self._initialized = True
 
     @classmethod

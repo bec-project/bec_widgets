@@ -105,14 +105,14 @@ class GUIServer:
         """
         Run the GUI server.
         """
+        # TODO decide if attach to app or not
         self.app = QApplication(sys.argv)
         self.app.setApplicationName("BEC")
         self.app.gui_id = self.gui_id  # type: ignore
         self.setup_bec_icon()
 
         service_config = self._get_service_config()
-        self.dispatcher = BECDispatcher(config=service_config)
-        self.dispatcher.start_cli_server(gui_id=self.gui_id)
+        self.dispatcher = BECDispatcher(config=service_config, gui_id=self.gui_id)
 
         self.launcher_window = LaunchWindow(gui_id=f"{self.gui_id}:launcher")
         self.launcher_window.setAttribute(Qt.WA_ShowWithoutActivating)  # type: ignore
