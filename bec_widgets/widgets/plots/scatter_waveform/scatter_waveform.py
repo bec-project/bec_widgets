@@ -111,8 +111,6 @@ class ScatterWaveform(PlotBase):
             parent=parent, config=config, client=client, gui_id=gui_id, popups=popups, **kwargs
         )
         self._main_curve = ScatterCurve(parent=self, parent_item=self)
-        # self._main_curve = ScatterCurve(parent_item=self)
-        # For PropertyManager identification
 
         # Specific GUI elements
         self.scatter_dialog = None
