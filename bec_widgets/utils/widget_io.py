@@ -1,13 +1,8 @@
 # pylint: disable=no-name-in-module
 from __future__ import annotations
 
-from collections import defaultdict
-
-import pyqtgraph as pg
-
 from abc import ABC, abstractmethod
 
-from PySide6.QtCore import Qt
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -295,9 +290,8 @@ class WidgetHierarchy:
             only_bec_widgets(bool, optional): Whether to print only widgets that are instances of BECWidget.
             show_parent(bool, optional): Whether to display which BECWidget is the parent of each discovered BECWidget.
         """
-        from bec_widgets.widgets.plots.waveform.waveform import Waveform
-
         from bec_widgets.utils import BECConnector
+        from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
         # 1) Filter out widgets that are not BECConnectors (if 'only_bec_widgets' is True)
         is_bec = isinstance(widget, BECConnector)
@@ -362,7 +356,9 @@ class WidgetHierarchy:
         """
         import sys
         from collections import defaultdict
+
         from qtpy.QtWidgets import QApplication
+
         from bec_widgets.utils import BECConnector
         from bec_widgets.widgets.plots.plot_base import PlotBase
 
