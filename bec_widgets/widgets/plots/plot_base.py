@@ -171,6 +171,9 @@ class PlotBase(BECWidget, QWidget):
         # hide some options by default
         self.toolbar.toggle_action_visibility("fps_monitor", False)
 
+        # Get default viewbox state
+        self.mouse_bundle.get_viewbox_mode()
+
     def add_side_menus(self):
         """Adds multiple menus to the side panel."""
         # Setting Axis Widget
