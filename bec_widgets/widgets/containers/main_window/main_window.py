@@ -2,15 +2,17 @@ import os
 from typing import TYPE_CHECKING
 
 from bec_lib.logger import bec_logger
-from qtpy.QtGui import QAction, QActionGroup
+from qtpy.QtCore import QSize
+from qtpy.QtGui import QAction, QActionGroup, QIcon
 from qtpy.QtWidgets import QApplication, QMainWindow, QStyle
 
+import bec_widgets
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils import UILoader
-from bec_widgets.utils.bec_qapp import BECApplication
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.container_utils import WidgetContainerUtils
+from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
 
@@ -19,52 +21,49 @@ if TYPE_CHECKING:
 
 logger = bec_logger.logger
 
+MODULE_PATH = os.path.dirname(bec_widgets.__file__)
+
 
 class BECMainWindow(BECWidget, QMainWindow):
-    def __init__(self, gui_id: str = None, *args, **kwargs):
+    def __init__(self, gui_id: str = None, client=None, window_title: str = "BEC", *args, **kwargs):
         QMainWindow.__init__(self, *args, **kwargs)
-        BECWidget.__init__(self, gui_id=gui_id, **kwargs)
+        BECWidget.__init__(self, gui_id=gui_id, client=client, **kwargs)
 
-        self.bec_dispatcher.start_cli_server("test")
         self.app = QApplication.instance()
-
-        # self._upgrade_qapp() #TODO consider to make upgrade function to any QApplication to BECQApplication
+        self.setWindowTitle(window_title)
         self._init_ui()
 
     def _init_ui(self):
-        # Set the window title
-        self.setWindowTitle("BEC")
 
         # Set Menu and Status bar
         self._setup_menu_bar()
 
         # BEC Specific UI
-        self._init_bec_specific_ui()
-        # self.ui = UILoader
-        # ui_file_path = os.path.join(os.path.dirname(__file__), "general_app.ui")
-        # self.load_ui(ui_file_path)
+        self.display_app_it()
 
-    # TODO can be implemented for toolbar
+    def _init_bec_icon(self):
+        icon = self.app.windowIcon()
+        if icon.isNull():
+            icon = QIcon()
+            icon.addFile(
+                os.path.join(MODULE_PATH, "assets", "app_icons", "bec_widgets_icon.png"),
+                size=QSize(48, 48),
+            )
+            self.setWindowIcon(icon)
+        else:
+            print("An icon is set")
+
     def load_ui(self, ui_file):
         loader = UILoader(self)
         self.ui = loader.loader(ui_file)
         self.setCentralWidget(self.ui)
 
-    def _init_bec_specific_ui(self):
-        # if getattr(self.app, "is_bec_app", False):
-        #     self.statusBar().showMessage(f"App ID: {self.app.gui_id}")
-        # else:
-        #     logger.warning(
-        #         "Application is not a BECApplication instance. Status bar will not show App ID. Please initialize the application with BECApplication."
-        #     )
+    def display_app_it(self):
         server_id = self.bec_dispatcher.cli_server.gui_id
         self.statusBar().showMessage(f"App ID: {server_id}")
 
-    def list_app_hierarchy(self):
-        """
-        List the hierarchy of the application.
-        """
-        self.app.list_hierarchy()
+    def _fetch_theme(self) -> str:
+        return self.app.theme.theme
 
     def _setup_menu_bar(self):
         """
@@ -91,8 +90,11 @@ class BECMainWindow(BECWidget, QMainWindow):
         dark_theme_action.triggered.connect(lambda: self.change_theme("dark"))
 
         # Set the default theme
-        # TODO can be fetched from app
-        dark_theme_action.setChecked(True)
+        theme = self.app.theme.theme
+        if theme == "light":
+            light_theme_action.setChecked(True)
+        elif theme == "dark":
+            dark_theme_action.setChecked(True)
 
         ########################################
         # Help menu
@@ -116,38 +118,35 @@ class BECMainWindow(BECWidget, QMainWindow):
         help_menu.addAction(widgets_docs)
         help_menu.addAction(bug_report)
 
-        debug_bar = menu_bar.addMenu(f"DEBUG {self.__class__.__name__}")
-        list_hierarchy = QAction("List App Hierarchy", self)
-        list_hierarchy.triggered.connect(self.list_app_hierarchy)
-        debug_bar.addAction(list_hierarchy)
-
-    def change_theme(self, theme):
+    @SafeSlot(str)
+    def change_theme(self, theme: str):
         apply_theme(theme)
 
-    def _dump(self):
-        """Return a dictionary with informations about the application state, for use in tests"""
-        # TODO: ModularToolBar and something else leak top-level widgets (3 or 4 QMenu + 2 QWidget);
-        # so, a filtering based on title is applied here, but the solution is to not have those widgets
-        # as top-level (so for now, a window with no title does not appear in _dump() result)
-
-        # NOTE: the main window itself is excluded, since we want to dump dock areas
-        info = {
-            tlw.gui_id: {
-                "title": tlw.windowTitle(),
-                "visible": tlw.isVisible(),
-                "class": str(type(tlw)),
-            }
-            for tlw in QApplication.instance().topLevelWidgets()
-            if tlw is not self and tlw.windowTitle()
-        }
-        # Add the main window dock area
-        info[self.centralWidget().gui_id] = {
-            "title": self.windowTitle(),
-            "visible": self.isVisible(),
-            "class": str(type(self.centralWidget())),
-        }
-        return info
-
+    # #FIXME I have zero idea what this is good for...
+    # def _dump(self):
+    #     """Return a dictionary with informations about the application state, for use in tests"""
+    #     # TODO: ModularToolBar and something else leak top-level widgets (3 or 4 QMenu + 2 QWidget);
+    #     # so, a filtering based on title is applied here, but the solution is to not have those widgets
+    #     # as top-level (so for now, a window with no title does not appear in _dump() result)
+    #
+    #     # NOTE: the main window itself is excluded, since we want to dump dock areas
+    #     info = {
+    #         tlw.gui_id: {
+    #             "title": tlw.windowTitle(),
+    #             "visible": tlw.isVisible(),
+    #             "class": str(type(tlw)),
+    #         }
+    #         for tlw in QApplication.instance().topLevelWidgets()
+    #         if tlw is not self and tlw.windowTitle()
+    #     }
+    #     # Add the main window dock area
+    #     info[self.centralWidget().gui_id] = {
+    #         "title": self.windowTitle(),
+    #         "visible": self.isVisible(),
+    #         "class": str(type(self.centralWidget())),
+    #     }
+    #     return info
+    #
     def new_dock_area(
         self, name: str | None = None, geometry: tuple[int, int, int, int] | None = None
     ) -> "BECDockArea":
@@ -195,7 +194,7 @@ class WindowWithUi(BECMainWindow):
     USER_ACCESS = ["new_dock_area", "all_connections", "change_theme", "hierarchy"]
 
     def __init__(self, *args, name: str = None, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(gui_id="test", *args, **kwargs)
         if name is None:
             name = self.__class__.__name__
         else:
