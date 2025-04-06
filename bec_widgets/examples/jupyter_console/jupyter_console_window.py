@@ -34,11 +34,13 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         super().__init__(parent)
 
         self._init_ui()
+        self.app_instance = QApplication.instance()
 
         # console push
         if self.console.inprocess is True:
             self.console.kernel_manager.kernel.shell.push(
                 {
+                    "app": self.app_instance,
                     "np": np,
                     "pg": pg,
                     "wh": wh,
