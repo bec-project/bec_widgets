@@ -191,7 +191,8 @@ class CLIServer:
         for callback in self._registry_update_callbacks:
             callback(registry_data)
 
-        logger.info(f"Broadcasting registry update: {registry_data} for {self.gui_id}")
+        # FIXME this message is bugged and it was even before mine refactor of parent logic
+        # logger.info(f"Broadcasting registry update: {registry_data} for {self.gui_id}")
         self.client.connector.xadd(
             MessageEndpoints.gui_registry_state(self.gui_id),
             msg_dict={"data": messages.GUIRegistryStateMessage(state=registry_data)},

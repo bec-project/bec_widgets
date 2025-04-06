@@ -63,11 +63,12 @@ class LaunchWindow(BECWidget, QMainWindow):
             )
 
     # Set the window icon
-    # def list_app_hierarchy(self):
-    #     """
-    #     List the hierarchy of the application.
-    #     """
-    #     self.app.list_hierarchy()
+    # FIXME this do not work
+    def list_app_hierarchy(self):
+        """
+        List the hierarchy of the application.
+        """
+        self.app.list_hierarchy()
 
     def _setup_menu_bar(self):
         """
