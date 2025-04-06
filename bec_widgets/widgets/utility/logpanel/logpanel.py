@@ -96,6 +96,7 @@ class BecLogsQueue:
         self._new_message_signal.disconnect()
 
     def _process_incoming_log_msg(self, msg: dict):
+        logger.error(f"LogPanel received message {msg}")
         try:
             _msg: LogMessage = msg["data"]
             self._data.append(_msg)
