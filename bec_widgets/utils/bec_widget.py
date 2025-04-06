@@ -43,7 +43,7 @@ class BECWidget(BECConnector):
 
         >>> class MyWidget(BECWidget, QWidget):
         >>>     def __init__(self, parent=None, client=None, config=None, gui_id=None):
-        >>>         QWidget.__init__(self, parent=parent)
+        >>>         QWidget.__init__(self, parent=parent) #Qt class has to be initialized first before BECWidget
         >>>         BECWidget.__init__(self,client=client, config=config, gui_id=gui_id)
 
 
@@ -76,13 +76,6 @@ class BECWidget(BECConnector):
         if theme_update:
             logger.debug(f"Subscribing to theme updates for {self.__class__.__name__}")
             self._connect_to_theme_change()
-
-    def _ensure_bec_app(self):
-        # pylint: disable=import-outside-toplevel
-        from bec_widgets.utils.bec_qapp import BECApplication
-
-        app = BECApplication.from_qapplication()
-        return app
 
     def _connect_to_theme_change(self):
         """Connect to the theme change signal."""
