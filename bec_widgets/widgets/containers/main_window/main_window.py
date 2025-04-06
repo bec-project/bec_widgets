@@ -11,6 +11,7 @@ from bec_widgets.utils.bec_qapp import BECApplication
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.container_utils import WidgetContainerUtils
+from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
 
 if TYPE_CHECKING:
@@ -191,15 +192,7 @@ class WindowWithUi(BECMainWindow):
 
     """
 
-    USER_ACCESS = [
-        "new_dock_area",
-        "all_connections",
-        "change_theme",
-        "dock_area",
-        "register_all_rpc",
-        "widget_list",
-        "list_app_hierarchy",
-    ]
+    USER_ACCESS = ["new_dock_area", "all_connections", "change_theme", "hierarchy"]
 
     def __init__(self, *args, name: str = None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -217,28 +210,14 @@ class WindowWithUi(BECMainWindow):
         self.ui = loader.loader(ui_file)
         self.setCentralWidget(self.ui)
 
-    # TODO actually these propertiers are not much exposed now in the real CLI
-    @property
-    def dock_area(self):
-        dock_area = self.ui.dock_area
-        return dock_area
-
     @property
     def all_connections(self) -> list:
         all_connections = self.rpc_register.list_all_connections()
         all_connections_keys = list(all_connections.keys())
         return all_connections_keys
 
-    def register_all_rpc(self):
-        app = QApplication.instance()
-        app.register_all()
-
-    @property
-    def widget_list(self) -> list:
-        """Return a list of all widgets in the application."""
-        app = QApplication.instance()
-        all_widgets = app.list_all_bec_widgets()
-        return all_widgets
+    def hierarchy(self):
+        WidgetHierarchy.print_widget_hierarchy(self, only_bec_widgets=True)
 
 
 if __name__ == "__main__":
