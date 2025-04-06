@@ -126,17 +126,15 @@ class Image(PlotBase):
         **kwargs,
     ):
         self._color_bar = None
+        self._main_image = None
         if config is None:
             config = ImageConfig(widget_class=self.__class__.__name__)
         super().__init__(
             parent=parent, config=config, client=client, gui_id=gui_id, popups=popups, **kwargs
         )
-        self._main_image = ImageItem(parent_image=self)
 
         # For PropertyManager identification
         self.setObjectName("Image")
-
-        self.plot_item.addItem(self._main_image)
         self.scan_id = None
 
         # Default Color map to magma
@@ -145,6 +143,10 @@ class Image(PlotBase):
     ################################################################################
     # Widget Specific GUI interactions
     ################################################################################
+    def _init_main_image(self):
+        self._main_image = ImageItem(parent_image=self)
+        self.plot_item.addItem(self._main_image)
+
     def _init_toolbar(self):
 
         # add to the first position
@@ -270,7 +272,7 @@ class Image(PlotBase):
             style(Literal["full", "simple"]): The type of colorbar to enable.
             vrange(tuple): The range of values to use for the colorbar.
         """
-        autorange_state = self._main_image.autorange
+        autorange_state = self.main_image.autorange
         if enabled:
             if self._color_bar:
                 if self.config.color_bar == "full":
@@ -280,14 +282,14 @@ class Image(PlotBase):
 
             if style == "simple":
                 self._color_bar = pg.ColorBarItem(colorMap=self.config.color_map)
-                self._color_bar.setImageItem(self._main_image)
+                self._color_bar.setImageItem(self.main_image)
                 self._color_bar.sigLevelsChangeFinished.connect(
                     lambda: self.setProperty("autorange", False)
                 )
 
             elif style == "full":
                 self._color_bar = pg.HistogramLUTItem()
-                self._color_bar.setImageItem(self._main_image)
+                self._color_bar.setImageItem(self.main_image)
                 self._color_bar.gradient.loadPreset(self.config.color_map)
                 self._color_bar.sigLevelsChanged.connect(
                     lambda: self.setProperty("autorange", False)
@@ -374,7 +376,7 @@ class Image(PlotBase):
         """
         try:
             self.config.color_map = value
-            self._main_image.color_map = value
+            self.main_image.color_map = value
 
             if self._color_bar:
                 if self.config.color_bar == "simple":
@@ -390,7 +392,7 @@ class Image(PlotBase):
         """
         Set the v_range of the main image.
         """
-        vmin, vmax = self._main_image.v_range
+        vmin, vmax = self.main_image.v_range
         return QPointF(vmin, vmax)
 
     @v_range.setter
@@ -406,7 +408,7 @@ class Image(PlotBase):
 
         vmin, vmax = value.x(), value.y()
 
-        self._main_image.v_range = (vmin, vmax)
+        self.main_image.v_range = (vmin, vmax)
 
         # propagate to colorbar if exists
         if self._color_bar:
@@ -495,7 +497,7 @@ class Image(PlotBase):
         """
         The name of the monitor to use for the image.
         """
-        return self._main_image.config.monitor
+        return self.main_image.config.monitor
 
     @monitor.setter
     def monitor(self, value: str):
@@ -505,7 +507,7 @@ class Image(PlotBase):
         Args:
             value(str): The name of the monitor to set.
         """
-        if self._main_image.config.monitor == value:
+        if self.main_image.config.monitor == value:
             return
         try:
             self.entry_validator.validate_monitor(value)
@@ -516,6 +518,8 @@ class Image(PlotBase):
     @property
     def main_image(self) -> ImageItem:
         """Access the main image item."""
+        if self._main_image is None:
+            self._init_main_image()
         return self._main_image
 
     ################################################################################
@@ -526,7 +530,7 @@ class Image(PlotBase):
         """
         Whether autorange is enabled.
         """
-        return self._main_image.autorange
+        return self.main_image.autorange
 
     @autorange.setter
     def autorange(self, enabled: bool):
@@ -536,9 +540,9 @@ class Image(PlotBase):
         Args:
             enabled(bool): Whether to enable autorange.
         """
-        self._main_image.autorange = enabled
-        if enabled and self._main_image.raw_data is not None:
-            self._main_image.apply_autorange()
+        self.main_image.autorange = enabled
+        if enabled and self.main_image.raw_data is not None:
+            self.main_image.apply_autorange()
             self._sync_colorbar_levels()
         self._sync_autorange_switch()
 
@@ -552,7 +556,7 @@ class Image(PlotBase):
             - "mean": Use the mean value of the image for autoranging.
 
         """
-        return self._main_image.autorange_mode
+        return self.main_image.autorange_mode
 
     @autorange_mode.setter
     def autorange_mode(self, mode: str):
@@ -565,7 +569,7 @@ class Image(PlotBase):
         # for qt Designer
         if mode not in ["max", "mean"]:
             return
-        self._main_image.autorange_mode = mode
+        self.main_image.autorange_mode = mode
 
         self._sync_autorange_switch()
 
@@ -578,11 +582,11 @@ class Image(PlotBase):
             enabled(bool): Whether to enable autorange.
             mode(str): The autorange mode. Options are "max" or "mean".
         """
-        if self._main_image is not None:
-            self._main_image.autorange = enabled
-            self._main_image.autorange_mode = mode
+        if self.main_image is not None:
+            self.main_image.autorange = enabled
+            self.main_image.autorange_mode = mode
             if enabled:
-                self._main_image.apply_autorange()
+                self.main_image.apply_autorange()
             self._sync_colorbar_levels()
 
     def _sync_autorange_switch(self):
@@ -590,13 +594,13 @@ class Image(PlotBase):
         Synchronize the autorange switch with the current autorange state and mode if changed from outside.
         """
         self.autorange_switch.block_all_signals(True)
-        self.autorange_switch.set_default_action(f"auto_range_{self._main_image.autorange_mode}")
-        self.autorange_switch.set_state_all(self._main_image.autorange)
+        self.autorange_switch.set_default_action(f"auto_range_{self.main_image.autorange_mode}")
+        self.autorange_switch.set_state_all(self.main_image.autorange)
         self.autorange_switch.block_all_signals(False)
 
     def _sync_colorbar_levels(self):
         """Immediately propagate current levels to the active colorbar."""
-        vrange = self._main_image.v_range
+        vrange = self.main_image.v_range
         if self._color_bar:
             self._color_bar.blockSignals(True)
             self.v_range = vrange
@@ -623,7 +627,7 @@ class Image(PlotBase):
         """
         Whether FFT postprocessing is enabled.
         """
-        return self._main_image.fft
+        return self.main_image.fft
 
     @fft.setter
     def fft(self, enable: bool):
@@ -633,14 +637,14 @@ class Image(PlotBase):
         Args:
             enable(bool): Whether to enable FFT postprocessing.
         """
-        self._main_image.fft = enable
+        self.main_image.fft = enable
 
     @SafeProperty(bool)
     def log(self) -> bool:
         """
         Whether logarithmic scaling is applied.
         """
-        return self._main_image.log
+        return self.main_image.log
 
     @log.setter
     def log(self, enable: bool):
@@ -650,14 +654,14 @@ class Image(PlotBase):
         Args:
             enable(bool): Whether to enable logarithmic scaling.
         """
-        self._main_image.log = enable
+        self.main_image.log = enable
 
     @SafeProperty(int)
     def rotation(self) -> int:
         """
         The number of 90° rotations to apply.
         """
-        return self._main_image.rotation
+        return self.main_image.rotation
 
     @rotation.setter
     def rotation(self, value: int):
@@ -667,14 +671,14 @@ class Image(PlotBase):
         Args:
             value(int): The number of 90° rotations to apply.
         """
-        self._main_image.rotation = value
+        self.main_image.rotation = value
 
     @SafeProperty(bool)
     def transpose(self) -> bool:
         """
         Whether the image is transposed.
         """
-        return self._main_image.transpose
+        return self.main_image.transpose
 
     @transpose.setter
     def transpose(self, enable: bool):
@@ -684,7 +688,7 @@ class Image(PlotBase):
         Args:
             enable(bool): Whether to enable transposing the image.
         """
-        self._main_image.transpose = enable
+        self.main_image.transpose = enable
 
     ################################################################################
     # High Level methods for API
@@ -712,27 +716,27 @@ class Image(PlotBase):
             ImageItem: The image object.
         """
 
-        if self._main_image.config.monitor is not None:
-            self.disconnect_monitor(self._main_image.config.monitor)
+        if self.main_image.config.monitor is not None:
+            self.disconnect_monitor(self.main_image.config.monitor)
         self.entry_validator.validate_monitor(monitor)
-        self._main_image.config.monitor = monitor
+        self.main_image.config.monitor = monitor
 
         if monitor_type == "1d":
-            self._main_image.config.source = "device_monitor_1d"
-            self._main_image.config.monitor_type = "1d"
+            self.main_image.config.source = "device_monitor_1d"
+            self.main_image.config.monitor_type = "1d"
         elif monitor_type == "2d":
-            self._main_image.config.source = "device_monitor_2d"
-            self._main_image.config.monitor_type = "2d"
+            self.main_image.config.source = "device_monitor_2d"
+            self.main_image.config.monitor_type = "2d"
         elif monitor_type == "auto":
-            self._main_image.config.source = "auto"
+            self.main_image.config.source = "auto"
             logger.warning(
                 f"Updates for '{monitor}' will be fetch from both 1D and 2D monitor endpoints."
             )
-            self._main_image.config.monitor_type = "auto"
+            self.main_image.config.monitor_type = "auto"
 
         self.set_image_update(monitor=monitor, type=monitor_type)
         if color_map is not None:
-            self._main_image.color_map = color_map
+            self.main_image.color_map = color_map
         if color_bar is not None:
             self.enable_colorbar(True, color_bar)
         if vrange is not None:
@@ -740,20 +744,20 @@ class Image(PlotBase):
 
         self._sync_device_selection()
 
-        return self._main_image
+        return self.main_image
 
     def _sync_device_selection(self):
         """
         Synchronize the device selection with the current monitor.
         """
-        if self._main_image.config.monitor is not None:
+        if self.main_image.config.monitor is not None:
             for combo in (
                 self.selection_bundle.device_combo_box,
                 self.selection_bundle.dim_combo_box,
             ):
                 combo.blockSignals(True)
-            self.selection_bundle.device_combo_box.set_device(self._main_image.config.monitor)
-            self.selection_bundle.dim_combo_box.setCurrentText(self._main_image.config.monitor_type)
+            self.selection_bundle.device_combo_box.set_device(self.main_image.config.monitor)
+            self.selection_bundle.dim_combo_box.setCurrentText(self.main_image.config.monitor_type)
             for combo in (
                 self.selection_bundle.device_combo_box,
                 self.selection_bundle.dim_combo_box,
@@ -793,7 +797,7 @@ class Image(PlotBase):
                 self.on_image_update_2d, MessageEndpoints.device_monitor_2d(monitor)
             )
         print(f"Connected to {monitor} with type {type}")
-        self._main_image.config.monitor = monitor
+        self.main_image.config.monitor = monitor
 
     def disconnect_monitor(self, monitor: str):
         """
@@ -808,7 +812,7 @@ class Image(PlotBase):
         self.bec_dispatcher.disconnect_slot(
             self.on_image_update_2d, MessageEndpoints.device_monitor_2d(monitor)
         )
-        self._main_image.config.monitor = None
+        self.main_image.config.monitor = None
 
     ########################################
     # 1D updates
@@ -829,13 +833,13 @@ class Image(PlotBase):
             return
         if current_scan_id != self.scan_id:
             self.scan_id = current_scan_id
-            self._main_image.clear()
-            self._main_image.buffer = []
-            self._main_image.max_len = 0
-        image_buffer = self.adjust_image_buffer(self._main_image, data)
+            self.main_image.clear()
+            self.main_image.buffer = []
+            self.main_image.max_len = 0
+        image_buffer = self.adjust_image_buffer(self.main_image, data)
         if self._color_bar is not None:
             self._color_bar.blockSignals(True)
-        self._main_image.set_data(image_buffer)
+        self.main_image.set_data(image_buffer)
         if self._color_bar is not None:
             self._color_bar.blockSignals(False)
 
@@ -886,7 +890,7 @@ class Image(PlotBase):
         data = msg["data"]
         if self._color_bar is not None:
             self._color_bar.blockSignals(True)
-        self._main_image.set_data(data)
+        self.main_image.set_data(data)
         if self._color_bar is not None:
             self._color_bar.blockSignals(False)
 
@@ -914,9 +918,9 @@ class Image(PlotBase):
         """
         Disconnect the image update signals and clean up the image.
         """
-        if self._main_image.config.monitor is not None:
-            self.disconnect_monitor(self._main_image.config.monitor)
-            self._main_image.config.monitor = None
+        if self.main_image.config.monitor is not None:
+            self.disconnect_monitor(self.main_image.config.monitor)
+            self.main_image.config.monitor = None
 
         if self._color_bar:
             if self.config.color_bar == "full":
