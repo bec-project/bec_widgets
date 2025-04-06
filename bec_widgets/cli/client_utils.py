@@ -501,6 +501,7 @@ class BECGuiClient(RPCBase):
         return obj
 
 
+# FIXME not sure if this is cleanup properly, thread seems hanging
 if __name__ == "__main__":  # pragma: no cover
     from bec_lib.client import BECClient
     from bec_lib.service_config import ServiceConfig
