@@ -182,6 +182,8 @@ class CLIServer:
         # 3) Convert each BECConnector to a JSON-like dict
         registry_data = {}
         for connector in bec_widgets:
+            if not hasattr(connector, "config"):
+                continue
             serialized = self._serialize_bec_connector(connector)
             registry_data[serialized["gui_id"]] = serialized
 
@@ -201,6 +203,7 @@ class CLIServer:
         Create the serialization dict for a single BECConnector,
         setting 'parent_id' via the real nearest BECConnector parent.
         """
+
         parent = WidgetHierarchy._get_becwidget_ancestor(connector)
         parent_id = parent.gui_id if parent else None
 
