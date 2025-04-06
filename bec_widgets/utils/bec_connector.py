@@ -7,12 +7,10 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from PySide6.QtCore import Qt
-
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
 from pydantic import BaseModel, Field, field_validator
-from qtpy.QtCore import QObject, QRunnable, QThreadPool, Signal
+from qtpy.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal
 from qtpy.QtWidgets import QApplication
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
