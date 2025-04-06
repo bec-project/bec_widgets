@@ -62,11 +62,12 @@ class LaunchWindow(BECWidget, QMainWindow):
                 "Application is not a BECApplication instance. Status bar will not show App ID. Please initialize the application with BECApplication."
             )
 
-    def list_app_hierarchy(self):
-        """
-        List the hierarchy of the application.
-        """
-        self.app.list_hierarchy()
+    # Set the window icon
+    # def list_app_hierarchy(self):
+    #     """
+    #     List the hierarchy of the application.
+    #     """
+    #     self.app.list_hierarchy()
 
     def _setup_menu_bar(self):
         """
