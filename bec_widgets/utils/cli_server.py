@@ -6,13 +6,12 @@ import types
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
-from PySide6.QtWidgets import QApplication
-
 from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import
 from qtpy.QtCore import QTimer
+from qtpy.QtWidgets import QApplication
 from redis.exceptions import RedisError
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
