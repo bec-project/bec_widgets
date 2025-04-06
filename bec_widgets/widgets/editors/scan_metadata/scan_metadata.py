@@ -52,7 +52,7 @@ class ScanMetadata(BECWidget, QWidget):
         **kwargs,
     ):
         QWidget.__init__(self, parent=parent)
-        BECWidget.__init__(client=client, **kwargs)
+        BECWidget.__init__(self, client=client, **kwargs)
 
         self.set_schema(scan_name)
 
