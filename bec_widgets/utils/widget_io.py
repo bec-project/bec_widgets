@@ -433,19 +433,6 @@ class WidgetHierarchy:
             parent = parent.parent()
         return None
 
-    # @staticmethod
-    # def _get_becwidget_ancestor(widget):
-    #     """
-    #     Traverse up the parent chain to find the nearest BECConnector.
-    #     Returns None if none is found.
-    #     """
-    #     parent = widget.parent()
-    #     while parent is not None:
-    #         if isinstance(parent, BECConnector):
-    #             return parent
-    #         parent = parent.parent()
-    #     return None
-
     @staticmethod
     def export_config_to_dict(
         widget: QWidget,
