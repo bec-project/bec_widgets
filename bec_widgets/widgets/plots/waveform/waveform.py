@@ -9,7 +9,7 @@ import pyqtgraph as pg
 from bec_lib import bec_logger, messages
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import Field, ValidationError, field_validator
-from qtpy.QtCore import QTimer, Signal
+from qtpy.QtCore import QTimer, Signal, Slot
 from qtpy.QtWidgets import QDialog, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget
 
 from bec_widgets.utils import ConnectionConfig
@@ -179,6 +179,20 @@ class Waveform(PlotBase):
 
         # for updating a color scheme of curves
         self._connect_to_theme_change()
+        # To fix the ViewAll action with clipToView activated
+        self._connect_viewbox_menu_actions()
+
+    def _connect_viewbox_menu_actions(self):
+        """Connect the viewbox menu action ViewAll to the custom reset_view method."""
+        menu = self.plot_item.vb.menu
+        # Find and replace "View All" action
+        for action in menu.actions():
+            if action.text() == "View All":
+                # Disconnect the default autoRange action
+                action.triggered.disconnect()
+                # Connect to the custom reset_view method
+                action.triggered.connect(self._reset_view)
+                break
 
     def __getitem__(self, key: int | str):
         return self.get_curve(key)
@@ -219,6 +233,23 @@ class Waveform(PlotBase):
             target_widget=self,
         )
         self.toolbar.widgets["fit_params"].action.triggered.connect(self.show_dap_summary_popup)
+
+    @SafeSlot()
+    def _reset_view(self):
+        """
+        Custom _reset_view method to fix ViewAll action in toolbar.
+        Due to setting clipToView to True on the curves, the autoRange() method
+        of the ViewBox does no longer work as expected. This method deactivates the
+        setClipToView for all curves, calls autoRange() to circumvent that issue.
+        Afterwards, it re-enables the setClipToView for all curves again.
+
+        It is hooked to the ViewAll action in the right-click menu of the pg.PlotItem ViewBox.
+        """
+        for curve in self._async_curves + self._sync_curves:
+            curve.setClipToView(False)
+        self.plot_item.vb.autoRange()
+        for curve in self._async_curves + self._sync_curves:
+            curve.setClipToView(True)
 
     ################################################################################
     # Roi manager
@@ -1072,10 +1103,12 @@ class Waveform(PlotBase):
             # If there's actual data, set it
             if device_data is not None:
                 self._auto_adjust_async_curve_settings(curve, len(device_data))
-                if x_data is not None:
+                if x_data is not None or self.x_axis_mode["name"] == "timestamp":
                     curve.setData(x_data, device_data)
                 else:
-                    curve.setData(device_data)
+                    curve.setData(
+                        np.linspace(0, len(device_data) - 1, len(device_data)), device_data
+                    )
         self.request_dap_update.emit()
 
     def _setup_async_curve(self, curve: Curve):
@@ -1116,57 +1149,57 @@ class Waveform(PlotBase):
             new_data = None
             y_data = None
             x_data = None
-            y_entry = curve.config.signal.entry
             x_name = self.x_axis_mode["name"]
-            for device, async_data in msg["signals"].items():
-                if device == y_entry:
-                    data_plot = async_data["value"]
-                    # Add
-                    if instruction == "add":
-                        if len(max_shape) > 1:
-                            if len(data_plot.shape) > 1:
-                                data_plot = data_plot[-1, :]
-                        else:
-                            x_data, y_data = curve.get_data()
+            async_data = msg["signals"].get(curve.config.signal.entry, None)
+            if async_data is None:
+                continue
+            data_plot = async_data["value"]
+            # Add
+            if instruction == "add":
+                if len(max_shape) > 1:
+                    if len(data_plot.shape) > 1:
+                        data_plot = data_plot[-1, :]
+                else:
+                    x_data, y_data = curve.get_data()
 
-                        if y_data is not None:
-                            new_data = np.hstack((y_data, data_plot))  # TODO check performance
-                        else:
-                            new_data = data_plot
-                        if x_name == "timestamp":
-                            if x_data is not None:
-                                x_data = np.hstack((x_data, async_data["timestamp"]))
-                            else:
-                                x_data = async_data["timestamp"]
-                                # FIXME x axis wrong if timestamp switched during scan
-                    # Add slice
-                    elif instruction == "add_slice":
-                        current_slice_id = metadata.get("async_update", {}).get("index")
-                        data_plot = async_data["value"]
-                        if current_slice_id != curve.slice_index:
-                            curve.slice_index = current_slice_id
-                        else:
-                            x_data, y_data = curve.get_data()
-                        if y_data is not None:
-                            new_data = np.hstack((y_data, data_plot))
-                        else:
-                            new_data = data_plot
-                    # Replace
-                    elif instruction == "replace":
-                        if x_name == "timestamp":
-                            x_data = async_data["timestamp"]
-                        new_data = data_plot
-
-                    # If update is not add, add_slice or replace, continue.
-                    if new_data is None:
-                        continue
-                    # Hide symbol, activate downsampling if data >1000
-                    self._auto_adjust_async_curve_settings(curve, len(new_data))
-                    # Set data on the curve
-                    if x_name == "timestamp" and instruction != "add_slice":
-                        curve.setData(x_data, new_data)
+                if y_data is not None:
+                    new_data = np.hstack((y_data, data_plot))  # TODO check performance
+                else:
+                    new_data = data_plot
+                if x_name == "timestamp":
+                    if x_data is not None:
+                        x_data = np.hstack((x_data, async_data["timestamp"]))
                     else:
-                        curve.setData(np.linspace(0, len(new_data) - 1, len(new_data)), new_data)
+                        x_data = async_data["timestamp"]
+                        # FIXME x axis wrong if timestamp switched during scan
+            # Add slice
+            elif instruction == "add_slice":
+                current_slice_id = metadata.get("async_update", {}).get("index")
+                data_plot = async_data["value"]
+                if current_slice_id != curve.slice_index:
+                    curve.slice_index = current_slice_id
+                else:
+                    x_data, y_data = curve.get_data()
+                if y_data is not None:
+                    new_data = np.hstack((y_data, data_plot))
+                else:
+                    new_data = data_plot
+            # Replace
+            elif instruction == "replace":
+                if x_name == "timestamp":
+                    x_data = async_data["timestamp"]
+                new_data = data_plot
+
+            # If update is not add, add_slice or replace, continue.
+            if new_data is None:
+                continue
+            # Hide symbol, activate downsampling if data >1000
+            self._auto_adjust_async_curve_settings(curve, len(new_data))
+            # Set data on the curve
+            if x_name == "timestamp" and instruction != "add_slice":
+                curve.setData(x_data, new_data)
+            else:
+                curve.setData(np.linspace(0, len(new_data) - 1, len(new_data)), new_data)
 
         self.request_dap_update.emit()
 
@@ -1175,7 +1208,7 @@ class Waveform(PlotBase):
         curve: Curve,
         data_length: int,
         limit: int = 1000,
-        method: Literal["subsample", "mean", "peak"] | None = "mean",
+        method: Literal["subsample", "mean", "peak"] | None = "peak",
     ) -> None:
         """
         Based on the length of the data this method will adjust the plotting settings of
@@ -1196,12 +1229,15 @@ class Waveform(PlotBase):
         if data_length > limit:
             if curve.config.symbol is not None:
                 curve.set_symbol(None)
-            sampling_factor = int(data_length / (5 * limit))  # increase by limit 5x
-            curve.setDownsampling(ds=sampling_factor, auto=None, method=method)
+            if curve.config.pen_width > 3:
+                curve.set_pen_width(3)
+            curve.setDownsampling(ds=None, auto=True, method=method)
+            curve.setClipToView(True)
         elif data_length <= limit:
             curve.set_symbol("o")
-            sampling_factor = 1
-            curve.setDownsampling(ds=sampling_factor, auto=None, method=method)
+            curve.set_pen_width(4)
+            curve.setDownsampling(ds=1, auto=None, method=method)
+            curve.setClipToView(True)
 
     def setup_dap_for_scan(self):
         """Setup DAP updates for the new scan."""

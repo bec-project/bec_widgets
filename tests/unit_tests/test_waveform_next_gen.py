@@ -595,13 +595,15 @@ def test_on_async_readback_add_update(qtbot, mocked_client, x_mode):
     c.setData([], [])
 
     # Test large updates, limit 1000 to deactivate symbols, downsampling for 8000 should be factor 2.
-    waveform_shape = 12000
-    for ii in range(12):
+    waveform_shape = 100000
+    n_cycles = 10
+    for ii in range(n_cycles):
         msg = {
             "signals": {
                 "async_device": {
-                    "value": np.array(range(1000)),
-                    "timestamp": (ii + 1) * np.linspace(0, 1000 - 1, 1000),
+                    "value": np.array(range(waveform_shape // n_cycles)),
+                    "timestamp": (ii + 1)
+                    * np.linspace(0, waveform_shape // n_cycles - 1, waveform_shape // n_cycles),
                 }
             }
         }
@@ -615,9 +617,7 @@ def test_on_async_readback_add_update(qtbot, mocked_client, x_mode):
     assert c.opts["symbol"] == None
     # Get displayed data
     displayed_x, displayed_y = c.getData()
-    assert len(displayed_y) == waveform_shape / 2
-    assert len(displayed_x) == waveform_shape / 2
-    assert displayed_x[-1] == waveform_shape - 1  # Should be the correct index stil.
+    assert len(displayed_y) == len(displayed_x)
 
     ############# Test replace ################
     waveform_shape = 10

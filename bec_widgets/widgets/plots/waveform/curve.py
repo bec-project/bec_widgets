@@ -61,6 +61,7 @@ class Curve(BECConnector, pg.PlotDataItem):
         "remove",
         "_rpc_id",
         "_config_dict",
+        "_get_displayed_data",
         "set",
         "set_data",
         "set_color",
@@ -100,6 +101,8 @@ class Curve(BECConnector, pg.PlotDataItem):
         self.slice_index = None
         if kwargs:
             self.set(**kwargs)
+        # Activate setClipToView, to boost performance for large datasets per default
+        self.setClipToView(True)
 
     def apply_config(self, config: dict | CurveConfig | None = None, **kwargs) -> None:
         """
@@ -327,3 +330,15 @@ class Curve(BECConnector, pg.PlotDataItem):
         # self.parent_item.removeItem(self)
         self.parent_item.remove_curve(self.name())
         super().remove()
+
+    def _get_displayed_data(self) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Get the displayed data of the curve.
+
+        Returns:
+            tuple[np.ndarray, np.ndarray]: The x and y data of the curve.
+        """
+        x_data, y_data = self.getData()
+        if x_data is None or y_data is None:
+            return np.array([]), np.array([])
+        return x_data, y_data

@@ -113,6 +113,51 @@ def test_rpc_waveform_scan(qtbot, bec_client_lib, connected_client_gui_obj):
     assert plt_data["bpm4d-bpm4d"]["y"] == last_scan_data["bpm4d"]["bpm4d"].val
 
 
+def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
+    gui = connected_client_gui_obj
+    dock = gui.bec
+
+    client = bec_client_lib
+    dev = client.device_manager.devices
+    scans = client.scans
+    queue = client.queue
+
+    # Test add
+    dev.waveform.sim.select_model("GaussianModel")
+    dev.waveform.sim.params = {"amplitude": 1000, "center": 4000, "sigma": 300}
+    dev.waveform.async_update.put("add")
+    dev.waveform.waveform_shape.put(10000)
+    wf = dock.new("wf_dock").new("Waveform")
+    curve = wf.plot(y_name="waveform")
+
+    status = scans.line_scan(dev.samx, -5, 5, steps=10, exp_time=0.05, relative=False)
+    status.wait()
+
+    # Wait for the scan to finish and the data to be available in history
+    # Wait until scan_id is in history
+    def _wait_for_scan_in_hisotry():
+        if len(client.history) == 0:
+            return False
+        # Once items appear in storage, the last one hast to be the one we just scanned
+        return client.history[-1].metadata.bec["scan_id"] == status.scan.scan_id
+
+    qtbot.waitUntil(_wait_for_scan_in_hisotry, timeout=10000)
+    last_scan_data = client.history[-1]
+    # check plotted data
+    x_data, y_data = curve.get_data()
+    assert np.array_equal(x_data, np.linspace(0, len(y_data) - 1, len(y_data)))
+    assert np.array_equal(
+        y_data, last_scan_data.devices.waveform.get("waveform_waveform", {}).read().get("value", [])
+    )
+
+    # Check displayed data
+    x_data_display, y_data_display = curve._get_displayed_data()
+    # Should be not more than 1% difference, actually be closer but this might be flaky
+    assert np.isclose(x_data_display[-1], x_data[-1], rtol=0.01)
+    # Downsampled data should be smaller than original data
+    assert len(y_data_display) < len(y_data)
+
+
 def test_rpc_image(qtbot, bec_client_lib, connected_client_gui_obj):
     gui = connected_client_gui_obj
     dock = gui.bec

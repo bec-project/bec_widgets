@@ -499,6 +499,15 @@ class Curve(RPCBase):
         """
 
     @rpc_call
+    def _get_displayed_data(self) -> "tuple[np.ndarray, np.ndarray]":
+        """
+        Get the displayed data of the curve.
+
+        Returns:
+            tuple[np.ndarray, np.ndarray]: The x and y data of the curve.
+        """
+
+    @rpc_call
     def set(self, **kwargs):
         """
         Set the properties of the curve.
@@ -593,7 +602,7 @@ class Curve(RPCBase):
         """
 
     @rpc_call
-    def get_data(self) -> "tuple[np.ndarray, np.ndarray]":
+    def get_data(self) -> "tuple[np.ndarray | None, np.ndarray | None]":
         """
         Get the data of the curve.
         Returns:
