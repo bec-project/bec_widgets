@@ -62,6 +62,7 @@ def log_panel(qtbot, mocked_client: MagicMock):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
+    widget.cleanup()
 
 
 def test_log_panel_init(log_panel: LogPanel):
@@ -89,6 +90,7 @@ def test_logpanel_output(qtbot, log_panel: LogPanel):
     assert log_panel.plain_text == TEST_COMBINED_PLAINTEXT
 
     def display_queue_empty():
+        print(log_panel._log_manager._display_queue)
         return len(log_panel._log_manager._display_queue) == 0
 
     next_text = "datetime | error | test log message"
@@ -102,7 +104,7 @@ def test_logpanel_output(qtbot, log_panel: LogPanel):
         }
     )
 
-    qtbot.waitUntil(display_queue_empty)
+    qtbot.waitUntil(display_queue_empty, timeout=5000)
     assert log_panel.plain_text == TEST_COMBINED_PLAINTEXT + next_text + "\n"
 
 

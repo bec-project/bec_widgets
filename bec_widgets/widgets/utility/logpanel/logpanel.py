@@ -8,13 +8,14 @@ import re
 from collections import deque
 from functools import partial, reduce
 from re import Pattern
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 from bec_lib.client import BECClient
 from bec_lib.connector import ConnectorBase
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import LogLevel, bec_logger
 from bec_lib.messages import LogMessage, StatusMessage
+from PySide6.QtCore import QObject
 from qtpy.QtCore import QDateTime, Qt, Signal  # type: ignore
 from qtpy.QtGui import QFont
 from qtpy.QtWidgets import (
@@ -51,9 +52,6 @@ from bec_widgets.widgets.utility.logpanel._util import (
     simple_color_format,
 )
 
-if TYPE_CHECKING:
-    from PySide6.QtCore import SignalInstance
-
 logger = bec_logger.logger
 
 MODULE_PATH = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -68,20 +66,22 @@ DEFAULT_LOG_COLORS = {
 }
 
 
-class BecLogsQueue:
+class BecLogsQueue(QObject):
     """Manages getting logs from BEC Redis and formatting them for display"""
+
+    new_message = Signal()
 
     def __init__(
         self,
+        parent: QObject | None,
         conn: ConnectorBase,
-        new_message_signal: SignalInstance,
         maxlen: int = 1000,
         line_formatter: LineFormatter = noop_format,
     ) -> None:
+        super().__init__(parent=parent)
         self._timestamp_start: QDateTime | None = None
         self._timestamp_end: QDateTime | None = None
         self._conn = conn
-        self._new_message_signal: SignalInstance | None = new_message_signal
         self._max_length = maxlen
         self._data: deque[LogMessage] = deque([], self._max_length)
         self._display_queue: deque[str] = deque([], self._max_length)
@@ -91,9 +91,9 @@ class BecLogsQueue:
         self._set_formatter_and_update_filter(line_formatter)
         self._conn.register([MessageEndpoints.log()], None, self._process_incoming_log_msg)
 
-    def disconnect(self):
+    def unsub_and_disconnect(self):
         self._conn.unregister([MessageEndpoints.log()], None, self._process_incoming_log_msg)
-        self._new_message_signal.disconnect()
+        self.new_message.disconnect()
 
     def _process_incoming_log_msg(self, msg: dict):
         try:
@@ -101,10 +101,9 @@ class BecLogsQueue:
             self._data.append(_msg)
             if self.filter is None or self.filter(_msg):
                 self._display_queue.append(self._line_formatter(_msg))
-                if self._new_message_signal:
-                    self._new_message_signal.emit()
-        except Exception:
-            pass
+                self.new_message.emit()
+        except Exception as e:
+            logger.warning(f"Error in LogPanel incoming message callback: {e}")
 
     def _set_formatter_and_update_filter(self, line_formatter: LineFormatter = noop_format):
         self._line_formatter: LineFormatter = line_formatter
@@ -396,10 +395,11 @@ class LogPanel(TextBox):
         self._update_colors()
         self._service_status = service_status or BECServiceStatusMixin(self, client=self.client)  # type: ignore
         self._log_manager = BecLogsQueue(
+            parent,
             self.client.connector,  # type: ignore
-            new_message_signal=self._new_messages,
             line_formatter=partial(simple_color_format, colors=self._colors),
         )
+        self._log_manager.new_message.connect(self._new_messages)
 
         self.toolbar = LogPanelToolbar(parent=parent)
         self.toolbar_area = QScrollArea()
@@ -513,7 +513,7 @@ class LogPanel(TextBox):
 
     def cleanup(self):
         self._service_status.cleanup()
-        self._log_manager.disconnect()
+        self._log_manager.unsub_and_disconnect()
         super().cleanup()
 
 
