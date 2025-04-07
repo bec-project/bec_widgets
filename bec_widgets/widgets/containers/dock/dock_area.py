@@ -21,6 +21,7 @@ from bec_widgets.utils.toolbar import (
     ModularToolBar,
     SeparatorAction,
 )
+from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.widgets.containers.dock.dock import BECDock, DockConfig
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox
 from bec_widgets.widgets.control.scan_control.scan_control import ScanControl
@@ -500,10 +501,12 @@ if __name__ == "__main__":  # pragma: no cover
     set_theme("auto")
     dock_area = BECDockArea()
     dock_1 = dock_area.new(name="dock_0", widget="Waveform")
+    dock_1.new(widget="Waveform")
     # dock_1 = dock_area.new(name="dock_0", widget="Waveform")
     dock_area.new(widget="Waveform")
     dock_area.show()
     dock_area.setGeometry(100, 100, 800, 600)
+    WidgetHierarchy.print_becconnector_hierarchy_from_app()
     app.topLevelWidgets()
     app.exec_()
     sys.exit(app.exec_())
