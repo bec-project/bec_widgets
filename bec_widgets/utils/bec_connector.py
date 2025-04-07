@@ -10,13 +10,14 @@ from typing import TYPE_CHECKING, Optional
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
 from pydantic import BaseModel, Field, field_validator
-from qtpy.QtCore import QObject, QRunnable, QThreadPool, Signal
+from qtpy.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal
 from qtpy.QtWidgets import QApplication
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import ErrorPopupUtility
 from bec_widgets.utils.error_popups import SafeSlot as pyqtSlot
+from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.utils.yaml_dialog import load_yaml, load_yaml_gui, save_yaml, save_yaml_gui
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -75,7 +76,6 @@ class BECConnector:
     """Connection mixin class to handle BEC client and device manager"""
 
     USER_ACCESS = ["_config_dict", "_get_all_rpc", "_rpc_id"]
-    RPC = True
     EXIT_HANDLERS = {}
 
     def __init__(
@@ -86,7 +86,9 @@ class BECConnector:
         name: str | None = None,
         parent_dock: BECDock | None = None,
         parent_id: str | None = None,
+        **kwargs,
     ):
+        super().__init__(**kwargs)
         # BEC related connections
         self.bec_dispatcher = BECDispatcher(client=client)
         self.client = self.bec_dispatcher.client if client is None else client
@@ -128,10 +130,19 @@ class BECConnector:
         else:
             if not WidgetContainerUtils.has_name_valid_chars(name):
                 raise ValueError(f"Name {name} contains invalid characters.")
-        self._name = name if name else self.__class__.__name__
+        # TODO Hierarchy can be refreshed upon creation -> also registry should be notified if objectName changes
+        if isinstance(self, QObject):
+            # 1) If no objectName is set, set the initial name
+            if not self.objectName():
+                self.setObjectName(name if name else self.__class__.__name__)
+            self._name = self.objectName()
+
+            # 2) Enforce unique objectName among siblings with the same BECConnector parent
+            self._enforce_unique_sibling_name()
+        else:
+            self._name = name if name else self.__class__.__name__
         self.rpc_register = RPCRegister()
-        if self.RPC is True:
-            self.rpc_register.add_rpc(self)
+        self.rpc_register.add_rpc(self)
 
         # Error popups
         self.error_utility = ErrorPopupUtility()
@@ -139,6 +150,49 @@ class BECConnector:
         self._thread_pool = QThreadPool.globalInstance()
         # Store references to running workers so they're not garbage collected prematurely.
         self._workers = []
+
+    def _enforce_unique_sibling_name(self):
+        """
+        Enforce that this BECConnector has a unique objectName among its siblings.
+
+        Sibling logic:
+          - If there's a nearest BECConnector parent, only compare with children of that parent.
+          - If parent is None (i.e., top-level object), compare with all other top-level BECConnectors.
+        """
+        parent_bec = WidgetHierarchy._get_becwidget_ancestor(self)
+
+        if parent_bec:
+            # We have a parent => only compare with siblings under that parent
+            siblings = parent_bec.findChildren(BECConnector, options=Qt.FindDirectChildrenOnly)
+        else:
+            # No parent => treat all top-level BECConnectors as siblings
+            # 1) Gather all BECConnectors from QApplication
+            all_widgets = QApplication.allWidgets()
+            all_bec = [w for w in all_widgets if isinstance(w, BECConnector)]
+            # 2) "Top-level" means closest BECConnector parent is None
+            top_level_bec = [
+                w for w in all_bec if WidgetHierarchy._get_becwidget_ancestor(w) is None
+            ]
+            # 3) We are among these top-level siblings
+            siblings = top_level_bec
+
+        # Collect used names among siblings
+        used_names = {sib.objectName() for sib in siblings if sib is not self}
+
+        base_name = self.objectName()
+        if base_name not in used_names:
+            # Name is already unique among siblings
+            return
+
+        # Need a suffix to avoid collision
+        counter = 0
+        while True:
+            trial_name = f"{base_name}_{counter}"
+            if trial_name not in used_names:
+                self.setObjectName(trial_name)
+                self._name = trial_name
+                break
+            counter += 1
 
     def submit_task(self, fn, *args, on_complete: pyqtSlot = None, **kwargs) -> Worker:
         """

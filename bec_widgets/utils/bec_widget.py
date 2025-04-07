@@ -54,8 +54,7 @@ class BECWidget(BECConnector):
             theme_update(bool, optional): Whether to subscribe to theme updates. Defaults to False. When set to True, the
                 widget's apply_theme method will be called when the theme changes.
         """
-        if not isinstance(self, QWidget):
-            raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")
+
         super().__init__(
             client=client,
             config=config,
@@ -63,7 +62,10 @@ class BECWidget(BECConnector):
             name=name,
             parent_dock=parent_dock,
             parent_id=parent_id,
+            **kwargs,
         )
+        if not isinstance(self, QWidget):
+            raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")
         app = QApplication.instance()
         if not hasattr(app, "theme"):
             # DO NOT SET THE THEME TO AUTO! Otherwise, the qwebengineview will segfault
