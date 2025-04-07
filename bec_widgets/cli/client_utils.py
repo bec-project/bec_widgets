@@ -490,7 +490,9 @@ class BECGuiClient(RPCBase):
         gui_id = state["gui_id"]
         if state["widget_class"] in IGNORE_WIDGETS:
             return
-        widget_class = getattr(client, state["widget_class"])
+        widget_class = getattr(client, state["widget_class"], None)
+        if widget_class is None:
+            return
         obj = self._ipython_registry.get(gui_id)
         if obj is None:
             widget = widget_class(gui_id=gui_id, name=name, parent=parent)
