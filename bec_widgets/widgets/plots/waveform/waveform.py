@@ -10,7 +10,15 @@ from bec_lib import bec_logger, messages
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import Field, ValidationError, field_validator
 from qtpy.QtCore import QTimer, Signal
-from qtpy.QtWidgets import QDialog, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget
+from qtpy.QtWidgets import (
+    QApplication,
+    QDialog,
+    QHBoxLayout,
+    QMainWindow,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
@@ -121,16 +129,23 @@ class Waveform(PlotBase):
         client=None,
         gui_id: str | None = None,
         popups: bool = True,
+        name=None,
         **kwargs,
     ):
         if config is None:
             config = WaveformConfig(widget_class=self.__class__.__name__)
         super().__init__(
-            parent=parent, config=config, client=client, gui_id=gui_id, popups=popups, **kwargs
+            parent=parent,
+            config=config,
+            client=client,
+            gui_id=gui_id,
+            popups=popups,
+            name=name,
+            **kwargs,
         )
 
         # For PropertyManager identification
-        self.setObjectName("Waveform")
+        # self.setObjectName("Waveform")
 
         # Curve data
         self._sync_curves = []
