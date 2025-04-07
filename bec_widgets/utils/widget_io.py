@@ -18,7 +18,6 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
 
 
@@ -291,62 +290,141 @@ class WidgetHierarchy:
             only_bec_widgets(bool, optional): Whether to print only widgets that are instances of BECWidget.
             show_parent(bool, optional): Whether to display which BECWidget is the parent of each discovered BECWidget.
         """
-        # Decide if this particular widget is to be printed
-        is_bec = isinstance(widget, BECWidget)
-        print_this = (not only_bec_widgets) or is_bec
+        from bec_widgets.utils import BECConnector
+        from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
-        # If it is a BECWidget and we're showing the parent, climb the chain to find the nearest BECWidget ancestor
+        # 1) Filter out widgets that are not BECConnectors (if 'only_bec_widgets' is True)
+        is_bec = isinstance(widget, BECConnector)
+        if only_bec_widgets and not is_bec:
+            return
+
+        # 2) Determine and print the parent's info (closest BECConnector)
+        parent_info = ""
         if show_parent and is_bec:
             ancestor = WidgetHierarchy._get_becwidget_ancestor(widget)
-            if ancestor is not None:
-                parent_info = f" parent={ancestor.__class__.__name__}"
+            if ancestor:
+                parent_label = ancestor.objectName() or ancestor.__class__.__name__
+                parent_info = f" parent={parent_label}"
             else:
                 parent_info = " parent=None"
-        else:
-            parent_info = ""
 
-        if print_this:
-            widget_info = f"{widget.__class__.__name__} ({widget.objectName()}){parent_info}"
-            if grab_values:
-                value = WidgetIO.get_value(widget, ignore_errors=True)
-                value_str = f" [value: {value}]" if value is not None else ""
-                widget_info += value_str
-            print(prefix + widget_info)
+        widget_info = f"{widget.__class__.__name__} ({widget.objectName()}){parent_info}"
+        print(prefix + widget_info)
 
-        # Always recurse so we can discover deeper BECWidgets even if the current widget is not a BECWidget
-        children = widget.children()
-        for i, child in enumerate(children):
-            # Possibly skip known internal child widgets of a QComboBox
-            if (
-                exclude_internal_widgets
-                and isinstance(widget, QComboBox)
-                and child.__class__.__name__ in ["QFrame", "QBoxLayout", "QListView"]
-            ):
+        # 3) If it's a Waveform, explicitly print the curves
+        if isinstance(widget, Waveform):
+            for curve in widget.curves:
+                curve_prefix = prefix + "  └─ "
+                print(
+                    f"{curve_prefix}{curve.__class__.__name__} ({curve.objectName()}) "
+                    f"parent={widget.objectName()}"
+                )
+
+        # 4) Recursively handle each child if:
+        #    - It's a QWidget
+        #    - It is a BECConnector (or we don't care about filtering)
+        #    - Its closest BECConnector parent is the current widget
+        for child in widget.findChildren(QWidget):
+            if only_bec_widgets and not isinstance(child, BECConnector):
                 continue
 
-            child_prefix = prefix + "  "
-            arrow = "├─ " if child != children[-1] else "└─ "
-
-            # Regardless of whether child is BECWidget or not, keep recursing, or we might miss deeper BECWidgets
+            # if WidgetHierarchy._get_becwidget_ancestor(child) == widget:
+            child_prefix = prefix + "  └─ "
             WidgetHierarchy.print_widget_hierarchy(
                 child,
-                indent + 1,
+                indent=indent + 1,
                 grab_values=grab_values,
-                prefix=child_prefix + arrow,
+                prefix=child_prefix,
                 exclude_internal_widgets=exclude_internal_widgets,
                 only_bec_widgets=only_bec_widgets,
                 show_parent=show_parent,
             )
 
     @staticmethod
+    def print_becconnector_hierarchy_from_app():
+        """
+        Enumerate ALL BECConnector objects in the QApplication.
+        Also detect if a widget is a PlotBase, and add any data items
+        (PlotDataItem-like) that are also BECConnector objects.
+
+        Build a parent->children graph where each child's 'parent'
+        is its closest BECConnector ancestor. Print the entire hierarchy
+        from the root(s).
+
+        The result is a single, consolidated tree for your entire
+        running GUI, including PlotBase data items that are BECConnector.
+        """
+        import sys
+        from collections import defaultdict
+
+        from qtpy.QtWidgets import QApplication
+
+        from bec_widgets.utils import BECConnector
+        from bec_widgets.widgets.plots.plot_base import PlotBase
+
+        # 1) Gather ALL QWidget-based BECConnector objects
+        all_qwidgets = QApplication.allWidgets()
+        bec_widgets = set(w for w in all_qwidgets if isinstance(w, BECConnector))
+
+        # 2) Also gather any BECConnector-based data items from PlotBase widgets
+        for w in all_qwidgets:
+            if isinstance(w, PlotBase) and hasattr(w, "plot_item"):
+                plot_item = w.plot_item
+                if hasattr(plot_item, "listDataItems"):
+                    for data_item in plot_item.listDataItems():
+                        if isinstance(data_item, BECConnector):
+                            bec_widgets.add(data_item)
+
+        # 3) Build a map of (closest BECConnector parent) -> list of children
+        parent_map = defaultdict(list)
+        for w in bec_widgets:
+            parent_bec = WidgetHierarchy._get_becwidget_ancestor(w)
+            parent_map[parent_bec].append(w)
+
+        # 4) Define a recursive printer to show each object's children
+        def print_tree(parent, prefix=""):
+            children = parent_map[parent]
+            for i, child in enumerate(children):
+                connector_class = child.__class__.__name__
+                connector_name = child.objectName() or connector_class
+
+                if parent is None:
+                    parent_label = "None"
+                else:
+                    parent_label = parent.objectName() or parent.__class__.__name__
+
+                line = f"{connector_class} ({connector_name}) parent={parent_label}"
+                # Determine tree-branch symbols
+                is_last = i == len(children) - 1
+                branch_str = "└─ " if is_last else "├─ "
+                print(prefix + branch_str + line)
+
+                # Recurse deeper
+                next_prefix = prefix + ("   " if is_last else "│  ")
+                print_tree(child, prefix=next_prefix)
+
+        # 5) Print top-level items (roots) whose BECConnector parent is None
+        roots = parent_map[None]
+        for r_i, root in enumerate(roots):
+            root_class = root.__class__.__name__
+            root_name = root.objectName() or root_class
+            line = f"{root_class} ({root_name}) parent=None"
+            is_last_root = r_i == len(roots) - 1
+            print(line)
+            # Recurse into its children
+            print_tree(root, prefix="   ")
+
+    @staticmethod
     def _get_becwidget_ancestor(widget):
         """
-        Climb the parent chain to find the nearest BECWidget above this widget.
+        Traverse up the parent chain to find the nearest BECConnector.
         Returns None if none is found.
         """
+        from bec_widgets.utils import BECConnector
+
         parent = widget.parent()
         while parent is not None:
-            if isinstance(parent, BECWidget):
+            if isinstance(parent, BECConnector):
                 return parent
             parent = parent.parent()
         return None
