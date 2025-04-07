@@ -103,8 +103,8 @@ class BecLogsQueue:
                 self._display_queue.append(self._line_formatter(_msg))
                 if self._new_message_signal:
                     self._new_message_signal.emit()
-        except Exception as e:
-            logger.warning(f"Error in LogPanel incoming message callback: {e}")
+        except Exception:
+            pass
 
     def _set_formatter_and_update_filter(self, line_formatter: LineFormatter = noop_format):
         self._line_formatter: LineFormatter = line_formatter

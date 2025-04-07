@@ -20,9 +20,8 @@ logger = bec_logger.logger
 
 
 class BECMainWindow(BECWidget, QMainWindow):
-    def __init__(self, gui_id: str = None, *args, **kwargs):
-        BECWidget.__init__(self, gui_id=gui_id, **kwargs)
-        QMainWindow.__init__(self, *args, **kwargs)
+    def __init__(self, parent=None, gui_id: str = None, *args, **kwargs):
+        super().__init__(parent=parent, gui_id=gui_id, **kwargs)
 
         self.app = QApplication.instance()
 

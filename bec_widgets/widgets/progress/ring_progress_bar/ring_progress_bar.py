@@ -110,8 +110,7 @@ class RingProgressBar(BECWidget, QWidget):
             if isinstance(config, dict):
                 config = RingProgressBarConfig(**config, widget_class=self.__class__.__name__)
             self.config = config
-        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
-        QWidget.__init__(self, parent=parent)
+        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
 
         self.get_bec_shortcuts()
         self.entry_validator = EntryValidator(self.dev)

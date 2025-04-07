@@ -45,6 +45,7 @@ class ScanMetadata(BECWidget, QWidget):
 
     metadata_updated = Signal(dict)
     metadata_cleared = Signal(NoneType)
+    RPC = False
 
     def __init__(
         self,
@@ -54,8 +55,7 @@ class ScanMetadata(BECWidget, QWidget):
         initial_extras: list[list[str]] | None = None,
         **kwargs,
     ):
-        super().__init__(client=client, **kwargs)
-        QWidget.__init__(self, parent=parent)
+        super().__init__(parent=parent, client=client, **kwargs)
 
         self.set_schema(scan_name)
 

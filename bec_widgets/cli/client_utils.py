@@ -10,7 +10,7 @@ import threading
 import time
 from contextlib import contextmanager
 from threading import Lock
-from typing import TYPE_CHECKING, Literal, TypeAlias
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
@@ -22,9 +22,9 @@ import bec_widgets.cli.client as client
 from bec_widgets.cli.rpc.rpc_base import RPCBase, RPCReference
 
 if TYPE_CHECKING:  # pragma: no cover
-    from bec_lib.redis_connector import StreamMessage
+    from bec_lib.messages import GUIRegistryStateMessage
 else:
-    StreamMessage = lazy_import_from("bec_lib.redis_connector", ("StreamMessage",))
+    GUIRegistryStateMessage = lazy_import_from("bec_lib.messages", "GUIRegistryStateMessage")
 
 logger = bec_logger.logger
 
@@ -71,7 +71,11 @@ def _get_output(process, logger) -> None:
 
 
 def _start_plot_process(
-    gui_id: str, gui_class_id: str, config: dict | str, gui_class: str = "launcher", logger=None
+    gui_id: str,
+    gui_class_id: str,
+    config: dict | str,
+    gui_class: str = "dock_area",
+    logger=None,  # FIXME change gui_class back to "launcher" later
 ) -> tuple[subprocess.Popen[str], threading.Thread | None]:
     """
     Start the plot in a new process.
@@ -199,7 +203,7 @@ class BECGuiClient(RPCBase):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._lock = Lock()
-        self._default_dock_name = "bec"
+        self._anchor_widget = "launcher"
         self._auto_updates_enabled = True
         self._auto_updates = None
         self._killed = False
@@ -220,7 +224,7 @@ class BECGuiClient(RPCBase):
     @property
     def launcher(self) -> RPCBase:
         """The launcher object."""
-        return RPCBase(gui_id=f"{self._gui_id}:launcher", parent=self, name="launcher")
+        return RPCBase(gui_id=f"{self._gui_id}:launcher", parent=self, object_name="launcher")
 
     def connect_to_gui_server(self, gui_id: str) -> None:
         """Connect to a GUI server"""
@@ -247,7 +251,7 @@ class BECGuiClient(RPCBase):
     @property
     def windows(self) -> dict:
         """Dictionary with dock areas in the GUI."""
-        return {widget._name: widget for widget in self._top_level.values()}
+        return {widget.object_name: widget for widget in self._top_level.values()}
 
     @property
     def window_list(self) -> list:
@@ -365,7 +369,7 @@ class BECGuiClient(RPCBase):
         # After 60s timeout. Should this raise an exception on timeout?
         while time.time() < time.time() + timeout:
             if len(list(self._server_registry.keys())) < 2 or not hasattr(
-                self, self._default_dock_name
+                self, self._anchor_widget
             ):
                 time.sleep(0.1)
             else:
@@ -383,7 +387,7 @@ class BECGuiClient(RPCBase):
             self._gui_started_event.clear()
             self._process, self._process_output_processing_thread = _start_plot_process(
                 self._gui_id,
-                gui_class_id=self._default_dock_name,
+                gui_class_id="bec",
                 config=self._client._service_config.config,  # pylint: disable=protected-access
                 logger=logger,
             )
@@ -413,11 +417,13 @@ class BECGuiClient(RPCBase):
         return self._start_server(wait=wait)
 
     @staticmethod
-    def _handle_registry_update(msg: StreamMessage, parent: BECGuiClient) -> None:
+    def _handle_registry_update(
+        msg: dict[str, GUIRegistryStateMessage], parent: BECGuiClient
+    ) -> None:
         # This was causing a deadlock during shutdown, not sure why.
         # with self._lock:
         self = parent
-        self._server_registry = msg["data"].state
+        self._server_registry = cast(dict[str, RegistryState], msg["data"].state)
         self._update_dynamic_namespace(self._server_registry)
 
     def _do_show_all(self):
@@ -460,12 +466,11 @@ class BECGuiClient(RPCBase):
         for gui_id, widget in self._ipython_registry.items():
             if gui_id not in server_registry:
                 remove_from_registry.append(gui_id)
-            widget._refresh_references()
         for gui_id in remove_from_registry:
             self._ipython_registry.pop(gui_id)
 
         removed_widgets = [
-            widget._name for widget in self._top_level.values() if widget._is_deleted()
+            widget.object_name for widget in self._top_level.values() if widget._is_deleted()
         ]
 
         for widget_name in removed_widgets:
@@ -475,9 +480,12 @@ class BECGuiClient(RPCBase):
                 delattr(self, widget_name)
 
         for gui_id, widget_ref in top_level_widgets.items():
-            setattr(self, widget_ref._name, widget_ref)
+            setattr(self, widget_ref.object_name, widget_ref)
 
         self._top_level = top_level_widgets
+
+        for widget in self._ipython_registry.values():
+            widget._refresh_references()
 
     def _add_widget(self, state: dict, parent: object) -> RPCReference | None:
         """Add a widget to the namespace
@@ -486,7 +494,7 @@ class BECGuiClient(RPCBase):
             state (dict): The state of the widget from the _server_registry.
             parent (object): The parent object.
         """
-        name = state["name"]
+        object_name = state["object_name"]
         gui_id = state["gui_id"]
         if state["widget_class"] in IGNORE_WIDGETS:
             return
@@ -495,7 +503,7 @@ class BECGuiClient(RPCBase):
             return
         obj = self._ipython_registry.get(gui_id)
         if obj is None:
-            widget = widget_class(gui_id=gui_id, name=name, parent=parent)
+            widget = widget_class(gui_id=gui_id, object_name=object_name, parent=parent)
             self._ipython_registry[gui_id] = widget
         else:
             widget = obj

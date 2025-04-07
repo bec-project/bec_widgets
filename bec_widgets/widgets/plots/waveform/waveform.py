@@ -9,8 +9,15 @@ import pyqtgraph as pg
 from bec_lib import bec_logger, messages
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import Field, ValidationError, field_validator
-from qtpy.QtCore import QTimer, Signal, Slot
-from qtpy.QtWidgets import QDialog, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget
+from qtpy.QtCore import QTimer, Signal
+from qtpy.QtWidgets import (
+    QApplication,
+    QDialog,
+    QHBoxLayout,
+    QMainWindow,
+    QVBoxLayout,
+    QWidget,
+)
 
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
@@ -18,7 +25,6 @@ from bec_widgets.utils.colors import Colors, set_theme
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.toolbar import MaterialIconAction
-from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 from bec_widgets.widgets.dap.lmfit_dialog.lmfit_dialog import LMFitDialog
 from bec_widgets.widgets.plots.plot_base import PlotBase
 from bec_widgets.widgets.plots.waveform.curve import Curve, CurveConfig, DeviceSignal
@@ -128,9 +134,6 @@ class Waveform(PlotBase):
         super().__init__(
             parent=parent, config=config, client=client, gui_id=gui_id, popups=popups, **kwargs
         )
-
-        # For PropertyManager identification
-        self.setObjectName("Waveform")
 
         # Curve data
         self._sync_curves = []
@@ -1737,12 +1740,12 @@ class Waveform(PlotBase):
         super().cleanup()
 
 
-class DemoApp(BECMainWindow):  # pragma: no cover
+class DemoApp(QMainWindow):  # pragma: no cover
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Waveform Demo")
         self.resize(800, 600)
-        self.main_widget = QWidget()
+        self.main_widget = QWidget(self)
         self.layout = QHBoxLayout(self.main_widget)
         self.setCentralWidget(self.main_widget)
 
@@ -1760,9 +1763,7 @@ class DemoApp(BECMainWindow):  # pragma: no cover
 if __name__ == "__main__":  # pragma: no cover
     import sys
 
-    from bec_widgets.utils.bec_qapp import BECApplication
-
-    app = BECApplication(sys.argv)
+    app = QApplication(sys.argv)
     set_theme("dark")
     widget = DemoApp()
     widget.show()

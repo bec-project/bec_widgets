@@ -29,6 +29,7 @@ class DeviceSignalInputBase(BECWidget):
     signal object based on the current text of the widget.
     """
 
+    RPC = False
     _filter_handler = {
         Kind.hinted: "include_hinted_signals",
         Kind.normal: "include_normal_signals",

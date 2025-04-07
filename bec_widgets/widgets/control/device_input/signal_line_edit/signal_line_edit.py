@@ -42,8 +42,7 @@ class SignalLineEdit(DeviceSignalInputBase, QLineEdit):
         **kwargs,
     ):
         self._is_valid_input = False
-        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
-        QLineEdit.__init__(self, parent=parent)
+        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
         self._accent_colors = get_accent_colors()
         self.completer = QCompleter(self)
         self.setCompleter(self.completer)

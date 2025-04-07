@@ -125,16 +125,15 @@ class Image(PlotBase):
         popups: bool = True,
         **kwargs,
     ):
-        self._main_image = ImageItem(parent_image=self)
-        self._color_bar = None
         if config is None:
             config = ImageConfig(widget_class=self.__class__.__name__)
+        self.gui_id = config.gui_id
+        self._color_bar = None
+        self._main_image = ImageItem()
         super().__init__(
             parent=parent, config=config, client=client, gui_id=gui_id, popups=popups, **kwargs
         )
-
-        # For PropertyManager identification
-        self.setObjectName("Image")
+        self._main_image.parent_image = self
 
         self.plot_item.addItem(self._main_image)
         self.scan_id = None

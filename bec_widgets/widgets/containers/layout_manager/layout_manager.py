@@ -34,7 +34,6 @@ class LayoutManagerWidget(QWidget):
 
     def __init__(self, parent=None, auto_reindex=True):
         super().__init__(parent)
-        self.setObjectName("LayoutManagerWidget")
         self.layout = QGridLayout(self)
         self.auto_reindex = auto_reindex
 

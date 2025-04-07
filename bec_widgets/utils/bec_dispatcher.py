@@ -80,13 +80,21 @@ class BECDispatcher:
     client: BECClient
     cli_server: CLIServer | None = None
 
-    def __new__(cls, client=None, config: str | ServiceConfig | None = None, *args, **kwargs):
+    # TODO add custom gui id for server
+    def __new__(
+        cls,
+        client=None,
+        config: str | ServiceConfig | None = None,
+        gui_id: str = None,
+        *args,
+        **kwargs,
+    ):
         if cls._instance is None:
             cls._instance = super(BECDispatcher, cls).__new__(cls)
             cls._initialized = False
         return cls._instance
 
-    def __init__(self, client=None, config: str | ServiceConfig | None = None):
+    def __init__(self, client=None, config: str | ServiceConfig | None = None, gui_id: str = None):
         if self._initialized:
             return
 
@@ -114,6 +122,8 @@ class BECDispatcher:
             logger.warning("Could not connect to Redis, skipping start of BECClient.")
 
         logger.success("Initialized BECDispatcher")
+
+        self.start_cli_server(gui_id=gui_id)
         self._initialized = True
 
     @classmethod
@@ -207,7 +217,7 @@ class BECDispatcher:
             logger.error("Cannot start CLI server without a running client")
             return
         self.cli_server = CLIServer(gui_id, dispatcher=self, client=self.client)
-        logger.success("Started CLI server with gui_id: {gui_id}")
+        logger.success(f"Started CLI server with gui_id: {gui_id}")
 
     def stop_cli_server(self):
         """

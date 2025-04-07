@@ -44,8 +44,7 @@ class DapComboBox(BECWidget, QWidget):
         default_fit: str | None = None,
         **kwargs,
     ):
-        super().__init__(client=client, gui_id=gui_id, **kwargs)
-        QWidget.__init__(self, parent=parent)
+        super().__init__(parent=parent, client=client, gui_id=gui_id, **kwargs)
         self.layout = QVBoxLayout(self)
         self.fit_model_combobox = QComboBox(self)
         self.layout.addWidget(self.fit_model_combobox)

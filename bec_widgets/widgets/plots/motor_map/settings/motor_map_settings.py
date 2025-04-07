@@ -20,7 +20,6 @@ class MotorMapSettings(SettingWidget):
         super().__init__(parent=parent, *args, **kwargs)
 
         self.setProperty("skip_settings", True)
-        self.setObjectName("MotorMapSettings")
         current_path = os.path.dirname(__file__)
 
         form = UILoader().load_ui(os.path.join(current_path, "motor_map_settings.ui"), self)

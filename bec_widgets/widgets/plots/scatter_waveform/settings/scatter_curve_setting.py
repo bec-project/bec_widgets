@@ -15,7 +15,6 @@ class ScatterCurveSettings(SettingWidget):
         # and should mirror what is in the target widget.
         # Saving settings for this widget could result in recursively setting the target widget.
         self.setProperty("skip_settings", True)
-        self.setObjectName("ScatterCurveSettings")
 
         current_path = os.path.dirname(__file__)
         if popup:

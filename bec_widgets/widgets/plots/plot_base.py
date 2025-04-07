@@ -74,11 +74,9 @@ class PlotBase(BECWidget, QWidget):
     ) -> None:
         if config is None:
             config = ConnectionConfig(widget_class=self.__class__.__name__)
-        super().__init__(client=client, gui_id=gui_id, config=config, **kwargs)
-        QWidget.__init__(self, parent=parent)
+        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
 
         # For PropertyManager identification
-        self.setObjectName("PlotBase")
         self.get_bec_shortcuts()
 
         # Layout Management
@@ -1018,7 +1016,7 @@ if __name__ == "__main__":  # pragma: no cover:
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    window = DemoPlotBase()
+    window = PlotBase()
     window.show()
 
     sys.exit(app.exec_())

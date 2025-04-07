@@ -49,8 +49,7 @@ class TextBox(BECWidget, QWidget):
             if isinstance(config, dict):
                 config = TextBoxConfig(**config)
             self.config = config
-        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
-        QWidget.__init__(self, parent)
+        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
         self.layout = QVBoxLayout(self)
         self.text_box_text_edit = QTextEdit(parent=self)
         self.layout.addWidget(self.text_box_text_edit)

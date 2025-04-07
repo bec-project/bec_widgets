@@ -130,11 +130,11 @@ class ExamplePlotWidget(BECWidget, QWidget):
         config: ConnectionConfig | None = None,
         client=None,
         gui_id: str | None = None,
+        **kwargs,
     ) -> None:
         if config is None:
             config = ConnectionConfig(widget_class=self.__class__.__name__)
-        super().__init__(client=client, gui_id=gui_id, config=config)
-        QWidget.__init__(self, parent=parent)
+        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
 
         self.layout = QVBoxLayout(self)
         self.glw = pg.GraphicsLayoutWidget()

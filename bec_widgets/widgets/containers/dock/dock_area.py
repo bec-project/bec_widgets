@@ -21,6 +21,7 @@ from bec_widgets.utils.toolbar import (
     ModularToolBar,
     SeparatorAction,
 )
+from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.widgets.containers.dock.dock import BECDock, DockConfig
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox
 from bec_widgets.widgets.control.scan_control.scan_control import ScanControl
@@ -73,7 +74,7 @@ class BECDockArea(BECWidget, QWidget):
         config: DockAreaConfig | None = None,
         client=None,
         gui_id: str = None,
-        name: str | None = None,
+        object_name: str = None,
         **kwargs,
     ) -> None:
         if config is None:
@@ -82,9 +83,15 @@ class BECDockArea(BECWidget, QWidget):
             if isinstance(config, dict):
                 config = DockAreaConfig(**config)
             self.config = config
-        super().__init__(client=client, config=config, gui_id=gui_id, name=name, **kwargs)
-        QWidget.__init__(self, parent=parent)
-        self._parent = parent
+        super().__init__(
+            parent=parent,
+            object_name=object_name,
+            client=client,
+            gui_id=gui_id,
+            config=config,
+            **kwargs,
+        )
+        self._parent = parent  # TODO probably not needed
         self.layout = QVBoxLayout(self)
         self.layout.setSpacing(5)
         self.layout.setContentsMargins(0, 0, 0, 0)
@@ -354,17 +361,26 @@ class BECDockArea(BECWidget, QWidget):
         Returns:
             BECDock: The created dock.
         """
-        dock_names = [dock._name for dock in self.panel_list]  # pylint: disable=protected-access
+        dock_names = [
+            dock.object_name for dock in self.panel_list
+        ]  # pylint: disable=protected-access
         if name is not None:  # Name is provided
             if name in dock_names:
                 raise ValueError(
                     f"Name {name} must be unique for docks, but already exists in DockArea "
-                    f"with name: {self._name} and id {self.gui_id}."
+                    f"with name: {self.object_name} and id {self.gui_id}."
                 )
         else:  # Name is not provided
             name = WidgetContainerUtils.generate_unique_name(name="dock", list_of_names=dock_names)
 
-        dock = BECDock(name=name, parent_dock_area=self, parent_id=self.gui_id, closable=closable)
+        dock = BECDock(
+            parent=self,
+            name=name,  # this is dock name pyqtgraph property, this is displayed on label
+            object_name=name,  # this is a real qt object name passed to BECConnector
+            parent_dock_area=self,
+            parent_id=self.gui_id,
+            closable=closable,
+        )
         dock.config.position = position
         self.config.docks[dock.name()] = dock.config
         # The dock.name is equal to the name passed to BECDock
@@ -499,11 +515,13 @@ if __name__ == "__main__":  # pragma: no cover
     app = QApplication([])
     set_theme("auto")
     dock_area = BECDockArea()
-    dock_1 = dock_area.new(name="dock_0", widget="Waveform")
+    dock_1 = dock_area.new(name="dock_0", widget="DarkModeButton")
+    dock_1.new(widget="DarkModeButton")
     # dock_1 = dock_area.new(name="dock_0", widget="Waveform")
-    dock_area.new(widget="Waveform")
+    dock_area.new(widget="DarkModeButton")
     dock_area.show()
     dock_area.setGeometry(100, 100, 800, 600)
     app.topLevelWidgets()
+    WidgetHierarchy.print_becconnector_hierarchy_from_app()
     app.exec_()
     sys.exit(app.exec_())

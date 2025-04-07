@@ -11,6 +11,7 @@ class AbortButton(BECWidget, QWidget):
 
     PLUGIN = True
     ICON_NAME = "cancel"
+    RPC = False
 
     def __init__(
         self,
@@ -22,9 +23,7 @@ class AbortButton(BECWidget, QWidget):
         scan_id=None,
         **kwargs,
     ):
-        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
-        QWidget.__init__(self, parent=parent)
-
+        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
         self.get_bec_shortcuts()
 
         self.layout = QHBoxLayout(self)

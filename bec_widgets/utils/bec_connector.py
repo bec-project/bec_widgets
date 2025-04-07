@@ -10,21 +10,23 @@ from typing import TYPE_CHECKING, Optional
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
 from pydantic import BaseModel, Field, field_validator
-from qtpy.QtCore import QObject, QRunnable, QThreadPool, Signal
+from qtpy.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal
 from qtpy.QtWidgets import QApplication
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import ErrorPopupUtility
 from bec_widgets.utils.error_popups import SafeSlot as pyqtSlot
+from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.utils.yaml_dialog import load_yaml, load_yaml_gui, save_yaml, save_yaml_gui
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_widgets.utils.bec_dispatcher import BECDispatcher
     from bec_widgets.widgets.containers.dock import BECDock
+else:
+    BECDispatcher = lazy_import_from("bec_widgets.utils.bec_dispatcher", ("BECDispatcher",))
 
 logger = bec_logger.logger
-BECDispatcher = lazy_import_from("bec_widgets.utils.bec_dispatcher", ("BECDispatcher",))
 
 
 class ConnectionConfig(BaseModel):
@@ -82,14 +84,21 @@ class BECConnector:
         client=None,
         config: ConnectionConfig | None = None,
         gui_id: str | None = None,
-        name: str | None = None,
-        parent_dock: BECDock | None = None,
+        object_name: str | None = None,
+        parent_dock: BECDock | None = None,  # TODO should go away -> issue created #473
         parent_id: str | None = None,
+        **kwargs,
     ):
+        # Extract object_name from kwargs to not pass it to Qt class
+        object_name = object_name or kwargs.pop("objectName", None)
+        # Ensure the parent is always the first argument for QObject
+        parent = kwargs.pop("parent", None)
+        # This initializes the QObject or any qt related class
+        super().__init__(parent=parent, **kwargs)
         # BEC related connections
         self.bec_dispatcher = BECDispatcher(client=client)
         self.client = self.bec_dispatcher.client if client is None else client
-        self._parent_dock = parent_dock
+        self._parent_dock = parent_dock  # TODO also remove at some point -> issue created #473
 
         if not self.client in BECConnector.EXIT_HANDLERS:
             # register function to clean connections at exit;
@@ -122,12 +131,24 @@ class BECConnector:
             self.gui_id: str = gui_id  # Keep namespace in sync
         else:
             self.gui_id: str = self.config.gui_id  # type: ignore
-        if name is None:
-            name = self.__class__.__name__
-        else:
-            if not WidgetContainerUtils.has_name_valid_chars(name):
-                raise ValueError(f"Name {name} contains invalid characters.")
-        self._name = name if name else self.__class__.__name__
+
+        # TODO Hierarchy can be refreshed upon creation -> also registry should be notified if objectName changes -> issue #472
+        if object_name is not None:
+            self.setObjectName(object_name)
+
+        # 1) If no objectName is set, set the initial name
+        if not self.objectName():
+            self.setObjectName(self.__class__.__name__)
+        self.object_name = self.objectName()
+
+        # 2) Enforce unique objectName among siblings with the same BECConnector parent
+        self.setParent(parent)
+        if parent_id is None:
+            connector_parent = WidgetHierarchy._get_becwidget_ancestor(self)
+            if connector_parent is not None:
+                self.parent_id = connector_parent.gui_id
+
+        self._enforce_unique_sibling_name()
         self.rpc_register = RPCRegister()
         self.rpc_register.add_rpc(self)
 
@@ -137,6 +158,49 @@ class BECConnector:
         self._thread_pool = QThreadPool.globalInstance()
         # Store references to running workers so they're not garbage collected prematurely.
         self._workers = []
+
+    def _enforce_unique_sibling_name(self):
+        """
+        Enforce that this BECConnector has a unique objectName among its siblings.
+
+        Sibling logic:
+          - If there's a nearest BECConnector parent, only compare with children of that parent.
+          - If parent is None (i.e., top-level object), compare with all other top-level BECConnectors.
+        """
+        parent_bec = WidgetHierarchy._get_becwidget_ancestor(self)
+
+        if parent_bec:
+            # We have a parent => only compare with siblings under that parent
+            siblings = parent_bec.findChildren(BECConnector)
+        else:
+            # No parent => treat all top-level BECConnectors as siblings
+            # 1) Gather all BECConnectors from QApplication
+            all_widgets = QApplication.allWidgets()
+            all_bec = [w for w in all_widgets if isinstance(w, BECConnector)]
+            # 2) "Top-level" means closest BECConnector parent is None
+            top_level_bec = [
+                w for w in all_bec if WidgetHierarchy._get_becwidget_ancestor(w) is None
+            ]
+            # 3) We are among these top-level siblings
+            siblings = top_level_bec
+
+        # Collect used names among siblings
+        used_names = {sib.objectName() for sib in siblings if sib is not self}
+
+        base_name = self.objectName()
+        if base_name not in used_names:
+            # Name is already unique among siblings
+            return
+
+        # Need a suffix to avoid collision
+        counter = 0
+        while True:
+            trial_name = f"{base_name}_{counter}"
+            if trial_name not in used_names:
+                self.setObjectName(trial_name)
+                self.object_name = trial_name
+                break
+            counter += 1
 
     def submit_task(self, fn, *args, on_complete: pyqtSlot = None, **kwargs) -> Worker:
         """
@@ -316,8 +380,9 @@ class BECConnector:
     def remove(self):
         """Cleanup the BECConnector"""
         # If the widget is attached to a dock, remove it from the dock.
+        # TODO this should be handled by dock and dock are not by BECConnector
         if self._parent_dock is not None:
-            self._parent_dock.delete(self._name)
+            self._parent_dock.delete(self.object_name)
         # If the widget is from Qt, trigger its close method.
         elif hasattr(self, "close"):
             self.close()

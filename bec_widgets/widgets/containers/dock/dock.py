@@ -133,6 +133,7 @@ class BECDock(BECWidget, Dock):
         parent_id: str | None = None,
         config: DockConfig | None = None,
         name: str | None = None,
+        object_name: str | None = None,
         client=None,
         gui_id: str | None = None,
         closable: bool = True,
@@ -148,12 +149,17 @@ class BECDock(BECWidget, Dock):
             if isinstance(config, dict):
                 config = DockConfig(**config)
             self.config = config
-        super().__init__(
-            client=client, config=config, gui_id=gui_id, name=name, parent_id=parent_id
-        )  # Name was checked and created in BEC Widget
         label = CustomDockLabel(text=name, closable=closable)
-        Dock.__init__(self, name=name, label=label, parent=self, **kwargs)
-        # Dock.__init__(self, name=name, **kwargs)
+        super().__init__(
+            parent=parent_dock_area,
+            name=name,
+            object_name=object_name,
+            client=client,
+            gui_id=gui_id,
+            config=config,
+            label=label,
+            **kwargs,
+        )
 
         self.parent_dock_area = parent_dock_area
         # Layout Manager
@@ -193,7 +199,7 @@ class BECDock(BECWidget, Dock):
             widgets(dict): The widgets in the dock.
         """
         # pylint: disable=protected-access
-        return dict((widget._name, widget) for widget in self.element_list)
+        return dict((widget.object_name, widget) for widget in self.element_list)
 
     @property
     def element_list(self) -> list[BECWidget]:
@@ -296,27 +302,11 @@ class BECDock(BECWidget, Dock):
             shift(Literal["down", "up", "left", "right"]): The direction to shift the widgets if the position is occupied.
         """
         if row is None:
-            # row = cast(int, self.layout.rowCount())  # type:ignore
             row = self.layout.rowCount()
-            # row = cast(int, row)
 
         if self.layout_manager.is_position_occupied(row, col):
             self.layout_manager.shift_widgets(shift, start_row=row)
 
-        existing_widgets_parent_dock = self._get_list_of_widget_name_of_parent_dock_area()
-
-        if name is not None:  # Name is provided
-            if name in existing_widgets_parent_dock:
-                # pylint: disable=protected-access
-                raise ValueError(
-                    f"Name {name} must be unique for widgets, but already exists in DockArea "
-                    f"with name: {self.parent_dock_area._name} and id {self.parent_dock_area.gui_id}."
-                )
-        else:  # Name is not provided
-            widget_class_name = widget if isinstance(widget, str) else widget.__class__.__name__
-            name = WidgetContainerUtils.generate_unique_name(
-                name=widget_class_name, list_of_names=existing_widgets_parent_dock
-            )
         # Check that Widget is not BECDock or BECDockArea
         widget_class_name = widget if isinstance(widget, str) else widget.__class__.__name__
         if widget_class_name in IGNORE_WIDGETS:
@@ -326,16 +316,20 @@ class BECDock(BECWidget, Dock):
             widget = cast(
                 BECWidget,
                 widget_handler.create_widget(
-                    widget_type=widget, name=name, parent_dock=self, parent_id=self.gui_id
+                    widget_type=widget,
+                    object_name=name,
+                    parent_dock=self,
+                    parent_id=self.gui_id,
+                    parent=self,
                 ),
             )
         else:
-            widget._name = name  # pylint: disable=protected-access
+            widget.object_name = name
 
         self.addWidget(widget, row=row, col=col, rowspan=rowspan, colspan=colspan)
         if hasattr(widget, "config"):
             widget.config.gui_id = widget.gui_id
-            self.config.widgets[widget._name] = widget.config  # pylint: disable=protected-access
+            self.config.widgets[widget.object_name] = widget.config
         return widget
 
     def move_widget(self, widget: QWidget, new_row: int, new_col: int):
@@ -365,7 +359,7 @@ class BECDock(BECWidget, Dock):
         """
         Remove the dock from the parent dock area.
         """
-        self.parent_dock_area.delete(self._name)
+        self.parent_dock_area.delete(self.object_name)
 
     def delete(self, widget_name: str) -> None:
         """
@@ -375,7 +369,7 @@ class BECDock(BECWidget, Dock):
             widget_name(str): Delete the widget with the given name.
         """
         # pylint: disable=protected-access
-        widgets = [widget for widget in self.widgets if widget._name == widget_name]
+        widgets = [widget for widget in self.widgets if widget.object_name == widget_name]
         if len(widgets) == 0:
             logger.warning(
                 f"Widget with name {widget_name} not found in dock {self.name()}. "
@@ -391,7 +385,7 @@ class BECDock(BECWidget, Dock):
         else:
             widget = widgets[0]
         self.layout.removeWidget(widget)
-        self.config.widgets.pop(widget._name, None)
+        self.config.widgets.pop(widget.object_name, None)
         if widget in self.widgets:
             self.widgets.remove(widget)
         widget.close()
@@ -401,7 +395,7 @@ class BECDock(BECWidget, Dock):
         Remove all widgets from the dock.
         """
         for widget in self.widgets:
-            self.delete(widget._name)  # pylint: disable=protected-access
+            self.delete(widget.object_name)
 
     def cleanup(self):
         """

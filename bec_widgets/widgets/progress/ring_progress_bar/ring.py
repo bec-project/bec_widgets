@@ -6,6 +6,7 @@ from bec_lib.endpoints import EndpointInfo, MessageEndpoints
 from pydantic import BaseModel, Field, field_validator
 from pydantic_core import PydanticCustomError
 from qtpy import QtGui
+from qtpy.QtCore import QObject
 
 from bec_widgets.utils import BECConnector, ConnectionConfig
 
@@ -77,7 +78,7 @@ class RingConfig(ProgressbarConfig):
     )
 
 
-class Ring(BECConnector):
+class Ring(BECConnector, QObject):
     USER_ACCESS = [
         "_get_all_rpc",
         "_rpc_id",
@@ -108,7 +109,7 @@ class Ring(BECConnector):
             if isinstance(config, dict):
                 config = RingConfig(**config)
             self.config = config
-        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
+        super().__init__(parent=parent, client=client, config=config, gui_id=gui_id, **kwargs)
 
         self.parent_progress_widget = parent_progress_widget
         self.color = None

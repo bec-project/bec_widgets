@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import darkdetect
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import Slot
-from qtpy.QtWidgets import QApplication, QWidget
+from qtpy.QtCore import QObject, Slot
+from qtpy.QtWidgets import QApplication
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
@@ -32,8 +32,7 @@ class BECWidget(BECConnector):
         config: ConnectionConfig = None,
         gui_id: str | None = None,
         theme_update: bool = False,
-        name: str | None = None,
-        parent_dock: BECDock | None = None,
+        parent_dock: BECDock | None = None,  # TODO should go away -> issue created #473
         parent_id: str | None = None,
         **kwargs,
     ):
@@ -54,16 +53,17 @@ class BECWidget(BECConnector):
             theme_update(bool, optional): Whether to subscribe to theme updates. Defaults to False. When set to True, the
                 widget's apply_theme method will be called when the theme changes.
         """
-        if not isinstance(self, QWidget):
-            raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")
+
         super().__init__(
             client=client,
             config=config,
             gui_id=gui_id,
-            name=name,
             parent_dock=parent_dock,
             parent_id=parent_id,
+            **kwargs,
         )
+        if not isinstance(self, QObject):
+            raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")
         app = QApplication.instance()
         if not hasattr(app, "theme"):
             # DO NOT SET THE THEME TO AUTO! Otherwise, the qwebengineview will segfault

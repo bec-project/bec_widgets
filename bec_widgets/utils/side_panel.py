@@ -35,7 +35,6 @@ class SidePanel(QWidget):
         super().__init__(parent=parent)
 
         self.setProperty("skip_settings", True)
-        self.setObjectName("SidePanel")
 
         self._orientation = orientation
         self._panel_max_width = panel_max_width
