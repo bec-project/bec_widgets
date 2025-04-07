@@ -9,10 +9,10 @@ from bec_widgets.utils.colors import set_theme
 
 
 class DarkModeButton(BECWidget, QWidget):
-    USER_ACCESS = ["toggle_dark_mode"]
 
     ICON_NAME = "dark_mode"
     PLUGIN = True
+    RPC = False
 
     def __init__(
         self,
@@ -99,9 +99,6 @@ class DarkModeButton(BECWidget, QWidget):
 
 
 if __name__ == "__main__":
-    from qtpy.QtWidgets import QApplication
-
-    from bec_widgets.utils.colors import set_theme
 
     app = QApplication([])
     set_theme("auto")

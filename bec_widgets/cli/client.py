@@ -22,7 +22,6 @@ class Widgets(str, enum.Enum):
     BECQueue = "BECQueue"
     BECStatusBox = "BECStatusBox"
     DapComboBox = "DapComboBox"
-    DarkModeButton = "DarkModeButton"
     DeviceBrowser = "DeviceBrowser"
     DeviceComboBox = "DeviceComboBox"
     DeviceLineEdit = "DeviceLineEdit"
@@ -622,15 +621,6 @@ class DapComboBox(RPCBase):
 
         Args:
             default_device(str): Default device name.
-        """
-
-
-class DarkModeButton(RPCBase):
-    @rpc_call
-    def toggle_dark_mode(self) -> "None":
-        """
-        Toggle the dark mode state. This will change the theme of the entire
-        application to dark or light mode.
         """
 
 

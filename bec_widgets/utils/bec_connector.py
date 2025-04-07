@@ -75,6 +75,7 @@ class BECConnector:
     """Connection mixin class to handle BEC client and device manager"""
 
     USER_ACCESS = ["_config_dict", "_get_all_rpc", "_rpc_id"]
+    RPC = True
     EXIT_HANDLERS = {}
 
     def __init__(
@@ -129,7 +130,8 @@ class BECConnector:
                 raise ValueError(f"Name {name} contains invalid characters.")
         self._name = name if name else self.__class__.__name__
         self.rpc_register = RPCRegister()
-        self.rpc_register.add_rpc(self)
+        if self.RPC is True:
+            self.rpc_register.add_rpc(self)
 
         # Error popups
         self.error_utility = ErrorPopupUtility()
