@@ -11,10 +11,10 @@ class StopButton(BECWidget, QWidget):
 
     PLUGIN = True
     ICON_NAME = "dangerous"
+    RPC = False
 
     def __init__(self, parent=None, client=None, config=None, gui_id=None, toolbar=False, **kwargs):
-        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
-        QWidget.__init__(self, parent=parent)
+        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
 
         self.get_bec_shortcuts()
 

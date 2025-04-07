@@ -9,13 +9,11 @@ from bec_widgets.utils.bec_widget import BECWidget
 class BECColorMapWidget(BECWidget, QWidget):
     colormap_changed_signal = Signal(str)
     ICON_NAME = "palette"
-    USER_ACCESS = ["colormap"]
     PLUGIN = True
+    RPC = False
 
     def __init__(self, parent=None, cmap: str = "magma", **kwargs):
-        super().__init__(**kwargs)
-        QWidget.__init__(self, parent=parent)
-
+        super().__init__(parent=parent, **kwargs)
         # Create the ColorMapButton
         self.button = ColorMapButton()
 

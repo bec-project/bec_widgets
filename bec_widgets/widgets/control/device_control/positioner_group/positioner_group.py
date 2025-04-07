@@ -69,8 +69,7 @@ class PositionerGroup(BECWidget, QWidget):
         Args:
             parent: The parent widget.
         """
-        super().__init__(**kwargs)
-        QWidget.__init__(self, parent)
+        super().__init__(parent=parent, **kwargs)
 
         self.get_bec_shortcuts()
 

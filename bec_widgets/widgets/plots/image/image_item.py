@@ -82,10 +82,10 @@ class ImageItem(BECConnector, pg.ImageItem):
             self.config = config
         else:
             self.config = config
+        self.parent_image = parent_image
+        self.parent_id = self.parent_image.gui_id
         super().__init__(config=config, gui_id=gui_id)
         pg.ImageItem.__init__(self)
-
-        self.parent_image = parent_image
 
         self.raw_data = None
         self.buffer = []
@@ -93,6 +93,9 @@ class ImageItem(BECConnector, pg.ImageItem):
 
         # Image processor will handle any setting of data
         self._image_processor = ImageProcessor(config=self.config.processing)
+
+    def parent(self):
+        return self.parent_image
 
     def set_data(self, data: np.ndarray):
         self.raw_data = data

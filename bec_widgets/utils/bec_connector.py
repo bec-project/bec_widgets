@@ -88,7 +88,9 @@ class BECConnector:
         parent_id: str | None = None,
         **kwargs,
     ):
-        super().__init__(**kwargs)
+        # Ensure the parent is always kwargs!
+        parent = kwargs.pop("parent", None)
+        super().__init__(parent=parent, **kwargs)
         # BEC related connections
         self.bec_dispatcher = BECDispatcher(client=client)
         self.client = self.bec_dispatcher.client if client is None else client

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 import darkdetect
 from bec_lib.logger import bec_logger
+from PySide6.QtCore import QObject
 from qtpy.QtCore import Slot
 from qtpy.QtWidgets import QApplication, QWidget
 
@@ -64,7 +65,7 @@ class BECWidget(BECConnector):
             parent_id=parent_id,
             **kwargs,
         )
-        if not isinstance(self, QWidget):
+        if not isinstance(self, QObject):
             raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")
         app = QApplication.instance()
         if not hasattr(app, "theme"):

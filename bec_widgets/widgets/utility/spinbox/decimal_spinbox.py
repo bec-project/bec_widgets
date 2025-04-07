@@ -30,8 +30,7 @@ class BECSpinBox(BECWidget, QDoubleSpinBox):
     ) -> None:
         if config is None:
             config = ConnectionConfig(widget_class=self.__class__.__name__)
-        super().__init__(client=client, gui_id=gui_id, config=config, **kwargs)
-        QDoubleSpinBox.__init__(self, parent=parent)
+        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
 
         self.setObjectName("BECSpinBox")
         # Make the widget as compact as possible horizontally.

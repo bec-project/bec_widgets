@@ -17,6 +17,7 @@ class LMFitDialog(BECWidget, QWidget):
 
     PLUGIN = True
     ICON_NAME = "monitoring"
+    RPC = False
     # Signal to emit the currently selected fit curve_id
     selected_fit = Signal(str)
     # Signal to emit a move action in form of a tuple (param_name, value)
@@ -43,8 +44,7 @@ class LMFitDialog(BECWidget, QWidget):
             gui_id (str): GUI ID.
             ui_file (str): The UI file to be loaded.
         """
-        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
-        QWidget.__init__(self, parent=parent)
+        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
         self.setProperty("skip_settings", True)
         self.setObjectName("LMFitDialog")
         self._ui_file = ui_file

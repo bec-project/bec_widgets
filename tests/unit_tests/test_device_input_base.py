@@ -17,9 +17,8 @@ from .conftest import create_widget
 class DeviceInputWidget(DeviceInputBase, QWidget):
     """Thin wrapper around DeviceInputBase to make it a QWidget"""
 
-    def __init__(self, parent=None, client=None, config=None, gui_id=None):
-        super().__init__(client=client, config=config, gui_id=gui_id)
-        QWidget.__init__(self, parent=parent)
+    def __init__(self, parent=None, client=None, config=None, gui_id=None, **kwargs):
+        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
 
 
 @pytest.fixture

@@ -26,8 +26,7 @@ class WebsiteWidget(BECWidget, QWidget):
     def __init__(
         self, parent=None, url: str = None, config=None, client=None, gui_id=None, **kwargs
     ):
-        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
-        QWidget.__init__(self, parent=parent)
+        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         self.website = QWebEngineView()

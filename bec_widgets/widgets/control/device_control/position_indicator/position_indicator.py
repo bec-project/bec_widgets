@@ -13,8 +13,8 @@ class PositionIndicator(BECWidget, QWidget):
     ICON_NAME = "horizontal_distribute"
 
     def __init__(self, parent=None, client=None, config=None, gui_id=None, **kwargs):
-        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
-        QWidget.__init__(self, parent=parent)
+        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
+
         self.position = 50
         self.min_value = 0
         self.max_value = 100
