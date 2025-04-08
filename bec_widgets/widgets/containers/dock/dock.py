@@ -199,7 +199,7 @@ class BECDock(BECWidget, Dock):
             widgets(dict): The widgets in the dock.
         """
         # pylint: disable=protected-access
-        return dict((widget._name, widget) for widget in self.element_list)
+        return dict((widget.object_name, widget) for widget in self.element_list)
 
     @property
     def element_list(self) -> list[BECWidget]:
@@ -323,13 +323,12 @@ class BECDock(BECWidget, Dock):
                 ),
             )
         else:
-            # FIXME dangerous, pyqtgraph is using sometimes _name, we should get rid of it...
-            widget._name = name  # pylint: disable=protected-access
+            widget.object_name = name
 
         self.addWidget(widget, row=row, col=col, rowspan=rowspan, colspan=colspan)
         if hasattr(widget, "config"):
             widget.config.gui_id = widget.gui_id
-            self.config.widgets[widget._name] = widget.config  # pylint: disable=protected-access
+            self.config.widgets[widget.object_name] = widget.config
         return widget
 
     def move_widget(self, widget: QWidget, new_row: int, new_col: int):
@@ -359,7 +358,7 @@ class BECDock(BECWidget, Dock):
         """
         Remove the dock from the parent dock area.
         """
-        self.parent_dock_area.delete(self._name)
+        self.parent_dock_area.delete(self.object_name)
 
     def delete(self, widget_name: str) -> None:
         """
@@ -369,7 +368,7 @@ class BECDock(BECWidget, Dock):
             widget_name(str): Delete the widget with the given name.
         """
         # pylint: disable=protected-access
-        widgets = [widget for widget in self.widgets if widget._name == widget_name]
+        widgets = [widget for widget in self.widgets if widget.object_name == widget_name]
         if len(widgets) == 0:
             logger.warning(
                 f"Widget with name {widget_name} not found in dock {self.name()}. "
@@ -385,7 +384,7 @@ class BECDock(BECWidget, Dock):
         else:
             widget = widgets[0]
         self.layout.removeWidget(widget)
-        self.config.widgets.pop(widget._name, None)
+        self.config.widgets.pop(widget.object_name, None)
         if widget in self.widgets:
             self.widgets.remove(widget)
         widget.close()
@@ -395,7 +394,7 @@ class BECDock(BECWidget, Dock):
         Remove all widgets from the dock.
         """
         for widget in self.widgets:
-            self.delete(widget._name)  # pylint: disable=protected-access
+            self.delete(widget.object_name)
 
     def cleanup(self):
         """

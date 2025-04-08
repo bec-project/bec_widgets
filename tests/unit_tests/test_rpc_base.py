@@ -5,7 +5,7 @@ from bec_widgets.cli.rpc.rpc_base import DeletedWidgetError, RPCBase, RPCReferen
 
 @pytest.fixture
 def rpc_base():
-    yield RPCBase(gui_id="rpc_base_test", name="test")
+    yield RPCBase(gui_id="rpc_base_test", object_name="test")
 
 
 def test_rpc_base(rpc_base):

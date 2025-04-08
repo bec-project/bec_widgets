@@ -91,7 +91,7 @@ class BECDockArea(BECWidget, QWidget):
             config=config,
             **kwargs,
         )
-        self._parent = parent
+        self._parent = parent  # TODO probably not needed
         self.layout = QVBoxLayout(self)
         self.layout.setSpacing(5)
         self.layout.setContentsMargins(0, 0, 0, 0)
@@ -361,20 +361,22 @@ class BECDockArea(BECWidget, QWidget):
         Returns:
             BECDock: The created dock.
         """
-        dock_names = [dock._name for dock in self.panel_list]  # pylint: disable=protected-access
+        dock_names = [
+            dock.object_name for dock in self.panel_list
+        ]  # pylint: disable=protected-access
         if name is not None:  # Name is provided
             if name in dock_names:
                 raise ValueError(
                     f"Name {name} must be unique for docks, but already exists in DockArea "
-                    f"with name: {self._name} and id {self.gui_id}."
+                    f"with name: {self.object_name} and id {self.gui_id}."
                 )
         else:  # Name is not provided
             name = WidgetContainerUtils.generate_unique_name(name="dock", list_of_names=dock_names)
 
         dock = BECDock(
             parent=self,
-            name=name,
-            object_name=name,
+            name=name,  # this is dock name pyqtgraph property, this is displayed on label
+            object_name=name,  # this is a real qt object name passed to BECConnector
             parent_dock_area=self,
             parent_id=self.gui_id,
             closable=closable,

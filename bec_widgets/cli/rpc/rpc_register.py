@@ -123,7 +123,7 @@ class RPCRegister:
         # This retrieves any rpc objects that are subclass of BECWidget,
         # i.e. curve and image items are excluded
         widgets = [rpc for rpc in self._rpc_register.values() if isinstance(rpc, cls)]
-        return [widget._name for widget in widgets]
+        return [widget.object_name for widget in widgets]
 
     def broadcast(self):
         """

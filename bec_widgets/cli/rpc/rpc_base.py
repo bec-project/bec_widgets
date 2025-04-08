@@ -91,7 +91,7 @@ class RPCReference:
     def __init__(self, registry: dict, gui_id: str) -> None:
         self._registry = registry
         self._gui_id = gui_id
-        self._name = self._registry[self._gui_id]._name
+        self.object_name = self._registry[self._gui_id].object_name
 
     @check_for_deleted_widget
     def __getattr__(self, name):
@@ -127,13 +127,13 @@ class RPCBase:
         self,
         gui_id: str | None = None,
         config: dict | None = None,
-        name: str | None = None,
+        object_name: str | None = None,
         parent=None,
     ) -> None:
         self._client = BECClient()  # BECClient is a singleton; here, we simply get the instance
         self._config = config if config is not None else {}
         self._gui_id = gui_id if gui_id is not None else str(uuid.uuid4())[:5]
-        self._name = name if name is not None else str(uuid.uuid4())[:5]
+        self.object_name = object_name if object_name is not None else str(uuid.uuid4())[:5]
         self._parent = parent
         self._msg_wait_event = threading.Event()
         self._rpc_response = None
@@ -156,7 +156,7 @@ class RPCBase:
         """
         Get the widget name.
         """
-        return self._name
+        return self.object_name
 
     @property
     def _root(self) -> BECGuiClient:
@@ -276,12 +276,17 @@ class RPCBase:
             for key, val in self._root._server_registry.items():
                 parent_id = val["config"].get("parent_id")
                 if parent_id == self._gui_id:
-                    references[key] = {"gui_id": val["config"]["gui_id"], "name": val["name"]}
+                    references[key] = {
+                        "gui_id": val["config"]["gui_id"],
+                        "object_name": val["object_name"],
+                    }
             removed_references = set(self._rpc_references.keys()) - set(references.keys())
             for key in removed_references:
-                delattr(self, self._rpc_references[key]["name"])
+                delattr(self, self._rpc_references[key]["object_name"])
             self._rpc_references = references
             for key, val in references.items():
                 setattr(
-                    self, val["name"], RPCReference(self._root._ipython_registry, val["gui_id"])
+                    self,
+                    val["object_name"],
+                    RPCReference(self._root._ipython_registry, val["gui_id"]),
                 )

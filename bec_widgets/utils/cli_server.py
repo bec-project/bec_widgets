@@ -169,7 +169,7 @@ class CLIServer:
         bec_widgets = set(w for w in all_qwidgets if isinstance(w, BECConnector))
         bec_widgets = {
             c for c in bec_widgets if not (hasattr(c, "RPC") and c.RPC is False)
-        }  # FIXME not needed
+        }  # FIXME not needed -> actually maybe needed to filter widgets with no RPC, but can be done in register
 
         # 2) Also gather BECConnector-based data items from PlotBase
         # TODO do we need to access plot data items in cli in namespace?
@@ -216,7 +216,7 @@ class CLIServer:
 
         return {
             "gui_id": connector.gui_id,
-            "name": connector._name or connector.__class__.__name__,
+            "object_name": connector.object_name or connector.__class__.__name__,
             "widget_class": connector.__class__.__name__,
             "config": config_dict,
             "__rpc__": True,

@@ -224,7 +224,7 @@ class BECGuiClient(RPCBase):
     @property
     def launcher(self) -> RPCBase:
         """The launcher object."""
-        return RPCBase(gui_id=f"{self._gui_id}:launcher", parent=self, name="launcher")
+        return RPCBase(gui_id=f"{self._gui_id}:launcher", parent=self, object_name="launcher")
 
     def connect_to_gui_server(self, gui_id: str) -> None:
         """Connect to a GUI server"""
@@ -251,7 +251,7 @@ class BECGuiClient(RPCBase):
     @property
     def windows(self) -> dict:
         """Dictionary with dock areas in the GUI."""
-        return {widget._name: widget for widget in self._top_level.values()}
+        return {widget.object_name: widget for widget in self._top_level.values()}
 
     @property
     def window_list(self) -> list:
@@ -469,7 +469,7 @@ class BECGuiClient(RPCBase):
             self._ipython_registry.pop(gui_id)
 
         removed_widgets = [
-            widget._name for widget in self._top_level.values() if widget._is_deleted()
+            widget.object_name for widget in self._top_level.values() if widget._is_deleted()
         ]
 
         for widget_name in removed_widgets:
@@ -479,7 +479,7 @@ class BECGuiClient(RPCBase):
                 delattr(self, widget_name)
 
         for gui_id, widget_ref in top_level_widgets.items():
-            setattr(self, widget_ref._name, widget_ref)
+            setattr(self, widget_ref.object_name, widget_ref)
 
         self._top_level = top_level_widgets
 
@@ -490,7 +490,7 @@ class BECGuiClient(RPCBase):
             state (dict): The state of the widget from the _server_registry.
             parent (object): The parent object.
         """
-        name = state["name"]
+        object_name = state["object_name"]
         gui_id = state["gui_id"]
         if state["widget_class"] in IGNORE_WIDGETS:
             return
@@ -499,7 +499,7 @@ class BECGuiClient(RPCBase):
             return
         obj = self._ipython_registry.get(gui_id)
         if obj is None:
-            widget = widget_class(gui_id=gui_id, name=name, parent=parent)
+            widget = widget_class(gui_id=gui_id, object_name=object_name, parent=parent)
             self._ipython_registry[gui_id] = widget
         else:
             widget = obj

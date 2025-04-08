@@ -88,6 +88,7 @@ class BECConnector:
         parent_id: str | None = None,
         **kwargs,
     ):
+        # Extract object_name from kwargs to not pass it to Qt class
         object_name = object_name or kwargs.pop("objectName", None)
         # Ensure the parent is always the first argument for QObject
         parent = kwargs.pop("parent", None)
@@ -137,7 +138,7 @@ class BECConnector:
         # 1) If no objectName is set, set the initial name
         if not self.objectName():
             self.setObjectName(self.__class__.__name__)
-        self._name = self.objectName()
+        self.object_name = self.objectName()
 
         # 2) Enforce unique objectName among siblings with the same BECConnector parent
         self.setParent(parent)
@@ -145,6 +146,7 @@ class BECConnector:
             connector_parent = WidgetHierarchy._get_becwidget_ancestor(self)
             if connector_parent is not None:
                 self.parent_id = connector_parent.gui_id
+
         self._enforce_unique_sibling_name()
         self.rpc_register = RPCRegister()
         self.rpc_register.add_rpc(self)
@@ -195,7 +197,7 @@ class BECConnector:
             trial_name = f"{base_name}_{counter}"
             if trial_name not in used_names:
                 self.setObjectName(trial_name)
-                self._name = trial_name
+                self.object_name = trial_name
                 break
             counter += 1
 
@@ -377,8 +379,9 @@ class BECConnector:
     def remove(self):
         """Cleanup the BECConnector"""
         # If the widget is attached to a dock, remove it from the dock.
+        # TODO this should be handled by dock and dock are not by BECConnector
         if self._parent_dock is not None:
-            self._parent_dock.delete(self._name)
+            self._parent_dock.delete(self.object_name)
         # If the widget is from Qt, trigger its close method.
         elif hasattr(self, "close"):
             self.close()
