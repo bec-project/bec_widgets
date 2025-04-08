@@ -199,7 +199,7 @@ class BECGuiClient(RPCBase):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._lock = Lock()
-        self._default_dock_name = "bec"
+        self._default_dock_name = "BECDockArea"
         self._auto_updates_enabled = True
         self._auto_updates = None
         self._killed = False

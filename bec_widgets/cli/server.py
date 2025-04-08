@@ -111,8 +111,8 @@ class GUIServer:
         self.setup_bec_icon()
 
         service_config = self._get_service_config()
-        self.dispatcher = BECDispatcher(config=service_config)
-        self.dispatcher.start_cli_server(gui_id=self.gui_id)
+        self.dispatcher = BECDispatcher(config=service_config, gui_id=self.gui_id)
+        # self.dispatcher.start_cli_server(gui_id=self.gui_id)
 
         self.launcher_window = LaunchWindow(gui_id=f"{self.gui_id}:launcher")
         self.launcher_window.setAttribute(Qt.WA_ShowWithoutActivating)  # type: ignore
@@ -139,8 +139,6 @@ class GUIServer:
             if self.app:
                 self.app.quit()
 
-        # gui.bec.close()
-        # win.shutdown()
         signal.signal(signal.SIGINT, sigint_handler)
         signal.signal(signal.SIGTERM, sigint_handler)
 
