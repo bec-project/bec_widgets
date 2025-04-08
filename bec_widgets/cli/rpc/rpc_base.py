@@ -95,9 +95,16 @@ class RPCReference:
 
     @check_for_deleted_widget
     def __getattr__(self, name):
-        if name in ["_registry", "_gui_id", "_is_deleted", "_name"]:
+        if name in ["_registry", "_gui_id", "_is_deleted", "_name", "object_name"]:
             return super().__getattribute__(name)
         return self._registry[self._gui_id].__getattribute__(name)
+
+    def __setattr__(self, name, value):
+        if name in ["_registry", "_gui_id", "_is_deleted", "_name", "object_name"]:
+            return super().__setattr__(name, value)
+        if self._gui_id not in self._registry:
+            raise DeletedWidgetError(f"Widget with gui_id {self._gui_id} has been deleted")
+        self._registry[self._gui_id].__setattr__(name, value)
 
     @check_for_deleted_widget
     def __getitem__(self, key):
