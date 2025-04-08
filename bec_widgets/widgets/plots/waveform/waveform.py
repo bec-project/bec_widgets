@@ -1098,17 +1098,20 @@ class Waveform(PlotBase):
             if len(np.shape(device_data)) > 1:
                 device_data = device_data[-1, :]
 
-            x_data = self._get_x_data(device_name, device_entry)
+            if device_data is None:
+                logger.warning(f"Async data for curve {curve.name()} is None.")
+                continue
 
-            # If there's actual data, set it
-            if device_data is not None:
-                self._auto_adjust_async_curve_settings(curve, len(device_data))
-                if x_data is not None or self.x_axis_mode["name"] == "timestamp":
-                    curve.setData(x_data, device_data)
-                else:
-                    curve.setData(
-                        np.linspace(0, len(device_data) - 1, len(device_data)), device_data
-                    )
+            # Async curves only support plotting vs index or other device
+            if self.x_axis_mode["name"] in ["timestamp", "index", "auto"]:
+                device_data_x = np.linspace(0, len(device_data) - 1, len(device_data))
+            else:
+                # Fetch data from signal instead
+                device_data_x = self._get_x_data(device_name, device_entry)
+
+            self._auto_adjust_async_curve_settings(curve, len(device_data))
+            curve.setData(device_data_x, device_data)
+
         self.request_dap_update.emit()
 
     def _setup_async_curve(self, curve: Curve):
@@ -1137,69 +1140,72 @@ class Waveform(PlotBase):
     @SafeSlot(dict, dict)
     def on_async_readback(self, msg, metadata):
         """
-        Get async data readback.
+        Get async data readback. This code needs to be fast, therefor we try
+        to reduce the number of copies in between cycles. Be careful when refactoring
+        this part as it will affect the performance of the async readback.
+
+        Note:
+            We create data_plot_x and data_plot_y and modify them within this function
+            to avoid creating new arrays. This is important for performance.
+            We adjust the variables based on instruction type.
+            - add: Add the new data to the existing data.
+            - add_slice: Add the new data to the existing data and set the slice index.
+            - replace: Replace the existing data with the new data.
 
         Args:
             msg(dict): Message with the async data.
             metadata(dict): Metadata of the message.
         """
         instruction = metadata.get("async_update", {}).get("type")
+        if instruction not in ["add", "add_slice", "replace"]:
+            logger.warning(f"Invalid async update instruction: {instruction}")
+            return
         max_shape = metadata.get("async_update", {}).get("max_shape", [])
+        plot_mode = self.x_axis_mode["name"]
         for curve in self._async_curves:
-            new_data = None
-            y_data = None
-            x_data = None
-            x_name = self.x_axis_mode["name"]
+            x_data = None  # Reset x_data
+            # Get the curve data
             async_data = msg["signals"].get(curve.config.signal.entry, None)
             if async_data is None:
                 continue
-            data_plot = async_data["value"]
+            # y-data
+            data_plot_y = async_data["value"]
+            if data_plot_y is None:
+                logger.warning(f"Async data for curve {curve.name()} is None.")
+                continue
             # Add
             if instruction == "add":
                 if len(max_shape) > 1:
-                    if len(data_plot.shape) > 1:
-                        data_plot = data_plot[-1, :]
+                    # Ensure that data_plot_y is numpy array, this avoids copying if data_plot_y is already a numpy array
+                    data_plot_y = np.asarray(data_plot_y)
+                    if len(data_plot_y.shape) > 1:
+                        data_plot_y = data_plot_y[-1, :]
                 else:
                     x_data, y_data = curve.get_data()
-
-                if y_data is not None:
-                    new_data = np.hstack((y_data, data_plot))  # TODO check performance
-                else:
-                    new_data = data_plot
-                if x_name == "timestamp":
-                    if x_data is not None:
-                        x_data = np.hstack((x_data, async_data["timestamp"]))
-                    else:
-                        x_data = async_data["timestamp"]
-                        # FIXME x axis wrong if timestamp switched during scan
+                    if y_data is not None:
+                        data_plot_y = np.hstack((y_data, data_plot_y))
             # Add slice
-            elif instruction == "add_slice":
+            if instruction == "add_slice":
                 current_slice_id = metadata.get("async_update", {}).get("index")
-                data_plot = async_data["value"]
                 if current_slice_id != curve.slice_index:
                     curve.slice_index = current_slice_id
                 else:
                     x_data, y_data = curve.get_data()
-                if y_data is not None:
-                    new_data = np.hstack((y_data, data_plot))
-                else:
-                    new_data = data_plot
-            # Replace
-            elif instruction == "replace":
-                if x_name == "timestamp":
-                    x_data = async_data["timestamp"]
-                new_data = data_plot
+                    if y_data is not None:
+                        data_plot_y = np.hstack((y_data, data_plot_y))
 
-            # If update is not add, add_slice or replace, continue.
-            if new_data is None:
-                continue
-            # Hide symbol, activate downsampling if data >1000
-            self._auto_adjust_async_curve_settings(curve, len(new_data))
-            # Set data on the curve
-            if x_name == "timestamp" and instruction != "add_slice":
-                curve.setData(x_data, new_data)
+            # Replace is trivial, no need to modify data_plot_y
+
+            # Get the x data if 'timestamp' is selected, otherwise compute it
+            data_plot_x = async_data["timestamp"]
+            if plot_mode == "timestamp" and instruction != "add_slice":
+                if data_plot_x is not None and x_data is not None:
+                    data_plot_x = np.hstack((x_data, data_plot_x))
             else:
-                curve.setData(np.linspace(0, len(new_data) - 1, len(new_data)), new_data)
+                data_plot_x = np.linspace(0, len(data_plot_y) - 1, len(data_plot_y))
+            # Set the x data
+            self._auto_adjust_async_curve_settings(curve, len(data_plot_y))
+            curve.setData(data_plot_x, data_plot_y)
 
         self.request_dap_update.emit()
 
