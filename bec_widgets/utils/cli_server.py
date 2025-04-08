@@ -162,41 +162,19 @@ class CLIServer:
         except RedisError as exc:
             logger.error(f"Error while emitting heartbeat: {exc}")
 
-    # FIXME signature should be changed on all levels, connection dict is no longer needed
-    def broadcast_registry_update(self, _):
-        # 1) Gather ALL BECConnector-based widgets
-        all_qwidgets = QApplication.allWidgets()
-        bec_widgets = set(w for w in all_qwidgets if isinstance(w, BECConnector))
-        bec_widgets = {
-            c for c in bec_widgets if not (hasattr(c, "RPC") and c.RPC is False)
-        }  # FIXME not needed -> actually maybe needed to filter widgets with no RPC, but can be done in register
-
-        # 2) Also gather BECConnector-based data items from PlotBase
-        # TODO do we need to access plot data items in cli in namespace?
-        for w in all_qwidgets:
-            if isinstance(w, PlotBase) and hasattr(w, "plot_item"):
-                if hasattr(w.plot_item, "listDataItems"):
-                    for data_item in w.plot_item.listDataItems():
-                        if isinstance(data_item, BECConnector):
-                            bec_widgets.add(data_item)
-
-        # 3) Convert each BECConnector to a JSON-like dict
-        registry_data = {}
-        for connector in bec_widgets:
-            if not hasattr(connector, "config"):
+    def broadcast_registry_update(self, connections: dict):
+        data = {}
+        for key, val in connections.items():
+            if not isinstance(val, BECConnector):
                 continue
-            serialized = self._serialize_bec_connector(connector)
-            registry_data[serialized["gui_id"]] = serialized
+            if not getattr(val, "RPC", True):
+                continue
+            data[key] = self._serialize_bec_connector(val)
 
-        # 4) Broadcast the final dictionary
-        for callback in self._registry_update_callbacks:
-            callback(registry_data)
-
-        # FIXME this message is bugged and it was even before mine refactor of parent logic
-        # logger.info(f"Broadcasting registry update: {registry_data} for {self.gui_id}")
+        logger.info(f"Broadcasting registry update: {data} for {self.gui_id}")
         self.client.connector.xadd(
             MessageEndpoints.gui_registry_state(self.gui_id),
-            msg_dict={"data": messages.GUIRegistryStateMessage(state=registry_data)},
+            msg_dict={"data": messages.GUIRegistryStateMessage(state=data)},
             max_size=1,
         )
 
@@ -206,13 +184,8 @@ class CLIServer:
         setting 'parent_id' via the real nearest BECConnector parent.
         """
 
-        parent_id = getattr(connector, "parent_id", None)
-        if parent_id is None:
-            parent = self._get_becwidget_ancestor(connector)
-            parent_id = parent.gui_id if parent else None
-
         config_dict = connector.config.model_dump()
-        config_dict["parent_id"] = parent_id
+        config_dict["parent_id"] = getattr(connector, "parent_id", None)
 
         return {
             "gui_id": connector.gui_id,
