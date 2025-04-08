@@ -122,3 +122,17 @@ class ScatterCurveSettings(SettingWidget):
             color_map=color_map,
             validate_bec=validate_bec,
         )
+
+    def cleanup(self):
+        self.ui.x_name.close()
+        self.ui.x_name.deleteLater()
+        self.ui.x_entry.close()
+        self.ui.x_entry.deleteLater()
+        self.ui.y_name.close()
+        self.ui.y_name.deleteLater()
+        self.ui.y_entry.close()
+        self.ui.y_entry.deleteLater()
+        self.ui.z_name.close()
+        self.ui.z_name.deleteLater()
+        self.ui.z_entry.close()
+        self.ui.z_entry.deleteLater()
