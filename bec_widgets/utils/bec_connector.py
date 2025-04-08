@@ -23,9 +23,10 @@ from bec_widgets.utils.yaml_dialog import load_yaml, load_yaml_gui, save_yaml, s
 if TYPE_CHECKING:  # pragma: no cover
     from bec_widgets.utils.bec_dispatcher import BECDispatcher
     from bec_widgets.widgets.containers.dock import BECDock
+else:
+    BECDispatcher = lazy_import_from("bec_widgets.utils.bec_dispatcher", ("BECDispatcher",))
 
 logger = bec_logger.logger
-BECDispatcher = lazy_import_from("bec_widgets.utils.bec_dispatcher", ("BECDispatcher",))
 
 
 class ConnectionConfig(BaseModel):
