@@ -112,7 +112,16 @@ class SettingsDialog(QDialog):
         Accept the changes made in the settings widget and close the dialog.
         """
         self.widget.accept_changes()
+        self.cleanup()
         super().accept()
+
+    @SafeSlot()
+    def reject(self):
+        """
+        Reject the changes made in the settings widget and close the dialog.
+        """
+        self.cleanup()
+        super().reject()
 
     @SafeSlot()
     def apply_changes(self):

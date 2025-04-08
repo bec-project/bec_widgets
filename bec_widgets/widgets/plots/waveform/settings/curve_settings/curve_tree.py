@@ -544,6 +544,16 @@ class CurveTree(BECWidget, QWidget):
                 if dap.config.parent_label == dev.config.label:
                     CurveRow(self.tree, parent_item=dr, config=dap.config, device_manager=self.dev)
 
+    def cleanup(self):
+        """Cleanup the widget."""
+        for item in self.all_items:
+            if hasattr(item, "device_edit"):
+                item.device_edit.close()
+                item.device_edit.deleteLater()
+            if hasattr(item, "dap_combo"):
+                item.dap_combo.close()
+                item.dap_combo.deleteLater()
+
     def closeEvent(self, event):
-        logger.info("CurveTree closeEvent")
+        self.cleanup()
         return super().closeEvent(event)
