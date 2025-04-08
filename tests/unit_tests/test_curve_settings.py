@@ -33,8 +33,6 @@ def test_curve_setting_init(curve_setting_fixture):
     """
     curve_setting, wf = curve_setting_fixture
 
-    # Basic checks
-    assert curve_setting.objectName() == "CurveSetting"
     # The layout should be QVBoxLayout
     assert isinstance(curve_setting.layout, QVBoxLayout)
 

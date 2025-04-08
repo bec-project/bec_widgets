@@ -10,14 +10,7 @@ from bec_lib import bec_logger, messages
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import Field, ValidationError, field_validator
 from qtpy.QtCore import QTimer, Signal
-from qtpy.QtWidgets import (
-    QApplication,
-    QDialog,
-    QHBoxLayout,
-    QMainWindow,
-    QVBoxLayout,
-    QWidget,
-)
+from qtpy.QtWidgets import QApplication, QDialog, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget
 
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
@@ -320,6 +313,8 @@ class Waveform(PlotBase):
         """
         Slot for when the axis settings dialog is closed.
         """
+        self.curve_settings_dialog.close()
+        self.curve_settings_dialog.deleteLater()
         self.curve_settings_dialog = None
         self.toolbar.widgets["curve"].action.setChecked(False)
 
@@ -863,6 +858,9 @@ class Waveform(PlotBase):
         Clear all curves from the plot widget.
         """
         curve_list = self.curves
+        self._dap_curves = []
+        self._sync_curves = []
+        self._async_curves = []
         for curve in curve_list:
             self.remove_curve(curve.name())
         if self.crosshair is not None:
@@ -943,6 +941,7 @@ class Waveform(PlotBase):
             self.on_async_readback,
             MessageEndpoints.device_async_readback(self.scan_id, curve.name()),
         )
+        curve.rpc_register.remove_rpc(curve)
 
         # Remove itself from the DAP summary only for side panels
         if (
@@ -1330,7 +1329,9 @@ class Waveform(PlotBase):
             # find the device curve
             parent_curve = self._find_curve_by_label(parent_label)
             if parent_curve is None:
-                logger.warning(f"No device curve found for DAP curve '{dap_curve.name()}'!")
+                logger.warning(
+                    f"No device curve found for DAP curve '{dap_curve.name()}'!"
+                )  # TODO triggerd when DAP curve is removed from the curve dialog, why?
                 continue
 
             x_data, y_data = parent_curve.get_data()
@@ -1565,7 +1566,6 @@ class Waveform(PlotBase):
                 found_sync = True
             else:
                 logger.warning("Device {dev_name} not found in readout priority list.")
-
         # Determine the mode of the scan
         if found_async and found_sync:
             mode = "mixed"
@@ -1599,18 +1599,31 @@ class Waveform(PlotBase):
             logger.warning(f"Neither scan_id or scan_number was provided, fetching the latest scan")
             scan_index = -1
 
-        if scan_index is not None:
-            if len(self.client.history) == 0:
-                logger.info("No scans executed so far. Skipping scan history update.")
-                return
-
-            self.scan_item = self.client.history[scan_index]
-            metadata = self.scan_item.metadata
-            self.scan_id = metadata["bec"]["scan_id"]
-        else:
+        if scan_index is None:
             self.scan_id = scan_id
             self.scan_item = self.client.history.get_by_scan_id(scan_id)
+            self._emit_signal_update()
+            return
 
+        if scan_index == -1:
+            scan_item = self.client.queue.scan_storage.current_scan
+            if scan_item is not None:
+                self.scan_item = scan_item
+                self.scan_id = scan_item.scan_id
+                self._emit_signal_update()
+                return
+
+        if len(self.client.history) == 0:
+            logger.info("No scans executed so far. Skipping scan history update.")
+            return
+
+        self.scan_item = self.client.history[scan_index]
+        metadata = self.scan_item.metadata
+        self.scan_id = metadata["bec"]["scan_id"]
+
+        self._emit_signal_update()
+
+    def _emit_signal_update(self):
         self._categorise_device_curves()
 
         self.setup_dap_for_scan()
@@ -1733,9 +1746,11 @@ class Waveform(PlotBase):
         self.clear_all()
         if self.curve_settings_dialog is not None:
             self.curve_settings_dialog.close()
+            self.curve_settings_dialog.deleteLater()
             self.curve_settings_dialog = None
         if self.dap_summary_dialog is not None:
             self.dap_summary_dialog.close()
+            self.dap_summary_dialog.deleteLater()
             self.dap_summary_dialog = None
         super().cleanup()
 

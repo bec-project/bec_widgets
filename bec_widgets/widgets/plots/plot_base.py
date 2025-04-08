@@ -69,7 +69,7 @@ class PlotBase(BECWidget, QWidget):
         config: ConnectionConfig | None = None,
         client=None,
         gui_id: str | None = None,
-        popups: bool = False,
+        popups: bool = True,
         **kwargs,
     ) -> None:
         if config is None:
@@ -169,6 +169,9 @@ class PlotBase(BECWidget, QWidget):
 
         # hide some options by default
         self.toolbar.toggle_action_visibility("fps_monitor", False)
+
+        # Get default viewbox state
+        self.mouse_bundle.get_viewbox_mode()
 
     def add_side_menus(self):
         """Adds multiple menus to the side panel."""

@@ -27,14 +27,18 @@ class MotorSelectionToolbarBundle(ToolbarBundle):
         self.target_widget = target_widget
 
         # Motor X
-        self.motor_x = DeviceComboBox(device_filter=[BECDeviceFilter.POSITIONER])
+        self.motor_x = DeviceComboBox(
+            parent=self.target_widget, device_filter=[BECDeviceFilter.POSITIONER]
+        )
         self.motor_x.addItem("", None)
         self.motor_x.setCurrentText("")
         self.motor_x.setToolTip("Select Motor X")
         self.motor_x.setItemDelegate(NoCheckDelegate(self.motor_x))
 
         # Motor X
-        self.motor_y = DeviceComboBox(device_filter=[BECDeviceFilter.POSITIONER])
+        self.motor_y = DeviceComboBox(
+            parent=self.target_widget, device_filter=[BECDeviceFilter.POSITIONER]
+        )
         self.motor_y.addItem("", None)
         self.motor_y.setCurrentText("")
         self.motor_y.setToolTip("Select Motor Y")
@@ -58,3 +62,9 @@ class MotorSelectionToolbarBundle(ToolbarBundle):
                 or motor_y != self.target_widget.config.y_motor.name
             ):
                 self.target_widget.map(motor_x, motor_y)
+
+    def cleanup(self):
+        self.motor_x.close()
+        self.motor_x.deleteLater()
+        self.motor_y.close()
+        self.motor_y.deleteLater()

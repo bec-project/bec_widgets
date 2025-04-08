@@ -29,8 +29,6 @@ def test_axis_settings_init(axis_settings_fixture):
     assert axis_settings.layout.count() == 1  # scroll area
     # Check the target
     assert axis_settings.target_widget == plot_base
-    # Check the object name
-    assert axis_settings.objectName() == "AxisSettings"
 
 
 def test_change_ui_updates_plot_base(axis_settings_fixture, qtbot):

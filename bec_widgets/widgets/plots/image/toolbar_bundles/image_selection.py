@@ -28,7 +28,9 @@ class MonitorSelectionToolbarBundle(ToolbarBundle):
 
         # 1) Device combo box
         self.device_combo_box = DeviceComboBox(
-            device_filter=BECDeviceFilter.DEVICE, readout_priority_filter=[ReadoutPriority.ASYNC]
+            parent=self.target_widget,
+            device_filter=BECDeviceFilter.DEVICE,
+            readout_priority_filter=[ReadoutPriority.ASYNC],
         )
         self.device_combo_box.addItem("", None)
         self.device_combo_box.setCurrentText("")

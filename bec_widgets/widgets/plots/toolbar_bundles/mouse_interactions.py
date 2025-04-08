@@ -56,9 +56,6 @@ class MouseInteractionToolbarBundle(ToolbarBundle):
         rect.action.toggled.connect(self.enable_mouse_rectangle_mode)
         auto.action.triggered.connect(self.autorange_plot)
 
-        # Give some time to check the state
-        QTimer.singleShot(10, self.get_viewbox_mode)
-
     def get_viewbox_mode(self):
         """
         Returns the current interaction mode of a PyQtGraph ViewBox and sets the corresponding action.

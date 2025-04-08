@@ -107,13 +107,14 @@ class ScatterWaveform(PlotBase):
     ):
         if config is None:
             config = ScatterWaveformConfig(widget_class=self.__class__.__name__)
+        # Specific GUI elements
+        self.scatter_dialog = None
+        self.scatter_curve_settings = None
+
         super().__init__(
             parent=parent, config=config, client=client, gui_id=gui_id, popups=popups, **kwargs
         )
         self._main_curve = ScatterCurve(parent_item=self)
-
-        # Specific GUI elements
-        self.scatter_dialog = None
 
         # Scan Data
         self.old_scan_id = None
@@ -128,24 +129,26 @@ class ScatterWaveform(PlotBase):
         self.proxy_update_sync = pg.SignalProxy(
             self.sync_signal_update, rateLimit=25, slot=self.update_sync_curves
         )
-
         self._init_scatter_curve_settings()
         self.update_with_scan_history(-1)
 
     ################################################################################
     # Widget Specific GUI interactions
     ################################################################################
+
     def _init_scatter_curve_settings(self):
         """
         Initialize the scatter curve settings menu.
         """
 
-        scatter_curve_settings = ScatterCurveSettings(parent=self, target_widget=self, popup=False)
+        self.scatter_curve_settings = ScatterCurveSettings(
+            parent=self, target_widget=self, popup=False
+        )
         self.side_panel.add_menu(
             action_id="scatter_curve",
             icon_name="scatter_plot",
             tooltip="Show Scatter Curve Settings",
-            widget=scatter_curve_settings,
+            widget=self.scatter_curve_settings,
             title="Scatter Curve Settings",
         )
 
@@ -461,17 +464,30 @@ class ScatterWaveform(PlotBase):
             logger.warning(f"Neither scan_id or scan_number was provided, fetching the latest scan")
             scan_index = -1
 
-        if scan_index is not None:
-            if len(self.client.history) == 0:
-                logger.info("No scans executed so far. Skipping scan history update.")
-                return
-
-            self.scan_item = self.client.history[scan_index]
-            metadata = self.scan_item.metadata
-            self.scan_id = metadata["bec"]["scan_id"]
-        else:
+        if scan_index is None:
             self.scan_id = scan_id
             self.scan_item = self.client.history.get_by_scan_id(scan_id)
+            self.sync_signal_update.emit()
+            return
+
+        if scan_index == -1:
+            scan_item = self.client.queue.scan_storage.current_scan
+            if scan_item is not None:
+                if scan_item.status_message is None:
+                    logger.warning(f"Scan item with {scan_item.scan_id} has no status message.")
+                    return
+                self.scan_item = scan_item
+                self.scan_id = scan_item.scan_id
+                self.sync_signal_update.emit()
+                return
+
+        if len(self.client.history) == 0:
+            logger.info("No scans executed so far. Skipping scan history update.")
+            return
+
+        self.scan_item = self.client.history[scan_index]
+        metadata = self.scan_item.metadata
+        self.scan_id = metadata["bec"]["scan_id"]
 
         self.sync_signal_update.emit()
 
@@ -486,6 +502,22 @@ class ScatterWaveform(PlotBase):
         if self.crosshair is not None:
             self.crosshair.clear_markers()
         self._main_curve.clear()
+
+    def cleanup(self):
+        """
+        Cleanup the widget and disconnect all signals.
+        """
+        if self.scatter_dialog is not None:
+            self.scatter_dialog.close()
+            self.scatter_dialog.deleteLater()
+        if self.scatter_curve_settings is not None:
+            self.scatter_curve_settings.cleanup()
+            print("scatter_curve_settings celanup called")
+        self.bec_dispatcher.disconnect_slot(self.on_scan_status, MessageEndpoints.scan_status())
+        self.bec_dispatcher.disconnect_slot(self.on_scan_progress, MessageEndpoints.scan_progress())
+        self.plot_item.removeItem(self._main_curve)
+        self._main_curve = None
+        super().cleanup()
 
 
 class DemoApp(QMainWindow):  # pragma: no cover

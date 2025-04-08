@@ -791,6 +791,10 @@ class MotorMap(PlotBase):
         data = {"x": self._buffer["x"], "y": self._buffer["y"]}
         return data
 
+    def cleanup(self):
+        self.motor_selection_bundle.cleanup()
+        super().cleanup()
+
 
 class DemoApp(QMainWindow):  # pragma: no cover
     def __init__(self):

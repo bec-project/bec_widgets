@@ -134,12 +134,6 @@ def test_curve_access_pattern(qtbot, mocked_client):
     assert wf.get_curve(0) == c1
     assert wf.get_curve(1) == c2
 
-    # Check that the curve is accessible by label
-    assert wf["bpm4i-bpm4i"] == c1
-    assert wf["bpm3a-bpm3a"] == c2
-    assert wf[0] == c1
-    assert wf[1] == c2
-
     assert wf.curves[0] == c1
     assert wf.curves[1] == c2
 

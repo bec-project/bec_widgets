@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
+from bec_lib.logger import bec_logger
 from bec_qthemes._icon.material_icons import material_icon
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import (
@@ -34,6 +35,9 @@ from bec_widgets.widgets.utility.visual.colormap_widget.colormap_widget import B
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_widgets.widgets.plots.waveform.waveform import Waveform
+
+
+logger = bec_logger.logger
 
 
 class ColorButton(QPushButton):
@@ -110,11 +114,16 @@ class CurveRow(QTreeWidgetItem):
         self.curve_tree = tree.parent()  # The CurveTree widget
         self.curve_tree.all_items.append(self)  # Track stable ordering
 
+        # BEC user input
+        self.device_edit = None
+        self.dap_combo = None
+
         self.dev = device_manager
         self.entry_validator = EntryValidator(self.dev)
 
         self.config = config or CurveConfig()
         self.source = self.config.source
+        self.dap_rows = []
 
         # Create column 0 (Actions)
         self._init_actions()
@@ -155,8 +164,8 @@ class CurveRow(QTreeWidgetItem):
         """Create columns 1 and 2. For device rows, we have device/entry edits; for dap rows, label/model combo."""
         if self.source == "device":
             # Device row: columns 1..2 are device line edits
-            self.device_edit = DeviceLineEdit()
-            self.entry_edit = QLineEdit()  # TODO in future will be signal line edit
+            self.device_edit = DeviceLineEdit(parent=self.tree)
+            self.entry_edit = QLineEdit(parent=self.tree)  # TODO in future will be signal line edit
             if self.config.signal:
                 self.device_edit.setText(self.config.signal.name or "")
                 self.entry_edit.setText(self.config.signal.entry or "")
@@ -168,7 +177,7 @@ class CurveRow(QTreeWidgetItem):
             # DAP row: column1= "Model" label, column2= DapComboBox
             self.label_widget = QLabel("Model")
             self.tree.setItemWidget(self, 1, self.label_widget)
-            self.dap_combo = DapComboBox()
+            self.dap_combo = DapComboBox(parent=self.tree)
             self.dap_combo.populate_fit_model_combobox()
             # If config.signal has a dap
             if self.config.signal and self.config.signal.dap:
@@ -258,15 +267,31 @@ class CurveRow(QTreeWidgetItem):
 
     def remove_self(self):
         """Remove this row from the tree and from the parent's item list."""
-        # If top-level:
+        # Recursively remove all child rows first
+        for i in reversed(range(self.childCount())):
+            child = self.child(i)
+            if isinstance(child, CurveRow):
+                child.remove_self()
+
+        # Clean up the widget references if they still exist
+        if getattr(self, "device_edit", None) is not None:
+            self.device_edit.close()
+            self.device_edit.deleteLater()
+            self.device_edit = None
+
+        if getattr(self, "dap_combo", None) is not None:
+            self.dap_combo.close()
+            self.dap_combo.deleteLater()
+            self.dap_combo = None
+
+        # Remove the item from the tree widget
         index = self.tree.indexOfTopLevelItem(self)
         if index != -1:
             self.tree.takeTopLevelItem(index)
-        else:
-            # If child item
-            if self.parent_item:
-                self.parent_item.removeChild(self)
-        # Also remove from all_items
+        elif self.parent_item:
+            self.parent_item.removeChild(self)
+
+        # Finally, remove self from the registration list in the curve tree
         curve_tree = self.tree.parent()
         if self in curve_tree.all_items:
             curve_tree.all_items.remove(self)
@@ -319,6 +344,10 @@ class CurveRow(QTreeWidgetItem):
         self.config.symbol_size = self.symbol_spin.value()
 
         return self.config.model_dump()
+
+    def closeEvent(self, event) -> None:
+        logger.info(f"CurveRow closeEvent: {self.config.label}")
+        return super().closeEvent(event)
 
 
 class CurveTree(BECWidget, QWidget):
@@ -535,3 +564,13 @@ class CurveTree(BECWidget, QWidget):
             for dap in dap_curves:
                 if dap.config.parent_label == dev.config.label:
                     CurveRow(self.tree, parent_item=dr, config=dap.config, device_manager=self.dev)
+
+    def cleanup(self):
+        """Cleanup the widget."""
+        all_items = list(self.all_items)
+        for item in all_items:
+            item.remove_self()
+
+    def closeEvent(self, event):
+        self.cleanup()
+        return super().closeEvent(event)

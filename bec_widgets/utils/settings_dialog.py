@@ -1,6 +1,10 @@
+from bec_lib.logger import bec_logger
+from PySide6.QtGui import QCloseEvent
 from qtpy.QtWidgets import QDialog, QDialogButtonBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
 from bec_widgets.utils.error_popups import SafeSlot
+
+logger = bec_logger.logger
 
 
 class SettingWidget(QWidget):
@@ -36,6 +40,15 @@ class SettingWidget(QWidget):
             config_dict(dict): The current settings of the target widget.
         """
         pass
+
+    def cleanup(self):
+        """
+        Cleanup the settings widget.
+        """
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        self.cleanup()
+        return super().closeEvent(event)
 
 
 class SettingsDialog(QDialog):
@@ -99,7 +112,16 @@ class SettingsDialog(QDialog):
         Accept the changes made in the settings widget and close the dialog.
         """
         self.widget.accept_changes()
+        self.cleanup()
         super().accept()
+
+    @SafeSlot()
+    def reject(self):
+        """
+        Reject the changes made in the settings widget and close the dialog.
+        """
+        self.cleanup()
+        super().reject()
 
     @SafeSlot()
     def apply_changes(self):
@@ -114,7 +136,10 @@ class SettingsDialog(QDialog):
         """
         self.button_box.close()
         self.button_box.deleteLater()
+        self.widget.close()
+        self.widget.deleteLater()
 
     def closeEvent(self, event):
+        logger.info("Closing settings dialog")
         self.cleanup()
         super().closeEvent(event)

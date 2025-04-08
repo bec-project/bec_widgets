@@ -14,10 +14,8 @@ if TYPE_CHECKING:  # pragma: no cover
     from bec_lib import messages
     from bec_lib.connector import MessageObject
 
-    from bec_widgets.cli.client_utils import BECGuiClient
-
-
     import bec_widgets.cli.client as client
+    from bec_widgets.cli.client_utils import BECGuiClient
 else:
     client = lazy_import("bec_widgets.cli.client")  # avoid circular import
     messages = lazy_import("bec_lib.messages")

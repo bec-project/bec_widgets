@@ -58,3 +58,10 @@ class MultiWaveformSelectionToolbarBundle(ToolbarBundle):
     @SafeSlot(str)
     def change_colormap(self, colormap: str):
         self.target_widget.color_palette = colormap
+
+    def cleanup(self):
+        """
+        Cleanup the toolbar bundle.
+        """
+        self.monitor.close()
+        self.monitor.deleteLater()

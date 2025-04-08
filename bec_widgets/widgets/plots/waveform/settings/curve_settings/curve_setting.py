@@ -28,7 +28,6 @@ class CurveSetting(SettingWidget):
     def __init__(self, parent=None, target_widget: Waveform = None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
         self.setProperty("skip_settings", True)
-        self.setObjectName("CurveSetting")
         self.target_widget = target_widget
 
         self.layout = QVBoxLayout(self)
@@ -52,7 +51,7 @@ class CurveSetting(SettingWidget):
         self.spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         self.device_x_label = QLabel("Device")
-        self.device_x = DeviceLineEdit()
+        self.device_x = DeviceLineEdit(parent=self)
 
         self.signal_x_label = QLabel("Signal")
         self.signal_x = QLineEdit()
@@ -117,3 +116,10 @@ class CurveSetting(SettingWidget):
         """Refresh the curve tree and the x axis combo box in the case Waveform is modified from rpc."""
         self.curve_manager.refresh_from_waveform()
         self._get_x_mode_from_waveform()
+
+    def cleanup(self):
+        """Cleanup the widget."""
+        self.device_x.close()
+        self.device_x.deleteLater()
+        self.curve_manager.close()
+        self.curve_manager.deleteLater()

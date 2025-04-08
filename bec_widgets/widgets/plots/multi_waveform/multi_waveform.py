@@ -496,3 +496,9 @@ class MultiWaveform(PlotBase):
                 self.monitor_selection_bundle.colormap_widget.blockSignals(True)
                 self.monitor_selection_bundle.colormap_widget.colormap = self.config.color_palette
                 self.monitor_selection_bundle.colormap_widget.blockSignals(False)
+
+    def cleanup(self):
+        self._disconnect_monitor()
+        self.clear_curves()
+        self.monitor_selection_bundle.cleanup()
+        super().cleanup()

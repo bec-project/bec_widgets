@@ -77,13 +77,6 @@ class BECWidget(BECConnector):
             logger.debug(f"Subscribing to theme updates for {self.__class__.__name__}")
             self._connect_to_theme_change()
 
-    def _ensure_bec_app(self):
-        # pylint: disable=import-outside-toplevel
-        from bec_widgets.utils.bec_qapp import BECApplication
-
-        app = BECApplication.from_qapplication()
-        return app
-
     def _connect_to_theme_change(self):
         """Connect to the theme change signal."""
         qapp = QApplication.instance()
@@ -113,6 +106,7 @@ class BECWidget(BECConnector):
         """Cleanup the widget."""
         with RPCRegister.delayed_broadcast():
             # All widgets need to call super().cleanup() in their cleanup method
+            logger.info(f"Registry cleanup for widget {self.__class__.__name__}")
             self.rpc_register.remove_rpc(self)
 
     def closeEvent(self, event):
