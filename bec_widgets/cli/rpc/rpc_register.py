@@ -172,6 +172,6 @@ class RPCRegisterBroadcast:
         """Exit the context manager"""
 
         self._call_depth -= 1  # Remove nested calls
-        if self._call_depth == 0:  # Last one to exit is repsonsible for broadcasting
+        if self._call_depth == 0:  # The Last one to exit is responsible for broadcasting
             self.rpc_register._skip_broadcast = False
         self.rpc_register.broadcast()

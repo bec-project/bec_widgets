@@ -83,7 +83,7 @@ class BECConnector:
         client=None,
         config: ConnectionConfig | None = None,
         gui_id: str | None = None,
-        # name: str | None = None,
+        object_name: str | None = None,
         parent_dock: BECDock | None = None,
         parent_id: str | None = None,
         **kwargs,
@@ -134,6 +134,9 @@ class BECConnector:
         #         raise ValueError(f"Name {name} contains invalid characters.")
         # TODO Hierarchy can be refreshed upon creation -> also registry should be notified if objectName changes
         if isinstance(self, QObject):
+            if object_name is not None:
+                self.setObjectName(object_name)
+
             # 1) If no objectName is set, set the initial name
             if not self.objectName():
                 self.setObjectName(self.__class__.__name__)

@@ -74,7 +74,7 @@ class BECDockArea(BECWidget, QWidget):
         config: DockAreaConfig | None = None,
         client=None,
         gui_id: str = None,
-        name: str | None = None,
+        object_name: str = None,
         **kwargs,
     ) -> None:
         if config is None:
@@ -83,7 +83,14 @@ class BECDockArea(BECWidget, QWidget):
             if isinstance(config, dict):
                 config = DockAreaConfig(**config)
             self.config = config
-        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
+        super().__init__(
+            parent=parent,
+            object_name=object_name,
+            client=client,
+            gui_id=gui_id,
+            config=config,
+            **kwargs,
+        )
         self._parent = parent
         self.layout = QVBoxLayout(self)
         self.layout.setSpacing(5)

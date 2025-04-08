@@ -71,7 +71,11 @@ def _get_output(process, logger) -> None:
 
 
 def _start_plot_process(
-    gui_id: str, gui_class_id: str, config: dict | str, gui_class: str = "launcher", logger=None
+    gui_id: str,
+    gui_class_id: str,
+    config: dict | str,
+    gui_class: str = "dock_area",
+    logger=None,  # FIXME change gui_class back to "launcher" later
 ) -> tuple[subprocess.Popen[str], threading.Thread | None]:
     """
     Start the plot in a new process.
@@ -199,7 +203,7 @@ class BECGuiClient(RPCBase):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._lock = Lock()
-        self._default_dock_name = "BECDockArea"
+        self._anchor_widget = "launcher"
         self._auto_updates_enabled = True
         self._auto_updates = None
         self._killed = False
@@ -365,7 +369,7 @@ class BECGuiClient(RPCBase):
         # After 60s timeout. Should this raise an exception on timeout?
         while time.time() < time.time() + timeout:
             if len(list(self._server_registry.keys())) < 2 or not hasattr(
-                self, self._default_dock_name
+                self, self._anchor_widget
             ):
                 time.sleep(0.1)
             else:
@@ -383,7 +387,7 @@ class BECGuiClient(RPCBase):
             self._gui_started_event.clear()
             self._process, self._process_output_processing_thread = _start_plot_process(
                 self._gui_id,
-                gui_class_id=self._default_dock_name,
+                gui_class_id="bec",  # FIXME me experiment
                 config=self._client._service_config.config,  # pylint: disable=protected-access
                 logger=logger,
             )
