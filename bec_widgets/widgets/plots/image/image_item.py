@@ -82,10 +82,12 @@ class ImageItem(BECConnector, pg.ImageItem):
             self.config = config
         else:
             self.config = config
-        self.parent_image = parent_image
-        self.parent_id = self.parent_image.gui_id
-        super().__init__(config=config, gui_id=gui_id)
-        pg.ImageItem.__init__(self)
+        if parent_image is not None:
+            self.set_parent(parent_image)
+        else:
+            self.parent_image = None
+            self.parent_id = None
+        super().__init__(config=config, gui_id=gui_id, **kwargs)
 
         self.raw_data = None
         self.buffer = []
@@ -93,6 +95,10 @@ class ImageItem(BECConnector, pg.ImageItem):
 
         # Image processor will handle any setting of data
         self._image_processor = ImageProcessor(config=self.config.processing)
+
+    def set_parent(self, parent: BECConnector):
+        self.parent_image = parent
+        self.parent_id = parent.gui_id
 
     def parent(self):
         return self.parent_image
