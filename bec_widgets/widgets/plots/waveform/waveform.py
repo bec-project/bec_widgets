@@ -137,9 +137,6 @@ class Waveform(PlotBase):
             parent=parent, config=config, client=client, gui_id=gui_id, popups=popups, **kwargs
         )
 
-        # For PropertyManager identification
-        # self.setObjectName("Waveform")
-
         # Curve data
         self._sync_curves = []
         self._async_curves = []

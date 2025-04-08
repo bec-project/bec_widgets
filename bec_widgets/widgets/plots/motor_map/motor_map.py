@@ -161,9 +161,6 @@ class MotorMap(PlotBase):
             parent=parent, config=config, client=client, gui_id=gui_id, popups=popups, **kwargs
         )
 
-        # For PropertyManager identification
-        self.setObjectName("MotorMap")
-
         # Default values for PlotBase
         self.x_grid = True
         self.y_grid = True

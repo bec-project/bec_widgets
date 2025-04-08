@@ -126,9 +126,6 @@ class MultiWaveform(PlotBase):
             parent=parent, config=config, client=client, gui_id=gui_id, popups=popups, **kwargs
         )
 
-        # For PropertyManager identification
-        self.setObjectName("MultiWaveform")
-
         # Scan Data
         self.old_scan_id = None
         self.scan_id = None

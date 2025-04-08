@@ -46,7 +46,6 @@ class LMFitDialog(BECWidget, QWidget):
         """
         super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
         self.setProperty("skip_settings", True)
-        self.setObjectName("LMFitDialog")
         self._ui_file = ui_file
         self.target_widget = target_widget
 

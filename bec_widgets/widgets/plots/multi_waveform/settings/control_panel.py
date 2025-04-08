@@ -20,7 +20,6 @@ class MultiWaveformControlPanel(SettingWidget):
         super().__init__(parent=parent, *args, **kwargs)
 
         self.setProperty("skip_settings", True)
-        self.setObjectName("MultiWaveformControlPanel")
         current_path = os.path.dirname(__file__)
 
         form = UILoader().load_ui(os.path.join(current_path, "multi_waveform_controls.ui"), self)
