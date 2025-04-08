@@ -35,8 +35,7 @@ include:
       stage: test
       path: "."
       pytest_args: "-v,--random-order,tests/unit_tests"
-      ignore_dep_group: "pyqt6"
-      pip_args: ".[dev,pyside6]"
+      pip_args: ".[dev]"
 
 # different stages in the pipeline
 stages:
@@ -89,7 +88,7 @@ pylint:
   needs: []
   before_script:
     - pip install pylint pylint-exit anybadge
-    - pip install -e .[dev,pyqt6]
+    - pip install -e .[dev]
   script:
     - mkdir ./pylint
     - pylint ./bec_widgets --output-format=text --output=./pylint/pylint.log | tee ./pylint/pylint.log || pylint-exit $?
