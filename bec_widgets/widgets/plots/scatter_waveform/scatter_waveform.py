@@ -14,7 +14,7 @@ from bec_widgets.utils.colors import set_theme
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.toolbar import MaterialIconAction
-from bec_widgets.widgets.plots.plot_base import PlotBase
+from bec_widgets.widgets.plots.plot_base import PlotBase, UIMode
 from bec_widgets.widgets.plots.scatter_waveform.scatter_curve import (
     ScatterCurve,
     ScatterCurveConfig,
@@ -129,7 +129,8 @@ class ScatterWaveform(PlotBase):
         self.proxy_update_sync = pg.SignalProxy(
             self.sync_signal_update, rateLimit=25, slot=self.update_sync_curves
         )
-        self._init_scatter_curve_settings()
+        if self.ui_mode == UIMode.SIDE:
+            self._init_scatter_curve_settings()
         self.update_with_scan_history(-1)
 
     ################################################################################
@@ -512,7 +513,6 @@ class ScatterWaveform(PlotBase):
             self.scatter_dialog.deleteLater()
         if self.scatter_curve_settings is not None:
             self.scatter_curve_settings.cleanup()
-            print("scatter_curve_settings celanup called")
         self.bec_dispatcher.disconnect_slot(self.on_scan_status, MessageEndpoints.scan_status())
         self.bec_dispatcher.disconnect_slot(self.on_scan_progress, MessageEndpoints.scan_progress())
         self.plot_item.removeItem(self._main_curve)
