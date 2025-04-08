@@ -464,7 +464,6 @@ class BECGuiClient(RPCBase):
         for gui_id, widget in self._ipython_registry.items():
             if gui_id not in server_registry:
                 remove_from_registry.append(gui_id)
-            widget._refresh_references()
         for gui_id in remove_from_registry:
             self._ipython_registry.pop(gui_id)
 
@@ -482,6 +481,9 @@ class BECGuiClient(RPCBase):
             setattr(self, widget_ref.object_name, widget_ref)
 
         self._top_level = top_level_widgets
+
+        for widget in self._ipython_registry.values():
+            widget._refresh_references()
 
     def _add_widget(self, state: dict, parent: object) -> RPCReference | None:
         """Add a widget to the namespace
