@@ -372,7 +372,12 @@ class BECDockArea(BECWidget, QWidget):
             name = WidgetContainerUtils.generate_unique_name(name="dock", list_of_names=dock_names)
 
         dock = BECDock(
-            parent=self, name=name, parent_dock_area=self, parent_id=self.gui_id, closable=closable
+            parent=self,
+            name=name,
+            object_name=name,
+            parent_dock_area=self,
+            parent_id=self.gui_id,
+            closable=closable,
         )
         dock.config.position = position
         self.config.docks[dock.name()] = dock.config

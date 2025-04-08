@@ -133,6 +133,7 @@ class BECDock(BECWidget, Dock):
         parent_id: str | None = None,
         config: DockConfig | None = None,
         name: str | None = None,
+        object_name: str | None = None,
         client=None,
         gui_id: str | None = None,
         closable: bool = True,
@@ -152,6 +153,7 @@ class BECDock(BECWidget, Dock):
         super().__init__(
             parent=parent_dock_area,
             name=name,
+            object_name=object_name,
             client=client,
             gui_id=gui_id,
             config=config,
