@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from PySide6.QtGui import QCloseEvent
 from qtpy.QtWidgets import (
     QComboBox,
     QGroupBox,
@@ -51,7 +52,7 @@ class CurveSetting(SettingWidget):
         self.spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         self.device_x_label = QLabel("Device")
-        self.device_x = DeviceLineEdit()
+        self.device_x = DeviceLineEdit(parent=self)
 
         self._get_x_mode_from_waveform()
         self.switch_x_device_selection()
@@ -107,3 +108,10 @@ class CurveSetting(SettingWidget):
         """Refresh the curve tree and the x axis combo box in the case Waveform is modified from rpc."""
         self.curve_manager.refresh_from_waveform()
         self._get_x_mode_from_waveform()
+
+    def cleanup(self):
+        """Cleanup the widget."""
+        self.device_x.close()
+        self.device_x.deleteLater()
+        self.curve_manager.close()
+        self.curve_manager.deleteLater()

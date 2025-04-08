@@ -288,6 +288,8 @@ class Waveform(PlotBase):
         """
         Slot for when the axis settings dialog is closed.
         """
+        self.curve_settings_dialog.close()
+        self.curve_settings_dialog.deleteLater()
         self.curve_settings_dialog = None
         self.toolbar.widgets["curve"].action.setChecked(False)
 
@@ -1580,9 +1582,11 @@ class Waveform(PlotBase):
         self.clear_all()
         if self.curve_settings_dialog is not None:
             self.curve_settings_dialog.close()
+            self.curve_settings_dialog.deleteLater()
             self.curve_settings_dialog = None
         if self.dap_summary_dialog is not None:
             self.dap_summary_dialog.close()
+            self.dap_summary_dialog.deleteLater()
             self.dap_summary_dialog = None
         super().cleanup()
 

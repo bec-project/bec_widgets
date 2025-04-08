@@ -114,6 +114,7 @@ class BECWidget(BECConnector):
         """Cleanup the widget."""
         with RPCRegister.delayed_broadcast():
             # All widgets need to call super().cleanup() in their cleanup method
+            logger.info(f"Registry cleanup for widget {self.__class__.__name__}")
             self.rpc_register.remove_rpc(self)
 
     def closeEvent(self, event):

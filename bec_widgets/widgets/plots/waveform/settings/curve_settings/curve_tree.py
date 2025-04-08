@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
+from bec_lib.logger import bec_logger
 from bec_qthemes._icon.material_icons import material_icon
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import (
@@ -34,6 +35,9 @@ from bec_widgets.widgets.utility.visual.colormap_widget.colormap_widget import B
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_widgets.widgets.plots.waveform.waveform import Waveform
+
+
+logger = bec_logger.logger
 
 
 class ColorButton(QPushButton):
@@ -155,7 +159,7 @@ class CurveRow(QTreeWidgetItem):
         """Create columns 1 and 2. For device rows, we have device/entry edits; for dap rows, label/model combo."""
         if self.source == "device":
             # Device row: columns 1..2 are device line edits
-            self.device_edit = DeviceLineEdit()
+            self.device_edit = DeviceLineEdit(parent=self.tree)
             self.entry_edit = QLineEdit()  # TODO in future will be signal line edit
             if self.config.signal:
                 self.device_edit.setText(self.config.signal.name or "")
@@ -168,7 +172,7 @@ class CurveRow(QTreeWidgetItem):
             # DAP row: column1= "Model" label, column2= DapComboBox
             self.label_widget = QLabel("Model")
             self.tree.setItemWidget(self, 1, self.label_widget)
-            self.dap_combo = DapComboBox()
+            self.dap_combo = DapComboBox(parent=self.tree)
             self.dap_combo.populate_fit_model_combobox()
             # If config.signal has a dap
             if self.config.signal and self.config.signal.dap:
@@ -319,6 +323,10 @@ class CurveRow(QTreeWidgetItem):
         self.config.symbol_size = self.symbol_spin.value()
 
         return self.config.model_dump()
+
+    def closeEvent(self, event) -> None:
+        logger.info(f"CurveRow closeEvent: {self.config.label}")
+        return super().closeEvent(event)
 
 
 class CurveTree(BECWidget, QWidget):
@@ -535,3 +543,7 @@ class CurveTree(BECWidget, QWidget):
             for dap in dap_curves:
                 if dap.config.parent_label == dev.config.label:
                     CurveRow(self.tree, parent_item=dr, config=dap.config, device_manager=self.dev)
+
+    def closeEvent(self, event):
+        logger.info("CurveTree closeEvent")
+        return super().closeEvent(event)
