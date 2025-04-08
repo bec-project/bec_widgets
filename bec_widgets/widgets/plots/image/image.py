@@ -913,10 +913,14 @@ class Image(PlotBase):
         """
         Disconnect the image update signals and clean up the image.
         """
+        # Main Image cleanup
         if self._main_image.config.monitor is not None:
             self.disconnect_monitor(self._main_image.config.monitor)
             self._main_image.config.monitor = None
+        self.plot_item.removeItem(self._main_image)
+        self._main_image = None
 
+        # Colorbar Cleanup
         if self._color_bar:
             if self.config.color_bar == "full":
                 self.cleanup_histogram_lut_item(self._color_bar)
@@ -924,6 +928,10 @@ class Image(PlotBase):
                 self.plot_widget.removeItem(self._color_bar)
                 self._color_bar.deleteLater()
             self._color_bar = None
+
+        # Toolbar cleanup
+        self.toolbar.widgets["monitor"].widget.close()
+        self.toolbar.widgets["monitor"].widget.deleteLater()
 
         super().cleanup()
 
