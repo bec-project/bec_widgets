@@ -25,7 +25,6 @@ class RoundedFrame(QFrame):
 
         # Apply rounded frame styling
         self.setProperty("skip_settings", True)
-        self.setObjectName("roundedFrame")
 
         # Create a layout for the frame
         self.layout = QHBoxLayout(self)
