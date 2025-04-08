@@ -160,7 +160,6 @@ class BECDock(BECWidget, Dock):
             label=label,
             **kwargs,
         )
-        # Dock.__init__(self, name=name, **kwargs)
 
         self.parent_dock_area = parent_dock_area
         # Layout Manager
@@ -302,27 +301,11 @@ class BECDock(BECWidget, Dock):
             shift(Literal["down", "up", "left", "right"]): The direction to shift the widgets if the position is occupied.
         """
         if row is None:
-            # row = cast(int, self.layout.rowCount())  # type:ignore
             row = self.layout.rowCount()
-            # row = cast(int, row)
 
         if self.layout_manager.is_position_occupied(row, col):
             self.layout_manager.shift_widgets(shift, start_row=row)
 
-        existing_widgets_parent_dock = self._get_list_of_widget_name_of_parent_dock_area()
-
-        if name is not None:  # Name is provided
-            if name in existing_widgets_parent_dock:
-                # pylint: disable=protected-access
-                raise ValueError(
-                    f"Name {name} must be unique for widgets, but already exists in DockArea "
-                    f"with name: {self.parent_dock_area._name} and id {self.parent_dock_area.gui_id}."
-                )
-        else:  # Name is not provided
-            widget_class_name = widget if isinstance(widget, str) else widget.__class__.__name__
-            name = WidgetContainerUtils.generate_unique_name(
-                name=widget_class_name, list_of_names=existing_widgets_parent_dock
-            )
         # Check that Widget is not BECDock or BECDockArea
         widget_class_name = widget if isinstance(widget, str) else widget.__class__.__name__
         if widget_class_name in IGNORE_WIDGETS:
@@ -333,13 +316,14 @@ class BECDock(BECWidget, Dock):
                 BECWidget,
                 widget_handler.create_widget(
                     widget_type=widget,
-                    name=name,
+                    object_name=name,
                     parent_dock=self,
                     parent_id=self.gui_id,
                     parent=self,
                 ),
             )
         else:
+            # FIXME dangerous, pyqtgraph is using sometimes _name, we should get rid of it...
             widget._name = name  # pylint: disable=protected-access
 
         self.addWidget(widget, row=row, col=col, rowspan=rowspan, colspan=colspan)
