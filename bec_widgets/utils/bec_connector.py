@@ -84,12 +84,14 @@ class BECConnector:
         config: ConnectionConfig | None = None,
         gui_id: str | None = None,
         object_name: str | None = None,
-        parent_dock: BECDock | None = None,
+        parent_dock: BECDock | None = None,  # TODO should go away
         parent_id: str | None = None,
         **kwargs,
     ):
-        # Ensure the parent is always kwargs!
+        object_name = object_name or kwargs.pop("objectName", None)
+        # Ensure the parent is always the first argument for QObject
         parent = kwargs.pop("parent", None)
+        # This initializes the QObject or any qt related class
         super().__init__(parent=parent, **kwargs)
         # BEC related connections
         self.bec_dispatcher = BECDispatcher(client=client)
@@ -127,26 +129,23 @@ class BECConnector:
             self.gui_id: str = gui_id  # Keep namespace in sync
         else:
             self.gui_id: str = self.config.gui_id  # type: ignore
-        # if name is None:
-        #     name = self.__class__.__name__
-        # else:
-        #     if not WidgetContainerUtils.has_name_valid_chars(name):
-        #         raise ValueError(f"Name {name} contains invalid characters.")
-        # TODO Hierarchy can be refreshed upon creation -> also registry should be notified if objectName changes
-        if isinstance(self, QObject):
-            if object_name is not None:
-                self.setObjectName(object_name)
 
-            # 1) If no objectName is set, set the initial name
-            if not self.objectName():
-                self.setObjectName(self.__class__.__name__)
-            self._name = self.objectName()
+        # TODO Hierarchy can be refreshed upon creation -> also registry should be notified if objectName changes -> issue #472
+        if object_name is not None:
+            self.setObjectName(object_name)
 
-            # 2) Enforce unique objectName among siblings with the same BECConnector parent
-            self.setParent(parent)
-            self._enforce_unique_sibling_name()
-        # else:
-        #     self._name = name if name else self.__class__.__name__
+        # 1) If no objectName is set, set the initial name
+        if not self.objectName():
+            self.setObjectName(self.__class__.__name__)
+        self._name = self.objectName()
+
+        # 2) Enforce unique objectName among siblings with the same BECConnector parent
+        self.setParent(parent)
+        if parent_id is None:
+            connector_parent = WidgetHierarchy._get_becwidget_ancestor(self)
+            if connector_parent is not None:
+                self.parent_id = connector_parent.gui_id
+        self._enforce_unique_sibling_name()
         self.rpc_register = RPCRegister()
         self.rpc_register.add_rpc(self)
 
