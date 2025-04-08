@@ -38,7 +38,7 @@ class RPCWidgetHandler:
             cls.__name__: cls for cls in clss.widgets if cls.__name__ not in IGNORE_WIDGETS
         }
 
-    def create_widget(self, widget_type, name: str | None = None, **kwargs) -> BECWidget:
+    def create_widget(self, widget_type, **kwargs) -> BECWidget:
         """
         Create a widget from an RPC message.
 
