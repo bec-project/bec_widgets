@@ -135,13 +135,13 @@ def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
 
     # Wait for the scan to finish and the data to be available in history
     # Wait until scan_id is in history
-    def _wait_for_scan_in_hisotry():
+    def _wait_for_scan_in_history():
         if len(client.history) == 0:
             return False
         # Once items appear in storage, the last one hast to be the one we just scanned
         return client.history[-1].metadata.bec["scan_id"] == status.scan.scan_id
 
-    qtbot.waitUntil(_wait_for_scan_in_hisotry, timeout=10000)
+    qtbot.waitUntil(_wait_for_scan_in_history, timeout=10000)
     last_scan_data = client.history[-1]
     # check plotted data
     x_data, y_data = curve.get_data()

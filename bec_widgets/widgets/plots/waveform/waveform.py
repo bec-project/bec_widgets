@@ -1144,13 +1144,13 @@ class Waveform(PlotBase):
         to reduce the number of copies in between cycles. Be careful when refactoring
         this part as it will affect the performance of the async readback.
 
+        Async curves support plotting against 'index' or other 'device_signal'. No 'auto' or 'timestamp'.
+        The fallback mechanism for 'auto' and 'timestamp' is to use the 'index'.
+
         Note:
             We create data_plot_x and data_plot_y and modify them within this function
             to avoid creating new arrays. This is important for performance.
-            We adjust the variables based on instruction type.
-            - add: Add the new data to the existing data.
-            - add_slice: Add the new data to the existing data and set the slice index.
-            - replace: Replace the existing data with the new data.
+            Support update instructions are 'add', 'add_slice', and 'replace'.
 
         Args:
             msg(dict): Message with the async data.
@@ -1196,14 +1196,31 @@ class Waveform(PlotBase):
 
             # Replace is trivial, no need to modify data_plot_y
 
-            # Get the x data if 'timestamp' is selected, otherwise compute it
-            data_plot_x = async_data["timestamp"]
-            if plot_mode == "timestamp" and instruction != "add_slice":
-                if data_plot_x is not None and x_data is not None:
-                    data_plot_x = np.hstack((x_data, data_plot_x))
-            else:
+            # Get x data for plotting
+            if plot_mode in ["index", "auto", "timestamp"]:
                 data_plot_x = np.linspace(0, len(data_plot_y) - 1, len(data_plot_y))
-            # Set the x data
+                self._auto_adjust_async_curve_settings(curve, len(data_plot_y))
+                curve.setData(data_plot_x, data_plot_y)
+                # Move on in the loop
+                continue
+            # Only consider device signals that are async for now, fallback is index
+            x_device_entry = self.x_axis_mode["entry"]
+            async_data = msg["signals"].get(x_device_entry, None)
+            # Make sure the signal exists, otherwise fall back to index
+            if async_data is None:
+                # Try to grab the data from device signals
+                data_plot_x = self._get_x_data(plot_mode, x_device_entry)
+                if len(data_plot_x) != len(data_plot_y):
+                    # If the data is not the same length, fall back to index
+                    logger.warning(
+                        f"Async data for curve {curve.name()} is None. Falling back to index."
+                    )
+                    data_plot_x = np.linspace(0, len(data_plot_y) - 1, len(data_plot_y))
+            elif x_data is not None:
+                data_plot_x = np.hstack((x_data, async_data["value"]))
+            else:
+                data_plot_x = async_data["value"]
+            # Plot the data
             self._auto_adjust_async_curve_settings(curve, len(data_plot_y))
             curve.setData(data_plot_x, data_plot_y)
 

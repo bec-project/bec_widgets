@@ -353,7 +353,7 @@ def test_update_async_curves(monkeypatch, qtbot, mocked_client):
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     c = wf.plot(arg1="async_device", label="async_device-async_device")
     wf._async_curves = [c]
-    wf.x_mode = "timestamp"
+    wf.x_mode = "timestamp"  # Timestamp is not supported, fallback to index.
     dummy_scan = create_dummy_scan_item()
     wf.scan_item = dummy_scan
 
@@ -366,7 +366,7 @@ def test_update_async_curves(monkeypatch, qtbot, mocked_client):
     monkeypatch.setattr(c, "setData", fake_setData)
 
     wf.update_async_curves()
-    np.testing.assert_array_equal(recorded.get("x"), [11, 21, 31])
+    np.testing.assert_array_equal(recorded.get("x"), [0, 1, 2])
     np.testing.assert_array_equal(recorded.get("y"), [1, 2, 3])
 
 
@@ -528,12 +528,10 @@ def test_setup_async_curve(qtbot, mocked_client, monkeypatch):
     assert "async_device" in endpoint_called
 
 
-@pytest.mark.parametrize("x_mode", ("timestamp", "index"))
-def test_on_async_readback_add_update(qtbot, mocked_client, x_mode):
+def test_on_async_readback_add_update(qtbot, mocked_client):
     """
     Test that on_async_readback extends or replaces async data depending on metadata instruction.
-    For 'timestamp' mode, new timestamps are appended to x_data.
-    For 'index' mode, x_data simply increases by integer index.
+    'Index' mode
     """
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     wf.scan_item = create_dummy_scan_item()
@@ -543,7 +541,7 @@ def test_on_async_readback_add_update(qtbot, mocked_client, x_mode):
     c.setData([0, 1, 2], [10, 11, 12])
 
     # Set the x_axis_mode
-    wf.x_axis_mode["name"] = x_mode
+    wf.x_axis_mode["name"] = "index"
 
     ############# Test add ################
 
@@ -554,10 +552,7 @@ def test_on_async_readback_add_update(qtbot, mocked_client, x_mode):
     x_data, y_data = c.get_data()
     assert len(x_data) == 5
     # Check x_data based on x_mode
-    if x_mode == "timestamp":
-        np.testing.assert_array_equal(x_data, [0, 1, 2, 1001, 1002])
-    else:  # x_mode == "index"
-        np.testing.assert_array_equal(x_data, [0, 1, 2, 3, 4])
+    np.testing.assert_array_equal(x_data, [0, 1, 2, 3, 4])
 
     np.testing.assert_array_equal(y_data, [10, 11, 12, 100, 200])
 
@@ -566,11 +561,7 @@ def test_on_async_readback_add_update(qtbot, mocked_client, x_mode):
     metadata2 = {"async_update": {"max_shape": [None], "type": "replace"}}
     wf.on_async_readback(msg2, metadata2)
     x_data2, y_data2 = c.get_data()
-    if x_mode == "timestamp":
-        np.testing.assert_array_equal(x_data2, [555])
-    else:
-
-        np.testing.assert_array_equal(x_data2, [0])
+    np.testing.assert_array_equal(x_data2, [0])
 
     np.testing.assert_array_equal(y_data2, [999])
 
