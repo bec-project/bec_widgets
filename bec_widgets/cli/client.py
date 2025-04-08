@@ -15,8 +15,6 @@ class Widgets(str, enum.Enum):
     Enum for the available widgets.
     """
 
-    AbortButton = "AbortButton"
-    BECColorMapWidget = "BECColorMapWidget"
     BECDockArea = "BECDockArea"
     BECProgressBar = "BECProgressBar"
     BECQueue = "BECQueue"
@@ -26,46 +24,17 @@ class Widgets(str, enum.Enum):
     DeviceComboBox = "DeviceComboBox"
     DeviceLineEdit = "DeviceLineEdit"
     Image = "Image"
-    LMFitDialog = "LMFitDialog"
     LogPanel = "LogPanel"
-    Minesweeper = "Minesweeper"
     MotorMap = "MotorMap"
     MultiWaveform = "MultiWaveform"
     PositionIndicator = "PositionIndicator"
-    PositionerBox = "PositionerBox"
-    PositionerBox2D = "PositionerBox2D"
-    PositionerControlLine = "PositionerControlLine"
-    ResetButton = "ResetButton"
-    ResumeButton = "ResumeButton"
     RingProgressBar = "RingProgressBar"
     ScanControl = "ScanControl"
     ScatterWaveform = "ScatterWaveform"
-    SignalComboBox = "SignalComboBox"
-    SignalLineEdit = "SignalLineEdit"
-    StopButton = "StopButton"
     TextBox = "TextBox"
     VSCodeEditor = "VSCodeEditor"
     Waveform = "Waveform"
     WebsiteWidget = "WebsiteWidget"
-
-
-class AbortButton(RPCBase):
-    """A button that abort the scan."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
-class BECColorMapWidget(RPCBase):
-    @property
-    @rpc_call
-    def colormap(self):
-        """
-        Get the current colormap name.
-        """
 
 
 class BECDock(RPCBase):
@@ -357,14 +326,6 @@ class BECDockArea(RPCBase):
         """
 
 
-class BECMainWindow(RPCBase):
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
 class BECProgressBar(RPCBase):
     """A custom progress bar with smooth transitions. The displayed text can be customized using a template."""
 
@@ -624,14 +585,6 @@ class DapComboBox(RPCBase):
         """
 
 
-class DemoApp(RPCBase):
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
 class DeviceBrowser(RPCBase):
     @rpc_call
     def remove(self):
@@ -662,16 +615,6 @@ class DeviceInputBase(RPCBase):
 
 class DeviceLineEdit(RPCBase):
     """Line edit widget for device input with autocomplete for device names."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
-class DeviceSignalInputBase(RPCBase):
-    """Mixin base class for device signal input widgets."""
 
     @rpc_call
     def remove(self):
@@ -1339,16 +1282,6 @@ class ImageItem(RPCBase):
         """
 
 
-class LMFitDialog(RPCBase):
-    """Dialog for displaying the fit summary and params for LMFit DAP processes"""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
 class LogPanel(RPCBase):
     """Displays a log panel"""
 
@@ -1369,9 +1302,6 @@ class LogPanel(RPCBase):
         Args:
             text (str): The text to set.
         """
-
-
-class Minesweeper(RPCBase): ...
 
 
 class MotorMap(RPCBase):
@@ -2211,64 +2141,6 @@ class PositionIndicator(RPCBase):
         """
 
 
-class PositionerBox(RPCBase):
-    """Simple Widget to control a positioner in box form"""
-
-    @rpc_call
-    def set_positioner(self, positioner: "str | Positioner"):
-        """
-        Set the device
-
-        Args:
-            positioner (Positioner | str) : Positioner to set, accepts str or the device
-        """
-
-
-class PositionerBox2D(RPCBase):
-    """Simple Widget to control two positioners in box form"""
-
-    @rpc_call
-    def set_positioner_hor(self, positioner: "str | Positioner"):
-        """
-        Set the device
-
-        Args:
-            positioner (Positioner | str) : Positioner to set, accepts str or the device
-        """
-
-    @rpc_call
-    def set_positioner_ver(self, positioner: "str | Positioner"):
-        """
-        Set the device
-
-        Args:
-            positioner (Positioner | str) : Positioner to set, accepts str or the device
-        """
-
-
-class PositionerBoxBase(RPCBase):
-    """Contains some core logic for positioner box widgets"""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
-class PositionerControlLine(RPCBase):
-    """A widget that controls a single device."""
-
-    @rpc_call
-    def set_positioner(self, positioner: "str | Positioner"):
-        """
-        Set the device
-
-        Args:
-            positioner (Positioner | str) : Positioner to set, accepts str or the device
-        """
-
-
 class PositionerGroup(RPCBase):
     """Simple Widget to control a positioner in box form"""
 
@@ -2278,26 +2150,6 @@ class PositionerGroup(RPCBase):
         Redraw grid with positioners from device_names string
 
         Device names must be separated by space
-        """
-
-
-class ResetButton(RPCBase):
-    """A button that resets the scan queue."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
-class ResumeButton(RPCBase):
-    """A button that continue scan queue."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
         """
 
 
@@ -2581,16 +2433,6 @@ class RingProgressBar(RPCBase):
 
 
 class ScanControl(RPCBase):
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
-class ScanMetadata(RPCBase):
-    """Dynamically generates a form for inclusion of metadata for a scan. Uses the"""
-
     @rpc_call
     def remove(self):
         """
@@ -2948,36 +2790,6 @@ class ScatterWaveform(RPCBase):
     def clear_all(self):
         """
         Clear all the curves from the plot.
-        """
-
-
-class SignalComboBox(RPCBase):
-    """Line edit widget for device input with autocomplete for device names."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
-class SignalLineEdit(RPCBase):
-    """Line edit widget for device input with autocomplete for device names."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-
-class StopButton(RPCBase):
-    """A button that stops the current scan."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
         """
 
 
@@ -3510,61 +3322,4 @@ class WebsiteWidget(RPCBase):
     def forward(self):
         """
         Go forward in the history
-        """
-
-
-class WindowWithUi(RPCBase):
-    """This is just testing app wiht UI file which could be connected to RPC."""
-
-    @rpc_call
-    def new_dock_area(
-        self, name: str | None = None, geometry: tuple[int, int, int, int] | None = None
-    ) -> "BECDockArea":
-        """
-        Create a new dock area.
-
-        Args:
-            name(str): The name of the dock area.
-            geometry(tuple): The geometry parameters to be passed to the dock area.
-        Returns:
-            BECDockArea: The newly created dock area.
-        """
-
-    @property
-    @rpc_call
-    def all_connections(self) -> list:
-        """
-        None
-        """
-
-    @rpc_call
-    def change_theme(self, theme):
-        """
-        None
-        """
-
-    @property
-    @rpc_call
-    def dock_area(self):
-        """
-        None
-        """
-
-    @rpc_call
-    def register_all_rpc(self):
-        """
-        None
-        """
-
-    @property
-    @rpc_call
-    def widget_list(self) -> list:
-        """
-        Return a list of all widgets in the application.
-        """
-
-    @rpc_call
-    def list_app_hierarchy(self):
-        """
-        List the hierarchy of the application.
         """
