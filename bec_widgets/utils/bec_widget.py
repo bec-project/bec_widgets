@@ -33,8 +33,7 @@ class BECWidget(BECConnector):
         config: ConnectionConfig = None,
         gui_id: str | None = None,
         theme_update: bool = False,
-        name: str | None = None,
-        parent_dock: BECDock | None = None,
+        parent_dock: BECDock | None = None,  # TODO should not be there
         parent_id: str | None = None,
         **kwargs,
     ):
@@ -60,7 +59,6 @@ class BECWidget(BECConnector):
             client=client,
             config=config,
             gui_id=gui_id,
-            name=name,
             parent_dock=parent_dock,
             parent_id=parent_id,
             **kwargs,

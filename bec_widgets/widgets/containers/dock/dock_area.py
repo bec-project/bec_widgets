@@ -21,6 +21,7 @@ from bec_widgets.utils.toolbar import (
     ModularToolBar,
     SeparatorAction,
 )
+from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.widgets.containers.dock.dock import BECDock, DockConfig
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox
 from bec_widgets.widgets.control.scan_control.scan_control import ScanControl
@@ -363,7 +364,9 @@ class BECDockArea(BECWidget, QWidget):
         else:  # Name is not provided
             name = WidgetContainerUtils.generate_unique_name(name="dock", list_of_names=dock_names)
 
-        dock = BECDock(name=name, parent_dock_area=self, parent_id=self.gui_id, closable=closable)
+        dock = BECDock(
+            parent=self, name=name, parent_dock_area=self, parent_id=self.gui_id, closable=closable
+        )
         dock.config.position = position
         self.config.docks[dock.name()] = dock.config
         # The dock.name is equal to the name passed to BECDock
@@ -498,11 +501,13 @@ if __name__ == "__main__":  # pragma: no cover
     app = QApplication([])
     set_theme("auto")
     dock_area = BECDockArea()
-    dock_1 = dock_area.new(name="dock_0", widget="Waveform")
+    dock_1 = dock_area.new(name="dock_0", widget="DarkModeButton")
+    dock_1.new(widget="DarkModeButton")
     # dock_1 = dock_area.new(name="dock_0", widget="Waveform")
-    dock_area.new(widget="Waveform")
+    dock_area.new(widget="DarkModeButton")
     dock_area.show()
     dock_area.setGeometry(100, 100, 800, 600)
     app.topLevelWidgets()
+    WidgetHierarchy.print_becconnector_hierarchy_from_app()
     app.exec_()
     sys.exit(app.exec_())

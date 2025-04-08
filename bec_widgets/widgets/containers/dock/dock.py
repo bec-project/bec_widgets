@@ -150,7 +150,13 @@ class BECDock(BECWidget, Dock):
             self.config = config
         label = CustomDockLabel(text=name, closable=closable)
         super().__init__(
-            parent=parent, client=client, gui_id=gui_id, config=config, label=label, **kwargs
+            parent=parent_dock_area,
+            name=name,
+            client=client,
+            gui_id=gui_id,
+            config=config,
+            label=label,
+            **kwargs,
         )
         # Dock.__init__(self, name=name, **kwargs)
 
@@ -324,7 +330,11 @@ class BECDock(BECWidget, Dock):
             widget = cast(
                 BECWidget,
                 widget_handler.create_widget(
-                    widget_type=widget, name=name, parent_dock=self, parent_id=self.gui_id
+                    widget_type=widget,
+                    name=name,
+                    parent_dock=self,
+                    parent_id=self.gui_id,
+                    parent=self,
                 ),
             )
         else:

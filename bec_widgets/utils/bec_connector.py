@@ -83,7 +83,7 @@ class BECConnector:
         client=None,
         config: ConnectionConfig | None = None,
         gui_id: str | None = None,
-        name: str | None = None,
+        # name: str | None = None,
         parent_dock: BECDock | None = None,
         parent_id: str | None = None,
         **kwargs,
@@ -94,7 +94,7 @@ class BECConnector:
         # BEC related connections
         self.bec_dispatcher = BECDispatcher(client=client)
         self.client = self.bec_dispatcher.client if client is None else client
-        self._parent_dock = parent_dock
+        self._parent_dock = parent_dock  # TODO also remove at some point
 
         if not self.client in BECConnector.EXIT_HANDLERS:
             # register function to clean connections at exit;
@@ -127,22 +127,23 @@ class BECConnector:
             self.gui_id: str = gui_id  # Keep namespace in sync
         else:
             self.gui_id: str = self.config.gui_id  # type: ignore
-        if name is None:
-            name = self.__class__.__name__
-        else:
-            if not WidgetContainerUtils.has_name_valid_chars(name):
-                raise ValueError(f"Name {name} contains invalid characters.")
+        # if name is None:
+        #     name = self.__class__.__name__
+        # else:
+        #     if not WidgetContainerUtils.has_name_valid_chars(name):
+        #         raise ValueError(f"Name {name} contains invalid characters.")
         # TODO Hierarchy can be refreshed upon creation -> also registry should be notified if objectName changes
         if isinstance(self, QObject):
             # 1) If no objectName is set, set the initial name
             if not self.objectName():
-                self.setObjectName(name if name else self.__class__.__name__)
+                self.setObjectName(self.__class__.__name__)
             self._name = self.objectName()
 
             # 2) Enforce unique objectName among siblings with the same BECConnector parent
+            self.setParent(parent)
             self._enforce_unique_sibling_name()
-        else:
-            self._name = name if name else self.__class__.__name__
+        # else:
+        #     self._name = name if name else self.__class__.__name__
         self.rpc_register = RPCRegister()
         self.rpc_register.add_rpc(self)
 
@@ -165,7 +166,7 @@ class BECConnector:
 
         if parent_bec:
             # We have a parent => only compare with siblings under that parent
-            siblings = parent_bec.findChildren(BECConnector, options=Qt.FindDirectChildrenOnly)
+            siblings = parent_bec.findChildren(BECConnector)
         else:
             # No parent => treat all top-level BECConnectors as siblings
             # 1) Gather all BECConnectors from QApplication

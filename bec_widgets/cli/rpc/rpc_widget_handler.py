@@ -52,7 +52,7 @@ class RPCWidgetHandler:
         """
         widget_class = self.widget_classes.get(widget_type)  # type: ignore
         if widget_class:
-            return widget_class(name=name, **kwargs)
+            return widget_class(**kwargs)
         raise ValueError(f"Unknown widget type: {widget_type}")
 
 

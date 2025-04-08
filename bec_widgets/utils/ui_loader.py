@@ -31,7 +31,7 @@ if PYSIDE6:
                         f"Custom widget {class_name} does not have a parent_id argument. "
                     )
                     widget = self.custom_widgets[class_name](self.baseinstance)
-                widget.setObjectName(name)
+                # widget.setObjectName(name) #TODO careful...
                 return widget
             return super().createWidget(class_name, self.baseinstance, name)
 
