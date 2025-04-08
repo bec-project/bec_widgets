@@ -1109,6 +1109,13 @@ class Waveform(PlotBase):
                 # Fetch data from signal instead
                 device_data_x = self._get_x_data(device_name, device_entry)
 
+            # Fallback to 'index' in case data is not of equal length
+            if len(device_data_x) != len(device_data):
+                logger.warning(
+                    f"Async data for curve {curve.name()} and x_axis {device_entry} is not of equal length. Falling back to 'index' plotting."
+                )
+                device_data_x = np.linspace(0, len(device_data) - 1, len(device_data))
+
             self._auto_adjust_async_curve_settings(curve, len(device_data))
             curve.setData(device_data_x, device_data)
 
@@ -1173,11 +1180,11 @@ class Waveform(PlotBase):
             if data_plot_y is None:
                 logger.warning(f"Async data for curve {curve.name()} is None.")
                 continue
+            # Ensure we have numpy array for data_plot_y
+            data_plot_y = np.asarray(data_plot_y)
             # Add
             if instruction == "add":
                 if len(max_shape) > 1:
-                    # Ensure that data_plot_y is numpy array, this avoids copying if data_plot_y is already a numpy array
-                    data_plot_y = np.asarray(data_plot_y)
                     if len(data_plot_y.shape) > 1:
                         data_plot_y = data_plot_y[-1, :]
                 else:
@@ -1203,6 +1210,8 @@ class Waveform(PlotBase):
                 curve.setData(data_plot_x, data_plot_y)
                 # Move on in the loop
                 continue
+
+            # x_axis_mode is device signal
             # Only consider device signals that are async for now, fallback is index
             x_device_entry = self.x_axis_mode["entry"]
             async_data = msg["signals"].get(x_device_entry, None)
@@ -1210,16 +1219,17 @@ class Waveform(PlotBase):
             if async_data is None:
                 # Try to grab the data from device signals
                 data_plot_x = self._get_x_data(plot_mode, x_device_entry)
-                if len(data_plot_x) != len(data_plot_y):
-                    # If the data is not the same length, fall back to index
-                    logger.warning(
-                        f"Async data for curve {curve.name()} is None. Falling back to index."
-                    )
-                    data_plot_x = np.linspace(0, len(data_plot_y) - 1, len(data_plot_y))
-            elif x_data is not None:
-                data_plot_x = np.hstack((x_data, async_data["value"]))
             else:
-                data_plot_x = async_data["value"]
+                data_plot_x = np.asarray(async_data["value"])
+            if x_data is not None:
+                data_plot_x = np.hstack((x_data, data_plot_x))
+            # Fallback incase data is not of equal length
+            if len(data_plot_x) != len(data_plot_y):
+                logger.warning(
+                    f"Async data for curve {curve.name()} and x_axis {x_device_entry} is not of equal length. Falling back to 'index' plotting."
+                )
+                data_plot_x = np.linspace(0, len(data_plot_y) - 1, len(data_plot_y))
+
             # Plot the data
             self._auto_adjust_async_curve_settings(curve, len(data_plot_y))
             curve.setData(data_plot_x, data_plot_y)
