@@ -128,13 +128,18 @@ class ScatterWaveform(PlotBase):
         self.proxy_update_sync = pg.SignalProxy(
             self.sync_signal_update, rateLimit=25, slot=self.update_sync_curves
         )
-
-        self._init_scatter_curve_settings()
         self.update_with_scan_history(-1)
 
     ################################################################################
     # Widget Specific GUI interactions
     ################################################################################
+    def add_side_menus(self):
+        """
+        Add the side menus to the ScatterWaveform widget.
+        """
+        super().add_side_menus()
+        self._init_scatter_curve_settings()
+
     def _init_scatter_curve_settings(self):
         """
         Initialize the scatter curve settings menu.
@@ -486,6 +491,16 @@ class ScatterWaveform(PlotBase):
         if self.crosshair is not None:
             self.crosshair.clear_markers()
         self._main_curve.clear()
+
+    def cleanup(self):
+        """
+        Cleanup the widget and disconnect all signals.
+        """
+        self.bec_dispatcher.disconnect_slot(self.on_scan_status, MessageEndpoints.scan_status())
+        self.bec_dispatcher.disconnect_slot(self.on_scan_progress, MessageEndpoints.scan_progress())
+        self.plot_item.removeItem(self._main_curve)
+        self._main_curve = None
+        super().cleanup()
 
 
 class DemoApp(QMainWindow):  # pragma: no cover
