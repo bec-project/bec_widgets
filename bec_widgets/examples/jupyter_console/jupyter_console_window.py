@@ -42,9 +42,9 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "np": np,
                     "pg": pg,
                     "wh": wh,
-                    "dock": self.dock,
-                    "im": self.im,
-                    "mi": self.mi,
+                    "dock_area": self.dock_area,
+                    "dock_1": self.dock_1,
+                    "dock_2": self.dock_2,
                     "mm": self.mm,
                     "lm": self.lm,
                     "btn1": self.btn1,
@@ -73,9 +73,10 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
 
         first_tab = QWidget()
         first_tab_layout = QVBoxLayout(first_tab)
-        self.dock = BECDockArea(gui_id="dock")
-        first_tab_layout.addWidget(self.dock)
+        self.dock_area = BECDockArea(gui_id="dock")
+        first_tab_layout.addWidget(self.dock_area)
         tab_widget.addTab(first_tab, "Dock Area")
+        self._init_dock()
 
         third_tab = QWidget()
         third_tab_layout = QVBoxLayout(third_tab)
@@ -112,14 +113,6 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         tab_widget.addTab(fifth_tab, "Waveform Next Gen")
         tab_widget.setCurrentIndex(4)
 
-        sixth_tab = QWidget()
-        sixth_tab_layout = QVBoxLayout(sixth_tab)
-        self.im = Image()
-        self.mi = self.im.main_image
-        sixth_tab_layout.addWidget(self.im)
-        tab_widget.addTab(sixth_tab, "Image Next Gen")
-        tab_widget.setCurrentIndex(5)
-
         seventh_tab = QWidget()
         seventh_tab_layout = QVBoxLayout(seventh_tab)
         self.scatter = ScatterWaveform()
@@ -141,7 +134,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.mwf = MultiWaveform()
         ninth_tab_layout.addWidget(self.mwf)
         tab_widget.addTab(ninth_tab, "MultiWaveform")
-        tab_widget.setCurrentIndex(8)
+        tab_widget.setCurrentIndex(0)
 
         # add stuff to the new Waveform widget
         self._init_waveform()
@@ -152,10 +145,15 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         self.wf.plot(y_name="bpm4i", y_entry="bpm4i", dap="GaussianModel")
         self.wf.plot(y_name="bpm3a", y_entry="bpm3a", dap="GaussianModel")
 
+    def _init_dock(self):
+        self.dock_1 = self.dock_area.new(name="dock_0", widget="DarkModeButton")
+        self.dock_1.new(widget="DarkModeButton")
+        self.dock_2 = self.dock_area.new(widget="DarkModeButton")
+
     def closeEvent(self, event):
         """Override to handle things when main window is closed."""
-        self.dock.cleanup()
-        self.dock.close()
+        self.dock_area.cleanup()
+        self.dock_area.close()
         self.console.close()
 
         super().closeEvent(event)
