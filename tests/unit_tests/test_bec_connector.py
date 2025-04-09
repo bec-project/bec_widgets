@@ -2,6 +2,7 @@
 import time
 
 import pytest
+from qtpy.QtCore import QObject
 from qtpy.QtWidgets import QApplication
 
 from bec_widgets.utils import BECConnector
@@ -10,9 +11,12 @@ from bec_widgets.utils.error_popups import SafeSlot as Slot
 from .client_mocks import mocked_client
 
 
+class BECConnectorQObject(BECConnector, QObject): ...
+
+
 @pytest.fixture
 def bec_connector(mocked_client):
-    connector = BECConnector(client=mocked_client)
+    connector = BECConnectorQObject(client=mocked_client)
     return connector
 
 
@@ -20,11 +24,11 @@ def test_bec_connector_init(bec_connector):
     assert bec_connector is not None
     assert bec_connector.client is not None
     assert isinstance(bec_connector, BECConnector)
-    assert bec_connector.config.widget_class == "BECConnector"
+    assert bec_connector.config.widget_class == "BECConnectorQObject"
 
 
 def test_bec_connector_init_with_gui_id(mocked_client):
-    bc = BECConnector(client=mocked_client, gui_id="test_gui_id")
+    bc = BECConnectorQObject(client=mocked_client, gui_id="test_gui_id")
     assert bc.config.gui_id == "test_gui_id"
     assert bc.gui_id == "test_gui_id"
 

@@ -93,7 +93,8 @@ class BECConnector:
         object_name = object_name or kwargs.pop("objectName", None)
         # Ensure the parent is always the first argument for QObject
         parent = kwargs.pop("parent", None)
-        # This initializes the QObject or any qt related class
+        # This initializes the QObject or any qt related class BECConnector has to be used from this line down with QObject, otherwise hierarchy logic will not work
+        # TODO do a proper check if the class is a QObject -> issue #475
         super().__init__(parent=parent, **kwargs)
         # BEC related connections
         self.bec_dispatcher = BECDispatcher(client=client)
@@ -187,7 +188,7 @@ class BECConnector:
         # Collect used names among siblings
         used_names = {sib.objectName() for sib in siblings if sib is not self}
 
-        base_name = self.objectName()
+        base_name = self.object_name
         if base_name not in used_names:
             # Name is already unique among siblings
             return
@@ -380,7 +381,7 @@ class BECConnector:
     def remove(self):
         """Cleanup the BECConnector"""
         # If the widget is attached to a dock, remove it from the dock.
-        # TODO this should be handled by dock and dock are not by BECConnector
+        # TODO this should be handled by dock and dock are not by BECConnector  -> issue created #473
         if self._parent_dock is not None:
             self._parent_dock.delete(self.object_name)
         # If the widget is from Qt, trigger its close method.
