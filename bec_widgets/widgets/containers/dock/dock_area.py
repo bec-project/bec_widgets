@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, Literal, Optional
 from weakref import WeakValueDictionary
 
 from bec_lib.endpoints import MessageEndpoints
@@ -37,6 +37,9 @@ from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECStatus
 from bec_widgets.widgets.utility.logpanel.logpanel import LogPanel
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
+if TYPE_CHECKING:  # pragma: no cover
+    from bec_widgets.cli.auto_updates import AutoUpdates
+
 logger = bec_logger.logger
 
 
@@ -63,8 +66,9 @@ class BECDockArea(BECWidget, QWidget):
         "remove",
         "detach_dock",
         "attach_all",
-        "selected_device",
         "save_state",
+        "selected_device",
+        "selected_device.setter",
         "restore_state",
     ]
 
@@ -96,6 +100,8 @@ class BECDockArea(BECWidget, QWidget):
         self.layout.setSpacing(5)
         self.layout.setContentsMargins(0, 0, 0, 0)
 
+        self.auto_update: AutoUpdates | None = None
+        self._auto_update_selected_device: str | None = None
         self._instructions_visible = True
 
         self.dark_mode_button = DarkModeButton(parent=self, parent_id=self.gui_id, toolbar=True)
@@ -253,15 +259,33 @@ class BECDockArea(BECWidget, QWidget):
             )
 
     @property
-    def selected_device(self) -> str:
-        gui_id = QApplication.instance().gui_id
-        auto_update_config = self.client.connector.get(
-            MessageEndpoints.gui_auto_update_config(gui_id)
-        )
-        try:
-            return auto_update_config.selected_device
-        except AttributeError:
-            return None
+    def selected_device(self) -> str | None:
+        """
+        Get the selected device from the auto update config.
+
+        Returns:
+            str: The selected device. If no device is selected, None is returned.
+        """
+        return self._auto_update_selected_device
+
+    @selected_device.setter
+    def selected_device(self, value: str | None) -> None:
+        """
+        Set the selected device in the auto update config.
+
+        Args:
+            value(str): The selected device.
+        """
+        self._auto_update_selected_device = value
+
+    def set_auto_update(self, auto_update_cls: type[AutoUpdates]) -> None:
+        """
+        Set the auto update object for the dock area.
+
+        Args:
+            auto_update(AutoUpdates): The auto update object.
+        """
+        self.auto_update = auto_update_cls(self)
 
     @property
     def panels(self) -> dict[str, BECDock]:
@@ -447,6 +471,8 @@ class BECDockArea(BECWidget, QWidget):
         """
         Cleanup the dock area.
         """
+        if self.auto_update:
+            self.auto_update.enabled = False
         self.delete_all()
         self.toolbar.close()
         self.toolbar.deleteLater()
