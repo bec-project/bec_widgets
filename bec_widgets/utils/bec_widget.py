@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import darkdetect
 from bec_lib.logger import bec_logger
 from PySide6.QtCore import QObject
 from qtpy.QtCore import Slot
-from qtpy.QtWidgets import QApplication, QWidget
+from qtpy.QtWidgets import QApplication
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
