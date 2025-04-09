@@ -4,7 +4,7 @@ import inspect
 import threading
 import uuid
 from functools import wraps
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
@@ -41,7 +41,7 @@ def rpc_call(func):
     def wrapper(self, *args, **kwargs):
         # we could rely on a strict type check here, but this is more flexible
         # moreover, it would anyway crash for objects...
-        caller_frame = inspect.currentframe().f_back
+        caller_frame = inspect.currentframe().f_back  # type: ignore
         while caller_frame:
             if "jedi" in caller_frame.f_globals:
                 # Jedi module is present, likely tab completion
@@ -175,7 +175,7 @@ class RPCBase:
         # pylint: disable=protected-access
         while parent._parent is not None:
             parent = parent._parent
-        return parent
+        return parent  # type: ignore
 
     def _run_rpc(self, method, *args, wait_for_rpc_response=True, timeout=300, **kwargs) -> Any:
         """
@@ -219,7 +219,11 @@ class RPCBase:
                 self._client.connector.unregister(
                     MessageEndpoints.gui_instruction_response(request_id), cb=self._on_rpc_response
                 )
-            # get class name
+
+            # we can assume that the response is a RequestResponseMessage, updated by
+            # the _on_rpc_response method
+            assert isinstance(self._rpc_response, messages.RequestResponseMessage)
+
             if not self._rpc_response.accepted:
                 raise ValueError(self._rpc_response.message["error"])
             msg_result = self._rpc_response.message.get("result")
@@ -227,8 +231,8 @@ class RPCBase:
             return self._create_widget_from_msg_result(msg_result)
 
     @staticmethod
-    def _on_rpc_response(msg: MessageObject, parent: RPCBase) -> None:
-        msg = msg.value
+    def _on_rpc_response(msg_obj: MessageObject, parent: RPCBase) -> None:
+        msg = cast(messages.RequestResponseMessage, msg_obj.value)
         parent._msg_wait_event.set()
         parent._rpc_response = msg
 
