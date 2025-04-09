@@ -148,6 +148,8 @@ class GUIServer:
         """
         Set the BEC icon for the application
         """
+        if self.app is None:
+            return
         icon = QIcon()
         icon.addFile(
             os.path.join(MODULE_PATH, "assets", "app_icons", "bec_widgets_icon.png"),
