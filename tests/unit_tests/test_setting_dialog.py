@@ -81,12 +81,12 @@ def test_settings_dialog_accept(settings_dialog, qtbot):
     settings_widget.accept_changes.assert_called_once()
 
 
-def test_settings_dialog_reject(settings_dialog, qtbot):
+def test_settings_dialog_reject_calls_cleanup(settings_dialog, qtbot):
     dialog, _, _ = settings_dialog
 
-    with patch.object(dialog, "reject", wraps=dialog.reject) as mock_reject:
+    with patch.object(dialog, "cleanup") as mock_cleanup:
         dialog.button_box.buttons()[1].click()  # Cancel Button
-        mock_reject.assert_called_once()
+        mock_cleanup.assert_called_once()
 
 
 def test_settings_dialog_apply_changes(settings_dialog, qtbot):
