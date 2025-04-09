@@ -884,6 +884,7 @@ class Waveform(PlotBase):
             self.on_async_readback,
             MessageEndpoints.device_async_readback(self.scan_id, curve.name()),
         )
+        curve.rpc_register.remove_rpc(curve)
 
         # Remove itself from the DAP summary only for side panels
         if (
