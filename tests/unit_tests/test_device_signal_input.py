@@ -21,9 +21,6 @@ from .conftest import create_widget
 class DeviceInputWidget(DeviceSignalInputBase, QWidget):
     """Thin wrapper around DeviceInputBase to make it a QWidget"""
 
-    def __init__(self, parent=None, client=None, config=None, gui_id=None):
-        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
-
 
 @pytest.fixture
 def device_signal_base(qtbot, mocked_client):
