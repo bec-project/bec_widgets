@@ -5,7 +5,6 @@ from qtpy.QtGui import QAction, QActionGroup, QIcon
 from qtpy.QtWidgets import QApplication, QMainWindow, QStyle
 
 import bec_widgets
-from bec_lib.logger import bec_logger
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
@@ -13,8 +12,6 @@ from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
-
-logger = bec_logger.logger
 
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
