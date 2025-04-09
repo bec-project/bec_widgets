@@ -466,17 +466,27 @@ class ScatterWaveform(PlotBase):
             logger.warning(f"Neither scan_id or scan_number was provided, fetching the latest scan")
             scan_index = -1
 
-        if scan_index is not None:
-            if len(self.client.history) == 0:
-                logger.info("No scans executed so far. Skipping scan history update.")
-                return
-
-            self.scan_item = self.client.history[scan_index]
-            metadata = self.scan_item.metadata
-            self.scan_id = metadata["bec"]["scan_id"]
-        else:
+        if scan_index is None:
             self.scan_id = scan_id
             self.scan_item = self.client.history.get_by_scan_id(scan_id)
+            self.sync_signal_update.emit()
+            return
+
+        if scan_index == -1:
+            scan_item = self.client.queue.scan_storage.current_scan
+            if scan_item is not None:
+                self.scan_item = scan_item
+                self.scan_id = scan_item.scan_id
+                self.sync_signal_update.emit()
+                return
+
+        if len(self.client.history) == 0:
+            logger.info("No scans executed so far. Skipping scan history update.")
+            return
+
+        self.scan_item = self.client.history[scan_index]
+        metadata = self.scan_item.metadata
+        self.scan_id = metadata["bec"]["scan_id"]
 
         self.sync_signal_update.emit()
 
