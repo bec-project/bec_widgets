@@ -363,13 +363,6 @@ class BECDockArea(RPCBase):
         Return all floating docks to the dock area.
         """
 
-    @property
-    @rpc_call
-    def selected_device(self) -> "str":
-        """
-        None
-        """
-
     @rpc_call
     def save_state(self) -> "dict":
         """
@@ -377,6 +370,26 @@ class BECDockArea(RPCBase):
 
         Returns:
             dict: The state of the dock area.
+        """
+
+    @property
+    @rpc_call
+    def selected_device(self) -> "str | None":
+        """
+        Get the selected device from the auto update config.
+
+        Returns:
+            str: The selected device. If no device is selected, None is returned.
+        """
+
+    @selected_device.setter
+    @rpc_call
+    def selected_device(self) -> "str | None":
+        """
+        Get the selected device from the auto update config.
+
+        Returns:
+            str: The selected device. If no device is selected, None is returned.
         """
 
     @rpc_call
