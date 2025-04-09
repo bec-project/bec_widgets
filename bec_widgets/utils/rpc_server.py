@@ -51,7 +51,7 @@ def rpc_exception_hook(err_func):
         popup.custom_exception_hook = old_exception_hook
 
 
-class CLIServer:
+class RPCServer:
 
     client: BECClient
 

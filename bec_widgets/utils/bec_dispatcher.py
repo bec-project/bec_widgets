@@ -19,7 +19,7 @@ logger = bec_logger.logger
 if TYPE_CHECKING:
     from bec_lib.endpoints import EndpointInfo
 
-    from bec_widgets.utils.cli_server import CLIServer
+    from bec_widgets.utils.rpc_server import RPCServer
 
 
 class QtThreadSafeCallback(QObject):
@@ -78,9 +78,8 @@ class BECDispatcher:
     _instance = None
     _initialized = False
     client: BECClient
-    cli_server: CLIServer | None = None
+    cli_server: RPCServer | None = None
 
-    # TODO add custom gui id for server
     def __new__(
         cls,
         client=None,
@@ -208,7 +207,7 @@ class BECDispatcher:
             gui_id(str, optional): The GUI ID. Defaults to None. If None, a unique identifier will be generated.
         """
         # pylint: disable=import-outside-toplevel
-        from bec_widgets.utils.cli_server import CLIServer
+        from bec_widgets.utils.rpc_server import RPCServer
 
         if gui_id is None:
             gui_id = self.generate_unique_identifier()
@@ -216,7 +215,7 @@ class BECDispatcher:
         if not self.client.started:
             logger.error("Cannot start CLI server without a running client")
             return
-        self.cli_server = CLIServer(gui_id, dispatcher=self, client=self.client)
+        self.cli_server = RPCServer(gui_id, dispatcher=self, client=self.client)
         logger.success(f"Started CLI server with gui_id: {gui_id}")
 
     def stop_cli_server(self):
