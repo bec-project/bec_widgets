@@ -1,22 +1,22 @@
+from __future__ import annotations
+
 import os
+from typing import TYPE_CHECKING
 
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QSize
-from qtpy.QtGui import QAction, QActionGroup
-from qtpy.QtWidgets import QApplication, QMainWindow, QSizePolicy, QStyle
+from qtpy.QtWidgets import QApplication, QSizePolicy
 
 import bec_widgets
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
-from bec_widgets.utils import UILoader
-from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
-from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
 logger = bec_logger.logger
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
+
+if TYPE_CHECKING:  # pragma: no cover
+    from qtpy.QtWidgets import QWidget
 
 
 class LaunchWindow(BECMainWindow):
@@ -36,20 +36,27 @@ class LaunchWindow(BECMainWindow):
         self.load_ui(ui_file_path)
         self.ui.open_dock_area.setText("Open Dock Area")
         self.ui.open_dock_area.clicked.connect(lambda: self.launch("dock_area"))
+        self.ui.open_auto_update_dock_area.setText("Open Dock Area with Auto Update")
+        self.ui.open_auto_update_dock_area.clicked.connect(
+            lambda: self.launch("auto_update_dock_area", "auto_updates")
+        )
 
     def launch(
         self,
         launch_script: str,
         name: str | None = None,
         geometry: tuple[int, int, int, int] | None = None,
-    ) -> "BECDockArea":
-        """Create a new dock area.
+    ) -> QWidget:
+        """Launch the specified script. If the launch script creates a QWidget, it will be
+        embedded in a BECMainWindow. If the launch script creates a BECMainWindow, it will be shown
+        as a separate window.
 
         Args:
+            launch_script(str): The name of the script to be launched.
             name(str): The name of the dock area.
             geometry(tuple): The geometry parameters to be passed to the dock area.
         Returns:
-            BECDockArea: The newly created dock area.
+            QWidget: The created dock area.
         """
         from bec_widgets.applications import bw_launch
 
