@@ -1415,7 +1415,6 @@ class Waveform(PlotBase):
                 found_sync = True
             else:
                 logger.warning("Device {dev_name} not found in readout priority list.")
-
         # Determine the mode of the scan
         if found_async and found_sync:
             mode = "mixed"
@@ -1449,18 +1448,31 @@ class Waveform(PlotBase):
             logger.warning(f"Neither scan_id or scan_number was provided, fetching the latest scan")
             scan_index = -1
 
-        if scan_index is not None:
-            if len(self.client.history) == 0:
-                logger.info("No scans executed so far. Skipping scan history update.")
-                return
-
-            self.scan_item = self.client.history[scan_index]
-            metadata = self.scan_item.metadata
-            self.scan_id = metadata["bec"]["scan_id"]
-        else:
+        if scan_index is None:
             self.scan_id = scan_id
             self.scan_item = self.client.history.get_by_scan_id(scan_id)
+            self._emit_signal_update()
+            return
 
+        if scan_index == -1:
+            scan_item = self.client.queue.scan_storage.current_scan
+            if scan_item is not None:
+                self.scan_item = scan_item
+                self.scan_id = scan_item.scan_id
+                self._emit_signal_update()
+                return
+
+        if len(self.client.history) == 0:
+            logger.info("No scans executed so far. Skipping scan history update.")
+            return
+
+        self.scan_item = self.client.history[scan_index]
+        metadata = self.scan_item.metadata
+        self.scan_id = metadata["bec"]["scan_id"]
+
+        self._emit_signal_update()
+
+    def _emit_signal_update(self):
         self._categorise_device_curves()
 
         self.setup_dap_for_scan()
