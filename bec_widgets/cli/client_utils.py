@@ -10,7 +10,7 @@ import threading
 import time
 from contextlib import contextmanager
 from threading import Lock
-from typing import TYPE_CHECKING, Literal, TypeAlias
+from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
@@ -22,9 +22,9 @@ import bec_widgets.cli.client as client
 from bec_widgets.cli.rpc.rpc_base import RPCBase, RPCReference
 
 if TYPE_CHECKING:  # pragma: no cover
-    from bec_lib.redis_connector import StreamMessage
+    from bec_lib.messages import GUIRegistryStateMessage
 else:
-    StreamMessage = lazy_import_from("bec_lib.redis_connector", ("StreamMessage",))
+    GUIRegistryStateMessage = lazy_import_from("bec_lib.messages", "GUIRegistryStateMessage")
 
 logger = bec_logger.logger
 
@@ -417,11 +417,13 @@ class BECGuiClient(RPCBase):
         return self._start_server(wait=wait)
 
     @staticmethod
-    def _handle_registry_update(msg: StreamMessage, parent: BECGuiClient) -> None:
+    def _handle_registry_update(
+        msg: dict[str, GUIRegistryStateMessage], parent: BECGuiClient
+    ) -> None:
         # This was causing a deadlock during shutdown, not sure why.
         # with self._lock:
         self = parent
-        self._server_registry = msg["data"].state
+        self._server_registry = cast(dict[str, RegistryState], msg["data"].state)
         self._update_dynamic_namespace(self._server_registry)
 
     def _do_show_all(self):
