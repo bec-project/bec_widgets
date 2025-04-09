@@ -248,6 +248,8 @@ class Waveform(PlotBase):
         for curve in self._async_curves + self._sync_curves:
             curve.setClipToView(False)
         self.plot_item.vb.autoRange()
+        self.auto_range_x = True
+        self.auto_range_y = True
         for curve in self._async_curves + self._sync_curves:
             curve.setClipToView(True)
 
