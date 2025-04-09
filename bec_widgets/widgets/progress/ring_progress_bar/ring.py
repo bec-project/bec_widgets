@@ -228,9 +228,9 @@ class Ring(BECConnector, QObject):
             self.config.connections.slot = None
             self.config.connections.endpoint = None
         elif mode == "scan":
-            self.set_connections("on_scan_progress", "scans/scan_progress")
+            self.set_connections("on_scan_progress", MessageEndpoints.scan_progress())
         elif mode == "device":
-            self.set_connections("on_device_readback", f"internal/devices/readback/{device}")
+            self.set_connections("on_device_readback", MessageEndpoints.device_readback(device))
 
         self.parent_progress_widget.enable_auto_updates(False)
 
@@ -244,12 +244,12 @@ class Ring(BECConnector, QObject):
         """
         if self.config.connections.endpoint == endpoint and self.config.connections.slot == slot:
             return
-        else:
-            self.bec_dispatcher.disconnect_slot(
-                self.config.connections.slot, self.config.connections.endpoint
-            )
-            self.config.connections = ProgressbarConnections(slot=slot, endpoint=endpoint)
-            self.bec_dispatcher.connect_slot(getattr(self, slot), endpoint)
+
+        self.bec_dispatcher.disconnect_slot(
+            self.config.connections.slot, self.config.connections.endpoint
+        )
+        self.config.connections = ProgressbarConnections(slot=slot, endpoint=endpoint)
+        self.bec_dispatcher.connect_slot(getattr(self, slot), endpoint)
 
     def reset_connection(self):
         """
