@@ -27,9 +27,8 @@ def qapplication(qtbot, request, testable_qtimer_class):  # pylint: disable=unus
     if request.node.stash._storage.get("failed"):
         print("Test failed, skipping cleanup checks")
         return
-
-    # qapp = BECApplication()
-    # qapp.shutdown()
+    bec_dispatcher = bec_dispatcher_module.BECDispatcher()
+    bec_dispatcher.stop_cli_server()
 
     testable_qtimer_class.check_all_stopped(qtbot)
     qapp = QApplication.instance()
@@ -55,6 +54,8 @@ def bec_dispatcher(threads_check):  # pylint: disable=unused-argument
     bec_dispatcher.disconnect_all()
     # clean BEC client
     bec_dispatcher.client.shutdown()
+    # stop the cli server
+    bec_dispatcher.stop_cli_server()
     # reinitialize singleton for next test
     bec_dispatcher_module.BECDispatcher.reset_singleton()
 
