@@ -99,6 +99,16 @@ class RPCReference:
     def __getitem__(self, key):
         return self._registry[self._gui_id].__getitem__(key)
 
+    def __setattr__(self, name, value):
+        if name in ["_registry", "_gui_id"]:
+            super().__setattr__(name, value)
+        else:
+            registry = super().__getattribute__("_registry")
+            gui_id = super().__getattribute__("_gui_id")
+            if gui_id not in registry:
+                raise DeletedWidgetError(f"Widget with gui_id {gui_id} has been deleted")
+            registry.__getitem__(gui_id).__setattr__(name, value)
+
     def __repr__(self):
         if self._gui_id not in self._registry:
             return f"<Deleted widget with gui_id {self._gui_id}>"
