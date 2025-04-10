@@ -16,6 +16,7 @@ class RoundedFrame(QFrame):
         parent=None,
         content_widget: QWidget = None,
         background_color: str = None,
+        orientation: str = "horizontal",
         radius: int = 10,
     ):
         QFrame.__init__(self, parent)
@@ -28,8 +29,12 @@ class RoundedFrame(QFrame):
         self.setObjectName("roundedFrame")
 
         # Create a layout for the frame
-        self.layout = QHBoxLayout(self)
-        self.layout.setContentsMargins(5, 5, 5, 5)  # Set 5px margin
+        if orientation == "vertical":
+            self.layout = QVBoxLayout(self)
+            self.layout.setContentsMargins(5, 5, 5, 5)
+        else:
+            self.layout = QHBoxLayout(self)
+            self.layout.setContentsMargins(5, 5, 5, 5)  # Set 5px margin
 
         # Add the content widget to the layout
         if content_widget:
