@@ -1551,7 +1551,7 @@ class Waveform(PlotBase):
 
         # Iterate over all curves
         for curve in self.curves:
-            if curve.config.source == "custom":
+            if curve.config.source != "device":
                 continue
             dev_name = curve.config.signal.name
             if dev_name in readout_priority_async:
