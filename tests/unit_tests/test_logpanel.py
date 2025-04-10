@@ -1,4 +1,7 @@
-# pylint: disable=missing-function-docstring, missing-module-docstring, unused-import
+# pylint: disable=no-member
+# pylint: disable=missing-function-docstring
+# pylint: disable=redefined-outer-name
+# pylint: disable=protected-access
 
 from collections import deque
 from unittest.mock import MagicMock

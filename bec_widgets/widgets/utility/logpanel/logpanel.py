@@ -16,7 +16,7 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import LogLevel, bec_logger
 from bec_lib.messages import LogMessage, StatusMessage
 from PySide6.QtCore import QObject
-from qtpy.QtCore import QDateTime, Qt, Signal  # type: ignore
+from qtpy.QtCore import QDateTime, Qt, Signal, SignalInstance  # type: ignore
 from qtpy.QtGui import QFont
 from qtpy.QtWidgets import (
     QApplication,
@@ -91,9 +91,9 @@ class BecLogsQueue(QObject):
         self._set_formatter_and_update_filter(line_formatter)
         self._conn.register([MessageEndpoints.log()], None, self._process_incoming_log_msg)
 
-    def unsub_and_disconnect(self):
+    def unsub_from_redis(self):
+        """Stop listening to the Redis log stream"""
         self._conn.unregister([MessageEndpoints.log()], None, self._process_incoming_log_msg)
-        self.new_message.disconnect()
 
     def _process_incoming_log_msg(self, msg: dict):
         try:
@@ -143,6 +143,7 @@ class BecLogsQueue(QObject):
 
     @property
     def filter(self) -> LineFilter:
+        """A function which filters a log message based on all applied criteria"""
         thresh = LogLevel[self._log_level].value if self._log_level is not None else 0
         return self._combine_filters(
             partial(level_filter, thresh=thresh),
@@ -152,6 +153,7 @@ class BecLogsQueue(QObject):
         )
 
     def update_level_filter(self, level: str):
+        """Change the log-level of the level filter"""
         if level not in [l.name for l in LogLevel]:
             logger.error(f"Logging level {level} unrecognized for filter!")
             return
@@ -159,34 +161,42 @@ class BecLogsQueue(QObject):
         self._set_formatter_and_update_filter(self._line_formatter)
 
     def update_search_filter(self, search_query: Pattern | str | None = None):
+        """Change the string or regex to filter against"""
         self._search_query = search_query
         self._set_formatter_and_update_filter(self._line_formatter)
 
     def update_time_filter(self, start: QDateTime | None, end: QDateTime | None):
+        """Change the start and/or end times to filter against"""
         self._timestamp_start = start
         self._timestamp_end = end
         self._set_formatter_and_update_filter(self._line_formatter)
 
     def update_service_filter(self, services: set[str]):
+        """Change the selected services to display"""
         self._selected_services = services
         self._set_formatter_and_update_filter(self._line_formatter)
 
     def update_line_formatter(self, line_formatter: LineFormatter):
+        """Update the formatter"""
         self._set_formatter_and_update_filter(line_formatter)
 
     def display_all(self) -> str:
+        """Return formatted output for all log messages"""
         return "\n".join(self._queue_formatter(self._data.copy()))
 
     def format_new(self):
+        """Return formatted output for the display queue"""
         res = "\n".join(self._display_queue)
         self._display_queue = deque([], self._max_length)
         return res
 
     def clear_logs(self):
+        """Clear the cache and display queue"""
         self._data = deque([])
         self._display_queue = deque([])
 
     def fetch_history(self):
+        """Fetch all available messages from Redis"""
         self._data = deque(
             item["data"]
             for item in self._conn.xread(
@@ -195,14 +205,16 @@ class BecLogsQueue(QObject):
         )
 
     def unique_service_names_from_history(self) -> set[str]:
+        """Go through the log history to determine active service names"""
         return set(msg.log_msg["service_name"] for msg in self._data)
 
 
 class LogPanelToolbar(QWidget):
 
-    services_selected: pyqtBoundSignal = Signal(set)
+    services_selected: SignalInstance = Signal(set)
 
     def __init__(self, parent: QWidget | None = None) -> None:
+        """A toolbar for the logpanel, mainly used for managing the states of filters"""
         super().__init__(parent)
 
         # in unix time
@@ -336,6 +348,7 @@ class LogPanelToolbar(QWidget):
     def service_list_update(
         self, services_info: dict[str, StatusMessage], services_from_history: set[str], *_, **__
     ):
+        """Change the list of services which can be selected"""
         self._unique_service_names = set([s.split("/")[0] for s in services_info.keys()])
         self._unique_service_names |= services_from_history
         if self._services_selected is None:
@@ -513,7 +526,9 @@ class LogPanel(TextBox):
 
     def cleanup(self):
         self._service_status.cleanup()
-        self._log_manager.unsub_and_disconnect()
+        self._log_manager.unsub_from_redis()
+        self._log_manager.new_message.disconnect(self._new_messages)
+        self._new_messages.disconnect(self._on_append)
         super().cleanup()
 
 
