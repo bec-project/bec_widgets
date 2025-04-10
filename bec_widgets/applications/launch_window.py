@@ -1,22 +1,97 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
 
 from bec_lib.logger import bec_logger
-from qtpy.QtWidgets import QApplication, QSizePolicy
+from qtpy.QtCore import Qt, Signal
+from qtpy.QtGui import QPainter, QPainterPath, QPixmap
+from qtpy.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
 
 import bec_widgets
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.container_utils import WidgetContainerUtils
+from bec_widgets.utils.round_frame import RoundedFrame
+from bec_widgets.utils.toolbar import ModularToolBar
 from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
+from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
 logger = bec_logger.logger
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
-if TYPE_CHECKING:  # pragma: no cover
-    from qtpy.QtWidgets import QWidget
+
+class LaunchTile(RoundedFrame):
+    open_signal = Signal()
+
+    def __init__(
+        self, parent=None, icon_path=None, top_label=None, main_label=None, description=None
+    ):
+        super().__init__(parent=parent, orientation="vertical")
+
+        self.icon_label = QLabel(parent=self)
+        self.icon_label.setFixedSize(100, 100)
+        self.icon_label.setScaledContents(True)
+        pixmap = QPixmap(icon_path)
+        if not pixmap.isNull():
+            size = 100
+            circular_pixmap = QPixmap(size, size)
+            circular_pixmap.fill(Qt.transparent)
+
+            painter = QPainter(circular_pixmap)
+            painter.setRenderHints(QPainter.Antialiasing, True)
+            path = QPainterPath()
+            path.addEllipse(0, 0, size, size)
+            painter.setClipPath(path)
+            pixmap = pixmap.scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            painter.drawPixmap(0, 0, pixmap)
+            painter.end()
+
+            self.icon_label.setPixmap(circular_pixmap)
+        self.layout.addWidget(self.icon_label, alignment=Qt.AlignCenter)
+
+        # Top label
+        self.top_label = QLabel(top_label.upper())
+        font_top = self.top_label.font()
+        font_top.setPointSize(10)
+        self.top_label.setFont(font_top)
+        self.layout.addWidget(self.top_label, alignment=Qt.AlignCenter)
+
+        # Main label
+        self.main_label = QLabel(main_label)
+        font_main = self.main_label.font()
+        font_main.setPointSize(14)
+        font_main.setBold(True)
+        self.main_label.setFont(font_main)
+        self.main_label.setWordWrap(True)
+        self.main_label.setAlignment(Qt.AlignCenter)
+        self.layout.addWidget(self.main_label)
+
+        # Description
+        self.description_label = QLabel(description)
+        self.description_label.setWordWrap(True)
+        self.description_label.setAlignment(Qt.AlignCenter)
+        self.layout.addWidget(self.description_label)
+
+        # Action button
+        self.action_button = QPushButton("Open")
+        self.action_button.setStyleSheet(
+            """
+        QPushButton {
+            background-color: #007AFF;
+            border: none;
+            padding: 8px 16px;
+            color: white;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #005BB5;
+        }
+        """
+        )
+        self.layout.addWidget(self.action_button, alignment=Qt.AlignCenter)
+
+        # self.apply_theme("dark")
 
 
 class LaunchWindow(BECMainWindow):
@@ -29,17 +104,48 @@ class LaunchWindow(BECMainWindow):
 
         self.app = QApplication.instance()
 
-        self.resize(500, 300)
-        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        # Toolbar
+        self.dark_mode_button = DarkModeButton(parent=self, toolbar=True)
+        self.toolbar = ModularToolBar(parent=self)
+        self.addToolBar(Qt.TopToolBarArea, self.toolbar)
+        self.spacer = QWidget()
+        self.spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.toolbar.addWidget(self.spacer)
+        self.toolbar.addWidget(self.dark_mode_button)
 
-        ui_file_path = os.path.join(MODULE_PATH, "applications/launch_dialog.ui")
-        self.load_ui(ui_file_path)
-        self.ui.open_dock_area.setText("Open Dock Area")
-        self.ui.open_dock_area.clicked.connect(lambda: self.launch("dock_area"))
-        self.ui.open_auto_update_dock_area.setText("Open Dock Area with Auto Update")
-        self.ui.open_auto_update_dock_area.clicked.connect(
+        # Main Widget
+        self.central_widget = QWidget(self)
+        self.central_widget.layout = QHBoxLayout(self.central_widget)
+        self.setCentralWidget(self.central_widget)
+
+        self.tile_dock_area = LaunchTile(
+            icon_path=os.path.join(MODULE_PATH, "assets", "app_icons", "bec_widgets_icon.png"),
+            top_label="Get started",
+            main_label="BEC Dock Area",
+            description="Highly flexible and customizable dock area application with modular widgets.",
+        )
+        self.tile_dock_area.setFixedSize(250, 300)
+
+        self.tile_auto_update = LaunchTile(
+            icon_path=os.path.join(MODULE_PATH, "assets", "app_icons", "auto_update.png"),
+            top_label="Get automated",
+            main_label="BEC Auto Update Dock Area",
+            description="Dock area with auto update functionality for BEC widgets plotting.",
+        )
+        self.tile_auto_update.setFixedSize(250, 300)
+
+        # Add tiles to the main layout
+        self.central_widget.layout.addWidget(self.tile_dock_area)
+        self.central_widget.layout.addWidget(self.tile_auto_update)
+        # hacky solution no time to waste
+        self.tiles = [self.tile_dock_area, self.tile_auto_update]
+
+        # Connect signals
+        self.tile_dock_area.action_button.clicked.connect(lambda: self.launch("dock_area"))
+        self.tile_auto_update.action_button.clicked.connect(
             lambda: self.launch("auto_update_dock_area", "auto_updates")
         )
+        self._update_theme()
 
     def launch(
         self,
@@ -95,6 +201,15 @@ class LaunchWindow(BECMainWindow):
                 window.show()
             return result_widget
 
+    def apply_theme(self, theme: str):
+        """
+        Change the theme of the application.
+        """
+        for tile in self.tiles:
+            tile.apply_theme(theme)
+
+        super().apply_theme(theme)
+
     def show_launcher(self):
         self.show()
 
@@ -103,3 +218,16 @@ class LaunchWindow(BECMainWindow):
 
     def cleanup(self):
         super().close()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.setFixedSize(self.size())
+
+
+if __name__ == "__main__":
+    import sys
+
+    app = QApplication(sys.argv)
+    launcher = LaunchWindow()
+    launcher.show()
+    sys.exit(app.exec())
