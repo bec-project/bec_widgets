@@ -14,7 +14,7 @@ classifiers = [
 ]
 dependencies = [
     "bec_ipython_client>=2.21.4, <=4.0", # needed for jupyter console
-    "bec_lib>=2.21.4, <=4.0",
+    "bec_lib>=3.28.1, <=4.0",
     "bec_qthemes~=0.7, >=0.7",
     "black~=24.0",                       # needed for bw-generate-cli
     "isort~=5.13, >=5.13.2",             # needed for bw-generate-cli
