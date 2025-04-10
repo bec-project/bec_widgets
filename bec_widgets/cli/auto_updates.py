@@ -53,6 +53,10 @@ class AutoUpdates:
         Callback for scan status messages.
         """
         msg = ScanStatusMessage(**content, metadata=metadata)
+        if not self.enabled:
+            return
+
+        self.enable_gui_highlights(True)
 
         match msg.status:
             case "open":
@@ -129,6 +133,22 @@ class AutoUpdates:
             return sel_device
         return None
 
+    def enable_gui_highlights(self, enable: bool) -> None:
+        """
+        Enable or disable GUI highlights.
+
+        Args:
+            enable (bool): Whether to enable or disable the highlights.
+        """
+        if enable:
+            title = self.dock_area.window().windowTitle()
+            if " [Auto Updates]" in title:
+                return
+            self.dock_area.window().setWindowTitle(f"{title} [Auto Updates]")
+        else:
+            title = self.dock_area.window().windowTitle()
+            self.dock_area.window().setWindowTitle(title.replace(" [Auto Updates]", ""))
+
     @property
     def enabled(self) -> bool:
         """
@@ -147,9 +167,11 @@ class AutoUpdates:
 
         if value:
             self.connect()
+            self.enable_gui_highlights(True)
             self.on_start()
         else:
             self.disconnect()
+            self.enable_gui_highlights(False)
             self.on_stop()
 
     ########################################################################
