@@ -3161,12 +3161,6 @@ class Waveform(RPCBase):
         The font size of the legend font.
         """
 
-    @rpc_call
-    def __getitem__(self, key: "int | str"):
-        """
-        None
-        """
-
     @property
     @rpc_call
     def curves(self) -> "list[Curve]":

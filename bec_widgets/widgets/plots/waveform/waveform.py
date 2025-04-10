@@ -82,7 +82,6 @@ class Waveform(PlotBase):
         "legend_label_size",
         "legend_label_size.setter",
         # Waveform Specific RPC Access
-        "__getitem__",
         "curves",
         "x_mode",
         "x_mode.setter",
@@ -190,9 +189,6 @@ class Waveform(PlotBase):
                 # Connect to the custom reset_view method
                 action.triggered.connect(self._reset_view)
                 break
-
-    def __getitem__(self, key: int | str):
-        return self.get_curve(key)
 
     ################################################################################
     # Widget Specific GUI interactions
@@ -1608,6 +1604,9 @@ class Waveform(PlotBase):
         if scan_index == -1:
             scan_item = self.client.queue.scan_storage.current_scan
             if scan_item is not None:
+                if scan_item.status_message is None:
+                    logger.warning(f"Scan item with {scan_item.scan_id} has no status message.")
+                    return
                 self.scan_item = scan_item
                 self.scan_id = scan_item.scan_id
                 self._emit_signal_update()
