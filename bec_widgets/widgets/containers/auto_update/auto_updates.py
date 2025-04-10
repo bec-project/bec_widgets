@@ -7,11 +7,12 @@ from bec_lib.logger import bec_logger
 from bec_lib.messages import ScanStatusMessage
 
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
+from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_widgets.utils.bec_widget import BECWidget
     from bec_widgets.widgets.containers.dock.dock import BECDock
-    from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
     from bec_widgets.widgets.plots.image.image import Image
     from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
     from bec_widgets.widgets.plots.multi_waveform.multi_waveform import MultiWaveform
@@ -22,30 +23,59 @@ if TYPE_CHECKING:  # pragma: no cover
 logger = bec_logger.logger
 
 
-class AutoUpdates:
+class AutoUpdates(BECMainWindow):
     _default_dock: BECDock
+    USER_ACCESS = ["enabled", "enabled.setter", "selected_device", "selected_device.setter"]
+    RPC = True
 
-    def __init__(self, dock_area: BECDockArea):
-        self.dock_area = dock_area
-        self.bec_dispatcher = dock_area.bec_dispatcher
+    def __init__(
+        self, parent=None, gui_id: str = None, window_title="Auto Update", *args, **kwargs
+    ):
+        super().__init__(parent=parent, gui_id=gui_id, window_title=window_title, **kwargs)
+
+        self.dock_area = BECDockArea(parent=self, object_name="dock_area")
+        self.setCentralWidget(self.dock_area)
+        self._auto_update_selected_device: str | None = None
+
         self._default_dock = None  # type:ignore
         self.current_widget: BECWidget | None = None
         self.dock_name = None
-        self._enabled = False
+        self._enabled = True
+        self.start_auto_update()
 
-    def connect(self):
+    def start_auto_update(self):
         """
         Establish all connections for the auto updates.
         """
         self.bec_dispatcher.connect_slot(self._on_scan_status, MessageEndpoints.scan_status())
 
-    def disconnect(self):
+    def stop_auto_update(self):
         """
         Disconnect all connections for the auto updates.
         """
         self.bec_dispatcher.disconnect_slot(
             self._on_scan_status, MessageEndpoints.scan_status()  # type:ignore
         )
+
+    @property
+    def selected_device(self) -> str | None:
+        """
+        Get the selected device from the auto update config.
+
+        Returns:
+            str: The selected device. If no device is selected, None is returned.
+        """
+        return self._auto_update_selected_device
+
+    @selected_device.setter
+    def selected_device(self, value: str | None) -> None:
+        """
+        Set the selected device in the auto update config.
+
+        Args:
+            value(str): The selected device.
+        """
+        self._auto_update_selected_device = value
 
     @SafeSlot()
     def _on_scan_status(self, content: dict, metadata: dict) -> None:
@@ -125,7 +155,7 @@ class AutoUpdates:
         """
 
         if selected_device is None:
-            selected_device = self.dock_area.selected_device
+            selected_device = self.selected_device
         if selected_device:
             return selected_device
         if len(monitored_devices) > 0:
@@ -166,11 +196,11 @@ class AutoUpdates:
         self._enabled = value
 
         if value:
-            self.connect()
+            self.start_auto_update()
             self.enable_gui_highlights(True)
             self.on_start()
         else:
-            self.disconnect()
+            self.stop_auto_update()
             self.enable_gui_highlights(False)
             self.on_stop()
 
@@ -227,6 +257,9 @@ class AutoUpdates:
         # Get the scan report devices reported by the scan
         dev_x, dev_y = info.scan_report_devices[0], info.scan_report_devices[1]  # type:ignore
         dev_z = self.get_selected_device(info.readout_priority["monitored"])  # type:ignore
+
+        if dev_x or dev_y or dev_z is None:
+            return
 
         # Clear the scatter waveform widget and plot the data
         scatter.clear_all()
@@ -315,3 +348,14 @@ class AutoUpdates:
         Args:
             msg (ScanStatusMessage): The scan status message.
         """
+
+    def cleanup(self) -> None:
+        """
+        Cleanup procedure to run when the auto updates are disabled.
+        """
+        self.enabled = False
+        self.stop_auto_update()
+        self.dock_area.close()
+        self.dock_area.deleteLater()
+        self.dock_area = None
+        super().cleanup()

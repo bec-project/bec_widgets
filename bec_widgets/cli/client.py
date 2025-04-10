@@ -72,6 +72,42 @@ for plugin_name, plugin_class in inspect.getmembers(plugin_client, inspect.iscla
             globals()[plugin_name] = plugin_class
 
 
+class AutoUpdates(RPCBase):
+    @property
+    @rpc_call
+    def enabled(self) -> "bool":
+        """
+        Get the enabled status of the auto updates.
+        """
+
+    @enabled.setter
+    @rpc_call
+    def enabled(self) -> "bool":
+        """
+        Get the enabled status of the auto updates.
+        """
+
+    @property
+    @rpc_call
+    def selected_device(self) -> "str | None":
+        """
+        Get the selected device from the auto update config.
+
+        Returns:
+            str: The selected device. If no device is selected, None is returned.
+        """
+
+    @selected_device.setter
+    @rpc_call
+    def selected_device(self) -> "str | None":
+        """
+        Get the selected device from the auto update config.
+
+        Returns:
+            str: The selected device. If no device is selected, None is returned.
+        """
+
+
 class BECDock(RPCBase):
     @property
     @rpc_call
@@ -339,26 +375,6 @@ class BECDockArea(RPCBase):
 
         Returns:
             dict: The state of the dock area.
-        """
-
-    @property
-    @rpc_call
-    def selected_device(self) -> "str | None":
-        """
-        Get the selected device from the auto update config.
-
-        Returns:
-            str: The selected device. If no device is selected, None is returned.
-        """
-
-    @selected_device.setter
-    @rpc_call
-    def selected_device(self) -> "str | None":
-        """
-        Get the selected device from the auto update config.
-
-        Returns:
-            str: The selected device. If no device is selected, None is returned.
         """
 
     @rpc_call
