@@ -18,6 +18,7 @@ MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 class BECMainWindow(BECWidget, QMainWindow):
     RPC = False
+    PLUGIN = False
 
     def __init__(
         self,
@@ -70,11 +71,42 @@ class BECMainWindow(BECWidget, QMainWindow):
     def _fetch_theme(self) -> str:
         return self.app.theme.theme
 
+    def _get_launcher_from_qapp(self):
+        """
+        Get the launcher from the QApplication instance.
+        """
+        from bec_widgets.applications.launch_window import LaunchWindow
+
+        qapp = QApplication.instance()
+        widgets = qapp.topLevelWidgets()
+        widgets = [w for w in widgets if isinstance(w, LaunchWindow)]
+        if widgets:
+            return widgets[0]
+        return None
+
+    def _show_launcher(self):
+        """
+        Show the launcher if it exists.
+        """
+        launcher = self._get_launcher_from_qapp()
+        if launcher:
+            launcher.show()
+            launcher.activateWindow()
+            launcher.raise_()
+
     def _setup_menu_bar(self):
         """
         Setup the menu bar for the main window.
         """
         menu_bar = self.menuBar()
+
+        ##########################################
+        # Launch menu
+        launch_menu = menu_bar.addMenu("New")
+
+        open_launcher_action = QAction("Open Launcher", self)
+        launch_menu.addAction(open_launcher_action)
+        open_launcher_action.triggered.connect(self._show_launcher)
 
         ########################################
         # Theme menu
