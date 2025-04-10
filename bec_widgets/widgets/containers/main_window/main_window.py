@@ -34,6 +34,7 @@ class BECMainWindow(BECWidget, QMainWindow):
         self.app = QApplication.instance()
         self.setWindowTitle(window_title)
         self._init_ui()
+        self._connect_to_theme_change()
 
     def _init_ui(self):
 
