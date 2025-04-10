@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal, Optional
 from weakref import WeakValueDictionary
 
-from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from pydantic import Field
 from pyqtgraph.dockarea.DockArea import DockArea
@@ -23,6 +22,7 @@ from bec_widgets.utils.toolbar import (
 )
 from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.widgets.containers.dock.dock import BECDock, DockConfig
+from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox
 from bec_widgets.widgets.control.scan_control.scan_control import ScanControl
 from bec_widgets.widgets.editors.vscode.vscode import VSCodeEditor
@@ -528,7 +528,18 @@ class BECDockArea(BECWidget, QWidget):
         # self._broadcast_update()
 
     def remove(self) -> None:
-        """Remove the dock area."""
+        """
+        Remove the dock area. If the dock area is embedded in a BECMainWindow and
+        is set as the central widget, the main window will be closed.
+        """
+        parent = self.parent()
+        if isinstance(parent, BECMainWindow):
+            central_widget = parent.centralWidget()
+            if central_widget is self:
+                # Closing the parent will also close the dock area
+                parent.close()
+                return
+
         self.close()
 
 
