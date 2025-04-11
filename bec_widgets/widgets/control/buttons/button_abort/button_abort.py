@@ -11,7 +11,7 @@ class AbortButton(BECWidget, QWidget):
 
     PLUGIN = True
     ICON_NAME = "cancel"
-    RPC = False
+    RPC = True
 
     def __init__(
         self,

@@ -10,7 +10,8 @@ from typing import Literal, Optional
 from bec_lib.logger import bec_logger
 
 from bec_widgets.cli.rpc.rpc_base import RPCBase, rpc_call
-from bec_widgets.utils.bec_plugin_helper import get_all_plugin_widgets, get_plugin_client_module
+from bec_widgets.utils.bec_plugin_helper import (get_all_plugin_widgets,
+                                                 get_plugin_client_module)
 
 logger = bec_logger.logger
 
@@ -24,22 +25,31 @@ class _WidgetsEnumType(str, enum.Enum):
 
 
 _Widgets = {
+    "AbortButton": "AbortButton",
     "BECDockArea": "BECDockArea",
     "BECProgressBar": "BECProgressBar",
     "BECQueue": "BECQueue",
     "BECStatusBox": "BECStatusBox",
     "DapComboBox": "DapComboBox",
+    "DarkModeButton": "DarkModeButton",
     "DeviceBrowser": "DeviceBrowser",
     "DeviceComboBox": "DeviceComboBox",
     "DeviceLineEdit": "DeviceLineEdit",
     "Image": "Image",
     "LogPanel": "LogPanel",
+    "Minesweeper": "Minesweeper",
     "MotorMap": "MotorMap",
     "MultiWaveform": "MultiWaveform",
     "PositionIndicator": "PositionIndicator",
+    "PositionerBox": "PositionerBox",
+    "PositionerBox2D": "PositionerBox2D",
+    "PositionerControlLine": "PositionerControlLine",
+    "ResetButton": "ResetButton",
+    "ResumeButton": "ResumeButton",
     "RingProgressBar": "RingProgressBar",
     "ScanControl": "ScanControl",
     "ScatterWaveform": "ScatterWaveform",
+    "StopButton": "StopButton",
     "TextBox": "TextBox",
     "VSCodeEditor": "VSCodeEditor",
     "Waveform": "Waveform",
@@ -70,6 +80,16 @@ for plugin_name, plugin_class in inspect.getmembers(plugin_client, inspect.iscla
             continue
         if plugin_name not in _overlap:
             globals()[plugin_name] = plugin_class
+
+
+class AbortButton(RPCBase):
+    """A button that abort the scan."""
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
 
 
 class AutoUpdates(RPCBase):
@@ -658,6 +678,14 @@ class DapComboBox(RPCBase):
 
         Args:
             default_device(str): Default device name.
+        """
+
+
+class DarkModeButton(RPCBase):
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
         """
 
 
@@ -1382,6 +1410,9 @@ class LogPanel(RPCBase):
         Args:
             text (str): The text to set.
         """
+
+
+class Minesweeper(RPCBase): ...
 
 
 class MotorMap(RPCBase):
@@ -2227,6 +2258,54 @@ class PositionIndicator(RPCBase):
         """
 
 
+class PositionerBox(RPCBase):
+    """Simple Widget to control a positioner in box form"""
+
+    @rpc_call
+    def set_positioner(self, positioner: "str | Positioner"):
+        """
+        Set the device
+
+        Args:
+            positioner (Positioner | str) : Positioner to set, accepts str or the device
+        """
+
+
+class PositionerBox2D(RPCBase):
+    """Simple Widget to control two positioners in box form"""
+
+    @rpc_call
+    def set_positioner_hor(self, positioner: "str | Positioner"):
+        """
+        Set the device
+
+        Args:
+            positioner (Positioner | str) : Positioner to set, accepts str or the device
+        """
+
+    @rpc_call
+    def set_positioner_ver(self, positioner: "str | Positioner"):
+        """
+        Set the device
+
+        Args:
+            positioner (Positioner | str) : Positioner to set, accepts str or the device
+        """
+
+
+class PositionerControlLine(RPCBase):
+    """A widget that controls a single device."""
+
+    @rpc_call
+    def set_positioner(self, positioner: "str | Positioner"):
+        """
+        Set the device
+
+        Args:
+            positioner (Positioner | str) : Positioner to set, accepts str or the device
+        """
+
+
 class PositionerGroup(RPCBase):
     """Simple Widget to control a positioner in box form"""
 
@@ -2236,6 +2315,26 @@ class PositionerGroup(RPCBase):
         Redraw grid with positioners from device_names string
 
         Device names must be separated by space
+        """
+
+
+class ResetButton(RPCBase):
+    """A button that resets the scan queue."""
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+
+class ResumeButton(RPCBase):
+    """A button that continue scan queue."""
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
         """
 
 
@@ -2880,6 +2979,16 @@ class ScatterWaveform(RPCBase):
     def clear_all(self):
         """
         Clear all the curves from the plot.
+        """
+
+
+class StopButton(RPCBase):
+    """A button that stops the current scan."""
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
         """
 
 

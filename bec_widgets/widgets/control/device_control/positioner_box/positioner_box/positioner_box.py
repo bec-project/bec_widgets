@@ -31,6 +31,7 @@ class PositionerBox(PositionerBoxBase):
     dimensions = (234, 224)
 
     PLUGIN = True
+    RPC = True
 
     USER_ACCESS = ["set_positioner"]
     device_changed = Signal(str, str)

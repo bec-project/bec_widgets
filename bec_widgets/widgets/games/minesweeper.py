@@ -144,7 +144,7 @@ class Minesweeper(BECWidget, QWidget):
     PLUGIN = True
     ICON_NAME = "videogame_asset"
     USER_ACCESS = []
-    RPC = False
+    RPC = True
 
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
