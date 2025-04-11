@@ -227,8 +227,8 @@ class RPCBase:
     @staticmethod
     def _on_rpc_response(msg_obj: MessageObject, parent: RPCBase) -> None:
         msg = cast(messages.RequestResponseMessage, msg_obj.value)
-        parent._msg_wait_event.set()
         parent._rpc_response = msg
+        parent._msg_wait_event.set()
 
     def _create_widget_from_msg_result(self, msg_result):
         if msg_result is None:
