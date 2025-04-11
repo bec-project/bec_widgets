@@ -291,13 +291,11 @@ class BECGuiClient(RPCBase):
             self.start(wait=True)
         if wait:
             with wait_for_server(self):
-                rpc_client = RPCBase(gui_id=f"{self._gui_id}:launcher", parent=self)
-                widget = rpc_client._run_rpc(
+                widget = self.launcher._run_rpc(
                     "launch", "dock_area", name, geometry
                 )  # pylint: disable=protected-access
                 return widget
-        rpc_client = RPCBase(gui_id=f"{self._gui_id}:launcher", parent=self)
-        widget = rpc_client._run_rpc(
+        widget = self.launcher._run_rpc(
             "new_dock_area", name, geometry
         )  # pylint: disable=protected-access
         return widget
