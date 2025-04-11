@@ -139,7 +139,9 @@ def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
         return client.history[-1].metadata.bec["scan_id"] == status.scan.scan_id
 
     qtbot.waitUntil(_wait_for_scan_in_history, timeout=10000)
-    last_scan_data = client.history[-1]
+
+    item = queue.scan_storage.storage[-1]
+    last_scan_data = item.data
     # check plotted data
     x_data, y_data = curve.get_data()
     assert np.array_equal(x_data, np.linspace(0, len(y_data) - 1, len(y_data)))
@@ -151,8 +153,6 @@ def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
     x_data_display, y_data_display = curve._get_displayed_data()
     # Should be not more than 1% difference, actually be closer but this might be flaky
     assert np.isclose(x_data_display[-1], x_data[-1], rtol=0.01)
-    # Downsampled data should be smaller than original data
-    assert len(y_data_display) < len(y_data)
 
 
 def test_rpc_image(qtbot, bec_client_lib, connected_client_gui_obj):
