@@ -117,6 +117,7 @@ class WebsiteWidget(BECWidget, QWidget):
         Cleanup the widget
         """
         self.website.page().deleteLater()
+        super().cleanup()
 
 
 if __name__ == "__main__":
