@@ -11,7 +11,7 @@ from pydantic_core import PydanticCustomError
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QApplication
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from bec_qthemes._main import AccentColors
 
 

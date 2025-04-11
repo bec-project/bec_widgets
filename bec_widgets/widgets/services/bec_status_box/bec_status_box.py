@@ -16,7 +16,7 @@ from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.compact_popup import CompactPopupWidget
 from bec_widgets.widgets.services.bec_status_box.status_item import StatusItem
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.client import BECClient
 
 # TODO : Put normal imports back when Pydantic gets faster

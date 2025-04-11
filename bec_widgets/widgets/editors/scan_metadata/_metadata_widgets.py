@@ -33,7 +33,7 @@ from bec_widgets.widgets.editors.scan_metadata._util import (
     field_precision,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pydantic.fields import FieldInfo
 
 logger = bec_logger.logger

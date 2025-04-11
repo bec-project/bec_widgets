@@ -15,7 +15,7 @@ from bec_widgets.utils.container_utils import WidgetContainerUtils
 
 logger = bec_logger.logger
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from qtpy.QtWidgets import QWidget
 
     from bec_widgets.widgets.containers.dock.dock_area import BECDockArea

@@ -16,7 +16,7 @@ from qtpy.QtCore import Signal as pyqtSignal
 
 logger = bec_logger.logger
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.endpoints import EndpointInfo
 
     from bec_widgets.utils.rpc_server import RPCServer
