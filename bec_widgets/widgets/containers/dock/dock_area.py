@@ -102,7 +102,7 @@ class BECDockArea(BECWidget, QWidget):
         self._instructions_visible = True
 
         self.dark_mode_button = DarkModeButton(parent=self, parent_id=self.gui_id, toolbar=True)
-        self.dock_area = DockArea()
+        self.dock_area = DockArea(parent=self)
         self.toolbar = ModularToolBar(
             parent=self,
             actions={
@@ -440,12 +440,6 @@ class BECDockArea(BECWidget, QWidget):
         Cleanup the dock area.
         """
         self.delete_all()
-        self.toolbar.close()
-        self.toolbar.deleteLater()
-        self.dark_mode_button.close()
-        self.dark_mode_button.deleteLater()
-        self.dock_area.close()
-        self.dock_area.deleteLater()
         super().cleanup()
 
     def show(self):

@@ -76,6 +76,7 @@ class BECQueue(BECWidget, CompactPopupWidget):
         widget_label = QLabel("Live Queue")
         widget_label.setStyleSheet("font-weight: bold;")
         self.toolbar = ModularToolBar(
+            parent=self,
             actions={
                 "widget_label": WidgetAction(widget=widget_label),
                 "separator_1": SeparatorAction(),

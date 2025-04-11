@@ -386,7 +386,7 @@ class CurveTree(BECWidget, QWidget):
 
     def _init_toolbar(self):
         """Initialize the toolbar with actions: add, send, refresh, expand, collapse, renormalize."""
-        self.toolbar = ModularToolBar(target_widget=self, orientation="horizontal")
+        self.toolbar = ModularToolBar(parent=self, target_widget=self, orientation="horizontal")
         add = MaterialIconAction(
             icon_name="add", tooltip="Add new curve", checkable=False, parent=self
         )

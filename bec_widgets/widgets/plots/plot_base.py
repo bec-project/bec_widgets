@@ -101,7 +101,7 @@ class PlotBase(BECWidget, QWidget):
         self.plot_item = pg.PlotItem(viewBox=BECViewBox(enableMenu=True))
         self.plot_widget.addItem(self.plot_item)
         self.side_panel = SidePanel(self, orientation="left", panel_max_width=280)
-        self.toolbar = ModularToolBar(target_widget=self, orientation="horizontal")
+        self.toolbar = ModularToolBar(parent=self, target_widget=self, orientation="horizontal")
         self._init_toolbar()
 
         # PlotItem Addons
