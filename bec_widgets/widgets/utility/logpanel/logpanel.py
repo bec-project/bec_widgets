@@ -396,6 +396,8 @@ class LogPanel(TextBox):
     _new_messages = Signal()
     service_list_update = Signal(dict, set)
 
+    USER_ACCESS = []  # Overwrite TextBox USER_ACCESS
+
     def __init__(
         self,
         parent=None,
