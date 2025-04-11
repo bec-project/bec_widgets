@@ -8,7 +8,7 @@ import re
 from collections import deque
 from functools import partial, reduce
 from re import Pattern
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from bec_lib.client import BECClient
 from bec_lib.connector import ConnectorBase
@@ -51,6 +51,9 @@ from bec_widgets.widgets.utility.logpanel._util import (
     noop_format,
     simple_color_format,
 )
+
+if TYPE_CHECKING:  # pragma: no cover
+    from PySide6.QtCore import SignalInstance
 
 logger = bec_logger.logger
 

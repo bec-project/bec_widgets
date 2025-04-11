@@ -8,7 +8,7 @@ from bec_widgets.widgets.services.device_browser.device_browser import DeviceBro
 
 from .client_mocks import mocked_client
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from qtpy.QtWidgets import QListWidgetItem
 
     from bec_widgets.widgets.services.device_browser import DeviceItem
