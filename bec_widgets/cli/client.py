@@ -7,11 +7,11 @@ import enum
 import inspect
 from typing import Literal, Optional
 
-from bec_lib.logger import bec_logger
-
 from bec_widgets.cli.rpc.rpc_base import RPCBase, rpc_call
 from bec_widgets.utils.bec_plugin_helper import (get_all_plugin_widgets,
                                                  get_plugin_client_module)
+
+from bec_lib.logger import bec_logger
 
 logger = bec_logger.logger
 
@@ -465,6 +465,12 @@ class BECProgressBar(RPCBase):
         >>> progressbar.label_template = "$value / $percentage %"
         """
 
+    @rpc_call
+    def _get_label(self) -> str:
+        """
+        Return the label text. mostly used for testing rpc.
+        """
+
 
 class BECQueue(RPCBase):
     """Widget to display the BEC queue."""
@@ -480,9 +486,9 @@ class BECStatusBox(RPCBase):
     """An autonomous widget to display the status of BEC services."""
 
     @rpc_call
-    def remove(self):
+    def get_server_state(self) -> "str":
         """
-        Cleanup the BECConnector
+        Get the state ("RUNNING", "BUSY", "IDLE", "ERROR") of the BEC server
         """
 
 
@@ -1393,23 +1399,7 @@ class ImageItem(RPCBase):
 class LogPanel(RPCBase):
     """Displays a log panel"""
 
-    @rpc_call
-    def set_plain_text(self, text: str) -> None:
-        """
-        Set the plain text of the widget.
-
-        Args:
-            text (str): The text to set.
-        """
-
-    @rpc_call
-    def set_html_text(self, text: str) -> None:
-        """
-        Set the HTML text of the widget.
-
-        Args:
-            text (str): The text to set.
-        """
+    ...
 
 
 class Minesweeper(RPCBase): ...
