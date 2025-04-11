@@ -4,7 +4,7 @@ import functools
 import traceback
 import types
 from contextlib import contextmanager
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
@@ -26,6 +26,9 @@ if TYPE_CHECKING:
 else:
     messages = lazy_import("bec_lib.messages")
 logger = bec_logger.logger
+
+
+T = TypeVar("T")
 
 
 @contextmanager
@@ -143,13 +146,22 @@ class RPCServer:
                 res = self.serialize_object(res)
             return res
 
-    def serialize_object(self, obj):
-        if isinstance(obj, BECConnector):
-            # Respect RPC = False
-            if hasattr(obj, "RPC") and obj.RPC is False:
-                return None
-            return self._serialize_bec_connector(obj)
-        return obj
+    def serialize_object(self, obj: T) -> None | dict | T:
+        """
+        Serialize all BECConnector objects.
+
+        Args:
+            obj: The object to be serialized.
+
+        Returns:
+            None | dict | T: The serialized object or None if the object is not a BECConnector.
+        """
+        if not isinstance(obj, BECConnector):
+            return obj
+        # Respect RPC = False
+        if getattr(obj, "RPC", True) is False:
+            return None
+        return self._serialize_bec_connector(obj)
 
     def emit_heartbeat(self):
         logger.trace(f"Emitting heartbeat for {self.gui_id}")
