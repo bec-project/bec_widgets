@@ -7,11 +7,10 @@ import enum
 import inspect
 from typing import Literal, Optional
 
-from bec_widgets.cli.rpc.rpc_base import RPCBase, rpc_call
-from bec_widgets.utils.bec_plugin_helper import (get_all_plugin_widgets,
-                                                 get_plugin_client_module)
-
 from bec_lib.logger import bec_logger
+
+from bec_widgets.cli.rpc.rpc_base import RPCBase, rpc_call
+from bec_widgets.utils.bec_plugin_helper import get_all_plugin_widgets, get_plugin_client_module
 
 logger = bec_logger.logger
 
