@@ -136,6 +136,8 @@ def test_all_available_widgets(
         # Skip private attributes
         if widget_name.startswith("_"):
             continue
+        if widget_name == "VSCodeEditor":
+            continue  # Not installed in docker image for CI, so we skip it.
         dock_area, dock, widget = create_widget(
             qtbot, gui, getattr(gui.available_widgets, widget_name)
         )
@@ -647,23 +649,6 @@ def test_widgets_e2e_text_box(
     # RPC calls
     widget.set_plain_text("Hello World")
     widget.set_html_text("<b> Hello World HTML </b>")
-
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_widget(qtbot, gui, dock, widget, random_generator_from_seed)
-    maybe_remove_dock_area(qtbot, gui, dock_area, random_generator_from_seed)
-
-
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_vs_code_editor(
-    qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
-):
-    """Test the VSCodeEditor widget"""
-    gui = connected_gui_and_bec_with_scope_session
-    bec = gui._client
-    # Create dock_area, dock, widget
-    dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.VSCodeEditor)
-
-    # No rpc calls to check so far
 
     # Test removing the widget, or leaving it open for the next test
     maybe_remove_widget(qtbot, gui, dock, widget, random_generator_from_seed)
