@@ -11,18 +11,16 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import
 from qtpy.QtCore import QTimer
-from qtpy.QtWidgets import QApplication
 from redis.exceptions import RedisError
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.error_popups import ErrorPopupUtility
-from bec_widgets.utils.widget_io import WidgetHierarchy
-from bec_widgets.widgets.plots.plot_base import PlotBase
 
 if TYPE_CHECKING:
     from bec_lib import messages
+    from qtpy.QtCore import QObject
 else:
     messages = lazy_import("bec_lib.messages")
 logger = bec_logger.logger
@@ -216,7 +214,7 @@ class RPCServer:
         }
 
     @staticmethod
-    def _get_becwidget_ancestor(widget) -> BECConnector | None:
+    def _get_becwidget_ancestor(widget: QObject) -> BECConnector | None:
         """
         Traverse up the parent chain to find the nearest BECConnector.
         Returns None if none is found.
