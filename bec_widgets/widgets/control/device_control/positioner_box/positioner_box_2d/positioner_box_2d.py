@@ -33,6 +33,7 @@ class PositionerBox2D(PositionerBoxBase):
     ui_file = "positioner_box_2d.ui"
 
     PLUGIN = True
+    RPC = True
     USER_ACCESS = ["set_positioner_hor", "set_positioner_ver"]
 
     device_changed_hor = Signal(str, str)

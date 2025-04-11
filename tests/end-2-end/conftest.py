@@ -44,7 +44,7 @@ def connected_client_gui_obj(gui_id, bec_client_lib):
 
 
 @pytest.fixture(scope="session")
-def connected_gui_with_scope_session(gui_id, bec_client_lib):
+def connected_gui_with_scope_session(qtbot, gui_id, bec_client_lib):
     """
     Fixture to create a new BECGuiClient object and start a server in the background.
 
@@ -55,6 +55,8 @@ def connected_gui_with_scope_session(gui_id, bec_client_lib):
     gui = BECGuiClient(gui_id=gui_id)
     try:
         gui.start(wait=True)
+        # After the server started, we need to wait until the bec exists in the namespace
+        qtbot.waitUntil(lambda: hasattr(gui, "bec"), timeout=5000)
         yield gui
     finally:
         gui.kill_server()

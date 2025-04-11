@@ -11,7 +11,7 @@ class ResumeButton(BECWidget, QWidget):
 
     PLUGIN = True
     ICON_NAME = "resume"
-    RPC = False
+    RPC = True
 
     def __init__(self, parent=None, client=None, config=None, gui_id=None, toolbar=False, **kwargs):
         super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
