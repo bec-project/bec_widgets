@@ -90,7 +90,12 @@ class GUIServer:
         """
         self.launcher_window = cast(LaunchWindow, self.launcher_window)
 
-        if len(connections) <= 1:
+        remaining_connections = [
+            connection
+            for connection in connections.values()
+            if connection.parent_id != self.launcher_window.gui_id
+        ]
+        if len(remaining_connections) <= 1:
             self.launcher_window.show()
             self.launcher_window.activateWindow()
             self.launcher_window.raise_()
