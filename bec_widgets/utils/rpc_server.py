@@ -19,7 +19,7 @@ from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.error_popups import ErrorPopupUtility
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from bec_lib import messages
     from qtpy.QtCore import QObject
 else:

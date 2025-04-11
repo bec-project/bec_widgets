@@ -9,7 +9,7 @@ from annotated_types import Ge, Gt, Le, Lt
 from bec_lib.logger import bec_logger
 from pydantic_core import PydanticUndefined
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pydantic.fields import FieldInfo
 
 logger = bec_logger.logger

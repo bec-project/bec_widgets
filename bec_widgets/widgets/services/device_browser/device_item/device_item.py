@@ -7,7 +7,7 @@ from qtpy.QtCore import QMimeData, Qt
 from qtpy.QtGui import QDrag
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QLabel, QWidget
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from qtpy.QtGui import QMouseEvent
 
 logger = bec_logger.logger

@@ -52,6 +52,9 @@ from bec_widgets.widgets.utility.logpanel._util import (
     simple_color_format,
 )
 
+if TYPE_CHECKING:  # pragma: no cover
+    from PySide6.QtCore import SignalInstance
+
 logger = bec_logger.logger
 
 MODULE_PATH = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
