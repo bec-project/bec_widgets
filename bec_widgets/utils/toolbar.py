@@ -521,7 +521,7 @@ class ModularToolBar(QToolBar):
         orientation: Literal["horizontal", "vertical"] = "horizontal",
         background_color: str = "rgba(0, 0, 0, 0)",
     ):
-        super().__init__(parent)
+        super().__init__(parent=parent)
 
         self.widgets = defaultdict(dict)
         self.background_color = background_color

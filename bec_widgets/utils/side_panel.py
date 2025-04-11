@@ -59,7 +59,7 @@ class SidePanel(QWidget):
             self.main_layout.setContentsMargins(0, 0, 0, 0)
             self.main_layout.setSpacing(0)
 
-            self.toolbar = ModularToolBar(target_widget=self, orientation="vertical")
+            self.toolbar = ModularToolBar(parent=self, target_widget=self, orientation="vertical")
 
             self.container = QWidget()
             self.container.layout = QVBoxLayout(self.container)
@@ -89,7 +89,7 @@ class SidePanel(QWidget):
             self.main_layout.setContentsMargins(0, 0, 0, 0)
             self.main_layout.setSpacing(0)
 
-            self.toolbar = ModularToolBar(target_widget=self, orientation="horizontal")
+            self.toolbar = ModularToolBar(parent=self, target_widget=self, orientation="horizontal")
 
             self.container = QWidget()
             self.container.layout = QVBoxLayout(self.container)
