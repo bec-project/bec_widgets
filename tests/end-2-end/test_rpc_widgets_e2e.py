@@ -315,6 +315,14 @@ def test_widgets_e2e_image(
     # Run a scan and plot the image
     s = scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False)
     s.wait()
+
+    def _wait_for_scan_in_history():
+        # Get scan item from history
+        scan_item = bec.history.get_by_scan_id(s.scan.scan_id)
+        return scan_item is not None
+
+    qtbot.waitUntil(_wait_for_scan_in_history, timeout=7000)
+
     # Check that last image is equivalent to data in Redis
     last_img = bec.device_monitor.get_data(
         dev.eiger, count=1
@@ -323,22 +331,6 @@ def test_widgets_e2e_image(
 
     # Test removing the widget, or leaving it open for the next test
     maybe_remove_widget(qtbot, gui, dock, widget, random_generator_from_seed)
-    maybe_remove_dock_area(qtbot, gui, dock_area, random_generator_from_seed)
-
-    # @pytest.mark.timeout(PYTEST_TIMEOUT)
-    # def test_widgets_e2e_lmfit_dialog(
-    #     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
-    # ):
-    #     """Test the LMFITDialog widget."""
-    #     gui = connected_gui_and_bec_with_scope_session
-    #     bec = gui._client
-    #     # Create dock_area, dock, widget
-    #     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.LMFitDialog)
-
-    #     # No rpc calls to check so far
-
-    #     # Test removing the widget, or leaving it open for the next test
-    #     maybe_remove_widget(qtbot, gui, dock, widget, random_generator_from_seed)
     maybe_remove_dock_area(qtbot, gui, dock_area, random_generator_from_seed)
 
 
@@ -672,24 +664,16 @@ def test_widgets_e2e_waveform(
     s = scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False)
     s.wait()
 
-    def _wait_live_data_updated():
-        # Wait until storage exists
-        if len(bec.queue.scan_storage.storage) == 0:
-            return False
-        scan_item = bec.queue.scan_storage.storage[-1]
-        # Wait until scan_id is in history
-        if not scan_item.status_message.info["scan_id"] == s.scan.scan_id:
-            return False
-        # Wait until data for all steps is available
-        return len(scan_item.live_data.samx.samx.val) == 50
+    def _wait_for_scan_in_history():
+        # Get scan item from history
+        scan_item = bec.history.get_by_scan_id(s.scan.scan_id)
+        return scan_item is not None
 
-    qtbot.waitUntil(_wait_live_data_updated, timeout=7000)
-    # Check if data that is plotted is the same as the scan_item
-    # Plot may not be updated yet, so we need to wait for the data to be updated
-    qtbot.waitUntil(lambda: len(widget.curves[0].get_data()[0]) == 50)
-    scan_item = bec.queue.scan_storage.storage[-1]
-    samx_data = scan_item.live_data.samx.samx.val
-    bpm4i_data = scan_item.live_data.bpm4i.bpm4i.val
+    qtbot.waitUntil(_wait_for_scan_in_history, timeout=7000)
+
+    scan_item = bec.history.get_by_scan_id(s.scan.scan_id)
+    samx_data = scan_item.devices.samx.samx.read()["value"]
+    bpm4i_data = scan_item.devices.bpm4i.bpm4i.read()["value"]
     curve = widget.curves[0]
     assert np.allclose(curve.get_data()[0], samx_data)
     assert np.allclose(curve.get_data()[1], bpm4i_data)

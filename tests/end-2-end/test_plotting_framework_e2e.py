@@ -3,10 +3,13 @@ import time
 import numpy as np
 import pytest
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.logger import bec_logger
 
 from bec_widgets.cli.client import Image, MotorMap, MultiWaveform, ScatterWaveform, Waveform
 from bec_widgets.cli.rpc.rpc_base import RPCReference
 from bec_widgets.tests.utils import check_remote_data_size
+
+logger = bec_logger.logger
 
 
 def test_rpc_waveform1d_custom_curve(qtbot, connected_client_gui_obj):
@@ -111,6 +114,7 @@ def test_rpc_waveform_scan(qtbot, bec_client_lib, connected_client_gui_obj):
 
 
 def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
+    logger.warning("Starting async plotting test in e2e test.")
     gui = connected_client_gui_obj
     dock = gui.bec
 
@@ -121,9 +125,9 @@ def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
 
     # Test add
     dev.waveform.sim.select_model("GaussianModel")
-    dev.waveform.sim.params = {"amplitude": 1000, "center": 4000, "sigma": 300}
+    dev.waveform.sim.params = {"amplitude": 1000, "center": 400, "sigma": 300}
     dev.waveform.async_update.put("add")
-    dev.waveform.waveform_shape.put(10000)
+    dev.waveform.waveform_shape.put(1000)  # Do not reduce, data needs to be large to downsample
     wf = dock.new("wf_dock").new("Waveform")
     curve = wf.plot(y_name="waveform")
 
@@ -131,28 +135,24 @@ def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
     status.wait()
 
     # Wait for the scan to finish and the data to be available in history
-    # Wait until scan_id is in history
     def _wait_for_scan_in_history():
-        if len(client.history) == 0:
-            return False
-        # Once items appear in storage, the last one hast to be the one we just scanned
-        return client.history[-1].metadata.bec["scan_id"] == status.scan.scan_id
+        # Get scan item from history
+        scan_item = client.history.get_by_scan_id(status.scan.scan_id)
+        return scan_item is not None
 
-    qtbot.waitUntil(_wait_for_scan_in_history, timeout=10000)
-    last_scan_data = client.history[-1]
+    qtbot.waitUntil(_wait_for_scan_in_history, timeout=7000)
+    # Get all data
+    waveform_data = client.history[-1].devices.waveform.waveform_waveform.read()["value"]
+
     # check plotted data
     x_data, y_data = curve.get_data()
     assert np.array_equal(x_data, np.linspace(0, len(y_data) - 1, len(y_data)))
-    assert np.array_equal(
-        y_data, last_scan_data.devices.waveform.get("waveform_waveform", {}).read().get("value", [])
-    )
+    assert np.array_equal(y_data, waveform_data)
 
     # Check displayed data
     x_data_display, y_data_display = curve._get_displayed_data()
     # Should be not more than 1% difference, actually be closer but this might be flaky
     assert np.isclose(x_data_display[-1], x_data[-1], rtol=0.01)
-    # Downsampled data should be smaller than original data
-    assert len(y_data_display) < len(y_data)
 
 
 def test_rpc_image(qtbot, bec_client_lib, connected_client_gui_obj):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import traceback
 from typing import Literal
 
 import lmfit
@@ -1205,6 +1206,7 @@ class Waveform(PlotBase):
         plot_mode = self.x_axis_mode["name"]
         for curve in self._async_curves:
             x_data = None  # Reset x_data
+            y_data = None
             # Get the curve data
             async_data = msg["signals"].get(curve.config.signal.entry, None)
             if async_data is None:
@@ -1223,6 +1225,7 @@ class Waveform(PlotBase):
                         data_plot_y = data_plot_y[-1, :]
                 else:
                     x_data, y_data = curve.get_data()
+
                     if y_data is not None:
                         data_plot_y = np.hstack((y_data, data_plot_y))
             # Add slice
