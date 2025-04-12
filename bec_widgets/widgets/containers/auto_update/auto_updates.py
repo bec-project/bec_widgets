@@ -204,6 +204,17 @@ class AutoUpdates(BECMainWindow):
             self.enable_gui_highlights(False)
             self.on_stop()
 
+    def cleanup(self) -> None:
+        """
+        Cleanup procedure to run when the auto updates are disabled.
+        """
+        self.enabled = False
+        self.stop_auto_update()
+        self.dock_area.close()
+        self.dock_area.deleteLater()
+        self.dock_area = None
+        super().cleanup()
+
     ########################################################################
     ################# Update Functions #####################################
     ########################################################################
@@ -348,14 +359,3 @@ class AutoUpdates(BECMainWindow):
         Args:
             msg (ScanStatusMessage): The scan status message.
         """
-
-    def cleanup(self) -> None:
-        """
-        Cleanup procedure to run when the auto updates are disabled.
-        """
-        self.enabled = False
-        self.stop_auto_update()
-        self.dock_area.close()
-        self.dock_area.deleteLater()
-        self.dock_area = None
-        super().cleanup()
