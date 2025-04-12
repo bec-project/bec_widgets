@@ -258,7 +258,7 @@ class AutoUpdates(BECMainWindow):
         dev_x, dev_y = info.scan_report_devices[0], info.scan_report_devices[1]  # type:ignore
         dev_z = self.get_selected_device(info.readout_priority["monitored"])  # type:ignore
 
-        if dev_x or dev_y or dev_z is None:
+        if None in (dev_x, dev_y, dev_z):
             return
 
         # Clear the scatter waveform widget and plot the data
