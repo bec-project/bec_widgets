@@ -41,6 +41,10 @@ class ScanControlConfig(ConnectionConfig):
 
 
 class ScanControl(BECWidget, QWidget):
+    """
+    Widget to submit new scans to the queue.
+    """
+
     PLUGIN = True
     ICON_NAME = "tune"
     ARG_BOX_POSITION: int = 2

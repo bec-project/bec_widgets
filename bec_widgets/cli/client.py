@@ -240,6 +240,8 @@ class BECDock(RPCBase):
 
 
 class BECDockArea(RPCBase):
+    """Container for other widgets. Widgets can be added to the dock area and arranged in a grid layout."""
+
     @property
     @rpc_call
     def _rpc_id(self) -> "str":
@@ -660,6 +662,8 @@ class DapComboBox(RPCBase):
 
 
 class DeviceBrowser(RPCBase):
+    """DeviceBrowser is a widget that displays all available devices in the current BEC session."""
+
     @rpc_call
     def remove(self):
         """
@@ -698,6 +702,8 @@ class DeviceLineEdit(RPCBase):
 
 
 class Image(RPCBase):
+    """Image widget for displaying 2D data."""
+
     @property
     @rpc_call
     def enable_toolbar(self) -> "bool":
@@ -1379,6 +1385,8 @@ class LogPanel(RPCBase):
 
 
 class MotorMap(RPCBase):
+    """Motor map widget for plotting motor positions in 2D including a trace of the last points."""
+
     @property
     @rpc_call
     def enable_toolbar(self) -> "bool":
@@ -1768,6 +1776,8 @@ class MotorMap(RPCBase):
 
 
 class MultiWaveform(RPCBase):
+    """MultiWaveform widget for displaying multiple waveforms emitted by a single signal."""
+
     @property
     @rpc_call
     def enable_toolbar(self) -> "bool":
@@ -2177,6 +2187,8 @@ class MultiWaveform(RPCBase):
 
 
 class PositionIndicator(RPCBase):
+    """Display a position within a defined range, e.g. motor limits."""
+
     @rpc_call
     def set_value(self, position: float):
         """
@@ -2328,6 +2340,8 @@ class Ring(RPCBase):
 
 
 class RingProgressBar(RPCBase):
+    """Show the progress of devices, scans or custom values in the form of ring progress bars."""
+
     @rpc_call
     def _get_all_rpc(self) -> "dict":
         """
@@ -2507,6 +2521,8 @@ class RingProgressBar(RPCBase):
 
 
 class ScanControl(RPCBase):
+    """Widget to submit new scans to the queue."""
+
     @rpc_call
     def remove(self):
         """
@@ -2896,6 +2912,8 @@ class VSCodeEditor(RPCBase):
 
 
 class Waveform(RPCBase):
+    """Widget for plotting waveforms."""
+
     @property
     @rpc_call
     def _config_dict(self) -> "dict":

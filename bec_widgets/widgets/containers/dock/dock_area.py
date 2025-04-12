@@ -48,6 +48,10 @@ class DockAreaConfig(ConnectionConfig):
 
 
 class BECDockArea(BECWidget, QWidget):
+    """
+    Container for other widgets. Widgets can be added to the dock area and arranged in a grid layout.
+    """
+
     PLUGIN = True
     USER_ACCESS = [
         "_rpc_id",

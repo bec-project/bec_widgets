@@ -71,6 +71,10 @@ class RingProgressBarConfig(ConnectionConfig):
 
 
 class RingProgressBar(BECWidget, QWidget):
+    """
+    Show the progress of devices, scans or custom values in the form of ring progress bars.
+    """
+
     PLUGIN = True
     ICON_NAME = "track_changes"
     USER_ACCESS = [

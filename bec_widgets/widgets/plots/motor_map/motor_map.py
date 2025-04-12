@@ -83,6 +83,10 @@ class MotorMapConfig(ConnectionConfig):
 
 
 class MotorMap(PlotBase):
+    """
+    Motor map widget for plotting motor positions in 2D including a trace of the last points.
+    """
+
     PLUGIN = True
     RPC = True
     ICON_NAME = "my_location"

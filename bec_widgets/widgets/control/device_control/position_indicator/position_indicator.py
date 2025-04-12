@@ -8,6 +8,10 @@ from bec_widgets.utils.colors import get_accent_colors, get_theme_palette
 
 
 class PositionIndicator(BECWidget, QWidget):
+    """
+    Display a position within a defined range, e.g. motor limits.
+    """
+
     USER_ACCESS = ["set_value", "set_range", "vertical", "indicator_width", "rounded_corners"]
     PLUGIN = True
     ICON_NAME = "horizontal_distribute"

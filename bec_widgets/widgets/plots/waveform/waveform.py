@@ -38,6 +38,10 @@ class WaveformConfig(ConnectionConfig):
 
 
 class Waveform(PlotBase):
+    """
+    Widget for plotting waveforms.
+    """
+
     PLUGIN = True
     RPC = True
     ICON_NAME = "show_chart"

@@ -13,6 +13,10 @@ from bec_widgets.widgets.services.device_browser.device_item import DeviceItem
 
 
 class DeviceBrowser(BECWidget, QWidget):
+    """
+    DeviceBrowser is a widget that displays all available devices in the current BEC session.
+    """
+
     device_update: Signal = Signal()
     PLUGIN = True
     ICON_NAME = "lists"

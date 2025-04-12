@@ -41,6 +41,10 @@ class ImageConfig(ConnectionConfig):
 
 
 class Image(PlotBase):
+    """
+    Image widget for displaying 2D data.
+    """
+
     PLUGIN = True
     RPC = True
     ICON_NAME = "image"

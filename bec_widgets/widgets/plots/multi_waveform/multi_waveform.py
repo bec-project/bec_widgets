@@ -45,6 +45,10 @@ class MultiWaveformConfig(ConnectionConfig):
 
 
 class MultiWaveform(PlotBase):
+    """
+    MultiWaveform widget for displaying multiple waveforms emitted by a single signal.
+    """
+
     PLUGIN = True
     RPC = True
     ICON_NAME = "ssid_chart"
