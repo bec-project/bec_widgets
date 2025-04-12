@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
+import shiboken6 as shb
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -422,6 +423,8 @@ class WidgetHierarchy:
         """
         from bec_widgets.utils import BECConnector
 
+        if not shb.isValid(widget):
+            return None
         parent = widget.parent()
         while parent is not None:
             if isinstance(parent, BECConnector):

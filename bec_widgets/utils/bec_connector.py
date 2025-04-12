@@ -10,11 +10,10 @@ from typing import TYPE_CHECKING, Optional
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import_from
 from pydantic import BaseModel, Field, field_validator
-from qtpy.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal
+from qtpy.QtCore import QObject, QRunnable, QThreadPool, QTimer, Signal
 from qtpy.QtWidgets import QApplication
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
-from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import ErrorPopupUtility
 from bec_widgets.utils.error_popups import SafeSlot as pyqtSlot
 from bec_widgets.utils.widget_io import WidgetHierarchy
@@ -149,7 +148,7 @@ class BECConnector:
             if connector_parent is not None:
                 self.parent_id = connector_parent.gui_id
 
-        self._enforce_unique_sibling_name()
+        QTimer.singleShot(0, self._enforce_unique_sibling_name)
         self.rpc_register = RPCRegister()
         self.rpc_register.add_rpc(self)
 
@@ -168,6 +167,7 @@ class BECConnector:
           - If there's a nearest BECConnector parent, only compare with children of that parent.
           - If parent is None (i.e., top-level object), compare with all other top-level BECConnectors.
         """
+        QApplication.processEvents()
         parent_bec = WidgetHierarchy._get_becwidget_ancestor(self)
 
         if parent_bec:
