@@ -65,7 +65,7 @@ class RPCRegister:
         return register._broadcast_on_hold
 
     @broadcast_update
-    def add_rpc(self, rpc: QObject):
+    def add_rpc(self, rpc: BECConnector):
         """
         Add an RPC object to the register.
 
@@ -135,6 +135,18 @@ class RPCRegister:
         connections = self.list_all_connections()
         for callback in self.callbacks:
             callback(connections)
+
+    def object_is_registered(self, obj: BECConnector) -> bool:
+        """
+        Check if an object is registered in the RPC register.
+
+        Args:
+            obj(QObject): The object to check.
+
+        Returns:
+            bool: True if the object is registered, False otherwise.
+        """
+        return obj.gui_id in self._rpc_register
 
     def add_callback(self, callback: Callable[[dict], None]):
         """
