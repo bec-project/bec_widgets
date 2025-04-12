@@ -11,6 +11,7 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import
 from qtpy.QtCore import QTimer
+from qtpy.QtWidgets import QApplication
 from redis.exceptions import RedisError
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
@@ -159,7 +160,7 @@ class RPCServer:
         # Respect RPC = False
         if getattr(obj, "RPC", True) is False:
             return None
-        return self._serialize_bec_connector(obj)
+        return self._serialize_bec_connector(obj, wait=True)
 
     def emit_heartbeat(self) -> None:
         """
@@ -196,14 +197,24 @@ class RPCServer:
             max_size=1,
         )
 
-    def _serialize_bec_connector(self, connector: BECConnector) -> dict:
+    def _serialize_bec_connector(self, connector: BECConnector, wait=False) -> dict:
         """
-        Create the serialization dict for a single BECConnector,
-        setting 'parent_id' via the real nearest BECConnector parent.
+        Create the serialization dict for a single BECConnector.
+
+        Args:
+            connector (BECConnector): The BECConnector to serialize.
+            wait (bool): If True, wait until the object is registered in the RPC register.
+
+        Returns:
+            dict: The serialized BECConnector object.
         """
 
         config_dict = connector.config.model_dump()
         config_dict["parent_id"] = getattr(connector, "parent_id", None)
+
+        if wait:
+            while not self.rpc_register.object_is_registered(connector):
+                QApplication.processEvents()
 
         return {
             "gui_id": connector.gui_id,
