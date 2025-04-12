@@ -99,6 +99,7 @@ class BECConnector:
         self.bec_dispatcher = BECDispatcher(client=client)
         self.client = self.bec_dispatcher.client if client is None else client
         self._parent_dock = parent_dock  # TODO also remove at some point -> issue created #473
+        self.rpc_register = RPCRegister()
 
         if not self.client in BECConnector.EXIT_HANDLERS:
             # register function to clean connections at exit;
@@ -148,16 +149,24 @@ class BECConnector:
             if connector_parent is not None:
                 self.parent_id = connector_parent.gui_id
 
-        QTimer.singleShot(0, self._enforce_unique_sibling_name)
-        self.rpc_register = RPCRegister()
-        self.rpc_register.add_rpc(self)
-
         # Error popups
         self.error_utility = ErrorPopupUtility()
 
         self._thread_pool = QThreadPool.globalInstance()
         # Store references to running workers so they're not garbage collected prematurely.
         self._workers = []
+
+        QTimer.singleShot(0, self._update_object_name)
+
+    def _update_object_name(self) -> None:
+        """
+        Enforce a unique object name among siblings and register the object for RPC.
+        This method is called through a single shot timer kicked off in the constructor.
+        """
+        # 1) Enforce unique objectName among siblings with the same BECConnector parent
+        self._enforce_unique_sibling_name()
+        # 2) Register the object for RPC
+        self.rpc_register.add_rpc(self)
 
     def _enforce_unique_sibling_name(self):
         """
