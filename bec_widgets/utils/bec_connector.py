@@ -93,8 +93,12 @@ class BECConnector:
         # Ensure the parent is always the first argument for QObject
         parent = kwargs.pop("parent", None)
         # This initializes the QObject or any qt related class BECConnector has to be used from this line down with QObject, otherwise hierarchy logic will not work
-        # TODO do a proper check if the class is a QObject -> issue #475
         super().__init__(parent=parent, **kwargs)
+
+        assert isinstance(
+            self, QObject
+        ), "BECConnector must be used with a QObject or any qt related class."
+
         # BEC related connections
         self.bec_dispatcher = BECDispatcher(client=client)
         self.client = self.bec_dispatcher.client if client is None else client
