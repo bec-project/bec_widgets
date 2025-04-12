@@ -137,7 +137,6 @@ class BECConnector:
         else:
             self.gui_id: str = self.config.gui_id  # type: ignore
 
-        # TODO Hierarchy can be refreshed upon creation -> also registry should be notified if objectName changes -> issue #472
         if object_name is not None:
             self.setObjectName(object_name)
 
@@ -215,6 +214,19 @@ class BECConnector:
                 self.object_name = trial_name
                 break
             counter += 1
+
+    # pylint: disable=invalid-name
+    def setObjectName(self, name: str) -> None:
+        """
+        Set the object name of the widget.
+
+        Args:
+            name (str): The new object name.
+        """
+        super().setObjectName(name)
+        self.object_name = name
+        if self.rpc_register.object_is_registered(self):
+            self.rpc_register.broadcast()
 
     def submit_task(self, fn, *args, on_complete: pyqtSlot = None, **kwargs) -> Worker:
         """
