@@ -131,14 +131,12 @@ def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
     status.wait()
 
     # Wait for the scan to finish and the data to be available in history
-    # Wait until scan_id is in history
     def _wait_for_scan_in_history():
-        if len(client.history) == 0:
-            return False
-        # Once items appear in storage, the last one hast to be the one we just scanned
-        return client.history[-1].metadata.bec["scan_id"] == status.scan.scan_id
+        # Get scan item from history
+        scan_item = client.history.get_by_scan_id(s.scan.scan_id)
+        return scan_item is not None
 
-    qtbot.waitUntil(_wait_for_scan_in_history, timeout=10000)
+    qtbot.waitUntil(_wait_for_scan_in_history, timeout=7000)
     # Get all data
     msgs = client.connector.xrange(
         MessageEndpoints.device_async_readback(
