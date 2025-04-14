@@ -133,7 +133,7 @@ def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
     # Wait for the scan to finish and the data to be available in history
     def _wait_for_scan_in_history():
         # Get scan item from history
-        scan_item = client.history.get_by_scan_id(s.scan.scan_id)
+        scan_item = client.history.get_by_scan_id(status.scan.scan_id)
         return scan_item is not None
 
     qtbot.waitUntil(_wait_for_scan_in_history, timeout=7000)
