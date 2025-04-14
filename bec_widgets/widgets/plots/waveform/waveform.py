@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import traceback
 from typing import Literal
 
 import lmfit
@@ -1226,6 +1227,7 @@ class Waveform(PlotBase):
                     x_data, y_data = curve.get_data()
 
                     if y_data is not None:
+                        traceback.print_stack()
                         logger.warning(
                             f"Async data for curve {curve.name()}, shape: ({x_data.shape}, {y_data.shape}) (x,y)"
                         )
