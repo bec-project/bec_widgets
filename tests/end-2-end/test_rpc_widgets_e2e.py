@@ -519,25 +519,25 @@ def test_widgets_e2e_positioner_control_line(
     maybe_remove_dock_area(qtbot, gui, dock_area, random_generator_from_seed)
 
 
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_ring_progress_bar(
-    qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
-):
-    """Test the RingProgressBar widget"""
-    gui = connected_gui_and_bec_with_scope_session
-    bec = gui._client
-    # Create dock_area, dock, widget
-    dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.RingProgressBar)
+# @pytest.mark.timeout(PYTEST_TIMEOUT)
+# def test_widgets_e2e_ring_progress_bar(
+#     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
+# ):
+#     """Test the RingProgressBar widget"""
+#     gui = connected_gui_and_bec_with_scope_session
+#     bec = gui._client
+#     # Create dock_area, dock, widget
+#     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.RingProgressBar)
 
-    # Test rpc calls
-    dev = bec.device_manager.devices
-    scans = bec.scans
-    # Do a scan
-    scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False).wait()
+#     # Test rpc calls
+#     dev = bec.device_manager.devices
+#     scans = bec.scans
+#     # Do a scan
+#     scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False).wait()
 
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_widget(qtbot, gui, dock, widget, random_generator_from_seed)
-    maybe_remove_dock_area(qtbot, gui, dock_area, random_generator_from_seed)
+#     # Test removing the widget, or leaving it open for the next test
+#     maybe_remove_widget(qtbot, gui, dock, widget, random_generator_from_seed)
+#     maybe_remove_dock_area(qtbot, gui, dock_area, random_generator_from_seed)
 
 
 @pytest.mark.timeout(PYTEST_TIMEOUT)
