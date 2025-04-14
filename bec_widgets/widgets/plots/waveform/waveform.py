@@ -1164,6 +1164,9 @@ class Waveform(PlotBase):
             curve(Curve): The curve to set up.
         """
         name = curve.config.signal.name
+        logger.info(
+            f"subscriptions before removal: {self.bec_dispatcher.client.connector._stream_topics_subscription.values()}"
+        )
         self.bec_dispatcher.disconnect_slot(
             self.on_async_readback, MessageEndpoints.device_async_readback(self.old_scan_id, name)
         )
@@ -1176,6 +1179,9 @@ class Waveform(PlotBase):
             self.on_async_readback,
             MessageEndpoints.device_async_readback(self.scan_id, name),
             from_start=True,
+        )
+        logger.info(
+            f"remaining subscriptions: {self.bec_dispatcher.client.connector._stream_topics_subscription.values()}"
         )
         logger.info(f"Setup async curve {name}")
 
