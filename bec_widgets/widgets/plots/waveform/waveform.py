@@ -1633,6 +1633,7 @@ class Waveform(PlotBase):
                     self.scan_item = scan_item
                     self.scan_id = scan_item.scan_id
                     self._emit_signal_update()
+                    logger.info(f"Updating from history with current scan_id {self.scan_id}")
                 return
 
         if len(self.client.history) == 0:
@@ -1642,6 +1643,7 @@ class Waveform(PlotBase):
         self.scan_item = self.client.history[scan_index]
         metadata = self.scan_item.metadata
         self.scan_id = metadata["bec"]["scan_id"]
+        logger.info(f"Updating from history with scan_id {self.scan_id}")
 
         self._emit_signal_update()
 
