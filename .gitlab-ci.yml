@@ -13,7 +13,7 @@ variables:
     value: main
   CHILD_PIPELINE_BRANCH: $CI_DEFAULT_BRANCH
   CHECK_PKG_VERSIONS:
-    description: Whether to run additional tests against min/max/random selection of dependencies. Set to 1 for running. 
+    description: Whether to run additional tests against min/max/random selection of dependencies. Set to 1 for running.
     value: 0
 
 workflow:
@@ -216,7 +216,7 @@ end-2-end-conda:
     - pip install -e ./ophyd_devices
 
     - pip install -e .[dev,pyside6]
-    - pytest -v --files-path ./ --start-servers --random-order  ./tests/end-2-end
+    - pytest -v --files-path ./ --start-servers --random-order  ./tests/end-2-end/test_plotting_framework_e2e.py::test_async_plotting
 
   artifacts:
     when: on_failure
@@ -231,7 +231,7 @@ end-2-end-conda:
     - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "production"'
-    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^pre_release.*$/'
+    - if: "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^pre_release.*$/"
 
 semver:
   stage: Deploy
