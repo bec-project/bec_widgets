@@ -164,6 +164,16 @@ class BECMainWindow(BECWidget, QMainWindow):
         central_widget = self.centralWidget()
         central_widget.close()
         central_widget.deleteLater()
+        if not isinstance(central_widget, BECWidget):
+            # if the central widget is not a BECWidget, we need to call the cleanup method
+            # of all widgets whose parent is the current BECMainWindow
+            children = self.findChildren(BECWidget)
+            for child in children:
+                ancestor = WidgetHierarchy._get_becwidget_ancestor(child)
+                if ancestor is self:
+                    child.cleanup()
+                    child.close()
+                    child.deleteLater()
         super().cleanup()
 
 

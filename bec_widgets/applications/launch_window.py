@@ -1,20 +1,35 @@
 from __future__ import annotations
 
 import os
+import xml.etree.ElementTree as ET
+from typing import TYPE_CHECKING
 
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtGui import QPainter, QPainterPath, QPixmap
-from qtpy.QtWidgets import QApplication, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
+from qtpy.QtWidgets import (
+    QApplication,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSizePolicy,
+    QWidget,
+)
 
 import bec_widgets
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.container_utils import WidgetContainerUtils
+from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.round_frame import RoundedFrame
 from bec_widgets.utils.toolbar import ModularToolBar
+from bec_widgets.utils.ui_loader import UILoader
 from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
-from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
+from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow, UILaunchWindow
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
+
+if TYPE_CHECKING:  # pragma: no cover
+    from qtpy.QtCore import QObject
 
 logger = bec_logger.logger
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
@@ -24,7 +39,12 @@ class LaunchTile(RoundedFrame):
     open_signal = Signal()
 
     def __init__(
-        self, parent=None, icon_path=None, top_label=None, main_label=None, description=None
+        self,
+        parent: QObject | None = None,
+        icon_path: str | None = None,
+        top_label: str | None = None,
+        main_label: str | None = None,
+        description: str | None = None,
     ):
         super().__init__(parent=parent, orientation="vertical")
 
@@ -91,8 +111,6 @@ class LaunchTile(RoundedFrame):
         )
         self.layout.addWidget(self.action_button, alignment=Qt.AlignCenter)
 
-        # self.apply_theme("dark")
-
 
 class LaunchWindow(BECMainWindow):
     RPC = True
@@ -134,17 +152,28 @@ class LaunchWindow(BECMainWindow):
         )
         self.tile_auto_update.setFixedSize(250, 300)
 
+        self.tile_ui_file = LaunchTile(
+            icon_path=os.path.join(MODULE_PATH, "assets", "app_icons", "auto_update.png"),
+            top_label="Get customized",
+            main_label="Launch Custom UI File",
+            description="GUI application with custom UI file.",
+        )
+        self.tile_ui_file.setFixedSize(250, 300)
+
         # Add tiles to the main layout
         self.central_widget.layout.addWidget(self.tile_dock_area)
         self.central_widget.layout.addWidget(self.tile_auto_update)
+        self.central_widget.layout.addWidget(self.tile_ui_file)
+
         # hacky solution no time to waste
-        self.tiles = [self.tile_dock_area, self.tile_auto_update]
+        self.tiles = [self.tile_dock_area, self.tile_auto_update, self.tile_ui_file]
 
         # Connect signals
         self.tile_dock_area.action_button.clicked.connect(lambda: self.launch("dock_area"))
         self.tile_auto_update.action_button.clicked.connect(
             lambda: self.launch("auto_update_dock_area", "auto_updates")
         )
+        self.tile_ui_file.action_button.clicked.connect(self._open_custom_ui_file)
         self._update_theme()
 
     def launch(
@@ -152,6 +181,7 @@ class LaunchWindow(BECMainWindow):
         launch_script: str,
         name: str | None = None,
         geometry: tuple[int, int, int, int] | None = None,
+        **kwargs,
     ) -> QWidget:
         """Launch the specified script. If the launch script creates a QWidget, it will be
         embedded in a BECMainWindow. If the launch script creates a BECMainWindow, it will be shown
@@ -181,16 +211,48 @@ class LaunchWindow(BECMainWindow):
                 launch_script = "dock_area"
             if not isinstance(launch_script, str):
                 raise ValueError(f"Launch script must be a string, but got {type(launch_script)}.")
-            launch = getattr(bw_launch, launch_script, None)
-            if launch is None:
-                raise ValueError(f"Launch script {launch_script} not found.")
 
-            result_widget = launch(name)
+            if launch_script == "custom_ui_file":
+                # Load the custom UI file
+                ui_file = kwargs.pop("ui_file", None)
+                if ui_file is None:
+                    raise ValueError("UI file must be provided for custom UI file launch.")
+                filename = os.path.basename(ui_file).split(".")[0]
+
+                tree = ET.parse(ui_file)
+                root = tree.getroot()
+                # Check if the top-level widget is a QMainWindow
+                widget = root.find("widget")
+                if widget is None:
+                    raise ValueError("No widget found in the UI file.")
+
+                if widget.attrib.get("class") == "QMainWindow":
+                    raise ValueError(
+                        "Loading a QMainWindow from a UI file is currently not supported."
+                        "If you need this, please contact the BEC team or create a ticket on gitlab.psi.ch/bec/bec_widgets."
+                    )
+
+                window = UILaunchWindow(object_name=filename)
+                QApplication.processEvents()
+                result_widget = UILoader(window).loader(ui_file)
+                window.setCentralWidget(result_widget)
+                window.setWindowTitle(f"BEC - {window.object_name}")
+                window.show()
+                logger.info(
+                    f"Object name of new instance: {result_widget.objectName()}, {window.gui_id}"
+                )
+                return window
+            else:
+                launch = getattr(bw_launch, launch_script, None)
+                if launch is None:
+                    raise ValueError(f"Launch script {launch_script} not found.")
+
+                result_widget = launch(name)
             result_widget.resize(result_widget.minimumSizeHint())
             # TODO Should we simply use the specified name as title here?
             result_widget.window().setWindowTitle(f"BEC - {name}")
             logger.info(f"Created new dock area: {name}")
-            logger.info(f"Existing dock areas: {geometry}")
+
             if geometry is not None:
                 result_widget.setGeometry(*geometry)
             if isinstance(result_widget, BECMainWindow):
@@ -209,6 +271,16 @@ class LaunchWindow(BECMainWindow):
             tile.apply_theme(theme)
 
         super().apply_theme(theme)
+
+    @SafeSlot(popup_error=True)
+    def _open_custom_ui_file(self):
+        """
+        Open a file dialog to select a custom UI file and launch it.
+        """
+        ui_file, _ = QFileDialog.getOpenFileName(
+            self, "Select UI File", "", "UI Files (*.ui);;All Files (*)"
+        )
+        self.launch("custom_ui_file", ui_file=ui_file)
 
     def show_launcher(self):
         self.show()
