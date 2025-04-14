@@ -216,7 +216,7 @@ end-2-end-conda:
     - pip install -e ./ophyd_devices
 
     - pip install -e .[dev,pyside6]
-    - pytest -v --files-path ./ --start-servers --random-order  ./tests/end-2-end/test_plotting_framework_e2e.py::test_async_plotting ./tests/end-2-end/test_plotting_framework_e2e.py::test_rpc_waveform_scan
+    - pytest -v --files-path ./ --start-servers --random-order ./tests/end-2-end/test_plotting_framework_e2e.py::test_rpc_waveform_scan ./tests/end-2-end/test_plotting_framework_e2e.py::test_async_plotting
 
   artifacts:
     when: on_failure
