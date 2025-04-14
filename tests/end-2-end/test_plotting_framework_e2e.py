@@ -138,21 +138,7 @@ def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
 
     qtbot.waitUntil(_wait_for_scan_in_history, timeout=7000)
     # Get all data
-    msgs = client.connector.xrange(
-        MessageEndpoints.device_async_readback(
-            device=dev.waveform.name, scan_id=status.scan.scan_id
-        ),
-        min="-",
-        max="+",
-    )
-
-    # FIXME Issue #487
-    waveform_data = []
-    for msg in msgs:
-        waveform_data = np.hstack(
-            [waveform_data, msg["data"].signals["waveform_waveform"]["value"]]
-        )
-
+    waveform_data = client.history[-1].devices.waveform.waveform_waveform.read()["value"]
     # check plotted data
     x_data, y_data = curve.get_data()
     assert np.array_equal(x_data, np.linspace(0, len(y_data) - 1, len(y_data)))
