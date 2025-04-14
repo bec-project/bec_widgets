@@ -2905,6 +2905,14 @@ class TextBox(RPCBase):
         """
 
 
+class UILaunchWindow(RPCBase):
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+
 class VSCodeEditor(RPCBase):
     """A widget to display the VSCode editor."""
 

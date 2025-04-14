@@ -165,3 +165,7 @@ class BECMainWindow(BECWidget, QMainWindow):
         central_widget.close()
         central_widget.deleteLater()
         super().cleanup()
+
+
+class UILaunchWindow(BECMainWindow):
+    RPC = True
