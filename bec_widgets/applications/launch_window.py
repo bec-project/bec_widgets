@@ -153,7 +153,7 @@ class LaunchWindow(BECMainWindow):
         self.tile_auto_update.setFixedSize(250, 300)
 
         self.tile_ui_file = LaunchTile(
-            icon_path=os.path.join(MODULE_PATH, "assets", "app_icons", "auto_update.png"),
+            icon_path=os.path.join(MODULE_PATH, "assets", "app_icons", "ui_loader_tile.png"),
             top_label="Get customized",
             main_label="Launch Custom UI File",
             description="GUI application with custom UI file.",
