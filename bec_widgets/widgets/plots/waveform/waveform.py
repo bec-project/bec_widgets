@@ -1548,6 +1548,7 @@ class Waveform(PlotBase):
         """
         Categorise the device curves into sync and async based on the readout priority.
         """
+        logger.info(f"Called categorise_device_curves from {traceback.extract_stack()}")
         if self.scan_item is None:
             self.update_with_scan_history(-1)
             if self.scan_item is None:
