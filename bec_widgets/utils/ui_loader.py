@@ -21,16 +21,7 @@ if PYSIDE6:
 
         def createWidget(self, class_name, parent=None, name=""):
             if class_name in self.custom_widgets:
-
-                # check if the custom widget has a parent_id argument
-                if "parent_id" in inspect.signature(self.custom_widgets[class_name]).parameters:
-                    gui_id = getattr(self.baseinstance, "gui_id", None)
-                    widget = self.custom_widgets[class_name](self.baseinstance, parent_id=gui_id)
-                else:
-                    logger.warning(
-                        f"Custom widget {class_name} does not have a parent_id argument. "
-                    )
-                    widget = self.custom_widgets[class_name](self.baseinstance)
+                widget = self.custom_widgets[class_name](self.baseinstance)
                 return widget
             return super().createWidget(class_name, self.baseinstance, name)
 
