@@ -1,4 +1,4 @@
-""" Module for a PositionerBox2D widget to control two positioner devices."""
+"""Module for a PositionerBox2D widget to control two positioner devices."""
 
 from __future__ import annotations
 
@@ -312,6 +312,7 @@ class PositionerBox2D(PositionerBoxBase):
                 "stop": self.ui.stop_button,
                 "tweak_increase": self.ui.tweak_increase_hor,
                 "tweak_decrease": self.ui.tweak_decrease_hor,
+                "units": self.ui.units_hor,
             }
         elif device == "vertical":
             return {
@@ -324,6 +325,7 @@ class PositionerBox2D(PositionerBoxBase):
                 "stop": self.ui.stop_button,
                 "tweak_increase": self.ui.tweak_increase_ver,
                 "tweak_decrease": self.ui.tweak_decrease_ver,
+                "units": self.ui.units_ver,
             }
         else:
             raise ValueError(f"Device {device} is not represented by this UI")

@@ -40,6 +40,7 @@ class DeviceUpdateUIComponents(TypedDict):
     stop: QPushButton
     tweak_increase: QPushButton
     tweak_decrease: QPushButton
+    units: QLabel
 
 
 class PositionerBoxBase(BECWidget, CompactPopupWidget):
@@ -84,16 +85,33 @@ class PositionerBoxBase(BECWidget, CompactPopupWidget):
         limit_update: Callable[[tuple[float, float]], None],
     ):
         """Init the device view and readback"""
-        if self._check_device_is_valid(device):
-            data = self.dev[device].read()
-            self._on_device_readback(
-                device,
-                self._device_ui_components(device),
-                {"signals": data},
-                {},
-                position_emit,
-                limit_update,
-            )
+        if not self._check_device_is_valid(device):
+            return
+
+        data = self.dev[device].read()
+        self._on_device_readback(
+            device,
+            self._device_ui_components(device),
+            {"signals": data},
+            {},
+            position_emit,
+            limit_update,
+        )
+
+        ui = self._device_ui_components(device)
+        if not ui.get("units"):
+            return
+
+        try:
+            egu = f"[{self.dev[device].egu()}]"
+        except Exception:
+            egu = ""
+
+        if egu:
+            ui["units"].setVisible(True)
+            ui["units"].setText(egu)
+        else:
+            ui["units"].setVisible(False)
 
     def _stop_device(self, device: str):
         """Stop call"""

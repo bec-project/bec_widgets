@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>326</width>
-    <height>323</height>
+    <width>402</width>
+    <height>394</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -23,7 +23,7 @@
          <property name="title">
           <string>No positioner selected</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_6" rowstretch="0,0,0,0,0,0">
+         <layout class="QGridLayout" name="gridLayout_6" rowstretch="0,0,0,0,0,0,0">
           <property name="topMargin">
            <number>0</number>
           </property>
@@ -40,14 +40,37 @@
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="readback_ver">
-              <property name="text">
-               <string>Position</string>
+             <spacer name="horizontalSpacer_18">
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
               </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignCenter</set>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QLabel" name="units_ver">
+              <property name="text">
+               <string/>
               </property>
              </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_19">
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
             </item>
             <item>
              <widget class="SpinnerWidget" name="spinner_widget_ver">
@@ -67,20 +90,7 @@
             </item>
            </layout>
           </item>
-          <item row="2" column="0">
-           <widget class="QLineEdit" name="setpoint_ver">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="focusPolicy">
-             <enum>Qt::FocusPolicy::StrongFocus</enum>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignmentFlag::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="0">
+          <item row="6" column="0">
            <layout class="QHBoxLayout" name="horizontalLayout_6">
             <item>
              <widget class="QDoubleSpinBox" name="step_size_ver">
@@ -93,6 +103,29 @@
              </widget>
             </item>
            </layout>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLineEdit" name="setpoint_ver">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="focusPolicy">
+             <enum>Qt::FocusPolicy::StrongFocus</enum>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="readback_ver">
+            <property name="text">
+             <string>Position</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignCenter</set>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>
@@ -132,14 +165,37 @@
              </widget>
             </item>
             <item>
-             <widget class="QLabel" name="readback_hor">
-              <property name="text">
-               <string>Position</string>
+             <spacer name="horizontalSpacer_9">
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
               </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignCenter</set>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QLabel" name="units_hor">
+              <property name="text">
+               <string/>
               </property>
              </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_13">
+              <property name="orientation">
+               <enum>Qt::Orientation::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
             </item>
             <item>
              <widget class="SpinnerWidget" name="spinner_widget_hor">
@@ -172,6 +228,16 @@
              </widget>
             </item>
            </layout>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="readback_hor">
+            <property name="text">
+             <string>Position</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignmentFlag::AlignCenter</set>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>
@@ -526,14 +592,14 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>StopButton</class>
-   <extends>QWidget</extends>
-   <header>stop_button</header>
-  </customwidget>
-  <customwidget>
    <class>PositionIndicator</class>
    <extends>QWidget</extends>
    <header>position_indicator</header>
+  </customwidget>
+  <customwidget>
+   <class>StopButton</class>
+   <extends>QWidget</extends>
+   <header>stop_button</header>
   </customwidget>
   <customwidget>
    <class>SpinnerWidget</class>

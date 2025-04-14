@@ -170,6 +170,7 @@ class PositionerBox(PositionerBoxBase):
             "stop": self.ui.stop,
             "tweak_increase": self.ui.tweak_right,
             "tweak_decrease": self.ui.tweak_left,
+            "units": self.ui.units,
         }
 
     @SafeSlot(dict, dict)
