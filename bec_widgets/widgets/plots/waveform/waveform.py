@@ -1205,6 +1205,7 @@ class Waveform(PlotBase):
         plot_mode = self.x_axis_mode["name"]
         for curve in self._async_curves:
             x_data = None  # Reset x_data
+            y_data = None
             # Get the curve data
             async_data = msg["signals"].get(curve.config.signal.entry, None)
             if async_data is None:
@@ -1223,8 +1224,14 @@ class Waveform(PlotBase):
                         data_plot_y = data_plot_y[-1, :]
                 else:
                     x_data, y_data = curve.get_data()
+                    logger.warning(
+                        f"Async data for curve {curve.name()}, shape: ({x_data.shape}, {y_data.shape}) (x,y)"
+                    )
                     if y_data is not None:
                         data_plot_y = np.hstack((y_data, data_plot_y))
+                    logger.warning(
+                        f"Async data for curve {curve.name()}, shape: {data_plot_y.shape} (y)"
+                    )
             # Add slice
             if instruction == "add_slice":
                 current_slice_id = metadata.get("async_update", {}).get("index")
