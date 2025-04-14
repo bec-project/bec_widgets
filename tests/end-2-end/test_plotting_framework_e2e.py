@@ -139,6 +139,17 @@ def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
     qtbot.waitUntil(_wait_for_scan_in_history, timeout=7000)
     # Get all data
     waveform_data = client.history[-1].devices.waveform.waveform_waveform.read()["value"]
+
+    # Wait for data to be plotted, qtloop could lag behind the server
+    def _wait_for_plot():
+        _, y_data = curve.get_data()
+        if y_data is None:
+            return False
+        # Check if the data is not empty
+        return len(y_data) == len(waveform_data)
+
+    qtbot.waitUntil(_wait_for_plot, timeout=7000)
+
     # check plotted data
     x_data, y_data = curve.get_data()
     assert np.array_equal(x_data, np.linspace(0, len(y_data) - 1, len(y_data)))
