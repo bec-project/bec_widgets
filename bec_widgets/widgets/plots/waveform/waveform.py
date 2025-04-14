@@ -1628,9 +1628,11 @@ class Waveform(PlotBase):
                 if scan_item.status_message is None:
                     logger.warning(f"Scan item with {scan_item.scan_id} has no status message.")
                     return
-                self.scan_item = scan_item
-                self.scan_id = scan_item.scan_id
-                self._emit_signal_update()
+
+                if self.scan_id != scan_item.scan_id:
+                    self.scan_item = scan_item
+                    self.scan_id = scan_item.scan_id
+                    self._emit_signal_update()
                 return
 
         if len(self.client.history) == 0:
