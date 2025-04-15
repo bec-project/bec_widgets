@@ -46,3 +46,15 @@ def test_launch_window_launch_ui_file(bec_launch_window):
     # In real usage, the GUIServer would handle this in the sigint handler in case of a ctrl-c initiated shutdown.
     res.close()
     res.deleteLater()
+
+
+def test_launch_window_launch_ui_file_raises_for_qmainwindow(bec_launch_window):
+    # Mock the file dialog to return a specific UI file path
+    # the selected file must contain a QMainWindow widget but can be any file
+    ui_file_path = os.path.join(base_path, "applications/alignment/alignment_1d/alignment_1d.ui")
+
+    # Call the method to launch the custom UI file
+    with pytest.raises(ValueError) as excinfo:
+        bec_launch_window.launch("custom_ui_file", ui_file=ui_file_path)
+
+    assert "Loading a QMainWindow from a UI file is currently not supported." in str(excinfo.value)
