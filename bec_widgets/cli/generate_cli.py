@@ -39,6 +39,7 @@ class ClientGenerator:
         base_imports = (
             """import enum
 import inspect
+import traceback
 from typing import Literal, Optional
 """
             if self._base
@@ -107,28 +108,30 @@ _Widgets = {
         if self._base:
             self.content += """
 
-_plugin_widgets = get_all_plugin_widgets()
-plugin_client = get_plugin_client_module()
-Widgets = _WidgetsEnumType("Widgets", {name: name for name in _plugin_widgets} | _Widgets)
+try:
+    _plugin_widgets = get_all_plugin_widgets()
+    plugin_client = get_plugin_client_module()
+    Widgets = _WidgetsEnumType("Widgets", {name: name for name in _plugin_widgets} | _Widgets)
 
-if (_overlap := _Widgets.keys() & _plugin_widgets.keys()) != set():
-    for _widget in _overlap:
-        logger.warning(f"Detected duplicate widget {_widget} in plugin repo file: {inspect.getfile(_plugin_widgets[_widget])} !")
-for plugin_name, plugin_class in inspect.getmembers(plugin_client, inspect.isclass):
-    if issubclass(plugin_class, RPCBase) and plugin_class is not RPCBase:
-        if plugin_name in globals():
-            conflicting_file = (
-                inspect.getfile(_plugin_widgets[plugin_name])
-                if plugin_name in _plugin_widgets
-                else f"{plugin_client}"
-            )
-            logger.warning(
-                f"Plugin widget {plugin_name} from {conflicting_file} conflicts with a built-in class!"
-            )
-            continue
-        if plugin_name not in _overlap:
-            globals()[plugin_name] = plugin_class
-
+    if (_overlap := _Widgets.keys() & _plugin_widgets.keys()) != set():
+        for _widget in _overlap:
+            logger.warning(f"Detected duplicate widget {_widget} in plugin repo file: {inspect.getfile(_plugin_widgets[_widget])} !")
+    for plugin_name, plugin_class in inspect.getmembers(plugin_client, inspect.isclass):
+        if issubclass(plugin_class, RPCBase) and plugin_class is not RPCBase:
+            if plugin_name in globals():
+                conflicting_file = (
+                    inspect.getfile(_plugin_widgets[plugin_name])
+                    if plugin_name in _plugin_widgets
+                    else f"{plugin_client}"
+                )
+                logger.warning(
+                    f"Plugin widget {plugin_name} from {conflicting_file} conflicts with a built-in class!"
+                )
+                continue
+            if plugin_name not in _overlap:
+                globals()[plugin_name] = plugin_class
+except ImportError as e:
+    logger.error(f"Failed loading plugins: \\n{reduce(add, traceback.format_exception(e))}")
 """
 
     def generate_content_for_class(self, cls):
