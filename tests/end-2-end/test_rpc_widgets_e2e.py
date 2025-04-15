@@ -419,7 +419,17 @@ def test_widgets_e2e_multi_waveform(
     assert widget.color_palette == cm
 
     # Scan with BEC
-    scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False).wait()
+    s = scans.line_scan(dev.samx, -3, 3, steps=5, exp_time=0.01, relative=False)
+    s.wait()
+
+    def _wait_for_scan_in_history():
+        # Get scan item from history
+        scan_item = bec.history.get_by_scan_id(s.scan.scan_id)
+        return scan_item is not None
+
+    qtbot.waitUntil(_wait_for_scan_in_history, timeout=7000)
+    # Wait for data in history (should be plotted?)
+
     # TODO how can we check that the data was plotted, implement get_data()
 
     # Test removing the widget, or leaving it open for the next test
@@ -705,37 +715,3 @@ def test_widgets_e2e_website_widget(
     # Test removing the widget, or leaving it open for the next test
     maybe_remove_widget(qtbot, gui, dock, widget, random_generator_from_seed)
     maybe_remove_dock_area(qtbot, gui, dock_area, random_generator_from_seed)
-
-
-# # AbortButton            │ A button that abort the scan.                                                                         │
-# # │ BECColorMapWidget      │ No description available                                                                              │
-# # │ BECMultiWaveformWidget │ No description available                                                                              │
-# # │ BECProgressBar         │ A custom progress bar with smooth transitions. The displayed text can be customized using a template. │
-# # │ BECQueue               │ Widget to display the BEC queue.                                                                      │
-# # │ BECStatusBox           │ An autonomous widget to display the status of BEC services.                                           │
-# # │ DapComboBox            │ The DAPComboBox widget is an extension to the QComboBox with all avaialble DAP model from BEC.        │
-# # │ DarkModeButton         │ No description available                                                                              │
-# # │ DeviceBrowser          │ No description available                                                                              │
-# # │ DeviceComboBox         │ Combobox widget for device input with autocomplete for device names.                                  │
-# # │ DeviceLineEdit         │ Line edit widget for device input with autocomplete for device names.                                 │
-# # │ Image                  │ No description available                                                                              │
-# # │ LMFitDialog            │ Dialog for displaying the fit summary and params for LMFit DAP processes                              │
-# # │ LogPanel               │ Displays a log panel                                                                                  │
-# # │ Minesweeper            │ No description available                                                                              │
-# # │ MotorMap               │ No description available                                                                              │
-# # │ PositionIndicator      │ No description available                                                                              │
-# # │ PositionerBox          │ Simple Widget to control a positioner in box form                                                     │
-# # │ PositionerBox2D        │ Simple Widget to control two positioners in box form                                                  │
-# # │ PositionerControlLine  │ A widget that controls a single device.                                                               │
-# # │ ResetButton            │ A button that resets the scan queue.                                                                  │
-# # │ ResumeButton           │ A button that continue scan queue.                                                                    │
-# # │ RingProgressBar        │ No description available                                                                              │
-# # │ ScanControl            │ No description available                                                                              │
-# # │ ScatterWaveform        │ No description available                                                                              │
-# # │ SignalComboBox         │ Line edit widget for device input with autocomplete for device names.                                 │
-# # │ SignalLineEdit         │ Line edit widget for device input with autocomplete for device names.                                 │
-# # │ StopButton             │ A button that stops the current scan.                                                                 │
-# # │ TextBox                │ A widget that displays text in plain and HTML format                                                  │
-# # │ VSCodeEditor           │ A widget to display the VSCode editor.                                                                │
-# # │ Waveform               │ No description available                                                                              │
-# # │ WebsiteWidget          │ A simple widget to display a website
