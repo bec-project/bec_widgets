@@ -1543,7 +1543,11 @@ class Waveform(PlotBase):
         Categorise the device curves into sync and async based on the readout priority.
         """
         if self.scan_item is None:
-            self.update_with_scan_history(-1)
+            # If scan_item is None, than update_with_scan_history will call `_categorise_device_curves` via
+            # `_emit_signal_update`. All of this happens while old_scan_id is still set. So we actually register
+            # a callback twice for the same scan_id. This is a problem since data will be duplicated.
+
+            # self.update_with_scan_history(-1)
             if self.scan_item is None:
                 logger.info("No scan executed so far; skipping device curves categorisation.")
                 return "none"
