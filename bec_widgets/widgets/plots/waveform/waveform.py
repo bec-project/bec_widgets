@@ -1014,6 +1014,8 @@ class Waveform(PlotBase):
             self.old_scan_id = self.scan_id
             self.scan_id = current_scan_id
             self.scan_item = self.queue.scan_storage.find_scan_by_ID(self.scan_id)  # live scan
+            if self.scan_item is None:
+                raise ValueError(f"Scan item with ID {self.scan_id} not found in the queue.")
             self._slice_index = None  # Reset the slice index
 
             self._mode = self._categorise_device_curves()
@@ -1180,6 +1182,7 @@ class Waveform(PlotBase):
             self.on_async_readback,
             MessageEndpoints.device_async_readback(self.scan_id, name),
             from_start=True,
+            cb_info={"scan_id": self.scan_id},
         )
         logger.info(
             f"remaining subscriptions: {self.bec_dispatcher.client.connector._stream_topics_subscription.values()}"
@@ -1205,6 +1208,12 @@ class Waveform(PlotBase):
             msg(dict): Message with the async data.
             metadata(dict): Metadata of the message.
         """
+        sender = self.sender()
+        if sender and hasattr(sender, "cb_info"):
+            scan_id = sender.cb_info.get("scan_id")
+            if scan_id != self.scan_id:
+                logger.warning("Scan ID mismatch, ignoring async readback.")
+                return
         instruction = metadata.get("async_update", {}).get("type")
         if instruction not in ["add", "add_slice", "replace"]:
             logger.warning(f"Invalid async update instruction: {instruction}")
