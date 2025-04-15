@@ -1013,6 +1013,7 @@ class Waveform(PlotBase):
             self.auto_range_y = True
             self.old_scan_id = self.scan_id
             self.scan_id = current_scan_id
+            # What if there is not yet a scan item here
             self.scan_item = self.queue.scan_storage.find_scan_by_ID(self.scan_id)  # live scan
             self._slice_index = None  # Reset the slice index
 
@@ -1163,6 +1164,7 @@ class Waveform(PlotBase):
         Args:
             curve(Curve): The curve to set up.
         """
+        logger.warning(f"SETUP ASYNC CURVE {curve.name()} for scan ID {self.scan_id}")
         name = curve.config.signal.name
         self.bec_dispatcher.disconnect_slot(
             self.on_async_readback, MessageEndpoints.device_async_readback(self.old_scan_id, name)
