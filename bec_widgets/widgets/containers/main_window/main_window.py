@@ -66,8 +66,16 @@ class BECMainWindow(BECWidget, QMainWindow):
         self.setCentralWidget(self.ui)
 
     def display_app_id(self):
-        server_id = self.bec_dispatcher.cli_server.gui_id
-        self.statusBar().showMessage(f"App ID: {server_id}")
+        """
+        Display the app ID in the status bar.
+        """
+        if self.bec_dispatcher.cli_server is None:
+            status_message = "Not connected"
+        else:
+            # Get the server ID from the dispatcher
+            server_id = self.bec_dispatcher.cli_server.gui_id
+            status_message = f"App ID: {server_id}"
+        self.statusBar().showMessage(status_message)
 
     def _fetch_theme(self) -> str:
         return self.app.theme.theme
