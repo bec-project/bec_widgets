@@ -1215,6 +1215,7 @@ class Waveform(PlotBase):
             if scan_id != self.scan_id:
                 logger.warning("Scan ID mismatch, ignoring async readback.")
                 return
+            logger.info(f"Async readback for scan ID {scan_id}.")
         instruction = metadata.get("async_update", {}).get("type")
         if instruction not in ["add", "add_slice", "replace"]:
             logger.warning(f"Invalid async update instruction: {instruction}")
