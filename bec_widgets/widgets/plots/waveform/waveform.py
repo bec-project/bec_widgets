@@ -1172,6 +1172,7 @@ class Waveform(PlotBase):
         except KeyError:
             logger.warning(f"Curve {name} not found in plot item.")
             pass
+        QApplication.processEvents()  # Process events to avoid async callbacks scheduled but executed in the wrong order
         self.bec_dispatcher.connect_slot(
             self.on_async_readback,
             MessageEndpoints.device_async_readback(self.scan_id, name),
