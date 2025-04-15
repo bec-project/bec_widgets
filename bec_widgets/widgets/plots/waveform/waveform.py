@@ -1203,8 +1203,12 @@ class Waveform(PlotBase):
             metadata(dict): Metadata of the message.
         """
         sender = self.sender()
+        logger.info(f"Update from sender {sender}")
         if sender and hasattr(sender, "cb_info"):
             scan_id = sender.cb_info.get("scan_id", None)
+            logger.info(
+                f"Update from sender {sender} with scan ID {scan_id} for curve {self.scan_id}"
+            )
             if scan_id != self.scan_id:
                 return  # Ignore messages from other scans
         instruction = metadata.get("async_update", {}).get("type")
