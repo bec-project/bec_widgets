@@ -6,13 +6,13 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-import os
+import datetime
 import pathlib
 
 import tomli
 
 project = "BEC Widgets"
-copyright = "2023, Paul Scherrer Institute"
+copyright = f"{datetime.datetime.today().year}, Paul Scherrer Institute"
 author = "Paul Scherrer Institute"
 
 # -- General configuration ---------------------------------------------------
