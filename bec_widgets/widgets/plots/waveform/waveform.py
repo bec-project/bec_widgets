@@ -1167,7 +1167,7 @@ class Waveform(PlotBase):
         """
         name = curve.config.signal.name
         logger.info(
-            f"subscriptions before removal: {self.bec_dispatcher.client.connector._stream_topics_subscription.values()} and pubsub: {self.bec_dispatcher.client.connector._topics_cb.values()}"
+            f"subscriptions before removal: {self.bec_dispatcher.client.connector._stream_topics_subscription.values()} and pubsub: {self.bec_dispatcher.client.connector._topics_cb}"
         )
         self.bec_dispatcher.disconnect_slot(
             self.on_async_readback, MessageEndpoints.device_async_readback(self.old_scan_id, name)
