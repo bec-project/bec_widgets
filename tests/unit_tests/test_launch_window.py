@@ -7,6 +7,7 @@ from bec_lib.endpoints import MessageEndpoints
 
 import bec_widgets
 from bec_widgets.applications.launch_window import LaunchWindow
+from bec_widgets.widgets.containers.auto_update.auto_updates import AutoUpdates
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow, UILaunchWindow
 
 from .client_mocks import mocked_client
@@ -58,3 +59,37 @@ def test_launch_window_launch_ui_file_raises_for_qmainwindow(bec_launch_window):
         bec_launch_window.launch("custom_ui_file", ui_file=ui_file_path)
 
     assert "Loading a QMainWindow from a UI file is currently not supported." in str(excinfo.value)
+
+
+def test_launch_window_launch_default_auto_update(bec_launch_window):
+    # Mock the auto update selection
+    bec_launch_window.tile_auto_update.selector.setCurrentText("Default")
+
+    # Call the method to launch the auto update
+    res = bec_launch_window._open_auto_update()
+
+    assert isinstance(res, AutoUpdates)
+    assert res.windowTitle() == "BEC - AutoUpdates"
+
+    # We need to manually close the launched window as it is not registered with qtbot.
+    # In real usage, the GUIServer would handle this in the sigint handler in case of a ctrl-c initiated shutdown.
+    res.close()
+    res.deleteLater()
+
+
+def test_launch_window_launch_plugin_auto_update(bec_launch_window):
+    class PluginAutoUpdate(AutoUpdates): ...
+
+    bec_launch_window.available_auto_updates = {"PluginAutoUpdate": PluginAutoUpdate}
+    bec_launch_window.tile_auto_update.selector.clear()
+    bec_launch_window.tile_auto_update.selector.addItems(
+        list(bec_launch_window.available_auto_updates.keys()) + ["Default"]
+    )
+    bec_launch_window.tile_auto_update.selector.setCurrentText("PluginAutoUpdate")
+    res = bec_launch_window._open_auto_update()
+    assert isinstance(res, PluginAutoUpdate)
+    assert res.windowTitle() == "BEC - PluginAutoUpdate"
+    # We need to manually close the launched window as it is not registered with qtbot.
+    # In real usage, the GUIServer would handle this in the sigint handler in case of a ctrl-c initiated shutdown.
+    res.close()
+    res.deleteLater()

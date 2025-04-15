@@ -330,7 +330,7 @@ class LaunchWindow(BECMainWindow):
             auto_update = self.tile_auto_update.selector.currentText()
             if auto_update == "Default":
                 auto_update = None
-        self.launch("auto_update", auto_update=auto_update)
+        return self.launch("auto_update", auto_update=auto_update)
 
     @SafeSlot(popup_error=True)
     def _open_custom_ui_file(self):
