@@ -28,6 +28,9 @@ class AutoUpdates(BECMainWindow):
     USER_ACCESS = ["enabled", "enabled.setter", "selected_device", "selected_device.setter"]
     RPC = True
 
+    # enforce that subclasses have the same rpc widget class
+    rpc_widget_class = "AutoUpdates"
+
     def __init__(
         self, parent=None, gui_id: str = None, window_title="Auto Update", *args, **kwargs
     ):

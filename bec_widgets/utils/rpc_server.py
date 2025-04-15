@@ -216,10 +216,14 @@ class RPCServer:
             while not self.rpc_register.object_is_registered(connector):
                 QApplication.processEvents()
 
+        widget_class = getattr(connector, "rpc_widget_class", None)
+        if not widget_class:
+            widget_class = connector.__class__.__name__
+
         return {
             "gui_id": connector.gui_id,
             "object_name": connector.object_name or connector.__class__.__name__,
-            "widget_class": connector.__class__.__name__,
+            "widget_class": widget_class,
             "config": config_dict,
             "__rpc__": True,
         }
