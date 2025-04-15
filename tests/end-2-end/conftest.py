@@ -32,16 +32,21 @@ def gui_id():
     return f"figure_{random.randint(0,100)}"  # make a new gui id each time, to ensure no 'gui is alive' zombie key can perturbate
 
 
-@pytest.fixture
-def connected_client_gui_obj(gui_id, bec_client_lib):
+@pytest.fixture(scope="function")
+def connected_client_gui_obj(qtbot, gui_id, bec_client_lib):
     """
     Fixture to create a new BECGuiClient object and start a server in the background.
 
     This fixture should be used if a new gui instance is needed for each test.
     """
+
+    def _check_gui_has_bec():
+        return hasattr(gui, "bec") and gui.bec is not None
+
     gui = BECGuiClient(gui_id=gui_id)
     try:
         gui.start(wait=True)
+        qtbot.waitUntil(_check_gui_has_bec, timeout=7000)
         yield gui
     finally:
         gui.kill_server()
