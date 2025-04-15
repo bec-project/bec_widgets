@@ -9,11 +9,13 @@ from qtpy.QtCore import Qt, Signal
 from qtpy.QtGui import QPainter, QPainterPath, QPixmap
 from qtpy.QtWidgets import (
     QApplication,
+    QComboBox,
     QFileDialog,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QSizePolicy,
+    QSpacerItem,
     QWidget,
 )
 
@@ -21,9 +23,11 @@ import bec_widgets
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.plugin_utils import get_plugin_auto_updates
 from bec_widgets.utils.round_frame import RoundedFrame
 from bec_widgets.utils.toolbar import ModularToolBar
 from bec_widgets.utils.ui_loader import UILoader
+from bec_widgets.widgets.containers.auto_update.auto_updates import AutoUpdates
 from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow, UILaunchWindow
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
@@ -45,6 +49,7 @@ class LaunchTile(RoundedFrame):
         top_label: str | None = None,
         main_label: str | None = None,
         description: str | None = None,
+        show_selector: bool = False,
     ):
         super().__init__(parent=parent, orientation="vertical")
 
@@ -86,11 +91,24 @@ class LaunchTile(RoundedFrame):
         self.main_label.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(self.main_label)
 
+        self.spacer_top = QSpacerItem(0, 10, QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.layout.addItem(self.spacer_top)
+
         # Description
         self.description_label = QLabel(description)
         self.description_label.setWordWrap(True)
         self.description_label.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(self.description_label)
+
+        # Selector
+        if show_selector:
+            self.selector = QComboBox(self)
+            self.layout.addWidget(self.selector)
+        else:
+            self.selector = None
+
+        self.spacer_bottom = QSpacerItem(0, 0, QSizePolicy.Fixed, QSizePolicy.Expanding)
+        self.layout.addItem(self.spacer_bottom)
 
         # Action button
         self.action_button = QPushButton("Open")
@@ -114,6 +132,7 @@ class LaunchTile(RoundedFrame):
 
 class LaunchWindow(BECMainWindow):
     RPC = True
+    TILE_SIZE = (250, 300)
 
     def __init__(
         self, parent=None, gui_id: str = None, window_title="BEC Launcher", *args, **kwargs
@@ -142,15 +161,16 @@ class LaunchWindow(BECMainWindow):
             main_label="BEC Dock Area",
             description="Highly flexible and customizable dock area application with modular widgets.",
         )
-        self.tile_dock_area.setFixedSize(250, 300)
+        self.tile_dock_area.setFixedSize(*self.TILE_SIZE)
 
         self.tile_auto_update = LaunchTile(
             icon_path=os.path.join(MODULE_PATH, "assets", "app_icons", "auto_update.png"),
             top_label="Get automated",
             main_label="BEC Auto Update Dock Area",
             description="Dock area with auto update functionality for BEC widgets plotting.",
+            show_selector=True,
         )
-        self.tile_auto_update.setFixedSize(250, 300)
+        self.tile_auto_update.setFixedSize(*self.TILE_SIZE)
 
         self.tile_ui_file = LaunchTile(
             icon_path=os.path.join(MODULE_PATH, "assets", "app_icons", "ui_loader_tile.png"),
@@ -158,7 +178,7 @@ class LaunchWindow(BECMainWindow):
             main_label="Launch Custom UI File",
             description="GUI application with custom UI file.",
         )
-        self.tile_ui_file.setFixedSize(250, 300)
+        self.tile_ui_file.setFixedSize(*self.TILE_SIZE)
 
         # Add tiles to the main layout
         self.central_widget.layout.addWidget(self.tile_dock_area)
@@ -170,11 +190,18 @@ class LaunchWindow(BECMainWindow):
 
         # Connect signals
         self.tile_dock_area.action_button.clicked.connect(lambda: self.launch("dock_area"))
-        self.tile_auto_update.action_button.clicked.connect(
-            lambda: self.launch("auto_update_dock_area", "auto_updates")
-        )
+        self.tile_auto_update.action_button.clicked.connect(self._open_auto_update)
         self.tile_ui_file.action_button.clicked.connect(self._open_custom_ui_file)
         self._update_theme()
+
+        # Auto updates
+        self.available_auto_updates: dict[str, type[AutoUpdates]] = (
+            self._update_available_auto_updates()
+        )
+        if self.tile_auto_update.selector is not None:
+            self.tile_auto_update.selector.addItems(
+                list(self.available_auto_updates.keys()) + ["Default"]
+            )
 
     def launch(
         self,
@@ -213,41 +240,18 @@ class LaunchWindow(BECMainWindow):
                 raise ValueError(f"Launch script must be a string, but got {type(launch_script)}.")
 
             if launch_script == "custom_ui_file":
-                # Load the custom UI file
                 ui_file = kwargs.pop("ui_file", None)
-                if ui_file is None:
-                    raise ValueError("UI file must be provided for custom UI file launch.")
-                filename = os.path.basename(ui_file).split(".")[0]
+                return self._launch_custom_ui_file(ui_file)
 
-                tree = ET.parse(ui_file)
-                root = tree.getroot()
-                # Check if the top-level widget is a QMainWindow
-                widget = root.find("widget")
-                if widget is None:
-                    raise ValueError("No widget found in the UI file.")
+            if launch_script == "auto_update":
+                auto_update = kwargs.pop("auto_update", None)
+                return self._launch_auto_update(auto_update)
 
-                if widget.attrib.get("class") == "QMainWindow":
-                    raise ValueError(
-                        "Loading a QMainWindow from a UI file is currently not supported."
-                        "If you need this, please contact the BEC team or create a ticket on gitlab.psi.ch/bec/bec_widgets."
-                    )
+            launch = getattr(bw_launch, launch_script, None)
+            if launch is None:
+                raise ValueError(f"Launch script {launch_script} not found.")
 
-                window = UILaunchWindow(object_name=filename)
-                QApplication.processEvents()
-                result_widget = UILoader(window).loader(ui_file)
-                window.setCentralWidget(result_widget)
-                window.setWindowTitle(f"BEC - {window.object_name}")
-                window.show()
-                logger.info(
-                    f"Object name of new instance: {result_widget.objectName()}, {window.gui_id}"
-                )
-                return window
-            else:
-                launch = getattr(bw_launch, launch_script, None)
-                if launch is None:
-                    raise ValueError(f"Launch script {launch_script} not found.")
-
-                result_widget = launch(name)
+            result_widget = launch(name)
             result_widget.resize(result_widget.minimumSizeHint())
             # TODO Should we simply use the specified name as title here?
             result_widget.window().setWindowTitle(f"BEC - {name}")
@@ -263,6 +267,49 @@ class LaunchWindow(BECMainWindow):
                 window.show()
             return result_widget
 
+    def _launch_custom_ui_file(self, ui_file: str | None) -> BECMainWindow:
+        # Load the custom UI file
+        if ui_file is None:
+            raise ValueError("UI file must be provided for custom UI file launch.")
+        filename = os.path.basename(ui_file).split(".")[0]
+
+        tree = ET.parse(ui_file)
+        root = tree.getroot()
+        # Check if the top-level widget is a QMainWindow
+        widget = root.find("widget")
+        if widget is None:
+            raise ValueError("No widget found in the UI file.")
+
+        if widget.attrib.get("class") == "QMainWindow":
+            raise ValueError(
+                "Loading a QMainWindow from a UI file is currently not supported."
+                "If you need this, please contact the BEC team or create a ticket on gitlab.psi.ch/bec/bec_widgets."
+            )
+
+        window = UILaunchWindow(object_name=filename)
+        QApplication.processEvents()
+        result_widget = UILoader(window).loader(ui_file)
+        window.setCentralWidget(result_widget)
+        window.setWindowTitle(f"BEC - {window.object_name}")
+        window.show()
+        logger.info(f"Object name of new instance: {result_widget.objectName()}, {window.gui_id}")
+        return window
+
+    def _launch_auto_update(self, auto_update: str) -> AutoUpdates:
+        if auto_update in self.available_auto_updates:
+            auto_update_cls = self.available_auto_updates[auto_update]
+            window = auto_update_cls()
+        else:
+
+            auto_update = "auto_updates"
+            window = AutoUpdates()
+
+        window.resize(window.minimumSizeHint())
+        QApplication.processEvents()
+        window.setWindowTitle(f"BEC - {window.objectName()}")
+        window.show()
+        return window
+
     def apply_theme(self, theme: str):
         """
         Change the theme of the application.
@@ -271,6 +318,18 @@ class LaunchWindow(BECMainWindow):
             tile.apply_theme(theme)
 
         super().apply_theme(theme)
+
+    def _open_auto_update(self):
+        """
+        Open the auto update window.
+        """
+        if self.tile_auto_update.selector is None:
+            auto_update = None
+        else:
+            auto_update = self.tile_auto_update.selector.currentText()
+            if auto_update == "Default":
+                auto_update = None
+        self.launch("auto_update", auto_update=auto_update)
 
     @SafeSlot(popup_error=True)
     def _open_custom_ui_file(self):
@@ -281,6 +340,19 @@ class LaunchWindow(BECMainWindow):
             self, "Select UI File", "", "UI Files (*.ui);;All Files (*)"
         )
         self.launch("custom_ui_file", ui_file=ui_file)
+
+    @staticmethod
+    def _update_available_auto_updates() -> dict[str, type[AutoUpdates]]:
+        """
+        Load all available auto updates from the plugin repository.
+        """
+        try:
+            auto_updates = get_plugin_auto_updates()
+            logger.info(f"Available auto updates: {auto_updates.keys()}")
+        except Exception as exc:
+            logger.error(f"Failed to load auto updates: {exc}")
+            return {}
+        return auto_updates
 
     def show_launcher(self):
         self.show()
