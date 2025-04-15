@@ -1,13 +1,19 @@
+from __future__ import annotations
+
 import importlib
 import inspect
 import os
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from bec_lib.plugin_helper import _get_available_plugins
 from qtpy.QtWidgets import QGraphicsWidget, QWidget
 
 from bec_widgets.utils import BECConnector
 from bec_widgets.utils.bec_widget import BECWidget
+
+if TYPE_CHECKING:  # pragma: no cover
+    from bec_widgets.widgets.containers.auto_update.auto_updates import AutoUpdates
 
 
 def get_plugin_widgets() -> dict[str, BECConnector]:
@@ -43,6 +49,40 @@ def get_plugin_widgets() -> dict[str, BECConnector]:
 
 def _filter_plugins(obj):
     return inspect.isclass(obj) and issubclass(obj, BECConnector)
+
+
+def get_plugin_auto_updates() -> dict[str, type[AutoUpdates]]:
+    """
+    Get all available auto update classes from the plugin directory. AutoUpdates must inherit from AutoUpdate and be
+    placed in the plugin repository's bec_widgets/auto_updates directory. The entry point for the auto updates is
+    specified in the respective pyproject.toml file using the following key:
+        [project.entry-points."bec.widgets.auto_updates"]
+        plugin_widgets_update = "<beamline_name>.bec_widgets.auto_updates"
+
+    e.g.
+        [project.entry-points."bec.widgets.auto_updates"]
+        plugin_widgets_update = "pxiii_bec.bec_widgets.auto_updates"
+
+    Returns:
+        dict[str, AutoUpdates]: A dictionary of widget names and their respective classes.
+    """
+    modules = _get_available_plugins("bec.widgets.auto_updates")
+    loaded_plugins = {}
+    for module in modules:
+        mods = inspect.getmembers(module, predicate=_filter_auto_updates)
+        for name, mod_cls in mods:
+            if name in loaded_plugins:
+                print(f"Duplicated auto update {name}.")
+            loaded_plugins[name] = mod_cls
+    return loaded_plugins
+
+
+def _filter_auto_updates(obj):
+    from bec_widgets.widgets.containers.auto_update.auto_updates import AutoUpdates
+
+    return (
+        inspect.isclass(obj) and issubclass(obj, AutoUpdates) and not obj.__name__ == "AutoUpdates"
+    )
 
 
 @dataclass
