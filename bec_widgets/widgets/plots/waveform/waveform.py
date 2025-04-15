@@ -1176,6 +1176,7 @@ class Waveform(PlotBase):
         self.bec_dispatcher.connect_slot(
             self.on_async_readback,
             MessageEndpoints.device_async_readback(self.scan_id, name),
+            cb_info={"scan_id": self.scan_id},
             from_start=True,
         )
         logger.info(f"Setup async curve {name}")
@@ -1199,6 +1200,11 @@ class Waveform(PlotBase):
             msg(dict): Message with the async data.
             metadata(dict): Metadata of the message.
         """
+        sender = self.sender()
+        if sender and hasattr(sender, "cb_info"):
+            scan_id = sender.cb_info.get("scan_id", None)
+            if scan_id != self.scan_id:
+                return  # Ignore messages from other scans
         instruction = metadata.get("async_update", {}).get("type")
         if instruction not in ["add", "add_slice", "replace"]:
             logger.warning(f"Invalid async update instruction: {instruction}")
