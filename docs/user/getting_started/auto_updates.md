@@ -2,81 +2,128 @@
 # Auto updates
 BEC Widgets provides a simple way to update the entire GUI configuration based on events. These events can be of different types, such as a new scan being started or completed, a button being pressed, a device reporting an error or the existence of a specific metadata key. This allows the users to streamline the experience of the GUI and to focus on the data and the analysis, rather than on the GUI itself.
 
-The default auto update only takes control over a single `BECFigure` widget, which is automatically added to the GUI instance. The update instance is accessible via the `bec.gui.auto_updates` object. The user can disable / enable the auto updates by setting the `enabled` attribute of the `bec.gui.auto_updates` object, e.g. 
+The auto update widget can be launched through the BEC launcher:
 
-```python
-bec.gui.auto_updates.enabled = False
-```
+![BEC launcher](launcher.png)
 
-Without further customization, the auto update will automatically update the `BECFigure` widget based on the currently performed scan. The behaviour is determined by the `handler` method of the `AutoUpdate` class: 
+The auto update's launch tile also provides a combo box to select the specific auto update to be launched. These options are automatically populated with all available auto updates from a plugin repository and the default auto update. 
+
+Once the proper auto update is selected and launched, the CLI will automatically add a new entry to the `gui` object. 
+
+The default auto update only provides a simple handler that switches between `line_scan`, `grid_scan` and `best_effort`. More details can be found in the following snippet. 
 
 ````{dropdown} Auto Updates Handler
 :icon: code-square
 :animate: fade-in-slide-down
 :open: 
-```{literalinclude} ../../../bec_widgets/cli/auto_updates.py
-:pyobject: AutoUpdates.handler
+```{literalinclude} ../../../bec_widgets/widgets/containers/auto_update/auto_updates.py
+:pyobject: AutoUpdates.on_scan_open
 ```
 ````
 
-As shown, the default handler switches between different scan names and updates the `BECFigure` widget accordingly. If the scan is a line scan, the `simple_line_scan` update method is executed. 
+As shown, the default auto updates switches between different visualizations whenever a new scan is started. If the scan is a `line_scan`, the `simple_line_scan` update method is executed. 
 
 ````{dropdown} Auto Updates Simple Line Scan
 :icon: code-square
 :animate: fade-in-slide-down
 :open: 
-```{literalinclude} ../../../bec_widgets/cli/auto_updates.py
+```{literalinclude} ../../../bec_widgets/widgets/containers/auto_update/auto_updates.py
 :pyobject: AutoUpdates.simple_line_scan
 ```
 ````
 
-As it can be seen from the above snippet, the update method gets the default figure by calling the `get_default_figure` method. If the figure is not found, maybe because the user has deleted or closed it, no update is performed. If the figure is found, the scan info is used to extract the first reported device for the x axis and the first device of the monitored devices for the y axis. The y axis can also be set by the user using the `selected_device` attribute:
+As it can be seen from the above snippet, the update method changes the dock to a specific widget, in this case to a waveform widget. After selecting the device for the x axis, the y axis is retrieved from the list of monitored devices or from a user-specified `selected_device`. 
+
+The y axis can also be set by the user using the `selected_device` attribute:
 
 ```python
-bec.gui.auto_updates.selected_device = 'bpm4i'
+gui.AutoUpdates.selected_device = 'bpm4i'
 ```
 
 
 ````{dropdown} Auto Updates Code
 :icon: code-square
 :animate: fade-in-slide-down
-```{literalinclude} ../../../bec_widgets/cli/auto_updates.py
+```{literalinclude} ../../../bec_widgets/widgets/containers/auto_update/auto_updates.py
 ```
 ````
 
 ## Custom Auto Updates
-The beamline can customize their default behaviour through customized auto update classes. This can be achieved by modifying the class located in the beamline plugin repository: `<beamline_plugin>/bec_widgets/auto_updates.py`. The class should inherit from the `AutoUpdates` class and overwrite the `handler` method. 
+The beamline can customize their default behaviour through customized auto update classes. This can be achieved by adding an auto update class to the plugin repository: `<beamline_plugin>/bec_widgets/auto_updates/auto_updates.py`. The class must inherit from the `AutoUpdates` class. 
+
+An example of a custom auto update class `PXIIIUpdate` is shown below.
+
+```{note}
+The code below is simply a copy of the default auto update class's 'GUI Callbacks' section. The user can modify any of the methods to suit their needs but we suggest to have a look at the 'GUI Callbacks' section and the 'Update Functions' section of the default auto update class to understand how to implement the custom auto update class.  
+```
 
 ```python
-from bec_widgets.cli.auto_updates import AutoUpdates, ScanInfo
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from bec_widgets.widgets.containers.auto_update.auto_updates import AutoUpdates
+
+if TYPE_CHECKING: # pragma: no cover
+    from bec_lib.messages import ScanStatusMessage
 
 
-class PlotUpdate(AutoUpdates):
-    create_default_dock = True
-    enabled = True
+class PXIIIUpdate(AutoUpdates):
 
-    # def simple_line_scan(self, info: ScanInfo) -> None:
-    #     """
-    #     Simple line scan.
-    #     """
-    #     fig = self.get_default_figure()
-    #     if not fig:
-    #         return
-    #     dev_x = info.scan_report_devices[0]
-    #     dev_y = self.get_selected_device(info.monitored_devices, self.gui.selected_device)
-    #     if not dev_y:
-    #         return
-    #     fig.clear_all()
-    #     plt = fig.plot(x_name=dev_x, y_name=dev_y)
-    #     plt.set(title=f"Custom Plot {info.scan_number}", x_label=dev_x, y_label=dev_y)
+    #######################################################################
+    ################# GUI Callbacks #######################################
+    #######################################################################
 
-    def handler(self, info: ScanInfo) -> None:
-        # EXAMPLES:
-        # if info.scan_name == "line_scan" and info.scan_report_devices:
-        #     self.simple_line_scan(info)
-        #     return
-        # if info.scan_name == "grid_scan" and info.scan_report_devices:
-        #     self.run_grid_scan_update(info)
-        #     return
-        super().handler(info)
+    def on_start(self) -> None:
+        """
+        Procedure to run when the auto updates are enabled.
+        """
+        self.start_default_dock()
+
+    def on_stop(self) -> None:
+        """
+        Procedure to run when the auto updates are disabled.
+        """
+
+    def on_scan_open(self, msg: ScanStatusMessage) -> None:
+        """
+        Procedure to run when a scan starts.
+
+        Args:
+            msg (ScanStatusMessage): The scan status message.
+        """
+        if msg.scan_name == "line_scan" and msg.scan_report_devices:
+            return self.simple_line_scan(msg)
+        if msg.scan_name == "grid_scan" and msg.scan_report_devices:
+            return self.simple_grid_scan(msg)
+        if msg.scan_report_devices:
+            return self.best_effort(msg)
+        return None
+
+    def on_scan_closed(self, msg: ScanStatusMessage) -> None:
+        """
+        Procedure to run when a scan ends.
+
+        Args:
+            msg (ScanStatusMessage): The scan status message.
+        """
+
+    def on_scan_abort(self, msg: ScanStatusMessage) -> None:
+        """
+        Procedure to run when a scan is aborted.
+
+        Args:
+            msg (ScanStatusMessage): The scan status message.
+        """
+
 ```
+
+
+````{important}
+In order for the custom auto update method to be found, the class must be added to the `__init__.py` file of the `auto_updates` folder. This should be done already when the plugin repository is created but it is worth mentioning here. If not, the user can add the following line to the `__init__.py` file:
+```python
+from .auto_updates import * 
+```
+````
+
+
