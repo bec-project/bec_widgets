@@ -133,6 +133,7 @@ class LaunchTile(RoundedFrame):
 class LaunchWindow(BECMainWindow):
     RPC = True
     TILE_SIZE = (250, 300)
+    USER_ACCESS = ["show_launcher", "hide_launcher"]
 
     def __init__(
         self, parent=None, gui_id: str = None, window_title="BEC Launcher", *args, **kwargs
@@ -282,7 +283,7 @@ class LaunchWindow(BECMainWindow):
 
         if widget.attrib.get("class") == "QMainWindow":
             raise ValueError(
-                "Loading a QMainWindow from a UI file is currently not supported."
+                "Loading a QMainWindow from a UI file is currently not supported. "
                 "If you need this, please contact the BEC team or create a ticket on gitlab.psi.ch/bec/bec_widgets."
             )
 
@@ -355,9 +356,15 @@ class LaunchWindow(BECMainWindow):
         return auto_updates
 
     def show_launcher(self):
+        """
+        Show the launcher window.
+        """
         self.show()
 
     def hide_launcher(self):
+        """
+        Hide the launcher window.
+        """
         self.hide()
 
     def showEvent(self, event):
