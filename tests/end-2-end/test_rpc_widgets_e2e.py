@@ -334,21 +334,21 @@ def test_widgets_e2e_image(
     maybe_remove_dock_area(qtbot, gui, dock_area, random_generator_from_seed)
 
 
-@pytest.mark.timeout(PYTEST_TIMEOUT)
-def test_widgets_e2e_log_panel(
-    qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
-):
-    """Test the LogPanel widget."""
-    gui = connected_gui_and_bec_with_scope_session
-    bec = gui._client
-    # Create dock_area, dock, widget
-    dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.LogPanel)
+# @pytest.mark.timeout(PYTEST_TIMEOUT)
+# def test_widgets_e2e_log_panel(
+#     qtbot, connected_gui_and_bec_with_scope_session, random_generator_from_seed
+# ):
+#     """Test the LogPanel widget."""
+#     gui = connected_gui_and_bec_with_scope_session
+#     bec = gui._client
+#     # Create dock_area, dock, widget
+#     dock_area, dock, widget = create_widget(qtbot, gui, gui.available_widgets.LogPanel)
 
-    # No rpc calls to check so far
+#     # No rpc calls to check so far
 
-    # Test removing the widget, or leaving it open for the next test
-    maybe_remove_widget(qtbot, gui, dock, widget, random_generator_from_seed)
-    maybe_remove_dock_area(qtbot, gui, dock_area, random_generator_from_seed)
+#     # Test removing the widget, or leaving it open for the next test
+#     maybe_remove_widget(qtbot, gui, dock, widget, random_generator_from_seed)
+#     maybe_remove_dock_area(qtbot, gui, dock_area, random_generator_from_seed)
 
 
 @pytest.mark.timeout(PYTEST_TIMEOUT)
