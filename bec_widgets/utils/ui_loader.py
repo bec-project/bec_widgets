@@ -1,7 +1,5 @@
-import inspect
-
 from bec_lib.logger import bec_logger
-from qtpy import PYQT6, PYSIDE6, QT_VERSION
+from qtpy import PYQT6, PYSIDE6
 from qtpy.QtCore import QFile, QIODevice
 
 from bec_widgets.utils.generate_designer_plugin import DesignerPluginInfo
@@ -13,7 +11,7 @@ if PYSIDE6:
     from PySide6.QtUiTools import QUiLoader
 
     class CustomUiLoader(QUiLoader):
-        def __init__(self, baseinstance, custom_widgets: dict = None):
+        def __init__(self, baseinstance, custom_widgets: dict | None = None):
             super().__init__(baseinstance)
             self.custom_widgets = custom_widgets or {}
 
