@@ -288,9 +288,6 @@ class LaunchWindow(BECMainWindow):
     def hide_launcher(self):
         self.hide()
 
-    def cleanup(self):
-        super().close()
-
     def showEvent(self, event):
         super().showEvent(event)
         self.setFixedSize(self.size())
