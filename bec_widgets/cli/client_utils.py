@@ -204,8 +204,6 @@ class BECGuiClient(RPCBase):
         super().__init__(**kwargs)
         self._lock = Lock()
         self._anchor_widget = "launcher"
-        self._auto_updates_enabled = True
-        self._auto_updates = None
         self._killed = False
         self._top_level: dict[str, RPCReference] = {}
         self._startup_timeout = 0
