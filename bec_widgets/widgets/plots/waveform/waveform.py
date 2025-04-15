@@ -1167,7 +1167,7 @@ class Waveform(PlotBase):
         """
         name = curve.config.signal.name
         logger.info(
-            f"subscriptions before removal: {self.bec_dispatcher.client.connector._stream_topics_subscription.values()}"
+            f"subscriptions before removal: {self.bec_dispatcher.client.connector._stream_topics_subscription.values()} and pubsub: {self.bec_dispatcher.client.connector._topics_cb.values()}"
         )
         self.bec_dispatcher.disconnect_slot(
             self.on_async_readback, MessageEndpoints.device_async_readback(self.old_scan_id, name)
@@ -1216,6 +1216,8 @@ class Waveform(PlotBase):
                 logger.warning("Scan ID mismatch, ignoring async readback.")
                 return
             logger.info(f"Async readback for scan ID {scan_id}.")
+        else:
+            print()
         instruction = metadata.get("async_update", {}).get("type")
         if instruction not in ["add", "add_slice", "replace"]:
             logger.warning(f"Invalid async update instruction: {instruction}")
