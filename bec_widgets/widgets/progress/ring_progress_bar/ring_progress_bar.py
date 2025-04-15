@@ -123,7 +123,7 @@ class RingProgressBar(BECWidget, QWidget):
 
         # For updating bar behaviour
         self._auto_updates = True
-        self._rings = None
+        self._rings = []
 
         if num_bars is not None:
             self.config.num_bars = max(
@@ -134,11 +134,12 @@ class RingProgressBar(BECWidget, QWidget):
         self.enable_auto_updates(self.config.auto_updates)
 
     @property
-    def rings(self):
+    def rings(self) -> list[Ring]:
+        """Returns a list of all rings in the progress bar."""
         return self._rings
 
     @rings.setter
-    def rings(self, value):
+    def rings(self, value: list[Ring]):
         self._rings = value
 
     def update_config(self, config: RingProgressBarConfig | dict):
@@ -169,9 +170,7 @@ class RingProgressBar(BECWidget, QWidget):
             )
             for i in range(self.config.num_bars)
         ]
-        self._rings = [
-            Ring(parent_progress_widget=self, config=config) for config in self.config.rings
-        ]
+        self._rings = [Ring(parent=self, config=config) for config in self.config.rings]
 
         if self.config.color_map:
             self.set_colors_from_map(self.config.color_map)
@@ -199,7 +198,7 @@ class RingProgressBar(BECWidget, QWidget):
                 directions=-1,
                 **kwargs,
             )
-            ring = Ring(parent_progress_widget=self, config=ring_config)
+            ring = Ring(parent=self, config=ring_config)
             self.config.num_bars += 1
             self._rings.append(ring)
             self.config.rings.append(ring.config)
@@ -225,7 +224,10 @@ class RingProgressBar(BECWidget, QWidget):
         self._reindex_rings()
         if self.config.color_map:
             self.set_colors_from_map(self.config.color_map)
-        del ring
+        # Remove ring from rpc, afterwards call close event.
+        ring.rpc_register.remove_rpc(ring)
+        ring.deleteLater()
+        # del ring
         self.update()
 
     def _reindex_rings(self):
@@ -292,7 +294,7 @@ class RingProgressBar(BECWidget, QWidget):
                     widget_class="Ring", index=i, start_positions=90 * 16, directions=-1
                 )
                 self.config.rings.append(new_ring_config)
-                new_ring = Ring(parent_progress_widget=self, config=new_ring_config)
+                new_ring = Ring(parent=self, config=new_ring_config)
                 self._rings.append(new_ring)
 
         elif num_bars < current_num_bars:

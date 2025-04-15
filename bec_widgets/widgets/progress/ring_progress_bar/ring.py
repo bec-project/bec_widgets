@@ -96,7 +96,6 @@ class Ring(BECConnector, QObject):
     def __init__(
         self,
         parent=None,
-        parent_progress_widget=None,
         config: RingConfig | dict | None = None,
         client=None,
         gui_id: Optional[str] = None,
@@ -111,7 +110,8 @@ class Ring(BECConnector, QObject):
             self.config = config
         super().__init__(parent=parent, client=client, config=config, gui_id=gui_id, **kwargs)
 
-        self.parent_progress_widget = parent_progress_widget
+        self.parent_progress_widget = parent
+
         self.color = None
         self.background_color = None
         self.start_position = None
