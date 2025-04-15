@@ -1167,12 +1167,12 @@ class Waveform(PlotBase):
         self.bec_dispatcher.disconnect_slot(
             self.on_async_readback, MessageEndpoints.device_async_readback(self.old_scan_id, name)
         )
+        QApplication.processEvents()  # Process events to avoid async callbacks scheduled but executed in the wrong order
         try:
             curve.clear_data()
         except KeyError:
             logger.warning(f"Curve {name} not found in plot item.")
             pass
-        QApplication.processEvents()  # Process events to avoid async callbacks scheduled but executed in the wrong order
         self.bec_dispatcher.connect_slot(
             self.on_async_readback,
             MessageEndpoints.device_async_readback(self.scan_id, name),
