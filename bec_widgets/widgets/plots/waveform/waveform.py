@@ -1173,6 +1173,7 @@ class Waveform(PlotBase):
             self.on_async_readback, MessageEndpoints.device_async_readback(self.old_scan_id, name)
         )
         try:
+            logger.info(f"Clearing data for curve {name}")
             curve.clear_data()
         except KeyError:
             logger.warning(f"Curve {name} not found in plot item.")
@@ -1243,7 +1244,6 @@ class Waveform(PlotBase):
                     x_data, y_data = curve.get_data()
 
                     if y_data is not None:
-                        traceback.print_stack()
                         logger.warning(
                             f"Async data for curve {curve.name()}, shape: ({x_data.shape}, {y_data.shape}) (x,y)"
                         )
