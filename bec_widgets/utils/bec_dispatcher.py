@@ -27,7 +27,7 @@ class QtThreadSafeCallback(QObject):
 
     def __init__(self, cb):
         super().__init__()
-
+        self.topics = None
         self.cb = cb
         self.cb_signal.connect(self.cb)
 
@@ -38,6 +38,7 @@ class QtThreadSafeCallback(QObject):
         return id(self.cb)
 
     def __call__(self, msg_content, metadata):
+        logger.info(f"Received message for topic {self.topics}")
         self.cb_signal.emit(msg_content, metadata)
 
 
@@ -147,6 +148,7 @@ class BECDispatcher:
             topics (EndpointInfo | str | list): A topic or list of topics that can typically be acquired via bec_lib.MessageEndpoints
         """
         slot = QtThreadSafeCallback(slot)
+        slot.topics = topics
         self.client.connector.register(topics, cb=slot, **kwargs)
         topics_str, _ = self.client.connector._convert_endpointinfo(topics)
         self._slots[slot].update(set(topics_str))
