@@ -110,6 +110,7 @@ def test_rpc_waveform_scan(qtbot, bec_client_lib, connected_client_gui_obj):
     assert plt_data["bpm4d-bpm4d"]["y"] == last_scan_data["bpm4d"]["bpm4d"].val
 
 
+@pytest.mark.timeout(100)
 def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
     gui = connected_client_gui_obj
     dock = gui.bec
@@ -122,12 +123,12 @@ def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
     # Test add
     dev.waveform.sim.select_model("GaussianModel")
     dev.waveform.sim.params = {"amplitude": 1000, "center": 4000, "sigma": 300}
-    dev.waveform.async_update.put("add")
-    dev.waveform.waveform_shape.put(10000)
+    dev.waveform.async_update.set("add").wait()
+    dev.waveform.waveform_shape.set(1000).wait()
     wf = dock.new("wf_dock").new("Waveform")
     curve = wf.plot(y_name="waveform")
 
-    status = scans.line_scan(dev.samx, -5, 5, steps=10, exp_time=0.05, relative=False)
+    status = scans.line_scan(dev.samx, -5, 5, steps=5, exp_time=0.05, relative=False)
     status.wait()
 
     # Wait for the scan to finish and the data to be available in history

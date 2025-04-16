@@ -29,7 +29,7 @@ def gui_id():
 
 
 @pytest.fixture
-def connected_client_gui_obj(gui_id, bec_client_lib):
+def connected_client_gui_obj(qtbot, gui_id, bec_client_lib):
     """
     Fixture to create a new BECGuiClient object and start a server in the background.
 
@@ -38,6 +38,7 @@ def connected_client_gui_obj(gui_id, bec_client_lib):
     gui = BECGuiClient(gui_id=gui_id)
     try:
         gui.start(wait=True)
+        qtbot.waitUntil(lambda: hasattr(gui, "bec"), timeout=5000)
         yield gui
     finally:
         gui.kill_server()
