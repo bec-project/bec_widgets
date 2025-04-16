@@ -1179,7 +1179,7 @@ class Waveform(PlotBase):
             self.on_async_readback,
             MessageEndpoints.device_async_readback(self.scan_id, name),
             cb_info={"scan_id": self.scan_id},
-            from_start=True,
+            # from_start=True,
         )
         logger.info(f"Setup async curve {name}")
 
