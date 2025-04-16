@@ -144,20 +144,13 @@ class RPCBase:
     def __repr__(self):
         type_ = type(self)
         qualname = type_.__qualname__
-        return f"<{qualname} with name: {self.widget_name}>"
+        return f"<{qualname} with name: {self.object_name}>"
 
     def remove(self):
         """
         Remove the widget.
         """
         self._run_rpc("remove")
-
-    @property
-    def widget_name(self):
-        """
-        Get the widget name.
-        """
-        return self.object_name
 
     @property
     def _root(self) -> BECGuiClient:

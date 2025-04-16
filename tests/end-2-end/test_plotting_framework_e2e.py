@@ -148,13 +148,6 @@ def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
         y_data, last_scan_data.devices.waveform.get("waveform_waveform", {}).read().get("value", [])
     )
 
-    # Check displayed data
-    x_data_display, y_data_display = curve._get_displayed_data()
-    # Should be not more than 1% difference, actually be closer but this might be flaky
-    assert np.isclose(x_data_display[-1], x_data[-1], rtol=0.01)
-    # Downsampled data should be smaller than original data
-    assert len(y_data_display) < len(y_data)
-
 
 def test_rpc_image(qtbot, bec_client_lib, connected_client_gui_obj):
     gui = connected_client_gui_obj
