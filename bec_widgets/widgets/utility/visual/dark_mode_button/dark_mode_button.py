@@ -31,9 +31,9 @@ class DarkModeButton(BECWidget, QWidget):
         self.layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         if toolbar:
-            self.mode_button = QToolButton()
+            self.mode_button = QToolButton(parent=parent)
         else:
-            self.mode_button = QPushButton()
+            self.mode_button = QPushButton(parent=parent)
 
         self.dark_mode_enabled = self._get_qapp_dark_mode_state()
         self.update_mode_button()

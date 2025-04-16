@@ -181,7 +181,7 @@ class BECDockArea(BECWidget, QWidget):
 
         self.layout.addWidget(self.toolbar)
         self.layout.addWidget(self.dock_area)
-        self.spacer = QWidget()
+        self.spacer = QWidget(parent=self)
         self.spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.toolbar.addWidget(self.spacer)
         self.toolbar.addWidget(self.dark_mode_button)
@@ -440,6 +440,8 @@ class BECDockArea(BECWidget, QWidget):
         Cleanup the dock area.
         """
         self.delete_all()
+        self.dark_mode_button.close()
+        self.dark_mode_button.deleteLater()
         super().cleanup()
 
     def show(self):

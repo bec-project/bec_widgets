@@ -37,7 +37,7 @@ class ExpandableGroupFrame(QFrame):
         self._title_layout.addWidget(self._expansion_button)
         self._title_layout.addWidget(self._title)
 
-        self._contents = QWidget()
+        self._contents = QWidget(self)
         self._layout.addWidget(self._contents)
 
         self._expansion_button.clicked.connect(self.switch_expanded_state)

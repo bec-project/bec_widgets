@@ -146,7 +146,7 @@ class LaunchWindow(BECMainWindow):
         self.dark_mode_button = DarkModeButton(parent=self, toolbar=True)
         self.toolbar = ModularToolBar(parent=self)
         self.addToolBar(Qt.TopToolBarArea, self.toolbar)
-        self.spacer = QWidget()
+        self.spacer = QWidget(self)
         self.spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.toolbar.addWidget(self.spacer)
         self.toolbar.addWidget(self.dark_mode_button)

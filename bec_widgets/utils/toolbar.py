@@ -118,7 +118,7 @@ class IconAction(ToolBarAction):
     def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
         icon = QIcon()
         icon.addFile(self.icon_path, size=QSize(20, 20))
-        self.action = QAction(icon, self.tooltip, target)
+        self.action = QAction(icon=icon, text=self.tooltip, parent=target)
         self.action.setCheckable(self.checkable)
         toolbar.addAction(self.action)
 
@@ -128,7 +128,7 @@ class QtIconAction(ToolBarAction):
         super().__init__(icon_path=None, tooltip=tooltip, checkable=checkable)
         self.standard_icon = standard_icon
         self.icon = QApplication.style().standardIcon(standard_icon)
-        self.action = QAction(self.icon, self.tooltip, parent)
+        self.action = QAction(icon=self.icon, text=self.tooltip, parent=parent)
         self.action.setCheckable(self.checkable)
 
     def add_to_toolbar(self, toolbar, target):
@@ -173,7 +173,7 @@ class MaterialIconAction(ToolBarAction):
             filled=self.filled,
             color=self.color,
         )
-        self.action = QAction(self.icon, self.tooltip, parent=parent)
+        self.action = QAction(icon=self.icon, text=self.tooltip, parent=parent)
         self.action.setCheckable(self.checkable)
 
     def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
@@ -212,12 +212,12 @@ class DeviceSelectionAction(ToolBarAction):
         self.device_combobox.currentIndexChanged.connect(lambda: self.set_combobox_style("#ffa700"))
 
     def add_to_toolbar(self, toolbar, target):
-        widget = QWidget()
+        widget = QWidget(parent=target)
         layout = QHBoxLayout(widget)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         if self.label is not None:
-            label = QLabel(f"{self.label}")
+            label = QLabel(text=f"{self.label}", parent=target)
             layout.addWidget(label)
         if self.device_combobox is not None:
             layout.addWidget(self.device_combobox)
@@ -280,7 +280,9 @@ class SwitchableToolBarAction(ToolBarAction):
         self.main_button.clicked.connect(self._trigger_current_action)
         menu = QMenu(self.main_button)
         for key, action_obj in self.actions.items():
-            menu_action = QAction(action_obj.get_icon(), action_obj.tooltip, self.main_button)
+            menu_action = QAction(
+                icon=action_obj.get_icon(), text=action_obj.tooltip, parent=self.main_button
+            )
             menu_action.setIconVisibleInMenu(True)
             menu_action.setCheckable(self.checkable)
             menu_action.setChecked(key == self.current_key)
@@ -369,13 +371,13 @@ class WidgetAction(ToolBarAction):
             toolbar (QToolBar): The toolbar to add the widget to.
             target (QWidget): The target widget for the action.
         """
-        self.container = QWidget()
+        self.container = QWidget(parent=target)
         layout = QHBoxLayout(self.container)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
         if self.label is not None:
-            label_widget = QLabel(f"{self.label}")
+            label_widget = QLabel(text=f"{self.label}", parent=target)
             label_widget.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
             label_widget.setAlignment(Qt.AlignVCenter | Qt.AlignRight)
             layout.addWidget(label_widget)
@@ -437,7 +439,7 @@ class ExpandableMenuAction(ToolBarAction):
         )
         menu = QMenu(button)
         for action_id, action in self.actions.items():
-            sub_action = QAction(action.tooltip, target)
+            sub_action = QAction(text=action.tooltip, parent=target)
             sub_action.setIconVisibleInMenu(True)
             if action.icon_path:
                 icon = QIcon()
