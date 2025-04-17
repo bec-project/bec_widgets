@@ -83,7 +83,6 @@ class ClearableBoolEntry(QWidget):
 
 
 class MetadataWidget(QWidget):
-
     valueChanged = Signal()
 
     def __init__(self, info: FieldInfo, parent: QWidget | None = None) -> None:
@@ -250,7 +249,9 @@ def widget_from_type(annotation: type | None) -> Callable[[FieldInfo], MetadataW
     if annotation in [bool, bool | None]:
         return BoolMetadataField
     else:
-        logger.warning(f"Type {annotation} is not (yet) supported in metadata form creation.")
+        logger.warning(
+            f"Type {annotation} is not (yet) supported in metadata form creation."
+        )
         return StrMetadataField
 
 

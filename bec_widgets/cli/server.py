@@ -28,6 +28,7 @@ class SimpleFileLikeFromLogOutputFunc:
     def __init__(self, log_func):
         self._log_func = log_func
         self._buffer = []
+        self.encoding = "utf8"
 
     def write(self, buffer):
         self._buffer.append(buffer)
