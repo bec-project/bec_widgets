@@ -1,4 +1,4 @@
-""" Module for DapComboBox widget class to select a DAP model from a combobox. """
+"""Module for DapComboBox widget class to select a DAP model from a combobox."""
 
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import Property, Signal, Slot
@@ -16,7 +16,7 @@ class DapComboBox(BECWidget, QWidget):
     Args:
         parent: Parent widget.
         client: BEC client object.
-        gui_id: GUI ID.
+        gui_id: GUI ID.--
         default: Default device name.
     """
 
@@ -154,7 +154,9 @@ class DapComboBox(BECWidget, QWidget):
     def populate_fit_model_combobox(self):
         """Populate the fit_model_combobox with the devices."""
         # pylint: disable=protected-access
-        self.available_models = [model for model in self.client.dap._available_dap_plugins.keys()]
+        self.available_models = [
+            model for model in self.client.dap._available_dap_plugins.keys()
+        ]
         self.fit_model_combobox.clear()
         self.fit_model_combobox.addItems(self.available_models)
 

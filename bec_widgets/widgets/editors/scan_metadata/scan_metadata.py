@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 logger = bec_logger.logger
 
 
-class ScanMetadata(BECWidget, QWidget):
+class PydanticModelForm(BECWidget, QWidget):
     """Dynamically generates a form for inclusion of metadata for a scan. Uses the
     metadata schema registry supplied in the plugin repo to find pydantic models
     associated with the scan type. Sets limits for numerical values if specified."""
@@ -75,7 +75,9 @@ class ScanMetadata(BECWidget, QWidget):
         self._new_grid_layout()
         self._grid_container.addLayout(self._md_grid_layout)
 
-        self._additional_md_box = ExpandableGroupFrame("Additional metadata", expanded=False)
+        self._additional_md_box = ExpandableGroupFrame(
+            "Additional metadata", expanded=False
+        )
         self._layout.addWidget(self._additional_md_box)
         self._additional_md_box_layout = QHBoxLayout()
         self._additional_md_box.set_layout(self._additional_md_box_layout)
@@ -129,7 +131,9 @@ class ScanMetadata(BECWidget, QWidget):
         self._populate()
 
     def _populate(self):
-        self._additional_metadata.update_disallowed_keys(list(self._md_schema.model_fields.keys()))
+        self._additional_metadata.update_disallowed_keys(
+            list(self._md_schema.model_fields.keys())
+        )
         for i, (field_name, info) in enumerate(self._md_schema.model_fields.items()):
             self._add_griditem(field_name, info, i)
 
@@ -146,7 +150,11 @@ class ScanMetadata(BECWidget, QWidget):
     def _dict_from_grid(self) -> dict[str, str | int | float | Decimal | bool]:
         grid = self._md_grid_layout
         return {
-            grid.itemAtPosition(i, 0).widget().property("_model_field_name"): grid.itemAtPosition(i, 1).widget().getValue()  # type: ignore # we only add 'MetadataWidget's here
+            grid.itemAtPosition(i, 0)
+            .widget()
+            .property("_model_field_name"): grid.itemAtPosition(i, 1)
+            .widget()
+            .getValue()  # type: ignore # we only add 'MetadataWidget's here
             for i in range(grid.rowCount())
         }
 
@@ -182,6 +190,9 @@ class ScanMetadata(BECWidget, QWidget):
         self._additional_md_box.setVisible(not hide)
 
 
+class ScanMetadata(PydanticModelForm): ...
+
+
 if __name__ == "__main__":  # pragma: no cover
     from unittest.mock import patch
 
@@ -190,15 +201,21 @@ if __name__ == "__main__":  # pragma: no cover
     from bec_widgets.utils.colors import set_theme
 
     class ExampleSchema1(BasicScanMetadata):
-        abc: int = Field(gt=0, lt=2000, description="Heating temperature abc", title="A B C")
-        foo: str = Field(max_length=12, description="Sample database code", default="DEF123")
+        abc: int = Field(
+            gt=0, lt=2000, description="Heating temperature abc", title="A B C"
+        )
+        foo: str = Field(
+            max_length=12, description="Sample database code", default="DEF123"
+        )
         xyz: Decimal = Field(decimal_places=4)
         baz: bool
 
     class ExampleSchema2(BasicScanMetadata):
         checkbox_up_top: bool
         checkbox_again: bool = Field(
-            title="Checkbox Again", description="this one defaults to True", default=True
+            title="Checkbox Again",
+            description="this one defaults to True",
+            default=True,
         )
         different_items: int | None = Field(
             None, description="This is just one different item...", gt=-100, lt=0
@@ -211,9 +228,12 @@ if __name__ == "__main__":  # pragma: no cover
 
     with patch(
         "bec_lib.metadata_schema._get_metadata_schema_registry",
-        lambda: {"scan1": ExampleSchema1, "scan2": ExampleSchema2, "scan3": ExampleSchema3},
+        lambda: {
+            "scan1": ExampleSchema1,
+            "scan2": ExampleSchema2,
+            "scan3": ExampleSchema3,
+        },
     ):
-
         app = QApplication([])
         w = QWidget()
         selection = QComboBox()
