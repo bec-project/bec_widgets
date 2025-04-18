@@ -1220,6 +1220,7 @@ class Waveform(PlotBase):
             stack_trace = traceback.extract_stack()
             logger.warning(f"Async readback without scan ID, stack trace: {stack_trace}")
             logger.warning(f"Sender: {sender}, cb_info: {getattr(sender, 'cb_info', None)}")
+            return
         instruction = metadata.get("async_update", {}).get("type")
         if instruction not in ["add", "add_slice", "replace"]:
             logger.warning(f"Invalid async update instruction: {instruction}")
