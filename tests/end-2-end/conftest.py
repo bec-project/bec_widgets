@@ -60,7 +60,7 @@ def connected_client_gui_obj(gui_id, bec_client_lib):
 #         bec.shutdown()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def bec_client_lib_with_demo_config(bec_redis_fixture, bec_services_config_file_path, bec_servers):
     config = ServiceConfig(bec_services_config_file_path)
     bec = BECClient(config, RedisConnector, forced=True, wait_for_server=True)
@@ -73,32 +73,32 @@ def bec_client_lib_with_demo_config(bec_redis_fixture, bec_services_config_file_
         bec._client._reset_singleton()
 
 
-# @pytest.fixture(scope="session")
-# def bec_client_lib_session(bec_client_lib_with_demo_config_session):
-#     """Session-scoped fixture to create a BECClient object with a demo configuration."""
-#     bec = bec_client_lib_with_demo_config_session
-#     bec.queue.request_queue_reset()
-#     bec.queue.request_scan_continuation()
-#     wait_for_empty_queue(bec)
-#     yield bec
+@pytest.fixture(scope="module")
+def bec_client_lib(bec_client_lib_with_demo_config):
+    """Session-scoped fixture to create a BECClient object with a demo configuration."""
+    bec = bec_client_lib_with_demo_config
+    bec.queue.request_queue_reset()
+    bec.queue.request_scan_continuation()
+    wait_for_empty_queue(bec)
+    yield bec
 
 
-# @pytest.fixture(scope="session")
-# def connected_gui_and_bec_with_scope_session(bec_client_lib):
-#     """
-#     Fixture to create a new BECGuiClient object and start a server in the background.
+@pytest.fixture(scope="module")
+def connected_gui_and_bec_with_scope_session(bec_client_lib):
+    """
+    Fixture to create a new BECGuiClient object and start a server in the background.
 
-#     This fixture is scoped to the session, meaning it remains alive for all tests in the session.
-#     We can use this fixture to create a gui object that is used across multiple tests, and
-#     simulate a real-world scenario where the gui is not restarted for each test.
+    This fixture is scoped to the session, meaning it remains alive for all tests in the session.
+    We can use this fixture to create a gui object that is used across multiple tests, and
+    simulate a real-world scenario where the gui is not restarted for each test.
 
-#     Returns:
-#         The gui object as for the CLI and bec_client_lib object.
-#     """
-#     gui_id = "GUIMainWindow_TEST"
-#     gui = BECGuiClient(gui_id=gui_id)
-#     try:
-#         gui.start(wait=True)
-#         yield gui
-#     finally:
-#         gui.kill_server()
+    Returns:
+        The gui object as for the CLI and bec_client_lib object.
+    """
+    gui_id = "GUIMainWindow_TEST"
+    gui = BECGuiClient(gui_id=gui_id)
+    try:
+        gui.start(wait=True)
+        yield gui
+    finally:
+        gui.kill_server()
