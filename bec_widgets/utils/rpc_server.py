@@ -125,7 +125,7 @@ class RPCServer:
     def run_rpc(self, obj, method, args, kwargs):
         # Run with rpc registry broadcast, but only once
         with RPCRegister.delayed_broadcast():
-            logger.debug(f"Running RPC instruction: {method} with args: {args}, kwargs: {kwargs}")
+            logger.info(f"Running RPC instruction: {method} with args: {args}, kwargs: {kwargs}")
             method_obj = getattr(obj, method)
             # check if the method accepts args and kwargs
             if not callable(method_obj):

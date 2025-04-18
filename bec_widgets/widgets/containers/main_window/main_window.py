@@ -1,5 +1,6 @@
 import os
 
+from bec_lib.logger import bec_logger
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QAction, QActionGroup, QIcon
 from qtpy.QtWidgets import QApplication, QMainWindow, QStyle
@@ -15,6 +16,8 @@ from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
 
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
+
+logger = bec_logger.logger
 
 
 class BECMainWindow(BECWidget, QMainWindow):
@@ -170,6 +173,7 @@ class BECMainWindow(BECWidget, QMainWindow):
         apply_theme(theme)
 
     def cleanup(self):
+        logger.info("Cleaning up BECMainWindow with delayed broadcast")
         with RPCRegister.delayed_broadcast():
             central_widget = self.centralWidget()
             central_widget.close()
