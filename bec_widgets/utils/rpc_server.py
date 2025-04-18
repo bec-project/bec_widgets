@@ -190,6 +190,10 @@ class RPCServer:
                 continue
             data[key] = self._serialize_bec_connector(val)
 
+        stack_trace = traceback.extract_stack()
+        stack_trace = [f"{frame.filename}:{frame.lineno}" for frame in stack_trace]
+        stack_trace = "\n".join(stack_trace)
+        logger.info(f"Stack trace: {stack_trace}")
         logger.info(f"Broadcasting registry update: {data} for {self.gui_id}")
         self.client.connector.xadd(
             MessageEndpoints.gui_registry_state(self.gui_id),
