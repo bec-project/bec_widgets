@@ -70,7 +70,9 @@ class RPCServer:
         self.client = self.dispatcher.client if client is None else client
         self.client.start()
         self.gui_id = gui_id
+
         # register broadcast callback
+        self._broadcasted_data = None
         self.rpc_register = RPCRegister()
         self.rpc_register.add_callback(self.broadcast_registry_update)
 
@@ -189,7 +191,9 @@ class RPCServer:
             if not getattr(val, "RPC", True):
                 continue
             data[key] = self._serialize_bec_connector(val)
-
+        if self._broadcasted_data == data:
+            return
+        self._broadcasted_data = data
         stack_trace = traceback.extract_stack()
         stack_trace = [f"{frame.filename}:{frame.lineno}" for frame in stack_trace]
         stack_trace = "\n".join(stack_trace)
