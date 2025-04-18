@@ -122,8 +122,10 @@ def test_async_plotting(qtbot, bec_client_lib, connected_client_gui_obj):
     # Test add
     dev.waveform.sim.select_model("GaussianModel")
     dev.waveform.sim.params = {"amplitude": 1000, "center": 400, "sigma": 300}
-    dev.waveform.async_update.put("add")
-    dev.waveform.waveform_shape.put(1000)  # Do not reduce, data needs to be large to downsample
+    dev.waveform.async_update.set("add").wait()
+    dev.waveform.waveform_shape.set(
+        1000
+    ).wait()  # Do not reduce, data needs to be large to downsample
     wf = dock.new("wf_dock").new("Waveform")
     curve = wf.plot(y_name="waveform")
 
