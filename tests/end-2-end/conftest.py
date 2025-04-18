@@ -47,33 +47,31 @@ def connected_client_gui_obj(gui_id, bec_client_lib):
         gui.kill_server()
 
 
-@pytest.fixture(scope="session")
-def bec_client_lib_with_demo_config_session(
-    bec_redis_fixture, bec_services_config_file_path, bec_servers
-):
-    """Session-scoped fixture to create a BECClient object with a demo configuration."""
-    config = ServiceConfig(bec_services_config_file_path)
-    bec = BECClient(config, RedisConnector, forced=True, wait_for_server=True)
-    bec.start()
-    bec.config.load_demo_config()
-    try:
-        yield bec
-    finally:
-        bec.shutdown()
+# @pytest.fixture(scope="session")
+# def bec_client_lib_with_demo_config(bec_redis_fixture, bec_services_config_file_path, bec_servers):
+#     """Session-scoped fixture to create a BECClient object with a demo configuration."""
+#     config = ServiceConfig(bec_services_config_file_path)
+#     bec = BECClient(config, RedisConnector, forced=True, wait_for_server=True)
+#     bec.start()
+#     bec.config.load_demo_config()
+#     try:
+#         yield bec
+#     finally:
+#         bec.shutdown()
+
+
+# @pytest.fixture(scope="session")
+# def bec_client_lib_session(bec_client_lib_with_demo_config_session):
+#     """Session-scoped fixture to create a BECClient object with a demo configuration."""
+#     bec = bec_client_lib_with_demo_config_session
+#     bec.queue.request_queue_reset()
+#     bec.queue.request_scan_continuation()
+#     wait_for_empty_queue(bec)
+#     yield bec
 
 
 @pytest.fixture(scope="session")
-def bec_client_lib_session(bec_client_lib_with_demo_config_session):
-    """Session-scoped fixture to create a BECClient object with a demo configuration."""
-    bec = bec_client_lib_with_demo_config_session
-    bec.queue.request_queue_reset()
-    bec.queue.request_scan_continuation()
-    wait_for_empty_queue(bec)
-    yield bec
-
-
-@pytest.fixture(scope="session")
-def connected_gui_and_bec_with_scope_session(bec_client_lib_session):
+def connected_gui_and_bec_with_scope_session(bec_client_lib):
     """
     Fixture to create a new BECGuiClient object and start a server in the background.
 
