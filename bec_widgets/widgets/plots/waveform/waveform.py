@@ -1191,7 +1191,7 @@ class Waveform(PlotBase):
         logger.info(f"Setup async curve {name}")
 
     @SafeSlot(dict, dict)
-    def on_async_readback(self, msg, metadata):
+    def on_async_readback(self, msg, metadata, skip_sender_validation: bool = False):
         """
         Get async data readback. This code needs to be fast, therefor we try
         to reduce the number of copies in between cycles. Be careful when refactoring
@@ -1208,6 +1208,7 @@ class Waveform(PlotBase):
         Args:
             msg(dict): Message with the async data.
             metadata(dict): Metadata of the message.
+            skip_sender_validation(bool): Skip sender validation. Used for testing. Default is False.
         """
         sender = self.sender()
         if sender and hasattr(sender, "cb_info"):
@@ -1216,9 +1217,10 @@ class Waveform(PlotBase):
                 logger.warning("Scan ID mismatch, ignoring async readback.")
                 return
             logger.info(f"Async readback for scan ID {scan_id}.")
-        else:
+        elif not skip_sender_validation:
             stack_trace = traceback.extract_stack()
             logger.warning(f"Async readback without scan ID, stack trace: {stack_trace}")
+            return
         instruction = metadata.get("async_update", {}).get("type")
         if instruction not in ["add", "add_slice", "replace"]:
             logger.warning(f"Invalid async update instruction: {instruction}")
