@@ -5,6 +5,7 @@ from qtpy.QtGui import QAction, QActionGroup, QIcon
 from qtpy.QtWidgets import QApplication, QMainWindow, QStyle
 
 import bec_widgets
+from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
@@ -169,19 +170,20 @@ class BECMainWindow(BECWidget, QMainWindow):
         apply_theme(theme)
 
     def cleanup(self):
-        central_widget = self.centralWidget()
-        central_widget.close()
-        central_widget.deleteLater()
-        if not isinstance(central_widget, BECWidget):
-            # if the central widget is not a BECWidget, we need to call the cleanup method
-            # of all widgets whose parent is the current BECMainWindow
-            children = self.findChildren(BECWidget)
-            for child in children:
-                ancestor = WidgetHierarchy._get_becwidget_ancestor(child)
-                if ancestor is self:
-                    child.cleanup()
-                    child.close()
-                    child.deleteLater()
+        with RPCRegister.delayed_broadcast():
+            central_widget = self.centralWidget()
+            central_widget.close()
+            central_widget.deleteLater()
+            if not isinstance(central_widget, BECWidget):
+                # if the central widget is not a BECWidget, we need to call the cleanup method
+                # of all widgets whose parent is the current BECMainWindow
+                children = self.findChildren(BECWidget)
+                for child in children:
+                    ancestor = WidgetHierarchy._get_becwidget_ancestor(child)
+                    if ancestor is self:
+                        child.cleanup()
+                        child.close()
+                        child.deleteLater()
         super().cleanup()
 
 
