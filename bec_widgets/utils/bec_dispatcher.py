@@ -35,7 +35,7 @@ class QtThreadSafeCallback(QObject):
         # make 2 differents QtThreadSafeCallback to look
         # identical when used as dictionary keys, if the
         # callback is the same
-        return id(self.cb)
+        return f"{id(self.cb)}{self.cb_info}".__hash__()
 
     def __call__(self, msg_content, metadata):
         self.cb_signal.emit(msg_content, metadata)
