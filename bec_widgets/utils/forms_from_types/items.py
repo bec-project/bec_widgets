@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from decimal import Decimal
-from typing import TYPE_CHECKING, Callable, get_args
+from types import UnionType
+from typing import Callable, Protocol
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.fields import FieldInfo
 from qtpy.QtCore import Signal  # type: ignore
 from qtpy.QtWidgets import (
     QApplication,
@@ -33,10 +35,20 @@ from bec_widgets.widgets.editors.scan_metadata._util import (
     field_precision,
 )
 
-if TYPE_CHECKING:  # pragma: no cover
-    from pydantic.fields import FieldInfo
-
 logger = bec_logger.logger
+
+
+class FormItemSpec(BaseModel):
+    """
+    The specification for an item in a dynamically generated form. Uses a pydantic FieldInfo
+    to store most annotation info, since one of the main purposes is to store data for
+    forms genrated from pydantic models, but can also be composed from other sources or by hand.
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    item_type: type | UnionType
+    name: str
+    info: FieldInfo = FieldInfo()
 
 
 class ClearableBoolEntry(QWidget):
@@ -82,21 +94,20 @@ class ClearableBoolEntry(QWidget):
         self._false.setToolTip(tooltip)
 
 
-class MetadataWidget(QWidget):
-
+class DynamicFormItem(QWidget):
     valueChanged = Signal()
 
-    def __init__(self, info: FieldInfo, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: QWidget | None = None, *, spec: FormItemSpec) -> None:
         super().__init__(parent)
-        self._info = info
+        self._spec = spec
         self._layout = QHBoxLayout()
         self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.setSizeConstraint(QLayout.SizeConstraint.SetMaximumSize)
-        self._default = field_default(self._info)
-        self._desc = self._info.description
+        self._default = field_default(self._spec.info)
+        self._desc = self._spec.info.description
         self.setLayout(self._layout)
         self._add_main_widget()
-        if clearable_required(info):
+        if clearable_required(spec.info):
             self._add_clear_button()
 
     @abstractmethod
@@ -127,15 +138,15 @@ class MetadataWidget(QWidget):
         self.valueChanged.emit()
 
 
-class StrMetadataField(MetadataWidget):
-    def __init__(self, info: FieldInfo, parent: QWidget | None = None) -> None:
-        super().__init__(info, parent)
+class StrMetadataField(DynamicFormItem):
+    def __init__(self, parent: QWidget | None = None, *, spec: FormItemSpec) -> None:
+        super().__init__(parent=parent, spec=spec)
         self._main_widget.textChanged.connect(self._value_changed)
 
     def _add_main_widget(self) -> None:
         self._main_widget = QLineEdit()
         self._layout.addWidget(self._main_widget)
-        min_length, max_length = field_minlen(self._info), field_maxlen(self._info)
+        min_length, max_length = (field_minlen(self._spec.info), field_maxlen(self._spec.info))
         if max_length:
             self._main_widget.setMaxLength(max_length)
         self._main_widget.setToolTip(
@@ -156,15 +167,15 @@ class StrMetadataField(MetadataWidget):
         self._main_widget.setText(value)
 
 
-class IntMetadataField(MetadataWidget):
-    def __init__(self, info: FieldInfo, parent: QWidget | None = None) -> None:
-        super().__init__(info, parent)
+class IntMetadataField(DynamicFormItem):
+    def __init__(self, parent: QWidget | None = None, *, spec: FormItemSpec) -> None:
+        super().__init__(parent=parent, spec=spec)
         self._main_widget.textChanged.connect(self._value_changed)
 
     def _add_main_widget(self) -> None:
         self._main_widget = QSpinBox()
         self._layout.addWidget(self._main_widget)
-        min_, max_ = field_limits(self._info, int)
+        min_, max_ = field_limits(self._spec.info, int)
         self._main_widget.setMinimum(min_)
         self._main_widget.setMaximum(max_)
         self._main_widget.setToolTip(f"(range {min_} to {max_}){self._describe()}")
@@ -185,18 +196,18 @@ class IntMetadataField(MetadataWidget):
         self._main_widget.setValue(value)
 
 
-class FloatDecimalMetadataField(MetadataWidget):
-    def __init__(self, info: FieldInfo, parent: QWidget | None = None) -> None:
-        super().__init__(info, parent)
+class FloatDecimalMetadataField(DynamicFormItem):
+    def __init__(self, parent: QWidget | None = None, *, spec: FormItemSpec) -> None:
+        super().__init__(parent=parent, spec=spec)
         self._main_widget.textChanged.connect(self._value_changed)
 
     def _add_main_widget(self) -> None:
         self._main_widget = QDoubleSpinBox()
         self._layout.addWidget(self._main_widget)
-        min_, max_ = field_limits(self._info, int)
+        min_, max_ = field_limits(self._spec.info, int)
         self._main_widget.setMinimum(min_)
         self._main_widget.setMaximum(max_)
-        precision = field_precision(self._info)
+        precision = field_precision(self._spec.info)
         if precision:
             self._main_widget.setDecimals(precision)
         minstr = f"{float(min_):.3f}" if abs(min_) <= 1000 else f"{float(min_):.3e}"
@@ -219,13 +230,13 @@ class FloatDecimalMetadataField(MetadataWidget):
         self._main_widget.setValue(value)
 
 
-class BoolMetadataField(MetadataWidget):
-    def __init__(self, info: FieldInfo, parent: QWidget | None = None) -> None:
-        super().__init__(info, parent)
+class BoolMetadataField(DynamicFormItem):
+    def __init__(self, *, parent: QWidget | None = None, spec: FormItemSpec) -> None:
+        super().__init__(parent=parent, spec=spec)
         self._main_widget.stateChanged.connect(self._value_changed)
 
     def _add_main_widget(self) -> None:
-        if clearable_required(self._info):
+        if clearable_required(self._spec.info):
             self._main_widget = ClearableBoolEntry()
         else:
             self._main_widget = QCheckBox()
@@ -240,7 +251,7 @@ class BoolMetadataField(MetadataWidget):
         self._main_widget.setChecked(value)
 
 
-def widget_from_type(annotation: type | None) -> Callable[[FieldInfo], MetadataWidget]:
+def widget_from_type(annotation: type | UnionType | None) -> type[DynamicFormItem]:
     if annotation in [str, str | None]:
         return StrMetadataField
     if annotation in [int, int | None]:

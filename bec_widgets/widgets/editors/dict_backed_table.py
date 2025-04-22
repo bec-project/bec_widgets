@@ -16,11 +16,19 @@ from qtpy.QtWidgets import (
 from bec_widgets.utils.error_popups import SafeSlot
 
 
-class AdditionalMetadataTableModel(QAbstractTableModel):
+class DictBackedTableModel(QAbstractTableModel):
     def __init__(self, data):
+        """A model to go with DictBackedTable, which represents key-value pairs
+        to be displayed in a TreeWidget.
+
+        Args:
+            data (list[list[str]]): list of key-value pairs to initialise with"""
         super().__init__()
         self._data: list[list[str]] = data
         self._disallowed_keys: list[str] = []
+
+    # pylint: disable=missing-function-docstring
+    # see QAbstractTableModel documentation for these methods
 
     def headerData(
         self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole()
@@ -49,6 +57,10 @@ class AdditionalMetadataTableModel(QAbstractTableModel):
         return False
 
     def update_disallowed_keys(self, keys: list[str]):
+        """Set the list of keys which may not be used.
+
+        Args:
+            keys (list[str]): list of keys which are forbidden."""
         self._disallowed_keys = keys
         for i, item in enumerate(self._data):
             if item[0] in self._disallowed_keys:
@@ -95,16 +107,21 @@ class AdditionalMetadataTableModel(QAbstractTableModel):
         return dict(self._data)
 
 
-class AdditionalMetadataTable(QWidget):
-
+class DictBackedTable(QWidget):
     delete_rows = Signal(list)
 
     def __init__(self, initial_data: list[list[str]]):
+        """Widget which uses a DictBackedTableModel to display an editable table
+        which can be extracted as a dict.
+
+        Args:
+            initial_data (list[list[str]]): list of key-value pairs to initialise with
+        """
         super().__init__()
 
         self._layout = QHBoxLayout()
         self.setLayout(self._layout)
-        self._table_model = AdditionalMetadataTableModel(initial_data)
+        self._table_model = DictBackedTableModel(initial_data)
         self._table_view = QTreeView()
         self._table_view.setModel(self._table_model)
         self._table_view.setSizePolicy(
@@ -126,15 +143,21 @@ class AdditionalMetadataTable(QWidget):
         self.delete_rows.connect(self._table_model.delete_rows)
 
     def delete_selected_rows(self):
+        """Delete rows which are part of the selection model"""
         cells: list[QModelIndex] = self._table_view.selectionModel().selectedIndexes()
         row_indices = list({r.row() for r in cells})
         if row_indices:
             self.delete_rows.emit(row_indices)
 
     def dump_dict(self):
+        """Get the current content of the table as a dict"""
         return self._table_model.dump_dict()
 
     def update_disallowed_keys(self, keys: list[str]):
+        """Set the list of keys which may not be used.
+
+        Args:
+            keys (list[str]): list of keys which are forbidden."""
         self._table_model.update_disallowed_keys(keys)
 
 
@@ -144,6 +167,6 @@ if __name__ == "__main__":  # pragma: no cover
     app = QApplication([])
     set_theme("dark")
 
-    window = AdditionalMetadataTable([["key1", "value1"], ["key2", "value2"], ["key3", "value3"]])
+    window = DictBackedTable([["key1", "value1"], ["key2", "value2"], ["key3", "value3"]])
     window.show()
     app.exec()

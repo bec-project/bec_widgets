@@ -5,11 +5,16 @@ import pytest
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.messages import AvailableResourceMessage, ScanQueueHistoryMessage, ScanQueueMessage
 
+from bec_widgets.utils.forms_from_types.items import StrMetadataField
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.control.scan_control import ScanControl
-from bec_widgets.widgets.editors.scan_metadata._metadata_widgets import StrMetadataField
 
 from .client_mocks import mocked_client
+
+# pylint: disable=no-member
+# pylint: disable=missing-function-docstring
+# pylint: disable=redefined-outer-name
+# pylint: disable=protected-access
 
 available_scans_message = AvailableResourceMessage(
     resource={
@@ -539,9 +544,10 @@ def test_scan_metadata_is_connected(scan_control):
     assert scan_control._metadata_form._scan_name == "line_scan"
     scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
     assert scan_control._metadata_form._scan_name == "grid_scan"
-    sample_name = scan_control._metadata_form._md_grid_layout.itemAtPosition(0, 1).widget()
+    sample_name = scan_control._metadata_form._form_grid.layout().itemAtPosition(0, 1).widget()
     assert isinstance(sample_name, StrMetadataField)
     sample_name._main_widget.setText("Test Sample")
+
     scan_control._metadata_form._additional_metadata._table_model._data = [
         ["test key 1", "test value 1"],
         ["test key 2", "test value 2"],

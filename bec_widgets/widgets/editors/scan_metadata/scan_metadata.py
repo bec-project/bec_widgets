@@ -1,52 +1,21 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from types import NoneType
-from typing import TYPE_CHECKING
 
 from bec_lib.logger import bec_logger
 from bec_lib.metadata_schema import get_metadata_schema_for_scan
-from bec_qthemes import material_icon
-from pydantic import Field, ValidationError
-from qtpy.QtCore import Signal  # type: ignore
-from qtpy.QtWidgets import (
-    QApplication,
-    QComboBox,
-    QGridLayout,
-    QHBoxLayout,
-    QLabel,
-    QLayout,
-    QVBoxLayout,
-    QWidget,
-)
+from pydantic import Field
+from qtpy.QtWidgets import QApplication, QComboBox, QHBoxLayout, QVBoxLayout, QWidget
 
-from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.compact_popup import CompactPopupWidget
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.expandable_frame import ExpandableGroupFrame
-from bec_widgets.widgets.editors.scan_metadata._metadata_widgets import widget_from_type
-from bec_widgets.widgets.editors.scan_metadata.additional_metadata_table import (
-    AdditionalMetadataTable,
-)
-
-if TYPE_CHECKING:  # pragma: no cover
-    from pydantic.fields import FieldInfo
+from bec_widgets.utils.forms_from_types.forms import PydanticModelForm
+from bec_widgets.widgets.editors.dict_backed_table import DictBackedTable
 
 logger = bec_logger.logger
 
 
-class ScanMetadata(BECWidget, QWidget):
-    """Dynamically generates a form for inclusion of metadata for a scan. Uses the
-    metadata schema registry supplied in the plugin repo to find pydantic models
-    associated with the scan type. Sets limits for numerical values if specified."""
-
-    PLUGIN = True
-    ICON_NAME = "list_alt"
-
-    metadata_updated = Signal(dict)
-    metadata_cleared = Signal(NoneType)
-    RPC = False
-
+class ScanMetadata(PydanticModelForm):
     def __init__(
         self,
         parent=None,
@@ -55,117 +24,35 @@ class ScanMetadata(BECWidget, QWidget):
         initial_extras: list[list[str]] | None = None,
         **kwargs,
     ):
-        super().__init__(parent=parent, client=client, **kwargs)
+        """Dynamically generates a form for inclusion of metadata for a scan. Uses the
+        metadata schema registry supplied in the plugin repo to find pydantic models
+        associated with the scan type. Sets limits for numerical values if specified.
 
-        self.set_schema(scan_name)
+        Args:
+            scan_name (str): The scan for which to generate a metadata form
+            Initial_extras (list[list[str]]): Initial data with which to populate the additional
+                                              metadata table - inner lists should be key-value pairs
+        """
 
-        self._layout = QVBoxLayout()
-        self._layout.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(self._layout)
-
-        self._required_md_box = ExpandableGroupFrame("Scan schema metadata")
-        self._layout.addWidget(self._required_md_box)
-        self._required_md_box_layout = QHBoxLayout()
-        self._required_md_box.set_layout(self._required_md_box_layout)
-
-        self._md_grid = QWidget()
-        self._required_md_box_layout.addWidget(self._md_grid)
-        self._grid_container = QVBoxLayout()
-        self._md_grid.setLayout(self._grid_container)
-        self._new_grid_layout()
-        self._grid_container.addLayout(self._md_grid_layout)
-
+        # self.populate() gets called in super().__init__
+        # so make sure self._additional_metadata exists
         self._additional_md_box = ExpandableGroupFrame("Additional metadata", expanded=False)
-        self._layout.addWidget(self._additional_md_box)
         self._additional_md_box_layout = QHBoxLayout()
         self._additional_md_box.set_layout(self._additional_md_box_layout)
 
-        self._additional_metadata = AdditionalMetadataTable(initial_extras or [])
-        self._additional_md_box_layout.addWidget(self._additional_metadata)
-
-        self._validity = CompactPopupWidget()
-        self._validity.compact_view = True  # type: ignore
-        self._validity.label = "Metadata validity"  # type: ignore
-        self._validity.compact_show_popup.setIcon(
-            material_icon(icon_name="info", size=(10, 10), convert_to_pixmap=False)
-        )
-        self._validity_message = QLabel("Not yet validated")
-        self._validity.addWidget(self._validity_message)
-        self._layout.addWidget(self._validity)
-
-        self.populate()
-
-    @SafeSlot(str)
-    def update_with_new_scan(self, scan_name: str):
-        self.set_schema(scan_name)
-        self.populate()
-        self.validate_form()
-
-    def validate_form(self, *_) -> bool:
-        """validate the currently entered metadata against the pydantic schema.
-        If successful, returns on metadata_emitted and returns true.
-        Otherwise, emits on metadata_cleared and returns false."""
-        try:
-            metadata_dict = self.get_full_model_dict()
-            self._md_schema.model_validate(metadata_dict)
-            self._validity.set_global_state("success")
-            self._validity_message.setText("No errors!")
-            self.metadata_updated.emit(metadata_dict)
-        except ValidationError as e:
-            self._validity.set_global_state("emergency")
-            self._validity_message.setText(str(e))
-            self.metadata_cleared.emit(None)
-
-    def get_full_model_dict(self):
-        """Get the entered metadata as a dict"""
-        return self._additional_metadata.dump_dict() | self._dict_from_grid()
-
-    def set_schema(self, scan_name: str | None = None):
+        self._additional_metadata = DictBackedTable(initial_extras or [])
         self._scan_name = scan_name or ""
         self._md_schema = get_metadata_schema_for_scan(self._scan_name)
 
-    def populate(self):
-        self._clear_grid()
-        self._populate()
+        super().__init__(self._md_schema, parent, client, **kwargs)
 
-    def _populate(self):
-        self._additional_metadata.update_disallowed_keys(list(self._md_schema.model_fields.keys()))
-        for i, (field_name, info) in enumerate(self._md_schema.model_fields.items()):
-            self._add_griditem(field_name, info, i)
+        self._layout.addWidget(self._additional_md_box)
+        self._additional_md_box_layout.addWidget(self._additional_metadata)
 
-    def _add_griditem(self, field_name: str, info: FieldInfo, row: int):
-        grid = self._md_grid_layout
-        label = QLabel(info.title or field_name)
-        label.setProperty("_model_field_name", field_name)
-        label.setToolTip(info.description or field_name)
-        grid.addWidget(label, row, 0)
-        widget = widget_from_type(info.annotation)(info)
-        widget.valueChanged.connect(self.validate_form)
-        grid.addWidget(widget, row, 1)
-
-    def _dict_from_grid(self) -> dict[str, str | int | float | Decimal | bool]:
-        grid = self._md_grid_layout
-        return {
-            grid.itemAtPosition(i, 0).widget().property("_model_field_name"): grid.itemAtPosition(i, 1).widget().getValue()  # type: ignore # we only add 'MetadataWidget's here
-            for i in range(grid.rowCount())
-        }
-
-    def _clear_grid(self):
-        while self._md_grid_layout.count():
-            item = self._md_grid_layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.deleteLater()
-        self._md_grid_layout.deleteLater()
-        self._new_grid_layout()
-        self._grid_container.addLayout(self._md_grid_layout)
-        self._md_grid.adjustSize()
-        self.adjustSize()
-
-    def _new_grid_layout(self):
-        self._md_grid_layout = QGridLayout()
-        self._md_grid_layout.setContentsMargins(0, 0, 0, 0)
-        self._md_grid_layout.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
+    @SafeSlot(str)
+    def update_with_new_scan(self, scan_name: str):
+        self.set_schema_from_scan(scan_name)
+        self.validate_form()
 
     @SafeProperty(bool)
     def hide_optional_metadata(self):  # type: ignore
@@ -181,8 +68,25 @@ class ScanMetadata(BECWidget, QWidget):
         """
         self._additional_md_box.setVisible(not hide)
 
+    def get_form_data(self):
+        """Get the entered metadata as a dict"""
+        return self._additional_metadata.dump_dict() | self._dict_from_grid()
+
+    def populate(self):
+        self._additional_metadata.update_disallowed_keys(list(self._md_schema.model_fields.keys()))
+        super().populate()
+
+    def set_schema_from_scan(self, scan_name: str | None):
+        self._scan_name = scan_name or ""
+        self.set_schema(get_metadata_schema_for_scan(self._scan_name))
+        self.populate()
+
 
 if __name__ == "__main__":  # pragma: no cover
+    # pylint: disable=redefined-outer-name
+    # pylint: disable=protected-access
+    # pylint: disable=disallowed-name
+
     from unittest.mock import patch
 
     from bec_lib.metadata_schema import BasicScanMetadata
@@ -213,7 +117,6 @@ if __name__ == "__main__":  # pragma: no cover
         "bec_lib.metadata_schema._get_metadata_schema_registry",
         lambda: {"scan1": ExampleSchema1, "scan2": ExampleSchema2, "scan3": ExampleSchema3},
     ):
-
         app = QApplication([])
         w = QWidget()
         selection = QComboBox()

@@ -64,7 +64,6 @@ class ScanControl(BECWidget, QWidget):
         default_scan: str | None = None,
         **kwargs,
     ):
-
         if config is None:
             config = ScanControlConfig(
                 widget_class=self.__class__.__name__, allowed_scans=allowed_scans

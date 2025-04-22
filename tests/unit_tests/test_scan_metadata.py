@@ -1,5 +1,4 @@
 from decimal import Decimal
-from typing import Annotated
 
 import pytest
 from bec_lib.metadata_schema import BasicScanMetadata
@@ -7,17 +6,20 @@ from pydantic import Field
 from pydantic.types import Json
 from qtpy.QtCore import QItemSelectionModel, QPoint, Qt
 
-from bec_widgets.widgets.editors.scan_metadata import ScanMetadata
-from bec_widgets.widgets.editors.scan_metadata._metadata_widgets import (
+from bec_widgets.utils.forms_from_types.items import (
     BoolMetadataField,
+    DynamicFormItem,
     FloatDecimalMetadataField,
     IntMetadataField,
-    MetadataWidget,
     StrMetadataField,
 )
-from bec_widgets.widgets.editors.scan_metadata.additional_metadata_table import (
-    AdditionalMetadataTable,
-)
+from bec_widgets.widgets.editors.dict_backed_table import DictBackedTable
+from bec_widgets.widgets.editors.scan_metadata.scan_metadata import ScanMetadata
+
+# pylint: disable=no-member
+# pylint: disable=missing-function-docstring
+# pylint: disable=redefined-outer-name
+# pylint: disable=protected-access
 
 
 class ExampleSchema(BasicScanMetadata):
@@ -34,8 +36,6 @@ class ExampleSchema(BasicScanMetadata):
     decimal_dp_limits_nodefault: Decimal = Field(Decimal(1.23), decimal_places=2, gt=1, le=34.5)
     unsupported_class: Json = Field(default_factory=dict)
 
-
-pytest.approx(0.1)
 
 TEST_DICT = {
     "sample_name": "test name",
@@ -72,17 +72,17 @@ def metadata_widget(empty_metadata_widget: ScanMetadata):
     widget._md_schema = ExampleSchema
     widget.populate()
 
-    sample_name = widget._md_grid_layout.itemAtPosition(0, 1).widget()
-    str_optional = widget._md_grid_layout.itemAtPosition(1, 1).widget()
-    str_required = widget._md_grid_layout.itemAtPosition(2, 1).widget()
-    bool_optional = widget._md_grid_layout.itemAtPosition(3, 1).widget()
-    bool_required_default = widget._md_grid_layout.itemAtPosition(4, 1).widget()
-    bool_required_nodefault = widget._md_grid_layout.itemAtPosition(5, 1).widget()
-    int_default = widget._md_grid_layout.itemAtPosition(6, 1).widget()
-    int_nodefault_optional = widget._md_grid_layout.itemAtPosition(7, 1).widget()
-    float_nodefault = widget._md_grid_layout.itemAtPosition(8, 1).widget()
-    decimal_dp_limits_nodefault = widget._md_grid_layout.itemAtPosition(9, 1).widget()
-    unsupported_class = widget._md_grid_layout.itemAtPosition(10, 1).widget()
+    sample_name = widget._form_grid.layout().itemAtPosition(0, 1).widget()
+    str_optional = widget._form_grid.layout().itemAtPosition(1, 1).widget()
+    str_required = widget._form_grid.layout().itemAtPosition(2, 1).widget()
+    bool_optional = widget._form_grid.layout().itemAtPosition(3, 1).widget()
+    bool_required_default = widget._form_grid.layout().itemAtPosition(4, 1).widget()
+    bool_required_nodefault = widget._form_grid.layout().itemAtPosition(5, 1).widget()
+    int_default = widget._form_grid.layout().itemAtPosition(6, 1).widget()
+    int_nodefault_optional = widget._form_grid.layout().itemAtPosition(7, 1).widget()
+    float_nodefault = widget._form_grid.layout().itemAtPosition(8, 1).widget()
+    decimal_dp_limits_nodefault = widget._form_grid.layout().itemAtPosition(9, 1).widget()
+    unsupported_class = widget._form_grid.layout().itemAtPosition(10, 1).widget()
 
     yield (
         widget,
@@ -102,7 +102,7 @@ def metadata_widget(empty_metadata_widget: ScanMetadata):
     )
 
 
-def fill_commponents(components: dict[str, MetadataWidget]):
+def fill_commponents(components: dict[str, DynamicFormItem]):
     components["sample_name"].setValue("test name")
     components["str_optional"].setValue(None)
     components["str_required"].setValue("something")
@@ -116,7 +116,7 @@ def fill_commponents(components: dict[str, MetadataWidget]):
 
 
 def test_griditems_are_correct_class(
-    metadata_widget: tuple[ScanMetadata, dict[str, MetadataWidget]]
+    metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]]
 ):
     _, components = metadata_widget
     assert isinstance(components["sample_name"], StrMetadataField)
@@ -132,15 +132,15 @@ def test_griditems_are_correct_class(
     assert isinstance(components["unsupported_class"], StrMetadataField)
 
 
-def test_grid_to_dict(metadata_widget: tuple[ScanMetadata, dict[str, MetadataWidget]]):
+def test_grid_to_dict(metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]]):
     widget, components = metadata_widget = metadata_widget
     fill_commponents(components)
 
     assert widget._dict_from_grid() == TEST_DICT
-    assert widget.get_full_model_dict() == TEST_DICT | {"extra_field": "extra_data"}
+    assert widget.get_form_data() == TEST_DICT | {"extra_field": "extra_data"}
 
 
-def test_validation(metadata_widget: tuple[ScanMetadata, dict[str, MetadataWidget]]):
+def test_validation(metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]]):
     widget, components = metadata_widget = metadata_widget
     assert widget._validity.compact_status.styleSheet().startswith(
         widget._validity.compact_status.default_led[:114]
@@ -161,7 +161,9 @@ def test_validation(metadata_widget: tuple[ScanMetadata, dict[str, MetadataWidge
     components["float_nodefault"].setValue(True)
 
 
-def test_numbers_clipped_to_limits(metadata_widget: tuple[ScanMetadata, dict[str, MetadataWidget]]):
+def test_numbers_clipped_to_limits(
+    metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]]
+):
     widget, components = metadata_widget = metadata_widget
     fill_commponents(components)
 
@@ -173,20 +175,20 @@ def test_numbers_clipped_to_limits(metadata_widget: tuple[ScanMetadata, dict[str
 
 @pytest.fixture
 def table():
-    table = AdditionalMetadataTable([["key1", "value1"], ["key2", "value2"], ["key3", "value3"]])
+    table = DictBackedTable([["key1", "value1"], ["key2", "value2"], ["key3", "value3"]])
     yield table
     table._table_model.deleteLater()
     table._table_view.deleteLater()
     table.deleteLater()
 
 
-def test_additional_metadata_table_add_row(table: AdditionalMetadataTable):
+def test_additional_metadata_table_add_row(table: DictBackedTable):
     assert table._table_model.rowCount() == 3
     table._add_button.click()
     assert table._table_model.rowCount() == 4
 
 
-def test_additional_metadata_table_delete_row(table: AdditionalMetadataTable):
+def test_additional_metadata_table_delete_row(table: DictBackedTable):
     assert table._table_model.rowCount() == 3
     m = table._table_view.selectionModel()
     item = table._table_view.indexAt(QPoint(0, 0)).siblingAtRow(1)
@@ -196,14 +198,14 @@ def test_additional_metadata_table_delete_row(table: AdditionalMetadataTable):
     assert list(table.dump_dict().keys()) == ["key1", "key3"]
 
 
-def test_additional_metadata_allows_changes(table: AdditionalMetadataTable):
+def test_additional_metadata_allows_changes(table: DictBackedTable):
     assert table._table_model.rowCount() == 3
     assert list(table.dump_dict().keys()) == ["key1", "key2", "key3"]
     table._table_model.setData(table._table_model.index(1, 0), "key4", Qt.ItemDataRole.EditRole)
     assert list(table.dump_dict().keys()) == ["key1", "key4", "key3"]
 
 
-def test_additional_metadata_doesnt_allow_dupes(table: AdditionalMetadataTable):
+def test_additional_metadata_doesnt_allow_dupes(table: DictBackedTable):
     assert table._table_model.rowCount() == 3
     assert list(table.dump_dict().keys()) == ["key1", "key2", "key3"]
     table._table_model.setData(table._table_model.index(1, 0), "key1", Qt.ItemDataRole.EditRole)
