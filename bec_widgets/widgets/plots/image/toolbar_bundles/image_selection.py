@@ -40,7 +40,7 @@ class MonitorSelectionToolbarBundle(ToolbarBundle):
         self.add_action("monitor", WidgetAction(widget=self.device_combo_box, adjust_size=True))
 
         # 2) Dimension combo box
-        self.dim_combo_box = QComboBox()
+        self.dim_combo_box = QComboBox(parent=self.target_widget)
         self.dim_combo_box.addItems(["auto", "1d", "2d"])
         self.dim_combo_box.setCurrentText("auto")
         self.dim_combo_box.setToolTip("Monitor Dimension")
