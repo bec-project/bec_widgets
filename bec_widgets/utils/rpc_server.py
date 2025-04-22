@@ -18,6 +18,7 @@ from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.error_popups import ErrorPopupUtility
+from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib import messages
@@ -212,6 +213,15 @@ class RPCServer:
         config_dict = connector.config.model_dump()
         config_dict["parent_id"] = getattr(connector, "parent_id", None)
 
+        try:
+            parent = connector.parent()
+            if isinstance(parent, BECMainWindow):
+                container_proxy = parent.gui_id
+            else:
+                container_proxy = None
+        except Exception:
+            container_proxy = None
+
         if wait:
             while not self.rpc_register.object_is_registered(connector):
                 QApplication.processEvents()
@@ -225,6 +235,7 @@ class RPCServer:
             "object_name": connector.object_name or connector.__class__.__name__,
             "widget_class": widget_class,
             "config": config_dict,
+            "container_proxy": container_proxy,
             "__rpc__": True,
         }
 

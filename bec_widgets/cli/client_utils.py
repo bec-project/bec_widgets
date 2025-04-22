@@ -31,7 +31,8 @@ logger = bec_logger.logger
 IGNORE_WIDGETS = ["LaunchWindow"]
 
 RegistryState: TypeAlias = dict[
-    Literal["gui_id", "name", "widget_class", "config", "__rpc__"], str | bool | dict
+    Literal["gui_id", "name", "widget_class", "config", "__rpc__", "container_proxy"],
+    str | bool | dict,
 ]
 
 # pylint: disable=redefined-outer-scope

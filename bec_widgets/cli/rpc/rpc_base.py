@@ -130,6 +130,7 @@ class RPCBase:
         config: dict | None = None,
         object_name: str | None = None,
         parent=None,
+        **kwargs,
     ) -> None:
         self._client = BECClient()  # BECClient is a singleton; here, we simply get the instance
         self._config = config if config is not None else {}
@@ -150,6 +151,13 @@ class RPCBase:
         """
         Remove the widget.
         """
+        obj = self._root._server_registry.get(self._gui_id)
+        if obj is None:
+            raise ValueError(f"Widget {self._gui_id} not found.")
+        if proxy := obj.get("container_proxy"):
+            assert isinstance(proxy, str)
+            self._run_rpc("remove", gui_id=proxy)
+            return
         self._run_rpc("remove")
 
     @property
@@ -164,7 +172,15 @@ class RPCBase:
             parent = parent._parent
         return parent  # type: ignore
 
-    def _run_rpc(self, method, *args, wait_for_rpc_response=True, timeout=5, **kwargs) -> Any:
+    def _run_rpc(
+        self,
+        method,
+        *args,
+        wait_for_rpc_response=True,
+        timeout=5,
+        gui_id: str | None = None,
+        **kwargs,
+    ) -> Any:
         """
         Run the RPC call.
 
@@ -172,6 +188,8 @@ class RPCBase:
             method: The method to call.
             args: The arguments to pass to the method.
             wait_for_rpc_response: Whether to wait for the RPC response.
+            timeout: The timeout for the RPC response.
+            gui_id: The GUI ID to use for the RPC call. If None, the default GUI ID is used.
             kwargs: The keyword arguments to pass to the method.
 
         Returns:
@@ -180,7 +198,7 @@ class RPCBase:
         request_id = str(uuid.uuid4())
         rpc_msg = messages.GUIInstructionMessage(
             action=method,
-            parameter={"args": args, "kwargs": kwargs, "gui_id": self._gui_id},
+            parameter={"args": args, "kwargs": kwargs, "gui_id": gui_id or self._gui_id},
             metadata={"request_id": request_id},
         )
         # pylint: disable=protected-access
