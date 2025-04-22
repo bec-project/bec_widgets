@@ -16,7 +16,7 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import LogLevel, bec_logger
 from bec_lib.messages import LogMessage, StatusMessage
 from PySide6.QtCore import QObject
-from qtpy.QtCore import QDateTime, Qt, Signal, SignalInstance  # type: ignore
+from qtpy.QtCore import QDateTime, Qt, Signal
 from qtpy.QtGui import QFont
 from qtpy.QtWidgets import (
     QApplication,
@@ -53,7 +53,7 @@ from bec_widgets.widgets.utility.logpanel._util import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
-    from PySide6.QtCore import SignalInstance
+    from qtpy.QtCore import SignalInstance
 
 logger = bec_logger.logger
 
