@@ -57,6 +57,7 @@ class BECQueue(BECWidget, CompactPopupWidget):
         # self.layout.addWidget(self.table)
         self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels(["Scan Number", "Type", "Status", "Cancel"])
+
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)
 
@@ -73,16 +74,16 @@ class BECQueue(BECWidget, CompactPopupWidget):
         """
         Set the toolbar.
         """
-        widget_label = QLabel("Live Queue")
+        widget_label = QLabel(text="Live Queue", parent=self)
         widget_label.setStyleSheet("font-weight: bold;")
         self.toolbar = ModularToolBar(
             parent=self,
             actions={
                 "widget_label": WidgetAction(widget=widget_label),
                 "separator_1": SeparatorAction(),
-                "resume": WidgetAction(widget=ResumeButton(toolbar=False)),
-                "stop": WidgetAction(widget=StopButton(toolbar=False)),
-                "reset": WidgetAction(widget=ResetButton(toolbar=False)),
+                "resume": WidgetAction(widget=ResumeButton(parent=self, toolbar=False)),
+                "stop": WidgetAction(widget=StopButton(parent=self, toolbar=False)),
+                "reset": WidgetAction(widget=ResetButton(parent=self, toolbar=False)),
             },
             target_widget=self,
         )
@@ -224,7 +225,7 @@ class BECQueue(BECWidget, CompactPopupWidget):
         Returns:
             AbortButton: The abort button.
         """
-        abort_button = AbortButton(scan_id=scan_id)
+        abort_button = AbortButton(parent=self, scan_id=scan_id)
 
         abort_button.button.setText("")
         abort_button.button.setIcon(
@@ -232,7 +233,6 @@ class BECQueue(BECWidget, CompactPopupWidget):
         )
         abort_button.button.setStyleSheet("background-color:  rgba(0,0,0,0) ")
         abort_button.button.setFlat(True)
-
         return abort_button
 
     def delete_selected_row(self):
@@ -240,7 +240,7 @@ class BECQueue(BECWidget, CompactPopupWidget):
         button = self.sender()
         row = self.table.indexAt(button.pos()).row()
         self.table.removeRow(row)
-
+        button.close()
         button.deleteLater()
 
     def reset_content(self):
