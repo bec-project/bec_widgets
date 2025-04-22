@@ -32,7 +32,7 @@ As shown, the default auto updates switches between different visualizations whe
 ```
 ````
 
-As it can be seen from the above snippet, the update method changes the dock to a specific widget, in this case to a waveform widget. After selecting the device for the x axis, the y axis is retrieved from the list of monitored devices or from a user-specified `selected_device`. 
+As can be seen from the above snippet, the update method changes the dock to a specific widget, in this case to a waveform widget. After selecting the device for the x axis, the y axis is retrieved from the list of monitored devices or from a user-specified `selected_device`. 
 
 The y axis can also be set by the user using the `selected_device` attribute:
 
