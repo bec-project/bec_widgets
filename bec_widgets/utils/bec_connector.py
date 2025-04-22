@@ -152,6 +152,9 @@ class BECConnector:
             if connector_parent is not None:
                 self.parent_id = connector_parent.gui_id
 
+        if isinstance(self.parent(), QObject) and hasattr(self, "cleanup"):
+            self.parent().destroyed.connect(self.cleanup)
+
         # Error popups
         self.error_utility = ErrorPopupUtility()
 
