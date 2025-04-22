@@ -266,3 +266,5 @@ class CompactPopupWidget(QWidget):
         # to ensure proper resources cleanup
         for child in self.container.findChildren(QWidget, options=Qt.FindDirectChildrenOnly):
             child.close()
+
+        super().closeEvent(event)
