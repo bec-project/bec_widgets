@@ -217,6 +217,10 @@ class RingProgressBar(BECWidget, QWidget):
             index(int): Index of the progress bar to remove.
         """
         ring = self._find_ring_by_index(index)
+        self._cleanup_ring(ring)
+        self.update()
+
+    def _cleanup_ring(self, ring: Ring) -> None:
         ring.reset_connection()
         self._rings.remove(ring)
         self.config.rings.remove(ring.config)
@@ -228,7 +232,6 @@ class RingProgressBar(BECWidget, QWidget):
         ring.rpc_register.remove_rpc(ring)
         ring.deleteLater()
         # del ring
-        self.update()
 
     def _reindex_rings(self):
         """
@@ -644,6 +647,6 @@ class RingProgressBar(BECWidget, QWidget):
             self.on_scan_queue_status, MessageEndpoints.scan_queue_status()
         )
         for ring in self._rings:
-            ring.reset_connection()
+            self._cleanup_ring(ring)
         self._rings.clear()
         super().cleanup()
