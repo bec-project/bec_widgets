@@ -231,6 +231,10 @@ class LaunchWindow(BECMainWindow):
                     raise ValueError(
                         f"Name {name} must be unique for dock areas, but already exists: {existing_dock_areas}."
                     )
+                if not WidgetContainerUtils.has_name_valid_chars(name):
+                    raise ValueError(
+                        f"Name {name} contains invalid characters. Only alphanumeric characters, underscores, and dashes are allowed."
+                    )
             else:
                 name = "dock_area"
                 name = WidgetContainerUtils.generate_unique_name(name, existing_dock_areas)

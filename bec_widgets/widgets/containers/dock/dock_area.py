@@ -14,6 +14,7 @@ from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils import ConnectionConfig, WidgetContainerUtils
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.name_utils import pascal_to_snake
 from bec_widgets.utils.toolbar import (
     ExpandableMenuAction,
     MaterialIconAction,
@@ -242,7 +243,8 @@ class BECDockArea(BECWidget, QWidget):
     def _create_widget_from_toolbar(self, widget_name: str) -> None:
         # Run with RPC broadcast to namespace of all widgets
         with RPCRegister.delayed_broadcast():
-            dock_name = WidgetContainerUtils.generate_unique_name(widget_name, self.panels.keys())
+            name = pascal_to_snake(widget_name)
+            dock_name = WidgetContainerUtils.generate_unique_name(name, self.panels.keys())
             self.new(name=dock_name, widget=widget_name)
 
     def paintEvent(self, event: QPaintEvent):  # TODO decide if we want any default instructions
@@ -361,6 +363,11 @@ class BECDockArea(BECWidget, QWidget):
                 raise ValueError(
                     f"Name {name} must be unique for docks, but already exists in DockArea "
                     f"with name: {self.object_name} and id {self.gui_id}."
+                )
+            if not WidgetContainerUtils.has_name_valid_chars(name):
+                raise ValueError(
+                    f"Name {name} contains invalid characters. "
+                    f"Only alphanumeric characters and underscores are allowed."
                 )
         else:  # Name is not provided
             name = WidgetContainerUtils.generate_unique_name(name="dock", list_of_names=dock_names)

@@ -5,6 +5,8 @@ from typing import NamedTuple
 
 from qtpy.QtCore import QObject
 
+from bec_widgets.utils.name_utils import pascal_to_snake
+
 EXCLUDED_PLUGINS = ["BECConnector", "BECDockArea", "BECDock", "BECFigure"]
 
 
@@ -22,7 +24,7 @@ class DesignerPluginInfo:
     def __init__(self, plugin_class):
         self.plugin_class = plugin_class
         self.plugin_name_pascal = plugin_class.__name__
-        self.plugin_name_snake = self.pascal_to_snake(self.plugin_name_pascal)
+        self.plugin_name_snake = pascal_to_snake(self.plugin_name_pascal)
         self.widget_import = f"from {plugin_class.__module__} import {self.plugin_name_pascal}"
         plugin_module = (
             ".".join(plugin_class.__module__.split(".")[:-1]) + f".{self.plugin_name_snake}_plugin"
@@ -37,21 +39,6 @@ class DesignerPluginInfo:
         )
 
         self.base_path = os.path.dirname(inspect.getfile(plugin_class))
-
-    @staticmethod
-    def pascal_to_snake(name: str) -> str:
-        """
-        Convert PascalCase to snake_case.
-
-        Args:
-            name (str): The name to be converted.
-
-        Returns:
-            str: The converted name.
-        """
-        s1 = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name)
-        s2 = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", s1)
-        return s2.lower()
 
 
 class DesignerPluginGenerator:

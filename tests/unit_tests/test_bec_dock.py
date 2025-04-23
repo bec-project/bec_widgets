@@ -94,41 +94,45 @@ def test_undock_and_dock_docks(bec_dock_area, qtbot):
 ###################################
 def test_toolbar_add_plot_waveform(bec_dock_area):
     bec_dock_area.toolbar.widgets["menu_plots"].widgets["waveform"].trigger()
-    assert "Waveform_0" in bec_dock_area.panels
-    assert bec_dock_area.panels["Waveform_0"].widgets[0].config.widget_class == "Waveform"
+    assert "waveform_0" in bec_dock_area.panels
+    assert bec_dock_area.panels["waveform_0"].widgets[0].config.widget_class == "Waveform"
 
 
 def test_toolbar_add_plot_scatter_waveform(bec_dock_area):
     bec_dock_area.toolbar.widgets["menu_plots"].widgets["scatter_waveform"].trigger()
-    assert "ScatterWaveform_0" in bec_dock_area.panels
+    assert "scatter_waveform_0" in bec_dock_area.panels
     assert (
-        bec_dock_area.panels["ScatterWaveform_0"].widgets[0].config.widget_class
+        bec_dock_area.panels["scatter_waveform_0"].widgets[0].config.widget_class
         == "ScatterWaveform"
     )
 
 
 def test_toolbar_add_plot_image(bec_dock_area):
     bec_dock_area.toolbar.widgets["menu_plots"].widgets["image"].trigger()
-    assert "Image_0" in bec_dock_area.panels
-    assert bec_dock_area.panels["Image_0"].widgets[0].config.widget_class == "Image"
+    assert "image_0" in bec_dock_area.panels
+    assert bec_dock_area.panels["image_0"].widgets[0].config.widget_class == "Image"
 
 
 def test_toolbar_add_plot_motor_map(bec_dock_area):
     bec_dock_area.toolbar.widgets["menu_plots"].widgets["motor_map"].trigger()
-    assert "MotorMap_0" in bec_dock_area.panels
-    assert bec_dock_area.panels["MotorMap_0"].widgets[0].config.widget_class == "MotorMap"
+    assert "motor_map_0" in bec_dock_area.panels
+    assert bec_dock_area.panels["motor_map_0"].widgets[0].config.widget_class == "MotorMap"
 
 
 def test_toolbar_add_multi_waveform(bec_dock_area):
     bec_dock_area.toolbar.widgets["menu_plots"].widgets["multi_waveform"].trigger()
-    assert "MultiWaveform_0" in bec_dock_area.panels
-    assert bec_dock_area.panels["MultiWaveform_0"].widgets[0].config.widget_class == "MultiWaveform"
+    assert "multi_waveform_0" in bec_dock_area.panels
+    assert (
+        bec_dock_area.panels["multi_waveform_0"].widgets[0].config.widget_class == "MultiWaveform"
+    )
 
 
 def test_toolbar_add_device_positioner_box(bec_dock_area):
     bec_dock_area.toolbar.widgets["menu_devices"].widgets["positioner_box"].trigger()
-    assert "PositionerBox_0" in bec_dock_area.panels
-    assert bec_dock_area.panels["PositionerBox_0"].widgets[0].config.widget_class == "PositionerBox"
+    assert "positioner_box_0" in bec_dock_area.panels
+    assert (
+        bec_dock_area.panels["positioner_box_0"].widgets[0].config.widget_class == "PositionerBox"
+    )
 
 
 def test_toolbar_add_utils_queue(bec_dock_area, bec_queue_msg_full):
@@ -136,20 +140,20 @@ def test_toolbar_add_utils_queue(bec_dock_area, bec_queue_msg_full):
         MessageEndpoints.scan_queue_status(), bec_queue_msg_full
     )
     bec_dock_area.toolbar.widgets["menu_utils"].widgets["queue"].trigger()
-    assert "BECQueue_0" in bec_dock_area.panels
-    assert bec_dock_area.panels["BECQueue_0"].widgets[0].config.widget_class == "BECQueue"
+    assert "bec_queue_0" in bec_dock_area.panels
+    assert bec_dock_area.panels["bec_queue_0"].widgets[0].config.widget_class == "BECQueue"
 
 
 def test_toolbar_add_utils_status(bec_dock_area):
     bec_dock_area.toolbar.widgets["menu_utils"].widgets["status"].trigger()
-    assert "BECStatusBox_0" in bec_dock_area.panels
-    assert bec_dock_area.panels["BECStatusBox_0"].widgets[0].config.widget_class == "BECStatusBox"
+    assert "bec_status_box_0" in bec_dock_area.panels
+    assert bec_dock_area.panels["bec_status_box_0"].widgets[0].config.widget_class == "BECStatusBox"
 
 
 def test_toolbar_add_utils_progress_bar(bec_dock_area):
     bec_dock_area.toolbar.widgets["menu_utils"].widgets["progress_bar"].trigger()
-    assert "RingProgressBar_0" in bec_dock_area.panels
+    assert "ring_progress_bar_0" in bec_dock_area.panels
     assert (
-        bec_dock_area.panels["RingProgressBar_0"].widgets[0].config.widget_class
+        bec_dock_area.panels["ring_progress_bar_0"].widgets[0].config.widget_class
         == "RingProgressBar"
     )
