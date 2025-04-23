@@ -109,6 +109,16 @@ class DesignerPluginGenerator:
                 or bool(init_source.find("super().__init__(parent)") > 0)
             )
 
+        # for the new style classes, we only have one super call. We can therefore check if the
+        # number of __init__ calls is 2 (the class itself and the super class)
+        num_inits = re.findall(r"__init__", init_source)
+        if len(num_inits) == 2 and not super_init_found:
+            super_init_found = bool(
+                init_source.find("super().__init__(parent=parent") > 0
+                or init_source.find("super().__init__(parent,") > 0
+                or init_source.find("super().__init__(parent)") > 0
+            )
+
         if not cls_init_found and not super_init_found:
             raise ValueError(
                 f"Widget class {self.widget.__name__} must call the super constructor with parent."
