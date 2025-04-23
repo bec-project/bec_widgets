@@ -315,4 +315,7 @@ def main():
 
 
 if __name__ == "__main__":  # pragma: no cover
+    import sys
+
+    sys.argv = ["bw-generate-cli", "--target", "csaxs_bec"]
     main()
