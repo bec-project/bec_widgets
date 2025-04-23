@@ -2246,6 +2246,13 @@ class PositionIndicator(RPCBase):
         Property to determine the orientation of the position indicator
         """
 
+    @vertical.setter
+    @rpc_call
+    def vertical(self):
+        """
+        Property to determine the orientation of the position indicator
+        """
+
     @property
     @rpc_call
     def indicator_width(self):
@@ -2253,7 +2260,21 @@ class PositionIndicator(RPCBase):
         Property to get the width of the indicator
         """
 
+    @indicator_width.setter
+    @rpc_call
+    def indicator_width(self):
+        """
+        Property to get the width of the indicator
+        """
+
     @property
+    @rpc_call
+    def rounded_corners(self):
+        """
+        Property to get the rounded corners of the position indicator
+        """
+
+    @rounded_corners.setter
     @rpc_call
     def rounded_corners(self):
         """
@@ -2469,9 +2490,9 @@ class RingProgressBar(RPCBase):
 
     @property
     @rpc_call
-    def rings(self):
+    def rings(self) -> "list[Ring]":
         """
-        None
+        Returns a list of all rings in the progress bar.
         """
 
     @rpc_call

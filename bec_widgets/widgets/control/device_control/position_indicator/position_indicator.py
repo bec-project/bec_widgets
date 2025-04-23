@@ -12,7 +12,16 @@ class PositionIndicator(BECWidget, QWidget):
     Display a position within a defined range, e.g. motor limits.
     """
 
-    USER_ACCESS = ["set_value", "set_range", "vertical", "indicator_width", "rounded_corners"]
+    USER_ACCESS = [
+        "set_value",
+        "set_range",
+        "vertical",
+        "vertical.setter",
+        "indicator_width",
+        "indicator_width.setter",
+        "rounded_corners",
+        "rounded_corners.setter",
+    ]
     PLUGIN = True
     ICON_NAME = "horizontal_distribute"
 
@@ -209,6 +218,12 @@ class PositionIndicator(BECWidget, QWidget):
     @Slot(int)
     @Slot(float)
     def set_value(self, position: float):
+        """
+        Set the position of the indicator
+
+        Args:
+            position: The new position of the indicator
+        """
         self.position = position
         self.update()
 
