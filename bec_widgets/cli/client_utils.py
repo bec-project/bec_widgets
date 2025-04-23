@@ -20,6 +20,7 @@ from rich.table import Table
 
 import bec_widgets.cli.client as client
 from bec_widgets.cli.rpc.rpc_base import RPCBase, RPCReference
+from bec_widgets.utils.serialization import register_serializer_extension
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.messages import GUIRegistryStateMessage
@@ -215,6 +216,7 @@ class BECGuiClient(RPCBase):
         self._server_registry: dict[str, RegistryState] = {}
         self._ipython_registry: dict[str, RPCReference] = {}
         self.available_widgets = AvailableWidgetsNamespace()
+        register_serializer_extension()
 
     ####################
     #### Client API ####

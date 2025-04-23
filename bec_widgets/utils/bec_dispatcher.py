@@ -14,6 +14,8 @@ from bec_lib.service_config import ServiceConfig
 from qtpy.QtCore import QObject
 from qtpy.QtCore import Signal as pyqtSignal
 
+from bec_widgets.utils.serialization import register_serializer_extension
+
 logger = bec_logger.logger
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -119,6 +121,8 @@ class BECDispatcher:
             self.client.start()
         except redis.exceptions.ConnectionError:
             logger.warning("Could not connect to Redis, skipping start of BECClient.")
+
+        register_serializer_extension()
 
         logger.success("Initialized BECDispatcher")
 
