@@ -177,6 +177,8 @@ class RingProgressBar(BECWidget, QWidget):
 
         min_size = self._calculate_minimum_size()
         self.setMinimumSize(min_size)
+        # Set outer ring to listen to scan progress
+        self.rings[0].set_update(mode="scan")
         self.update()
 
     def add_ring(self, **kwargs) -> Ring:

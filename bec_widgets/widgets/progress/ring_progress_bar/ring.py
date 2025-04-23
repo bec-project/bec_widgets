@@ -244,10 +244,10 @@ class Ring(BECConnector, QObject):
         """
         if self.config.connections.endpoint == endpoint and self.config.connections.slot == slot:
             return
-
-        self.bec_dispatcher.disconnect_slot(
-            self.config.connections.slot, self.config.connections.endpoint
-        )
+        if self.config.connections.slot is not None:
+            self.bec_dispatcher.disconnect_slot(
+                getattr(self, self.config.connections.slot), self.config.connections.endpoint
+            )
         self.config.connections = ProgressbarConnections(slot=slot, endpoint=endpoint)
         self.bec_dispatcher.connect_slot(getattr(self, slot), endpoint)
 
