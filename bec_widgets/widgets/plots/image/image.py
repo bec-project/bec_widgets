@@ -27,7 +27,7 @@ logger = bec_logger.logger
 # noinspection PyDataclass
 class ImageConfig(ConnectionConfig):
     color_map: str = Field(
-        "magma", description="The colormap  of the figure widget.", validate_default=True
+        "plasma", description="The colormap  of the figure widget.", validate_default=True
     )
     color_bar: Literal["full", "simple"] | None = Field(
         None, description="The type of the color bar."
@@ -142,8 +142,8 @@ class Image(PlotBase):
         self.plot_item.addItem(self._main_image)
         self.scan_id = None
 
-        # Default Color map to magma
-        self.color_map = "magma"
+        # Default Color map to plasma
+        self.color_map = "plasma"
 
     ################################################################################
     # Widget Specific GUI interactions

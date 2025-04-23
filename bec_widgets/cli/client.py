@@ -2196,7 +2196,7 @@ class MultiWaveform(RPCBase):
         """
 
     @rpc_call
-    def plot(self, monitor: "str", color_palette: "str | None" = "magma"):
+    def plot(self, monitor: "str", color_palette: "str | None" = "plasma"):
         """
         Create a plot for the given monitor.
         Args:
@@ -2966,7 +2966,7 @@ class ScatterWaveform(RPCBase):
         x_entry: "None | str" = None,
         y_entry: "None | str" = None,
         z_entry: "None | str" = None,
-        color_map: "str | None" = "magma",
+        color_map: "str | None" = "plasma",
         label: "str | None" = None,
         validate_bec: "bool" = True,
     ) -> "ScatterCurve":

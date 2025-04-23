@@ -40,7 +40,7 @@ class MultiWaveformSelectionToolbarBundle(ToolbarBundle):
         self.add_action("monitor", WidgetAction(widget=self.monitor, adjust_size=False))
 
         # Colormap Selection
-        self.colormap_widget = BECColorMapWidget(cmap="magma", parent_id=self.target_widget.gui_id)
+        self.colormap_widget = BECColorMapWidget(cmap="plasma", parent_id=self.target_widget.gui_id)
         self.add_action("color_map", WidgetAction(widget=self.colormap_widget, adjust_size=False))
 
         # Connect slots, a device will be connected upon change of any combobox

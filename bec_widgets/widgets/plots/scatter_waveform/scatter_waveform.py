@@ -30,7 +30,7 @@ logger = bec_logger.logger
 # noinspection PyDataclass
 class ScatterWaveformConfig(ConnectionConfig):
     color_map: str | None = Field(
-        "magma",
+        "plasma",
         description="The color map of the z scaling of scatter waveform.",
         validate_default=True,
     )
@@ -266,7 +266,7 @@ class ScatterWaveform(PlotBase):
         x_entry: None | str = None,
         y_entry: None | str = None,
         z_entry: None | str = None,
-        color_map: str | None = "magma",
+        color_map: str | None = "plasma",
         label: str | None = None,
         validate_bec: bool = True,
     ) -> ScatterCurve:

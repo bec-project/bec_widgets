@@ -142,7 +142,7 @@ def curve_tree_fixture(qtbot, mocked_client_with_dap):
     Creates a CurveTree widget referencing a mocked or real Waveform.
     """
     wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
-    wf.color_palette = "magma"
+    wf.color_palette = "plasma"
     curve_tree = create_widget(qtbot, CurveTree, parent=None, waveform=wf)
     return curve_tree, wf
 
@@ -154,7 +154,7 @@ def test_curve_tree_init(curve_tree_fixture):
     """
     curve_tree, wf = curve_tree_fixture
     assert curve_tree.waveform == wf
-    assert curve_tree.color_palette == "magma"
+    assert curve_tree.color_palette == "plasma"
     assert curve_tree.tree.columnCount() == 7
 
     assert "add" in curve_tree.toolbar.widgets

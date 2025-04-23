@@ -13,7 +13,7 @@ from tests.unit_tests.conftest import create_widget
 
 def test_initialization_defaults(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
-    assert bec_image_view.color_map == "magma"
+    assert bec_image_view.color_map == "plasma"
     assert bec_image_view.autorange is True
     assert bec_image_view.autorange_mode == "mean"
     assert bec_image_view.config.lock_aspect_ratio is True

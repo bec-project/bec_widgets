@@ -40,7 +40,7 @@ def test_scatter_waveform_plot(qtbot, mocked_client):
 
 def test_scatter_waveform_color_map(qtbot, mocked_client):
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
-    assert swf.color_map == "magma"
+    assert swf.color_map == "plasma"
 
     swf.color_map = "plasma"
     assert swf.color_map == "plasma"

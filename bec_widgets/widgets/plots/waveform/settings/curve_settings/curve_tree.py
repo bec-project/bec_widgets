@@ -373,7 +373,7 @@ class CurveTree(BECWidget, QWidget):
         if self.waveform and hasattr(self.waveform, "color_palette"):
             self.color_palette = self.waveform.color_palette
         else:
-            self.color_palette = "magma"
+            self.color_palette = "plasma"
 
         self.get_bec_shortcuts()
 
@@ -413,7 +413,7 @@ class CurveTree(BECWidget, QWidget):
         self.toolbar.add_action("renormalize_colors", renorm_action, self)
         renorm_action.action.triggered.connect(lambda checked: self.renormalize_colors())
 
-        self.colormap_widget = BECColorMapWidget(cmap=self.color_palette or "magma")
+        self.colormap_widget = BECColorMapWidget(cmap=self.color_palette or "plasma")
         self.toolbar.addWidget(self.colormap_widget)
         self.colormap_widget.colormap_changed_signal.connect(self.handle_colormap_changed)
 

@@ -25,7 +25,7 @@ def test_multiwaveform_initialization(qtbot, mocked_client):
     assert len(mw.plot_item.curves) == 0
     # Multiwaveform specific
     assert mw.monitor is None
-    assert mw.color_palette == "magma"
+    assert mw.color_palette == "plasma"
     assert mw.max_trace == 200
     assert mw.flush_buffer is False
     assert mw.highlight_last_curve is True
@@ -50,7 +50,7 @@ def test_multiwaveform_set_properties(qtbot, mocked_client):
     mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
 
     # Default checks
-    assert mw.color_palette == "magma"
+    assert mw.color_palette == "plasma"
     assert mw.max_trace == 200
     assert mw.flush_buffer is False
     assert mw.highlight_last_curve is True
@@ -162,7 +162,7 @@ def test_multiwaveform_set_colormap(qtbot, mocked_client):
         mw.on_monitor_1d_update(msg_data, metadata={"scan_id": "scan_1"})
 
     # Default color_palette is "magma"
-    assert mw.color_palette == "magma"
+    assert mw.color_palette == "plasma"
     # Now change to a new colormap
     mw.color_palette = "viridis"
     assert mw.color_palette == "viridis"

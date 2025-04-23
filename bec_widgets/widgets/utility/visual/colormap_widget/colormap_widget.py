@@ -12,7 +12,7 @@ class BECColorMapWidget(BECWidget, QWidget):
     PLUGIN = True
     RPC = False
 
-    def __init__(self, parent=None, cmap: str = "magma", **kwargs):
+    def __init__(self, parent=None, cmap: str = "plasma", **kwargs):
         super().__init__(parent=parent, **kwargs)
         # Create the ColorMapButton
         self.button = ColorMapButton()

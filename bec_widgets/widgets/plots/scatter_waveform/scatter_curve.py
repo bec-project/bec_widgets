@@ -38,7 +38,7 @@ class ScatterCurveConfig(ConnectionConfig):
         "solid", description="The style of the pen of the curve."
     )
     color_map: str | None = Field(
-        "magma", description="The color palette of the figure widget.", validate_default=True
+        "plasma", description="The color palette of the figure widget.", validate_default=True
     )
     x_device: ScatterDeviceSignal | None = Field(
         None, description="The x device signal of the scatter waveform."

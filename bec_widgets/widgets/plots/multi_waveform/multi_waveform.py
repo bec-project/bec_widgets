@@ -25,7 +25,7 @@ logger = bec_logger.logger
 
 class MultiWaveformConfig(ConnectionConfig):
     color_palette: str | None = Field(
-        "magma", description="The color palette of the figure widget.", validate_default=True
+        "plasma", description="The color palette of the figure widget.", validate_default=True
     )
     curve_limit: int | None = Field(
         200, description="The maximum number of curves to display on the plot."
@@ -308,7 +308,7 @@ class MultiWaveform(PlotBase):
     ################################################################################
 
     @SafeSlot(popup_error=True)
-    def plot(self, monitor: str, color_palette: str | None = "magma"):
+    def plot(self, monitor: str, color_palette: str | None = "plasma"):
         """
         Create a plot for the given monitor.
         Args:

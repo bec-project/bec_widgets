@@ -30,7 +30,7 @@ logger = bec_logger.logger
 # noinspection PyDataclass
 class WaveformConfig(ConnectionConfig):
     color_palette: str | None = Field(
-        "magma", description="The color palette of the figure widget.", validate_default=True
+        "plasma", description="The color palette of the figure widget.", validate_default=True
     )
 
     model_config: dict = {"validate_assignment": True}
@@ -1748,12 +1748,10 @@ class Waveform(PlotBase):
         self.proxy_dap_request.cleanup()
         self.clear_all()
         if self.curve_settings_dialog is not None:
-            self.curve_settings_dialog.close()
-            self.curve_settings_dialog.deleteLater()
+            self.curve_settings_dialog.reject()
             self.curve_settings_dialog = None
         if self.dap_summary_dialog is not None:
-            self.dap_summary_dialog.close()
-            self.dap_summary_dialog.deleteLater()
+            self.dap_summary_dialog.reject()
             self.dap_summary_dialog = None
         super().cleanup()
 

@@ -180,8 +180,8 @@ def test_color_palette_update(qtbot, mocked_client):
     curve = wf.plot(x=[1, 2, 3], y=[4, 5, 6], label="test_curve")
     original_color = curve.config.color
     # Change to a different valid palette
-    wf.color_palette = "plasma"
-    assert wf.config.color_palette == "plasma"
+    wf.color_palette = "magma"
+    assert wf.config.color_palette == "magma"
     # After updating the palette, the curve's color should be re-generated.
     assert curve.config.color != original_color
 

@@ -20,7 +20,7 @@ logger = bec_logger.logger
 
 class RingProgressBarConfig(ConnectionConfig):
     color_map: Optional[str] = Field(
-        "magma", description="Color scheme for the progress bars.", validate_default=True
+        "plasma", description="Color scheme for the progress bars.", validate_default=True
     )
     min_number_of_bars: int | None = Field(
         1, description="Minimum number of progress bars to display."

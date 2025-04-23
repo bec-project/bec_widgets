@@ -16,10 +16,10 @@ def test_color_map_widget_init(color_map_widget):
     """Test that the widget initializes correctly."""
     assert color_map_widget is not None
     assert isinstance(color_map_widget, BECColorMapWidget)
-    assert color_map_widget.colormap == "magma"
+    assert color_map_widget.colormap == "plasma"
     assert isinstance(color_map_widget.button, ColorMapButton)
     # Check that the button has the correct initial colormap
-    assert color_map_widget.button.colorMap().name == "magma"
+    assert color_map_widget.button.colorMap().name == "plasma"
 
 
 def test_color_map_widget_set_valid_colormap(color_map_widget):
@@ -44,7 +44,7 @@ def test_color_map_widget_set_invalid_colormap(color_map_widget):
 
 def test_color_map_widget_signal_emitted(color_map_widget, qtbot):
     """Test that the signal is emitted when the colormap changes."""
-    new_cmap = "plasma"
+    new_cmap = "magma"
     with qtbot.waitSignal(color_map_widget.colormap_changed_signal, timeout=1000) as blocker:
         color_map_widget.colormap = new_cmap
     assert blocker.signal_triggered
@@ -58,7 +58,7 @@ def test_color_map_widget_signal_not_emitted_for_invalid_colormap(color_map_widg
     with qtbot.assertNotEmitted(color_map_widget.colormap_changed_signal):
         color_map_widget.colormap = invalid_cmap
     # The colormap should remain unchanged
-    assert color_map_widget.colormap == "magma"
+    assert color_map_widget.colormap == "plasma"
 
 
 def test_color_map_widget_resize(color_map_widget):
