@@ -333,12 +333,13 @@ class ScatterWaveform(PlotBase):
 
         # To have only one main curve
         if self._main_curve is not None:
+            self.rpc_register.remove_rpc(self._main_curve)
+            self.rpc_register.broadcast()
             self.plot_item.removeItem(self._main_curve)
+            self._main_curve.deleteLater()
             self._main_curve = None
 
-        self._main_curve = ScatterCurve(
-            parent_item=self, config=config, gui_id=self.gui_id, name=config.label
-        )
+        self._main_curve = ScatterCurve(parent_item=self, config=config, name=config.label)
         self.plot_item.addItem(self._main_curve)
 
         self.sync_signal_update.emit()
