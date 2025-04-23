@@ -52,7 +52,7 @@ def test_launch_window_launch_ui_file(bec_launch_window):
 def test_launch_window_launch_ui_file_raises_for_qmainwindow(bec_launch_window):
     # Mock the file dialog to return a specific UI file path
     # the selected file must contain a QMainWindow widget but can be any file
-    ui_file_path = os.path.join(base_path, "applications/alignment/alignment_1d/alignment_1d.ui")
+    ui_file_path = os.path.join(base_path, "examples/general_app/general_app.ui")
 
     # Call the method to launch the custom UI file
     with pytest.raises(ValueError) as excinfo:
