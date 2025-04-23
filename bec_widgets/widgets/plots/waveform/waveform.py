@@ -15,6 +15,7 @@ from qtpy.QtWidgets import QApplication, QDialog, QHBoxLayout, QMainWindow, QVBo
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
 from bec_widgets.utils.colors import Colors, set_theme
+from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.toolbar import MaterialIconAction
@@ -644,7 +645,9 @@ class Waveform(PlotBase):
         # Decide label if not provided
         if label is None:
             if source == "custom":
-                label = f"Curve {len(self.curves) + 1}"
+                label = WidgetContainerUtils.generate_unique_name(
+                    "Curve", [c.object_name for c in self.curves]
+                )
             else:
                 label = f"{y_name}-{y_entry}"
 
@@ -769,7 +772,9 @@ class Waveform(PlotBase):
         label = config.label
         if not label:
             # Fallback label
-            label = f"Curve {len(self.curves) + 1}"
+            label = WidgetContainerUtils.generate_unique_name(
+                "Curve", [c.object_name for c in self.curves]
+            )
             config.label = label
 
         # Check for duplicates
