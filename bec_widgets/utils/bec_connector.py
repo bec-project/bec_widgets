@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import time
+import traceback
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
@@ -152,7 +153,7 @@ class BECConnector:
                 self.parent_id = connector_parent.gui_id
 
         if isinstance(self.parent(), QObject) and hasattr(self, "cleanup"):
-            self.parent().destroyed.connect(self.cleanup)
+            self.parent().destroyed.connect(self._run_cleanup_on_deleted_parent)
 
         # Error popups
         self.error_utility = ErrorPopupUtility()
@@ -162,6 +163,23 @@ class BECConnector:
         self._workers = []
 
         QTimer.singleShot(0, self._update_object_name)
+
+    @SafeSlot()
+    def _run_cleanup_on_deleted_parent(self) -> None:
+        """
+        Run cleanup on the deleted parent.
+        This method is called when the parent is deleted.
+        """
+        if not hasattr(self, "cleanup"):
+            return
+        try:
+            self.cleanup()
+        except Exception:
+            content = traceback.format_exc()
+            logger.info(
+                "Failed to run cleanup on deleted parent. "
+                f"This is not necessarily an error as the parent may be deleted before the child and includes already a cleanup. The following exception was raised:\n{content}"
+            )
 
     def _update_object_name(self) -> None:
         """
