@@ -35,10 +35,22 @@ def test_rpc_plotting_shortcuts_init_configs(qtbot, connected_client_gui_obj):
     mw = dock.new("mw_dock").new("MultiWaveform")
 
     c1 = wf.plot(x_name="samx", y_name="bpm4i")
+    # Adding custom curves, removing one and adding it again should not crash
+    c2 = wf.plot(y=[1, 2, 3], x=[1, 2, 3])
+    assert c2.object_name == "Curve_0"
+    c2.remove()
+    c3 = wf.plot(y=[1, 2, 3], x=[1, 2, 3])
+    assert c3.object_name == "Curve_0"
+
     im_item = im.image(monitor="eiger")
     mm.map(x_name="samx", y_name="samy")
     sw.plot(x_name="samx", y_name="samy", z_name="bpm4i")
+    assert sw.main_curve.object_name == "bpm4i_bpm4i"
+    # Create a new curve on the scatter waveform should replace the old one
+    sw.plot(x_name="samx", y_name="samy", z_name="bpm4a")
+    assert sw.main_curve.object_name == "bpm4a_bpm4a"
     mw.plot(monitor="waveform")
+    # Adding multiple custom curves sho
 
     # Checking if classes are correctly initialised
     assert len(dock.panel_list) == 5
