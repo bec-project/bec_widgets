@@ -11,81 +11,64 @@ The Multi Waveform Widget is designed to display multiple 1D detector signals ov
 - **Interactive Controls**: Highlight specific curves, adjust opacity, and interact with the plot using zoom and pan tools.
 - **Customizable Appearance**: Customize the colormap, curve opacity, and highlight settings to enhance data visualization.
 - **Data Export**: Export the displayed data for further analysis, including exporting to Matplotlib for advanced plotting.
-- **Flexible Integration**: Can be integrated into both [`BECFigure`](user.widgets.bec_figure) and [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`.
+- **Flexible Integration**: Can be integrated into [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`.
 
 ````
 
 ````{tab} Examples - CLI
 
-`BECMultiWaveform` can be embedded in both [`BECFigure`](user.widgets.bec_figure) and [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`. The command-line API is consistent across these contexts.
+`BECMultiWaveform` can be embedded in [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`. The command-line API is consistent across these contexts.
 
-## Example 1 - Adding Multi Waveform to BECFigure
-
-In this example, we demonstrate how to add a `MultiWaveform` plot to a `BECFigure` widget and connect it to a monitor.
-
-```python
-# Add a new dock and BECFigure to the GUI
-fig = gui.add_dock().add_widget('BECFigure')
-
-# Add a MultiWaveform plot to the figure and set the monitor
-multi_waveform = fig.multi_waveform(monitor='waveform1d')
-
-# Optionally, set plot properties
-multi_waveform.set_title("Real-Time Multi Waveform")
-multi_waveform.set_x_label("Time (s)")
-multi_waveform.set_y_label("Amplitude")
-```
-
-## Example 2 - Using BECMultiWaveformWidget in BECDockArea
+## Example 1 - Using BECMultiWaveformWidget in BECDockArea
 
 You can add `BECMultiWaveformWidget` directly to a `BECDockArea`. This widget includes its own toolbar and controls for interacting with the multi waveform plot.
 
 ```python
-# Add a new BECMultiWaveformWidget to the BECDockArea
-multi_waveform_widget = gui.add_dock().add_widget('BECMultiWaveformWidget')
+# Add a new MultiWaveform  to the BECDockArea
+dock_area = gui.new()
+multi_waveform_widget = dock_area.new().new(gui.available_widgets.MultiWaveform)
 
 # Set the monitor from the command line
-multi_waveform_widget.set_monitor('waveform1d')
+multi_waveform_widget.plot('waveform')
 
 # Optionally, adjust settings
-multi_waveform_widget.set_opacity(60)
-multi_waveform_widget.set_curve_limit(100)
+multi_waveform_widget.opacity = 60
 ```
 
-## Example 3 - Customizing the Multi Waveform Plot
+## Example 2 - Customizing the Multi Waveform Plot
 
 You can customize various aspects of the plot, such as the colormap, opacity, and curve limit.
 
 ```python
 # Change the colormap to 'viridis'
-multi_waveform.set_colormap('viridis')
+multi_waveform_widget.color_palette = 'viridis'
 
 # Adjust the opacity of the curves to 70%
-multi_waveform.set_opacity(70)
+multi_waveform_widget.opacity = 60
 
 # Limit the number of curves displayed to 50
-multi_waveform.set_curve_limit(50)
+multi_waveform_widget.max_trace = 10
 
 # Enable buffer flush when the curve limit is reached
-multi_waveform.set_curve_limit(50, flush_buffer=True)
+multi_waveform_widget.flush_buffer = True
 ```
 
-## Example 4 - Highlighting Curves
+## Example 3 - Highlighting Curves
 
 You can highlight specific curves to emphasize important data.
 
 ```python
 # Disable automatic highlighting of the last curve
-multi_waveform.set_highlight_last_curve(False)
+multi_waveform.highlight_last_curve = False
 
 # Highlight the third curve (indexing starts from 0)
-multi_waveform.set_curve_highlight(2)
+multi_waveform.highlighted_index = 2
 
 # Re-enable automatic highlighting of the last curve
-multi_waveform.set_highlight_last_curve(True)
+multi_waveform.highlight_last_curve = True
 ```
 
-## Example 5 - Exporting Data
+<!-- ## Example 4 - Exporting Data
 
 You can export the data from the multi waveform plot for further analysis.
 
@@ -98,14 +81,14 @@ data_df = multi_waveform.get_all_data(output='pandas')
 
 # Export the plot to Matplotlib for further customization
 multi_waveform.export_to_matplotlib()
-```
+``` -->
 ````
 
 ````{tab} API
 
-```{eval-rst}
-.. autoclass:: bec_widgets.widgets.figure.plots.multi_waveform.multi_waveform.BECMultiWaveform
-   :members:
-   :inherited-members:
+
+````{tab} API
+```{eval-rst}  
+.. include:: /api_reference/_autosummary/bec_widgets.cli.client.MultiWaveform.rst
 ```
-```
+````

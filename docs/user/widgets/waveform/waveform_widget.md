@@ -7,7 +7,7 @@
 The Waveform Widget is used to display 1D detector signals. The widget is directly integrated with the `BEC` framework and can display real-time data from detectors loaded in the current `BEC` session as well as custom data from users.
 
 ## Key Features:
-- **Flexible Integration**: The widget can be integrated into both [`BECFigure`](user.widgets.bec_figure) and [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`.
+- **Flexible Integration**: The widget can be integrated into [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`.
 - **Data Visualization**: Real-time plotting of positioner versus detector values from the BEC session, as well as static plotting of custom data.
 - **Real-time Data Processing**: Add real-time Data Processing Pipeline (DAP) to the real-time acquisition.
 - **Data Export**: Export data to CSV, H5, and other formats.
@@ -19,47 +19,27 @@ The Waveform Widget is used to display 1D detector signals. The widget is direct
 
 ````{tab} Examples - CLI
 
-`WaveformWidget` can be embedded in both [`BECFigure`](user.widgets.bec_figure) and [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`. However, the command-line API is the same for all cases.
+`WaveformWidget` can be embedded in [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`. However, the command-line API is the same for all cases.
 
-## Example 1 - Adding Waveform Widget to BECFigure
+## Example 1 - Adding Waveform Widget as a dock with BECDockArea
 
-In this example, we will demonstrate how to add two different `WaveformWidgets` into a single [`BECFigure`](user.widgets.bec_figure) widget.
-
-```python
-# Add new dock with BECFigure widget
-fig = gui.add_dock().add_widget('BECFigure')
-
-# Add two WaveformWidgets to the BECFigure
-plt1 = fig.plot(x_name='samx', y_name='bpm4i')
-plt2 = fig.plot(x_name='samx', y_name='bpm3i')
-```
-
-## Example 2 - Adding Waveform Widget as a dock with BECDockArea
-
-Adding `WaveformWidget` into a [`BECDockArea`](user.widgets.bec_dock_area) is similar to adding any other widget. The widget has the same API as the one in BECFigure; however, as an independent widget outside BECFigure, it has its own toolbar, allowing users to configure the widget without needing CLI commands.
+Adding `Waveform` into a [`BECDockArea`](user.widgets.bec_dock_area) is similar to adding any other widget. 
 
 ```python
 # Add new WaveformWidgets to the BECDockArea
-plt1 = gui.add_dock().add_widget('BECWaveformWidget')
-plt2 = gui.add_dock().add_widget('BECWaveformWidget')
+dock_area = gui.new('my_new_dock_area') # Create a new dock area
+plt1 = dock_area.new().new('Waveform')
+plt2 = gui.my_new_dock_area.new().new(gui.available_widgets.Waveform) # as an alternative example via dynamic name space
 
 # Add signals to the WaveformWidget
 plt1.plot(x_name='samx', y_name='bpm4i')
 plt2.plot(x_name='samx', y_name='bpm3i')
-```
-
-## Example 3 - Adding Waveform Widget with curves
-```python
-# adds a new dock, a new BECFigure and a BECWaveForm to the dock
-plt = gui.add_dock().add_widget('BECFigure').plot(x_name='samx', y_name='bpm4i')
-
-# add a second curve to the same plot 
-plt.plot(x_name='samx', y_name='bpm3i')
 
 # set axis labels
-plt.set_title("Gauss plots vs. samx")
-plt.set_x_label("Motor X")
-plt.set_y_label("Gauss Signal (A.U.")
+plt1.set_title("Gauss plots vs. samx")
+plt1.set_x_label("Motor X")
+plt1.set_y_label("Gauss Signal (A.U.")
+
 ```
 
 ```{note}
@@ -73,26 +53,24 @@ dev.bpm4i.sim.select_sim_model("GaussianModel")
 # bpm3i uses StepModel and samx as a reference; default settings
 dev.bpm3i.sim.select_sim_model("StepModel")
 ```
-## Example 4 - Adding Data Processing Pipeline Curve with LMFit Models
+## Example 2- Adding Data Processing Pipeline Curve with LMFit Models
 
 In addition to the scan curve, you can also add a second curve that fits the signal using a specified model from [LMFit](https://lmfit.github.io/lmfit-py/builtin_models.html). The following code snippet demonstrates how to create a 1D waveform curve with an attached DAP process, or how to add a DAP process to an existing curve using the BEC CLI. Please note that for this example, both devices were set as Gaussian signals. You can also add a region of interest (roi) to the plot which will respected by all running DAP processes. 
 
 ```python
-# Add a new dock, a new BECFigure, and a BECWaveForm to the dock with a GaussianModel DAP
-plt = gui.add_dock().add_widget('BECFigure').plot(x_name='samx', y_name='bpm4i', dap="GaussianModel")
+# Add a new dock_area, dock and Waveform and plot bpm4i vs samx with a GaussianModel DAP
+plt = gui.new().new().new('Waveform')
+plt.plot(x_name='samx', y_name='bpm4i', dap="GaussianModel")
 
 # Add a second curve to the same plot without DAP
 plt.plot(x_name='samx', y_name='bpm3a')
 
 # Add DAP to the second curve
-plt.add_dap(x_name='samx', y_name='bpm3a', dap="GaussianModel")
+plt.add_dap_curve(device_label='bpm3a-bpm3a', dap_name='GaussianModel')
 
-# Add roi to the plot, this limits the DAP fit to the selected region x_min=-1, x_max=1
+# Add ROI to the plot, this limits the DAP fit to the selected region x_min=-1, x_max=1
 # The fit will automatically update
 plt.select_roi(region=(-1, 1))
-
-# To remove the DAP from the curve, you can use the toggle button in the toolbar or the following command
-plt.toggle_roi(False)
 
 ```
 
@@ -119,21 +97,29 @@ print(dap_bpm3a.dap_params)
 
 ![Waveform 1D_DAP](./bec_figure_dap.gif)
 
-## Example 5 - 2D Waveform Scatter Plot
+## Example 3 - 2D ScatterWaveform plot
 
 The 2D scatter plot widget is designed for more complex data visualization. It employs a false color map to represent a third dimension (z-axis), making it an ideal tool for visualizing multidimensional data sets.
 
 ```python
-# adds a new dock, a new BECFigure and a BECWaveForm to the dock
+# Add a new dock_area, a new dock and a BECWaveForm to the dock
+plt = gui.new().new().new(gui.available_widgets.ScatterWaveform)
+plt.plot(x_name='samx', y_name='samy', z_name='bpm4i')
+
 plt = gui.add_dock().add_widget('BECFigure').add_plot(x_name='samx', y_name='samy', z_name='bpm4i')
 ```
 
 ![Scatter 2D](./scatter_2D.gif)
 
+
+```{note}
+The ScatterWaveform widget only plots the data points if both x and y axis motors are moving. Or more generally, if all signals are of readout type *monitored*.
+```
+
 ````
 
 ````{tab} API
 ```{eval-rst}  
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.BECWaveform.rst
+.. include:: /api_reference/_autosummary/bec_widgets.cli.client.Waveform.rst
 ```
 ````
