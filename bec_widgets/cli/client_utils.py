@@ -278,6 +278,8 @@ class BECGuiClient(RPCBase):
         name: str | None = None,
         wait: bool = True,
         geometry: tuple[int, int, int, int] | None = None,
+        launch_script: str = "dock_area",
+        **kwargs,
     ) -> client.BECDockArea:
         """Create a new top-level dock area.
 
@@ -293,11 +295,11 @@ class BECGuiClient(RPCBase):
         if wait:
             with wait_for_server(self):
                 widget = self.launcher._run_rpc(
-                    "launch", "dock_area", name, geometry
+                    "launch", launch_script=launch_script, name=name, geometry=geometry, **kwargs
                 )  # pylint: disable=protected-access
                 return widget
         widget = self.launcher._run_rpc(
-            "new_dock_area", name, geometry
+            "launch", launch_script=launch_script, name=name, geometry=geometry, **kwargs
         )  # pylint: disable=protected-access
         return widget
 
