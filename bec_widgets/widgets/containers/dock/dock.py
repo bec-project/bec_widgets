@@ -12,6 +12,7 @@ from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 from bec_widgets.utils import ConnectionConfig, GridLayoutManager
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.container_utils import WidgetContainerUtils
+from bec_widgets.utils.error_popups import SafeSlot
 
 logger = bec_logger.logger
 
@@ -279,6 +280,7 @@ class BECDock(BECWidget, Dock):
             widgets.extend(dock.elements.keys())
         return widgets
 
+    @SafeSlot(popup_error=True)
     def new(
         self,
         widget: BECWidget | str,
@@ -301,6 +303,13 @@ class BECDock(BECWidget, Dock):
             colspan(int): The number of columns the widget should span.
             shift(Literal["down", "up", "left", "right"]): The direction to shift the widgets if the position is occupied.
         """
+        if name is not None:
+            if not WidgetContainerUtils.has_name_valid_chars(name):
+                raise ValueError(
+                    f"Name {name} contains invalid characters. "
+                    f"Only alphanumeric characters and underscores are allowed."
+                )
+
         if row is None:
             row = self.layout.rowCount()
 
