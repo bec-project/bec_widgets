@@ -3,10 +3,31 @@
 In order to use BEC Widgets as a plotting tool for BEC, it needs to be [installed](#user.installation) in the same Python environment as the BEC IPython client (please refer to the [BEC documentation](https://bec.readthedocs.io/en/latest/user/command_line_interface.html#start-up) for more details). Upon startup, the client will automatically launch a GUI and store it as a `gui` object in the client. The GUI backend will also be automatically connect to the BEC server, giving access to all information on the server and allowing the user to visualize the data in real-time.
 
 ## BECGuiClient
-The `gui` object is the entry point for users to interact with the BEC Widgets framework. It is an instance of the [`BECGuiClient`](/api_reference/_autosummary/bec_widgets.cli.client.BECGuiClient) class, which provides a set of methods to create and manage the GUI. Upon startup of BEC, we automatically launch a [`BECDockArea`](/api_reference/_autosummary/bec_widgets.cli.client.BECDockArea) instance, as the default main area for the user interface. However, the startup procedure can be individually configured by the user to launch their own custom GUI. We provide a launcher instance which is accessible through the top menu bar *New* -> *Open Launcher*. A new window will open, allowing the user to launch a new [`BECDockArea`](/api_reference/_autosummary/bec_widgets.cli.client.BECDockArea) instance, an [AutoUpdate](#user.auto_updates) instance, an individual widget or a custom *ui file* prepared throught the *QtDesigner*. 
+The `gui` object is the main entry point for interacting with the BEC Widgets framework. It is an instance of the [`BECGuiClient`](/api_reference/_autosummary/bec_widgets.cli.client.BECGuiClient) class, which provides methods to create and manage GUI components. Upon BEC startup, a default [`BECDockArea`](/api_reference/_autosummary/bec_widgets.cli.client.BECDockArea) instance named *bec* is automatically launched.
+
+A launcher interface is available via the top menu bar under New → Open Launcher. This opens a window where users can launch a new [`BECDockArea`](/api_reference/_autosummary/bec_widgets.cli.client.BECDockArea) instance, an [AutoUpdate](#user.auto_updates) instance, individual widgets or a custom *ui file* created with *BECDesigner*. Alternatively, users can launch a new [`BECDockArea`](/api_reference/_autosummary/bec_widgets.cli.client.BECDockArea) from the command line:
+
+```python
+dock_area = gui.new() # launches a new BECDockArea instance
+gui.new('my_dock_area') # launches a new BECDockArea instance with the name 'my_dock_area'
+dock_area2 = gui.my_dock_area # Dynamic attribute access to created dock_area
+```
+
+``` {note}
+If a name is provided, the new dock area will use that name. If the name already exists, an error is raised. If no name is specified, a name will be auto-generated following the pattern *dock_area_ii* where *ii* is the next available number. Named dock areas can be accessed dynamically as attributes of the gui object.
+```
+
 
 ## BECDockArea
-The [`BECDockArea`](/api_reference/_autosummary/bec_widgets.cli.client.BECDockArea) is a versatile container to quickly build customized GUIS. It allows adding new widgets through the CLI, or directly via toolbar actions. New widgets can only be added into [`BECDock`](/api_reference/_autosummary/bec_widgets.cli.client.BECDock) instances, which are the individual containers for the widgets. The docks allow us to arrange the widgets in a customizable structure, detach them from the main window and allow for floating windows. 
+The [`BECDockArea`](/api_reference/_autosummary/bec_widgets.cli.client.BECDockArea) is a versatile container for quickly building customized GUIs. It supports adding new widgets either through the CLI or directly via toolbar actions. Widgets must be added into [`BECDock`](/api_reference/_autosummary/bec_widgets.cli.client.BECDock) instances, which serve as the individual containers. These docks can be arranged freely, detached from the main window, and used as floating panels.
+
+From the CLI, you can create new docks like this:
+
+```python
+dock_area = gui.new()
+dock = dock_area.new(name='my_dock_area')
+dock = gui.new().new()
+```
 
 <!-- **Schema of the BECDockArea**
 
@@ -66,17 +87,20 @@ gui.new? # shows the dockstring of the new method
 In addition, we list below a few useful commands that can be used to interface with the widgets:
 
 ```python
-gui.windows # returns a dictionary of all docks in the gui
-gui.new() # adds a new dock_area to the gui
+gui.windows  # Returns a dictionary of all dock areas in the GUI
+gui.new()  # Adds a new BECDockArea to the GUI
 
 dock_area = gui.windows['bec']
-dock = dock_area.new('my_dock') # adds a new widget of BECFigure to the dock
-plt = dock.new(gui.available_widgets.Waveform) # adds a new widget of Waveformto the dock
-#dock_area.my_dock.new(gui.available_widgets.Waveform) # alterntive syntax
-dock.element_list # returns a list of all widgets in the dock
-dock.elements
+dock = dock_area.new('my_dock')  # Adds a new dock named 'my_dock' to the dock area
+plt = dock.new(gui.available_widgets.Waveform)  # Adds a Waveform widget to the dock
 
-plt.curves # returns a list of all curves in the plot
+# Alternative syntax:
+# dock_area.my_dock.new(gui.available_widgets.Waveform)
+
+dock.element_list  # Returns a list of all widgets in the dock
+dock.elements  # Equivalent to dock.element_list
+
+plt.curves  # Returns a list of all curves in the plot
 ```
 
 We note that commands can also be chained. For example, `gui.new().new().new(gui.available_widgets.Waveform)` will add a new dock_area to the gui and add a new dock with a `Waveform` widget to the dock. 

@@ -20,14 +20,6 @@ Serves as containers to organise and display other widgets.
 Quickly build dynamic GUI.
 
 ```
-
-```{grid-item-card}  BEC Figure
-:link: user.widgets.bec_figure
-:link-type: ref
-:img-top: /assets/widget_screenshots/figure.png
-
-Display 1D and 2D data.
-```
 ````
 
 ## Plotting Widgets
