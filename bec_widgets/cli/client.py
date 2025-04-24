@@ -2227,7 +2227,10 @@ class PositionIndicator(RPCBase):
     @rpc_call
     def set_value(self, position: float):
         """
-        None
+        Set the position of the indicator
+
+        Args:
+            position: The new position of the indicator
         """
 
     @rpc_call

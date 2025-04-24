@@ -4,7 +4,7 @@
 
 ````{tab} Overview
 
-The [`PositionIndicator`](/api_reference/_autosummary/bec_widgets.cli.client.PositionIndicator) widget is a simple yet effective tool for visually indicating the position of a motor within its set limits. This widget is particularly useful in applications where it is important to provide a visual cue of the motor's current position relative to its minimum and maximum values. The `PositionIndicator` can be easily integrated into your GUI application either through direct code instantiation or by using `QtDesigner`.
+The [`PositionIndicator`](/api_reference/_autosummary/bec_widgets.cli.client.PositionIndicator) widget is a simple yet effective tool for visually indicating the position of a motor within its set limits. This widget is particularly useful in applications where it is important to provide a visual clue of the motor's current position relative to its minimum and maximum values. The `PositionIndicator` can be easily integrated into your GUI application either through direct code instantiation or by using `QtDesigner`.
 
 ## Key Features:
 - **Position Visualization**: Displays the current position of a motor on a linear scale, showing its location relative to the defined limits.
@@ -36,15 +36,16 @@ Within the BECDesigner's [property editor](https://doc.qt.io/qt-6/designer-widge
 
 ````{tab} Examples
 
-The `PositionIndicator` widget can be embedded within a GUI application through direct code instantiation or by using `QtDesigner`. Below are examples demonstrating how to create and use the `PositionIndicator` widget.
+The `PositionIndicator` widget can be embedded in a [`BECDockArea`](#user.widgets.bec_dock_area) or used as an individual component in your application through `QtDesigner`. Below are examples demonstrating how to create and use the `PositionIndicator` from the CLI and also directly within Code.
 
 ## Example 1 - Creating a Position Indicator in Code
 
 In this example, we demonstrate how to create a `PositionIndicator` widget in code and connect it to a slider to simulate position updates.
 
 ```python
+from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication, QSlider, QVBoxLayout, QWidget
-from bec_widgets.widgets.position_indicator import PositionIndicator
+from bec_widgets.widgets.control.device_control.position_indicator.position_indicator import PositionIndicator
 
 app = QApplication([])
 
@@ -68,11 +69,15 @@ widget.show()
 app.exec_()
 ```
 
-## Example 2 - Setting the Range for the Position Indicator
+## Example 2 - CLI Example, illustrating how to use the position_indicator API
 
 You can set the minimum and maximum range for the position indicator to reflect the actual limits of the motor.
 
 ```python
+# Create a new PositionIndicator widget
+dock_area = gui.new()
+position_indicator = dock_area.new("position_indicator").new(gui.available_widgets.PositionIndicator)
+
 # Set the range for the position indicator
 position_indicator.set_range(min_value=0, max_value=200)
 ```
