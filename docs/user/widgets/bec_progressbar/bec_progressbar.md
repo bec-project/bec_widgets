@@ -3,7 +3,7 @@
 
 ```{tab} Overview
 
-The BEC Progressbar widget is a general purpose progress bar that follows the BEC theme and style. It can be embedded in any application to display the progress of a task or operation. 
+The [`BECProgressbar`](/api_reference/_autosummary/bec_widgets.cli.client.BECProgressBar) widget is a general purpose progress bar that follows the BEC theme and style. It can be embedded in any application to display the progress of a task or operation. 
 
 ## Key Features:
 - **Modern Design**: The BEC Progressbar widget is designed with a modern and sleek appearance, following the BEC theme.
@@ -25,8 +25,9 @@ The `BECProgressBar` widget can be integrated within a [`BECDockArea`](user.widg
 In this example, we demonstrate how to add a `BECProgressBar` widget to a `BECDockArea`, allowing users to manually set and update the progress states.
 
 ```python
-# Add a new dock with a BECStatusBox widget
-pb = gui.add_dock().add_widget("BECProgressBar")
+# Add a new dock with a BEC Progressbar widget
+dock_area = gui.new()
+pb = dock_area.new().new(gui.available_widgets.BECProgressBar)
 pb.set_value(50)
 ```
 
@@ -34,6 +35,6 @@ pb.set_value(50)
 
 ````{tab} API
 ```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.BECProgressbar.rst
+.. include:: /api_reference/_autosummary/bec_widgets.cli.client.BECProgressBar.rst
 ```
 ````

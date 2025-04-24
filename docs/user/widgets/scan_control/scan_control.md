@@ -22,7 +22,7 @@ By default, this widget supports scans that are derived from the following base 
 ```
 
 ```{hint}
-The full procedure how to design `gui_config` for your custom scan class is described in the [Scan GUI Configuration](https://bec.readthedocs.io/en/latest/developer/scans/scan_gui_config.html) tutorial.
+The full procedure how to design `gui_config` for your custom scan class is described in the [Scan GUI Configuration](https://bec.readthedocs.io/en/latest/developer/scans/tutorials/scan_gui_config.html) tutorial.
 ```
 
 ## BECDesigner Customization
@@ -52,7 +52,8 @@ In this example, we demonstrate how to add a `ScanControl` widget to a `BECDockA
 
 ```python
 # Add a new dock with a ScanControl widget
-scan_control = gui.add_dock().add_widget("ScanControl")
+dock_area = gui.new()
+scan_control = dock_area.new().new(gui.available_widgets.ScanControl)
 ```
 ````
 

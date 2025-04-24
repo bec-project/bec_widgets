@@ -23,7 +23,8 @@ In this example, we demonstrate how to add a `WebsiteWidget` to a `BECDockArea` 
 
 ```python
 # Add a new dock with a WebsiteWidget
-web = gui.add_dock().add_widget("WebsiteWidget")
+dock_area = gui.new()
+web = dock_area.new().new(gui.available_widgets.WebsiteWidget)
 
 # Set the URL of the website to display
 web.set_url("https://bec.readthedocs.io/en/latest/")
@@ -32,6 +33,7 @@ web.set_url("https://bec.readthedocs.io/en/latest/")
 ## Example 2 - Navigating within the Website Widget
 
 The `WebsiteWidget` allows users to navigate back and forward through the website’s history. This example shows how to implement these navigation controls.
+If you click on a link in the website, you can use the back and forward buttons to navigate through the history.
 
 ```python
 # Go back in the website history

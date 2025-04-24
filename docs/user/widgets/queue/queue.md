@@ -4,7 +4,7 @@
 
 ````{tab} Overview
 
-The [`BEC Queue Widget`](/api_reference/_autosummary/bec_widgets.cli.client.BECQueue) provides a real-time display and control of the BEC scan queue, allowing users to monitor, manage, and control the status of ongoing and pending scans. The widget automatically updates to reflect the current state of the scan queue, displaying critical information such as scan numbers, types, and statuses. Additionally, it provides control options to stop individual scans, stop the entire queue, resume, and reset the queue, making it a powerful tool for managing scan operations in the BEC environment.
+The [`BEC Queue`](/api_reference/_autosummary/bec_widgets.cli.client.BECQueue) widget provides a real-time display and control of the BEC scan queue, allowing users to monitor, manage, and control the status of ongoing and pending scans. The widget automatically updates to reflect the current state of the scan queue, displaying critical information such as scan numbers, types, and statuses. Additionally, it provides control options to stop individual scans, stop the entire queue, resume, and reset the queue, making it a powerful tool for managing scan operations in the BEC environment.
 
 ## Key Features:
 - **Real-Time Queue Monitoring**: Displays the current state of the BEC scan queue, with automatic updates as the queue changes.
@@ -25,7 +25,9 @@ In this example, we demonstrate how to add a `BECQueue` widget to a `BECDockArea
 
 ```python
 # Add a new dock with a BECQueue widget
-bec_queue = gui.add_dock().add_widget("BECQueue")
+dock_area = gui.new()
+dock_area.new("queue").new(gui.available_widgets.BECQueue)
+queue = dock_area.queue.BECQueue
 ```
 
 ```{hint}
