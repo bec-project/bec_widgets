@@ -24,7 +24,8 @@ In this example, we demonstrate how to add a `RingProgressBar` widget to a `BECD
 
 ```python
 # Add a new dock with a RingProgressBar widget
-progress = gui.add_dock().add_widget("RingProgressBar")
+dock_area = gui.new('my_new_dock_area') # Create a new dock area
+progress = dock_area.new().new(gui.available_widgets.RingProgressBar)
 
 # Customize the size of the progress ring
 progress.set_line_widths(20)

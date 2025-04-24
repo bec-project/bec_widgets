@@ -45,12 +45,12 @@ from bec_lib.device import ReadoutPriority
 from bec_widgets.widgets.base_classes.device_input_base import BECDeviceFilter
 
 class MyGui(QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
         self.setLayout(QVBoxLayout(self))  # Initialize the layout for the widget
 
         # Create and add the DeviceLineEdit to the layout
-        self.device_line_edit = DeviceLineEdit(device_filter=BECDeviceFilter.POSITIONER, readout_priority_filter=ReadoutPriority.BASELINE)
+        self.device_line_edit = DeviceLineEdit(parent=self, device_filter=BECDeviceFilter.POSITIONER, readout_priority_filter=ReadoutPriority.BASELINE)
         self.layout().addWidget(self.device_line_edit)
 
 # Example of how this custom GUI might be used:
@@ -71,12 +71,12 @@ from bec_lib.device import ReadoutPriority
 from bec_widgets.widgets.base_classes.device_input_base import BECDeviceFilter
 
 class MyGui(QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
         self.setLayout(QVBoxLayout(self))  # Initialize the layout for the widget
 
         # Create and add the DeviceComboBox to the layout
-        self.device_combobox = DeviceComboBox(device_filter=BECDeviceFilter.POSITIONER, readout_priority_filter=ReadoutPriority.BASELINE)
+        self.device_combobox = DeviceComboBox(parent=self, device_filter=BECDeviceFilter.POSITIONER, readout_priority_filter=ReadoutPriority.BASELINE)
         self.layout().addWidget(self.device_combobox)
 
 # Example of how this custom GUI might be used:

@@ -28,7 +28,7 @@ from qtpy.QtWidgets import QWidget, QLabel, QDoubleSpinBox, QPushButton, QVBoxLa
 
 
 class MotorControlWidget(QWidget):
-    def __init__(self, motor_name: str, parent=None):
+    def __init__(self, parent=None, motor_name: str = ""):
         super().__init__(parent)
 
         self.motor_name = motor_name
@@ -70,18 +70,17 @@ from [`BECWidget`](https://bec.readthedocs.io/projects/bec-widgets/en/latest/api
 pass the motor name to the widget, and use `get_bec_shortcuts` to access BEC services.
 
 ```python
-from qtpy.QtCore import Slot
-from qtpy.QtWidgets import QWidget, QLabel, QDoubleSpinBox, QPushButton, QVBoxLayout
-
 from bec_lib.endpoints import MessageEndpoints
+from qtpy.QtWidgets import QDoubleSpinBox, QLabel, QPushButton, QVBoxLayout, QWidget
+
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.error_popups import SafeSlot
 
 
 class MotorControlWidget(BECWidget, QWidget):
 
-    def __init__(self, motor_name: str, parent=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        QWidget.__init__(self, parent)
+    def __init__(self, parent=None, motor_name: str = "", **kwargs):
+        super().__init__(parent=parent, **kwargs)
 
         self.motor_name = motor_name
 
@@ -114,13 +113,13 @@ class MotorControlWidget(BECWidget, QWidget):
             self.on_motor_update, MessageEndpoints.device_readback(self.motor_name)
         )
 
-    @Slot()
+    @SafeSlot()
     def move_motor(self):
         target_position = self.spin_box.value()
         self.dev[self.motor_name].move(target_position)
         print(f"Commanding motor {self.motor_name} to move to {target_position}")
 
-    @Slot(dict, dict)
+    @SafeSlot(dict, dict)
     def on_motor_update(self, msg_content, metadata):
         position = msg_content.get("signals", {}).get(self.motor_name, {}).get("value", "N/A")
         self.label.setText(f"{self.motor_name} : {round(position, 2)}")
@@ -132,19 +131,18 @@ Next, we’ll set up an RPC interface to allow remote control of the widget from
 the `BECIPythonClient`. We’ll expose a method that allows changing the motor name through CLI commands.
 
 ```python
-from qtpy.QtCore import Slot
-from qtpy.QtWidgets import QWidget, QLabel, QDoubleSpinBox, QPushButton, QVBoxLayout
-
 from bec_lib.endpoints import MessageEndpoints
+from qtpy.QtWidgets import QDoubleSpinBox, QLabel, QPushButton, QVBoxLayout, QWidget
+
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.error_popups import SafeSlot
 
 
 class MotorControlWidget(BECWidget, QWidget):
     USER_ACCESS = ["change_motor"]
 
-    def __init__(self, motor_name: str, parent=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        QWidget.__init__(self, parent)
+    def __init__(self, parent=None, motor_name: str = "", **kwargs):
+        super().__init__(parent=parent, **kwargs)
 
         self.motor_name = motor_name
 
@@ -177,13 +175,13 @@ class MotorControlWidget(BECWidget, QWidget):
             self.on_motor_update, MessageEndpoints.device_readback(self.motor_name)
         )
 
-    @Slot()
+    @SafeSlot()
     def move_motor(self):
         target_position = self.spin_box.value()
         self.dev[self.motor_name].move(target_position)
         print(f"Commanding motor {self.motor_name} to move to {target_position}")
 
-    @Slot(dict, dict)
+    @SafeSlot(dict, dict)
     def on_motor_update(self, msg_content, metadata):
         position = msg_content.get("signals", {}).get(self.motor_name, {}).get("value", "N/A")
         self.label.setText(f"{self.motor_name} : {round(position, 2)}")
@@ -203,11 +201,11 @@ class MotorControlWidget(BECWidget, QWidget):
 ```
 
 ```{warning}
-After implementing an RPC method, you must run the `cli/generate_cli.py` script to update the CLI commands for `BECIPythonClient`. This script generates the necessary command-line interface bindings, ensuring that your RPC method can be accessed and controlled remotely.
+After implementing an RPC method, you must run the `bw-generate-cli --target <your plugin repo name>` script to update the CLI commands for `BECIPythonClient`, e.g. `bw-generate-cli --target csaxs_bec`. This script generates the necessary command-line interface bindings, ensuring that your RPC method can be accessed and controlled remotely.
 ```
 
 ```{note}
-In this tutorial, we used the @Slot decorator from QtCore to mark methods as slots for signals. This decorator ensures that the connected methods are treated as slots by the Qt framework, which can be connected to signals. It’s a best practice to use the @Slot decorator to clearly indicate which methods are intended to handle signal events with correct argument signatures.
+In this tutorial, we used the @SafeSlot decorator from BEC Widgets to mark methods as slots for signals. This decorator ensures that the connected methods are treated as slots by the Qt framework, which can be connected to signals. It’s a best practice to use the @SafeSlot decorator to clearly indicate which methods are intended to handle signal events with correct argument signatures. @SafeSlot also provides error handling and logging capabilities, making it more robust and easier to debug.
 ```
 
 ## Step 4: Running the Widget

@@ -36,9 +36,9 @@ plt1.plot(x_name='samx', y_name='bpm4i')
 plt2.plot(x_name='samx', y_name='bpm3i')
 
 # set axis labels
-plt1.set_title("Gauss plots vs. samx")
-plt1.set_x_label("Motor X")
-plt1.set_y_label("Gauss Signal (A.U.")
+plt1.title = "Gauss plots vs. samx"
+plt1.x_label = "Motor X"
+plt1.y_label = "Gauss Signal (A.U.)"
 
 ```
 
@@ -96,25 +96,6 @@ print(dap_bpm3a.dap_params)
 ```
 
 ![Waveform 1D_DAP](./bec_figure_dap.gif)
-
-## Example 3 - 2D ScatterWaveform plot
-
-The 2D scatter plot widget is designed for more complex data visualization. It employs a false color map to represent a third dimension (z-axis), making it an ideal tool for visualizing multidimensional data sets.
-
-```python
-# Add a new dock_area, a new dock and a BECWaveForm to the dock
-plt = gui.new().new().new(gui.available_widgets.ScatterWaveform)
-plt.plot(x_name='samx', y_name='samy', z_name='bpm4i')
-
-plt = gui.add_dock().add_widget('BECFigure').add_plot(x_name='samx', y_name='samy', z_name='bpm4i')
-```
-
-![Scatter 2D](./scatter_2D.gif)
-
-
-```{note}
-The ScatterWaveform widget only plots the data points if both x and y axis motors are moving. Or more generally, if all signals are of readout type *monitored*.
-```
 
 ````
 

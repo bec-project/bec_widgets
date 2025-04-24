@@ -63,12 +63,12 @@ from qtpy.QtWidgets import QWidget, QVBoxLayout
 from bec_widgets.widgets.buttons import DarkModeButton
 
 class MyGui(QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
         self.setLayout(QVBoxLayout(self))
 
         # Create and add the DarkModeButton to the layout
-        self.dark_mode_button = DarkModeButton()
+        self.dark_mode_button = DarkModeButton(parent=self)
         self.layout().addWidget(self.dark_mode_button)
 
 # Example of how this custom GUI might be used:
@@ -83,12 +83,12 @@ from qtpy.QtWidgets import QWidget, QVBoxLayout
 from bec_widgets.widgets.buttons import ColorButton
 
 class MyGui(QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
         self.setLayout(QVBoxLayout(self))
 
         # Create and add the ColorButton to the layout
-        self.color_button = ColorButton()
+        self.color_button = ColorButton(self)
         self.layout().addWidget(self.color_button)
 
 # Example of how this custom GUI might be used:
@@ -103,12 +103,12 @@ from qtpy.QtWidgets import QWidget, QVBoxLayout
 from bec_widgets.widgets.buttons import ColormapSelector
 
 class MyGui(QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
         self.setLayout(QVBoxLayout(self))
 
         # Create and add the ColormapSelector to the layout
-        self.colormap_selector = ColormapSelector()
+        self.colormap_selector = ColormapSelector(self)
         self.layout().addWidget(self.colormap_selector)
 
 # Example of how this custom GUI might be used:
@@ -123,12 +123,12 @@ from qtpy.QtWidgets import QWidget, QVBoxLayout
 from bec_widgets.widgets.buttons import ColormapButton
 
 class MyGui(QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
         self.setLayout(QVBoxLayout(self))
 
         # Create and add the ColormapButton to the layout
-        self.colormap_button = ColormapButton()
+        self.colormap_button = ColormapButton(self)
         self.layout().addWidget(self.colormap_button)
 
         # Connect the signal to handle colormap changes

@@ -45,7 +45,15 @@ Display 1D detector signals.
 Display multiple 1D waveforms.
 ```
 
-```{grid-item-card}  Image widget
+```{grid-item-card}  Scatter Waveform Widget
+:link: user.widgets.scatter_waveform_widget
+:link-type: ref
+:img-top: /assets/widget_screenshots/scatter_waveform.png
+
+Display a 1D waveforms with a third device on the z-axis.
+```
+
+```{grid-item-card}  Image Widget
 :link: user.widgets.image_widget
 :link-type: ref
 :img-top: /assets/widget_screenshots/image_widget.png
@@ -256,6 +264,7 @@ hidden: true
 
 dock_area/bec_dock_area.md
 waveform/waveform_widget.md
+scatter_waveform/scatter_waveform.md
 multi_waveform/multi_waveform.md
 image/image_widget.md
 motor_map/motor_map.md

@@ -27,12 +27,12 @@ from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 from bec_widgets.widgets.positioner_box import PositionerBox
 
 class MyGui(QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
         self.setLayout(QVBoxLayout(self))  # Initialize the layout for the widget
 
         # Create and add the PositionerBox to the layout
-        self.positioner_box = PositionerBox(device="motor1")
+        self.positioner_box = PositionerBox(parent=self, device="motor1")
         self.layout().addWidget(self.positioner_box)
 
 # Example of how this custom GUI might be used:

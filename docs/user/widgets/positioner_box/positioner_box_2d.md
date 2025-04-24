@@ -1,10 +1,10 @@
 (user.widgets.positioner_box_2d)=
 
-# Positioner Box Widget
+# Positioner Box 2D Widget
 
 ````{tab} Overview
 
-The [`PositionerBox2D`](/api_reference/_autosummary/bec_widgets.cli.client.PositionerBox2D) widget is very similar to the ['PositionerBox'](/user/widgets/positioner_box/positioner_box) but allows controlling two positioners at the same time, in a horizontal and vertical orientation respectively. It is intended primarily for controlling axes which have a perpendicular relationship like that. In other cases, it may be better to use a `PositionerGroup` instead. 
+The [`PositionerBox2D`](/api_reference/_autosummary/bec_widgets.cli.client.PositionerBox2D) widget is very similar to the [`PositionerBox`](/user/widgets/positioner_box/positioner_box) but allows controlling two positioners at the same time, in a horizontal and vertical orientation respectively. It is intended primarily for controlling axes which have a perpendicular relationship like that. In other cases, it may be better to use a `PositionerGroup` instead. 
 
 The `PositionerBox2D` has the same features as the standard `PositionerBox`, but additionally, step buttons which move the positioner by the selected step size, and tweak buttons which move by a tenth of the selected step size.
 
@@ -23,12 +23,12 @@ from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 from bec_widgets.widgets.positioner_box import PositionerBox2D
 
 class MyGui(QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
         self.setLayout(QVBoxLayout(self))  # Initialize the layout for the widget
 
         # Create and add the PositionerBox to the layout
-        self.positioner_box_2d = PositionerBox(device_hor="horizontal_motor", device_ver="vertical_motor")
+        self.positioner_box_2d = PositionerBox(parent=self, device_hor="horizontal_motor", device_ver="vertical_motor")
         self.layout().addWidget(self.positioner_box_2d)
 
 # Example of how this custom GUI might be used:

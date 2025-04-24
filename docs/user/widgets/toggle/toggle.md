@@ -27,12 +27,12 @@ from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 from bec_widgets.widgets.toggle_switch import ToggleSwitch
 
 class MyGui(QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
         self.setLayout(QVBoxLayout(self))  # Initialize the layout for the widget
 
         # Create and add the ToggleSwitch to the layout
-        self.toggle_switch = ToggleSwitch()
+        self.toggle_switch = ToggleSwitch(parent=self)
         self.layout().addWidget(self.toggle_switch)
 
 # Example of how this custom GUI might be used:
