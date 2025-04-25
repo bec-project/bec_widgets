@@ -73,6 +73,7 @@ def test_client_generator_with_black_formatting():
         import enum
         import inspect
         import traceback
+        from functools import reduce
         from typing import Literal, Optional
 
         from bec_lib.logger import bec_logger

@@ -40,6 +40,7 @@ class ClientGenerator:
             """import enum
 import inspect
 import traceback
+from functools import reduce
 from typing import Literal, Optional
 """
             if self._base
