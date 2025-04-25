@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from bec_widgets.widgets.containers.auto_update.auto_updates import AutoUpdates
 from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
 

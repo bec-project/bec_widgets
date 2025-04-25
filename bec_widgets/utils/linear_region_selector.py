@@ -1,6 +1,8 @@
 """ Module for a thin wrapper (LinearRegionWrapper) around the LinearRegionItem in pyqtgraph.
 The class is mainly designed for usage with the BECWaveform and 1D plots. """
 
+from __future__ import annotations
+
 import pyqtgraph as pg
 from qtpy.QtCore import QObject, Signal, Slot
 from qtpy.QtGui import QColor
