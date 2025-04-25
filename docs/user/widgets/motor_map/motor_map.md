@@ -7,7 +7,7 @@
 The Motor Map Widget is a specialized tool for tracking and visualizing the positions of motors in real-time. This widget is crucial for applications requiring precise alignment and movement tracking during scans. It provides an intuitive way to monitor motor trajectories, ensuring accurate positioning throughout the scanning process.
 
 ## Key Features:
-- **Flexible Integration**: The widget can be integrated into [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`.
+- **Flexible Integration**: The widget can be integrated into a [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`.
 - **Real-time Motor Position Visualization**: Tracks motor positions in real-time and visually represents motor trajectories.
 - **Customizable Visual Elements**: The appearance of all widget components is fully customizable, including scatter size and background values.
 - **Interactive Controls**: Interactive controls for zooming, panning, and adjusting the visual properties of motor trajectories on the fly.

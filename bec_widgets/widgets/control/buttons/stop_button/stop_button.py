@@ -54,9 +54,20 @@ class StopButton(BECWidget, QWidget):
 if __name__ == "__main__":  # pragma: no cover
     import sys
 
-    from qtpy.QtWidgets import QApplication
+    from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
-    app = QApplication(sys.argv)
-    w = StopButton()
-    w.show()
+    from bec_widgets.widgets.control.buttons.stop_button.stop_button import StopButton
+
+    class MyGui(QWidget):
+        def __init__(self):
+            super().__init__()
+            self.setLayout(QVBoxLayout())
+            # Create and add the StopButton to the layout
+            self.stop_button = StopButton()
+            self.layout().addWidget(self.stop_button)
+
+    # Example of how this custom GUI might be used:
+    app = QApplication([])
+    my_gui = MyGui()
+    my_gui.show()
     sys.exit(app.exec_())

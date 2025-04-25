@@ -1,30 +1,21 @@
 (user.widgets.image_widget)=
 
-# Image Widget
+# Image widget
 
 ````{tab} Overview
 
-The Image Widget is a versatile tool designed for visualizing both 1D and 2D data, such as camera images or waveform data, in real-time. Directly integrated with the `BEC` framework, it can display live data streams from connected detectors or other data sources within the current `BEC` session. The widget provides advanced customization options for color maps and scale bars, allowing users to tailor the visualization to their specific needs.
+The Image widget is a versatile tool designed for visualizing both 1D and 2D data, such as camera images or waveform data, in real-time. Directly integrated with the `BEC` framework, it can display live data streams from connected detectors or other data sources within the current `BEC` session. The widget provides advanced customization options for color maps and scale bars, allowing users to tailor the visualization to their specific needs.
 
 ## Key Features:
 - **Flexible Integration**: The widget can be integrated into [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`.
 - **Live Data Visualization**: Real-time plotting of both 1D and 2D data from detectors or other data sources, provided that a data stream is available in the BEC session.
-- **Support for Multiple Monitor Types**: The Image Widget supports different monitor types (`'1d'` and `'2d'`), allowing visualization of various data dimensions.
+- **Support for Multiple Monitor Types**: The Image widget supports different monitor types (`'1d'` and `'2d'`), allowing visualization of various data dimensions. It can automatically determine the best way to visualise the data based on the shape of the data source.
 - **Customizable Color Maps and Scale Bars**: Users can customize the appearance of images with various color maps and adjust scale bars to better interpret the visualized data.
 - **Real-time Image Processing**: Apply real-time image processing techniques directly within the widget to enhance the quality or analyze specific aspects of the data, such as rotation, logarithmic scaling, and Fast Fourier Transform (FFT).
 - **Data Export**: Export visualized data to various formats such as PNG, TIFF, or H5 for further analysis or reporting.
 - **Interactive Controls**: Offers interactive controls for zooming, panning, and adjusting the visual properties of the images on the fly.
 
-## Monitor Types
-
-The Image Widget can handle different types of data, specified by the `monitor_type` parameter:
-
-- **1D Monitor (`monitor_type='1d'`)**: Used for visualizing 1D waveform data. The widget collects incoming 1D data arrays and constructs a 2D image by stacking them, adjusting for varying lengths if necessary.
-- **2D Monitor (`monitor_type='2d'`)**: Used for visualizing 2D image data directly from detectors like cameras.
-
-By specifying the appropriate `monitor_type`, you can configure the Image Widget to handle data from different detectors and sources.
-
-![Image 2D](./image_plot.gif)
+![Image 2D](./image.gif)
 ````
 
 ````{tab} Examples - CLI
@@ -47,7 +38,7 @@ img_widget.title = "Camera Image - Eiger Detector"
 
 ## Example 2 - Visualizing 1D Waveform Data from a Detector
 
-This example demonstrates how to set up the Image Widget to visualize 1D waveform data from a detector, such as a line detector or a spectrometer. The widget will stack incoming 1D data arrays to construct a 2D image.
+This example demonstrates how to set up the Image widget to visualize 1D waveform data from a detector, such as a line detector or a spectrometer. The widget will stack incoming 1D data arrays to construct a 2D image.
 
 ```python
 # Add a new dock with BECFigure widget
@@ -65,7 +56,7 @@ img_widget.vrange= [0, 100]
 
 ## Example 3 - Real-time Image Processing
 
-The `ImageWidget` provides real-time image processing capabilities, such as rotating, scaling, applying logarithmic scaling, and performing FFT on the displayed images. The following example demonstrates how to apply these transformations to an image.
+The `Image` provides real-time image processing capabilities, such as rotating, scaling, applying logarithmic scaling, and performing FFT on the displayed images. The following example demonstrates how to apply these transformations to an image.
 
 ```python
 # Rotate the image by 90 degrees (1,2,3,4 are multiplied by 90 degrees)

@@ -38,16 +38,15 @@ Note, not specifying signal_filter will include all signals.
 
 ```python
 from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
-from bec_widgets.widgets.signal_line_edit.signal_line_edit import SignalLineEdit
-from bec_widgets.widgets.base_classes.device_signal_input_base import BECSignalFilter
+from bec_widgets.widgets.control.device_input.signal_line_edit.signal_line_edit import SignalLineEdit
+from ophyd import Kind
 
 class MyGui(QWidget):
     def __init__(self):
         super().__init__()
         self.setLayout(QVBoxLayout(self))  # Initialize the layout for the widget
-
-        # Create and add the DeviceLineEdit to the layout
-        self.signal_line_edit = SignalLineEdit(device="samx", signal_filter=[BECSignalFilter.NORMAL, BECSignalFilter.HINTED])
+        # Create and add the SignalLineEdit to the layout
+        self.signal_line_edit = SignalLineEdit(device="samx", signal_filter=[Kind.normal, Kind.hinted])
         self.layout().addWidget(self.signal_line_edit)
 
 # Example of how this custom GUI might be used:
@@ -57,28 +56,27 @@ my_gui.show()
 app.exec_()
 ```
 
-## Example 2 - Creating a DeviceComboBox in Code
+## Example 2 - Creating a SignalComboBox in Code
 
-Similarly, here is an example of creating a `DeviceComboBox` widget in code and customizing its behavior.
+A 
 
 ```python
 from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
-from bec_widgets.widgets.signal_combobox.signal_combobox import SignalComboBox
-from bec_widgets.widgets.base_classes.device_signal_input_base import BECSignalFilter
+from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
+from ophyd import Kind
 
 class MyGui(QWidget):
     def __init__(self):
         super().__init__()
         self.setLayout(QVBoxLayout(self))  # Initialize the layout for the widget
-
-        # Create and add the DeviceLineEdit to the layout
-        self.signal_combobox = SignalComboBox(device="samx", signal_filter=[BECSignalFilter.NORMAL, BECSignalFilter.HINTED])
+        # Create and add the SignalComboBox to the layout
+        self.signal_combobox = SignalComboBox(device="samx",  signal_filter=[Kind.normal, Kind.hinted])
         self.layout().addWidget(self.signal_combobox)
 
 # Example of how this custom GUI might be used:
 app = QApplication([])
 my_gui = MyGui()
-my_gui.show()
+my_gui.show()   
 app.exec_()
 ```
 
@@ -108,12 +106,12 @@ The following Qt properties are also included:
 
 ````{tab} API - ComboBox
 ```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.SignalComboBox.rst
+.. include:: /api_reference/_autosummary/bec_widgets.control.device_input.signal_combobox.SignalComboBox.rst
 ```
 ````
 
 ````{tab} API - LineEdit
 ```{eval-rst}
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.SignalLineEdit.rst
+.. include:: /api_reference/_autosummary/bec_widgets.control.device_input.signal_line_edit.SignalLineEdit.rst
 ```
 ````

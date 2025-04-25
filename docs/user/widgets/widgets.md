@@ -45,7 +45,7 @@ Display 1D detector signals.
 Display multiple 1D waveforms.
 ```
 
-```{grid-item-card}  Image Widget
+```{grid-item-card}  Image widget
 :link: user.widgets.image_widget
 :link-type: ref
 :img-top: /assets/widget_screenshots/image_widget.png
@@ -238,6 +238,14 @@ Display DAP summaries of LMFit models in a window.
 
 Select DAP model from a list of DAP processes.
 ```
+
+```{grid-item-card} Log panel widget
+:link: user.widgets.log_panel
+:link-type: ref
+:img-top: /user/widgets/log_panel/logpanel.png
+
+Show and filter logs from the BEC Redis server.
+```
 ````
 
 ```{toctree}
@@ -247,7 +255,6 @@ hidden: true
 ---
 
 dock_area/bec_dock_area.md
-bec_figure/bec_figure.md
 waveform/waveform_widget.md
 multi_waveform/multi_waveform.md
 image/image_widget.md
@@ -272,5 +279,6 @@ position_indicator/position_indicator.md
 lmfit_dialog/lmfit_dialog.md
 dap_combo_box/dap_combo_box.md
 games/games.md
+log_panel/log_panel.md
 
 ```

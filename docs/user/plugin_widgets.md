@@ -1,5 +1,5 @@
 (user.plugin_widgets)=
-# PLugin repository widgets
+# Plugin repository widgets
 
 ## Adding widgets to the plugin repository
 

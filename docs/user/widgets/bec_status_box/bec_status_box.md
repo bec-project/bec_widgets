@@ -23,7 +23,7 @@ In this example, we demonstrate how to add a `BECStatusBox` widget to a `BECDock
 
 ```python
 # Add a new dock with a BECStatusBox widget
-bec_status_box = gui.add_dock().add_widget("BECStatusBox")
+sb = gui.bec.new().new(widget=gui.available_widgets.BECStatusBox)
 ```
 
 ```{hint}

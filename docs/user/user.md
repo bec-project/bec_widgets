@@ -5,6 +5,16 @@ Welcome to the User section of the BEC Widgets documentation! BEC Widgets is a v
 ```{toctree}
 ---
 maxdepth: 2
+hidden: false
+---
+
+customisation.md
+plugin_widgets.md
+```
+
+```{toctree}
+---
+maxdepth: 2
 hidden: true
 ---
 
@@ -13,7 +23,6 @@ applications/applications.md
 widgets/widgets.md
 api_reference/api_reference.md
 ```
-
 
 ***
 

@@ -11,7 +11,7 @@ The [`Text Box Widget`](/api_reference/_autosummary/bec_widgets.cli.client.TextB
 - **Automatic styling**: The widget automatically adheres to BEC's style guides. No need to worry about background colors, font sizes, or other appearance settings.
 
 ## BEC Designer Properties
-```{figure} ../../assets/widget_screenshots/text_box_properties.png
+```{figure} ../../../assets/widget_screenshots/text_box_properties.png
 ```
 
 ````
@@ -26,7 +26,7 @@ In this example, we demonstrate how to add a `TextBox` widget to a `BECDockArea`
 
 ```python
 # Add a new dock with a TextBox widget
-text_box = gui.add_dock().add_widget("TextBox")
+text_box = gui.bec.new().new(widget=gui.available_widgets.TextBox)
 
 # Set the text to display
 text_box.set_plain_text("Hello, World!")

@@ -4,7 +4,7 @@
 
 ````{tab} Overview
 
-The [`SpinnerWidget`](/api_reference/_autosummary/bec_widgets.cli.client.SpinnerWidget) is a simple and versatile widget designed to indicate loading or movement within an application. It is commonly used to show that a device is in motion or that an operation is ongoing. The `SpinnerWidget` can be easily integrated into your GUI application either through direct code instantiation or by using `QtDesigner`.
+The [`SpinnerWidget`](/api_reference/_autosummary/bec_widgets.utility.spinner.spinner.SpinnerWidget) is a simple and versatile widget designed to indicate loading or movement within an application. It is commonly used to show that a device is in motion or that an operation is ongoing. The `SpinnerWidget` can be easily integrated into your GUI application either through direct code instantiation or by using `QtDesigner`.
 
 ## Key Features:
 - **Loading Indicator**: Provides a visual indication of ongoing operations or device movement.
@@ -24,7 +24,7 @@ In this example, we demonstrate how to create a `SpinnerWidget` in code and star
 
 ```python
 from qtpy.QtWidgets import QApplication, QMainWindow
-from bec_widgets.widgets.spinner_widget import SpinnerWidget
+from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 
 app = QApplication([])
 
@@ -55,7 +55,7 @@ spinner.stop()
 
 ## Example 3 - Integrating the Spinner Widget in QtDesigner
 
-The `SpinnerWidget` can be added to your GUI layout using `QtDesigner`. Once added, you can control the spinner using the `start` and `stop` methods, similar to the code examples above.
+The `SpinnerWidget` can be added to your GUI layout using `QtDesigner`. Once added, you can assign the spinner to an attribute of your application, and then control the spinner using the `start` and `stop` methods, similar to the code examples above.
 
 ```python
 # Example: Start the spinner in a QtDesigner-based application
