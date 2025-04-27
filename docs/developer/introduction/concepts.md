@@ -5,7 +5,7 @@ This section provides an overview of the core concepts of BEC Widgets, which are
 ## Moduler Design
 We develop widgets with the single-responsibility principle in mind, meaning each widget is designed for a specific task. Our goal is to keep widgets simple, using them primarily for visualization or to initiate actions within BEC. Following these ideas, widgets should be designed to be reusable in various applications, making them versatile building blocks for larger GUIs. 
 
-We offer up to three different options for composing larger GUIs from these modular widgets: BECDesigner, DockArea widget, or scripting from the command line interface. More information about these options can be found in the user sections on [applications](user.applications).
+We offer up to three different options for composing larger GUIs from these modular widgets: BEC Designer, DockArea widget, or scripting from the command line interface. More information about these options can be found in the user sections on [applications](user.applications).
 
 ## Client-Server Architecture
 

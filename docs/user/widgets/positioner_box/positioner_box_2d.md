@@ -12,7 +12,7 @@ The `PositionerBox2D` has the same features as the standard `PositionerBox`, but
 
 ````{tab} Examples
 
-The `PositionerBox2D` widget can be integrated within a GUI application either through direct code instantiation or by using `QtDesigner`. Below are examples demonstrating how to create and use the `PositionerBox2D` widget.
+The `PositionerBox2D` widget can be integrated within a GUI application either through direct code instantiation or by using `BEC Designer`. Below are examples demonstrating how to create and use the `PositionerBox2D` widget.
 
 ## Example 1 - Creating a PositionerBox in Code
 
@@ -42,12 +42,12 @@ app.exec_()
 
 Users can select the positioner device by clicking the button under the device label, which opens a dialog for device selection.
 
-## Example 3 - Customizing PositionerBox in QtDesigner
+## Example 3 - Customizing PositionerBox in BEC Designer
 
-The `PositionerBox2D` widget can be added to a GUI through `QtDesigner`. Once integrated, you can configure the default device and customize the widget’s appearance and behavior directly within the designer.
+The `PositionerBox2D` widget can be added to a GUI through `BEC Designer`. Once integrated, you can configure the default device and customize the widget’s appearance and behavior directly within the designer.
 
 ```python
-# After adding the widget to a form in QtDesigner, you can configure the device:
+# After adding the widget to a form in BEC Designer, you can configure the device:
 self.positioner_box.set_positioner_hor("samx")
 self.positioner_box.set_positioner_verr("samy")
 ```

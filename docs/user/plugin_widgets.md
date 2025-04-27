@@ -44,7 +44,7 @@ class TestWidget(BECWidget, QWidget):
 ### Generating the plugin files and RPC client template
 
 To allow the BEC client to communicate with the GUI server and to know which widgets are available,
-as well as to allow the Qt Designer to find the available widgets, a code generation tool should be
+as well as to allow the BEC Designer to find the available widgets, a code generation tool should be
 run to prepare a client file which lists all the available widget classes and functions. Make sure
 you are in the BEC python environment where your plugin repository is also installed, and run:
 

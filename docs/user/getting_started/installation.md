@@ -28,5 +28,5 @@ pip cache purge
 This can resolve conflicts or issues with package installations.
 
 ```{warning}
-At the moment PyQt6 is no longer officially supported by BEC Widgets due to incompatibilities with Qt Designer. Please use PySide6 instead.
+At the moment PyQt6 is no longer officially supported by BEC Widgets due to incompatibilities with BEC Designer. Please use PySide6 instead.
 ```

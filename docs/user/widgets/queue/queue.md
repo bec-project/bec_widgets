@@ -11,13 +11,13 @@ The [`BEC Queue`](/api_reference/_autosummary/bec_widgets.cli.client.BECQueue) w
 - **Detailed Scan Information**: Provides a clear view of scan numbers, types, and statuses, helping users track the progress and state of each scan.
 - **Queue Control**: Allows users to stop specific scans, stop the entire queue, resume paused scans, and reset the queue.
 - **Interactive Table Layout**: The queue is presented in a table format, with customizable columns that stretch to fit the available space.
-- **Flexible Integration**: The widget can be integrated into both [`BECDockArea`](user.widgets.bec_dock_area) and used as an individual component in your application through `QtDesigner`.
+- **Flexible Integration**: The widget can be integrated into both [`BECDockArea`](user.widgets.bec_dock_area) and used as an individual component in your application through `BEC Designer`.
 
 ````
 
 ````{tab} Examples
 
-The `BEC Queue Widget` can be embedded within a [`BECDockArea`](user.widgets.bec_dock_area) or used as an individual component in your application through `QtDesigner`. Below are examples demonstrating how to create and use the `BEC Queue Widget`.
+The `BEC Queue Widget` can be embedded within a [`BECDockArea`](user.widgets.bec_dock_area) or used as an individual component in your application through `BEC Designer`. Below are examples demonstrating how to create and use the `BEC Queue Widget`.
 
 ## Example 1 - Adding BEC Queue Widget to BECDockArea
 

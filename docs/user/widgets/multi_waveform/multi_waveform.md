@@ -11,13 +11,13 @@ The Multi Waveform Widget is designed to display multiple 1D detector signals ov
 - **Interactive Controls**: Highlight specific curves, adjust opacity, and interact with the plot using zoom and pan tools.
 - **Customizable Appearance**: Customize the colormap, curve opacity, and highlight settings to enhance data visualization.
 - **Data Export**: Export the displayed data for further analysis, including exporting to Matplotlib for advanced plotting.
-- **Flexible Integration**: Can be integrated into [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`.
+- **Flexible Integration**: Can be integrated into [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BEC Designer`.
 
 ````
 
 ````{tab} Examples - CLI
 
-`BECMultiWaveform` can be embedded in [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`. The command-line API is consistent across these contexts.
+`BECMultiWaveform` can be embedded in [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BEC Designer`. The command-line API is consistent across these contexts.
 
 ## Example 1 - Using BECMultiWaveformWidget in BECDockArea
 

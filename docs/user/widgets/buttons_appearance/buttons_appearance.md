@@ -23,7 +23,7 @@ The `Dark Mode Button` is a toggle control that allows users to switch between l
 
 **Key Features:**
 - **Theme Switching**: Enables users to switch between light and dark themes with a single click.
-- **Configurable from BECDesigner**: The defaults for the dark mode can be set in the BECDesigner, allowing users to customize the startup appearance of the GUI.
+- **Configurable from BEC Designer**: The defaults for the dark mode can be set in the BEC Designer, allowing users to customize the startup appearance of the GUI.
 
 ## Color Button
 
@@ -48,7 +48,7 @@ The `Colormap Button` is a custom widget that displays the current colormap and,
 - **Current Colormap Display**: Shows the name and a gradient icon of the current colormap directly on the button.
 - **Nested Menu Selection**: Offers a nested menu with categorized colormaps, making it easy to find and select the desired colormap.
 - **Signal Emission**: Emits a signal when the colormap changes, providing the new colormap name as a string.
-- **Qt Designer Integration**: Exposes properties and signals to be used within Qt Designer, allowing for customization within the designer interface.
+- **BEC Designer Integration**: Exposes properties and signals to be used within BEC Designer, allowing for customization within the designer interface.
 - **Resizable and Styled**: Features adjustable size policies and styles to match the look and feel of standard `QPushButton` widgets, including rounded edges.
 `````
 

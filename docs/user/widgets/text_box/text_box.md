@@ -18,7 +18,7 @@ The [`Text Box Widget`](/api_reference/_autosummary/bec_widgets.cli.client.TextB
 
 ````{tab} Examples - CLI
 
-The `TextBox` widget can be integrated within a [`BECDockArea`](user.widgets.bec_dock_area) or used as an individual component in your application through `QtDesigner`. The following examples demonstrate how to create and customize the `TextBox` widget in various scenarios.
+The `TextBox` widget can be integrated within a [`BECDockArea`](user.widgets.bec_dock_area) or used as an individual component in your application through `BEC Designer`. The following examples demonstrate how to create and customize the `TextBox` widget in various scenarios.
 
 ## Example 1 - Adding Text Box Widget to BECDockArea
 

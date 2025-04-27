@@ -7,7 +7,7 @@
 The Image widget is a versatile tool designed for visualizing both 1D and 2D data, such as camera images or waveform data, in real-time. Directly integrated with the `BEC` framework, it can display live data streams from connected detectors or other data sources within the current `BEC` session. The widget provides advanced customization options for color maps and scale bars, allowing users to tailor the visualization to their specific needs.
 
 ## Key Features:
-- **Flexible Integration**: The widget can be integrated into [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`.
+- **Flexible Integration**: The widget can be integrated into [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BEC Designer`.
 - **Live Data Visualization**: Real-time plotting of both 1D and 2D data from detectors or other data sources, provided that a data stream is available in the BEC session.
 - **Support for Multiple Monitor Types**: The Image widget supports different monitor types (`'1d'` and `'2d'`), allowing visualization of various data dimensions. It can automatically determine the best way to visualise the data based on the shape of the data source.
 - **Customizable Color Maps and Scale Bars**: Users can customize the appearance of images with various color maps and adjust scale bars to better interpret the visualized data.
@@ -20,7 +20,7 @@ The Image widget is a versatile tool designed for visualizing both 1D and 2D dat
 
 ````{tab} Examples - CLI
 
-`ImageWidget` can be embedded in [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`. The command-line API is the same for all cases.
+`ImageWidget` can be embedded in [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BEC Designer`. The command-line API is the same for all cases.
 
 ## Example 1 - Visualizing 2D Image Data from a Detector
 

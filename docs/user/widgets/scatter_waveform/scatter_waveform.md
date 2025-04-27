@@ -7,13 +7,13 @@ The 2D scatter plot widget is designed for more complex data visualization. It e
 
 ## Key Features:
 - **Real-Time Data Visualization**: Display 2D scatter plots with a third dimension represented by color.
-- **Flexible Integration**: Can be integrated into [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`.
+- **Flexible Integration**: Can be integrated into [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BEC Designer`.
 
 ````
 
 ````{tab} Examples - CLI
 
-`ScatterWaveform` widget can be embedded in [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`. The command-line API is consistent across these contexts.
+`ScatterWaveform` widget can be embedded in [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BEC Designer`. The command-line API is consistent across these contexts.
 
 ## Example
 

@@ -4,19 +4,19 @@
 
 ````{tab} Overview
 
-The [`PositionerBox`](/api_reference/_autosummary/bec_widgets.cli.client.PositionerBox) widget provides a graphical user interface to control a positioner device within the BEC environment. This widget allows users to interact with a positioner by setting setpoints, tweaking the motor position, and stopping motion. The device selection can be done via a small button under the device label, through `QtDesigner`, or by using the command line interface (CLI). This flexibility makes the `PositionerBox` an essential tool for tasks involving precise position control.
+The [`PositionerBox`](/api_reference/_autosummary/bec_widgets.cli.client.PositionerBox) widget provides a graphical user interface to control a positioner device within the BEC environment. This widget allows users to interact with a positioner by setting setpoints, tweaking the motor position, and stopping motion. The device selection can be done via a small button under the device label, through `BEC Designer`, or by using the command line interface (CLI). This flexibility makes the `PositionerBox` an essential tool for tasks involving precise position control.
 
 ## Key Features:
-- **Device Selection**: Easily select a positioner device by clicking the button under the device label or by configuring the widget in `QtDesigner`.
+- **Device Selection**: Easily select a positioner device by clicking the button under the device label or by configuring the widget in `BEC Designer`.
 - **Setpoint Control**: Directly set the positioner’s target setpoint and issue movement commands.
 - **Tweak Controls**: Adjust the motor position incrementally using the tweak left/right buttons.
 - **Real-Time Feedback**: Monitor the device’s current position and status, with live updates on whether the device is moving or idle.
-- **Flexible Integration**: Can be integrated into a GUI through `BECDockArea` or used as a standalone component in `QtDesigner`.
+- **Flexible Integration**: Can be integrated into a GUI through `BECDockArea` or used as a standalone component in `BEC Designer`.
 ````
 
 ````{tab} Examples
 
-The `PositionerBox` widget can be integrated within a GUI application either through direct code instantiation or by using `QtDesigner`. Below are examples demonstrating how to create and use the `PositionerBox` widget.
+The `PositionerBox` widget can be integrated within a GUI application either through direct code instantiation or by using `BEC Designer`. Below are examples demonstrating how to create and use the `PositionerBox` widget.
 
 ## Example 1 - Creating a PositionerBox in Code
 
@@ -46,12 +46,12 @@ app.exec_()
 
 Users can select the positioner device by clicking the button under the device label, which opens a dialog for device selection.
 
-## Example 3 - Customizing PositionerBox in QtDesigner
+## Example 3 - Customizing PositionerBox in BEC Designer
 
-The `PositionerBox` widget can be added to a GUI through `QtDesigner`. Once integrated, you can configure the default device and customize the widget’s appearance and behavior directly within the designer.
+The `PositionerBox` widget can be added to a GUI through `BEC Designer`. Once integrated, you can configure the default device and customize the widget’s appearance and behavior directly within the designer.
 
 ```python
-# After adding the widget to a form in QtDesigner, you can configure the device:
+# After adding the widget to a form in BEC Designer, you can configure the device:
 self.positioner_box.set_positioner("motor2")
 ```
 ````

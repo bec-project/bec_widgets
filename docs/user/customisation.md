@@ -110,14 +110,14 @@ window.show()
 sys.exit(app.exec())
 ```
 
-## Writing applications using Qt Designer
+## Writing applications using BEC Designer
 
-BEC Widgets are designed to be used with QtDesigner to quickly design GUI.
+BEC Widgets are designed to be used with BEC Designer to quickly design GUI.
 
-## Example of promoting widgets in Qt Designer
+## Example of promoting widgets in BEC Designer
 
 _Work in progress_
 
-## Implementation of plugins into Qt Designer
+## Implementation of plugins into BEC Designer
 
 _Work in progress_

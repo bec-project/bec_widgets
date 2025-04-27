@@ -4,7 +4,7 @@
 
 ````{tab} Overview
 
-The `Device Input Widgets` consist of two primary widgets: `DeviceLineEdit` and `DeviceComboBox`. Both widgets are designed to facilitate the selection of devices within the BEC environment, allowing users to filter, search, and select devices dynamically. These widgets are highly customizable and can be integrated into a GUI either through direct code instantiation or by using `QtDesigner`.
+The `Device Input Widgets` consist of two primary widgets: `DeviceLineEdit` and `DeviceComboBox`. Both widgets are designed to facilitate the selection of devices within the BEC environment, allowing users to filter, search, and select devices dynamically. These widgets are highly customizable and can be integrated into a GUI either through direct code instantiation or by using `BEC Designer`.
 
 ## DeviceLineEdit
 The `DeviceLineEdit` widget provides a line edit interface with autocomplete functionality for device names, making it easier for users to quickly search and select devices.
@@ -19,7 +19,7 @@ The `DeviceComboBox` widget offers a dropdown interface for device selection, pr
 - **Real-Time Autocomplete (LineEdit)**: The `DeviceLineEdit` widget supports real-time autocomplete, helping users find devices faster.
 - **Real-Time Input Validation (LineEdit)**: User input is validated in real-time with a red border around the `DeviceLineEdit` indicating an invalid input. 
 - **Dropdown Selection (ComboBox)**: The `DeviceComboBox` widget displays devices in a dropdown list, making selection straightforward.
-- **QtDesigner Integration**: Both widgets can be added as custom widgets in `QtDesigner` or instantiated directly in code.
+- **BEC Designer Integration**: Both widgets can be added as custom widgets in `BEC Designer` or instantiated directly in code.
 
 ## Screenshot
 ```{figure} /assets/widget_screenshots/device_inputs.png
@@ -29,7 +29,7 @@ The `DeviceComboBox` widget offers a dropdown interface for device selection, pr
 
 ````{tab} Examples
 
-Both `DeviceLineEdit` and `DeviceComboBox` can be integrated within a GUI application through direct code instantiation or by using `QtDesigner`. Below are examples demonstrating how to create and use these widgets.
+Both `DeviceLineEdit` and `DeviceComboBox` can be integrated within a GUI application through direct code instantiation or by using `BEC Designer`. Below are examples demonstrating how to create and use these widgets.
 
 
 ## Example 1 - Creating a DeviceLineEdit in Code

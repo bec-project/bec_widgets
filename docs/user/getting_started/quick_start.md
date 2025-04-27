@@ -5,7 +5,7 @@ In order to use BEC Widgets as a plotting tool for BEC, it needs to be [installe
 ## BECGuiClient
 The `gui` object is the main entry point for interacting with the BEC Widgets framework. It is an instance of the [`BECGuiClient`](/api_reference/_autosummary/bec_widgets.cli.client.BECGuiClient) class, which provides methods to create and manage GUI components. Upon BEC startup, a default [`BECDockArea`](/api_reference/_autosummary/bec_widgets.cli.client.BECDockArea) instance named *bec* is automatically launched.
 
-A launcher interface is available via the top menu bar under New → Open Launcher. This opens a window where users can launch a new [`BECDockArea`](/api_reference/_autosummary/bec_widgets.cli.client.BECDockArea) instance, an [AutoUpdate](#user.auto_updates) instance, individual widgets or a custom *ui file* created with *BECDesigner*. Alternatively, users can launch a new [`BECDockArea`](/api_reference/_autosummary/bec_widgets.cli.client.BECDockArea) from the command line:
+A launcher interface is available via the top menu bar under New → Open Launcher. This opens a window where users can launch a new [`BECDockArea`](/api_reference/_autosummary/bec_widgets.cli.client.BECDockArea) instance, an [AutoUpdate](#user.auto_updates) instance, individual widgets or a custom *ui file* created with *BEC Designer*. Alternatively, users can launch a new [`BECDockArea`](/api_reference/_autosummary/bec_widgets.cli.client.BECDockArea) from the command line:
 
 ```python
 dock_area = gui.new() # launches a new BECDockArea instance

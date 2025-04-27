@@ -4,19 +4,19 @@
 
 ````{tab} Overview
 
-The [`Toggle Switch`](/api_reference/_autosummary/bec_widgets.cli.client.ToggleSwitch) widget provides a simple, customizable toggle switch that can be used to represent binary states (e.g., on/off, true/false) within a GUI. This widget is designed to be used directly in code or added through `QtDesigner`, making it versatile for various applications where a user-friendly switch is needed.
+The [`Toggle Switch`](/api_reference/_autosummary/bec_widgets.cli.client.ToggleSwitch) widget provides a simple, customizable toggle switch that can be used to represent binary states (e.g., on/off, true/false) within a GUI. This widget is designed to be used directly in code or added through `BEC Designer`, making it versatile for various applications where a user-friendly switch is needed.
 
 ## Key Features:
 - **Binary State Representation**: Represents a simple on/off state with a smooth toggle animation.
 - **Customizable Appearance**: Allows customization of track and thumb colors for both active and inactive states.
 - **Smooth Animation**: Includes a smooth animation when toggling between states, enhancing user interaction.
-- **QtDesigner Integration**: Can be added directly through `QtDesigner` or instantiated in code.
+- **BEC Designer Integration**: Can be added directly through `BEC Designer` or instantiated in code.
 
 ````
 
 ````{tab} Examples
 
-The `Toggle Switch` widget can be integrated within a GUI application either through direct code instantiation or by using `QtDesigner`. Below are examples demonstrating how to create and customize the `Toggle Switch` widget.
+The `Toggle Switch` widget can be integrated within a GUI application either through direct code instantiation or by using `BEC Designer`. Below are examples demonstrating how to create and customize the `Toggle Switch` widget.
 
 ## Example 1 - Creating a Toggle Switch in Code
 
@@ -54,9 +54,9 @@ self.toggle_switch.active_thumb_color = QColor(255, 255, 255)  # Active state th
 self.toggle_switch.inactive_thumb_color = QColor(255, 255, 255)  # Inactive state thumb color (white)
 ```
 
-## Example 3 - Integrating the Toggle Switch in QtDesigner
+## Example 3 - Integrating the Toggle Switch in BEC Designer
 
-The `ToggleSwitch` can be added as a custom widget in `QtDesigner`. Once integrated, you can configure its properties through the designer's property editor. After adding the widget to a form in QtDesigner, you can manipulate it in your PyQt/PySide application:
+The `ToggleSwitch` can be added as a custom widget in `BEC Designer`. Once integrated, you can configure its properties through the designer's property editor. After adding the widget to a form in BEC Designer, you can manipulate it in your PyQt/PySide application:
 
 ```python
 # For instance:

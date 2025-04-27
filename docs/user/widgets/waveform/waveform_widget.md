@@ -7,7 +7,7 @@
 The Waveform Widget is used to display 1D detector signals. The widget is directly integrated with the `BEC` framework and can display real-time data from detectors loaded in the current `BEC` session as well as custom data from users.
 
 ## Key Features:
-- **Flexible Integration**: The widget can be integrated into [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`.
+- **Flexible Integration**: The widget can be integrated into [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BEC Designer`.
 - **Data Visualization**: Real-time plotting of positioner versus detector values from the BEC session, as well as static plotting of custom data.
 - **Real-time Data Processing**: Add real-time Data Processing Pipeline (DAP) to the real-time acquisition.
 - **Data Export**: Export data to CSV, H5, and other formats.
@@ -19,7 +19,7 @@ The Waveform Widget is used to display 1D detector signals. The widget is direct
 
 ````{tab} Examples - CLI
 
-`WaveformWidget` can be embedded in [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BECDesigner`. However, the command-line API is the same for all cases.
+`WaveformWidget` can be embedded in [`BECDockArea`](user.widgets.bec_dock_area), or used as an individual component in your application through `BEC Designer`. However, the command-line API is the same for all cases.
 
 ## Example 1 - Adding Waveform Widget as a dock with BECDockArea
 

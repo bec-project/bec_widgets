@@ -25,8 +25,8 @@ By default, this widget supports scans that are derived from the following base 
 The full procedure how to design `gui_config` for your custom scan class is described in the [Scan GUI Configuration](https://bec.readthedocs.io/en/latest/developer/scans/tutorials/scan_gui_config.html) tutorial.
 ```
 
-## BECDesigner Customization
-Within the BECDesigner's [property editor](https://doc.qt.io/qt-6/designer-widget-mode.html#the-property-editor/), the `ScanControl` widget can be customized to suit your application's requirements. The widget provides the following customization options:
+## BEC Designer Customization
+Within the BEC Designer's [property editor](https://doc.qt.io/qt-6/designer-widget-mode.html#the-property-editor/), the `ScanControl` widget can be customized to suit your application's requirements. The widget provides the following customization options:
 - **Hide Scan Control**: Allows you to hide the scan control buttons from the widget interface. This is useful when you want to place the control buttons in a different location.
 - **Hide Scan Selection**: Allows you to hide the scan selection combobox from the widget interface. This is useful when you want to restrict the user to a specific scan type or implement a custom scan selection mechanism.
 - **Hide Scan Remember Toggle**: Allows you to hide the toggle button that reloads scan parameters from the last executed scan. This is useful if you want to disable or restrict this functionality in specific scenarios.
@@ -44,7 +44,7 @@ Within the BECDesigner's [property editor](https://doc.qt.io/qt-6/designer-widge
 
 ````{tab} Examples
 
-The `ScanControl` widget can be integrated within a [`BECDockArea`](user.widgets.bec_dock_area) or used as an individual component in your application through `BECDesigner`. Below are examples demonstrating how to create and use the `ScanControl` widget.
+The `ScanControl` widget can be integrated within a [`BECDockArea`](user.widgets.bec_dock_area) or used as an individual component in your application through `BEC Designer`. Below are examples demonstrating how to create and use the `ScanControl` widget.
 
 ## Example 1 - Adding Scan Control Widget to BECDockArea
 
