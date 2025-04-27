@@ -210,7 +210,7 @@ class LaunchWindow(BECMainWindow):
         name: str | None = None,
         geometry: tuple[int, int, int, int] | None = None,
         **kwargs,
-    ) -> QWidget:
+    ) -> QWidget | None:
         """Launch the specified script. If the launch script creates a QWidget, it will be
         embedded in a BECMainWindow. If the launch script creates a BECMainWindow, it will be shown
         as a separate window.
@@ -246,6 +246,8 @@ class LaunchWindow(BECMainWindow):
 
             if launch_script == "custom_ui_file":
                 ui_file = kwargs.pop("ui_file", None)
+                if not ui_file:
+                    return None
                 return self._launch_custom_ui_file(ui_file)
 
             if launch_script == "auto_update":
