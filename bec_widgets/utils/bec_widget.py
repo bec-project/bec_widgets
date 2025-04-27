@@ -112,6 +112,8 @@ class BECWidget(BECConnector):
     def closeEvent(self, event):
         """Wrap the close even to ensure the rpc_register is cleaned up."""
         try:
-            self.cleanup()
+            if not self._destroyed:
+                self.cleanup()
+                self._destroyed = True
         finally:
             super().closeEvent(event)  # pylint: disable=no-member

@@ -99,6 +99,9 @@ class BECConnector:
             self, QObject
         ), "BECConnector must be used with a QObject or any qt related class."
 
+        # flag to check if the object was destroyed and its cleanup was called
+        self._destroyed = False
+
         # BEC related connections
         self.bec_dispatcher = BECDispatcher(client=client)
         self.client = self.bec_dispatcher.client if client is None else client
@@ -173,7 +176,9 @@ class BECConnector:
         if not hasattr(self, "cleanup"):
             return
         try:
-            self.cleanup()
+            if not self._destroyed:
+                self.cleanup()
+                self._destroyed = True
         except Exception:
             content = traceback.format_exc()
             logger.info(
