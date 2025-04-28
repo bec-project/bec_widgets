@@ -412,11 +412,10 @@ class BECDock(BECWidget, Dock):
         """
         # # FIXME Cleanup might be called twice
         try:
-            logger.info(f"Cleaning up dock {self.name()}")
             self.label.close()
             self.label.deleteLater()
         except Exception as e:
-            logger.error(f"Error while closing dock label: {e}")
+            logger.info(f"Error while closing dock label of dock: {e}")
 
         # Remove the dock from the parent dock area
         if self.parent_dock_area:
