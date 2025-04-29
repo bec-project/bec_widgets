@@ -558,3 +558,31 @@ def test_scan_metadata_is_connected(scan_control):
         "test key 1": "test value 1",
         "test key 2": "test value 2",
     }
+
+
+def test_restore_parameters_with_fewer_arg_bundles(scan_control, qtbot):
+    """
+    Ensure that when more argument bundles are present than exist in the
+    stored history, restoring parameters regenerates the arg box to the
+    correct (smaller) size and sets the values properly.
+    This is a check for the previous infinite loop bug.
+    """
+    # Select the scan type that has history with only one arg bundle
+    scan_control.comboBox_scan_selection.setCurrentText("line_scan")
+
+    # Manually add bundles so we end up with three rows
+    while scan_control.arg_box.count_arg_rows() < 3:
+        scan_control.arg_box.add_widget_bundle()
+    assert scan_control.arg_box.count_arg_rows() == 3
+
+    # Trigger restore of parameters from history
+    scan_control.toggle.checked = True
+    qtbot.wait(200)
+
+    # After restore, arg_box should have only one bundle (the history size)
+    assert scan_control.arg_box.count_arg_rows() == 1
+
+    # Verify that the restored parameter values match the history
+    args, kwargs = scan_control.get_scan_parameters(bec_object=False)
+    assert args == ["samx", 0.0, 2.0]
+    assert kwargs["steps"] == 10

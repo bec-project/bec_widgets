@@ -281,6 +281,17 @@ class ScanGroupBox(QGroupBox):
         selected_devices_str = " ".join(self.selected_devices.values())
         self.device_selected.emit(selected_devices_str.strip())
 
+    def remove_all_widget_bundles(self):
+        """Remove every widget bundle from the scan control layout."""
+        for widget in list(self.widgets):
+            if isinstance(widget, DeviceLineEdit):
+                self.selected_devices.pop(widget, None)
+            widget.close()
+            widget.deleteLater()
+            self.layout.removeWidget(widget)
+        self.widgets.clear()
+        self.device_selected.emit("")
+
     @Property(bool)
     def hide_add_remove_buttons(self):
         return self._hide_add_remove_buttons
@@ -349,10 +360,21 @@ class ScanGroupBox(QGroupBox):
             self._set_kwarg_parameters(parameters)
 
     def _set_arg_parameters(self, parameters: list):
-        while len(parameters) != len(self.widgets):
-            self.add_widget_bundle()
-        for i, parameter in enumerate(parameters):
-            WidgetIO.set_value(self.widgets[i], parameter)
+        self.remove_all_widget_bundles()
+        if not parameters:
+            return
+
+        inputs_per_bundle = len(self.inputs)
+        if inputs_per_bundle == 0:
+            return
+
+        bundles_needed = -(-len(parameters) // inputs_per_bundle)
+
+        for row in range(1, bundles_needed + 1):
+            self.add_input_widgets(self.inputs, row)
+
+        for i, value in enumerate(parameters):
+            WidgetIO.set_value(self.widgets[i], value)
 
     def _set_kwarg_parameters(self, parameters: dict):
         for widget in self.widgets:
