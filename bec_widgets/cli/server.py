@@ -83,29 +83,6 @@ class GUIServer:
             service_config = ServiceConfig()
         return service_config
 
-    def _turn_off_the_lights(self, connections: dict):
-        """
-        If there is only one connection remaining, it is the launcher, so we show it.
-        Once the launcher is closed as the last window, we quit the application.
-        """
-        self.launcher_window = cast(LaunchWindow, self.launcher_window)
-
-        remaining_connections = [
-            connection
-            for connection in connections.values()
-            if connection.parent_id != self.launcher_window.gui_id
-        ]
-        if len(remaining_connections) <= 1:
-            self.launcher_window.show()
-            self.launcher_window.activateWindow()
-            self.launcher_window.raise_()
-            if self.app:
-                self.app.setQuitOnLastWindowClosed(True)
-        else:
-            self.launcher_window.hide()
-            if self.app:
-                self.app.setQuitOnLastWindowClosed(False)
-
     def _run(self):
         """
         Run the GUI server.
@@ -124,10 +101,6 @@ class GUIServer:
 
         self.app.aboutToQuit.connect(self.shutdown)
         self.app.setQuitOnLastWindowClosed(False)
-
-        register = RPCRegister()
-        register.callbacks.append(self._turn_off_the_lights)
-        register.broadcast()
 
         if self.gui_class:
             # If the server is started with a specific gui class, we launch it.

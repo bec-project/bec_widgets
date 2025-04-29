@@ -204,6 +204,10 @@ class LaunchWindow(BECMainWindow):
                 list(self.available_auto_updates.keys()) + ["Default"]
             )
 
+        self.register = RPCRegister()
+        self.register.callbacks.append(self._turn_off_the_lights)
+        self.register.broadcast()
+
     def launch(
         self,
         launch_script: str,
@@ -376,6 +380,45 @@ class LaunchWindow(BECMainWindow):
     def showEvent(self, event):
         super().showEvent(event)
         self.setFixedSize(self.size())
+
+    def _launcher_is_last_widget(self, connections: dict) -> bool:
+        """
+        Check if the launcher is the last widget in the application.
+        """
+
+        remaining_connections = [
+            connection for connection in connections.values() if connection.parent_id != self.gui_id
+        ]
+        return len(remaining_connections) <= 1
+
+    def _turn_off_the_lights(self, connections: dict):
+        """
+        If there is only one connection remaining, it is the launcher, so we show it.
+        Once the launcher is closed as the last window, we quit the application.
+        """
+        if self._launcher_is_last_widget(connections):
+            self.show()
+            self.activateWindow()
+            self.raise_()
+            if self.app:
+                self.app.setQuitOnLastWindowClosed(True)  # type: ignore
+            return
+
+        self.hide()
+        if self.app:
+            self.app.setQuitOnLastWindowClosed(False)  # type: ignore
+
+    def closeEvent(self, event):
+        """
+        Close the launcher window.
+        """
+        connections = self.register.list_all_connections()
+        if self._launcher_is_last_widget(connections):
+            event.accept()
+            return
+
+        event.ignore()
+        self.hide()
 
 
 if __name__ == "__main__":
