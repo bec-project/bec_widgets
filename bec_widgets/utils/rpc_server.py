@@ -84,6 +84,7 @@ class RPCServer:
         self._heartbeat_timer.timeout.connect(self.emit_heartbeat)
         self._heartbeat_timer.start(200)
         self._registry_update_callbacks = []
+        self._broadcasted_data = {}
 
         self.status = messages.BECStatus.RUNNING
         logger.success(f"Server started with gui_id: {self.gui_id}")
@@ -190,6 +191,9 @@ class RPCServer:
             if not getattr(val, "RPC", True):
                 continue
             data[key] = self._serialize_bec_connector(val)
+        if self._broadcasted_data == data:
+            return
+        self._broadcasted_data = data
 
         logger.info(f"Broadcasting registry update: {data} for {self.gui_id}")
         self.client.connector.xadd(
