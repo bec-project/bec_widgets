@@ -60,7 +60,7 @@ The `Image` provides real-time image processing capabilities, such as rotating, 
 
 ```python
 # Rotate the image by 90 degrees (1,2,3,4 are multiplied by 90 degrees)
-img_widget.rotation = 1
+img_widget.num_rotation_90 = 1
 
 # Transpose the image
 img_widget.transpose = True
