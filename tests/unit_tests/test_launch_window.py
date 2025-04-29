@@ -1,6 +1,7 @@
 # pylint: disable=missing-function-docstring, missing-module-docstring, unused-import
 
 import os
+from unittest import mock
 
 import pytest
 from bec_lib.endpoints import MessageEndpoints
@@ -93,3 +94,62 @@ def test_launch_window_launch_plugin_auto_update(bec_launch_window):
     # In real usage, the GUIServer would handle this in the sigint handler in case of a ctrl-c initiated shutdown.
     res.close()
     res.deleteLater()
+
+
+@pytest.mark.parametrize(
+    "connections, hide",
+    [
+        ({}, False),
+        ({"launcher": mock.MagicMock()}, False),
+        ({"launcher": mock.MagicMock(), "dock_area": mock.MagicMock()}, True),
+    ],
+)
+def test_gui_server_turns_off_the_lights(bec_launch_window, connections, hide):
+    with (
+        mock.patch.object(bec_launch_window, "show") as mock_show,
+        mock.patch.object(bec_launch_window, "activateWindow") as mock_activate_window,
+        mock.patch.object(bec_launch_window, "raise_") as mock_raise,
+        mock.patch.object(bec_launch_window, "hide") as mock_hide,
+        mock.patch.object(
+            bec_launch_window.app, "setQuitOnLastWindowClosed"
+        ) as mock_set_quit_on_last_window_closed,
+    ):
+
+        bec_launch_window._turn_off_the_lights(connections)
+        if hide:
+            mock_hide.assert_called_once()
+            mock_set_quit_on_last_window_closed.assert_called_once_with(False)
+        else:
+            mock_show.assert_called_once()
+            mock_activate_window.assert_called_once()
+            mock_raise.assert_called_once()
+            mock_set_quit_on_last_window_closed.assert_called_once_with(True)
+
+
+@pytest.mark.parametrize(
+    "connections, close_called",
+    [
+        ({}, True),
+        ({"launcher": mock.MagicMock()}, True),
+        ({"launcher": mock.MagicMock(), "dock_area": mock.MagicMock()}, False),
+    ],
+)
+def test_launch_window_closes(bec_launch_window, connections, close_called):
+    """
+    Test that the close event is handled correctly based on the connections.
+    If there are no connections or only the launcher connection, the window should close.
+    If there are other connections, the window should hide instead of closing.
+    """
+    close_event = mock.MagicMock()
+    with mock.patch.object(
+        bec_launch_window.register, "list_all_connections", return_value=connections
+    ):
+        with mock.patch.object(bec_launch_window, "hide") as mock_hide:
+            bec_launch_window.closeEvent(close_event)
+            if close_called:
+                mock_hide.assert_not_called()
+                close_event.accept.assert_called_once()
+            else:
+                mock_hide.assert_called_once()
+                close_event.accept.assert_not_called()
+                close_event.ignore.assert_called_once()
