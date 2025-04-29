@@ -26,9 +26,9 @@ class TypedForm(BECWidget, QWidget):
 
     def __init__(
         self,
+        parent=None,
         items: list[tuple[str, type]] | None = None,
         form_item_specs: list[FormItemSpec] | None = None,
-        parent=None,
         client=None,
         **kwargs,
     ):
@@ -122,7 +122,7 @@ class PydanticModelForm(TypedForm):
     metadata_updated = Signal(dict)
     metadata_cleared = Signal(NoneType)
 
-    def __init__(self, metadata_model: type[BaseModel], parent=None, client=None, **kwargs):
+    def __init__(self, parent=None, metadata_model: type[BaseModel] = None, client=None, **kwargs):
         """
         A form generated from a pydantic model.
 
@@ -130,7 +130,7 @@ class PydanticModelForm(TypedForm):
             metadata_model (type[BaseModel]): the model class for which to generate a form.
         """
         self._md_schema = metadata_model
-        super().__init__(form_item_specs=self._form_item_specs(), parent=parent, client=client)
+        super().__init__(parent=parent, form_item_specs=self._form_item_specs(), client=client)
 
         self._validity = CompactPopupWidget()
         self._validity.compact_view = True  # type: ignore

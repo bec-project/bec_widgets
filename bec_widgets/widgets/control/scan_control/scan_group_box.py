@@ -234,7 +234,7 @@ class ScanGroupBox(QGroupBox):
                 continue
             if default == "_empty":
                 default = None
-            widget = widget_class(arg_name=arg_name, default=default)
+            widget = widget_class(parent=self.parent(), arg_name=arg_name, default=default)
             if isinstance(widget, DeviceLineEdit):
                 widget.set_device_filter(BECDeviceFilter.DEVICE)
                 self.selected_devices[widget] = ""

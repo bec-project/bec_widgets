@@ -165,7 +165,7 @@ class ScanControl(BECWidget, QWidget):
         self.layout.addStretch()
 
     def _add_metadata_form(self):
-        self._metadata_form = ScanMetadata()
+        self._metadata_form = ScanMetadata(parent=self)
         self.layout.addWidget(self._metadata_form)
         self._metadata_form.update_with_new_scan(self.comboBox_scan_selection.currentText())
         self.scan_selected.connect(self._metadata_form.update_with_new_scan)
