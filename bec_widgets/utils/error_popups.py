@@ -96,15 +96,33 @@ def SafeSlot(*slot_args, **slot_kwargs):  # pylint: disable=invalid-name
 
     'popup_error' keyword argument can be passed with boolean value if a dialog should pop up,
     otherwise error display is left to the original exception hook
+    'verify_sender' keyword argument can be passed with boolean value if the sender should be verified
+    before executing the slot. If True, the slot will only execute if the sender is a QObject. This is
+    useful to prevent function calls from already deleted objects.
     """
     popup_error = bool(slot_kwargs.pop("popup_error", False))
+    verify_sender = bool(slot_kwargs.pop("verify_sender", False))
 
     def error_managed(method):
         @Slot(*slot_args, **slot_kwargs)
         @functools.wraps(method)
         def wrapper(*args, **kwargs):
             try:
+                if not verify_sender or len(args) == 0:
+                    return method(*args, **kwargs)
+
+                _instance = args[0]
+                if not isinstance(_instance, QObject):
+                    return method(*args, **kwargs)
+                sender = _instance.sender()
+                if sender is None:
+                    logger.info(
+                        f"Sender is None for {method.__module__}.{method.__qualname__}, "
+                        "skipping method call."
+                    )
+                    return
                 return method(*args, **kwargs)
+
             except Exception:
                 slot_name = f"{method.__module__}.{method.__qualname__}"
                 error_msg = traceback.format_exc()

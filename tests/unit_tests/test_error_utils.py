@@ -1,13 +1,11 @@
-import sys
 from unittest.mock import patch
 
 import pytest
-import pytestqt
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QObject
+from qtpy.QtCore import QObject, Signal
 from qtpy.QtWidgets import QMessageBox
 
-from bec_widgets.utils.error_popups import ErrorPopupUtility, ExampleWidget, SafeProperty
+from bec_widgets.utils.error_popups import ErrorPopupUtility, ExampleWidget, SafeProperty, SafeSlot
 
 
 class TestSafePropertyClass(QObject):
@@ -28,6 +26,32 @@ class TestSafePropertyClass(QObject):
         if val == -999:
             raise ValueError("Invalid user input in setter!")
         self._my_value = val
+
+
+class TestSafeSlotEmitter(QObject):
+    test_signal = Signal()
+
+
+class TestSafeSlotClass(QObject):
+    """
+    Test class to demonstrate the use of SafeSlot decorator.
+    """
+
+    def __init__(self, parent=None, signal_obj: TestSafeSlotEmitter | None = None):
+        super().__init__(parent)
+        assert signal_obj is not None, "Signal object must be provided"
+        signal_obj.test_signal.connect(self.method_without_sender_verification)
+        signal_obj.test_signal.connect(self.method_with_sender_verification)
+        self._method_without_verification_called = False
+        self._method_with_verification_called = False
+
+    @SafeSlot()
+    def method_without_sender_verification(self):
+        self._method_without_verification_called = True
+
+    @SafeSlot(verify_sender=True)
+    def method_with_sender_verification(self):
+        self._method_with_verification_called = True
 
 
 @pytest.fixture
@@ -147,3 +171,28 @@ def test_safe_property_setter_error(mock_exec, mock_log_error, qtbot, global_pop
     logged_msg = mock_log_error.call_args[0][0]
     assert "SafeProperty error in SETTER" in logged_msg
     assert "ValueError" in logged_msg
+
+
+@pytest.mark.timeout(100)
+def test_safe_slot_emit(qtbot):
+    """
+    Test that the signal is emitted correctly.
+    """
+    signal_obj = TestSafeSlotEmitter()
+    test_obj = TestSafeSlotClass(signal_obj=signal_obj)
+    signal_obj.test_signal.emit()
+
+    qtbot.waitUntil(lambda: test_obj._method_without_verification_called, timeout=1000)
+    qtbot.waitUntil(lambda: test_obj._method_with_verification_called, timeout=1000)
+
+    test_obj.deleteLater()
+
+    test_obj = TestSafeSlotClass(signal_obj=signal_obj)
+    test_obj.method_without_sender_verification()
+    test_obj.method_with_sender_verification()
+
+    assert test_obj._method_without_verification_called is True
+    assert test_obj._method_with_verification_called is False
+
+    test_obj.deleteLater()
+    signal_obj.deleteLater()
