@@ -762,6 +762,19 @@ class Image(PlotBase):
                 self.selection_bundle.dim_combo_box,
             ):
                 combo.blockSignals(False)
+        else:
+            for combo in (
+                self.selection_bundle.device_combo_box,
+                self.selection_bundle.dim_combo_box,
+            ):
+                combo.blockSignals(True)
+            self.selection_bundle.device_combo_box.setCurrentText("")
+            self.selection_bundle.dim_combo_box.setCurrentText("auto")
+            for combo in (
+                self.selection_bundle.device_combo_box,
+                self.selection_bundle.dim_combo_box,
+            ):
+                combo.blockSignals(False)
 
     ################################################################################
     # Image Update Methods
@@ -812,6 +825,7 @@ class Image(PlotBase):
             self.on_image_update_2d, MessageEndpoints.device_monitor_2d(monitor)
         )
         self._main_image.config.monitor = None
+        self._sync_device_selection()
 
     ########################################
     # 1D updates

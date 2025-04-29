@@ -273,3 +273,7 @@ class ImageItem(BECConnector, pg.ImageItem):
         self.raw_data = None
         self.buffer = []
         self.max_len = 0
+
+    def remove(self):
+        self.parent().disconnect_monitor(self.config.monitor)
+        self.clear()
