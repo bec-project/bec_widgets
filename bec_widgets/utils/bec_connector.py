@@ -85,8 +85,21 @@ class BECConnector:
         gui_id: str | None = None,
         object_name: str | None = None,
         parent_dock: BECDock | None = None,  # TODO should go away -> issue created #473
+        root_widget: bool = False,
         **kwargs,
     ):
+        """
+        BECConnector mixin class to handle BEC client and device manager.
+
+        Args:
+            client(BECClient, optional): The BEC client.
+            config(ConnectionConfig, optional): The connection configuration with specific gui id.
+            gui_id(str, optional): The GUI ID.
+            object_name(str, optional): The object name.
+            parent_dock(BECDock, optional): The parent dock.# TODO should go away -> issue created #473
+            root_widget(bool, optional): If set to True, the parent_id will be always set to None, thus enforcing that the widget is accessible as a root widget of the BECGuiClient object.
+            **kwargs:
+        """
         # Extract object_name from kwargs to not pass it to Qt class
         object_name = object_name or kwargs.pop("objectName", None)
         # Ensure the parent is always the first argument for QObject
@@ -158,11 +171,16 @@ class BECConnector:
         # Store references to running workers so they're not garbage collected prematurely.
         self._workers = []
 
+        # If set to True, the parent_id will be always set to None, thus enforcing that the widget is accessible as a root widget of the BECGuiClient object.
+        self.root_widget = root_widget
+
         QTimer.singleShot(0, self._update_object_name)
 
     @property
     def parent_id(self) -> str | None:
         try:
+            if self.root_widget:
+                return None
             connector_parent = WidgetHierarchy._get_becwidget_ancestor(self)
             return connector_parent.gui_id if connector_parent else None
         except:

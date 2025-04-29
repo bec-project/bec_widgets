@@ -5,7 +5,7 @@ from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
 
 
 def dock_area(object_name: str | None = None) -> BECDockArea:
-    _dock_area = BECDockArea(object_name=object_name)
+    _dock_area = BECDockArea(object_name=object_name, root_widget=True)
     return _dock_area
 
 
