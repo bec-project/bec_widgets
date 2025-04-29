@@ -192,8 +192,8 @@ def test_image_processing_log_toggle(qtbot, mocked_client):
 
 def test_image_rotation_and_transpose(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
-    bec_image_view.rotation = 2
-    assert bec_image_view.rotation == 2
+    bec_image_view.num_rotation_90 = 2
+    assert bec_image_view.num_rotation_90 == 2
 
     bec_image_view.transpose = True
     assert bec_image_view.transpose is True
@@ -294,9 +294,9 @@ def test_image_toggle_action_rotate_right(qtbot, mocked_client):
 
     bec_image_view.processing_bundle.right.action.trigger()
 
-    assert bec_image_view.rotation == 3
-    assert bec_image_view.main_image.rotation == 3
-    assert bec_image_view.main_image.config.processing.rotation == 3
+    assert bec_image_view.num_rotation_90 == 3
+    assert bec_image_view.main_image.num_rotation_90 == 3
+    assert bec_image_view.main_image.config.processing.num_rotation_90 == 3
 
 
 def test_image_toggle_action_rotate_left(qtbot, mocked_client):
@@ -304,9 +304,9 @@ def test_image_toggle_action_rotate_left(qtbot, mocked_client):
 
     bec_image_view.processing_bundle.left.action.trigger()
 
-    assert bec_image_view.rotation == 1
-    assert bec_image_view.main_image.rotation == 1
-    assert bec_image_view.main_image.config.processing.rotation == 1
+    assert bec_image_view.num_rotation_90 == 1
+    assert bec_image_view.main_image.num_rotation_90 == 1
+    assert bec_image_view.main_image.config.processing.num_rotation_90 == 1
 
 
 def test_image_toggle_action_reset(qtbot, mocked_client):
@@ -316,13 +316,13 @@ def test_image_toggle_action_reset(qtbot, mocked_client):
     bec_image_view.fft = True
     bec_image_view.log = True
     bec_image_view.transpose = True
-    bec_image_view.rotation = 2
+    bec_image_view.num_rotation_90 = 2
 
     bec_image_view.processing_bundle.reset.action.trigger()
 
-    assert bec_image_view.rotation == 0
-    assert bec_image_view.main_image.rotation == 0
-    assert bec_image_view.main_image.config.processing.rotation == 0
+    assert bec_image_view.num_rotation_90 == 0
+    assert bec_image_view.main_image.num_rotation_90 == 0
+    assert bec_image_view.main_image.config.processing.num_rotation_90 == 0
     assert bec_image_view.fft is False
     assert bec_image_view.main_image.fft is False
     assert bec_image_view.log is False

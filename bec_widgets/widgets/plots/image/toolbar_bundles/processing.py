@@ -55,24 +55,24 @@ class ImageProcessingToolbarBundle(ToolbarBundle):
 
     @SafeSlot()
     def rotate_right(self):
-        if self.target_widget.rotation is None:
+        if self.target_widget.num_rotation_90 is None:
             return
-        rotation = (self.target_widget.rotation - 1) % 4
-        self.target_widget.rotation = rotation
+        rotation = (self.target_widget.num_rotation_90 - 1) % 4
+        self.target_widget.num_rotation_90 = rotation
 
     @SafeSlot()
     def rotate_left(self):
-        if self.target_widget.rotation is None:
+        if self.target_widget.num_rotation_90 is None:
             return
-        rotation = (self.target_widget.rotation + 1) % 4
-        self.target_widget.rotation = rotation
+        rotation = (self.target_widget.num_rotation_90 + 1) % 4
+        self.target_widget.num_rotation_90 = rotation
 
     @SafeSlot()
     def reset_settings(self):
         self.target_widget.fft = False
         self.target_widget.log = False
         self.target_widget.transpose = False
-        self.target_widget.rotation = 0
+        self.target_widget.num_rotation_90 = 0
 
         self.fft.action.setChecked(False)
         self.log.action.setChecked(False)

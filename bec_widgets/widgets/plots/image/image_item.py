@@ -239,13 +239,13 @@ class ImageItem(BECConnector, pg.ImageItem):
         self._process_image()
 
     @property
-    def rotation(self) -> Optional[int]:
+    def num_rotation_90(self) -> Optional[int]:
         """Get or set the number of 90° rotations to apply."""
-        return self.config.processing.rotation
+        return self.config.processing.num_rotation_90
 
-    @rotation.setter
-    def rotation(self, value: Optional[int]):
-        self.config.processing.rotation = value
+    @num_rotation_90.setter
+    def num_rotation_90(self, value: Optional[int]):
+        self.config.processing.num_rotation_90 = value
         self._process_image()
 
     @property

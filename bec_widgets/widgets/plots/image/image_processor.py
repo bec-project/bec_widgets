@@ -37,7 +37,7 @@ class ProcessingConfig(BaseModel):
     transpose: bool = Field(
         False, description="Whether to transpose the monitor data before displaying."
     )
-    rotation: int = Field(
+    num_rotation_90: int = Field(
         0, description="The rotation angle of the monitor data before displaying."
     )
     stats: ImageStats = Field(
@@ -140,8 +140,8 @@ class ImageProcessor(QObject):
         """Core processing logic without threading overhead."""
         if self.config.fft:
             data = self.FFT(data)
-        if self.config.rotation is not None:
-            data = self.rotation(data, self.config.rotation)
+        if self.config.num_rotation_90 is not None:
+            data = self.rotation(data, self.config.num_rotation_90)
         if self.config.transpose:
             data = self.transpose(data)
         if self.config.log:

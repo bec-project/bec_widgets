@@ -79,12 +79,6 @@ class Image(PlotBase):
         "auto_range_x.setter",
         "auto_range_y",
         "auto_range_y.setter",
-        "x_log",
-        "x_log.setter",
-        "y_log",
-        "y_log.setter",
-        "legend_label_size",
-        "legend_label_size.setter",
         # ImageView Specific Settings
         "color_map",
         "color_map.setter",
@@ -111,8 +105,8 @@ class Image(PlotBase):
         "fft.setter",
         "log",
         "log.setter",
-        "rotation",
-        "rotation.setter",
+        "num_rotation_90",
+        "num_rotation_90.setter",
         "transpose",
         "transpose.setter",
         "image",
@@ -656,21 +650,21 @@ class Image(PlotBase):
         self._main_image.log = enable
 
     @SafeProperty(int)
-    def rotation(self) -> int:
+    def num_rotation_90(self) -> int:
         """
-        The number of 90° rotations to apply.
+        The number of 90° rotations to apply counterclockwise.
         """
-        return self._main_image.rotation
+        return self._main_image.num_rotation_90
 
-    @rotation.setter
-    def rotation(self, value: int):
+    @num_rotation_90.setter
+    def num_rotation_90(self, value: int):
         """
-        Set the number of 90° rotations to apply.
+        Set the number of 90° rotations to apply counterclockwise.
 
         Args:
             value(int): The number of 90° rotations to apply.
         """
-        self._main_image.rotation = value
+        self._main_image.num_rotation_90 = value
 
     @SafeProperty(bool)
     def transpose(self) -> bool:

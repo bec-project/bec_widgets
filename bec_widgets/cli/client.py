@@ -953,48 +953,6 @@ class Image(RPCBase):
 
     @property
     @rpc_call
-    def x_log(self) -> "bool":
-        """
-        Set X-axis to log scale if True, linear if False.
-        """
-
-    @x_log.setter
-    @rpc_call
-    def x_log(self) -> "bool":
-        """
-        Set X-axis to log scale if True, linear if False.
-        """
-
-    @property
-    @rpc_call
-    def y_log(self) -> "bool":
-        """
-        Set Y-axis to log scale if True, linear if False.
-        """
-
-    @y_log.setter
-    @rpc_call
-    def y_log(self) -> "bool":
-        """
-        Set Y-axis to log scale if True, linear if False.
-        """
-
-    @property
-    @rpc_call
-    def legend_label_size(self) -> "int":
-        """
-        The font size of the legend font.
-        """
-
-    @legend_label_size.setter
-    @rpc_call
-    def legend_label_size(self) -> "int":
-        """
-        The font size of the legend font.
-        """
-
-    @property
-    @rpc_call
     def color_map(self) -> "str":
         """
         Set the color map of the image.
@@ -1187,16 +1145,16 @@ class Image(RPCBase):
 
     @property
     @rpc_call
-    def rotation(self) -> "int":
+    def num_rotation_90(self) -> "int":
         """
-        The number of 90° rotations to apply.
+        The number of 90° rotations to apply counterclockwise.
         """
 
-    @rotation.setter
+    @num_rotation_90.setter
     @rpc_call
-    def rotation(self) -> "int":
+    def num_rotation_90(self) -> "int":
         """
-        The number of 90° rotations to apply.
+        The number of 90° rotations to apply counterclockwise.
         """
 
     @property
@@ -3362,6 +3320,20 @@ class Waveform(RPCBase):
     def x_mode(self) -> "str":
         """
         None
+        """
+
+    @property
+    @rpc_call
+    def x_entry(self) -> "str | None":
+        """
+        The x signal name.
+        """
+
+    @x_entry.setter
+    @rpc_call
+    def x_entry(self) -> "str | None":
+        """
+        The x signal name.
         """
 
     @property

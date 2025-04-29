@@ -90,6 +90,8 @@ class Waveform(PlotBase):
         "curves",
         "x_mode",
         "x_mode.setter",
+        "x_entry",
+        "x_entry.setter",
         "color_palette",
         "color_palette.setter",
         "plot",
