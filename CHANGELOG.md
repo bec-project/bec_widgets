@@ -1,6 +1,637 @@
 # CHANGELOG
 
 
+## v2.0.0 (2025-04-29)
+
+### Bug Fixes
+
+- Add designer plugin for ScanMetadata
+  ([`43e1aa9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/43e1aa9505cfa6e87b4fce1d065efb48b4111190))
+
+- Add support for 'add_slice', add downsampling for performance improvements. add tests
+  ([`7f7891d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7f7891dfa54588f5d902448b760f141b183a7fa1))
+
+- Broadcast context manager to emit registry changes just once
+  ([`a5f06c8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a5f06c8f8380156a763445a69df29ee0e62e434c))
+
+- Bugfix in cleanup of ScatterWaveform ScatterCurve; closes #520
+  ([`1d09107`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1d091071e1179821bb1dcd47fb97f3d0959b972f))
+
+- Change default colormap to plasma
+  ([`074bbbc`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/074bbbc16648849bdfcfc28b2c520b0e38dd07c2))
+
+- Create widget enum programatically
+  ([`7726d83`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7726d83b6834b8145e48e709e2f839fb0ec1b971))
+
+- Ensure provided dock and dock_area names are valid and defaults are snake_case
+  ([`0ac14a7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0ac14a74b851578fff668fb8c6722f990130831d))
+
+- Expose common classes from bec_widgets package
+  ([`28ae0d2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/28ae0d2b577d7c926ee54690898fe8e327e1229f))
+
+- Forward parent to children
+  ([`1fc6125`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1fc61253699425a2bf64a0f8b560f8474549b841))
+
+- Import from qtpy instead of PySide6
+  ([`fef07ac`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fef07ac8e12399e7e49bcd673a5fc7cbf713bc50))
+
+- Proper cleanup of progressbar
+  ([`8ff2063`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8ff2063bc8978c5b2a97f720d5da055e8ec08f0c))
+
+- Rpc access enabled for certain widgets.
+  ([`ef4a52c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ef4a52cc17748f35ed627170b1025e6e028d70b8))
+
+- Server shutdown widgets
+  ([`75b2446`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/75b24467def65284ea6b6114b25098437e31ec95))
+
+- Support auto_range_x/y for viewAll during measurement
+  ([`af28e2e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/af28e2e433c9b0233436da850be97cd63df90a74))
+
+- Unique name for widgets, fix new method for docks; closes #534
+  ([`77f9d42`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/77f9d425765061f137c997062a3bf769a939bc64))
+
+- Warning in logpanel
+  ([`1d7b423`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1d7b423bb307b6aae3879987776310c14380895d))
+
+- chain a signal to the child BecLogsQueue rather than passing the signal instance in
+
+- Wrap fetching plugin widgets in case of errors
+  ([`ef14831`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ef148317dea9c7ff985b2a3ff06ccdb37258153f))
+
+- **auto_updates**: Fix condition to skip auto update
+  ([`18e4ba6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/18e4ba6cfe9f67512efbd3989156de5670aab3fe))
+
+- **bec_connector**: Add assertion to ensure BECConnector is used with a QObject; closes #475
+  ([`1921444`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1921444e152e06c4decc790452f3c496cf8ee961))
+
+- **bec_connector**: Add setObjectName method to update object name and broadcast if registered;
+  closes #472
+  ([`064343a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/064343acf2631e4ae62b2a5e08bc08087246570c))
+
+- **bec_connector**: Call cleanup on widgets if the parent was deleted
+  ([`fc1cdc8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fc1cdc814fc3c44a571c20986bc627935f90ff91))
+
+- **bec_connector**: Improve cleanup handling on deleted parent to prevent errors
+  ([`3709cdc`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3709cdc86671e5219afca7a8e11bdd01f03dd30e))
+
+- **bec_connector**: Move RPC registration into single shot method to ensure the rpc name is in sync
+  ([`3b16c9f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3b16c9f5a2f7f16b23f25560b1e8fb4e42359ef0))
+
+- **bec_queue**: Set parent for toolbar buttons
+  ([`cdc613b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cdc613b6e7d7eac806d458515321590e9344244a))
+
+- **becconnector**: Widgets can be flagged as root widget, skipping the BECMainWindow in CLI usage
+  ([`061f348`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/061f3481daae6844a83c44e9caca7ed56a1bb100))
+
+- **becconnector,widgets**: Parent_id is always fetched from the real bec widget parent; all widgets
+  adjusted; hardcoded parent_ids removed
+  ([`f35f4c4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f35f4c4b295139b99a2dad9e8241f900d2565aeb))
+
+- **BECGuiClient**: Add launch_script parameter to dock area creation
+  ([`06a4954`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/06a4954d3da44c6805232d34e47e242b28ba7fd1))
+
+- **cleanup**: Prevent double cleanup by tracking object destruction state
+  ([`fde9120`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fde912005db61a60707e7181c3425a4557bdc011))
+
+- **cli**: Add type ignore comment to generated files
+  ([`d171255`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d1712552ffd1118845dc7121218df86ce10e8750))
+
+- **client**: Import reduce
+  ([`8cca510`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8cca510fa1cbda00a07edbef9d36fdd74e63d201))
+
+- **client**: Regenerated client
+  ([`c97db6a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c97db6aaae81d08019a13c344414c16c42691654))
+
+- **client**: Rpc API adjusted for DockArea, ImageItem and Waveform
+  ([`6ca4aa0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6ca4aa0f9b9d5ace9fb1e174219f4da5617ebbac))
+
+- **client_utils**: Simplify RPC client instantiation in BECGuiClient
+  ([`96b31a4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/96b31a450998aca2b7ac94138b07223418d2bacd))
+
+- **colormap_widget**: Size policy fixed
+  ([`1cc2a98`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1cc2a9848906a7013e86687976d42d4b9676b25f))
+
+- **compact_popup**: Forward close event
+  ([`e0f146b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e0f146beeb34367a4d3454a7012af4728d594b9b))
+
+- **crosshair**: Adapted for 2D image
+  ([`a85402d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a85402dde1af1d9c4a154892c46422ac3e1f22f9))
+
+- **curve**: Fix unique names for custom curves
+  ([`8e846d4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8e846d449955ded3cb8090e44ea36d26efccb80e))
+
+- **dark-mode-button**: Fix parent passed to QObjects in various classes
+  ([`a06f060`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a06f0600c1c9a80436f01533a82905a6f3633895))
+
+- **designer**: Avoid touching deleted widgets during init as QtDesigner will segfault
+  ([`4381fcc`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4381fcc4c212cd03ce91f1638dc361c3315f8c45))
+
+- **designer-plugin-generator**: Enhance super constructor validation for new style classes
+  ([`6318b2d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6318b2d822be0ded561a1afd0d485158614e2406))
+
+- **device_input_base**: Removed enums from Pydantic models to make them serialisable
+  ([`43b747e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/43b747ec8a761530d78b26650b0ec2ee4581ffaf))
+
+- **dock_area**: Close BECMainWindow if dock area is central widget
+  ([`e725de3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e725de3c4504d43fbcad25d69c5cb8cbe7a70867))
+
+- **docs**: Update copyright year to be dynamic
+  ([`f2d5b57`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f2d5b57e86d0c9d690b8d9f988035427608f0b4c))
+
+- **entry_validator**: Validator reports list of signal if user chooses the wrong one
+  ([`da05877`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/da05877dd04fa618cdb45268cb62df602a5e808f))
+
+- **image**: Imageitem remove adjusted to disconnect and remove current displayed image
+  ([`98f159b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/98f159b25f6bf7e1f2dd76726d7ab66a0baf88de))
+
+- **launch_window**: Redesign
+  ([`7e65d4f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7e65d4f2d6d840d3895e023f5cd090a56ea6e5f3))
+
+- **launch_window**: Return None when cancelling the ui file launcher
+  ([`b3dbe92`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b3dbe922dea2cea9190d1583bd6b69f1a45d6b90))
+
+- **launch_window**: Update LaunchTile icon to use new UI loader tile image
+  ([`3cd6e05`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3cd6e05b2478654210049ca8e1756ad592f1da81))
+
+- **launcher**: Hide launcher when launcher is closed even though it is not the last widget
+  ([`6e7920c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6e7920c119824650006e7357ca2f4ff95d413e13))
+
+- **lmfit_dialog_vertical**: Vertical sizePolicy fixed
+  ([`584b945`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/584b94500565a33e5daed86b7552ec54f1135cf6))
+
+- **main_window**: Connected to theme change
+  ([`11feeff`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/11feeff37ce0b02fcbc8e506c67c14e1fc5e0cb6))
+
+- **main_window**: Show app id only when connected to redis
+  ([`be72268`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/be722683a7cc7b215c572f9c2e996839b010b64e))
+
+- **moduar-toolbar**: Fix cleanup of modular toolbar and dock_area
+  ([`c70cd9d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c70cd9d6e8f7ea9d5f81b10ac437cdcc9ee900e9))
+
+- **motor_map**: Limit map creating optimized
+  ([`9f2a083`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9f2a083abbcfb465ebea9acee8263dcc9a6da5d9))
+
+- **plot_base**: Ability to set y label suffix
+  ([`890b501`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/890b50115fef845c2a77242fdb05863d2eec4a00))
+
+- **plot_base**: Aspect ratio removed from the PlotBase
+  ([`19d8aeb`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/19d8aeb16249a1093cfec124d0ebdf6af11d94a8))
+
+- **plot_base**: Axis setting filter for relevant properties
+  ([`0204d9c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0204d9c86f9665dcefdcbe7f49ac23918d74dd66))
+
+- **plot_base**: Do not enable inner axes when label is changed
+  ([`98eda03`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/98eda03f4d6d449605d5559a1db44c900d93cb79))
+
+- **plot_base**: Enable popup property fixed
+  ([`30db183`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/30db18367e9c6d6375fda970a1bb255d966cba5a))
+
+- **plot_base**: Fix cleanup of popups if popups are still open when PlotBase is closed
+  ([`39cf4dd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/39cf4ddd5a033ee7f589d508f765669186e776bc))
+
+- **plot_base**: Improved handling of matplotlib exporter errors
+  ([`4f9514f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4f9514fbd1ff0059248d3b7b5b4fcd85c3eb9c72))
+
+- **plot_base**: Inner and outer axis setting in popup mode
+  ([`055b968`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/055b96818aa69d66119caee9a3e8c24575ce60b4))
+
+- **plot_base**: Update mouse mode state on mode change
+  ([`fc24c8b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fc24c8b3a5f9cd55fb3d49f753b53a65a2a0fa26))
+
+- **plot_framework**: All widgets, popups and side menus cleanups adjusted
+  ([`337a332`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/337a332ed123f99729b8cf6869f7fe4b056c2b16))
+
+- **plot_indicators**: Cleanup adjusted
+  ([`4865341`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/48653410101a2a38d5067fbfca7712d255d89625))
+
+- **plot_indicators**: Plot indicators added to the PlotBase
+  ([`42e3b9c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/42e3b9c13786e67220874a1275a3d9ee9515541a))
+
+- **positioner-indicator**: Fix property setters for position indicator
+  ([`1910993`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1910993b2b3d30ecb8e4977b4a362f46adae3c75))
+
+- **progress-ring-bar**: Fix parent inheritance and cleanup of ring objects; closes #496
+  ([`b460ea9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b460ea9955318879ddfe4f9ae963249ba342bbb5))
+
+- **ring-progress-bar**: Fix bug in disconnect slot of rings, enable 'scan' mode as default for init
+  with first ring
+  ([`7c303d0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7c303d01294493a55fd26db8c1475e8c58b3e492))
+
+- **ring_progress_bar**: Replaced hard-coded endpoints by MessageEndpoints
+  ([`e4e9feb`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e4e9febc98268a4b6b9774b253419e88ea044811))
+
+- **round_frame**: Orientation can be vertical
+  ([`c1bbb16`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c1bbb16dad481c628e7680180d7250ba8a560c46))
+
+- **round_frame**: Roundframe removed from BECWidget inheritance
+  ([`b58a098`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b58a098ed4afbe62721fd2bf8497f363deecbfa6))
+
+- **rpc**: Call close on container widget if needed
+  ([`a13de45`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a13de45131309771c1438407f3733a8c0897d495))
+
+- **rpc-base**: Deprecate widget_name in favor of object_name; closes #499
+  ([`86647b9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/86647b9b7e2fa111105ae483808883a624fa4cd6))
+
+- **rpc_base**: Ensure message wait event is set after processing RPC response
+  ([`4dc59aa`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4dc59aa5e9b15e5ec40401e80e7965acd88e2fce))
+
+- **rpc_base**: Timeout run_rpc 3s
+  ([`8558b46`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8558b46114760a9434eaa827f81d5fd9d047112f))
+
+- **rpc_register**: _lock and _skip_broad_cast moved to instance attributes
+  ([`8d17f7e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8d17f7e32f81894294d7da472268e8d9eb3bb74b))
+
+- **rpc_register**: Change add_rpc parameter type to BECConnector and add object_is_registered
+  method
+  ([`82b8265`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/82b82659b7919b15d629375866302624b5b6e457))
+
+- **rpc_register**: Lock changed to RLock
+  ([`6c90ca3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6c90ca31078d97124a3ad535ffe83da138558d67))
+
+- **rpc_server**: Broadcasted data check
+  ([`c36852b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c36852b2ef762cdae3fde569bbd0d5f2f6f2725b))
+
+- **rpc_server**: Enhance serialization logic for BECConnector objects and fix return types
+  ([`125afc8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/125afc89073b4fc69a3f42650b3d4f6fa6ccaa47))
+
+- **rpc_server**: Update _serialize_bec_connector to include wait parameter for registration check
+  ([`d6fccd1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d6fccd10f5d600ea67cf7b2a5ebb42295d15cdfe))
+
+- **RPCReference**: Setattr added
+  ([`a2128ad`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a2128ad8d688995551c5e26974396fd0588b6804))
+
+- **scan_control**: Restore scan parameters always regenerate the arg box, preventing infinite loop
+  ([`1f2db92`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1f2db927f50f4f30d43ebe52e39118c7d79994d4))
+
+- **scan_matadata**: Parent passing
+  ([`4eaadd1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4eaadd1545885b111fce3f8cab527a77b8633ff3))
+
+- **scatter_waveform,waveform**: Added QTimer to fetch the last data points after 500ms
+  ([`e6795dd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e6795dd87ccd93cfd53e22cd94d71bffe1ef54dd))
+
+- **serialization**: Add serialization for qpointf
+  ([`3ddfeaa`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3ddfeaa49fd4a7fdbff7cae47b90c25720f6dca0))
+
+- **server**: Becdockarea type added
+  ([`4a74891`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4a74891184f112751258866b6bc9d800dbc5ed05))
+
+- **server**: Remove window.hide() since widgets will be teared down on kill_server before siginit
+  signals is sent
+  ([`58b0c7d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/58b0c7ddc1d0b85b35e7e18434c0b83aac01a735))
+
+- **server**: Turn_off_the_lights cleanup fixed for parent_id widgets
+  ([`20a86ad`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/20a86ad325d36aa5aec73aeda7ff43ea9cc6c1f7))
+
+- **setting_widget**: Added parent kwarg into all settings widgets in plotting framework
+  ([`94c2e2d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/94c2e2db6518402207b2a1077bb16403a8e61cee))
+
+- **side_panel**: Side panel menu can be initialized without a title
+  ([`112eed6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/112eed694c0ef6eb80ec7a7cfdfbaacf732d5b9f))
+
+- **toolbar**: Update action check handling logic for SwitchableToolBarAction
+  ([`ac08bdf`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ac08bdfab2162ac8fd103e60779a76d36e9a3765))
+
+- **type hints**: Add future import to prevent sphinx from crashing
+  ([`aff5a51`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/aff5a51f4c059ce21ec72cefc263f37df2491480))
+
+- **waveform**: Dap curve flickering
+  ([`b03d2ea`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b03d2eaeed4263846c470bc45eba9208ced2370b))
+
+- **waveform**: Error where scan history is empty
+  ([`288ea4d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/288ea4dbbde6d5f770c37f4daf377da9ec8fe729))
+
+- **waveform**: Fix dap curve categorization logic
+  ([`b91f1fe`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b91f1fe4879e43e71a1be49ce5a206efbae19315))
+
+- **waveform**: Legend is correctly updated when changed from curve dialog
+  ([`c2d2c48`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c2d2c484cd1f133f45fe7147616c22c0b5fd5611))
+
+- **waveform**: Signals for x device can be defined from gui
+  ([`39164fe`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/39164feb18f9e996d97814f58157892e8db816ae))
+
+- **waveform, rpc_reference**: __getitem__ removed form waveform and rpc_reference
+  ([`3a82c95`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3a82c95f60cb2b7f0b29a1ea5cdcbfa5bf602af8))
+
+- **website-widget**: Add super().cleanup() in website widget
+  ([`8fbd54c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8fbd54c3aa864623e42b39a1ebf92ba098ba437d))
+
+- **widgets**: Becconnector resolves hierarchy including objectName, parent, parent_id upon init;
+  all widgets adjusted
+  ([`a1bec75`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a1bec7511549277da231928d989b16ecad0eed1b))
+
+### Build System
+
+- Pyside6 capped to 6.9
+  ([`9dabf2c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9dabf2c66c8023194964b9ad308e06197471f89f))
+
+- **bec_lib**: Raised required version to 3.28.1
+  ([`a5f1f47`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a5f1f4781ed9787148053d71e0d12fefe42e142a))
+
+- **dependencies**: Update min bec_lib version to 3.29
+  ([`eb0323b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/eb0323b989e96e89d2eb1ff7b648edb43f5fe198))
+
+### Continuous Integration
+
+- **e2e**: E2e tests are saving logs
+  ([`d4106c5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d4106c548e2373463a48268fd991ded7f554e3a6))
+
+### Documentation
+
+- Add docs on widget plugins
+  ([`52a9f29`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/52a9f29bdcb20a9339a8970508bc0a93ba8bef5f))
+
+- Add missing class doc strings for rpc-enabled widgets
+  ([`cfc8272`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cfc8272ac288541d1e20c0840bd2ce6fa930897c))
+
+- Better document logpanel code
+  ([`d2c9075`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d2c90757c21e040940a378325cad75c4d94470f9))
+
+- Grammar improvement
+  ([`1fe052e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1fe052e9da9e44bf9872db0d42218843a8e6d275))
+
+- Remove BECFigure
+  ([`75cc45d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/75cc45d767970e985c566fd4aeccd4394f48dfa3))
+
+- Remove BECFigure from docs, fix wrong api for docs of plotting widgets
+  ([`a1c859c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a1c859c7434357e6fb82f0912314c203fb73e890))
+
+- Replaces instances of QtDesigner with BEC Designer for improved clarity
+  ([`60852e2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/60852e228f80f0d2e74813f82bd30f1ba83ff154))
+
+- Review quick_start
+  ([`4acf5be`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4acf5befb1dbcc69e8cc7da70ebf5663b9ec15f2))
+
+- Update docs for v2
+  ([`25bd905`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/25bd905cef987a713e24aca178c04aef1ab59656))
+
+- Update docs for various widgets
+  ([`b6695b4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b6695b45d076dbf3896e94eedcf73d542022d764))
+
+- Update quick_start
+  ([`afc818b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/afc818bf7d17f42703c3cebafd2b292b8444647a))
+
+- Updated docs for v2 ([#531](https://gitlab.psi.ch/bec/bec_widgets/-/merge_requests/531),
+  [`b4af2cc`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b4af2cc77aa0013f4547cd98345b0c77abb7101b))
+
+- **auto_updates**: Update documentation for auto updates functionality and add launcher image
+  ([`6630ba1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6630ba1c421e566bf86ac38701a86eff624395d2))
+
+- **lmfit**: Fix links
+  ([`5e4965f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5e4965fe1f88d18fcc7e6875777ff3eb01ab08ec))
+
+- **plot_base**: Update docstrings for properties and setters
+  ([`b085ef6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b085ef6e730d529149bcb696b1ad4cd9c5220a83))
+
+- **position-indicator**: Update docs for positioner indicator
+  ([`2f0d213`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2f0d213e32fd662bfffd4df73b9281fa30cef6e3))
+
+### Features
+
+- Add loader/helper for widget plugins
+  ([`ca2bb4f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ca2bb4f9b42ebaac2fc544d3da36267d93e9903d))
+
+- Add rpc broadcast
+  ([`2ba9b4c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2ba9b4cb236a2182261dfb88398d5ece733ba393))
+
+- Add support for auto updates
+  ([`2511056`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/2511056557daf0b5dd78d3e85ac4befb8bf8c316))
+
+- Delete bec_app
+  ([`8e64b65`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8e64b65c2d3b8a8f3c6e5376e694369b41733da4))
+
+- Deprecated and delete alignment_1d gui
+  ([`27ea92d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/27ea92d120cc8ef01fff10341ce0954b4f7fed5d))
+
+- Namespace update for gui, dock_area and docks.
+  ([`ac3c5a3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ac3c5a38e449c2c3e4a1c61d5f9a59acfbf0cab5))
+
+- **auto_update**: Add GUI highlight management for auto updates status
+  ([`5f272a6`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5f272a66a4d4f65273d7b2a6709336cd3582d695))
+
+- **auto_updates**: Enforce rpc widget class for subclasses of auto updates
+  ([`778230b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/778230b5edf5d24df8a10c78c90ea065510e8344))
+
+- **image**: New Image widget based on new PlotBase
+  ([`cb39ff3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cb39ff3fbde99f4e4bed49dee8a5e5987d257b23))
+
+- **launch_window**: Add custom UI file launching functionality and UI tile
+  ([`3089ca1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/3089ca15ec4a8c110d11c57aff2da42f4af5bd08))
+
+- **launch_window**: Add user access permissions
+  ([`8efa93d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8efa93d2d2c5e6c28008e1bbde89e5cc8a01d139))
+
+- **launch_window**: Enhance auto update functionality with selector and dynamic loading
+  ([`2965323`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/29653239c5cf43313224cc5123d066fcba4b831b))
+
+- **launcher**: Add option for launching with auto updates
+  ([`20a1c5d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/20a1c5ddb3cd0763ce69bba5a893f54c56678706))
+
+- **main_window**: Add launcher menu and functionality to show launcher
+  ([`55baa84`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/55baa84eb6723b30b407092bc36f826b826cc934))
+
+- **motor_map**: New MotorMap widget based on PlotBase
+  ([`fec26d7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fec26d793e14965a719a4d038838418b9a7603bb))
+
+- **multi_waveform**: Multi-waveform widget based on new PlotBase
+  ([`77f9616`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/77f96160ab348c1a65ceb55986ea4ea75f8be04a))
+
+- **plugin_utils**: Add functionality to retrieve auto update classes from plugins
+  ([`c434af9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c434af9b92d68d08da87112ef424738e5e42ae6e))
+
+- **positioner_box**: Add units QLabel to device UI components and update visibility logic
+  ([`f653fc5`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f653fc5f7ebf8ad5297facd739a8a49ea0a06c95))
+
+- **scatter_waveform**: Scatter waveform widget based on new Plotbase
+  ([`95fcf01`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/95fcf016c32c52330acfd5900a3996c99c4ee01f))
+
+- **server,launcher**: Rpc server separated with the launcher window introduced
+  ([`5f27a90`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/5f27a9098903ffd8ec27c1b45565f1c113892cca))
+
+- **slot**: Add 'verify_sender' argument to SafeSlot for sender verification
+  ([`8eef425`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8eef4253b0507f60f50c06ed48b59a1b19b29644))
+
+- **ui_launch_window**: Add UILaunchWindow class
+  ([`45cd82e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/45cd82e6354c72e1e35cd6366aa7aad93f8b12ca))
+
+- **waveform**: New Waveform widget based on NextGen PlotBase
+  ([`4bec181`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4bec181f3aff34d9de7d3f9ec012b641c125a661))
+
+- **widget_io**: Added handler for Sliders
+  ([`1a0097e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1a0097e02728b6470217d3a574260f376776d81f))
+
+### Refactoring
+
+- Add fallback to 'index' plotting in case of missmatch in length
+  ([`515d7ad`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/515d7ad05584086a8e8ac626b476d629e27aacf3))
+
+- Add pragma no cover to various TYPE_CHECKING
+  ([`f88dfc8`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f88dfc8f1bbc0819736a4f32bf21682366fd3437))
+
+- Add support to plot against x_data
+  ([`0e276d4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0e276d4c09cddb459688aecf28684a963d8f6613))
+
+- Add template for debugging the cli generator
+  ([`f89e74b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f89e74b199d007cf47f355a1c5e1f582daeea90a))
+
+- Autoupdate disabled
+  ([`4e29291`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/4e29291b3a0891657a8d2011bcaf1d6e65de125a))
+
+- Cleanup MR
+  ([`0b00cd2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0b00cd24fd43dbc87c81f7dbfae816343f7da4c4))
+
+- Cleanup rpc reference tracking, fix appquit, fix namespace updates edge cases
+  ([`7ba93ce`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7ba93ce934cc644ad6340f141a6a0888bd1d3d98))
+
+- Cleanup, fix tests and _top_level dict/windows
+  ([`5872253`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/58722531232b2290f9fd974bae24877c9d5451f4))
+
+- Fix cleanup bug for BECConnector items, renamed _registry_state to _server_registry
+  ([`be83c7d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/be83c7d5f4bc04d110734b491727dc60d8dd61ef))
+
+- Fix cleanup for various widgets, including RoundedFrame
+  ([`d05179a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d05179a519d6419c9631ffdf4fa6aa262966c2ed))
+
+- Improve plotting behaviour from history
+  ([`ed2d958`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ed2d958de62223cd796c869b6c8b9b75170e66f5))
+
+- Rearrange base of metadata forms for generic use
+  ([`d04770f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d04770fe913474ec9d4e06b056c85e720d1470c4))
+
+- Set downsampling to auto=True, method 'peak', activate clipToView for (Async)-Curves and fix
+  ViewAll hook from pg.view_box menu
+  ([`25820a1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/25820a1cdec2cff99ab0d6085aece0e3e7dd9092))
+
+- Tidy client generation and add options
+  ([`b492591`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b4925918f7acf31e40971814639be8a6c55d46df))
+
+- **assets**: New icon for ui loader
+  ([`e5b5322`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e5b532274ede281456a14b02a99855302603490a))
+
+- **auto_update**: Auto_update changed to be BECMainWindow; removed auto update logic from
+  BECDockArea
+  ([`56c2827`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/56c282714037f733bcfd8a659f34baadcd1aa223))
+
+- **auto_updates**: Move cleanup method from user section to internal section
+  ([`ac9224e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/ac9224e5f2d3edcb5b1cc1cbc1a8583f81d0b912))
+
+- **bec_connector**: Replace pyqtSlot with SafeSlot for consistency
+  ([`9d6d0b4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9d6d0b406a812e08ca8417415b5def98b40bdf92))
+
+- **bec_figure**: Becfigure removed
+  ([`f76d931`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f76d9319bd13bb52b1ae2524c1c5e44a167cc330))
+
+- **client_utils**: Remove unused auto update attributes from BECGuiClient
+  ([`b7795b4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b7795b4d0ae21641bead0f1f1541f920ae95702a))
+
+- **image_widget**: Old BECImageWidget removed
+  ([`de10609`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/de10609b3c714b80a14bf6940e86763d0779402b))
+
+- **launch_window**: Remove cleanup method
+  ([`9a940bb`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9a940bb8d58f37d1fc24ce4fdb38282d02349efb))
+
+- **launcher,main_window**: Launcher window moved to inherit from BECMainWindow
+  ([`99383b7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/99383b77150ca7c74c19c899a0e6a7879b770376))
+
+- **motor_map_widget**: Becmotormapwidget removed
+  ([`f878e87`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f878e87ad545e0fe68292030d9f06dee693e0da2))
+
+- **multi_waveform_widget**: Becmultiwaveformwidget removed
+  ([`7c31bbd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/7c31bbd9c2e0230e54f4dca0f1e5c4d2cd6e7674))
+
+- **plots**: Plot_next_gen module renamed to plots
+  ([`9fb9a1c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9fb9a1cfd2a94efd5e2a9fcbaa05d65c7b7105ee))
+
+- **plots**: Waveform and image rpc api review
+  ([`a3de1f0`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a3de1f0a31dfb9048493fb61983167960577fb97))
+
+- **rpc_reference**: Refactor rpc reference tracking
+  ([`bd5e251`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/bd5e251ee9396633f419732e43411821726250aa))
+
+- **rpc_server**: Add type hint for _get_becwidget_ancestor method parameter; minor cleanup of
+  imports
+  ([`cb91ebc`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cb91ebc0c34ae29b6b293996199f4624d36a3cc0))
+
+- **rpc_server**: Add type hints and docstrings for heartbeat and registry update methods
+  ([`08168f2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/08168f28d3c5375b9ace9df0d7aa31e33adb97e9))
+
+- **rpc_server**: Cli_server renamed to rpc_server
+  ([`6082e7a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6082e7a6907c2fe15e4e5ebca857fbf8f222d192))
+
+- **tests**: Create dummy scan item moved to client_mocks.py
+  ([`0dd9617`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/0dd9617e6e5ea756edc344c324451480a62bdae2))
+
+- **ui_loader**: Remove unnecessary parent_id handling
+  ([`d60cf6c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d60cf6c843ecc135a6065d1e913f9f6abb1a483d))
+
+- **ui_loader**: Remove unused import
+  ([`a6ce312`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a6ce312f7c60c2babcc37127f7c69d54c1b32573))
+
+- **utils**: Qt_utils moved to utils
+  ([`be552d3`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/be552d3ece97e7f472c4534b4af8438b95c518aa))
+
+- **waveform_widget**: Removed and replaced by Waveform
+  ([`96cff49`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/96cff49cd4453fa70d8802653d5afe62d71c6b2a))
+
+### Testing
+
+- Add function scoped rpc_widgets e2e test; closes #510
+  ([`36dc174`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/36dc174bfedf212532658b84f8ab64971863d292))
+
+- Add IPython client GUI object test module with tab completion
+  ([`e3d0d55`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e3d0d5566c50f6a80ba861d4e3e0789f17785a46))
+
+- Add tests for name creation of custom curves, and object name handling
+  ([`99d7623`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/99d76236cac63042f0d7d1db580dde8aa7cfd214))
+
+- Disable test_bec_dock_rpc_e2e module, issue to fix this created #450
+  ([`17f2dda`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/17f2dda977025bc422e26289293d3fcbd224a6f6))
+
+- Fix rpc widgets e2e test
+  ([`113938e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/113938e71a6dacba37164069e2c795cc9db168d4))
+
+- Fix tests for launcher close / hide behavior
+  ([`23fee22`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/23fee22ef8f2c22f191dfc1da57b921484ede6cd))
+
+- Fix tests for namespace updates
+  ([`f3d3c94`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/f3d3c9425d3ed619b978427cea782137beedfb59))
+
+- Qapp must shutdown cli server before checking for leaked QTimer
+  ([`d066051`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d06605122e5c2e225650b44ebfc047daa5aa6f55))
+
+- **bec_connector**: Becconnector requires a QObject
+  ([`23bdd95`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/23bdd95d8c6311d989cb3b807921e3fb2a3d62a0))
+
+- **device_signal_input**: Fix init of device input widget
+  ([`31c3b64`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/31c3b64d7b157e5e26d44e5288afabef343c5e13))
+
+- **e2e**: E2e tests adjusted for new plotting framework
+  ([`378398a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/378398a29b34e43f0cca0a49b08adfcb144e4777))
+
+- **generate_cli**: Fix reference output
+  ([`a8adb06`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a8adb064f5011e1708ee2dc0090326f533407260))
+
+- **launch_window**: Add test for launching UI file that raises ValueError for QMainWindow
+  ([`33a8a76`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/33a8a767f31a57bcfda624d503ed39e0e4578dcb))
+
+- **launch_window**: Add unit tests for LaunchWindow initialization and custom UI file launching
+  ([`d5e422c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d5e422c7fc0e169c35d7f206937e8c7902fbf123))
+
+- **launch_window**: Tests for default and plugin auto updates
+  ([`e10f5ec`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/e10f5ec088c6937beb26ec468f510a209c7cc782))
+
+- **plot_base**: Test for plot base re-enabled
+  ([`b51d637`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b51d637c5ff3418420801cd9b457fc073fa98adc))
+
+- **plot_indicators**: Tests adapted to not be dependent on BECWaveformWidget
+  ([`360fe4c`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/360fe4c9c3b5c3c1f26e97cb795aef8f4aba3b46))
+
+- **setting_dialog**: Test that settings reject calls cleanup
+  ([`8914f1d`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/8914f1d50600cab588a6cbecb08d85bfd1a715a1))
+
+- **unit_tests**: Unit tests adjusted to use a modern plotting framework instead of BECFigure
+  ([`6ade934`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/6ade93435632fa66fb012d92f9b8b548d96e718f))
+
+
 ## v1.25.1 (2025-03-24)
 
 ### Bug Fixes
