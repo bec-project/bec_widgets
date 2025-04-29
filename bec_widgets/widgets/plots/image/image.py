@@ -137,7 +137,7 @@ class Image(PlotBase):
         super().__init__(
             parent=parent, config=config, client=client, gui_id=gui_id, popups=popups, **kwargs
         )
-        self._main_image = ImageItem(parent_image=self, parent_id=self.gui_id)
+        self._main_image = ImageItem(parent_image=self)
 
         self.plot_item.addItem(self._main_image)
         self.scan_id = None

@@ -29,9 +29,7 @@ class MultiWaveformSelectionToolbarBundle(ToolbarBundle):
 
         # Monitor Selection
         self.monitor = DeviceComboBox(
-            device_filter=BECDeviceFilter.DEVICE,
-            readout_priority_filter=ReadoutPriority.ASYNC,
-            parent_id=self.target_widget.gui_id,
+            device_filter=BECDeviceFilter.DEVICE, readout_priority_filter=ReadoutPriority.ASYNC
         )
         self.monitor.addItem("", None)
         self.monitor.setCurrentText("")
@@ -40,7 +38,7 @@ class MultiWaveformSelectionToolbarBundle(ToolbarBundle):
         self.add_action("monitor", WidgetAction(widget=self.monitor, adjust_size=False))
 
         # Colormap Selection
-        self.colormap_widget = BECColorMapWidget(cmap="plasma", parent_id=self.target_widget.gui_id)
+        self.colormap_widget = BECColorMapWidget(cmap="plasma")
         self.add_action("color_map", WidgetAction(widget=self.colormap_widget, adjust_size=False))
 
         # Connect slots, a device will be connected upon change of any combobox

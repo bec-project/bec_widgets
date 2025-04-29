@@ -274,6 +274,7 @@ class ScanGroupBox(QGroupBox):
         for widget in self.widgets[-len(self.inputs) :]:
             if isinstance(widget, DeviceLineEdit):
                 self.selected_devices[widget] = ""
+            widget.close()
             widget.deleteLater()
         self.widgets = self.widgets[: -len(self.inputs)]
 

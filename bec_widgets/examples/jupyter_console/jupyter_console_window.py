@@ -43,22 +43,22 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "pg": pg,
                     "wh": wh,
                     "dock": self.dock,
-                    "im": self.im,
-                    "mi": self.mi,
-                    "mm": self.mm,
-                    "lm": self.lm,
-                    "btn1": self.btn1,
-                    "btn2": self.btn2,
-                    "btn3": self.btn3,
-                    "btn4": self.btn4,
-                    "btn5": self.btn5,
-                    "btn6": self.btn6,
-                    "pb": self.pb,
-                    "pi": self.pi,
-                    "wf": self.wf,
-                    "scatter": self.scatter,
-                    "scatter_mi": self.scatter,
-                    "mwf": self.mwf,
+                    # "im": self.im,
+                    # "mi": self.mi,
+                    # "mm": self.mm,
+                    # "lm": self.lm,
+                    # "btn1": self.btn1,
+                    # "btn2": self.btn2,
+                    # "btn3": self.btn3,
+                    # "btn4": self.btn4,
+                    # "btn5": self.btn5,
+                    # "btn6": self.btn6,
+                    # "pb": self.pb,
+                    # "pi": self.pi,
+                    # "wf": self.wf,
+                    # "scatter": self.scatter,
+                    # "scatter_mi": self.scatter,
+                    # "mwf": self.mwf,
                 }
             )
 
@@ -77,76 +77,76 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         first_tab_layout.addWidget(self.dock)
         tab_widget.addTab(first_tab, "Dock Area")
 
-        third_tab = QWidget()
-        third_tab_layout = QVBoxLayout(third_tab)
-        self.lm = LayoutManagerWidget()
-        third_tab_layout.addWidget(self.lm)
-        tab_widget.addTab(third_tab, "Layout Manager Widget")
-
-        fourth_tab = QWidget()
-        fourth_tab_layout = QVBoxLayout(fourth_tab)
-        self.pb = PlotBase()
-        self.pi = self.pb.plot_item
-        fourth_tab_layout.addWidget(self.pb)
-        tab_widget.addTab(fourth_tab, "PlotBase")
-
-        tab_widget.setCurrentIndex(3)
-
+        # third_tab = QWidget()
+        # third_tab_layout = QVBoxLayout(third_tab)
+        # self.lm = LayoutManagerWidget()
+        # third_tab_layout.addWidget(self.lm)
+        # tab_widget.addTab(third_tab, "Layout Manager Widget")
+        #
+        # fourth_tab = QWidget()
+        # fourth_tab_layout = QVBoxLayout(fourth_tab)
+        # self.pb = PlotBase()
+        # self.pi = self.pb.plot_item
+        # fourth_tab_layout.addWidget(self.pb)
+        # tab_widget.addTab(fourth_tab, "PlotBase")
+        #
+        # tab_widget.setCurrentIndex(3)
+        #
         group_box = QGroupBox("Jupyter Console", splitter)
         group_box_layout = QVBoxLayout(group_box)
         self.console = BECJupyterConsole(inprocess=True)
         group_box_layout.addWidget(self.console)
-
-        # Some buttons for layout testing
-        self.btn1 = QPushButton("Button 1")
-        self.btn2 = QPushButton("Button 2")
-        self.btn3 = QPushButton("Button 3")
-        self.btn4 = QPushButton("Button 4")
-        self.btn5 = QPushButton("Button 5")
-        self.btn6 = QPushButton("Button 6")
-
-        fifth_tab = QWidget()
-        fifth_tab_layout = QVBoxLayout(fifth_tab)
-        self.wf = Waveform()
-        fifth_tab_layout.addWidget(self.wf)
-        tab_widget.addTab(fifth_tab, "Waveform Next Gen")
-        tab_widget.setCurrentIndex(4)
-
-        sixth_tab = QWidget()
-        sixth_tab_layout = QVBoxLayout(sixth_tab)
-        self.im = Image()
-        self.mi = self.im.main_image
-        sixth_tab_layout.addWidget(self.im)
-        tab_widget.addTab(sixth_tab, "Image Next Gen")
-        tab_widget.setCurrentIndex(5)
-
-        seventh_tab = QWidget()
-        seventh_tab_layout = QVBoxLayout(seventh_tab)
-        self.scatter = ScatterWaveform()
-        self.scatter_mi = self.scatter.main_curve
-        self.scatter.plot("samx", "samy", "bpm4i")
-        seventh_tab_layout.addWidget(self.scatter)
-        tab_widget.addTab(seventh_tab, "Scatter Waveform")
-        tab_widget.setCurrentIndex(6)
-
-        eighth_tab = QWidget()
-        eighth_tab_layout = QVBoxLayout(eighth_tab)
-        self.mm = MotorMap()
-        eighth_tab_layout.addWidget(self.mm)
-        tab_widget.addTab(eighth_tab, "Motor Map")
-        tab_widget.setCurrentIndex(7)
-
-        ninth_tab = QWidget()
-        ninth_tab_layout = QVBoxLayout(ninth_tab)
-        self.mwf = MultiWaveform()
-        ninth_tab_layout.addWidget(self.mwf)
-        tab_widget.addTab(ninth_tab, "MultiWaveform")
-        tab_widget.setCurrentIndex(8)
-
-        # add stuff to the new Waveform widget
-        self._init_waveform()
-
-        self.setWindowTitle("Jupyter Console Window")
+        #
+        # # Some buttons for layout testing
+        # self.btn1 = QPushButton("Button 1")
+        # self.btn2 = QPushButton("Button 2")
+        # self.btn3 = QPushButton("Button 3")
+        # self.btn4 = QPushButton("Button 4")
+        # self.btn5 = QPushButton("Button 5")
+        # self.btn6 = QPushButton("Button 6")
+        #
+        # fifth_tab = QWidget()
+        # fifth_tab_layout = QVBoxLayout(fifth_tab)
+        # self.wf = Waveform()
+        # fifth_tab_layout.addWidget(self.wf)
+        # tab_widget.addTab(fifth_tab, "Waveform Next Gen")
+        # tab_widget.setCurrentIndex(4)
+        #
+        # sixth_tab = QWidget()
+        # sixth_tab_layout = QVBoxLayout(sixth_tab)
+        # self.im = Image()
+        # self.mi = self.im.main_image
+        # sixth_tab_layout.addWidget(self.im)
+        # tab_widget.addTab(sixth_tab, "Image Next Gen")
+        # tab_widget.setCurrentIndex(5)
+        #
+        # seventh_tab = QWidget()
+        # seventh_tab_layout = QVBoxLayout(seventh_tab)
+        # self.scatter = ScatterWaveform()
+        # self.scatter_mi = self.scatter.main_curve
+        # self.scatter.plot("samx", "samy", "bpm4i")
+        # seventh_tab_layout.addWidget(self.scatter)
+        # tab_widget.addTab(seventh_tab, "Scatter Waveform")
+        # tab_widget.setCurrentIndex(6)
+        #
+        # eighth_tab = QWidget()
+        # eighth_tab_layout = QVBoxLayout(eighth_tab)
+        # self.mm = MotorMap()
+        # eighth_tab_layout.addWidget(self.mm)
+        # tab_widget.addTab(eighth_tab, "Motor Map")
+        # tab_widget.setCurrentIndex(7)
+        #
+        # ninth_tab = QWidget()
+        # ninth_tab_layout = QVBoxLayout(ninth_tab)
+        # self.mwf = MultiWaveform()
+        # ninth_tab_layout.addWidget(self.mwf)
+        # tab_widget.addTab(ninth_tab, "MultiWaveform")
+        # tab_widget.setCurrentIndex(8)
+        #
+        # # add stuff to the new Waveform widget
+        # self._init_waveform()
+        #
+        # self.setWindowTitle("Jupyter Console Window")
 
     def _init_waveform(self):
         self.wf.plot(y_name="bpm4i", y_entry="bpm4i", dap="GaussianModel")
@@ -174,7 +174,7 @@ if __name__ == "__main__":  # pragma: no cover
     icon = material_icon("terminal", color=(255, 255, 255, 255), filled=True)
     app.setWindowIcon(icon)
 
-    bec_dispatcher = BECDispatcher()
+    bec_dispatcher = BECDispatcher(gui_id="jupyter_console")
     client = bec_dispatcher.client
     client.start()
 

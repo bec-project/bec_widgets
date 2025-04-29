@@ -85,7 +85,6 @@ class BECConnector:
         gui_id: str | None = None,
         object_name: str | None = None,
         parent_dock: BECDock | None = None,  # TODO should go away -> issue created #473
-        parent_id: str | None = None,
         **kwargs,
     ):
         # Extract object_name from kwargs to not pass it to Qt class
@@ -131,7 +130,6 @@ class BECConnector:
             )
             self.config = ConnectionConfig(widget_class=self.__class__.__name__)
 
-        self.parent_id = parent_id
         # If the gui_id is passed, it should be respected. However, this should be revisted since
         # the gui_id has to be unique, and may no longer be.
         if gui_id:
@@ -150,11 +148,6 @@ class BECConnector:
 
         # 2) Enforce unique objectName among siblings with the same BECConnector parent
         self.setParent(parent)
-        if parent_id is None:
-            connector_parent = WidgetHierarchy._get_becwidget_ancestor(self)
-            if connector_parent is not None:
-                self.parent_id = connector_parent.gui_id
-
         if isinstance(self.parent(), QObject) and hasattr(self, "cleanup"):
             self.parent().destroyed.connect(self._run_cleanup_on_deleted_parent)
 
@@ -166,6 +159,14 @@ class BECConnector:
         self._workers = []
 
         QTimer.singleShot(0, self._update_object_name)
+
+    @property
+    def parent_id(self) -> str | None:
+        try:
+            connector_parent = WidgetHierarchy._get_becwidget_ancestor(self)
+            return connector_parent.gui_id if connector_parent else None
+        except:
+            logger.error(f"Error getting parent_id for {self.__class__.__name__}")
 
     @SafeSlot()
     def _run_cleanup_on_deleted_parent(self) -> None:

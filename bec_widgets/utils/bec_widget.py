@@ -33,7 +33,6 @@ class BECWidget(BECConnector):
         gui_id: str | None = None,
         theme_update: bool = False,
         parent_dock: BECDock | None = None,  # TODO should go away -> issue created #473
-        parent_id: str | None = None,
         **kwargs,
     ):
         """
@@ -55,12 +54,7 @@ class BECWidget(BECConnector):
         """
 
         super().__init__(
-            client=client,
-            config=config,
-            gui_id=gui_id,
-            parent_dock=parent_dock,
-            parent_id=parent_id,
-            **kwargs,
+            client=client, config=config, gui_id=gui_id, parent_dock=parent_dock, **kwargs
         )
         if not isinstance(self, QObject):
             raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")

@@ -102,7 +102,7 @@ class BECDockArea(BECWidget, QWidget):
 
         self._instructions_visible = True
 
-        self.dark_mode_button = DarkModeButton(parent=self, parent_id=self.gui_id, toolbar=True)
+        self.dark_mode_button = DarkModeButton(parent=self, toolbar=True)
         self.dock_area = DockArea(parent=self)
         self.toolbar = ModularToolBar(
             parent=self,
@@ -377,7 +377,6 @@ class BECDockArea(BECWidget, QWidget):
             name=name,  # this is dock name pyqtgraph property, this is displayed on label
             object_name=name,  # this is a real qt object name passed to BECConnector
             parent_dock_area=self,
-            parent_id=self.gui_id,
             closable=closable,
         )
         dock.config.position = position

@@ -131,7 +131,6 @@ class BECDock(BECWidget, Dock):
         self,
         parent: QWidget | None = None,
         parent_dock_area: BECDockArea | None = None,
-        parent_id: str | None = None,
         config: DockConfig | None = None,
         name: str | None = None,
         object_name: str | None = None,
@@ -325,11 +324,7 @@ class BECDock(BECWidget, Dock):
             widget = cast(
                 BECWidget,
                 widget_handler.create_widget(
-                    widget_type=widget,
-                    object_name=name,
-                    parent_dock=self,
-                    parent_id=self.gui_id,
-                    parent=self,
+                    widget_type=widget, object_name=name, parent_dock=self, parent=self
                 ),
             )
         else:
@@ -425,6 +420,7 @@ class BECDock(BECWidget, Dock):
         self.delete_all()
         self.widgets.clear()
         super().cleanup()
+        self.deleteLater()
 
     def close(self):
         """
