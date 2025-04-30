@@ -308,6 +308,8 @@ class BECDockArea(BECWidget, QWidget):
         """
         if state is None:
             state = self.config.docks_state
+        if state is None:
+            return
         self.dock_area.restoreState(state, missing=missing, extra=extra)
 
     @SafeSlot()
