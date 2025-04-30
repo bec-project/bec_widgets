@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.0.1 (2025-04-30)
+
+### Bug Fixes
+
+- **dock_area**: Restore state safeguard to not pass none to pyqtgraph restoreState
+  ([`9079ddd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/9079ddd7278ede7a9a12d7b39797154e83659c20))
+
+
 ## v2.0.0 (2025-04-29)
 
 ### Bug Fixes
