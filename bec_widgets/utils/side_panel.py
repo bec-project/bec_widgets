@@ -31,6 +31,7 @@ class SidePanel(QWidget):
         panel_max_width: int = 200,
         animation_duration: int = 200,
         animations_enabled: bool = True,
+        show_toolbar: bool = True,
     ):
         super().__init__(parent=parent)
 
@@ -40,6 +41,7 @@ class SidePanel(QWidget):
         self._panel_max_width = panel_max_width
         self._animation_duration = animation_duration
         self._animations_enabled = animations_enabled
+        self._show_toolbar = show_toolbar
 
         self._panel_width = 0
         self._panel_height = 0
@@ -72,11 +74,13 @@ class SidePanel(QWidget):
             self.stack_widget.setMaximumWidth(self._panel_max_width)
 
             if self._orientation == "left":
-                self.main_layout.addWidget(self.toolbar)
+                if self._show_toolbar:
+                    self.main_layout.addWidget(self.toolbar)
                 self.main_layout.addWidget(self.container)
             else:
                 self.main_layout.addWidget(self.container)
-                self.main_layout.addWidget(self.toolbar)
+                if self._show_toolbar:
+                    self.main_layout.addWidget(self.toolbar)
 
             self.container.layout.addWidget(self.stack_widget)
 
@@ -102,10 +106,13 @@ class SidePanel(QWidget):
             self.stack_widget.setMaximumHeight(self._panel_max_width)
 
             if self._orientation == "top":
-                self.main_layout.addWidget(self.toolbar)
+                if self._show_toolbar:
+                    self.main_layout.addWidget(self.toolbar)
                 self.main_layout.addWidget(self.container)
             else:
                 self.main_layout.addWidget(self.container)
+                if self._show_toolbar:
+                    self.main_layout.addWidget(self.toolbar)
                 self.main_layout.addWidget(self.toolbar)
 
             self.container.layout.addWidget(self.stack_widget)
@@ -233,21 +240,24 @@ class SidePanel(QWidget):
 
     def add_menu(
         self,
-        action_id: str,
-        icon_name: str,
-        tooltip: str,
         widget: QWidget,
+        action_id: str | None = None,
+        icon_name: str | None = None,
+        tooltip: str | None = None,
         title: str | None = None,
-    ):
+    ) -> int:
         """
         Add a menu to the side panel.
 
         Args:
-            action_id(str): The ID of the action.
-            icon_name(str): The name of the icon.
-            tooltip(str): The tooltip for the action.
             widget(QWidget): The widget to add to the panel.
-            title(str): The title of the panel.
+            action_id(Optional[str]): The ID of the action. Optional if no toolbar action is needed.
+            icon_name(Optional[str]): The name of the icon. Optional if no toolbar action is needed.
+            tooltip(Optional[str]): The tooltip for the action. Optional if no toolbar action is needed.
+            title(Optional[str]): The title of the panel.
+
+        Returns:
+            int: The index of the added panel, which can be used with show_panel() and switch_to().
         """
         # container_widget: top-level container for the stacked page
         container_widget = QWidget()
@@ -278,32 +288,35 @@ class SidePanel(QWidget):
         index = self.stack_widget.count()
         self.stack_widget.addWidget(container_widget)
 
-        # Add an action to the toolbar
-        action = MaterialIconAction(icon_name=icon_name, tooltip=tooltip, checkable=True)
-        self.toolbar.add_action(action_id, action, target_widget=self)
+        # Add an action to the toolbar if action_id, icon_name, and tooltip are provided
+        if action_id is not None and icon_name is not None and tooltip is not None:
+            action = MaterialIconAction(icon_name=icon_name, tooltip=tooltip, checkable=True)
+            self.toolbar.add_action(action_id, action, target_widget=self)
 
-        def on_action_toggled(checked: bool):
-            if self.switching_actions:
-                return
+            def on_action_toggled(checked: bool):
+                if self.switching_actions:
+                    return
 
-            if checked:
-                if self.current_action and self.current_action != action.action:
-                    self.switching_actions = True
-                    self.current_action.setChecked(False)
-                    self.switching_actions = False
+                if checked:
+                    if self.current_action and self.current_action != action.action:
+                        self.switching_actions = True
+                        self.current_action.setChecked(False)
+                        self.switching_actions = False
 
-                self.current_action = action.action
+                    self.current_action = action.action
 
-                if not self.panel_visible:
-                    self.show_panel(index)
+                    if not self.panel_visible:
+                        self.show_panel(index)
+                    else:
+                        self.switch_to(index)
                 else:
-                    self.switch_to(index)
-            else:
-                if self.current_action == action.action:
-                    self.current_action = None
-                    self.hide_panel()
+                    if self.current_action == action.action:
+                        self.current_action = None
+                        self.hide_panel()
 
-        action.action.toggled.connect(on_action_toggled)
+            action.action.toggled.connect(on_action_toggled)
+
+        return index
 
 
 ############################################
@@ -332,40 +345,55 @@ class ExampleApp(QMainWindow):  # pragma: no cover
         self.add_side_menus()
 
     def add_side_menus(self):
+        # Example 1: With action, icon, and tooltip
         widget1 = QWidget()
         layout1 = QVBoxLayout(widget1)
         for i in range(15):
             layout1.addWidget(QLabel(f"Widget 1 label row {i}"))
         self.side_panel.add_menu(
+            widget=widget1,
             action_id="widget1",
             icon_name="counter_1",
             tooltip="Show Widget 1",
-            widget=widget1,
             title="Widget 1 Panel",
         )
 
+        # Example 2: With action, icon, and tooltip
         widget2 = QWidget()
         layout2 = QVBoxLayout(widget2)
         layout2.addWidget(QLabel("Short widget 2 content"))
         self.side_panel.add_menu(
+            widget=widget2,
             action_id="widget2",
             icon_name="counter_2",
             tooltip="Show Widget 2",
-            widget=widget2,
             title="Widget 2 Panel",
         )
 
+        # Example 3: With action, icon, and tooltip
         widget3 = QWidget()
         layout3 = QVBoxLayout(widget3)
         for i in range(10):
             layout3.addWidget(QLabel(f"Line {i} for Widget 3"))
         self.side_panel.add_menu(
+            widget=widget3,
             action_id="widget3",
             icon_name="counter_3",
             tooltip="Show Widget 3",
-            widget=widget3,
             title="Widget 3 Panel",
         )
+
+        # Example 4: Without action, icon, and tooltip (can only be shown programmatically)
+        widget4 = QWidget()
+        layout4 = QVBoxLayout(widget4)
+        layout4.addWidget(QLabel("This panel has no toolbar button"))
+        layout4.addWidget(QLabel("It can only be shown programmatically"))
+        self.hidden_panel_index = self.side_panel.add_menu(widget=widget4, title="Hidden Panel")
+
+        # Example of how to show the hidden panel programmatically after 3 seconds
+        from qtpy.QtCore import QTimer
+
+        QTimer.singleShot(3000, lambda: self.side_panel.show_panel(self.hidden_panel_index))
 
 
 if __name__ == "__main__":  # pragma: no cover
