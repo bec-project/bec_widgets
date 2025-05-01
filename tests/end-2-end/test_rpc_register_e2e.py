@@ -9,7 +9,7 @@ from bec_widgets.cli.rpc.rpc_base import RPCReference
 
 def test_rpc_reference_objects(connected_client_gui_obj):
     gui = connected_client_gui_obj
-    dock = gui.window_list[0].new("dock")
+    dock = gui.window_list[0].new()
     plt = dock.new(name="fig", widget="Waveform")
 
     plt.plot(x_name="samx", y_name="bpm4i")

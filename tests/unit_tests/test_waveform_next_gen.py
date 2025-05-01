@@ -1,4 +1,6 @@
 import json
+from types import SimpleNamespace
+from unittest import mock
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -18,6 +20,8 @@ from tests.unit_tests.client_mocks import (
 )
 
 from .conftest import create_widget
+
+# pylint: disable=unexpected-keyword-arg
 
 ##################################################
 # Waveform widget base functionality tests
@@ -541,7 +545,14 @@ def test_on_async_readback_add_update(qtbot, mocked_client):
 
     msg = {"signals": {"async_device": {"value": [100, 200], "timestamp": [1001, 1002]}}}
     metadata = {"async_update": {"max_shape": [None], "type": "add"}}
-    wf.on_async_readback(msg, metadata)
+
+    cb_info_ret = {"scan_id": wf.scan_id}
+
+    def ret_sender():
+        return SimpleNamespace(cb_info={"scan_id": wf.scan_id})
+
+    with mock.patch.object(wf, "sender", side_effect=ret_sender):
+        wf.on_async_readback(msg, metadata, _override_slot_params={"verify_sender": False})
 
     x_data, y_data = c.get_data()
     assert len(x_data) == 5
@@ -553,7 +564,8 @@ def test_on_async_readback_add_update(qtbot, mocked_client):
     # instruction='replace'
     msg2 = {"signals": {"async_device": {"value": [999], "timestamp": [555]}}}
     metadata2 = {"async_update": {"max_shape": [None], "type": "replace"}}
-    wf.on_async_readback(msg2, metadata2)
+    with mock.patch.object(wf, "sender", side_effect=ret_sender):
+        wf.on_async_readback(msg2, metadata2, _override_slot_params={"verify_sender": False})
     x_data2, y_data2 = c.get_data()
     np.testing.assert_array_equal(x_data2, [0])
 
@@ -568,7 +580,8 @@ def test_on_async_readback_add_update(qtbot, mocked_client):
         metadata = {
             "async_update": {"max_shape": [None, waveform_shape], "index": 0, "type": "add_slice"}
         }
-        wf.on_async_readback(msg, metadata)
+        with mock.patch.object(wf, "sender", side_effect=ret_sender):
+            wf.on_async_readback(msg, metadata, _override_slot_params={"verify_sender": False})
 
     # Old data should be deleted since the slice_index did not match
     x_data, y_data = c.get_data()
@@ -595,7 +608,8 @@ def test_on_async_readback_add_update(qtbot, mocked_client):
         metadata = {
             "async_update": {"max_shape": [None, waveform_shape], "index": 0, "type": "add_slice"}
         }
-        wf.on_async_readback(msg, metadata)
+        with mock.patch.object(wf, "sender", side_effect=ret_sender):
+            wf.on_async_readback(msg, metadata, _override_slot_params={"verify_sender": False})
     x_data, y_data = c.get_data()
     assert len(y_data) == waveform_shape
     assert len(x_data) == waveform_shape
@@ -616,7 +630,8 @@ def test_on_async_readback_add_update(qtbot, mocked_client):
             }
         }
         metadata = {"async_update": {"type": "replace"}}
-        wf.on_async_readback(msg, metadata)
+        with mock.patch.object(wf, "sender", side_effect=ret_sender):
+            wf.on_async_readback(msg, metadata, _override_slot_params={"verify_sender": False})
 
     x_data, y_data = c.get_data()
     assert np.array_equal(y_data, np.array(range(waveform_shape)))

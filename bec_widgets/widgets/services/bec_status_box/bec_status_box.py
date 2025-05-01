@@ -76,7 +76,7 @@ class BECStatusBox(BECWidget, CompactPopupWidget):
 
     PLUGIN = True
     CORE_SERVICES = ["DeviceServer", "ScanServer", "SciHub", "ScanBundler", "FileWriterManager"]
-    USER_ACCESS = ["get_server_state"]
+    USER_ACCESS = ["get_server_state", "remove"]
 
     service_update = Signal(BECServiceInfoContainer)
     bec_core_state = Signal(str)

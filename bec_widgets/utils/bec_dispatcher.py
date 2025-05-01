@@ -25,9 +25,18 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class QtThreadSafeCallback(QObject):
+    """QtThreadSafeCallback is a wrapper around a callback function to make it thread-safe for Qt."""
+
     cb_signal = pyqtSignal(dict, dict)
 
     def __init__(self, cb: Callable, cb_info: dict | None = None):
+        """
+        Initialize the QtThreadSafeCallback.
+
+        Args:
+            cb (Callable): The callback function to be wrapped.
+            cb_info (dict, optional): Additional information about the callback. Defaults to None.
+        """
         super().__init__()
         self.cb_info = cb_info
 
@@ -151,6 +160,7 @@ class BECDispatcher:
             slot (Callable): A slot method/function that accepts two inputs: content and metadata of
                 the corresponding pub/sub message
             topics (EndpointInfo | str | list): A topic or list of topics that can typically be acquired via bec_lib.MessageEndpoints
+            cb_info (dict | None): A dictionary containing information about the callback. Defaults to None.
         """
         slot = QtThreadSafeCallback(cb=slot, cb_info=cb_info)
         self.client.connector.register(topics, cb=slot, **kwargs)

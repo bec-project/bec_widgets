@@ -496,6 +496,12 @@ class BECStatusBox(RPCBase):
         Get the state ("RUNNING", "BUSY", "IDLE", "ERROR") of the BEC server
         """
 
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
 
 class Curve(RPCBase):
     @rpc_call
