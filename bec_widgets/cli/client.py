@@ -491,9 +491,9 @@ class BECStatusBox(RPCBase):
     """An autonomous widget to display the status of BEC services."""
 
     @rpc_call
-    def remove(self):
+    def get_server_state(self) -> "str":
         """
-        Cleanup the BECConnector
+        Get the state ("RUNNING", "BUSY", "IDLE", "ERROR") of the BEC server
         """
 
 

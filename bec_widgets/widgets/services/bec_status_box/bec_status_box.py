@@ -76,6 +76,7 @@ class BECStatusBox(BECWidget, CompactPopupWidget):
 
     PLUGIN = True
     CORE_SERVICES = ["DeviceServer", "ScanServer", "SciHub", "ScanBundler", "FileWriterManager"]
+    USER_ACCESS = ["get_server_state"]
 
     service_update = Signal(BECServiceInfoContainer)
     bec_core_state = Signal(str)
@@ -133,6 +134,10 @@ class BECStatusBox(BECWidget, CompactPopupWidget):
             "}"
             "QTreeWidget::item:selected {}"
         )
+
+    def get_server_state(self) -> str:
+        """Get the state ("RUNNING", "BUSY", "IDLE", "ERROR") of the BEC server"""
+        return self.status_container[self.box_name]["info"].status
 
     def _create_status_widget(
         self, service_name: str, status=BECStatus, info: dict = None, metrics: dict = None
