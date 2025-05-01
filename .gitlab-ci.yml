@@ -77,7 +77,7 @@ formatter:
   stage: Formatter
   needs: []
   script:
-    - pip install bec_lib[dev]
+    - pip install -e ./[dev]
     - isort --check --diff --line-length=100 --profile=black --multi-line=3 --trailing-comma ./
     - black --check --diff --color --line-length=100 --skip-magic-trailing-comma ./
   rules:
