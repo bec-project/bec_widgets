@@ -168,7 +168,7 @@ def test_image_data_update_1d(qtbot, mocked_client):
 
 def test_toolbar_actions_presence(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
-    assert "autorange_image" in bec_image_view.toolbar.bundles["roi"]
+    assert "autorange_image" in bec_image_view.toolbar.widgets
     assert "lock_aspect_ratio" in bec_image_view.toolbar.bundles["mouse_interaction"]
     assert "processing" in bec_image_view.toolbar.bundles
     assert "selection" in bec_image_view.toolbar.bundles
@@ -414,3 +414,72 @@ def test_show_roi_manager_popup(qtbot, mocked_client):
     view.roi_manager_dialog.close()
     assert view.roi_manager_dialog is None
     assert roi_action.isChecked() is False, "Icon should toggle off"
+
+
+###################################
+# ROI Plots & Crosshair Switch
+###################################
+
+
+def test_crosshair_roi_panels_visibility(qtbot, mocked_client):
+    """
+    Verify that enabling the ROI‑crosshair shows ROI panels and disabling hides them.
+    """
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+    switch = bec_image_view.toolbar.widgets["switch_crosshair"]
+
+    # Initially panels should be hidden
+    assert bec_image_view.side_panel_x.panel_height == 0
+    assert bec_image_view.side_panel_y.panel_width == 0
+
+    # Enable ROI crosshair
+    switch.actions["crosshair_roi"].action.trigger()
+    qtbot.wait(500)
+
+    # Panels must be visible
+    assert bec_image_view.side_panel_x.panel_height > 0
+    assert bec_image_view.side_panel_y.panel_width > 0
+
+    # Disable ROI crosshair
+    switch.actions["crosshair_roi"].action.trigger()
+    qtbot.wait(500)
+
+    # Panels hidden again
+    assert bec_image_view.side_panel_x.panel_height == 0
+    assert bec_image_view.side_panel_y.panel_width == 0
+
+
+def test_roi_plot_data_from_image(qtbot, mocked_client):
+    """
+    Check that ROI plots receive correct slice data from the 2D image.
+    """
+    import numpy as np
+
+    bec_image_view = create_widget(qtbot, Image, client=mocked_client)
+
+    # Provide deterministic 2D data
+    test_data = np.arange(25).reshape(5, 5)
+    bec_image_view.on_image_update_2d({"data": test_data}, {})
+
+    # Activate ROI crosshair
+    switch = bec_image_view.toolbar.widgets["switch_crosshair"]
+    switch.actions["crosshair_roi"].action.trigger()
+    qtbot.wait(50)
+
+    # Simulate crosshair at row 2, col 3
+    bec_image_view.update_image_slices((0, 2, 3))
+
+    # Extract plotted data
+    x_items = bec_image_view.x_roi.plot_item.listDataItems()
+    y_items = bec_image_view.y_roi.plot_item.listDataItems()
+
+    assert len(x_items) == 1
+    assert len(y_items) == 1
+
+    # Vertical slice (column)
+    _, v_slice = x_items[0].getData()
+    np.testing.assert_array_equal(v_slice, test_data[:, 3])
+
+    # Horizontal slice (row)
+    h_slice, _ = y_items[0].getData()
+    np.testing.assert_array_equal(h_slice, test_data[2])

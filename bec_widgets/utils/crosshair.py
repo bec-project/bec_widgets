@@ -85,7 +85,8 @@ class Crosshair(QObject):
         self.items = []
         self.marker_moved_1d = {}
         self.marker_clicked_1d = {}
-        self.marker_2d = None
+        self.marker_2d_row = None
+        self.marker_2d_col = None
         self.update_markers()
         self.check_log()
         self.check_derivatives()
@@ -195,13 +196,23 @@ class Crosshair(QObject):
                         marker_clicked_list.append(marker_clicked)
                     self.marker_clicked_1d[name] = marker_clicked_list
             elif isinstance(item, pg.ImageItem):  # 2D plot
-                if self.marker_2d is not None:
+                if self.marker_2d_row is not None and self.marker_2d_col is not None:
                     continue
-                self.marker_2d = pg.ROI(
-                    [0, 0], size=[1, 1], pen=pg.mkPen("r", width=2), movable=False
+                # Create horizontal ROI for row highlighting
+                if item.image is None:
+                    continue
+                self.marker_2d_row = pg.ROI(
+                    [0, 0], size=[item.image.shape[0], 1], pen=pg.mkPen("r", width=2), movable=False
                 )
-                self.marker_2d.skip_auto_range = True
-                self.plot_item.addItem(self.marker_2d)
+                self.marker_2d_row.skip_auto_range = True
+                self.plot_item.addItem(self.marker_2d_row)
+
+                # Create vertical ROI for column highlighting
+                self.marker_2d_col = pg.ROI(
+                    [0, 0], size=[1, item.image.shape[1]], pen=pg.mkPen("r", width=2), movable=False
+                )
+                self.marker_2d_col.skip_auto_range = True
+                self.plot_item.addItem(self.marker_2d_col)
 
     def snap_to_data(
         self, x: float, y: float
@@ -243,6 +254,8 @@ class Crosshair(QObject):
             elif isinstance(item, pg.ImageItem):  # 2D plot
                 name = item.config.monitor or str(id(item))
                 image_2d = item.image
+                if image_2d is None:
+                    continue
                 # Clip the x and y values to the image dimensions to avoid out of bounds errors
                 y_values[name] = int(np.clip(y, 0, image_2d.shape[1] - 1))
                 x_values[name] = int(np.clip(x, 0, image_2d.shape[0] - 1))
@@ -330,7 +343,10 @@ class Crosshair(QObject):
                     x, y = x_snap_values[name], y_snap_values[name]
                     if x is None or y is None:
                         continue
-                    self.marker_2d.setPos([x, y])
+                    # Set position of horizontal ROI (row)
+                    self.marker_2d_row.setPos([0, y])
+                    # Set position of vertical ROI (column)
+                    self.marker_2d_col.setPos([x, 0])
                     coordinate_to_emit = (name, x, y)
                     self.coordinatesChanged2D.emit(coordinate_to_emit)
                 else:
@@ -384,7 +400,10 @@ class Crosshair(QObject):
                     x, y = x_snap_values[name], y_snap_values[name]
                     if x is None or y is None:
                         continue
-                    self.marker_2d.setPos([x, y])
+                    # Set position of horizontal ROI (row)
+                    self.marker_2d_row.setPos([0, y])
+                    # Set position of vertical ROI (column)
+                    self.marker_2d_col.setPos([x, 0])
                     coordinate_to_emit = (name, x, y)
                     self.coordinatesClicked2D.emit(coordinate_to_emit)
                 else:
@@ -428,6 +447,8 @@ class Crosshair(QObject):
         for item in self.items:
             if isinstance(item, pg.ImageItem):
                 image = item.image
+                if image is None:
+                    continue
                 ix = int(np.clip(x, 0, image.shape[0] - 1))
                 iy = int(np.clip(y, 0, image.shape[1] - 1))
                 intensity = image[ix, iy]
@@ -450,9 +471,12 @@ class Crosshair(QObject):
         self.clear_markers()
 
     def cleanup(self):
-        if self.marker_2d is not None:
-            self.plot_item.removeItem(self.marker_2d)
-            self.marker_2d = None
+        if self.marker_2d_row is not None:
+            self.plot_item.removeItem(self.marker_2d_row)
+            self.marker_2d_row = None
+        if self.marker_2d_col is not None:
+            self.plot_item.removeItem(self.marker_2d_col)
+            self.marker_2d_col = None
         self.plot_item.removeItem(self.v_line)
         self.plot_item.removeItem(self.h_line)
         self.plot_item.removeItem(self.coord_label)
