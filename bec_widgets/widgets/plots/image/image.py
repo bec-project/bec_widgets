@@ -327,8 +327,12 @@ class Image(PlotBase):
         self.y_roi.plot_item.setTitle("Y ROI")
 
         # Create side panels
-        self.side_panel_x = SidePanel(parent=self, orientation="bottom", panel_max_width=200)
-        self.side_panel_y = SidePanel(parent=self, orientation="left", panel_max_width=200)
+        self.side_panel_x = SidePanel(
+            parent=self, orientation="bottom", panel_max_width=200, show_toolbar=False
+        )
+        self.side_panel_y = SidePanel(
+            parent=self, orientation="left", panel_max_width=200, show_toolbar=False
+        )
 
         # Add ROI plots to side panels
         self.x_panel_index = self.side_panel_x.add_menu(widget=self.x_roi)
