@@ -1182,10 +1182,11 @@ class Waveform(PlotBase):
             self.on_async_readback,
             MessageEndpoints.device_async_readback(self.scan_id, name),
             from_start=True,
+            cb_info={"scan_id": self.scan_id},
         )
         logger.info(f"Setup async curve {name}")
 
-    @SafeSlot(dict, dict)
+    @SafeSlot(dict, dict, verify_sender=True)
     def on_async_readback(self, msg, metadata):
         """
         Get async data readback. This code needs to be fast, therefor we try
@@ -1204,6 +1205,14 @@ class Waveform(PlotBase):
             msg(dict): Message with the async data.
             metadata(dict): Metadata of the message.
         """
+        sender = self.sender()
+        if not hasattr(sender, "cb_info"):
+            logger.info(f"Sender {sender} has no cb_info.")
+            return
+        scan_id = sender.cb_info.get("scan_id", None)
+        if scan_id != self.scan_id:
+            logger.info("Scan ID mismatch, ignoring async readback.")
+
         instruction = metadata.get("async_update", {}).get("type")
         if instruction not in ["add", "add_slice", "replace"]:
             logger.warning(f"Invalid async update instruction: {instruction}")
@@ -1212,6 +1221,7 @@ class Waveform(PlotBase):
         plot_mode = self.x_axis_mode["name"]
         for curve in self._async_curves:
             x_data = None  # Reset x_data
+            y_data = None  # Reset y_data
             # Get the curve data
             async_data = msg["signals"].get(curve.config.signal.entry, None)
             if async_data is None:

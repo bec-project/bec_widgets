@@ -27,8 +27,9 @@ if TYPE_CHECKING:  # pragma: no cover
 class QtThreadSafeCallback(QObject):
     cb_signal = pyqtSignal(dict, dict)
 
-    def __init__(self, cb):
+    def __init__(self, cb: Callable, cb_info: dict | None = None):
         super().__init__()
+        self.cb_info = cb_info
 
         self.cb = cb
         self.cb_signal.connect(self.cb)
@@ -37,7 +38,7 @@ class QtThreadSafeCallback(QObject):
         # make 2 differents QtThreadSafeCallback to look
         # identical when used as dictionary keys, if the
         # callback is the same
-        return id(self.cb)
+        return f"{id(self.cb)}{self.cb_info}".__hash__()
 
     def __call__(self, msg_content, metadata):
         self.cb_signal.emit(msg_content, metadata)
@@ -141,6 +142,7 @@ class BECDispatcher:
         self,
         slot: Callable,
         topics: Union[EndpointInfo, str, list[Union[EndpointInfo, str]]],
+        cb_info: dict | None = None,
         **kwargs,
     ) -> None:
         """Connect widget's qt slot, so that it is called on new pub/sub topic message.
@@ -150,7 +152,7 @@ class BECDispatcher:
                 the corresponding pub/sub message
             topics (EndpointInfo | str | list): A topic or list of topics that can typically be acquired via bec_lib.MessageEndpoints
         """
-        slot = QtThreadSafeCallback(slot)
+        slot = QtThreadSafeCallback(cb=slot, cb_info=cb_info)
         self.client.connector.register(topics, cb=slot, **kwargs)
         topics_str, _ = self.client.connector._convert_endpointinfo(topics)
         self._slots[slot].update(set(topics_str))
