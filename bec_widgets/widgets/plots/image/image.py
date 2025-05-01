@@ -13,8 +13,10 @@ from qtpy.QtWidgets import QDialog, QVBoxLayout, QWidget
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.side_panel import SidePanel
 from bec_widgets.utils.toolbar import MaterialIconAction, SwitchableToolBarAction
 from bec_widgets.widgets.plots.image.image_item import ImageItem
+from bec_widgets.widgets.plots.image.image_roi_plot import ImageROIPlot
 from bec_widgets.widgets.plots.image.setting_widgets.image_roi_tree import ROIPropertyTree
 from bec_widgets.widgets.plots.image.toolbar_bundles.image_selection import (
     MonitorSelectionToolbarBundle,
@@ -123,6 +125,7 @@ class Image(PlotBase):
         "rois",
     ]
     sync_colorbar_with_autorange = Signal()
+    image_updated = Signal()
 
     def __init__(
         self,
@@ -139,6 +142,8 @@ class Image(PlotBase):
         self._color_bar = None
         self._main_image = ImageItem()
         self.roi_controller = ROIController(colormap="viridis")
+        self.x_roi = None
+        self.y_roi = None
         super().__init__(
             parent=parent, config=config, client=client, gui_id=gui_id, popups=popups, **kwargs
         )
@@ -150,23 +155,59 @@ class Image(PlotBase):
         # Default Color map to plasma
         self.color_map = "plasma"
 
+        # Initialize ROI plots and side panels
+        self._add_roi_plots()
+
         self.roi_manager_dialog = None
+
+        # Refresh theme for ROI plots
+        self._update_theme()
 
     ################################################################################
     # Widget Specific GUI interactions
     ################################################################################
+    def apply_theme(self, theme: str):
+        super().apply_theme(theme)
+        if self.x_roi is not None and self.y_roi is not None:
+            self.x_roi.apply_theme(theme)
+            self.y_roi.apply_theme(theme)
+
     def _init_toolbar(self):
 
         # add to the first position
         self.selection_bundle = MonitorSelectionToolbarBundle(
             bundle_id="selection", target_widget=self
         )
-        self.toolbar.add_bundle(self.selection_bundle, self)
+        self.toolbar.add_bundle(bundle=self.selection_bundle, target_widget=self)
 
         super()._init_toolbar()
 
         # Image specific changes to PlotBase toolbar
         self.toolbar.widgets["reset_legend"].action.setVisible(False)
+
+        # ROI Bundle replacement with switchable crosshair
+        self.toolbar.remove_bundle("roi")
+        crosshair = MaterialIconAction(
+            icon_name="point_scan", tooltip="Show Crosshair", checkable=True
+        )
+        crosshair_roi = MaterialIconAction(
+            icon_name="my_location",
+            tooltip="Show Crosshair with ROI plots",
+            checkable=True,
+            parent=self,
+        )
+        crosshair_roi.action.toggled.connect(self.toggle_roi_panels)
+        crosshair.action.toggled.connect(self.toggle_crosshair)
+        switch_crosshair = SwitchableToolBarAction(
+            actions={"crosshair_simple": crosshair, "crosshair_roi": crosshair_roi},
+            initial_action="crosshair_simple",
+            tooltip="Crosshair",
+            checkable=True,
+            parent=self,
+        )
+        self.toolbar.add_action(
+            action_id="switch_crosshair", action=switch_crosshair, target_widget=self
+        )
 
         # Lock aspect ratio button
         self.lock_aspect_ratio_action = MaterialIconAction(
@@ -216,11 +257,8 @@ class Image(PlotBase):
             parent=self,
         )
 
-        self.toolbar.add_action_to_bundle(
-            bundle_id="roi",
-            action_id="autorange_image",
-            action=self.autorange_switch,
-            target_widget=self,
+        self.toolbar.add_action(
+            action_id="autorange_image", action=self.autorange_switch, target_widget=self
         )
 
         self.autorange_mean_action.action.toggled.connect(
@@ -252,11 +290,8 @@ class Image(PlotBase):
             parent=self,
         )
 
-        self.toolbar.add_action_to_bundle(
-            bundle_id="roi",
-            action_id="switch_colorbar",
-            action=self.colorbar_switch,
-            target_widget=self,
+        self.toolbar.add_action(
+            action_id="switch_colorbar", action=self.colorbar_switch, target_widget=self
         )
 
         self.simple_colorbar_action.action.toggled.connect(
@@ -429,6 +464,101 @@ class Image(PlotBase):
             self.roi_controller.remove_roi_by_name(roi)
         else:
             raise ValueError("roi must be an int index or str name")
+
+    def _add_roi_plots(self):
+        """
+        Initialize the ROI plots and side panels.
+        """
+        # Create ROI plot widgets
+        self.x_roi = ImageROIPlot(parent=self)
+        self.y_roi = ImageROIPlot(parent=self)
+        self.x_roi.apply_theme("dark")
+        self.y_roi.apply_theme("dark")
+
+        # Set titles for the plots
+        self.x_roi.plot_item.setTitle("X ROI")
+        self.y_roi.plot_item.setTitle("Y ROI")
+
+        # Create side panels
+        self.side_panel_x = SidePanel(
+            parent=self, orientation="bottom", panel_max_width=200, show_toolbar=False
+        )
+        self.side_panel_y = SidePanel(
+            parent=self, orientation="left", panel_max_width=200, show_toolbar=False
+        )
+
+        # Add ROI plots to side panels
+        self.x_panel_index = self.side_panel_x.add_menu(widget=self.x_roi)
+        self.y_panel_index = self.side_panel_y.add_menu(widget=self.y_roi)
+
+        # # Add side panels to the layout
+        self.layout_manager.add_widget_relative(
+            self.side_panel_x, self.round_plot_widget, position="bottom", shift_direction="down"
+        )
+        self.layout_manager.add_widget_relative(
+            self.side_panel_y, self.round_plot_widget, position="left", shift_direction="right"
+        )
+
+    def toggle_roi_panels(self, checked: bool):
+        """
+        Show or hide the ROI panels based on the test action toggle state.
+
+        Args:
+            checked (bool): Whether the test action is checked.
+        """
+        if checked:
+            # Show the ROI panels
+            self.hook_crosshair()
+            self.side_panel_x.show_panel(self.x_panel_index)
+            self.side_panel_y.show_panel(self.y_panel_index)
+            self.crosshair.coordinatesChanged2D.connect(self.update_image_slices)
+            self.image_updated.connect(self.update_image_slices)
+        else:
+            self.unhook_crosshair()
+            # Hide the ROI panels
+            self.side_panel_x.hide_panel()
+            self.side_panel_y.hide_panel()
+            self.image_updated.disconnect(self.update_image_slices)
+
+    @SafeSlot()
+    def update_image_slices(self, coordinates: tuple[int, int, int] = None):
+        """
+        Update the image slices based on the crosshair position.
+
+        Args:
+            coordinates(tuple): The coordinates of the crosshair.
+        """
+        if coordinates is None:
+            # Try to get coordinates from crosshair position (like in crosshair mouse_moved)
+            if (
+                hasattr(self, "crosshair")
+                and hasattr(self.crosshair, "v_line")
+                and hasattr(self.crosshair, "h_line")
+            ):
+                x = int(round(self.crosshair.v_line.value()))
+                y = int(round(self.crosshair.h_line.value()))
+            else:
+                return
+        else:
+            x = coordinates[1]
+            y = coordinates[2]
+        image = self._main_image.image
+        if image is None:
+            return
+        max_row, max_col = image.shape[0] - 1, image.shape[1] - 1
+        row, col = x, y
+        if not (0 <= row <= max_row and 0 <= col <= max_col):
+            return
+        # Horizontal slice
+        h_slice = image[:, col]
+        x_axis = np.arange(h_slice.shape[0])
+        self.x_roi.plot_item.clear()
+        self.x_roi.plot_item.plot(x_axis, h_slice, pen=pg.mkPen(self.x_roi.curve_color, width=3))
+        # Vertical slice
+        v_slice = image[row, :]
+        y_axis = np.arange(v_slice.shape[0])
+        self.y_roi.plot_item.clear()
+        self.y_roi.plot_item.plot(v_slice, y_axis, pen=pg.mkPen(self.y_roi.curve_color, width=3))
 
     ################################################################################
     # Widget Specific Properties
@@ -984,6 +1114,7 @@ class Image(PlotBase):
         self._main_image.set_data(image_buffer)
         if self._color_bar is not None:
             self._color_bar.blockSignals(False)
+        self.image_updated.emit()
 
     def adjust_image_buffer(self, image: ImageItem, new_data: np.ndarray) -> np.ndarray:
         """
@@ -1035,6 +1166,7 @@ class Image(PlotBase):
         self._main_image.set_data(data)
         if self._color_bar is not None:
             self._color_bar.blockSignals(False)
+        self.image_updated.emit()
 
     ################################################################################
     # Clean up
@@ -1089,6 +1221,10 @@ class Image(PlotBase):
         # Toolbar cleanup
         self.toolbar.widgets["monitor"].widget.close()
         self.toolbar.widgets["monitor"].widget.deleteLater()
+
+        # ROI plots cleanup
+        self.x_roi.cleanup_pyqtgraph()
+        self.y_roi.cleanup_pyqtgraph()
 
         super().cleanup()
 
