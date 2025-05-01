@@ -10,7 +10,7 @@ from pydantic import Field, ValidationError, field_validator
 from qtpy.QtCore import QPointF, Signal
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.utils import ConnectionConfig, Crosshair
+from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.side_panel import SidePanel
@@ -135,18 +135,6 @@ class Image(PlotBase):
         )
         self._main_image = ImageItem(parent_image=self)
 
-        # Crosshair toggle
-        self.crosshair_action = MaterialIconAction(
-            icon_name="counter_2", tooltip="Toggle Crosshair", checkable=True, parent=self
-        )
-        self.toolbar.add_action_to_bundle(
-            bundle_id="mouse_interaction",
-            action_id="toggle_crosshair",
-            action=self.crosshair_action,
-            target_widget=self,
-        )
-        self.crosshair_action.action.toggled.connect(self._toggle_crosshair)
-
         self.plot_item.addItem(self._main_image)
         self.scan_id = None
 
@@ -170,11 +158,6 @@ class Image(PlotBase):
         )
         self.toolbar.add_bundle(self.selection_bundle, self)
 
-        self.test_action = MaterialIconAction(
-            icon_name="counter_1", tooltip="Test Action", checkable=True, parent=self
-        )
-        self.toolbar.add_action("test", self.test_action, target_widget=self)
-        self.test_action.action.toggled.connect(self.toggle_roi_panels)
         super()._init_toolbar()
 
         # Image specific changes to PlotBase toolbar
@@ -359,6 +342,14 @@ class Image(PlotBase):
             self.side_panel_y, self.round_plot_widget, position="left", shift_direction="right"
         )
 
+    def hook_crosshair(self) -> None:
+        super().hook_crosshair()
+        self.toggle_roi_panels(True)
+
+    def unhook_crosshair(self) -> None:
+        super().unhook_crosshair()
+        self.toggle_roi_panels(False)
+
     def toggle_roi_panels(self, checked):
         """
         Show or hide the ROI panels based on the test action toggle state.
@@ -370,37 +361,16 @@ class Image(PlotBase):
             # Show the ROI panels
             self.side_panel_x.show_panel(self.x_panel_index)
             self.side_panel_y.show_panel(self.y_panel_index)
+            self.crosshair.coordinatesChanged2D.connect(self.update_image_slices)
         else:
             # Hide the ROI panels
             self.side_panel_x.hide_panel()
             self.side_panel_y.hide_panel()
 
-    @SafeSlot(bool)
-    def _toggle_crosshair(self, checked: bool):
-        if checked:
-            # Activate crosshair
-            self.crosshair = Crosshair(self.plot_item, precision=3, parent=self)
-            # Show ROI panels
-            self.side_panel_x.show_panel(self.x_panel_index)
-            self.side_panel_y.show_panel(self.y_panel_index)
-            # Connect ROI updates
-            self.crosshair.coordinatesChanged2D.connect(self._handle_crosshair_changed_2d)
-        else:
-            # Deactivate crosshair
-            self.side_panel_x.hide_panel()
-            self.side_panel_y.hide_panel()
-            # Disconnect ROI updates
-            if hasattr(self, "crosshair") and self.crosshair:
-                try:
-                    self.crosshair.coordinatesChanged2D.disconnect(
-                        self._handle_crosshair_changed_2d
-                    )
-                except TypeError:
-                    pass
-                self.crosshair.cleanup()
-                self.crosshair = None
+    def update_image_slices(self, coordinates: tuple[int, int]):
 
-    def _update_image_slices(self, name: str, x: int, y: int):
+        x = coordinates[1]
+        y = coordinates[2]
         image = self._main_image.image
         max_row, max_col = image.shape[0] - 1, image.shape[1] - 1
         row, col = x, y
@@ -416,11 +386,6 @@ class Image(PlotBase):
         y_axis = np.arange(v_slice.shape[0])
         self.y_roi.plot_item.clear()
         self.y_roi.plot_item.plot(v_slice, y_axis)
-
-    @SafeSlot(tuple)
-    def _handle_crosshair_changed_2d(self, coords: tuple):
-        name, x, y = coords
-        self._update_image_slices(name, x, y)
 
     ################################################################################
     # Widget Specific Properties
@@ -1072,47 +1037,7 @@ if __name__ == "__main__":  # pragma: no cover
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    widget = Image(popups=False)
+    widget = Image(popups=True)
     widget.show()
     widget.resize(1000, 800)
     sys.exit(app.exec_())
-
-    @SafeSlot(bool)
-    def _toggle_crosshair(self, checked: bool):
-        if checked:
-            # Activate crosshair
-            self.crosshair = Crosshair(self.plot_item, precision=self.precision, parent=self)
-            # Show ROI panels
-            self.side_panel_x.show_panel(self.x_panel_index)
-            self.side_panel_y.show_panel(self.y_panel_index)
-            # Connect ROI updates
-            self.crosshair.coordinatesChanged2D.connect(self._update_image_slices)
-        else:
-            # Deactivate crosshair
-            self.side_panel_x.hide_panel()
-            self.side_panel_y.hide_panel()
-            # Disconnect ROI updates
-            if hasattr(self, "crosshair") and self.crosshair:
-                try:
-                    self.crosshair.coordinatesChanged2D.disconnect(self._update_image_slices)
-                except TypeError:
-                    pass
-                self.crosshair.cleanup()
-                self.crosshair = None
-
-    def _update_image_slices(self, name: str, x: int, y: int):
-        image = self._main_image.image
-        max_row, max_col = image.shape[0] - 1, image.shape[1] - 1
-        row, col = x, y
-        if not (0 <= row <= max_row and 0 <= col <= max_col):
-            return
-        # Horizontal slice (row)
-        h_slice = image[row, :]
-        x_axis = np.arange(h_slice.shape[0])
-        self.x_roi.plot_item.clear()
-        self.x_roi.plot_item.plot(x_axis, h_slice)
-        # Vertical slice (column)
-        v_slice = image[:, col]
-        y_axis = np.arange(v_slice.shape[0])
-        self.y_roi.plot_item.clear()
-        self.y_roi.plot_item.plot(v_slice, y_axis)
