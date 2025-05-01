@@ -98,6 +98,7 @@ class PlotBase(BECWidget, QWidget):
         self._ui_mode = UIMode.POPUP if popups else UIMode.SIDE
         self.axis_settings_dialog = None
         self.plot_widget = pg.GraphicsLayoutWidget(parent=self)
+        self.plot_widget.ci.setContentsMargins(0, 0, 0, 0)
         self.plot_item = pg.PlotItem(viewBox=BECViewBox(enableMenu=True))
         self.plot_widget.addItem(self.plot_item)
         self.side_panel = SidePanel(self, orientation="left", panel_max_width=280)
@@ -795,6 +796,7 @@ class PlotBase(BECWidget, QWidget):
         """
         self.plot_item.showAxis("top", value)
         self.plot_item.showAxis("right", value)
+
         self.property_changed.emit("outer_axes", value)
 
     @SafeProperty(bool, doc="Show inner axes of the plot widget.")
@@ -814,6 +816,7 @@ class PlotBase(BECWidget, QWidget):
         """
         self.plot_item.showAxis("bottom", value)
         self.plot_item.showAxis("left", value)
+
         self._apply_x_label()
         self._apply_y_label()
         self.property_changed.emit("inner_axes", value)
