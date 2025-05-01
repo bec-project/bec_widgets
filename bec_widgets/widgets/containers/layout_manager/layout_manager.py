@@ -138,6 +138,39 @@ class LayoutManagerWidget(QWidget):
         ref_row, ref_col, ref_rowspan, ref_colspan = self.widget_positions[reference_widget]
 
         # Determine new widget position based on the specified relative position
+
+        # If adding to the left or right with shifting, shift the entire column
+        if (
+            position in ("left", "right")
+            and shift_existing
+            and shift_direction in ("left", "right")
+        ):
+            column = ref_col
+            # Collect all rows in this column and sort for safe shifting
+            rows = sorted(
+                {row for (row, col) in self.position_widgets.keys() if col == column},
+                reverse=(shift_direction == "right"),
+            )
+            # Shift each widget in the column
+            for r in rows:
+                self.shift_widgets(direction=shift_direction, start_row=r, start_col=column)
+            # Update reference widget's position after the column shift
+            ref_row, ref_col, ref_rowspan, ref_colspan = self.widget_positions[reference_widget]
+            new_row = ref_row
+            # Compute insertion column based on relative position
+            if position == "left":
+                new_col = ref_col - ref_colspan
+            else:
+                new_col = ref_col + ref_colspan
+            # Add the new widget without triggering another shift
+            return self.add_widget(
+                widget=widget,
+                row=new_row,
+                col=new_col,
+                rowspan=rowspan,
+                colspan=colspan,
+                shift_existing=False,
+            )
         if position == "left":
             new_row = ref_row
             new_col = ref_col - 1
