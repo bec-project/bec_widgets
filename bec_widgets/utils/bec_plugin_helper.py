@@ -21,7 +21,7 @@ def _submodule_specs(module: ModuleType) -> tuple[ModuleSpec | None, ...]:
 
 
 def _loaded_submodules_from_specs(
-    submodule_specs: tuple[ModuleSpec | None, ...]
+    submodule_specs: tuple[ModuleSpec | None, ...],
 ) -> Generator[ModuleType, None, None]:
     """Load all submodules from the given specs."""
     for submodule in (

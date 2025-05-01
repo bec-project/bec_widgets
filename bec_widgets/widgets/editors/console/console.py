@@ -1,5 +1,5 @@
 """
-BECConsole is a Qt widget that runs a Bash shell. 
+BECConsole is a Qt widget that runs a Bash shell.
 
 BECConsole VT100 emulation is powered by Pyte,
 (https://github.com/selectel/pyte).
@@ -56,12 +56,12 @@ control_keys_mapping = {
     QtCore.Qt.Key_G: b"\x07",  # Ctrl-G (Bell)
     QtCore.Qt.Key_H: b"\x08",  # Ctrl-H (Backspace)
     QtCore.Qt.Key_I: b"\x09",  # Ctrl-I (Tab)
-    QtCore.Qt.Key_J: b"\x0A",  # Ctrl-J (Line Feed)
-    QtCore.Qt.Key_K: b"\x0B",  # Ctrl-K (Vertical Tab)
-    QtCore.Qt.Key_L: b"\x0C",  # Ctrl-L (Form Feed)
-    QtCore.Qt.Key_M: b"\x0D",  # Ctrl-M (Carriage Return)
-    QtCore.Qt.Key_N: b"\x0E",  # Ctrl-N
-    QtCore.Qt.Key_O: b"\x0F",  # Ctrl-O
+    QtCore.Qt.Key_J: b"\x0a",  # Ctrl-J (Line Feed)
+    QtCore.Qt.Key_K: b"\x0b",  # Ctrl-K (Vertical Tab)
+    QtCore.Qt.Key_L: b"\x0c",  # Ctrl-L (Form Feed)
+    QtCore.Qt.Key_M: b"\x0d",  # Ctrl-M (Carriage Return)
+    QtCore.Qt.Key_N: b"\x0e",  # Ctrl-N
+    QtCore.Qt.Key_O: b"\x0f",  # Ctrl-O
     QtCore.Qt.Key_P: b"\x10",  # Ctrl-P
     QtCore.Qt.Key_Q: b"\x11",  # Ctrl-Q
     QtCore.Qt.Key_R: b"\x12",  # Ctrl-R
@@ -72,10 +72,10 @@ control_keys_mapping = {
     QtCore.Qt.Key_W: b"\x17",  # Ctrl-W
     QtCore.Qt.Key_X: b"\x18",  # Ctrl-X
     QtCore.Qt.Key_Y: b"\x19",  # Ctrl-Y
-    QtCore.Qt.Key_Z: b"\x1A",  # Ctrl-Z
-    QtCore.Qt.Key_Escape: b"\x1B",  # Ctrl-Escape
-    QtCore.Qt.Key_Backslash: b"\x1C",  # Ctrl-\
-    QtCore.Qt.Key_Underscore: b"\x1F",  # Ctrl-_
+    QtCore.Qt.Key_Z: b"\x1a",  # Ctrl-Z
+    QtCore.Qt.Key_Escape: b"\x1b",  # Ctrl-Escape
+    QtCore.Qt.Key_Backslash: b"\x1c",  # Ctrl-\
+    QtCore.Qt.Key_Underscore: b"\x1f",  # Ctrl-_
 }
 
 normal_keys_mapping = {
@@ -89,7 +89,7 @@ normal_keys_mapping = {
     QtCore.Qt.Key_Left: b"\x02",
     QtCore.Qt.Key_Up: b"\x10",
     QtCore.Qt.Key_Right: b"\x06",
-    QtCore.Qt.Key_Down: b"\x0E",
+    QtCore.Qt.Key_Down: b"\x0e",
     QtCore.Qt.Key_PageUp: b"\x49",
     QtCore.Qt.Key_PageDown: b"\x51",
     QtCore.Qt.Key_F1: b"\x1b\x31",

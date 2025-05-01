@@ -1,4 +1,4 @@
-""" Utilities for filtering and formatting in the LogPanel"""
+"""Utilities for filtering and formatting in the LogPanel"""
 
 from __future__ import annotations
 

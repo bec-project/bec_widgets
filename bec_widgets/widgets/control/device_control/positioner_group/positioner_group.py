@@ -1,4 +1,4 @@
-""" Module for a PositionerGroup widget to control a positioner device."""
+"""Module for a PositionerGroup widget to control a positioner device."""
 
 from __future__ import annotations
 

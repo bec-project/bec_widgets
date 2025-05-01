@@ -1,4 +1,4 @@
-""" Module for a StatusItem widget to display status and metrics for a BEC service.
+"""Module for a StatusItem widget to display status and metrics for a BEC service.
 The widget is bound to be used with the BECStatusBox widget."""
 
 import enum

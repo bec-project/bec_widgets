@@ -1,6 +1,6 @@
-""" This custom class is a thin wrapper around the SignalProxy class to allow signal calls to be blocked.
+"""This custom class is a thin wrapper around the SignalProxy class to allow signal calls to be blocked.
 Unblocking the proxy needs to be done through the slot unblock_proxy. The most likely use case for this class is
-when the callback function is potentially initiating a slower progress, i.e. requesting a data analysis routine to 
+when the callback function is potentially initiating a slower progress, i.e. requesting a data analysis routine to
 analyse data. Requesting a new fit may lead to request piling up and an overall slow done of performance. This proxy
 will allow you to decide by yourself when to unblock and execute the callback again."""
 

@@ -1,5 +1,5 @@
 """
-Test module for the gui object within the BEC IPython client. 
+Test module for the gui object within the BEC IPython client.
 """
 
 from unittest import mock

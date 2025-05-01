@@ -1,4 +1,4 @@
-""" Module for DapComboBox widget class to select a DAP model from a combobox. """
+"""Module for DapComboBox widget class to select a DAP model from a combobox."""
 
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import Property, Signal, Slot

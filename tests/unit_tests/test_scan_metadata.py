@@ -116,7 +116,7 @@ def fill_commponents(components: dict[str, DynamicFormItem]):
 
 
 def test_griditems_are_correct_class(
-    metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]]
+    metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]],
 ):
     _, components = metadata_widget
     assert isinstance(components["sample_name"], StrMetadataField)
@@ -162,7 +162,7 @@ def test_validation(metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormIt
 
 
 def test_numbers_clipped_to_limits(
-    metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]]
+    metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]],
 ):
     widget, components = metadata_widget = metadata_widget
     fill_commponents(components)
