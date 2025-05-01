@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.0.2 (2025-05-01)
+
+### Bug Fixes
+
+- **plot_base**: No content margin for plot_widget window
+  ([`1b78840`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1b78840fd87ea0f156c73beeb57c6c06f685f7b1))
+
+
 ## v2.0.1 (2025-04-30)
 
 ### Bug Fixes
