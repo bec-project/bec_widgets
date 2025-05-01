@@ -470,6 +470,12 @@ class BECProgressBar(RPCBase):
         >>> progressbar.label_template = "$value / $percentage %"
         """
 
+    @rpc_call
+    def _get_label(self) -> str:
+        """
+        Return the label text. mostly used for testing rpc.
+        """
+
 
 class BECQueue(RPCBase):
     """Widget to display the BEC queue."""

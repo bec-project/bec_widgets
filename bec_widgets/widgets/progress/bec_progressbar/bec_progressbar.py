@@ -21,6 +21,7 @@ class BECProgressBar(BECWidget, QWidget):
         "set_minimum",
         "label_template",
         "label_template.setter",
+        "_get_label",
     ]
     ICON_NAME = "page_control"
 
@@ -234,6 +235,10 @@ class BECProgressBar(BECWidget, QWidget):
         return (
             (value - self._user_minimum) / (self._user_maximum - self._user_minimum) * self._maximum
         )
+
+    def _get_label(self) -> str:
+        """Return the label text. mostly used for testing rpc."""
+        return self.center_label.text()
 
 
 if __name__ == "__main__":  # pragma: no cover
