@@ -13,7 +13,7 @@ variables:
     value: main
   CHILD_PIPELINE_BRANCH: $CI_DEFAULT_BRANCH
   CHECK_PKG_VERSIONS:
-    description: Whether to run additional tests against min/max/random selection of dependencies. Set to 1 for running. 
+    description: Whether to run additional tests against min/max/random selection of dependencies. Set to 1 for running.
     value: 0
 
 workflow:
@@ -162,6 +162,20 @@ tests:
       - tests/reference_failures/
     when: always
 
+generate-client-check:
+  stage: test
+  needs: []
+  variables:
+    QT_QPA_PLATFORM: "offscreen"
+  script:
+    - *clone-repos
+    - *install-os-packages
+    - *install-repos
+    - pip install -e .[dev,pyside6]
+    - bw-generate-cli --target bec_widgets
+    # if there are changes in the generated files, fail the job
+    - git diff --exit-code
+
 test-matrix:
   parallel:
     matrix:
@@ -231,7 +245,7 @@ end-2-end-conda:
     - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "main"'
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "production"'
-    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^pre_release.*$/'
+    - if: "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME =~ /^pre_release.*$/"
 
 semver:
   stage: Deploy
