@@ -89,6 +89,13 @@ def test_undock_and_dock_docks(bec_dock_area, qtbot):
     assert len(bec_dock_area.dock_area.tempAreas) == 0
 
 
+def test_new_dock_raises_for_invalid_name(bec_dock_area):
+    with pytest.raises(ValueError):
+        bec_dock_area.new(
+            name="new", _override_slot_params={"popup_error": False, "raise_error": True}
+        )
+
+
 ###################################
 # Toolbar Actions
 ###################################
