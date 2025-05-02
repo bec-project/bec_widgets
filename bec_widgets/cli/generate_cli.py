@@ -222,18 +222,18 @@ class {class_name}(RPCBase):"""
         # Combine header and content, then format with black
         full_content = self.header + "\n" + self.content
         try:
-            formatted_content = black.format_str(full_content, mode=black.FileMode(line_length=100))
+            formatted_content = black.format_str(full_content, mode=black.Mode(line_length=100))
         except black.NothingChanged:
             formatted_content = full_content
 
-        isort.Config(
+        config = isort.Config(
             profile="black",
             line_length=100,
             multi_line_output=3,
-            include_trailing_comma=True,
+            include_trailing_comma=False,
             known_first_party=["bec_widgets"],
         )
-        formatted_content = isort.code(formatted_content)
+        formatted_content = isort.code(formatted_content, config=config)
 
         with open(file_name, "w", encoding="utf-8") as file:
             file.write(formatted_content)
@@ -318,5 +318,5 @@ def main():
 if __name__ == "__main__":  # pragma: no cover
     import sys
 
-    sys.argv = ["bw-generate-cli", "--target", "csaxs_bec"]
+    sys.argv = ["bw-generate-cli", "--target", "bec_widgets"]
     main()
