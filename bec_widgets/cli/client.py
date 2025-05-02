@@ -1317,14 +1317,14 @@ class ImageItem(RPCBase):
 
     @property
     @rpc_call
-    def rotation(self) -> "Optional[int]":
+    def num_rotation_90(self) -> "Optional[int]":
         """
         Get or set the number of 90° rotations to apply.
         """
 
-    @rotation.setter
+    @num_rotation_90.setter
     @rpc_call
-    def rotation(self) -> "Optional[int]":
+    def num_rotation_90(self) -> "Optional[int]":
         """
         Get or set the number of 90° rotations to apply.
         """
