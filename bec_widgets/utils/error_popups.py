@@ -99,16 +99,30 @@ def SafeSlot(*slot_args, **slot_kwargs):  # pylint: disable=invalid-name
     'verify_sender' keyword argument can be passed with boolean value if the sender should be verified
     before executing the slot. If True, the slot will only execute if the sender is a QObject. This is
     useful to prevent function calls from already deleted objects.
+    'raise_error' keyword argument can be passed with boolean value if the error should be raised
+    after the error is displayed. This is useful to propagate the error to the caller but should be used
+    with great care to avoid segfaults.
+
+    The keywords above are stored in a container which can be overridden by passing
+    '_override_slot_params' keyword argument with a dictionary containing the keywords to override.
+    This is useful to override the default behavior of the decorator for a specific function call.
+
     """
-    popup_error = bool(slot_kwargs.pop("popup_error", False))
-    verify_sender = bool(slot_kwargs.pop("verify_sender", False))
+    _slot_params = {
+        "popup_error": bool(slot_kwargs.pop("popup_error", False)),
+        "verify_sender": bool(slot_kwargs.pop("verify_sender", False)),
+        "raise_error": bool(slot_kwargs.pop("raise_error", False)),
+    }
 
     def error_managed(method):
         @Slot(*slot_args, **slot_kwargs)
         @functools.wraps(method)
         def wrapper(*args, **kwargs):
+
+            _override_slot_params = kwargs.pop("_override_slot_params", {})
+            _slot_params.update(_override_slot_params)
             try:
-                if not verify_sender or len(args) == 0:
+                if not _slot_params["verify_sender"] or len(args) == 0:
                     return method(*args, **kwargs)
 
                 _instance = args[0]
@@ -126,11 +140,11 @@ def SafeSlot(*slot_args, **slot_kwargs):  # pylint: disable=invalid-name
             except Exception:
                 slot_name = f"{method.__module__}.{method.__qualname__}"
                 error_msg = traceback.format_exc()
-                if popup_error:
-                    ErrorPopupUtility().custom_exception_hook(
-                        *sys.exc_info(), popup_error=popup_error
-                    )
+                if _slot_params["popup_error"]:
+                    ErrorPopupUtility().custom_exception_hook(*sys.exc_info(), popup_error=True)
                 logger.error(f"SafeSlot error in slot '{slot_name}':\n{error_msg}")
+                if _slot_params["raise_error"]:
+                    raise
 
         return wrapper
 
