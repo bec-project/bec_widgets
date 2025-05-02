@@ -20,12 +20,11 @@ from bec_widgets.widgets.utility.visual.colormap_widget.colormap_widget import B
 
 
 class BaseROI:
-    """Mixin providing a name property to ROIs."""
+    """Mixin providing a name property and CLI/GUI-agnostic API."""
 
     nameChanged = Signal(str)
 
     def __init__(self, name: str):
-        # No super() call: initialization done in shape subclass
         self._name = name
 
     @property
@@ -38,21 +37,26 @@ class BaseROI:
             self._name = value
             self.nameChanged.emit(value)
 
+    def get_coordinates(self):
+        """
+        Return defining coordinates.
+        - RectangularROI:  (x0, y0, x1, y1)
+        - CircularROI:     (cx, cy, diameter)
+        """
+        raise NotImplementedError
+
 
 class RectangularROI(BaseROI, pg.RectROI):
-    """Rectangular ROI emitting its edge coordinates."""
-
     edgesChanged = Signal(float, float, float, float)
     edgesReleased = Signal(float, float, float, float)
 
     def __init__(self, name: str, pos, size, pen=None, **kwargs):
         pg.RectROI.__init__(self, pos, size, pen=pen, **kwargs)
         BaseROI.__init__(self, name)
-        # Aspect-ratio handles
+        # three handles for aspect locking…
         self.addScaleHandle([0.5, 1], [0.5, 0.5])
         self.addScaleHandle([1, 0.5], [0.5, 0.5])
         self.addScaleHandle([1, 1], [0.5, 0.5])
-        # Track continuous and finished moves
         self.sigRegionChanged.connect(self._on_region_changed)
         self.handlePen = mkPen("white", width=20)
 
@@ -68,10 +72,13 @@ class RectangularROI(BaseROI, pg.RectROI):
             w, h = self.state["size"]
             self.edgesReleased.emit(x0, y0, x0 + w, y0 + h)
 
+    def get_coordinates(self):
+        x0, y0 = self.pos().x(), self.pos().y()
+        w, h = self.state["size"]
+        return (x0, y0, x0 + w, y0 + h)
+
 
 class CircularROI(BaseROI, pg.CircleROI):
-    """Circular ROI emitting its center and diameter."""
-
     centerChanged = Signal(float, float, float)
     centerReleased = Signal(float, float, float)
 
@@ -93,6 +100,12 @@ class CircularROI(BaseROI, pg.CircleROI):
             cx = self.pos().x() + d / 2
             cy = self.pos().y() + d / 2
             self.centerReleased.emit(cx, cy, d)
+
+    def get_coordinates(self):
+        d = self.state["size"][0]
+        cx = self.pos().x() + d / 2
+        cy = self.pos().y() + d / 2
+        return (cx, cy, d)
 
 
 class ROIManagerTree(BECWidget, QWidget):
@@ -286,6 +299,7 @@ if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication, QHBoxLayout, QVBoxLayout, QPushButton
 
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
     win = QWidget()
     win.setWindowTitle("Modular ROI Demo")
     ml = QHBoxLayout(win)
