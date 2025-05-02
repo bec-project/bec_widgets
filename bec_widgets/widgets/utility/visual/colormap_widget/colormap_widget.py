@@ -1,9 +1,27 @@
 from pyqtgraph.widgets.ColorMapButton import ColorMapButton
+from qtpy import QtCore, QtGui
 from qtpy.QtCore import Property, Signal, Slot
 from qtpy.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 
 from bec_widgets.utils import Colors
 from bec_widgets.utils.bec_widget import BECWidget
+
+
+class RoundedColorMapButton(ColorMapButton):
+    """Thin wrapper around pyqtgraph ColorMapButton to add rounded clipping."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+
+    def paintEvent(self, evt):
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        path = QtGui.QPainterPath()
+        path.addRoundedRect(self.rect(), 8, 8)
+        painter.setClipPath(path)
+        self.paintColorMap(painter, self.contentsRect())
+        painter.end()
 
 
 class BECColorMapWidget(BECWidget, QWidget):
@@ -15,7 +33,7 @@ class BECColorMapWidget(BECWidget, QWidget):
     def __init__(self, parent=None, cmap: str = "plasma", **kwargs):
         super().__init__(parent=parent, **kwargs)
         # Create the ColorMapButton
-        self.button = ColorMapButton()
+        self.button = RoundedColorMapButton()
 
         # Set the size policy and minimum width
         size_policy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
