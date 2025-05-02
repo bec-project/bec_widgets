@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v2.0.3 (2025-05-02)
+
+### Bug Fixes
+
+- **generate_cli**: Apply isort config
+  ([`770dbd4`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/770dbd4b63baba588871a4d4ffa77d44872d085b))
+
+- **image_item**: Wrong user access name for rotation
+  ([`58a0bc7`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/58a0bc79742e7e7578988711a9840ed6041d9a69))
+
+### Continuous Integration
+
+- Add job to test that the generated client is up to date
+  ([`d22035f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/d22035f8974ac51ae1b6efc0e2b3749ca0a674ff))
+
+
 ## v2.0.2 (2025-05-01)
 
 ### Bug Fixes
