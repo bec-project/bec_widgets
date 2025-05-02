@@ -366,11 +366,8 @@ class BECDockArea(BECWidget, QWidget):
                     f"Name {name} must be unique for docks, but already exists in DockArea "
                     f"with name: {self.object_name} and id {self.gui_id}."
                 )
-            if not WidgetContainerUtils.has_name_valid_chars(name):
-                raise ValueError(
-                    f"Name {name} contains invalid characters. "
-                    f"Only alphanumeric characters and underscores are allowed."
-                )
+            WidgetContainerUtils.raise_for_invalid_name(name, container=self)
+
         else:  # Name is not provided
             name = WidgetContainerUtils.generate_unique_name(name="dock", list_of_names=dock_names)
 

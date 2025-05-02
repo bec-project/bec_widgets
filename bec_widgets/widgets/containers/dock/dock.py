@@ -303,11 +303,7 @@ class BECDock(BECWidget, Dock):
             shift(Literal["down", "up", "left", "right"]): The direction to shift the widgets if the position is occupied.
         """
         if name is not None:
-            if not WidgetContainerUtils.has_name_valid_chars(name):
-                raise ValueError(
-                    f"Name {name} contains invalid characters. "
-                    f"Only alphanumeric characters and underscores are allowed."
-                )
+            WidgetContainerUtils.raise_for_invalid_name(name, container=self)
 
         if row is None:
             row = self.layout.rowCount()

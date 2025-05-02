@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import itertools
-from typing import Literal, Type
+from typing import Any, Type
 
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.cli.rpc.rpc_register import RPCRegister
+from bec_widgets.cli.client_utils import BECGuiClient
 
 
 class WidgetContainerUtils:
@@ -73,3 +72,36 @@ class WidgetContainerUtils:
             return None
         else:
             raise ValueError(f"No widget of class {widget_class} found.")
+
+    @staticmethod
+    def name_is_protected(name: str, container: Any = None) -> bool:
+        """
+        Check if the name is not protected.
+
+        Args:
+            name(str): The name to be checked.
+
+        Returns:
+            bool: True if the name is not protected, False otherwise.
+        """
+        if container is None:
+            container = BECGuiClient
+        gui_client_methods = set(filter(lambda x: not x.startswith("_"), dir(container)))
+        return name in gui_client_methods
+
+    @staticmethod
+    def raise_for_invalid_name(name: str, container: Any = None) -> None:
+        """
+        Check if the name is valid. If not, raise a ValueError.
+
+        Args:
+            name(str): The name to be checked.
+        Raises:
+            ValueError: If the name is not valid.
+        """
+        if not WidgetContainerUtils.has_name_valid_chars(name):
+            raise ValueError(
+                f"Name '{name}' contains invalid characters. Only alphanumeric characters, underscores, and dashes are allowed."
+            )
+        if WidgetContainerUtils.name_is_protected(name, container):
+            raise ValueError(f"Name '{name}' is protected. Please choose another name.")
