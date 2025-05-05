@@ -137,6 +137,7 @@ class Waveform(PlotBase):
         # Curve data
         self._sync_curves = []
         self._async_curves = []
+        self._async_connected_devices: set[str] = set()
         self._slice_index = None
         self._dap_curves = []
         self._mode: Literal["none", "sync", "async", "mixed"] = "none"
@@ -544,6 +545,7 @@ class Waveform(PlotBase):
                     continue
                 config = CurveConfig(**cfg_dict)
                 self._add_curve(config=config)
+            self.update_with_scan_history(-1)
         except json.JSONDecodeError as e:
             logger.error(f"Failed to decode JSON: {e}")
 
@@ -1012,6 +1014,7 @@ class Waveform(PlotBase):
             return
 
         if current_scan_id != self.scan_id:
+            self._async_connected_devices.clear()
             self.reset()
             self.new_scan.emit()
             self.new_scan_id.emit(current_scan_id)
@@ -1178,18 +1181,22 @@ class Waveform(PlotBase):
         except KeyError:
             logger.warning(f"Curve {name} not found in plot item.")
             pass
-        self.bec_dispatcher.connect_slot(
-            self.on_async_readback,
-            MessageEndpoints.device_async_readback(self.scan_id, name),
-            from_start=True,
-            cb_info={"scan_id": self.scan_id},
-        )
-        logger.info(f"Setup async curve {name}")
+
+        # Connect only once per device signal
+        if name not in self._async_connected_devices:
+            self.bec_dispatcher.connect_slot(
+                self.on_async_readback,
+                MessageEndpoints.device_async_readback(self.scan_id, name),
+                from_start=True,
+                cb_info={"scan_id": self.scan_id},
+            )
+            self._async_connected_devices.add(name)
+            logger.info(f"Async read-back connected for {name}")
 
     @SafeSlot(dict, dict, verify_sender=True)
     def on_async_readback(self, msg, metadata):
         """
-        Get async data readback. This code needs to be fast, therefor we try
+        Get async data readback. This code needs to be fast; therefore, we try
         to reduce the number of copies in between cycles. Be careful when refactoring
         this part as it will affect the performance of the async readback.
 
