@@ -16,9 +16,9 @@ if PYSIDE6:
     from PySide6.scripts.pyside_tool import (
         _extend_path_var,
         init_virtual_env,
-        qt_tool_wrapper,
         is_pyenv_python,
         is_virtual_env,
+        qt_tool_wrapper,
         ui_tool_binary,
     )
 
@@ -78,7 +78,7 @@ def list_editable_packages() -> set[str]:
     return editable_packages
 
 
-def patch_designer():  # pragma: no cover
+def patch_designer(cmd_args: list[str] = []):  # pragma: no cover
     if not PYSIDE6:
         print("PYSIDE6 is not available in the environment. Cannot patch designer.")
         return
@@ -119,7 +119,7 @@ def patch_designer():  # pragma: no cover
             editable_packages = list_editable_packages()
             for pckg in editable_packages:
                 _extend_path_var("PYTHONPATH", pckg, True)
-    qt_tool_wrapper(ui_tool_binary("designer"), sys.argv[1:])
+    qt_tool_wrapper(ui_tool_binary("designer"), cmd_args)
 
 
 def find_plugin_paths(base_path: Path):
@@ -147,7 +147,7 @@ def set_plugin_environment_variable(plugin_paths):
 
 
 # Patch the designer function
-def main():  # pragma: no cover
+def open_designer(cmd_args: list[str] = []):  # pragma: no cover
     if not PYSIDE6:
         print("PYSIDE6 is not available in the environment. Exiting...")
         return
@@ -160,7 +160,11 @@ def main():  # pragma: no cover
 
     set_plugin_environment_variable(plugin_paths)
 
-    patch_designer()
+    patch_designer(cmd_args)
+
+
+def main():
+    open_designer(sys.argv[1:])
 
 
 if __name__ == "__main__":  # pragma: no cover
