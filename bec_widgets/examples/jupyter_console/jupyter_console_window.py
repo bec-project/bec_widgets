@@ -43,7 +43,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "pg": pg,
                     "wh": wh,
                     "dock": self.dock,
-                    # "im": self.im,
+                    "im": self.im,
                     # "mi": self.mi,
                     # "mm": self.mm,
                     # "lm": self.lm,
@@ -112,13 +112,13 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         # tab_widget.addTab(fifth_tab, "Waveform Next Gen")
         # tab_widget.setCurrentIndex(4)
         #
-        # sixth_tab = QWidget()
-        # sixth_tab_layout = QVBoxLayout(sixth_tab)
-        # self.im = Image()
-        # self.mi = self.im.main_image
-        # sixth_tab_layout.addWidget(self.im)
-        # tab_widget.addTab(sixth_tab, "Image Next Gen")
-        # tab_widget.setCurrentIndex(5)
+        sixth_tab = QWidget()
+        sixth_tab_layout = QVBoxLayout(sixth_tab)
+        self.im = Image()
+        self.mi = self.im.main_image
+        sixth_tab_layout.addWidget(self.im)
+        tab_widget.addTab(sixth_tab, "Image Next Gen")
+        tab_widget.setCurrentIndex(1)
         #
         # seventh_tab = QWidget()
         # seventh_tab_layout = QVBoxLayout(seventh_tab)

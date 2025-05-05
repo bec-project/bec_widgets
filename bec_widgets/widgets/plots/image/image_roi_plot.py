@@ -1,5 +1,5 @@
-import pyqtgraph as pg
 import numpy as np
+import pyqtgraph as pg
 
 from bec_widgets import SafeSlot
 from bec_widgets.utils.round_frame import RoundedFrame

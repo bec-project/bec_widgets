@@ -13,6 +13,13 @@ from qtpy.QtWidgets import QWidget
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.modular_roi import (
+    BaseROI,
+    RectangularROI,
+    CircularROI,
+    ROIController,
+    ROIManagerTree,
+)
 from bec_widgets.utils.side_panel import SidePanel
 from bec_widgets.utils.toolbar import MaterialIconAction, SwitchableToolBarAction
 from bec_widgets.widgets.plots.image.image_item import ImageItem
@@ -144,6 +151,12 @@ class Image(PlotBase):
         # Initialize ROI plots and side panels
         self._add_roi_plots()
 
+        # ---------------- ROI Manager integration ----------------
+        # Headless controller keeps the canonical list.
+        self.roi_controller = ROIController(colormap=self.color_map)
+        # TODO make as property for RPC
+        # self.rois = self.roi_controller.rois
+
         # TODO mock data to setup the image
         self._main_image.set_data(np.random.rand(100, 100))
 
@@ -227,6 +240,9 @@ class Image(PlotBase):
 
         self.autorange = True
         self.autorange_mode = "mean"
+
+    ################################################################################
+    # Colorbar
 
     def _init_colorbar_action(self):
         self.full_colorbar_action = MaterialIconAction(
@@ -312,6 +328,9 @@ class Image(PlotBase):
         if vrange:  # should be at the end to disable the autorange if defined
             self.v_range = vrange
 
+    ################################################################################
+    # Roi plots with cuts
+
     def _add_roi_plots(self):
         """
         Initialize the ROI plots and side panels.
@@ -392,8 +411,52 @@ class Image(PlotBase):
         self.y_roi.plot_item.plot(v_slice, y_axis)
 
     ################################################################################
+    # Static rois with roi manager
+
+    def add_roi(self, kind: Literal["rect", "circle"], name: str):
+        """
+        Add a new ROI to the image.
+        """
+        if name is None:
+            name = f"ROI {len(self.rois) + 1}"
+        if kind == "rect":
+            roi = RectangularROI(name, pos=[10, 10], size=[50, 50], pen=None)
+        elif kind == "circle":
+            roi = CircularROI(name, pos=[10, 10], size=[50, 50], pen=None)
+        else:
+            raise ValueError("kind must be 'rect' or 'circle'")
+
+        self.plot_item.addItem(roi)
+        self.roi_controller.add_roi(roi)
+        return roi
+
+    def remove_roi(self, roi_index: int = None, roi_name: str = None):
+        """
+        Remove a ROI from the image.
+        """
+        if roi_index is not None:
+            roi = self.roi_controller.get_roi(roi_index)
+        elif roi_name is not None:
+            roi = self.roi_controller.get_roi_by_name(roi_name)
+        else:
+            raise ValueError("Either roi_index or roi_name must be provided")
+
+        if roi is not None:
+            self.plot_item.removeItem(roi)
+            self.roi_controller.remove_roi(roi)
+
+    ################################################################################
     # Widget Specific Properties
     ################################################################################
+    ################################################################################
+    # Rois
+
+    @property
+    def rois(self) -> list[BaseROI]:
+        """
+        Get the list of ROIs.
+        """
+        return self.roi_controller.rois
 
     ################################################################################
     # Colorbar toggle
@@ -1041,7 +1104,7 @@ if __name__ == "__main__":  # pragma: no cover
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    widget = Image(popups=True)
+    widget = Image(popups=False)
     widget.show()
     widget.resize(1000, 800)
     sys.exit(app.exec_())

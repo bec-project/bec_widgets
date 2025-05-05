@@ -12,7 +12,7 @@ from qtpy.QtWidgets import (
     QTreeWidgetItem,
 )
 
-from bec_widgets.utils import ConnectionConfig
+from bec_widgets.utils import ConnectionConfig, BECConnector
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.toolbar import MaterialIconAction, ModularToolBar
@@ -54,12 +54,17 @@ class LabelAdorner:
 
 
 class BaseROI:
-    """Mixin providing a name and get_coordinates API."""
+    """Mixin providing name plus line color/width properties."""
 
     nameChanged = Signal(str)
+    penChanged = Signal()
+    # TODO add bec connector shit
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, line_color: str | None = None, line_width: int = 15):
         self._name = name
+        # default color assigned later by ROIController; fall back to white
+        self._line_color: str = line_color or "#FFFFFF"
+        self._line_width: int = line_width
 
     @property
     def name(self) -> str:
@@ -70,6 +75,29 @@ class BaseROI:
         if new != self._name:
             self._name = new
             self.nameChanged.emit(new)
+
+    @property
+    def line_color(self) -> str:
+        return self._line_color
+
+    @line_color.setter
+    def line_color(self, value: str):
+        if value != self._line_color:
+            self._line_color = value
+            # update pen but preserve width
+            self.setPen(mkPen(value, width=self._line_width))
+            self.penChanged.emit()
+
+    @property
+    def line_width(self) -> int:
+        return self._line_width
+
+    @line_width.setter
+    def line_width(self, value: int):
+        if value != self._line_width and value > 0:
+            self._line_width = value
+            self.setPen(mkPen(self._line_color, width=value))
+            self.penChanged.emit()
 
     def get_coordinates(self):
         raise NotImplementedError("Subclasses must implement get_coordinates()")
@@ -89,9 +117,9 @@ class RectangularROI(BaseROI, pg.RectROI):
         self.addScaleHandle([1, 1], [0.5, 0.5])
         self.sigRegionChanged.connect(self._on_region_changed)
         self.handlePen = mkPen("white", width=20)
+        self.handleHoverPen = mkPen("white", width=30)  # TODO not sure if this works
         # attach the auto-aligning label
         self._adorner = LabelAdorner(self)
-        self.line_width = 20  # set the line width for all handles
 
     def _on_region_changed(self):
         x0, y0 = self.pos().x(), self.pos().y()
@@ -172,7 +200,10 @@ class ROIController(QObject):
         self._rebuild_color_buffer()
         idx = len(self._rois) - 1
         color = self._colors[idx]
-        roi.setPen(mkPen(color, width=3))
+        roi.line_color = color
+        # ensure line width default is at least 3 if not previously set
+        if getattr(roi, "line_width", 0) < 1:
+            roi.line_width = 3
         self.roiAdded.emit(roi)
 
     def remove_roi(self, roi: BaseROI):
@@ -216,7 +247,7 @@ class ROIController(QObject):
         """Reassign palette colors to all ROIs in order."""
         self._rebuild_color_buffer()
         for idx, roi in enumerate(self._rois):
-            roi.setPen(mkPen(self._colors[idx], width=3))
+            roi.line_color = self._colors[idx]
 
     # TODO can be property with validation
     def set_colormap(self, cmap: str):
@@ -408,7 +439,7 @@ class ROIManagerTree(BECWidget, QWidget):
             return
         idx = self.controller.rois.index(roi)
         self.controller._colors[idx] = c.name()
-        roi.setPen(mkPen(c.name(), width=3))
+        roi.line_color = c.name()
 
     def _remove_roi(self, roi):
         self.plot.removeItem(roi)
