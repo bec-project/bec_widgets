@@ -1,6 +1,39 @@
 # CHANGELOG
 
 
+## v2.1.0 (2025-05-05)
+
+### Bug Fixes
+
+- Ensure rpc object do not collide with protected names
+  ([`94463af`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/94463afdba11fe2da5958a371ef49572889b8622))
+
+### Chores
+
+- **formatter**: Upgrade to black v25
+  ([`452124b`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/452124b528c41db14d1e34ab98db95f6f7230ad6))
+
+### Continuous Integration
+
+- Install dev dependencies for formatter
+  ([`fff4af2`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/fff4af2489bdea0cf4f6f8db68db59fba411c25e))
+
+### Features
+
+- **SafeSlot**: Slot parameters can be overridden with kwarg; add option to raise
+  ([`9387275`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/93872758517177503b1f868376a6095670131844))
+
+### Refactoring
+
+- **colormap_widget**: Widget is rounded
+  ([`02563b1`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/02563b10f3c90bddc069446dfe4137aa5a9727cb))
+
+### Testing
+
+- **Dock**: Add validation for new dock creation with invalid name
+  ([`c16b9dc`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/c16b9dce9ce629b794d731cd7f3282a59f8b8c59))
+
+
 ## v2.0.3 (2025-05-02)
 
 ### Bug Fixes
