@@ -181,13 +181,27 @@ class LaunchWindow(BECMainWindow):
         )
         self.tile_ui_file.setFixedSize(*self.TILE_SIZE)
 
+        self.tile_widget = LaunchTile(
+            icon_path=os.path.join(MODULE_PATH, "assets", "app_icons", "widget_launch_tile.png"),
+            top_label="Get quickly started",
+            main_label="Launch One Widget",
+            description="GUI application with one widget.",
+        )
+        self.tile_widget.setFixedSize(*self.TILE_SIZE)
+
         # Add tiles to the main layout
         self.central_widget.layout.addWidget(self.tile_dock_area)
         self.central_widget.layout.addWidget(self.tile_auto_update)
         self.central_widget.layout.addWidget(self.tile_ui_file)
+        self.central_widget.layout.addWidget(self.tile_widget)
 
         # hacky solution no time to waste
-        self.tiles = [self.tile_dock_area, self.tile_auto_update, self.tile_ui_file]
+        self.tiles = [
+            self.tile_dock_area,
+            self.tile_auto_update,
+            self.tile_ui_file,
+            self.tile_widget,
+        ]
 
         # Connect signals
         self.tile_dock_area.action_button.clicked.connect(lambda: self.launch("dock_area"))
