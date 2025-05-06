@@ -4,8 +4,9 @@ import collections
 import random
 import string
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, DefaultDict, Hashable, Union
 
+import louie
 import redis
 from bec_lib.client import BECClient
 from bec_lib.logger import bec_logger
@@ -41,15 +42,25 @@ class QtThreadSafeCallback(QObject):
         self.cb_info = cb_info
 
         self.cb = cb
+        self.cb_ref = louie.saferef.safe_ref(cb)
         self.cb_signal.connect(self.cb)
+        self.topics = set()
 
     def __hash__(self):
         # make 2 differents QtThreadSafeCallback to look
         # identical when used as dictionary keys, if the
         # callback is the same
-        return f"{id(self.cb)}{self.cb_info}".__hash__()
+        return f"{id(self.cb_ref)}{self.cb_info}".__hash__()
+
+    def __eq__(self, other):
+        if not isinstance(other, QtThreadSafeCallback):
+            return False
+        return self.cb_ref == other.cb_ref and self.cb_info == other.cb_info
 
     def __call__(self, msg_content, metadata):
+        if self.cb_ref() is None:
+            # callback has been deleted
+            return
         self.cb_signal.emit(msg_content, metadata)
 
 
@@ -96,7 +107,7 @@ class BECDispatcher:
         cls,
         client=None,
         config: str | ServiceConfig | None = None,
-        gui_id: str = None,
+        gui_id: str | None = None,
         *args,
         **kwargs,
     ):
@@ -109,7 +120,9 @@ class BECDispatcher:
         if self._initialized:
             return
 
-        self._slots = collections.defaultdict(set)
+        self._registered_slots: DefaultDict[Hashable, QtThreadSafeCallback] = (
+            collections.defaultdict()
+        )
         self.client = client
 
         if self.client is None:
@@ -162,10 +175,13 @@ class BECDispatcher:
             topics (EndpointInfo | str | list): A topic or list of topics that can typically be acquired via bec_lib.MessageEndpoints
             cb_info (dict | None): A dictionary containing information about the callback. Defaults to None.
         """
-        slot = QtThreadSafeCallback(cb=slot, cb_info=cb_info)
-        self.client.connector.register(topics, cb=slot, **kwargs)
+        qt_slot = QtThreadSafeCallback(cb=slot, cb_info=cb_info)
+        if qt_slot not in self._registered_slots:
+            self._registered_slots[qt_slot] = qt_slot
+        qt_slot = self._registered_slots[qt_slot]
+        self.client.connector.register(topics, cb=qt_slot, **kwargs)
         topics_str, _ = self.client.connector._convert_endpointinfo(topics)
-        self._slots[slot].update(set(topics_str))
+        qt_slot.topics.update(set(topics_str))
 
     def disconnect_slot(self, slot: Callable, topics: Union[str, list]):
         """
@@ -178,16 +194,16 @@ class BECDispatcher:
         # find the right slot to disconnect from ;
         # slot callbacks are wrapped in QtThreadSafeCallback objects,
         # but the slot we receive here is the original callable
-        for connected_slot in self._slots:
+        for connected_slot in self._registered_slots.values():
             if connected_slot.cb == slot:
                 break
         else:
             return
         self.client.connector.unregister(topics, cb=connected_slot)
         topics_str, _ = self.client.connector._convert_endpointinfo(topics)
-        self._slots[connected_slot].difference_update(set(topics_str))
-        if not self._slots[connected_slot]:
-            del self._slots[connected_slot]
+        self._registered_slots[connected_slot].topics.difference_update(set(topics_str))
+        if not self._registered_slots[connected_slot].topics:
+            del self._registered_slots[connected_slot]
 
     def disconnect_topics(self, topics: Union[str, list]):
         """
@@ -198,11 +214,16 @@ class BECDispatcher:
         """
         self.client.connector.unregister(topics)
         topics_str, _ = self.client.connector._convert_endpointinfo(topics)
-        for slot in list(self._slots.keys()):
-            slot_topics = self._slots[slot]
-            slot_topics.difference_update(set(topics_str))
-            if not slot_topics:
-                del self._slots[slot]
+
+        remove_slots = []
+        for connected_slot in self._registered_slots.values():
+            connected_slot.topics.difference_update(set(topics_str))
+
+            if not connected_slot.topics:
+                remove_slots.append(connected_slot)
+
+        for connected_slot in remove_slots:
+            self._registered_slots.pop(connected_slot, None)
 
     def disconnect_all(self, *args, **kwargs):
         """
