@@ -208,6 +208,7 @@ end-2-end-conda:
   variables:
     QT_QPA_PLATFORM: "offscreen"
   script:
+    - lsb_release -a || cat /etc/os-release
     - *clone-repos
     - *install-os-packages
     - conda create -q -n test-environment python=3.11
