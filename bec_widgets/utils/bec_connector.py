@@ -86,6 +86,7 @@ class BECConnector:
         object_name: str | None = None,
         parent_dock: BECDock | None = None,  # TODO should go away -> issue created #473
         root_widget: bool = False,
+        *args,
         **kwargs,
     ):
         """

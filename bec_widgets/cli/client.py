@@ -503,6 +503,126 @@ class BECStatusBox(RPCBase):
         """
 
 
+class BaseROI(RPCBase):
+    """Mixin providing name plus line color/width properties."""
+
+    @property
+    @rpc_call
+    def name(self) -> "str":
+        """
+        None
+        """
+
+    @name.setter
+    @rpc_call
+    def name(self) -> "str":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def line_color(self) -> "str":
+        """
+        None
+        """
+
+    @line_color.setter
+    @rpc_call
+    def line_color(self) -> "str":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def line_width(self) -> "int":
+        """
+        None
+        """
+
+    @line_width.setter
+    @rpc_call
+    def line_width(self) -> "int":
+        """
+        None
+        """
+
+    @rpc_call
+    def get_coordinates(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def get_data_from_image(self, image: "'np.ndarray | None'" = None):
+        """
+        Return a NumPy array of pixels inside the ROI.
+        If *image* is None, the method tries to locate the first pg.ImageItem
+        in the same graphics scene and uses its `.image` array.
+        """
+
+
+class CircularROI(RPCBase):
+    """Circle emitting center/diameter signals and auto-labeled."""
+
+    @property
+    @rpc_call
+    def name(self) -> "str":
+        """
+        None
+        """
+
+    @name.setter
+    @rpc_call
+    def name(self) -> "str":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def line_color(self) -> "str":
+        """
+        None
+        """
+
+    @line_color.setter
+    @rpc_call
+    def line_color(self) -> "str":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def line_width(self) -> "int":
+        """
+        None
+        """
+
+    @line_width.setter
+    @rpc_call
+    def line_width(self) -> "int":
+        """
+        None
+        """
+
+    @rpc_call
+    def get_coordinates(self, *, typed: "bool" = False):
+        """
+        Return (cx, cy, diameter) or a typed dict if *typed* is True.
+        """
+
+    @rpc_call
+    def get_data_from_image(self, image=None):
+        """
+        Return a NumPy array of pixels inside the ROI.
+        If *image* is None, the method tries to locate the first pg.ImageItem
+        in the same graphics scene and uses its `.image` array.
+        """
+
+
 class Curve(RPCBase):
     @rpc_call
     def remove(self):
@@ -1212,6 +1332,20 @@ class Image(RPCBase):
     def main_image(self) -> "ImageItem":
         """
         Access the main image item.
+        """
+
+    @rpc_call
+    def add_roi(
+        self, kind: "Literal['rect', 'circle']" = "rect", name: "str | None" = None, **pg_kwargs
+    ) -> "BaseROI":
+        """
+        Create an ROI (rect or circle), add to scene & controller, and return it.
+        """
+
+    @rpc_call
+    def remove_roi(self, roi_index: "int | None" = None, roi_name: "str | None" = None):
+        """
+        Remove ROI by index or name from both scene and controller.
         """
 
 
@@ -2314,6 +2448,66 @@ class PositionerGroup(RPCBase):
         Redraw grid with positioners from device_names string
 
         Device names must be separated by space
+        """
+
+
+class RectangularROI(RPCBase):
+    """Rectangle emitting edge signals and auto-labeled."""
+
+    @property
+    @rpc_call
+    def name(self) -> "str":
+        """
+        None
+        """
+
+    @name.setter
+    @rpc_call
+    def name(self) -> "str":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def line_color(self) -> "str":
+        """
+        None
+        """
+
+    @line_color.setter
+    @rpc_call
+    def line_color(self) -> "str":
+        """
+        None
+        """
+
+    @property
+    @rpc_call
+    def line_width(self) -> "int":
+        """
+        None
+        """
+
+    @line_width.setter
+    @rpc_call
+    def line_width(self) -> "int":
+        """
+        None
+        """
+
+    @rpc_call
+    def get_coordinates(self, *, typed: "bool" = False):
+        """
+        Return (x0, y0, x1, y1) or a typed dict if *typed* is True.
+        """
+
+    @rpc_call
+    def get_data_from_image(self, image=None):
+        """
+        Return a NumPy array of pixels inside the ROI.
+        If *image* is None, the method tries to locate the first pg.ImageItem
+        in the same graphics scene and uses its `.image` array.
         """
 
 

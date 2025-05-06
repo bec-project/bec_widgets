@@ -13,7 +13,7 @@ from qtpy.QtWidgets import QWidget
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
-from bec_widgets.utils.modular_roi import (
+from bec_widgets.widgets.plots.roi.image_roi import (
     BaseROI,
     RectangularROI,
     CircularROI,
@@ -120,6 +120,8 @@ class Image(PlotBase):
         "transpose.setter",
         "image",
         "main_image",
+        "add_roi",
+        "remove_roi",
     ]
     sync_colorbar_with_autorange = Signal()
 
@@ -413,27 +415,40 @@ class Image(PlotBase):
     ################################################################################
     # Static rois with roi manager
 
-    def add_roi(self, kind: Literal["rect", "circle"], name: str):
-        """
-        Add a new ROI to the image.
-        """
+    def add_roi(
+        self, kind: Literal["rect", "circle"] = "rect", name: str | None = None, **pg_kwargs
+    ) -> BaseROI:
+        """Create an ROI (rect or circle), add to scene & controller, and return it."""
         if name is None:
-            name = f"ROI {len(self.rois) + 1}"
+            name = f"ROI_{len(self.roi_controller.rois) + 1}"
         if kind == "rect":
-            roi = RectangularROI(name, pos=[10, 10], size=[50, 50], pen=None)
+            roi = RectangularROI(
+                pos=[10, 10],
+                size=[50, 50],
+                parent_image=self,
+                line_width=3,
+                label=name,
+                **pg_kwargs,
+            )
         elif kind == "circle":
-            roi = CircularROI(name, pos=[10, 10], size=[50, 50], pen=None)
+            roi = CircularROI(
+                pos=[10, 10],
+                size=[50, 50],
+                parent_image=self,
+                line_width=3,
+                label=name,
+                **pg_kwargs,
+            )
         else:
             raise ValueError("kind must be 'rect' or 'circle'")
 
+        # Add to plot and controller (controller assigns color)
         self.plot_item.addItem(roi)
         self.roi_controller.add_roi(roi)
         return roi
 
-    def remove_roi(self, roi_index: int = None, roi_name: str = None):
-        """
-        Remove a ROI from the image.
-        """
+    def remove_roi(self, roi_index: int | None = None, roi_name: str | None = None):
+        """Remove ROI by index or name from both scene and controller."""
         if roi_index is not None:
             roi = self.roi_controller.get_roi(roi_index)
         elif roi_name is not None:

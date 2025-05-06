@@ -53,18 +53,75 @@ class LabelAdorner:
         self.label.setPos(0, height)
 
 
-class BaseROI:
+class BaseROI(BECConnector):
     """Mixin providing name plus line color/width properties."""
+
+    RPC = True
+    PLUGIN = False
 
     nameChanged = Signal(str)
     penChanged = Signal()
-    # TODO add bec connector shit
+    USER_ACCESS = [
+        "name",
+        "name.setter",
+        "line_color",
+        "line_color.setter",
+        "line_width",
+        "line_width.setter",
+        "get_coordinates",
+        "get_data_from_image",
+    ]
 
-    def __init__(self, name: str, line_color: str | None = None, line_width: int = 15):
-        self._name = name
-        # default color assigned later by ROIController; fall back to white
-        self._line_color: str = line_color or "#FFFFFF"
-        self._line_width: int = line_width
+    def __init__(
+        self,
+        *,
+        # BECConnector kwargs
+        config: ConnectionConfig | None = None,
+        gui_id: str | None = None,
+        parent_image: BECConnector | None = None,
+        # ROI-specific
+        label: str | None = None,
+        line_color: str | None = None,
+        line_width: int = 3,
+        # all remaining pg.*ROI kwargs (pos, size, pen, …)
+        **pg_kwargs,
+    ):
+        """Base class for all modular ROIs.
+
+        Args:
+            label (str): Human-readable name shown in ROI Manager and labels.
+            line_color (str | None, optional): Initial pen color. Defaults to None.
+                Controller may override color later.
+            line_width (int, optional): Initial pen width. Defaults to 15.
+                Controller may override width later.
+            config (ConnectionConfig | None, optional): Standard BECConnector argument. Defaults to None.
+            gui_id (str | None, optional): Standard BECConnector argument. Defaults to None.
+            parent_image (BECConnector | None, optional): Standard BECConnector argument. Defaults to None.
+        """
+        if config is None:
+            config = ConnectionConfig(widget_class=self.__class__.__name__)
+        self.config = config
+
+        if parent_image is not None:
+            self.set_parent(parent_image)
+        else:
+            self.parent_image = None
+
+        # --------------------------------------------------
+        # one super() call – BECConnector will forward pg-kwargs
+        super().__init__(config=config, gui_id=gui_id, **pg_kwargs)
+        # --------------------------------------------------
+
+        self._name = label or f"ROI {self.__class__.__name__}"
+        self._line_color = line_color or "#ffffff"
+        self._line_width = line_width
+        self.setPen(mkPen(self._line_color, width=self._line_width))
+
+    def set_parent(self, parent: BECConnector):
+        self.parent_image = parent
+
+    def parent(self):
+        return self.parent_image
 
     @property
     def name(self) -> str:
@@ -117,9 +174,36 @@ class RectangularROI(BaseROI, pg.RectROI):
     edgesChanged = Signal(float, float, float, float)
     edgesReleased = Signal(float, float, float, float)
 
-    def __init__(self, name: str, pos, size, pen=None, **kwargs):
-        pg.RectROI.__init__(self, pos, size, pen=pen, **kwargs)
-        BaseROI.__init__(self, name)
+    def __init__(
+        self,
+        *,
+        # pg.RectROI kwargs
+        pos,
+        size,
+        pen=None,
+        # BECConnector kwargs
+        config: ConnectionConfig | None = None,
+        gui_id: str | None = None,
+        parent_image: BECConnector | None = None,
+        # ROI specifics
+        label: str | None = None,
+        line_color: str | None = None,
+        line_width: int = 3,
+        **extra_pg,
+    ):
+        super().__init__(
+            config=config,
+            gui_id=gui_id,
+            parent_image=parent_image,
+            label=label,
+            line_color=line_color,
+            line_width=line_width,
+            pos=pos,
+            size=size,
+            pen=pen,
+            **extra_pg,
+        )
+
         self.addScaleHandle([0.5, 1], [0.5, 0.5])
         self.addScaleHandle([1, 0.5], [0.5, 0.5])
         self.addScaleHandle([1, 1], [0.5, 0.5])
@@ -141,10 +225,14 @@ class RectangularROI(BaseROI, pg.RectROI):
             w, h = self.state["size"]
             self.edgesReleased.emit(x0, y0, x0 + w, y0 + h)
 
-    def get_coordinates(self) -> tuple[float, float, float, float]:
+    def get_coordinates(self, *, typed: bool = False):
+        """Return (x0, y0, x1, y1) or a typed dict if *typed* is True."""
         x0, y0 = self.pos().x(), self.pos().y()
         w, h = self.state["size"]
-        return (x0, y0, x0 + w, y0 + h)
+        coords = (x0, y0, x0 + w, y0 + h)
+        if typed:
+            return {"left": coords[0], "top": coords[1], "right": coords[2], "bottom": coords[3]}
+        return coords
 
     def get_data_from_image(self, image=None):
         import numpy as np
@@ -174,9 +262,32 @@ class CircularROI(BaseROI, pg.CircleROI):
     centerChanged = Signal(float, float, float)
     centerReleased = Signal(float, float, float)
 
-    def __init__(self, name: str, pos, size, pen=None, **kwargs):
-        pg.CircleROI.__init__(self, pos, size, pen=pen, **kwargs)
-        BaseROI.__init__(self, name)
+    def __init__(
+        self,
+        *,
+        pos,
+        size,
+        pen=None,
+        config: ConnectionConfig | None = None,
+        gui_id: str | None = None,
+        parent_image: BECConnector | None = None,
+        label: str | None = None,
+        line_color: str | None = None,
+        line_width: int = 3,
+        **extra_pg,
+    ):
+        super().__init__(
+            config=config,
+            gui_id=gui_id,
+            parent_image=parent_image,
+            label=label,
+            line_color=line_color,
+            line_width=line_width,
+            pos=pos,
+            size=size,
+            pen=pen,
+            **extra_pg,
+        )
         self.sigRegionChanged.connect(self._on_region_changed)
         self._adorner = LabelAdorner(self)
 
@@ -194,10 +305,13 @@ class CircularROI(BaseROI, pg.CircleROI):
             cy = self.pos().y() + d / 2
             self.centerReleased.emit(cx, cy, d)
 
-    def get_coordinates(self) -> tuple[float, float, float]:
+    def get_coordinates(self, *, typed: bool = False):
+        """Return (cx, cy, diameter) or a typed dict if *typed* is True."""
         d = self.state["size"][0]
         cx = self.pos().x() + d / 2
         cy = self.pos().y() + d / 2
+        if typed:
+            return {"center_x": cx, "center_y": cy, "diameter": d}
         return (cx, cy, d)
 
     def get_data_from_image(self, image=None):
@@ -406,9 +520,9 @@ class ROIManagerTree(BECWidget, QWidget):
         idx = len(self.all_rois) + 1
         name = f"ROI {idx}"
         if kind == "rect":
-            roi = RectangularROI(name, pos=[10, 10], size=[50, 50], pen=None)
+            roi = RectangularROI(pos=[10, 10], size=[50, 50], line_width=3, label=name)
         else:
-            roi = CircularROI(name, pos=[10, 10], size=[50, 50], pen=None)
+            roi = CircularROI(pos=[10, 10], size=[50, 50], line_width=3, label=name)
         self.controller.add_roi(roi)
 
     def _on_roi_added(self, roi):
