@@ -80,7 +80,7 @@ class BaseROI(BECConnector):
         gui_id: str | None = None,
         parent_image: BECConnector | None = None,
         # ROI-specific
-        label: str | None = None,
+        name: str | None = None,
         line_color: str | None = None,
         line_width: int = 3,
         # all remaining pg.*ROI kwargs (pos, size, pen, …)
@@ -89,7 +89,7 @@ class BaseROI(BECConnector):
         """Base class for all modular ROIs.
 
         Args:
-            label (str): Human-readable name shown in ROI Manager and labels.
+            name (str): Human-readable name shown in ROI Manager and labels.
             line_color (str | None, optional): Initial pen color. Defaults to None.
                 Controller may override color later.
             line_width (int, optional): Initial pen width. Defaults to 15.
@@ -106,13 +106,10 @@ class BaseROI(BECConnector):
             self.set_parent(parent_image)
         else:
             self.parent_image = None
+        object_name = name.replace("-", "_").replace(" ", "_") if name else None
+        super().__init__(object_name=object_name, config=config, gui_id=gui_id, **pg_kwargs)
 
-        # --------------------------------------------------
-        # one super() call – BECConnector will forward pg-kwargs
-        super().__init__(config=config, gui_id=gui_id, **pg_kwargs)
-        # --------------------------------------------------
-
-        self._name = label or f"ROI {self.__class__.__name__}"
+        self._name = name or f"ROI {self.__class__.__name__}"
         self._line_color = line_color or "#ffffff"
         self._line_width = line_width
         self.setPen(mkPen(self._line_color, width=self._line_width))
@@ -195,7 +192,7 @@ class RectangularROI(BaseROI, pg.RectROI):
             config=config,
             gui_id=gui_id,
             parent_image=parent_image,
-            label=label,
+            name=label,
             line_color=line_color,
             line_width=line_width,
             pos=pos,
@@ -280,7 +277,7 @@ class CircularROI(BaseROI, pg.CircleROI):
             config=config,
             gui_id=gui_id,
             parent_image=parent_image,
-            label=label,
+            name=label,
             line_color=line_color,
             line_width=line_width,
             pos=pos,
