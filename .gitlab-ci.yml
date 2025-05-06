@@ -203,7 +203,7 @@ test-matrix:
 end-2-end-conda:
   stage: End2End
   needs: []
-  image: condaforge/miniforge3
+  image: condaforge/miniforge3:24.11.3-0
   allow_failure: false
   variables:
     QT_QPA_PLATFORM: "offscreen"
