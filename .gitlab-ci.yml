@@ -203,22 +203,13 @@ test-matrix:
 end-2-end-conda:
   stage: End2End
   needs: []
-  image: continuumio/miniconda3
+  image: condaforge/miniforge3
   allow_failure: false
   variables:
     QT_QPA_PLATFORM: "offscreen"
   script:
     - *clone-repos
     - *install-os-packages
-    - conda config --show-sources
-    - conda config --add channels conda-forge
-    - conda config --system --remove channels https://repo.anaconda.com/pkgs/main
-    - conda config --system --remove channels https://repo.anaconda.com/pkgs/r
-    - conda config --remove channels https://repo.anaconda.com/pkgs/main
-    - conda config --remove channels https://repo.anaconda.com/pkgs/r
-    - conda config --show-sources
-    - conda config --set channel_priority strict
-    - conda config --set always_yes yes --set changeps1 no
     - conda create -q -n test-environment python=3.11
     - conda init bash
     - source ~/.bashrc
