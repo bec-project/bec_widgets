@@ -102,6 +102,14 @@ class BaseROI:
     def get_coordinates(self):
         raise NotImplementedError("Subclasses must implement get_coordinates()")
 
+    def get_data_from_image(self, image: "np.ndarray | None" = None):
+        """
+        Return a NumPy array of pixels inside the ROI.
+        If *image* is None, the method tries to locate the first pg.ImageItem
+        in the same graphics scene and uses its `.image` array.
+        """
+        raise NotImplementedError
+
 
 class RectangularROI(BaseROI, pg.RectROI):
     """Rectangle emitting edge signals and auto-labeled."""
@@ -138,6 +146,27 @@ class RectangularROI(BaseROI, pg.RectROI):
         w, h = self.state["size"]
         return (x0, y0, x0 + w, y0 + h)
 
+    def get_data_from_image(self, image=None):
+        import numpy as np
+
+        if image is None:
+            image = self._lookup_scene_image()
+        if image is None:
+            raise RuntimeError("No image available to extract ROI data.")
+        x0, y0, x1, y1 = map(int, self.get_coordinates())
+        y0 = max(0, y0)
+        y1 = min(image.shape[0], y1)
+        x0 = max(0, x0)
+        x1 = min(image.shape[1], x1)
+        return image[y0:y1, x0:x1]
+
+    # helper
+    def _lookup_scene_image(self):
+        for it in self.scene().items():
+            if isinstance(it, pg.ImageItem) and it.image is not None:
+                return it.image
+        return None
+
 
 class CircularROI(BaseROI, pg.CircleROI):
     """Circle emitting center/diameter signals and auto-labeled."""
@@ -170,6 +199,27 @@ class CircularROI(BaseROI, pg.CircleROI):
         cx = self.pos().x() + d / 2
         cy = self.pos().y() + d / 2
         return (cx, cy, d)
+
+    def get_data_from_image(self, image=None):
+        import numpy as np
+
+        if image is None:
+            image = self._lookup_scene_image()
+        if image is None:
+            raise RuntimeError("No image available to extract ROI data.")
+        cx, cy, d = self.get_coordinates()
+        r = d / 2
+        x0, x1 = int(max(0, cx - r)), int(min(image.shape[1], cx + r))
+        y0, y1 = int(max(0, cy - r)), int(min(image.shape[0], cy + r))
+        yy, xx = np.ogrid[y0:y1, x0:x1]
+        mask = (xx - cx) ** 2 + (yy - cy) ** 2 <= r**2
+        return image[y0:y1, x0:x1][mask]
+
+    def _lookup_scene_image(self):
+        for it in self.scene().items():
+            if isinstance(it, pg.ImageItem) and it.image is not None:
+                return it.image
+        return None
 
 
 from qtpy.QtCore import QObject, Signal
@@ -431,7 +481,14 @@ class ROIManagerTree(BECWidget, QWidget):
                 break
 
     def _print_roi(self, roi):
-        print(roi.get_coordinates())
+        coords = roi.get_coordinates()
+        try:
+            data = roi.get_data_from_image()  # auto-detect image
+            info = f"mean={data.mean():.3g}, N={data.size}"
+            data = f"data = {data}"
+        except Exception as err:
+            info = f"no data ({err})"
+        print(coords, info, data)
 
     def _change_color(self, roi):
         c = QColorDialog.getColor(parent=self)
