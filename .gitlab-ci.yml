@@ -203,7 +203,7 @@ test-matrix:
 end-2-end-conda:
   stage: End2End
   needs: []
-  image: continuumio/miniconda3
+  image: continuumio/miniconda3:25.1.1-2
   allow_failure: false
   variables:
     QT_QPA_PLATFORM: "offscreen"
