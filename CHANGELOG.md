@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v2.1.1 (2025-05-06)
+
+### Bug Fixes
+
+- Import add operator in client
+  ([`55f7efc`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/55f7efc4f586128dfb66fc6a8eb5d3a9f32bf61e))
+
+### Refactoring
+
+- Supply bec designer filename to function
+  ([`be72c9f`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/be72c9f2708c93dab24d4383f5622e38cf1dc8a2))
+
+
 ## v2.1.0 (2025-05-05)
 
 ### Bug Fixes
