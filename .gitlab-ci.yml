@@ -210,8 +210,9 @@ end-2-end-conda:
   script:
     - lsb_release -a || cat /etc/os-release
     - *clone-repos
-    # - *install-os-packages
-    - apt-get install -y libgl1 x11-utils libxkbcommon-x11-0 libdbus-1-3 xvfb
+    - apt-get install -y libxcb-xinerama0-dev
+    - *install-os-packages
+    # - apt-get install -y libgl1-mes x11-utils libxkbcommon-x11-0 libdbus-1-3 xvfb
     - *install-qt-webengine-deps
     - conda create -q -n test-environment python=3.11
     - conda init bash
