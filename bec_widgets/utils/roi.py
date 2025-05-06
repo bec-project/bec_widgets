@@ -11,7 +11,6 @@ from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.toolbar import MaterialIconAction, ModularToolBar
 from bec_widgets.widgets.utility.visual.colormap_widget.colormap_widget import BECColorMapWidget
 
-
 # Reusable rectangular ROI with custom aspect-ratio handles and edge-coordinate signals.
 
 

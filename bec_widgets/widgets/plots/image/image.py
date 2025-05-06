@@ -13,13 +13,6 @@ from qtpy.QtWidgets import QWidget
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
-from bec_widgets.widgets.plots.roi.image_roi import (
-    BaseROI,
-    RectangularROI,
-    CircularROI,
-    ROIController,
-    ROIManagerTree,
-)
 from bec_widgets.utils.side_panel import SidePanel
 from bec_widgets.utils.toolbar import MaterialIconAction, SwitchableToolBarAction
 from bec_widgets.widgets.plots.image.image_item import ImageItem
@@ -29,6 +22,13 @@ from bec_widgets.widgets.plots.image.toolbar_bundles.image_selection import (
 )
 from bec_widgets.widgets.plots.image.toolbar_bundles.processing import ImageProcessingToolbarBundle
 from bec_widgets.widgets.plots.plot_base import PlotBase
+from bec_widgets.widgets.plots.roi.image_roi import (
+    BaseROI,
+    CircularROI,
+    RectangularROI,
+    ROIController,
+    ROIManagerTree,
+)
 
 logger = bec_logger.logger
 

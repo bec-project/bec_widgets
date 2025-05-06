@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import pyqtgraph as pg
 from pyqtgraph import TextItem, mkPen
-from qtpy.QtCore import Signal, Qt
+from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QToolButton,
     QColorDialog,
+    QToolButton,
     QTreeWidget,
     QTreeWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
 
-from bec_widgets.utils import ConnectionConfig, BECConnector
+from bec_widgets.utils import BECConnector, ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.toolbar import MaterialIconAction, ModularToolBar
@@ -636,8 +636,10 @@ class ROIManagerTree(BECWidget, QWidget):
 
 # Demo
 if __name__ == "__main__":
-    import sys, numpy as np
-    from qtpy.QtWidgets import QApplication, QHBoxLayout, QVBoxLayout, QPushButton
+    import sys
+
+    import numpy as np
+    from qtpy.QtWidgets import QApplication, QHBoxLayout, QPushButton, QVBoxLayout
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
