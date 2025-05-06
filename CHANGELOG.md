@@ -1,6 +1,28 @@
 # CHANGELOG
 
 
+## v2.1.2 (2025-05-06)
+
+### Bug Fixes
+
+- **waveform**: Ignore callbacks for on_async_readback from QtSender objects that are already
+  destroyed; closes #497
+  ([`64a4824`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/64a48240546846fdf4541c2adf3a0a5a0829f948))
+
+### Build System
+
+- Remove flush-redis from ci job
+  ([`a6c479e`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/a6c479e42ea2a47c45e5a323bb3072bab503ecf1))
+
+### Refactoring
+
+- **bec-progressbar**: Add private method for bec_progressbar, udate client file
+  ([`37f0024`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/37f002427ad5da01164ae3b0f4983695fe61c243))
+
+- **bec-status-box**: Add get_server_state user_access method to BECStatusBox
+  ([`1619446`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1619446ec9839cfa1c666a3790a0c2abc449c4a8))
+
+
 ## v2.1.1 (2025-05-06)
 
 ### Bug Fixes
