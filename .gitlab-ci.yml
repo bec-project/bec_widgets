@@ -209,7 +209,8 @@ end-2-end-conda:
     QT_QPA_PLATFORM: "offscreen"
   script:
     - *clone-repos
-    - *install-os-packages
+    # - *install-os-packages
+    - apt-get install -y libegl1-mesa x11-utils libxkbcommon-x11-0 libdbus-1-3 xvfb
     - conda create -q -n test-environment python=3.11
     - conda init bash
     - source ~/.bashrc
