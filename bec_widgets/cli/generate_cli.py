@@ -41,6 +41,7 @@ class ClientGenerator:
 import inspect
 import traceback
 from functools import reduce
+from operator import add
 from typing import Literal, Optional
 """
             if self._base

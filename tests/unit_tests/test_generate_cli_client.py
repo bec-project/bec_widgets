@@ -74,6 +74,7 @@ def test_client_generator_with_black_formatting():
         import inspect
         import traceback
         from functools import reduce
+        from operator import add
         from typing import Literal, Optional
 
         from bec_lib.logger import bec_logger
