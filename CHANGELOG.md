@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.1.3 (2025-05-07)
+
+### Bug Fixes
+
+- **bec-dispatcher**: Fix reference to boundmethods to avoid duplicated subscriptions
+  ([`cf59d31`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/cf59d311132cd1a21f1893c19cc9f2a7e45101d0))
+
+
 ## v2.1.2 (2025-05-06)
 
 ### Bug Fixes
