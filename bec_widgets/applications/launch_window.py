@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import os
 import xml.etree.ElementTree as ET
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import Qt, Signal
+from qtpy.QtCore import Qt, Signal  # type: ignore
 from qtpy.QtGui import QPainter, QPainterPath, QPixmap
 from qtpy.QtWidgets import (
     QApplication,
@@ -21,8 +21,10 @@ from qtpy.QtWidgets import (
 
 import bec_widgets
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
+from bec_widgets.utils.bec_plugin_helper import get_all_plugin_widgets
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.name_utils import pascal_to_snake
 from bec_widgets.utils.plugin_utils import get_plugin_auto_updates
 from bec_widgets.utils.round_frame import RoundedFrame
 from bec_widgets.utils.toolbar import ModularToolBar
@@ -34,6 +36,8 @@ from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import
 
 if TYPE_CHECKING:  # pragma: no cover
     from qtpy.QtCore import QObject
+
+    from bec_widgets.utils.bec_widget import BECWidget
 
 logger = bec_logger.logger
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
@@ -141,6 +145,7 @@ class LaunchWindow(BECMainWindow):
         super().__init__(parent=parent, gui_id=gui_id, window_title=window_title, **kwargs)
 
         self.app = QApplication.instance()
+        self.tiles: dict[str, LaunchTile] = {}
 
         # Toolbar
         self.dark_mode_button = DarkModeButton(parent=self, toolbar=True)
@@ -156,71 +161,104 @@ class LaunchWindow(BECMainWindow):
         self.central_widget.layout = QHBoxLayout(self.central_widget)
         self.setCentralWidget(self.central_widget)
 
-        self.tile_dock_area = LaunchTile(
+        self.register_tile(
+            name="dock_area",
             icon_path=os.path.join(MODULE_PATH, "assets", "app_icons", "bec_widgets_icon.png"),
             top_label="Get started",
             main_label="BEC Dock Area",
             description="Highly flexible and customizable dock area application with modular widgets.",
+            action_button=lambda: self.launch("dock_area"),
+            show_selector=False,
         )
-        self.tile_dock_area.setFixedSize(*self.TILE_SIZE)
 
-        self.tile_auto_update = LaunchTile(
+        self.available_auto_updates: dict[str, type[AutoUpdates]] = (
+            self._update_available_auto_updates()
+        )
+        self.register_tile(
+            name="auto_update",
             icon_path=os.path.join(MODULE_PATH, "assets", "app_icons", "auto_update.png"),
             top_label="Get automated",
             main_label="BEC Auto Update Dock Area",
             description="Dock area with auto update functionality for BEC widgets plotting.",
+            action_button=self._open_auto_update,
             show_selector=True,
+            selector_items=list(self.available_auto_updates.keys()) + ["Default"],
         )
-        self.tile_auto_update.setFixedSize(*self.TILE_SIZE)
 
-        self.tile_ui_file = LaunchTile(
+        self.register_tile(
+            name="custom_ui_file",
             icon_path=os.path.join(MODULE_PATH, "assets", "app_icons", "ui_loader_tile.png"),
             top_label="Get customized",
             main_label="Launch Custom UI File",
             description="GUI application with custom UI file.",
+            action_button=self._open_custom_ui_file,
+            show_selector=False,
         )
-        self.tile_ui_file.setFixedSize(*self.TILE_SIZE)
 
-        self.tile_widget = LaunchTile(
-            icon_path=os.path.join(MODULE_PATH, "assets", "app_icons", "widget_launch_tile.png"),
-            top_label="Get quickly started",
-            main_label="Launch One Widget",
-            description="GUI application with one widget.",
-        )
-        self.tile_widget.setFixedSize(*self.TILE_SIZE)
-
-        # Add tiles to the main layout
-        self.central_widget.layout.addWidget(self.tile_dock_area)
-        self.central_widget.layout.addWidget(self.tile_auto_update)
-        self.central_widget.layout.addWidget(self.tile_ui_file)
-        self.central_widget.layout.addWidget(self.tile_widget)
-
-        # hacky solution no time to waste
-        self.tiles = [
-            self.tile_dock_area,
-            self.tile_auto_update,
-            self.tile_ui_file,
-            self.tile_widget,
-        ]
-
-        # Connect signals
-        self.tile_dock_area.action_button.clicked.connect(lambda: self.launch("dock_area"))
-        self.tile_auto_update.action_button.clicked.connect(self._open_auto_update)
-        self.tile_ui_file.action_button.clicked.connect(self._open_custom_ui_file)
-        self._update_theme()
-
-        # Auto updates
-        self.available_auto_updates: dict[str, type[AutoUpdates]] = (
-            self._update_available_auto_updates()
-        )
-        if self.tile_auto_update.selector is not None:
-            self.tile_auto_update.selector.addItems(
-                list(self.available_auto_updates.keys()) + ["Default"]
+        # plugin widgets
+        self.available_widgets: dict[str, BECWidget] = get_all_plugin_widgets()
+        if self.available_widgets:
+            plugin_repo_name = next(iter(self.available_widgets.values())).__module__.split(".")[0]
+            plugin_repo_name = plugin_repo_name.removesuffix("_bec").upper()
+            self.register_tile(
+                name="widget",
+                icon_path=os.path.join(
+                    MODULE_PATH, "assets", "app_icons", "widget_launch_tile.png"
+                ),
+                top_label="Get quickly started",
+                main_label=f"Launch a {plugin_repo_name} Widget",
+                description=f"GUI application with one widget from the {plugin_repo_name} repository.",
+                action_button=self._open_widget,
+                show_selector=True,
+                selector_items=list(self.available_widgets.keys()),
             )
+
+        self._update_theme()
 
         self.register = RPCRegister()
         self.register.callbacks.append(self._turn_off_the_lights)
         self.register.broadcast()
+
+    def register_tile(
+        self,
+        name: str,
+        icon_path: str | None = None,
+        top_label: str | None = None,
+        main_label: str | None = None,
+        description: str | None = None,
+        action_button: Callable | None = None,
+        show_selector: bool = False,
+        selector_items: list[str] | None = None,
+    ):
+        """
+        Register a tile in the launcher window.
+
+        Args:
+            name(str): The name of the tile.
+            icon_path(str): The path to the icon.
+            top_label(str): The top label of the tile.
+            main_label(str): The main label of the tile.
+            description(str): The description of the tile.
+            action_button(callable): The action to be performed when the button is clicked.
+            show_selector(bool): Whether to show a selector or not.
+            selector_items(list[str]): The items to be shown in the selector.
+        """
+
+        tile = LaunchTile(
+            icon_path=icon_path,
+            top_label=top_label,
+            main_label=main_label,
+            description=description,
+            show_selector=show_selector,
+        )
+        tile.setFixedSize(*self.TILE_SIZE)
+        if action_button:
+            tile.action_button.clicked.connect(action_button)
+        if show_selector and selector_items:
+            tile.selector.addItems(selector_items)
+        self.central_widget.layout.addWidget(tile)
+
+        self.tiles[name] = tile
 
     def launch(
         self,
@@ -270,6 +308,12 @@ class LaunchWindow(BECMainWindow):
                 auto_update = kwargs.pop("auto_update", None)
                 return self._launch_auto_update(auto_update)
 
+            if launch_script == "widget":
+                widget = kwargs.pop("widget", None)
+                if widget is None:
+                    raise ValueError("Widget name must be provided.")
+                return self._launch_widget(widget)
+
             launch = getattr(bw_launch, launch_script, None)
             if launch is None:
                 raise ValueError(f"Launch script {launch_script} not found.")
@@ -287,6 +331,7 @@ class LaunchWindow(BECMainWindow):
             else:
                 window = BECMainWindow()
                 window.setCentralWidget(result_widget)
+                window.setWindowTitle(f"BEC - {result_widget.objectName()}")
                 window.show()
             return result_widget
 
@@ -335,11 +380,28 @@ class LaunchWindow(BECMainWindow):
         window.show()
         return window
 
+    def _launch_widget(self, widget: type[BECWidget]) -> QWidget:
+        name = pascal_to_snake(widget.__name__)
+
+        WidgetContainerUtils.raise_for_invalid_name(name)
+
+        window = BECMainWindow()
+
+        widget_instance = widget(root_widget=True, object_name=name)
+        assert isinstance(widget_instance, QWidget)
+        QApplication.processEvents()
+
+        window.setCentralWidget(widget_instance)
+        window.resize(window.minimumSizeHint())
+        window.setWindowTitle(f"BEC - {widget_instance.objectName()}")
+        window.show()
+        return window
+
     def apply_theme(self, theme: str):
         """
         Change the theme of the application.
         """
-        for tile in self.tiles:
+        for tile in self.tiles.values():
             tile.apply_theme(theme)
 
         super().apply_theme(theme)
@@ -348,13 +410,24 @@ class LaunchWindow(BECMainWindow):
         """
         Open the auto update window.
         """
-        if self.tile_auto_update.selector is None:
+        if self.tiles["auto_update"].selector is None:
             auto_update = None
         else:
-            auto_update = self.tile_auto_update.selector.currentText()
+            auto_update = self.tiles["auto_update"].selector.currentText()
             if auto_update == "Default":
                 auto_update = None
         return self.launch("auto_update", auto_update=auto_update)
+
+    def _open_widget(self):
+        """
+        Open a widget from the available widgets.
+        """
+        if self.tiles["widget"].selector is None:
+            return
+        widget = self.tiles["widget"].selector.currentText()
+        if widget not in self.available_widgets:
+            raise ValueError(f"Widget {widget} not found in available widgets.")
+        return self.launch("widget", widget=self.available_widgets[widget])
 
     @SafeSlot(popup_error=True)
     def _open_custom_ui_file(self):

@@ -64,7 +64,7 @@ def test_launch_window_launch_ui_file_raises_for_qmainwindow(bec_launch_window):
 
 def test_launch_window_launch_default_auto_update(bec_launch_window):
     # Mock the auto update selection
-    bec_launch_window.tile_auto_update.selector.setCurrentText("Default")
+    bec_launch_window.tiles["auto_update"].selector.setCurrentText("Default")
 
     # Call the method to launch the auto update
     res = bec_launch_window._open_auto_update()
@@ -82,11 +82,11 @@ def test_launch_window_launch_plugin_auto_update(bec_launch_window):
     class PluginAutoUpdate(AutoUpdates): ...
 
     bec_launch_window.available_auto_updates = {"PluginAutoUpdate": PluginAutoUpdate}
-    bec_launch_window.tile_auto_update.selector.clear()
-    bec_launch_window.tile_auto_update.selector.addItems(
+    bec_launch_window.tiles["auto_update"].selector.clear()
+    bec_launch_window.tiles["auto_update"].selector.addItems(
         list(bec_launch_window.available_auto_updates.keys()) + ["Default"]
     )
-    bec_launch_window.tile_auto_update.selector.setCurrentText("PluginAutoUpdate")
+    bec_launch_window.tiles["auto_update"].selector.setCurrentText("PluginAutoUpdate")
     res = bec_launch_window._open_auto_update()
     assert isinstance(res, PluginAutoUpdate)
     assert res.windowTitle() == "BEC - PluginAutoUpdate"
