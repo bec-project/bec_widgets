@@ -82,3 +82,52 @@ def test_bec_connector_submit_task(bec_connector):
     while not completed:
         QApplication.processEvents()
         time.sleep(0.1)
+
+
+def test_bec_connector_change_object_name(bec_connector):
+    # Store the original object name and RPC register state
+    original_name = bec_connector.objectName()
+    original_gui_id = bec_connector.gui_id
+
+    # Call the method with a new name
+    new_name = "new_test_name"
+    bec_connector.change_object_name(new_name)
+
+    # Process events to allow the single shot timer to execute
+    QApplication.processEvents()
+
+    # Verify that the object name was changed correctly
+    assert bec_connector.objectName() == new_name
+    assert bec_connector.object_name == new_name
+
+    # Verify that the object is registered in the RPC register with the new name
+    assert bec_connector.rpc_register.object_is_registered(bec_connector)
+
+    # Verify that the object with the original name is no longer registered
+    # The object should still have the same gui_id
+    assert bec_connector.gui_id == original_gui_id
+    # Check that no object with the original name exists in the RPC register
+    all_objects = bec_connector.rpc_register.list_all_connections().values()
+    assert not any(obj.objectName() == original_name for obj in all_objects)
+
+    # Store the current name for the next test
+    previous_name = bec_connector.objectName()
+
+    # Test with spaces and hyphens
+    name_with_spaces_and_hyphens = "test name-with-hyphens"
+    expected_name = "test_name_with_hyphens"
+    bec_connector.change_object_name(name_with_spaces_and_hyphens)
+
+    # Process events to allow the single shot timer to execute
+    QApplication.processEvents()
+
+    # Verify that the object name was changed correctly with replacements
+    assert bec_connector.objectName() == expected_name
+    assert bec_connector.object_name == expected_name
+
+    # Verify that the object is still registered in the RPC register after the second name change
+    assert bec_connector.rpc_register.object_is_registered(bec_connector)
+
+    # Verify that the object with the previous name is no longer registered
+    all_objects = bec_connector.rpc_register.list_all_connections().values()
+    assert not any(obj.objectName() == previous_name for obj in all_objects)

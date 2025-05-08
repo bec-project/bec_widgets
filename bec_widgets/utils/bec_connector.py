@@ -205,6 +205,17 @@ class BECConnector:
                 f"This is not necessarily an error as the parent may be deleted before the child and includes already a cleanup. The following exception was raised:\n{content}"
             )
 
+    def change_object_name(self, name: str) -> None:
+        """
+        Change the object name of the widget. Unregister old name and register the new one.
+
+        Args:
+            name (str): The new object name.
+        """
+        self.rpc_register.remove_rpc(self)
+        self.setObjectName(name.replace("-", "_").replace(" ", "_"))
+        QTimer.singleShot(0, self._update_object_name)
+
     def _update_object_name(self) -> None:
         """
         Enforce a unique object name among siblings and register the object for RPC.
