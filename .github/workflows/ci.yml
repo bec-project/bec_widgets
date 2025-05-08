@@ -4,3 +4,6 @@ on: [push]
 jobs:
   formatter:
     uses: ./.github/workflows/formatter.yml
+
+  unit-test:
+    uses: ./.github/workflows/pytest.yml
