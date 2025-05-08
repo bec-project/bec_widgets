@@ -1,0 +1,6 @@
+name: Full CI
+on: [push]
+
+jobs:
+  formatter:
+    uses: ./.github/workflows/formatter.yml
