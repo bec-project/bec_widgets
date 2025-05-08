@@ -156,8 +156,6 @@ class Image(PlotBase):
         # ---------------- ROI Manager integration ----------------
         # Headless controller keeps the canonical list.
         self.roi_controller = ROIController(colormap=self.color_map)
-        # TODO make as property for RPC
-        # self.rois = self.roi_controller.rois
 
         # TODO mock data to setup the image
         self._main_image.set_data(np.random.rand(100, 100))
