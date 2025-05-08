@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pyqtgraph as pg
+from PySide6.QtCore import QTimer
 from pyqtgraph import TextItem, mkPen
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtWidgets import (
@@ -124,11 +125,13 @@ class BaseROI(BECConnector):
     def name(self) -> str:
         return self._name
 
+    # TODO implement name change dynamically from CLI
     @name.setter
     def name(self, new: str):
         if new != self._name:
             self._name = new
             self.nameChanged.emit(new)
+            self.change_object_name(new)
 
     @property
     def line_color(self) -> str:
