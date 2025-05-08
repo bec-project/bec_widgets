@@ -42,6 +42,6 @@ jobs:
       - name: Run Pytest with Coverage
         run: |
           pip install coverage pytest pytest-random-order
-          coverage run --source=./ophyd_devices --omit=*/ophyd_devices/tests/* -m pytest -v --junitxml=report.xml --random-order --full-trace ./tests
+          coverage run --source=./bec_widgets -m pytest -v --junitxml=report.xml --maxfail=2 --random-order --full-trace ./tests/unit_tests
           coverage report
           coverage xml
