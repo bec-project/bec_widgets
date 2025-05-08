@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import pyqtgraph as pg
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QPushButton
 from pyqtgraph import TextItem, mkPen
 from qtpy.QtCore import QObject, Qt, Signal
 from qtpy.QtWidgets import QColorDialog, QToolButton, QTreeWidget, QTreeWidgetItem, QWidget
@@ -10,6 +12,50 @@ from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.toolbar import MaterialIconAction, ModularToolBar
 from bec_widgets.widgets.utility.visual.colormap_widget.colormap_widget import BECColorMapWidget
+
+
+# TODO temp will be taken from the curve_tree.py
+class ColorButton(QPushButton):
+    """A QPushButton subclass that displays a color.
+
+    The background is set to the given color and the button text is the hex code.
+    The text color is chosen automatically (black if the background is light, white if dark)
+    to guarantee good readability.
+    """
+
+    def __init__(self, color="#000000", parent=None):
+        """Initialize the color button.
+
+        Args:
+            color (str): The initial color in hex format (e.g., '#000000').
+            parent: Optional QWidget parent.
+        """
+        super().__init__(parent)
+        self.set_color(color)
+
+    def set_color(self, color):
+        """Set the button's color and update its appearance.
+
+        Args:
+            color (str or QColor): The new color to assign.
+        """
+        if isinstance(color, QColor):
+            self._color = color.name()
+        else:
+            self._color = color
+        self._update_appearance()
+
+    def color(self):
+        """Return the current color in hex."""
+        return self._color
+
+    def _update_appearance(self):
+        """Update the button style based on the background color's brightness."""
+        c = QColor(self._color)
+        brightness = c.lightnessF()
+        text_color = "#000000" if brightness > 0.5 else "#FFFFFF"
+        self.setStyleSheet(f"background-color: {self._color}; color: {text_color};")
+        self.setText(self._color)
 
 
 class LabelAdorner:
@@ -891,13 +937,10 @@ class ROIManagerTree(BECWidget, QWidget):
         if controller is None:
             controller = ROIController()
         self.controller = controller
-        # no longer maintain self.all_rois or color_buffer here
 
-        # Ensure the widget has a layout before building children
         self.layout = QVBoxLayout(self)
         self.roi_items: dict[BaseROI, QTreeWidgetItem] = {}
 
-        # build toolbar + tree as before
         self._init_toolbar()
         self._init_tree()
 
@@ -932,7 +975,7 @@ class ROIManagerTree(BECWidget, QWidget):
         colormap selector widget. Connects signals from these controls to the
         appropriate handler methods.
         """
-        tb = ModularToolBar(parent=self, target_widget=self, orientation="horizontal")
+        self.toolbar = ModularToolBar(parent=self, target_widget=self, orientation="horizontal")
         add_rect = MaterialIconAction(
             icon_name="add_box", tooltip="Add Rect ROI", checkable=False, parent=self
         )
@@ -948,14 +991,14 @@ class ROIManagerTree(BECWidget, QWidget):
         renorm = MaterialIconAction(
             icon_name="palette", tooltip="Renormalize Colors", checkable=False, parent=self
         )
-        tb.add_action("add_rect", add_rect, self)
-        tb.add_action("add_circle", add_circle, self)
-        tb.add_action("expand", expand, self)
-        tb.add_action("collapse", collapse, self)
-        tb.add_action("renorm", renorm, self)
-        tb.addWidget(QWidget())  # spacer
+        self.toolbar.add_action("add_rect", add_rect, self)
+        self.toolbar.add_action("add_circle", add_circle, self)
+        self.toolbar.add_action("expand", expand, self)
+        self.toolbar.add_action("collapse", collapse, self)
+        self.toolbar.add_action("renorm", renorm, self)
+        self.toolbar.addWidget(QWidget())  # spacer
         cmap = BECColorMapWidget(cmap=self.controller.colormap)
-        tb.addWidget(cmap)
+        self.toolbar.addWidget(cmap)
         add_rect.action.triggered.connect(lambda: self.add_new_roi("rect"))
         add_circle.action.triggered.connect(lambda: self.add_new_roi("circle"))
         expand.action.triggered.connect(lambda: self.tree.expandAll())
@@ -963,8 +1006,8 @@ class ROIManagerTree(BECWidget, QWidget):
         renorm.action.triggered.connect(lambda: self.controller.renormalize_colors())
         cmap.colormap_changed_signal.connect(self._on_colormap_changed)
 
-        self.layout.addWidget(tb)
-        self.toolbar = tb
+        self.layout.addWidget(self.toolbar)
+        self.toolbar = self.toolbar
 
     def _init_tree(self):
         """
@@ -1139,6 +1182,163 @@ class ROIManagerTree(BECWidget, QWidget):
                     self.tree.takeTopLevelItem(idx)
 
 
+# -----------------------------------------------------------------------------
+# New alternative manager: ROIPropertyTree
+# -----------------------------------------------------------------------------
+from qtpy.QtWidgets import QSpinBox, QLabel
+
+
+class ROIPropertyTree(BECWidget, QWidget):
+    """
+    Two-column tree:  [ROI]  [Properties]
+
+    • Top-level = ROI name (editable) + color button.
+    • Children  =   type, line-width (spin box), coordinates (auto-updating).
+    """
+
+    PLUGIN = False
+    RPC = False
+
+    COL_ROI, COL_PROPS = 0, 1
+
+    def __init__(self, plot: pg.PlotItem, controller: ROIController | None = None, parent=None):
+        if controller is None:
+            controller = ROIController()
+        super().__init__(
+            parent=parent, config=ConnectionConfig(widget_class=self.__class__.__name__)
+        )
+        self.plot = plot
+        self.controller = controller
+        self.roi_items: dict[BaseROI, QTreeWidgetItem] = {}
+
+        self.layout = QVBoxLayout(self)
+        self._init_toolbar()
+        self._init_tree()
+
+        # connect controller
+        c = self.controller
+        c.roiAdded.connect(self._on_roi_added)
+        c.roiRemoved.connect(self._on_roi_removed)
+        c.cleared.connect(self.tree.clear)
+
+        # initial load
+        for r in c.rois:
+            self._on_roi_added(r)
+
+    # --------------------------------------------------------------------- UI
+    def _init_toolbar(self):
+        tb = ModularToolBar(self, self, orientation="horizontal")
+        for icon, tip, slot in (
+            ("add_box", "Add Rect ROI", lambda: self._add_rect()),
+            ("panorama_fish_eye", "Add Circle ROI", lambda: self._add_circle()),
+            ("unfold_more", "Expand All", self.treeExpandAll),
+            ("unfold_less", "Collapse All", self.treeCollapseAll),
+            ("palette", "Renormalize Colors", self.controller.renormalize_colors),
+        ):
+            act = MaterialIconAction(icon, tip, False, self)
+            tb.add_action(tip, act, self)
+            act.action.triggered.connect(slot)
+        # colormap widget
+        cmap = BECColorMapWidget(cmap=self.controller.colormap)
+        tb.addWidget(QWidget())  # spacer
+        tb.addWidget(cmap)
+        cmap.colormap_changed_signal.connect(self.controller.set_colormap)
+        self.layout.addWidget(tb)
+
+    def _init_tree(self):
+        self.tree = QTreeWidget()
+        self.tree.setColumnCount(2)
+        self.tree.setHeaderLabels(["ROI", "Properties"])
+        self.tree.setAlternatingRowColors(True)
+        self.tree.itemChanged.connect(self._on_item_edited)
+        self.layout.addWidget(self.tree)
+
+    # ----------------------------------------------------------------- helpers
+    def _add_rect(self):
+        r = RectangularROI(pos=[10, 10], size=[50, 50])
+        self.plot.addItem(r)
+        self.controller.add_roi(r)
+
+    def _add_circle(self):
+        r = CircularROI(pos=[10, 10], size=[50, 50])
+        self.plot.addItem(r)
+        self.controller.add_roi(r)
+
+    # --------------------------------------------------------- controller slots
+    def _on_roi_added(self, roi: BaseROI):
+        # parent row
+        parent = QTreeWidgetItem(self.tree, [roi.name])
+        parent.setFlags(parent.flags() | Qt.ItemIsEditable)
+        # color button
+        color_btn = ColorButton(roi.line_color)
+        self.tree.setItemWidget(parent, self.COL_PROPS, color_btn)
+        color_btn.clicked.connect(lambda: self._pick_color(roi, color_btn))
+
+        # child rows
+        type_item = QTreeWidgetItem(parent, ["Type", roi.__class__.__name__])
+        width_item = QTreeWidgetItem(parent, ["Line width"])
+        width_spin = QSpinBox()
+        width_spin.setRange(1, 20)
+        width_spin.setValue(roi.line_width)
+        self.tree.setItemWidget(width_item, self.COL_PROPS, width_spin)
+        width_spin.valueChanged.connect(lambda v, r=roi: setattr(r, "line_width", v))
+
+        coord_item = QTreeWidgetItem(parent, ["Coordinates", str(roi.get_coordinates(typed=True))])
+
+        # keep dict refs
+        self.roi_items[roi] = parent
+
+        # update coord text live
+        if isinstance(roi, RectangularROI):
+            sig = roi.edgesChanged
+            fmt = lambda r: str(r.get_coordinates(typed=True))
+        else:
+            sig = roi.centerChanged
+            fmt = lambda r: str(r.get_coordinates(typed=True))
+        sig.connect(lambda *_, r=roi, it=coord_item: it.setText(self.COL_PROPS, fmt(r)))
+
+        # sync width edits back to spinbox
+        roi.penChanged.connect(lambda r=roi, sp=width_spin: sp.setValue(r.line_width))
+        roi.nameChanged.connect(lambda n, itm=parent: itm.setText(self.COL_ROI, n))
+
+        # color changes
+        roi.penChanged.connect(lambda r=roi, b=color_btn: b.set_color(r.line_color))
+
+        # expand parent by default
+        self.tree.expandItem(parent)
+        for c in range(2):
+            self.tree.resizeColumnToContents(c)
+
+    def _on_roi_removed(self, roi: BaseROI):
+        item = self.roi_items.pop(roi, None)
+        if item:
+            idx = self.tree.indexOfTopLevelItem(item)
+            self.tree.takeTopLevelItem(idx)
+
+    # ---------------------------------------------------------- event handlers
+    def _pick_color(self, roi: BaseROI, btn: "ColorButton"):
+        clr = QColorDialog.getColor(QColor(roi.line_color), self, "Select ROI Color")
+        if clr.isValid():
+            roi.line_color = clr.name()
+            btn.set_color(clr)
+
+    def _on_item_edited(self, item: QTreeWidgetItem, col: int):
+        if col != self.COL_ROI:
+            return
+        # find which roi
+        for r, it in self.roi_items.items():
+            if it is item:
+                r.name = item.text(self.COL_ROI)
+                break
+
+    # Qt convenience
+    def treeExpandAll(self):
+        self.tree.expandAll()
+
+    def treeCollapseAll(self):
+        self.tree.collapseAll()
+
+
 # Demo
 if __name__ == "__main__":
     import sys
@@ -1163,6 +1363,9 @@ if __name__ == "__main__":
     mgr = ROIManagerTree(plot)
     mgr.setFixedWidth(350)
     ml.addWidget(mgr)
-    win.resize(800, 600)
+    mgr_new = ROIPropertyTree(plot)
+    mgr_new.setFixedWidth(350)
+    ml.addWidget(mgr_new)
+    win.resize(1500, 600)
     win.show()
     sys.exit(app.exec_())
