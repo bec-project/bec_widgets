@@ -11,6 +11,7 @@ jobs:
       OPHYD_DEVICES_BRANCH: main   # Set the branch you want for ophyd_devices
       PROJECT_PATH: ${{ github.repository }}
       QTWEBENGINE_DISABLE_SANDBOX: 1
+      QT_QPA_PLATFORM: "offscreen"
 
     steps:
       - uses: actions/checkout@v4
