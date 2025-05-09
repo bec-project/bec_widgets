@@ -190,7 +190,7 @@ class BaseROI(BECConnector):
         object_name = name.replace("-", "_").replace(" ", "_") if name else None
         super().__init__(object_name=object_name, config=config, gui_id=gui_id, **pg_kwargs)
 
-        self._name = name or f"ROI {self.__class__.__name__}"
+        self._name = name or "ROI"
         self._line_color = line_color or "#ffffff"
         self._line_width = line_width
         self._description = True
@@ -760,6 +760,8 @@ class ROIController(QObject):
         self._rois.append(roi)
         self._rebuild_color_buffer()
         idx = len(self._rois) - 1
+        if roi.name == "ROI" or roi.name.startswith("ROI "):
+            roi.name = f"ROI {idx}"
         color = self._colors[idx]
         roi.line_color = color
         # ensure line width default is at least 3 if not previously set
@@ -1283,19 +1285,43 @@ class ROIPropertyTree(BECWidget, QWidget):
         self.tree.setItemWidget(width_item, self.COL_PROPS, width_spin)
         width_spin.valueChanged.connect(lambda v, r=roi: setattr(r, "line_width", v))
 
-        coord_item = QTreeWidgetItem(parent, ["Coordinates", str(roi.get_coordinates(typed=True))])
+        # --- Step 2: Insert separate coordinate rows (one per value)
+        coord_rows = {}
+        coords = roi.get_coordinates(typed=True)  # e.g. {'left':x0, 'top':y0,...}
+
+        for key, value in coords.items():
+            # Human-readable label: “center x” from “center_x”, etc.
+            label = key.replace("_", " ").title()
+            if isinstance(value, (tuple, list)):
+                val_text = "(" + ", ".join(f"{v:.2f}" for v in value) + ")"
+            elif isinstance(value, (int, float)):
+                val_text = f"{value:.2f}"
+            else:
+                val_text = str(value)
+            row = QTreeWidgetItem(parent, [label, val_text])
+            coord_rows[key] = row
 
         # keep dict refs
         self.roi_items[roi] = parent
 
-        # update coord text live
+        # --- Step 3: Update coordinates on ROI movement
+        def _update_coords():
+            c_dict = roi.get_coordinates(typed=True)
+            for k, row in coord_rows.items():
+                if k in c_dict:
+                    val = c_dict[k]
+                    if isinstance(val, (tuple, list)):
+                        text = "(" + ", ".join(f"{v:.2f}" for v in val) + ")"
+                    elif isinstance(val, (int, float)):
+                        text = f"{val:.2f}"
+                    else:
+                        text = str(val)
+                    row.setText(self.COL_PROPS, text)
+
         if isinstance(roi, RectangularROI):
-            sig = roi.edgesChanged
-            fmt = lambda r: str(r.get_coordinates(typed=True))
+            roi.edgesChanged.connect(_update_coords)
         else:
-            sig = roi.centerChanged
-            fmt = lambda r: str(r.get_coordinates(typed=True))
-        sig.connect(lambda *_, r=roi, it=coord_item: it.setText(self.COL_PROPS, fmt(r)))
+            roi.centerChanged.connect(_update_coords)
 
         # sync width edits back to spinbox
         roi.penChanged.connect(lambda r=roi, sp=width_spin: sp.setValue(r.line_width))
