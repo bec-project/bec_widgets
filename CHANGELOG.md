@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.3.0 (2025-05-09)
+
+### Features
+
+- **bec_connector**: Ability to change object name during runtime
+  ([`dc151cd`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/dc151cdfe39f1f0507eeee307a35c1677ae4d8c5))
+
+
 ## v2.2.0 (2025-05-09)
 
 ### Features
