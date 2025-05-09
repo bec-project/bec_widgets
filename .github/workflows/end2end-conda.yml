@@ -35,6 +35,8 @@ jobs:
           git clone --branch $OPHYD_DEVICES_BRANCH https://gitlab.psi.ch/bec/ophyd_devices.git
           export OHPYD_DEVICES_PATH=$PWD/ophyd_devices
           cd ./bec
+          conda create -q -n test-environment python=3.11
+          conda init bash
           source ./bin/install_bec_dev.sh -t
           cd ../
           pip install -e ./ophyd_devices

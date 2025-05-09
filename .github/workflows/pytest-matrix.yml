@@ -40,7 +40,7 @@ jobs:
           pip install -e ./ophyd_devices
           pip install -e ./bec/bec_lib[dev]
           pip install -e ./bec/bec_ipython_client
-          pip install -e .[dev, pyside6]
+          pip install -e .[dev,pyside6]
 
       - name: Run Pytest
         run: |
