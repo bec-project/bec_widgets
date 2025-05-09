@@ -1,0 +1,15 @@
+name: Full CI
+on: [push]
+
+jobs:
+  formatter:
+    uses: ./.github/workflows/formatter.yml
+
+  unit-test:
+    uses: ./.github/workflows/pytest.yml
+
+  unit-test-matrix:
+    uses: ./.github/workflows/pytest-matrix.yml
+
+  end2end-test:
+    uses: ./.github/workflows/end2end-conda.yml

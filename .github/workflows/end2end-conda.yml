@@ -1,0 +1,48 @@
+name: Run Pytest with Coverage
+on: [workflow_call]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+
+    env:
+      CHILD_PIPELINE_BRANCH: main  # Set the branch you want for ophyd_devices
+      BEC_CORE_BRANCH: main        # Set the branch you want for bec
+      OPHYD_DEVICES_BRANCH: main   # Set the branch you want for ophyd_devices
+      PROJECT_PATH: ${{ github.repository }}
+      QTWEBENGINE_DISABLE_SANDBOX: 1
+      QT_QPA_PLATFORM: "offscreen"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Conda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+            auto-update-conda: true
+            auto-activate-base: true
+            python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1 libegl1 x11-utils libxkbcommon-x11-0 libdbus-1-3 xvfb
+          sudo apt-get -y install libnss3 libxdamage1 libasound2t64 libatomic1 libxcursor1
+
+      - name: Conda install and run pytest
+        run: |
+          echo -e "\033[35;1m Using branch $BEC_CORE_BRANCH of BEC CORE \033[0;m";
+          git clone --branch $BEC_CORE_BRANCH https://gitlab.psi.ch/bec/bec.git
+          echo -e "\033[35;1m Using branch $OPHYD_DEVICES_BRANCH of OPHYD_DEVICES \033[0;m";
+          git clone --branch $OPHYD_DEVICES_BRANCH https://gitlab.psi.ch/bec/ophyd_devices.git
+          export OHPYD_DEVICES_PATH=$PWD/ophyd_devices
+          cd ./bec
+          conda create -q -n test-environment python=3.11
+          source ./bin/install_bec_dev.sh -t
+          cd ../
+          pip install -e ./ophyd_devices
+          pip install -e .[dev,pyside6]
+          pytest -v --files-path ./ --start-servers --random-order  ./tests/end-2-end
