@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pyqtgraph as pg
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QPushButton
+from PySide6.QtWidgets import QPushButton, QSpinBox
 from pyqtgraph import TextItem, mkPen
 from qtpy.QtCore import QObject, Qt, Signal
 from qtpy.QtWidgets import QColorDialog, QToolButton, QTreeWidget, QTreeWidgetItem, QWidget
@@ -163,7 +163,7 @@ class BaseROI(BECConnector):
         # ROI-specific
         name: str | None = None,
         line_color: str | None = None,
-        line_width: int = 3,
+        line_width: int = 10,
         # all remaining pg.*ROI kwargs (pos, size, pen, …)
         **pg_kwargs,
     ):
@@ -224,7 +224,6 @@ class BaseROI(BECConnector):
         """
         return self._name
 
-    # TODO implement name change dynamically from CLI
     @name.setter
     def name(self, new: str):
         """
@@ -386,7 +385,7 @@ class RectangularROI(BaseROI, pg.RectROI):
         # ROI specifics
         label: str | None = None,
         line_color: str | None = None,
-        line_width: int = 3,
+        line_width: int = 10,
         **extra_pg,
     ):
         """
@@ -555,7 +554,7 @@ class CircularROI(BaseROI, pg.CircleROI):
         parent_image: BECConnector | None = None,
         label: str | None = None,
         line_color: str | None = None,
-        line_width: int = 3,
+        line_width: int = 10,
         **extra_pg,
     ):
         """
@@ -766,7 +765,7 @@ class ROIController(QObject):
         roi.line_color = color
         # ensure line width default is at least 3 if not previously set
         if getattr(roi, "line_width", 0) < 1:
-            roi.line_width = 3
+            roi.line_width = 10
         self.roiAdded.emit(roi)
 
     def remove_roi(self, roi: BaseROI):
@@ -889,305 +888,6 @@ class ROIController(QObject):
             list[BaseROI]: A list of all ROIs currently managed by this controller.
         """
         return list(self._rois)
-
-
-class ROIManagerTree(BECWidget, QWidget):
-    """
-    Tree-based GUI widget for managing Region of Interest (ROI) instances.
-
-    This widget provides a user interface for creating, viewing, and manipulating
-    ROIs on an image plot. It includes a toolbar with buttons for adding rectangular
-    and circular ROIs, expanding/collapsing the tree view, and changing the colormap.
-    The tree view displays all ROIs with options to rename them, print their data,
-    change their colors, and remove them.
-
-    Attributes:
-        PLUGIN (bool): Flag indicating if this class is a plugin for BECDesigner.
-        RPC (bool): Flag indicating if remote procedure calls are enabled.
-    """
-
-    PLUGIN = False
-    RPC = False
-
-    def __init__(
-        self,
-        plot,
-        controller: ROIController | None = None,
-        parent=None,
-        config: ConnectionConfig = None,
-        **kwargs,
-    ):
-        """
-        Initializes the ROI Manager Tree widget.
-
-        Sets up the widget with a plot reference, ROI controller, and UI components
-        including a toolbar and tree view for managing ROIs.
-
-        Args:
-            plot: The plot widget where ROIs will be displayed.
-            controller (ROIController | None, optional): The controller for managing ROIs.
-                If None, a new ROIController is created. Defaults to None.
-            parent: The parent widget. Defaults to None.
-            config (ConnectionConfig, optional): Configuration for BECWidget.
-                If None, a default configuration is created. Defaults to None.
-            **kwargs: Additional keyword arguments passed to the parent class.
-        """
-        if config is None:
-            config = ConnectionConfig(widget_class=self.__class__.__name__)
-        super().__init__(parent=parent, config=config, **kwargs)
-        self.plot = plot
-        if controller is None:
-            controller = ROIController()
-        self.controller = controller
-
-        self.layout = QVBoxLayout(self)
-        self.roi_items: dict[BaseROI, QTreeWidgetItem] = {}
-
-        self._init_toolbar()
-        self._init_tree()
-
-        # subscribe to the headless controller:
-        self.controller.roiAdded.connect(self._on_roi_added)
-        self.controller.roiRemoved.connect(self._on_roi_removed)
-        self.controller.cleared.connect(self.clear)
-        self.controller.paletteChanged.connect(lambda cmap: self.controller.renormalize_colors())
-
-        # initial population
-        for roi in self.controller.rois:
-            self._add_roi_item(roi)
-
-    @property
-    def all_rois(self):
-        """
-        Gets all ROIs managed by this widget's controller.
-
-        This is a convenience property that delegates to the controller's rois property.
-
-        Returns:
-            list[BaseROI]: A list of all ROIs currently managed by the controller.
-        """
-        return self.controller.rois
-
-    def _init_toolbar(self):
-        """
-        Initializes the toolbar with buttons and widgets for ROI management.
-
-        Creates a toolbar with buttons for adding rectangular and circular ROIs,
-        expanding and collapsing the tree view, renormalizing colors, and a
-        colormap selector widget. Connects signals from these controls to the
-        appropriate handler methods.
-        """
-        self.toolbar = ModularToolBar(parent=self, target_widget=self, orientation="horizontal")
-        add_rect = MaterialIconAction(
-            icon_name="add_box", tooltip="Add Rect ROI", checkable=False, parent=self
-        )
-        add_circle = MaterialIconAction(
-            icon_name="panorama_fish_eye", tooltip="Add Circle ROI", checkable=False, parent=self
-        )
-        expand = MaterialIconAction(
-            icon_name="unfold_more", tooltip="Expand All", checkable=False, parent=self
-        )
-        collapse = MaterialIconAction(
-            icon_name="unfold_less", tooltip="Collapse All", checkable=False, parent=self
-        )
-        renorm = MaterialIconAction(
-            icon_name="palette", tooltip="Renormalize Colors", checkable=False, parent=self
-        )
-        self.toolbar.add_action("add_rect", add_rect, self)
-        self.toolbar.add_action("add_circle", add_circle, self)
-        self.toolbar.add_action("expand", expand, self)
-        self.toolbar.add_action("collapse", collapse, self)
-        self.toolbar.add_action("renorm", renorm, self)
-        self.toolbar.addWidget(QWidget())  # spacer
-        cmap = BECColorMapWidget(cmap=self.controller.colormap)
-        self.toolbar.addWidget(cmap)
-        add_rect.action.triggered.connect(lambda: self.add_new_roi("rect"))
-        add_circle.action.triggered.connect(lambda: self.add_new_roi("circle"))
-        expand.action.triggered.connect(lambda: self.tree.expandAll())
-        collapse.action.triggered.connect(lambda: self.tree.collapseAll())
-        renorm.action.triggered.connect(lambda: self.controller.renormalize_colors())
-        cmap.colormap_changed_signal.connect(self._on_colormap_changed)
-
-        self.layout.addWidget(self.toolbar)
-        self.toolbar = self.toolbar
-
-    def _init_tree(self):
-        """
-        Initializes the tree widget for displaying and managing ROIs.
-
-        Creates a QTreeWidget with columns for the ROI name, print button,
-        color button, and remove button. Sets up edit triggers to allow
-        renaming ROIs by double-clicking or pressing edit keys, and connects
-        the itemChanged signal to handle ROI name changes.
-        """
-        tw = QTreeWidget()
-        tw.setColumnCount(4)
-        tw.setHeaderLabels(["Name", "Print", "Color", "Remove"])
-        tw.setEditTriggers(QTreeWidget.DoubleClicked | QTreeWidget.EditKeyPressed)
-        tw.itemChanged.connect(self._on_item_changed)
-        self.layout.addWidget(tw)
-        self.tree = tw
-
-    def add_new_roi(self, kind: str = "rect"):
-        """
-        Creates and adds a new ROI of the specified kind.
-
-        Creates either a rectangular or circular ROI with default position and size,
-        assigns it a name based on the current number of ROIs, and adds it to the
-        controller.
-
-        Args:
-            kind (str, optional): The type of ROI to create, either "rect" for rectangular
-                or any other value for circular. Defaults to "rect".
-        """
-        idx = len(self.all_rois) + 1
-        name = f"ROI {idx}"
-        if kind == "rect":
-            roi = RectangularROI(pos=[10, 10], size=[50, 50], line_width=3, label=name)
-        else:
-            roi = CircularROI(pos=[10, 10], size=[50, 50], line_width=3, label=name)
-        self.controller.add_roi(roi)
-
-    def _on_roi_added(self, roi):
-        """
-        Handles the event when a new ROI is added to the controller.
-
-        This method is called when the controller's roiAdded signal is emitted.
-        It adds the ROI to the plot if it's not already there, and adds a
-        corresponding item to the tree view.
-
-        Args:
-            roi (BaseROI): The ROI that was added to the controller.
-        """
-        # Only add to plot if not already present
-        if not hasattr(roi, "scene") or roi.scene() is None:
-            self.plot.addItem(roi)
-        self._add_roi_item(roi)
-
-    def _on_roi_removed(self, roi):
-        """
-        Handles the event when an ROI is removed from the controller.
-
-        This method is called when the controller's roiRemoved signal is emitted.
-        It removes the corresponding item from the tree view.
-
-        Args:
-            roi (BaseROI): The ROI that was removed from the controller.
-        """
-        item = self.roi_items.pop(roi, None)
-        if item is not None:
-            idx = self.tree.indexOfTopLevelItem(item)
-            if idx != -1:
-                self.tree.takeTopLevelItem(idx)
-
-    def _add_roi_item(self, roi: BaseROI):
-        """
-        Adds an ROI to the tree widget and sets up its UI controls.
-
-        Creates a tree item for the ROI with buttons for printing data, changing color,
-        and removing the ROI. Also connects signals from the ROI to print coordinate
-        information when it's moved or released.
-
-        Args:
-            roi (BaseROI): The ROI to add to the tree widget.
-        """
-        item = QTreeWidgetItem(self.tree, [roi.name])
-        item.setFlags(item.flags() | Qt.ItemIsEditable)
-        pb = QToolButton(self)
-        pb.setText("📐")
-        cb = QToolButton(self)
-        cb.setText("🎨")
-        rb = QToolButton(self)
-        rb.setText("✖")
-        self.tree.setItemWidget(item, 1, pb)
-        self.tree.setItemWidget(item, 2, cb)
-        self.tree.setItemWidget(item, 3, rb)
-        self.roi_items[roi] = item
-
-        # Hook printing on move/release
-        if isinstance(roi, RectangularROI):
-            roi.edgesChanged.connect(
-                lambda x0, y0, x1, y1, name=roi.name: print(f"{name} moved: {x0},{y0} → {x1},{y1}")
-            )
-            roi.edgesReleased.connect(
-                lambda x0, y0, x1, y1, name=roi.name: print(
-                    f"{name} released: {x0},{y0} → {x1},{y1}"
-                )
-            )
-        else:
-            roi.centerChanged.connect(
-                lambda cx, cy, d, name=roi.name: print(
-                    f"{name} moved: center=({cx:.1f},{cy:.1f}), d={d:.1f}"
-                )
-            )
-            roi.centerReleased.connect(
-                lambda cx, cy, d, name=roi.name: print(
-                    f"{name} released: center=({cx:.1f},{cy:.1f}), d={d:.1f}"
-                )
-            )
-
-        # Buttons
-        pb.clicked.connect(lambda *_: self._print_roi(roi))
-        cb.clicked.connect(lambda *_: self._change_color(roi))
-        rb.clicked.connect(lambda *_: self._remove_roi(roi))
-
-        # adjust column widths
-        for c in range(self.tree.columnCount()):
-            self.tree.resizeColumnToContents(c)
-
-    def _on_item_changed(self, item, col):
-        if col != 0:
-            return
-        new_name = item.text(0)
-        for roi, it in self.roi_items.items():
-            if it is item:
-                roi.name = new_name
-                break
-
-    def _print_roi(self, roi):
-        coords = roi.get_coordinates()
-        try:
-            data = roi.get_data_from_image()  # auto-detect image
-            info = f"mean={data.mean():.3g}, N={data.size}"
-            data = f"data = {data}"
-        except Exception as err:
-            info = f"no data ({err})"
-        print(coords, info, data)
-
-    def _change_color(self, roi):
-        c = QColorDialog.getColor(parent=self)
-        if not c.isValid():
-            return
-        idx = self.controller.rois.index(roi)
-        self.controller._colors[idx] = c.name()
-        roi.line_color = c.name()
-
-    def _remove_roi(self, roi):
-        self.plot.removeItem(roi)
-        item = self.roi_items.pop(roi)
-        self.tree.takeTopLevelItem(self.tree.indexOfTopLevelItem(item))
-        # Remove from controller (which will update .all_rois)
-        self.controller.remove_roi(roi)
-
-    # Removed renormalize_colors; use controller.renormalize_colors instead.
-
-    def _on_colormap_changed(self, cmap):
-        self.controller.set_colormap(cmap)
-
-    def clear(self):
-        for roi in list(self.all_rois):
-            self.plot.removeItem(roi)
-            item = self.roi_items.pop(roi, None)
-            if item is not None:
-                idx = self.tree.indexOfTopLevelItem(item)
-                if idx != -1:
-                    self.tree.takeTopLevelItem(idx)
-
-
-# -----------------------------------------------------------------------------
-# New alternative manager: ROIPropertyTree
-# -----------------------------------------------------------------------------
-from qtpy.QtWidgets import QSpinBox, QLabel
 
 
 class ROIPropertyTree(BECWidget, QWidget):
@@ -1386,12 +1086,9 @@ if __name__ == "__main__":
     plot.addItem(img)
     img.setImage(np.random.normal(size=(200, 200)))
     ml.addWidget(left)
-    mgr = ROIManagerTree(plot)
+    mgr = ROIPropertyTree(plot)
     mgr.setFixedWidth(350)
     ml.addWidget(mgr)
-    mgr_new = ROIPropertyTree(plot)
-    mgr_new.setFixedWidth(350)
-    ml.addWidget(mgr_new)
     win.resize(1500, 600)
     win.show()
     sys.exit(app.exec_())
