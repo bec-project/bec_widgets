@@ -4,6 +4,9 @@ on: [workflow_call]
 jobs:
   pytest:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
 
     env:
       CHILD_PIPELINE_BRANCH: main  # Set the branch you want for ophyd_devices
@@ -16,10 +19,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Conda
+        uses: conda-incubator/setup-miniconda@v3
         with:
-          python-version: '3.11'
+            auto-update-conda: true
+            auto-activate-base: true
+            python-version: '3.11'
 
       - name: Install dependencies
         run: |
@@ -36,7 +41,7 @@ jobs:
           export OHPYD_DEVICES_PATH=$PWD/ophyd_devices
           cd ./bec
           conda create -q -n test-environment python=3.11
-          conda run -n ./bin/install_bec_dev.sh -t
+          source ./bin/install_bec_dev.sh -t
           cd ../
           pip install -e ./ophyd_devices
           pip install -e .[dev,pyside6]
