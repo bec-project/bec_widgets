@@ -10,3 +10,6 @@ jobs:
 
   unit-test-matrix:
     uses: ./.github/workflows/pytest-matrix.yml
+
+  end2end-test:
+    uses: ./.github/workflows/end2end-conda.yml

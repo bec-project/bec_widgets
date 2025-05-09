@@ -1,12 +1,9 @@
-name: Run Pytest with different Python versions
+name: Run Pytest with Coverage
 on: [workflow_call]
 
 jobs:
-  pytest-matrix:
+  pytest:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.11", "3.12"]
 
     env:
       CHILD_PIPELINE_BRANCH: main  # Set the branch you want for ophyd_devices
@@ -22,7 +19,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
@@ -37,12 +34,12 @@ jobs:
           echo -e "\033[35;1m Using branch $OPHYD_DEVICES_BRANCH of OPHYD_DEVICES \033[0;m";
           git clone --branch $OPHYD_DEVICES_BRANCH https://gitlab.psi.ch/bec/ophyd_devices.git
           export OHPYD_DEVICES_PATH=$PWD/ophyd_devices
+          cd ./bec
+          source ./bin/install_bec_dev.sh -t
+          cd ../
           pip install -e ./ophyd_devices
-          pip install -e ./bec/bec_lib[dev]
-          pip install -e ./bec/bec_ipython_client
-          pip install -e .[dev, pyside6]
+          pip install -e .[dev,pyside6]
 
-      - name: Run Pytest
+      - name: Run Pytest with Coverage
         run: |
-          pip install pytest pytest-random-order
-          pytest -v --maxfail=2 --junitxml=report.xml --random-order ./tests/unit_tests
+          pytest -v --files-path ./ --start-servers --random-order  ./tests/end-2-end
