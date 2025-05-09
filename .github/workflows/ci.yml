@@ -7,3 +7,6 @@ jobs:
 
   unit-test:
     uses: ./.github/workflows/pytest.yml
+
+  unit-test-matrix:
+    uses: ./.github/workflows/pytest-matrix.yml
