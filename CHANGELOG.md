@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v2.2.0 (2025-05-09)
+
+### Features
+
+- **launcher**: Add support for launching plugin widget
+  ([`1fb680a`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/1fb680abb40668e72007c245f32c80112466c46e))
+
+### Refactoring
+
+- **launch_window**: Widget tile added
+  ([`b9e56c9`](https://gitlab.psi.ch/bec/bec_widgets/-/commit/b9e56c96cbae561beb893cedb7d18e9b6a7bfc76))
+
+
 ## v2.1.3 (2025-05-07)
 
 ### Bug Fixes
