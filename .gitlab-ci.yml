@@ -58,8 +58,9 @@ stages:
 
 .install-repos: &install-repos
   - pip install -e ./ophyd_devices
+  - pip install -e ./bec/bec_server[dev]
+  - pip install -e ./bec/bec_ipython_client[dev]
   - pip install -e ./bec/bec_lib[dev]
-  - pip install -e ./bec/bec_ipython_client
   - pip install -e ./bec/pytest_bec_e2e
 
 .install-os-packages: &install-os-packages
