@@ -1,5 +1,9 @@
 # BEC Widgets
 
+
+[![CI](https://github.com/bec-project/bec_widgets/actions/workflows/ci.yml/badge.svg)](https://github.com/bec-project/bec_widgets/actions/workflows/ci.yml)
+
+
 **⚠️ Important Notice:**
 
 🚨 **PyQt6 is no longer supported** due to incompatibilities with Qt Designer. Please use **PySide6** instead. 🚨
