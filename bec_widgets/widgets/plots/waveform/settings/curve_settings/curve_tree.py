@@ -31,6 +31,9 @@ from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit 
 )
 from bec_widgets.widgets.dap.dap_combo_box.dap_combo_box import DapComboBox
 from bec_widgets.widgets.plots.waveform.curve import CurveConfig, DeviceSignal
+from bec_widgets.widgets.utility.visual.color_button_native.color_button_native import (
+    ColorButtonNative,
+)
 from bec_widgets.widgets.utility.visual.colormap_widget.colormap_widget import BECColorMapWidget
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -38,49 +41,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 logger = bec_logger.logger
-
-
-class ColorButton(QPushButton):
-    """A QPushButton subclass that displays a color.
-
-    The background is set to the given color and the button text is the hex code.
-    The text color is chosen automatically (black if the background is light, white if dark)
-    to guarantee good readability.
-    """
-
-    def __init__(self, color="#000000", parent=None):
-        """Initialize the color button.
-
-        Args:
-            color (str): The initial color in hex format (e.g., '#000000').
-            parent: Optional QWidget parent.
-        """
-        super().__init__(parent)
-        self.set_color(color)
-
-    def set_color(self, color):
-        """Set the button's color and update its appearance.
-
-        Args:
-            color (str or QColor): The new color to assign.
-        """
-        if isinstance(color, QColor):
-            self._color = color.name()
-        else:
-            self._color = color
-        self._update_appearance()
-
-    def color(self):
-        """Return the current color in hex."""
-        return self._color
-
-    def _update_appearance(self):
-        """Update the button style based on the background color's brightness."""
-        c = QColor(self._color)
-        brightness = c.lightnessF()
-        text_color = "#000000" if brightness > 0.5 else "#FFFFFF"
-        self.setStyleSheet(f"background-color: {self._color}; color: {text_color};")
-        self.setText(self._color)
 
 
 class CurveRow(QTreeWidgetItem):
@@ -193,7 +153,7 @@ class CurveRow(QTreeWidgetItem):
     def _init_style_controls(self):
         """Create columns 3..6: color button, style combo, width spin, symbol spin."""
         # Color in col 3
-        self.color_button = ColorButton(self.config.color)
+        self.color_button = ColorButtonNative(color=self.config.color)
         self.color_button.clicked.connect(lambda: self._select_color(self.color_button))
         self.tree.setItemWidget(self, 3, self.color_button)
 
@@ -284,6 +244,11 @@ class CurveRow(QTreeWidgetItem):
             self.dap_combo.deleteLater()
             self.dap_combo = None
 
+        if getattr(self, "color_button", None) is not None:
+            self.color_button.close()
+            self.color_button.deleteLater()
+            self.color_button = None
+
         # Remove the item from the tree widget
         index = self.tree.indexOfTopLevelItem(self)
         if index != -1:
@@ -337,8 +302,8 @@ class CurveRow(QTreeWidgetItem):
             self.config.label = f"{parent_conf.label}-{new_dap}"
 
         # Common style fields
-        self.config.color = self.color_button.color()
-        self.config.symbol_color = self.color_button.color()
+        self.config.color = self.color_button.color
+        self.config.symbol_color = self.color_button.color
         self.config.pen_style = self.style_combo.currentText()
         self.config.pen_width = self.width_spin.value()
         self.config.symbol_size = self.symbol_spin.value()
