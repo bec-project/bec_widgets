@@ -5,6 +5,9 @@
 [![badge](https://img.shields.io/pypi/v/bec-widgets)](https://pypi.org/project/bec-widgets/)
 [![License](https://img.shields.io/github/license/bec-project/bec_widgets)](./LICENSE)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue?logo=python&logoColor=white)
+![PySide6](https://img.shields.io/badge/PySide6-blue?logo=qt&logoColor=white)
+[![Conventional Commits](https://img.shields.io/badge/conventional%20commits-1.0.0-yellow?logo=conventionalcommits&logoColor=white)](https://conventionalcommits.org)
 
 
 **⚠️ Important Notice:**
