@@ -1,5 +1,8 @@
 name: Full CI
-on: [push]
+on: [push, pull_request]
+
+permissions:
+  pull-requests: write
 
 jobs:
   formatter:
@@ -7,6 +10,8 @@ jobs:
 
   unit-test:
     uses: ./.github/workflows/pytest.yml
+    with:
+        pr_number: ${{ github.event.pull_request.number }}
 
   unit-test-matrix:
     uses: ./.github/workflows/pytest-matrix.yml
