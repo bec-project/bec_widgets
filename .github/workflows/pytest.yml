@@ -45,3 +45,11 @@ jobs:
           coverage run --source=./bec_widgets -m pytest -v --junitxml=report.xml --maxfail=2 --random-order --full-trace ./tests/unit_tests
           coverage report
           coverage xml
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: coverage.xml
+          flags: unit-tests
+          name: codecov-$(date +%Y-%m-%d)
+          fail_ci_if_error: true
+          verbose: true
