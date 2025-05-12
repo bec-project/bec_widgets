@@ -3,7 +3,7 @@
 
 [![CI](https://github.com/bec-project/bec_widgets/actions/workflows/ci.yml/badge.svg)](https://github.com/bec-project/bec_widgets/actions/workflows/ci.yml)
 [![badge](https://img.shields.io/pypi/v/bec-widgets)](https://pypi.org/project/bec-widgets/)
-[![badge](https://img.shields.io/pypi/l/bec-widgets)](./LICENSE)
+[![License](https://img.shields.io/github/license/bec-project/bec_widgets)](./LICENSE)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 
