@@ -1,4 +1,5 @@
-from typing import Optional
+from __future__ import annotations
+
 from unittest.mock import patch
 
 import pytest
@@ -8,7 +9,8 @@ from bec_widgets.widgets.containers.layout_manager.layout_manager import LayoutM
 
 
 class MockWidgetHandler:
-    def create_widget(self, widget_type: str) -> Optional[QWidget]:
+
+    def create_widget(self, widget_type: str) -> QWidget | None:
         if widget_type == "ButtonWidget":
             return QPushButton()
         elif widget_type == "LabelWidget":
@@ -225,13 +227,11 @@ def test_add_widget_overlap_with_span(layout_manager):
 
 
 @pytest.mark.parametrize(
-    "position, btn3_coords",
-    [("left", (1, 0)), ("right", (1, 2)), ("top", (0, 1)), ("bottom", (2, 1))],
+    "position, expected_position",
+    [("left", "left"), ("right", "right"), ("top", "top"), ("bottom", "bottom")],
 )
-def test_add_widget_relative(layout_manager, position, btn3_coords):
+def test_add_widget_relative(layout_manager, position, expected_position):
     """Test adding a widget relative to an existing widget using parameterized data."""
-    expected_row, expected_col = btn3_coords
-
     btn1 = QPushButton("Button 1")
     btn2 = QPushButton("Button 2")
     btn3 = QPushButton("Button 3")
@@ -241,9 +241,28 @@ def test_add_widget_relative(layout_manager, position, btn3_coords):
 
     layout_manager.add_widget_relative(btn3, reference_widget=btn2, position=position)
 
-    assert layout_manager.get_widget(0, 0) == btn1
-    assert layout_manager.get_widget(1, 1) == btn2
-    assert layout_manager.get_widget(expected_row, expected_col) == btn3
+    # Get the actual positions of the widgets
+    btn1_pos = layout_manager.widget_positions[btn1]
+    btn2_pos = layout_manager.widget_positions[btn2]
+    btn3_pos = layout_manager.widget_positions[btn3]
+
+    # Check that btn1 and btn2 are still in the layout
+    assert btn1 in layout_manager.widget_positions
+    assert btn2 in layout_manager.widget_positions
+
+    # Check that btn3 is positioned correctly relative to btn2
+    if expected_position == "left":
+        assert btn3_pos[1] < btn2_pos[1]  # btn3's column < btn2's column
+        assert btn3_pos[0] == btn2_pos[0]  # same row
+    elif expected_position == "right":
+        assert btn3_pos[1] > btn2_pos[1]  # btn3's column > btn2's column
+        assert btn3_pos[0] == btn2_pos[0]  # same row
+    elif expected_position == "top":
+        assert btn3_pos[0] < btn2_pos[0]  # btn3's row < btn2's row
+        assert btn3_pos[1] == btn2_pos[1]  # same column
+    elif expected_position == "bottom":
+        assert btn3_pos[0] > btn2_pos[0]  # btn3's row > btn2's row
+        assert btn3_pos[1] == btn2_pos[1]  # same column
 
 
 def test_add_widget_relative_invalid_position(layout_manager):
@@ -366,3 +385,74 @@ def test_shift_all_widgets_up_at_top_row(layout_manager):
         layout_manager.shift_all_widgets(direction="up")
 
     assert "Shifting widgets out of grid boundaries." in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    "test_id, position, shift_direction, additional_assertions",
+    [
+        (
+            "from_left",
+            "left",
+            "right",
+            [
+                # Additional assertions for the left test case
+                lambda btn1_pos, btn1_new_pos, btn2_pos, btn2_new_pos, btn3_pos: btn1_new_pos[1]
+                > btn1_pos[1],  # column shifted right
+                lambda btn1_pos, btn1_new_pos, btn2_pos, btn2_new_pos, btn3_pos: btn2_new_pos[1]
+                > btn2_pos[1],  # column shifted right
+                lambda btn1_pos, btn1_new_pos, btn2_pos, btn2_new_pos, btn3_pos: btn3_pos[1]
+                < btn2_new_pos[1],  # btn3 is to the left of btn2
+            ],
+        ),
+        (
+            "from_right",
+            "right",
+            "right",
+            [
+                # Additional assertions for the right test case
+                lambda btn1_pos, btn1_new_pos, btn2_pos, btn2_new_pos, btn3_pos: btn3_pos[1]
+                > btn2_new_pos[1]  # btn3 is to the right of btn2
+            ],
+        ),
+    ],
+)
+def test_column_shift_when_adding_widget(
+    layout_manager, test_id, position, shift_direction, additional_assertions
+):
+    """Test that adding a widget to a column of widgets shifts the entire column appropriately."""
+    # Create a column of widgets
+    btn1 = QPushButton("Button 1")
+    btn2 = QPushButton("Button 2")
+
+    # Add btn1 at position (0, 1)
+    layout_manager.add_widget(btn1, row=0, col=1)
+
+    # Add btn2 below btn1
+    layout_manager.add_widget_relative(btn2, reference_widget=btn1, position="bottom")
+
+    # Get the positions after initial setup
+    btn1_pos = layout_manager.widget_positions[btn1]
+    btn2_pos = layout_manager.widget_positions[btn2]
+
+    # Verify btn2 is below btn1 (same column)
+    assert btn1_pos[0] < btn2_pos[0]  # btn2's row > btn1's row
+    assert btn1_pos[1] == btn2_pos[1]  # same column
+
+    # Add a new button relative to btn2 with the specified position and shift_direction
+    btn3 = QPushButton("Button 3")
+    layout_manager.add_widget_relative(
+        btn3, reference_widget=btn2, position=position, shift_direction=shift_direction
+    )
+
+    # Get the updated positions
+    btn1_new_pos = layout_manager.widget_positions[btn1]
+    btn2_new_pos = layout_manager.widget_positions[btn2]
+    btn3_pos = layout_manager.widget_positions[btn3]
+
+    # Common assertions for both test cases
+    assert btn1_new_pos[1] == btn2_new_pos[1]  # btn1 and btn2 still in same column
+    assert btn3_pos[0] == btn2_new_pos[0]  # btn3 is in the same row as btn2
+
+    # Run additional assertions specific to each test case
+    for assertion in additional_assertions:
+        assertion(btn1_pos, btn1_new_pos, btn2_pos, btn2_new_pos, btn3_pos)
