@@ -94,6 +94,9 @@ class ClearableBoolEntry(QWidget):
         self._false.setToolTip(tooltip)
 
 
+DynamicFormItemType = str | int | float | Decimal | bool
+
+
 class DynamicFormItem(QWidget):
     valueChanged = Signal()
 
@@ -111,7 +114,7 @@ class DynamicFormItem(QWidget):
             self._add_clear_button()
 
     @abstractmethod
-    def getValue(self): ...
+    def getValue(self) -> DynamicFormItemType: ...
 
     @abstractmethod
     def setValue(self, value): ...
@@ -204,7 +207,7 @@ class FloatDecimalMetadataField(DynamicFormItem):
     def _add_main_widget(self) -> None:
         self._main_widget = QDoubleSpinBox()
         self._layout.addWidget(self._main_widget)
-        min_, max_ = field_limits(self._spec.info, int)
+        min_, max_ = field_limits(self._spec.info, float)
         self._main_widget.setMinimum(min_)
         self._main_widget.setMaximum(max_)
         precision = field_precision(self._spec.info)
@@ -224,10 +227,10 @@ class FloatDecimalMetadataField(DynamicFormItem):
             return self._default
         return self._main_widget.value()
 
-    def setValue(self, value: float):
+    def setValue(self, value: float | Decimal):
         if value is None:
             self._main_widget.clear()
-        self._main_widget.setValue(value)
+        self._main_widget.setValue(float(value))
 
 
 class BoolMetadataField(DynamicFormItem):
