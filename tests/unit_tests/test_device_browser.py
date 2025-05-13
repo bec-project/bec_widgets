@@ -85,6 +85,7 @@ def test_device_item_expansion(device_browser, qtbot):
     qtbot.mouseClick(widget._expansion_button, Qt.MouseButton.LeftButton)
     form = widget._contents.layout().itemAt(0).widget()
     qtbot.waitUntil(lambda: isinstance(form, DeviceItemForm), timeout=500)
+
     assert widget.expanded
     assert (name_field := form.widget_dict.get("name")) is not None
     assert name_field.getValue() == "samx"
