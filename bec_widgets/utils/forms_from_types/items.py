@@ -26,6 +26,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_widgets.widgets.editors.dict_backed_table import DictBackedTable
 from bec_widgets.widgets.editors.scan_metadata._util import (
     clearable_required,
     field_default,
@@ -94,7 +95,7 @@ class ClearableBoolEntry(QWidget):
         self._false.setToolTip(tooltip)
 
 
-DynamicFormItemType = str | int | float | Decimal | bool
+DynamicFormItemType = str | int | float | Decimal | bool | dict
 
 
 class DynamicFormItem(QWidget):
@@ -205,12 +206,12 @@ class FloatDecimalMetadataField(DynamicFormItem):
         self._main_widget.textChanged.connect(self._value_changed)
 
     def _add_main_widget(self) -> None:
+        precision = field_precision(self._spec.info)
         self._main_widget = QDoubleSpinBox()
         self._layout.addWidget(self._main_widget)
-        min_, max_ = field_limits(self._spec.info, float)
+        min_, max_ = field_limits(self._spec.info, float, precision)
         self._main_widget.setMinimum(min_)
         self._main_widget.setMaximum(max_)
-        precision = field_precision(self._spec.info)
         if precision:
             self._main_widget.setDecimals(precision)
         minstr = f"{float(min_):.3f}" if abs(min_) <= 1000 else f"{float(min_):.3e}"
@@ -254,6 +255,23 @@ class BoolMetadataField(DynamicFormItem):
         self._main_widget.setChecked(value)
 
 
+class DictMetadataField(DynamicFormItem):
+    def __init__(self, *, parent: QWidget | None = None, spec: FormItemSpec) -> None:
+        super().__init__(parent=parent, spec=spec)
+        self._main_widget.data_changed.connect(self._value_changed)
+
+    def _add_main_widget(self) -> None:
+        self._main_widget = DictBackedTable([])
+        self._layout.addWidget(self._main_widget)
+        self._main_widget.setToolTip(self._describe(""))
+
+    def getValue(self):
+        return self._main_widget.dump_dict()
+
+    def setValue(self, value):
+        self._main_widget.replace_data(value)
+
+
 def widget_from_type(annotation: type | UnionType | None) -> type[DynamicFormItem]:
     if annotation in [str, str | None]:
         return StrMetadataField
@@ -263,6 +281,14 @@ def widget_from_type(annotation: type | UnionType | None) -> type[DynamicFormIte
         return FloatDecimalMetadataField
     if annotation in [bool, bool | None]:
         return BoolMetadataField
+    if annotation in [dict, dict | None] or (
+        isinstance(annotation, GenericAlias) and annotation.__origin__ is dict
+    ):
+        return DictMetadataField
+    if annotation in [list, list | None] or (
+        isinstance(annotation, GenericAlias) and annotation.__origin__ is list
+    ):
+        return StrMetadataField
     else:
         logger.warning(f"Type {annotation} is not (yet) supported in metadata form creation.")
         return StrMetadataField

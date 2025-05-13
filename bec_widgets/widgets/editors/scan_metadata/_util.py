@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from decimal import Decimal
-from math import inf, nextafter
+from math import copysign, inf, nextafter
 from typing import TYPE_CHECKING, TypeVar, get_args
 
 from annotated_types import Ge, Gt, Le, Lt
@@ -23,16 +23,19 @@ _MAXFLOAT = sys.float_info.max
 T = TypeVar("T", int, float, Decimal)
 
 
-def field_limits(info: FieldInfo, type_: type[T]) -> tuple[T, T]:
+def field_limits(info: FieldInfo, type_: type[T], prec: int | None = None) -> tuple[T, T]:
+    def _nextafter(x, y):
+        return nextafter(x, y) if prec is None else x + (10 ** (-prec)) * (copysign(1, y))
+
     _min = _MININT if type_ is int else _MINFLOAT
     _max = _MAXINT if type_ is int else _MAXFLOAT
     for md in info.metadata:
         if isinstance(md, Ge):
             _min = type_(md.ge)  # type: ignore
         if isinstance(md, Gt):
-            _min = type_(md.gt) + 1 if type_ is int else nextafter(type_(md.gt), inf)  # type: ignore
+            _min = type_(md.gt) + 1 if type_ is int else _nextafter(type_(md.gt), inf)  # type: ignore
         if isinstance(md, Lt):
-            _max = type_(md.lt) - 1 if type_ is int else nextafter(type_(md.lt), -inf)  # type: ignore
+            _max = type_(md.lt) - 1 if type_ is int else _nextafter(type_(md.lt), -inf)  # type: ignore
         if isinstance(md, Le):
             _max = type_(md.le)  # type: ignore
     return _min, _max  # type: ignore
