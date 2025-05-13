@@ -45,7 +45,7 @@ class ScanMetadata(PydanticModelForm):
         self._md_schema = get_metadata_schema_for_scan(self._scan_name)
         self._additional_metadata.data_updated.connect(self.validate_form)
 
-        super().__init__(parent=parent, metadata_model=self._md_schema, client=client, **kwargs)
+        super().__init__(parent=parent, data_model=self._md_schema, client=client, **kwargs)
 
         self._layout.addWidget(self._additional_md_box)
         self._additional_md_box_layout.addWidget(self._additional_metadata)
