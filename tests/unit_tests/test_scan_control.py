@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.messages import AvailableResourceMessage, ScanQueueHistoryMessage, ScanQueueMessage
-from qtpy.QtCore import QModelIndex, QPoint, Qt
+from qtpy.QtCore import QModelIndex, Qt
 
 from bec_widgets.utils.forms_from_types.items import StrMetadataField
 from bec_widgets.utils.widget_io import WidgetIO

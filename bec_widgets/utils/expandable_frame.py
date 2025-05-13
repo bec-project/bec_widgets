@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from bec_qthemes import material_icon
+from qtpy.QtCore import Signal
 from qtpy.QtWidgets import (
+    QApplication,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -17,11 +19,13 @@ from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 
 class ExpandableGroupFrame(QFrame):
 
+    expansion_state_changed = Signal()
+
     EXPANDED_ICON_NAME: str = "collapse_all"
     COLLAPSED_ICON_NAME: str = "expand_all"
 
     def __init__(
-        self, title: str, parent: QWidget | None = None, expanded: bool = True, icon: str = ""
+        self, parent: QWidget | None = None, title: str = "", expanded: bool = True, icon: str = ""
     ) -> None:
         super().__init__(parent=parent)
         self._expanded = expanded
@@ -52,6 +56,7 @@ class ExpandableGroupFrame(QFrame):
 
         self._expansion_button.clicked.connect(self.switch_expanded_state)
         self.expanded = self._expanded  # type: ignore
+        self.expansion_state_changed.emit()
 
     def set_layout(self, layout: QLayout) -> None:
         self._contents.setLayout(layout)
@@ -61,6 +66,7 @@ class ExpandableGroupFrame(QFrame):
     def switch_expanded_state(self):
         self.expanded = not self.expanded  # type: ignore
         self._update_expansion_icon()
+        self.expansion_state_changed.emit()
 
     @SafeProperty(bool)
     def expanded(self):  # type: ignore
@@ -71,6 +77,7 @@ class ExpandableGroupFrame(QFrame):
         self._expanded = expanded
         self._contents.setVisible(expanded)
         self.updateGeometry()
+        self.adjustSize()
 
     def _update_expansion_icon(self):
         self._expansion_button.setIcon(
@@ -98,3 +105,18 @@ class ExpandableGroupFrame(QFrame):
             )
         else:
             self._title_icon.setVisible(False)
+
+
+# Application example
+if __name__ == "__main__":  # pragma: no cover
+
+    app = QApplication([])
+    frame = ExpandableGroupFrame()
+    layout = QVBoxLayout()
+    frame.set_layout(layout)
+    layout.addWidget(QLabel("test1"))
+    layout.addWidget(QLabel("test2"))
+    layout.addWidget(QLabel("test3"))
+
+    frame.show()
+    app.exec()

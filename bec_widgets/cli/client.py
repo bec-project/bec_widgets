@@ -50,6 +50,7 @@ _Widgets = {
     "ResumeButton": "ResumeButton",
     "RingProgressBar": "RingProgressBar",
     "ScanControl": "ScanControl",
+    "ScanMetadata": "ScanMetadata",
     "ScatterWaveform": "ScatterWaveform",
     "StopButton": "StopButton",
     "TextBox": "TextBox",
@@ -2961,6 +2962,22 @@ class ScanControl(RPCBase):
     def remove(self):
         """
         Cleanup the BECConnector
+        """
+
+
+class ScanMetadata(RPCBase):
+    @property
+    @rpc_call
+    def enabled(self):
+        """
+        None
+        """
+
+    @enabled.setter
+    @rpc_call
+    def enabled(self):
+        """
+        None
         """
 
 

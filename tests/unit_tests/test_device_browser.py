@@ -5,6 +5,7 @@ import pytest
 from qtpy.QtCore import QPoint, Qt
 
 from bec_widgets.widgets.services.device_browser.device_browser import DeviceBrowser
+from bec_widgets.widgets.services.device_browser.device_item.device_item import DeviceItemForm
 
 from .client_mocks import mocked_client
 
@@ -36,25 +37,24 @@ def test_device_browser_init_with_devices(device_browser):
     assert device_list.count() == len(device_browser.dev)
 
 
-def test_device_browser_filtering(qtbot, device_browser):
+@pytest.mark.parametrize(
+    ["search_term", "expected_num_visible"],
+    [("sam", 3), ("nonexistent", 0), ("", -1), (r"(\)", -1)],
+)
+def test_device_browser_filtering(
+    qtbot, device_browser, search_term: str, expected_num_visible: int
+):
     """
     Test that the device browser is able to filter the device list.
     """
+    expected = expected_num_visible if expected_num_visible >= 0 else len(device_browser.dev)
 
     def num_visible(item_dict):
         return len(list(filter(lambda i: not i.isHidden(), item_dict.values())))
 
-    device_browser.ui.filter_input.setText("sam")
-    qtbot.wait(1000)
-    assert num_visible(device_browser._device_items) == 3
-
-    device_browser.ui.filter_input.setText("nonexistent")
-    qtbot.wait(1000)
-    assert num_visible(device_browser._device_items) == 0
-
-    device_browser.ui.filter_input.setText("")
-    qtbot.wait(1000)
-    assert num_visible(device_browser._device_items) == len(device_browser.dev)
+    device_browser.ui.filter_input.setText(search_term)
+    qtbot.wait(100)
+    assert num_visible(device_browser._device_items) == expected
 
 
 def test_device_item_mouse_press_event(device_browser, qtbot):
@@ -65,6 +65,30 @@ def test_device_item_mouse_press_event(device_browser, qtbot):
     device_item: QListWidgetItem = device_browser.ui.device_list.itemAt(0, 0)
     widget: DeviceItem = device_browser.ui.device_list.itemWidget(device_item)
     qtbot.mouseClick(widget._title, Qt.MouseButton.LeftButton)
+
+
+def test_update_event_captured(device_browser, qtbot):
+    device_browser.update_device_list = mock.MagicMock()
+    device_browser.update_device_list.assert_not_called()
+    device_browser.on_device_update("remove", {})
+    device_browser.update_device_list.assert_called_once()
+    device_browser.on_device_update("", {})
+
+
+def test_device_item_expansion(device_browser, qtbot):
+    """
+    Test that the form is displayed when the item is expanded
+    """
+    device_item: QListWidgetItem = device_browser.ui.device_list.itemAt(0, 0)
+    widget: DeviceItem = device_browser.ui.device_list.itemWidget(device_item)
+    qtbot.mouseClick(widget._expansion_button, Qt.MouseButton.LeftButton)
+    form = widget._contents.layout().itemAt(0).widget()
+    qtbot.waitUntil(lambda: isinstance(form, DeviceItemForm), timeout=500)
+    assert widget.expanded
+    assert (name_field := form.widget_dict.get("name")) is not None
+    assert name_field.getValue() == "samx"
+    qtbot.mouseClick(widget._expansion_button, Qt.MouseButton.LeftButton)
+    assert not widget.expanded
 
 
 def test_device_item_mouse_press_and_move_events_creates_drag(device_browser, qtbot):
