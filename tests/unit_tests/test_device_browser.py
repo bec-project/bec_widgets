@@ -11,7 +11,13 @@ from .client_mocks import mocked_client
 if TYPE_CHECKING:  # pragma: no cover
     from qtpy.QtWidgets import QListWidgetItem
 
-    from bec_widgets.widgets.services.device_browser import DeviceItem
+    from bec_widgets.widgets.services.device_browser.device_item import DeviceItem
+
+
+# pylint: disable=no-member
+# pylint: disable=missing-function-docstring
+# pylint: disable=redefined-outer-name
+# pylint: disable=protected-access
 
 
 @pytest.fixture
@@ -34,18 +40,21 @@ def test_device_browser_filtering(qtbot, device_browser):
     """
     Test that the device browser is able to filter the device list.
     """
-    device_list = device_browser.ui.device_list
+
+    def num_visible(item_dict):
+        return len(list(filter(lambda i: not i.isHidden(), item_dict.values())))
+
     device_browser.ui.filter_input.setText("sam")
     qtbot.wait(1000)
-    assert device_list.count() == 3
+    assert num_visible(device_browser._device_items) == 3
 
     device_browser.ui.filter_input.setText("nonexistent")
     qtbot.wait(1000)
-    assert device_list.count() == 0
+    assert num_visible(device_browser._device_items) == 0
 
     device_browser.ui.filter_input.setText("")
     qtbot.wait(1000)
-    assert device_list.count() == len(device_browser.dev)
+    assert num_visible(device_browser._device_items) == len(device_browser.dev)
 
 
 def test_device_item_mouse_press_event(device_browser, qtbot):
@@ -55,7 +64,7 @@ def test_device_item_mouse_press_event(device_browser, qtbot):
     # Simulate a left mouse press event on the device item
     device_item: QListWidgetItem = device_browser.ui.device_list.itemAt(0, 0)
     widget: DeviceItem = device_browser.ui.device_list.itemWidget(device_item)
-    qtbot.mouseClick(widget.label, Qt.MouseButton.LeftButton)
+    qtbot.mouseClick(widget._title, Qt.MouseButton.LeftButton)
 
 
 def test_device_item_mouse_press_and_move_events_creates_drag(device_browser, qtbot):
@@ -67,7 +76,7 @@ def test_device_item_mouse_press_and_move_events_creates_drag(device_browser, qt
     device_name = widget.device
     with mock.patch("qtpy.QtGui.QDrag.exec_") as mock_exec:
         with mock.patch("qtpy.QtGui.QDrag.setMimeData") as mock_set_mimedata:
-            qtbot.mousePress(widget.label, Qt.MouseButton.LeftButton, pos=QPoint(0, 0))
+            qtbot.mousePress(widget._title, Qt.MouseButton.LeftButton, pos=QPoint(0, 0))
             qtbot.mouseMove(widget, pos=QPoint(10, 10))
             qtbot.mouseRelease(widget, Qt.MouseButton.LeftButton)
             mock_set_mimedata.assert_called_once()
