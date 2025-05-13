@@ -57,6 +57,11 @@ class DictBackedTableModel(QAbstractTableModel):
             return True
         return False
 
+    def replaceData(self, data: dict):
+        self.resetInternalData()
+        self._data = [[k, v] for k, v in data.items()]
+        self.dataChanged.emit(self.index(0, 0), self.index(len(self._data), 0))
+
     def update_disallowed_keys(self, keys: list[str]):
         """Set the list of keys which may not be used.
 
@@ -110,7 +115,7 @@ class DictBackedTableModel(QAbstractTableModel):
 
 class DictBackedTable(QWidget):
     delete_rows = Signal(list)
-    data_updated = Signal()
+    data_changed = Signal(dict)
 
     def __init__(self, initial_data: list[list[str]]):
         """Widget which uses a DictBackedTableModel to display an editable table
@@ -143,11 +148,14 @@ class DictBackedTable(QWidget):
         self._add_button.clicked.connect(self._table_model.add_row)
         self._remove_button.clicked.connect(self.delete_selected_rows)
         self.delete_rows.connect(self._table_model.delete_rows)
-        self._table_model.dataChanged.connect(self._emit_data_updated)
+        self._table_model.dataChanged.connect(lambda *_: self.data_changed.emit(self.dump_dict()))
 
-    def _emit_data_updated(self, *args, **kwargs):
-        """Just to swallow the args"""
-        self.data_updated.emit()
+    @SafeSlot()
+    def clear(self):
+        self._table_model.replaceData({})
+
+    def replace_data(self, data: dict):
+        self._table_model.replaceData(data)
 
     def delete_selected_rows(self):
         """Delete rows which are part of the selection model"""
