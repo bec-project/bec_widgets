@@ -1,15 +1,23 @@
 import os
 import re
-from typing import Optional
+from functools import partial
 
 from bec_lib.callback_handler import EventType
+from bec_lib.logger import bec_logger
+from bec_lib.messages import ConfigAction
 from pyqtgraph import SignalProxy
-from qtpy.QtCore import Signal, Slot
-from qtpy.QtWidgets import QListWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtCore import QSize
+from qtpy.QtCore import Signal
+from qtpy.QtWidgets import QListWidget, QListWidgetItem, QVBoxLayout, QWidget
 
+from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.ui_loader import UILoader
 from bec_widgets.widgets.services.device_browser.device_item import DeviceItem
+from bec_widgets.widgets.services.device_browser.util import map_device_type_to_icon
+
+logger = bec_logger.logger
 
 
 class DeviceBrowser(BECWidget, QWidget):
@@ -23,18 +31,18 @@ class DeviceBrowser(BECWidget, QWidget):
 
     def __init__(
         self,
-        parent: Optional[QWidget] = None,
+        parent: QWidget | None = None,
         config=None,
         client=None,
-        gui_id: Optional[str] = None,
+        gui_id: str | None = None,
         **kwargs,
     ) -> None:
         super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
-
         self.get_bec_shortcuts()
         self.ui = None
         self.ini_ui()
-
+        self.dev_list: QListWidget = self.ui.device_list
+        self.dev_list.setVerticalScrollMode(QListWidget.ScrollMode.ScrollPerPixel)
         self.proxy_device_update = SignalProxy(
             self.ui.filter_input.textChanged, rateLimit=500, slot=self.update_device_list
         )
@@ -43,6 +51,7 @@ class DeviceBrowser(BECWidget, QWidget):
         )
         self.device_update.connect(self.update_device_list)
 
+        self.init_device_list()
         self.update_device_list()
 
     def ini_ui(self) -> None:
@@ -50,14 +59,12 @@ class DeviceBrowser(BECWidget, QWidget):
         Initialize the UI by loading the UI file and setting the layout.
         """
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-
         ui_file_path = os.path.join(os.path.dirname(__file__), "device_browser.ui")
         self.ui = UILoader(self).loader(ui_file_path)
         layout.addWidget(self.ui)
         self.setLayout(layout)
 
-    def on_device_update(self, action: str, content: dict) -> None:
+    def on_device_update(self, action: ConfigAction, content: dict) -> None:
         """
         Callback for device update events. Triggers the device_update signal.
 
@@ -68,8 +75,43 @@ class DeviceBrowser(BECWidget, QWidget):
         if action in ["add", "remove", "reload"]:
             self.device_update.emit()
 
-    @Slot()
-    def update_device_list(self) -> None:
+    def init_device_list(self):
+        self.dev_list.clear()
+        self._device_items: dict[str, QListWidgetItem] = {}
+
+        def _updatesize(item: QListWidgetItem, device_item: DeviceItem):
+            device_item.adjustSize()
+            item.setSizeHint(QSize(device_item.width(), device_item.height()))
+            logger.debug(f"Adjusting {item} size to {device_item.width(), device_item.height()}")
+
+        with RPCRegister.delayed_broadcast():
+            for device, device_obj in self.dev.items():
+                item = QListWidgetItem(self.dev_list)
+                device_item = DeviceItem(
+                    parent=self, device=device, icon=map_device_type_to_icon(device_obj)
+                )
+
+                device_item.expansion_state_changed.connect(partial(_updatesize, item, device_item))
+
+                device_config = self.dev[device]._config  # pylint: disable=protected-access
+                device_item.set_display_config(device_config)
+                tooltip = device_config.get("description", "")
+                device_item.setToolTip(tooltip)
+                device_item.broadcast_size_hint.connect(item.setSizeHint)
+                item.setSizeHint(device_item.sizeHint())
+
+                self.dev_list.setItemWidget(item, device_item)
+                self.dev_list.addItem(item)
+                self._device_items[device] = item
+
+    @SafeSlot()
+    def reset_device_list(self) -> None:
+        self.init_device_list()
+        self.update_device_list()
+
+    @SafeSlot()
+    @SafeSlot(str)
+    def update_device_list(self, *_) -> None:
         """
         Update the device list based on the filter input.
         There are two ways to trigger this function:
@@ -80,23 +122,14 @@ class DeviceBrowser(BECWidget, QWidget):
         """
         filter_text = self.ui.filter_input.text()
         try:
-            regex = re.compile(filter_text, re.IGNORECASE)
+            self.regex = re.compile(filter_text, re.IGNORECASE)
         except re.error:
-            regex = None  # Invalid regex, disable filtering
-
-        dev_list = self.ui.device_list
-        dev_list.clear()
+            self.regex = None  # Invalid regex, disable filtering
+            for device in self.dev:
+                self._device_items[device].setHidden(False)
+            return
         for device in self.dev:
-            if regex is None or regex.search(device):
-                item = QListWidgetItem(dev_list)
-                device_item = DeviceItem(device)
-
-                # pylint: disable=protected-access
-                tooltip = self.dev[device]._config.get("description", "")
-                device_item.setToolTip(tooltip)
-                item.setSizeHint(device_item.sizeHint())
-                dev_list.setItemWidget(item, device_item)
-                dev_list.addItem(item)
+            self._device_items[device].setHidden(not self.regex.search(device))
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -104,10 +137,10 @@ if __name__ == "__main__":  # pragma: no cover
 
     from qtpy.QtWidgets import QApplication
 
-    from bec_widgets.utils.colors import apply_theme
+    from bec_widgets.utils.colors import set_theme
 
     app = QApplication(sys.argv)
-    apply_theme("light")
+    set_theme("light")
     widget = DeviceBrowser()
     widget.show()
     sys.exit(app.exec_())

@@ -183,7 +183,9 @@ def test_numbers_clipped_to_limits(
 
 @pytest.fixture
 def table():
-    table = DictBackedTable([["key1", "value1"], ["key2", "value2"], ["key3", "value3"]])
+    table = DictBackedTable(
+        initial_data=[["key1", "value1"], ["key2", "value2"], ["key3", "value3"]]
+    )
     yield table
     table._table_model.deleteLater()
     table._table_view.deleteLater()

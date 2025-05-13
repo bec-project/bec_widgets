@@ -121,14 +121,14 @@ class DictBackedTable(QWidget):
     delete_rows = Signal(list)
     data_changed = Signal(dict)
 
-    def __init__(self, initial_data: list[list[str]]):
+    def __init__(self, parent: QWidget | None = None, initial_data: list[list[str]] = []):
         """Widget which uses a DictBackedTableModel to display an editable table
         which can be extracted as a dict.
 
         Args:
             initial_data (list[list[str]]): list of key-value pairs to initialise with
         """
-        super().__init__()
+        super().__init__(parent)
 
         self._layout = QHBoxLayout()
         self.setLayout(self._layout)
@@ -141,8 +141,10 @@ class DictBackedTable(QWidget):
         self._table_view.setAlternatingRowColors(True)
         self._layout.addWidget(self._table_view)
 
+        self._button_holder = QWidget()
         self._buttons = QVBoxLayout()
-        self._layout.addLayout(self._buttons)
+        self._button_holder.setLayout(self._buttons)
+        self._layout.addWidget(self._button_holder)
         self._add_button = QPushButton("+")
         self._add_button.setToolTip("add a new row")
         self._remove_button = QPushButton("-")
@@ -153,6 +155,9 @@ class DictBackedTable(QWidget):
         self._remove_button.clicked.connect(self.delete_selected_rows)
         self.delete_rows.connect(self._table_model.delete_rows)
         self._table_model.dataChanged.connect(lambda *_: self.data_changed.emit(self.dump_dict()))
+
+    def set_button_visibility(self, value: bool):
+        self._button_holder.setVisible(value)
 
     @SafeSlot()
     def clear(self):
@@ -186,6 +191,6 @@ if __name__ == "__main__":  # pragma: no cover
     app = QApplication([])
     set_theme("dark")
 
-    window = DictBackedTable([["key1", "value1"], ["key2", "value2"], ["key3", "value3"]])
+    window = DictBackedTable(None, [["key1", "value1"], ["key2", "value2"], ["key3", "value3"]])
     window.show()
     app.exec()
