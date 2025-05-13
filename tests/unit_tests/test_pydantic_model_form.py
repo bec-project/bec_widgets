@@ -5,8 +5,6 @@ from pydantic import BaseModel, Field
 
 from bec_widgets.utils.forms_from_types.forms import PydanticModelForm
 from bec_widgets.utils.forms_from_types.items import (
-    BoolMetadataField,
-    DynamicFormItem,
     FloatDecimalMetadataField,
     IntMetadataField,
     StrMetadataField,
@@ -34,7 +32,7 @@ class ExampleSchema(BaseModel):
 
 TEST_DICT = {
     "sample_name": "test name",
-    "str_optional": None,
+    "str_optional": "None",
     "str_required": "something",
     "bool_optional": None,
     "bool_required_default": True,

@@ -43,7 +43,7 @@ class ScanMetadata(PydanticModelForm):
         self._additional_metadata = DictBackedTable(initial_extras or [])
         self._scan_name = scan_name or ""
         self._md_schema = get_metadata_schema_for_scan(self._scan_name)
-        self._additional_metadata.data_updated.connect(self.validate_form)
+        self._additional_metadata.data_changed.connect(self.validate_form)
 
         super().__init__(parent=parent, data_model=self._md_schema, client=client, **kwargs)
 
