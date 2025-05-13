@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 from types import NoneType
+from typing import NamedTuple
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
@@ -11,9 +12,21 @@ from qtpy.QtWidgets import QGridLayout, QLabel, QLayout, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.compact_popup import CompactPopupWidget
-from bec_widgets.utils.forms_from_types.items import FormItemSpec, widget_from_type
+from bec_widgets.utils.error_popups import SafeProperty
+from bec_widgets.utils.forms_from_types.items import (
+    DynamicFormItem,
+    DynamicFormItemType,
+    FormItemSpec,
+    widget_from_type,
+)
 
 logger = bec_logger.logger
+
+
+class GridRow(NamedTuple):
+    i: int
+    label: QLabel
+    widget: DynamicFormItem
 
 
 class TypedForm(BECWidget, QWidget):
@@ -22,25 +35,27 @@ class TypedForm(BECWidget, QWidget):
 
     value_changed = Signal()
 
-    RPC = False
+    RPC = True
+    USER_ACCESS = ["enabled", "enabled.setter"]
 
     def __init__(
         self,
         parent=None,
         items: list[tuple[str, type]] | None = None,
         form_item_specs: list[FormItemSpec] | None = None,
+        enabled: bool = True,
         client=None,
         **kwargs,
     ):
         """Widget with a list of form items based on a list of types.
 
         Args:
-            items (list[tuple[str, type]]): list of tuples of a name for the field and its type.
-                                            Should be a type supported by the logic in items.py
-            form_item_specs (list[FormItemSpec]): list of form item specs, equivalent to items.
-                                                  only one of items or form_item_specs should be
-                                                  supplied.
-
+            items (list[tuple[str, type]]):         list of tuples of a name for the field and its type.
+                                                    Should be a type supported by the logic in items.py
+            form_item_specs (list[FormItemSpec]):   list of form item specs, equivalent to items.
+                                                    only one of items or form_item_specs should be
+                                                    supplied.
+            enabled (bool):                         whether fields are enabled for editing.
         """
         if (items is not None and form_item_specs is not None) or (
             items is None and form_item_specs is None
@@ -58,6 +73,8 @@ class TypedForm(BECWidget, QWidget):
         self._layout = QVBoxLayout()
         self._layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self._layout)
+
+        self._enabled: bool = enabled
 
         self._form_grid_container = QWidget(parent=self)
         self._form_grid = QWidget(parent=self._form_grid_container)
@@ -82,15 +99,17 @@ class TypedForm(BECWidget, QWidget):
         widget.valueChanged.connect(self.value_changed)
         grid.addWidget(widget, row, 1)
 
-    def _dict_from_grid(self) -> dict[str, str | int | float | Decimal | bool]:
+    def enumerate_form_widgets(self):
+        """Return a generator over the rows of the form, with the row number, the label widget (to
+        which the field name is attached as a property), and the entry widget"""
         grid: QGridLayout = self._form_grid.layout()  # type: ignore
+        for i in range(grid.rowCount()):
+            yield GridRow(i, grid.itemAtPosition(i, 0).widget(), grid.itemAtPosition(i, 1).widget())
+
+    def _dict_from_grid(self) -> dict[str, DynamicFormItemType]:
         return {
-            grid.itemAtPosition(i, 0)
-            .widget()
-            .property("_model_field_name"): grid.itemAtPosition(i, 1)
-            .widget()
-            .getValue()  # type: ignore # we only add 'DynamicFormItem's here
-            for i in range(grid.rowCount())
+            row.label.property("_model_field_name"): row.widget.getValue()
+            for row in self.enumerate_form_widgets()
         }
 
     def _clear_grid(self):
@@ -117,20 +136,50 @@ class TypedForm(BECWidget, QWidget):
         new_grid.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
         return new_grid
 
+    def _set_widgets_enabled(self, enabled: bool):
+        for row in self.enumerate_form_widgets():
+            row.widget.setEnabled(enabled)
+
+    @property
+    def widget_dict(self):
+        return {
+            row.label.property("_model_field_name"): row.widget
+            for row in self.enumerate_form_widgets()
+        }
+
+    @SafeProperty(bool)
+    def enabled(self):
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, value: bool):
+        self._enabled = value
+        self._set_widgets_enabled(value)
+
 
 class PydanticModelForm(TypedForm):
     metadata_updated = Signal(dict)
     metadata_cleared = Signal(NoneType)
 
-    def __init__(self, parent=None, metadata_model: type[BaseModel] = None, client=None, **kwargs):
+    def __init__(
+        self,
+        parent=None,
+        data_model: type[BaseModel] | None = None,
+        enabled: bool = True,
+        client=None,
+        **kwargs,
+    ):
         """
         A form generated from a pydantic model.
 
         Args:
-            metadata_model (type[BaseModel]): the model class for which to generate a form.
+            data_model (type[BaseModel]): the model class for which to generate a form.
+            enabled (bool): whether fields are enabled for editing.
         """
-        self._md_schema = metadata_model
-        super().__init__(parent=parent, form_item_specs=self._form_item_specs(), client=client)
+        self._md_schema = data_model
+        super().__init__(
+            parent=parent, form_item_specs=self._form_item_specs(), enabled=enabled, client=client
+        )
 
         self._validity = CompactPopupWidget()
         self._validity.compact_view = True  # type: ignore
@@ -146,6 +195,19 @@ class PydanticModelForm(TypedForm):
     def set_schema(self, schema: type[BaseModel]):
         self._md_schema = schema
         self.populate()
+
+    def set_data(self, data: BaseModel):
+        """Fill the data for the form.
+
+        Args:
+            data (BaseModel):   the data to enter into the form. Must be the same type as the
+                                currently set schema, raises TypeError otherwise."""
+        if not self._md_schema:
+            raise ValueError("Schema not set - can't set data")
+        if not isinstance(data, self._md_schema):
+            raise TypeError(f"Supplied data {data} not of type {self._md_schema}")
+        for form_item in self.enumerate_form_widgets():
+            form_item.widget.setValue(getattr(data, form_item.label.property("_model_field_name")))
 
     def _form_item_specs(self):
         return [
