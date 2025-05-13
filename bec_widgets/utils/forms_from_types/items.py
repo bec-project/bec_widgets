@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from decimal import Decimal
-from types import UnionType
-from typing import Callable, Protocol
+from types import GenericAlias, UnionType
+from typing import Literal
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.fields import FieldInfo
 from qtpy.QtCore import Signal  # type: ignore
 from qtpy.QtWidgets import (
@@ -47,9 +47,36 @@ class FormItemSpec(BaseModel):
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    item_type: type | UnionType
+
+    item_type: type | UnionType | GenericAlias
     name: str
     info: FieldInfo = FieldInfo()
+    pretty_display: bool = Field(
+        default=False,
+        description="Whether to use a pretty display for the widget. Defaults to False. If True, disables the widget, doesn't add a clear button, and adapts the stylesheet for non-editable display.",
+    )
+
+    @field_validator("item_type", mode="before")
+    @classmethod
+    def _validate_type(cls, v):
+        allowed_primitives = [str, int, float, bool]
+        if isinstance(v, (type, UnionType)):
+            return v
+        if isinstance(v, GenericAlias):
+            if v.__origin__ in [list, dict] and all(
+                arg in allowed_primitives for arg in v.__args__
+            ):
+                return v
+            raise ValueError(
+                f"Generics of type {v} are not supported - only lists and dicts of primitive types {allowed_primitives}"
+            )
+        if type(v) is type(Literal[""]):  # _LiteralGenericAlias is not exported from typing
+            arg_types = set(type(arg) for arg in v.__args__)
+            if len(arg_types) != 1:
+                raise ValueError("Mixtures of literal types are not supported!")
+            if (t := arg_types.pop()) in allowed_primitives:
+                return t
+            raise ValueError(f"Literals of type {t} are not supported")
 
 
 class ClearableBoolEntry(QWidget):
@@ -102,6 +129,13 @@ class DynamicFormItem(QWidget):
     valueChanged = Signal()
 
     def __init__(self, parent: QWidget | None = None, *, spec: FormItemSpec) -> None:
+        """
+        Initializes the form item widget.
+
+        Args:
+            parent (QWidget | None, optional): The parent widget. Defaults to None.
+            spec (FormItemSpec): The specification for the form item.
+        """
         super().__init__(parent)
         self._spec = spec
         self._layout = QHBoxLayout()
@@ -111,8 +145,11 @@ class DynamicFormItem(QWidget):
         self._desc = self._spec.info.description
         self.setLayout(self._layout)
         self._add_main_widget()
-        if clearable_required(spec.info):
-            self._add_clear_button()
+        if not spec.pretty_display:
+            if clearable_required(spec.info):
+                self._add_clear_button()
+        else:
+            self._set_pretty_display()
 
     @abstractmethod
     def getValue(self) -> DynamicFormItemType: ...
@@ -124,6 +161,9 @@ class DynamicFormItem(QWidget):
     def _add_main_widget(self) -> None:
         """Add the main data entry widget to self._main_widget and appply any
         constraints from the field info"""
+
+    def _set_pretty_display(self):
+        self.setEnabled(False)
 
     def _describe(self, pad=" "):
         return pad + (self._desc if self._desc else "")
@@ -168,7 +208,7 @@ class StrMetadataField(DynamicFormItem):
     def setValue(self, value: str):
         if value is None:
             self._main_widget.setText("")
-        self._main_widget.setText(value)
+        self._main_widget.setText(str(value))
 
 
 class IntMetadataField(DynamicFormItem):
@@ -260,8 +300,12 @@ class DictMetadataField(DynamicFormItem):
         super().__init__(parent=parent, spec=spec)
         self._main_widget.data_changed.connect(self._value_changed)
 
+    def _set_pretty_display(self):
+        self._main_widget.set_button_visibility(False)
+        super()._set_pretty_display()
+
     def _add_main_widget(self) -> None:
-        self._main_widget = DictBackedTable([])
+        self._main_widget = DictBackedTable(self, [])
         self._layout.addWidget(self._main_widget)
         self._main_widget.setToolTip(self._describe(""))
 

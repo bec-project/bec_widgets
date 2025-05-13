@@ -89,6 +89,7 @@ class ScanControl(BECWidget, QWidget):
         self.config.allowed_scans = allowed_scans
 
         self._scan_metadata: dict | None = None
+        self._metadata_form = ScanMetadata(parent=parent)
 
         # Create and set main layout
         self._init_UI()
@@ -165,7 +166,6 @@ class ScanControl(BECWidget, QWidget):
         self.layout.addStretch()
 
     def _add_metadata_form(self):
-        self._metadata_form = ScanMetadata(parent=self)
         self.layout.addWidget(self._metadata_form)
         self._metadata_form.update_with_new_scan(self.comboBox_scan_selection.currentText())
         self.scan_selected.connect(self._metadata_form.update_with_new_scan)

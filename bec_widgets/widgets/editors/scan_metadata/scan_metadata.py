@@ -36,11 +36,13 @@ class ScanMetadata(PydanticModelForm):
 
         # self.populate() gets called in super().__init__
         # so make sure self._additional_metadata exists
-        self._additional_md_box = ExpandableGroupFrame("Additional metadata", expanded=False)
+        self._additional_md_box = ExpandableGroupFrame(
+            parent, "Additional metadata", expanded=False
+        )
         self._additional_md_box_layout = QHBoxLayout()
         self._additional_md_box.set_layout(self._additional_md_box_layout)
 
-        self._additional_metadata = DictBackedTable(initial_extras or [])
+        self._additional_metadata = DictBackedTable(parent, initial_extras or [])
         self._scan_name = scan_name or ""
         self._md_schema = get_metadata_schema_for_scan(self._scan_name)
         self._additional_metadata.data_changed.connect(self.validate_form)
@@ -127,6 +129,7 @@ if __name__ == "__main__":  # pragma: no cover
         w.setLayout(layout)
 
         scan_metadata = ScanMetadata(
+            parent=w,
             scan_name="grid_scan",
             initial_extras=[["key1", "value1"], ["key2", "value2"], ["key3", "value3"]],
         )

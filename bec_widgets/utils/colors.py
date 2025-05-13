@@ -15,12 +15,15 @@ if TYPE_CHECKING:  # pragma: no cover
     from bec_qthemes._main import AccentColors
 
 
-def get_theme_palette():
+def get_theme_name():
     if QApplication.instance() is None or not hasattr(QApplication.instance(), "theme"):
-        theme = "dark"
+        return "dark"
     else:
-        theme = QApplication.instance().theme.theme
-    return bec_qthemes.load_palette(theme)
+        return QApplication.instance().theme.theme
+
+
+def get_theme_palette():
+    return bec_qthemes.load_palette(get_theme_name())
 
 
 def get_accent_colors() -> AccentColors | None:

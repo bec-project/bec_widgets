@@ -1,6 +1,7 @@
-from typing import TYPE_CHECKING
+import json
 
 import pytest
+import pytestqt.exceptions
 
 from bec_widgets.cli.rpc.rpc_base import RPCBase, RPCReference
 
@@ -145,7 +146,12 @@ def test_available_widgets(qtbot, connected_client_gui_obj):
 
         # Check that the number of top level widgets is still the same. As the cleanup is done by the
         # qt event loop, we need to wait for the qtbot to finish the cleanup
-        qtbot.waitUntil(lambda: len(gui._server_registry) == top_level_widgets_count)
+        try:
+            qtbot.waitUntil(lambda: len(gui._server_registry) == top_level_widgets_count)
+        except pytestqt.exceptions.TimeoutError as e:
+            raise RuntimeError(
+                f"Widget {widget} was not cleanly deleted in five seconds! \n Server registry contents: \n {json.dumps(gui._server_registry,indent=4)}"
+            )
         # Number of widgets with parent_id == None, should be 2
         widgets = [
             widget
