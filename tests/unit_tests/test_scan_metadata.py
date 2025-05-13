@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import Set
 
 import pytest
 from bec_lib.metadata_schema import BasicScanMetadata
@@ -8,6 +9,7 @@ from qtpy.QtCore import QItemSelectionModel, QPoint, Qt
 
 from bec_widgets.utils.forms_from_types.items import (
     BoolMetadataField,
+    DictMetadataField,
     DynamicFormItem,
     FloatDecimalMetadataField,
     IntMetadataField,
@@ -34,12 +36,13 @@ class ExampleSchema(BasicScanMetadata):
     int_nodefault_optional: int | None = Field(lt=-1, ge=-44)
     float_nodefault: float
     decimal_dp_limits_nodefault: Decimal = Field(Decimal(1.23), decimal_places=2, gt=1, le=34.5)
-    unsupported_class: Json = Field(default_factory=dict)
+    dict_default: dict = Field(default_factory=dict)
+    unsupported_class: Json = Field(default=set())
 
 
 TEST_DICT = {
     "sample_name": "test name",
-    "str_optional": None,
+    "str_optional": "None",
     "str_required": "something",
     "bool_optional": None,
     "bool_required_default": True,
@@ -47,8 +50,9 @@ TEST_DICT = {
     "int_default": 21,
     "int_nodefault_optional": -10,
     "float_nodefault": pytest.approx(0.1),
-    "decimal_dp_limits_nodefault": pytest.approx(34),
-    "unsupported_class": '{"key": "value"}',
+    "decimal_dp_limits_nodefault": pytest.approx(34.5),
+    "dict_default": {"test_dict": "values"},
+    "unsupported_class": '["set", "item"]',
 }
 
 
@@ -82,7 +86,8 @@ def metadata_widget(empty_metadata_widget: ScanMetadata):
     int_nodefault_optional = widget._form_grid.layout().itemAtPosition(7, 1).widget()
     float_nodefault = widget._form_grid.layout().itemAtPosition(8, 1).widget()
     decimal_dp_limits_nodefault = widget._form_grid.layout().itemAtPosition(9, 1).widget()
-    unsupported_class = widget._form_grid.layout().itemAtPosition(10, 1).widget()
+    dict_default = widget._form_grid.layout().itemAtPosition(10, 1).widget()
+    unsupported_class = widget._form_grid.layout().itemAtPosition(11, 1).widget()
 
     yield (
         widget,
@@ -97,6 +102,7 @@ def metadata_widget(empty_metadata_widget: ScanMetadata):
             "int_nodefault_optional": int_nodefault_optional,
             "float_nodefault": float_nodefault,
             "decimal_dp_limits_nodefault": decimal_dp_limits_nodefault,
+            "dict_default": dict_default,
             "unsupported_class": unsupported_class,
         },
     )
@@ -112,7 +118,8 @@ def fill_commponents(components: dict[str, DynamicFormItem]):
     components["int_nodefault_optional"].setValue(-10)
     components["float_nodefault"].setValue(0.1)
     components["decimal_dp_limits_nodefault"].setValue(456.789)
-    components["unsupported_class"].setValue(r'{"key": "value"}')
+    components["dict_default"].setValue({"test_dict": "values"})
+    components["unsupported_class"].setValue(r'["set", "item"]')
 
 
 def test_griditems_are_correct_class(
@@ -129,6 +136,7 @@ def test_griditems_are_correct_class(
     assert isinstance(components["int_nodefault_optional"], IntMetadataField)
     assert isinstance(components["float_nodefault"], FloatDecimalMetadataField)
     assert isinstance(components["decimal_dp_limits_nodefault"], FloatDecimalMetadataField)
+    assert isinstance(components["dict_default"], DictMetadataField)
     assert isinstance(components["unsupported_class"], StrMetadataField)
 
 
@@ -168,8 +176,8 @@ def test_numbers_clipped_to_limits(
     fill_commponents(components)
 
     components["decimal_dp_limits_nodefault"].setValue(-56)
+    assert components["decimal_dp_limits_nodefault"].getValue() == pytest.approx(1.01)
     widget.validate_form()
-    assert components["decimal_dp_limits_nodefault"].getValue() == pytest.approx(2)
     assert widget._validity_message.text() == "No errors!"
 
 
