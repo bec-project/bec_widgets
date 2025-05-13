@@ -44,6 +44,7 @@ class TypedForm(BECWidget, QWidget):
         items: list[tuple[str, type]] | None = None,
         form_item_specs: list[FormItemSpec] | None = None,
         enabled: bool = True,
+        pretty_display: bool = False,
         client=None,
         **kwargs,
     ):
@@ -55,7 +56,8 @@ class TypedForm(BECWidget, QWidget):
             form_item_specs (list[FormItemSpec]):   list of form item specs, equivalent to items.
                                                     only one of items or form_item_specs should be
                                                     supplied.
-            enabled (bool):                         whether fields are enabled for editing.
+            enabled (bool, optional):               whether fields are enabled for editing.
+            pretty_display (bool, optional): Whether to use a pretty display for the widget. Defaults to False. If True, disables the widget, doesn't add a clear button, and adapts the stylesheet for non-editable display.
         """
         if (items is not None and form_item_specs is not None) or (
             items is None and form_item_specs is None
@@ -66,7 +68,7 @@ class TypedForm(BECWidget, QWidget):
             form_item_specs
             if form_item_specs is not None
             else [
-                FormItemSpec(name=name, item_type=item_type)
+                FormItemSpec(name=name, item_type=item_type, pretty_display=pretty_display)
                 for name, item_type in items  # type: ignore
             ]
         )
@@ -83,6 +85,7 @@ class TypedForm(BECWidget, QWidget):
         self._form_grid.setLayout(self._new_grid_layout())
 
         self.populate()
+        self.enabled = self._enabled  # type: ignore # QProperty
 
     def populate(self):
         self._clear_grid()
@@ -139,10 +142,6 @@ class TypedForm(BECWidget, QWidget):
         new_grid.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
         return new_grid
 
-    def _set_widgets_enabled(self, enabled: bool):
-        for row in self.enumerate_form_widgets():
-            row.widget.setEnabled(enabled)
-
     @property
     def widget_dict(self):
         return {
@@ -157,7 +156,7 @@ class TypedForm(BECWidget, QWidget):
     @enabled.setter
     def enabled(self, value: bool):
         self._enabled = value
-        self._set_widgets_enabled(value)
+        self.setEnabled(value)
 
 
 class PydanticModelForm(TypedForm):
@@ -169,6 +168,7 @@ class PydanticModelForm(TypedForm):
         parent=None,
         data_model: type[BaseModel] | None = None,
         enabled: bool = True,
+        pretty_display: bool = False,
         client=None,
         **kwargs,
     ):
@@ -178,7 +178,10 @@ class PydanticModelForm(TypedForm):
         Args:
             data_model (type[BaseModel]): the model class for which to generate a form.
             enabled (bool): whether fields are enabled for editing.
+            pretty_display (bool, optional): Whether to use a pretty display for the widget. Defaults to False. If True, disables the widget, doesn't add a clear button, and adapts the stylesheet for non-editable display.
+
         """
+        self._pretty_display = pretty_display
         self._md_schema = data_model
         super().__init__(
             parent=parent, form_item_specs=self._form_item_specs(), enabled=enabled, client=client
@@ -214,7 +217,9 @@ class PydanticModelForm(TypedForm):
 
     def _form_item_specs(self):
         return [
-            FormItemSpec(name=name, info=info, item_type=info.annotation)
+            FormItemSpec(
+                name=name, info=info, item_type=info.annotation, pretty_display=self._pretty_display
+            )
             for name, info in self._md_schema.model_fields.items()
         ]
 

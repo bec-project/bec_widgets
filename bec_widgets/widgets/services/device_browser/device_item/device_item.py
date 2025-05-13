@@ -2,10 +2,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from bec_lib.atlas_models import Device as DeviceConfigModel
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QMimeData, Qt
+from qtpy.QtCore import QMimeData, QSize, Qt, Signal
 from qtpy.QtGui import QDrag
-from qtpy.QtWidgets import QApplication, QHBoxLayout, QLabel, QWidget
+from qtpy.QtWidgets import QApplication, QHBoxLayout, QWidget
+
+from bec_widgets.utils.colors import get_theme_name
+from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.expandable_frame import ExpandableGroupFrame
+from bec_widgets.utils.forms_from_types import styles
+from bec_widgets.utils.forms_from_types.forms import PydanticModelForm
+from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
 if TYPE_CHECKING:  # pragma: no cover
     from qtpy.QtGui import QMouseEvent
@@ -13,26 +21,75 @@ if TYPE_CHECKING:  # pragma: no cover
 logger = bec_logger.logger
 
 
-class DeviceItem(QWidget):
-    def __init__(self, device: str) -> None:
-        super().__init__()
+class DeviceItemForm(PydanticModelForm):
+    RPC = False
+    PLUGIN = False
+
+    def __init__(self, parent=None, client=None, pretty_display=False, **kwargs):
+        super().__init__(
+            parent=parent,
+            data_model=DeviceConfigModel,
+            pretty_display=pretty_display,
+            client=client,
+            **kwargs,
+        )
+        self._validity.setVisible(False)
+        self._connect_to_theme_change()
+
+    def set_pretty_display_theme(self, theme: str | None = None):
+        if theme is None:
+            theme = get_theme_name()
+        self.setStyleSheet(styles.pretty_display_theme(theme))
+
+    def _connect_to_theme_change(self):
+        """Connect to the theme change signal."""
+        qapp = QApplication.instance()
+        if hasattr(qapp, "theme_signal"):
+            qapp.theme_signal.theme_updated.connect(self.set_pretty_display_theme)  # type: ignore
+
+
+class DeviceItem(ExpandableGroupFrame):
+    broadcast_size_hint = Signal(QSize)
+
+    RPC = False
+
+    def __init__(self, parent, device: str, icon: str = "") -> None:
+        super().__init__(parent, title=device, expanded=False, icon=icon)
 
         self._drag_pos = None
-
+        self._expanded_first_time = False
+        self._data = None
         self.device = device
         layout = QHBoxLayout()
-        layout.setContentsMargins(10, 2, 10, 2)
-        self.label = QLabel(device)
-        layout.addWidget(self.label)
-        self.setLayout(layout)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.set_layout(layout)
 
-        self.setStyleSheet(
-            """
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 10px;
-        """
-        )
+        self.adjustSize()
+
+    @SafeSlot()
+    def switch_expanded_state(self):
+        if not self.expanded and not self._expanded_first_time:
+            self._expanded_first_time = True
+            self.form = DeviceItemForm(parent=self, pretty_display=True)
+            self._contents.layout().addWidget(self.form)
+            if self._data:
+                self.form.set_data(self._data)
+            self.broadcast_size_hint.emit(self.sizeHint())
+        super().switch_expanded_state()
+        if self._expanded_first_time:
+            self.form.adjustSize()
+            self.updateGeometry()
+            if self._expanded:
+                self.form.set_pretty_display_theme()
+        self.adjustSize()
+        self.broadcast_size_hint.emit(self.sizeHint())
+
+    def set_display_config(self, config_dict: dict):
+        """Set the displayed information from a device config dict, which must conform to the
+        bec_lib.atlas_models.Device config model."""
+        self._data = DeviceConfigModel.model_validate(config_dict)
+        if self._expanded_first_time:
+            self.form.set_data(self._data)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         super().mousePressEvent(event)
@@ -63,6 +120,25 @@ if __name__ == "__main__":  # pragma: no cover
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    widget = DeviceItem("Device")
+    widget = QWidget()
+    layout = QHBoxLayout()
+    widget.setLayout(layout)
+    item = DeviceItem("Device")
+    layout.addWidget(DarkModeButton())
+    layout.addWidget(item)
+    item.set_display_config(
+        {
+            "name": "Test Device",
+            "enabled": True,
+            "deviceClass": "FakeDeviceClass",
+            "deviceConfig": {"kwarg1": "value1"},
+            "readoutPriority": "baseline",
+            "description": "A device for testing out a widget",
+            "readOnly": True,
+            "softwareTrigger": False,
+            "deviceTags": ["tag1", "tag2", "tag3"],
+            "userParameter": {"some_setting": "some_ value"},
+        }
+    )
     widget.show()
     sys.exit(app.exec_())
