@@ -45,7 +45,11 @@ class DictBackedTableModel(QAbstractTableModel):
 
     def data(self, index, role=Qt.ItemDataRole):
         if index.isValid():
-            if role == Qt.ItemDataRole.DisplayRole or role == Qt.ItemDataRole.EditRole:
+            if role in [
+                Qt.ItemDataRole.DisplayRole,
+                Qt.ItemDataRole.EditRole,
+                Qt.ItemDataRole.ToolTipRole,
+            ]:
                 return str(self._data[index.row()][index.column()])
 
     def setData(self, index, value, role):
@@ -132,7 +136,7 @@ class DictBackedTable(QWidget):
         self._table_view = QTreeView()
         self._table_view.setModel(self._table_model)
         self._table_view.setSizePolicy(
-            QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+            QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         )
         self._table_view.setAlternatingRowColors(True)
         self._layout.addWidget(self._table_view)

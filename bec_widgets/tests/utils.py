@@ -184,8 +184,8 @@ class FakePositioner(BECPositioner):
 class Positioner(FakePositioner):
     """just placeholder for testing embedded isinstance check in DeviceCombobox"""
 
-    def __init__(self, name="test", limits=None, read_value=1.0):
-        super().__init__(name, limits, read_value)
+    def __init__(self, name="test", limits=None, read_value=1.0, enabled=True):
+        super().__init__(name, limits=limits, read_value=read_value, enabled=enabled)
 
 
 class Device(FakeDevice):
