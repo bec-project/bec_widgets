@@ -28,6 +28,7 @@ from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox
 from bec_widgets.widgets.control.scan_control.scan_control import ScanControl
 from bec_widgets.widgets.editors.vscode.vscode import VSCodeEditor
+from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap
 from bec_widgets.widgets.plots.image.image import Image
 from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
 from bec_widgets.widgets.plots.multi_waveform.multi_waveform import MultiWaveform
@@ -153,6 +154,9 @@ class BECDockArea(BECWidget, QWidget):
                         tooltip="Add Motor Map",
                         filled=True,
                         parent=self,
+                    ),
+                    "heatmap": MaterialIconAction(
+                        icon_name=Heatmap.ICON_NAME, tooltip="Add Heatmap", filled=True, parent=self
                     ),
                 },
             ),
@@ -290,6 +294,9 @@ class BECDockArea(BECWidget, QWidget):
         )
         menu_plots.actions["motor_map"].action.triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="MotorMap")
+        )
+        menu_plots.actions["heatmap"].action.triggered.connect(
+            lambda: self._create_widget_from_toolbar(widget_name="Heatmap")
         )
 
         # Menu Devices
