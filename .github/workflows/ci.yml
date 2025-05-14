@@ -25,6 +25,11 @@ jobs:
     if: needs.check_pr_status.outputs.branch-pr == ''
     uses: ./.github/workflows/pytest-matrix.yml
 
+  generate-cli-test:
+    needs: [check_pr_status, formatter]
+    if: needs.check_pr_status.outputs.branch-pr == ''
+    uses: ./.github/workflows/generate-cli-check.yml
+
   end2end-test:
     needs: [check_pr_status, formatter]
     if: needs.check_pr_status.outputs.branch-pr == ''

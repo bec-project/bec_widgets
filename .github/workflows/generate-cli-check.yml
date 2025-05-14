@@ -1,0 +1,49 @@
+name: Run bw-generate-cli
+on: [workflow_call]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+
+    env:
+      CHILD_PIPELINE_BRANCH: main  # Set the branch you want for ophyd_devices
+      BEC_CORE_BRANCH: main        # Set the branch you want for bec
+      OPHYD_DEVICES_BRANCH: main   # Set the branch you want for ophyd_devices
+      PROJECT_PATH: ${{ github.repository }}
+      QTWEBENGINE_DISABLE_SANDBOX: 1
+      QT_QPA_PLATFORM: "offscreen"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install os dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1 libegl1 x11-utils libxkbcommon-x11-0 libdbus-1-3 xvfb
+          sudo apt-get -y install libnss3 libxdamage1 libasound2t64 libatomic1 libxcursor1
+
+      - name: Clone and install dependencies
+        run: |
+            echo -e "\033[35;1m Using branch $BEC_CORE_BRANCH of BEC CORE \033[0;m";
+            git clone --branch $BEC_CORE_BRANCH https://github.com/bec-project/bec.git
+            echo -e "\033[35;1m Using branch $OPHYD_DEVICES_BRANCH of OPHYD_DEVICES \033[0;m";
+            git clone --branch $OPHYD_DEVICES_BRANCH https://github.com/bec-project/ophyd_devices.git
+            export OHPYD_DEVICES_PATH=$PWD/ophyd_devices
+            pip install -e ./ophyd_devices
+            pip install -e ./bec/bec_lib[dev]
+            pip install -e ./bec/bec_ipython_client
+            pip install -e .[dev,pyside6]
+
+      - name: Run bw-generate-cli
+        run: |
+            bw-generate-cli --target bec_widgets 
+            git diff --exit-code
+            
