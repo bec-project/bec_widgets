@@ -397,7 +397,7 @@ class DeviceInputBase(BECWidget):
             object: Device object, can be device of type Device, Positioner, Signal or ComputedSignal.
         """
         self.validate_device(device)
-        dev = getattr(self.dev, device.lower(), None)
+        dev = getattr(self.dev, device, None)
         if dev is None:
             raise ValueError(
                 f"Device {device} is not found in the device manager {self.dev} as enabled device."

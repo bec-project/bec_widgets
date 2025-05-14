@@ -140,7 +140,7 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         """
         if self.validate_device(input_text) is True:
             self._is_valid_input = True
-            self.device_selected.emit(input_text.lower())
+            self.device_selected.emit(input_text)
         else:
             self._is_valid_input = False
         self.update()
