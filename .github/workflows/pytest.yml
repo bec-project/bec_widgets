@@ -57,7 +57,7 @@ jobs:
         id: coverage
         run: |
           pip install coverage pytest pytest-random-order pytest-cov
-          pytest --cov --random-order --cov-branch --cov-report=xml tests/unit_tests/
+          pytest --random-order --cov --cov-config=pyproject.toml --cov-branch --cov-report=xml --no-cov-on-fail tests/unit_tests/
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
