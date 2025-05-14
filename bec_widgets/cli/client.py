@@ -37,6 +37,7 @@ _Widgets = {
     "DeviceBrowser": "DeviceBrowser",
     "DeviceComboBox": "DeviceComboBox",
     "DeviceLineEdit": "DeviceLineEdit",
+    "Heatmap": "Heatmap",
     "Image": "Image",
     "LogPanel": "LogPanel",
     "Minesweeper": "Minesweeper",
@@ -1178,6 +1179,482 @@ class EllipticalROI(RPCBase):
         Args:
             x (float): The x-coordinate of the new position.
             y (float): The y-coordinate of the new position.
+        """
+
+
+class Heatmap(RPCBase):
+    """Heatmap widget for visualizing 2d grid data with color mapping for the z-axis."""
+
+    @property
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @enable_toolbar.setter
+    @rpc_call
+    def enable_toolbar(self) -> "bool":
+        """
+        Show Toolbar.
+        """
+
+    @property
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @enable_side_panel.setter
+    @rpc_call
+    def enable_side_panel(self) -> "bool":
+        """
+        Show Side Panel
+        """
+
+    @property
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @enable_fps_monitor.setter
+    @rpc_call
+    def enable_fps_monitor(self) -> "bool":
+        """
+        Enable the FPS monitor.
+        """
+
+    @rpc_call
+    def set(self, **kwargs):
+        """
+        Set the properties of the plot widget.
+
+        Args:
+            **kwargs: Keyword arguments for the properties to be set.
+
+        Possible properties:
+            - title: str
+            - x_label: str
+            - y_label: str
+            - x_scale: Literal["linear", "log"]
+            - y_scale: Literal["linear", "log"]
+            - x_lim: tuple
+            - y_lim: tuple
+            - legend_label_size: int
+        """
+
+    @property
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @title.setter
+    @rpc_call
+    def title(self) -> "str":
+        """
+        Set title of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @x_label.setter
+    @rpc_call
+    def x_label(self) -> "str":
+        """
+        The set label for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @y_label.setter
+    @rpc_call
+    def y_label(self) -> "str":
+        """
+        The set label for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @x_limits.setter
+    @rpc_call
+    def x_limits(self) -> "QPointF":
+        """
+        Get the x limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @y_limits.setter
+    @rpc_call
+    def y_limits(self) -> "QPointF":
+        """
+        Get the y limits of the plot.
+        """
+
+    @property
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @x_grid.setter
+    @rpc_call
+    def x_grid(self) -> "bool":
+        """
+        Show grid on the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @y_grid.setter
+    @rpc_call
+    def y_grid(self) -> "bool":
+        """
+        Show grid on the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @inner_axes.setter
+    @rpc_call
+    def inner_axes(self) -> "bool":
+        """
+        Show inner axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @outer_axes.setter
+    @rpc_call
+    def outer_axes(self) -> "bool":
+        """
+        Show the outer axes of the plot widget.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @auto_range_x.setter
+    @rpc_call
+    def auto_range_x(self) -> "bool":
+        """
+        Set auto range for the x-axis.
+        """
+
+    @property
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @auto_range_y.setter
+    @rpc_call
+    def auto_range_y(self) -> "bool":
+        """
+        Set auto range for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def minimal_crosshair_precision(self) -> "int":
+        """
+        Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @minimal_crosshair_precision.setter
+    @rpc_call
+    def minimal_crosshair_precision(self) -> "int":
+        """
+        Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @property
+    @rpc_call
+    def color_map(self) -> "str":
+        """
+        Set the color map of the image.
+        """
+
+    @color_map.setter
+    @rpc_call
+    def color_map(self) -> "str":
+        """
+        Set the color map of the image.
+        """
+
+    @property
+    @rpc_call
+    def v_range(self) -> "QPointF":
+        """
+        Set the v_range of the main image.
+        """
+
+    @v_range.setter
+    @rpc_call
+    def v_range(self) -> "QPointF":
+        """
+        Set the v_range of the main image.
+        """
+
+    @property
+    @rpc_call
+    def v_min(self) -> "float":
+        """
+        Get the minimum value of the v_range.
+        """
+
+    @v_min.setter
+    @rpc_call
+    def v_min(self) -> "float":
+        """
+        Get the minimum value of the v_range.
+        """
+
+    @property
+    @rpc_call
+    def v_max(self) -> "float":
+        """
+        Get the maximum value of the v_range.
+        """
+
+    @v_max.setter
+    @rpc_call
+    def v_max(self) -> "float":
+        """
+        Get the maximum value of the v_range.
+        """
+
+    @property
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Whether the aspect ratio is locked.
+        """
+
+    @lock_aspect_ratio.setter
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Whether the aspect ratio is locked.
+        """
+
+    @property
+    @rpc_call
+    def autorange(self) -> "bool":
+        """
+        Whether autorange is enabled.
+        """
+
+    @autorange.setter
+    @rpc_call
+    def autorange(self) -> "bool":
+        """
+        Whether autorange is enabled.
+        """
+
+    @property
+    @rpc_call
+    def autorange_mode(self) -> "str":
+        """
+        Autorange mode.
+
+        Options:
+            - "max": Use the maximum value of the image for autoranging.
+            - "mean": Use the mean value of the image for autoranging.
+        """
+
+    @autorange_mode.setter
+    @rpc_call
+    def autorange_mode(self) -> "str":
+        """
+        Autorange mode.
+
+        Options:
+            - "max": Use the maximum value of the image for autoranging.
+            - "mean": Use the mean value of the image for autoranging.
+        """
+
+    @rpc_call
+    def enable_colorbar(
+        self,
+        enabled: "bool",
+        style: "Literal['full', 'simple']" = "full",
+        vrange: "tuple[int, int] | None" = None,
+    ):
+        """
+        Enable the colorbar and switch types of colorbars.
+
+        Args:
+            enabled(bool): Whether to enable the colorbar.
+            style(Literal["full", "simple"]): The type of colorbar to enable.
+            vrange(tuple): The range of values to use for the colorbar.
+        """
+
+    @property
+    @rpc_call
+    def enable_simple_colorbar(self) -> "bool":
+        """
+        Enable the simple colorbar.
+        """
+
+    @enable_simple_colorbar.setter
+    @rpc_call
+    def enable_simple_colorbar(self) -> "bool":
+        """
+        Enable the simple colorbar.
+        """
+
+    @property
+    @rpc_call
+    def enable_full_colorbar(self) -> "bool":
+        """
+        Enable the full colorbar.
+        """
+
+    @enable_full_colorbar.setter
+    @rpc_call
+    def enable_full_colorbar(self) -> "bool":
+        """
+        Enable the full colorbar.
+        """
+
+    @property
+    @rpc_call
+    def fft(self) -> "bool":
+        """
+        Whether FFT postprocessing is enabled.
+        """
+
+    @fft.setter
+    @rpc_call
+    def fft(self) -> "bool":
+        """
+        Whether FFT postprocessing is enabled.
+        """
+
+    @property
+    @rpc_call
+    def log(self) -> "bool":
+        """
+        Whether logarithmic scaling is applied.
+        """
+
+    @log.setter
+    @rpc_call
+    def log(self) -> "bool":
+        """
+        Whether logarithmic scaling is applied.
+        """
+
+    @property
+    @rpc_call
+    def main_image(self) -> "ImageItem":
+        """
+        Access the main image item.
+        """
+
+    @rpc_call
+    def add_roi(
+        self,
+        kind: "Literal['rect', 'circle', 'ellipse']" = "rect",
+        name: "str | None" = None,
+        line_width: "int | None" = 5,
+        pos: "tuple[float, float] | None" = (10, 10),
+        size: "tuple[float, float] | None" = (50, 50),
+        movable: "bool" = True,
+        **pg_kwargs,
+    ) -> "RectangularROI | CircularROI":
+        """
+        Add a ROI to the image.
+
+        Args:
+            kind(str): The type of ROI to add. Options are "rect" or "circle".
+            name(str): The name of the ROI.
+            line_width(int): The line width of the ROI.
+            pos(tuple): The position of the ROI.
+            size(tuple): The size of the ROI.
+            movable(bool): Whether the ROI is movable.
+            **pg_kwargs: Additional arguments for the ROI.
+
+        Returns:
+            RectangularROI | CircularROI: The created ROI object.
+        """
+
+    @rpc_call
+    def remove_roi(self, roi: "int | str"):
+        """
+        Remove an ROI by index or label via the ROIController.
+        """
+
+    @property
+    @rpc_call
+    def rois(self) -> "list[BaseROI]":
+        """
+        Get the list of ROIs.
+        """
+
+    @rpc_call
+    def plot(
+        self,
+        x_name: "str",
+        y_name: "str",
+        z_name: "str",
+        x_entry: "None | str" = None,
+        y_entry: "None | str" = None,
+        z_entry: "None | str" = None,
+        color_map: "str | None" = "plasma",
+        label: "str | None" = None,
+        validate_bec: "bool" = True,
+        reload: "bool" = False,
+    ):
+        """
+        Plot the heatmap with the given x, y, and z data.
         """
 
 
