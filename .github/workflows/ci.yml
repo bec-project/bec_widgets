@@ -5,16 +5,27 @@ permissions:
   pull-requests: write
 
 jobs:
+  check_pr_status:
+    uses: ./.github/workflows/check_pr.yml
+
   formatter:
+    needs: check_pr_status
+    if: needs.check_pr_status.outputs.branch-pr == ''
     uses: ./.github/workflows/formatter.yml
 
   unit-test:
+    needs: check_pr_status
+    if: needs.check_pr_status.outputs.branch-pr == ''
     uses: ./.github/workflows/pytest.yml
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   unit-test-matrix:
+    needs: check_pr_status
+    if: needs.check_pr_status.outputs.branch-pr == ''
     uses: ./.github/workflows/pytest-matrix.yml
 
   end2end-test:
+    needs: check_pr_status
+    if: needs.check_pr_status.outputs.branch-pr == ''
     uses: ./.github/workflows/end2end-conda.yml
