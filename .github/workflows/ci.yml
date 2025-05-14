@@ -10,8 +10,8 @@ jobs:
 
   unit-test:
     uses: ./.github/workflows/pytest.yml
-    with:
-        pr_number: ${{ github.event.pull_request.number }}
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   unit-test-matrix:
     uses: ./.github/workflows/pytest-matrix.yml
