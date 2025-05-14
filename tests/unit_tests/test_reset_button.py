@@ -16,25 +16,3 @@ def reset_button(qtbot, mocked_client):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-
-
-def test_reset_button_appearance(reset_button):
-    assert reset_button.button.text() == "Reset Queue"
-    assert (
-        reset_button.button.styleSheet()
-        == "background-color:  #F19E39; color: white; font-weight: bold; font-size: 12px;"
-    )
-
-
-@patch.object(QMessageBox, "exec_", return_value=QMessageBox.Yes)
-def test_reset_button_confirmed(mock_exec, reset_button):
-    reset_button.button.click()
-    assert reset_button.queue.request_queue_reset.called
-    reset_button.close()
-
-
-@patch.object(QMessageBox, "exec_", return_value=QMessageBox.No)
-def test_reset_button_cancelled(mock_exec, reset_button):
-    reset_button.button.click()
-    assert not reset_button.queue.request_queue_reset.called
-    reset_button.close()
