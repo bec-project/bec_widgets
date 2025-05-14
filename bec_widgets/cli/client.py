@@ -55,6 +55,7 @@ _Widgets = {
     "TextBox": "TextBox",
     "VSCodeEditor": "VSCodeEditor",
     "Waveform": "Waveform",
+    "WebConsole": "WebConsole",
     "WebsiteWidget": "WebsiteWidget",
 }
 
@@ -3498,6 +3499,16 @@ class Waveform(RPCBase):
     def clear_all(self):
         """
         Clear all curves from the plot widget.
+        """
+
+
+class WebConsole(RPCBase):
+    """A simple widget to display a website"""
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
         """
 
 
