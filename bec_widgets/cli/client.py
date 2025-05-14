@@ -41,6 +41,7 @@ _Widgets = {
     "Image": "Image",
     "LogPanel": "LogPanel",
     "Minesweeper": "Minesweeper",
+    "MonacoWidget": "MonacoWidget",
     "MotorMap": "MotorMap",
     "MultiWaveform": "MultiWaveform",
     "PositionIndicator": "PositionIndicator",
@@ -2416,6 +2417,98 @@ class LogPanel(RPCBase):
 
 
 class Minesweeper(RPCBase): ...
+
+
+class MonacoWidget(RPCBase):
+    """A simple Monaco editor widget"""
+
+    @rpc_call
+    def set_text(self, text: str) -> None:
+        """
+        Set the text in the Monaco editor.
+
+        Args:
+            text (str): The text to set in the editor.
+        """
+
+    @rpc_call
+    def get_text(self) -> str:
+        """
+        Get the current text from the Monaco editor.
+        """
+
+    @rpc_call
+    def set_language(self, language: str) -> None:
+        """
+        Set the programming language for syntax highlighting in the Monaco editor.
+
+        Args:
+            language (str): The programming language to set (e.g., "python", "javascript").
+        """
+
+    @rpc_call
+    def get_language(self) -> str:
+        """
+        Get the current programming language set in the Monaco editor.
+        """
+
+    @rpc_call
+    def set_theme(self, theme: str) -> None:
+        """
+        Set the theme for the Monaco editor.
+
+        Args:
+            theme (str): The theme to set (e.g., "vs-dark", "light").
+        """
+
+    @rpc_call
+    def get_theme(self) -> str:
+        """
+        Get the current theme of the Monaco editor.
+        """
+
+    @rpc_call
+    def set_readonly(self, read_only: bool) -> None:
+        """
+        Set the Monaco editor to read-only mode.
+
+        Args:
+            read_only (bool): If True, the editor will be read-only.
+        """
+
+    @rpc_call
+    def set_cursor(
+        self,
+        line: int,
+        column: int = 1,
+        move_to_position: Literal[None, "center", "top", "position"] = None,
+    ) -> None:
+        """
+        Set the cursor position in the Monaco editor.
+
+        Args:
+            line (int): Line number (1-based).
+            column (int): Column number (1-based), defaults to 1.
+            move_to_position (Literal[None, "center", "top", "position"], optional): Position to move the cursor to.
+        """
+
+    @rpc_call
+    def current_cursor(self) -> dict[str, int]:
+        """
+        Get the current cursor position in the Monaco editor.
+
+        Returns:
+            dict[str, int]: A dictionary with keys 'line' and 'column' representing the cursor position.
+        """
+
+    @rpc_call
+    def set_minimap_enabled(self, enabled: bool) -> None:
+        """
+        Enable or disable the minimap in the Monaco editor.
+
+        Args:
+            enabled (bool): If True, the minimap will be enabled; otherwise, it will be disabled.
+        """
 
 
 class MotorMap(RPCBase):

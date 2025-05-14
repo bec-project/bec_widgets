@@ -9,6 +9,7 @@ from contextlib import redirect_stderr, redirect_stdout
 
 from bec_lib.logger import bec_logger
 from bec_lib.service_config import ServiceConfig
+from qtmonaco.pylsp_provider import pylsp_server
 from qtpy.QtCore import QSize, Qt
 from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QApplication
@@ -142,6 +143,8 @@ class GUIServer:
         """
         Shutdown the GUI server.
         """
+        if pylsp_server.is_running():
+            pylsp_server.stop()
         if self.dispatcher:
             self.dispatcher.stop_cli_server()
             self.dispatcher.disconnect_all()
