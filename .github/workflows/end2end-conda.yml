@@ -35,7 +35,7 @@ jobs:
       - name: Conda install and run pytest
         run: |
           echo -e "\033[35;1m Using branch $BEC_CORE_BRANCH of BEC CORE \033[0;m";
-          git clone --branch $BEC_CORE_BRANCH https://gitlab.psi.ch/bec/bec.git
+          git clone --branch $BEC_CORE_BRANCH https://github.com/bec-project/bec.git
           echo -e "\033[35;1m Using branch $OPHYD_DEVICES_BRANCH of OPHYD_DEVICES \033[0;m";
           git clone --branch $OPHYD_DEVICES_BRANCH https://gitlab.psi.ch/bec/ophyd_devices.git
           export OHPYD_DEVICES_PATH=$PWD/ophyd_devices
