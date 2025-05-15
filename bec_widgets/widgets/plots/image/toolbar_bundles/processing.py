@@ -11,18 +11,31 @@ class ImageProcessingToolbarBundle(ToolbarBundle):
         super().__init__(bundle_id=bundle_id, actions=[], **kwargs)
         self.target_widget = target_widget
 
-        self.fft = MaterialIconAction(icon_name="fft", tooltip="Toggle FFT", checkable=True)
-        self.log = MaterialIconAction(icon_name="log_scale", tooltip="Toggle Log", checkable=True)
+        self.fft = MaterialIconAction(
+            icon_name="fft", tooltip="Toggle FFT", checkable=True, parent=self.target_widget
+        )
+        self.log = MaterialIconAction(
+            icon_name="log_scale", tooltip="Toggle Log", checkable=True, parent=self.target_widget
+        )
         self.transpose = MaterialIconAction(
-            icon_name="transform", tooltip="Transpose Image", checkable=True
+            icon_name="transform",
+            tooltip="Transpose Image",
+            checkable=True,
+            parent=self.target_widget,
         )
         self.right = MaterialIconAction(
-            icon_name="rotate_right", tooltip="Rotate image clockwise by 90 deg"
+            icon_name="rotate_right",
+            tooltip="Rotate image clockwise by 90 deg",
+            parent=self.target_widget,
         )
         self.left = MaterialIconAction(
-            icon_name="rotate_left", tooltip="Rotate image counterclockwise by 90 deg"
+            icon_name="rotate_left",
+            tooltip="Rotate image counterclockwise by 90 deg",
+            parent=self.target_widget,
         )
-        self.reset = MaterialIconAction(icon_name="reset_settings", tooltip="Reset Image Settings")
+        self.reset = MaterialIconAction(
+            icon_name="reset_settings", tooltip="Reset Image Settings", parent=self.target_widget
+        )
 
         self.add_action("fft", self.fft)
         self.add_action("log", self.log)
