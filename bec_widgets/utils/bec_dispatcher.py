@@ -163,7 +163,7 @@ class BECDispatcher:
     def connect_slot(
         self,
         slot: Callable,
-        topics: Union[EndpointInfo, str, list[Union[EndpointInfo, str]]],
+        topics: EndpointInfo | str | list[EndpointInfo] | list[str],
         cb_info: dict | None = None,
         **kwargs,
     ) -> None:
@@ -172,7 +172,7 @@ class BECDispatcher:
         Args:
             slot (Callable): A slot method/function that accepts two inputs: content and metadata of
                 the corresponding pub/sub message
-            topics (EndpointInfo | str | list): A topic or list of topics that can typically be acquired via bec_lib.MessageEndpoints
+            topics EndpointInfo | str | list[EndpointInfo] | list[str]: A topic or list of topics that can typically be acquired via bec_lib.MessageEndpoints
             cb_info (dict | None): A dictionary containing information about the callback. Defaults to None.
         """
         qt_slot = QtThreadSafeCallback(cb=slot, cb_info=cb_info)
@@ -183,13 +183,15 @@ class BECDispatcher:
         topics_str, _ = self.client.connector._convert_endpointinfo(topics)
         qt_slot.topics.update(set(topics_str))
 
-    def disconnect_slot(self, slot: Callable, topics: Union[str, list]):
+    def disconnect_slot(
+        self, slot: Callable, topics: EndpointInfo | str | list[EndpointInfo] | list[str]
+    ):
         """
         Disconnect a slot from a topic.
 
         Args:
             slot(Callable): The slot to disconnect
-            topics(Union[str, list]): The topic(s) to disconnect from
+            topics EndpointInfo | str | list[EndpointInfo] | list[str]: A topic or list of topics to unsub from.
         """
         # find the right slot to disconnect from ;
         # slot callbacks are wrapped in QtThreadSafeCallback objects,
