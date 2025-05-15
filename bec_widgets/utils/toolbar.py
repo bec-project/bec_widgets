@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Dict, List, Literal, Tuple
 
+from bec_lib.logger import bec_logger
 from bec_qthemes._icon.material_icons import material_icon
 from qtpy.QtCore import QSize, Qt, QTimer
 from qtpy.QtGui import QAction, QColor, QIcon
@@ -30,6 +31,8 @@ from bec_widgets.utils.colors import set_theme
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
+
+logger = bec_logger.logger
 
 # Ensure that icons are shown in menus (especially on macOS)
 QApplication.setAttribute(Qt.AA_DontShowIconsInMenus, False)
@@ -173,6 +176,10 @@ class MaterialIconAction(ToolBarAction):
             filled=self.filled,
             color=self.color,
         )
+        if parent is None:
+            logger.warning(
+                "MaterialIconAction was created without a parent. Please consider adding one. Using None as parent may cause issues."
+            )
         self.action = QAction(icon=self.icon, text=self.tooltip, parent=parent)
         self.action.setCheckable(self.checkable)
 
