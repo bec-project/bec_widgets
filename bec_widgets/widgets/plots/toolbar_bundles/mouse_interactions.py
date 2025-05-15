@@ -44,7 +44,7 @@ class MouseInteractionToolbarBundle(ToolbarBundle):
             initial_action="drag_mode",
             tooltip="Mouse Modes",
             checkable=True,
-            parent=self,
+            parent=self.target_widget,
         )
 
         # Add them to the bundle
