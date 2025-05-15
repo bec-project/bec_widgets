@@ -38,6 +38,7 @@ dev = [
     "pytest-timeout~=2.2",
     "pytest-xvfb~=3.0",
     "pytest~=8.0",
+    "pytest-cov~=6.1.1",
 ]
 
 [project.urls]
@@ -108,11 +109,11 @@ upload_to_vcs_release = true
 
 [tool.coverage.report]
 skip_empty = true # exclude empty *files*, e.g. __init__.py, from the report
-exclude_lines = [
+exclude_also = [ # Exclude lines matching these regexes from the coverage report
     "pragma: no cover",
     "if TYPE_CHECKING:",
     "return NotImplemented",
     "raise NotImplementedError",
-    "...",
+    "\\.\\.\\.",
     'if __name__ == "__main__":',
 ]
