@@ -518,3 +518,156 @@ def test_long_pressbutton(toolbar_fixture, dummy_widget, switchable_toolbar_acti
 
     # Verify that fake_showMenu() was called.
     assert call_flag, "Long press did not trigger showMenu() as expected."
+
+
+# Additional tests for action/bundle removal
+def test_remove_standalone_action(toolbar_fixture, icon_action, dummy_widget):
+    """
+    Ensure that a standalone action is fully removed and no longer accessible.
+    """
+    toolbar = toolbar_fixture
+    # Add the action and check it is present
+    toolbar.add_action("icon_action", icon_action, dummy_widget)
+    assert "icon_action" in toolbar.widgets
+    assert icon_action.action in toolbar.actions()
+
+    # Now remove it
+    toolbar.remove_action("icon_action")
+
+    # Action bookkeeping
+    assert "icon_action" not in toolbar.widgets
+    # QAction list
+    assert icon_action.action not in toolbar.actions()
+    # Attempting to hide / show it should raise
+    with pytest.raises(ValueError):
+        toolbar.hide_action("icon_action")
+    with pytest.raises(ValueError):
+        toolbar.show_action("icon_action")
+
+
+def test_remove_action_from_bundle(
+    toolbar_fixture, dummy_widget, icon_action, material_icon_action
+):
+    """
+    Remove a single action that is part of a bundle and verify clean‑up.
+    """
+    toolbar = toolbar_fixture
+    bundle = ToolbarBundle(
+        bundle_id="test_bundle",
+        actions=[("icon_action", icon_action), ("material_action", material_icon_action)],
+    )
+    toolbar.add_bundle(bundle, dummy_widget)
+
+    # Initial assertions
+    assert "test_bundle" in toolbar.bundles
+    assert "icon_action" in toolbar.widgets
+    assert "material_action" in toolbar.widgets
+
+    # Remove one action from the bundle
+    toolbar.remove_action("icon_action")
+
+    # icon_action should be fully gone
+    assert "icon_action" not in toolbar.widgets
+    assert icon_action.action not in toolbar.actions()
+    # Bundle tracking should be updated
+    assert "icon_action" not in toolbar.bundles["test_bundle"]
+    # The other action must still exist
+    assert "material_action" in toolbar.widgets
+    assert material_icon_action.action in toolbar.actions()
+
+
+def test_remove_last_action_from_bundle_removes_bundle(toolbar_fixture, dummy_widget, icon_action):
+    """
+    Removing the final action from a bundle should delete the bundle entry itself.
+    """
+    toolbar = toolbar_fixture
+    bundle = ToolbarBundle(bundle_id="single_action_bundle", actions=[("only_action", icon_action)])
+    toolbar.add_bundle(bundle, dummy_widget)
+
+    # Sanity check
+    assert "single_action_bundle" in toolbar.bundles
+    assert "only_action" in toolbar.widgets
+
+    # Remove the sole action
+    toolbar.remove_action("only_action")
+
+    # Bundle should be gone
+    assert "single_action_bundle" not in toolbar.bundles
+    # QAction removed
+    assert icon_action.action not in toolbar.actions()
+
+
+def test_remove_entire_bundle(toolbar_fixture, dummy_widget, icon_action, material_icon_action):
+    """
+    Ensure that removing a bundle deletes all its actions and separators.
+    """
+    toolbar = toolbar_fixture
+    bundle = ToolbarBundle(
+        bundle_id="to_remove",
+        actions=[("icon_action", icon_action), ("material_action", material_icon_action)],
+    )
+    toolbar.add_bundle(bundle, dummy_widget)
+
+    # Confirm bundle presence
+    assert "to_remove" in toolbar.bundles
+
+    # Remove the whole bundle
+    toolbar.remove_bundle("to_remove")
+
+    # Bundle mapping gone
+    assert "to_remove" not in toolbar.bundles
+    # All actions gone
+    for aid, act in [("icon_action", icon_action), ("material_action", material_icon_action)]:
+        assert aid not in toolbar.widgets
+        assert act.action not in toolbar.actions()
+
+
+def test_trigger_removed_action_raises(toolbar_fixture, icon_action, dummy_widget, qtbot):
+    """
+    Add an action, connect a mock slot, then remove the action and verify that
+    attempting to trigger it afterwards raises RuntimeError (since the underlying
+    QAction has been deleted).
+    """
+    toolbar = toolbar_fixture
+
+    # Add the action and connect a mock slot
+    toolbar.add_action("icon_action", icon_action, dummy_widget)
+    called = []
+
+    def mock_slot():
+        called.append(True)
+
+    icon_action.action.triggered.connect(mock_slot)
+
+    # Trigger once to confirm connection works
+    icon_action.action.trigger()
+    assert called == [True]
+
+    # Now remove the action
+    toolbar.remove_action("icon_action")
+    # Allow deleteLater event to process
+    qtbot.wait(50)
+
+    # The underlying C++ object should be deleted; triggering should raise
+    with pytest.raises(RuntimeError):
+        icon_action.action.trigger()
+
+
+def test_remove_nonexistent_action(toolbar_fixture):
+    """
+    Attempting to remove an action that does not exist should raise ValueError.
+    """
+    toolbar = toolbar_fixture
+    with pytest.raises(ValueError) as excinfo:
+        toolbar.remove_action("nonexistent_action")
+    assert "Action with ID 'nonexistent_action' does not exist." in str(excinfo.value)
+
+
+def test_remove_nonexistent_bundle(toolbar_fixture):
+    """
+    Attempting to remove a bundle that does not exist should raise ValueError.
+    """
+    toolbar = toolbar_fixture
+    with pytest.raises(ValueError) as excinfo:
+        toolbar.remove_bundle("nonexistent_bundle")
+    assert "Bundle 'nonexistent_bundle' does not exist." in str(excinfo.value)

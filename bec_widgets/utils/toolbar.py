@@ -702,6 +702,85 @@ class ModularToolBar(QToolBar):
         self.bundles[bundle_id].append(action_id)
         self.update_separators()
 
+    def remove_action(self, action_id: str):
+        """
+        Completely remove a single action from the toolbar.
+
+        The method takes care of both standalone actions and actions that are
+        part of an existing bundle.
+
+        Args:
+            action_id (str): Unique identifier for the action.
+        """
+        if action_id not in self.widgets:
+            raise ValueError(f"Action with ID '{action_id}' does not exist.")
+
+        # Identify potential bundle membership
+        parent_bundle = None
+        for b_id, a_ids in self.bundles.items():
+            if action_id in a_ids:
+                parent_bundle = b_id
+                break
+
+        # 1. Remove the QAction from the QToolBar and delete it
+        tool_action = self.widgets.pop(action_id)
+        if hasattr(tool_action, "action") and tool_action.action is not None:
+            self.removeAction(tool_action.action)
+            tool_action.action.deleteLater()
+
+        # 2. Clean bundle bookkeeping if the action belonged to one
+        if parent_bundle:
+            self.bundles[parent_bundle].remove(action_id)
+            # If the bundle becomes empty, get rid of the bundle entry as well
+            if not self.bundles[parent_bundle]:
+                self.remove_bundle(parent_bundle)
+
+        # 3. Remove from the ordering list
+        self.toolbar_items = [
+            item
+            for item in self.toolbar_items
+            if not (item[0] == "action" and item[1] == action_id)
+        ]
+
+        self.update_separators()
+
+    def remove_bundle(self, bundle_id: str):
+        """
+        Remove an entire bundle (and all of its actions) from the toolbar.
+
+        Args:
+            bundle_id (str): Unique identifier for the bundle.
+        """
+        if bundle_id not in self.bundles:
+            raise ValueError(f"Bundle '{bundle_id}' does not exist.")
+
+        # Remove every action belonging to this bundle
+        for action_id in list(self.bundles[bundle_id]):  # copy the list
+            if action_id in self.widgets:
+                tool_action = self.widgets.pop(action_id)
+                if hasattr(tool_action, "action") and tool_action.action is not None:
+                    self.removeAction(tool_action.action)
+                    tool_action.action.deleteLater()
+
+        # Drop the bundle entry
+        self.bundles.pop(bundle_id, None)
+
+        # Remove bundle entry and its preceding separator (if any) from the ordering list
+        cleaned_items = []
+        skip_next_separator = False
+        for item_type, ident in self.toolbar_items:
+            if item_type == "bundle" and ident == bundle_id:
+                # mark to skip one following separator if present
+                skip_next_separator = True
+                continue
+            if skip_next_separator and item_type == "separator":
+                skip_next_separator = False
+                continue
+            cleaned_items.append((item_type, ident))
+        self.toolbar_items = cleaned_items
+
+        self.update_separators()
+
     def contextMenuEvent(self, event):
         """
         Overrides the context menu event to show toolbar actions with checkboxes and icons.
