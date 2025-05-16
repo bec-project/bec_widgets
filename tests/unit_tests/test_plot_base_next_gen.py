@@ -51,10 +51,11 @@ def test_set_x_label_emits_signal(qtbot, mocked_client):
     """
     pb = create_widget(qtbot, PlotBase, client=mocked_client)
     with qtbot.waitSignal(pb.property_changed, timeout=500) as signal:
-        pb.x_label = "Voltage (V)"
-    assert signal.args == ["x_label", "Voltage (V)"]
-    assert pb.x_label == "Voltage (V)"
-    assert pb.plot_item.getAxis("bottom").labelText == "Voltage (V)"
+        pb.x_label = "Voltage"
+    assert signal.args == ["x_label", "Voltage"]
+    assert pb.x_label == "Voltage"
+    pb.x_label_units = "V"
+    assert pb.plot_item.getAxis("bottom").labelText == "Voltage [V]"
 
 
 def test_set_y_label_emits_signal(qtbot, mocked_client):
@@ -63,10 +64,11 @@ def test_set_y_label_emits_signal(qtbot, mocked_client):
     """
     pb = create_widget(qtbot, PlotBase, client=mocked_client)
     with qtbot.waitSignal(pb.property_changed, timeout=500) as signal:
-        pb.y_label = "Current (A)"
-    assert signal.args == ["y_label", "Current (A)"]
-    assert pb.y_label == "Current (A)"
-    assert pb.plot_item.getAxis("left").labelText == "Current (A)"
+        pb.y_label = "Current"
+    assert signal.args == ["y_label", "Current"]
+    assert pb.y_label == "Current"
+    pb.y_label_units = "A"
+    assert pb.plot_item.getAxis("left").labelText == "Current [A]"
 
 
 def test_set_x_min_max(qtbot, mocked_client):
