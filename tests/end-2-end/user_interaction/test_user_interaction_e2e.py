@@ -258,7 +258,10 @@ def test_widgets_e2e_device_combo_box(qtbot, connected_client_gui_obj, random_ge
     dock: client.BECDock
     widget: client.DeviceComboBox
 
-    # No rpc calls to check so far, maybe set_device should be exposed
+    assert "samx" in widget.devices
+    assert "bpm4i" in widget.devices
+
+    widget.set_device("samx")
 
     # Test removing the widget, or leaving it open for the next test
     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
@@ -274,10 +277,64 @@ def test_widgets_e2e_device_line_edit(qtbot, connected_client_gui_obj, random_ge
     dock: client.BECDock
     widget: client.DeviceLineEdit
 
-    # No rpc calls to check so far
-    # Should probably have a set_device method
+    assert widget._is_valid_input is False
+    assert "samx" in widget.devices
+    assert "bpm4i" in widget.devices
 
-    # No rpc calls to check so far, maybe set_device should be exposed
+    widget.set_device("samx")
+    assert widget._is_valid_input is True
+
+    # Test removing the widget, or leaving it open for the next test
+    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+
+
+@pytest.mark.timeout(PYTEST_TIMEOUT)
+def test_widgets_e2e_signal_line_edit(qtbot, connected_client_gui_obj, random_generator_from_seed):
+    """Test the DeviceSignalLineEdit widget."""
+    gui = connected_client_gui_obj
+    bec = gui._client
+    # Create dock_area, dock, widget
+    dock, widget = create_widget(qtbot, gui, gui.available_widgets.SignalLineEdit)
+    dock: client.BECDock
+    widget: client.SignalLineEdit
+
+    widget.set_device("samx")
+    assert widget._is_valid_input is False
+    assert widget.signals == [
+        "readback",
+        "setpoint",
+        "motor_is_moving",
+        "velocity",
+        "acceleration",
+        "tolerance",
+    ]
+    widget.set_signal("readback")
+    assert widget._is_valid_input is True
+
+    # Test removing the widget, or leaving it open for the next test
+    maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
+
+
+@pytest.mark.timeout(PYTEST_TIMEOUT)
+def test_widgets_e2e_signal_combobox(qtbot, connected_client_gui_obj, random_generator_from_seed):
+    """Test the DeviceSignalComboBox widget."""
+    gui = connected_client_gui_obj
+    bec = gui._client
+    # Create dock_area, dock, widget
+    dock, widget = create_widget(qtbot, gui, gui.available_widgets.SignalComboBox)
+    dock: client.BECDock
+    widget: client.SignalComboBox
+
+    widget.set_device("samx")
+    assert widget.signals == [
+        "readback",
+        "setpoint",
+        "motor_is_moving",
+        "velocity",
+        "acceleration",
+        "tolerance",
+    ]
+    widget.set_signal("readback")
 
     # Test removing the widget, or leaving it open for the next test
     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
