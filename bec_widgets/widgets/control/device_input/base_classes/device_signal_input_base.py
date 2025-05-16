@@ -49,7 +49,7 @@ class DeviceSignalInputBase(BECWidget):
 
         self._device = None
         self.get_bec_shortcuts()
-        self._signal_filter = []
+        self._signal_filter = set()
         self._signals = []
         self._hinted_signals = []
         self._normal_signals = []
@@ -158,9 +158,9 @@ class DeviceSignalInputBase(BECWidget):
     @include_hinted_signals.setter
     def include_hinted_signals(self, value: bool):
         if value:
-            self._signal_filter.append(Kind.hinted)
+            self._signal_filter.add(Kind.hinted)
         else:
-            self._signal_filter.remove(Kind.hinted)
+            self._signal_filter.discard(Kind.hinted)
         self.update_signals_from_filters()
 
     @Property(bool)
@@ -171,9 +171,9 @@ class DeviceSignalInputBase(BECWidget):
     @include_normal_signals.setter
     def include_normal_signals(self, value: bool):
         if value:
-            self._signal_filter.append(Kind.normal)
+            self._signal_filter.add(Kind.normal)
         else:
-            self._signal_filter.remove(Kind.normal)
+            self._signal_filter.discard(Kind.normal)
         self.update_signals_from_filters()
 
     @Property(bool)
@@ -184,9 +184,9 @@ class DeviceSignalInputBase(BECWidget):
     @include_config_signals.setter
     def include_config_signals(self, value: bool):
         if value:
-            self._signal_filter.append(Kind.config)
+            self._signal_filter.add(Kind.config)
         else:
-            self._signal_filter.remove(Kind.config)
+            self._signal_filter.discard(Kind.config)
         self.update_signals_from_filters()
 
     ### Properties and Methods ###
