@@ -1,3 +1,13 @@
+---
+name: Documentation update request
+about: Suggest an update to the docs
+title: '[DOCS]: '
+type: documentation
+label: documentation
+assignees: ''
+
+---
+
 ## Documentation Section
 
 [Specify the section or page of the documentation that needs updating]
