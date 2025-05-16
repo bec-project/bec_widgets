@@ -35,19 +35,20 @@ class MonitorSelectionToolbarBundle(ToolbarBundle):
         self.device_combo_box.addItem("", None)
         self.device_combo_box.setCurrentText("")
         self.device_combo_box.setToolTip("Select Device")
+        self.device_combo_box.setFixedWidth(150)
         self.device_combo_box.setItemDelegate(NoCheckDelegate(self.device_combo_box))
 
-        self.add_action("monitor", WidgetAction(widget=self.device_combo_box, adjust_size=True))
+        self.add_action("monitor", WidgetAction(widget=self.device_combo_box, adjust_size=False))
 
         # 2) Dimension combo box
         self.dim_combo_box = QComboBox(parent=self.target_widget)
         self.dim_combo_box.addItems(["auto", "1d", "2d"])
         self.dim_combo_box.setCurrentText("auto")
         self.dim_combo_box.setToolTip("Monitor Dimension")
-        self.dim_combo_box.setFixedWidth(60)
+        self.dim_combo_box.setFixedWidth(100)
         self.dim_combo_box.setItemDelegate(NoCheckDelegate(self.dim_combo_box))
 
-        self.add_action("dim_combo", WidgetAction(widget=self.dim_combo_box, adjust_size=True))
+        self.add_action("dim_combo", WidgetAction(widget=self.dim_combo_box, adjust_size=False))
 
         # Connect slots, a device will be connected upon change of any combobox
         self.device_combo_box.currentTextChanged.connect(lambda: self.connect_monitor())
