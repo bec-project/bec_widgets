@@ -20,6 +20,12 @@ from bec_widgets.widgets.plots.image.toolbar_bundles.image_selection import (
 )
 from bec_widgets.widgets.plots.image.toolbar_bundles.processing import ImageProcessingToolbarBundle
 from bec_widgets.widgets.plots.plot_base import PlotBase
+from bec_widgets.widgets.plots.roi.image_roi import (
+    BaseROI,
+    CircularROI,
+    RectangularROI,
+    ROIController,
+)
 
 logger = bec_logger.logger
 
@@ -111,6 +117,9 @@ class Image(PlotBase):
         "transpose.setter",
         "image",
         "main_image",
+        "add_roi",
+        "remove_roi",
+        "rois",
     ]
     sync_colorbar_with_autorange = Signal()
 
@@ -128,6 +137,7 @@ class Image(PlotBase):
         self.gui_id = config.gui_id
         self._color_bar = None
         self._main_image = ImageItem()
+        self.roi_controller = ROIController(colormap="viridis")
         super().__init__(
             parent=parent, config=config, client=client, gui_id=gui_id, popups=popups, **kwargs
         )
@@ -138,6 +148,9 @@ class Image(PlotBase):
 
         # Default Color map to plasma
         self.color_map = "plasma"
+
+        # Headless controller keeps the canonical list.
+        self._roi_manager_dialog = None
 
     ################################################################################
     # Widget Specific GUI interactions
@@ -305,8 +318,80 @@ class Image(PlotBase):
             self.v_range = vrange
 
     ################################################################################
+    # Static rois with roi manager
+
+    def add_roi(
+        self,
+        kind: Literal["rect", "circle"] = "rect",
+        name: str | None = None,
+        line_width: int | None = 10,
+        pos: tuple[float, float] | None = (10, 10),
+        size: tuple[float, float] | None = (50, 50),
+        **pg_kwargs,
+    ) -> RectangularROI | CircularROI:
+        """
+        Add a ROI to the image.
+
+        Args:
+            kind(str): The type of ROI to add. Options are "rect" or "circle".
+            name(str): The name of the ROI.
+            line_width(int): The line width of the ROI.
+            pos(tuple): The position of the ROI.
+            size(tuple): The size of the ROI.
+            **pg_kwargs: Additional arguments for the ROI.
+
+        Returns:
+            RectangularROI | CircularROI: The created ROI object.
+        """
+        if name is None:
+            name = f"ROI_{len(self.roi_controller.rois) + 1}"
+        if kind == "rect":
+            roi = RectangularROI(
+                pos=pos,
+                size=size,
+                parent_image=self,
+                line_width=line_width,
+                label=name,
+                **pg_kwargs,
+            )
+        elif kind == "circle":
+            roi = CircularROI(
+                pos=pos,
+                size=size,
+                parent_image=self,
+                line_width=line_width,
+                label=name,
+                **pg_kwargs,
+            )
+        else:
+            raise ValueError("kind must be 'rect' or 'circle'")
+
+        # Add to plot and controller (controller assigns color)
+        self.plot_item.addItem(roi)
+        self.roi_controller.add_roi(roi)
+        return roi
+
+    def remove_roi(self, roi: int | str):
+        """Remove an ROI by index or label via the ROIController."""
+        if isinstance(roi, int):
+            self.roi_controller.remove_roi_by_index(roi)
+        elif isinstance(roi, str):
+            self.roi_controller.remove_roi_by_name(roi)
+        else:
+            raise ValueError("roi must be an int index or str name")
+
+    ################################################################################
     # Widget Specific Properties
     ################################################################################
+    ################################################################################
+    # Rois
+
+    @property
+    def rois(self) -> list[BaseROI]:
+        """
+        Get the list of ROIs.
+        """
+        return self.roi_controller.rois
 
     ################################################################################
     # Colorbar toggle
@@ -925,6 +1010,11 @@ class Image(PlotBase):
         """
         Disconnect the image update signals and clean up the image.
         """
+        # Remove all ROIs
+        rois = self.rois
+        for roi in rois:
+            roi.remove()
+
         # Main Image cleanup
         if self._main_image.config.monitor is not None:
             self.disconnect_monitor(self._main_image.config.monitor)
