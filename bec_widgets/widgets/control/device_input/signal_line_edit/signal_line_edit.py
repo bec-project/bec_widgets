@@ -24,9 +24,12 @@ class SignalLineEdit(DeviceSignalInputBase, QLineEdit):
         arg_name: Argument name, can be used for the other widgets which has to call some other function in bec using correct argument names.
     """
 
+    USER_ACCESS = ["_is_valid_input", "set_signal", "set_device", "signals"]
+
     device_signal_changed = Signal(str)
 
     PLUGIN = True
+    RPC = True
     ICON_NAME = "vital_signs"
 
     def __init__(
@@ -41,7 +44,7 @@ class SignalLineEdit(DeviceSignalInputBase, QLineEdit):
         arg_name: str | None = None,
         **kwargs,
     ):
-        self._is_valid_input = False
+        self.__is_valid_input = False
         super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
         self._accent_colors = get_accent_colors()
         self.completer = QCompleter(self)
@@ -67,6 +70,20 @@ class SignalLineEdit(DeviceSignalInputBase, QLineEdit):
             self.set_signal(default)
         self.textChanged.connect(self.check_validity)
         self.check_validity(self.text())
+
+    @property
+    def _is_valid_input(self) -> bool:
+        """
+        Check if the current value is a valid device name.
+
+        Returns:
+            bool: True if the current value is a valid device name, False otherwise.
+        """
+        return self.__is_valid_input
+
+    @_is_valid_input.setter
+    def _is_valid_input(self, value: bool) -> None:
+        self.__is_valid_input = value
 
     def get_current_device(self) -> object:
         """

@@ -23,8 +23,11 @@ class SignalComboBox(DeviceSignalInputBase, QComboBox):
         arg_name: Argument name, can be used for the other widgets which has to call some other function in bec using correct argument names.
     """
 
+    USER_ACCESS = ["set_signal", "set_device", "signals"]
+
     ICON_NAME = "list_alt"
     PLUGIN = True
+    RPC = True
 
     device_signal_changed = Signal(str)
 

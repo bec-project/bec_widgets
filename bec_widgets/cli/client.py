@@ -51,6 +51,8 @@ _Widgets = {
     "RingProgressBar": "RingProgressBar",
     "ScanControl": "ScanControl",
     "ScatterWaveform": "ScatterWaveform",
+    "SignalComboBox": "SignalComboBox",
+    "SignalLineEdit": "SignalLineEdit",
     "StopButton": "StopButton",
     "TextBox": "TextBox",
     "VSCodeEditor": "VSCodeEditor",
@@ -939,9 +941,22 @@ class DeviceComboBox(RPCBase):
     """Combobox widget for device input with autocomplete for device names."""
 
     @rpc_call
-    def remove(self):
+    def set_device(self, device: "str"):
         """
-        Cleanup the BECConnector
+        Set the device.
+
+        Args:
+            device (str): Default name.
+        """
+
+    @property
+    @rpc_call
+    def devices(self) -> "list[str]":
+        """
+        Get the list of devices for the applied filters.
+
+        Returns:
+            list[str]: List of devices.
         """
 
 
@@ -959,9 +974,32 @@ class DeviceLineEdit(RPCBase):
     """Line edit widget for device input with autocomplete for device names."""
 
     @rpc_call
-    def remove(self):
+    def set_device(self, device: "str"):
         """
-        Cleanup the BECConnector
+        Set the device.
+
+        Args:
+            device (str): Default name.
+        """
+
+    @property
+    @rpc_call
+    def devices(self) -> "list[str]":
+        """
+        Get the list of devices for the applied filters.
+
+        Returns:
+            list[str]: List of devices.
+        """
+
+    @property
+    @rpc_call
+    def _is_valid_input(self) -> bool:
+        """
+        Check if the current value is a valid device name.
+
+        Returns:
+            bool: True if the current value is a valid device name, False otherwise.
         """
 
 
@@ -3344,6 +3382,80 @@ class ScatterWaveform(RPCBase):
     def clear_all(self):
         """
         Clear all the curves from the plot.
+        """
+
+
+class SignalComboBox(RPCBase):
+    """Line edit widget for device input with autocomplete for device names."""
+
+    @rpc_call
+    def set_signal(self, signal: str):
+        """
+        Set the signal.
+
+        Args:
+            signal (str): signal name.
+        """
+
+    @rpc_call
+    def set_device(self, device: str | None):
+        """
+        Set the device. If device is not valid, device will be set to None which happpens
+
+        Args:
+            device(str): device name.
+        """
+
+    @property
+    @rpc_call
+    def signals(self) -> list[str]:
+        """
+        Get the list of device signals for the applied filters.
+
+        Returns:
+            list[str]: List of device signals.
+        """
+
+
+class SignalLineEdit(RPCBase):
+    """Line edit widget for device input with autocomplete for device names."""
+
+    @property
+    @rpc_call
+    def _is_valid_input(self) -> bool:
+        """
+        Check if the current value is a valid device name.
+
+        Returns:
+            bool: True if the current value is a valid device name, False otherwise.
+        """
+
+    @rpc_call
+    def set_signal(self, signal: str):
+        """
+        Set the signal.
+
+        Args:
+            signal (str): signal name.
+        """
+
+    @rpc_call
+    def set_device(self, device: str | None):
+        """
+        Set the device. If device is not valid, device will be set to None which happpens
+
+        Args:
+            device(str): device name.
+        """
+
+    @property
+    @rpc_call
+    def signals(self) -> list[str]:
+        """
+        Get the list of device signals for the applied filters.
+
+        Returns:
+            list[str]: List of device signals.
         """
 
 
