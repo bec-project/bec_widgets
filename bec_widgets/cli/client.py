@@ -3400,7 +3400,7 @@ class SignalComboBox(RPCBase):
     @rpc_call
     def set_device(self, device: str | None):
         """
-        Set the device. If device is not valid, device will be set to None which happpens
+        Set the device. If device is not valid, device will be set to None which happens
 
         Args:
             device(str): device name.
@@ -3442,7 +3442,7 @@ class SignalLineEdit(RPCBase):
     @rpc_call
     def set_device(self, device: str | None):
         """
-        Set the device. If device is not valid, device will be set to None which happpens
+        Set the device. If device is not valid, device will be set to None which happens
 
         Args:
             device(str): device name.
