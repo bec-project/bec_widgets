@@ -65,8 +65,8 @@ class SignalLineEdit(DeviceSignalInputBase, QLineEdit):
             self.set_device(device)
         if default is not None:
             self.set_signal(default)
-        self.textChanged.connect(self.validate_device)
-        self.validate_device(self.text())
+        self.textChanged.connect(self.check_validity)
+        self.check_validity(self.text())
 
     def get_current_device(self) -> object:
         """
@@ -131,6 +131,9 @@ if __name__ == "__main__":  # pragma: no cover
     from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
     from bec_widgets.utils.colors import set_theme
+    from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import (
+        DeviceComboBox,
+    )
 
     app = QApplication([])
     set_theme("dark")
@@ -138,6 +141,12 @@ if __name__ == "__main__":  # pragma: no cover
     widget.setFixedSize(200, 200)
     layout = QVBoxLayout()
     widget.setLayout(layout)
-    layout.addWidget(SignalLineEdit(device="samx"))
+    device_line_edit = DeviceComboBox()
+    device_line_edit.filter_to_positioner = True
+    signal_line_edit = SignalLineEdit()
+    device_line_edit.device_selected.connect(signal_line_edit.set_device)
+
+    layout.addWidget(device_line_edit)
+    layout.addWidget(signal_line_edit)
     widget.show()
     app.exec_()
