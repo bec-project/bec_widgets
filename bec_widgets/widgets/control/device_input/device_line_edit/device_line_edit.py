@@ -29,6 +29,8 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
         arg_name: Argument name, can be used for the other widgets which has to call some other function in bec using correct argument names.
     """
 
+    USER_ACCESS = ["set_device", "devices", "_is_valid_input"]
+
     device_selected = Signal(str)
     device_config_update = Signal()
 
@@ -51,7 +53,7 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
         **kwargs,
     ):
         self._callback_id = None
-        self._is_valid_input = False
+        self.__is_valid_input = False
         self._accent_colors = get_accent_colors()
         super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
         self.completer = QCompleter(self)
@@ -94,6 +96,20 @@ class DeviceLineEdit(DeviceInputBase, QLineEdit):
         self.device_config_update.connect(self.update_devices_from_filters)
         self.textChanged.connect(self.check_validity)
         self.check_validity(self.text())
+
+    @property
+    def _is_valid_input(self) -> bool:
+        """
+        Check if the current value is a valid device name.
+
+        Returns:
+            bool: True if the current value is a valid device name, False otherwise.
+        """
+        return self.__is_valid_input
+
+    @_is_valid_input.setter
+    def _is_valid_input(self, value: bool) -> None:
+        self.__is_valid_input = value
 
     def on_device_update(self, action: str, content: dict) -> None:
         """
