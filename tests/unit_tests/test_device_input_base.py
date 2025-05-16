@@ -7,6 +7,7 @@ from qtpy.QtWidgets import QWidget
 from bec_widgets.widgets.control.device_input.base_classes.device_input_base import (
     BECDeviceFilter,
     DeviceInputBase,
+    DeviceInputConfig,
 )
 
 from .client_mocks import mocked_client
@@ -51,9 +52,13 @@ def test_device_input_base_init_with_config(mocked_client):
         "default": "samx",
     }
     widget = DeviceInputWidget(client=mocked_client, config=config)
-    assert widget.config.gui_id == "test_gui_id"
-    assert widget.config.device_filter == ["Positioner"]
-    assert widget.config.default == "samx"
+    widget2 = DeviceInputWidget(
+        client=mocked_client, config=DeviceInputConfig.model_validate(config)
+    )
+    for w in [widget, widget2]:
+        assert w.config.gui_id == "test_gui_id"
+        assert w.config.device_filter == ["Positioner"]
+        assert w.config.default == "samx"
 
 
 def test_device_input_base_set_device_filter(device_input_base):
