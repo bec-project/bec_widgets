@@ -52,6 +52,7 @@ _Widgets = {
     "ScanControl": "ScanControl",
     "ScatterWaveform": "ScatterWaveform",
     "SignalComboBox": "SignalComboBox",
+    "SignalLabel": "SignalLabel",
     "SignalLineEdit": "SignalLineEdit",
     "StopButton": "StopButton",
     "TextBox": "TextBox",
@@ -3414,6 +3415,78 @@ class SignalComboBox(RPCBase):
 
         Returns:
             list[str]: List of device signals.
+        """
+
+
+class SignalLabel(RPCBase):
+    @property
+    @rpc_call
+    def custom_label(self) -> "str":
+        """
+        Use a cusom label rather than the signal name
+        """
+
+    @property
+    @rpc_call
+    def custom_units(self) -> "str":
+        """
+        Use a custom unit string
+        """
+
+    @custom_label.setter
+    @rpc_call
+    def custom_label(self) -> "str":
+        """
+        Use a cusom label rather than the signal name
+        """
+
+    @custom_units.setter
+    @rpc_call
+    def custom_units(self) -> "str":
+        """
+        Use a custom unit string
+        """
+
+    @property
+    @rpc_call
+    def decimal_places(self) -> "int":
+        """
+        Format to a given number of decimal_places. Set to 0 to disable.
+        """
+
+    @decimal_places.setter
+    @rpc_call
+    def decimal_places(self) -> "int":
+        """
+        Format to a given number of decimal_places. Set to 0 to disable.
+        """
+
+    @property
+    @rpc_call
+    def show_default_units(self) -> "bool":
+        """
+        Show default units obtained from the signal alongside it
+        """
+
+    @show_default_units.setter
+    @rpc_call
+    def show_default_units(self) -> "bool":
+        """
+        Show default units obtained from the signal alongside it
+        """
+
+    @property
+    @rpc_call
+    def show_select_button(self) -> "bool":
+        """
+        Show the button to select the signal to display
+        """
+
+    @show_select_button.setter
+    @rpc_call
+    def show_select_button(self) -> "bool":
+        """
+        Show the button to select the signal to display
         """
 
 

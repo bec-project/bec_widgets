@@ -1,10 +1,11 @@
 from bec_lib.callback_handler import EventType
 from bec_lib.device import Signal
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import Property, Slot
+from qtpy.QtCore import Property
 
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.filter_io import FilterIO
 from bec_widgets.utils.ophyd_kind_util import Kind
 from bec_widgets.utils.widget_io import WidgetIO
@@ -60,7 +61,7 @@ class DeviceSignalInputBase(BECWidget):
 
     ### Qt Slots ###
 
-    @Slot(str)
+    @SafeSlot(str)
     def set_signal(self, signal: str):
         """
         Set the signal.
@@ -76,7 +77,7 @@ class DeviceSignalInputBase(BECWidget):
                 f"Signal {signal} not found for device {self.device} and filtered selection {self.signal_filter}."
             )
 
-    @Slot(str)
+    @SafeSlot(str)
     def set_device(self, device: str | None):
         """
         Set the device. If device is not valid, device will be set to None which happens
@@ -90,8 +91,8 @@ class DeviceSignalInputBase(BECWidget):
             self._device = device
         self.update_signals_from_filters()
 
-    @Slot(dict, dict)
-    @Slot()
+    @SafeSlot(dict, dict)
+    @SafeSlot()
     def update_signals_from_filters(
         self, content: dict | None = None, metadata: dict | None = None
     ):

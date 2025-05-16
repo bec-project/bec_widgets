@@ -1,11 +1,13 @@
 from bec_lib.device import Positioner
-from qtpy.QtCore import QSize, Signal, Slot
+from qtpy.QtCore import QSize, Signal
 from qtpy.QtWidgets import QComboBox, QSizePolicy
 
+from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.filter_io import ComboBoxFilterHandler, FilterIO
 from bec_widgets.utils.ophyd_kind_util import Kind
 from bec_widgets.widgets.control.device_input.base_classes.device_signal_input_base import (
     DeviceSignalInputBase,
+    DeviceSignalInputBaseConfig,
 )
 
 
@@ -35,7 +37,7 @@ class SignalComboBox(DeviceSignalInputBase, QComboBox):
         self,
         parent=None,
         client=None,
-        config: DeviceSignalInputBase = None,
+        config: DeviceSignalInputBaseConfig | None = None,
         gui_id: str | None = None,
         device: str | None = None,
         signal_filter: str | list[str] | None = None,
@@ -65,9 +67,13 @@ class SignalComboBox(DeviceSignalInputBase, QComboBox):
         if default is not None:
             self.set_signal(default)
 
-    def update_signals_from_filters(self):
+    @SafeSlot()
+    @SafeSlot(dict, dict)
+    def update_signals_from_filters(
+        self, content: dict | None = None, metadata: dict | None = None
+    ):
         """Update the filters for the combobox"""
-        super().update_signals_from_filters()
+        super().update_signals_from_filters(content, metadata)
         # pylint: disable=protected-access
         if FilterIO._find_handler(self) is ComboBoxFilterHandler:
             if len(self._config_signals) > 0:
@@ -84,7 +90,7 @@ class SignalComboBox(DeviceSignalInputBase, QComboBox):
                 self.insertItem(0, "Hinted Signals")
                 self.model().item(0).setEnabled(False)
 
-    @Slot(str)
+    @SafeSlot(str)
     def on_text_changed(self, text: str):
         """Slot for text changed. If a device is selected and the signal is changed and valid it emits a signal.
         For a positioner, the readback value has to be renamed to the device name.
