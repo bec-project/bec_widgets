@@ -76,6 +76,10 @@ def test_device_signal_base_init(device_signal_base):
 
 def test_device_signal_qproperties(device_signal_base):
     """Test if the DeviceSignalInputBase has the correct QProperties"""
+    assert device_signal_base._signal_filter == set()
+    device_signal_base.include_config_signals = False
+    device_signal_base.include_normal_signals = False
+    assert device_signal_base._signal_filter == set()
     device_signal_base.include_config_signals = True
     assert device_signal_base._signal_filter == {Kind.config}
     device_signal_base.include_normal_signals = True
@@ -129,7 +133,7 @@ def test_signal_combobox(qtbot, device_signal_combobox):
     assert device_signal_combobox._hinted_signals == ["fake_signal"]
 
 
-def test_signal_lineeidt(device_signal_line_edit):
+def test_signal_lineedit(device_signal_line_edit):
     """Test the signal_combobox"""
 
     assert device_signal_line_edit._signals == []
