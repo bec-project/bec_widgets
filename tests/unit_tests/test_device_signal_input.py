@@ -67,7 +67,7 @@ def test_device_signal_combo(qtbot, mocked_client):
 def test_device_signal_base_init(device_signal_base):
     """Test if the DeviceSignalInputBase is initialized correctly"""
     assert device_signal_base._device is None
-    assert device_signal_base._signal_filter == []
+    assert device_signal_base._signal_filter == set()
     assert device_signal_base._signals == []
     assert device_signal_base._hinted_signals == []
     assert device_signal_base._normal_signals == []
@@ -77,11 +77,17 @@ def test_device_signal_base_init(device_signal_base):
 def test_device_signal_qproperties(device_signal_base):
     """Test if the DeviceSignalInputBase has the correct QProperties"""
     device_signal_base.include_config_signals = True
-    assert device_signal_base._signal_filter == [Kind.config]
+    assert device_signal_base._signal_filter == {Kind.config}
     device_signal_base.include_normal_signals = True
-    assert device_signal_base._signal_filter == [Kind.config, Kind.normal]
+    assert device_signal_base._signal_filter == {Kind.config, Kind.normal}
     device_signal_base.include_hinted_signals = True
-    assert device_signal_base._signal_filter == [Kind.config, Kind.normal, Kind.hinted]
+    assert device_signal_base._signal_filter == {Kind.config, Kind.normal, Kind.hinted}
+    device_signal_base.include_hinted_signals = True
+    assert device_signal_base._signal_filter == {Kind.config, Kind.normal, Kind.hinted}
+    device_signal_base.include_hinted_signals = True
+    assert device_signal_base._signal_filter == {Kind.config, Kind.normal, Kind.hinted}
+    device_signal_base.include_hinted_signals = False
+    assert device_signal_base._signal_filter == {Kind.config, Kind.normal}
 
 
 def test_device_signal_set_device(device_signal_base):
