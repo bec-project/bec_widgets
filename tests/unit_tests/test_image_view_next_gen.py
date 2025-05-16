@@ -329,3 +329,60 @@ def test_image_toggle_action_reset(qtbot, mocked_client):
     assert bec_image_view.main_image.log is False
     assert bec_image_view.transpose is False
     assert bec_image_view.main_image.transpose is False
+
+
+def test_roi_add_remove_and_properties(qtbot, mocked_client):
+    view = create_widget(qtbot, Image, client=mocked_client)
+    # Add ROIs
+    rect = view.add_roi(kind="rect", name="rect_roi", line_width=7)
+    circ = view.add_roi(kind="circle", name="circ_roi", line_width=5)
+    assert rect in view.roi_controller.rois
+    assert circ in view.roi_controller.rois
+    assert rect.label == "rect_roi"
+    assert circ.label == "circ_roi"
+    assert rect.line_width == 7
+    assert circ.line_width == 5
+    # Change properties
+    rect.label = "rect_roi2"
+    circ.line_color = "#ff0000"
+    assert rect.label == "rect_roi2"
+    assert circ.line_color == "#ff0000"
+    # Remove by name
+    view.remove_roi("rect_roi2")
+    assert rect not in view.roi_controller.rois
+    # Remove by index
+    view.remove_roi(0)
+    assert not view.roi_controller.rois
+
+
+def test_roi_controller_palette_signal(qtbot, mocked_client):
+    view = create_widget(qtbot, Image, client=mocked_client)
+    controller = view.roi_controller
+    changed = []
+    controller.paletteChanged.connect(lambda cmap: changed.append(cmap))
+    view.add_roi(kind="rect")
+    controller.colormap = "plasma"
+    assert changed and changed[0] == "plasma"
+
+
+def test_roi_controller_clear_and_get_methods(qtbot, mocked_client):
+    view = create_widget(qtbot, Image, client=mocked_client)
+    r1 = view.add_roi(kind="rect", name="r1")
+    r2 = view.add_roi(kind="circle", name="c1")
+    controller = view.roi_controller
+    assert controller.get_roi_by_name("r1") == r1
+    assert controller.get_roi(1) == r2
+    controller.clear()
+    assert not controller.rois
+
+
+def test_roi_get_data_from_image_with_no_image(qtbot, mocked_client):
+    view = create_widget(qtbot, Image, client=mocked_client)
+    roi = view.add_roi(kind="rect")
+    # Remove all images from scene
+    for item in list(view.plot_item.items):
+        if hasattr(item, "image"):
+            view.plot_item.removeItem(item)
+
+    with pytest.raises(RuntimeError):
+        roi.get_data_from_image()
