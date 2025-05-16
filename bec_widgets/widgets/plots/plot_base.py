@@ -112,8 +112,10 @@ class PlotBase(BECWidget, QWidget):
         self.fps_label = QLabel(alignment=Qt.AlignmentFlag.AlignRight)
         self._user_x_label = ""
         self._x_label_suffix = ""
+        self._x_axis_units = ""
         self._user_y_label = ""
         self._y_label_suffix = ""
+        self._y_axis_units = ""
 
         # Plot Indicator Items
         self.tick_item = BECTickItem(parent=self, plot_item=self.plot_item)
@@ -474,11 +476,30 @@ class PlotBase(BECWidget, QWidget):
         self._apply_x_label()
 
     @property
+    def x_label_units(self) -> str:
+        """
+        The units of the x-axis.
+        """
+        return self._x_axis_units
+
+    @x_label_units.setter
+    def x_label_units(self, units: str):
+        """
+        The units of the x-axis.
+
+        Args:
+            units(str): The units to set.
+        """
+        self._x_axis_units = units
+        self._apply_x_label()
+
+    @property
     def x_label_combined(self) -> str:
         """
-        The final label shown on the axis = user portion + suffix.
+        The final label shown on the axis = user portion + suffix + [units].
         """
-        return self._user_x_label + self._x_label_suffix
+        units = f" [{self._x_axis_units}]" if self._x_axis_units else ""
+        return self._user_x_label + self._x_label_suffix + units
 
     def _apply_x_label(self):
         """
@@ -522,11 +543,30 @@ class PlotBase(BECWidget, QWidget):
         self._apply_y_label()
 
     @property
+    def y_label_units(self) -> str:
+        """
+        The units of the y-axis.
+        """
+        return self._y_axis_units
+
+    @y_label_units.setter
+    def y_label_units(self, units: str):
+        """
+        The units of the y-axis.
+
+        Args:
+            units(str): The units to set.
+        """
+        self._y_axis_units = units
+        self._apply_y_label()
+
+    @property
     def y_label_combined(self) -> str:
         """
-        The final y label shown on the axis = user portion + suffix.
+        The final y label shown on the axis = user portion + suffix + [units].
         """
-        return self._user_y_label + self._y_label_suffix
+        units = f" [{self._y_axis_units}]" if self._y_axis_units else ""
+        return self._user_y_label + self._y_label_suffix + units
 
     def _apply_y_label(self):
         """

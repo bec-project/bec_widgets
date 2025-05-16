@@ -1468,7 +1468,7 @@ class Waveform(PlotBase):
                 x_data = data.get(x_name, {}).get(x_entry, {}).get(access_key, [0])
             else:  # history data
                 x_data = data.get(x_name, {}).get(x_entry, {}).read().get("value", [0])
-            new_suffix = f" [custom: {x_name}-{x_entry}]"
+            new_suffix = f" (custom: {x_name}-{x_entry})"
 
         # 2 User wants timestamp
         if self.x_axis_mode["name"] == "timestamp":
@@ -1477,19 +1477,19 @@ class Waveform(PlotBase):
             else:  # history data
                 timestamps = data[device_name][device_entry].read().get("timestamp", [0])
             x_data = timestamps
-            new_suffix = " [timestamp]"
+            new_suffix = " (timestamp)"
 
         # 3 User wants index
         if self.x_axis_mode["name"] == "index":
             x_data = None
-            new_suffix = " [index]"
+            new_suffix = " (index)"
 
         # 4 Best effort automatic mode
         if self.x_axis_mode["name"] is None or self.x_axis_mode["name"] == "auto":
             # 4.1 If there are async curves, use index
             if len(self._async_curves) > 0:
                 x_data = None
-                new_suffix = " [auto: index]"
+                new_suffix = " (auto: index)"
             # 4.2 If there are sync curves, use the first device from the scan report
             else:
                 try:
@@ -1503,7 +1503,7 @@ class Waveform(PlotBase):
                     x_data = data.get(x_name, {}).get(x_entry, {}).get(access_key, None)
                 else:
                     x_data = data.get(x_name, {}).get(x_entry, {}).read().get("value", None)
-                new_suffix = f" [auto: {x_name}-{x_entry}]"
+                new_suffix = f" (auto: {x_name}-{x_entry})"
         self._update_x_label_suffix(new_suffix)
         return x_data
 
