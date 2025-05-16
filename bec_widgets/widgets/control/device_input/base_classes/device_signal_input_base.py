@@ -36,14 +36,16 @@ class DeviceSignalInputBase(BECWidget):
         Kind.config: "include_config_signals",
     }
 
-    def __init__(self, client=None, config=None, gui_id: str = None, **kwargs):
-        if config is None:
-            config = DeviceSignalInputBaseConfig(widget_class=self.__class__.__name__)
-        else:
-            if isinstance(config, dict):
-                config = DeviceSignalInputBaseConfig(**config)
-            self.config = config
-        super().__init__(client=client, config=config, gui_id=gui_id, **kwargs)
+    def __init__(
+        self,
+        client=None,
+        config: DeviceSignalInputBaseConfig | dict | None = None,
+        gui_id: str = None,
+        **kwargs,
+    ):
+
+        self.config = self._process_config_input(config)
+        super().__init__(client=client, config=self.config, gui_id=gui_id, **kwargs)
 
         self._device = None
         self.get_bec_shortcuts()
@@ -102,10 +104,7 @@ class DeviceSignalInputBase(BECWidget):
         """
         self.config.signal_filter = self.signal_filter
         # pylint: disable=protected-access
-        self._hinted_signals = []
-        self._normal_signals = []
-        self._config_signals = []
-        if self.validate_device(self._device) is False:
+        if not self.validate_device(self._device):
             self._device = None
             self.config.device = self._device
             return
@@ -116,27 +115,19 @@ class DeviceSignalInputBase(BECWidget):
             FilterIO.set_selection(widget=self, selection=[self._device])
             return
         device_info = device._info["signals"]
-        if Kind.hinted in self.signal_filter:
-            hinted_signals = [
+
+        def _update(kind: Kind):
+            return [
                 signal
                 for signal, signal_info in device_info.items()
-                if (signal_info.get("kind_str", None) == str(Kind.hinted.value))
+                if kind in self.signal_filter
+                and (signal_info.get("kind_str", None) == str(kind.name))
             ]
-            self._hinted_signals = hinted_signals
-        if Kind.normal in self.signal_filter:
-            normal_signals = [
-                signal
-                for signal, signal_info in device_info.items()
-                if (signal_info.get("kind_str", None) == str(Kind.normal.value))
-            ]
-            self._normal_signals = normal_signals
-        if Kind.config in self.signal_filter:
-            config_signals = [
-                signal
-                for signal, signal_info in device_info.items()
-                if (signal_info.get("kind_str", None) == str(Kind.config.value))
-            ]
-            self._config_signals = config_signals
+
+        self._hinted_signals = _update(Kind.hinted)
+        self._normal_signals = _update(Kind.normal)
+        self._config_signals = _update(Kind.config)
+
         self._signals = self._hinted_signals + self._normal_signals + self._config_signals
         FilterIO.set_selection(widget=self, selection=self.signals)
 
@@ -279,3 +270,8 @@ class DeviceSignalInputBase(BECWidget):
         if signal in self.signals:
             return True
         return False
+
+    def _process_config_input(self, config: DeviceSignalInputBaseConfig | dict | None):
+        if config is None:
+            return DeviceSignalInputBaseConfig(widget_class=self.__class__.__name__)
+        return DeviceSignalInputBaseConfig.model_validate(config)

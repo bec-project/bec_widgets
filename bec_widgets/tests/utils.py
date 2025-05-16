@@ -96,9 +96,9 @@ class FakePositioner(BECPositioner):
         }
         self._info = {
             "signals": {
-                "readback": {"kind_str": "5"},  # hinted
-                "setpoint": {"kind_str": "1"},  # normal
-                "velocity": {"kind_str": "2"},  # config
+                "readback": {"kind_str": "hinted"},  # hinted
+                "setpoint": {"kind_str": "normal"},  # normal
+                "velocity": {"kind_str": "config"},  # config
             }
         }
         self.signals = {
