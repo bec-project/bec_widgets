@@ -119,3 +119,8 @@ def test_signal_lineeidt(device_signal_line_edit):
     assert device_signal_line_edit.signals == []
     device_signal_line_edit.set_device("samx")
     assert device_signal_line_edit.signals == ["readback", "setpoint", "velocity"]
+    device_signal_line_edit.set_signal("readback")
+    assert device_signal_line_edit.text() == "readback"
+    assert device_signal_line_edit._is_valid_input is True
+    device_signal_line_edit.setText("invalid")
+    assert device_signal_line_edit._is_valid_input is False
