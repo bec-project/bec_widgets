@@ -53,6 +53,7 @@ class DictBackedTableModel(QAbstractTableModel):
             if value in self._disallowed_keys or value in self._other_keys(index.row()):
                 return False
             self._data[index.row()][index.column()] = str(value)
+            self.dataChanged.emit(index, index)
             return True
         return False
 
@@ -109,6 +110,7 @@ class DictBackedTableModel(QAbstractTableModel):
 
 class DictBackedTable(QWidget):
     delete_rows = Signal(list)
+    data_updated = Signal()
 
     def __init__(self, initial_data: list[list[str]]):
         """Widget which uses a DictBackedTableModel to display an editable table
@@ -141,6 +143,11 @@ class DictBackedTable(QWidget):
         self._add_button.clicked.connect(self._table_model.add_row)
         self._remove_button.clicked.connect(self.delete_selected_rows)
         self.delete_rows.connect(self._table_model.delete_rows)
+        self._table_model.dataChanged.connect(self._emit_data_updated)
+
+    def _emit_data_updated(self, *args, **kwargs):
+        """Just to swallow the args"""
+        self.data_updated.emit()
 
     def delete_selected_rows(self):
         """Delete rows which are part of the selection model"""
