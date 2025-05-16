@@ -1,9 +1,11 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
-from unittest.mock import MagicMock
+from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
 
 import pytest
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.messages import AvailableResourceMessage, ScanQueueHistoryMessage, ScanQueueMessage
+from qtpy.QtCore import QModelIndex, QPoint, Qt
 
 from bec_widgets.utils.forms_from_types.items import StrMetadataField
 from bec_widgets.utils.widget_io import WidgetIO
@@ -540,6 +542,29 @@ def test_get_scan_parameters_from_redis(scan_control, mocked_client):
     assert kwargs == {"steps": 10, "relative": False, "exp_time": 2.0, "burst_at_each_point": 1}
 
 
+TEST_MD = {"sample_name": "Test Sample", "test key 1": "test value 1", "test key 2": "test value 2"}
+TEST_TABLE_ENTRY = [["test key 1", "test value 1"], ["test key 2", "test value 2"]]
+
+
+def test_scan_metadata_is_updated_even_without_default_form_changes(
+    scan_control: ScanControl, qtbot
+):
+    assert scan_control._metadata_form._scan_name == "line_scan"
+    scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
+    assert scan_control._metadata_form._scan_name == "grid_scan"
+    scan_control._metadata_form._additional_metadata._add_button.click()
+    qtbot.wait(100)
+    table_model = scan_control._metadata_form._additional_metadata._table_model
+    model_key = table_model.index(0, 0, QModelIndex())
+    table_model.setData(model_key, "test key 1", Qt.EditRole)
+    model_value = model_key.siblingAtColumn(1)
+    table_model.setData(model_value, "test value 1", Qt.EditRole)
+    assert scan_control._metadata_form._additional_metadata.dump_dict() == {
+        "test key 1": "test value 1"
+    }
+    assert scan_control._scan_metadata == {"sample_name": "", "test key 1": "test value 1"}
+
+
 def test_scan_metadata_is_connected(scan_control):
     assert scan_control._metadata_form._scan_name == "line_scan"
     scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
@@ -548,16 +573,28 @@ def test_scan_metadata_is_connected(scan_control):
     assert isinstance(sample_name, StrMetadataField)
     sample_name._main_widget.setText("Test Sample")
 
-    scan_control._metadata_form._additional_metadata._table_model._data = [
-        ["test key 1", "test value 1"],
-        ["test key 2", "test value 2"],
-    ]
+    scan_control._metadata_form._additional_metadata._table_model._data = TEST_TABLE_ENTRY
     scan_control._metadata_form.validate_form()
-    assert scan_control._scan_metadata == {
-        "sample_name": "Test Sample",
-        "test key 1": "test value 1",
-        "test key 2": "test value 2",
-    }
+    assert scan_control._scan_metadata == TEST_MD
+
+
+def test_scan_metadata_is_passed_to_scan_function(scan_control: ScanControl):
+    scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
+
+    sample_name = scan_control._metadata_form._form_grid.layout().itemAtPosition(0, 1).widget()
+    sample_name._main_widget.setText("Test Sample")
+    scan_control._metadata_form._additional_metadata._table_model._data = TEST_TABLE_ENTRY
+    scan_control._metadata_form.validate_form()
+
+    assert scan_control._scan_metadata == TEST_MD
+
+    scans = SimpleNamespace(grid_scan=MagicMock())
+    with (
+        patch.object(scan_control, "scans", scans),
+        patch.object(scan_control, "get_scan_parameters", lambda: ((), {})),
+    ):
+        scan_control.run_scan()
+    scans.grid_scan.assert_called_once_with(metadata=TEST_MD)
 
 
 def test_restore_parameters_with_fewer_arg_bundles(scan_control, qtbot):
