@@ -93,7 +93,8 @@ jobs:
 
       - name: Semantic Version Release
         id: release
-        # Adjust tag with desired version if applicable.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           pip install python-semantic-release==9.* wheel build twine
           semantic-release -vv version
