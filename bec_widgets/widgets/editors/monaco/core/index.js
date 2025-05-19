@@ -19,24 +19,17 @@ require(["vs/editor/editor.main"], () => {
     provideCompletionItems: function (model, position, context, token) {
       return new Promise((resolve, reject) => {
         const value = model.getValue();
-        bridge.requestCompletions(
-          JSON.stringify({
-            code: value,
-            line: position.lineNumber,
-            column: position.column,
-            context: context,
-            token: token,
-          }),
-          (result) => {
-            try {
-              const items = JSON.parse(result);
-              resolve({ suggestions: items });
-            } catch (e) {
-              console.error("Failed to parse completion result:", e);
-              reject();
-            }
-          }
-        );
+        sendToPython("completion", {
+          code: value,
+          line: position.lineNumber,
+          column: position.column,
+          context: context,
+          token: token,
+        });
+        bridge.completion.connect((data) => {
+          const completionItems = JSON.parse(data);
+          resolve({ suggestions: completionItems });
+        });
       });
     },
   });

@@ -35,6 +35,13 @@ class MonacoWidget(BECWidget, QWidget):
     def set_theme(self, theme: str) -> None:
         self.editor.setTheme(theme)
 
+    def cleanup(self) -> None:
+        """
+        Clean up the widget before closing.
+        """
+        self.editor.shutdown()
+        super().cleanup()
+
 
 if __name__ == "__main__":
     qapp = QApplication([])
@@ -43,9 +50,23 @@ if __name__ == "__main__":
     widget.set_theme("vs-dark")
     widget.set_text(
         """
-        # This is a comment
-        def hello_world():
-            print("Hello, world!")
+import numpy as np
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from bec_lib.devicemanager import DeviceContainer
+    from bec_lib.scans import Scans
+    dev: DeviceContainer
+    scans: Scans
+
+#######################################
+########## User Script #####################
+#######################################
+
+
+# This is a comment
+def hello_world():
+    print("Hello, world!")
         """
     )
 
