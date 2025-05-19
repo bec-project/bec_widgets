@@ -44,6 +44,11 @@ jobs:
           ssh-key: ${{ secrets.CI_DEPLOY_SSH_KEY }}
           ssh-known-hosts: ${{ secrets.CI_DEPLOY_SSH_KNOWN_HOSTS }}
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Setup | Force release branch to be at workflow sha
         run: |
           git reset --hard ${{ github.sha }}
@@ -86,57 +91,12 @@ jobs:
 
           printf '%s\n' "Verified upstream branch has not changed, continuing with release..."
 
-      - name: Action | Semantic Version Release
+      - name: Semantic Version Release
         id: release
         # Adjust tag with desired version if applicable.
-        uses: python-semantic-release/python-semantic-release@v9.21.1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          git_committer_name: "github-actions"
-          git_committer_email: "actions@users.noreply.github.com"
-          ssh_private_signing_key: ${{ secrets.CI_DEPLOY_SSH_KEY }}
-      - name: Publish | Upload to GitHub Release Assets
-        uses: python-semantic-release/publish-action@v9.21.1
-        if: steps.release.outputs.released == 'true'
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ steps.release.outputs.tag }}
-
-      - name: Upload | Distribution Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: distribution-artifacts
-          path: dist
-          if-no-files-found: error
-
-  pypi-publish:
-    # 1. Separate out the deploy step from the publish step to run each step at
-    #    the least amount of token privilege
-    # 2. Also, deployments can fail, and its better to have a separate job if you need to retry
-    #    and it won't require reversing the release.
-    runs-on: ubuntu-latest
-    needs: release
-    if: ${{ needs.release.outputs.released == 'true' }}
-
-    environment:
-      name: pypi
-      url: https://pypi.org/p/bec-widgets
-    permissions:
-      contents: read
-      id-token: write
-
-    steps:
-      - name: Setup | Download Build Artifacts
-        uses: actions/download-artifact@v4
-        id: artifact-download
-        with:
-          name: distribution-artifacts
-          path: dist
-
-      # see https://docs.pypi.org/trusted-publishers/
-      - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.12.4
-        with:
-          packages-dir: dist
-          print-hash: true
-          verbose: true
+        run: |
+          pip install python-semantic-release==9.* wheel build twine
+          semantic-release -vv version
+          if [ ! -d dist ]; then echo No release will be made; exit 0; fi
+          twine upload dist/* -u __token__ -p $CI_PYPI_TOKEN --skip-existing
+          semantic-release publish
