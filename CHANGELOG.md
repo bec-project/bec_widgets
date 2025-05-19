@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.4.2 (2025-05-19)
+
+### Bug Fixes
+
+- Push release using GH_token
+  ([`1e344ea`](https://github.com/bec-project/bec_widgets/commit/1e344eacb79659aab9bb4a7568a88fc93bba2238))
+
+
 ## v2.4.1 (2025-05-19)
 
 ### Bug Fixes
