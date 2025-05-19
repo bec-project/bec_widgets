@@ -42,6 +42,7 @@ jobs:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
           ssh-key: ${{ secrets.CI_DEPLOY_SSH_KEY }}
+          ssh-known-hosts: ${{ secrets.CI_DEPLOY_SSH_KNOWN_HOSTS }}
 
       - name: Setup | Force release branch to be at workflow sha
         run: |
