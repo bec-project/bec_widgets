@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.4.3 (2025-05-19)
+
+### Bug Fixes
+
+- Twine upload key
+  ([`f064baa`](https://github.com/bec-project/bec_widgets/commit/f064baae68d242035128b73a32a18fdddf423dfc))
+
+
 ## v2.4.2 (2025-05-19)
 
 ### Bug Fixes
