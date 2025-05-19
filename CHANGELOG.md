@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.4.1 (2025-05-19)
+
+### Bug Fixes
+
+- Skip actions on new tags
+  ([`a00d510`](https://github.com/bec-project/bec_widgets/commit/a00d510a751900a4deb5f24a91cd1822ef7c1a10))
+
+
 ## v2.4.0 (2025-05-19)
 
 ### Bug Fixes
