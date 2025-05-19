@@ -81,6 +81,10 @@ jobs:
 
           printf '%s\n' "Verified upstream branch has not changed, continuing with release..."
 
+      - name: Setup | Install Dependencies
+        run: |
+          pip install build wheel
+
       - name: Action | Semantic Version Release
         id: release
         # Adjust tag with desired version if applicable.
