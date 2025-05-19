@@ -71,7 +71,7 @@ include_trailing_comma = true
 known_first_party = ["bec_widgets"]
 
 [tool.semantic_release]
-build_command = "python -m build"
+build_command = "pip install build wheel && python -m build"
 version_toml = ["pyproject.toml:project.version"]
 
 [tool.semantic_release.commit_author]
