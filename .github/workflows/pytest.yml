@@ -48,10 +48,11 @@ jobs:
           echo -e "\033[35;1m Using branch $OPHYD_DEVICES_BRANCH of OPHYD_DEVICES \033[0;m";
           git clone --branch $OPHYD_DEVICES_BRANCH https://github.com/bec-project/ophyd_devices.git
           export OHPYD_DEVICES_PATH=$PWD/ophyd_devices
-          pip install -e ./ophyd_devices
-          pip install -e ./bec/bec_lib[dev]
-          pip install -e ./bec/bec_ipython_client
-          pip install -e .[dev,pyside6]
+          pip install uv
+          uv pip install --system -e ./ophyd_devices
+          uv pip install --system -e ./bec/bec_lib[dev]
+          uv pip install --system -e ./bec/bec_ipython_client
+          uv pip install --system -e .[dev,pyside6]
 
       - name: Run Pytest with Coverage
         id: coverage
