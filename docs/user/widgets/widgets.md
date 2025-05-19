@@ -175,6 +175,14 @@ Various buttons which manage the control of the BEC Queue.
 Choose individual device from current session.
 ```
 
+```{grid-item-card} Signal Label
+:link: user.widgets.signal_label
+:link-type: ref
+:img-top: ./signal_label/test_screenshot.png
+
+Display the live value of a signal.
+```
+
 ```{grid-item-card} Signal Input Widgets
 :link: user.widgets.signal_input
 :link-type: ref
@@ -289,5 +297,7 @@ lmfit_dialog/lmfit_dialog.md
 dap_combo_box/dap_combo_box.md
 games/games.md
 log_panel/log_panel.md
+signal_label/signal_label.md
+
 
 ```
