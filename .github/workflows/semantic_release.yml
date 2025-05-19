@@ -26,6 +26,9 @@ jobs:
       QTWEBENGINE_DISABLE_SANDBOX: 1
       QT_QPA_PLATFORM: "offscreen"
 
+    permissions:
+      contents: write
+
     steps:
       # Note: We checkout the repository at the branch that triggered the workflow
       # with the entire history to ensure to match PSR's release branch detection
