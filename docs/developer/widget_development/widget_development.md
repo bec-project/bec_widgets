@@ -21,11 +21,9 @@ class HelloWorldWidget(BECWidget, QWidget):
     def __init__(
         self, parent: QWidget | None = None, client=None, gui_id: str | None = None
     ) -> None:
-        # Initialize the BECWidget and QWidget
-        super().__init__(client=client, gui_id=gui_id)
-        QWidget.__init__(self, parent)
+        # Initialize base classes
+        super().__init__(parent=parent, client=client, gui_id=gui_id)
 
-        # Create a label with the text "Hello World"
         self.label = QLabel(self)
         self.label.setText("Hello World")
 
