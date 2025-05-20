@@ -126,7 +126,7 @@ class BaseROI(BECConnector):
         # ROI-specific
         label: str | None = None,
         line_color: str | None = None,
-        line_width: int = 10,
+        line_width: int = 5,
         # all remaining pg.*ROI kwargs (pos, size, pen, …)
         **pg_kwargs,
     ):
@@ -345,6 +345,11 @@ class BaseROI(BECConnector):
         self.setPos(x, y)
 
     def remove(self):
+        # Delegate to controller first so that GUI managers stay in sync
+        controller = getattr(self.parent_image, "roi_controller", None)
+        if controller and self in controller.rois:
+            controller.remove_roi(self)
+            return  # controller will call back into this method once deregistered
         handles = self.handles
         for i in range(len(handles)):
             try:
@@ -353,9 +358,8 @@ class BaseROI(BECConnector):
                 continue
         self.rpc_register.remove_rpc(self)
         self.parent_image.plot_item.removeItem(self)
-        if hasattr(self.parent_image, "roi_controller"):
-            self.parent_image.roi_controller._rois.remove(self)
-            self.parent_image.roi_controller._rebuild_color_buffer()
+        viewBox = self.parent_plot_item.vb
+        viewBox.update()
 
 
 class RectangularROI(BaseROI, pg.RectROI):
@@ -389,7 +393,7 @@ class RectangularROI(BaseROI, pg.RectROI):
         # ROI specifics
         label: str | None = None,
         line_color: str | None = None,
-        line_width: int = 10,
+        line_width: int = 5,
         resize_handles: bool = True,
         **extra_pg,
     ):
@@ -558,7 +562,7 @@ class CircularROI(BaseROI, pg.CircleROI):
         parent_image: Image | None = None,
         label: str | None = None,
         line_color: str | None = None,
-        line_width: int = 10,
+        line_width: int = 5,
         **extra_pg,
     ):
         """
@@ -739,7 +743,7 @@ class ROIController(QObject):
         roi.line_color = color
         # ensure line width default is at least 3 if not previously set
         if getattr(roi, "line_width", 0) < 1:
-            roi.line_width = 10
+            roi.line_width = 5
         self.roiAdded.emit(roi)
 
     def remove_roi(self, roi: BaseROI):
@@ -752,8 +756,12 @@ class ROIController(QObject):
         Args:
             roi (BaseROI): The ROI instance to remove.
         """
-        rois = self._rois
-        if roi not in rois:
+        if roi in self._rois:
+            self.roiRemoved.emit(roi)
+            self._rois.remove(roi)
+            roi.remove()
+            self._rebuild_color_buffer()
+        else:
             roi.remove()
 
     def get_roi(self, index: int) -> BaseROI | None:
@@ -796,7 +804,7 @@ class ROIController(QObject):
         """
         roi = self.get_roi(index)
         if roi is not None:
-            roi.remove()
+            self.remove_roi(roi)
 
     def remove_roi_by_name(self, name: str):
         """
@@ -807,7 +815,7 @@ class ROIController(QObject):
         """
         roi = self.get_roi_by_name(name)
         if roi is not None:
-            roi.remove()
+            self.remove_roi(roi)
 
     def clear(self):
         """
@@ -817,7 +825,7 @@ class ROIController(QObject):
         the cleared signal to notify listeners that all ROIs have been removed.
         """
         for roi in list(self._rois):
-            roi.remove()
+            self.remove_roi(roi)
         self.cleared.emit()
 
     def renormalize_colors(self):

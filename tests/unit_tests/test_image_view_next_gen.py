@@ -386,3 +386,31 @@ def test_roi_get_data_from_image_with_no_image(qtbot, mocked_client):
 
     with pytest.raises(RuntimeError):
         roi.get_data_from_image()
+
+
+##################################################
+# Settings and popups
+##################################################
+def test_show_roi_manager_popup(qtbot, mocked_client):
+    """
+    Verify that the ROI-manager dialog opens and closes correctly,
+    and that the matching toolbar icon stays in sync.
+    """
+    view = create_widget(qtbot, Image, client=mocked_client, popups=True)
+
+    # ROI-manager toggle is exposed via the toolbar.
+    assert "roi_mgr" in view.toolbar.widgets
+    roi_action = view.toolbar.widgets["roi_mgr"].action
+    assert roi_action.isChecked() is False, "Should start unchecked"
+
+    # Open the popup.
+    view.show_roi_manager_popup()
+
+    assert view.roi_manager_dialog is not None
+    assert view.roi_manager_dialog.isVisible()
+    assert roi_action.isChecked() is True, "Icon should toggle on"
+
+    # Close again.
+    view.roi_manager_dialog.close()
+    assert view.roi_manager_dialog is None
+    assert roi_action.isChecked() is False, "Icon should toggle off"
