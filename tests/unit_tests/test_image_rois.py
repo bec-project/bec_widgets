@@ -3,9 +3,7 @@ from __future__ import annotations
 from typing import Literal
 
 import numpy as np
-import pyqtgraph as pg
 import pytest
-from qtpy.QtCore import QPointF
 
 from bec_widgets.widgets.plots.image.image import Image
 from bec_widgets.widgets.plots.roi.image_roi import CircularROI, RectangularROI, ROIController

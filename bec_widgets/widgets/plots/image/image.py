@@ -369,6 +369,7 @@ class Image(PlotBase):
         # Add to plot and controller (controller assigns color)
         self.plot_item.addItem(roi)
         self.roi_controller.add_roi(roi)
+        roi.add_scale_handle()
         return roi
 
     def remove_roi(self, roi: int | str):
