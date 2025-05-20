@@ -74,7 +74,7 @@ class ImageItem(BECConnector, pg.ImageItem):
         self,
         config: Optional[ImageItemConfig] = None,
         gui_id: Optional[str] = None,
-        parent_image=None,
+        parent_image=None,  # FIXME: rename to parent
         **kwargs,
     ):
         if config is None:
@@ -269,6 +269,7 @@ class ImageItem(BECConnector, pg.ImageItem):
         return self.image
 
     def clear(self):
+        self.rpc_register.remove_rpc(self)
         super().clear()
         self.raw_data = None
         self.buffer = []

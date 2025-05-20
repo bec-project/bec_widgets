@@ -1252,16 +1252,16 @@ class Image(RPCBase):
 
     @property
     @rpc_call
-    def vrange(self) -> "tuple":
+    def v_range(self) -> "QPointF":
         """
-        Get the vrange of the image.
+        Set the v_range of the main image.
         """
 
-    @vrange.setter
+    @v_range.setter
     @rpc_call
-    def vrange(self) -> "tuple":
+    def v_range(self) -> "QPointF":
         """
-        Get the vrange of the image.
+        Set the v_range of the main image.
         """
 
     @property

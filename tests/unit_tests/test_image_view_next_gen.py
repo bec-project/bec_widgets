@@ -1,6 +1,7 @@
 import numpy as np
 import pyqtgraph as pg
 import pytest
+from qtpy.QtCore import QPointF
 
 from bec_widgets.widgets.plots.image.image import Image
 from tests.unit_tests.client_mocks import mocked_client
@@ -61,8 +62,8 @@ def test_lock_aspect_ratio(qtbot, mocked_client):
 
 def test_set_vrange(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
-    bec_image_view.vrange = (10, 100)
-    assert bec_image_view.vrange == (10, 100)
+    bec_image_view.v_range = (10, 100)
+    assert bec_image_view.v_range == QPointF(10, 100)
     assert bec_image_view.main_image.levels == (10, 100)
     assert bec_image_view.main_image.config.v_range == (10, 100)
 
@@ -107,7 +108,7 @@ def test_enable_colorbar_with_vrange(qtbot, mocked_client, colorbar_type):
         assert isinstance(bec_image_view._color_bar, pg.HistogramLUTItem)
         assert bec_image_view.enable_full_colorbar is True
     assert bec_image_view.config.color_bar == colorbar_type
-    assert bec_image_view.vrange == (0, 100)
+    assert bec_image_view.v_range == QPointF(0, 100)
     assert bec_image_view.main_image.levels == (0, 100)
     assert bec_image_view._color_bar is not None
 
@@ -150,7 +151,7 @@ def test_image_data_update_2d(qtbot, mocked_client):
 
     bec_image_view.on_image_update_2d(message, metadata)
 
-    np.testing.assert_array_equal(bec_image_view._main_image.image, test_data)
+    np.testing.assert_array_equal(bec_image_view.main_image.image, test_data)
 
 
 def test_image_data_update_1d(qtbot, mocked_client):
@@ -160,10 +161,10 @@ def test_image_data_update_1d(qtbot, mocked_client):
     metadata = {"scan_id": "scan_test"}
 
     bec_image_view.on_image_update_1d({"data": waveform1}, metadata)
-    assert bec_image_view._main_image.raw_data.shape == (1, 50)
+    assert bec_image_view.main_image.raw_data.shape == (1, 50)
 
     bec_image_view.on_image_update_1d({"data": waveform2}, metadata)
-    assert bec_image_view._main_image.raw_data.shape == (2, 60)
+    assert bec_image_view.main_image.raw_data.shape == (2, 60)
 
 
 def test_toolbar_actions_presence(qtbot, mocked_client):
@@ -207,8 +208,8 @@ def test_setting_vrange_with_colorbar(qtbot, mocked_client, colorbar_type):
     elif colorbar_type == "full":
         bec_image_view.enable_full_colorbar = True
 
-    bec_image_view.vrange = (0, 100)
-    assert bec_image_view.vrange == (0, 100)
+    bec_image_view.v_range = (0, 100)
+    assert bec_image_view.v_range == QPointF(0, 100)
     assert bec_image_view.main_image.levels == (0, 100)
     assert bec_image_view.main_image.config.v_range == (0, 100)
     assert bec_image_view.v_min == 0
