@@ -414,8 +414,6 @@ class RectangularROI(BaseROI, pg.RectROI):
 
         self.sigRegionChanged.connect(self._on_region_changed)
         self.adorner = LabelAdorner(roi=self)
-        if resize_handles:
-            self.add_scale_handle()
         self.hoverPen = fn.mkPen(color=(255, 0, 0), width=3, style=QtCore.Qt.DashLine)
         self.handleHoverPen = fn.mkPen("lime", width=4)
 
@@ -439,6 +437,11 @@ class RectangularROI(BaseROI, pg.RectROI):
         self.addScaleHandle([0.5, 1], [0.5, 0])  # bottom edge
         self.addScaleHandle([0, 0.5], [1, 0.5])  # left edge
         self.addScaleHandle([1, 0.5], [0, 0.5])  # right edge
+
+        self.handlePen = fn.mkPen("#ffff00", width=5)  # bright yellow outline
+        self.handleHoverPen = fn.mkPen("#00ffff", width=4)  # cyan, thicker when hovered
+        self.handleBrush = (200, 200, 0, 120)  # semi-transparent fill
+        self.handleHoverBrush = (0, 255, 255, 160)
 
     def _on_region_changed(self):
         """
