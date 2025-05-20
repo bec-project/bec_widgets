@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v2.5.0 (2025-05-20)
+
+### Continuous Integration
+
+- Try uv for test env setup
+  ([`6ee0f50`](https://github.com/bec-project/bec_widgets/commit/6ee0f5004d6c840a31a9394f5d1610f635e9b83b))
+
+### Features
+
+- **image_rois**: Image rois with RPC can be added to Image widget
+  ([`1d018e8`](https://github.com/bec-project/bec_widgets/commit/1d018e863ca0cdb3274002cf35d69a6961aaf07d))
+
+
 ## v2.4.3 (2025-05-19)
 
 ### Bug Fixes
