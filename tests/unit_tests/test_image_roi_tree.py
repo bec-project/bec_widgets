@@ -1,0 +1,333 @@
+from __future__ import annotations
+
+import numpy as np
+import pytest
+from qtpy.QtCore import QPointF, Qt
+
+from bec_widgets.widgets.plots.image.image import Image
+from bec_widgets.widgets.plots.image.setting_widgets.image_roi_tree import ROIPropertyTree
+from bec_widgets.widgets.plots.roi.image_roi import CircularROI, RectangularROI
+from tests.unit_tests.client_mocks import mocked_client
+from tests.unit_tests.conftest import create_widget
+
+
+@pytest.fixture
+def image_widget(qtbot, mocked_client):
+    """Create an Image widget with some test data."""
+    widget = create_widget(qtbot, Image, client=mocked_client)
+    # Add a simple test image
+    data = np.zeros((100, 100), dtype=float)
+    data[20:40, 20:40] = 5  # A square region with value 5
+    widget.main_image.set_data(data)
+    yield widget
+
+
+@pytest.fixture
+def roi_tree(qtbot, image_widget):
+    """Create an ROI property tree widget linked to the image widget."""
+    tree = create_widget(qtbot, ROIPropertyTree, image_widget=image_widget)
+    yield tree
+
+
+def test_initialization(roi_tree, image_widget):
+    """Test that the widget initializes correctly with the right components."""
+    # Check the widget has the right structure
+    assert roi_tree.image_widget == image_widget
+    assert roi_tree.plot == image_widget.plot_item
+    assert roi_tree.controller == image_widget.roi_controller
+    assert isinstance(roi_tree.roi_items, dict)
+    assert len(roi_tree.tree.findItems("", Qt.MatchContains)) == 0  # Empty tree initially
+
+    # Check toolbar actions
+    assert hasattr(roi_tree, "add_rect_action")
+    assert hasattr(roi_tree, "add_circle_action")
+    assert hasattr(roi_tree, "expand_toggle")
+
+    # Check tree view setup
+    assert roi_tree.tree.columnCount() == 3
+    assert roi_tree.tree.headerItem().text(roi_tree.COL_ACTION) == "Actions"
+    assert roi_tree.tree.headerItem().text(roi_tree.COL_ROI) == "ROI"
+    assert roi_tree.tree.headerItem().text(roi_tree.COL_PROPS) == "Properties"
+
+
+def test_controller_connection(roi_tree, image_widget):
+    """Test that controller signals/slots are properly connected."""
+    roi = image_widget.add_roi(kind="rect", name="test_roi")
+
+    # Verify that ROI was added to the tree
+    assert roi in roi_tree.roi_items
+    assert len(roi_tree.tree.findItems("test_roi", Qt.MatchExactly, roi_tree.COL_ROI)) == 1
+
+    # Remove ROI via controller and check that it's removed from the tree
+    image_widget.remove_roi(0)
+    assert roi not in roi_tree.roi_items
+    assert len(roi_tree.tree.findItems("test_roi", Qt.MatchExactly, roi_tree.COL_ROI)) == 0
+
+
+def test_expand_collapse_tree(roi_tree, image_widget):
+    """Test that triggering the expand action expands and collapses all ROI items in the tree."""
+    roi1 = image_widget.add_roi(kind="rect", name="rect1")
+    roi2 = image_widget.add_roi(kind="circle", name="circle1")
+    item1 = roi_tree.roi_items[roi1]
+    item2 = roi_tree.roi_items[roi2]
+
+    # Initially, items should be collapsed
+    assert not item1.isExpanded()
+    assert not item2.isExpanded()
+
+    # Trigger expand
+    roi_tree.expand_toggle.action.trigger()
+    assert item1.isExpanded()
+    assert item2.isExpanded()
+
+    # Trigger collapse
+    roi_tree.expand_toggle.action.trigger()
+    assert not item1.isExpanded()
+    assert not item2.isExpanded()
+
+
+def test_roi_properties_display(roi_tree, image_widget):
+    """Test that ROI properties are displayed correctly in the tree."""
+    # Add ROI with specific properties
+    roi = image_widget.add_roi(kind="rect", name="prop_test", line_width=15)
+    roi.line_color = "#FF0000"  # bright red
+
+    # Find the tree item
+    item = roi_tree.roi_items[roi]
+
+    # Check property display
+    assert item.text(roi_tree.COL_ROI) == "prop_test"
+
+    # Find the type item (first child)
+    type_item = item.child(0)
+    assert type_item.text(roi_tree.COL_ROI) == "Type"
+    assert type_item.text(roi_tree.COL_PROPS) == "RectangularROI"
+
+    # Find the width item (second child)
+    width_item = item.child(1)
+    assert width_item.text(roi_tree.COL_ROI) == "Line width"
+    width_spin = roi_tree.tree.itemWidget(width_item, roi_tree.COL_PROPS)
+    assert width_spin.value() == 15
+
+
+def test_roi_name_edit(roi_tree, image_widget, qtbot):
+    """Test editing the ROI name in the tree."""
+    roi = image_widget.add_roi(kind="rect", name="original_name")
+    item = roi_tree.roi_items[roi]
+
+    # Edit the name - simulate user editing the item
+    item.setFlags(item.flags() | Qt.ItemIsEditable)
+    roi_tree.tree.editItem(item, roi_tree.COL_ROI)
+    qtbot.keyClicks(roi_tree.tree.viewport().focusWidget(), "new_name")
+    qtbot.keyClick(roi_tree.tree.viewport().focusWidget(), Qt.Key_Return)
+    qtbot.wait(200)
+
+    # Check the ROI name was updated
+    assert roi.label == "new_name"
+    assert item.text(roi_tree.COL_ROI) == "new_name"
+
+
+def test_roi_width_edit(roi_tree, image_widget, qtbot):
+    """Test editing ROI line width via spin box."""
+    roi = image_widget.add_roi(kind="rect", name="width_test", line_width=5)
+    item = roi_tree.roi_items[roi]
+
+    # Find the width spin box
+    width_item = item.child(1)  # Second child item (index 1)
+    width_spin = roi_tree.tree.itemWidget(width_item, roi_tree.COL_PROPS)
+
+    # Change the width
+    width_spin.setValue(25)
+    qtbot.wait(200)
+    # Check the ROI width was updated
+    assert roi.line_width == 25
+
+
+def test_delete_roi_button(roi_tree, image_widget, qtbot):
+    """Test that the delete button correctly removes the ROI."""
+    roi = image_widget.add_roi(kind="rect", name="to_delete")
+    item = roi_tree.roi_items[roi]
+
+    # Get the delete button
+    del_btn = roi_tree.tree.itemWidget(item, roi_tree.COL_ACTION)
+
+    # Click the delete button
+    del_btn.click()
+    qtbot.wait(200)
+
+    # Verify ROI was removed
+    assert roi not in roi_tree.roi_items
+    assert roi not in image_widget.roi_controller.rois
+
+
+def test_roi_color_change_from_roi(roi_tree, image_widget):
+    """Test that changing the ROI color updates the tree display."""
+    roi = image_widget.add_roi(kind="rect", name="color_test")
+    item = roi_tree.roi_items[roi]
+
+    # Change the ROI color directly
+    roi.line_color = "#00FF00"  # bright green
+
+    # Check that the color button was updated
+    color_btn = roi_tree.tree.itemWidget(item, roi_tree.COL_PROPS)
+    assert color_btn.color == "#00FF00"
+
+
+def test_colormap_change(roi_tree, image_widget):
+    """Test changing the colormap affects ROI colors."""
+    # Add multiple ROIs
+    roi1 = image_widget.add_roi(kind="rect", name="r1")
+    roi2 = image_widget.add_roi(kind="circle", name="c1")
+
+    # Store original colors
+    orig_colors = [roi1.line_color, roi2.line_color]
+
+    # Change colormap to "plasma" from the color map widget
+    roi_tree.cmap.colormap = "plasma"
+
+    # Colors should have changed
+    new_colors = [roi1.line_color, roi2.line_color]
+    assert new_colors != orig_colors
+
+
+def test_coordinates_update(roi_tree, image_widget):
+    """Test that coordinates update when ROI is moved."""
+    # Add a rectangular ROI
+    roi = image_widget.add_roi(kind="rect", name="moving_roi", pos=(10, 10), size=(20, 20))
+    item = roi_tree.roi_items[roi]
+
+    # Find coordinate items (type and width are 0 and 1, coordinates start at 2)
+    coordinate_items = [item.child(i) for i in range(2, item.childCount())]
+
+    # Store initial coordinates
+    initial_coords = [item.text(roi_tree.COL_PROPS) for item in coordinate_items]
+
+    # Move the ROI
+    roi.setPos(50, 50)
+
+    # Check that coordinates were updated
+    new_coords = [item.text(roi_tree.COL_PROPS) for item in coordinate_items]
+    assert new_coords != initial_coords
+
+
+def test_draw_mode_toggle(roi_tree, qtbot):
+    """Test toggling draw modes."""
+    # Initially no draw mode
+    assert roi_tree._roi_draw_mode is None
+
+    # Toggle rect mode on
+    roi_tree.add_rect_action.action.toggle()
+    assert roi_tree._roi_draw_mode == "rect"
+    assert roi_tree.add_rect_action.action.isChecked()
+    assert not roi_tree.add_circle_action.action.isChecked()
+
+    # Toggle circle mode on (should turn off rect mode)
+    roi_tree.add_circle_action.action.toggle()
+    qtbot.wait(200)
+    assert roi_tree._roi_draw_mode == "circle"
+    assert not roi_tree.add_rect_action.action.isChecked()
+    assert roi_tree.add_circle_action.action.isChecked()
+
+    # Toggle circle mode off
+    roi_tree.add_circle_action.action.toggle()
+    assert roi_tree._roi_draw_mode is None
+    assert not roi_tree.add_rect_action.action.isChecked()
+    assert not roi_tree.add_circle_action.action.isChecked()
+
+
+def test_add_roi_from_toolbar(qtbot, mocked_client):
+    """Test creating ROIs using the toolbar and mouse interactions."""
+    # Create Image widget with ROI tree
+    widget = create_widget(qtbot, Image, client=mocked_client)
+    data = np.zeros((100, 100), dtype=float)
+    widget.main_image.set_data(data)
+    qtbot.waitExposed(widget)
+
+    roi_tree = create_widget(qtbot, ROIPropertyTree, image_widget=widget)
+
+    # Get initial ROI count
+    initial_roi_count = len(widget.roi_controller.rois)
+
+    # Test rectangle ROI creation
+    # 1. Activate rectangle drawing mode
+    roi_tree.add_rect_action.action.setChecked(True)
+    assert roi_tree._roi_draw_mode == "rect"
+
+    # Get plot widget and view
+    plot_item = widget.plot_item
+    view = plot_item.vb.scene().views()[0]
+    qtbot.waitExposed(view)
+
+    # Define start and end points for the ROI (in view coordinates)
+    start_pos = QPointF(20, 20)
+    end_pos = QPointF(60, 60)
+
+    # Map view coordinates to scene coordinates
+    start_pos_scene = plot_item.vb.mapViewToScene(start_pos)
+    end_pos_scene = plot_item.vb.mapViewToScene(end_pos)
+
+    # Map scene coordinates to widget coordinates
+    start_pos_widget = view.mapFromScene(start_pos_scene)
+    end_pos_widget = view.mapFromScene(end_pos_scene)
+
+    # Using qtbot to simulate mouse actions
+    # First click to start drawing
+    qtbot.mousePress(view.viewport(), Qt.LeftButton, pos=start_pos_widget)
+
+    # Then move to end position
+    qtbot.mouseMove(view.viewport(), pos=end_pos_widget)
+
+    # Finally release to complete the ROI
+    qtbot.mouseRelease(view.viewport(), Qt.LeftButton, pos=end_pos_widget)
+
+    # Wait for signals to process
+    qtbot.wait(200)
+
+    # Check that a new ROI was created
+    assert len(widget.roi_controller.rois) == initial_roi_count + 1
+
+    # Get the newly created ROI
+    new_roi = widget.roi_controller.rois[-1]
+
+    # Verify it's a rectangular ROI
+    assert isinstance(new_roi, RectangularROI)
+
+    # Test circle ROI creation
+    # Reset ROI draw mode
+    roi_tree.add_rect_action.action.setChecked(False)
+    roi_tree.add_circle_action.action.setChecked(True)
+    assert roi_tree._roi_draw_mode == "circle"
+
+    # Define new positions for circle ROI
+    start_pos = QPointF(30, 30)
+    end_pos = QPointF(50, 50)
+
+    # Map view coordinates to scene coordinates
+    start_pos_scene = plot_item.vb.mapViewToScene(start_pos)
+    end_pos_scene = plot_item.vb.mapViewToScene(end_pos)
+
+    # Map scene coordinates to widget coordinates
+    start_pos_widget = view.mapFromScene(start_pos_scene)
+    end_pos_widget = view.mapFromScene(end_pos_scene)
+
+    # Using qtbot to simulate mouse actions
+    # First click to start drawing
+    qtbot.mousePress(view.viewport(), Qt.LeftButton, pos=start_pos_widget)
+
+    # Then move to end position
+    qtbot.mouseMove(view.viewport(), pos=end_pos_widget)
+
+    # Finally release to complete the ROI
+    qtbot.mouseRelease(view.viewport(), Qt.LeftButton, pos=end_pos_widget)
+
+    # Wait for signals to process
+    qtbot.wait(200)
+
+    # Check that a new ROI was created
+    assert len(widget.roi_controller.rois) == initial_roi_count + 2
+
+    # Get the newly created ROI
+    new_roi = widget.roi_controller.rois[-1]
+
+    # Verify it's a circle ROI
+    assert isinstance(new_roi, CircularROI)

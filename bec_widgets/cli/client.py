@@ -1438,7 +1438,7 @@ class Image(RPCBase):
         self,
         kind: "Literal['rect', 'circle']" = "rect",
         name: "str | None" = None,
-        line_width: "int | None" = 10,
+        line_width: "int | None" = 5,
         pos: "tuple[float, float] | None" = (10, 10),
         size: "tuple[float, float] | None" = (50, 50),
         **pg_kwargs,

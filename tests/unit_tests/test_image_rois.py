@@ -36,7 +36,7 @@ def test_default_properties(bec_image_widget_with_roi):
 
     assert roi.label.startswith("ROI")
 
-    assert roi.line_width == 10
+    assert roi.line_width == 5
 
     # concrete subclass type
     assert isinstance(roi, RectangularROI) if roi_type == "rect" else isinstance(roi, CircularROI)

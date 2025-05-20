@@ -114,7 +114,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         #
         sixth_tab = QWidget()
         sixth_tab_layout = QVBoxLayout(sixth_tab)
-        self.im = Image(popups=False)
+        self.im = Image(popups=True)
         self.mi = self.im.main_image
         sixth_tab_layout.addWidget(self.im)
         tab_widget.addTab(sixth_tab, "Image Next Gen")

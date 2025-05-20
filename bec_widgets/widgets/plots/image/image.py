@@ -8,13 +8,14 @@ from bec_lib import bec_logger
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import Field, ValidationError, field_validator
 from qtpy.QtCore import QPointF, Signal
-from qtpy.QtWidgets import QWidget
+from qtpy.QtWidgets import QDialog, QVBoxLayout, QWidget
 
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.toolbar import MaterialIconAction, SwitchableToolBarAction
 from bec_widgets.widgets.plots.image.image_item import ImageItem
+from bec_widgets.widgets.plots.image.setting_widgets.image_roi_tree import ROIPropertyTree
 from bec_widgets.widgets.plots.image.toolbar_bundles.image_selection import (
     MonitorSelectionToolbarBundle,
 )
@@ -149,8 +150,7 @@ class Image(PlotBase):
         # Default Color map to plasma
         self.color_map = "plasma"
 
-        # Headless controller keeps the canonical list.
-        self._roi_manager_dialog = None
+        self.roi_manager_dialog = None
 
     ################################################################################
     # Widget Specific GUI interactions
@@ -266,6 +266,55 @@ class Image(PlotBase):
             lambda checked: self.enable_colorbar(checked, style="full")
         )
 
+    ########################################
+    # ROI Gui Manager
+    def add_side_menus(self):
+        super().add_side_menus()
+
+        roi_mgr = ROIPropertyTree(parent=self, image_widget=self)
+        self.side_panel.add_menu(
+            action_id="roi_mgr",
+            icon_name="view_list",
+            tooltip="ROI Manager",
+            widget=roi_mgr,
+            title="ROI Manager",
+        )
+
+    def add_popups(self):
+        super().add_popups()  # keep Axis Settings
+
+        roi_action = MaterialIconAction(
+            icon_name="view_list", tooltip="ROI Manager", checkable=True, parent=self
+        )
+        # self.popup_bundle.add_action("roi_mgr", roi_action)
+        self.toolbar.add_action_to_bundle(
+            bundle_id="popup_bundle", action_id="roi_mgr", action=roi_action, target_widget=self
+        )
+        self.toolbar.widgets["roi_mgr"].action.triggered.connect(self.show_roi_manager_popup)
+
+    def show_roi_manager_popup(self):
+        roi_action = self.toolbar.widgets["roi_mgr"].action
+        if self.roi_manager_dialog is None or not self.roi_manager_dialog.isVisible():
+            self.roi_mgr = ROIPropertyTree(parent=self, image_widget=self)
+            self.roi_manager_dialog = QDialog(modal=False)
+            self.roi_manager_dialog.layout = QVBoxLayout(self.roi_manager_dialog)
+            self.roi_manager_dialog.layout.addWidget(self.roi_mgr)
+            self.roi_manager_dialog.finished.connect(self._roi_mgr_closed)
+            self.roi_manager_dialog.show()
+            roi_action.setChecked(True)
+        else:
+            self.roi_manager_dialog.raise_()
+            self.roi_manager_dialog.activateWindow()
+            roi_action.setChecked(True)
+
+    def _roi_mgr_closed(self):
+        self.roi_mgr.close()
+        self.roi_mgr.deleteLater()
+        self.roi_manager_dialog.close()
+        self.roi_manager_dialog.deleteLater()
+        self.roi_manager_dialog = None
+        self.toolbar.widgets["roi_mgr"].action.setChecked(False)
+
     def enable_colorbar(
         self,
         enabled: bool,
@@ -324,7 +373,7 @@ class Image(PlotBase):
         self,
         kind: Literal["rect", "circle"] = "rect",
         name: str | None = None,
-        line_width: int | None = 10,
+        line_width: int | None = 5,
         pos: tuple[float, float] | None = (10, 10),
         size: tuple[float, float] | None = (50, 50),
         **pg_kwargs,
@@ -1032,6 +1081,11 @@ class Image(PlotBase):
                 self._color_bar.deleteLater()
             self._color_bar = None
 
+        # Popup cleanup
+        if self.roi_manager_dialog is not None:
+            self.roi_manager_dialog.reject()
+            self.roi_manager_dialog = None
+
         # Toolbar cleanup
         self.toolbar.widgets["monitor"].widget.close()
         self.toolbar.widgets["monitor"].widget.deleteLater()
@@ -1042,10 +1096,19 @@ class Image(PlotBase):
 if __name__ == "__main__":  # pragma: no cover
     import sys
 
-    from qtpy.QtWidgets import QApplication
+    from qtpy.QtWidgets import QApplication, QHBoxLayout
 
     app = QApplication(sys.argv)
-    widget = Image(popups=True)
-    widget.show()
-    widget.resize(1000, 800)
+    win = QWidget()
+    win.setWindowTitle("Image Demo")
+    ml = QHBoxLayout(win)
+
+    image_popup = Image(popups=True)
+    image_side_panel = Image(popups=False)
+
+    ml.addWidget(image_popup)
+    ml.addWidget(image_side_panel)
+
+    win.resize(1500, 800)
+    win.show()
     sys.exit(app.exec_())
