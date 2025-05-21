@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v2.5.1 (2025-05-21)
+
+### Bug Fixes
+
+- **ui loader**: Fix loader for widget plugins
+  ([`a7ae856`](https://github.com/bec-project/bec_widgets/commit/a7ae856c8f073b4af10b0f0b129dba4fc02bc2aa))
+
+### Documentation
+
+- Add kwargs to example
+  ([`06f43e4`](https://github.com/bec-project/bec_widgets/commit/06f43e488355470331a3bdf28cfe973a4440fc6d))
+
+- **developer**: Fix hello world example
+  ([`5ec9697`](https://github.com/bec-project/bec_widgets/commit/5ec969727116cee6e7fb4ab05c0e9ab142f24be6))
+
+
 ## v2.5.0 (2025-05-20)
 
 ### Continuous Integration
