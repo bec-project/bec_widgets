@@ -113,6 +113,7 @@ class BaseROI(BECConnector):
         "line_width.setter",
         "get_coordinates",
         "get_data_from_image",
+        "set_position",
     ]
 
     def __init__(
@@ -332,6 +333,16 @@ class BaseROI(BECConnector):
 
     def add_scale_handle(self):
         return
+
+    def set_position(self, x: float, y: float):
+        """
+        Sets the position of the ROI.
+
+        Args:
+            x (float): The x-coordinate of the new position.
+            y (float): The y-coordinate of the new position.
+        """
+        self.setPos(x, y)
 
     def remove(self):
         handles = self.handles
