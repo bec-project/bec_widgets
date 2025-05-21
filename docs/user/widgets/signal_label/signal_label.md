@@ -4,7 +4,7 @@
 
 ````{tab} Overview
 
-The [`SignalLabel`](/api_reference/_autosummary/bec_widgets.cli.client.SignalLabel) displays the value of a signal from a device, with optional customization for labels, units, decimal formatting, and signal selection. It is designed for use in BEC (Beamline Experiment Control) GUIs to monitor values which beamline operators might want to keep an eye on, e.g. sample position, flux, hutch state...
+The `SignalLabel` displays the value of a signal from a device, with optional customization for labels, units, decimal formatting, and signal selection. It is designed for use in BEC (Beamline Experiment Control) GUIs to monitor values which beamline operators might want to keep an eye on, e.g. sample position, flux, hutch state...
 
 ## Key Features:
 - Display: Shows the current value of a device signal.
@@ -88,7 +88,9 @@ The various properties can also be set when the SignalLabel widget is added to a
 
 ````{tab} API
 ```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.TextBox.rst
+.. autoclass:: bec_widgets.cli.client.TextBox
+   :members:
+   :show-inheritance:
 ```
 ````
 

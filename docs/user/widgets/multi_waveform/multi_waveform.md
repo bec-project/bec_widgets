@@ -89,6 +89,8 @@ multi_waveform.export_to_matplotlib()
 
 ````{tab} API
 ```{eval-rst}  
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.MultiWaveform.rst
+.. autoclass:: bec_widgets.cli.client.MultiWaveform
+   :members:
+   :show-inheritance:
 ```
 ````

@@ -4,7 +4,7 @@
 
 ````{tab} Overview
 
-The [`PositionerBox`](/api_reference/_autosummary/bec_widgets.cli.client.PositionerBox) widget provides a graphical user interface to control a positioner device within the BEC environment. This widget allows users to interact with a positioner by setting setpoints, tweaking the motor position, and stopping motion. The device selection can be done via a small button under the device label, through `BEC Designer`, or by using the command line interface (CLI). This flexibility makes the `PositionerBox` an essential tool for tasks involving precise position control.
+The `PositionerBox` widget provides a graphical user interface to control a positioner device within the BEC environment. This widget allows users to interact with a positioner by setting setpoints, tweaking the motor position, and stopping motion. The device selection can be done via a small button under the device label, through `BEC Designer`, or by using the command line interface (CLI). This flexibility makes the `PositionerBox` an essential tool for tasks involving precise position control.
 
 ## Key Features:
 - **Device Selection**: Easily select a positioner device by clicking the button under the device label or by configuring the widget in `BEC Designer`.
@@ -58,6 +58,8 @@ self.positioner_box.set_positioner("motor2")
 
 ````{tab} API
 ```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.PositionerBox.rst
+.. autoclass:: bec_widgets.cli.client.PositionerBox
+   :members:
+   :show-inheritance:
 ```
 ````

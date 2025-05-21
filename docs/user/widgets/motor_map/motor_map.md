@@ -63,6 +63,8 @@ mm1.map(x_name='aptrx', y_name='aptry')
 
 ````{tab} API
 ```{eval-rst}  
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.MotorMap.rst
+.. autoclass:: bec_widgets.cli.client.MotorMap
+   :members:
+   :show-inheritance:
 ```
 ````

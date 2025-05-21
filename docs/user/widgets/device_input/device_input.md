@@ -114,12 +114,16 @@ The following Qt properties are also included:
 
 ````{tab} API - ComboBox
 ```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.DeviceComboBox.rst
+.. autoclass:: bec_widgets.cli.client.DeviceComboBox
+   :members:
+   :show-inheritance:
 ```
 ````
 
 ````{tab} API - LineEdit
 ```{eval-rst}
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.DeviceLineEdit.rst
+.. autoclass:: bec_widgets.cli.client.DeviceLineEdit
+   :members:
+   :show-inheritance:
 ```
 ````

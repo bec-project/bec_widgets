@@ -4,7 +4,7 @@
 
 ````{tab} Overview
 
-The [`PositionerBox2D`](/api_reference/_autosummary/bec_widgets.cli.client.PositionerBox2D) widget is very similar to the [`PositionerBox`](/user/widgets/positioner_box/positioner_box) but allows controlling two positioners at the same time, in a horizontal and vertical orientation respectively. It is intended primarily for controlling axes which have a perpendicular relationship like that. In other cases, it may be better to use a `PositionerGroup` instead. 
+The `PositionerBox2D` widget is very similar to the `PositionerBox` but allows controlling two positioners at the same time, in a horizontal and vertical orientation respectively. It is intended primarily for controlling axes which have a perpendicular relationship like that. In other cases, it may be better to use a `PositionerGroup` instead. 
 
 The `PositionerBox2D` has the same features as the standard `PositionerBox`, but additionally, step buttons which move the positioner by the selected step size, and tweak buttons which move by a tenth of the selected step size.
 
@@ -55,6 +55,8 @@ self.positioner_box.set_positioner_verr("samy")
 
 ````{tab} API
 ```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.PositionerBox2D.rst
+.. autoclass:: bec_widgets.cli.client.PositionerBox2D
+   :members:
+   :show-inheritance:
 ```
 ````

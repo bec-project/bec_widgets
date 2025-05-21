@@ -10,5 +10,5 @@ We offer up to three different options for composing larger GUIs from these modu
 ## Client-Server Architecture
 
 BEC Widgets is built on top of the [BEC](https://bec.readthedocs.io/en/latest/) package, which provides the backend for beamline experiment control. BEC Widgets is a client of BEC, meaning it can interact with the backend through a client-server architecture. To make full usage of the available features of BEC, we recommend to check the documentation about [data access](https://bec.readthedocs.io/en/latest/developer/data_access/data_access.html) in which the messaging and event system of BEC is described.
-In the context of BEC Widgets, the [`BECDispatcher`](/api_reference/_autosummary/bec_widgets.utils.bec_dispatcher.BECDispatcher) connects to this messaging and event system, allowing you to link your Qt [`Slots`](https://www.pythonguis.com/tutorials/pyside6-signals-slots-events/) to messages and event received from BEC.
+In the context of BEC Widgets, the {py:class}`~bec_widgets.utils.bec_dispatcher.BECDispatcher` connects to this messaging and event system, allowing you to link your Qt [`Slots`](https://www.pythonguis.com/tutorials/pyside6-signals-slots-events/) to messages and event received from BEC.
 

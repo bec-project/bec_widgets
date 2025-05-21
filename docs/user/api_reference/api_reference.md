@@ -1,11 +1,10 @@
 (user.api_reference)=
 # User API Reference
 
-```{eval-rst}
-.. autosummary::
-   :toctree: _autosummary
-   :template: custom-module-template.rst
+This section contains the API documentation for the main user-facing modules and classes.
 
-    bec_widgets.cli.client
+```{toctree}
+:maxdepth: 2
 
+../../autoapi/bec_widgets/cli/index
 ```

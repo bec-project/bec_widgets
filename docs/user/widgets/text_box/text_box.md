@@ -4,7 +4,7 @@
 
 ````{tab} Overview
 
-The [`Text Box Widget`](/api_reference/_autosummary/bec_widgets.cli.client.TextBox) is a versatile widget that allows users to display text within the BEC GUI. It supports both plain text and HTML, making it useful for displaying simple messages or more complex formatted content. This widget is particularly suited for integrating textual content directly into the user interface, whether as a standalone message box or as part of a larger application interface.
+The {py:class}`~bec_widgets.cli.client.TextBox` is a versatile widget that allows users to display text within the BEC GUI. It supports both plain text and HTML, making it useful for displaying simple messages or more complex formatted content. This widget is particularly suited for integrating textual content directly into the user interface, whether as a standalone message box or as part of a larger application interface.
 
 ## Key Features:
 - **Text Display**: Display either plain text or HTML content, with automatic detection of the format.
@@ -45,7 +45,9 @@ text_box.set_html_text("<h1>Welcome to BEC Widgets</h1><p>This is an example of 
 
 ````{tab} API
 ```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.TextBox.rst
+.. autoclass:: bec_widgets.cli.client.TextBox
+   :members:
+   :show-inheritance:
 ```
 ````
 

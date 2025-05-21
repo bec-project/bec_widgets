@@ -34,6 +34,8 @@ The ScatterWaveform widget only plots the data points if both x and y axis motor
 
 ````{tab} API
 ```{eval-rst}  
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.ScatterWaveform.rst
+.. autoclass:: bec_widgets.cli.client.ScatterWaveform
+   :members:
+   :show-inheritance:
 ```
 ````

@@ -39,7 +39,7 @@ The `Reset Button` is used to reset the scan queue. It prompts the user for conf
 - **Toolbar and Button Options**: Can be configured as a toolbar button or a standard push button.
 ```
 
-`````{tab} Examples
+````{tab} Examples
 
 Integrating these buttons into a BEC GUI layout is straightforward. The following examples demonstrate how to embed these buttons within a custom GUI layout using `QtWidgets`.
 
@@ -66,12 +66,21 @@ app.exec_()
 ```
 
 `ResumeButton`, `ResetButton`, and `AbortButton` may be used in an exactly analogous way.
+````
 
 ````{tab} API
 ```{eval-rst}
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.StopButton.rst
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.ResumeButton.rst
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.AbortButton.rst
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.ResetButton.rst
+.. autoclass:: bec_widgets.cli.client.StopButton
+   :members:
+   :show-inheritance:
+.. autoclass:: bec_widgets.cli.client.ResumeButton
+   :members:
+   :show-inheritance:
+.. autoclass:: bec_widgets.cli.client.AbortButton
+   :members:
+   :show-inheritance:
+.. autoclass:: bec_widgets.cli.client.ResetButton
+   :members:
+   :show-inheritance:
 ```
-`````
+````

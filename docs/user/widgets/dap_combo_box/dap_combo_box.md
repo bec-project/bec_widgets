@@ -4,8 +4,8 @@
 
 ````{tab} Overview
 
-The [`DAPComboBox`](/api_reference/_autosummary/bec_widgets.widgets.dap_combo_box.dap_combo_box.DAPComboBox) is a widget that extends the functionality of a standard `QComboBox` to allow the user to select a DAP process from all available DAP models.
-One of its signals `new_dap_config` is designed to be connected to the [`add_dap(str, str, str)`](/api_reference/_autosummary/bec_widgets.widgets.waveform.waveform_widget.BECWaveformWidget.rst#bec_widgets.widgets.waveform.waveform_widget.BECWaveformWidget.add_dap) slot from the BECWaveformWidget to add a DAP process.
+The {py:class}`~bec_widgets.widgets.dap_combo_box.dap_combo_box.DAPComboBox` is a widget that extends the functionality of a standard `QComboBox` to allow the user to select a DAP process from all available DAP models.
+One of its signals `new_dap_config` is designed to be connected to the {py:class}`~bec_widgets.widgets.plots.waveform.waveform.Waveform.add_dap_curve` slot from the Waveform widget to add a DAP process.
 
 ## Key Features:
 - **Select DAP model**: Select one of the available DAP models.
@@ -29,11 +29,6 @@ The following slots are available for the `DAP ComboBox` widget:
 - `select_x_axis(str)` : Slot to select the current x axis, emits the `x_axis_updated` signal
 - `select_y_axis(str)` : Slot to select the current y axis, emits the `x_axis_updated` signal
 - `select_fit_model(str)` : Slot to select the current fit model, emits the `fit_model_updated` signal. If x and y axis are set, it will also emit the `new_dap_config` signal.
-````
-````{tab} API
-```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.widgets.dap_combo_box.dap_combo_box.DAPCombobox.rst
-```
 ````
 
 

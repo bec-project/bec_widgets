@@ -1,12 +1,11 @@
 (api_reference)=
 # API Reference
 
-```{eval-rst}
-.. autosummary::
-   :toctree: _autosummary
-   :template: custom-module-template.rst
-   :recursive:
+This page contains the auto-generated API documentation for all modules, classes, and functions in the BEC Widgets package.
 
-   bec_widgets
+```{toctree}
+:maxdepth: 2
+:caption: API Documentation
 
+../autoapi/bec_widgets/index
 ```

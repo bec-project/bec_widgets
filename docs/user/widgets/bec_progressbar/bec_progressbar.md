@@ -3,7 +3,7 @@
 
 ```{tab} Overview
 
-The [`BECProgressbar`](/api_reference/_autosummary/bec_widgets.cli.client.BECProgressBar) widget is a general purpose progress bar that follows the BEC theme and style. It can be embedded in any application to display the progress of a task or operation. 
+The {py:class}`~bec_widgets.cli.client.BECProgressBar` widget is a general purpose progress bar that follows the BEC theme and style. It can be embedded in any application to display the progress of a task or operation.
 
 ## Key Features:
 - **Modern Design**: The BEC Progressbar widget is designed with a modern and sleek appearance, following the BEC theme.
@@ -35,6 +35,8 @@ pb.set_value(50)
 
 ````{tab} API
 ```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.BECProgressBar.rst
+.. autoclass:: bec_widgets.cli.client.BECProgressBar
+   :members:
+   :show-inheritance:
 ```
 ````

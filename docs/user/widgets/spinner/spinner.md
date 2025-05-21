@@ -4,7 +4,7 @@
 
 ````{tab} Overview
 
-The [`SpinnerWidget`](/api_reference/_autosummary/bec_widgets.utility.spinner.spinner.SpinnerWidget) is a simple and versatile widget designed to indicate loading or movement within an application. It is commonly used to show that a device is in motion or that an operation is ongoing. The `SpinnerWidget` can be easily integrated into your GUI application either through direct code instantiation or by using `BEC Designer`.
+The `SpinnerWidget` is a simple and versatile widget designed to indicate loading or movement within an application. It is commonly used to show that a device is in motion or that an operation is ongoing. The `SpinnerWidget` can be easily integrated into your GUI application either through direct code instantiation or by using `BEC Designer`.
 
 ## Key Features:
 - **Loading Indicator**: Provides a visual indication of ongoing operations or device movement.

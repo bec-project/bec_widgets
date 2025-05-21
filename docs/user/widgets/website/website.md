@@ -4,7 +4,7 @@
 
 ````{tab} Overview
 
-The [`Website Widget`](/api_reference/_autosummary/bec_widgets.cli.client.WebsiteWidget) is a versatile tool that allows users to display websites directly within the BEC GUI. This widget is useful for embedding documentation, dashboards, or any web-based tools within the application interface. It is designed to be integrated within a [`BECDockArea`](user.widgets.bec_dock_area) or used as an individual component in your application through `BEC Designer`.
+The {py:class}`~bec_widgets.cli.client.WebsiteWidget` is a versatile tool that allows users to display websites directly within the BEC GUI. This widget is useful for embedding documentation, dashboards, or any web-based tools within the application interface. It is designed to be integrated within a [`BECDockArea`](user.widgets.bec_dock_area) or used as an individual component in your application through `BEC Designer`.
 
 ## Key Features:
 - **URL Display**: Set and display any website URL within the widget.
@@ -66,6 +66,8 @@ print(f"The current URL is: {current_url}")
 
 ````{tab} API
 ```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.WebsiteWidget.rst
+.. autoclass:: bec_widgets.cli.client.WebsiteWidget
+   :members:
+   :show-inheritance:
 ```
 ````

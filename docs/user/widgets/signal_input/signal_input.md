@@ -104,14 +104,6 @@ The following Qt properties are also included:
 
 ````
 
-````{tab} API - ComboBox
-```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.control.device_input.signal_combobox.SignalComboBox.rst
-```
-````
 
-````{tab} API - LineEdit
-```{eval-rst}
-.. include:: /api_reference/_autosummary/bec_widgets.control.device_input.signal_line_edit.SignalLineEdit.rst
-```
-````
+
+

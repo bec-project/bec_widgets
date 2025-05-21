@@ -7,4 +7,5 @@ sphinx-copybutton
 sphinx-inline-tabs
 myst-parser
 sphinx-design
+sphinx-autoapi
 tomli

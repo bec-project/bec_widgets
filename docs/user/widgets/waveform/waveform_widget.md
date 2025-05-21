@@ -101,6 +101,8 @@ print(dap_bpm3a.dap_params)
 
 ````{tab} API
 ```{eval-rst}  
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.Waveform.rst
+.. autoclass:: bec_widgets.cli.client.Waveform
+   :members:
+   :show-inheritance:
 ```
 ````
