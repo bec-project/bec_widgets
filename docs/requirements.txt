@@ -7,6 +7,4 @@ sphinx-copybutton
 sphinx-inline-tabs
 myst-parser
 sphinx-design
-PySide6~=6.8.2
-bec-widgets
 tomli
