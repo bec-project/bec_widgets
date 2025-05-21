@@ -19,10 +19,10 @@ from bec_widgets.utils.bec_widget import BECWidget
 
 class HelloWorldWidget(BECWidget, QWidget):
     def __init__(
-        self, parent: QWidget | None = None, client=None, gui_id: str | None = None
+        self, parent: QWidget | None = None, client=None, gui_id: str | None = None, **kwargs
     ) -> None:
         # Initialize base classes
-        super().__init__(parent=parent, client=client, gui_id=gui_id)
+        super().__init__(parent=parent, client=client, gui_id=gui_id, **kwargs)
 
         self.label = QLabel(self)
         self.label.setText("Hello World")
