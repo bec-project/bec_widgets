@@ -188,3 +188,20 @@ def test_roi_controller_get_roi_methods(qtbot, mocked_client):
     assert controller.get_roi(1) == r2
     assert controller.get_roi(99) is None
     assert controller.get_roi_by_name("notfound") is None
+
+
+def test_roi_set_position(bec_image_widget_with_roi):
+    """Test that set_position updates the ROI position and coordinates."""
+    widget, roi, _ = bec_image_widget_with_roi
+    # Save original coordinates
+    orig_coords = roi.get_coordinates(typed=False)
+    # Move ROI by a known offset
+    roi.set_position(10, 15)
+    new_coords = roi.get_coordinates(typed=False)
+    # The new position should reflect the set_position call
+    assert new_coords != orig_coords
+    # The first coordinate should match the new position
+    if hasattr(roi, "pos"):
+        pos = roi.pos()
+        assert int(pos.x()) == 10
+        assert int(pos.y()) == 15

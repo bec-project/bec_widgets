@@ -602,6 +602,16 @@ class BaseROI(RPCBase):
             ndarray: Pixel data inside the ROI, or (data, coords) if *returnMappedCoords* is True.
         """
 
+    @rpc_call
+    def set_position(self, x: "float", y: "float"):
+        """
+        Sets the position of the ROI.
+
+        Args:
+            x (float): The x-coordinate of the new position.
+            y (float): The y-coordinate of the new position.
+        """
+
 
 class CircularROI(RPCBase):
     """Circular Region of Interest with center/diameter tracking and auto-labeling."""
@@ -699,6 +709,16 @@ class CircularROI(RPCBase):
 
         Returns:
             ndarray: Pixel data inside the ROI, or (data, coords) if *returnMappedCoords* is True.
+        """
+
+    @rpc_call
+    def set_position(self, x: "float", y: "float"):
+        """
+        Sets the position of the ROI.
+
+        Args:
+            x (float): The x-coordinate of the new position.
+            y (float): The y-coordinate of the new position.
         """
 
 
@@ -2650,6 +2670,16 @@ class RectangularROI(RPCBase):
 
         Returns:
             ndarray: Pixel data inside the ROI, or (data, coords) if *returnMappedCoords* is True.
+        """
+
+    @rpc_call
+    def set_position(self, x: "float", y: "float"):
+        """
+        Sets the position of the ROI.
+
+        Args:
+            x (float): The x-coordinate of the new position.
+            y (float): The y-coordinate of the new position.
         """
 
 
