@@ -2,6 +2,7 @@ from bec_lib.logger import bec_logger
 from qtpy import PYQT6, PYSIDE6
 from qtpy.QtCore import QFile, QIODevice
 
+from bec_widgets.utils.bec_plugin_helper import get_all_plugin_widgets
 from bec_widgets.utils.generate_designer_plugin import DesignerPluginInfo
 from bec_widgets.utils.plugin_utils import get_custom_classes
 
@@ -33,6 +34,9 @@ class UILoader:
         widgets = get_custom_classes("bec_widgets").classes
 
         self.custom_widgets = {widget.__name__: widget for widget in widgets}
+
+        plugin_widgets = get_all_plugin_widgets()
+        self.custom_widgets.update(plugin_widgets)
 
         if PYSIDE6:
             self.loader = self.load_ui_pyside6
