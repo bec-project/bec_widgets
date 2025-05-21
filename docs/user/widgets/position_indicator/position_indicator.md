@@ -4,7 +4,7 @@
 
 ````{tab} Overview
 
-The [`PositionIndicator`](/api_reference/_autosummary/bec_widgets.cli.client.PositionIndicator) widget is a simple yet effective tool for visually indicating the position of a motor within its set limits. This widget is particularly useful in applications where it is important to provide a visual clue of the motor's current position relative to its minimum and maximum values. The `PositionIndicator` can be easily integrated into your GUI application either through direct code instantiation or by using `BEC Designer`.
+The `PositionIndicator` widget is a simple yet effective tool for visually indicating the position of a motor within its set limits. This widget is particularly useful in applications where it is important to provide a visual clue of the motor's current position relative to its minimum and maximum values. The `PositionIndicator` can be easily integrated into your GUI application either through direct code instantiation or by using `BEC Designer`.
 
 ## Key Features:
 - **Position Visualization**: Displays the current position of a motor on a linear scale, showing its location relative to the defined limits.
@@ -36,7 +36,7 @@ Within the BEC Designer's [property editor](https://doc.qt.io/qt-6/designer-widg
 
 ````{tab} Examples
 
-The `PositionIndicator` widget can be embedded in a [`BECDockArea`](#user.widgets.bec_dock_area) or used as an individual component in your application through `BEC Designer`. Below are examples demonstrating how to create and use the `PositionIndicator` from the CLI and also directly within Code.
+The `PositionIndicator` widget can be embedded in a [`BECDockArea`](user.widgets.bec_dock_area) or used as an individual component in your application through `BEC Designer`. Below are examples demonstrating how to create and use the `PositionIndicator` from the CLI and also directly within Code.
 
 ## Example 1 - Creating a Position Indicator in Code
 
@@ -95,6 +95,8 @@ self.position_indicator.set_value(new_position_value)
 
 ````{tab} API
 ```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.PositionIndicator.rst
+.. autoclass:: bec_widgets.cli.client.PositionIndicator
+   :members:
+   :show-inheritance:
 ```
 ````

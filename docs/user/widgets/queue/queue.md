@@ -4,7 +4,7 @@
 
 ````{tab} Overview
 
-The [`BEC Queue`](/api_reference/_autosummary/bec_widgets.cli.client.BECQueue) widget provides a real-time display and control of the BEC scan queue, allowing users to monitor, manage, and control the status of ongoing and pending scans. The widget automatically updates to reflect the current state of the scan queue, displaying critical information such as scan numbers, types, and statuses. Additionally, it provides control options to stop individual scans, stop the entire queue, resume, and reset the queue, making it a powerful tool for managing scan operations in the BEC environment.
+The `BECQueue` widget provides a real-time display and control of the BEC scan queue, allowing users to monitor, manage, and control the status of ongoing and pending scans. The widget automatically updates to reflect the current state of the scan queue, displaying critical information such as scan numbers, types, and statuses. Additionally, it provides control options to stop individual scans, stop the entire queue, resume, and reset the queue, making it a powerful tool for managing scan operations in the BEC environment.
 
 ## Key Features:
 - **Real-Time Queue Monitoring**: Displays the current state of the BEC scan queue, with automatic updates as the queue changes.
@@ -39,6 +39,8 @@ Once the widget is added, it will automatically display the current scan queue
 
 ````{tab} API
 ```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.BECQueue.rst
+.. autoclass:: bec_widgets.cli.client.BECQueue
+   :members:
+   :show-inheritance:
 ```
 ````

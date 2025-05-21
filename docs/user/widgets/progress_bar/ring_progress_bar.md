@@ -4,7 +4,7 @@
 
 ````{tab} Overview
 
-The [`Ring Progress Bar`](/api_reference/_autosummary/bec_widgets.cli.client.RingProgressBar) widget is a circular progress bar designed to visualize the progress of tasks in a clear and intuitive manner. This widget is particularly useful in applications where task progress needs to be represented as a percentage. The `Ring Progress Bar` can be controlled directly via its API or can be hooked up to track the progress of a device readback or scan, providing real-time visual feedback.
+The `RingProgressBar` widget is a circular progress bar designed to visualize the progress of tasks in a clear and intuitive manner. This widget is particularly useful in applications where task progress needs to be represented as a percentage. The `Ring Progress Bar` can be controlled directly via its API or can be hooked up to track the progress of a device readback or scan, providing real-time visual feedback.
 
 ## Key Features:
 - **Circular Progress Visualization**: Displays a circular progress bar to represent task completion.
@@ -98,7 +98,9 @@ progress.set_value([50, 75, 25])
 
 ````{tab} API
 ```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.RingProgressBar.rst
+.. autoclass:: bec_widgets.cli.client.RingProgressBar
+   :members:
+   :show-inheritance:
 ```
 ````
 

@@ -4,7 +4,7 @@
 
 ````{tab} Overview
 
-The [`Device Browser`](/api_reference/_autosummary/bec_widgets.cli.client.DeviceBrowser) widget provides a user-friendly interface for browsing through all available devices in the current BEC session. As it supports drag functionality, users can easily drag and drop device into other widgets or applications. 
+The {py:class}`~bec_widgets.cli.client.DeviceBrowser` widget provides a user-friendly interface for browsing through all available devices in the current BEC session. As it supports drag functionality, users can easily drag and drop device into other widgets or applications. 
 
 ```{note}
 The `Device Browser` widget is currently under development. Other widgets may not support drag and drop functionality yet.
@@ -34,6 +34,8 @@ dock_area.device_browser.DeviceBrowser
 
 ````{tab} API
 ```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.DeviceBrowser.rst
+.. autoclass:: bec_widgets.cli.client.DeviceBrowser
+   :members:
+   :show-inheritance:
 ```
 ````

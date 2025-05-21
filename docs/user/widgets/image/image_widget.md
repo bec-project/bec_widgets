@@ -105,6 +105,8 @@ Since the Image Widget does not have prior information about the shape of incomi
 
 ````{tab} API
 ```{eval-rst}  
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.Image.rst
+.. autoclass:: bec_widgets.cli.client.Image
+   :members:
+   :show-inheritance:
 ```
 ````

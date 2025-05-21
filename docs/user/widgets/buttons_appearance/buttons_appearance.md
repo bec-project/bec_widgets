@@ -146,8 +146,14 @@ my_gui.show()
 
 ````{tab} API
 ```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.DarkModeButton.rst
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.ColorButton.rst
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.ColormapSelector.rst
+.. autoclass:: bec_widgets.cli.client.DarkModeButton
+   :members:
+   :show-inheritance:
+.. autoclass:: bec_widgets.cli.client.ColorButton
+   :members:
+   :show-inheritance:
+.. autoclass:: bec_widgets.cli.client.ColormapSelector
+   :members:
+   :show-inheritance:
 ```
 ````

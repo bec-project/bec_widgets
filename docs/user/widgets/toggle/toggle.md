@@ -4,7 +4,7 @@
 
 ````{tab} Overview
 
-The [`Toggle Switch`](/api_reference/_autosummary/bec_widgets.cli.client.ToggleSwitch) widget provides a simple, customizable toggle switch that can be used to represent binary states (e.g., on/off, true/false) within a GUI. This widget is designed to be used directly in code or added through `BEC Designer`, making it versatile for various applications where a user-friendly switch is needed.
+The {py:class}`~bec_widgets.cli.client.ToggleSwitch` widget provides a simple, customizable toggle switch that can be used to represent binary states (e.g., on/off, true/false) within a GUI. This widget is designed to be used directly in code or added through `BEC Designer`, making it versatile for various applications where a user-friendly switch is needed.
 
 ## Key Features:
 - **Binary State Representation**: Represents a simple on/off state with a smooth toggle animation.

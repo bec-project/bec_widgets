@@ -4,7 +4,7 @@
 
 ````{tab} Overview
 
-The [`Scan Control`](/api_reference/_autosummary/bec_widgets.cli.client.ScanControl) widget provides a graphical user interface (GUI) to manage various scan operations in a BEC environment. It is designed to interact with the BEC server, enabling users to start and stop scans. The widget automatically creates the necessary input form based on the scan's signature and gui_config, making it highly adaptable to different scanning processes.
+The `ScanControl` widget provides a graphical user interface (GUI) to manage various scan operations in a BEC environment. It is designed to interact with the BEC server, enabling users to start and stop scans. The widget automatically creates the necessary input form based on the scan's signature and gui_config, making it highly adaptable to different scanning processes.
 
 ## Key Features:
 - **Automatic Interface Generation**: Automatically generates a control interface based on scan signatures and `gui_config`.
@@ -59,6 +59,8 @@ scan_control = dock_area.new().new(gui.available_widgets.ScanControl)
 
 ````{tab} API
 ```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.ScanControl.rst
+.. autoclass:: bec_widgets.cli.client.ScanControl
+   :members:
+   :show-inheritance:
 ```
 ````

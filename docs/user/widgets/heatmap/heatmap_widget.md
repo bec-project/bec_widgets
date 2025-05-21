@@ -101,6 +101,8 @@ heatmap_widget.v_max = 1000
 
 ````{tab} API
 ```{eval-rst}  
-.. include:: /api_reference/_autosummary/bec_widgets.widgets.plots.heatmap.heatmap.Heatmap.rst
+.. autoclass:: bec_widgets.widgets.plots.heatmap.heatmap.Heatmap
+   :members:
+   :show-inheritance:
 ```
 ````

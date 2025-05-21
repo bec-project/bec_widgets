@@ -3,7 +3,7 @@
 
 ````{tab} Overview
 
-The [`BEC Status Box`](/api_reference/_autosummary/bec_widgets.cli.client.BECStatusBox) widget is designed to monitor the status and health of all running BEC processes. This widget provides a real-time overview of the BEC core services, including DeviceServer, ScanServer, SciHub, ScanBundler, and FileWriter. The top-level display indicates the overall state of the BEC services, while the collapsed view allows users to delve into the status of each individual process. By double-clicking on a specific process, users can access a detailed popup window with live updates of the metrics for that process.
+The {py:class}`~bec_widgets.cli.client.BECStatusBox` widget is designed to monitor the status and health of all running BEC processes. This widget provides a real-time overview of the BEC core services, including DeviceServer, ScanServer, SciHub, ScanBundler, and FileWriter. The top-level display indicates the overall state of the BEC services, while the collapsed view allows users to delve into the status of each individual process. By double-clicking on a specific process, users can access a detailed popup window with live updates of the metrics for that process.
 
 ## Key Features:
 - **Comprehensive Service Monitoring**: Track the state of individual BEC services, including real-time updates on their health and status.
@@ -33,6 +33,8 @@ Once the `BECStatusBox` is added, users can interact with it to view the status 
 
 ````{tab} API
 ```{eval-rst} 
-.. include:: /api_reference/_autosummary/bec_widgets.cli.client.BECStatusBox.rst
+.. autoclass:: bec_widgets.cli.client.BECStatusBox
+   :members:
+   :show-inheritance:
 ```
 ````
