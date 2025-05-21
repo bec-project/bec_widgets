@@ -8,6 +8,9 @@ from qtpy.QtCore import QObject
 from bec_widgets.utils.name_utils import pascal_to_snake
 
 EXCLUDED_PLUGINS = ["BECConnector", "BECDockArea", "BECDock", "BECFigure"]
+_PARENT_ARG_REGEX = r".__init__\(\s*(?:parent\)|parent=parent,?|parent,?)"
+_SELF_PARENT_ARG_REGEX = r".__init__\(\s*self,\s*(?:parent\)|parent=parent,?|parent,?)"
+SUPER_INIT_REGEX = re.compile(r"super\(\)" + _PARENT_ARG_REGEX, re.MULTILINE)
 
 
 class PluginFilenames(NamedTuple):
@@ -90,34 +93,20 @@ class DesignerPluginGenerator:
 
         # Check if the widget class calls the super constructor with parent argument
         init_source = inspect.getsource(self.widget.__init__)
-        cls_init_found = (
-            bool(init_source.find(f"{base_cls[0].__name__}.__init__(self, parent=parent") > 0)
-            or bool(init_source.find(f"{base_cls[0].__name__}.__init__(self, parent)") > 0)
-            or bool(init_source.find(f"{base_cls[0].__name__}.__init__(self, parent,") > 0)
+        class_re = re.compile(base_cls[0].__name__ + _SELF_PARENT_ARG_REGEX, re.MULTILINE)
+        cls_init_found = class_re.search(init_source) is not None
+        super_self_re = re.compile(
+            rf"super\({base_cls[0].__name__}, self\)" + _PARENT_ARG_REGEX, re.MULTILINE
         )
-        super_init_found = (
-            bool(
-                init_source.find(f"super({base_cls[0].__name__}, self).__init__(parent=parent") > 0
-            )
-            or bool(init_source.find(f"super({base_cls[0].__name__}, self).__init__(parent,") > 0)
-            or bool(init_source.find(f"super({base_cls[0].__name__}, self).__init__(parent)") > 0)
-        )
+        super_init_found = super_self_re.search(init_source) is not None
         if issubclass(self.widget.__bases__[0], QObject) and not super_init_found:
-            super_init_found = (
-                bool(init_source.find("super().__init__(parent=parent") > 0)
-                or bool(init_source.find("super().__init__(parent,") > 0)
-                or bool(init_source.find("super().__init__(parent)") > 0)
-            )
+            super_init_found = SUPER_INIT_REGEX.search(init_source) is not None
 
         # for the new style classes, we only have one super call. We can therefore check if the
         # number of __init__ calls is 2 (the class itself and the super class)
         num_inits = re.findall(r"__init__", init_source)
         if len(num_inits) == 2 and not super_init_found:
-            super_init_found = bool(
-                init_source.find("super().__init__(parent=parent") > 0
-                or init_source.find("super().__init__(parent,") > 0
-                or init_source.find("super().__init__(parent)") > 0
-            )
+            super_init_found = SUPER_INIT_REGEX.search(init_source) is not None
 
         if not cls_init_found and not super_init_found:
             raise ValueError(
