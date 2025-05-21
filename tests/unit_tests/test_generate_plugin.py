@@ -48,12 +48,22 @@ class MyWidget(QWidget):
 from qtpy.QtWidgets import QWidget
 class MyWidget(QWidget):
     def __init__(self, parent=None):
-        super(QWidget, self).__init__(parent)"""
+        super(QWidget, self).__init__(parent)
+""",
         """
 from qtpy.QtWidgets import QWidget
 class MyWidget(QWidget):
     def __init__(self, parent=None):
         super(QWidget, self).__init__(parent=parent)
+""",
+        """
+from qtpy.QtWidgets import QWidget
+class MyWidget(QWidget):
+    def __init__(self, parent=None):
+        super(QWidget, self).__init__(
+            parent=parent,
+            other=arguments,
+        )
 """,
     ]
 )
