@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v2.5.3 (2025-05-22)
+
+### Bug Fixes
+
+- **server**: Simplefilelikefromlogoutputfunc added encoding for stdout
+  ([`bcab66b`](https://github.com/bec-project/bec_widgets/commit/bcab66b1871fcb522a99859bde0c35bda2570e3a))
+
+### Continuous Integration
+
+- Reusable actions for installing bec widgets
+  ([`a345253`](https://github.com/bec-project/bec_widgets/commit/a345253c6e6ca7e4dba710b91c39cba0085251e5))
+
+
 ## v2.5.2 (2025-05-22)
 
 ### Bug Fixes
