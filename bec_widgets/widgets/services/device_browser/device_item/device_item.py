@@ -18,6 +18,7 @@ from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import
 if TYPE_CHECKING:  # pragma: no cover
     from qtpy.QtGui import QMouseEvent
 
+
 logger = bec_logger.logger
 
 

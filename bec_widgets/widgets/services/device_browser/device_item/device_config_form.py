@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from bec_lib.atlas_models import Device as DeviceConfigModel
+from pydantic import BaseModel
 
 from bec_widgets.utils.forms_from_types.forms import PydanticModelForm
 
@@ -18,3 +19,9 @@ class DeviceConfigForm(PydanticModelForm):
             **kwargs,
         )
         self._validity.setVisible(False)
+
+    def set_schema(self, schema: type[BaseModel]):
+        raise TypeError("This class doesn't support changing the schema")
+
+    def set_data(self, data: DeviceConfigModel):  # type: ignore # This class locks the type
+        super().set_data(data)

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from decimal import Decimal
 from types import NoneType
 from typing import NamedTuple
 
@@ -171,14 +170,13 @@ class PydanticModelForm(TypedForm):
         enabled: bool = True,
         pretty_display: bool = False,
         client=None,
-        **kwargs,
     ):
         """
         A form generated from a pydantic model.
 
         Args:
             data_model (type[BaseModel]): the model class for which to generate a form.
-            enabled (bool): whether fields are enabled for editing.
+            enabled (bool, optional): whether fields are enabled for editing.
             pretty_display (bool, optional): Whether to use a pretty display for the widget. Defaults to False. If True, disables the widget, doesn't add a clear button, and adapts the stylesheet for non-editable display.
 
         """
