@@ -163,8 +163,11 @@ class BECDockArea(BECWidget, QWidget):
                             tooltip="Add Circular ProgressBar",
                             filled=True,
                         ),
+                        # FIXME temporarily disabled  -> issue #644
                         "log_panel": MaterialIconAction(
-                            icon_name=LogPanel.ICON_NAME, tooltip="Add LogPanel", filled=True
+                            icon_name=LogPanel.ICON_NAME,
+                            tooltip="Add LogPanel - Disabled",
+                            filled=True,
                         ),
                     },
                 ),
@@ -230,9 +233,11 @@ class BECDockArea(BECWidget, QWidget):
         self.toolbar.widgets["menu_utils"].widgets["progress_bar"].triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="RingProgressBar")
         )
-        self.toolbar.widgets["menu_utils"].widgets["log_panel"].triggered.connect(
-            lambda: self._create_widget_from_toolbar(widget_name="LogPanel")
-        )
+        # FIXME temporarily disabled -> issue #644
+        self.toolbar.widgets["menu_utils"].widgets["log_panel"].setEnabled(False)
+        # self.toolbar.widgets["menu_utils"].widgets["log_panel"].triggered.connect(
+        #     lambda: self._create_widget_from_toolbar(widget_name="LogPanel")
+        # )
 
         # Icons
         self.toolbar.widgets["attach_all"].action.triggered.connect(self.attach_all)
