@@ -10,6 +10,7 @@ from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.fields import FieldInfo
+from pydantic_core import PydanticUndefined
 from qtpy.QtCore import Signal  # type: ignore
 from qtpy.QtWidgets import (
     QApplication,
@@ -43,6 +44,7 @@ from bec_widgets.widgets.editors.scan_metadata._util import (
     field_minlen,
     field_precision,
 )
+from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
 
 logger = bec_logger.logger
 
@@ -217,7 +219,7 @@ class StrMetadataField(DynamicFormItem):
 
     def setValue(self, value: str):
         if value is None:
-            self._main_widget.setText("")
+            return self._main_widget.setText("")
         self._main_widget.setText(str(value))
 
 
@@ -305,10 +307,26 @@ class BoolMetadataField(DynamicFormItem):
         self._main_widget.setChecked(value)
 
 
+class BoolToggleMetadataField(BoolMetadataField):
+    def __init__(self, *, parent: QWidget | None = None, spec: FormItemSpec) -> None:
+        if spec.info.default is PydanticUndefined:
+            spec.info.default = False
+        super().__init__(parent=parent, spec=spec)
+
+    def _add_main_widget(self) -> None:
+        self._main_widget = ToggleSwitch()
+        self._layout.addWidget(self._main_widget)
+        self._main_widget.setToolTip(self._describe(""))
+        if self._default is not None:
+            self._main_widget.setChecked(self._default)
+
+
 class DictMetadataField(DynamicFormItem):
     def __init__(self, *, parent: QWidget | None = None, spec: FormItemSpec) -> None:
         super().__init__(parent=parent, spec=spec)
         self._main_widget.data_changed.connect(self._value_changed)
+        if spec.info.default is not PydanticUndefined:
+            self._main_widget.set_default(spec.info.default)
 
     def _set_pretty_display(self):
         self._main_widget.set_button_visibility(False)
@@ -326,13 +344,11 @@ class DictMetadataField(DynamicFormItem):
         self._main_widget.replace_data(value)
 
 
-_T = TypeVar("_T")
-
-
-class _ItemAndWidgetType(NamedTuple, Generic[_T]):
-    item: type[_T]
+class _ItemAndWidgetType(NamedTuple):
+    # TODO: this should be generic but not supported in 3.10
+    item: type[int | float | str]
     widget: type
-    default: _T
+    default: int | float | str
 
 
 class ListMetadataField(DynamicFormItem):

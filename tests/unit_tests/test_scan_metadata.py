@@ -42,7 +42,7 @@ class ExampleSchema(BasicScanMetadata):
 
 TEST_DICT = {
     "sample_name": "test name",
-    "str_optional": "None",
+    "str_optional": None,
     "str_required": "something",
     "bool_optional": None,
     "bool_required_default": True,

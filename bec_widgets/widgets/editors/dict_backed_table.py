@@ -17,6 +17,8 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 
+_NOT_SET = object()
+
 
 class DictBackedTableModel(QAbstractTableModel):
     def __init__(self, data):
@@ -27,6 +29,7 @@ class DictBackedTableModel(QAbstractTableModel):
             data (list[list[str]]): list of key-value pairs to initialise with"""
         super().__init__()
         self._data: list[list[str]] = data
+        self._default = _NOT_SET
         self._disallowed_keys: list[str] = []
 
     # pylint: disable=missing-function-docstring
@@ -113,8 +116,13 @@ class DictBackedTableModel(QAbstractTableModel):
         for row in sorted(rows, reverse=True):
             self.removeRows(row, 1, QModelIndex())
 
+    def set_default(self, value: dict | None):
+        self._default = value
+
     def dump_dict(self):
-        if self._data == [[]]:
+        if self._data in [[], [[]], [["", ""]]]:
+            if self._default is not _NOT_SET:
+                return self._default
             return {}
         return dict(self._data)
 
@@ -174,6 +182,9 @@ class DictBackedTable(QWidget):
         self.delete_rows.connect(self._table_model.delete_rows)
 
         self._table_model.dataChanged.connect(lambda *_: self.data_changed.emit(self.dump_dict()))
+
+    def set_default(self, value: dict | None):
+        self._table_model.set_default(value)
 
     def set_button_visibility(self, value: bool):
         self._button_holder.setVisible(value)

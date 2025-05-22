@@ -67,4 +67,6 @@ def field_default(info: FieldInfo):
 
 
 def clearable_required(info: FieldInfo):
-    return type(None) in get_args(info.annotation) or info.is_required()
+    return type(None) in get_args(info.annotation) or (
+        info.is_required() and info.default is PydanticUndefined
+    )
