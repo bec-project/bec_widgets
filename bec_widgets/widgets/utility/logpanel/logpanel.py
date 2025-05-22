@@ -97,7 +97,7 @@ class BecLogsQueue(BECConnector, QObject):
         self._callback = lambda *args: self._process_incoming_log_msg(*args)
         self._conn.register([MessageEndpoints.log()], None, self._callback)
 
-    def cleanup(self):
+    def unsub_from_redis(self, *_):
         """Stop listening to the Redis log stream"""
         self._conn.unregister([MessageEndpoints.log()], None, self._callback)
 
@@ -535,9 +535,9 @@ class LogPanel(TextBox):
 
     def cleanup(self):
         self._service_status.cleanup()
-        self._log_manager.cleanup()
-        self._log_manager.new_message.disconnect(self._new_messages)
-        self._new_messages.disconnect(self._on_append)
+        self._log_manager.new_message.disconnect()
+        self._new_messages.disconnect()
+        self._log_manager.unsub_from_redis()
         super().cleanup()
 
 
