@@ -38,6 +38,10 @@ class SimpleFileLikeFromLogOutputFunc:
             self._log_func(lines)
         self._buffer = [remaining]
 
+    @property
+    def encoding(self):
+        return "utf-8"
+
     def close(self):
         return
 
