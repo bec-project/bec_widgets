@@ -8,44 +8,17 @@ from qtpy.QtCore import QMimeData, QSize, Qt, Signal
 from qtpy.QtGui import QDrag
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QWidget
 
-from bec_widgets.utils.colors import get_theme_name
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.expandable_frame import ExpandableGroupFrame
-from bec_widgets.utils.forms_from_types import styles
-from bec_widgets.utils.forms_from_types.forms import PydanticModelForm
+from bec_widgets.widgets.services.device_browser.device_item.device_config_form import (
+    DeviceConfigForm,
+)
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
 if TYPE_CHECKING:  # pragma: no cover
     from qtpy.QtGui import QMouseEvent
 
 logger = bec_logger.logger
-
-
-class DeviceItemForm(PydanticModelForm):
-    RPC = False
-    PLUGIN = False
-
-    def __init__(self, parent=None, client=None, pretty_display=False, **kwargs):
-        super().__init__(
-            parent=parent,
-            data_model=DeviceConfigModel,
-            pretty_display=pretty_display,
-            client=client,
-            **kwargs,
-        )
-        self._validity.setVisible(False)
-        self._connect_to_theme_change()
-
-    def set_pretty_display_theme(self, theme: str | None = None):
-        if theme is None:
-            theme = get_theme_name()
-        self.setStyleSheet(styles.pretty_display_theme(theme))
-
-    def _connect_to_theme_change(self):
-        """Connect to the theme change signal."""
-        qapp = QApplication.instance()
-        if hasattr(qapp, "theme_signal"):
-            qapp.theme_signal.theme_updated.connect(self.set_pretty_display_theme)  # type: ignore
 
 
 class DeviceItem(ExpandableGroupFrame):
@@ -72,7 +45,7 @@ class DeviceItem(ExpandableGroupFrame):
     def switch_expanded_state(self):
         if not self.expanded and not self._expanded_first_time:
             self._expanded_first_time = True
-            self.form = DeviceItemForm(parent=self, pretty_display=True)
+            self.form = DeviceConfigForm(parent=self, pretty_display=True)
             self._contents.layout().addWidget(self.form)
             if self._data:
                 self.form.set_data(self._data)
@@ -125,7 +98,7 @@ if __name__ == "__main__":  # pragma: no cover
     widget = QWidget()
     layout = QHBoxLayout()
     widget.setLayout(layout)
-    item = DeviceItem("Device")
+    item = DeviceItem(widget, "Device")
     layout.addWidget(DarkModeButton())
     layout.addWidget(item)
     item.set_display_config(
