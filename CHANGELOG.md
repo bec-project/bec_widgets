@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.5.4 (2025-05-22)
+
+### Bug Fixes
+
+- **dock_area**: Menu to add LogPanel into DockArea is temporary disabled
+  ([`d4def09`](https://github.com/bec-project/bec_widgets/commit/d4def09a4ecc024fd7e0e90fd975799066e7bb58))
+
+
 ## v2.5.3 (2025-05-22)
 
 ### Bug Fixes
