@@ -10,6 +10,7 @@ class ToggleSwitch(QWidget):
     A simple toggle.
     """
 
+    stateChanged = Signal(bool)
     enabled = Signal(bool)
     ICON_NAME = "toggle_on"
     PLUGIN = True
@@ -42,10 +43,18 @@ class ToggleSwitch(QWidget):
 
     @checked.setter
     def checked(self, state):
+        if self._checked != state:
+            self.stateChanged.emit(state)
         self._checked = state
         self.update_colors()
         self.set_thumb_pos_to_state()
         self.enabled.emit(self._checked)
+
+    def setChecked(self, state: bool):
+        self.checked = state
+
+    def isChecked(self):
+        return self.checked
 
     @Property(QPointF)
     def thumb_pos(self):

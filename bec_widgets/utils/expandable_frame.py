@@ -37,6 +37,16 @@ class ExpandableGroupFrame(QFrame):
         self._layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self._layout)
 
+        self._create_title_layout(title, icon)
+
+        self._contents = QWidget(self)
+        self._layout.addWidget(self._contents)
+
+        self._expansion_button.clicked.connect(self.switch_expanded_state)
+        self.expanded = self._expanded  # type: ignore
+        self.expansion_state_changed.emit()
+
+    def _create_title_layout(self, title: str, icon: str):
         self._title_layout = QHBoxLayout()
         self._layout.addLayout(self._title_layout)
 
@@ -53,13 +63,6 @@ class ExpandableGroupFrame(QFrame):
         self._expansion_button = QToolButton()
         self._update_expansion_icon()
         self._title_layout.addWidget(self._expansion_button, stretch=1)
-
-        self._contents = QWidget(self)
-        self._layout.addWidget(self._contents)
-
-        self._expansion_button.clicked.connect(self.switch_expanded_state)
-        self.expanded = self._expanded  # type: ignore
-        self.expansion_state_changed.emit()
 
     def set_layout(self, layout: QLayout) -> None:
         self._contents.setLayout(layout)
