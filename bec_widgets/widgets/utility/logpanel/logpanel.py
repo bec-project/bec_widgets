@@ -35,6 +35,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_widgets.utils.bec_connector import BECConnector
 from bec_widgets.utils.colors import get_theme_palette, set_theme
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.editors.text_box.text_box import TextBox
@@ -69,22 +70,22 @@ DEFAULT_LOG_COLORS = {
 }
 
 
-class BecLogsQueue(QObject):
+class BecLogsQueue(BECConnector, QObject):
     """Manages getting logs from BEC Redis and formatting them for display"""
 
+    RPC = False
     new_message = Signal()
 
     def __init__(
         self,
         parent: QObject | None,
-        conn: ConnectorBase,
         maxlen: int = 1000,
         line_formatter: LineFormatter = noop_format,
     ) -> None:
         super().__init__(parent=parent)
         self._timestamp_start: QDateTime | None = None
         self._timestamp_end: QDateTime | None = None
-        self._conn = conn
+        self._conn = self.client.connector
         self._max_length = maxlen
         self._data: deque[LogMessage] = deque([], self._max_length)
         self._display_queue: deque[str] = deque([], self._max_length)
@@ -92,20 +93,27 @@ class BecLogsQueue(QObject):
         self._search_query: Pattern | str | None = None
         self._selected_services: set[str] | None = None
         self._set_formatter_and_update_filter(line_formatter)
-        self._conn.register([MessageEndpoints.log()], None, self._process_incoming_log_msg)
+        # instance attribute still accessible after c++ object is deleted, so the callback can be unregistered
+        self._callback = lambda *args: self._process_incoming_log_msg(*args)
+        self._conn.register([MessageEndpoints.log()], None, self._callback)
 
-    def unsub_from_redis(self):
+    def cleanup(self):
         """Stop listening to the Redis log stream"""
-        self._conn.unregister([MessageEndpoints.log()], None, self._process_incoming_log_msg)
+        self._conn.unregister([MessageEndpoints.log()], None, self._callback)
 
     def _process_incoming_log_msg(self, msg: dict):
         try:
-            _msg: LogMessage = msg["data"]
+            _msg: LogMessage | None = msg.get("data", None)
+            if _msg is None or not isinstance(_msg, LogMessage):
+                return
             self._data.append(_msg)
             if self.filter is None or self.filter(_msg):
                 self._display_queue.append(self._line_formatter(_msg))
                 self.new_message.emit()
         except Exception as e:
+            if "Internal C++ object (BecLogsQueue) already deleted." in e.args:
+                self._conn.unregister([MessageEndpoints.log()], None, self._callback)
+                return
             logger.warning(f"Error in LogPanel incoming message callback: {e}")
 
     def _set_formatter_and_update_filter(self, line_formatter: LineFormatter = noop_format):
@@ -407,17 +415,15 @@ class LogPanel(TextBox):
         **kwargs,
     ):
         """Initialize the LogPanel widget."""
-        super().__init__(parent=parent, client=client, **kwargs)
+        super().__init__(parent=parent, client=client, config={"text": ""}, **kwargs)
         self._update_colors()
         self._service_status = service_status or BECServiceStatusMixin(self, client=self.client)  # type: ignore
         self._log_manager = BecLogsQueue(
-            parent,
-            self.client.connector,  # type: ignore
-            line_formatter=partial(simple_color_format, colors=self._colors),
+            parent=self, line_formatter=partial(simple_color_format, colors=self._colors)
         )
         self._log_manager.new_message.connect(self._new_messages)
 
-        self.toolbar = LogPanelToolbar(parent=parent)
+        self.toolbar = LogPanelToolbar(parent=self)
         self.toolbar_area = QScrollArea()
         self.toolbar_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.toolbar_area.setSizeAdjustPolicy(QScrollArea.SizeAdjustPolicy.AdjustToContents)
@@ -529,7 +535,7 @@ class LogPanel(TextBox):
 
     def cleanup(self):
         self._service_status.cleanup()
-        self._log_manager.unsub_from_redis()
+        self._log_manager.cleanup()
         self._log_manager.new_message.disconnect(self._new_messages)
         self._new_messages.disconnect(self._on_append)
         super().cleanup()
