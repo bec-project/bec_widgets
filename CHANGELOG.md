@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v2.5.2 (2025-05-22)
+
+### Bug Fixes
+
+- Update gitignore
+  ([`f8276f0`](https://github.com/bec-project/bec_widgets/commit/f8276f02245d4263e94dfd018060aef28d787f25))
+
+### Documentation
+
+- Fix build process for sphinx
+  ([`8227c44`](https://github.com/bec-project/bec_widgets/commit/8227c44c33d573874b9a4c74ae9a03a370adcb18))
+
+
 ## v2.5.1 (2025-05-21)
 
 ### Bug Fixes
