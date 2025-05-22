@@ -8,11 +8,12 @@ from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from pydantic import BaseModel, ValidationError
 from qtpy.QtCore import Signal  # type: ignore
-from qtpy.QtWidgets import QGridLayout, QLabel, QLayout, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QApplication, QGridLayout, QLabel, QLayout, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.compact_popup import CompactPopupWidget
 from bec_widgets.utils.error_popups import SafeProperty
+from bec_widgets.utils.forms_from_types import styles
 from bec_widgets.utils.forms_from_types.items import (
     DynamicFormItem,
     DynamicFormItemType,
@@ -197,6 +198,18 @@ class PydanticModelForm(TypedForm):
         self._validity.addWidget(self._validity_message)
         self._layout.addWidget(self._validity)
         self.value_changed.connect(self.validate_form)
+
+        self._connect_to_theme_change()
+
+    def set_pretty_display_theme(self, theme: str = "dark"):
+        if self._pretty_display:
+            self.setStyleSheet(styles.pretty_display_theme(theme))
+
+    def _connect_to_theme_change(self):
+        """Connect to the theme change signal."""
+        qapp = QApplication.instance()
+        if hasattr(qapp, "theme_signal"):
+            qapp.theme_signal.theme_updated.connect(self.set_pretty_display_theme)  # type: ignore
 
     def set_schema(self, schema: type[BaseModel]):
         self._md_schema = schema
