@@ -4,11 +4,12 @@
 # pylint: disable=protected-access
 
 from collections import deque
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from bec_lib.messages import LogMessage
-from qtpy.QtCore import QDateTime, Qt, Signal  # type: ignore
+from bec_lib.redis_connector import StreamMessage
+from qtpy.QtCore import QDateTime
 
 from bec_widgets.widgets.utility.logpanel._util import (
     log_time,
@@ -136,3 +137,31 @@ def test_timestamp_filter(log_panel: LogPanel):
     assert not filter_(TEST_LOG_MESSAGES[0])
     assert filter_(TEST_LOG_MESSAGES[1])
     assert not filter_(TEST_LOG_MESSAGES[2])
+
+
+def test_error_handling_in_callback(log_panel: LogPanel):
+    log_panel._log_manager.new_message = MagicMock()
+
+    cbs = (lambda: log_panel._log_manager._process_incoming_log_msg, {})
+    with patch("bec_widgets.widgets.utility.logpanel.logpanel.logger") as logger:
+        # generally errors should be logged
+        log_panel._log_manager.new_message.emit = MagicMock(
+            side_effect=ValueError("Something went wrong")
+        )
+        log_panel.client.connector._handle_message(
+            msg=StreamMessage(
+                msg={"data": LogMessage(log_type="debug", log_msg="message")}, callbacks=[cbs]
+            )
+        )
+        logger.warning.assert_called_once()
+
+        # this specific error should be ignored and not relogged
+        log_panel._log_manager.new_message.emit = MagicMock(
+            side_effect=RuntimeError("Internal C++ object (BecLogsQueue) already deleted.")
+        )
+        log_panel.client.connector._handle_message(
+            msg=StreamMessage(
+                msg={"data": LogMessage(log_type="debug", log_msg="message")}, callbacks=[cbs]
+            )
+        )
+        logger.warning.assert_called_once()
