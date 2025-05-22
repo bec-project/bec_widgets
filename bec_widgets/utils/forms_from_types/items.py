@@ -3,12 +3,13 @@ from __future__ import annotations
 from abc import abstractmethod
 from decimal import Decimal
 from types import GenericAlias, UnionType
-from typing import Literal
+from typing import Callable, Literal, TypedDict
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.fields import FieldInfo
+from pydantic_core import PydanticUndefined
 from qtpy.QtCore import Signal  # type: ignore
 from qtpy.QtWidgets import (
     QApplication,
@@ -36,6 +37,7 @@ from bec_widgets.widgets.editors.scan_metadata._util import (
     field_minlen,
     field_precision,
 )
+from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
 
 logger = bec_logger.logger
 
@@ -210,7 +212,7 @@ class StrMetadataField(DynamicFormItem):
 
     def setValue(self, value: str):
         if value is None:
-            self._main_widget.setText("")
+            return self._main_widget.setText("")
         self._main_widget.setText(str(value))
 
 
@@ -298,6 +300,20 @@ class BoolMetadataField(DynamicFormItem):
         self._main_widget.setChecked(value)
 
 
+class BoolToggleMetadataField(BoolMetadataField):
+    def __init__(self, *, parent: QWidget | None = None, spec: FormItemSpec) -> None:
+        if spec.info.default is PydanticUndefined:
+            spec.info.default = False
+        super().__init__(parent=parent, spec=spec)
+
+    def _add_main_widget(self) -> None:
+        self._main_widget = ToggleSwitch()
+        self._layout.addWidget(self._main_widget)
+        self._main_widget.setToolTip(self._describe(""))
+        if self._default is not None:
+            self._main_widget.setChecked(self._default)
+
+
 class DictMetadataField(DynamicFormItem):
     def __init__(self, *, parent: QWidget | None = None, spec: FormItemSpec) -> None:
         super().__init__(parent=parent, spec=spec)
@@ -319,26 +335,39 @@ class DictMetadataField(DynamicFormItem):
         self._main_widget.replace_data(value)
 
 
-def widget_from_type(annotation: type | UnionType | None) -> type[DynamicFormItem]:
-    if annotation in [str, str | None]:
-        return StrMetadataField
-    if annotation in [int, int | None]:
-        return IntMetadataField
-    if annotation in [float, float | None, Decimal, Decimal | None]:
-        return FloatDecimalMetadataField
-    if annotation in [bool, bool | None]:
-        return BoolMetadataField
-    if annotation in [dict, dict | None] or (
-        isinstance(annotation, GenericAlias) and annotation.__origin__ is dict
-    ):
-        return DictMetadataField
-    if annotation in [list, list | None] or (
-        isinstance(annotation, GenericAlias) and annotation.__origin__ is list
-    ):
-        return StrMetadataField
-    else:
-        logger.warning(f"Type {annotation} is not (yet) supported in metadata form creation.")
-        return StrMetadataField
+WidgetTypeRegistry = dict[
+    str, tuple[Callable[[type | UnionType | None], bool], type[DynamicFormItem]]
+]
+
+default_widget_types: WidgetTypeRegistry = {
+    "str": (lambda anno: anno in [str, str | None, None], StrMetadataField),
+    "int": (lambda anno: anno in [int, int | None], IntMetadataField),
+    "float_decimal": (
+        lambda anno: anno in [float, float | None, Decimal, Decimal | None],
+        FloatDecimalMetadataField,
+    ),
+    "bool": (lambda anno: anno in [bool, bool | None], BoolMetadataField),
+    "dict": (
+        lambda anno: anno in [dict, dict | None]
+        or (isinstance(anno, GenericAlias) and anno.__origin__ is dict),
+        DictMetadataField,
+    ),
+    "list": (
+        lambda anno: anno in [list, list | None]
+        or (isinstance(anno, GenericAlias) and anno.__origin__ is list),
+        StrMetadataField,
+    ),
+}
+
+
+def widget_from_type(
+    annotation: type | UnionType | None, widget_types: WidgetTypeRegistry
+) -> type[DynamicFormItem]:
+    for predicate, widget_type in widget_types.values():
+        if predicate(annotation):
+            return widget_type
+    logger.warning(f"Type {annotation} is not (yet) supported in metadata form creation.")
+    return StrMetadataField
 
 
 if __name__ == "__main__":  # pragma: no cover

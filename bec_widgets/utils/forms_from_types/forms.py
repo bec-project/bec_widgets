@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from decimal import Decimal
 from types import NoneType
 from typing import NamedTuple
 
@@ -8,7 +7,7 @@ from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from pydantic import BaseModel, ValidationError
 from qtpy.QtCore import Signal  # type: ignore
-from qtpy.QtWidgets import QApplication, QGridLayout, QLabel, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QApplication, QGridLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.compact_popup import CompactPopupWidget
@@ -18,6 +17,7 @@ from bec_widgets.utils.forms_from_types.items import (
     DynamicFormItem,
     DynamicFormItemType,
     FormItemSpec,
+    default_widget_types,
     widget_from_type,
 )
 
@@ -93,7 +93,11 @@ class TypedForm(BECWidget, QWidget):
         self._layout.addWidget(self._form_grid_container)
         self._form_grid_container.setLayout(QVBoxLayout())
         self._form_grid.setLayout(self._new_grid_layout())
+        self._widget_types = default_widget_types
+        self._widget_from_type = widget_from_type
+        self._post_init()
 
+    def _post_init(self):
         self.populate()
         self.enabled = self._enabled  # type: ignore # QProperty
 
@@ -108,7 +112,7 @@ class TypedForm(BECWidget, QWidget):
         label.setProperty("_model_field_name", item.name)
         label.setToolTip(item.info.description or item.name)
         grid.addWidget(label, row, 0)
-        widget = widget_from_type(item.item_type)(parent=self, spec=item)
+        widget = self._widget_from_type(item.item_type, self._widget_types)(parent=self, spec=item)
         widget.valueChanged.connect(self.value_changed)
         widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         grid.addWidget(widget, row, 1)
@@ -187,7 +191,7 @@ class PydanticModelForm(TypedForm):
 
         Args:
             data_model (type[BaseModel]): the model class for which to generate a form.
-            enabled (bool): whether fields are enabled for editing.
+            enabled (bool, optional): whether fields are enabled for editing.
             pretty_display (bool, optional): Whether to use a pretty display for the widget. Defaults to False. If True, disables the widget, doesn't add a clear button, and adapts the stylesheet for non-editable display.
 
         """
