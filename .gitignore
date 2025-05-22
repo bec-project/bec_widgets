@@ -64,6 +64,9 @@ coverage.xml
 .pytest_cache/
 cover/
 
+# Output from end2end testing
+tests/reference_failures/
+
 # Translations
 *.mo
 *.pot
