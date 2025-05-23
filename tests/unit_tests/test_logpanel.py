@@ -66,7 +66,6 @@ def log_panel(qtbot, mocked_client: MagicMock):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
     yield widget
-    widget.cleanup()
 
 
 def test_log_panel_init(log_panel: LogPanel):
@@ -98,14 +97,13 @@ def test_logpanel_output(qtbot, log_panel: LogPanel):
         return len(log_panel._log_manager._display_queue) == 0
 
     next_text = "datetime | error | test log message"
+    msg = LogMessage(
+        metadata={},
+        log_type="error",
+        log_msg={"text": next_text, "record": {}, "service_name": "ScanServer"},
+    )
     log_panel._log_manager._process_incoming_log_msg(
-        {
-            "data": LogMessage(
-                metadata={},
-                log_type="error",
-                log_msg={"text": next_text, "record": {}, "service_name": "ScanServer"},
-            )
-        }
+        msg.content, msg.metadata, _override_slot_params={"verify_sender": False}
     )
 
     qtbot.waitUntil(display_queue_empty, timeout=5000)
@@ -142,16 +140,22 @@ def test_timestamp_filter(log_panel: LogPanel):
 def test_error_handling_in_callback(log_panel: LogPanel):
     log_panel._log_manager.new_message = MagicMock()
 
-    cbs = (lambda: log_panel._log_manager._process_incoming_log_msg, {})
     with patch("bec_widgets.widgets.utility.logpanel.logpanel.logger") as logger:
         # generally errors should be logged
         log_panel._log_manager.new_message.emit = MagicMock(
             side_effect=ValueError("Something went wrong")
         )
-        log_panel.client.connector._handle_message(
-            msg=StreamMessage(
-                msg={"data": LogMessage(log_type="debug", log_msg="message")}, callbacks=[cbs]
-            )
+        msg = LogMessage(
+            metadata={},
+            log_type="debug",
+            log_msg={
+                "text": "datetime | debug | test log message",
+                "record": {"time": {"timestamp": 123456789.000}},
+                "service_name": "ScanServer",
+            },
+        )
+        log_panel._log_manager._process_incoming_log_msg(
+            msg.content, msg.metadata, _override_slot_params={"verify_sender": False}
         )
         logger.warning.assert_called_once()
 
@@ -159,9 +163,7 @@ def test_error_handling_in_callback(log_panel: LogPanel):
         log_panel._log_manager.new_message.emit = MagicMock(
             side_effect=RuntimeError("Internal C++ object (BecLogsQueue) already deleted.")
         )
-        log_panel.client.connector._handle_message(
-            msg=StreamMessage(
-                msg={"data": LogMessage(log_type="debug", log_msg="message")}, callbacks=[cbs]
-            )
+        log_panel._log_manager._process_incoming_log_msg(
+            msg.content, msg.metadata, _override_slot_params={"verify_sender": False}
         )
         logger.warning.assert_called_once()
