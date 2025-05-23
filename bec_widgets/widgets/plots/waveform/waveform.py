@@ -414,6 +414,8 @@ class Waveform(PlotBase):
         """
         Slot for when the axis settings dialog is closed.
         """
+        self.dap_summary.close()
+        self.dap_summary.deleteLater()
         self.dap_summary_dialog.deleteLater()
         self.dap_summary_dialog = None
         self.toolbar.widgets["fit_params"].action.setChecked(False)
