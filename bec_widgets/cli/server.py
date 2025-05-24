@@ -6,7 +6,6 @@ import os
 import signal
 import sys
 from contextlib import redirect_stderr, redirect_stdout
-from typing import cast
 
 from bec_lib.logger import bec_logger
 from bec_lib.service_config import ServiceConfig
