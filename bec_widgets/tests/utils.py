@@ -200,7 +200,13 @@ class DMMock:
         self.devices = DeviceContainer()
         self.enabled_devices = [device for device in self.devices if device.enabled]
 
-    def add_devives(self, devices: list):
+    def add_devices(self, devices: list):
+        """
+        Add devices to the DeviceContainer.
+
+        Args:
+            devices (list): List of device instances to add.
+        """
         for device in devices:
             self.devices[device.name] = device
 

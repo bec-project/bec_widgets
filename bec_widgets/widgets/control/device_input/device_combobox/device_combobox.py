@@ -22,6 +22,8 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         config: Device input configuration.
         gui_id: GUI ID.
         device_filter: Device filter, name of the device class from BECDeviceFilter and BECReadoutPriority. Check DeviceInputBase for more details.
+        readout_priority_filter: Readout priority filter, name of the readout priority class from BECDeviceFilter and BECReadoutPriority. Check DeviceInputBase for more details.
+        available_devices: List of available devices, if passed, it sets apply filters to false and device/readout priority filters will not be applied.
         default: Default device name.
         arg_name: Argument name, can be used for the other widgets which has to call some other function in bec using correct argument names.
     """
