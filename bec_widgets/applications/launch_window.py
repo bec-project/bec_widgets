@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Callable
 
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import Qt, Signal  # type: ignore
-from qtpy.QtGui import QPainter, QPainterPath, QPixmap
+from qtpy.QtGui import QFontMetrics, QPainter, QPainterPath, QPixmap
 from qtpy.QtWidgets import (
     QApplication,
     QComboBox,
@@ -44,6 +44,7 @@ MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
 class LaunchTile(RoundedFrame):
+    DEFAULT_SIZE = (250, 300)
     open_signal = Signal()
 
     def __init__(
@@ -54,8 +55,14 @@ class LaunchTile(RoundedFrame):
         main_label: str | None = None,
         description: str | None = None,
         show_selector: bool = False,
+        tile_size: tuple[int, int] | None = None,
     ):
         super().__init__(parent=parent, orientation="vertical")
+
+        # Provide a per‑instance TILE_SIZE so the class can compute layout
+        if tile_size is None:
+            tile_size = self.DEFAULT_SIZE
+        self.tile_size = tile_size
 
         self.icon_label = QLabel(parent=self)
         self.icon_label.setFixedSize(100, 100)
@@ -87,12 +94,26 @@ class LaunchTile(RoundedFrame):
 
         # Main label
         self.main_label = QLabel(main_label)
+
+        # Desired default appearance
         font_main = self.main_label.font()
         font_main.setPointSize(14)
         font_main.setBold(True)
         self.main_label.setFont(font_main)
-        self.main_label.setWordWrap(True)
         self.main_label.setAlignment(Qt.AlignCenter)
+
+        # Shrink font if the default would wrap on this platform / DPI
+        content_width = (
+            self.tile_size[0]
+            - self.layout.contentsMargins().left()
+            - self.layout.contentsMargins().right()
+        )
+        self._fit_label_to_width(self.main_label, content_width)
+
+        # Give every tile the same reserved height for the title so the
+        # description labels start at an identical y‑offset.
+        self.main_label.setFixedHeight(QFontMetrics(self.main_label.font()).height() + 2)
+
         self.layout.addWidget(self.main_label)
 
         self.spacer_top = QSpacerItem(0, 10, QSizePolicy.Fixed, QSizePolicy.Fixed)
@@ -133,6 +154,29 @@ class LaunchTile(RoundedFrame):
         )
         self.layout.addWidget(self.action_button, alignment=Qt.AlignCenter)
 
+    def _fit_label_to_width(self, label: QLabel, max_width: int, min_pt: int = 10):
+        """
+        Fit the label text to the specified maximum width by adjusting the font size.
+
+        Args:
+            label(QLabel): The label to adjust.
+            max_width(int): The maximum width the label can occupy.
+            min_pt(int): The minimum font point size to use.
+        """
+        font = label.font()
+        for pt in range(font.pointSize(), min_pt - 1, -1):
+            font.setPointSize(pt)
+            metrics = QFontMetrics(font)
+            if metrics.horizontalAdvance(label.text()) <= max_width:
+                label.setFont(font)
+                label.setWordWrap(False)
+                return
+        # If nothing fits, fall back to eliding
+        metrics = QFontMetrics(font)
+        label.setFont(font)
+        label.setWordWrap(False)
+        label.setText(metrics.elidedText(label.text(), Qt.ElideRight, max_width))
+
 
 class LaunchWindow(BECMainWindow):
     RPC = True
@@ -146,6 +190,8 @@ class LaunchWindow(BECMainWindow):
 
         self.app = QApplication.instance()
         self.tiles: dict[str, LaunchTile] = {}
+        # Track the smallest main‑label font size chosen so far
+        self._min_main_label_pt: int | None = None
 
         # Toolbar
         self.dark_mode_button = DarkModeButton(parent=self, toolbar=True)
@@ -250,13 +296,33 @@ class LaunchWindow(BECMainWindow):
             main_label=main_label,
             description=description,
             show_selector=show_selector,
+            tile_size=self.TILE_SIZE,
         )
-        tile.setFixedSize(*self.TILE_SIZE)
+        tile.setFixedWidth(self.TILE_SIZE[0])
+        tile.setMinimumHeight(self.TILE_SIZE[1])
+        tile.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.MinimumExpanding)
         if action_button:
             tile.action_button.clicked.connect(action_button)
         if show_selector and selector_items:
             tile.selector.addItems(selector_items)
         self.central_widget.layout.addWidget(tile)
+
+        # keep all tiles' main labels at a unified point size
+        current_pt = tile.main_label.font().pointSize()
+        if self._min_main_label_pt is None or current_pt < self._min_main_label_pt:
+            # New global minimum – shrink every existing tile to this size
+            self._min_main_label_pt = current_pt
+            for t in self.tiles.values():
+                f = t.main_label.font()
+                f.setPointSize(self._min_main_label_pt)
+                t.main_label.setFont(f)
+                t.main_label.setFixedHeight(QFontMetrics(f).height() + 2)
+        elif current_pt > self._min_main_label_pt:
+            # Tile is larger than global minimum – shrink it to match
+            f = tile.main_label.font()
+            f.setPointSize(self._min_main_label_pt)
+            tile.main_label.setFont(f)
+            tile.main_label.setFixedHeight(QFontMetrics(f).height() + 2)
 
         self.tiles[name] = tile
 
