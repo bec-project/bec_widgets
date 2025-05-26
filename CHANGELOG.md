@@ -1,6 +1,37 @@
 # CHANGELOG
 
 
+## v2.6.0 (2025-05-26)
+
+### Bug Fixes
+
+- **image_roi**: Position can be set from rpc
+  ([`41b7ca8`](https://github.com/bec-project/bec_widgets/commit/41b7ca8e649d39dd21d09febfa8aabfc8f6f98fc))
+
+### Chores
+
+- Migrate issue template to github form syntax
+  ([`05489a1`](https://github.com/bec-project/bec_widgets/commit/05489a1c563e20a49fe34d4df97ca0c3c23d8634))
+
+### Continuous Integration
+
+- Add pr issue sync
+  ([`53377d2`](https://github.com/bec-project/bec_widgets/commit/53377d26e2767b3df7c788330c4d592fc12051ed))
+
+### Features
+
+- **image_roi_tree**: Gui roi manager for image widget
+  ([`a939c3b`](https://github.com/bec-project/bec_widgets/commit/a939c3b1c4a7bcf1322f2d1d330fdb721ea04d56))
+
+- **waveform**: Lmfitdialog cleanup after close
+  ([`a020f2d`](https://github.com/bec-project/bec_widgets/commit/a020f2dc7e537493ce4aff5d88ea003956624869))
+
+### Refactoring
+
+- **image_roi**: Glowing handles for Rectangle roi
+  ([`7a531c1`](https://github.com/bec-project/bec_widgets/commit/7a531c17d6a4411550600ddc8bb9d56ee777259d))
+
+
 ## v2.5.4 (2025-05-22)
 
 ### Bug Fixes
