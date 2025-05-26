@@ -145,7 +145,14 @@ def test_available_widgets(qtbot, connected_client_gui_obj):
 
         # Check that the number of top level widgets is still the same. As the cleanup is done by the
         # qt event loop, we need to wait for the qtbot to finish the cleanup
-        qtbot.waitUntil(lambda: len(gui._server_registry) == top_level_widgets_count)
+        try:
+            qtbot.waitUntil(lambda: len(gui._server_registry) == top_level_widgets_count)
+        except Exception as exc:
+            raise RuntimeError(
+                f"Widget {object_name} was not removed properly. The number of top level widgets "
+                f"is {len(gui._server_registry)} instead of {top_level_widgets_count}. The following "
+                f"widgets are still registered: {list(gui._server_registry.keys())}."
+            ) from exc
         # Number of widgets with parent_id == None, should be 2
         widgets = [
             widget
