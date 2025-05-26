@@ -1,6 +1,27 @@
 # CHANGELOG
 
 
+## v2.8.0 (2025-05-26)
+
+### Bug Fixes
+
+- **ImageProcessing**: Use target widget as parent
+  ([`d8547c7`](https://github.com/bec-project/bec_widgets/commit/d8547c7a56cea72dd41a2020c47adfd93969139f))
+
+### Features
+
+- **plot_base**: Add option to specify units
+  ([`3484507`](https://github.com/bec-project/bec_widgets/commit/3484507c75500dc1b1a53853ff01937ad9ad8913))
+
+### Refactoring
+
+- **server**: Minor cleanup of imports
+  ([`8abebb7`](https://github.com/bec-project/bec_widgets/commit/8abebb72862c44d32a24f5e692319dec7a0891bf))
+
+- **toolbar**: Add warning if no parent is provided as it may lead to segfaults
+  ([`4f69f5d`](https://github.com/bec-project/bec_widgets/commit/4f69f5da45420d92fd985801a8920ecf10166554))
+
+
 ## v2.7.1 (2025-05-26)
 
 ### Bug Fixes
