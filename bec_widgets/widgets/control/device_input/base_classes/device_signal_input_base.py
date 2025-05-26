@@ -112,9 +112,12 @@ class DeviceSignalInputBase(BECWidget):
         # See above convention for Signals and ComputedSignals
         if isinstance(device, Signal):
             self._signals = [self._device]
-            FilterIO.set_selection(widget=self, selection=[self._device])
+            self._hinted_signals = [self._device]
+            self._normal_signals = []
+            self._config_signals = []
+            FilterIO.set_selection(widget=self, selection=self._signals)
             return
-        device_info = device._info["signals"]
+        device_info = device._info.get("signals", {})
 
         def _update(kind: Kind):
             return [

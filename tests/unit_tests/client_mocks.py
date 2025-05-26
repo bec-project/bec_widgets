@@ -30,7 +30,7 @@ def mocked_client(bec_dispatcher):
     # Mock the device_manager.devices attribute
     client.connector = connector
     client.device_manager = DMMock()
-    client.device_manager.add_devives(DEVICES)
+    client.device_manager.add_devices(DEVICES)
 
     def mock_mv(*args, relative=False):
         # Extracting motor and value pairs

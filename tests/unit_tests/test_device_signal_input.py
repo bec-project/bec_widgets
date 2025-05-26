@@ -1,8 +1,10 @@
 from unittest import mock
 
 import pytest
+from bec_lib.device import Signal
 from qtpy.QtWidgets import QWidget
 
+from bec_widgets.tests.utils import FakeDevice
 from bec_widgets.utils.ophyd_kind_util import Kind
 from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
 from bec_widgets.widgets.control.device_input.base_classes.device_signal_input_base import (
@@ -16,6 +18,10 @@ from bec_widgets.widgets.control.device_input.signal_line_edit.signal_line_edit 
 
 from .client_mocks import mocked_client
 from .conftest import create_widget
+
+
+class FakeSignal(Signal):
+    """Fake signal to test the DeviceSignalInputBase."""
 
 
 class DeviceInputWidget(DeviceSignalInputBase, QWidget):
@@ -107,6 +113,14 @@ def test_signal_combobox(qtbot, device_signal_combobox):
     assert device_signal_combobox.signals == ["readback", "setpoint", "velocity"]
     qtbot.wait(100)
     assert container == ["samx"]
+    # Set the type of class from the FakeDevice to Signal
+    fake_signal = FakeSignal(name="fake_signal")
+    device_signal_combobox.client.device_manager.add_devices([fake_signal])
+    device_signal_combobox.set_device("fake_signal")
+    assert device_signal_combobox.signals == ["fake_signal"]
+    assert device_signal_combobox._config_signals == []
+    assert device_signal_combobox._normal_signals == []
+    assert device_signal_combobox._hinted_signals == ["fake_signal"]
 
 
 def test_signal_lineeidt(device_signal_line_edit):
