@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v2.7.0 (2025-05-26)
+
+### Bug Fixes
+
+- **image/image_selecetion**: Toolbar selection tool size adjusted
+  ([`e12e9e5`](https://github.com/bec-project/bec_widgets/commit/e12e9e534d6913223b741bff31bed6674ae4c0e6))
+
+- **plot_base/mouse_interactions.py**: Fixed parent
+  ([`66e9445`](https://github.com/bec-project/bec_widgets/commit/66e9445760f2796c008d08feba54c3d48e4a9cfb))
+
+### Features
+
+- **image**: Roi plots with crosshair cuts added
+  ([`ce88787`](https://github.com/bec-project/bec_widgets/commit/ce88787e881d12384dd3a25b75fadda1f2280c81))
+
+
 ## v2.6.0 (2025-05-26)
 
 ### Bug Fixes
