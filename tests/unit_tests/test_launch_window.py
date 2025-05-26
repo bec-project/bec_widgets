@@ -5,6 +5,7 @@ from unittest import mock
 
 import pytest
 from bec_lib.endpoints import MessageEndpoints
+from qtpy.QtGui import QFontMetrics
 
 import bec_widgets
 from bec_widgets.applications.launch_window import LaunchWindow
@@ -153,3 +154,32 @@ def test_launch_window_closes(bec_launch_window, connections, close_called):
                 mock_hide.assert_called_once()
                 close_event.accept.assert_not_called()
                 close_event.ignore.assert_called_once()
+
+
+def test_main_label_fits_tile_width(bec_launch_window, qtbot):
+    """
+    Every tile’s main label must render in a single line and its text
+    width must not exceed the usable width of the tile.
+    """
+    for name, tile in bec_launch_window.tiles.items():
+        label = tile.main_label
+        qtbot.waitUntil(lambda: label.isVisible())
+        metrics = QFontMetrics(label.font())
+        text_width = metrics.horizontalAdvance(label.text())
+        content_width = (
+            tile.tile_size[0]
+            - tile.layout.contentsMargins().left()
+            - tile.layout.contentsMargins().right()
+        )
+        assert text_width <= content_width, f"{name} main label exceeds tile width"
+        # _fit_label_to_width disables wrapping, so confirm that:
+        assert not label.wordWrap(), f"{name} main label is wrapped"
+
+
+def test_main_label_point_size_uniform(bec_launch_window):
+    """
+    The launcher should unify all main-label font sizes to the smallest
+    needed size, so every tile shares the same point size.
+    """
+    point_sizes = {tile.main_label.font().pointSize() for tile in bec_launch_window.tiles.values()}
+    assert len(point_sizes) == 1, f"Non-uniform main-label point sizes: {point_sizes}"
