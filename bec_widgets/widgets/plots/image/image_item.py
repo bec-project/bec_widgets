@@ -269,7 +269,6 @@ class ImageItem(BECConnector, pg.ImageItem):
         return self.image
 
     def clear(self):
-        self.rpc_register.remove_rpc(self)
         super().clear()
         self.raw_data = None
         self.buffer = []
@@ -278,3 +277,4 @@ class ImageItem(BECConnector, pg.ImageItem):
     def remove(self):
         self.parent().disconnect_monitor(self.config.monitor)
         self.clear()
+        super().remove()
