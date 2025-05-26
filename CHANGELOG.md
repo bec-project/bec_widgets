@@ -1,6 +1,28 @@
 # CHANGELOG
 
 
+## v2.7.1 (2025-05-26)
+
+### Bug Fixes
+
+- **signal-combobox**: Bug fix in signal combobox that crashed upon switching from device to signal
+  input
+  ([`1a4eb1d`](https://github.com/bec-project/bec_widgets/commit/1a4eb1db67ff6cfc45ce91cd264ae2818a57230a))
+
+- **signal-line-edit**: Fix signal_line_edit validity check; closes #610
+  ([`ec740d3`](https://github.com/bec-project/bec_widgets/commit/ec740d31fdea561f1ed9274ea79b7be3b6ecba11))
+
+### Refactoring
+
+- Add rpc interface to signal_line_edit/combobox; add user access methods
+  ([`a8811c9`](https://github.com/bec-project/bec_widgets/commit/a8811c9d914feacf08f2f1f1aaf16302cd320ba3))
+
+### Testing
+
+- **input-widgets**: Add e2e tests to test widget inputs with demo config of bec.
+  ([`f57950c`](https://github.com/bec-project/bec_widgets/commit/f57950c4e3b0b5eab7bc303eaead89f7e50e2804))
+
+
 ## v2.7.0 (2025-05-26)
 
 ### Bug Fixes
