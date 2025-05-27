@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, call, patch
 
 from bec_widgets.cli import client
 from bec_widgets.cli.rpc.rpc_base import RPCBase
+from bec_widgets.utils.plugin_utils import BECClassContainer, BECClassInfo
 
 
 class _TestGlobalPlugin(RPCBase): ...
@@ -47,7 +48,9 @@ mock_client_module_duplicate.DeviceComboBox = _TestDuplicatePlugin
 )
 @patch(
     "bec_widgets.utils.bec_plugin_helper.get_all_plugin_widgets",
-    return_value={"DeviceComboBox": _TestDuplicatePlugin},
+    return_value=BECClassContainer(
+        [BECClassInfo(name="DeviceComboBox", obj=_TestDuplicatePlugin, module="", file="")]
+    ),
 )
 def test_duplicate_plugins_not_allowed(_, bec_logger: MagicMock):
     reload(client)

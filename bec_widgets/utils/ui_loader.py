@@ -31,12 +31,9 @@ class UILoader:
     def __init__(self, parent=None):
         self.parent = parent
 
-        widgets = get_custom_classes("bec_widgets").classes
-
-        self.custom_widgets = {widget.__name__: widget for widget in widgets}
-
-        plugin_widgets = get_all_plugin_widgets()
-        self.custom_widgets.update(plugin_widgets)
+        self.custom_widgets = (
+            get_custom_classes("bec_widgets") + get_all_plugin_widgets()
+        ).as_dict()
 
         if PYSIDE6:
             self.loader = self.load_ui_pyside6
