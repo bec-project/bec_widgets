@@ -88,6 +88,8 @@ class Image(PlotBase):
         "auto_range_x.setter",
         "auto_range_y",
         "auto_range_y.setter",
+        "minimal_crosshair_precision",
+        "minimal_crosshair_precision.setter",
         # ImageView Specific Settings
         "color_map",
         "color_map.setter",

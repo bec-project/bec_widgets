@@ -1223,6 +1223,20 @@ class Image(RPCBase):
 
     @property
     @rpc_call
+    def minimal_crosshair_precision(self) -> "int":
+        """
+        Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @minimal_crosshair_precision.setter
+    @rpc_call
+    def minimal_crosshair_precision(self) -> "int":
+        """
+        Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @property
+    @rpc_call
     def color_map(self) -> "str":
         """
         Set the color map of the image.
@@ -2352,6 +2366,20 @@ class MultiWaveform(RPCBase):
 
     @property
     @rpc_call
+    def minimal_crosshair_precision(self) -> "int":
+        """
+        Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @minimal_crosshair_precision.setter
+    @rpc_call
+    def minimal_crosshair_precision(self) -> "int":
+        """
+        Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @property
+    @rpc_call
     def highlighted_index(self):
         """
         None
@@ -3317,6 +3345,20 @@ class ScatterWaveform(RPCBase):
 
     @property
     @rpc_call
+    def minimal_crosshair_precision(self) -> "int":
+        """
+        Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @minimal_crosshair_precision.setter
+    @rpc_call
+    def minimal_crosshair_precision(self) -> "int":
+        """
+        Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @property
+    @rpc_call
     def main_curve(self) -> "ScatterCurve":
         """
         The main scatter curve item.
@@ -3787,6 +3829,20 @@ class Waveform(RPCBase):
     def legend_label_size(self) -> "int":
         """
         The font size of the legend font.
+        """
+
+    @property
+    @rpc_call
+    def minimal_crosshair_precision(self) -> "int":
+        """
+        Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @minimal_crosshair_precision.setter
+    @rpc_call
+    def minimal_crosshair_precision(self) -> "int":
+        """
+        Minimum decimal places for crosshair when dynamic precision is enabled.
         """
 
     @property

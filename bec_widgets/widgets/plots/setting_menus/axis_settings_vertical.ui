@@ -6,15 +6,84 @@
             <rect>
                 <x>0</x>
                 <y>0</y>
-                <width>241</width>
-                <height>526</height>
+                <width>250</width>
+                <height>612</height>
             </rect>
         </property>
         <property name="windowTitle">
             <string>Form</string>
         </property>
-        <layout class="QGridLayout" name="gridLayout">
-            <item row="4" column="0" colspan="2">
+        <layout class="QVBoxLayout" name="verticalLayout">
+            <item>
+                <widget class="QGroupBox" name="general_box">
+                    <property name="title">
+                        <string>General</string>
+                    </property>
+                    <layout class="QGridLayout" name="gridLayout_2">
+                        <item row="4" column="0">
+                            <widget class="QLabel" name="label_outer_axes">
+                                <property name="text">
+                                    <string>Outer Axes</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="4" column="1">
+                            <widget class="ToggleSwitch" name="outer_axes">
+                                <property name="checked" stdset="0">
+                                    <bool>false</bool>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="1" column="1">
+                            <widget class="QLineEdit" name="title"/>
+                        </item>
+                        <item row="3" column="0">
+                            <widget class="QLabel" name="label">
+                                <property name="text">
+                                    <string>Inner Axes</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="1" column="0">
+                            <widget class="QLabel" name="plot_title_label">
+                                <property name="text">
+                                    <string>Plot Title</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="3" column="1">
+                            <widget class="ToggleSwitch" name="inner_axes"/>
+                        </item>
+                        <item row="2" column="0">
+                            <widget class="QLabel" name="label_2">
+                                <property name="toolTip">
+                                    <string>Minimal Crosshair Precision</string>
+                                </property>
+                                <property name="text">
+                                    <string>Precision</string>
+                                </property>
+                            </widget>
+                        </item>
+                        <item row="2" column="1">
+                            <widget class="QSpinBox" name="minimal_crosshair_precision">
+                                <property name="toolTip">
+                                    <string>Minimal Crosshair Precision</string>
+                                </property>
+                                <property name="alignment">
+                                    <set>Qt::AlignmentFlag::AlignCenter</set>
+                                </property>
+                                <property name="maximum">
+                                    <number>20</number>
+                                </property>
+                                <property name="value">
+                                    <number>3</number>
+                                </property>
+                            </widget>
+                        </item>
+                    </layout>
+                </widget>
+            </item>
+            <item>
                 <widget class="QGroupBox" name="x_axis_box">
                     <property name="title">
                         <string>X Axis</string>
@@ -81,28 +150,7 @@
                     </layout>
                 </widget>
             </item>
-            <item row="0" column="0" colspan="2">
-                <layout class="QHBoxLayout" name="horizontalLayout">
-                    <item>
-                        <widget class="QLabel" name="plot_title_label">
-                            <property name="text">
-                                <string>Plot Title</string>
-                            </property>
-                        </widget>
-                    </item>
-                    <item>
-                        <widget class="QLineEdit" name="title"/>
-                    </item>
-                </layout>
-            </item>
-            <item row="2" column="0">
-                <widget class="QLabel" name="label_outer_axes">
-                    <property name="text">
-                        <string>Outer Axes</string>
-                    </property>
-                </widget>
-            </item>
-            <item row="5" column="0" colspan="2">
+            <item>
                 <widget class="QGroupBox" name="y_axis_box">
                     <property name="title">
                         <string>Y Axis</string>
@@ -168,23 +216,6 @@
                         </item>
                     </layout>
                 </widget>
-            </item>
-            <item row="2" column="1">
-                <widget class="ToggleSwitch" name="outer_axes">
-                    <property name="checked" stdset="0">
-                        <bool>false</bool>
-                    </property>
-                </widget>
-            </item>
-            <item row="1" column="0">
-                <widget class="QLabel" name="label">
-                    <property name="text">
-                        <string>Inner Axes</string>
-                    </property>
-                </widget>
-            </item>
-            <item row="1" column="1">
-                <widget class="ToggleSwitch" name="inner_axes"/>
             </item>
         </layout>
     </widget>

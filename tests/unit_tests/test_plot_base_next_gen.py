@@ -349,3 +349,39 @@ def test_enable_fps_monitor_property(qtbot, mocked_client):
 
     pb.enable_fps_monitor = False
     assert pb.fps_monitor is None
+
+
+def test_minimal_crosshair_precision_default(qtbot, mocked_client):
+    """
+    By default PlotBase should expose a floor of 3 decimals, with no crosshair yet.
+    """
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    assert pb.minimal_crosshair_precision == 3
+    assert pb.crosshair is None
+
+
+def test_minimal_crosshair_precision_before_hook(qtbot, mocked_client):
+    """
+    If the floor is changed before hook_crosshair(), the new crosshair must pick it up.
+    """
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    pb.minimal_crosshair_precision = 5
+    pb.hook_crosshair()
+    assert pb.crosshair is not None
+    assert pb.crosshair.min_precision == 5
+
+
+def test_minimal_crosshair_precision_after_hook(qtbot, mocked_client):
+    """
+    Changing the floor after the crosshair exists should update it immediately
+    and emit the property_changed signal.
+    """
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+    pb.hook_crosshair()
+    assert pb.crosshair is not None
+
+    with qtbot.waitSignal(pb.property_changed, timeout=500) as sig:
+        pb.minimal_crosshair_precision = 1
+
+    assert sig.args == ["minimal_crosshair_precision", 1]
+    assert pb.crosshair.min_precision == 1

@@ -60,6 +60,7 @@ class AxisSettings(SettingWidget):
             self.ui.y_grid,
             self.ui.inner_axes,
             self.ui.outer_axes,
+            self.ui.minimal_crosshair_precision,
         ]:
             WidgetIO.connect_widget_change_signal(widget, self.set_property)
 
@@ -121,6 +122,7 @@ class AxisSettings(SettingWidget):
             self.ui.y_max,
             self.ui.y_log,
             self.ui.y_grid,
+            self.ui.minimal_crosshair_precision,
         ]:
             property_name = widget.objectName()
             value = getattr(self.target_widget, property_name)
@@ -144,6 +146,7 @@ class AxisSettings(SettingWidget):
             self.ui.y_grid,
             self.ui.outer_axes,
             self.ui.inner_axes,
+            self.ui.minimal_crosshair_precision,
         ]:
             property_name = widget.objectName()
             value = WidgetIO.get_value(widget)

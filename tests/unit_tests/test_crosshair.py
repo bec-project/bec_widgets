@@ -236,7 +236,7 @@ def test_update_coord_label_1D(plot_widget_with_crosshair):
     # Provide a test position
     pos = (10, 20)
     crosshair.update_coord_label(pos)
-    expected_text = f"({10:.3g}, {20:.3g})"
+    expected_text = f"({10:.3f}, {20:.3f})"
     # Verify that the coordinate label shows only the 1D coordinates (no intensity line)
     assert crosshair.coord_label.toPlainText() == expected_text
     label_pos = crosshair.coord_label.pos()
@@ -260,10 +260,54 @@ def test_update_coord_label_2D(image_widget_with_crosshair):
     ix = int(np.clip(0.5, 0, known_image.shape[0] - 1))  # 0
     iy = int(np.clip(1.2, 0, known_image.shape[1] - 1))  # 1
     intensity = known_image[ix, iy]  # Expected: 20
-    expected_text = f"({0.5:.3g}, {1.2:.3g})\nIntensity: {intensity:.3g}"
+    expected_text = f"({0.5:.3f}, {1.2:.3f})\nIntensity: {intensity:.3f}"
 
     assert crosshair.coord_label.toPlainText() == expected_text
     label_pos = crosshair.coord_label.pos()
     assert np.isclose(label_pos.x(), 0.5)
     assert np.isclose(label_pos.y(), 1.2)
     assert crosshair.coord_label.isVisible()
+
+
+def test_crosshair_precision_properties(plot_widget_with_crosshair):
+    """
+    Ensure Crosshair.precision and Crosshair.min_precision behave correctly
+    and that _current_precision() reflects changes immediately.
+    """
+    crosshair, plot_item = plot_widget_with_crosshair
+
+    assert crosshair.precision == 3
+    assert crosshair._current_precision() == 3
+
+    crosshair.precision = None
+    plot_item.vb.setXRange(0, 1_000, padding=0)
+    plot_item.vb.setYRange(0, 1_000, padding=0)
+    assert crosshair._current_precision() == crosshair.min_precision == 2  # default floor
+
+    crosshair.min_precision = 5
+    assert crosshair._current_precision() == 5
+
+    crosshair.precision = 1
+    assert crosshair._current_precision() == 1
+
+
+def test_crosshair_precision_properties_image(image_widget_with_crosshair):
+    """
+    The same precision/min_precision behaviour must apply for crosshairs attached
+    to ImageItem-based plots.
+    """
+    crosshair, plot_item = image_widget_with_crosshair
+
+    assert crosshair.precision == 3
+    assert crosshair._current_precision() == 3
+
+    crosshair.precision = None
+    plot_item.vb.setXRange(0, 1_000, padding=0)
+    plot_item.vb.setYRange(0, 1_000, padding=0)
+    assert crosshair._current_precision() == crosshair.min_precision == 2
+
+    crosshair.min_precision = 6
+    assert crosshair._current_precision() == 6
+
+    crosshair.precision = 2
+    assert crosshair._current_precision() == 2
