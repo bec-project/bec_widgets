@@ -116,6 +116,7 @@ class PlotBase(BECWidget, QWidget):
         self._user_y_label = ""
         self._y_label_suffix = ""
         self._y_axis_units = ""
+        self._minimal_crosshair_precision = 3
 
         # Plot Indicator Items
         self.tick_item = BECTickItem(parent=self, plot_item=self.plot_item)
@@ -978,7 +979,9 @@ class PlotBase(BECWidget, QWidget):
     def hook_crosshair(self) -> None:
         """Hook the crosshair to all plots."""
         if self.crosshair is None:
-            self.crosshair = Crosshair(self.plot_item, precision=3)
+            self.crosshair = Crosshair(
+                self.plot_item, min_precision=self._minimal_crosshair_precision
+            )
             self.crosshair.crosshairChanged.connect(self.crosshair_position_changed)
             self.crosshair.crosshairClicked.connect(self.crosshair_position_clicked)
             self.crosshair.coordinatesChanged1D.connect(self.crosshair_coordinates_changed)
@@ -1005,6 +1008,29 @@ class PlotBase(BECWidget, QWidget):
             return self.hook_crosshair()
 
         self.unhook_crosshair()
+
+    @SafeProperty(
+        int, doc="Minimum decimal places for crosshair when dynamic precision is enabled."
+    )
+    def minimal_crosshair_precision(self) -> int:
+        """
+        Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+        return self._minimal_crosshair_precision
+
+    @minimal_crosshair_precision.setter
+    def minimal_crosshair_precision(self, value: int):
+        """
+        Set the minimum decimal places for crosshair when dynamic precision is enabled.
+
+        Args:
+            value(int): The minimum decimal places to set.
+        """
+        value_int = max(0, int(value))
+        self._minimal_crosshair_precision = value_int
+        if self.crosshair is not None:
+            self.crosshair.min_precision = value_int
+        self.property_changed.emit("minimal_crosshair_precision", value_int)
 
     @SafeSlot()
     def reset(self) -> None:

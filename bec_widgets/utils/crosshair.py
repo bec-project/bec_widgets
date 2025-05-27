@@ -34,13 +34,21 @@ class Crosshair(QObject):
     coordinatesChanged2D = Signal(tuple)
     coordinatesClicked2D = Signal(tuple)
 
-    def __init__(self, plot_item: pg.PlotItem, precision: int = 3, parent=None):
+    def __init__(
+        self,
+        plot_item: pg.PlotItem,
+        precision: int | None = None,
+        *,
+        min_precision: int = 2,
+        parent=None,
+    ):
         """
         Crosshair for 1D and 2D plots.
 
         Args:
             plot_item (pyqtgraph.PlotItem): The plot item to which the crosshair will be attached.
-            precision (int, optional): Number of decimal places to round the coordinates to. Defaults to None.
+            precision (int | None, optional): Fixed number of decimal places to display. If *None*, precision is chosen dynamically from the current view range.
+            min_precision (int, optional): The lower bound (in decimal places) used when dynamic precision is enabled. Defaults to 2.
             parent (QObject, optional): Parent object for the QObject. Defaults to None.
         """
         super().__init__(parent)
@@ -48,7 +56,9 @@ class Crosshair(QObject):
         self.is_log_x = None
         self.is_derivative = None
         self.plot_item = plot_item
-        self.precision = precision
+        self._precision = precision
+        self._min_precision = max(0, int(min_precision))  # ensure non‑negative
+
         self.v_line = pg.InfiniteLine(angle=90, movable=False)
         self.v_line.skip_auto_range = True
         self.h_line = pg.InfiniteLine(angle=0, movable=False)
@@ -92,6 +102,56 @@ class Crosshair(QObject):
         self.check_derivatives()
 
         self._connect_to_theme_change()
+
+    @property
+    def precision(self) -> int | None:
+        """Fixed number of decimals; ``None`` enables dynamic mode."""
+        return self._precision
+
+    @precision.setter
+    def precision(self, value: int | None):
+        """
+        Set the fixed number of decimals to display.
+
+        Args:
+            value(int | None): The number of decimals to display. If `None`, dynamic precision is used based on the view range.
+        """
+        self._precision = value
+
+    @property
+    def min_precision(self) -> int:
+        """Lower bound on decimals when dynamic precision is used."""
+        return self._min_precision
+
+    @min_precision.setter
+    def min_precision(self, value: int):
+        """
+        Set the lower bound on decimals when dynamic precision is used.
+
+        Args:
+            value(int): The minimum number of decimals to display. Must be non-negative.
+        """
+        self._min_precision = max(0, int(value))
+
+    def _current_precision(self) -> int:
+        """
+        Get the current precision based on the view range or fixed precision.
+        """
+        if self._precision is not None:
+            return self._precision
+
+        # Dynamically choose precision from the smaller visible span
+        view_range = self.plot_item.vb.viewRange()
+        x_span = abs(view_range[0][1] - view_range[0][0])
+        y_span = abs(view_range[1][1] - view_range[1][0])
+
+        # Ignore zero spans that can appear during initialisation
+        spans = [s for s in (x_span, y_span) if s > 0]
+        span = min(spans) if spans else 1.0
+
+        exponent = np.floor(np.log10(span))  # order of magnitude
+        decimals = max(0, int(-exponent) + 1)
+        return max(self._min_precision, decimals)
 
     def _connect_to_theme_change(self):
         """Connect to the theme change signal."""
@@ -324,6 +384,7 @@ class Crosshair(QObject):
                 # not sure how we got here, but just to be safe...
                 return
 
+            precision = self._current_precision()
             for item in self.items:
                 if isinstance(item, pg.PlotDataItem):
                     name = item.name() or str(id(item))
@@ -334,8 +395,8 @@ class Crosshair(QObject):
                     x_snapped_scaled, y_snapped_scaled = self.scale_emitted_coordinates(x, y)
                     coordinate_to_emit = (
                         name,
-                        round(x_snapped_scaled, self.precision),
-                        round(y_snapped_scaled, self.precision),
+                        round(x_snapped_scaled, precision),
+                        round(y_snapped_scaled, precision),
                     )
                     self.coordinatesChanged1D.emit(coordinate_to_emit)
                 elif isinstance(item, pg.ImageItem):
@@ -380,6 +441,7 @@ class Crosshair(QObject):
                 # not sure how we got here, but just to be safe...
                 return
 
+            precision = self._current_precision()
             for item in self.items:
                 if isinstance(item, pg.PlotDataItem):
                     name = item.name() or str(id(item))
@@ -391,8 +453,8 @@ class Crosshair(QObject):
                     x_snapped_scaled, y_snapped_scaled = self.scale_emitted_coordinates(x, y)
                     coordinate_to_emit = (
                         name,
-                        round(x_snapped_scaled, self.precision),
-                        round(y_snapped_scaled, self.precision),
+                        round(x_snapped_scaled, precision),
+                        round(y_snapped_scaled, precision),
                     )
                     self.coordinatesClicked1D.emit(coordinate_to_emit)
                 elif isinstance(item, pg.ImageItem):
@@ -443,7 +505,8 @@ class Crosshair(QObject):
         """
         x, y = pos
         x_scaled, y_scaled = self.scale_emitted_coordinates(x, y)
-        text = f"({x_scaled:.{self.precision}g}, {y_scaled:.{self.precision}g})"
+        precision = self._current_precision()
+        text = f"({x_scaled:.{precision}f}, {y_scaled:.{precision}f})"
         for item in self.items:
             if isinstance(item, pg.ImageItem):
                 image = item.image
@@ -452,7 +515,7 @@ class Crosshair(QObject):
                 ix = int(np.clip(x, 0, image.shape[0] - 1))
                 iy = int(np.clip(y, 0, image.shape[1] - 1))
                 intensity = image[ix, iy]
-                text += f"\nIntensity: {intensity:.{self.precision}g}"
+                text += f"\nIntensity: {intensity:.{precision}f}"
                 break
         # Update coordinate label
         self.coord_label.setText(text)
