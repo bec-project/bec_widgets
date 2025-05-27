@@ -1055,3 +1055,39 @@ def test_dialog_reject_real_interaction(qtbot, mocked_client):
     assert wf.skip_large_dataset_warning is True
     # Limit remains unchanged
     assert wf.max_dataset_size_mb == 1
+
+
+##################################################
+# _safe_entry_value helper tests
+##################################################
+
+
+class _DummyReadEntry:
+    """Mimics a history entry whose payload is behind a .read() call."""
+
+    def __init__(self, mapping):
+        self._mapping = mapping
+
+    def read(self):
+        return self._mapping
+
+
+def test_safe_entry_value_plain_dict(qtbot, mocked_client):
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    entry = {"val": [1, 2, 3], "timestamp": [11, 22, 33]}
+    assert wf._safe_entry_value(entry, "val") == [1, 2, 3]
+    assert wf._safe_entry_value(entry, "timestamp") == [11, 22, 33]
+
+
+def test_safe_entry_value_missing_key_returns_default(qtbot, mocked_client):
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    entry = {"val": [1, 2, 3]}
+    sentinel = object()
+    assert wf._safe_entry_value(entry, "nonexistent", sentinel) is sentinel
+
+
+def test_safe_entry_value_read_object(qtbot, mocked_client):
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    obj = _DummyReadEntry({"value": [42], "timestamp": [99]})
+    assert wf._safe_entry_value(obj, "value") == [42]
+    assert wf._safe_entry_value(obj, "timestamp") == [99]
