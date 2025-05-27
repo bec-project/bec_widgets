@@ -150,7 +150,12 @@ class BaseROI(BECConnector):
         self.parent_plot_item = parent_image.plot_item
         object_name = label.replace("-", "_").replace(" ", "_") if label else None
         super().__init__(
-            object_name=object_name, config=config, gui_id=gui_id, removable=True, **pg_kwargs
+            object_name=object_name,
+            config=config,
+            gui_id=gui_id,
+            removable=True,
+            invertible=True,
+            **pg_kwargs,
         )
 
         self._label = label or "ROI"
