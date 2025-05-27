@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.8.2 (2025-05-27)
+
+### Bug Fixes
+
+- **image_roi**: Rois are invertible by default, fixes resizing bug when adding from ROI manager
+  ([`0bdd4e8`](https://github.com/bec-project/bec_widgets/commit/0bdd4e86a24a61b5365febcb2fcbde0532117053))
+
+
 ## v2.8.1 (2025-05-27)
 
 ### Bug Fixes
