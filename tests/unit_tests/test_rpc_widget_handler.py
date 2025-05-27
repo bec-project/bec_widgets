@@ -7,6 +7,7 @@ from bec_widgets.cli import client
 from bec_widgets.cli.rpc.rpc_base import RPCBase
 from bec_widgets.cli.rpc.rpc_widget_handler import RPCWidgetHandler
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.plugin_utils import BECClassContainer, BECClassInfo
 from bec_widgets.widgets.containers.dock.dock import BECDock
 
 
@@ -21,7 +22,12 @@ class _TestPluginWidget(BECWidget): ...
 
 @patch(
     "bec_widgets.cli.rpc.rpc_widget_handler.get_all_plugin_widgets",
-    return_value={"DeviceComboBox": _TestPluginWidget, "NewPluginWidget": _TestPluginWidget},
+    return_value=BECClassContainer(
+        [
+            BECClassInfo(name="DeviceComboBox", obj=_TestPluginWidget, module="", file=""),
+            BECClassInfo(name="NewPluginWidget", obj=_TestPluginWidget, module="", file=""),
+        ]
+    ),
 )
 def test_duplicate_plugins_not_allowed(_):
     handler = RPCWidgetHandler()

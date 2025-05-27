@@ -242,7 +242,7 @@ class LaunchWindow(BECMainWindow):
         )
 
         # plugin widgets
-        self.available_widgets: dict[str, BECWidget] = get_all_plugin_widgets()
+        self.available_widgets: dict[str, type[BECWidget]] = get_all_plugin_widgets().as_dict()
         if self.available_widgets:
             plugin_repo_name = next(iter(self.available_widgets.values())).__module__.split(".")[0]
             plugin_repo_name = plugin_repo_name.removesuffix("_bec").upper()

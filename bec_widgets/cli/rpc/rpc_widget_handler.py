@@ -31,10 +31,9 @@ class RPCWidgetHandler:
         Returns:
             None
         """
-        clss = get_custom_classes("bec_widgets")
-        self._widget_classes = get_all_plugin_widgets() | {
-            cls.__name__: cls for cls in clss.widgets if cls.__name__ not in IGNORE_WIDGETS
-        }
+        self._widget_classes = (
+            get_custom_classes("bec_widgets") + get_all_plugin_widgets()
+        ).as_dict(IGNORE_WIDGETS)
 
     def create_widget(self, widget_type, **kwargs) -> BECWidget:
         """

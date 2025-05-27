@@ -4,7 +4,7 @@ import importlib
 import inspect
 import os
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Iterable
 
 from bec_lib.plugin_helper import _get_available_plugins
 from qtpy.QtWidgets import QGraphicsWidget, QWidget
@@ -90,21 +90,31 @@ class BECClassInfo:
     name: str
     module: str
     file: str
-    obj: type
+    obj: type[BECWidget]
     is_connector: bool = False
     is_widget: bool = False
     is_plugin: bool = False
 
 
 class BECClassContainer:
-    def __init__(self):
-        self._collection: list[BECClassInfo] = []
+    def __init__(self, initial: Iterable[BECClassInfo] = []):
+        self._collection: list[BECClassInfo] = list(initial)
 
     def __repr__(self):
         return str(list(cl.name for cl in self.collection))
 
     def __iter__(self):
         return self._collection.__iter__()
+
+    def __add__(self, other: BECClassContainer):
+        return BECClassContainer((*self, *(c for c in other if c.name not in self.names)))
+
+    def as_dict(self, ignores: list[str] = []) -> dict[str, type[BECWidget]]:
+        """get a dict of {name: Type} for all the entries in the collection.
+
+        Args:
+            ignores(list[str]): a list of class names to exclude from the dictionary."""
+        return {c.name: c.obj for c in self if c.name not in ignores}
 
     def add_class(self, class_info: BECClassInfo):
         """
@@ -116,52 +126,43 @@ class BECClassContainer:
         self.collection.append(class_info)
 
     @property
+    def names(self):
+        """Return a list of class names"""
+        return [c.name for c in self]
+
+    @property
     def collection(self):
-        """
-        Get the collection of classes.
-        """
+        """Get the collection of classes."""
         return self._collection
 
     @property
     def connector_classes(self):
-        """
-        Get all connector classes.
-        """
+        """Get all connector classes."""
         return [info.obj for info in self.collection if info.is_connector]
 
     @property
     def top_level_classes(self):
-        """
-        Get all top-level classes.
-        """
+        """Get all top-level classes."""
         return [info.obj for info in self.collection if info.is_plugin]
 
     @property
     def plugins(self):
-        """
-        Get all plugins. These are all classes that are on the top level and are widgets.
-        """
+        """Get all plugins. These are all classes that are on the top level and are widgets."""
         return [info.obj for info in self.collection if info.is_widget and info.is_plugin]
 
     @property
     def widgets(self):
-        """
-        Get all widgets. These are all classes inheriting from BECWidget.
-        """
+        """Get all widgets. These are all classes inheriting from BECWidget."""
         return [info.obj for info in self.collection if info.is_widget]
 
     @property
     def rpc_top_level_classes(self):
-        """
-        Get all top-level classes that are RPC-enabled. These are all classes that users can choose from.
-        """
+        """Get all top-level classes that are RPC-enabled. These are all classes that users can choose from."""
         return [info.obj for info in self.collection if info.is_plugin and info.is_connector]
 
     @property
     def classes(self):
-        """
-        Get all classes.
-        """
+        """Get all classes."""
         return [info.obj for info in self.collection]
 
 
@@ -197,7 +198,7 @@ def get_custom_classes(repo_name: str) -> BECClassContainer:
                 if not hasattr(obj, "__module__") or obj.__module__ != module.__name__:
                     continue
                 if isinstance(obj, type):
-                    class_info = BECClassInfo(name=name, module=module_name, file=path, obj=obj)
+                    class_info = BECClassInfo(name=name, module=module.__name__, file=path, obj=obj)
                     if issubclass(obj, BECConnector):
                         class_info.is_connector = True
                     if issubclass(obj, BECWidget):

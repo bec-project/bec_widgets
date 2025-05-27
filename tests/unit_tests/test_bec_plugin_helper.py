@@ -2,7 +2,9 @@ from importlib.machinery import FileFinder, SourceFileLoader
 from types import ModuleType
 from unittest import mock
 
-from bec_widgets.utils.bec_plugin_helper import BECWidget, _all_widgets_from_all_submods
+from bec_widgets.utils.bec_plugin_helper import _all_widgets_from_all_submods
+from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.plugin_utils import BECClassContainer, BECClassInfo
 
 
 def test_all_widgets_from_module_no_submodules():
@@ -39,10 +41,17 @@ def test_all_widgets_from_module_with_submodules():
         mock.patch("importlib.util.module_from_spec", return_value=submodule),
         mock.patch(
             "bec_widgets.utils.bec_plugin_helper._get_widgets_from_module",
-            side_effect=[{"TestWidget": BECWidget}, {"SubWidget": BECWidget}],
+            side_effect=[
+                BECClassContainer(
+                    [BECClassInfo(name="TestWidget", module="", obj=BECWidget, file="")]
+                ),
+                BECClassContainer(
+                    [BECClassInfo(name="SubWidget", module="", obj=BECWidget, file="")]
+                ),
+            ],
         ),
     ):
-        widgets = _all_widgets_from_all_submods(module)
+        widgets = _all_widgets_from_all_submods(module).as_dict()
 
     assert widgets == {"TestWidget": BECWidget, "SubWidget": BECWidget}
 
@@ -54,8 +63,9 @@ def test_all_widgets_from_module_no_widgets():
     module = mock.MagicMock()
 
     with mock.patch(
-        "bec_widgets.utils.bec_plugin_helper._get_widgets_from_module", return_value={}
+        "bec_widgets.utils.bec_plugin_helper._get_widgets_from_module",
+        return_value=BECClassContainer([]),
     ):
-        widgets = _all_widgets_from_all_submods(module)
+        widgets = _all_widgets_from_all_submods(module).as_dict()
 
     assert widgets == {}

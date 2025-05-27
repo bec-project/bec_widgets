@@ -99,7 +99,7 @@ def test_client_generator_with_black_formatting():
 
         
         try:
-            _plugin_widgets = get_all_plugin_widgets()
+            _plugin_widgets = get_all_plugin_widgets().as_dict()
             plugin_client = get_plugin_client_module()
             Widgets = _WidgetsEnumType("Widgets", {name: name for name in _plugin_widgets} | _Widgets)
 
