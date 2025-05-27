@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.8.1 (2025-05-27)
+
+### Bug Fixes
+
+- **launch_window**: Font and tile size fixed across OSs, closes #607
+  ([`ada0977`](https://github.com/bec-project/bec_widgets/commit/ada0977a1b50e750c2e2c848ce9b80895e0e524a))
+
+
 ## v2.8.0 (2025-05-26)
 
 ### Bug Fixes
