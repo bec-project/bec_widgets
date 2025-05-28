@@ -144,6 +144,7 @@ class Waveform(PlotBase):
         self._mode: Literal["none", "sync", "async", "mixed"] = "none"
 
         # Scan data
+        self._scan_done = True  # means scan is not running
         self.old_scan_id = None
         self.scan_id = None
         self.scan_item = None
@@ -1056,8 +1057,8 @@ class Waveform(PlotBase):
             meta(dict): The message metadata.
         """
         self.sync_signal_update.emit()
-        status = msg.get("done")
-        if status:
+        self._scan_done = msg.get("done")
+        if self._scan_done:
             QTimer.singleShot(100, self.update_sync_curves)
             QTimer.singleShot(300, self.update_sync_curves)
 
@@ -1209,6 +1210,9 @@ class Waveform(PlotBase):
             msg(dict): Message with the async data.
             metadata(dict): Metadata of the message.
         """
+        if self._scan_done:
+            logger.info("Scan is done, ignoring async readback.")
+            return
         sender = self.sender()
         if not hasattr(sender, "cb_info"):
             logger.info(f"Sender {sender} has no cb_info.")
