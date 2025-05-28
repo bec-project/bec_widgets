@@ -5,9 +5,18 @@ import random
 import pytest
 
 from bec_widgets.cli.client_utils import BECGuiClient
+from bec_widgets.widgets.control.scan_control import ScanControl
 
 # pylint: disable=unused-argument
 # pylint: disable=redefined-outer-name
+
+
+@pytest.fixture(scope="function")
+def scan_control(qtbot, bec_client_lib):  # , mock_dev):
+    widget = ScanControl(client=bec_client_lib)
+    qtbot.addWidget(widget)
+    qtbot.waitExposed(widget)
+    yield widget
 
 
 @pytest.fixture(autouse=True)
