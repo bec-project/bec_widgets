@@ -3970,6 +3970,48 @@ class Waveform(RPCBase):
         The color palette of the figure widget.
         """
 
+    @property
+    @rpc_call
+    def skip_large_dataset_warning(self) -> "bool":
+        """
+        Whether to skip the large dataset warning when fetching async data.
+        """
+
+    @skip_large_dataset_warning.setter
+    @rpc_call
+    def skip_large_dataset_warning(self) -> "bool":
+        """
+        Whether to skip the large dataset warning when fetching async data.
+        """
+
+    @property
+    @rpc_call
+    def skip_large_dataset_check(self) -> "bool":
+        """
+        Whether to skip the large dataset warning when fetching async data.
+        """
+
+    @skip_large_dataset_check.setter
+    @rpc_call
+    def skip_large_dataset_check(self) -> "bool":
+        """
+        Whether to skip the large dataset warning when fetching async data.
+        """
+
+    @property
+    @rpc_call
+    def max_dataset_size_mb(self) -> "float":
+        """
+        The maximum dataset size (in MB) permitted when fetching async data from history before prompting the user.
+        """
+
+    @max_dataset_size_mb.setter
+    @rpc_call
+    def max_dataset_size_mb(self) -> "float":
+        """
+        The maximum dataset size (in MB) permitted when fetching async data from history before prompting the user.
+        """
+
     @rpc_call
     def plot(
         self,

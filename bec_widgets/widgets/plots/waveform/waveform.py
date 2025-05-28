@@ -9,8 +9,19 @@ import pyqtgraph as pg
 from bec_lib import bec_logger, messages
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import Field, ValidationError, field_validator
-from qtpy.QtCore import QTimer, Signal
-from qtpy.QtWidgets import QApplication, QDialog, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget
+from qtpy.QtCore import Qt, QTimer, Signal
+from qtpy.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QDialog,
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QVBoxLayout,
+    QWidget,
+)
 
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
@@ -32,6 +43,11 @@ logger = bec_logger.logger
 class WaveformConfig(ConnectionConfig):
     color_palette: str | None = Field(
         "plasma", description="The color palette of the figure widget.", validate_default=True
+    )
+    max_dataset_size_mb: float = Field(
+        10,
+        description="Maximum dataset size (in MB) permitted when fetching async data from history before prompting the user.",
+        validate_default=True,
     )
 
     model_config: dict = {"validate_assignment": True}
@@ -96,6 +112,12 @@ class Waveform(PlotBase):
         "x_entry.setter",
         "color_palette",
         "color_palette.setter",
+        "skip_large_dataset_warning",
+        "skip_large_dataset_warning.setter",
+        "skip_large_dataset_check",
+        "skip_large_dataset_check.setter",
+        "max_dataset_size_mb",
+        "max_dataset_size_mb.setter",
         "plot",
         "add_dap_curve",
         "remove_curve",
@@ -163,6 +185,10 @@ class Waveform(PlotBase):
         self._enable_roi_toolbar_action(False)  # default state where are no dap curves
         self._init_curve_dialog()
         self.curve_settings_dialog = None
+
+        # Large‑dataset guard
+        self._skip_large_dataset_warning = False  # session flag
+        self._skip_large_dataset_check = False  # per-plot flag, to skip the warning for this plot
 
         # Scan status update loop
         self.bec_dispatcher.connect_slot(self.on_scan_status, MessageEndpoints.scan_status())
@@ -562,6 +588,59 @@ class Waveform(PlotBase):
         """
         return [item for item in self.plot_item.curves if isinstance(item, Curve)]
 
+    @SafeProperty(bool)
+    def skip_large_dataset_check(self) -> bool:
+        """
+        Whether to skip the large dataset warning when fetching async data.
+        """
+        return self._skip_large_dataset_check
+
+    @skip_large_dataset_check.setter
+    def skip_large_dataset_check(self, value: bool):
+        """
+        Set whether to skip the large dataset warning when fetching async data.
+
+        Args:
+            value(bool): Whether to skip the large dataset warning.
+        """
+        self._skip_large_dataset_check = value
+
+    @SafeProperty(bool)
+    def skip_large_dataset_warning(self) -> bool:
+        """
+        Whether to skip the large dataset warning when fetching async data.
+        """
+        return self._skip_large_dataset_warning
+
+    @skip_large_dataset_warning.setter
+    def skip_large_dataset_warning(self, value: bool):
+        """
+        Set whether to skip the large dataset warning when fetching async data.
+
+        Args:
+            value(bool): Whether to skip the large dataset warning.
+        """
+        self._skip_large_dataset_warning = value
+
+    @SafeProperty(float)
+    def max_dataset_size_mb(self) -> float:
+        """
+        The maximum dataset size (in MB) permitted when fetching async data from history before prompting the user.
+        """
+        return self.config.max_dataset_size_mb
+
+    @max_dataset_size_mb.setter
+    def max_dataset_size_mb(self, value: float):
+        """
+        Set the maximum dataset size (in MB) permitted when fetching async data from history before prompting the user.
+
+        Args:
+            value(float): The maximum dataset size in MB.
+        """
+        if value <= 0:
+            raise ValueError("Maximum dataset size must be greater than 0.")
+        self.config.max_dataset_size_mb = value
+
     ################################################################################
     # High Level methods for API
     ################################################################################
@@ -808,8 +887,6 @@ class Waveform(PlotBase):
         if config.source == "device":
             if self.scan_item is None:
                 self.update_with_scan_history(-1)
-            if curve in self._async_curves:
-                self._setup_async_curve(curve)
             self.async_signal_update.emit()
             self.sync_signal_update.emit()
         if config.source == "dap":
@@ -1136,9 +1213,11 @@ class Waveform(PlotBase):
             if access_key == "val":  # live access
                 device_data = data.get(device_name, {}).get(device_entry, {}).get(access_key, None)
             else:  # history access
-                device_data = (
-                    data.get(device_name, {}).get(device_entry, {}).read().get("value", None)
-                )
+                dataset_obj = data.get(device_name, {})
+                if self._skip_large_dataset_check is False:
+                    if not self._check_dataset_size_and_confirm(dataset_obj, device_entry):
+                        continue  # user declined to load; skip this curve
+                device_data = dataset_obj.get(device_entry, {}).read().get("value", None)
 
             # if shape is 2D cast it into 1D and take the last waveform
             if len(np.shape(device_data)) > 1:
@@ -1210,9 +1289,6 @@ class Waveform(PlotBase):
             msg(dict): Message with the async data.
             metadata(dict): Metadata of the message.
         """
-        if self._scan_done:
-            logger.info("Scan is done, ignoring async readback.")
-            return
         sender = self.sender()
         if not hasattr(sender, "cb_info"):
             logger.info(f"Sender {sender} has no cb_info.")
@@ -1585,6 +1661,8 @@ class Waveform(PlotBase):
             dev_name = curve.config.signal.name
             if dev_name in readout_priority_async:
                 self._async_curves.append(curve)
+                if hasattr(self.scan_item, "live_data"):
+                    self._setup_async_curve(curve)
                 found_async = True
             elif dev_name in readout_priority_sync:
                 self._sync_curves.append(curve)
@@ -1661,6 +1739,106 @@ class Waveform(PlotBase):
     ################################################################################
     # Utility Methods
     ################################################################################
+
+    # Large dataset handling helpers
+    def _check_dataset_size_and_confirm(self, dataset_obj, device_entry: str) -> bool:
+        """
+        Check the size of the dataset and confirm with the user if it exceeds the limit.
+
+        Args:
+            dataset_obj: The dataset object containing the information.
+            device_entry( str): The specific device entry to check.
+
+        Returns:
+            bool: True if the dataset is within the size limit or user confirmed to load it,
+                  False if the dataset exceeds the size limit and user declined to load it.
+        """
+        try:
+            info = dataset_obj._info
+            mem_bytes = info.get(device_entry, {}).get("value", {}).get("mem_size", 0)
+            # Fallback – grab first entry if lookup failed
+            if mem_bytes == 0 and info:
+                first_key = next(iter(info))
+                mem_bytes = info[first_key]["value"]["mem_size"]
+            size_mb = mem_bytes / (1024 * 1024)
+            print(f"Dataset size: {size_mb:.1f} MB")
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"Unable to evaluate dataset size: {exc}")
+            return True
+
+        if size_mb <= self.config.max_dataset_size_mb:
+            return True
+        logger.warning(
+            f"Attempt to load large dataset: {size_mb:.1f} MB "
+            f"(limit {self.config.max_dataset_size_mb} MB)"
+        )
+        if self._skip_large_dataset_warning:
+            logger.info("Skipping large dataset warning dialog.")
+            return False
+        return self._confirm_large_dataset(size_mb)
+
+    def _confirm_large_dataset(self, size_mb: float) -> bool:
+        """
+        Confirm with the user whether to load a large dataset with dialog popup.
+        Also allows the user to adjust the maximum dataset size limit and if user
+        wants to see this popup again during session.
+
+        Args:
+            size_mb(float): Size of the dataset in MB.
+
+        Returns:
+            bool: True if the user confirmed to load the dataset, False otherwise.
+        """
+        if self._skip_large_dataset_warning:
+            return True
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Large dataset detected")
+        main_dialog_layout = QVBoxLayout(dialog)
+
+        # Limit adjustment widgets
+        limit_adjustment_layout = QHBoxLayout()
+        limit_adjustment_layout.addWidget(QLabel("New limit (MB):"))
+        spin = QDoubleSpinBox()
+        spin.setRange(0.001, 4096)
+        spin.setDecimals(3)
+        spin.setSingleStep(0.01)
+        spin.setValue(self.config.max_dataset_size_mb)
+        spin.valueChanged.connect(lambda value: setattr(self.config, "max_dataset_size_mb", value))
+        limit_adjustment_layout.addWidget(spin)
+
+        # Don't show again checkbox
+        checkbox = QCheckBox("Don't show this again for this session")
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.Yes | QDialogButtonBox.No, Qt.Horizontal, dialog
+        )
+        buttons.accepted.connect(dialog.accept)  # Yes
+        buttons.rejected.connect(dialog.reject)  # No
+
+        # widget layout
+        main_dialog_layout.addWidget(
+            QLabel(
+                f"The selected dataset is {size_mb:.1f} MB which exceeds the "
+                f"current limit of {self.config.max_dataset_size_mb} MB.\n"
+            )
+        )
+        main_dialog_layout.addLayout(limit_adjustment_layout)
+        main_dialog_layout.addWidget(checkbox)
+        main_dialog_layout.addWidget(QLabel("Would you like to display dataset anyway?"))
+        main_dialog_layout.addWidget(buttons)
+
+        result = dialog.exec()  # modal; waits for user choice
+
+        # Respect the “don't show again” checkbox for *either* choice
+        if checkbox.isChecked():
+            self._skip_large_dataset_warning = True
+
+        if result == QDialog.Accepted:
+            self.config.max_dataset_size_mb = spin.value()
+            return True
+        return False
+
     def _ensure_str_list(self, entries: list | tuple | np.ndarray):
         """
         Convert a variety of possible inputs (string, bytes, list/tuple/ndarray of either)
@@ -1791,7 +1969,7 @@ class DemoApp(QMainWindow):  # pragma: no cover
         self.setCentralWidget(self.main_widget)
 
         self.waveform_popup = Waveform(popups=True)
-        self.waveform_popup.plot(y_name="monitor_async")
+        self.waveform_popup.plot(y_name="waveform")
 
         self.waveform_side = Waveform(popups=False)
         self.waveform_side.plot(y_name="bpm4i", y_entry="bpm4i", dap="GaussianModel")
