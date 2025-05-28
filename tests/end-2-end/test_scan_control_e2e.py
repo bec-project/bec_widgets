@@ -3,15 +3,6 @@ import time
 import pytest
 
 from bec_widgets.utils.widget_io import WidgetIO
-from bec_widgets.widgets.control.scan_control import ScanControl
-
-
-@pytest.fixture(scope="function")
-def scan_control(qtbot, bec_client_lib):  # , mock_dev):
-    widget = ScanControl(client=bec_client_lib)
-    qtbot.addWidget(widget)
-    qtbot.waitExposed(widget)
-    yield widget
 
 
 def test_scan_control_populate_scans_e2e(scan_control):
@@ -27,6 +18,7 @@ def test_scan_control_populate_scans_e2e(scan_control):
         "monitor_scan",
         "acquire",
         "line_scan",
+        "custom_testing_scan",
     ]
     items = [
         scan_control.comboBox_scan_selection.itemText(i)

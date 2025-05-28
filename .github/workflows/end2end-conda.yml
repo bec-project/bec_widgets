@@ -12,6 +12,7 @@ jobs:
       CHILD_PIPELINE_BRANCH: main  # Set the branch you want for ophyd_devices
       BEC_CORE_BRANCH: main        # Set the branch you want for bec
       OPHYD_DEVICES_BRANCH: main   # Set the branch you want for ophyd_devices
+      PLUGIN_REPO_BRANCH: main     # Set the branch you want for the plugin repo
       PROJECT_PATH: ${{ github.repository }}
       QTWEBENGINE_DISABLE_SANDBOX: 1
       QT_QPA_PLATFORM: "offscreen"
@@ -39,10 +40,11 @@ jobs:
           echo -e "\033[35;1m Using branch $OPHYD_DEVICES_BRANCH of OPHYD_DEVICES \033[0;m";
           git clone --branch $OPHYD_DEVICES_BRANCH https://github.com/bec-project/ophyd_devices.git
           export OHPYD_DEVICES_PATH=$PWD/ophyd_devices
+          echo -e "\033[35;1m Using branch $PLUGIN_REPO_BRANCH of bec_testing_plugin \033[0;m";
+          git clone --branch $PLUGIN_REPO_BRANCH https://github.com/bec-project/bec_testing_plugin.git
           cd ./bec
           conda create -q -n test-environment python=3.11
           source ./bin/install_bec_dev.sh -t
           cd ../
-          pip install -e ./ophyd_devices
-          pip install -e .[dev,pyside6]
+          pip install -e ./ophyd_devices -e .[dev,pyside6] -e ./bec_testing_plugin
           pytest -v --files-path ./ --start-servers --random-order  ./tests/end-2-end
