@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from types import SimpleNamespace
 from unittest import mock
@@ -7,6 +9,15 @@ import numpy as np
 import pyqtgraph as pg
 import pytest
 from pyqtgraph.graphicsItems.DateAxisItem import DateAxisItem
+from qtpy.QtCore import QTimer
+from qtpy.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QDialog,
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QSpinBox,
+)
 
 from bec_widgets.widgets.plots.plot_base import UIMode
 from bec_widgets.widgets.plots.waveform.curve import DeviceSignal
@@ -533,6 +544,7 @@ def test_on_async_readback_add_update(qtbot, mocked_client):
     """
     wf = create_widget(qtbot, Waveform, client=mocked_client)
     wf.scan_item = create_dummy_scan_item()
+    wf._scan_done = False  # simulate a live scan
     c = wf.plot(arg1="async_device", label="async_device-async_device")
     wf._async_curves = [c]
     # Suppose existing data
@@ -819,3 +831,227 @@ def test_show_dap_summary_popup(qtbot, mocked_client):
     wf.dap_summary_dialog.close()
     assert wf.dap_summary_dialog is None
     assert fit_action.isChecked() is False
+
+
+#####################################################
+# The following tests are for the async dataset guard
+#####################################################
+
+
+def test_skip_large_dataset_warning_property(qtbot, mocked_client):
+    """
+    Verify the getter and setter of skip_large_dataset_warning work correctly.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+
+    # Default should be False
+    assert wf.skip_large_dataset_warning is False
+
+    # Set to True
+    wf.skip_large_dataset_warning = True
+    assert wf.skip_large_dataset_warning is True
+
+    # Toggle back to False
+    wf.skip_large_dataset_warning = False
+    assert wf.skip_large_dataset_warning is False
+
+
+def test_max_dataset_size_mb_property(qtbot, mocked_client):
+    """
+    Verify getter, setter, and validation of max_dataset_size_mb.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+
+    # Default from WaveformConfig is 1 MB
+    assert wf.max_dataset_size_mb == 10
+
+    # Set to a valid new value
+    wf.max_dataset_size_mb = 5.5
+    assert wf.max_dataset_size_mb == 5.5
+    # Ensure the config is updated too
+    assert wf.config.max_dataset_size_mb == 5.5
+
+
+def _dummy_dataset(mem_bytes: int, entry: str = "waveform_waveform"):
+    """
+    Return an object that mimics the BEC dataset structure:
+    it has exactly one attribute `_info` with the expected layout.
+    """
+    return SimpleNamespace(_info={entry: {"value": {"mem_size": mem_bytes}}})
+
+
+def test_dataset_guard_under_limit(qtbot, mocked_client, monkeypatch):
+    """
+    Dataset below the limit should load without triggering the dialog.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.max_dataset_size_mb = 1  # 1 MiB
+
+    # If the dialog is called, we flip this flag – it must stay False.
+    called = {"dlg": False}
+    monkeypatch.setattr(
+        Waveform, "_confirm_large_dataset", lambda self, size_mb: called.__setitem__("dlg", True)
+    )
+
+    dataset = _dummy_dataset(mem_bytes=512_000)  # ≈0.49 MiB
+    assert wf._check_dataset_size_and_confirm(dataset, "waveform_waveform") is True
+    assert called["dlg"] is False
+
+
+def test_dataset_guard_over_limit_accept(qtbot, mocked_client, monkeypatch):
+    """
+    Dataset above the limit where user presses *Yes*.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.max_dataset_size_mb = 1  # 1 MiB
+
+    # Pretend the user clicked “Yes”
+    monkeypatch.setattr(Waveform, "_confirm_large_dataset", lambda *_: True)
+
+    dataset = _dummy_dataset(mem_bytes=2_000_000)  # ≈1.9 MiB
+    assert wf._check_dataset_size_and_confirm(dataset, "waveform_waveform") is True
+
+
+def test_dataset_guard_over_limit_reject(qtbot, mocked_client, monkeypatch):
+    """
+    Dataset above the limit where user presses *No*.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.max_dataset_size_mb = 1  # 1 MiB
+
+    # Pretend the user clicked “No”
+    monkeypatch.setattr(Waveform, "_confirm_large_dataset", lambda *_: False)
+
+    dataset = _dummy_dataset(mem_bytes=2_000_000)  # ≈1.9 MiB
+    assert wf._check_dataset_size_and_confirm(dataset, "waveform_waveform") is False
+
+
+##################################################
+# Dialog propagation behaviour
+##################################################
+
+
+def test_dialog_accept_updates_limit(monkeypatch, qtbot, mocked_client):
+    """
+    Simulate clicking 'Yes' in the dialog *after* changing the spinner value.
+    Verify max_dataset_size_mb is updated and dataset loads.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.max_dataset_size_mb = 1  # start small
+
+    def fake_confirm(self, size_mb):
+        # Simulate user typing '5' in the spinbox then pressing Yes
+        self.config.max_dataset_size_mb = 5
+        return True  # Yes pressed
+
+    monkeypatch.setattr(Waveform, "_confirm_large_dataset", fake_confirm)
+
+    big_dataset = _dummy_dataset(mem_bytes=4_800_000)  # ≈4.6 MiB
+    accepted = wf._check_dataset_size_and_confirm(big_dataset, "waveform_waveform")
+
+    # The load should be accepted and the limit must reflect the new value
+    assert accepted is True
+    assert wf.max_dataset_size_mb == 5
+    assert wf.config.max_dataset_size_mb == 5
+
+
+def test_dialog_cancel_sets_skip(monkeypatch, qtbot, mocked_client):
+    """
+    Simulate clicking 'No' but ticking 'Don't show again'.
+    Verify skip_large_dataset_warning becomes True and dataset is skipped.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    assert wf.skip_large_dataset_warning is False
+
+    def fake_confirm(self, size_mb):
+        # Mimic ticking the checkbox then pressing No
+        self._skip_large_dataset_warning = True
+        return False  # No pressed
+
+    monkeypatch.setattr(Waveform, "_confirm_large_dataset", fake_confirm)
+
+    big_dataset = _dummy_dataset(mem_bytes=11_000_000)
+    accepted = wf._check_dataset_size_and_confirm(big_dataset, "waveform_waveform")
+
+    # Dataset must not load, but future warnings are suppressed
+    assert accepted is False
+    assert wf.skip_large_dataset_warning is True
+
+
+##################################################
+# Live dialog interaction (no monkey‑patching)
+##################################################
+
+
+def _open_dialog_and_click(handler):
+    """
+    Utility that schedules *handler* to run as soon as a modal
+    dialog is shown.  Returns a function suitable for QTimer.singleShot.
+    """
+
+    def _cb():
+        # Locate the active modal dialog
+        dlg = QApplication.activeModalWidget()
+        assert isinstance(dlg, QDialog), "No active modal dialog found"
+        handler(dlg)
+
+    return _cb
+
+
+def test_dialog_accept_real_interaction(qtbot, mocked_client):
+    """
+    End‑to‑end: user changes the limit spinner to 5 MiB, ticks
+    'don't show again', then presses YES.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.max_dataset_size_mb = 1
+
+    # Prepare a large dataset (≈4.6 MiB)
+    big_dataset = _dummy_dataset(mem_bytes=4_800_000)
+
+    def handler(dlg):
+        spin: QDoubleSpinBox = dlg.findChild(QDoubleSpinBox)
+        chk: QCheckBox = dlg.findChild(QCheckBox)
+        btns: QDialogButtonBox = dlg.findChild(QDialogButtonBox)
+
+        # # Interact with widgets
+        spin.setValue(5)
+        chk.setChecked(True)
+
+        yes_btn = btns.button(QDialogButtonBox.Yes)
+        yes_btn.click()
+
+    # Schedule the handler right before invoking the check
+    QTimer.singleShot(0, _open_dialog_and_click(handler))
+
+    accepted = wf._check_dataset_size_and_confirm(big_dataset, "waveform_waveform")
+    assert accepted is True
+    assert wf.max_dataset_size_mb == 5
+    assert wf.skip_large_dataset_warning is True
+
+
+def test_dialog_reject_real_interaction(qtbot, mocked_client):
+    """
+    End‑to‑end: user leaves spinner unchanged, ticks 'don't show again',
+    and presses NO.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.max_dataset_size_mb = 1
+
+    big_dataset = _dummy_dataset(mem_bytes=4_800_000)
+
+    def handler(dlg):
+        chk: QCheckBox = dlg.findChild(QCheckBox)
+        btns: QDialogButtonBox = dlg.findChild(QDialogButtonBox)
+
+        chk.setChecked(True)
+        no_btn = btns.button(QDialogButtonBox.No)
+        no_btn.click()
+
+    QTimer.singleShot(0, _open_dialog_and_click(handler))
+
+    accepted = wf._check_dataset_size_and_confirm(big_dataset, "waveform_waveform")
+    assert accepted is False
+    assert wf.skip_large_dataset_warning is True
+    # Limit remains unchanged
+    assert wf.max_dataset_size_mb == 1
