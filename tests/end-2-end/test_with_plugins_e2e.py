@@ -1,7 +1,12 @@
 import time
 
 import pytest
-from bec_testing_plugin.scans.metadata_schema.custom_test_scan_schema import CustomScanSchema
+
+try:
+    from bec_testing_plugin.scans.metadata_schema.custom_test_scan_schema import CustomScanSchema
+except ImportError:
+    pytest.skip(reason="Requires plugin repo!", allow_module_level=True)
+
 from qtpy.QtWidgets import QGridLayout
 
 from bec_widgets.utils.widget_io import WidgetIO
