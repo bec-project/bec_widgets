@@ -1211,7 +1211,7 @@ class Waveform(PlotBase):
             metadata(dict): Metadata of the message.
         """
         if self._scan_done:
-            logger.info("Scan is done, ignoring async readback.")
+            # logger.info("Scan is done, ignoring async readback.")
             return
         sender = self.sender()
         if not hasattr(sender, "cb_info"):
