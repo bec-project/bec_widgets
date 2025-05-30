@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.9.1 (2025-05-30)
+
+### Bug Fixes
+
+- Make registry update log message debug level
+  ([`12f8c82`](https://github.com/bec-project/bec_widgets/commit/12f8c82eb59ed6a7273b57126efe340bf37b65cc))
+
+
 ## v2.9.0 (2025-05-30)
 
 ### Bug Fixes
