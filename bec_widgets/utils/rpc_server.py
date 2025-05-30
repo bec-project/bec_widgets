@@ -195,7 +195,7 @@ class RPCServer:
             return
         self._broadcasted_data = data
 
-        logger.info(f"Broadcasting registry update: {data} for {self.gui_id}")
+        logger.debug(f"Broadcasting registry update: {data} for {self.gui_id}")
         self.client.connector.xadd(
             MessageEndpoints.gui_registry_state(self.gui_id),
             msg_dict={"data": messages.GUIRegistryStateMessage(state=data)},
