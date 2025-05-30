@@ -1053,23 +1053,43 @@ class Image(PlotBase):
             type(str): The type of monitor to use. Options are "1d", "2d", or "auto".
         """
 
+        monitor_to_connect = self.dev[monitor]
+        signal = monitor_to_connect._info["signals"]["preview"]
+        ndim = monitor_to_connect._info["signals"]["preview"]["describe"]["signal_metadata"]["ndim"]
+        rot = monitor_to_connect._info["signals"]["preview"]["describe"]["signal_metadata"][
+            "num_rot90"
+        ]
+        self._main_image.num_rotation_90 = rot
+
+        if ndim == 1:
+            self.bec_dispatcher.connect_slot(
+                self.on_image_update_1d, MessageEndpoints.device_preview(monitor, "preview")
+            )
+            self._main_image.config.source = "device_monitor_1d"
+            self._main_image.config.monitor_type = "1d"
+        elif ndim == 2:
+            self.bec_dispatcher.connect_slot(
+                self.on_image_update_2d, MessageEndpoints.device_preview(monitor, "preview")
+            )
+            self._main_image.config.source = "device_monitor_2d"
+            self._main_image.config.monitor_type = "2d"
         # TODO consider moving connecting and disconnecting logic to Image itself if multiple images
-        if type == "1d":
-            self.bec_dispatcher.connect_slot(
-                self.on_image_update_1d, MessageEndpoints.device_monitor_1d(monitor)
-            )
-        elif type == "2d":
-            self.bec_dispatcher.connect_slot(
-                self.on_image_update_2d, MessageEndpoints.device_monitor_2d(monitor)
-            )
-        elif type == "auto":
-            self.bec_dispatcher.connect_slot(
-                self.on_image_update_1d, MessageEndpoints.device_monitor_1d(monitor)
-            )
-            self.bec_dispatcher.connect_slot(
-                self.on_image_update_2d, MessageEndpoints.device_monitor_2d(monitor)
-            )
-        print(f"Connected to {monitor} with type {type}")
+        # if type == "1d":
+        #     self.bec_dispatcher.connect_slot(
+        #         self.on_image_update_1d, MessageEndpoints.device_monitor_1d(monitor)
+        #     )
+        # elif type == "2d":
+        #     self.bec_dispatcher.connect_slot(
+        #         self.on_image_update_2d, MessageEndpoints.device_monitor_2d(monitor)
+        #     )
+        # elif type == "auto":
+        #     self.bec_dispatcher.connect_slot(
+        #         self.on_image_update_1d, MessageEndpoints.device_monitor_1d(monitor)
+        #     )
+        #     self.bec_dispatcher.connect_slot(
+        #         self.on_image_update_2d, MessageEndpoints.device_monitor_2d(monitor)
+        #     )
+        # print(f"Connected to {monitor} with type {type}")
         self._main_image.config.monitor = monitor
 
     def disconnect_monitor(self, monitor: str):
@@ -1242,10 +1262,11 @@ if __name__ == "__main__":  # pragma: no cover
     ml = QHBoxLayout(win)
 
     image_popup = Image(popups=True)
-    image_side_panel = Image(popups=False)
+    image_popup.image("eiger")
+    # image_side_panel = Image(popups=False)
 
     ml.addWidget(image_popup)
-    ml.addWidget(image_side_panel)
+    # ml.addWidget(image_side_panel)
 
     win.resize(1500, 800)
     win.show()
