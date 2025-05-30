@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v2.9.2 (2025-05-30)
+
+### Bug Fixes
+
+- Logpanel error cycle
+  ([`d9dc60e`](https://github.com/bec-project/bec_widgets/commit/d9dc60ee9974e2e6e6005378cc17ef088a4ded2c))
+
+- Move log panel to bec connector and add rate limiter
+  ([`7322cd1`](https://github.com/bec-project/bec_widgets/commit/7322cd194fcf7f56d41c86ecbcd97a5d8bd60c3e))
+
+- **log_panel**: Removed lambda callback method
+  ([`9112616`](https://github.com/bec-project/bec_widgets/commit/91126168b62f3e1623521ceb205dd854287cfef7))
+
+
 ## v2.9.1 (2025-05-30)
 
 ### Bug Fixes
