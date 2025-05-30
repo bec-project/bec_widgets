@@ -1,6 +1,34 @@
 # CHANGELOG
 
 
+## v2.9.0 (2025-05-30)
+
+### Bug Fixes
+
+- **DeviceSignalInput**: Improve robustness
+  ([`91195ae`](https://github.com/bec-project/bec_widgets/commit/91195ae0fdf024daf2daaa4ea2963992b4e40e04))
+
+use set for storing filter properties to allow multiple set to true or false
+
+### Code Style
+
+- Typing in bec_dispatcher
+  ([`a6c5c21`](https://github.com/bec-project/bec_widgets/commit/a6c5c21afaa6dcf33ce71027e8730354ee34e3b4))
+
+### Documentation
+
+- Add usage docs for signal label widget
+  ([`2b9919b`](https://github.com/bec-project/bec_widgets/commit/2b9919bb34a66708f4b910ffc17dc253e9b7f70d))
+
+### Features
+
+- (#569) add signal label widget
+  ([`822e7d0`](https://github.com/bec-project/bec_widgets/commit/822e7d06ff7479d006ae99942fed5e2c836831ce))
+
+add a widget which shows the current value of a signal from BEC. configurable with many properties
+  in designer. intended for use mainly in static GUIs.
+
+
 ## v2.8.4 (2025-05-30)
 
 ### Bug Fixes
