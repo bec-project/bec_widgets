@@ -15,8 +15,7 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import LogLevel, bec_logger
 from bec_lib.messages import LogMessage, StatusMessage
 from pyqtgraph import SignalProxy
-from PySide6.QtCore import QObject
-from qtpy.QtCore import QDateTime, Qt, Signal
+from qtpy.QtCore import QDateTime, QObject, Qt, Signal
 from qtpy.QtGui import QFont
 from qtpy.QtWidgets import (
     QApplication,
@@ -94,12 +93,13 @@ class BecLogsQueue(BECConnector, QObject):
         self._selected_services: set[str] | None = None
         self._set_formatter_and_update_filter(line_formatter)
         # instance attribute still accessible after c++ object is deleted, so the callback can be unregistered
-        self._callback = lambda *args: self._process_incoming_log_msg(*args)
-        self.bec_dispatcher.connect_slot(self._callback, MessageEndpoints.log())
+        self.bec_dispatcher.connect_slot(self._process_incoming_log_msg, MessageEndpoints.log())
 
     def cleanup(self, *_):
         """Stop listening to the Redis log stream"""
-        self.bec_dispatcher.disconnect_slot(self._callback, [MessageEndpoints.log()])
+        self.bec_dispatcher.disconnect_slot(
+            self._process_incoming_log_msg, [MessageEndpoints.log()]
+        )
 
     @SafeSlot(verify_sender=True)
     def _process_incoming_log_msg(self, msg: dict, _metadata: dict):
@@ -111,7 +111,6 @@ class BecLogsQueue(BECConnector, QObject):
                 self.new_message.emit()
         except Exception as e:
             if "Internal C++ object (BecLogsQueue) already deleted." in e.args:
-                self.bec_dispatcher.disconnect_slot(self._callback, [MessageEndpoints.log()])
                 return
             logger.warning(f"Error in LogPanel incoming message callback: {e}")
 
