@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v2.8.4 (2025-05-30)
+
+### Bug Fixes
+
+- **crosshair**: Label decimal precision is dynamically scaled with the plot zoom; API of all
+  affected widgets adjusted; option added to PlotBase; closes #637
+  ([`c8128fa`](https://github.com/bec-project/bec_widgets/commit/c8128faf79c43487921aada9dbf1869ef5bda93c))
+
+
 ## v2.8.3 (2025-05-30)
 
 ### Bug Fixes
