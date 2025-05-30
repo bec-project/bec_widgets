@@ -48,3 +48,11 @@ jobs:
           cd ../
           pip install -e ./ophyd_devices -e .[dev,pyside6] -e ./bec_testing_plugin
           pytest -v --files-path ./ --start-servers --random-order  ./tests/end-2-end
+
+      - name: Upload logs if job fails
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: pytest-logs
+          path: ./logs/*.log
+          retention-days: 7
