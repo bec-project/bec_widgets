@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v2.8.3 (2025-05-30)
+
+### Bug Fixes
+
+- Guard plugin repo import in e2e test
+  ([`bf172b8`](https://github.com/bec-project/bec_widgets/commit/bf172b8431ec207f39206d2a0446908f7186858a))
+
+### Refactoring
+
+- Store modules with widget search
+  ([`b225a7c`](https://github.com/bec-project/bec_widgets/commit/b225a7cc90b55697211c28d9411b6f85c8077217))
+
+### Testing
+
+- **e2e**: Add tests involving plugin repo
+  ([`05329ab`](https://github.com/bec-project/bec_widgets/commit/05329ab50fe10ffc3c19ef3eb408912bb9068de3))
+
+
 ## v2.8.2 (2025-05-27)
 
 ### Bug Fixes
