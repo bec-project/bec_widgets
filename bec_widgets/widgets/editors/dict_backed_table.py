@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from qtpy import QtWidgets
 from qtpy.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal  # type: ignore
 from qtpy.QtWidgets import (
     QApplication,
@@ -139,6 +140,8 @@ class DictBackedTable(QWidget):
             QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         )
         self._table_view.setAlternatingRowColors(True)
+        self._table_view.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        self._table_view.header().setSectionResizeMode(5, QtWidgets.QHeaderView.Stretch)
         self._layout.addWidget(self._table_view)
 
         self._button_holder = QWidget()
