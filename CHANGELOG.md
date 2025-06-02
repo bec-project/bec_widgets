@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v2.10.1 (2025-06-02)
+
+### Bug Fixes
+
+- **console**: Qt console widget deleted
+  ([`cd4e90a`](https://github.com/bec-project/bec_widgets/commit/cd4e90a79fcdbc96f4ec23db22375d05a48731db))
+
+### Build System
+
+- Pyte removed from dependencies
+  ([`a64cf0d`](https://github.com/bec-project/bec_widgets/commit/a64cf0dd871c1419e02d3803c74cc45966baac19))
+
+
 ## v2.10.0 (2025-06-02)
 
 ### Bug Fixes
