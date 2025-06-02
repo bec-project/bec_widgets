@@ -194,7 +194,11 @@ class PydanticModelForm(TypedForm):
         self._pretty_display = pretty_display
         self._md_schema = data_model
         super().__init__(
-            parent=parent, form_item_specs=self._form_item_specs(), enabled=enabled, client=client
+            parent=parent,
+            form_item_specs=self._form_item_specs(),
+            enabled=enabled,
+            client=client,
+            **kwargs,
         )
 
         self._validity = CompactPopupWidget()
