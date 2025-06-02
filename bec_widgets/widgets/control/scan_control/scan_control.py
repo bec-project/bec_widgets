@@ -89,7 +89,7 @@ class ScanControl(BECWidget, QWidget):
         self.config.allowed_scans = allowed_scans
 
         self._scan_metadata: dict | None = None
-        self._metadata_form = ScanMetadata(parent=parent)
+        self._metadata_form = ScanMetadata(parent=self)
 
         # Create and set main layout
         self._init_UI()

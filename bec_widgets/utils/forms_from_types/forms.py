@@ -8,7 +8,7 @@ from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from pydantic import BaseModel, ValidationError
 from qtpy.QtCore import Signal  # type: ignore
-from qtpy.QtWidgets import QGridLayout, QLabel, QLayout, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QGridLayout, QLabel, QLayout, QSizePolicy, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.compact_popup import CompactPopupWidget
@@ -59,10 +59,14 @@ class TypedForm(BECWidget, QWidget):
             enabled (bool, optional):               whether fields are enabled for editing.
             pretty_display (bool, optional): Whether to use a pretty display for the widget. Defaults to False. If True, disables the widget, doesn't add a clear button, and adapts the stylesheet for non-editable display.
         """
-        if (items is not None and form_item_specs is not None) or (
-            items is None and form_item_specs is None
-        ):
-            raise ValueError("Must specify one and only one of items and form_item_specs")
+        if items is not None and form_item_specs is not None:
+            logger.error(
+                "Must specify one and only one of items and form_item_specs! Ignoring `items`."
+            )
+            items = None
+        if items is None and form_item_specs is None:
+            logger.error("Must specify one and only one of items and form_item_specs!")
+            items = []
         super().__init__(parent=parent, client=client, **kwargs)
         self._items = (
             form_item_specs
@@ -72,6 +76,7 @@ class TypedForm(BECWidget, QWidget):
                 for name, item_type in items  # type: ignore
             ]
         )
+        self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         self._layout = QVBoxLayout()
         self._layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self._layout)
@@ -79,7 +84,11 @@ class TypedForm(BECWidget, QWidget):
         self._enabled: bool = enabled
 
         self._form_grid_container = QWidget(parent=self)
+        self._form_grid_container.setSizePolicy(
+            QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding
+        )
         self._form_grid = QWidget(parent=self._form_grid_container)
+        self._form_grid.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         self._layout.addWidget(self._form_grid_container)
         self._form_grid_container.setLayout(QVBoxLayout())
         self._form_grid.setLayout(self._new_grid_layout())
@@ -100,6 +109,7 @@ class TypedForm(BECWidget, QWidget):
         grid.addWidget(label, row, 0)
         widget = widget_from_type(item.item_type)(parent=self, spec=item)
         widget.valueChanged.connect(self.value_changed)
+        widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         grid.addWidget(widget, row, 1)
 
     def enumerate_form_widgets(self):
@@ -125,7 +135,7 @@ class TypedForm(BECWidget, QWidget):
             old_layout.deleteLater()
             self._form_grid.deleteLater()
         self._form_grid = QWidget()
-
+        self._form_grid.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         self._form_grid.setLayout(self._new_grid_layout())
         self._form_grid_container.layout().addWidget(self._form_grid)
 
@@ -139,7 +149,6 @@ class TypedForm(BECWidget, QWidget):
     def _new_grid_layout(self):
         new_grid = QGridLayout()
         new_grid.setContentsMargins(0, 0, 0, 0)
-        new_grid.setSizeConstraint(QLayout.SizeConstraint.SetFixedSize)
         return new_grid
 
     @property

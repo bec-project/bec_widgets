@@ -62,12 +62,11 @@ def example_md():
 
 
 @pytest.fixture
-def empty_metadata_widget():
+def empty_metadata_widget(qtbot):
     widget = ScanMetadata()
     widget._additional_metadata._table_model._data = [["extra_field", "extra_data"]]
+    qtbot.addWidget(widget)
     yield widget
-    widget._clear_grid()
-    widget.deleteLater()
 
 
 @pytest.fixture

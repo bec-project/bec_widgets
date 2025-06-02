@@ -50,12 +50,11 @@ def example_md():
 
 
 @pytest.fixture
-def model_widget():
+def model_widget(qtbot):
     widget = PydanticModelForm(data_model=ExampleSchema)
     widget.populate()
+    qtbot.addWidget(widget)
     yield widget
-    widget._clear_grid()
-    widget.deleteLater()
 
 
 def test_widget_dict(model_widget: PydanticModelForm):

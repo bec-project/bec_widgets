@@ -21,6 +21,7 @@ from qtpy.QtWidgets import (
     QLayout,
     QLineEdit,
     QRadioButton,
+    QSizePolicy,
     QSpinBox,
     QToolButton,
     QWidget,
@@ -145,6 +146,8 @@ class DynamicFormItem(QWidget):
         self._desc = self._spec.info.description
         self.setLayout(self._layout)
         self._add_main_widget()
+        self._main_widget: QWidget
+        self._main_widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         if not spec.pretty_display:
             if clearable_required(spec.info):
                 self._add_clear_button()
