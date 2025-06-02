@@ -145,7 +145,7 @@ class Image(ImageBase):
             popups=popups,
             **kwargs,
         )
-
+        self.layer_removed.connect(self._on_layer_removed)
         self.scan_id = None
 
         # Default Color map to plasma
@@ -479,14 +479,31 @@ class Image(ImageBase):
     # Clean up
     ################################################################################
 
+    @SafeSlot(str)
+    def _on_layer_removed(self, layer_name: str):
+        """
+        Handle the removal of a layer by disconnecting the monitor.
+
+        Args:
+            layer_name(str): The name of the layer that was removed.
+        """
+        if layer_name not in self.subscriptions:
+            return
+        config = self.subscriptions[layer_name]
+        if config.monitor is not None:
+            self.disconnect_monitor(config.monitor)
+            config.monitor = None
+
     def cleanup(self):
         """
         Disconnect the image update signals and clean up the image.
         """
-        # Main Image cleanup
-        if self.subscriptions["main"].monitor is not None:
-            self.disconnect_monitor(self.subscriptions["main"].monitor)
-            self.subscriptions["main"].monitor = None
+        for layer_name in list(self.subscriptions.keys()):
+            config = self.subscriptions[layer_name]
+            if config.monitor is not None:
+                self.disconnect_monitor(config.monitor)
+            del self.subscriptions[layer_name]
+        self.subscriptions.clear()
 
         # Toolbar cleanup
         self.toolbar.widgets["monitor"].widget.close()
