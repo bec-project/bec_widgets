@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import Literal
 
 import numpy as np
 from bec_lib import bec_logger
 from bec_lib.endpoints import MessageEndpoints
-from pydantic import Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils import ConnectionConfig
@@ -31,6 +32,14 @@ class ImageConfig(ConnectionConfig):
 
     model_config: dict = {"validate_assignment": True}
     _validate_color_map = field_validator("color_map")(Colors.validate_color_map)
+
+
+class ImageLayerConfig(BaseModel):
+    monitor: str | None = Field(None, description="The name of the monitor.")
+    monitor_type: Literal["1d", "2d", "auto"] = Field("auto", description="The type of monitor.")
+    source: Literal["device_monitor_1d", "device_monitor_2d", "auto"] = Field(
+        "auto", description="The source of the image data."
+    )
 
 
 class Image(ImageBase):
@@ -124,6 +133,9 @@ class Image(ImageBase):
             config = ImageConfig(widget_class=self.__class__.__name__)
         self.gui_id = config.gui_id
         self._color_bar = None
+        self.subscriptions: defaultdict[str, ImageLayerConfig] = defaultdict(
+            lambda: ImageLayerConfig(monitor=None, monitor_type="auto", source="auto")
+        )
         super().__init__(
             parent=parent,
             main_image=ImageItem(parent_image=self),
@@ -147,7 +159,7 @@ class Image(ImageBase):
         """
         The name of the monitor to use for the image.
         """
-        return self.main_image.config.monitor
+        return self.subscriptions["main"].monitor or ""
 
     @monitor.setter
     def monitor(self, value: str):
@@ -157,7 +169,7 @@ class Image(ImageBase):
         Args:
             value(str): The name of the monitor to set.
         """
-        if self.main_image.config.monitor == value:
+        if self.subscriptions["main"].monitor == value:
             return
         try:
             self.entry_validator.validate_monitor(value)
@@ -196,23 +208,23 @@ class Image(ImageBase):
             ImageItem: The image object.
         """
 
-        if self.main_image.config.monitor is not None:
-            self.disconnect_monitor(self.main_image.config.monitor)
+        if self.subscriptions["main"].monitor:
+            self.disconnect_monitor(self.subscriptions["main"].monitor)
         self.entry_validator.validate_monitor(monitor)
-        self.main_image.config.monitor = monitor
+        self.subscriptions["main"].monitor = monitor
 
         if monitor_type == "1d":
-            self.main_image.config.source = "device_monitor_1d"
-            self.main_image.config.monitor_type = "1d"
+            self.subscriptions["main"].source = "device_monitor_1d"
+            self.subscriptions["main"].monitor_type = "1d"
         elif monitor_type == "2d":
-            self.main_image.config.source = "device_monitor_2d"
-            self.main_image.config.monitor_type = "2d"
+            self.subscriptions["main"].source = "device_monitor_2d"
+            self.subscriptions["main"].monitor_type = "2d"
         elif monitor_type == "auto":
-            self.main_image.config.source = "auto"
+            self.subscriptions["main"].source = "auto"
             logger.warning(
                 f"Updates for '{monitor}' will be fetch from both 1D and 2D monitor endpoints."
             )
-            self.main_image.config.monitor_type = "auto"
+            self.subscriptions["main"].monitor_type = "auto"
 
         self.set_image_update(monitor=monitor, type=monitor_type)
         if color_map is not None:
@@ -230,14 +242,15 @@ class Image(ImageBase):
         """
         Synchronize the device selection with the current monitor.
         """
-        if self.main_image.config.monitor is not None:
+        config = self.subscriptions["main"]
+        if config.monitor is not None:
             for combo in (
                 self.selection_bundle.device_combo_box,
                 self.selection_bundle.dim_combo_box,
             ):
                 combo.blockSignals(True)
-            self.selection_bundle.device_combo_box.set_device(self.main_image.config.monitor)
-            self.selection_bundle.dim_combo_box.setCurrentText(self.main_image.config.monitor_type)
+            self.selection_bundle.device_combo_box.set_device(config.monitor)
+            self.selection_bundle.dim_combo_box.setCurrentText(config.monitor_type)
             for combo in (
                 self.selection_bundle.device_combo_box,
                 self.selection_bundle.dim_combo_box,
@@ -361,8 +374,8 @@ class Image(ImageBase):
             self.bec_dispatcher.connect_slot(
                 self.on_image_update_2d, MessageEndpoints.device_monitor_2d(monitor)
             )
-        print(f"Connected to {monitor} with type {type}")
-        self.main_image.config.monitor = monitor
+        logger.info(f"Connected to {monitor} with type {type}")
+        self.subscriptions["main"].monitor = monitor
 
     def disconnect_monitor(self, monitor: str):
         """
@@ -377,7 +390,7 @@ class Image(ImageBase):
         self.bec_dispatcher.disconnect_slot(
             self.on_image_update_2d, MessageEndpoints.device_monitor_2d(monitor)
         )
-        self.main_image.config.monitor = None
+        self.subscriptions["main"].monitor = None
         self._sync_device_selection()
 
     ########################################
@@ -471,9 +484,9 @@ class Image(ImageBase):
         Disconnect the image update signals and clean up the image.
         """
         # Main Image cleanup
-        if self.main_image.config.monitor is not None:
-            self.disconnect_monitor(self.main_image.config.monitor)
-            self.main_image.config.monitor = None
+        if self.subscriptions["main"].monitor is not None:
+            self.disconnect_monitor(self.subscriptions["main"].monitor)
+            self.subscriptions["main"].monitor = None
 
         # Toolbar cleanup
         self.toolbar.widgets["monitor"].widget.close()
