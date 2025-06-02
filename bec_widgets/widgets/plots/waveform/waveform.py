@@ -23,6 +23,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_lib.scan_data_container import ScanDataContainer
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
 from bec_widgets.utils.colors import Colors, set_theme
@@ -1792,6 +1793,44 @@ class Waveform(PlotBase):
         logger.info(f"Scan {self.scan_id} => mode={self._mode}")
         return mode
 
+    def get_history_scan_item(
+        self, scan_index: int = None, scan_id: str = None
+    ) -> ScanDataContainer | None:
+        """
+        Get scan item from history based on scan_id or scan_index.
+        Provide only one of scan_id or scan_index.
+
+        Args:
+            scan_id (str, optional): ScanID of the scan to fetch. Defaults to None.
+            scan_index (int, optional): Index of the scan to fetch. Defaults to None.
+
+        Returns:
+            ScanDataContainer | None: The fetched scan item or None if no item was found.
+        """
+        if scan_index is not None and scan_id is not None:
+            raise ValueError("Only one of scan_id or scan_index can be provided.")
+
+        if scan_index is None and scan_id is None:
+            logger.warning("Neither scan_id or scan_number was provided, fetching the latest scan")
+            scan_index = -1
+
+        if scan_index is None:
+            return self.client.history.get_by_scan_id(scan_id)
+
+        if scan_index == -1:
+            scan_item = self.client.queue.scan_storage.current_scan
+            if scan_item is not None:
+                if scan_item.status_message is None:
+                    logger.warning(f"Scan item with {scan_item.scan_id} has no status message.")
+                    return None
+                return scan_item
+
+        if len(self.client.history) == 0:
+            logger.info("No scans executed so far. Cannot fetch scan history.")
+            return None
+
+        return self.client.history[scan_index]
+
     @SafeSlot(int)
     @SafeSlot(str)
     @SafeSlot()
@@ -1807,34 +1846,19 @@ class Waveform(PlotBase):
         if scan_index is not None and scan_id is not None:
             raise ValueError("Only one of scan_id or scan_index can be provided.")
 
-        if scan_index is None and scan_id is None:
-            logger.warning(f"Neither scan_id or scan_number was provided, fetching the latest scan")
-            scan_index = -1
+        self.scan_item = self.get_history_scan_item(scan_index=scan_index, scan_id=scan_id)
 
-        if scan_index is None:
+        if self.scan_item is None:
+            return
+
+        if scan_id is not None:
             self.scan_id = scan_id
-            self.scan_item = self.client.history.get_by_scan_id(scan_id)
-            self._emit_signal_update()
-            return
-
-        if scan_index == -1:
-            scan_item = self.client.queue.scan_storage.current_scan
-            if scan_item is not None:
-                if scan_item.status_message is None:
-                    logger.warning(f"Scan item with {scan_item.scan_id} has no status message.")
-                    return
-                self.scan_item = scan_item
-                self.scan_id = scan_item.scan_id
-                self._emit_signal_update()
-                return
-
-        if len(self.client.history) == 0:
-            logger.info("No scans executed so far. Skipping scan history update.")
-            return
-
-        self.scan_item = self.client.history[scan_index]
-        metadata = self.scan_item.metadata
-        self.scan_id = metadata["bec"]["scan_id"]
+        else:
+            # If scan_index was used, set the scan_id from the fetched item
+            if hasattr(self.scan_item, "metadata"):
+                self.scan_id = self.scan_item.metadata["bec"]["scan_id"]
+            else:
+                self.scan_id = self.scan_item.scan_id
 
         self._emit_signal_update()
 
