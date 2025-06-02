@@ -1,6 +1,27 @@
 # CHANGELOG
 
 
+## v2.10.0 (2025-06-02)
+
+### Bug Fixes
+
+- **waveform**: Waveform only update async data when scan is currently running
+  ([`f90150d`](https://github.com/bec-project/bec_widgets/commit/f90150d1c708331d4ee78f82ebf5ef23cd81fd17))
+
+### Continuous Integration
+
+- Add job logs to e2e test
+  ([`d12bd9f`](https://github.com/bec-project/bec_widgets/commit/d12bd9fe1a010babc94dc86405d1b75a2b07534c))
+
+- Fix artifact version
+  ([`2b4454a`](https://github.com/bec-project/bec_widgets/commit/2b4454a291bc69399ddd08780c44e1339825fb36))
+
+### Features
+
+- **waveform**: Large async dataset warning popup
+  ([`d0c1ac0`](https://github.com/bec-project/bec_widgets/commit/d0c1ac0cf5d421d14c9e050ccf5832cd30ca0764))
+
+
 ## v2.9.2 (2025-05-30)
 
 ### Bug Fixes
