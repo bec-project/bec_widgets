@@ -6,8 +6,7 @@ from bec_lib.callback_handler import EventType
 from bec_lib.logger import bec_logger
 from bec_lib.messages import ConfigAction
 from pyqtgraph import SignalProxy
-from PySide6.QtCore import QSize
-from qtpy.QtCore import Signal
+from qtpy.QtCore import QSize, Signal
 from qtpy.QtWidgets import QListWidget, QListWidgetItem, QVBoxLayout, QWidget
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister

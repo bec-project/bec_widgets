@@ -16,6 +16,9 @@ logger = bec_logger.logger
 
 
 class ScanMetadata(PydanticModelForm):
+
+    RPC = False
+
     def __init__(
         self,
         parent=None,
