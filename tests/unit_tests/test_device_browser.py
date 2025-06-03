@@ -77,7 +77,8 @@ def test_update_event_captured(device_browser, qtbot):
 
 def test_device_item_expansion(device_browser, qtbot):
     """
-    Test that the form is displayed when the item is expanded
+    Test that the form is displayed when the item is expanded, and that the expansion is triggered
+    by clicking on the expansion button, the title, or the device icon
     """
     device_item: QListWidgetItem = device_browser.ui.device_list.itemAt(0, 0)
     widget: DeviceItem = device_browser.ui.device_list.itemWidget(device_item)
@@ -89,6 +90,12 @@ def test_device_item_expansion(device_browser, qtbot):
     assert name_field.getValue() == "samx"
     qtbot.mouseClick(widget._expansion_button, Qt.MouseButton.LeftButton)
     assert not widget.expanded
+
+    qtbot.mouseClick(widget._title, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: widget.expanded, timeout=500)
+
+    qtbot.mouseClick(widget._title_icon, Qt.MouseButton.LeftButton)
+    qtbot.waitUntil(lambda: not widget.expanded, timeout=500)
 
 
 def test_device_item_mouse_press_and_move_events_creates_drag(device_browser, qtbot):

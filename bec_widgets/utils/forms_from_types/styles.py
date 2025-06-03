@@ -2,7 +2,6 @@ import bec_qthemes
 
 
 def pretty_display_theme(theme: str = "dark"):
-    print(f"loading theme {theme}")
     palette = bec_qthemes.load_palette(theme)
     foreground = palette.text().color().name()
     background = palette.base().color().name()

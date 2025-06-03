@@ -65,6 +65,8 @@ class DeviceItem(ExpandableGroupFrame):
         self.set_layout(layout)
 
         self.adjustSize()
+        self._title.clicked.connect(self.switch_expanded_state)
+        self._title_icon.clicked.connect(self.switch_expanded_state)
 
     @SafeSlot()
     def switch_expanded_state(self):
