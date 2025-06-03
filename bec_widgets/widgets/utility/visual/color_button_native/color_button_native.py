@@ -1,5 +1,8 @@
+from __future__ import annotations
+
+from qtpy.QtCore import Signal
 from qtpy.QtGui import QColor
-from qtpy.QtWidgets import QPushButton
+from qtpy.QtWidgets import QColorDialog, QPushButton
 
 from bec_widgets import BECWidget, SafeProperty, SafeSlot
 
@@ -11,6 +14,8 @@ class ColorButtonNative(BECWidget, QPushButton):
     The text color is chosen automatically (black if the background is light, white if dark)
     to guarantee good readability.
     """
+
+    color_changed = Signal(str)
 
     RPC = False
     PLUGIN = True
@@ -25,9 +30,10 @@ class ColorButtonNative(BECWidget, QPushButton):
         """
         super().__init__(parent=parent, **kwargs)
         self.set_color(color)
+        self.clicked.connect(self._open_color_dialog)
 
     @SafeSlot()
-    def set_color(self, color):
+    def set_color(self, color: str | QColor):
         """Set the button's color and update its appearance.
 
         Args:
@@ -38,6 +44,7 @@ class ColorButtonNative(BECWidget, QPushButton):
         else:
             self._color = color
         self._update_appearance()
+        self.color_changed.emit(self._color)
 
     @SafeProperty("QColor")
     def color(self):
@@ -56,3 +63,11 @@ class ColorButtonNative(BECWidget, QPushButton):
         text_color = "#000000" if brightness > 0.5 else "#FFFFFF"
         self.setStyleSheet(f"background-color: {self._color}; color: {text_color};")
         self.setText(self._color)
+
+    @SafeSlot()
+    def _open_color_dialog(self):
+        """Open a QColorDialog and apply the selected color."""
+        current_color = QColor(self._color)
+        chosen_color = QColorDialog.getColor(current_color, self, "Select Curve Color")
+        if chosen_color.isValid():
+            self.set_color(chosen_color)
