@@ -155,7 +155,7 @@ def test_curve_tree_init(curve_tree_fixture):
     curve_tree, wf = curve_tree_fixture
     assert curve_tree.waveform == wf
     assert curve_tree.color_palette == "plasma"
-    assert curve_tree.tree.columnCount() == 7
+    assert curve_tree.tree.columnCount() == 8
 
     assert curve_tree.toolbar.components.exists("add")
     assert curve_tree.toolbar.components.exists("expand")
