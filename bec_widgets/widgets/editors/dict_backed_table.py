@@ -4,6 +4,7 @@ from typing import Any
 
 from qtpy import QtWidgets
 from qtpy.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal  # type: ignore
+from qtpy.QtGui import QFontMetrics
 from qtpy.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -14,7 +15,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 
 
 class DictBackedTableModel(QAbstractTableModel):
@@ -117,12 +118,20 @@ class DictBackedTableModel(QAbstractTableModel):
             return {}
         return dict(self._data)
 
+    def length(self):
+        return len(self._data)
+
 
 class DictBackedTable(QWidget):
     delete_rows = Signal(list)
     data_changed = Signal(dict)
 
-    def __init__(self, parent: QWidget | None = None, initial_data: list[list[str]] = []):
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        initial_data: list[list[str]] = [],
+        autoscale_to_data: bool = True,
+    ):
         """Widget which uses a DictBackedTableModel to display an editable table
         which can be extracted as a dict.
 
@@ -135,13 +144,19 @@ class DictBackedTable(QWidget):
         self.setLayout(self._layout)
         self._table_model = DictBackedTableModel(initial_data)
         self._table_view = QTreeView()
+
         self._table_view.setModel(self._table_model)
+        self.set_min_height_in_lines(max(5, len(initial_data)))
+        self.set_max_height_in_lines(len(initial_data))
         self._table_view.setSizePolicy(
             QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         )
         self._table_view.setAlternatingRowColors(True)
         self._table_view.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self._table_view.header().setSectionResizeMode(5, QtWidgets.QHeaderView.Stretch)
+        self.autoscale = autoscale_to_data
+        if self.autoscale:
+            self.data_changed.connect(self.scale_to_data)
         self._layout.addWidget(self._table_view)
 
         self._button_holder = QWidget()
@@ -186,6 +201,34 @@ class DictBackedTable(QWidget):
         Args:
             keys (list[str]): list of keys which are forbidden."""
         self._table_model.update_disallowed_keys(keys)
+
+    def set_min_height_in_lines(self, lines: int):
+        self._min_lines = lines
+
+        self._table_view.setMinimumHeight(QFontMetrics(self._table_view.font()).height() * lines)
+
+    def set_max_height_in_lines(self, lines: int):
+        self._table_view.setMaximumHeight(
+            QFontMetrics(self._table_view.font()).height() * max(lines, self._min_lines)
+        )
+
+    @SafeSlot()
+    @SafeSlot(dict)
+    def scale_to_data(self, *_):
+        self.set_max_height_in_lines(self._table_model.length())
+
+    @SafeProperty(bool)
+    def autoscale(self):  # type: ignore
+        return self._autoscale
+
+    @autoscale.setter
+    def autoscale(self, autoscale: bool):
+        self._autoscale = autoscale
+        if self._autoscale:
+            self.scale_to_data()
+            self.data_changed.connect(self.scale_to_data)
+        else:
+            self.data_changed.disconnect(self.scale_to_data)
 
 
 if __name__ == "__main__":  # pragma: no cover
