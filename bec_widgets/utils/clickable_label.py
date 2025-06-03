@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from PySide6.QtGui import QMouseEvent
 from qtpy.QtCore import Signal
+from qtpy.QtGui import QMouseEvent
 from qtpy.QtWidgets import QLabel
 
 
