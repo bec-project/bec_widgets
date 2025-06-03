@@ -22,6 +22,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_widgets import SafeSlot
 from bec_widgets.utils import ConnectionConfig, EntryValidator
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import Colors
@@ -154,7 +155,7 @@ class CurveRow(QTreeWidgetItem):
         """Create columns 3..6: color button, style combo, width spin, symbol spin."""
         # Color in col 3
         self.color_button = ColorButtonNative(color=self.config.color)
-        self.color_button.clicked.connect(lambda: self._select_color(self.color_button))
+        self.color_button.color_changed.connect(self._on_color_changed)
         self.tree.setItemWidget(self, 3, self.color_button)
 
         # Style in col 4
@@ -177,20 +178,16 @@ class CurveRow(QTreeWidgetItem):
         self.symbol_spin.setValue(self.config.symbol_size)
         self.tree.setItemWidget(self, 6, self.symbol_spin)
 
-    def _select_color(self, button):
+    @SafeSlot(str, verify_sender=True)
+    def _on_color_changed(self, new_color: str):
         """
-        Selects a new color using a color dialog and applies it to the specified button. Updates
-        related configuration properties based on the chosen color.
+        Update configuration when the color button emits a change.
 
         Args:
-            button: The button widget whose color is being modified.
+            new_color (str): The new color in hex format.
         """
-        current_color = QColor(button.color())
-        chosen_color = QColorDialog.getColor(current_color, self.tree, "Select Curve Color")
-        if chosen_color.isValid():
-            button.set_color(chosen_color)
-            self.config.color = chosen_color.name()
-            self.config.symbol_color = chosen_color.name()
+        self.config.color = new_color
+        self.config.symbol_color = new_color
 
     def add_dap_row(self):
         """Create a new DAP row as a child. Only valid if source='device'."""
