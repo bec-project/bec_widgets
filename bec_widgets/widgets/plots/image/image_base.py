@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from qtpy.QtCore import QPointF, Signal, SignalInstance
 from qtpy.QtWidgets import QDialog, QVBoxLayout
 
+from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.side_panel import SidePanel
 from bec_widgets.utils.toolbar import MaterialIconAction, SwitchableToolBarAction
@@ -93,7 +94,7 @@ class ImageLayerManager:
 
     def add(
         self,
-        name: str,
+        name: str | None = None,
         z_position: int | Literal["top", "bottom"] | None = None,
         sync: ImageLayerSync | None = None,
         **kwargs,
@@ -102,12 +103,16 @@ class ImageLayerManager:
         Add an image layer to the widget.
 
         Args:
-            name (str): The name of the image layer.
+            name (str | None): The name of the image layer. If None, a default name is generated.
             image (ImageItem): The image layer to add.
             z_position (int | None): The z position of the image layer. If None, the layer is added to the top.
             sync (ImageLayerSync | None): The synchronization settings for the image layer.
             **kwargs: ImageLayerSync settings. Only used if sync is None.
         """
+        if name is None:
+            name = WidgetContainerUtils.generate_unique_name(
+                "image_layer", list(self.layers.keys())
+            )
         if name in self.layers:
             raise ValueError(f"Layer with name '{name}' already exists.")
         if sync is None:

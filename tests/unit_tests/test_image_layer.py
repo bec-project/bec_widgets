@@ -73,3 +73,8 @@ def test_image_layer_iteration(image_layer_manager):
 
     layer2 = image_layer_manager.add(name="Test Layer 2")
     assert list(image_layer_manager) == [layer, layer2]
+
+    layer3 = image_layer_manager.add()
+    assert list(image_layer_manager) == [layer, layer2, layer3]
+    names = list(image_layer_manager.layers.keys())
+    assert names == ["Test Layer", "Test Layer 2", "image_layer_0"]
