@@ -5,7 +5,31 @@ from typing import TYPE_CHECKING
 
 from bec_lib.logger import bec_logger
 from bec_qthemes._icon.material_icons import material_icon
-from qtpy.QtCore import Qt
+from qtpy.QtGui import QValidator
+
+
+class ScanIndexValidator(QValidator):
+    """Validator to allow only 'live' or integer scan numbers within range."""
+
+    def __init__(self, max_scan: int, parent=None):
+        super().__init__(parent)
+        self.max_scan = max_scan
+
+    def validate(self, input_str: str, pos: int):
+        # Accept empty or 'live'
+        if input_str == "" or input_str == "live":
+            return QValidator.Acceptable, input_str, pos
+        # Allow partial editing of "live"
+        if "live".startswith(input_str):
+            return QValidator.Intermediate, input_str, pos
+        # Accept integer within [1, max_scan]
+        if input_str.isdigit():
+            num = int(input_str)
+            if 1 <= num <= self.max_scan:
+                return QValidator.Acceptable, input_str, pos
+        return QValidator.Invalid, input_str, pos
+
+
 from qtpy.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -91,7 +115,31 @@ class CurveRow(QTreeWidgetItem):
         # Create columns 1..2, depending on source
         self._init_source_ui()
         # Create columns 3..6 (color, style, width, symbol)
+        self._init_scan_index_ui()
         self._init_style_controls()
+
+    def _init_scan_index_ui(self):
+        """Create the Scan # editable combobox in column 3."""
+        if self.source not in ("device", "history"):
+            return
+        self.scan_index_combo = QComboBox()
+        self.scan_index_combo.setEditable(True)
+        # Populate 'live' and all available history scan indices
+        self.scan_index_combo.addItem("live")
+        history = getattr(self.curve_tree.client, "history", None)
+        num_scans = len(history) if history is not None else 0
+        # Restrict input to 'live' or valid scan numbers
+        validator = ScanIndexValidator(num_scans, self.scan_index_combo)
+        self.scan_index_combo.lineEdit().setValidator(validator)
+        for idx in range(num_scans):
+            # Display scan numbers starting at 1
+            self.scan_index_combo.addItem(str(idx + 1))
+        # Select current scan number if set, otherwise default to 'live'
+        if getattr(self.config, "scan_number", None) is not None:
+            self.scan_index_combo.setCurrentText(str(self.config.scan_number))
+        else:
+            self.scan_index_combo.setCurrentText("live")
+        self.tree.setItemWidget(self, 3, self.scan_index_combo)
 
     def _init_actions(self):
         """Create the actions widget in column 0, including a delete button and maybe 'Add DAP'."""
@@ -114,7 +162,7 @@ class CurveRow(QTreeWidgetItem):
         actions_layout.addWidget(self.delete_button)
 
         # If device row, add "Add DAP" button
-        if self.source == "device":
+        if self.source in ("device", "history"):
             self.add_dap_button = QPushButton("DAP")
             self.add_dap_button.clicked.connect(lambda: self.add_dap_row())
             actions_layout.addWidget(self.add_dap_button)
@@ -123,7 +171,7 @@ class CurveRow(QTreeWidgetItem):
 
     def _init_source_ui(self):
         """Create columns 1 and 2. For device rows, we have device/entry edits; for dap rows, label/model combo."""
-        if self.source == "device":
+        if self.source in ("device", "history"):
             # Device row: columns 1..2 are device line edits
             self.device_edit = DeviceComboBox(parent=self.tree)
             self.device_edit.insertItem(0, "")
@@ -152,7 +200,6 @@ class CurveRow(QTreeWidgetItem):
 
             self.tree.setItemWidget(self, 1, self.device_edit)
             self.tree.setItemWidget(self, 2, self.entry_edit)
-
         else:
             # DAP row: column1= "Model" label, column2= DapComboBox
             self.label_widget = QLabel("Model")
@@ -171,31 +218,31 @@ class CurveRow(QTreeWidgetItem):
             self.tree.setItemWidget(self, 2, self.dap_combo)
 
     def _init_style_controls(self):
-        """Create columns 3..6: color button, style combo, width spin, symbol spin."""
-        # Color in col 3
+        """Create columns 4..7: color button, style combo, width spin, symbol spin."""
+        # Color in col 4
         self.color_button = ColorButtonNative(color=self.config.color)
         self.color_button.color_changed.connect(self._on_color_changed)
-        self.tree.setItemWidget(self, 3, self.color_button)
+        self.tree.setItemWidget(self, 4, self.color_button)
 
-        # Style in col 4
+        # Style in col 5
         self.style_combo = QComboBox()
         self.style_combo.addItems(["solid", "dash", "dot", "dashdot"])
         idx = self.style_combo.findText(self.config.pen_style)
         if idx >= 0:
             self.style_combo.setCurrentIndex(idx)
-        self.tree.setItemWidget(self, 4, self.style_combo)
+        self.tree.setItemWidget(self, 5, self.style_combo)
 
-        # Pen width in col 5
+        # Pen width in col 6
         self.width_spin = QSpinBox()
         self.width_spin.setRange(1, 20)
         self.width_spin.setValue(self.config.pen_width)
-        self.tree.setItemWidget(self, 5, self.width_spin)
+        self.tree.setItemWidget(self, 6, self.width_spin)
 
-        # Symbol size in col 6
+        # Symbol size in col 7
         self.symbol_spin = QSpinBox()
         self.symbol_spin.setRange(1, 20)
         self.symbol_spin.setValue(self.config.symbol_size)
-        self.tree.setItemWidget(self, 6, self.symbol_spin)
+        self.tree.setItemWidget(self, 7, self.symbol_spin)
 
     @SafeSlot(str, verify_sender=True)
     def _on_color_changed(self, new_color: str):
@@ -209,8 +256,8 @@ class CurveRow(QTreeWidgetItem):
         self.config.symbol_color = new_color
 
     def add_dap_row(self):
-        """Create a new DAP row as a child. Only valid if source='device'."""
-        if self.source != "device":
+        """Create a new DAP row as a child. Only valid if source is 'device' or 'history'."""
+        if self.source not in ("device", "history"):
             return
         curve_tree = self.tree.parent()
         parent_label = self.config.label
@@ -288,7 +335,7 @@ class CurveRow(QTreeWidgetItem):
         Returns:
             dict: The serialized config based on the GUI state.
         """
-        if self.source == "device":
+        if self.source in ("device", "history"):
             # Gather device name/entry
             device_name = ""
             device_entry = ""
@@ -309,8 +356,23 @@ class CurveRow(QTreeWidgetItem):
                     )
 
             self.config.signal = DeviceSignal(name=device_name, entry=device_entry)
-            self.config.source = "device"
-            self.config.label = f"{device_name}-{device_entry}"
+            scan_combo_text = self.scan_index_combo.currentText()
+            if scan_combo_text == "live" or scan_combo_text == "":
+                self.config.scan_number = None
+                self.config.scan_id = None
+                self.config.source = "device"
+                self.config.label = f"{device_name}-{device_entry}"
+            if scan_combo_text.isdigit():
+                try:
+                    scan_num = int(scan_combo_text)
+                except ValueError:
+                    scan_num = None
+                self.config.scan_number = scan_num
+                self.config.scan_id = None  # has to be reset to fetch by scan number, not by scan id, can cause leak of old scan ids
+                self.config.source = "history"
+                # Label history curves with scan number suffix
+                if scan_num is not None:
+                    self.config.label = f"{device_name}-{device_entry}-scan-{scan_num}"
         else:
             # DAP logic
             parent_conf_dict = {}
@@ -443,10 +505,12 @@ class CurveTree(BECWidget, QWidget):
         self.toolbar.show_bundles(["curve_tree"])
 
     def _init_tree(self):
-        """Initialize the QTreeWidget with 7 columns and compact widths."""
+        """Initialize the QTreeWidget with 8 columns and compact widths."""
         self.tree = QTreeWidget()
-        self.tree.setColumnCount(7)
-        self.tree.setHeaderLabels(["Actions", "Name", "Entry", "Color", "Style", "Width", "Symbol"])
+        self.tree.setColumnCount(8)
+        self.tree.setHeaderLabels(
+            ["Actions", "Name", "Entry", "Scan #", "Color", "Style", "Width", "Symbol"]
+        )
 
         header = self.tree.header()
         for idx in range(self.tree.columnCount()):
@@ -456,10 +520,10 @@ class CurveTree(BECWidget, QWidget):
                 header.setSectionResizeMode(idx, QHeaderView.Fixed)
         header.setStretchLastSection(False)
         self.tree.setColumnWidth(0, 90)
-        self.tree.setColumnWidth(3, 70)
-        self.tree.setColumnWidth(4, 80)
-        self.tree.setColumnWidth(5, 50)
+        self.tree.setColumnWidth(4, 70)
+        self.tree.setColumnWidth(5, 80)
         self.tree.setColumnWidth(6, 50)
+        self.tree.setColumnWidth(7, 50)
 
         self.layout.addWidget(self.tree)
 
@@ -583,9 +647,9 @@ class CurveTree(BECWidget, QWidget):
         self.tree.clear()
         self.all_items = []
 
-        device_curves = [c for c in self.waveform.curves if c.config.source == "device"]
+        top_curves = [c for c in self.waveform.curves if c.config.source in ("device", "history")]
         dap_curves = [c for c in self.waveform.curves if c.config.source == "dap"]
-        for dev in device_curves:
+        for dev in top_curves:
             dr = CurveRow(self.tree, parent_item=None, config=dev.config, device_manager=self.dev)
             for dap in dap_curves:
                 if dap.config.parent_label == dev.config.label:

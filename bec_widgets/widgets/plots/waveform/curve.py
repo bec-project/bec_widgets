@@ -42,10 +42,15 @@ class CurveConfig(ConnectionConfig):
     pen_style: Literal["solid", "dash", "dot", "dashdot"] | None = Field(
         "solid", description="The style of the pen of the curve."
     )
-    source: Literal["device", "dap", "custom"] = Field(
+    source: Literal["device", "dap", "custom", "history"] = Field(
         "custom", description="The source of the curve."
     )
     signal: DeviceSignal | None = Field(None, description="The signal of the curve.")
+    scan_id: str | None = Field(None, description="Scan ID to be used when `source` is 'history'.")
+    scan_number: int | None = Field(
+        None, description="Scan index to be used when `source` is 'history'."
+    )
+    current_x_mode: str | None = Field(None, description="The current x mode of the history curve.")
     parent_label: str | None = Field(
         None, description="The label of the parent plot, only relevant for dap curves."
     )
@@ -199,7 +204,7 @@ class Curve(BECConnector, pg.PlotDataItem):
         Raises:
             ValueError: If the source is not custom.
         """
-        if self.config.source == "custom":
+        if self.config.source in ["custom", "history"]:
             self.setData(x, y)
         else:
             raise ValueError(f"Source {self.config.source} do not allow custom data setting.")

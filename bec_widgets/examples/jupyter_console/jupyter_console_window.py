@@ -55,7 +55,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     # "btn6": self.btn6,
                     # "pb": self.pb,
                     # "pi": self.pi,
-                    # "wf": self.wf,
+                    "wf": self.wf,
                     # "scatter": self.scatter,
                     # "scatter_mi": self.scatter,
                     # "mwf": self.mwf,
@@ -105,12 +105,11 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         # self.btn5 = QPushButton("Button 5")
         # self.btn6 = QPushButton("Button 6")
         #
-        # fifth_tab = QWidget()
-        # fifth_tab_layout = QVBoxLayout(fifth_tab)
-        # self.wf = Waveform()
-        # fifth_tab_layout.addWidget(self.wf)
-        # tab_widget.addTab(fifth_tab, "Waveform Next Gen")
-        # tab_widget.setCurrentIndex(4)
+        fifth_tab = QWidget()
+        fifth_tab_layout = QVBoxLayout(fifth_tab)
+        self.wf = Waveform()
+        fifth_tab_layout.addWidget(self.wf)
+        tab_widget.addTab(fifth_tab, "Waveform Next Gen")
         #
         sixth_tab = QWidget()
         sixth_tab_layout = QVBoxLayout(sixth_tab)
