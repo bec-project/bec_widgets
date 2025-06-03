@@ -45,6 +45,8 @@ class ExpandableGroupFrame(QFrame):
         self._title_layout.addWidget(self._title_icon)
         self._title_layout.addWidget(self._title)
         self.icon_name = icon
+        self._title.clicked.connect(self.switch_expanded_state)
+        self._title_icon.clicked.connect(self.switch_expanded_state)
 
         self._title_layout.addStretch(1)
 
