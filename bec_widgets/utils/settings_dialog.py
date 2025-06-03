@@ -1,5 +1,5 @@
 from bec_lib.logger import bec_logger
-from PySide6.QtGui import QCloseEvent
+from qtpy.QtGui import QCloseEvent
 from qtpy.QtWidgets import QDialog, QDialogButtonBox, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
 from bec_widgets.utils.error_popups import SafeSlot
