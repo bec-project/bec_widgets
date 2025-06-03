@@ -80,10 +80,12 @@ class ImageLayerManager:
 
     def __init__(
         self,
+        parent: ImageBase,
         plot_item: pg.PlotItem,
         on_add: SignalInstance | None = None,
         on_remove: SignalInstance | None = None,
     ):
+        self.parent = parent
         self.plot_item = plot_item
         self.on_add = on_add
         self.on_remove = on_remove
@@ -92,7 +94,6 @@ class ImageLayerManager:
     def add(
         self,
         name: str,
-        image: ImageItem,
         z_position: int | Literal["top", "bottom"] | None = None,
         sync: ImageLayerSync | None = None,
         **kwargs,
@@ -107,14 +108,17 @@ class ImageLayerManager:
             sync (ImageLayerSync | None): The synchronization settings for the image layer.
             **kwargs: ImageLayerSync settings. Only used if sync is None.
         """
+        if name in self.layers:
+            raise ValueError(f"Layer with name '{name}' already exists.")
         if sync is None:
             sync = ImageLayerSync(**kwargs)
         if z_position is None or z_position == "top":
             z_position = self._get_top_z_position()
         elif z_position == "bottom":
             z_position = self._get_bottom_z_position()
+        image = ImageItem(parent_image=self.parent, object_name=name)
         image.setZValue(z_position)
-        image.destroyed.connect(lambda: self._remove_destroyed_layer(name))
+        image.removed.connect(lambda: self._remove_destroyed_layer(name))
         self.layers[name] = ImageLayer(name=name, image=image, sync=sync)
         self.plot_item.addItem(image)
 
@@ -131,30 +135,28 @@ class ImageLayerManager:
         Args:
             layer (str): The name of the layer to remove.
         """
-        self.remove(layer, pop=True)
+        self.remove(layer)
         if self.on_remove is not None:
             self.on_remove.emit(layer)
 
-    def remove(self, layer: ImageLayer | str, pop=True):
+    def remove(self, layer: ImageLayer | str):
         """
         Remove an image layer from the widget.
 
         Args:
             layer (ImageLayer | str): The image layer to remove. Can be the layer object or the name of the layer.
-            pop (bool): Whether to remove the layer from the manager's layers dictionary. If False, the layer is only removed from the plot item.
         """
         if isinstance(layer, str):
             name = layer
         else:
             name = layer.name
-        if pop:
-            removed_layer = self.layers.pop(name, None)
-        else:
-            removed_layer = self.layers.get(name, None)
+
+        removed_layer = self.layers.pop(name, None)
+
         if not removed_layer:
             return
         self.plot_item.removeItem(removed_layer.image)
-        removed_layer.image.remove()
+        removed_layer.image.remove(emit=False)
         removed_layer.image.deleteLater()
         removed_layer.image = None
 
@@ -162,9 +164,9 @@ class ImageLayerManager:
         """
         Clear all image layers from the manager.
         """
-        for layer in self.layers.values():
+        for layer in list(self.layers.keys()):
             # Remove each layer from the plot item and delete it
-            self.remove(layer, pop=False)
+            self.remove(layer)
         self.layers.clear()
 
     def _get_top_z_position(self) -> int:
@@ -234,11 +236,9 @@ class ImageBase(PlotBase):
     layer_added = Signal(str)
     layer_removed = Signal(str)
 
-    def __init__(self, *args, main_image: ImageItem, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Initialize the ImageBase widget.
-        Args:
-            main_image (ImageItem): The main image item to be displayed. This is the main image layer, also used as reference for autoranging.
         """
         self.x_roi = None
         self.y_roi = None
@@ -248,9 +248,9 @@ class ImageBase(PlotBase):
         # Headless controller keeps the canonical list.
         self.roi_manager_dialog = None
         self.layers: ImageLayerManager = ImageLayerManager(
-            self.plot_item, on_add=self.layer_added, on_remove=self.layer_removed
+            self, plot_item=self.plot_item, on_add=self.layer_added, on_remove=self.layer_removed
         )
-        self.layers.add("main", main_image)
+        self.layers.add("main")
 
         self.autorange = True
         self.autorange_mode = "mean"
@@ -644,7 +644,7 @@ class ImageBase(PlotBase):
         else:
             x = coordinates[1]
             y = coordinates[2]
-        image = self.main_image.image
+        image = self.layers["main"].image.image
         if image is None:
             return
         max_row, max_col = image.shape[0] - 1, image.shape[1] - 1

@@ -117,8 +117,8 @@ def test_image_setup_image_2d(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
     bec_image_view.image(monitor="eiger", monitor_type="2d")
     assert bec_image_view.monitor == "eiger"
-    assert bec_image_view.main_image.config.source == "device_monitor_2d"
-    assert bec_image_view.main_image.config.monitor_type == "2d"
+    assert bec_image_view.subscriptions["main"].source == "device_monitor_2d"
+    assert bec_image_view.subscriptions["main"].monitor_type == "2d"
     assert bec_image_view.main_image.raw_data is None
     assert bec_image_view.main_image.image is None
 
@@ -127,8 +127,8 @@ def test_image_setup_image_1d(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
     bec_image_view.image(monitor="eiger", monitor_type="1d")
     assert bec_image_view.monitor == "eiger"
-    assert bec_image_view.main_image.config.source == "device_monitor_1d"
-    assert bec_image_view.main_image.config.monitor_type == "1d"
+    assert bec_image_view.subscriptions["main"].source == "device_monitor_1d"
+    assert bec_image_view.subscriptions["main"].monitor_type == "1d"
     assert bec_image_view.main_image.raw_data is None
     assert bec_image_view.main_image.image is None
 
@@ -137,8 +137,8 @@ def test_image_setup_image_auto(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
     bec_image_view.image(monitor="eiger", monitor_type="auto")
     assert bec_image_view.monitor == "eiger"
-    assert bec_image_view.main_image.config.source == "auto"
-    assert bec_image_view.main_image.config.monitor_type == "auto"
+    assert bec_image_view.subscriptions["main"].source == "auto"
+    assert bec_image_view.subscriptions["main"].monitor_type == "auto"
     assert bec_image_view.main_image.raw_data is None
     assert bec_image_view.main_image.image is None
 
@@ -235,8 +235,8 @@ def test_setup_image_from_toolbar(qtbot, mocked_client):
     bec_image_view.selection_bundle.dim_combo_box.setCurrentText("2d")
 
     assert bec_image_view.monitor == "eiger"
-    assert bec_image_view.main_image.config.source == "device_monitor_2d"
-    assert bec_image_view.main_image.config.monitor_type == "2d"
+    assert bec_image_view.subscriptions["main"].source == "device_monitor_2d"
+    assert bec_image_view.subscriptions["main"].monitor_type == "2d"
     assert bec_image_view.main_image.raw_data is None
     assert bec_image_view.main_image.image is None
 

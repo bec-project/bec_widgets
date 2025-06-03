@@ -137,13 +137,7 @@ class Image(ImageBase):
             lambda: ImageLayerConfig(monitor=None, monitor_type="auto", source="auto")
         )
         super().__init__(
-            parent=parent,
-            main_image=ImageItem(parent_image=self),
-            config=config,
-            client=client,
-            gui_id=gui_id,
-            popups=popups,
-            **kwargs,
+            parent=parent, config=config, client=client, gui_id=gui_id, popups=popups, **kwargs
         )
         self.layer_removed.connect(self._on_layer_removed)
         self.scan_id = None
@@ -498,6 +492,7 @@ class Image(ImageBase):
         """
         Disconnect the image update signals and clean up the image.
         """
+        self.layer_removed.disconnect(self._on_layer_removed)
         for layer_name in list(self.subscriptions.keys()):
             config = self.subscriptions[layer_name]
             if config.monitor is not None:
