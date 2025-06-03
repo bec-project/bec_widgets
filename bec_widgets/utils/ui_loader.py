@@ -9,7 +9,7 @@ from bec_widgets.utils.plugin_utils import get_custom_classes
 logger = bec_logger.logger
 
 if PYSIDE6:
-    from PySide6.QtUiTools import QUiLoader
+    from qtpy.QtUiTools import QUiLoader
 
     class CustomUiLoader(QUiLoader):
         def __init__(self, baseinstance, custom_widgets: dict | None = None):
