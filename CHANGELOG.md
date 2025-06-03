@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v2.10.2 (2025-06-03)
+
+### Bug Fixes
+
+- Remove unnecessary PySide imports
+  ([`1df6c19`](https://github.com/bec-project/bec_widgets/commit/1df6c1925b6ec88df8d7a1a5a79a5ddc6b1161b5))
+
+### Continuous Integration
+
+- Check for disallowed imports from PySide
+  ([`6b939ac`](https://github.com/bec-project/bec_widgets/commit/6b939ac34d01cdbb0e8e32a0bd4e56cad032e75b))
+
+
 ## v2.10.1 (2025-06-02)
 
 ### Bug Fixes
