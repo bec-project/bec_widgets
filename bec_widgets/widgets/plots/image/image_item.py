@@ -43,6 +43,7 @@ class ImageItemConfig(ConnectionConfig):  # TODO review config
 
 
 class ImageItem(BECConnector, pg.ImageItem):
+
     RPC = True
     USER_ACCESS = [
         "color_map",
@@ -69,6 +70,7 @@ class ImageItem(BECConnector, pg.ImageItem):
     ]
 
     vRangeChangedManually = Signal(tuple)
+    removed = Signal()
 
     def __init__(
         self,
@@ -274,6 +276,8 @@ class ImageItem(BECConnector, pg.ImageItem):
         self.buffer = []
         self.max_len = 0
 
-    def remove(self):
+    def remove(self, emit: bool = True):
         self.clear()
         super().remove()
+        if emit:
+            self.removed.emit()
