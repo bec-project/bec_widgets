@@ -14,10 +14,15 @@ jobs:
 
       - name: Run black and isort
         run: |
-          pip install black isort
-          pip install -e .[dev]
+          pip install uv
+          uv pip install --system black isort
+          uv pip install --system -e .[dev]
           black --check --diff --color .
           isort --check --diff ./
+      
+      - name: Check for disallowed imports from PySide
+        run: '! grep -re "from PySide6\." bec_widgets/ | grep  -v -e "PySide6.QtDesigner" -e "PySide6.scripts"'
+
   Pylint:
     runs-on: ubuntu-latest
 
