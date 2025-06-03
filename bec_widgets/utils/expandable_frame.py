@@ -14,6 +14,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_widgets.utils.clickable_label import ClickableLabel
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 
 
@@ -39,8 +40,8 @@ class ExpandableGroupFrame(QFrame):
         self._title_layout = QHBoxLayout()
         self._layout.addLayout(self._title_layout)
 
-        self._title = QLabel(f"<b>{title}</b>")
-        self._title_icon = QLabel()
+        self._title = ClickableLabel(f"<b>{title}</b>")
+        self._title_icon = ClickableLabel()
         self._title_layout.addWidget(self._title_icon)
         self._title_layout.addWidget(self._title)
         self.icon_name = icon
