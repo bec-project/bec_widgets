@@ -124,6 +124,10 @@ class ImageLayerManager:
         image = ImageItem(parent_image=self.parent, object_name=name)
         image.setZValue(z_position)
         image.removed.connect(self._remove_destroyed_layer)
+
+        # FIXME: For now, we hard-code the default color map here. In the future, this should be configurable.
+        image.color_map = "plasma"
+
         self.layers[name] = ImageLayer(name=name, image=image, sync=sync)
         self.plot_item.addItem(image)
 
