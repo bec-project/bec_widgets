@@ -113,6 +113,75 @@ def test_enable_colorbar_with_vrange(qtbot, mocked_client, colorbar_type):
     assert bec_image_view._color_bar is not None
 
 
+##############################################
+# Preview‑signal update mechanism
+
+
+def test_image_setup_preview_signal_1d(qtbot, mocked_client, monkeypatch):
+    """
+    Ensure that calling .image() with a (device, signal, config) tuple representing
+    a 1‑D PreviewSignal connects using the 1‑D path and updates correctly.
+    """
+    import numpy as np
+
+    view = create_widget(qtbot, Image, client=mocked_client)
+
+    signal_config = {
+        "obj_name": "waveform1d_img",
+        "signal_class": "PreviewSignal",
+        "describe": {"signal_info": {"ndim": 1}},
+    }
+
+    # Set the image monitor to the preview signal
+    view.image(monitor=("waveform1d", "img", signal_config))
+
+    # Subscriptions should indicate 1‑D preview connection
+    sub = view.subscriptions["main"]
+    assert sub.source == "device_monitor_1d"
+    assert sub.monitor_type == "1d"
+    assert sub.monitor == ("waveform1d", "img", signal_config)
+
+    # Simulate a waveform update from the dispatcher
+    waveform = np.arange(25, dtype=float)
+    view.on_image_update_1d({"data": waveform}, {"scan_id": "scan_test"})
+    assert view.main_image.raw_data.shape == (1, 25)
+    np.testing.assert_array_equal(view.main_image.raw_data[0], waveform)
+
+
+def test_image_setup_preview_signal_2d(qtbot, mocked_client, monkeypatch):
+    """
+    Ensure that calling .image() with a (device, signal, config) tuple representing
+    a 2‑D PreviewSignal connects using the 2‑D path and updates correctly.
+    """
+    import numpy as np
+
+    view = create_widget(qtbot, Image, client=mocked_client)
+
+    signal_config = {
+        "obj_name": "eiger_img2d",
+        "signal_class": "PreviewSignal",
+        "describe": {"signal_info": {"ndim": 2}},
+    }
+
+    # Set the image monitor to the preview signal
+    view.image(monitor=("eiger", "img2d", signal_config))
+
+    # Subscriptions should indicate 2‑D preview connection
+    sub = view.subscriptions["main"]
+    assert sub.source == "device_monitor_2d"
+    assert sub.monitor_type == "2d"
+    assert sub.monitor == ("eiger", "img2d", signal_config)
+
+    # Simulate a 2‑D image update
+    test_data = np.arange(16, dtype=float).reshape(4, 4)
+    view.on_image_update_2d({"data": test_data}, {})
+    np.testing.assert_array_equal(view.main_image.image, test_data)
+
+
+##############################################
+# Device monitor endpoint update mechanism
+
+
 def test_image_setup_image_2d(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
     bec_image_view.image(monitor="eiger", monitor_type="2d")
@@ -165,6 +234,10 @@ def test_image_data_update_1d(qtbot, mocked_client):
 
     bec_image_view.on_image_update_1d({"data": waveform2}, metadata)
     assert bec_image_view.main_image.raw_data.shape == (2, 60)
+
+
+##############################################
+# Toolbar and Actions Tests
 
 
 def test_toolbar_actions_presence(qtbot, mocked_client):
@@ -484,3 +557,96 @@ def test_roi_plot_data_from_image(qtbot, mocked_client):
     # Horizontal slice (row)
     h_slice, _ = y_items[0].getData()
     np.testing.assert_array_equal(h_slice, test_data[2])
+
+
+##############################################
+# MonitorSelectionToolbarBundle specific tests
+##############################################
+
+
+def test_monitor_selection_reverse_device_items(qtbot, mocked_client):
+    """
+    Verify that _reverse_device_items correctly reverses the order of items in the
+    device combo‑box while preserving the current selection.
+    """
+    view = create_widget(qtbot, Image, client=mocked_client)
+    bundle = view.selection_bundle
+    combo = bundle.device_combo_box
+
+    # Replace existing items with a deterministic list
+    combo.clear()
+    combo.addItem("samx", 1)
+    combo.addItem("samy", 2)
+    combo.addItem("samz", 3)
+    combo.setCurrentText("samy")
+
+    # Reverse the items
+    bundle._reverse_device_items()
+
+    # Order should be reversed and selection preserved
+    assert [combo.itemText(i) for i in range(combo.count())] == ["samz", "samy", "samx"]
+    assert combo.currentText() == "samy"
+
+
+def test_monitor_selection_populate_preview_signals(qtbot, mocked_client, monkeypatch):
+    """
+    Verify that _populate_preview_signals adds preview‑signal devices to the combo‑box
+    with the correct userData.
+    """
+    view = create_widget(qtbot, Image, client=mocked_client)
+    bundle = view.selection_bundle
+
+    # Provide a deterministic fake device_manager with get_bec_signals
+    class _FakeDM:
+        def get_bec_signals(self, _filter):
+            return [
+                ("eiger", "img", {"obj_name": "eiger_img"}),
+                ("async_device", "img2", {"obj_name": "async_device_img2"}),
+            ]
+
+    monkeypatch.setattr(view.client, "device_manager", _FakeDM())
+
+    initial_count = bundle.device_combo_box.count()
+
+    bundle._populate_preview_signals()
+
+    # Two new entries should have been added
+    assert bundle.device_combo_box.count() == initial_count + 2
+
+    # The first newly added item should carry tuple userData describing the device/signal
+    data = bundle.device_combo_box.itemData(initial_count)
+    assert isinstance(data, tuple) and data[0] == "eiger"
+
+
+def test_monitor_selection_adjust_and_connect(qtbot, mocked_client, monkeypatch):
+    """
+    Verify that _adjust_and_connect performs the full set‑up:
+    ‑ fills the combo‑box with preview signals,
+    ‑ reverses their order,
+    ‑ and resets the currentText to an empty string.
+    """
+    view = create_widget(qtbot, Image, client=mocked_client)
+    bundle = view.selection_bundle
+
+    # Deterministic fake device_manager
+    class _FakeDM:
+        def get_bec_signals(self, _filter):
+            return [("eiger", "img", {"obj_name": "eiger_img"})]
+
+    monkeypatch.setattr(view.client, "device_manager", _FakeDM())
+
+    combo = bundle.device_combo_box
+    # Start from a clean state
+    combo.clear()
+    combo.addItem("", None)
+    combo.setCurrentText("")
+
+    # Execute the method under test
+    bundle._adjust_and_connect()
+
+    # Expect exactly two items: preview label followed by the empty default
+    assert combo.count() == 2
+    # Because of the reversal, the preview label comes first
+    assert combo.itemText(0) == "eiger_img"
+    # Current selection remains empty
+    assert combo.currentText() == ""
