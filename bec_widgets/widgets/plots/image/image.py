@@ -142,9 +142,6 @@ class Image(ImageBase):
         self.layer_removed.connect(self._on_layer_removed)
         self.scan_id = None
 
-        # Default Color map to plasma
-        self.color_map = "plasma"
-
     ################################################################################
     # Data Acquisition
 
