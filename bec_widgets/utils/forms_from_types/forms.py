@@ -68,14 +68,10 @@ class TypedForm(BECWidget, QWidget):
             logger.error("Must specify one and only one of items and form_item_specs!")
             items = []
         super().__init__(parent=parent, client=client, **kwargs)
-        self._items = (
-            form_item_specs
-            if form_item_specs is not None
-            else [
-                FormItemSpec(name=name, item_type=item_type, pretty_display=pretty_display)
-                for name, item_type in items  # type: ignore
-            ]
-        )
+        self._items = form_item_specs or [
+            FormItemSpec(name=name, item_type=item_type, pretty_display=pretty_display)
+            for name, item_type in items  # type: ignore
+        ]
         self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         self._layout = QVBoxLayout()
         self._layout.setContentsMargins(0, 0, 0, 0)

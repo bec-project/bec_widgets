@@ -4,7 +4,7 @@ import typing
 from abc import abstractmethod
 from decimal import Decimal
 from types import GenericAlias, UnionType
-from typing import Callable, Final, Literal
+from typing import Callable, Final, Literal, TypeVar
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
@@ -22,6 +22,8 @@ from qtpy.QtWidgets import (
     QLabel,
     QLayout,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QRadioButton,
     QSizePolicy,
     QSpinBox,
@@ -126,7 +128,7 @@ class ClearableBoolEntry(QWidget):
         self._false.setToolTip(tooltip)
 
 
-DynamicFormItemType = str | int | float | Decimal | bool | dict | list
+DynamicFormItemType = str | int | float | Decimal | bool | dict | list | None
 
 
 class DynamicFormItem(QWidget):
@@ -149,7 +151,7 @@ class DynamicFormItem(QWidget):
         self._desc = self._spec.info.description
         self.setLayout(self._layout)
         self._add_main_widget()
-        self._main_widget: QWidget
+        assert isinstance(self._main_widget, QWidget), "Please set a widget in _add_main_widget()"  # type: ignore
         self._main_widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         if not spec.pretty_display:
             if clearable_required(spec.info):
@@ -339,18 +341,45 @@ class DictMetadataField(DynamicFormItem):
 class ListMetadataField(DynamicFormItem):
     def __init__(self, *, parent: QWidget | None = None, spec: FormItemSpec) -> None:
         super().__init__(parent=parent, spec=spec)
+        self._main_widget: QListWidget
         if spec.info.annotation is list:
-            self.item_type = str
+            self._item_type = str
         elif isinstance(spec.info.annotation, GenericAlias):
             args = set(typing.get_args(spec.info.annotation))
-            if args == set((str,)):
-                self.item_type = str
-            if args == set((int,)):
-                self.item_type = int
-            if args == set((float,)) or args == set((int, float)):
-                self.item_type = float
+            if args == {str}:
+                self._item_type = str
+            if args == {int}:
+                self._item_type = int
+            if args == {float} or args == {int, float}:
+                self._item_type = float
         else:
-            self.item_type = str
+            self._item_type = str
+        self._data = []
+
+    def _add_main_widget(self) -> None:
+        self._main_widget = QListWidget()
+        self._layout.addWidget(self._main_widget)
+
+    def _repop(self):
+        self._main_widget.clear()
+        for val in self._data:
+            item = QListWidgetItem(self._main_widget)
+            item_widget = QLabel(str(val))
+            self._main_widget.setItemWidget(item, item_widget)
+            self._main_widget.addItem(item)
+
+    def clear(self):
+        self._data = []
+        self._repop()
+
+    def getValue(self):
+        return self._data
+
+    def setValue(self, value: list):
+        if set(map(type, value)) != {self._item_type}:
+            raise ValueError(f"This widget only accepts items of type {self._item_type}")
+        self._data = value
+        self._repop()
 
 
 WidgetTypeRegistry = dict[
@@ -404,9 +433,17 @@ if __name__ == "__main__":  # pragma: no cover
     w = QWidget()
     layout = QGridLayout()
     w.setLayout(layout)
+    items = []
     for i, (field_name, info) in enumerate(TestModel.model_fields.items()):
         layout.addWidget(QLabel(field_name), i, 0)
-        layout.addWidget(widget_from_type(info.annotation)(info), i, 1)
+        widg = widget_from_type(info.annotation)(
+            spec=FormItemSpec(item_type=info.annotation, name=field_name, info=info)
+        )
+        items.append(widg)
+        layout.addWidget(widg, i, 1)
+
+    items[5].setValue([1, 2, 3, 4])
+    items[6].setValue(["1", "2", "asdfg", "qwerty"])
 
     w.show()
     app.exec()
