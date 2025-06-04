@@ -1459,12 +1459,12 @@ class Image(RPCBase):
     @rpc_call
     def image(
         self,
-        monitor: "str | None" = None,
+        monitor: "str | tuple | None" = None,
         monitor_type: "Literal['auto', '1d', '2d']" = "auto",
         color_map: "str | None" = None,
         color_bar: "Literal['simple', 'full'] | None" = None,
         vrange: "tuple[int, int] | None" = None,
-    ) -> "ImageItem":
+    ) -> "ImageItem | None":
         """
         Set the image source and update the image.
 

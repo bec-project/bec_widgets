@@ -35,7 +35,7 @@ class ImageConfig(ConnectionConfig):
 
 
 class ImageLayerConfig(BaseModel):
-    monitor: str | None = Field(None, description="The name of the monitor.")
+    monitor: str | tuple | None = Field(None, description="The name of the monitor.")
     monitor_type: Literal["1d", "2d", "auto"] = Field("auto", description="The type of monitor.")
     source: Literal["device_monitor_1d", "device_monitor_2d", "auto"] = Field(
         "auto", description="The source of the image data."
@@ -179,12 +179,12 @@ class Image(ImageBase):
     @SafeSlot(popup_error=True)
     def image(
         self,
-        monitor: str | None = None,
+        monitor: str | tuple | None = None,
         monitor_type: Literal["auto", "1d", "2d"] = "auto",
         color_map: str | None = None,
         color_bar: Literal["simple", "full"] | None = None,
         vrange: tuple[int, int] | None = None,
-    ) -> ImageItem:
+    ) -> ImageItem | None:
         """
         Set the image source and update the image.
 
@@ -201,21 +201,13 @@ class Image(ImageBase):
 
         if self.subscriptions["main"].monitor:
             self.disconnect_monitor(self.subscriptions["main"].monitor)
-        self.entry_validator.validate_monitor(monitor)
-        self.subscriptions["main"].monitor = monitor
-
-        if monitor_type == "1d":
-            self.subscriptions["main"].source = "device_monitor_1d"
-            self.subscriptions["main"].monitor_type = "1d"
-        elif monitor_type == "2d":
-            self.subscriptions["main"].source = "device_monitor_2d"
-            self.subscriptions["main"].monitor_type = "2d"
-        elif monitor_type == "auto":
-            self.subscriptions["main"].source = "auto"
-            logger.warning(
-                f"Updates for '{monitor}' will be fetch from both 1D and 2D monitor endpoints."
-            )
-            self.subscriptions["main"].monitor_type = "auto"
+        if monitor is None or monitor == "":
+            logger.warning(f"No monitor specified, cannot set image, old monitor is unsubscribed")
+            return None
+        if isinstance(monitor, tuple):
+            self.entry_validator.validate_monitor(monitor[0])
+        else:
+            self.entry_validator.validate_monitor(monitor)
 
         self.set_image_update(monitor=monitor, type=monitor_type)
         if color_map is not None:
@@ -240,7 +232,12 @@ class Image(ImageBase):
                 self.selection_bundle.dim_combo_box,
             ):
                 combo.blockSignals(True)
-            self.selection_bundle.device_combo_box.set_device(config.monitor)
+            if isinstance(config.monitor, tuple):
+                self.selection_bundle.device_combo_box.setCurrentText(
+                    f"{config.monitor[0]}_{config.monitor[1]}"
+                )
+            else:
+                self.selection_bundle.device_combo_box.setCurrentText(config.monitor)
             self.selection_bundle.dim_combo_box.setCurrentText(config.monitor_type)
             for combo in (
                 self.selection_bundle.device_combo_box,
@@ -340,7 +337,8 @@ class Image(ImageBase):
     ########################################
     # Connections
 
-    def set_image_update(self, monitor: str, type: Literal["1d", "2d", "auto"]):
+    @SafeSlot()
+    def set_image_update(self, monitor: str | tuple, type: Literal["1d", "2d", "auto"]):
         """
         Set the image update method for the given monitor.
 
@@ -350,37 +348,95 @@ class Image(ImageBase):
         """
 
         # TODO consider moving connecting and disconnecting logic to Image itself if multiple images
-        if type == "1d":
-            self.bec_dispatcher.connect_slot(
-                self.on_image_update_1d, MessageEndpoints.device_monitor_1d(monitor)
-            )
-        elif type == "2d":
-            self.bec_dispatcher.connect_slot(
-                self.on_image_update_2d, MessageEndpoints.device_monitor_2d(monitor)
-            )
-        elif type == "auto":
-            self.bec_dispatcher.connect_slot(
-                self.on_image_update_1d, MessageEndpoints.device_monitor_1d(monitor)
-            )
-            self.bec_dispatcher.connect_slot(
-                self.on_image_update_2d, MessageEndpoints.device_monitor_2d(monitor)
-            )
+        if isinstance(monitor, tuple):
+            device = self.dev[monitor[0]]
+            signal = monitor[1]
+            if len(monitor) == 3:
+                signal_config = monitor[2]
+            else:
+                signal_config = device._info["signals"][signal]
+            signal_class = signal_config.get("signal_class", None)
+            if signal_class != "PreviewSignal":
+                logger.warning(f"Signal '{monitor}' is not a PreviewSignal.")
+                return
+
+            ndim = signal_config.get("describe", None).get("signal_info", None).get("ndim", None)
+            if ndim is None:
+                logger.warning(
+                    f"Signal '{monitor}' does not have a valid 'ndim' in its signal_info."
+                )
+                return
+
+            if ndim == 1:
+                self.bec_dispatcher.connect_slot(
+                    self.on_image_update_1d, MessageEndpoints.device_preview(device.name, signal)
+                )
+                self.subscriptions["main"].source = "device_monitor_1d"
+                self.subscriptions["main"].monitor_type = "1d"
+            elif ndim == 2:
+                self.bec_dispatcher.connect_slot(
+                    self.on_image_update_2d, MessageEndpoints.device_preview(device.name, signal)
+                )
+                self.subscriptions["main"].source = "device_monitor_2d"
+                self.subscriptions["main"].monitor_type = "2d"
+
+        else:  # FIXME old monitor 1d/2d endpoint handling, present for backwards compatibility, will be removed in future versions
+            if type == "1d":
+                self.bec_dispatcher.connect_slot(
+                    self.on_image_update_1d, MessageEndpoints.device_monitor_1d(monitor)
+                )
+                self.subscriptions["main"].source = "device_monitor_1d"
+                self.subscriptions["main"].monitor_type = "1d"
+            elif type == "2d":
+                self.bec_dispatcher.connect_slot(
+                    self.on_image_update_2d, MessageEndpoints.device_monitor_2d(monitor)
+                )
+                self.subscriptions["main"].source = "device_monitor_2d"
+                self.subscriptions["main"].monitor_type = "2d"
+            elif type == "auto":
+                self.bec_dispatcher.connect_slot(
+                    self.on_image_update_1d, MessageEndpoints.device_monitor_1d(monitor)
+                )
+                self.bec_dispatcher.connect_slot(
+                    self.on_image_update_2d, MessageEndpoints.device_monitor_2d(monitor)
+                )
+                self.subscriptions["main"].source = "auto"
+                logger.warning(
+                    f"Updates for '{monitor}' will be fetch from both 1D and 2D monitor endpoints."
+                )
+                self.subscriptions["main"].monitor_type = "auto"
+
         logger.info(f"Connected to {monitor} with type {type}")
         self.subscriptions["main"].monitor = monitor
 
-    def disconnect_monitor(self, monitor: str):
+    def disconnect_monitor(self, monitor: str | tuple):
         """
         Disconnect the monitor from the image update signals, both 1D and 2D.
 
         Args:
-            monitor(str): The name of the monitor to disconnect.
+            monitor(str|tuple): The name of the monitor to disconnect, or a tuple of (device, signal) for preview signals.
         """
-        self.bec_dispatcher.disconnect_slot(
-            self.on_image_update_1d, MessageEndpoints.device_monitor_1d(monitor)
-        )
-        self.bec_dispatcher.disconnect_slot(
-            self.on_image_update_2d, MessageEndpoints.device_monitor_2d(monitor)
-        )
+        if isinstance(monitor, tuple):
+            if self.subscriptions["main"].source == "device_monitor_1d":
+                self.bec_dispatcher.disconnect_slot(
+                    self.on_image_update_1d, MessageEndpoints.device_preview(monitor[0], monitor[1])
+                )
+            elif self.subscriptions["main"].source == "device_monitor_2d":
+                self.bec_dispatcher.disconnect_slot(
+                    self.on_image_update_2d, MessageEndpoints.device_preview(monitor[0], monitor[1])
+                )
+            else:
+                logger.warning(
+                    f"Cannot disconnect monitor {monitor} with source {self.subscriptions['main'].source}"
+                )
+                return
+        else:  # FIXME old monitor 1d/2d endpoint handling, present for backwards compatibility, will be removed in future versions
+            self.bec_dispatcher.disconnect_slot(
+                self.on_image_update_1d, MessageEndpoints.device_monitor_1d(monitor)
+            )
+            self.bec_dispatcher.disconnect_slot(
+                self.on_image_update_2d, MessageEndpoints.device_monitor_2d(monitor)
+            )
         self.subscriptions["main"].monitor = None
         self._sync_device_selection()
 

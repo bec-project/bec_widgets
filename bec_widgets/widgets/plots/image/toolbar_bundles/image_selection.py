@@ -1,5 +1,5 @@
 from bec_lib.device import ReadoutPriority
-from qtpy.QtCore import Qt
+from qtpy.QtCore import Qt, QTimer
 from qtpy.QtWidgets import QComboBox, QStyledItemDelegate
 
 from bec_widgets.utils.error_popups import SafeSlot
@@ -50,11 +50,58 @@ class MonitorSelectionToolbarBundle(ToolbarBundle):
 
         self.add_action("dim_combo", WidgetAction(widget=self.dim_combo_box, adjust_size=False))
 
-        # Connect slots, a device will be connected upon change of any combobox
-        self.device_combo_box.currentTextChanged.connect(lambda: self.connect_monitor())
-        self.dim_combo_box.currentTextChanged.connect(lambda: self.connect_monitor())
+        self.device_combo_box.currentTextChanged.connect(self.connect_monitor)
+        self.dim_combo_box.currentTextChanged.connect(self.connect_monitor)
+
+        QTimer.singleShot(0, self._adjust_and_connect)
+
+    def _adjust_and_connect(self):
+        """
+        Adjust the size of the device combo box and populate it with preview signals.
+        Has to be done with QTimer.singleShot to ensure the UI is fully initialized, needed for testing.
+        """
+        self._populate_preview_signals()
+        self._reverse_device_items()
+        self.device_combo_box.setCurrentText("")  # set again default to empty string
+
+    def _populate_preview_signals(self) -> None:
+        """
+        Populate the device combo box with preview‑signal devices in the
+        format '<device>_<signal>' and store the tuple(device, signal) in
+        the item's userData for later use.
+        """
+        preview_signals = self.target_widget.client.device_manager.get_bec_signals("PreviewSignal")
+        for device, signal, signal_config in preview_signals:
+            label = signal_config.get("obj_name", f"{device}_{signal}")
+            self.device_combo_box.addItem(label, (device, signal, signal_config))
+
+    def _reverse_device_items(self) -> None:
+        """
+        Reverse the current order of items in the device combo box while
+        keeping their userData and restoring the previous selection.
+        """
+        current_text = self.device_combo_box.currentText()
+        items = [
+            (self.device_combo_box.itemText(i), self.device_combo_box.itemData(i))
+            for i in range(self.device_combo_box.count())
+        ]
+        self.device_combo_box.clear()
+        for text, data in reversed(items):
+            self.device_combo_box.addItem(text, data)
+        if current_text:
+            self.device_combo_box.setCurrentText(current_text)
 
     @SafeSlot()
-    def connect_monitor(self):
+    def connect_monitor(self, *args, **kwargs):
+        """
+        Connect the target widget to the selected monitor based on the current device and dimension.
+
+        If the selected device is a preview-signal device, it will use the tuple (device, signal) as the monitor.
+        """
         dim = self.dim_combo_box.currentText()
-        self.target_widget.image(monitor=self.device_combo_box.currentText(), monitor_type=dim)
+        data = self.device_combo_box.currentData()
+
+        if isinstance(data, tuple):
+            self.target_widget.image(monitor=data, monitor_type="auto")
+        else:
+            self.target_widget.image(monitor=self.device_combo_box.currentText(), monitor_type=dim)
