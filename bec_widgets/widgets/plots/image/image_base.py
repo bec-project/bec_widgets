@@ -252,10 +252,10 @@ class ImageBase(PlotBase):
 
         # Headless controller keeps the canonical list.
         self.roi_manager_dialog = None
-        self.layers: ImageLayerManager = ImageLayerManager(
+        self.layer_manager: ImageLayerManager = ImageLayerManager(
             self, plot_item=self.plot_item, on_add=self.layer_added, on_remove=self.layer_removed
         )
-        self.layers.add("main")
+        self.layer_manager.add("main")
 
         self.autorange = True
         self.autorange_mode = "mean"
@@ -275,6 +275,40 @@ class ImageBase(PlotBase):
         if self.x_roi is not None and self.y_roi is not None:
             self.x_roi.apply_theme(theme)
             self.y_roi.apply_theme(theme)
+
+    def add_layer(self, name: str | None = None, **kwargs) -> ImageLayer:
+        """
+        Add a new image layer to the widget.
+
+        Args:
+            name (str | None): The name of the image layer. If None, a default name is generated.
+            **kwargs: Additional arguments for the image layer.
+
+        Returns:
+            ImageLayer: The added image layer.
+        """
+        layer = self.layer_manager.add(name=name, **kwargs)
+        self.image_updated.emit()
+        return layer
+
+    def remove_layer(self, layer: ImageLayer | str):
+        """
+        Remove an image layer from the widget.
+
+        Args:
+            layer (ImageLayer | str): The image layer to remove. Can be the layer object or the name of the layer.
+        """
+        self.layer_manager.remove(layer)
+        self.image_updated.emit()
+
+    def layers(self) -> list[ImageLayer]:
+        """
+        Get the list of image layers.
+
+        Returns:
+            list[ImageLayer]: The list of image layers.
+        """
+        return list(self.layer_manager.layers.values())
 
     def _init_toolbar(self):
 
@@ -468,7 +502,7 @@ class ImageBase(PlotBase):
             style(Literal["full", "simple"]): The type of colorbar to enable.
             vrange(tuple): The range of values to use for the colorbar.
         """
-        autorange_state = self.layers["main"].image.autorange
+        autorange_state = self.layer_manager["main"].image.autorange
         if enabled:
             if self._color_bar:
                 if self.config.color_bar == "full":
@@ -483,12 +517,12 @@ class ImageBase(PlotBase):
                     self.setProperty("autorange", False)
 
                 self._color_bar = pg.ColorBarItem(colorMap=self.config.color_map)
-                self._color_bar.setImageItem(self.layers["main"].image)
+                self._color_bar.setImageItem(self.layer_manager["main"].image)
                 self._color_bar.sigLevelsChangeFinished.connect(disable_autorange)
 
             elif style == "full":
                 self._color_bar = pg.HistogramLUTItem()
-                self._color_bar.setImageItem(self.layers["main"].image)
+                self._color_bar.setImageItem(self.layer_manager["main"].image)
                 self._color_bar.gradient.loadPreset(self.config.color_map)
                 self._color_bar.sigLevelsChanged.connect(
                     lambda: self.setProperty("autorange", False)
@@ -649,7 +683,7 @@ class ImageBase(PlotBase):
         else:
             x = coordinates[1]
             y = coordinates[2]
-        image = self.layers["main"].image.image
+        image = self.layer_manager["main"].image.image
         if image is None:
             return
         max_row, max_col = image.shape[0] - 1, image.shape[1] - 1
@@ -743,7 +777,7 @@ class ImageBase(PlotBase):
         """
         try:
             self.config.color_map = value
-            for layer in self.layers:
+            for layer in self.layer_manager:
                 if not layer.sync.color_map:
                     continue
                 layer.image.color_map = value
@@ -761,7 +795,7 @@ class ImageBase(PlotBase):
         """
         Set the v_range of the main image.
         """
-        vmin, vmax = self.layers["main"].image.v_range
+        vmin, vmax = self.layer_manager["main"].image.v_range
         return QPointF(vmin, vmax)
 
     @v_range.setter
@@ -777,7 +811,7 @@ class ImageBase(PlotBase):
 
         vmin, vmax = value.x(), value.y()
 
-        for layer in self.layers:
+        for layer in self.layer_manager:
             if not layer.sync.v_range:
                 continue
             layer.image.v_range = (vmin, vmax)
@@ -854,7 +888,7 @@ class ImageBase(PlotBase):
         """
 
         # FIXME: this should be made more general
-        return self.layers["main"].image.autorange
+        return self.layer_manager["main"].image.autorange
 
     @autorange.setter
     def autorange(self, enabled: bool):
@@ -864,7 +898,7 @@ class ImageBase(PlotBase):
         Args:
             enabled(bool): Whether to enable autorange.
         """
-        for layer in self.layers:
+        for layer in self.layer_manager:
             if not layer.sync.autorange:
                 continue
             layer.image.autorange = enabled
@@ -883,7 +917,7 @@ class ImageBase(PlotBase):
             - "mean": Use the mean value of the image for autoranging.
 
         """
-        return self.layers["main"].image.autorange_mode
+        return self.layer_manager["main"].image.autorange_mode
 
     @autorange_mode.setter
     def autorange_mode(self, mode: str):
@@ -896,7 +930,7 @@ class ImageBase(PlotBase):
         # for qt Designer
         if mode not in ["max", "mean"]:
             return
-        for layer in self.layers:
+        for layer in self.layer_manager:
             if not layer.sync.autorange_mode:
                 continue
             layer.image.autorange_mode = mode
@@ -912,10 +946,10 @@ class ImageBase(PlotBase):
             enabled(bool): Whether to enable autorange.
             mode(str): The autorange mode. Options are "max" or "mean".
         """
-        if not self.layers:
+        if not self.layer_manager:
             return
 
-        for layer in self.layers:
+        for layer in self.layer_manager:
             if layer.sync.autorange:
                 layer.image.autorange = enabled
             if layer.sync.autorange_mode:
@@ -935,9 +969,9 @@ class ImageBase(PlotBase):
         """
         self.autorange_switch.block_all_signals(True)
         self.autorange_switch.set_default_action(
-            f"auto_range_{self.layers['main'].image.autorange_mode}"
+            f"auto_range_{self.layer_manager['main'].image.autorange_mode}"
         )
-        self.autorange_switch.set_state_all(self.layers["main"].image.autorange)
+        self.autorange_switch.set_state_all(self.layer_manager["main"].image.autorange)
         self.autorange_switch.block_all_signals(False)
 
     def _sync_colorbar_levels(self):
@@ -947,7 +981,7 @@ class ImageBase(PlotBase):
             return
 
         total_vrange = (0, 0)
-        for layer in self.layers:
+        for layer in self.layer_manager:
             if not layer.sync.v_range:
                 continue
             img = layer.image
@@ -1015,7 +1049,7 @@ class ImageBase(PlotBase):
         if self.y_roi is not None:
             self.y_roi.cleanup_pyqtgraph()
 
-        self.layers.clear()
-        self.layers = None
+        self.layer_manager.clear()
+        self.layer_manager = None
 
         super().cleanup()

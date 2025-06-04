@@ -174,7 +174,7 @@ class Image(ImageBase):
     @property
     def main_image(self) -> ImageItem:
         """Access the main image item."""
-        return self.layers["main"].image
+        return self.layer_manager["main"].image
 
     ################################################################################
     # High Level methods for API
