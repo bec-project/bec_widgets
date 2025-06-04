@@ -4,7 +4,7 @@ import typing
 from abc import abstractmethod
 from decimal import Decimal
 from types import GenericAlias, UnionType
-from typing import Callable, Final, Literal, TypeVar
+from typing import Callable, Final, Literal, NamedTuple, TypeVar
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
@@ -31,6 +31,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.editors.dict_backed_table import DictBackedTable
 from bec_widgets.widgets.editors.scan_metadata._util import (
     clearable_required,
@@ -338,22 +339,27 @@ class DictMetadataField(DynamicFormItem):
         self._main_widget.replace_data(value)
 
 
+class ItemAndWidgetType(NamedTuple):
+    item: type
+    widget: type
+
+
 class ListMetadataField(DynamicFormItem):
     def __init__(self, *, parent: QWidget | None = None, spec: FormItemSpec) -> None:
         super().__init__(parent=parent, spec=spec)
         self._main_widget: QListWidget
         if spec.info.annotation is list:
-            self._item_type = str
+            self._types = ItemAndWidgetType(str, QLineEdit)
         elif isinstance(spec.info.annotation, GenericAlias):
             args = set(typing.get_args(spec.info.annotation))
             if args == {str}:
-                self._item_type = str
+                self._types = ItemAndWidgetType(str, QLineEdit)
             if args == {int}:
-                self._item_type = int
+                self._types = ItemAndWidgetType(int, QSpinBox)
             if args == {float} or args == {int, float}:
-                self._item_type = float
+                self._types = ItemAndWidgetType(float, QDoubleSpinBox)
         else:
-            self._item_type = str
+            self._item_type = ItemAndWidgetType(str, QLineEdit)
         self._data = []
 
     def _add_main_widget(self) -> None:
@@ -364,7 +370,8 @@ class ListMetadataField(DynamicFormItem):
         self._main_widget.clear()
         for val in self._data:
             item = QListWidgetItem(self._main_widget)
-            item_widget = QLabel(str(val))
+            item_widget = self._types.widget(parent=self)
+            WidgetIO.set_value(item_widget, val)
             self._main_widget.setItemWidget(item, item_widget)
             self._main_widget.addItem(item)
 
@@ -376,8 +383,8 @@ class ListMetadataField(DynamicFormItem):
         return self._data
 
     def setValue(self, value: list):
-        if set(map(type, value)) != {self._item_type}:
-            raise ValueError(f"This widget only accepts items of type {self._item_type}")
+        if set(map(type, value)) != {self._types.item}:
+            raise ValueError(f"This widget only accepts items of type {self._types.item}")
         self._data = value
         self._repop()
 
