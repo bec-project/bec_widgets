@@ -123,7 +123,7 @@ class ImageLayerManager:
             z_position = self._get_bottom_z_position()
         image = ImageItem(parent_image=self.parent, object_name=name)
         image.setZValue(z_position)
-        image.removed.connect(lambda: self._remove_destroyed_layer(name))
+        image.removed.connect(self._remove_destroyed_layer)
         self.layers[name] = ImageLayer(name=name, image=image, sync=sync)
         self.plot_item.addItem(image)
 
