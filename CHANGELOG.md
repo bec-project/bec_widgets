@@ -1,6 +1,39 @@
 # CHANGELOG
 
 
+## v2.12.0 (2025-06-04)
+
+### Bug Fixes
+
+- Exclude metadata from RPC
+  ([`718116a`](https://github.com/bec-project/bec_widgets/commit/718116afc3a724658c4cd57b76e93249a66a9ebd))
+
+- Grid formatting in TypedForm
+  ([`5949121`](https://github.com/bec-project/bec_widgets/commit/594912136e2118de1a4de5213c2f668952f28a84))
+
+- Make generate plugin robust to multiline init
+  ([`a10e6f7`](https://github.com/bec-project/bec_widgets/commit/a10e6f7820309d590e832f2bca44ca1db8ef72a1))
+
+instead of str.find, use multiline regex with whitespace
+
+- **device browser**: Mocks and utils for tests
+  ([`e0e26c2`](https://github.com/bec-project/bec_widgets/commit/e0e26c205bf930d680e01910f87489decc7fbcdb))
+
+### Features
+
+- (#493) add dict to dynamic form types
+  ([`92d1d64`](https://github.com/bec-project/bec_widgets/commit/92d1d6435d6e8c05851804eb76605a4abeec01bb))
+
+- (#493) add helpers to dynamic form widgets
+  ([`a25c1a8`](https://github.com/bec-project/bec_widgets/commit/a25c1a8039078c92789b717b3f8a553c75814c33))
+
+- (#493) device browser to display config
+  ([`5188b38`](https://github.com/bec-project/bec_widgets/commit/5188b38c86f543d2abc742411b64fa127c6c0c16))
+
+- Add clickable label util
+  ([`2dda58f`](https://github.com/bec-project/bec_widgets/commit/2dda58f7d2adf1f41c6ce4fad02d55bd9aa200fa))
+
+
 ## v2.11.0 (2025-06-04)
 
 ### Bug Fixes
