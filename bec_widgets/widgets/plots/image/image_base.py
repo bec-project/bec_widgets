@@ -223,6 +223,9 @@ class ImageLayerManager:
         """
         if not isinstance(name, str):
             raise TypeError("name must be a string")
+        if name == "main" and name not in self.layers:
+            # If 'main' is requested, create a default layer if it doesn't exist
+            return self.add(name=name, z_position="top")
         return self.layers[name]
 
     def __len__(self) -> int:
