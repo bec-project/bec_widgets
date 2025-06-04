@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.10.3 (2025-06-04)
+
+### Bug Fixes
+
+- **color_button_native**: Popup logic to choose color moved to ColorButtonNative
+  ([`2d0ed94`](https://github.com/bec-project/bec_widgets/commit/2d0ed94f3feb38dfc9645f2c3b9d6a06b92637bb))
+
+
 ## v2.10.2 (2025-06-03)
 
 ### Bug Fixes
