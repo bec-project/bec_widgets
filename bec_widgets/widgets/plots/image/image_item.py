@@ -67,7 +67,7 @@ class ImageItem(BECConnector, pg.ImageItem):
     ]
 
     vRangeChangedManually = Signal(tuple)
-    removed = Signal()
+    removed = Signal(str)
 
     def __init__(
         self,
@@ -277,4 +277,4 @@ class ImageItem(BECConnector, pg.ImageItem):
         self.clear()
         super().remove()
         if emit:
-            self.removed.emit()
+            self.removed.emit(self.objectName())
