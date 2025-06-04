@@ -149,6 +149,25 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
             self._is_valid_input = False
         self.update()
 
+    def validate_device(self, device: str) -> bool:  # type: ignore[override]
+        """
+        Extend validation so that preview‑signal pseudo‑devices (labels like
+        ``"eiger_preview"``) are accepted as valid choices.
+
+        The validation run only on device not on the preview‑signal.
+
+        Args:
+            device: The text currently entered/selected.
+
+        Returns:
+            True if the device is a genuine BEC device *or* one of the
+            whitelisted preview‑signal entries.
+        """
+        idx = self.findText(device)
+        if idx >= 0 and isinstance(self.itemData(idx), tuple):
+            device = self.itemData(idx)[0]  # type: ignore[assignment]
+        return super().validate_device(device)
+
 
 if __name__ == "__main__":  # pragma: no cover
     # pylint: disable=import-outside-toplevel
