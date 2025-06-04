@@ -172,6 +172,7 @@ class DictBackedTable(QWidget):
         self._add_button.clicked.connect(self._table_model.add_row)
         self._remove_button.clicked.connect(self.delete_selected_rows)
         self.delete_rows.connect(self._table_model.delete_rows)
+
         self._table_model.dataChanged.connect(lambda *_: self.data_changed.emit(self.dump_dict()))
 
     def set_button_visibility(self, value: bool):
