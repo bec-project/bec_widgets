@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from decimal import Decimal
 from types import NoneType
 from typing import NamedTuple
 
@@ -69,14 +68,10 @@ class TypedForm(BECWidget, QWidget):
             logger.error("Must specify one and only one of items and form_item_specs!")
             items = []
         super().__init__(parent=parent, client=client, **kwargs)
-        self._items = (
-            form_item_specs
-            if form_item_specs is not None
-            else [
-                FormItemSpec(name=name, item_type=item_type, pretty_display=pretty_display)
-                for name, item_type in items  # type: ignore
-            ]
-        )
+        self._items = form_item_specs or [
+            FormItemSpec(name=name, item_type=item_type, pretty_display=pretty_display)
+            for name, item_type in items  # type: ignore
+        ]
         self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         self._layout = QVBoxLayout()
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -93,7 +88,10 @@ class TypedForm(BECWidget, QWidget):
         self._layout.addWidget(self._form_grid_container)
         self._form_grid_container.setLayout(QVBoxLayout())
         self._form_grid.setLayout(self._new_grid_layout())
+        self._widget_from_type = widget_from_type
+        self._post_init()
 
+    def _post_init(self):
         self.populate()
         self.enabled = self._enabled  # type: ignore # QProperty
 
@@ -108,7 +106,7 @@ class TypedForm(BECWidget, QWidget):
         label.setProperty("_model_field_name", item.name)
         label.setToolTip(item.info.description or item.name)
         grid.addWidget(label, row, 0)
-        widget = widget_from_type(item.item_type)(parent=self, spec=item)
+        widget = self._widget_from_type(item.item_type)(parent=self, spec=item)
         widget.valueChanged.connect(self.value_changed)
         widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         grid.addWidget(widget, row, 1)

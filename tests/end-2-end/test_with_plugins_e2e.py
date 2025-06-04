@@ -69,7 +69,7 @@ def test_scan_metadata_for_custom_scan(
     def do_test():
         # Set the metadata
         grid: QGridLayout = scan_control._metadata_form._form_grid.layout()
-        for i in range(grid.rowCount()):  # type: ignore
+        for i in range(grid.rowCount() - 1):  # type: ignore
             field_name = grid.itemAtPosition(i, 0).widget().property("_model_field_name")
             if (value_to_set := md.pop(field_name, None)) is not None:
                 grid.itemAtPosition(i, 1).widget().setValue(value_to_set)

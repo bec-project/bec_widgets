@@ -6,6 +6,7 @@ from qtpy.QtWidgets import QApplication
 from bec_widgets.utils.colors import get_theme_name
 from bec_widgets.utils.forms_from_types import styles
 from bec_widgets.utils.forms_from_types.forms import PydanticModelForm
+from bec_widgets.utils.forms_from_types.items import DEFAULT_WIDGET_TYPES, BoolMetadataField
 
 
 class DeviceConfigForm(PydanticModelForm):
@@ -20,6 +21,8 @@ class DeviceConfigForm(PydanticModelForm):
             client=client,
             **kwargs,
         )
+        self._widget_types = DEFAULT_WIDGET_TYPES.copy()
+        self._widget_types["optional_bool"] = (lambda anno: anno is bool | None, BoolMetadataField)
         self._validity.setVisible(False)
         self._connect_to_theme_change()
 

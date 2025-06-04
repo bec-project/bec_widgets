@@ -1,11 +1,12 @@
 import sys
-from typing import Literal
+from typing import Any, Literal
 
 import pytest
 from pydantic import ValidationError
 from pydantic.fields import FieldInfo
 
-from bec_widgets.utils.forms_from_types.items import FormItemSpec
+from bec_widgets.utils.forms_from_types.items import FormItemSpec, ListMetadataField
+from bec_widgets.utils.widget_io import WidgetIO
 
 
 @pytest.mark.skipif(sys.version_info < (3, 11), reason="Generic types don't support this in 3.10")
@@ -58,3 +59,58 @@ def test_form_item_spec(input, validity):
     else:
         with pytest.raises(ValidationError):
             FormItemSpec.model_validate(input)
+
+
+@pytest.fixture(
+    params=[
+        {"type": list[int], "value": [1, 2, 3], "extra": 79},
+        {"type": list[str], "value": ["a", "b", "c"], "extra": "string"},
+        {"type": list[float], "value": [0.1, 0.2, 0.3], "extra": 79.0},
+    ]
+)
+def list_metadata_field_and_values(request, qtbot):
+    itype, vals, extra = (
+        request.param.get("type"),
+        request.param.get("value"),
+        request.param.get("extra"),
+    )
+    spec = FormItemSpec(item_type=itype, name="test_list", info=FieldInfo(annotation=itype))
+    (widget := ListMetadataField(parent=None, spec=spec)).setValue(vals)
+    qtbot.addWidget(widget)
+    yield widget, vals, extra
+
+
+def test_list_metadata_field(list_metadata_field_and_values: tuple[ListMetadataField, list, Any]):
+    list_metadata_field, vals, extra = list_metadata_field_and_values
+    assert list_metadata_field.getValue() == vals
+    assert list_metadata_field._main_widget.count() == 3
+
+    list_metadata_field._add_button.click()
+    assert len(list_metadata_field.getValue()) == 4
+    assert list_metadata_field._main_widget.count() == 4
+
+    list_metadata_field._main_widget.setCurrentRow(-1)
+    list_metadata_field._remove_button.click()
+    assert len(list_metadata_field.getValue()) == 4
+    assert list_metadata_field._main_widget.count() == 4
+
+    list_metadata_field._main_widget.setCurrentRow(2)
+    list_metadata_field._remove_button.click()
+    assert list_metadata_field.getValue() == vals[:2] + [list_metadata_field._types.default]
+    assert list_metadata_field._main_widget.count() == 3
+
+    list_metadata_field._main_widget.setCurrentRow(1)
+    WidgetIO.set_value(
+        list_metadata_field._main_widget.itemWidget(list_metadata_field._main_widget.item(1)), extra
+    )
+    assert list_metadata_field._main_widget.count() == 3
+    assert list_metadata_field.getValue() == [vals[0], extra, list_metadata_field._types.default]
+
+    list_metadata_field._add_item(extra)
+    assert list_metadata_field._main_widget.count() == 4
+    assert list_metadata_field.getValue() == [
+        vals[0],
+        extra,
+        list_metadata_field._types.default,
+        extra,
+    ]

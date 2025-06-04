@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import typing
 from abc import abstractmethod
 from decimal import Decimal
 from types import GenericAlias, UnionType
-from typing import Literal
+from typing import Callable, Final, Generic, Literal, NamedTuple, TypeVar
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
@@ -20,13 +21,19 @@ from qtpy.QtWidgets import (
     QLabel,
     QLayout,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QPushButton,
     QRadioButton,
     QSizePolicy,
     QSpinBox,
     QToolButton,
+    QVBoxLayout,
     QWidget,
 )
 
+from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.editors.dict_backed_table import DictBackedTable
 from bec_widgets.widgets.editors.scan_metadata._util import (
     clearable_required,
@@ -123,7 +130,7 @@ class ClearableBoolEntry(QWidget):
         self._false.setToolTip(tooltip)
 
 
-DynamicFormItemType = str | int | float | Decimal | bool | dict
+DynamicFormItemType = str | int | float | Decimal | bool | dict | list | None
 
 
 class DynamicFormItem(QWidget):
@@ -146,7 +153,7 @@ class DynamicFormItem(QWidget):
         self._desc = self._spec.info.description
         self.setLayout(self._layout)
         self._add_main_widget()
-        self._main_widget: QWidget
+        assert isinstance(self._main_widget, QWidget), "Please set a widget in _add_main_widget()"  # type: ignore
         self._main_widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         if not spec.pretty_display:
             if clearable_required(spec.info):
@@ -319,26 +326,133 @@ class DictMetadataField(DynamicFormItem):
         self._main_widget.replace_data(value)
 
 
-def widget_from_type(annotation: type | UnionType | None) -> type[DynamicFormItem]:
-    if annotation in [str, str | None]:
-        return StrMetadataField
-    if annotation in [int, int | None]:
-        return IntMetadataField
-    if annotation in [float, float | None, Decimal, Decimal | None]:
-        return FloatDecimalMetadataField
-    if annotation in [bool, bool | None]:
-        return BoolMetadataField
-    if annotation in [dict, dict | None] or (
-        isinstance(annotation, GenericAlias) and annotation.__origin__ is dict
-    ):
-        return DictMetadataField
-    if annotation in [list, list | None] or (
-        isinstance(annotation, GenericAlias) and annotation.__origin__ is list
-    ):
-        return StrMetadataField
-    else:
-        logger.warning(f"Type {annotation} is not (yet) supported in metadata form creation.")
-        return StrMetadataField
+_T = TypeVar("_T")
+
+
+class _ItemAndWidgetType(NamedTuple, Generic[_T]):
+    item: type[_T]
+    widget: type
+    default: _T
+
+
+class ListMetadataField(DynamicFormItem):
+    def __init__(self, *, parent: QWidget | None = None, spec: FormItemSpec) -> None:
+        super().__init__(parent=parent, spec=spec)
+        self._main_widget: QListWidget
+        if spec.info.annotation is list:
+            self._types = _ItemAndWidgetType(str, QLineEdit, "")
+        elif isinstance(spec.info.annotation, GenericAlias):
+            args = set(typing.get_args(spec.info.annotation))
+            if args == {str}:
+                self._types = _ItemAndWidgetType(str, QLineEdit, "")
+            if args == {int}:
+                self._types = _ItemAndWidgetType(int, QSpinBox, 0)
+            if args == {float} or args == {int, float}:
+                self._types = _ItemAndWidgetType(float, QDoubleSpinBox, 0.0)
+        else:
+            self._types = _ItemAndWidgetType(str, QLineEdit, 0)
+        self._data = []
+
+    def _add_main_widget(self) -> None:
+        self._main_widget = QListWidget()
+        self._layout.addWidget(self._main_widget)
+        self._add_buttons()
+
+    def _add_buttons(self):
+        self._button_holder = QWidget()
+        self._buttons = QVBoxLayout()
+        self._button_holder.setLayout(self._buttons)
+        self._layout.addWidget(self._button_holder)
+        self._add_button = QPushButton("+")
+        self._add_button.setToolTip("add a new row")
+        self._remove_button = QPushButton("-")
+        self._remove_button.setToolTip("delete the focused row (if any)")
+        self._add_button.clicked.connect(self._add_row)
+        self._remove_button.clicked.connect(self._delete_row)
+        self._buttons.addWidget(self._add_button)
+        self._buttons.addWidget(self._remove_button)
+
+    def _set_pretty_display(self):
+        super()._set_pretty_display()
+        self._button_holder.setHidden(True)
+
+    def _repop(self, data):
+        self._main_widget.clear()
+        for val in data:
+            self._add_item(val)
+
+    def _add_item(self, val=None):
+        val = val or self._types.default
+        self._data.append(val)
+        item = QListWidgetItem(self._main_widget)
+        item_widget = self._types.widget(parent=self)
+        WidgetIO.set_value(item_widget, val)
+        self._main_widget.setItemWidget(item, item_widget)
+        self._main_widget.addItem(item)
+        WidgetIO.connect_widget_change_signal(item_widget, self._update)
+
+    def _update(self, _, value, *args):
+        self._data[self._main_widget.currentRow()] = value
+
+    @SafeSlot()
+    def _add_row(self):
+        self._add_item(0)
+
+    @SafeSlot()
+    def _delete_row(self):
+        if selected := self._main_widget.currentItem():
+            self._main_widget.removeItemWidget(selected)
+            row = self._main_widget.currentRow()
+            self._main_widget.takeItem(row)
+            self._data.pop(row)
+
+    @SafeSlot()
+    def clear(self):
+        self._repop([])
+
+    def getValue(self):
+        return self._data
+
+    def setValue(self, value: list):
+        if set(map(type, value)) != {self._types.item}:
+            raise ValueError(f"This widget only accepts items of type {self._types.item}")
+        self._repop(value)
+
+
+WidgetTypeRegistry = dict[
+    str, tuple[Callable[[type | UnionType | None], bool], type[DynamicFormItem]]
+]
+
+DEFAULT_WIDGET_TYPES: Final[WidgetTypeRegistry] = {
+    "str": (lambda anno: anno in [str, str | None, None], StrMetadataField),
+    "int": (lambda anno: anno in [int, int | None], IntMetadataField),
+    "float_decimal": (
+        lambda anno: anno in [float, float | None, Decimal, Decimal | None],
+        FloatDecimalMetadataField,
+    ),
+    "bool": (lambda anno: anno in [bool, bool | None], BoolMetadataField),
+    "dict": (
+        lambda anno: anno in [dict, dict | None]
+        or (isinstance(anno, GenericAlias) and anno.__origin__ is dict),
+        DictMetadataField,
+    ),
+    "list": (
+        lambda anno: anno in [list, list | None]
+        or (isinstance(anno, GenericAlias) and anno.__origin__ is list),
+        ListMetadataField,
+    ),
+}
+
+
+def widget_from_type(
+    annotation: type | UnionType | None, widget_types: WidgetTypeRegistry | None = None
+) -> type[DynamicFormItem]:
+    widget_types = widget_types or DEFAULT_WIDGET_TYPES
+    for predicate, widget_type in widget_types.values():
+        if predicate(annotation):
+            return widget_type
+    logger.warning(f"Type {annotation} is not (yet) supported in metadata form creation.")
+    return StrMetadataField
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -349,14 +463,24 @@ if __name__ == "__main__":  # pragma: no cover
         value3: bool = Field(True)
         value4: int = Field(123)
         value5: int | None = Field()
+        value6: list[int] = Field()
+        value7: list = Field()
 
     app = QApplication([])
     w = QWidget()
     layout = QGridLayout()
     w.setLayout(layout)
+    items = []
     for i, (field_name, info) in enumerate(TestModel.model_fields.items()):
         layout.addWidget(QLabel(field_name), i, 0)
-        layout.addWidget(widget_from_type(info.annotation)(info), i, 1)
+        widg = widget_from_type(info.annotation)(
+            spec=FormItemSpec(item_type=info.annotation, name=field_name, info=info)
+        )
+        items.append(widg)
+        layout.addWidget(widg, i, 1)
+
+    items[5].setValue([1, 2, 3, 4])
+    items[6].setValue(["1", "2", "asdfg", "qwerty"])
 
     w.show()
     app.exec()
