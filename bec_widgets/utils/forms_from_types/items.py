@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import typing
 from abc import abstractmethod
 from decimal import Decimal
 from types import GenericAlias, UnionType
-from typing import Callable, Literal, TypedDict
+from typing import Callable, Final, Literal
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
@@ -125,7 +126,7 @@ class ClearableBoolEntry(QWidget):
         self._false.setToolTip(tooltip)
 
 
-DynamicFormItemType = str | int | float | Decimal | bool | dict
+DynamicFormItemType = str | int | float | Decimal | bool | dict | list
 
 
 class DynamicFormItem(QWidget):
@@ -335,11 +336,28 @@ class DictMetadataField(DynamicFormItem):
         self._main_widget.replace_data(value)
 
 
+class ListMetadataField(DynamicFormItem):
+    def __init__(self, *, parent: QWidget | None = None, spec: FormItemSpec) -> None:
+        super().__init__(parent=parent, spec=spec)
+        if spec.info.annotation is list:
+            self.item_type = str
+        elif isinstance(spec.info.annotation, GenericAlias):
+            args = set(typing.get_args(spec.info.annotation))
+            if args == set((str,)):
+                self.item_type = str
+            if args == set((int,)):
+                self.item_type = int
+            if args == set((float,)) or args == set((int, float)):
+                self.item_type = float
+        else:
+            self.item_type = str
+
+
 WidgetTypeRegistry = dict[
     str, tuple[Callable[[type | UnionType | None], bool], type[DynamicFormItem]]
 ]
 
-default_widget_types: WidgetTypeRegistry = {
+DEFAULT_WIDGET_TYPES: Final[WidgetTypeRegistry] = {
     "str": (lambda anno: anno in [str, str | None, None], StrMetadataField),
     "int": (lambda anno: anno in [int, int | None], IntMetadataField),
     "float_decimal": (
@@ -355,14 +373,15 @@ default_widget_types: WidgetTypeRegistry = {
     "list": (
         lambda anno: anno in [list, list | None]
         or (isinstance(anno, GenericAlias) and anno.__origin__ is list),
-        StrMetadataField,
+        ListMetadataField,
     ),
 }
 
 
 def widget_from_type(
-    annotation: type | UnionType | None, widget_types: WidgetTypeRegistry
+    annotation: type | UnionType | None, widget_types: WidgetTypeRegistry | None = None
 ) -> type[DynamicFormItem]:
+    widget_types = widget_types or DEFAULT_WIDGET_TYPES
     for predicate, widget_type in widget_types.values():
         if predicate(annotation):
             return widget_type
@@ -378,6 +397,8 @@ if __name__ == "__main__":  # pragma: no cover
         value3: bool = Field(True)
         value4: int = Field(123)
         value5: int | None = Field()
+        value6: list[int] = Field()
+        value7: list = Field()
 
     app = QApplication([])
     w = QWidget()

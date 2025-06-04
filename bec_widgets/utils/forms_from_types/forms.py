@@ -17,7 +17,6 @@ from bec_widgets.utils.forms_from_types.items import (
     DynamicFormItem,
     DynamicFormItemType,
     FormItemSpec,
-    default_widget_types,
     widget_from_type,
 )
 
@@ -93,7 +92,6 @@ class TypedForm(BECWidget, QWidget):
         self._layout.addWidget(self._form_grid_container)
         self._form_grid_container.setLayout(QVBoxLayout())
         self._form_grid.setLayout(self._new_grid_layout())
-        self._widget_types = default_widget_types
         self._widget_from_type = widget_from_type
         self._post_init()
 
@@ -112,7 +110,7 @@ class TypedForm(BECWidget, QWidget):
         label.setProperty("_model_field_name", item.name)
         label.setToolTip(item.info.description or item.name)
         grid.addWidget(label, row, 0)
-        widget = self._widget_from_type(item.item_type, self._widget_types)(parent=self, spec=item)
+        widget = self._widget_from_type(item.item_type)(parent=self, spec=item)
         widget.valueChanged.connect(self.value_changed)
         widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         grid.addWidget(widget, row, 1)
@@ -144,9 +142,9 @@ class TypedForm(BECWidget, QWidget):
         self._form_grid.setLayout(self._new_grid_layout())
         self._form_grid_container.layout().addWidget(self._form_grid)
 
-        self.resize()
+        self.update_size()
 
-    def resize(self):
+    def update_size(self):
         self._form_grid.adjustSize()
         self._form_grid_container.adjustSize()
         self.adjustSize()
