@@ -21,9 +21,6 @@ logger = bec_logger.logger
 # noinspection PyDataclass
 class ImageItemConfig(ConnectionConfig):  # TODO review config
     parent_id: str | None = Field(None, description="The parent plot of the image.")
-    monitor: str | None = Field(None, description="The name of the monitor.")
-    monitor_type: Literal["1d", "2d", "auto"] = Field("auto", description="The type of monitor.")
-    source: str | None = Field(None, description="The source of the curve.")
     color_map: str | None = Field("plasma", description="The color map of the image.")
     downsample: bool | None = Field(True, description="Whether to downsample the image.")
     opacity: float | None = Field(1.0, description="The opacity of the image.")
