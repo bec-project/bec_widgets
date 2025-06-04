@@ -1,6 +1,57 @@
 # CHANGELOG
 
 
+## v2.11.0 (2025-06-04)
+
+### Bug Fixes
+
+- **image item**: Propagate remove call to parent class
+  ([`e211e4d`](https://github.com/bec-project/bec_widgets/commit/e211e4d7161cc4fc4b2f7cd18f058e070f5b4b7a))
+
+- **image layer**: Add layer main if it does not exist
+  ([`7eb2f54`](https://github.com/bec-project/bec_widgets/commit/7eb2f54e0ed556e0c30a4e14ded75e32dcf3d531))
+
+- **image_item**: Do not disconnect the monitor from within the image item
+  ([`4c0bd97`](https://github.com/bec-project/bec_widgets/commit/4c0bd977fc2b82680bbace763f5ffb19ed664f72))
+
+### Features
+
+- **image_layer**: Add default name for image layers
+  ([`4a343b2`](https://github.com/bec-project/bec_widgets/commit/4a343b204112c53e593e9bb43642d21f268dfa85))
+
+### Refactoring
+
+- **image**: Disconnect when layer is removed
+  ([`8a299a8`](https://github.com/bec-project/bec_widgets/commit/8a299a8268f3c21bbdc6629ad1f1f50a0aa0948b))
+
+- **image**: Introduce image base and image layer; rename vrange to v_range
+  ([`10f292d`](https://github.com/bec-project/bec_widgets/commit/10f292def9d1551bca0d8f63c0a94799c08ff507))
+
+- **image**: Move image item creation to layer manager
+  ([`c2b0c8c`](https://github.com/bec-project/bec_widgets/commit/c2b0c8c4336302ec4a7807c31b3f3b78a413c1aa))
+
+- **image**: Removed access to image item config
+  ([`99ecf6a`](https://github.com/bec-project/bec_widgets/commit/99ecf6a18f2e87d68f3de3abf56d97f7e6467912))
+
+- **image_base**: Move default color map to image layer
+  ([`92b89e7`](https://github.com/bec-project/bec_widgets/commit/92b89e72750fc0ab72ea51f865032133c49a7f18))
+
+- **image_base**: Renamed layers to layer_manager and added public methods for accessing the layer
+  manager
+  ([`92dade0`](https://github.com/bec-project/bec_widgets/commit/92dade09508ff3940e0b5dc99917302d61b03bc8))
+
+- **image_item**: Emit object name with removed signal
+  ([`a4f3117`](https://github.com/bec-project/bec_widgets/commit/a4f311794132c6c24370cb2f5b5e0725b12587fd))
+
+- **image_item**: Removed outdated image item config
+  ([`3e789ca`](https://github.com/bec-project/bec_widgets/commit/3e789ca35b6d0cf2d8ae9677bc65b7f0ca4eabc7))
+
+### Testing
+
+- Improve error message for widgets that are not properly cleaned up
+  ([`7c47505`](https://github.com/bec-project/bec_widgets/commit/7c47505c5a147885ca2e854e13c1eb3fddaf5489))
+
+
 ## v2.10.3 (2025-06-04)
 
 ### Bug Fixes
