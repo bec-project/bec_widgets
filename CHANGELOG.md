@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.12.1 (2025-06-05)
+
+### Bug Fixes
+
+- **crosshair**: Emitted name from crosshair 2D is objectName of image or its id
+  ([`3e2544e`](https://github.com/bec-project/bec_widgets/commit/3e2544e52a84b30a5acb4a7874025fa359a3c58d))
+
+
 ## v2.12.0 (2025-06-04)
 
 ### Bug Fixes
