@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.12.2 (2025-06-05)
+
+### Bug Fixes
+
+- **waveform**: Safeguard for history data access, closes #571; removed return values "none"
+  ([`8570538`](https://github.com/bec-project/bec_widgets/commit/85705383e4aff2f83f76d342db0a13380aeca42f))
+
+
 ## v2.12.1 (2025-06-05)
 
 ### Bug Fixes
