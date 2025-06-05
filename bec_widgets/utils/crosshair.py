@@ -312,7 +312,7 @@ class Crosshair(QObject):
                     y_values[name] = closest_y
                     x_values[name] = closest_x
             elif isinstance(item, pg.ImageItem):  # 2D plot
-                name = item.config.monitor or str(id(item))
+                name = item.objectName() or str(id(item))
                 image_2d = item.image
                 if image_2d is None:
                     continue
@@ -400,7 +400,7 @@ class Crosshair(QObject):
                     )
                     self.coordinatesChanged1D.emit(coordinate_to_emit)
                 elif isinstance(item, pg.ImageItem):
-                    name = item.config.monitor or str(id(item))
+                    name = item.objectName() or str(id(item))
                     x, y = x_snap_values[name], y_snap_values[name]
                     if x is None or y is None:
                         continue

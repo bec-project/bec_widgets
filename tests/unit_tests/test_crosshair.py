@@ -29,7 +29,6 @@ def image_widget_with_crosshair(qtbot):
 
     image_item = pg.ImageItem()
     image_item.setImage(np.random.rand(100, 100))
-    image_item.config = type("obj", (object,), {"monitor": "test"})
 
     widget.addItem(image_item)
     plot_item = widget.getPlotItem()
@@ -99,6 +98,7 @@ def test_mouse_moved_signals_outside(plot_widget_with_crosshair):
 
 def test_mouse_moved_signals_2D(image_widget_with_crosshair):
     crosshair, plot_item = image_widget_with_crosshair
+    image_item = plot_item.items[0]
 
     emitted_values_2D = []
 
@@ -113,7 +113,7 @@ def test_mouse_moved_signals_2D(image_widget_with_crosshair):
 
     crosshair.mouse_moved(event_mock)
 
-    assert emitted_values_2D == [("test", 21, 55)]
+    assert emitted_values_2D == [(str(id(image_item)), 21, 55)]
 
 
 def test_mouse_moved_signals_2D_outside(image_widget_with_crosshair):
