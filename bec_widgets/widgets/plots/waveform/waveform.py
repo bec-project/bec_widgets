@@ -1177,8 +1177,8 @@ class Waveform(PlotBase):
             if access_key == "val":
                 device_data = data.get(device_name, {}).get(device_entry, {}).get(access_key, None)
             else:
-                entry_obj = data.get(device_name, {}).get(device_entry, None)
-                device_data = self._safe_entry_value(entry_obj, "value")
+                entry_obj = data.get(device_name, {}).get(device_entry)
+                device_data = entry_obj.read()["value"] if entry_obj else None
             x_data = self._get_x_data(device_name, device_entry)
             if x_data is not None:
                 if len(x_data) == 1:
@@ -1217,7 +1217,7 @@ class Waveform(PlotBase):
                     if not self._check_dataset_size_and_confirm(dataset_obj, device_entry):
                         continue  # user declined to load; skip this curve
                 entry_obj = dataset_obj.get(device_entry, None)
-                device_data = self._safe_entry_value(entry_obj, "value", None)
+                device_data = entry_obj.read()["value"] if entry_obj else None
 
             # if shape is 2D cast it into 1D and take the last waveform
             if len(np.shape(device_data)) > 1:
@@ -1549,8 +1549,8 @@ class Waveform(PlotBase):
             if access_key == "val":  # live data
                 x_data = data.get(x_name, {}).get(x_entry, {}).get(access_key, [0])
             else:  # history data
-                entry_obj = data.get(x_name, {}).get(x_entry, None)
-                x_data = self._safe_entry_value(entry_obj, "value", [0])
+                entry_obj = data.get(x_name, {}).get(x_entry)
+                x_data = entry_obj.read()["value"] if entry_obj else [0]
             new_suffix = f" (custom: {x_name}-{x_entry})"
 
         # 2 User wants timestamp
@@ -1562,8 +1562,8 @@ class Waveform(PlotBase):
                 else:
                     timestamps = x_data.timestamps
             else:  # history data
-                entry_obj = data.get(device_name, {}).get(device_entry, None)
-                timestamps = self._safe_entry_value(entry_obj, "timestamp", [0])
+                entry_obj = data.get(device_name, {}).get(device_entry)
+                timestamps = entry_obj.read()["timestamp"] if entry_obj else [0]
             x_data = timestamps
             new_suffix = " (timestamp)"
 
@@ -1590,8 +1590,8 @@ class Waveform(PlotBase):
                 if access_key == "val":
                     x_data = data.get(x_name, {}).get(x_entry, {}).get(access_key, None)
                 else:
-                    entry_obj = data.get(x_name, {}).get(x_entry, None)
-                    x_data = self._safe_entry_value(entry_obj, "value", None)
+                    entry_obj = data.get(x_name, {}).get(x_entry)
+                    x_data = entry_obj.read()["value"] if entry_obj else None
                 new_suffix = f" (auto: {x_name}-{x_entry})"
         self._update_x_label_suffix(new_suffix)
         return x_data
@@ -1862,20 +1862,6 @@ class Waveform(PlotBase):
             return [self._to_str(e) for e in entries]
         else:
             return [self._to_str(entries)]
-
-    @staticmethod
-    def _safe_entry_value(entry_obj: dict | None, field: str, default=None) -> Any:
-        """
-        Safely extract a value from an entry object, which can be a dict or an object with a read method.
-
-        Args:
-            entry_obj (dict | object): The entry object from which to extract the value.
-            field (str): The field to extract from the entry object.
-            default(any): The default value to return if the field is not found.
-        """
-        if not hasattr(entry_obj, "read"):
-            return entry_obj.get(field, default)
-        return entry_obj.read().get(field, None) if entry_obj is not None else default
 
     @staticmethod
     def _to_str(x):
