@@ -1,6 +1,26 @@
 # CHANGELOG
 
 
+## v2.12.3 (2025-06-05)
+
+### Bug Fixes
+
+- **crosshair**: Use objectName instead of config for retrieving the monitor name
+  ([`edfac87`](https://github.com/bec-project/bec_widgets/commit/edfac87868605b4b755f7732b2841673de53bc3f))
+
+- **device_combobox**: Tuple entries of preview signals are checked in DeviceComboBoxes just for the
+  relevant device
+  ([`12f5233`](https://github.com/bec-project/bec_widgets/commit/12f523374586d55499f80baf56a50b6ef486cd43))
+
+- **image**: Preview signals can be used in Image widget; update logic adjusted; closes #683
+  ([`2711164`](https://github.com/bec-project/bec_widgets/commit/271116453d1ef5316b19457d04613b6ddc939cdb))
+
+### Build System
+
+- Update min dependency of bec to 3.38
+  ([`3740ac8`](https://github.com/bec-project/bec_widgets/commit/3740ac8e325a489d59faca648896ffcea29e1a02))
+
+
 ## v2.12.2 (2025-06-05)
 
 ### Bug Fixes
