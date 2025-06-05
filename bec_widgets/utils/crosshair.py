@@ -458,7 +458,7 @@ class Crosshair(QObject):
                     )
                     self.coordinatesClicked1D.emit(coordinate_to_emit)
                 elif isinstance(item, pg.ImageItem):
-                    name = item.config.monitor or str(id(item))
+                    name = item.objectName() or str(id(item))
                     x, y = x_snap_values[name], y_snap_values[name]
                     if x is None or y is None:
                         continue
