@@ -168,11 +168,16 @@ def test_accept_changes(axis_settings_fixture, qtbot):
     axis_settings.ui.x_grid.checked = True
 
     axis_settings.accept_changes()
-    qtbot.wait(200)
-
-    assert plot_base.title == "New Title"
-    assert plot_base.x_min == 10
-    assert plot_base.x_max == 20
-    assert plot_base.x_label == "New X Label"
-    assert plot_base.x_log is True
-    assert plot_base.x_grid is True
+    qtbot.waitUntil(
+        lambda: all(
+            [
+                plot_base.title == "New Title",
+                plot_base.x_min == 10,
+                plot_base.x_max == 20,
+                plot_base.x_label == "New X Label",
+                plot_base.x_log is True,
+                plot_base.x_grid is True,
+            ]
+        ),
+        timeout=200,
+    )

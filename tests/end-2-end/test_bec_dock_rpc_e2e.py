@@ -51,7 +51,6 @@ def test_rpc_add_dock_with_plots_e2e(qtbot, bec_client_lib, connected_client_gui
 
     # Waii until docks are registered
     qtbot.waitUntil(check_docks_registered, timeout=5000)
-    qtbot.wait(500)
     assert len(dock.panels) == 3
     assert hasattr(gui.bec, "dock_0")
 

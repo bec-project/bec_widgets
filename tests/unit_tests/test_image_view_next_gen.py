@@ -508,19 +508,31 @@ def test_crosshair_roi_panels_visibility(qtbot, mocked_client):
 
     # Enable ROI crosshair
     switch.actions["crosshair_roi"].action.trigger()
-    qtbot.wait(500)
 
     # Panels must be visible
-    assert bec_image_view.side_panel_x.panel_height > 0
-    assert bec_image_view.side_panel_y.panel_width > 0
+    qtbot.waitUntil(
+        lambda: all(
+            [
+                bec_image_view.side_panel_x.panel_height > 0,
+                bec_image_view.side_panel_y.panel_width > 0,
+            ]
+        ),
+        timeout=500,
+    )
 
     # Disable ROI crosshair
     switch.actions["crosshair_roi"].action.trigger()
-    qtbot.wait(500)
 
     # Panels hidden again
-    assert bec_image_view.side_panel_x.panel_height == 0
-    assert bec_image_view.side_panel_y.panel_width == 0
+    qtbot.waitUntil(
+        lambda: all(
+            [
+                bec_image_view.side_panel_x.panel_height == 0,
+                bec_image_view.side_panel_y.panel_width == 0,
+            ]
+        ),
+        timeout=500,
+    )
 
 
 def test_roi_plot_data_from_image(qtbot, mocked_client):

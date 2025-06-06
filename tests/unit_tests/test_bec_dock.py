@@ -47,24 +47,21 @@ def test_bec_dock_area_add_remove_dock(bec_dock_area, qtbot):
     # Remove docks
     d0_name = d0.name()
     bec_dock_area.delete(d0_name)
-    qtbot.wait(200)
     d1.remove()
-    qtbot.wait(200)
 
-    assert len(bec_dock_area.dock_area.docks) == initial_count + 1
+    qtbot.waitUntil(lambda: len(bec_dock_area.dock_area.docks) == initial_count + 1, timeout=200)
     assert d0.name() not in dict(bec_dock_area.dock_area.docks)
     assert d1.name() not in dict(bec_dock_area.dock_area.docks)
     assert d2.name() in dict(bec_dock_area.dock_area.docks)
 
 
 def test_close_docks(bec_dock_area, qtbot):
-    d0 = bec_dock_area.new(name="dock_0")
-    d1 = bec_dock_area.new(name="dock_1")
-    d2 = bec_dock_area.new(name="dock_2")
+    _ = bec_dock_area.new(name="dock_0")
+    _ = bec_dock_area.new(name="dock_1")
+    _ = bec_dock_area.new(name="dock_2")
 
     bec_dock_area.delete_all()
-    qtbot.wait(200)
-    assert len(bec_dock_area.dock_area.docks) == 0
+    qtbot.waitUntil(lambda: len(bec_dock_area.dock_area.docks) == 0)
 
 
 def test_undock_and_dock_docks(bec_dock_area, qtbot):
