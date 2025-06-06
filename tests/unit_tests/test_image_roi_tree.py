@@ -120,11 +120,11 @@ def test_roi_name_edit(roi_tree, image_widget, qtbot):
     roi_tree.tree.editItem(item, roi_tree.COL_ROI)
     qtbot.keyClicks(roi_tree.tree.viewport().focusWidget(), "new_name")
     qtbot.keyClick(roi_tree.tree.viewport().focusWidget(), Qt.Key_Return)
-    qtbot.wait(200)
-
     # Check the ROI name was updated
-    assert roi.label == "new_name"
-    assert item.text(roi_tree.COL_ROI) == "new_name"
+    qtbot.waitUntil(
+        lambda: all([roi.label == "new_name", item.text(roi_tree.COL_ROI) == "new_name"]),
+        timeout=200,
+    )
 
 
 def test_roi_width_edit(roi_tree, image_widget, qtbot):
@@ -138,9 +138,8 @@ def test_roi_width_edit(roi_tree, image_widget, qtbot):
 
     # Change the width
     width_spin.setValue(25)
-    qtbot.wait(200)
     # Check the ROI width was updated
-    assert roi.line_width == 25
+    qtbot.waitUntil(lambda: roi.line_width == 25, timeout=200)
 
 
 def test_delete_roi_button(roi_tree, image_widget, qtbot):
@@ -153,11 +152,12 @@ def test_delete_roi_button(roi_tree, image_widget, qtbot):
 
     del_btn = layout.itemAt(1).widget()
     del_btn.click()
-    qtbot.wait(200)
 
     # Verify ROI was removed
-    assert roi not in roi_tree.roi_items
-    assert roi not in image_widget.roi_controller.rois
+    qtbot.waitUntil(
+        lambda: all([roi not in roi_tree.roi_items, roi not in image_widget.roi_controller.rois]),
+        timeout=200,
+    )
 
 
 def test_roi_color_change_from_roi(roi_tree, image_widget):
