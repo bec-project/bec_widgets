@@ -193,8 +193,8 @@ class DictBackedTable(QWidget):
     def clear(self):
         self._table_model.replaceData({})
 
-    def replace_data(self, data: dict):
-        self._table_model.replaceData(data)
+    def replace_data(self, data: dict | None):
+        self._table_model.replaceData(data or {})
 
     def delete_selected_rows(self):
         """Delete rows which are part of the selection model"""

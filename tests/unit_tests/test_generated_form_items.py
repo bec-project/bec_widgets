@@ -1,5 +1,5 @@
 import sys
-from typing import Any, Literal
+from typing import Any, Literal, get_args
 
 import pytest
 from pydantic import ValidationError
@@ -68,7 +68,7 @@ def test_form_item_spec(input, validity):
         {"type": list[float], "value": [0.1, 0.2, 0.3], "extra": 79.0},
     ]
 )
-def list_metadata_field_and_values(request, qtbot):
+def list_field_and_values(request, qtbot):
     itype, vals, extra = (
         request.param.get("type"),
         request.param.get("value"),
@@ -77,40 +77,49 @@ def list_metadata_field_and_values(request, qtbot):
     spec = FormItemSpec(item_type=itype, name="test_list", info=FieldInfo(annotation=itype))
     (widget := ListMetadataField(parent=None, spec=spec)).setValue(vals)
     qtbot.addWidget(widget)
-    yield widget, vals, extra
+    yield widget, vals, extra, get_args(itype)[0]
 
 
-def test_list_metadata_field(list_metadata_field_and_values: tuple[ListMetadataField, list, Any]):
-    list_metadata_field, vals, extra = list_metadata_field_and_values
-    assert list_metadata_field.getValue() == vals
-    assert list_metadata_field._main_widget.count() == 3
+def test_list_metadata_field(list_field_and_values: tuple[ListMetadataField, list, Any, type]):
+    list_field, vals, extra, _ = list_field_and_values
+    assert list_field.getValue() == vals
+    assert list_field._main_widget.count() == 3
 
-    list_metadata_field._add_button.click()
-    assert len(list_metadata_field.getValue()) == 4
-    assert list_metadata_field._main_widget.count() == 4
+    list_field._add_button.click()
+    assert len(list_field.getValue()) == 4
+    assert list_field._main_widget.count() == 4
 
-    list_metadata_field._main_widget.setCurrentRow(-1)
-    list_metadata_field._remove_button.click()
-    assert len(list_metadata_field.getValue()) == 4
-    assert list_metadata_field._main_widget.count() == 4
+    list_field._main_widget.setCurrentRow(-1)
+    list_field._remove_button.click()
+    assert len(list_field.getValue()) == 4
+    assert list_field._main_widget.count() == 4
 
-    list_metadata_field._main_widget.setCurrentRow(2)
-    list_metadata_field._remove_button.click()
-    assert list_metadata_field.getValue() == vals[:2] + [list_metadata_field._types.default]
-    assert list_metadata_field._main_widget.count() == 3
+    list_field._main_widget.setCurrentRow(2)
+    list_field._remove_button.click()
+    assert list_field.getValue() == vals[:2] + [list_field._types.default]
+    assert list_field._main_widget.count() == 3
 
-    list_metadata_field._main_widget.setCurrentRow(1)
-    WidgetIO.set_value(
-        list_metadata_field._main_widget.itemWidget(list_metadata_field._main_widget.item(1)), extra
-    )
-    assert list_metadata_field._main_widget.count() == 3
-    assert list_metadata_field.getValue() == [vals[0], extra, list_metadata_field._types.default]
+    list_field._main_widget.setCurrentRow(1)
+    WidgetIO.set_value(list_field._main_widget.itemWidget(list_field._main_widget.item(1)), extra)
+    assert list_field._main_widget.count() == 3
+    assert list_field.getValue() == [vals[0], extra, list_field._types.default]
 
-    list_metadata_field._add_item(extra)
-    assert list_metadata_field._main_widget.count() == 4
-    assert list_metadata_field.getValue() == [
-        vals[0],
-        extra,
-        list_metadata_field._types.default,
-        extra,
-    ]
+    list_field._add_item(extra)
+    assert list_field._main_widget.count() == 4
+    assert list_field.getValue() == [vals[0], extra, list_field._types.default, extra]
+
+
+def test_list_field_value_acceptance(
+    list_field_and_values: tuple[ListMetadataField, list, Any, type],
+):
+    class _WrongType(object): ...
+
+    list_field, _, _, t = list_field_and_values
+    list_field.setValue([])
+    assert list_field._main_widget.count() == 0
+    list_field.setValue([t(), t(), t()])
+    assert list_field._main_widget.count() == 3
+    with pytest.raises(ValueError) as e:
+        list_field.setValue([_WrongType()])
+    assert list_field._main_widget.count() == 3
+    assert e.match(f"This widget only accepts items of type {t}")
