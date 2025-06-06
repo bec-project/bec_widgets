@@ -28,9 +28,13 @@ class DeviceConfigDialog(BECWidget, QDialog):
     RPC = False
 
     def __init__(
-        self, parent=None, device: str | None = None, config_helper: ConfigHelper | None = None
+        self,
+        parent=None,
+        device: str | None = None,
+        config_helper: ConfigHelper | None = None,
+        **kwargs,
     ):
-        super().__init__(parent=parent)
+        super().__init__(parent=parent, **kwargs)
         self._config_helper = config_helper or ConfigHelper(
             self.client.connector, self.client._service_name
         )

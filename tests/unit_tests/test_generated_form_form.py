@@ -3,7 +3,7 @@ from decimal import Decimal
 import pytest
 from pydantic import BaseModel, Field
 
-from bec_widgets.utils.forms_from_types.forms import PydanticModelForm
+from bec_widgets.utils.forms_from_types.forms import PydanticModelForm, TypedForm
 from bec_widgets.utils.forms_from_types.items import (
     FloatDecimalMetadataField,
     IntMetadataField,

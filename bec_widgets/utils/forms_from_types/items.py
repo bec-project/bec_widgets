@@ -430,7 +430,7 @@ class ListMetadataField(DynamicFormItem):
         return self._data
 
     def setValue(self, value: list):
-        if set(map(type, value)) != {self._types.item}:
+        if set(map(type, value)) | {self._types.item} != {self._types.item}:
             raise ValueError(f"This widget only accepts items of type {self._types.item}")
         self._repop(value)
 
