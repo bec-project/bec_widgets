@@ -8,6 +8,7 @@ from qtpy.QtCore import QEvent, Qt
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import (
     QColorDialog,
+    QHBoxLayout,
     QHeaderView,
     QSpinBox,
     QToolButton,
@@ -33,6 +34,28 @@ from bec_widgets.widgets.utility.visual.colormap_widget.colormap_widget import B
 
 if TYPE_CHECKING:
     from bec_widgets.widgets.plots.image.image import Image
+
+
+class ROILockButton(QToolButton):
+    """Keeps its icon and checked state in sync with a single ROI."""
+
+    def __init__(self, roi: BaseROI, parent=None):
+        super().__init__(parent)
+        self.setCheckable(True)
+        self._roi = roi
+        self.clicked.connect(self._toggle)
+        roi.movableChanged.connect(lambda _: self._sync())
+        self._sync()
+
+    def _toggle(self):
+        # checked -> locked -> movable = False
+        self._roi.movable = not self.isChecked()
+
+    def _sync(self):
+        movable = self._roi.movable
+        self.setChecked(not movable)
+        icon = "lock_open_right" if movable else "lock"
+        self.setIcon(material_icon(icon, size=(20, 20), convert_to_pixmap=False))
 
 
 class ROIPropertyTree(BECWidget, QWidget):
@@ -124,6 +147,24 @@ class ROIPropertyTree(BECWidget, QWidget):
         self.expand_toggle.action.toggled.connect(_exp_toggled)
 
         self.expand_toggle.action.setChecked(False)
+
+        # Lock/Unlock all ROIs
+        self.lock_all_action = MaterialIconAction(
+            "lock_open_right", "Lock/Unlock all ROIs", checkable=True, parent=self
+        )
+        tb.add_action("Lock/Unlock all ROIs", self.lock_all_action, self)
+
+        def _lock_all(checked: bool):
+            # checked -> everything locked (movable = False)
+            for r in self.controller.rois:
+                r.movable = not checked
+            new_icon = material_icon(
+                "lock" if checked else "lock_open_right", size=(20, 20), convert_to_pixmap=False
+            )
+            self.lock_all_action.action.setIcon(new_icon)
+
+        self.lock_all_action.action.toggled.connect(_lock_all)
+
         # colormap widget
         self.cmap = BECColorMapWidget(cmap=self.controller.colormap)
         tb.addWidget(QWidget())  # spacer
@@ -241,11 +282,24 @@ class ROIPropertyTree(BECWidget, QWidget):
 
     # --------------------------------------------------------- controller slots
     def _on_roi_added(self, roi: BaseROI):
+        # check the global setting from the toolbar
+        if self.lock_all_action.action.isChecked():
+            roi.movable = False
         # parent row with blank action column, name in ROI column
         parent = QTreeWidgetItem(self.tree, ["", "", ""])
         parent.setText(self.COL_ROI, roi.label)
         parent.setFlags(parent.flags() | Qt.ItemIsEditable)
-        # --- delete button in actions column ---
+        # --- actions widget (lock/unlock + delete) ---
+        actions_widget = QWidget()
+        actions_layout = QHBoxLayout(actions_widget)
+        actions_layout.setContentsMargins(0, 0, 0, 0)
+        actions_layout.setSpacing(3)
+
+        # lock / unlock toggle
+        lock_btn = ROILockButton(roi, parent=self)
+        actions_layout.addWidget(lock_btn)
+
+        # delete button
         del_btn = QToolButton()
         delete_icon = material_icon(
             "delete",
@@ -255,8 +309,11 @@ class ROIPropertyTree(BECWidget, QWidget):
             color=self.DELETE_BUTTON_COLOR,
         )
         del_btn.setIcon(delete_icon)
-        self.tree.setItemWidget(parent, self.COL_ACTION, del_btn)
         del_btn.clicked.connect(lambda _=None, r=roi: self._delete_roi(r))
+        actions_layout.addWidget(del_btn)
+
+        # install composite widget into the tree
+        self.tree.setItemWidget(parent, self.COL_ACTION, actions_widget)
         # color button
         color_btn = ColorButtonNative(parent=self, color=roi.line_color)
         self.tree.setItemWidget(parent, self.COL_PROPS, color_btn)
@@ -308,6 +365,12 @@ class ROIPropertyTree(BECWidget, QWidget):
         for c in range(3):
             self.tree.resizeColumnToContents(c)
 
+    def _toggle_movable(self, roi: BaseROI):
+        """
+        Toggle the `movable` property of the given ROI.
+        """
+        roi.movable = not roi.movable
+
     def _on_roi_removed(self, roi: BaseROI):
         item = self.roi_items.pop(roi, None)
         if item:
@@ -344,7 +407,7 @@ if __name__ == "__main__":  # pragma: no cover
     import sys
 
     import numpy as np
-    from qtpy.QtWidgets import QApplication, QHBoxLayout, QVBoxLayout
+    from qtpy.QtWidgets import QApplication
 
     from bec_widgets.widgets.plots.image.image import Image
 

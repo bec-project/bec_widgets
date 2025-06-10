@@ -104,6 +104,7 @@ class BaseROI(BECConnector):
 
     nameChanged = Signal(str)
     penChanged = Signal()
+    movableChanged = Signal(bool)
     USER_ACCESS = [
         "label",
         "label.setter",
@@ -224,6 +225,7 @@ class BaseROI(BECConnector):
                 self.add_scale_handle()  # add custom scale handles
             else:
                 self.remove_scale_handles()  # remove custom scale handles
+            self.movableChanged.emit(value)
 
     @property
     def label(self) -> str:
