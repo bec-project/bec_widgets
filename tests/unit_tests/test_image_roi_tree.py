@@ -148,10 +148,10 @@ def test_delete_roi_button(roi_tree, image_widget, qtbot):
     roi = image_widget.add_roi(kind="rect", name="to_delete")
     item = roi_tree.roi_items[roi]
 
-    # Get the delete button
-    del_btn = roi_tree.tree.itemWidget(item, roi_tree.COL_ACTION)
+    action_widget = roi_tree.tree.itemWidget(item, roi_tree.COL_ACTION)
+    layout = action_widget.layout()
 
-    # Click the delete button
+    del_btn = layout.itemAt(1).widget()
     del_btn.click()
     qtbot.wait(200)
 
@@ -331,3 +331,67 @@ def test_add_roi_from_toolbar(qtbot, mocked_client):
 
     # Verify it's a circle ROI
     assert isinstance(new_roi, CircularROI)
+
+
+def test_roi_lock_button(roi_tree, image_widget, qtbot):
+    """Verify the individual lock button toggles ROI.movable."""
+    roi = image_widget.add_roi(kind="rect", name="lock_test")
+    item = roi_tree.roi_items[roi]
+
+    # Lock button is the first widget in the Actions layout
+    action_widget = roi_tree.tree.itemWidget(item, roi_tree.COL_ACTION)
+    lock_btn = action_widget.layout().itemAt(0).widget()
+
+    # Initially unlocked
+    assert roi.movable
+    assert not lock_btn.isChecked()
+
+    # Lock it
+    lock_btn.click()
+    qtbot.wait(200)
+    assert not roi.movable
+    assert lock_btn.isChecked()
+
+    # Unlock again
+    lock_btn.click()
+    qtbot.wait(200)
+    assert roi.movable
+    assert not lock_btn.isChecked()
+
+
+def test_global_lock_all_button(roi_tree, image_widget, qtbot):
+    """Verify the toolbar lock-all action locks/unlocks every ROI."""
+    roi1 = image_widget.add_roi(kind="rect", name="g1")
+    roi2 = image_widget.add_roi(kind="circle", name="g2")
+
+    lock_all = roi_tree.lock_all_action.action
+
+    # Start unlocked
+    assert roi1.movable and roi2.movable
+    assert not lock_all.isChecked()
+
+    # Toggle → lock everything
+    lock_all.trigger()
+    qtbot.wait(200)
+    assert lock_all.isChecked()
+    assert not roi1.movable and not roi2.movable
+
+    # Toggle again → unlock everything
+    lock_all.trigger()
+    qtbot.wait(200)
+    assert not lock_all.isChecked()
+    assert roi1.movable and roi2.movable
+
+
+def test_new_roi_respects_global_lock(roi_tree, image_widget, qtbot):
+    """When the global lock-all toggle is active, newly added ROIs start locked."""
+    # Enable global lock
+    roi_tree.lock_all_action.action.setChecked(True)
+    qtbot.wait(100)
+
+    # Add ROI after lock enabled
+    roi = image_widget.add_roi(kind="rect", name="new_locked")
+
+    assert not roi.movable
+    # Disable global lock again
+    roi_tree.lock_all_action.action.setChecked(False)
