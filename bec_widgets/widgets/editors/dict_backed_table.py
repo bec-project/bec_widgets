@@ -113,11 +113,13 @@ class DictBackedTableModel(QAbstractTableModel):
     @SafeSlot()
     def add_row(self):
         self.insertRow(self.rowCount())
+        self.dataChanged.emit(self.index(self.rowCount(), 0), self.index(self.rowCount(), 1), 0)
 
     @SafeSlot(list)
     def delete_rows(self, rows: list[int]):
         # delete from the end so indices stay correct
         for row in sorted(rows, reverse=True):
+            self.dataChanged.emit(self.index(row, 0), self.index(row, 1), 0)
             self.removeRows(row, 1, QModelIndex())
 
     def set_default(self, value: dict | None):
@@ -154,16 +156,20 @@ class DictBackedTable(QWidget):
 
         self._layout = QHBoxLayout()
         self.setLayout(self._layout)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+
         self._table_model = DictBackedTableModel(initial_data)
         self._table_view = QTreeView()
 
         self._table_view.setModel(self._table_model)
-        self.set_min_height_in_lines(max(5, len(initial_data)))
-        self.set_max_height_in_lines(len(initial_data))
+        self._min_lines = 3
+        self.set_height_in_lines(len(initial_data))
         self._table_view.setSizePolicy(
             QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         )
         self._table_view.setAlternatingRowColors(True)
+        self._table_view.setUniformRowHeights(True)
+        self._table_view.setWordWrap(False)
         self._table_view.header().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self._table_view.header().setSectionResizeMode(5, QtWidgets.QHeaderView.Stretch)
         self.autoscale = autoscale_to_data
@@ -218,19 +224,15 @@ class DictBackedTable(QWidget):
             keys (list[str]): list of keys which are forbidden."""
         self._table_model.update_disallowed_keys(keys)
 
-    def set_min_height_in_lines(self, lines: int):
-        self._min_lines = lines
-        self._table_view.setMinimumHeight(QFontMetrics(self._table_view.font()).height() * lines)
-
-    def set_max_height_in_lines(self, lines: int):
+    def set_height_in_lines(self, lines: int):
         self._table_view.setMaximumHeight(
-            QFontMetrics(self._table_view.font()).height() * max(lines, self._min_lines)
+            int(QFontMetrics(self._table_view.font()).height() * max(lines + 2, self._min_lines))
         )
 
     @SafeSlot()
     @SafeSlot(dict)
     def scale_to_data(self, *_):
-        self.set_max_height_in_lines(self._table_model.length())
+        self.set_height_in_lines(self._table_model.length())
 
     @SafeProperty(bool)
     def autoscale(self):  # type: ignore
