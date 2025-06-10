@@ -532,6 +532,26 @@ class BaseROI(RPCBase):
 
     @property
     @rpc_call
+    def movable(self) -> "bool":
+        """
+        Gets whether this ROI is movable.
+
+        Returns:
+            bool: True if the ROI can be moved, False otherwise.
+        """
+
+    @movable.setter
+    @rpc_call
+    def movable(self) -> "bool":
+        """
+        Gets whether this ROI is movable.
+
+        Returns:
+            bool: True if the ROI can be moved, False otherwise.
+        """
+
+    @property
+    @rpc_call
     def line_color(self) -> "str":
         """
         Gets the current line color of the ROI.
@@ -637,6 +657,26 @@ class CircularROI(RPCBase):
 
         Returns:
             str: The current name of the ROI.
+        """
+
+    @property
+    @rpc_call
+    def movable(self) -> "bool":
+        """
+        Gets whether this ROI is movable.
+
+        Returns:
+            bool: True if the ROI can be moved, False otherwise.
+        """
+
+    @movable.setter
+    @rpc_call
+    def movable(self) -> "bool":
+        """
+        Gets whether this ROI is movable.
+
+        Returns:
+            bool: True if the ROI can be moved, False otherwise.
         """
 
     @property
@@ -1494,6 +1534,7 @@ class Image(RPCBase):
         line_width: "int | None" = 5,
         pos: "tuple[float, float] | None" = (10, 10),
         size: "tuple[float, float] | None" = (50, 50),
+        movable: "bool" = True,
         **pg_kwargs,
     ) -> "RectangularROI | CircularROI":
         """
@@ -1505,6 +1546,7 @@ class Image(RPCBase):
             line_width(int): The line width of the ROI.
             pos(tuple): The position of the ROI.
             size(tuple): The size of the ROI.
+            movable(bool): Whether the ROI is movable.
             **pg_kwargs: Additional arguments for the ROI.
 
         Returns:
@@ -2662,6 +2704,26 @@ class RectangularROI(RPCBase):
 
         Returns:
             str: The current name of the ROI.
+        """
+
+    @property
+    @rpc_call
+    def movable(self) -> "bool":
+        """
+        Gets whether this ROI is movable.
+
+        Returns:
+            bool: True if the ROI can be moved, False otherwise.
+        """
+
+    @movable.setter
+    @rpc_call
+    def movable(self) -> "bool":
+        """
+        Gets whether this ROI is movable.
+
+        Returns:
+            bool: True if the ROI can be moved, False otherwise.
         """
 
     @property
