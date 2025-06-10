@@ -16,7 +16,6 @@ from qtpy.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QToolButton,
     QVBoxLayout,
     QWidget,
