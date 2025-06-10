@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v2.13.0 (2025-06-10)
+
+### Bug Fixes
+
+- **roi**: Removed roi handle adding/removing inconsistencies
+  ([`f904499`](https://github.com/bec-project/bec_widgets/commit/f9044996f6d62cdbb693149934b09625fb39fd55))
+
+### Features
+
+- **image_roi_tree**: Lock/unlock rois possible through the ROIPropertyTree
+  ([`594185d`](https://github.com/bec-project/bec_widgets/commit/594185dde9c73991489f2154507f1c3d3822c5b4))
+
+- **roi**: Rois can be lock to be not moved by mouse
+  ([`46d7e3f`](https://github.com/bec-project/bec_widgets/commit/46d7e3f5170a5f8b444043bc49651921816f7003))
+
+
 ## v2.12.4 (2025-06-10)
 
 ### Bug Fixes
