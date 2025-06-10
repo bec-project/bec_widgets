@@ -437,6 +437,23 @@ class RectangularROI(BaseROI, pg.RectROI):
         self.hoverPen = fn.mkPen(color=(255, 0, 0), width=3, style=QtCore.Qt.DashLine)
         self.handleHoverPen = fn.mkPen("lime", width=4)
 
+    def _normalized_edges(self) -> tuple[float, float, float, float]:
+        """
+        Return rectangle edges as (left, bottom, right, top) with consistent
+        ordering even when the ROI has been inverted by its scale handles.
+
+        Returns:
+            tuple: A tuple containing the left, bottom, right, and top edges
+                of the ROI rectangle in normalized coordinates.
+        """
+        x0, y0 = self.pos().x(), self.pos().y()
+        w, h = self.state["size"]
+        x_left = min(x0, x0 + w)
+        x_right = max(x0, x0 + w)
+        y_bottom = min(y0, y0 + h)
+        y_top = max(y0, y0 + h)
+        return x_left, y_bottom, x_right, y_top
+
     def add_scale_handle(self):
         """
         Add scale handles at every corner and edge of the ROI.
@@ -465,17 +482,15 @@ class RectangularROI(BaseROI, pg.RectROI):
 
     def _on_region_changed(self):
         """
-        Handles ROI region change events.
+        Handles changes to the ROI's region.
 
         This method is called whenever the ROI's position or size changes.
         It calculates the new corner coordinates and emits the edgesChanged signal
         with the updated coordinates.
         """
-        x0, y0 = self.pos().x(), self.pos().y()
-        w, h = self.state["size"]
-        self.edgesChanged.emit(x0, y0, x0 + w, y0 + h)
-        viewBox = self.parent_plot_item.vb
-        viewBox.update()
+        x_left, y_bottom, x_right, y_top = self._normalized_edges()
+        self.edgesChanged.emit(x_left, y_bottom, x_right, y_top)
+        self.parent_plot_item.vb.update()
 
     def mouseDragEvent(self, ev):
         """
@@ -489,9 +504,8 @@ class RectangularROI(BaseROI, pg.RectROI):
         """
         super().mouseDragEvent(ev)
         if ev.isFinish():
-            x0, y0 = self.pos().x(), self.pos().y()
-            w, h = self.state["size"]
-            self.edgesReleased.emit(x0, y0, x0 + w, y0 + h)
+            x_left, y_bottom, x_right, y_top = self._normalized_edges()
+            self.edgesReleased.emit(x_left, y_bottom, x_right, y_top)
 
     def get_coordinates(self, typed: bool | None = None) -> dict | tuple:
         """
@@ -510,17 +524,16 @@ class RectangularROI(BaseROI, pg.RectROI):
         if typed is None:
             typed = self.description
 
-        x0, y0 = self.pos().x(), self.pos().y()
-        w, h = self.state["size"]
-        x1, y1 = x0 + w, y0 + h
+        x_left, y_bottom, x_right, y_top = self._normalized_edges()
+
         if typed:
             return {
-                "bottom_left": (x0, y0),
-                "bottom_right": (x1, y0),
-                "top_left": (x0, y1),
-                "top_right": (x1, y1),
+                "bottom_left": (x_left, y_bottom),
+                "bottom_right": (x_right, y_bottom),
+                "top_left": (x_left, y_top),
+                "top_right": (x_right, y_top),
             }
-        return ((x0, y0), (x1, y0), (x0, y1), (x1, y1))
+        return (x_left, y_bottom), (x_right, y_bottom), (x_left, y_top), (x_right, y_top)
 
     def _lookup_scene_image(self):
         """
@@ -654,7 +667,7 @@ class CircularROI(BaseROI, pg.CircleROI):
         if typed is None:
             typed = self.description
 
-        d = self.state["size"][0]
+        d = abs(self.state["size"][0])
         cx = self.pos().x() + d / 2
         cy = self.pos().y() + d / 2
 
