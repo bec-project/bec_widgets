@@ -235,7 +235,6 @@ class ROIPropertyTree(BECWidget, QWidget):
             self._temp_roi = None
             self._set_roi_draw_mode(None)
             # register via controller
-            final_roi.add_scale_handle()
             self.controller.add_roi(final_roi)
             return True
         return super().eventFilter(obj, event)

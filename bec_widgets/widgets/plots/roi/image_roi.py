@@ -127,6 +127,7 @@ class BaseROI(BECConnector):
         label: str | None = None,
         line_color: str | None = None,
         line_width: int = 5,
+        movable: bool = True,
         # all remaining pg.*ROI kwargs (pos, size, pen, …)
         **pg_kwargs,
     ):
@@ -155,6 +156,7 @@ class BaseROI(BECConnector):
             gui_id=gui_id,
             removable=True,
             invertible=True,
+            movable=movable,
             **pg_kwargs,
         )
 
@@ -162,7 +164,12 @@ class BaseROI(BECConnector):
         self._line_color = line_color or "#ffffff"
         self._line_width = line_width
         self._description = True
+        self._movable = True  # allow moving by default
         self.setPen(mkPen(self._line_color, width=self._line_width))
+
+        # Reset Handles to avoid inherited handles from pyqtgraph
+        self.remove_scale_handles()  # remove any existing handles from pyqtgraph.RectROI
+        self.add_scale_handle()  # add custom scale handles
 
     def set_parent(self, parent: Image):
         """
@@ -337,7 +344,17 @@ class BaseROI(BECConnector):
         )
 
     def add_scale_handle(self):
+        """Add scale handles to the ROI."""
         return
+
+    def remove_scale_handles(self):
+        """Remove all scale handles from the ROI."""
+        handles = self.handles
+        for i in range(len(handles)):
+            try:
+                self.removeHandle(0)
+            except IndexError:
+                continue
 
     def set_position(self, x: float, y: float):
         """
@@ -355,12 +372,7 @@ class BaseROI(BECConnector):
         if controller and self in controller.rois:
             controller.remove_roi(self)
             return  # controller will call back into this method once deregistered
-        handles = self.handles
-        for i in range(len(handles)):
-            try:
-                self.removeHandle(0)
-            except IndexError:
-                continue
+        self.remove_scale_handles()
         self.rpc_register.remove_rpc(self)
         self.parent_image.plot_item.removeItem(self)
         viewBox = self.parent_plot_item.vb
@@ -474,11 +486,6 @@ class RectangularROI(BaseROI, pg.RectROI):
         self.addScaleHandle([0.5, 1], [0.5, 0])  # bottom edge
         self.addScaleHandle([0, 0.5], [1, 0.5])  # left edge
         self.addScaleHandle([1, 0.5], [0, 0.5])  # right edge
-
-        self.handlePen = fn.mkPen("#ffff00", width=5)  # bright yellow outline
-        self.handleHoverPen = fn.mkPen("#00ffff", width=4)  # cyan, thicker when hovered
-        self.handleBrush = (200, 200, 0, 120)  # semi-transparent fill
-        self.handleHoverBrush = (0, 255, 255, 160)
 
     def _on_region_changed(self):
         """
@@ -616,6 +623,14 @@ class CircularROI(BaseROI, pg.CircleROI):
         )
         self.sigRegionChanged.connect(self._on_region_changed)
         self._adorner = LabelAdorner(self)
+        self.hoverPen = fn.mkPen(color=(255, 0, 0), width=3, style=QtCore.Qt.DashLine)
+        self.handleHoverPen = fn.mkPen("lime", width=4)
+
+    def add_scale_handle(self):
+        """
+        Adds scale handles to the circular ROI.
+        """
+        self._addHandles()  # wrapper around pg.CircleROI._addHandles
 
     def _on_region_changed(self):
         """
