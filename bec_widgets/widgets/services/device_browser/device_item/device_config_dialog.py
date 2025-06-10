@@ -134,9 +134,7 @@ class DeviceConfigDialog(BECWidget, QDialog):
             self.client.device_manager is not None
             and self._device in self.client.device_manager.devices
         ):
-            dev = self.client.device_manager.devices.get(self._device)
-            dev.read_configuration(cached=False)
-            self._initial_config = dev._config
+            self._initial_config = self.client.device_manager.devices.get(self._device)._config
 
     def _fill_form(self):
         self._form.set_data(DeviceConfigModel.model_validate(self._initial_config))
@@ -146,8 +144,11 @@ class DeviceConfigDialog(BECWidget, QDialog):
         diff = {
             k: v for k, v in new_config.items() if self._initial_config.get(k) != new_config.get(k)
         }
-        # TODO: replace when https://github.com/bec-project/bec/issues/528 is resolved
         if diff.get("deviceConfig") is not None:
+            # TODO: special cased in some parts of device manager but not others, should
+            # be removed in config update as with below issue
+            diff["deviceConfig"].pop("device_access", None)
+            # TODO: replace when https://github.com/bec-project/bec/issues/528 is resolved
             diff["deviceConfig"] = {
                 k: literal_eval(str(v)) for k, v in diff["deviceConfig"].items()
             }

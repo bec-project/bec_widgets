@@ -72,7 +72,7 @@ class TypedForm(BECWidget, QWidget):
             FormItemSpec(name=name, item_type=item_type, pretty_display=pretty_display)
             for name, item_type in items  # type: ignore
         ]
-        self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
         self._layout = QVBoxLayout()
         self._layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self._layout)
@@ -80,11 +80,9 @@ class TypedForm(BECWidget, QWidget):
         self._enabled: bool = enabled
 
         self._form_grid_container = QWidget(parent=self)
-        self._form_grid_container.setSizePolicy(
-            QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding
-        )
+        self._form_grid_container.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
         self._form_grid = QWidget(parent=self._form_grid_container)
-        self._form_grid.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        self._form_grid.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
         self._layout.addWidget(self._form_grid_container)
         self._form_grid_container.setLayout(QVBoxLayout())
         self._form_grid.setLayout(self._new_grid_layout())
@@ -113,7 +111,7 @@ class TypedForm(BECWidget, QWidget):
         grid.addWidget(label, row, 0)
         widget = self._widget_from_type(item, self._widget_types)(parent=self, spec=item)
         widget.valueChanged.connect(self.value_changed)
-        widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
         grid.addWidget(widget, row, 1)
 
     def enumerate_form_widgets(self):
@@ -139,7 +137,7 @@ class TypedForm(BECWidget, QWidget):
             old_layout.deleteLater()
             self._form_grid.deleteLater()
         self._form_grid = QWidget()
-        self._form_grid.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        self._form_grid.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
         self._form_grid.setLayout(self._new_grid_layout())
         self._form_grid_container.layout().addWidget(self._form_grid)
 

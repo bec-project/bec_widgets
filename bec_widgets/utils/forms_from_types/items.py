@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 from qtpy import QtCore
-from qtpy.QtCore import QSize, Signal  # type: ignore
+from qtpy.QtCore import QSize, Qt, Signal  # type: ignore
 from qtpy.QtGui import QFontMetrics
 from qtpy.QtWidgets import (
     QApplication,
@@ -372,9 +372,11 @@ class ListFormItem(DynamicFormItem):
         else:
             self._types = _ItemAndWidgetType(str, QLineEdit, "")
         super().__init__(parent=parent, spec=spec)
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self._main_widget: QListWidget
         self._data = []
-        self.setFixedHeight(QFontMetrics(self.font()).height() * 6)
+        self._min_lines = 2 if spec.pretty_display else 4
+        self._repop(self._data)
 
     def sizeHint(self):
         default = super().sizeHint()
@@ -383,6 +385,7 @@ class ListFormItem(DynamicFormItem):
     def _add_main_widget(self) -> None:
         self._main_widget = QListWidget()
         self._layout.addWidget(self._main_widget)
+        self._layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self._add_buttons()
 
     def _add_buttons(self):
@@ -407,11 +410,13 @@ class ListFormItem(DynamicFormItem):
         self._main_widget.clear()
         for val in data:
             self._add_list_item(val)
+        self.scale_to_data()
 
     def _add_data_item(self, val=None):
         val = val or self._types.default
         self._data.append(val)
         self._add_list_item(val)
+        self._repop(self._data)
 
     def _add_list_item(self, val):
         item = QListWidgetItem(self._main_widget)
@@ -453,15 +458,26 @@ class ListFormItem(DynamicFormItem):
         self._data = list(value)
         self._repop(self._data)
 
+    def _line_height(self):
+        return QFontMetrics(self._main_widget.font()).height()
+
+    def set_max_height_in_lines(self, lines: int):
+        outer_inc = 1 if self._spec.pretty_display else 3
+        self._main_widget.setFixedHeight(self._line_height() * max(lines, self._min_lines))
+        self._button_holder.setFixedHeight(self._line_height() * (max(lines, self._min_lines) + 1))
+        self.setFixedHeight(self._line_height() * (max(lines, self._min_lines) + outer_inc))
+
+    def scale_to_data(self, *_):
+        self.set_max_height_in_lines(self._main_widget.count() + 1)
+
 
 class SetFormItem(ListFormItem):
-
     def _add_main_widget(self) -> None:
         super()._add_main_widget()
         self._add_item_field = self._types.widget()
         self._buttons.addWidget(QLabel("Add new:"))
         self._buttons.addWidget(self._add_item_field)
-        self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
+        self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Minimum)
 
     @SafeSlot()
     def _add_row(self):

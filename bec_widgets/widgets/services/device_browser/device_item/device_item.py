@@ -78,7 +78,6 @@ class DeviceItem(ExpandableGroupFrame):
 
     @SafeSlot(popup_error=True)
     def _reload_config(self, *_):
-        self.dev[self.device].read_configuration(cached=False)
         self.set_display_config(self.dev[self.device]._config)
 
     def set_display_config(self, config_dict: dict):
@@ -113,6 +112,7 @@ class DeviceItem(ExpandableGroupFrame):
 
 if __name__ == "__main__":  # pragma: no cover
     import sys
+    from unittest.mock import MagicMock
 
     from qtpy.QtWidgets import QApplication
 
@@ -125,22 +125,20 @@ if __name__ == "__main__":  # pragma: no cover
     widget = QWidget()
     layout = QHBoxLayout()
     widget.setLayout(layout)
-    item = DeviceItem(widget, "Device")
+    mock_config = {
+        "name": "Test Device",
+        "enabled": True,
+        "deviceClass": "FakeDeviceClass",
+        "deviceConfig": {"kwarg1": "value1"},
+        "readoutPriority": "baseline",
+        "description": "A device for testing out a widget",
+        "readOnly": True,
+        "softwareTrigger": False,
+        "deviceTags": {"tag1", "tag2", "tag3"},
+        "userParameter": {"some_setting": "some_ value"},
+    }
+    item = DeviceItem(widget, "Device", {"Device": MagicMock(enabled=True, _config=mock_config)})
     layout.addWidget(DarkModeButton())
     layout.addWidget(item)
-    item.set_display_config(
-        {
-            "name": "Test Device",
-            "enabled": True,
-            "deviceClass": "FakeDeviceClass",
-            "deviceConfig": {"kwarg1": "value1"},
-            "readoutPriority": "baseline",
-            "description": "A device for testing out a widget",
-            "readOnly": True,
-            "softwareTrigger": False,
-            "deviceTags": {"tag1", "tag2", "tag3"},
-            "userParameter": {"some_setting": "some_ value"},
-        }
-    )
     widget.show()
     sys.exit(app.exec_())
