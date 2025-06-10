@@ -559,6 +559,7 @@ class ImageBase(PlotBase):
         line_width: int | None = 5,
         pos: tuple[float, float] | None = (10, 10),
         size: tuple[float, float] | None = (50, 50),
+        movable: bool = True,
         **pg_kwargs,
     ) -> RectangularROI | CircularROI:
         """
@@ -570,6 +571,7 @@ class ImageBase(PlotBase):
             line_width(int): The line width of the ROI.
             pos(tuple): The position of the ROI.
             size(tuple): The size of the ROI.
+            movable(bool): Whether the ROI is movable.
             **pg_kwargs: Additional arguments for the ROI.
 
         Returns:
@@ -584,6 +586,7 @@ class ImageBase(PlotBase):
                 parent_image=self,
                 line_width=line_width,
                 label=name,
+                movable=movable,
                 **pg_kwargs,
             )
         elif kind == "circle":
@@ -593,6 +596,7 @@ class ImageBase(PlotBase):
                 parent_image=self,
                 line_width=line_width,
                 label=name,
+                movable=movable,
                 **pg_kwargs,
             )
         else:

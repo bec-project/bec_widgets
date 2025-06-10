@@ -205,3 +205,29 @@ def test_roi_set_position(bec_image_widget_with_roi):
         pos = roi.pos()
         assert int(pos.x()) == 10
         assert int(pos.y()) == 15
+
+
+def test_roi_movable_property(bec_image_widget_with_roi, qtbot):
+    """Verify BaseROI.movable toggles flags, handles, and emits a signal."""
+    _widget, roi, _ = bec_image_widget_with_roi
+
+    # defaults – ROI is movable
+    assert roi.movable
+    assert roi.translatable and roi.rotatable and roi.resizable and roi.removable
+    assert len(roi.handles) > 0
+
+    # lock it
+    with qtbot.waitSignal(roi.movableChanged) as blocker:
+        roi.movable = False
+    assert blocker.args == [False]
+    assert not roi.movable
+    assert not (roi.translatable or roi.rotatable or roi.resizable or roi.removable)
+    assert len(roi.handles) == 0
+
+    # unlock again
+    with qtbot.waitSignal(roi.movableChanged) as blocker:
+        roi.movable = True
+    assert blocker.args == [True]
+    assert roi.movable
+    assert roi.translatable and roi.rotatable and roi.resizable and roi.removable
+    assert len(roi.handles) > 0

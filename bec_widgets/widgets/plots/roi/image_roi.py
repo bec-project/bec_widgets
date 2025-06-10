@@ -107,6 +107,8 @@ class BaseROI(BECConnector):
     USER_ACCESS = [
         "label",
         "label.setter",
+        "movable",
+        "movable.setter",
         "line_color",
         "line_color.setter",
         "line_width",
@@ -164,12 +166,13 @@ class BaseROI(BECConnector):
         self._line_color = line_color or "#ffffff"
         self._line_width = line_width
         self._description = True
-        self._movable = True  # allow moving by default
+        self._movable = movable
         self.setPen(mkPen(self._line_color, width=self._line_width))
 
         # Reset Handles to avoid inherited handles from pyqtgraph
         self.remove_scale_handles()  # remove any existing handles from pyqtgraph.RectROI
-        self.add_scale_handle()  # add custom scale handles
+        if movable:
+            self.add_scale_handle()  # add custom scale handles
 
     def set_parent(self, parent: Image):
         """
@@ -188,6 +191,39 @@ class BaseROI(BECConnector):
             Image: The parent image object, or None if no parent is set.
         """
         return self.parent_image
+
+    @property
+    def movable(self) -> bool:
+        """
+        Gets whether this ROI is movable.
+
+        Returns:
+            bool: True if the ROI can be moved, False otherwise.
+        """
+        return self._movable
+
+    @movable.setter
+    def movable(self, value: bool):
+        """
+        Sets whether this ROI is movable.
+
+        If the new value is different from the current value, this method updates
+        the internal state and emits the penChanged signal.
+
+        Args:
+            value (bool): True to make the ROI movable, False to make it fixed.
+        """
+        if value != self._movable:
+            self._movable = value
+            # All relevant properties from pyqtgraph to block movement
+            self.translatable = value
+            self.rotatable = value
+            self.resizable = value
+            self.removable = value
+            if value:
+                self.add_scale_handle()  # add custom scale handles
+            else:
+                self.remove_scale_handles()  # remove custom scale handles
 
     @property
     def label(self) -> str:
@@ -411,6 +447,7 @@ class RectangularROI(BaseROI, pg.RectROI):
         label: str | None = None,
         line_color: str | None = None,
         line_width: int = 5,
+        movable: bool = True,
         resize_handles: bool = True,
         **extra_pg,
     ):
@@ -441,6 +478,7 @@ class RectangularROI(BaseROI, pg.RectROI):
             pos=pos,
             size=size,
             pen=pen,
+            movable=movable,
             **extra_pg,
         )
 
@@ -588,6 +626,7 @@ class CircularROI(BaseROI, pg.CircleROI):
         label: str | None = None,
         line_color: str | None = None,
         line_width: int = 5,
+        movable: bool = True,
         **extra_pg,
     ):
         """
@@ -619,6 +658,7 @@ class CircularROI(BaseROI, pg.CircleROI):
             pos=pos,
             size=size,
             pen=pen,
+            movable=movable,
             **extra_pg,
         )
         self.sigRegionChanged.connect(self._on_region_changed)
