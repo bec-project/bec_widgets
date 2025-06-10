@@ -6,16 +6,21 @@ import numpy as np
 import pytest
 
 from bec_widgets.widgets.plots.image.image import Image
-from bec_widgets.widgets.plots.roi.image_roi import CircularROI, RectangularROI, ROIController
+from bec_widgets.widgets.plots.roi.image_roi import (
+    CircularROI,
+    EllipticalROI,
+    RectangularROI,
+    ROIController,
+)
 from tests.unit_tests.client_mocks import mocked_client
 from tests.unit_tests.conftest import create_widget
 
 
-@pytest.fixture(params=["rect", "circle"])
+@pytest.fixture(params=["rect", "circle", "ellipse"])
 def bec_image_widget_with_roi(qtbot, request, mocked_client):
     """Return (widget, roi, shape_label) for each ROI class."""
 
-    roi_type: Literal["rect", "circle"] = request.param
+    roi_type: Literal["rect", "circle", "ellipse"] = request.param
 
     # Build an Image widget with a trivial 100×100 zeros array
     widget: Image = create_widget(qtbot, Image, client=mocked_client)
@@ -39,7 +44,12 @@ def test_default_properties(bec_image_widget_with_roi):
     assert roi.line_width == 5
 
     # concrete subclass type
-    assert isinstance(roi, RectangularROI) if roi_type == "rect" else isinstance(roi, CircularROI)
+    if roi_type == "rect":
+        assert isinstance(roi, RectangularROI)
+    elif roi_type == "circle":
+        assert isinstance(roi, CircularROI)
+    elif roi_type == "ellipse":
+        assert isinstance(roi, EllipticalROI)
 
 
 def test_coordinate_structures(bec_image_widget_with_roi):
@@ -98,7 +108,7 @@ def test_color_uniqueness_across_multiple_rois(qtbot, mocked_client):
     widget: Image = create_widget(qtbot, Image, client=mocked_client)
 
     # add two of each ROI type
-    for _kind in ("rect", "circle"):
+    for _kind in ("rect", "circle", "ellipse"):
         widget.add_roi(kind=_kind)
         widget.add_roi(kind=_kind)
 

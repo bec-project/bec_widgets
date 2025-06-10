@@ -24,6 +24,7 @@ from bec_widgets.utils.toolbar import MaterialIconAction, ModularToolBar
 from bec_widgets.widgets.plots.roi.image_roi import (
     BaseROI,
     CircularROI,
+    EllipticalROI,
     RectangularROI,
     ROIController,
 )
@@ -126,6 +127,9 @@ class ROIPropertyTree(BECWidget, QWidget):
         self.add_circle_action = MaterialIconAction("add_circle", "Add Circle ROI", True, self)
         tb.add_action("Add Rect ROI", self.add_rect_action, self)
         tb.add_action("Add Circle ROI", self.add_circle_action, self)
+        # --- Ellipse ROI draw action ---
+        self.add_ellipse_action = MaterialIconAction("vignette", "Add Ellipse ROI", True, self)
+        tb.add_action("Add Ellipse ROI", self.add_ellipse_action, self)
 
         # Expand/Collapse toggle
         self.expand_toggle = MaterialIconAction(
@@ -174,7 +178,7 @@ class ROIPropertyTree(BECWidget, QWidget):
         self.controller.paletteChanged.connect(lambda cmap: setattr(self.cmap, "colormap", cmap))
 
         # ROI drawing state
-        self._roi_draw_mode = None  # 'rect' | 'circle' | None
+        self._roi_draw_mode = None  # 'rect' | 'circle' | 'ellipse' | None
         self._roi_start_pos = None  # QPointF in image coords
         self._temp_roi = None  # live ROI being resized while dragging
 
@@ -184,6 +188,9 @@ class ROIPropertyTree(BECWidget, QWidget):
         )
         self.add_circle_action.action.toggled.connect(
             lambda on: self._set_roi_draw_mode("circle" if on else None)
+        )
+        self.add_ellipse_action.action.toggled.connect(
+            lambda on: self._set_roi_draw_mode("ellipse" if on else None)
         )
         # capture mouse events on the plot scene
         self.plot.scene().installEventFilter(self)
@@ -218,12 +225,20 @@ class ROIPropertyTree(BECWidget, QWidget):
         if mode == "rect":
             self.add_rect_action.action.setChecked(True)
             self.add_circle_action.action.setChecked(False)
+            self.add_ellipse_action.action.setChecked(False)
         elif mode == "circle":
             self.add_rect_action.action.setChecked(False)
             self.add_circle_action.action.setChecked(True)
+            self.add_ellipse_action.action.setChecked(False)
+        elif mode == "ellipse":
+            self.add_rect_action.action.setChecked(False)
+            self.add_circle_action.action.setChecked(False)
+            self.add_ellipse_action.action.setChecked(True)
         else:
             self.add_rect_action.action.setChecked(False)
             self.add_circle_action.action.setChecked(False)
+            self.add_ellipse_action.action.setChecked(False)
+
         self._roi_draw_mode = mode
         self._roi_start_pos = None
         # remove any unfinished temp ROI
@@ -243,8 +258,14 @@ class ROIPropertyTree(BECWidget, QWidget):
                     parent_image=self.image_widget,
                     resize_handles=False,
                 )
-            if self._roi_draw_mode == "circle":
+            elif self._roi_draw_mode == "circle":
                 self._temp_roi = CircularROI(
+                    pos=[self._roi_start_pos.x() - 2.5, self._roi_start_pos.y() - 2.5],
+                    size=[5, 5],
+                    parent_image=self.image_widget,
+                )
+            elif self._roi_draw_mode == "ellipse":
+                self._temp_roi = EllipticalROI(
                     pos=[self._roi_start_pos.x() - 2.5, self._roi_start_pos.y() - 2.5],
                     size=[5, 5],
                     parent_image=self.image_widget,
@@ -258,13 +279,19 @@ class ROIPropertyTree(BECWidget, QWidget):
 
             if self._roi_draw_mode == "rect":
                 self._temp_roi.setSize([dx, dy])
-            if self._roi_draw_mode == "circle":
+            elif self._roi_draw_mode == "circle":
                 r = max(
                     1, math.hypot(dx, dy)
                 )  # radius never smaller than 1 for safety of handle mapping, otherwise SEGFAULT
                 d = 2 * r  # diameter
                 self._temp_roi.setPos(self._roi_start_pos.x() - r, self._roi_start_pos.y() - r)
                 self._temp_roi.setSize([d, d])
+            elif self._roi_draw_mode == "ellipse":
+                # Safeguard: enforce a minimum ellipse width/height of 2 px
+                min_dim = 2.0
+                w = dx if abs(dx) >= min_dim else math.copysign(min_dim, dx or 1.0)
+                h = dy if abs(dy) >= min_dim else math.copysign(min_dim, dy or 1.0)
+                self._temp_roi.setSize([w, h])
             return True
         elif (
             event.type() == QEvent.GraphicsSceneMouseRelease
