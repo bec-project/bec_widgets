@@ -24,6 +24,7 @@ from bec_widgets.widgets.plots.plot_base import PlotBase
 from bec_widgets.widgets.plots.roi.image_roi import (
     BaseROI,
     CircularROI,
+    EllipticalROI,
     RectangularROI,
     ROIController,
 )
@@ -554,7 +555,7 @@ class ImageBase(PlotBase):
 
     def add_roi(
         self,
-        kind: Literal["rect", "circle"] = "rect",
+        kind: Literal["rect", "circle", "ellipse"] = "rect",
         name: str | None = None,
         line_width: int | None = 5,
         pos: tuple[float, float] | None = (10, 10),
@@ -591,6 +592,16 @@ class ImageBase(PlotBase):
             )
         elif kind == "circle":
             roi = CircularROI(
+                pos=pos,
+                size=size,
+                parent_image=self,
+                line_width=line_width,
+                label=name,
+                movable=movable,
+                **pg_kwargs,
+            )
+        elif kind == "ellipse":
+            roi = EllipticalROI(
                 pos=pos,
                 size=size,
                 parent_image=self,

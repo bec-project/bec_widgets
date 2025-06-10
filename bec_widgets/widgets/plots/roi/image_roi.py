@@ -750,6 +750,92 @@ class CircularROI(BaseROI, pg.CircleROI):
         return None
 
 
+class EllipticalROI(BaseROI, pg.EllipseROI):
+    """
+    Elliptical Region of Interest with centre/width/height tracking and auto-labelling.
+
+    Mirrors the behaviour of ``CircularROI`` but supports independent
+    horizontal and vertical radii.
+    """
+
+    centerChanged = Signal(float, float, float, float)  # cx, cy, width, height
+    centerReleased = Signal(float, float, float, float)
+
+    def __init__(
+        self,
+        *,
+        pos,
+        size,
+        pen=None,
+        config: ConnectionConfig | None = None,
+        gui_id: str | None = None,
+        parent_image: Image | None = None,
+        label: str | None = None,
+        line_color: str | None = None,
+        line_width: int = 5,
+        movable: bool = True,
+        **extra_pg,
+    ):
+        super().__init__(
+            config=config,
+            gui_id=gui_id,
+            parent_image=parent_image,
+            label=label,
+            line_color=line_color,
+            line_width=line_width,
+            pos=pos,
+            size=size,
+            pen=pen,
+            movable=movable,
+            **extra_pg,
+        )
+
+        self.sigRegionChanged.connect(self._on_region_changed)
+        self._adorner = LabelAdorner(self)
+        self.hoverPen = fn.mkPen(color=(255, 0, 0), width=3, style=QtCore.Qt.DashLine)
+        self.handleHoverPen = fn.mkPen("lime", width=4)
+
+    def add_scale_handle(self):
+        """Add scale handles to the elliptical ROI."""
+        self._addHandles()  # delegates to pg.EllipseROI
+
+    def _on_region_changed(self):
+        w = abs(self.state["size"][0])
+        h = abs(self.state["size"][1])
+        cx = self.pos().x() + w / 2
+        cy = self.pos().y() + h / 2
+        self.centerChanged.emit(cx, cy, w, h)
+        self.parent_plot_item.vb.update()
+
+    def mouseDragEvent(self, ev):
+        super().mouseDragEvent(ev)
+        if ev.isFinish():
+            w = abs(self.state["size"][0])
+            h = abs(self.state["size"][1])
+            cx = self.pos().x() + w / 2
+            cy = self.pos().y() + h / 2
+            self.centerReleased.emit(cx, cy, w, h)
+
+    def get_coordinates(self, typed: bool | None = None) -> dict | tuple:
+        """
+        Return the ellipse's centre and size.
+
+        Args:
+            typed (bool | None): If True returns dict; otherwise tuple.
+        """
+        if typed is None:
+            typed = self.description
+
+        w, h = map(abs, self.state["size"])  # raw diameters
+        major, minor = (w, h) if w >= h else (h, w)
+        cx = self.pos().x() + w / 2
+        cy = self.pos().y() + h / 2
+
+        if typed:
+            return {"center_x": cx, "center_y": cy, "major_axis": major, "minor_axis": minor}
+        return (cx, cy, major, minor)
+
+
 class ROIController(QObject):
     """Manages a collection of ROIs (Regions of Interest) with palette-assigned colors.
 
