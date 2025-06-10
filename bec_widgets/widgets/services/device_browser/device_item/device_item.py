@@ -6,6 +6,7 @@ from bec_lib.atlas_models import Device as DeviceConfigModel
 from bec_lib.devicemanager import DeviceContainer
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
+from PySide6.QtWidgets import QTabWidget, QVBoxLayout
 from qtpy.QtCore import QMimeData, QSize, Qt, Signal
 from qtpy.QtGui import QDrag
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QToolButton, QWidget
@@ -17,6 +18,9 @@ from bec_widgets.widgets.services.device_browser.device_item.device_config_dialo
 )
 from bec_widgets.widgets.services.device_browser.device_item.device_config_form import (
     DeviceConfigForm,
+)
+from bec_widgets.widgets.services.device_browser.device_item.device_signal_display import (
+    SignalDisplay,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -38,10 +42,25 @@ class DeviceItem(ExpandableGroupFrame):
         self._expanded_first_time = False
         self._data = None
         self.device = device
-        layout = QHBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        self.set_layout(layout)
 
+        self._layout = QHBoxLayout()
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._tab_widget = QTabWidget(tabShape=QTabWidget.TabShape.Rounded)
+        self._tab_widget.setDocumentMode(True)
+        self._layout.addWidget(self._tab_widget)
+
+        self.set_layout(self._layout)
+
+        self._form_page = QWidget()
+        self._form_page_layout = QVBoxLayout()
+        self._form_page.setLayout(self._form_page_layout)
+
+        self._signal_page = QWidget()
+        self._signal_page_layout = QVBoxLayout()
+        self._signal_page.setLayout(self._signal_page_layout)
+
+        self._tab_widget.addTab(self._form_page, "Configuration")
+        self._tab_widget.addTab(self._signal_page, "Signals")
         self.adjustSize()
 
     def _create_title_layout(self, title: str, icon: str):
@@ -64,7 +83,9 @@ class DeviceItem(ExpandableGroupFrame):
         if not self.expanded and not self._expanded_first_time:
             self._expanded_first_time = True
             self.form = DeviceConfigForm(parent=self, pretty_display=True)
-            self._contents.layout().addWidget(self.form)
+            self._form_page_layout.addWidget(self.form)
+            self.signals = SignalDisplay(parent=self, device=self.device)
+            self._signal_page_layout.addWidget(self.signals)
             self._reload_config()
             self.broadcast_size_hint.emit(self.sizeHint())
         super().switch_expanded_state()
