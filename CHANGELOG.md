@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v2.12.4 (2025-06-10)
+
+### Bug Fixes
+
+- **image_roi**: Coordinates are emitted correctly when handles are inverted; closes #672
+  ([`9ef418b`](https://github.com/bec-project/bec_widgets/commit/9ef418bf5597d4be77adc3c0c88c1c1619c9aa2f))
+
+### Continuous Integration
+
+- Add stale issue job
+  ([`b3ce680`](https://github.com/bec-project/bec_widgets/commit/b3ce68070d58cdd76559cbd7db04cdbcc6c1f075))
+
+
 ## v2.12.3 (2025-06-05)
 
 ### Bug Fixes
