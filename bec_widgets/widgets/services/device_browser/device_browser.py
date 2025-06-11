@@ -5,6 +5,7 @@ from functools import partial
 from bec_lib.callback_handler import EventType
 from bec_lib.logger import bec_logger
 from bec_lib.messages import ConfigAction
+from bec_qthemes import material_icon
 from pyqtgraph import SignalProxy
 from qtpy.QtCore import QSize, Signal
 from qtpy.QtWidgets import QListWidget, QListWidgetItem, QVBoxLayout, QWidget
@@ -14,6 +15,9 @@ from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.ui_loader import UILoader
 from bec_widgets.widgets.services.device_browser.device_item import DeviceItem
+from bec_widgets.widgets.services.device_browser.device_item.device_config_dialog import (
+    DeviceConfigDialog,
+)
 from bec_widgets.widgets.services.device_browser.util import map_device_type_to_icon
 
 logger = bec_logger.logger
@@ -49,6 +53,8 @@ class DeviceBrowser(BECWidget, QWidget):
             EventType.DEVICE_UPDATE, self.on_device_update
         )
         self.device_update.connect(self.update_device_list)
+        self.ui.add_button.clicked.connect(self._create_add_dialog)
+        self.ui.add_button.setIcon(material_icon("add", size=(20, 20), convert_to_pixmap=False))
 
         self.init_device_list()
         self.update_device_list()
@@ -62,6 +68,10 @@ class DeviceBrowser(BECWidget, QWidget):
         self.ui = UILoader(self).loader(ui_file_path)
         layout.addWidget(self.ui)
         self.setLayout(layout)
+
+    def _create_add_dialog(self):
+        dialog = DeviceConfigDialog(parent=self, device=None, action="add")
+        dialog.open()
 
     def on_device_update(self, action: ConfigAction, content: dict) -> None:
         """

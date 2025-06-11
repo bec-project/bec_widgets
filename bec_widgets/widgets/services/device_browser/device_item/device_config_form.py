@@ -42,6 +42,7 @@ class DeviceConfigForm(PydanticModelForm):
         if theme is None:
             theme = get_theme_name()
         self.setStyleSheet(styles.pretty_display_theme(theme))
+        self._validity.setVisible(False)
 
     def get_form_data(self):
         """Get the entered metadata as a dict."""

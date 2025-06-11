@@ -2,7 +2,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from bec_lib.atlas_models import Device as DeviceConfigModel
+from PySide6.QtWidgets import QPushButton
+from qtpy.QtWidgets import QDialogButtonBox, QLineEdit
 
+from bec_widgets.utils.forms_from_types.items import StrFormItem
 from bec_widgets.widgets.services.device_browser.device_item.device_config_dialog import (
     DeviceConfigDialog,
 )
@@ -16,83 +19,114 @@ _BASIC_CONFIG = {
 
 
 @pytest.fixture
-def dialog(qtbot):
-    """Fixture to create a DeviceConfigDialog instance."""
+def mock_client():
     mock_device = MagicMock(_config=DeviceConfigModel.model_validate(_BASIC_CONFIG).model_dump())
     mock_client = MagicMock()
     mock_client.device_manager.devices = {"test_device": mock_device}
-    dialog = DeviceConfigDialog(device="test_device", config_helper=MagicMock(), client=mock_client)
-    qtbot.addWidget(dialog)
-    return dialog
+    return mock_client
 
 
-def test_initialization(dialog):
-    assert dialog._device == "test_device"
-    assert dialog._container.count() == 2
+@pytest.fixture
+def update_dialog(mock_client, qtbot):
+    """Fixture to create a DeviceConfigDialog instance."""
+    update_dialog = DeviceConfigDialog(
+        device="test_device", config_helper=MagicMock(), client=mock_client
+    )
+    qtbot.addWidget(update_dialog)
+    return update_dialog
 
 
-def test_fill_form(dialog):
-    with patch.object(dialog._form, "set_data") as mock_set_data:
-        dialog._fill_form()
+@pytest.fixture
+def add_dialog(mock_client, qtbot):
+    """Fixture to create a DeviceConfigDialog instance."""
+    add_dialog = DeviceConfigDialog(
+        device=None, config_helper=MagicMock(), client=mock_client, action="add"
+    )
+    qtbot.addWidget(add_dialog)
+    return add_dialog
+
+
+def test_initialization(update_dialog):
+    assert update_dialog._device == "test_device"
+    assert update_dialog._container.count() == 2
+
+
+def test_fill_form(update_dialog):
+    with patch.object(update_dialog._form, "set_data") as mock_set_data:
+        update_dialog._fill_form()
         mock_set_data.assert_called_once_with(DeviceConfigModel.model_validate(_BASIC_CONFIG))
 
 
-def test_updated_config(dialog):
+def test_updated_config(update_dialog):
     """Test that updated_config returns the correct changes."""
-    dialog._initial_config = {"key1": "value1", "key2": "value2"}
+    update_dialog._initial_config = {"key1": "value1", "key2": "value2"}
     with patch.object(
-        dialog._form, "get_form_data", return_value={"key1": "value1", "key2": "new_value"}
+        update_dialog._form, "get_form_data", return_value={"key1": "value1", "key2": "new_value"}
     ):
-        updated = dialog.updated_config()
+        updated = update_dialog.updated_config()
         assert updated == {"key2": "new_value"}
 
 
-def test_apply(dialog):
-    with patch.object(dialog, "_process_update_action") as mock_process_update:
-        dialog.apply()
+def test_apply(update_dialog):
+    with patch.object(update_dialog, "_process_action") as mock_process_update:
+        update_dialog.apply()
         mock_process_update.assert_called_once()
 
 
-def test_accept(dialog):
+def test_accept(update_dialog):
     with (
-        patch.object(dialog, "_process_update_action") as mock_process_update,
+        patch.object(update_dialog, "_process_action") as mock_process_update,
         patch("qtpy.QtWidgets.QDialog.accept") as mock_parent_accept,
     ):
-        dialog.accept()
+        update_dialog.accept()
         mock_process_update.assert_called_once()
         mock_parent_accept.assert_called_once()
 
 
-def test_waiting_display(dialog, qtbot):
+def test_waiting_display(update_dialog, qtbot):
     with (
-        patch.object(dialog._spinner, "start") as mock_spinner_start,
-        patch.object(dialog._spinner, "stop") as mock_spinner_stop,
+        patch.object(update_dialog._spinner, "start") as mock_spinner_start,
+        patch.object(update_dialog._spinner, "stop") as mock_spinner_stop,
     ):
-        dialog.show()
-        dialog._start_waiting_display()
-        qtbot.waitUntil(dialog._overlay_widget.isVisible, timeout=100)
+        update_dialog.show()
+        update_dialog._start_waiting_display()
+        qtbot.waitUntil(update_dialog._overlay_widget.isVisible, timeout=100)
         mock_spinner_start.assert_called_once()
         mock_spinner_stop.assert_not_called()
-        dialog._stop_waiting_display()
-        qtbot.waitUntil(lambda: not dialog._overlay_widget.isVisible(), timeout=100)
+        update_dialog._stop_waiting_display()
+        qtbot.waitUntil(lambda: not update_dialog._overlay_widget.isVisible(), timeout=100)
         mock_spinner_stop.assert_called_once()
 
 
-def test_update_cycle(dialog, qtbot):
+def test_update_cycle(update_dialog, qtbot):
     update = {"enabled": False, "readoutPriority": "baseline", "deviceTags": {"tag"}}
 
     def _mock_send(action="update", config=None, wait_for_response=True, timeout_s=None):
-        dialog.client.device_manager.devices["test_device"]._config = config["test_device"]  # type: ignore
+        update_dialog.client.device_manager.devices["test_device"]._config = config["test_device"]  # type: ignore
 
-    dialog._config_helper.send_config_request = MagicMock(side_effect=_mock_send)
-    for item in dialog._form.enumerate_form_widgets():
+    update_dialog._config_helper.send_config_request = MagicMock(side_effect=_mock_send)
+    for item in update_dialog._form.enumerate_form_widgets():
         if (val := update.get(item.label.property("_model_field_name"))) is not None:
             item.widget.setValue(val)
 
-    assert dialog.updated_config() == update
-    dialog.apply()
-    qtbot.waitUntil(lambda: dialog._config_helper.send_config_request.call_count == 1, timeout=100)
+    assert update_dialog.updated_config() == update
+    update_dialog.apply()
+    qtbot.waitUntil(
+        lambda: update_dialog._config_helper.send_config_request.call_count == 1, timeout=100
+    )
 
-    dialog._config_helper.send_config_request.assert_called_with(
+    update_dialog._config_helper.send_config_request.assert_called_with(
         action="update", config={"test_device": update}, wait_for_response=False
     )
+
+
+def test_add_form_init_without_name(add_dialog, qtbot):
+    assert (name_widget := add_dialog._form.widget_dict.get("name")) is not None
+    assert isinstance(name_widget, StrFormItem)
+    assert name_widget.getValue() is None
+
+
+def test_add_form_validates_and_disables_on_init(add_dialog, qtbot):
+    assert (ok_button := add_dialog.button_box.button(QDialogButtonBox.Ok)) is not None
+    assert isinstance(ok_button, QPushButton)
+    assert not ok_button.isEnabled()
