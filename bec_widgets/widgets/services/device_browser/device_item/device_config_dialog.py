@@ -1,4 +1,5 @@
 from ast import literal_eval
+from typing import Literal
 
 from bec_lib.atlas_models import Device as DeviceConfigModel
 from bec_lib.config_helper import CONF as DEVICE_CONF_KEYS
@@ -32,20 +33,26 @@ class _CommSignals(QObject):
 
 class _CommunicateUpdate(QRunnable):
 
-    def __init__(self, config_helper: ConfigHelper, device: str, config: dict) -> None:
+    def __init__(self, config_helper: ConfigHelper, device: str, config: dict, action: str) -> None:
         super().__init__()
         self.config_helper = config_helper
         self.device = device
         self.config = config
+        self.action = action
         self.signals = _CommSignals()
 
     @SafeSlot()
     def run(self):
         try:
+            if (dev_name := self.device or self.config.get("name")) is None:
+                raise ValueError("Must be updating a device or be supplied a name for a new device")
+            req_args = {
+                "action": self.action,
+                "config": {dev_name: self.config},
+                "wait_for_response": False,
+            }
             timeout = self.config_helper.suggested_timeout_s(self.config)
-            RID = self.config_helper.send_config_request(
-                action="update", config={self.device: self.config}, wait_for_response=False
-            )
+            RID = self.config_helper.send_config_request(**req_args)
             logger.info("Waiting for config reply")
             reply = self.config_helper.wait_for_config_reply(RID, timeout=timeout)
             self.config_helper.handle_update_reply(reply, RID, timeout)
@@ -65,6 +72,7 @@ class DeviceConfigDialog(BECWidget, QDialog):
         parent=None,
         device: str | None = None,
         config_helper: ConfigHelper | None = None,
+        action: Literal["update", "add"] = "update",
         **kwargs,
     ):
         """A dialog to edit the configuration of a device in BEC. Generated from the pydantic model
@@ -76,12 +84,14 @@ class DeviceConfigDialog(BECWidget, QDialog):
             config_helper (ConfigHelper | None): a ConfigHelper object for communication with Redis, will be created if necessary.
             action (Literal["update", "add"]): the action which the form should perform on application or acceptance.
         """
+        self._initial_config = {}
         super().__init__(parent=parent, **kwargs)
         self._config_helper = config_helper or ConfigHelper(
             self.client.connector, self.client._service_name
         )
         self.threadpool = QThreadPool()
         self._device = device
+        self._action = action
         self.setWindowTitle(f"Edit config for: {device}")
         self._container = QStackedLayout()
         self._container.setStackingMode(QStackedLayout.StackAll)
@@ -94,11 +104,18 @@ class DeviceConfigDialog(BECWidget, QDialog):
         user_warning.setWordWrap(True)
         user_warning.setStyleSheet("QLabel { color: red; }")
         self._layout.addWidget(user_warning)
+        self.get_bec_shortcuts()
         self._add_form()
+        if self._action == "update":
+            self._form._validity.setVisible(False)
+        else:
+            self._form._validity.setVisible(True)
+            self._form.validity_proc.connect(self.enable_buttons_for_validity)
         self._add_overlay()
         self._add_buttons()
 
         self.setLayout(self._container)
+        self._form.validate_form()
         self._overlay_widget.setVisible(False)
 
     def _add_form(self):
@@ -108,11 +125,15 @@ class DeviceConfigDialog(BECWidget, QDialog):
         self._layout.addWidget(self._form)
 
         for row in self._form.enumerate_form_widgets():
-            if row.label.property("_model_field_name") in DEVICE_CONF_KEYS.NON_UPDATABLE:
+            if (
+                row.label.property("_model_field_name") in DEVICE_CONF_KEYS.NON_UPDATABLE
+                and self._action == "update"
+            ):
                 row.widget._set_pretty_display()
 
-        self._fetch_config()
-        self._fill_form()
+        if self._action == "update" and self._device in self.dev:
+            self._fetch_config()
+            self._fill_form()
         self._container.addWidget(self._form_widget)
 
     def _add_overlay(self):
@@ -129,16 +150,15 @@ class DeviceConfigDialog(BECWidget, QDialog):
         self._container.addWidget(self._overlay_widget)
 
     def _add_buttons(self):
-        button_box = QDialogButtonBox(
+        self.button_box = QDialogButtonBox(
             QDialogButtonBox.Apply | QDialogButtonBox.Ok | QDialogButtonBox.Cancel
         )
-        button_box.button(QDialogButtonBox.Apply).clicked.connect(self.apply)
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-        self._layout.addWidget(button_box)
+        self.button_box.button(QDialogButtonBox.Apply).clicked.connect(self.apply)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        self._layout.addWidget(self.button_box)
 
     def _fetch_config(self):
-        self._initial_config = {}
         if (
             self.client.device_manager is not None
             and self._device in self.client.device_manager.devices
@@ -163,37 +183,42 @@ class DeviceConfigDialog(BECWidget, QDialog):
             }
         return diff
 
-    @SafeSlot()
+    @SafeSlot(bool)
+    def enable_buttons_for_validity(self, valid: bool):
+        self.button_box.button(QDialogButtonBox.Apply).setEnabled(valid)
+        self.button_box.button(QDialogButtonBox.Ok).setEnabled(valid)
+
+    @SafeSlot(popup_error=True)
     def apply(self):
-        self._process_update_action()
+        self._process_action()
         self.applied.emit()
 
-    @SafeSlot()
+    @SafeSlot(popup_error=True)
     def accept(self):
-        self._process_update_action()
+        self._process_action()
         return super().accept()
 
-    def _process_update_action(self):
+    def _process_action(self):
         updated_config = self.updated_config()
-        if (device_name := updated_config.get("name")) == "":
-            logger.warning("Can't create a device with no name!")
-        elif set(updated_config.keys()) & set(DEVICE_CONF_KEYS.NON_UPDATABLE):
-            logger.info(
-                f"Removing old device {self._device} and adding new device {device_name or self._device} with modified config: {updated_config}"
-            )
+        if self._action == "add":
+            if (name := updated_config.get("name")) in self.dev:
+                raise ValueError(
+                    f"Can't create a new device with the same name as already existing device {name}!"
+                )
+            self._proc_device_config_change(updated_config)
         else:
-            self._update_device_config(updated_config)
+            if updated_config == {}:
+                logger.info("No changes made to device config")
+                return
+            self._proc_device_config_change(updated_config)
 
-    def _update_device_config(self, config: dict):
-        if self._device is None:
-            return
-        if config == {}:
-            logger.info("No changes made to device config")
-            return
+    def _proc_device_config_change(self, config: dict):
         logger.info(f"Sending request to update device config: {config}")
 
         self._start_waiting_display()
-        communicate_update = _CommunicateUpdate(self._config_helper, self._device, config)
+        communicate_update = _CommunicateUpdate(
+            self._config_helper, self._device, config, self._action
+        )
         communicate_update.signals.error.connect(self.update_error)
         communicate_update.signals.done.connect(self.update_done)
         self.threadpool.start(communicate_update)
@@ -201,8 +226,9 @@ class DeviceConfigDialog(BECWidget, QDialog):
     @SafeSlot()
     def update_done(self):
         self._stop_waiting_display()
-        self._fetch_config()
-        self._fill_form()
+        if self._action == "update":
+            self._fetch_config()
+            self._fill_form()
 
     @SafeSlot(Exception, popup_error=True)
     def update_error(self, e: Exception):
@@ -247,7 +273,8 @@ def main():  # pragma: no cover
     def _show_dialog(*_):
         nonlocal dialog
         if dialog is None:
-            dialog = DeviceConfigDialog(device=device.text())
+            kwargs = {"device": dev} if (dev := device.text()) else {"action": "add"}
+            dialog = DeviceConfigDialog(**kwargs)
             dialog.accepted.connect(accept)
             dialog.rejected.connect(_destroy_dialog)
             dialog.open()

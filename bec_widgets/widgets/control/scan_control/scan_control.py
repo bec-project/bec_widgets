@@ -169,8 +169,8 @@ class ScanControl(BECWidget, QWidget):
         self.layout.addWidget(self._metadata_form)
         self._metadata_form.update_with_new_scan(self.comboBox_scan_selection.currentText())
         self.scan_selected.connect(self._metadata_form.update_with_new_scan)
-        self._metadata_form.metadata_updated.connect(self.update_scan_metadata)
-        self._metadata_form.metadata_cleared.connect(self.update_scan_metadata)
+        self._metadata_form.form_data_updated.connect(self.update_scan_metadata)
+        self._metadata_form.form_data_cleared.connect(self.update_scan_metadata)
         self._metadata_form.validate_form()
 
     def populate_scans(self):

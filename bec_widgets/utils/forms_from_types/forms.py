@@ -171,8 +171,9 @@ class TypedForm(BECWidget, QWidget):
 
 
 class PydanticModelForm(TypedForm):
-    metadata_updated = Signal(dict)
-    metadata_cleared = Signal(NoneType)
+    form_data_updated = Signal(dict)
+    form_data_cleared = Signal(NoneType)
+    validity_proc = Signal(bool)
 
     def __init__(
         self,
@@ -204,7 +205,7 @@ class PydanticModelForm(TypedForm):
 
         self._validity = CompactPopupWidget()
         self._validity.compact_view = True  # type: ignore
-        self._validity.label = "Metadata validity"  # type: ignore
+        self._validity.label = "Validity"  # type: ignore
         self._validity.compact_show_popup.setIcon(
             material_icon(icon_name="info", size=(10, 10), convert_to_pixmap=False)
         )
@@ -264,16 +265,18 @@ class PydanticModelForm(TypedForm):
     def validate_form(self, *_) -> bool:
         """validate the currently entered metadata against the pydantic schema.
         If successful, returns on metadata_emitted and returns true.
-        Otherwise, emits on metadata_cleared and returns false."""
+        Otherwise, emits on form_data_cleared and returns false."""
         try:
             metadata_dict = self.get_form_data()
             self._md_schema.model_validate(metadata_dict)
             self._validity.set_global_state("success")
             self._validity_message.setText("No errors!")
-            self.metadata_updated.emit(metadata_dict)
+            self.form_data_updated.emit(metadata_dict)
+            self.validity_proc.emit(True)
             return True
         except ValidationError as e:
             self._validity.set_global_state("emergency")
             self._validity_message.setText(str(e))
-            self.metadata_cleared.emit(None)
+            self.form_data_cleared.emit(None)
+            self.validity_proc.emit(False)
             return False
