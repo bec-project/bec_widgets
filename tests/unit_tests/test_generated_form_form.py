@@ -4,11 +4,7 @@ import pytest
 from pydantic import BaseModel, Field
 
 from bec_widgets.utils.forms_from_types.forms import PydanticModelForm, TypedForm
-from bec_widgets.utils.forms_from_types.items import (
-    FloatDecimalMetadataField,
-    IntMetadataField,
-    StrMetadataField,
-)
+from bec_widgets.utils.forms_from_types.items import FloatDecimalFormItem, IntFormItem, StrFormItem
 
 # pylint: disable=no-member
 # pylint: disable=missing-function-docstring
@@ -58,9 +54,9 @@ def model_widget(qtbot):
 
 
 def test_widget_dict(model_widget: PydanticModelForm):
-    assert isinstance(model_widget.widget_dict["str_optional"], StrMetadataField)
-    assert isinstance(model_widget.widget_dict["float_nodefault"], FloatDecimalMetadataField)
-    assert isinstance(model_widget.widget_dict["int_default"], IntMetadataField)
+    assert isinstance(model_widget.widget_dict["str_optional"], StrFormItem)
+    assert isinstance(model_widget.widget_dict["float_nodefault"], FloatDecimalFormItem)
+    assert isinstance(model_widget.widget_dict["int_default"], IntFormItem)
 
 
 def test_widget_set_data(model_widget: PydanticModelForm):

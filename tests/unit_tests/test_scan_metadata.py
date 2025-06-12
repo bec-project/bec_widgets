@@ -8,12 +8,12 @@ from pydantic.types import Json
 from qtpy.QtCore import QItemSelectionModel, QPoint, Qt
 
 from bec_widgets.utils.forms_from_types.items import (
-    BoolMetadataField,
-    DictMetadataField,
+    BoolFormItem,
+    DictFormItem,
     DynamicFormItem,
-    FloatDecimalMetadataField,
-    IntMetadataField,
-    StrMetadataField,
+    FloatDecimalFormItem,
+    IntFormItem,
+    StrFormItem,
 )
 from bec_widgets.widgets.editors.dict_backed_table import DictBackedTable
 from bec_widgets.widgets.editors.scan_metadata.scan_metadata import ScanMetadata
@@ -125,18 +125,18 @@ def test_griditems_are_correct_class(
     metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]],
 ):
     _, components = metadata_widget
-    assert isinstance(components["sample_name"], StrMetadataField)
-    assert isinstance(components["str_optional"], StrMetadataField)
-    assert isinstance(components["str_required"], StrMetadataField)
-    assert isinstance(components["bool_optional"], BoolMetadataField)
-    assert isinstance(components["bool_required_default"], BoolMetadataField)
-    assert isinstance(components["bool_required_nodefault"], BoolMetadataField)
-    assert isinstance(components["int_default"], IntMetadataField)
-    assert isinstance(components["int_nodefault_optional"], IntMetadataField)
-    assert isinstance(components["float_nodefault"], FloatDecimalMetadataField)
-    assert isinstance(components["decimal_dp_limits_nodefault"], FloatDecimalMetadataField)
-    assert isinstance(components["dict_default"], DictMetadataField)
-    assert isinstance(components["unsupported_class"], StrMetadataField)
+    assert isinstance(components["sample_name"], StrFormItem)
+    assert isinstance(components["str_optional"], StrFormItem)
+    assert isinstance(components["str_required"], StrFormItem)
+    assert isinstance(components["bool_optional"], BoolFormItem)
+    assert isinstance(components["bool_required_default"], BoolFormItem)
+    assert isinstance(components["bool_required_nodefault"], BoolFormItem)
+    assert isinstance(components["int_default"], IntFormItem)
+    assert isinstance(components["int_nodefault_optional"], IntFormItem)
+    assert isinstance(components["float_nodefault"], FloatDecimalFormItem)
+    assert isinstance(components["decimal_dp_limits_nodefault"], FloatDecimalFormItem)
+    assert isinstance(components["dict_default"], DictFormItem)
+    assert isinstance(components["unsupported_class"], StrFormItem)
 
 
 def test_grid_to_dict(metadata_widget: tuple[ScanMetadata, dict[str, DynamicFormItem]]):

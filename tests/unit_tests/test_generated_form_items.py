@@ -5,7 +5,7 @@ import pytest
 from pydantic import ValidationError
 from pydantic.fields import FieldInfo
 
-from bec_widgets.utils.forms_from_types.items import FormItemSpec, ListMetadataField
+from bec_widgets.utils.forms_from_types.items import FormItemSpec, ListFormItem
 from bec_widgets.utils.widget_io import WidgetIO
 
 
@@ -75,12 +75,12 @@ def list_field_and_values(request, qtbot):
         request.param.get("extra"),
     )
     spec = FormItemSpec(item_type=itype, name="test_list", info=FieldInfo(annotation=itype))
-    (widget := ListMetadataField(parent=None, spec=spec)).setValue(vals)
+    (widget := ListFormItem(parent=None, spec=spec)).setValue(vals)
     qtbot.addWidget(widget)
     yield widget, vals, extra, get_args(itype)[0]
 
 
-def test_list_metadata_field(list_field_and_values: tuple[ListMetadataField, list, Any, type]):
+def test_list_metadata_field(list_field_and_values: tuple[ListFormItem, list, Any, type]):
     list_field, vals, extra, _ = list_field_and_values
     assert list_field.getValue() == vals
     assert list_field._main_widget.count() == 3
@@ -109,9 +109,7 @@ def test_list_metadata_field(list_field_and_values: tuple[ListMetadataField, lis
     assert list_field.getValue() == [vals[0], extra, list_field._types.default, extra]
 
 
-def test_list_field_value_acceptance(
-    list_field_and_values: tuple[ListMetadataField, list, Any, type],
-):
+def test_list_field_value_acceptance(list_field_and_values: tuple[ListFormItem, list, Any, type]):
     class _WrongType(object): ...
 
     list_field, _, _, t = list_field_and_values
