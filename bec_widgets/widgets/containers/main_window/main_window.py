@@ -1,6 +1,6 @@
 import os
 
-from qtpy.QtCore import QSize
+from qtpy.QtCore import QEvent, QSize
 from qtpy.QtGui import QAction, QActionGroup, QIcon
 from qtpy.QtWidgets import QApplication, QMainWindow, QStyle
 
@@ -167,6 +167,11 @@ class BECMainWindow(BECWidget, QMainWindow):
     @SafeSlot(str)
     def change_theme(self, theme: str):
         apply_theme(theme)
+
+    def event(self, event):
+        if event.type() == QEvent.Type.StatusTip:
+            return True
+        return super().event(event)
 
     def cleanup(self):
         central_widget = self.centralWidget()
