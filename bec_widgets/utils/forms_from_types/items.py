@@ -194,7 +194,7 @@ class DynamicFormItem(QWidget):
         self.valueChanged.emit()
 
 
-class StrMetadataField(DynamicFormItem):
+class StrFormItem(DynamicFormItem):
     def __init__(self, parent: QWidget | None = None, *, spec: FormItemSpec) -> None:
         super().__init__(parent=parent, spec=spec)
         self._main_widget.textChanged.connect(self._value_changed)
@@ -223,7 +223,7 @@ class StrMetadataField(DynamicFormItem):
         self._main_widget.setText(str(value))
 
 
-class IntMetadataField(DynamicFormItem):
+class IntFormItem(DynamicFormItem):
     def __init__(self, parent: QWidget | None = None, *, spec: FormItemSpec) -> None:
         super().__init__(parent=parent, spec=spec)
         self._main_widget.textChanged.connect(self._value_changed)
@@ -252,7 +252,7 @@ class IntMetadataField(DynamicFormItem):
         self._main_widget.setValue(value)
 
 
-class FloatDecimalMetadataField(DynamicFormItem):
+class FloatDecimalFormItem(DynamicFormItem):
     def __init__(self, parent: QWidget | None = None, *, spec: FormItemSpec) -> None:
         super().__init__(parent=parent, spec=spec)
         self._main_widget.textChanged.connect(self._value_changed)
@@ -286,7 +286,7 @@ class FloatDecimalMetadataField(DynamicFormItem):
         self._main_widget.setValue(float(value))
 
 
-class BoolMetadataField(DynamicFormItem):
+class BoolFormItem(DynamicFormItem):
     def __init__(self, *, parent: QWidget | None = None, spec: FormItemSpec) -> None:
         super().__init__(parent=parent, spec=spec)
         self._main_widget.stateChanged.connect(self._value_changed)
@@ -307,7 +307,7 @@ class BoolMetadataField(DynamicFormItem):
         self._main_widget.setChecked(value)
 
 
-class BoolToggleMetadataField(BoolMetadataField):
+class BoolToggleFormItem(BoolFormItem):
     def __init__(self, *, parent: QWidget | None = None, spec: FormItemSpec) -> None:
         if spec.info.default is PydanticUndefined:
             spec.info.default = False
@@ -321,7 +321,7 @@ class BoolToggleMetadataField(BoolMetadataField):
             self._main_widget.setChecked(self._default)
 
 
-class DictMetadataField(DynamicFormItem):
+class DictFormItem(DynamicFormItem):
     def __init__(self, *, parent: QWidget | None = None, spec: FormItemSpec) -> None:
         super().__init__(parent=parent, spec=spec)
         self._main_widget.data_changed.connect(self._value_changed)
@@ -351,7 +351,7 @@ class _ItemAndWidgetType(NamedTuple):
     default: int | float | str
 
 
-class ListMetadataField(DynamicFormItem):
+class ListFormItem(DynamicFormItem):
     def __init__(self, *, parent: QWidget | None = None, spec: FormItemSpec) -> None:
         super().__init__(parent=parent, spec=spec)
         self._main_widget: QListWidget
@@ -440,22 +440,22 @@ WidgetTypeRegistry = dict[
 ]
 
 DEFAULT_WIDGET_TYPES: Final[WidgetTypeRegistry] = {
-    "str": (lambda anno: anno in [str, str | None, None], StrMetadataField),
-    "int": (lambda anno: anno in [int, int | None], IntMetadataField),
+    "str": (lambda anno: anno in [str, str | None, None], StrFormItem),
+    "int": (lambda anno: anno in [int, int | None], IntFormItem),
     "float_decimal": (
         lambda anno: anno in [float, float | None, Decimal, Decimal | None],
-        FloatDecimalMetadataField,
+        FloatDecimalFormItem,
     ),
-    "bool": (lambda anno: anno in [bool, bool | None], BoolMetadataField),
+    "bool": (lambda anno: anno in [bool, bool | None], BoolFormItem),
     "dict": (
         lambda anno: anno in [dict, dict | None]
         or (isinstance(anno, GenericAlias) and anno.__origin__ is dict),
-        DictMetadataField,
+        DictFormItem,
     ),
     "list": (
         lambda anno: anno in [list, list | None]
         or (isinstance(anno, GenericAlias) and anno.__origin__ is list),
-        ListMetadataField,
+        ListFormItem,
     ),
 }
 
@@ -468,7 +468,7 @@ def widget_from_type(
         if predicate(annotation):
             return widget_type
     logger.warning(f"Type {annotation} is not (yet) supported in metadata form creation.")
-    return StrMetadataField
+    return StrFormItem
 
 
 if __name__ == "__main__":  # pragma: no cover

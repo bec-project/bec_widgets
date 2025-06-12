@@ -7,7 +7,7 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.messages import AvailableResourceMessage, ScanQueueHistoryMessage, ScanQueueMessage
 from qtpy.QtCore import QModelIndex, Qt
 
-from bec_widgets.utils.forms_from_types.items import StrMetadataField
+from bec_widgets.utils.forms_from_types.items import StrFormItem
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.control.scan_control import ScanControl
 
@@ -570,7 +570,7 @@ def test_scan_metadata_is_connected(scan_control):
     scan_control.comboBox_scan_selection.setCurrentText("grid_scan")
     assert scan_control._metadata_form._scan_name == "grid_scan"
     sample_name = scan_control._metadata_form._form_grid.layout().itemAtPosition(0, 1).widget()
-    assert isinstance(sample_name, StrMetadataField)
+    assert isinstance(sample_name, StrFormItem)
     sample_name._main_widget.setText("Test Sample")
 
     scan_control._metadata_form._additional_metadata._table_model._data = TEST_TABLE_ENTRY

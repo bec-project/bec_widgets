@@ -11,8 +11,8 @@ from bec_widgets.utils.forms_from_types import styles
 from bec_widgets.utils.forms_from_types.forms import PydanticModelForm
 from bec_widgets.utils.forms_from_types.items import (
     DEFAULT_WIDGET_TYPES,
-    BoolMetadataField,
-    BoolToggleMetadataField,
+    BoolFormItem,
+    BoolToggleFormItem,
     widget_from_type,
 )
 
@@ -30,8 +30,8 @@ class DeviceConfigForm(PydanticModelForm):
             **kwargs,
         )
         self._widget_types = DEFAULT_WIDGET_TYPES.copy()
-        self._widget_types["bool"] = (lambda anno: anno is bool, BoolToggleMetadataField)
-        self._widget_types["optional_bool"] = (lambda anno: anno == bool | None, BoolMetadataField)
+        self._widget_types["bool"] = (lambda anno: anno is bool, BoolToggleFormItem)
+        self._widget_types["optional_bool"] = (lambda anno: anno == bool | None, BoolFormItem)
         self._validity.setVisible(False)
         self._connect_to_theme_change()
         self.populate()
