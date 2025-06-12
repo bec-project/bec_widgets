@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.13.1 (2025-06-12)
+
+### Bug Fixes
+
+- **main_window**: Event filter applied on QEvent.Type.StatusTip; closes #698
+  ([`9f853b0`](https://github.com/bec-project/bec_widgets/commit/9f853b08640f0ffff9f5b59c6d5e0dd3e210d4f6))
+
+
 ## v2.13.0 (2025-06-10)
 
 ### Bug Fixes
