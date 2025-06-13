@@ -1,8 +1,9 @@
 import os
 
-from qtpy.QtCore import QEvent, QSize
+from bec_lib.endpoints import MessageEndpoints
+from qtpy.QtCore import QEvent, QSize, Qt
 from qtpy.QtGui import QAction, QActionGroup, QIcon
-from qtpy.QtWidgets import QApplication, QLabel, QMainWindow, QStyle
+from qtpy.QtWidgets import QApplication, QFrame, QLabel, QMainWindow, QStyle, QVBoxLayout, QWidget
 
 import bec_widgets
 from bec_widgets.utils import UILoader
@@ -10,6 +11,7 @@ from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.widget_io import WidgetHierarchy
+from bec_widgets.widgets.containers.main_window.addons.scroll_label import ScrollLabel
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
 
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
@@ -35,6 +37,14 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._init_ui()
         self._connect_to_theme_change()
 
+        # Connections to BEC Notifications
+        self.bec_dispatcher.connect_slot(
+            self.display_client_message, MessageEndpoints.client_info()
+        )
+
+    ################################################################################
+    # MainWindow Elements Initialization
+    ################################################################################
     def _init_ui(self):
 
         # Set the icon
@@ -55,38 +65,58 @@ class BECMainWindow(BECWidget, QMainWindow):
 
         # Left: App‑ID label
         self._app_id_label = QLabel()
+        self._app_id_label.setAlignment(
+            Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
+        )
         status_bar.addWidget(self._app_id_label)
+
+        # Add a separator after the app ID label
+        self._add_separator()
+
+        # Centre: Client‑info label (stretch=1 so it expands)
+        self._client_info_label = ScrollLabel()
+        self._client_info_label.setAlignment(
+            Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
+        )
+        status_bar.addWidget(self._client_info_label, 1)
+
+    def _add_separator(self):
+        """
+        Add a vertically centred separator to the status bar.
+        """
+        status_bar = self.statusBar()
+
+        # The actual line
+        line = QFrame()
+        line.setFrameShape(QFrame.VLine)
+        line.setFrameShadow(QFrame.Sunken)
+        line.setFixedHeight(status_bar.sizeHint().height() - 2)
+
+        # Wrapper to center the line vertically -> work around for QFrame not being able to center itself
+        wrapper = QWidget()
+        vbox = QVBoxLayout(wrapper)
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.addStretch()
+        vbox.addWidget(line, alignment=Qt.AlignHCenter)
+        vbox.addStretch()
+        wrapper.setFixedWidth(line.sizeHint().width())
+
+        status_bar.addWidget(wrapper)
 
     def _init_bec_icon(self):
         icon = self.app.windowIcon()
         if icon.isNull():
-            print("No icon is set, setting default icon")
             icon = QIcon()
             icon.addFile(
                 os.path.join(MODULE_PATH, "assets", "app_icons", "bec_widgets_icon.png"),
                 size=QSize(48, 48),
             )
             self.app.setWindowIcon(icon)
-        else:
-            print("An icon is set")
 
     def load_ui(self, ui_file):
         loader = UILoader(self)
         self.ui = loader.loader(ui_file)
         self.setCentralWidget(self.ui)
-
-    def display_app_id(self):
-        """
-        Display the app ID in the status bar.
-        """
-        if self.bec_dispatcher.cli_server is None:
-            status_message = "Not connected"
-        else:
-            # Get the server ID from the dispatcher
-            server_id = self.bec_dispatcher.cli_server.gui_id
-            status_message = f"App ID: {server_id}"
-        if hasattr(self, "_app_id_label"):
-            self._app_id_label.setText(status_message)
 
     def _fetch_theme(self) -> str:
         return self.app.theme.theme
@@ -175,8 +205,37 @@ class BECMainWindow(BECWidget, QMainWindow):
         help_menu.addAction(widgets_docs)
         help_menu.addAction(bug_report)
 
+    ################################################################################
+    # Status Bar Addons
+    ################################################################################
+    def display_app_id(self):
+        """
+        Display the app ID in the status bar.
+        """
+        if self.bec_dispatcher.cli_server is None:
+            status_message = "Not connected"
+        else:
+            # Get the server ID from the dispatcher
+            server_id = self.bec_dispatcher.cli_server.gui_id
+            status_message = f"App ID: {server_id}"
+        self._app_id_label.setText(status_message)
+
+    @SafeSlot(dict, dict)
+    def display_client_message(self, msg: dict, meta: dict):
+        message = msg.get("message", "")
+        self._client_info_label.setText(message)
+
+    ################################################################################
+    # General and Cleanup Methods
+    ################################################################################
     @SafeSlot(str)
     def change_theme(self, theme: str):
+        """
+        Change the theme of the application.
+
+        Args:
+            theme(str): The theme to apply, either "light" or "dark".
+        """
         apply_theme(theme)
 
     def event(self, event):
@@ -199,6 +258,9 @@ class BECMainWindow(BECWidget, QMainWindow):
                     child.cleanup()
                     child.close()
                     child.deleteLater()
+
+        # Status bar widgets cleanup
+        self._client_info_label.cleanup()
         super().cleanup()
 
 
