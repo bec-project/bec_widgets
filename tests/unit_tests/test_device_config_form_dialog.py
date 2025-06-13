@@ -91,6 +91,7 @@ def test_update_cycle(dialog, qtbot):
 
     assert dialog.updated_config() == update
     dialog.apply()
+    qtbot.waitUntil(lambda: dialog._config_helper.send_config_request.call_count == 1, timeout=100)
 
     dialog._config_helper.send_config_request.assert_called_with(
         action="update", config={"test_device": update}, wait_for_response=False
