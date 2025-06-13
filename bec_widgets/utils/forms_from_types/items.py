@@ -4,13 +4,14 @@ import typing
 from abc import abstractmethod
 from decimal import Decimal
 from types import GenericAlias, UnionType
-from typing import Callable, Final, Generic, Literal, NamedTuple, TypeVar
+from typing import Callable, Final, Generic, Literal, NamedTuple, OrderedDict, TypeVar, get_args
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
+from PySide6.QtWidgets import QComboBox
 from qtpy.QtCore import Signal  # type: ignore
 from qtpy.QtWidgets import (
     QApplication,
@@ -435,39 +436,75 @@ class ListFormItem(DynamicFormItem):
         self._repop(value)
 
 
-WidgetTypeRegistry = dict[
-    str, tuple[Callable[[type | UnionType | None], bool], type[DynamicFormItem]]
-]
+class StrLiteralFormItem(DynamicFormItem):
+    def _add_main_widget(self) -> None:
+        self._main_widget = QComboBox()
+        self._options = get_args(self._spec.info.annotation)
+        for opt in self._options:
+            self._main_widget.addItem(opt)
+        self._layout.addWidget(self._main_widget)
 
-DEFAULT_WIDGET_TYPES: Final[WidgetTypeRegistry] = {
-    "str": (lambda anno: anno in [str, str | None, None], StrFormItem),
-    "int": (lambda anno: anno in [int, int | None], IntFormItem),
+    def getValue(self):
+        return self._main_widget.currentText()
+
+    def setValue(self, value: str | None):
+        if value is None:
+            self.clear()
+        for i in range(self._main_widget.count()):
+            if self._main_widget.itemText(i) == value:
+                self._main_widget.setCurrentIndex(i)
+                return
+        raise ValueError(f"Cannot set value: {value}, options are: {self._options}")
+
+    def clear(self):
+        self._main_widget.setCurrentIndex(-1)
+
+
+WidgetTypeRegistry = OrderedDict[str, tuple[Callable[[FormItemSpec], bool], type[DynamicFormItem]]]
+
+DEFAULT_WIDGET_TYPES: Final[WidgetTypeRegistry] = OrderedDict() | {
+    # dict literals are ordered already but TypedForm subclasses may modify coppies of this dict
+    # and delete/insert keys or change the order
+    "literal_str": (
+        lambda spec: type(spec.info.annotation) is type(Literal[""])
+        and set(type(arg) for arg in get_args(spec.info.annotation)) == {str},
+        StrLiteralFormItem,
+    ),
+    "str": (lambda spec: spec.item_type in [str, str | None, None], StrFormItem),
+    "int": (lambda spec: spec.item_type in [int, int | None], IntFormItem),
     "float_decimal": (
-        lambda anno: anno in [float, float | None, Decimal, Decimal | None],
+        lambda spec: spec.item_type in [float, float | None, Decimal, Decimal | None],
         FloatDecimalFormItem,
     ),
-    "bool": (lambda anno: anno in [bool, bool | None], BoolFormItem),
+    "bool": (lambda spec: spec.item_type in [bool, bool | None], BoolFormItem),
     "dict": (
-        lambda anno: anno in [dict, dict | None]
-        or (isinstance(anno, GenericAlias) and anno.__origin__ is dict),
+        lambda spec: spec.item_type in [dict, dict | None]
+        or (isinstance(spec.item_type, GenericAlias) and spec.item_type.__origin__ is dict),
         DictFormItem,
     ),
     "list": (
-        lambda anno: anno in [list, list | None]
-        or (isinstance(anno, GenericAlias) and anno.__origin__ is list),
+        lambda spec: spec.item_type in [list, list | None]
+        or (isinstance(spec.item_type, GenericAlias) and spec.item_type.__origin__ is list),
         ListFormItem,
+    ),
+    "set": (
+        lambda spec: spec.item_type in [set, set | None]
+        or (isinstance(spec.item_type, GenericAlias) and spec.item_type.__origin__ is set),
+        SetFormItem,
     ),
 }
 
 
 def widget_from_type(
-    annotation: type | UnionType | None, widget_types: WidgetTypeRegistry | None = None
+    spec: FormItemSpec, widget_types: WidgetTypeRegistry | None = None
 ) -> type[DynamicFormItem]:
     widget_types = widget_types or DEFAULT_WIDGET_TYPES
     for predicate, widget_type in widget_types.values():
-        if predicate(annotation):
+        if predicate(spec):
             return widget_type
-    logger.warning(f"Type {annotation} is not (yet) supported in metadata form creation.")
+    logger.warning(
+        f"Type {spec.item_type=} / {spec.info.annotation=} is not (yet) supported in dynamic form creation."
+    )
     return StrFormItem
 
 

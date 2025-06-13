@@ -109,7 +109,7 @@ class TypedForm(BECWidget, QWidget):
         label.setProperty("_model_field_name", item.name)
         label.setToolTip(item.info.description or item.name)
         grid.addWidget(label, row, 0)
-        widget = self._widget_from_type(item.item_type, self._widget_types)(parent=self, spec=item)
+        widget = self._widget_from_type(item, self._widget_types)(parent=self, spec=item)
         widget.valueChanged.connect(self.value_changed)
         widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         grid.addWidget(widget, row, 1)
