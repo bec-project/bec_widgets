@@ -2,13 +2,12 @@ import os
 
 from qtpy.QtCore import QEvent, QSize
 from qtpy.QtGui import QAction, QActionGroup, QIcon
-from qtpy.QtWidgets import QApplication, QMainWindow, QStyle
+from qtpy.QtWidgets import QApplication, QLabel, QMainWindow, QStyle
 
 import bec_widgets
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
-from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
@@ -43,9 +42,20 @@ class BECMainWindow(BECWidget, QMainWindow):
 
         # Set Menu and Status bar
         self._setup_menu_bar()
+        self._init_status_bar_widgets()
 
         # BEC Specific UI
         self.display_app_id()
+
+    def _init_status_bar_widgets(self):
+        """
+        Prepare the BEC specific widgets in the status bar.
+        """
+        status_bar = self.statusBar()
+
+        # Left: App‑ID label
+        self._app_id_label = QLabel()
+        status_bar.addWidget(self._app_id_label)
 
     def _init_bec_icon(self):
         icon = self.app.windowIcon()
@@ -75,7 +85,8 @@ class BECMainWindow(BECWidget, QMainWindow):
             # Get the server ID from the dispatcher
             server_id = self.bec_dispatcher.cli_server.gui_id
             status_message = f"App ID: {server_id}"
-        self.statusBar().showMessage(status_message)
+        if hasattr(self, "_app_id_label"):
+            self._app_id_label.setText(status_message)
 
     def _fetch_theme(self) -> str:
         return self.app.theme.theme
