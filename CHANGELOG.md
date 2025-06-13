@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v2.14.0 (2025-06-13)
+
+### Features
+
+- **image_roi**: Added EllipticalROI
+  ([`af8db0b`](https://github.com/bec-project/bec_widgets/commit/af8db0bede32dd10ad72671a8c2978ca884f4994))
+
+### Refactoring
+
+- **image_roi_tree**: Shape switch logic adjusted to reduce code repetition
+  ([`f0d48a0`](https://github.com/bec-project/bec_widgets/commit/f0d48a05085bb8c628e516d4a976d776ee63c7c3))
+
+
 ## v2.13.2 (2025-06-13)
 
 ### Bug Fixes
