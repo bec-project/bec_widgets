@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.13.2 (2025-06-13)
+
+### Bug Fixes
+
+- Allow sets in generated form types
+  ([`32fd959`](https://github.com/bec-project/bec_widgets/commit/32fd959e675108265f35139b44d02ba966bd37e2))
+
+
 ## v2.13.1 (2025-06-12)
 
 ### Bug Fixes
