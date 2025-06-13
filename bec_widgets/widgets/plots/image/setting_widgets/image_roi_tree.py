@@ -122,14 +122,21 @@ class ROIPropertyTree(BECWidget, QWidget):
     # --------------------------------------------------------------------- UI
     def _init_toolbar(self):
         tb = ModularToolBar(self, self, orientation="horizontal")
+        self._draw_actions: dict[str, MaterialIconAction] = {}
         # --- ROI draw actions (toggleable) ---
         self.add_rect_action = MaterialIconAction("add_box", "Add Rect ROI", True, self)
-        self.add_circle_action = MaterialIconAction("add_circle", "Add Circle ROI", True, self)
         tb.add_action("Add Rect ROI", self.add_rect_action, self)
+        self._draw_actions["rect"] = self.add_rect_action
+        self.add_circle_action = MaterialIconAction("add_circle", "Add Circle ROI", True, self)
         tb.add_action("Add Circle ROI", self.add_circle_action, self)
+        self._draw_actions["circle"] = self.add_circle_action
         # --- Ellipse ROI draw action ---
         self.add_ellipse_action = MaterialIconAction("vignette", "Add Ellipse ROI", True, self)
         tb.add_action("Add Ellipse ROI", self.add_ellipse_action, self)
+        self._draw_actions["ellipse"] = self.add_ellipse_action
+
+        for mode, act in self._draw_actions.items():
+            act.action.toggled.connect(lambda on, m=mode: self._on_draw_action_toggled(m, on))
 
         # Expand/Collapse toggle
         self.expand_toggle = MaterialIconAction(
@@ -181,17 +188,6 @@ class ROIPropertyTree(BECWidget, QWidget):
         self._roi_draw_mode = None  # 'rect' | 'circle' | 'ellipse' | None
         self._roi_start_pos = None  # QPointF in image coords
         self._temp_roi = None  # live ROI being resized while dragging
-
-        # toggle handlers
-        self.add_rect_action.action.toggled.connect(
-            lambda on: self._set_roi_draw_mode("rect" if on else None)
-        )
-        self.add_circle_action.action.toggled.connect(
-            lambda on: self._set_roi_draw_mode("circle" if on else None)
-        )
-        self.add_ellipse_action.action.toggled.connect(
-            lambda on: self._set_roi_draw_mode("ellipse" if on else None)
-        )
         # capture mouse events on the plot scene
         self.plot.scene().installEventFilter(self)
 
@@ -221,23 +217,11 @@ class ROIPropertyTree(BECWidget, QWidget):
         return str(value)
 
     def _set_roi_draw_mode(self, mode: str | None):
-        # Ensure only the selected action is toggled on
-        if mode == "rect":
-            self.add_rect_action.action.setChecked(True)
-            self.add_circle_action.action.setChecked(False)
-            self.add_ellipse_action.action.setChecked(False)
-        elif mode == "circle":
-            self.add_rect_action.action.setChecked(False)
-            self.add_circle_action.action.setChecked(True)
-            self.add_ellipse_action.action.setChecked(False)
-        elif mode == "ellipse":
-            self.add_rect_action.action.setChecked(False)
-            self.add_circle_action.action.setChecked(False)
-            self.add_ellipse_action.action.setChecked(True)
-        else:
-            self.add_rect_action.action.setChecked(False)
-            self.add_circle_action.action.setChecked(False)
-            self.add_ellipse_action.action.setChecked(False)
+        # Update toolbar actions so that only the selected mode is checked
+        for m, act in self._draw_actions.items():
+            act.action.blockSignals(True)
+            act.action.setChecked(m == mode)
+            act.action.blockSignals(False)
 
         self._roi_draw_mode = mode
         self._roi_start_pos = None
@@ -245,6 +229,15 @@ class ROIPropertyTree(BECWidget, QWidget):
         if self._temp_roi is not None:
             self.plot.removeItem(self._temp_roi)
             self._temp_roi = None
+
+    def _on_draw_action_toggled(self, mode: str, checked: bool):
+        if checked:
+            # Activate selected mode
+            self._set_roi_draw_mode(mode)
+        else:
+            # If the active mode is being unchecked, clear mode
+            if self._roi_draw_mode == mode:
+                self._set_roi_draw_mode(None)
 
     def eventFilter(self, obj, event):
         if self._roi_draw_mode is None:
