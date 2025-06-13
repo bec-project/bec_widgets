@@ -5,6 +5,7 @@ from qtpy.QtGui import QAction, QActionGroup, QIcon
 from qtpy.QtWidgets import QApplication, QMainWindow, QStyle
 
 import bec_widgets
+from bec_lib.endpoints import MessageEndpoints
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
@@ -35,6 +36,9 @@ class BECMainWindow(BECWidget, QMainWindow):
         self.setWindowTitle(window_title)
         self._init_ui()
         self._connect_to_theme_change()
+
+        # Connections to BEC Notifications
+        self.bec_dispatcher.connect_slot(self.client_info_cb, MessageEndpoints.client_info())
 
     def _init_ui(self):
 
@@ -172,6 +176,10 @@ class BECMainWindow(BECWidget, QMainWindow):
         if event.type() == QEvent.Type.StatusTip:
             return True
         return super().event(event)
+
+    def client_info_cb(self, msg, meta):
+        msg = msg
+        print(f"Client info received in Waveform: {msg}")
 
     def cleanup(self):
         central_widget = self.centralWidget()
