@@ -79,7 +79,7 @@ def test_waiting_display(dialog, qtbot):
 
 
 def test_update_cycle(dialog, qtbot):
-    update = {"enabled": False, "readoutPriority": "baseline", "deviceTags": ["tag"]}
+    update = {"enabled": False, "readoutPriority": "baseline", "deviceTags": {"tag"}}
 
     def _mock_send(a, c, w):
         dialog.client.device_manager.devices["test_device"]._config = c["test_device"]

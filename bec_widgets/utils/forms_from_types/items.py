@@ -4,13 +4,14 @@ import typing
 from abc import abstractmethod
 from decimal import Decimal
 from types import GenericAlias, UnionType
-from typing import Callable, Final, Generic, Literal, NamedTuple, OrderedDict, TypeVar, get_args
+from typing import Callable, Final, Iterable, Literal, NamedTuple, OrderedDict, get_args
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
+from PySide6 import QtCore
 from PySide6.QtWidgets import QComboBox
 from qtpy.QtCore import Signal  # type: ignore
 from qtpy.QtWidgets import (
@@ -348,14 +349,12 @@ class DictFormItem(DynamicFormItem):
 class _ItemAndWidgetType(NamedTuple):
     # TODO: this should be generic but not supported in 3.10
     item: type[int | float | str]
-    widget: type
+    widget: type[QWidget]
     default: int | float | str
 
 
 class ListFormItem(DynamicFormItem):
     def __init__(self, *, parent: QWidget | None = None, spec: FormItemSpec) -> None:
-        super().__init__(parent=parent, spec=spec)
-        self._main_widget: QListWidget
         if spec.info.annotation is list:
             self._types = _ItemAndWidgetType(str, QLineEdit, "")
         elif isinstance(spec.info.annotation, GenericAlias):
@@ -367,7 +366,9 @@ class ListFormItem(DynamicFormItem):
             if args == {float} or args == {int, float}:
                 self._types = _ItemAndWidgetType(float, QDoubleSpinBox, 0.0)
         else:
-            self._types = _ItemAndWidgetType(str, QLineEdit, 0)
+            self._types = _ItemAndWidgetType(str, QLineEdit, "")
+        super().__init__(parent=parent, spec=spec)
+        self._main_widget: QListWidget
         self._data = []
 
     def _add_main_widget(self) -> None:
@@ -396,24 +397,30 @@ class ListFormItem(DynamicFormItem):
     def _repop(self, data):
         self._main_widget.clear()
         for val in data:
-            self._add_item(val)
+            self._add_list_item(val)
 
-    def _add_item(self, val=None):
+    def _add_data_item(self, val=None):
         val = val or self._types.default
         self._data.append(val)
+        self._add_list_item(val)
+
+    def _add_list_item(self, val):
         item = QListWidgetItem(self._main_widget)
+        item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEditable)
         item_widget = self._types.widget(parent=self)
         WidgetIO.set_value(item_widget, val)
         self._main_widget.setItemWidget(item, item_widget)
         self._main_widget.addItem(item)
         WidgetIO.connect_widget_change_signal(item_widget, self._update)
+        return item_widget
 
     def _update(self, _, value, *args):
         self._data[self._main_widget.currentRow()] = value
 
     @SafeSlot()
     def _add_row(self):
-        self._add_item(0)
+        self._add_data_item(self._types.default)
+        self._repop(self._data)
 
     @SafeSlot()
     def _delete_row(self):
@@ -422,6 +429,7 @@ class ListFormItem(DynamicFormItem):
             row = self._main_widget.currentRow()
             self._main_widget.takeItem(row)
             self._data.pop(row)
+        self._repop(self._data)
 
     @SafeSlot()
     def clear(self):
@@ -430,10 +438,11 @@ class ListFormItem(DynamicFormItem):
     def getValue(self):
         return self._data
 
-    def setValue(self, value: list):
+    def setValue(self, value: Iterable):
         if set(map(type, value)) | {self._types.item} != {self._types.item}:
             raise ValueError(f"This widget only accepts items of type {self._types.item}")
-        self._repop(value)
+        self._data = list(value)
+        self._repop(self._data)
 
 
 class StrLiteralFormItem(DynamicFormItem):
@@ -458,6 +467,44 @@ class StrLiteralFormItem(DynamicFormItem):
 
     def clear(self):
         self._main_widget.setCurrentIndex(-1)
+
+
+class SetFormItem(ListFormItem):
+
+    def _add_main_widget(self) -> None:
+        super()._add_main_widget()
+        self._add_item_field = self._types.widget()
+        self._buttons.addWidget(QLabel("Add new:"))
+        self._buttons.addWidget(self._add_item_field)
+
+    @SafeSlot()
+    def _add_row(self):
+        self._add_data_item(WidgetIO.get_value(self._add_item_field))
+        self._repop(self._data)
+
+    def _update(self, _, value, *args):
+        if value in self._data:
+            return
+        return super()._update(_, value, *args)
+
+    def _add_data_item(self, val=None):
+        val = val or self._types.default
+        if val == self._types.default or val in self._data:
+            return
+        self._data.append(val)
+        self._add_list_item(val)
+
+    def _add_list_item(self, val):
+        item_widget = super()._add_list_item(val)
+        if isinstance(item_widget, QLineEdit):
+            item_widget.setReadOnly(True)
+        return item_widget
+
+    def getValue(self):
+        return set(self._data)
+
+    def setValue(self, value: set):
+        return super().setValue(set(self._data))
 
 
 WidgetTypeRegistry = OrderedDict[str, tuple[Callable[[FormItemSpec], bool], type[DynamicFormItem]]]
@@ -511,6 +558,7 @@ def widget_from_type(
 if __name__ == "__main__":  # pragma: no cover
 
     class TestModel(BaseModel):
+        value0: set = Field(set(["a", "b"]))
         value1: str | None = Field(None)
         value2: bool | None = Field(None)
         value3: bool = Field(True)
@@ -525,15 +573,14 @@ if __name__ == "__main__":  # pragma: no cover
     w.setLayout(layout)
     items = []
     for i, (field_name, info) in enumerate(TestModel.model_fields.items()):
+        spec = spec = FormItemSpec(item_type=info.annotation, name=field_name, info=info)
         layout.addWidget(QLabel(field_name), i, 0)
-        widg = widget_from_type(info.annotation)(
-            spec=FormItemSpec(item_type=info.annotation, name=field_name, info=info)
-        )
+        widg = widget_from_type(spec)(spec=spec)
         items.append(widg)
         layout.addWidget(widg, i, 1)
 
-    items[5].setValue([1, 2, 3, 4])
-    items[6].setValue(["1", "2", "asdfg", "qwerty"])
+    items[6].setValue([1, 2, 3, 4])
+    items[7].setValue(["1", "2", "asdfg", "qwerty"])
 
     w.show()
     app.exec()

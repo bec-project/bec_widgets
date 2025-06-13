@@ -102,6 +102,8 @@ class TypedForm(BECWidget, QWidget):
         self._clear_grid()
         for r, item in enumerate(self._items):
             self._add_griditem(item, r)
+        gl: QGridLayout = self._form_grid.layout()
+        gl.setRowStretch(gl.rowCount(), 1)
 
     def _add_griditem(self, item: FormItemSpec, row: int):
         grid = self._form_grid.layout()
@@ -116,9 +118,9 @@ class TypedForm(BECWidget, QWidget):
 
     def enumerate_form_widgets(self):
         """Return a generator over the rows of the form, with the row number, the label widget (to
-        which the field name is attached as a property), and the entry widget"""
+        which the field name is attached as a property "_model_field_name"), and the entry widget"""
         grid: QGridLayout = self._form_grid.layout()  # type: ignore
-        for i in range(grid.rowCount()):
+        for i in range(grid.rowCount() - 1):  # One extra row for stretch
             yield GridRow(i, grid.itemAtPosition(i, 0).widget(), grid.itemAtPosition(i, 1).widget())
 
     def _dict_from_grid(self) -> dict[str, DynamicFormItemType]:
