@@ -64,12 +64,12 @@ class FormItemSpec(BaseModel):
         if isinstance(v, (type, UnionType)):
             return v
         if isinstance(v, GenericAlias):
-            if v.__origin__ in [list, dict] and all(
+            if v.__origin__ in [list, dict, set] and all(
                 arg in allowed_primitives for arg in v.__args__
             ):
                 return v
             raise ValueError(
-                f"Generics of type {v} are not supported - only lists and dicts of primitive types {allowed_primitives}"
+                f"Generics of type {v} are not supported - only lists, dicts and sets of primitive types {allowed_primitives}"
             )
         if type(v) is type(Literal[""]):  # _LiteralGenericAlias is not exported from typing
             arg_types = set(type(arg) for arg in v.__args__)
