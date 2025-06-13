@@ -30,8 +30,11 @@ class DeviceConfigForm(PydanticModelForm):
             **kwargs,
         )
         self._widget_types = DEFAULT_WIDGET_TYPES.copy()
-        self._widget_types["bool"] = (lambda anno: anno is bool, BoolToggleFormItem)
-        self._widget_types["optional_bool"] = (lambda anno: anno == bool | None, BoolFormItem)
+        self._widget_types["bool"] = (lambda spec: spec.item_type is bool, BoolToggleFormItem)
+        self._widget_types["optional_bool"] = (
+            lambda spec: spec.item_type == bool | None,
+            BoolFormItem,
+        )
         self._validity.setVisible(False)
         self._connect_to_theme_change()
         self.populate()
