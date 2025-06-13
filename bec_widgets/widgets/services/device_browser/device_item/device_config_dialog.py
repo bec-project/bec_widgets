@@ -5,8 +5,7 @@ from bec_lib.atlas_models import Device as DeviceConfigModel
 from bec_lib.config_helper import CONF as DEVICE_CONF_KEYS
 from bec_lib.config_helper import ConfigHelper
 from bec_lib.logger import bec_logger
-from PySide6.QtCore import QObject
-from qtpy.QtCore import QRunnable, QSize, Qt, QThreadPool, Signal
+from qtpy.QtCore import QObject, QRunnable, QSize, Qt, QThreadPool, Signal
 from qtpy.QtWidgets import (
     QApplication,
     QDialog,

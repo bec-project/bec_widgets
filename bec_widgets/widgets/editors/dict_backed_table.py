@@ -55,7 +55,10 @@ class DictBackedTableModel(QAbstractTableModel):
                 Qt.ItemDataRole.EditRole,
                 Qt.ItemDataRole.ToolTipRole,
             ]:
-                return str(self._data[index.row()][index.column()])
+                try:
+                    return str(self._data[index.row()][index.column()])
+                except IndexError:
+                    return None
 
     def setData(self, index, value, role):
         if role == Qt.ItemDataRole.EditRole:
@@ -67,9 +70,10 @@ class DictBackedTableModel(QAbstractTableModel):
         return False
 
     def replaceData(self, data: dict):
+        self.delete_rows(list(range(len(self._data))))
         self.resetInternalData()
         self._data = [[k, v] for k, v in data.items()]
-        self.dataChanged.emit(self.index(0, 0), self.index(len(self._data), 0))
+        self.dataChanged.emit(self.index(0, 0), self.index(len(self._data), 1))
 
     def update_disallowed_keys(self, keys: list[str]):
         """Set the list of keys which may not be used.
@@ -80,7 +84,7 @@ class DictBackedTableModel(QAbstractTableModel):
         for i, item in enumerate(self._data):
             if item[0] in self._disallowed_keys:
                 self._data[i][0] = ""
-                self.dataChanged.emit(self.index(i, 0), self.index(i, 0))
+                self.dataChanged.emit(self.index(i, 0), self.index(i, 1))
 
     def _other_keys(self, row: int):
         return [r[0] for r in self._data[:row] + self._data[row + 1 :]]
