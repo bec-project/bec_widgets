@@ -175,8 +175,9 @@ class BECMainWindow(BECWidget, QMainWindow):
 
     def cleanup(self):
         central_widget = self.centralWidget()
-        central_widget.close()
-        central_widget.deleteLater()
+        if central_widget is not None:
+            central_widget.close()
+            central_widget.deleteLater()
         if not isinstance(central_widget, BECWidget):
             # if the central widget is not a BECWidget, we need to call the cleanup method
             # of all widgets whose parent is the current BECMainWindow
