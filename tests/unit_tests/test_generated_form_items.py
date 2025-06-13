@@ -104,7 +104,7 @@ def test_list_metadata_field(list_field_and_values: tuple[ListFormItem, list, An
     assert list_field._main_widget.count() == 3
     assert list_field.getValue() == [vals[0], extra, list_field._types.default]
 
-    list_field._add_item(extra)
+    list_field._add_data_item(extra)
     assert list_field._main_widget.count() == 4
     assert list_field.getValue() == [vals[0], extra, list_field._types.default, extra]
 

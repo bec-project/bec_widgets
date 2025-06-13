@@ -131,7 +131,7 @@ if __name__ == "__main__":  # pragma: no cover
             "description": "A device for testing out a widget",
             "readOnly": True,
             "softwareTrigger": False,
-            "deviceTags": ["tag1", "tag2", "tag3"],
+            "deviceTags": {"tag1", "tag2", "tag3"},
             "userParameter": {"some_setting": "some_ value"},
         }
     )
