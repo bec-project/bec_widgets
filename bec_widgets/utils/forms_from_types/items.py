@@ -11,13 +11,13 @@ from bec_qthemes import material_icon
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
-from PySide6 import QtCore
-from PySide6.QtWidgets import QComboBox
+from qtpy import QtCore
 from qtpy.QtCore import Signal  # type: ignore
 from qtpy.QtWidgets import (
     QApplication,
     QButtonGroup,
     QCheckBox,
+    QComboBox,
     QDoubleSpinBox,
     QGridLayout,
     QHBoxLayout,
@@ -178,6 +178,8 @@ class DynamicFormItem(QWidget):
 
     def _set_pretty_display(self):
         self.setEnabled(False)
+        if button := getattr(self, "_clear_button", None):
+            button.setVisible(False)
 
     def _describe(self, pad=" "):
         return pad + (self._desc if self._desc else "")
@@ -476,6 +478,8 @@ class SetFormItem(ListFormItem):
         self._add_item_field = self._types.widget()
         self._buttons.addWidget(QLabel("Add new:"))
         self._buttons.addWidget(self._add_item_field)
+        self.setMinimumSize(QtCore.QSize(50, 100))
+        self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
 
     @SafeSlot()
     def _add_row(self):
@@ -504,7 +508,7 @@ class SetFormItem(ListFormItem):
         return set(self._data)
 
     def setValue(self, value: set):
-        return super().setValue(set(self._data))
+        return super().setValue(set(value))
 
 
 WidgetTypeRegistry = OrderedDict[str, tuple[Callable[[FormItemSpec], bool], type[DynamicFormItem]]]
