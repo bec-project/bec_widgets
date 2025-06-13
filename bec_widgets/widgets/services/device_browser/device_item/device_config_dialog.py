@@ -1,10 +1,12 @@
 import traceback
+from threading import Thread
 
 from bec_lib.atlas_models import Device as DeviceConfigModel
 from bec_lib.config_helper import CONF as DEVICE_CONF_KEYS
 from bec_lib.config_helper import ConfigHelper
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QSize, Qt
+from PySide6.QtCore import QObject
+from qtpy.QtCore import QRunnable, QSize, Qt, QThreadPool, Signal
 from qtpy.QtWidgets import (
     QApplication,
     QDialog,
@@ -24,6 +26,39 @@ from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 logger = bec_logger.logger
 
 
+class _CommSignals(QObject):
+    error = Signal(str)
+    done = Signal()
+
+
+class _CommunicateUpdate(QRunnable):
+
+    def __init__(self, config_helper: ConfigHelper, device: str, config: dict) -> None:
+        super().__init__()
+        self.config_helper = config_helper
+        self.device = device
+        self.config = config
+        self.signals = _CommSignals()
+
+    @SafeSlot()
+    def run(self):
+        try:
+            timeout = self.config_helper.suggested_timeout_s(self.config)
+            RID = self.config_helper.send_config_request(
+                action="update", config={self.device: self.config}, wait_for_response=False
+            )
+            logger.info("Waiting for config reply")
+            reply = self.config_helper.wait_for_config_reply(RID, timeout=timeout)
+            logger.info("Handling config reply")
+            self.config_helper.handle_update_reply(reply, RID, timeout)
+        except Exception as e:
+            self.signals.error.emit(
+                f"Error updating config: \n {''.join(traceback.format_exception(e))}"
+            )
+        finally:
+            self.signals.done.emit()
+
+
 class DeviceConfigDialog(BECWidget, QDialog):
     RPC = False
 
@@ -38,7 +73,7 @@ class DeviceConfigDialog(BECWidget, QDialog):
         self._config_helper = config_helper or ConfigHelper(
             self.client.connector, self.client._service_name
         )
-
+        self.threadpool = QThreadPool()
         self._device = device
         self.setWindowTitle(f"Edit config for: {device}")
         self._container = QStackedLayout()
@@ -57,6 +92,10 @@ class DeviceConfigDialog(BECWidget, QDialog):
         self._form_widget.setLayout(self._layout)
         self._form = DeviceConfigForm()
         self._layout.addWidget(self._form)
+
+        for row in self._form.enumerate_form_widgets():
+            if row.label.property("_model_field_name") in DEVICE_CONF_KEYS.NON_UPDATABLE:
+                row.widget._set_pretty_display()
 
         self._fetch_config()
         self._fill_form()
@@ -90,7 +129,9 @@ class DeviceConfigDialog(BECWidget, QDialog):
             self.client.device_manager is not None
             and self._device in self.client.device_manager.devices
         ):
-            self._initial_config = self.client.device_manager.devices.get(self._device)._config
+            dev = self.client.device_manager.devices.get(self._device)
+            dev.read_configuration(cached=False)
+            self._initial_config = dev._config
 
     def _fill_form(self):
         self._form.set_data(DeviceConfigModel.model_validate(self._initial_config))
@@ -122,32 +163,28 @@ class DeviceConfigDialog(BECWidget, QDialog):
             self._update_device_config(updated_config)
 
     def _update_device_config(self, config: dict):
+        if self._device is None:
+            return
         if config == {}:
             logger.info("No changes made to device config")
             return
         logger.info(f"Sending request to update device config: {config}")
 
         self._start_waiting_display()
+        communicate_update = _CommunicateUpdate(self._config_helper, self._device, config)
+        communicate_update.signals.error.connect(self.update_error)
+        communicate_update.signals.done.connect(self.update_done)
+        self.threadpool.start(communicate_update)
 
-        def _communicate_update():
-            try:
-                RID = self._config_helper.send_config_request(
-                    action="update", config={self._device: config}, wait_for_response=False
-                )
-                logger.info("Waiting for config reply")
-                reply = self._config_helper.wait_for_config_reply(
-                    RID, timeout=self._config_helper.suggested_timeout_s(config)
-                )
-                logger.info("Handling config reply")
-                self._config_helper.handle_update_reply(reply, RID)
-            except Exception as e:
-                self._stop_waiting_display()
-                logger.error(f"Error updating config: \n {''.join(traceback.format_exception(e))}")
-            finally:
-                self._fetch_config()
-                self._fill_form()
+    @SafeSlot()
+    def update_done(self):
+        self._stop_waiting_display()
+        self._fetch_config()
+        self._fill_form()
 
-        Thread(target=_communicate_update).start()
+    @SafeSlot(str)
+    def update_error(self, e: str):
+        logger.error(e)
 
     def _start_waiting_display(self):
         self._overlay_widget.setVisible(True)
