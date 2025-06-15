@@ -1,6 +1,30 @@
 # CHANGELOG
 
 
+## v2.15.0 (2025-06-15)
+
+### Bug Fixes
+
+- **main_window**: Central widget cleanup check to not remove None
+  ([`644be62`](https://github.com/bec-project/bec_widgets/commit/644be621f20cf09037da763f6217df9d1e4642bc))
+
+### Features
+
+- **main_window**: Main window can display the messages from the send_client_info as a scrolling
+  horizontal text; closes #700
+  ([`0dec78a`](https://github.com/bec-project/bec_widgets/commit/0dec78afbaddbef98d20949d3a0ba4e0dc8529df))
+
+### Refactoring
+
+- **main_window**: App id is displayed as QLabel instead of message
+  ([`57b9a57`](https://github.com/bec-project/bec_widgets/commit/57b9a57a631f267a8cb3622bf73035ffb15510e6))
+
+### Testing
+
+- **main_window**: Becmainwindow tests extended
+  ([`30acc4c`](https://github.com/bec-project/bec_widgets/commit/30acc4c236bfbfed19f56512b264a52b4359e6c1))
+
+
 ## v2.14.0 (2025-06-13)
 
 ### Features
