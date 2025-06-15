@@ -19,10 +19,15 @@ from qtpy.QtWidgets import (
 import bec_widgets
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import apply_theme
+from bec_widgets.utils.colors import apply_theme, set_theme
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.widgets.containers.main_window.addons.hover_widget import HoverWidget
+from bec_widgets.widgets.containers.main_window.addons.notification_center.notification_banner import (
+    BECNotificationBroker,
+    NotificationCentre,
+    NotificationIndicator,
+)
 from bec_widgets.widgets.containers.main_window.addons.scroll_label import ScrollLabel
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
 from bec_widgets.widgets.progress.scan_progressbar.scan_progressbar import ScanProgressBar
@@ -50,6 +55,16 @@ class BECMainWindow(BECWidget, QMainWindow):
         self.app = QApplication.instance()
         self.status_bar = self.statusBar()
         self.setWindowTitle(window_title)
+
+        # Notification Centre overlay
+        self.notification_centre = NotificationCentre(parent=self)  # Notification layer
+        self.notification_broker = BECNotificationBroker(
+            parent=self, centre=self.notification_centre
+        )
+        self._nc_margin = 16
+        self._position_notification_centre()
+
+        # Init ui
         self._init_ui()
         self._connect_to_theme_change()
 
@@ -57,6 +72,34 @@ class BECMainWindow(BECWidget, QMainWindow):
         self.bec_dispatcher.connect_slot(
             self.display_client_message, MessageEndpoints.client_info()
         )
+
+    def setCentralWidget(self, widget: QWidget, qt_default: bool = False):  # type: ignore[override]
+        """
+        Re‑implement QMainWindow.setCentralWidget so that the *main content*
+        widget always lives on the lower layer of the stacked layout that
+        hosts our notification overlays.
+
+        Args:
+            widget: The widget that should become the new central content.
+            qt_default: When *True* the call is forwarded to the base class so
+                that Qt behaves exactly as the original implementation (used
+                during __init__ when we first install ``self._full_content``).
+        """
+        super().setCentralWidget(widget)
+        self.notification_centre.raise_()
+        self.statusBar().raise_()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._position_notification_centre()
+
+    def _position_notification_centre(self):
+        """Keep the notification panel at a fixed margin top-right."""
+        if not hasattr(self, "notification_centre"):
+            return
+        margin = getattr(self, "_nc_margin", 16)  # px
+        nc = self.notification_centre
+        nc.move(self.width() - nc.width() - margin, margin)
 
     ################################################################################
     # MainWindow Elements Initialization
@@ -93,6 +136,26 @@ class BECMainWindow(BECWidget, QMainWindow):
 
         # Add scan_progress bar with display logic
         self._add_scan_progress_bar()
+
+        # Setup NotificationIndicator to bottom right of the status bar
+        self._add_notification_indicator()
+
+    ################################################################################
+    # Notification indicator and Notification Centre helpers
+
+    def _add_notification_indicator(self):
+        """
+        Add the notification indicator to the status bar and hook the signals.
+        """
+        # Add the notification indicator to the status bar
+        self.notification_indicator = NotificationIndicator(self)
+        self.status_bar.addPermanentWidget(self.notification_indicator)
+
+        # Connect the notification broker to the indicator
+        self.notification_centre.counts_updated.connect(self.notification_indicator.update_counts)
+        self.notification_indicator.filter_changed.connect(self.notification_centre.apply_filter)
+        self.notification_indicator.show_all_requested.connect(self.notification_centre.show_all)
+        self.notification_indicator.hide_all_requested.connect(self.notification_centre.hide_all)
 
     ################################################################################
     # Client message status bar widget helpers
@@ -379,12 +442,12 @@ class BECMainWindow(BECWidget, QMainWindow):
     @SafeSlot(str)
     def change_theme(self, theme: str):
         """
-        Change the theme of the application.
+        Change the theme of the application and propagate it to widgets.
 
         Args:
-            theme(str): The theme to apply, either "light" or "dark".
+            theme(str): Either "light" or "dark".
         """
-        apply_theme(theme)
+        set_theme(theme)  # emits theme_updated and applies palette globally
 
     def event(self, event):
         if event.type() == QEvent.Type.StatusTip:
@@ -427,6 +490,9 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._scan_progress_bar_full.deleteLater()
         self._scan_progress_hover.close()
         self._scan_progress_hover.deleteLater()
+        # Notification Centre cleanup
+        self.notification_broker.cleanup()
+        self.notification_broker.deleteLater()
         super().cleanup()
 
 
