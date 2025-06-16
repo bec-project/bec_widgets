@@ -25,17 +25,29 @@ class ScrollLabel(QLabel):
         self._step_px = step_px
 
     def setText(self, text):
+        """
+        Overridden to ensure that new text replaces the current one
+        immediately.
+        If the label was already scrolling (or in its delay phase),
+        the next message starts **without** the extra delay.
+        """
+        # Determine whether the widget was already in a scrolling cycle
+        was_scrolling = self._timer.isActive() or self._delay_timer.isActive()
+
         super().setText(text)
+
         fm = QFontMetrics(self.font())
         self._text_width = fm.horizontalAdvance(text)
         self._offset = 0
-        self._update_timer()
+
+        # Skip the delay when we were already scrolling
+        self._update_timer(skip_delay=was_scrolling)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._update_timer()
 
-    def _update_timer(self):
+    def _update_timer(self, *, skip_delay: bool = False):
         """
         Decide whether to start or stop scrolling.
 
@@ -46,10 +58,19 @@ class ScrollLabel(QLabel):
         needs_scroll = self._text_width > self.width()
 
         if needs_scroll:
+            # Reset any running timers
             if self._timer.isActive():
                 self._timer.stop()
+            if self._delay_timer.isActive():
+                self._delay_timer.stop()
+
             self._offset = 0
-            if not self._delay_timer.isActive():
+
+            # Start scrolling immediately when we should skip the delay,
+            # otherwise apply the configured delay_ms interval
+            if skip_delay:
+                self._timer.start()
+            else:
                 self._delay_timer.start()
         else:
             if self._delay_timer.isActive():
