@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v2.15.1 (2025-06-16)
+
+### Bug Fixes
+
+- **main_window**: Added expiration timer for scroll label for ClientInfoMessage
+  ([`187bf49`](https://github.com/bec-project/bec_widgets/commit/187bf493a5b18299a10939901b9ed7e308435092))
+
+- **scroll_label**: Updating label during scrolling is done imminently, regardless scrolling
+  ([`1612933`](https://github.com/bec-project/bec_widgets/commit/1612933dd9689f2bf480ad81811c051201a9ff70))
+
+
 ## v2.15.0 (2025-06-15)
 
 ### Bug Fixes
