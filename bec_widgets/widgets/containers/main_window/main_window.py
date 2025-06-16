@@ -1,7 +1,7 @@
 import os
 
 from bec_lib.endpoints import MessageEndpoints
-from qtpy.QtCore import QEvent, QSize, Qt
+from qtpy.QtCore import QEvent, QSize, Qt, QTimer
 from qtpy.QtGui import QAction, QActionGroup, QIcon
 from qtpy.QtWidgets import QApplication, QFrame, QLabel, QMainWindow, QStyle, QVBoxLayout, QWidget
 
@@ -79,6 +79,11 @@ class BECMainWindow(BECWidget, QMainWindow):
             Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
         )
         status_bar.addWidget(self._client_info_label, 1)
+
+        # Timer to automatically clear client messages once they expire
+        self._client_info_expire_timer = QTimer(self)
+        self._client_info_expire_timer.setSingleShot(True)
+        self._client_info_expire_timer.timeout.connect(lambda: self._client_info_label.setText(""))
 
     def _add_separator(self):
         """
@@ -222,8 +227,23 @@ class BECMainWindow(BECWidget, QMainWindow):
 
     @SafeSlot(dict, dict)
     def display_client_message(self, msg: dict, meta: dict):
+        """
+        Display a client message in the status bar.
+
+        Args:
+            msg(dict): The message to display, should contain:
+            meta(dict): Metadata about the message, usually empty.
+        """
+        # self._client_info_label.setText("")
         message = msg.get("message", "")
+        expiration = msg.get("expire", 0)  # 0 → never expire
         self._client_info_label.setText(message)
+
+        # Restart the expiration timer if necessary
+        if hasattr(self, "_client_info_expire_timer") and self._client_info_expire_timer.isActive():
+            self._client_info_expire_timer.stop()
+        if expiration and expiration > 0:
+            self._client_info_expire_timer.start(int(expiration * 1000))
 
     ################################################################################
     # General and Cleanup Methods
@@ -259,6 +279,8 @@ class BECMainWindow(BECWidget, QMainWindow):
                     child.close()
                     child.deleteLater()
 
+        if hasattr(self, "_client_info_expire_timer") and self._client_info_expire_timer.isActive():
+            self._client_info_expire_timer.stop()
         # Status bar widgets cleanup
         self._client_info_label.cleanup()
         super().cleanup()
@@ -266,3 +288,12 @@ class BECMainWindow(BECWidget, QMainWindow):
 
 class UILaunchWindow(BECMainWindow):
     RPC = True
+
+
+if __name__ == "__main__":
+    import sys
+
+    app = QApplication(sys.argv)
+    main_window = UILaunchWindow()
+    main_window.show()
+    sys.exit(app.exec())
