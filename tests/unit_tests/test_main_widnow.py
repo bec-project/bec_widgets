@@ -112,6 +112,60 @@ def test_scroll_label_paint_event(qtbot):
     assert not pixmap.isNull()
 
 
+def test_display_client_message_with_expiration(qtbot, bec_main_window):
+    """
+    A message with a finite 'expire' value should disappear once the timer
+    fires.
+    """
+    test_msg = "This message should vanish fast"
+    expire_sec = 0.2
+
+    bec_main_window.display_client_message({"message": test_msg, "expire": expire_sec}, {})
+
+    assert bec_main_window._client_info_expire_timer.isActive()
+    assert bec_main_window._client_info_label.text() == test_msg
+
+    qtbot.waitUntil(lambda: not bec_main_window._client_info_expire_timer.isActive(), timeout=1000)
+
+    assert bec_main_window._client_info_label.text() == ""
+
+
+def test_display_client_message_no_expiration(qtbot, bec_main_window):
+    """
+    A message with 'expire' == 0 must persist and never start the timer.
+    """
+    test_msg = "Persistent status message"
+
+    bec_main_window.display_client_message({"message": test_msg, "expire": 0}, {})
+
+    assert not bec_main_window._client_info_expire_timer.isActive()
+    assert bec_main_window._client_info_label.text() == test_msg
+
+    qtbot.wait(500)
+    assert bec_main_window._client_info_label.text() == test_msg
+
+
+def test_display_client_message_overwrite_resets_timer(qtbot, bec_main_window):
+    """
+    Sending a second message while the expiration timer is active should
+    overwrite the first and stop the timer if the second one is persistent.
+    """
+    first_msg = "First (temporary)"
+    second_msg = "Second (persistent)"
+
+    bec_main_window.display_client_message({"message": first_msg, "expire": 0.3}, {})
+    qtbot.wait(200)
+    assert bec_main_window._client_info_expire_timer.isActive()
+
+    bec_main_window.display_client_message({"message": second_msg, "expire": 0}, {})
+
+    assert not bec_main_window._client_info_expire_timer.isActive()
+    assert bec_main_window._client_info_label.text() == second_msg
+
+    qtbot.wait(400)
+    assert bec_main_window._client_info_label.text() == second_msg
+
+
 #################################################################
 # Tests for BECWebLinksMixin (webbrowser opening)
 
