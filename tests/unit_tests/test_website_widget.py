@@ -23,4 +23,7 @@ def test_website_widget_set_url(website_widget):
 
     website_widget.set_url("https://google.com")
     website_widget.wait_until_loaded()
-    assert website_widget.get_url() == "https://www.google.com/"
+    # in case we get https://www.google.com/sorry/index?continue=https://google.com/&q=...
+    # because of rate limiting or ddos protections etc
+    # e.g. https://github.com/bec-project/bec_widgets/actions/runs/15675153971/job/44172519713?pr=686
+    assert website_widget.get_url().startswith("https://www.google.com/")
