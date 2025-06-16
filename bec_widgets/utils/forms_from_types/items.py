@@ -12,7 +12,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 from qtpy import QtCore
-from qtpy.QtCore import Signal  # type: ignore
+from qtpy.QtCore import QSize, Signal  # type: ignore
+from qtpy.QtGui import QFontMetrics
 from qtpy.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -158,7 +159,8 @@ class DynamicFormItem(QWidget):
         self.setLayout(self._layout)
         self._add_main_widget()
         assert isinstance(self._main_widget, QWidget), "Please set a widget in _add_main_widget()"  # type: ignore
-        self._main_widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        self._main_widget.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         if not spec.pretty_display:
             if clearable_required(spec.info):
                 self._add_clear_button()
@@ -372,6 +374,11 @@ class ListFormItem(DynamicFormItem):
         super().__init__(parent=parent, spec=spec)
         self._main_widget: QListWidget
         self._data = []
+        self.setFixedHeight(QFontMetrics(self.font()).height() * 6)
+
+    def sizeHint(self):
+        default = super().sizeHint()
+        return QSize(default.width(), QFontMetrics(self.font()).height() * 6)
 
     def _add_main_widget(self) -> None:
         self._main_widget = QListWidget()
@@ -447,30 +454,6 @@ class ListFormItem(DynamicFormItem):
         self._repop(self._data)
 
 
-class StrLiteralFormItem(DynamicFormItem):
-    def _add_main_widget(self) -> None:
-        self._main_widget = QComboBox()
-        self._options = get_args(self._spec.info.annotation)
-        for opt in self._options:
-            self._main_widget.addItem(opt)
-        self._layout.addWidget(self._main_widget)
-
-    def getValue(self):
-        return self._main_widget.currentText()
-
-    def setValue(self, value: str | None):
-        if value is None:
-            self.clear()
-        for i in range(self._main_widget.count()):
-            if self._main_widget.itemText(i) == value:
-                self._main_widget.setCurrentIndex(i)
-                return
-        raise ValueError(f"Cannot set value: {value}, options are: {self._options}")
-
-    def clear(self):
-        self._main_widget.setCurrentIndex(-1)
-
-
 class SetFormItem(ListFormItem):
 
     def _add_main_widget(self) -> None:
@@ -478,7 +461,6 @@ class SetFormItem(ListFormItem):
         self._add_item_field = self._types.widget()
         self._buttons.addWidget(QLabel("Add new:"))
         self._buttons.addWidget(self._add_item_field)
-        self.setMinimumSize(QtCore.QSize(50, 100))
         self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
 
     @SafeSlot()
@@ -509,6 +491,30 @@ class SetFormItem(ListFormItem):
 
     def setValue(self, value: set):
         return super().setValue(set(value))
+
+
+class StrLiteralFormItem(DynamicFormItem):
+    def _add_main_widget(self) -> None:
+        self._main_widget = QComboBox()
+        self._options = get_args(self._spec.info.annotation)
+        for opt in self._options:
+            self._main_widget.addItem(opt)
+        self._layout.addWidget(self._main_widget)
+
+    def getValue(self):
+        return self._main_widget.currentText()
+
+    def setValue(self, value: str | None):
+        if value is None:
+            self.clear()
+        for i in range(self._main_widget.count()):
+            if self._main_widget.itemText(i) == value:
+                self._main_widget.setCurrentIndex(i)
+                return
+        raise ValueError(f"Cannot set value: {value}, options are: {self._options}")
+
+    def clear(self):
+        self._main_widget.setCurrentIndex(-1)
 
 
 WidgetTypeRegistry = OrderedDict[str, tuple[Callable[[FormItemSpec], bool], type[DynamicFormItem]]]

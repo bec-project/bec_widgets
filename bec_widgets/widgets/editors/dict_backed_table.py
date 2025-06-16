@@ -220,7 +220,6 @@ class DictBackedTable(QWidget):
 
     def set_min_height_in_lines(self, lines: int):
         self._min_lines = lines
-
         self._table_view.setMinimumHeight(QFontMetrics(self._table_view.font()).height() * lines)
 
     def set_max_height_in_lines(self, lines: int):
