@@ -81,8 +81,8 @@ def test_waiting_display(dialog, qtbot):
 def test_update_cycle(dialog, qtbot):
     update = {"enabled": False, "readoutPriority": "baseline", "deviceTags": {"tag"}}
 
-    def _mock_send(a, c, w):
-        dialog.client.device_manager.devices["test_device"]._config = c["test_device"]
+    def _mock_send(action="update", config=None, wait_for_response=True, timeout_s=None):
+        dialog.client.device_manager.devices["test_device"]._config = config["test_device"]  # type: ignore
 
     dialog._config_helper.send_config_request = MagicMock(side_effect=_mock_send)
     for item in dialog._form.enumerate_form_widgets():

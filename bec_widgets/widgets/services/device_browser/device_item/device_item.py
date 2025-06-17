@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from bec_lib.atlas_models import Device as DeviceConfigModel
+from bec_lib.devicemanager import DeviceContainer
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from qtpy.QtCore import QMimeData, QSize, Qt, Signal
@@ -30,9 +31,9 @@ class DeviceItem(ExpandableGroupFrame):
 
     RPC = False
 
-    def __init__(self, parent, device: str, icon: str = "") -> None:
+    def __init__(self, parent, device: str, devices: DeviceContainer, icon: str = "") -> None:
         super().__init__(parent, title=device, expanded=False, icon=icon)
-
+        self.dev = devices
         self._drag_pos = None
         self._expanded_first_time = False
         self._data = None
@@ -54,6 +55,8 @@ class DeviceItem(ExpandableGroupFrame):
 
     def _create_edit_dialog(self):
         dialog = DeviceConfigDialog(parent=self, device=self.device)
+        dialog.accepted.connect(self._reload_config)
+        dialog.applied.connect(self._reload_config)
         dialog.open()
 
     @SafeSlot()
@@ -62,8 +65,7 @@ class DeviceItem(ExpandableGroupFrame):
             self._expanded_first_time = True
             self.form = DeviceConfigForm(parent=self, pretty_display=True)
             self._contents.layout().addWidget(self.form)
-            if self._data:
-                self.form.set_data(self._data)
+            self._reload_config()
             self.broadcast_size_hint.emit(self.sizeHint())
         super().switch_expanded_state()
         if self._expanded_first_time:
@@ -73,6 +75,11 @@ class DeviceItem(ExpandableGroupFrame):
                 self.form.set_pretty_display_theme()
         self.adjustSize()
         self.broadcast_size_hint.emit(self.sizeHint())
+
+    @SafeSlot(popup_error=True)
+    def _reload_config(self, *_):
+        self.dev[self.device].read_configuration(cached=False)
+        self.set_display_config(self.dev[self.device]._config)
 
     def set_display_config(self, config_dict: dict):
         """Set the displayed information from a device config dict, which must conform to the

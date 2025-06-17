@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from functools import partial
-
 from bec_lib.atlas_models import Device as DeviceConfigModel
 from pydantic import BaseModel
 from qtpy.QtWidgets import QApplication
@@ -13,7 +11,6 @@ from bec_widgets.utils.forms_from_types.items import (
     DEFAULT_WIDGET_TYPES,
     BoolFormItem,
     BoolToggleFormItem,
-    widget_from_type,
 )
 
 
@@ -45,6 +42,10 @@ class DeviceConfigForm(PydanticModelForm):
         if theme is None:
             theme = get_theme_name()
         self.setStyleSheet(styles.pretty_display_theme(theme))
+
+    def get_form_data(self):
+        """Get the entered metadata as a dict."""
+        return self._md_schema.model_validate(super().get_form_data()).model_dump()
 
     def _connect_to_theme_change(self):
         """Connect to the theme change signal."""

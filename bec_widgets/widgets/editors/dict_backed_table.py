@@ -72,7 +72,7 @@ class DictBackedTableModel(QAbstractTableModel):
     def replaceData(self, data: dict):
         self.delete_rows(list(range(len(self._data))))
         self.resetInternalData()
-        self._data = [[k, v] for k, v in data.items()]
+        self._data = [[str(k), str(v)] for k, v in data.items()]
         self.dataChanged.emit(self.index(0, 0), self.index(len(self._data), 1))
 
     def update_disallowed_keys(self, keys: list[str]):
