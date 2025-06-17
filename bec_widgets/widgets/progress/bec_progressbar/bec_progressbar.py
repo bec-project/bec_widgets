@@ -1,12 +1,13 @@
 import sys
 from string import Template
 
-from qtpy.QtCore import Property, QEasingCurve, QPropertyAnimation, QRectF, Qt, QTimer, Slot
+from qtpy.QtCore import QEasingCurve, QPropertyAnimation, QRectF, Qt, QTimer
 from qtpy.QtGui import QColor, QPainter, QPainterPath
 from qtpy.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_accent_colors
+from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 
 
 class BECProgressBar(BECWidget, QWidget):
@@ -69,7 +70,9 @@ class BECProgressBar(BECWidget, QWidget):
 
         self.update()
 
-    @Property(str, doc="The template for the center label. Use $value, $maximum, and $percentage.")
+    @SafeProperty(
+        str, doc="The template for the center label. Use $value, $maximum, and $percentage."
+    )
     def label_template(self):
         """
         The template for the center label. Use $value, $maximum, and $percentage to insert the values.
@@ -87,7 +90,7 @@ class BECProgressBar(BECWidget, QWidget):
         self.set_value(self._user_value)
         self.update()
 
-    @Property(float, designable=False)
+    @SafeProperty(float, designable=False)
     def _progressbar_value(self):
         """
         The current value of the progress bar.
@@ -107,8 +110,8 @@ class BECProgressBar(BECWidget, QWidget):
             percentage=int((self.map_value(self._user_value) / self._maximum) * 100),
         )
 
-    @Slot(float)
-    @Slot(int)
+    @SafeSlot(float)
+    @SafeSlot(int)
     def set_value(self, value):
         """
         Set the value of the progress bar.
@@ -125,7 +128,7 @@ class BECProgressBar(BECWidget, QWidget):
         self.center_label.setText(self._update_template())
         self.animate_progress()
 
-    @Property(float)
+    @SafeProperty(float)
     def padding_left_right(self) -> float:
         return self._padding_left_right
 
@@ -178,7 +181,7 @@ class BECProgressBar(BECWidget, QWidget):
         self._value_animation.setEndValue(self._target_value)
         self._value_animation.start()
 
-    @Property(float)
+    @SafeProperty(float)
     def maximum(self):
         """
         The maximum value of the progress bar.
@@ -192,7 +195,7 @@ class BECProgressBar(BECWidget, QWidget):
         """
         self.set_maximum(maximum)
 
-    @Property(float)
+    @SafeProperty(float)
     def minimum(self):
         """
         The minimum value of the progress bar.
@@ -203,7 +206,7 @@ class BECProgressBar(BECWidget, QWidget):
     def minimum(self, minimum: float):
         self.set_minimum(minimum)
 
-    @Property(float)
+    @SafeProperty(float)
     def initial_value(self):
         """
         The initial value of the progress bar.
@@ -214,7 +217,7 @@ class BECProgressBar(BECWidget, QWidget):
     def initial_value(self, value: float):
         self.set_value(value)
 
-    @Slot(float)
+    @SafeSlot(float)
     def set_maximum(self, maximum: float):
         """
         Set the maximum value of the progress bar.
@@ -226,7 +229,7 @@ class BECProgressBar(BECWidget, QWidget):
         self.set_value(self._user_value)  # Update the value to fit the new range
         self.update()
 
-    @Slot(float)
+    @SafeSlot(float)
     def set_minimum(self, minimum: float):
         """
         Set the minimum value of the progress bar.
