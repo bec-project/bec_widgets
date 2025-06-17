@@ -13,6 +13,7 @@ from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.widgets.containers.main_window.addons.scroll_label import ScrollLabel
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
+from bec_widgets.widgets.progress.scan_progressbar.scan_progressbar import ScanProgressBar
 
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
@@ -84,6 +85,12 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._client_info_expire_timer = QTimer(self)
         self._client_info_expire_timer.setSingleShot(True)
         self._client_info_expire_timer.timeout.connect(lambda: self._client_info_label.setText(""))
+
+        self._add_separator()
+        self._scan_progress_bar = ScanProgressBar(self, one_line_design=True)
+        self._scan_progress_bar.show_elapsed_time = False
+        self._scan_progress_bar.show_remaining_time = False
+        status_bar.addWidget(self._scan_progress_bar)
 
     def _add_separator(self):
         """
@@ -283,6 +290,8 @@ class BECMainWindow(BECWidget, QMainWindow):
             self._client_info_expire_timer.stop()
         # Status bar widgets cleanup
         self._client_info_label.cleanup()
+        self._scan_progress_bar.close()
+        self._scan_progress_bar.deleteLater()
         super().cleanup()
 
 
@@ -296,4 +305,5 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     main_window = UILaunchWindow()
     main_window.show()
+    main_window.resize(800, 600)
     sys.exit(app.exec())
