@@ -1,6 +1,67 @@
 # CHANGELOG
 
 
+## v2.16.0 (2025-06-17)
+
+### Bug Fixes
+
+- Adjust height of list widget
+  ([`11131ef`](https://github.com/bec-project/bec_widgets/commit/11131ef14c7e8714a4eaf70256da9e5835d60810))
+
+- Make website test robust
+  ([`4d8c07c`](https://github.com/bec-project/bec_widgets/commit/4d8c07cdd142bab4c0d8224c43e66517a02da7c1))
+
+- Parse config on submission and reload after
+  ([`5e4c129`](https://github.com/bec-project/bec_widgets/commit/5e4c129af6ae6644e4bb94f4129c6770fd26542d))
+
+- Pass on kwargs from PydanticModelForm
+  ([`a55f561`](https://github.com/bec-project/bec_widgets/commit/a55f561971a9ce2295cd835cd5cb6ce436d6c693))
+
+- Put waiting in thread
+  ([`1a350c3`](https://github.com/bec-project/bec_widgets/commit/1a350c3b16da0d990afd53d14934040e5e063177))
+
+- Reset dict table properly
+  ([`5623547`](https://github.com/bec-project/bec_widgets/commit/5623547e926b86eeb5e2164fa6ec9e36b99b8f63))
+
+- Scale dict widget height
+  ([`dea2568`](https://github.com/bec-project/bec_widgets/commit/dea2568de370450ca871fe7bf3573eec9acf8122))
+
+- Tidy up form widget formatting
+  ([`8f4c8e4`](https://github.com/bec-project/bec_widgets/commit/8f4c8e45b3d4a15c67e36cd52d475c3117eca1d3))
+
+### Features
+
+- Add a widget to edit lists in forms
+  ([`7fc85ba`](https://github.com/bec-project/bec_widgets/commit/7fc85bac7fff8555b73d28eefe9a538540d574b9))
+
+- Add set form item
+  ([`be73349`](https://github.com/bec-project/bec_widgets/commit/be73349c706582c144813f70dbc477372057de86))
+
+- Allow editing device config from browser
+  ([`886964b`](https://github.com/bec-project/bec_widgets/commit/886964bb54d2f3923fb6baf198652bb05cf28eb2))
+
+- Generate combobox for literal str
+  ([`138d4ca`](https://github.com/bec-project/bec_widgets/commit/138d4cabbd50e3c86ab18e9cdc25bbb5cdabc511))
+
+### Performance Improvements
+
+- Replace wait with waitUntil
+  ([`d626caa`](https://github.com/bec-project/bec_widgets/commit/d626caae3dc71683134cc47073bc131eba4820f5))
+
+### Refactoring
+
+- Move device config form to module
+  ([`9ce31c9`](https://github.com/bec-project/bec_widgets/commit/9ce31c9833ae38721b2246cdcac50f1154fba99d))
+
+- Rename field widgets
+  ([`b0d03c0`](https://github.com/bec-project/bec_widgets/commit/b0d03c0648cd365143dfed27d4755d6f5b9c7a45))
+
+### Testing
+
+- Add tests for config dialog
+  ([`a9613a0`](https://github.com/bec-project/bec_widgets/commit/a9613a07b0cd9cd9455fd996d124c77218c9388f))
+
+
 ## v2.15.1 (2025-06-16)
 
 ### Bug Fixes
