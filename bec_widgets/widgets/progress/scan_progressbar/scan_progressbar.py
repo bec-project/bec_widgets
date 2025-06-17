@@ -291,6 +291,9 @@ class ScanProgressBar(BECWidget, QWidget):
                     else MessageEndpoints.device_progress(device=self._progress_source.value)
                 ),
             )
+        self.progressbar.close()
+        self.progressbar.deleteLater()
+        super().cleanup()
 
 
 if __name__ == "__main__":  # pragma: no cover
