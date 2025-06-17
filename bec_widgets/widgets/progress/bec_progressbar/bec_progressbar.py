@@ -58,17 +58,19 @@ class BECProgressBar(BECWidget, QWidget):
 
         # label on top of the progress bar
         self.center_label = QLabel(self)
-        self.center_label.setAlignment(Qt.AlignCenter)
+        self.center_label.setAlignment(Qt.AlignHCenter)
         self.center_label.setStyleSheet("color: white;")
         self.center_label.setMinimumSize(0, 0)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(10, 0, 10, 0)
         layout.setSpacing(0)
         layout.addWidget(self.center_label)
+        layout.setAlignment(self.center_label, Qt.AlignCenter)
         self.setLayout(layout)
 
         self.update()
+        self._adjust_label_width()
 
     @SafeProperty(
         str, doc="The template for the center label. Use $value, $maximum, and $percentage."
@@ -87,6 +89,7 @@ class BECProgressBar(BECWidget, QWidget):
     @label_template.setter
     def label_template(self, template):
         self._label_template = template
+        self._adjust_label_width()
         self.set_value(self._user_value)
         self.update()
 
@@ -109,6 +112,18 @@ class BECProgressBar(BECWidget, QWidget):
             maximum=self._user_maximum,
             percentage=int((self.map_value(self._user_value) / self._maximum) * 100),
         )
+
+    def _adjust_label_width(self):
+        """
+        Reserve enough horizontal space for the center label so the widget
+        doesn't resize as the text grows during progress.
+        """
+        template = Template(self._label_template)
+        sample_text = template.safe_substitute(
+            value=self._user_maximum, maximum=self._user_maximum, percentage=100
+        )
+        width = self.center_label.fontMetrics().horizontalAdvance(sample_text)
+        self.center_label.setFixedWidth(width)
 
     @SafeSlot(float)
     @SafeSlot(int)
@@ -226,6 +241,7 @@ class BECProgressBar(BECWidget, QWidget):
             maximum (float): The maximum value.
         """
         self._user_maximum = maximum
+        self._adjust_label_width()
         self.set_value(self._user_value)  # Update the value to fit the new range
         self.update()
 
