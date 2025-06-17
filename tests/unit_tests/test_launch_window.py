@@ -102,7 +102,15 @@ def test_launch_window_launch_plugin_auto_update(bec_launch_window):
     [
         ({}, False),
         ({"launcher": mock.MagicMock()}, False),
-        ({"launcher": mock.MagicMock(), "dock_area": mock.MagicMock()}, True),
+        ({"launcher": mock.MagicMock(), "dock_area": mock.MagicMock()}, False),
+        (
+            {
+                "launcher": mock.MagicMock(),
+                "dock_area": mock.MagicMock(),
+                "scan_progress": mock.MagicMock(),
+            },
+            True,
+        ),
     ],
 )
 def test_gui_server_turns_off_the_lights(bec_launch_window, connections, hide):
@@ -132,7 +140,15 @@ def test_gui_server_turns_off_the_lights(bec_launch_window, connections, hide):
     [
         ({}, True),
         ({"launcher": mock.MagicMock()}, True),
-        ({"launcher": mock.MagicMock(), "dock_area": mock.MagicMock()}, False),
+        ({"launcher": mock.MagicMock(), "dock_area": mock.MagicMock()}, True),
+        (
+            {
+                "launcher": mock.MagicMock(),
+                "dock_area": mock.MagicMock(),
+                "scan_progress": mock.MagicMock(),
+            },
+            False,
+        ),
     ],
 )
 def test_launch_window_closes(bec_launch_window, connections, close_called):
