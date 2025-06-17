@@ -123,11 +123,14 @@ class ScanProgressBar(BECWidget, QWidget):
 
     ICON_NAME = "timelapse"
 
-    def __init__(self, parent=None, client=None, config=None, gui_id=None):
+    def __init__(self, parent=None, client=None, config=None, gui_id=None, one_line_design=False):
         super().__init__(parent=parent, client=client, config=config, gui_id=gui_id)
 
         self.get_bec_shortcuts()
-        ui_file = os.path.join(os.path.dirname(__file__), "scan_progressbar.ui")
+        ui_file = os.path.join(
+            os.path.dirname(__file__),
+            "scan_progressbar_one_line.ui" if one_line_design else "scan_progressbar.ui",
+        )
         self.ui = UILoader(self).loader(ui_file)
         self.layout = QVBoxLayout(self)
         self.layout.setSpacing(0)
@@ -209,6 +212,8 @@ class ScanProgressBar(BECWidget, QWidget):
     @show_elapsed_time.setter
     def show_elapsed_time(self, value):
         self.ui.elapsed_time_label.setVisible(value)
+        if hasattr(self.ui, "dash"):
+            self.ui.dash.setVisible(value)
 
     @SafeProperty(bool)
     def show_remaining_time(self):
@@ -217,6 +222,8 @@ class ScanProgressBar(BECWidget, QWidget):
     @show_remaining_time.setter
     def show_remaining_time(self, value):
         self.ui.remaining_time_label.setVisible(value)
+        if hasattr(self.ui, "dash"):
+            self.ui.dash.setVisible(value)
 
     @SafeProperty(bool)
     def show_source_label(self):
