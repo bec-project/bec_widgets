@@ -1,5 +1,4 @@
-import traceback
-from threading import Thread
+from ast import literal_eval
 
 from bec_lib.atlas_models import Device as DeviceConfigModel
 from bec_lib.config_helper import CONF as DEVICE_CONF_KEYS
@@ -10,6 +9,7 @@ from qtpy.QtWidgets import (
     QApplication,
     QDialog,
     QDialogButtonBox,
+    QLabel,
     QStackedLayout,
     QVBoxLayout,
     QWidget,
@@ -26,7 +26,7 @@ logger = bec_logger.logger
 
 
 class _CommSignals(QObject):
-    error = Signal(str)
+    error = Signal(Exception)
     done = Signal()
 
 
@@ -48,18 +48,17 @@ class _CommunicateUpdate(QRunnable):
             )
             logger.info("Waiting for config reply")
             reply = self.config_helper.wait_for_config_reply(RID, timeout=timeout)
-            logger.info("Handling config reply")
             self.config_helper.handle_update_reply(reply, RID, timeout)
+            logger.info("Done updating config!")
         except Exception as e:
-            self.signals.error.emit(
-                f"Error updating config: \n {''.join(traceback.format_exception(e))}"
-            )
+            self.signals.error.emit(e)
         finally:
             self.signals.done.emit()
 
 
 class DeviceConfigDialog(BECWidget, QDialog):
     RPC = False
+    applied = Signal()
 
     def __init__(
         self,
@@ -78,6 +77,14 @@ class DeviceConfigDialog(BECWidget, QDialog):
         self._container = QStackedLayout()
         self._container.setStackingMode(QStackedLayout.StackAll)
 
+        self._layout = QVBoxLayout()
+        user_warning = QLabel(
+            "Warning: edit items here at your own risk - minimal validation is applied to the entered values.\n"
+            "Items in the deviceConfig dictionary should correspond to python literals, e.g. numbers, lists, strings (including quotes), etc."
+        )
+        user_warning.setWordWrap(True)
+        user_warning.setStyleSheet("QLabel { color: red; }")
+        self._layout.addWidget(user_warning)
         self._add_form()
         self._add_overlay()
         self._add_buttons()
@@ -87,7 +94,6 @@ class DeviceConfigDialog(BECWidget, QDialog):
 
     def _add_form(self):
         self._form_widget = QWidget()
-        self._layout = QVBoxLayout()
         self._form_widget.setLayout(self._layout)
         self._form = DeviceConfigForm()
         self._layout.addWidget(self._form)
@@ -137,13 +143,20 @@ class DeviceConfigDialog(BECWidget, QDialog):
 
     def updated_config(self):
         new_config = self._form.get_form_data()
-        return {
+        diff = {
             k: v for k, v in new_config.items() if self._initial_config.get(k) != new_config.get(k)
         }
+        # TODO: replace when https://github.com/bec-project/bec/issues/528 is resolved
+        if diff.get("deviceConfig") is not None:
+            diff["deviceConfig"] = {
+                k: literal_eval(str(v)) for k, v in diff["deviceConfig"].items()
+            }
+        return diff
 
     @SafeSlot()
     def apply(self):
         self._process_update_action()
+        self.applied.emit()
 
     @SafeSlot()
     def accept(self):
@@ -181,9 +194,9 @@ class DeviceConfigDialog(BECWidget, QDialog):
         self._fetch_config()
         self._fill_form()
 
-    @SafeSlot(str)
-    def update_error(self, e: str):
-        logger.error(e)
+    @SafeSlot(Exception, popup_error=True)
+    def update_error(self, e: Exception):
+        raise RuntimeError("Failed to update device configuration") from e
 
     def _start_waiting_display(self):
         self._overlay_widget.setVisible(True)

@@ -26,6 +26,7 @@ if TYPE_CHECKING:  # pragma: no cover
 @pytest.fixture
 def device_browser(qtbot, mocked_client):
     dev_browser = DeviceBrowser(client=mocked_client)
+    dev_browser.dev["samx"].read_configuration = mock.MagicMock()
     qtbot.addWidget(dev_browser)
     qtbot.waitExposed(dev_browser)
     yield dev_browser
@@ -88,8 +89,9 @@ def test_device_item_expansion(device_browser, qtbot):
     form = widget._contents.layout().itemAt(0).widget()
     qtbot.waitUntil(lambda: isinstance(form, DeviceConfigForm), timeout=500)
     assert widget.expanded
+    device_browser.dev["samx"].read_configuration.assert_called()
     assert (name_field := form.widget_dict.get("name")) is not None
-    assert name_field.getValue() == "samx"
+    qtbot.waitUntil(lambda: name_field.getValue() == "samx", timeout=500)
     qtbot.mouseClick(widget._expansion_button, Qt.MouseButton.LeftButton)
     assert not widget.expanded
 

@@ -87,14 +87,13 @@ class DeviceBrowser(BECWidget, QWidget):
             for device, device_obj in self.dev.items():
                 item = QListWidgetItem(self.dev_list)
                 device_item = DeviceItem(
-                    parent=self, device=device, icon=map_device_type_to_icon(device_obj)
+                    parent=self,
+                    device=device,
+                    devices=self.dev,
+                    icon=map_device_type_to_icon(device_obj),
                 )
-
                 device_item.expansion_state_changed.connect(partial(_updatesize, item, device_item))
-
-                device_config = self.dev[device]._config  # pylint: disable=protected-access
-                device_item.set_display_config(device_config)
-                tooltip = device_config.get("description", "")
+                tooltip = self.dev[device]._config.get("description", "")
                 device_item.setToolTip(tooltip)
                 device_item.broadcast_size_hint.connect(item.setSizeHint)
                 item.setSizeHint(device_item.sizeHint())
