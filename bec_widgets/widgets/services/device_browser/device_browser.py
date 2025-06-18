@@ -3,11 +3,12 @@ import re
 from functools import partial
 
 from bec_lib.callback_handler import EventType
+from bec_lib.config_helper import ConfigHelper
 from bec_lib.logger import bec_logger
 from bec_lib.messages import ConfigAction
 from bec_qthemes import material_icon
 from pyqtgraph import SignalProxy
-from qtpy.QtCore import QSize, Signal
+from qtpy.QtCore import QSize, QThreadPool, Signal
 from qtpy.QtWidgets import QListWidget, QListWidgetItem, QVBoxLayout, QWidget
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
@@ -42,6 +43,8 @@ class DeviceBrowser(BECWidget, QWidget):
     ) -> None:
         super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
         self.get_bec_shortcuts()
+        self._config_helper = ConfigHelper(self.client.connector, self.client._service_name)
+        self._q_threadpool = QThreadPool()
         self.ui = None
         self.ini_ui()
         self.dev_list: QListWidget = self.ui.device_list
@@ -88,29 +91,40 @@ class DeviceBrowser(BECWidget, QWidget):
         self.dev_list.clear()
         self._device_items: dict[str, QListWidgetItem] = {}
 
+        with RPCRegister.delayed_broadcast():
+            for device, device_obj in self.dev.items():
+                self._add_item_to_list(device, device_obj)
+
+    def _add_item_to_list(self, device: str, device_obj):
         def _updatesize(item: QListWidgetItem, device_item: DeviceItem):
             device_item.adjustSize()
             item.setSizeHint(QSize(device_item.width(), device_item.height()))
             logger.debug(f"Adjusting {item} size to {device_item.width(), device_item.height()}")
 
-        with RPCRegister.delayed_broadcast():
-            for device, device_obj in self.dev.items():
-                item = QListWidgetItem(self.dev_list)
-                device_item = DeviceItem(
-                    parent=self,
-                    device=device,
-                    devices=self.dev,
-                    icon=map_device_type_to_icon(device_obj),
-                )
-                device_item.expansion_state_changed.connect(partial(_updatesize, item, device_item))
-                tooltip = self.dev[device]._config.get("description", "")
-                device_item.setToolTip(tooltip)
-                device_item.broadcast_size_hint.connect(item.setSizeHint)
-                item.setSizeHint(device_item.sizeHint())
+        def _remove_item(item: QListWidgetItem):
+            self.dev_list.takeItem(self.dev_list.row(item))
+            del self._device_items[device]
+            self.dev_list.sortItems()
 
-                self.dev_list.setItemWidget(item, device_item)
-                self.dev_list.addItem(item)
-                self._device_items[device] = item
+        item = QListWidgetItem(self.dev_list)
+        device_item = DeviceItem(
+            parent=self,
+            device=device,
+            devices=self.dev,
+            icon=map_device_type_to_icon(device_obj),
+            config_helper=self._config_helper,
+            q_threadpool=self._q_threadpool,
+        )
+        device_item.expansion_state_changed.connect(partial(_updatesize, item, device_item))
+        device_item.imminent_deletion.connect(partial(_remove_item, item))
+        tooltip = self.dev[device]._config.get("description", "")
+        device_item.setToolTip(tooltip)
+        device_item.broadcast_size_hint.connect(item.setSizeHint)
+        item.setSizeHint(device_item.sizeHint())
+
+        self.dev_list.setItemWidget(item, device_item)
+        self.dev_list.addItem(item)
+        self._device_items[device] = item
 
     @SafeSlot()
     def reset_device_list(self) -> None:
@@ -129,6 +143,10 @@ class DeviceBrowser(BECWidget, QWidget):
         Either way, the function will filter the devices based on the filter input text and update the device list.
         """
         filter_text = self.ui.filter_input.text()
+        for device in self.dev:
+            if device not in self._device_items:
+                # it is possible the device has just been added to the config
+                self._add_item_to_list(device, self.dev[device])
         try:
             self.regex = re.compile(filter_text, re.IGNORECASE)
         except re.error:
