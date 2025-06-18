@@ -67,6 +67,15 @@ class DeviceConfigDialog(BECWidget, QDialog):
         config_helper: ConfigHelper | None = None,
         **kwargs,
     ):
+        """A dialog to edit the configuration of a device in BEC. Generated from the pydantic model
+        for device specification in bec_lib.atlas_models.
+
+        Args:
+            parent (QObject): the parent QObject
+            device (str | None): the name of the device. used with the "update" action to prefill the dialog and validate entries.
+            config_helper (ConfigHelper | None): a ConfigHelper object for communication with Redis, will be created if necessary.
+            action (Literal["update", "add"]): the action which the form should perform on application or acceptance.
+        """
         super().__init__(parent=parent, **kwargs)
         self._config_helper = config_helper or ConfigHelper(
             self.client.connector, self.client._service_name
