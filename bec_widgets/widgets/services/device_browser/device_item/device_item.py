@@ -3,15 +3,19 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from bec_lib.atlas_models import Device as DeviceConfigModel
+from bec_lib.config_helper import ConfigHelper
 from bec_lib.devicemanager import DeviceContainer
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
-from qtpy.QtCore import QMimeData, QSize, Qt, Signal
+from qtpy.QtCore import QMimeData, QSize, Qt, QThreadPool, Signal
 from qtpy.QtGui import QDrag
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QTabWidget, QToolButton, QVBoxLayout, QWidget
 
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.expandable_frame import ExpandableGroupFrame
+from bec_widgets.widgets.services.device_browser.device_item.config_communicator import (
+    CommunicateConfigAction,
+)
 from bec_widgets.widgets.services.device_browser.device_item.device_config_dialog import (
     DeviceConfigDialog,
 )
@@ -31,10 +35,20 @@ logger = bec_logger.logger
 
 class DeviceItem(ExpandableGroupFrame):
     broadcast_size_hint = Signal(QSize)
+    imminent_deletion = Signal()
 
     RPC = False
 
-    def __init__(self, parent, device: str, devices: DeviceContainer, icon: str = "") -> None:
+    def __init__(
+        self,
+        *,
+        parent,
+        device: str,
+        devices: DeviceContainer,
+        icon: str = "",
+        config_helper: ConfigHelper,
+        q_threadpool: QThreadPool | None = None,
+    ) -> None:
         super().__init__(parent, title=device, expanded=False, icon=icon)
         self.dev = devices
         self._drag_pos = None
@@ -48,34 +62,63 @@ class DeviceItem(ExpandableGroupFrame):
         self._tab_widget.setDocumentMode(True)
         self._layout.addWidget(self._tab_widget)
 
-        self.set_layout(self._layout)
-
-        self._form_page = QWidget()
+        self._form_page = QWidget(parent=self)
         self._form_page_layout = QVBoxLayout()
         self._form_page.setLayout(self._form_page_layout)
 
-        self._signal_page = QWidget()
+        self._signal_page = QWidget(parent=self)
         self._signal_page_layout = QVBoxLayout()
         self._signal_page.setLayout(self._signal_page_layout)
 
         self._tab_widget.addTab(self._form_page, "Configuration")
         self._tab_widget.addTab(self._signal_page, "Signals")
+        self._config_helper = config_helper
+        self._q_threadpool = q_threadpool or QThreadPool()
+
+        self.set_layout(self._layout)
         self.adjustSize()
 
     def _create_title_layout(self, title: str, icon: str):
         super()._create_title_layout(title, icon)
+
         self.edit_button = QToolButton()
-        self.edit_button.setIcon(
-            material_icon(icon_name="edit", size=(10, 10), convert_to_pixmap=False)
-        )
+        self.edit_button.setIcon(material_icon(icon_name="edit", size=(15, 15)))
         self._title_layout.insertWidget(self._title_layout.count() - 1, self.edit_button)
         self.edit_button.clicked.connect(self._create_edit_dialog)
 
+        self.delete_button = QToolButton()
+        self.delete_button.setIcon(material_icon(icon_name="delete", size=(15, 15)))
+        self._title_layout.insertWidget(self._title_layout.count() - 1, self.delete_button)
+        self.delete_button.clicked.connect(self._delete_device)
+
+    @SafeSlot()
     def _create_edit_dialog(self):
-        dialog = DeviceConfigDialog(parent=self, device=self.device)
+        dialog = DeviceConfigDialog(
+            parent=self,
+            device=self.device,
+            config_helper=self._config_helper,
+            threadpool=self._q_threadpool,
+        )
         dialog.accepted.connect(self._reload_config)
         dialog.applied.connect(self._reload_config)
         dialog.open()
+
+    @SafeSlot()
+    def _delete_device(self):
+        self.expanded = False
+        deleter = CommunicateConfigAction(self._config_helper, self.device, None, "remove")
+        deleter.signals.error.connect(self._deletion_error)
+        deleter.signals.done.connect(self._deletion_done)
+        self._q_threadpool.start(deleter)
+
+    @SafeSlot(Exception, popup_error=True)
+    def _deletion_error(self, e: Exception):
+        raise RuntimeError(f"Failed to delete device {self.device}") from e
+
+    @SafeSlot()
+    def _deletion_done(self):
+        self.imminent_deletion.emit()
+        self.deleteLater()
 
     @SafeSlot()
     def switch_expanded_state(self):
@@ -157,7 +200,12 @@ if __name__ == "__main__":  # pragma: no cover
         "deviceTags": {"tag1", "tag2", "tag3"},
         "userParameter": {"some_setting": "some_ value"},
     }
-    item = DeviceItem(widget, "Device", {"Device": MagicMock(enabled=True, _config=mock_config)})
+    item = DeviceItem(
+        parent=widget,
+        device="Device",
+        devices={"Device": MagicMock(enabled=True, _config=mock_config)},  # type: ignore
+        config_helper=ConfigHelper(MagicMock()),
+    )
     layout.addWidget(DarkModeButton())
     layout.addWidget(item)
     widget.show()

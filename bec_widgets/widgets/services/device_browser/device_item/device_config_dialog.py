@@ -5,7 +5,7 @@ from bec_lib.atlas_models import Device as DeviceConfigModel
 from bec_lib.config_helper import CONF as DEVICE_CONF_KEYS
 from bec_lib.config_helper import ConfigHelper
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QObject, QRunnable, QSize, Qt, QThreadPool, Signal
+from qtpy.QtCore import QSize, Qt, QThreadPool, Signal
 from qtpy.QtWidgets import (
     QApplication,
     QDialog,
@@ -18,6 +18,9 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.widgets.services.device_browser.device_item.config_communicator import (
+    CommunicateConfigAction,
+)
 from bec_widgets.widgets.services.device_browser.device_item.device_config_form import (
     DeviceConfigForm,
 )
@@ -26,53 +29,18 @@ from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 logger = bec_logger.logger
 
 
-class _CommSignals(QObject):
-    error = Signal(Exception)
-    done = Signal()
-
-
-class _CommunicateUpdate(QRunnable):
-
-    def __init__(self, config_helper: ConfigHelper, device: str, config: dict, action: str) -> None:
-        super().__init__()
-        self.config_helper = config_helper
-        self.device = device
-        self.config = config
-        self.action = action
-        self.signals = _CommSignals()
-
-    @SafeSlot()
-    def run(self):
-        try:
-            if (dev_name := self.device or self.config.get("name")) is None:
-                raise ValueError("Must be updating a device or be supplied a name for a new device")
-            req_args = {
-                "action": self.action,
-                "config": {dev_name: self.config},
-                "wait_for_response": False,
-            }
-            timeout = self.config_helper.suggested_timeout_s(self.config)
-            RID = self.config_helper.send_config_request(**req_args)
-            logger.info("Waiting for config reply")
-            reply = self.config_helper.wait_for_config_reply(RID, timeout=timeout)
-            self.config_helper.handle_update_reply(reply, RID, timeout)
-            logger.info("Done updating config!")
-        except Exception as e:
-            self.signals.error.emit(e)
-        finally:
-            self.signals.done.emit()
-
-
 class DeviceConfigDialog(BECWidget, QDialog):
     RPC = False
     applied = Signal()
 
     def __init__(
         self,
+        *,
         parent=None,
         device: str | None = None,
         config_helper: ConfigHelper | None = None,
         action: Literal["update", "add"] = "update",
+        threadpool: QThreadPool | None = None,
         **kwargs,
     ):
         """A dialog to edit the configuration of a device in BEC. Generated from the pydantic model
@@ -89,9 +57,9 @@ class DeviceConfigDialog(BECWidget, QDialog):
         self._config_helper = config_helper or ConfigHelper(
             self.client.connector, self.client._service_name
         )
-        self.threadpool = QThreadPool()
         self._device = device
         self._action = action
+        self._q_threadpool = threadpool or QThreadPool()
         self.setWindowTitle(f"Edit config for: {device}")
         self._container = QStackedLayout()
         self._container.setStackingMode(QStackedLayout.StackAll)
@@ -216,12 +184,12 @@ class DeviceConfigDialog(BECWidget, QDialog):
         logger.info(f"Sending request to update device config: {config}")
 
         self._start_waiting_display()
-        communicate_update = _CommunicateUpdate(
+        communicate_update = CommunicateConfigAction(
             self._config_helper, self._device, config, self._action
         )
         communicate_update.signals.error.connect(self.update_error)
         communicate_update.signals.done.connect(self.update_done)
-        self.threadpool.start(communicate_update)
+        self._q_threadpool.start(communicate_update)
 
     @SafeSlot()
     def update_done(self):

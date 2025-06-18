@@ -132,3 +132,13 @@ def test_device_item_double_click_event(device_browser, qtbot):
     device_item: QListWidgetItem = device_browser.ui.device_list.itemAt(0, 0)
     widget: DeviceItem = device_browser.ui.device_list.itemWidget(device_item)
     qtbot.mouseDClick(widget, Qt.LeftButton)
+
+
+def test_device_deletion(device_browser, qtbot):
+    device_item: QListWidgetItem = device_browser.ui.device_list.itemAt(0, 0)
+    widget: DeviceItem = device_browser.ui.device_list.itemWidget(device_item)
+    widget._config_helper = mock.MagicMock()
+
+    assert widget.device in device_browser._device_items
+    qtbot.mouseClick(widget.delete_button, Qt.LeftButton)
+    qtbot.waitUntil(lambda: widget.device not in device_browser._device_items, timeout=10000)

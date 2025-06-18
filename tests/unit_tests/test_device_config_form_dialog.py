@@ -2,8 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from bec_lib.atlas_models import Device as DeviceConfigModel
-from PySide6.QtWidgets import QPushButton
-from qtpy.QtWidgets import QDialogButtonBox, QLineEdit
+from qtpy.QtWidgets import QDialogButtonBox, QPushButton
 
 from bec_widgets.utils.forms_from_types.items import StrFormItem
 from bec_widgets.widgets.services.device_browser.device_item.device_config_dialog import (
