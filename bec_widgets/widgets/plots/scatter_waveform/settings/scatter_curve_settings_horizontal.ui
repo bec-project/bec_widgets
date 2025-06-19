@@ -141,6 +141,14 @@
    <header>bec_color_map_widget</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>x_name</tabstop>
+  <tabstop>x_entry</tabstop>
+  <tabstop>y_name</tabstop>
+  <tabstop>y_entry</tabstop>
+  <tabstop>z_name</tabstop>
+  <tabstop>z_entry</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>
