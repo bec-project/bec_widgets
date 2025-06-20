@@ -1,8 +1,26 @@
 import sys
+from enum import Enum
 from string import Template
 
 from qtpy.QtCore import QEasingCurve, QPropertyAnimation, QRectF, Qt, QTimer
 from qtpy.QtGui import QColor, QPainter, QPainterPath
+
+
+class ProgressState(Enum):
+    NORMAL = "normal"
+    PAUSED = "paused"
+    INTERRUPTED = "interrupted"
+    COMPLETED = "completed"
+
+
+PROGRESS_STATE_COLORS = {
+    ProgressState.NORMAL: QColor("#2979ff"),  # blue  – normal progress
+    ProgressState.PAUSED: QColor("#ffca28"),  # orange/amber – paused
+    ProgressState.INTERRUPTED: QColor("#ff5252"),  # red – interrupted
+    ProgressState.COMPLETED: QColor("#00e676"),  # green – finished
+}
+# ---------------------------------------------------------------------------
+
 from qtpy.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
@@ -22,6 +40,8 @@ class BECProgressBar(BECWidget, QWidget):
         "set_minimum",
         "label_template",
         "label_template.setter",
+        "state",
+        "state.setter",
         "_get_label",
     ]
     ICON_NAME = "page_control"
@@ -49,6 +69,12 @@ class BECProgressBar(BECWidget, QWidget):
 
         self._completed_color = accent_colors.success
         self._border_color = QColor(50, 50, 50)
+        # Corner‑rounding: base radius in pixels (auto‑reduced if bar is small)
+        self._corner_radius = 10
+
+        # Progress‑bar state handling
+        self._state = ProgressState.NORMAL
+        self._state_colors = dict(PROGRESS_STATE_COLORS)
 
         # layout settings
         self._padding_left_right = 10
@@ -141,7 +167,42 @@ class BECProgressBar(BECWidget, QWidget):
         self._target_value = self.map_value(value)
         self._user_value = value
         self.center_label.setText(self._update_template())
+        # Update state automatically unless paused or interrupted
+        if self._state not in (ProgressState.PAUSED, ProgressState.INTERRUPTED):
+            self._state = (
+                ProgressState.COMPLETED
+                if self._user_value >= self._user_maximum
+                else ProgressState.NORMAL
+            )
         self.animate_progress()
+
+    @SafeProperty(object, doc="Current visual state of the progress bar.")
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, state):
+        """
+        Set the visual state of the progress bar.
+
+        Args:
+            state(ProgressState | str): The state to set. Can be one of the
+        """
+        if isinstance(state, str):
+            state = ProgressState(state.lower())
+        if not isinstance(state, ProgressState):
+            raise ValueError("state must be a ProgressState or its value")
+        self._state = state
+        self.update()
+
+    @SafeProperty(float, doc="Base corner radius in pixels (auto‑scaled down on small bars).")
+    def corner_radius(self) -> float:
+        return self._corner_radius
+
+    @corner_radius.setter
+    def corner_radius(self, radius: float):
+        self._corner_radius = max(0.0, radius)
+        self.update()
 
     @SafeProperty(float)
     def padding_left_right(self) -> float:
@@ -157,28 +218,37 @@ class BECProgressBar(BECWidget, QWidget):
         painter.setRenderHint(QPainter.Antialiasing)
         rect = self.rect().adjusted(self._padding_left_right, 0, -self._padding_left_right, -1)
 
+        # Corner radius adapts to widget height so it never exceeds half the bar’s thickness
+        radius = min(self._corner_radius, rect.height() / 2)
+
         # Draw background
         painter.setBrush(self._background_color)
         painter.setPen(Qt.NoPen)
-        painter.drawRoundedRect(rect, 10, 10)  # Rounded corners
+        painter.drawRoundedRect(rect, radius, radius)  # Rounded corners
 
         # Draw border
         painter.setBrush(Qt.NoBrush)
         painter.setPen(self._border_color)
-        painter.drawRoundedRect(rect, 10, 10)
+        painter.drawRoundedRect(rect, radius, radius)
 
-        # Determine progress color based on completion
-        if self._value >= self._maximum:
-            current_color = self._completed_color
+        # Determine progress colour based on current state
+        if self._state == ProgressState.PAUSED:
+            current_color = self._state_colors[ProgressState.PAUSED]
+        elif self._state == ProgressState.INTERRUPTED:
+            current_color = self._state_colors[ProgressState.INTERRUPTED]
+        elif self._state == ProgressState.COMPLETED or self._value >= self._maximum:
+            current_color = self._state_colors[ProgressState.COMPLETED]
         else:
-            current_color = self._progress_color
+            current_color = self._state_colors[ProgressState.NORMAL]
 
         # Set clipping region to preserve the background's rounded corners
         progress_rect = rect.adjusted(
             0, 0, int(-rect.width() + (self._value / self._maximum) * rect.width()), 0
         )
         clip_path = QPainterPath()
-        clip_path.addRoundedRect(QRectF(rect), 10, 10)  # Clip to the background's rounded corners
+        clip_path.addRoundedRect(
+            QRectF(rect), radius, radius
+        )  # Clip to the background's rounded corners
         painter.setClipPath(clip_path)
 
         # Draw progress bar
