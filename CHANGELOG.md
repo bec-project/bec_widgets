@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.16.1 (2025-06-20)
+
+### Bug Fixes
+
+- **scatter**: Fix tab order
+  ([`235aabf`](https://github.com/bec-project/bec_widgets/commit/235aabf307ef0c01a51a5cd8be4eb53915ed360c))
+
+
 ## v2.16.0 (2025-06-17)
 
 ### Bug Fixes
