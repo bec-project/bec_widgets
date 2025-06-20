@@ -474,6 +474,20 @@ class BECProgressBar(RPCBase):
         >>> progressbar.label_template = "$value / $percentage %"
         """
 
+    @property
+    @rpc_call
+    def state(self):
+        """
+        None
+        """
+
+    @state.setter
+    @rpc_call
+    def state(self):
+        """
+        None
+        """
+
     @rpc_call
     def _get_label(self) -> str:
         """
