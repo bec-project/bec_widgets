@@ -3,15 +3,7 @@ from __future__ import annotations
 import os
 
 from bec_lib.endpoints import MessageEndpoints
-from qtpy.QtCore import (
-    QAbstractAnimation,
-    QEasingCurve,
-    QEvent,
-    QPropertyAnimation,
-    QSize,
-    Qt,
-    QTimer,
-)
+from qtpy.QtCore import QEasingCurve, QEvent, QPropertyAnimation, QSize, Qt, QTimer
 from qtpy.QtGui import QAction, QActionGroup, QIcon
 from qtpy.QtWidgets import (
     QApplication,
@@ -30,6 +22,7 @@ from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.widget_io import WidgetHierarchy
+from bec_widgets.widgets.containers.main_window.addons.hover_widget import HoverWidget
 from bec_widgets.widgets.containers.main_window.addons.scroll_label import ScrollLabel
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
 from bec_widgets.widgets.progress.scan_progressbar.scan_progressbar import ScanProgressBar
@@ -96,33 +89,60 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._add_separator()
 
         # Centre: Client‑info label (stretch=1 so it expands)
-        self._client_info_label = ScrollLabel()
-        self._client_info_label.setAlignment(
-            Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
-        )
-        self.status_bar.addWidget(self._client_info_label, 1)
-
-        # Timer to automatically clear client messages once they expire
-        self._client_info_expire_timer = QTimer(self)
-        self._client_info_expire_timer.setSingleShot(True)
-        self._client_info_expire_timer.timeout.connect(lambda: self._client_info_label.setText(""))
+        self._add_client_info_label()
 
         # Add scan_progress bar with display logic
         self._add_scan_progress_bar()
 
     ################################################################################
+    # Client message status bar widget helpers
+
+    def _add_client_info_label(self):
+        """
+        Add a client info label to the status bar.
+        This label will display messages from the BEC dispatcher.
+        """
+
+        # Scroll label for client info in Status Bar
+        self._client_info_label = ScrollLabel(self)
+        self._client_info_label.setAlignment(
+            Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
+        )
+        # Full label used in the hover widget
+        self._client_info_label_full = QLabel(self)
+        self._client_info_label_full.setAlignment(
+            Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter
+        )
+        # Hover widget to show the full client info label
+        self._client_info_hover = HoverWidget(
+            self, simple=self._client_info_label, full=self._client_info_label_full
+        )
+        self.status_bar.addWidget(self._client_info_hover, 1)
+
+        # Timer to automatically clear client messages once they expire
+        self._client_info_expire_timer = QTimer(self)
+        self._client_info_expire_timer.setSingleShot(True)
+        self._client_info_expire_timer.timeout.connect(lambda: self._client_info_label.setText(""))
+        self._client_info_expire_timer.timeout.connect(
+            lambda: self._client_info_label_full.setText("")
+        )
+
+    ################################################################################
     # Progress‑bar helpers
     def _add_scan_progress_bar(self):
 
-        # --- Progress bar -------------------------------------------------
-        # Scan progress bar minimalistic design setup
-        self._scan_progress_bar = ScanProgressBar(self, one_line_design=True)
-        self._scan_progress_bar.show_elapsed_time = False
-        self._scan_progress_bar.show_remaining_time = False
-        self._scan_progress_bar.show_source_label = False
-        self._scan_progress_bar.progressbar.label_template = ""
-        self._scan_progress_bar.progressbar.setFixedHeight(8)
-        self._scan_progress_bar.progressbar.setFixedWidth(80)
+        # Setting HoverWidget for the scan progress bar - minimal and full version
+        self._scan_progress_bar_simple = ScanProgressBar(self, one_line_design=True)
+        self._scan_progress_bar_simple.show_elapsed_time = False
+        self._scan_progress_bar_simple.show_remaining_time = False
+        self._scan_progress_bar_simple.show_source_label = False
+        self._scan_progress_bar_simple.progressbar.label_template = ""
+        self._scan_progress_bar_simple.progressbar.setFixedHeight(8)
+        self._scan_progress_bar_simple.progressbar.setFixedWidth(80)
+        self._scan_progress_bar_full = ScanProgressBar(self)
+        self._scan_progress_hover = HoverWidget(
+            self, simple=self._scan_progress_bar_simple, full=self._scan_progress_bar_full
+        )
 
         # Bundle the progress bar with a separator
         separator = self._add_separator(separate_object=True)
@@ -133,7 +153,7 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._scan_progress_bar_with_separator.layout.setContentsMargins(0, 0, 0, 0)
         self._scan_progress_bar_with_separator.layout.setSpacing(0)
         self._scan_progress_bar_with_separator.layout.addWidget(separator)
-        self._scan_progress_bar_with_separator.layout.addWidget(self._scan_progress_bar)
+        self._scan_progress_bar_with_separator.layout.addWidget(self._scan_progress_hover)
 
         # Set Size
         self._scan_progress_bar_target_width = self.SCAN_PROGRESS_WIDTH
@@ -152,8 +172,8 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._scan_progress_hide_timer.timeout.connect(self._animate_hide_scan_progress_bar)
 
         # Show / hide behaviour
-        self._scan_progress_bar.progress_started.connect(self._show_scan_progress_bar)
-        self._scan_progress_bar.progress_finished.connect(self._delay_hide_scan_progress_bar)
+        self._scan_progress_bar_simple.progress_started.connect(self._show_scan_progress_bar)
+        self._scan_progress_bar_simple.progress_finished.connect(self._delay_hide_scan_progress_bar)
 
     def _show_scan_progress_bar(self):
         if self._scan_progress_hide_timer.isActive():
@@ -342,10 +362,10 @@ class BECMainWindow(BECWidget, QMainWindow):
             msg(dict): The message to display, should contain:
             meta(dict): Metadata about the message, usually empty.
         """
-        # self._client_info_label.setText("")
         message = msg.get("message", "")
         expiration = msg.get("expire", 0)  # 0 → never expire
         self._client_info_label.setText(message)
+        self._client_info_label_full.setText(message)
 
         # Restart the expiration timer if necessary
         if hasattr(self, "_client_info_expire_timer") and self._client_info_expire_timer.isActive():
@@ -393,10 +413,20 @@ class BECMainWindow(BECWidget, QMainWindow):
         if hasattr(self, "_scan_progress_hide_timer") and self._scan_progress_hide_timer.isActive():
             self._scan_progress_hide_timer.stop()
 
+        ########################################
         # Status bar widgets cleanup
+
+        # Client info label cleanup
         self._client_info_label.cleanup()
-        self._scan_progress_bar.close()
-        self._scan_progress_bar.deleteLater()
+        self._client_info_hover.close()
+        self._client_info_hover.deleteLater()
+        # Scan progress bar cleanup
+        self._scan_progress_bar_simple.close()
+        self._scan_progress_bar_simple.deleteLater()
+        self._scan_progress_bar_full.close()
+        self._scan_progress_bar_full.deleteLater()
+        self._scan_progress_hover.close()
+        self._scan_progress_hover.deleteLater()
         super().cleanup()
 
 
