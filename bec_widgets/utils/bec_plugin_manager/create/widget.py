@@ -22,7 +22,7 @@ def _commit_added_widget(repo: Path, name: str):
     logger.info(f"Committing new widget {name}")
 
 
-def _widget_exists(widget_list: list[dict[str, str]], name: str):
+def _widget_exists(widget_list: list[dict[str, str | bool]], name: str):
     return name in [w["name"] for w in widget_list]
 
 

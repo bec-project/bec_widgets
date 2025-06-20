@@ -16,6 +16,7 @@ from watchdog.events import (
 )
 from watchdog.observers import Observer
 
+from bec_widgets.utils.bec_designer import open_designer
 from bec_widgets.utils.bec_plugin_helper import get_all_plugin_widgets
 from bec_widgets.utils.plugin_utils import get_custom_classes
 
@@ -57,6 +58,7 @@ class RecompileHandler(FileSystemEventHandler):
         if code == 0:
             logger.success("updating imports...")
             self._update_imports()
+            logger.success("done!")
 
     def _update_imports(self):
         with open(self.out_file, "r+") as f:
@@ -82,13 +84,6 @@ class RecompileHandler(FileSystemEventHandler):
 
 def open_and_watch_ui_editor(widget_name: str):
     logger.info(f"Opening the editor for {widget_name}... ")
-
-    try:
-        from bec_widgets.utils.bec_designer import open_designer
-    except ImportError:
-        logger.error("BEC Widgets must be installed to use the UI editor tool")
-        exit(127)
-
     repo = Path(plugin_repo_path())
     widget_dir = repo / repo.name / "bec_widgets" / "widgets" / widget_name
     ui_file = widget_dir / f"{widget_name}.ui"
