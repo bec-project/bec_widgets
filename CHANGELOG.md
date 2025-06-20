@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v2.16.2 (2025-06-20)
+
+### Bug Fixes
+
+- **waveform**: Asyncsignal are handled with the same update mechanism as async readback
+  ([`a3ffcef`](https://github.com/bec-project/bec_widgets/commit/a3ffcefe8085fa1a88d679f8ef6adfdff786492e))
+
+### Testing
+
+- **utils**: Dmmock can fetch get_bec_signals method
+  ([`3146d98`](https://github.com/bec-project/bec_widgets/commit/3146d98c572ff2bb8ab77f71b75d9612e364ffe0))
+
+
 ## v2.16.1 (2025-06-20)
 
 ### Bug Fixes
