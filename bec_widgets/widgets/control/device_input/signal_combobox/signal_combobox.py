@@ -90,6 +90,14 @@ class SignalComboBox(DeviceSignalInputBase, QComboBox):
                 self.insertItem(0, "Hinted Signals")
                 self.model().item(0).setEnabled(False)
 
+    @SafeSlot()
+    def reset_selection(self):
+        """Reset the selection of the combobox."""
+        self.clear()
+        self.setItemText(0, "Select a device")
+        self.update_signals_from_filters()
+        self.device_signal_changed.emit("")
+
     @SafeSlot(str)
     def on_text_changed(self, text: str):
         """Slot for text changed. If a device is selected and the signal is changed and valid it emits a signal.
