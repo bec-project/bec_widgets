@@ -3,6 +3,7 @@ from __future__ import annotations
 import enum
 import os
 import time
+from typing import Literal
 
 import numpy as np
 from bec_lib.endpoints import MessageEndpoints
@@ -13,6 +14,7 @@ from qtpy.QtWidgets import QVBoxLayout, QWidget
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.ui_loader import UILoader
+from bec_widgets.widgets.progress.bec_progressbar.bec_progressbar import ProgressState
 
 logger = bec_logger.logger
 
@@ -183,13 +185,17 @@ class ScanProgressBar(BECWidget, QWidget):
         logger.info(f"Set progress source to {text}")
         self.ui.source_label.setText(text)
 
-    def on_progress_update(self, msg_content, metadata):
+    @SafeSlot(dict, dict)
+    def on_progress_update(self, msg_content: dict, metadata: dict):
         """
         Update the progress bar based on the progress message.
         """
         value = msg_content["value"]
         max_value = msg_content.get("max_value", 100)
         done = msg_content.get("done", False)
+        status: Literal["open", "paused", "aborted", "halted", "closed"] = metadata.get(
+            "status", "open"
+        )
 
         if self.task is None:
             return
@@ -198,12 +204,12 @@ class ScanProgressBar(BECWidget, QWidget):
         self.update_labels()
 
         self.progressbar.set_maximum(self.task.max_value)
+        self.progressbar.state = ProgressState.from_bec_status(status)
+        self.progressbar.set_value(self.task.value)
+
         if done:
-            self.progressbar.set_value(self.task.max_value)
             self.task = None
             return
-
-        self.progressbar.set_value(self.task.value)
 
     @SafeProperty(bool)
     def show_elapsed_time(self):

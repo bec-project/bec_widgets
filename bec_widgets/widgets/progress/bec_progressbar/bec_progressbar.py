@@ -12,6 +12,22 @@ class ProgressState(Enum):
     INTERRUPTED = "interrupted"
     COMPLETED = "completed"
 
+    @classmethod
+    def from_bec_status(cls, status: str) -> "ProgressState":
+        """
+        Map a BEC status string (open, paused, aborted, halted, closed)
+        to the corresponding ProgressState.
+        Any unknown status falls back to NORMAL.
+        """
+        mapping = {
+            "open": cls.NORMAL,
+            "paused": cls.PAUSED,
+            "aborted": cls.INTERRUPTED,
+            "halted": cls.PAUSED,
+            "closed": cls.COMPLETED,
+        }
+        return mapping.get(status.lower(), cls.NORMAL)
+
 
 PROGRESS_STATE_COLORS = {
     ProgressState.NORMAL: QColor("#2979ff"),  # blue  – normal progress
@@ -19,7 +35,6 @@ PROGRESS_STATE_COLORS = {
     ProgressState.INTERRUPTED: QColor("#ff5252"),  # red – interrupted
     ProgressState.COMPLETED: QColor("#00e676"),  # green – finished
 }
-# ---------------------------------------------------------------------------
 
 from qtpy.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
 
