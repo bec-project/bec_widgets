@@ -1246,6 +1246,23 @@ class Waveform(PlotBase):
 
         self.request_dap_update.emit()
 
+    def _check_async_signal_found(self, name: str, signal: str) -> bool:
+        """
+        Check if the async signal is found in the BEC device manager.
+
+        Args:
+            name(str): The name of the async signal.
+            signal(str): The entry of the async signal.
+
+        Returns:
+            bool: True if the async signal is found, False otherwise.
+        """
+        bec_async_signals = self.client.device_manager.get_bec_signals("AsyncSignal")
+        for entry_name, _, entry_data in bec_async_signals:
+            if entry_name == name and entry_data.get("obj_name") == signal:
+                return True
+        return False
+
     def _setup_async_curve(self, curve: Curve):
         """
         Setup async curve.
@@ -1254,20 +1271,40 @@ class Waveform(PlotBase):
             curve(Curve): The curve to set up.
         """
         name = curve.config.signal.name
-        self.bec_dispatcher.disconnect_slot(
-            self.on_async_readback, MessageEndpoints.device_async_readback(self.old_scan_id, name)
-        )
+        signal = curve.config.signal.entry
+        async_signal_found = self._check_async_signal_found(name, signal)
+
         try:
             curve.clear_data()
         except KeyError:
             logger.warning(f"Curve {name} not found in plot item.")
             pass
-        self.bec_dispatcher.connect_slot(
-            self.on_async_readback,
-            MessageEndpoints.device_async_readback(self.scan_id, name),
-            from_start=True,
-            cb_info={"scan_id": self.scan_id},
-        )
+
+        # New endpoint for async signals
+        if async_signal_found:
+            self.bec_dispatcher.disconnect_slot(
+                self.on_async_readback,
+                MessageEndpoints.device_async_signal(self.old_scan_id, name, signal),
+            )
+            self.bec_dispatcher.connect_slot(
+                self.on_async_readback,
+                MessageEndpoints.device_async_signal(self.scan_id, name, signal),
+                from_start=True,
+                cb_info={"scan_id": self.scan_id},
+            )
+
+        # old endpoint
+        else:
+            self.bec_dispatcher.disconnect_slot(
+                self.on_async_readback,
+                MessageEndpoints.device_async_readback(self.old_scan_id, name),
+            )
+            self.bec_dispatcher.connect_slot(
+                self.on_async_readback,
+                MessageEndpoints.device_async_readback(self.scan_id, name),
+                from_start=True,
+                cb_info={"scan_id": self.scan_id},
+            )
         logger.info(f"Setup async curve {name}")
 
     @SafeSlot(dict, dict, verify_sender=True)
