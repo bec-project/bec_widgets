@@ -8,7 +8,7 @@ from typing import Literal
 import numpy as np
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QObject, QTimer
+from qtpy.QtCore import QObject, QTimer, Signal
 from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
@@ -124,6 +124,8 @@ class ScanProgressBar(BECWidget, QWidget):
     """
 
     ICON_NAME = "timelapse"
+    progress_started = Signal()
+    progress_finished = Signal()
 
     def __init__(self, parent=None, client=None, config=None, gui_id=None, one_line_design=False):
         super().__init__(parent=parent, client=client, config=config, gui_id=gui_id)
@@ -145,6 +147,7 @@ class ScanProgressBar(BECWidget, QWidget):
         self._progress_source = None
         self.task = None
         self.scan_number = None
+        self.progress_started.connect(lambda: print("Scan progress started"))
 
     def connect_to_queue(self):
         """
@@ -178,6 +181,7 @@ class ScanProgressBar(BECWidget, QWidget):
             ),
         )
         self.update_source_label(source, device=device)
+        # self.progress_started.emit()
 
     def update_source_label(self, source: ProgressSource, device=None):
         scan_text = f"Scan {self.scan_number}" if self.scan_number is not None else "Scan"
@@ -209,6 +213,7 @@ class ScanProgressBar(BECWidget, QWidget):
 
         if done:
             self.task = None
+            self.progress_finished.emit()
             return
 
     @SafeProperty(bool)
@@ -264,6 +269,7 @@ class ScanProgressBar(BECWidget, QWidget):
             return
         if scan_info.get("status").lower() == "running" and self.task is None:
             self.task = ProgressTask(parent=self)
+            self.progress_started.emit()
 
         active_request_block = scan_info.get("active_request_block", {})
         if active_request_block is None:
