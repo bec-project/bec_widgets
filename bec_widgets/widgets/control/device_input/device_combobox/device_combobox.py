@@ -34,6 +34,7 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
     PLUGIN = True
 
     device_selected = Signal(str)
+    device_reset = Signal()
     device_config_update = Signal()
 
     def __init__(
@@ -147,6 +148,7 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
             self.device_selected.emit(input_text)
         else:
             self._is_valid_input = False
+            self.device_reset.emit()
         self.update()
 
     def validate_device(self, device: str) -> bool:  # type: ignore[override]
