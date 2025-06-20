@@ -210,6 +210,39 @@ class DMMock:
         for device in devices:
             self.devices[device.name] = device
 
+    def get_bec_signals(self, signal_class_name: str):
+        """
+        Emulate DeviceManager.get_bec_signals for unit-tests.
+
+        For “AsyncSignal” we list every device whose readout_priority is
+        ReadoutPriority.ASYNC and build a minimal tuple
+        (device_name, signal_name, signal_info_dict) that matches the real
+        API shape used by Waveform._check_async_signal_found.
+        """
+        signals: list[tuple[str, str, dict]] = []
+        if signal_class_name != "AsyncSignal":
+            return signals
+
+        for device in self.devices.values():
+            if getattr(device, "readout_priority", None) == ReadoutPriority.ASYNC:
+                device_name = device.name
+                signal_name = device.name  # primary signal in our mocks
+                signal_info = {
+                    "component_name": signal_name,
+                    "obj_name": signal_name,
+                    "kind_str": "hinted",
+                    "signal_class": signal_class_name,
+                    "metadata": {
+                        "connected": True,
+                        "precision": None,
+                        "read_access": True,
+                        "timestamp": 0.0,
+                        "write_access": True,
+                    },
+                }
+                signals.append((device_name, signal_name, signal_info))
+        return signals
+
 
 DEVICES = [
     FakePositioner("samx", limits=[-10, 10], read_value=2.0),
