@@ -15,11 +15,13 @@ class WidgetFilterHandler(ABC):
     """Abstract base class for widget filter handlers"""
 
     @abstractmethod
-    def set_selection(self, widget, selection: list) -> None:
+    def set_selection(self, widget, selection: list[str | tuple]) -> None:
         """Set the filtered_selection for the widget
 
         Args:
-            selection (list): Filtered selection of items
+            widget: Widget instance
+            selection (list[str | tuple]): Filtered selection of items.
+                If tuple, it contains (text, data) pairs.
         """
 
     @abstractmethod
@@ -38,13 +40,16 @@ class WidgetFilterHandler(ABC):
 class LineEditFilterHandler(WidgetFilterHandler):
     """Handler for QLineEdit widget"""
 
-    def set_selection(self, widget: QLineEdit, selection: list) -> None:
+    def set_selection(self, widget: QLineEdit, selection: list[str | tuple]) -> None:
         """Set the selection for the widget to the completer model
 
         Args:
             widget (QLineEdit): The QLineEdit widget
-            selection (list): Filtered selection of items
+            selection (list[str | tuple]): Filtered selection of items. If tuple, it contains (text, data) pairs.
         """
+        if isinstance(selection, tuple):
+            # If selection is a tuple, it contains (text, data) pairs
+            selection = [text for text, _ in selection]
         if not isinstance(widget.completer, QCompleter):
             completer = QCompleter(widget)
             widget.setCompleter(completer)
@@ -68,15 +73,22 @@ class LineEditFilterHandler(WidgetFilterHandler):
 class ComboBoxFilterHandler(WidgetFilterHandler):
     """Handler for QComboBox widget"""
 
-    def set_selection(self, widget: QComboBox, selection: list) -> None:
+    def set_selection(self, widget: QComboBox, selection: list[str | tuple]) -> None:
         """Set the selection for the widget to the completer model
 
         Args:
             widget (QComboBox): The QComboBox widget
-            selection (list): Filtered selection of items
+            selection (list[str | tuple]): Filtered selection of items. If tuple, it contains (text, data) pairs.
         """
         widget.clear()
-        widget.addItems(selection)
+        if len(selection) == 0:
+            return
+        for element in selection:
+            if isinstance(element, str):
+                widget.addItem(element)
+            elif isinstance(element, tuple):
+                # If element is a tuple, it contains (text, data) pairs
+                widget.addItem(*element)
 
     def check_input(self, widget: QComboBox, text: str) -> bool:
         """Check if the input text is in the filtered selection
@@ -99,13 +111,14 @@ class FilterIO:
     _handlers = {QLineEdit: LineEditFilterHandler, QComboBox: ComboBoxFilterHandler}
 
     @staticmethod
-    def set_selection(widget, selection: list, ignore_errors=True):
+    def set_selection(widget, selection: list[str | tuple], ignore_errors=True):
         """
         Retrieve value from the widget instance.
 
         Args:
             widget: Widget instance.
-            selection(list): List of filtered selection items.
+            selection (list[str | tuple]): Filtered selection of items.
+                If tuple, it contains (text, data) pairs.
             ignore_errors(bool, optional): Whether to ignore if no handler is found.
         """
         handler_class = FilterIO._find_handler(widget)
