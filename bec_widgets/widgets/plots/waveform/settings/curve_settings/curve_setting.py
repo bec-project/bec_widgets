@@ -35,8 +35,6 @@ class CurveSetting(SettingWidget):
         self._init_x_box()
         self._init_y_box()
 
-        self.setFixedWidth(580)  # TODO height is still debate
-
     def _init_x_box(self):
         self.x_axis_box = QGroupBox("X Axis")
         self.x_axis_box.layout = QHBoxLayout(self.x_axis_box)

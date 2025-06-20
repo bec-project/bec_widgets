@@ -330,7 +330,6 @@ class Waveform(PlotBase):
             self.curve_settings_dialog = SettingsDialog(
                 self, settings_widget=curve_setting, window_title="Curve Settings", modal=False
             )
-            self.curve_settings_dialog.setFixedWidth(580)
             # When the dialog is closed, update the toolbar icon and clear the reference
             self.curve_settings_dialog.finished.connect(self._curve_settings_closed)
             self.curve_settings_dialog.show()
