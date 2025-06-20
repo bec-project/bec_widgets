@@ -90,6 +90,10 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._scan_progress_bar = ScanProgressBar(self, one_line_design=True)
         self._scan_progress_bar.show_elapsed_time = False
         self._scan_progress_bar.show_remaining_time = False
+        self._scan_progress_bar.show_source_label = False
+        self._scan_progress_bar.progressbar.label_template = ""
+        self._scan_progress_bar.progressbar.setFixedWidth(80)
+        self._scan_progress_bar.progressbar.setFixedHeight(8)
         status_bar.addWidget(self._scan_progress_bar)
 
     def _add_separator(self):
