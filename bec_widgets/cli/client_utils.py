@@ -14,18 +14,21 @@ from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
-from bec_lib.utils.import_utils import lazy_import_from
+from bec_lib.utils.import_utils import lazy_import, lazy_import_from
 from rich.console import Console
 from rich.table import Table
 
-import bec_widgets.cli.client as client
 from bec_widgets.cli.rpc.rpc_base import RPCBase, RPCReference
 from bec_widgets.utils.serialization import register_serializer_extension
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_lib.messages import GUIRegistryStateMessage
+
+    import bec_widgets.cli.client as client
 else:
     GUIRegistryStateMessage = lazy_import_from("bec_lib.messages", "GUIRegistryStateMessage")
+    client = lazy_import("bec_widgets.cli.client")
+
 
 logger = bec_logger.logger
 

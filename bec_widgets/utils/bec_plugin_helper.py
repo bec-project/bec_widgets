@@ -38,9 +38,11 @@ def _loaded_submodules_from_specs(
         try:
             submodule.__loader__.exec_module(submodule)
         except Exception as e:
-            logger.error(
-                f"Error loading plugin {submodule}: \n{''.join(traceback.format_exception(e))}"
-            )
+            exception_text = "".join(traceback.format_exception(e))
+            if "(most likely due to a circular import)" in exception_text:
+                logger.warning(f"Circular import encountered while loading {submodule}")
+            else:
+                logger.error(f"Error loading plugin {submodule}: \n{exception_text}")
         yield submodule
 
 
@@ -59,7 +61,8 @@ def _get_widgets_from_module(module: ModuleType) -> BECClassContainer:
         module,
         predicate=lambda item: inspect.isclass(item)
         and issubclass(item, BECWidget)
-        and item is not BECWidget,
+        and item is not BECWidget
+        and not item.__module__.startswith("bec_widgets"),
     )
     return BECClassContainer(
         BECClassInfo(name=k, module=module.__name__, file=module.__loader__.get_filename(), obj=v)
