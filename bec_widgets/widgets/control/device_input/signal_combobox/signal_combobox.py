@@ -110,11 +110,7 @@ class SignalComboBox(DeviceSignalInputBase, QComboBox):
             return
         if self.validate_signal(text) is False:
             return
-        if text == "readback" and isinstance(self.get_device_object(self.device), Positioner):
-            device_signal = self.device
-        else:
-            device_signal = f"{self.device}_{text}"
-        self.device_signal_changed.emit(device_signal)
+        self.device_signal_changed.emit(text)
 
 
 if __name__ == "__main__":  # pragma: no cover
