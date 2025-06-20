@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from qtpy.QtCore import QSize
 from qtpy.QtWidgets import (
     QComboBox,
     QGroupBox,
@@ -34,6 +35,12 @@ class CurveSetting(SettingWidget):
 
         self._init_x_box()
         self._init_y_box()
+
+    def sizeHint(self) -> QSize:
+        """
+        Returns the size hint for the settings widget.
+        """
+        return QSize(800, 500)
 
     def _init_x_box(self):
         self.x_axis_box = QGroupBox("X Axis")
