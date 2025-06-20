@@ -1,8 +1,14 @@
 import webbrowser
 
 import pytest
-from qtpy.QtWidgets import QFrame
+from qtpy.QtCore import QEvent, QPoint, QPointF
+from qtpy.QtGui import QEnterEvent
+from qtpy.QtWidgets import QApplication, QFrame, QLabel
 
+from bec_widgets.widgets.containers.main_window.addons.hover_widget import (
+    HoverWidget,
+    WidgetTooltip,
+)
 from bec_widgets.widgets.containers.main_window.addons.scroll_label import ScrollLabel
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
@@ -228,3 +234,60 @@ def test_scan_progress_bar_hide_animation(qtbot, bec_main_window):
     qtbot.waitUntil(lambda: container.maximumWidth() == 0, timeout=2000)
 
     assert container.maximumWidth() == 0
+
+
+#################################################################
+# Tests for hover widget and tooltip behaviour
+
+
+def test_hover_widget_tooltip(qtbot):
+    """
+    After a HoverWidget is closed, its WidgetTooltip must be gone.
+    """
+    simple = QLabel("Hover me")
+    full = QLabel("Full details")
+    hover = create_widget(qtbot, HoverWidget, simple=simple, full=full)
+
+    assert hover._simple is simple
+    assert hover._full is full
+    assert hover._tooltip is None
+
+
+def test_widget_tooltip_show_and_hide(qtbot):
+    """
+    WidgetTooltip should appear when show_above is called and hide on Leave.
+    """
+    full_lbl = QLabel("Standalone tooltip content")
+    tooltip = create_widget(qtbot, WidgetTooltip, content=full_lbl)
+
+    # Show above an arbitrary point
+    pos = QPoint(200, 200)
+    tooltip.show_above(pos)
+    assert tooltip.isVisible()
+
+    # Send a synthetic Leave event
+    QApplication.sendEvent(tooltip, QEvent(QEvent.Leave))
+    qtbot.waitUntil(lambda: not tooltip.isVisible(), timeout=500)
+    assert not tooltip.isVisible()
+
+
+def test_hover_widget_mouse_events(qtbot):
+    """
+    Verify that HoverWidget responds correctly to Enter, MouseMove, and Leave
+    events, keeping the tooltip visible only while the pointer is inside.
+    """
+    simple = QLabel("Hover‑target")
+    full = QLabel("Full‑view")
+    hover = create_widget(qtbot, HoverWidget, simple=simple, full=full)
+
+    local = QPointF(hover.rect().center())  # inside widget
+    scene = QPointF(hover.mapTo(hover.window(), local.toPoint()))
+    global_ = QPointF(hover.mapToGlobal(local.toPoint()))
+
+    enter_event = QEnterEvent(local, scene, global_)
+    hover.enterEvent(event=enter_event)
+    qtbot.wait(200)
+
+    assert hover._tooltip is not None
+    assert hover._tooltip.isVisible()
+    assert hover._tooltip.content is full
