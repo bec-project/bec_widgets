@@ -39,6 +39,7 @@ dev = [
     "pytest-xvfb~=3.0",
     "pytest~=8.0",
     "pytest-cov~=6.1.1",
+    "watchdog~=6.0",
 ]
 
 [project.urls]
