@@ -102,7 +102,7 @@ class CurveSetting(SettingWidget):
 
         self.layout.addWidget(self.y_axis_box)
 
-    @SafeSlot()
+    @SafeSlot(popup_error=True)
     def accept_changes(self):
         """
         Accepts the changes made in the settings widget and applies them to the target widget.

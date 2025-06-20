@@ -8,6 +8,8 @@ from bec_lib.logger import bec_logger
 from qtpy.QtCore import QStringListModel
 from qtpy.QtWidgets import QComboBox, QCompleter, QLineEdit
 
+from bec_widgets.utils.ophyd_kind_util import Kind
+
 logger = bec_logger.logger
 
 
@@ -35,6 +37,23 @@ class WidgetFilterHandler(ABC):
         Returns:
             bool: True if the input text is in the filtered selection
         """
+
+    @abstractmethod
+    def update_with_kind(
+        self, kind: Kind, signal_filter: set, device_info: dict, device_name: str
+    ) -> list[str | tuple]:
+        """Update the selection based on the kind of signal.
+
+        Args:
+            kind (Kind): The kind of signal to filter.
+            signal_filter (set): Set of signal kinds to filter.
+            device_info (dict): Dictionary containing device information.
+            device_name (str): Name of the device.
+
+        Returns:
+            list[str | tuple]: A list of filtered signals based on the kind.
+        """
+        # This method should be implemented in subclasses or extended as needed
 
 
 class LineEditFilterHandler(WidgetFilterHandler):
@@ -69,6 +88,27 @@ class LineEditFilterHandler(WidgetFilterHandler):
         model_data = [model.data(model.index(i)) for i in range(model.rowCount())]
         return text in model_data
 
+    def update_with_kind(
+        self, kind: Kind, signal_filter: set, device_info: dict, device_name: str
+    ) -> list[str | tuple]:
+        """Update the selection based on the kind of signal.
+
+        Args:
+            kind (Kind): The kind of signal to filter.
+            signal_filter (set): Set of signal kinds to filter.
+            device_info (dict): Dictionary containing device information.
+            device_name (str): Name of the device.
+
+        Returns:
+            list[str | tuple]: A list of filtered signals based on the kind.
+        """
+
+        return [
+            signal
+            for signal, signal_info in device_info.items()
+            if kind in signal_filter and (signal_info.get("kind_str", None) == str(kind.name))
+        ]
+
 
 class ComboBoxFilterHandler(WidgetFilterHandler):
     """Handler for QComboBox widget"""
@@ -101,6 +141,40 @@ class ComboBoxFilterHandler(WidgetFilterHandler):
             bool: True if the input text is in the filtered selection
         """
         return text in [widget.itemText(i) for i in range(widget.count())]
+
+    def update_with_kind(
+        self, kind: Kind, signal_filter: set, device_info: dict, device_name: str
+    ) -> list[str | tuple]:
+        """Update the selection based on the kind of signal.
+
+        Args:
+            kind (Kind): The kind of signal to filter.
+            signal_filter (set): Set of signal kinds to filter.
+            device_info (dict): Dictionary containing device information.
+            device_name (str): Name of the device.
+
+        Returns:
+            list[str | tuple]: A list of filtered signals based on the kind.
+        """
+        out = []
+        for signal, signal_info in device_info.items():
+            if kind not in signal_filter or (signal_info.get("kind_str", None) != str(kind.name)):
+                continue
+            obj_name = signal_info.get("obj_name", "")
+            component_name = signal_info.get("component_name", "")
+            signal_wo_device = obj_name.removeprefix(f"{device_name}_")
+            if not signal_wo_device:
+                signal_wo_device = obj_name
+
+            if signal_wo_device != signal and component_name.replace(".", "_") != signal_wo_device:
+                # If the object name is not the same as the signal name, we use the object name
+                # to display in the combobox.
+                out.append((f"{signal_wo_device} ({signal})", signal_info))
+            else:
+                # If the object name is the same as the signal name, we do not change it.
+                out.append((signal, signal_info))
+
+        return out
 
 
 class FilterIO:
@@ -151,6 +225,35 @@ class FilterIO:
                 f"No matching handler for widget type: {type(widget)} in handler list {FilterIO._handlers}"
             )
         return None
+
+    @staticmethod
+    def update_with_kind(
+        widget, kind: Kind, signal_filter: set, device_info: dict, device_name: str
+    ) -> list[str | tuple]:
+        """
+        Update the selection based on the kind of signal.
+
+        Args:
+            widget: Widget instance.
+            kind (Kind): The kind of signal to filter.
+            signal_filter (set): Set of signal kinds to filter.
+            device_info (dict): Dictionary containing device information.
+            device_name (str): Name of the device.
+
+        Returns:
+            list[str | tuple]: A list of filtered signals based on the kind.
+        """
+        handler_class = FilterIO._find_handler(widget)
+        if handler_class:
+            return handler_class().update_with_kind(
+                kind=kind,
+                signal_filter=signal_filter,
+                device_info=device_info,
+                device_name=device_name,
+            )
+        raise ValueError(
+            f"No matching handler for widget type: {type(widget)} in handler list {FilterIO._handlers}"
+        )
 
     @staticmethod
     def _find_handler(widget):

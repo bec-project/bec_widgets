@@ -12,12 +12,11 @@ may not be created immediately after the rpc call is made.
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
 
-from bec_widgets.cli.client import BECDockArea
 from bec_widgets.cli.rpc.rpc_base import RPCBase, RPCReference
 
 PYTEST_TIMEOUT = 50
@@ -321,20 +320,20 @@ def test_widgets_e2e_signal_combobox(qtbot, connected_client_gui_obj, random_gen
     gui = connected_client_gui_obj
     bec = gui._client
     # Create dock_area, dock, widget
-    dock, widget = create_widget(qtbot, gui, gui.available_widgets.SignalComboBox)
-    dock: client.BECDock
+    _, widget = create_widget(qtbot, gui, gui.available_widgets.SignalComboBox)
     widget: client.SignalComboBox
 
     widget.set_device("samx")
+    info = bec.device_manager.devices.samx._info["signals"]
     assert widget.signals == [
-        "readback",
-        "setpoint",
-        "motor_is_moving",
-        "velocity",
-        "acceleration",
-        "tolerance",
+        ["samx (readback)", info.get("readback")],
+        ["setpoint", info.get("setpoint")],
+        ["motor_is_moving", info.get("motor_is_moving")],
+        ["velocity", info.get("velocity")],
+        ["acceleration", info.get("acceleration")],
+        ["tolerance", info.get("tolerance")],
     ]
-    widget.set_signal("readback")
+    widget.set_signal("samx (readback)")
 
     # Test removing the widget, or leaving it open for the next test
     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)

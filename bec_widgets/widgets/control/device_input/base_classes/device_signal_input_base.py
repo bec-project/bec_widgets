@@ -6,7 +6,7 @@ from qtpy.QtCore import Property
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
-from bec_widgets.utils.filter_io import FilterIO
+from bec_widgets.utils.filter_io import FilterIO, LineEditFilterHandler
 from bec_widgets.utils.ophyd_kind_util import Kind
 from bec_widgets.utils.widget_io import WidgetIO
 
@@ -108,25 +108,32 @@ class DeviceSignalInputBase(BECWidget):
         if not self.validate_device(self._device):
             self._device = None
             self.config.device = self._device
-            return
-        device = self.get_device_object(self._device)
-        # See above convention for Signals and ComputedSignals
-        if isinstance(device, Signal):
-            self._signals = [self._device]
-            self._hinted_signals = [self._device]
+            self._signals = []
+            self._hinted_signals = []
             self._normal_signals = []
             self._config_signals = []
             FilterIO.set_selection(widget=self, selection=self._signals)
             return
+        device = self.get_device_object(self._device)
         device_info = device._info.get("signals", {})
 
+        # See above convention for Signals and ComputedSignals
+        if isinstance(device, Signal):
+            self._signals = [(self._device, {})]
+            self._hinted_signals = [(self._device, {})]
+            self._normal_signals = []
+            self._config_signals = []
+            FilterIO.set_selection(widget=self, selection=self._signals)
+            return
+
         def _update(kind: Kind):
-            return [
-                signal
-                for signal, signal_info in device_info.items()
-                if kind in self.signal_filter
-                and (signal_info.get("kind_str", None) == str(kind.name))
-            ]
+            return FilterIO.update_with_kind(
+                widget=self,
+                kind=kind,
+                signal_filter=self.signal_filter,
+                device_info=device_info,
+                device_name=self._device,
+            )
 
         self._hinted_signals = _update(Kind.hinted)
         self._normal_signals = _update(Kind.normal)
@@ -271,8 +278,11 @@ class DeviceSignalInputBase(BECWidget):
         Args:
             signal(str): Signal to validate.
         """
-        if signal in self.signals:
-            return True
+        for entry in self.signals:
+            if isinstance(entry, tuple):
+                entry = entry[0]
+            if entry == signal:
+                return True
         return False
 
     def _process_config_input(self, config: DeviceSignalInputBaseConfig | dict | None):

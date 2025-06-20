@@ -94,18 +94,6 @@ def test_device_signal_qproperties(device_signal_base):
     assert device_signal_base._signal_filter == {Kind.config, Kind.normal}
 
 
-def test_device_signal_set_device(device_signal_base):
-    """Test if the set_device method works correctly"""
-    device_signal_base.include_hinted_signals = True
-    device_signal_base.set_device("samx")
-    assert device_signal_base.device == "samx"
-    assert device_signal_base.signals == ["readback"]
-    device_signal_base.include_normal_signals = True
-    assert device_signal_base.signals == ["readback", "setpoint"]
-    device_signal_base.include_config_signals = True
-    assert device_signal_base.signals == ["readback", "setpoint", "velocity"]
-
-
 def test_signal_combobox(qtbot, device_signal_combobox):
     """Test the signal_combobox"""
     container = []
@@ -120,17 +108,25 @@ def test_signal_combobox(qtbot, device_signal_combobox):
     device_signal_combobox.include_config_signals = True
     assert device_signal_combobox.signals == []
     device_signal_combobox.set_device("samx")
-    assert device_signal_combobox.signals == ["readback", "setpoint", "velocity"]
+    samx = device_signal_combobox.dev.samx
+    assert device_signal_combobox.signals == [
+        ("samx (readback)", samx._info["signals"].get("readback")),
+        ("setpoint", samx._info["signals"].get("setpoint")),
+        ("velocity", samx._info["signals"].get("velocity")),
+    ]
     qtbot.wait(100)
-    assert container == ["samx"]
+    assert container == ["samx (readback)"]
     # Set the type of class from the FakeDevice to Signal
-    fake_signal = FakeSignal(name="fake_signal")
+    fake_signal = FakeSignal(name="fake_signal", info={"device_info": {"signals": {}}})
     device_signal_combobox.client.device_manager.add_devices([fake_signal])
     device_signal_combobox.set_device("fake_signal")
-    assert device_signal_combobox.signals == ["fake_signal"]
+    fake_signal = device_signal_combobox.dev.fake_signal
+    assert device_signal_combobox.signals == [
+        ("fake_signal", fake_signal._info["signals"].get("fake_signal", {}))
+    ]
     assert device_signal_combobox._config_signals == []
     assert device_signal_combobox._normal_signals == []
-    assert device_signal_combobox._hinted_signals == ["fake_signal"]
+    assert device_signal_combobox._hinted_signals == [("fake_signal", {})]
 
 
 def test_signal_lineedit(device_signal_line_edit):

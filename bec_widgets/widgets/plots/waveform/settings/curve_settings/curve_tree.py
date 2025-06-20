@@ -5,13 +5,12 @@ from typing import TYPE_CHECKING
 
 from bec_lib.logger import bec_logger
 from bec_qthemes._icon.material_icons import material_icon
-from qtpy.QtGui import QColor
+from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
-    QColorDialog,
     QComboBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
-    QLineEdit,
     QPushButton,
     QSizePolicy,
     QSpinBox,
@@ -27,9 +26,8 @@ from bec_widgets.utils import ConnectionConfig, EntryValidator
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.toolbar import MaterialIconAction, ModularToolBar
-from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit import (
-    DeviceLineEdit,
-)
+from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
+from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
 from bec_widgets.widgets.dap.dap_combo_box.dap_combo_box import DapComboBox
 from bec_widgets.widgets.plots.waveform.curve import CurveConfig, DeviceSignal
 from bec_widgets.widgets.utility.visual.color_button_native.color_button_native import (
@@ -125,11 +123,40 @@ class CurveRow(QTreeWidgetItem):
         """Create columns 1 and 2. For device rows, we have device/entry edits; for dap rows, label/model combo."""
         if self.source == "device":
             # Device row: columns 1..2 are device line edits
-            self.device_edit = DeviceLineEdit(parent=self.tree)
-            self.entry_edit = QLineEdit(parent=self.tree)  # TODO in future will be signal line edit
+            self.device_edit = DeviceComboBox(parent=self.tree)
+            self.device_edit.insertItem(0, "")
+            self.device_edit.setEditable(True)
+            self.entry_edit = SignalComboBox(parent=self.tree)
+            self.entry_edit.include_config_signals = False
+            self.entry_edit.insertItem(0, "")
+            self.entry_edit.setEditable(True)
+            self.device_edit.currentTextChanged.connect(self.entry_edit.set_device)
+            self.device_edit.device_reset.connect(self.entry_edit.reset_selection)
             if self.config.signal:
-                self.device_edit.setText(self.config.signal.name or "")
-                self.entry_edit.setText(self.config.signal.entry or "")
+                device_index = self.device_edit.findText(self.config.signal.name or "")
+                if device_index >= 0:
+                    self.device_edit.setCurrentIndex(device_index)
+                    # Force the entry_edit to update based on the device name
+                    self.device_edit.currentTextChanged.emit(self.device_edit.currentText())
+                else:
+                    # If the device name is not found, set the first enabled item
+                    self.device_edit.setCurrentIndex(0)
+
+                for i in range(self.entry_edit.count()):
+                    entry_data = self.entry_edit.itemData(i)
+                    if entry_data and entry_data.get("obj_name") == self.config.signal.entry:
+                        # If the device name matches an object name, set it
+                        self.entry_edit.setCurrentIndex(i)
+                        break
+                else:
+                    # If no match found, set the first enabled item
+                    for i in range(self.entry_edit.count()):
+                        model = self.entry_edit.model()
+                        if model.flags(model.index(i, 0)) & Qt.ItemIsEnabled:
+                            self.entry_edit.setCurrentIndex(i)
+                            break
+                    else:
+                        self.entry_edit.setCurrentIndex(0)
 
             self.tree.setItemWidget(self, 1, self.device_edit)
             self.tree.setItemWidget(self, 2, self.entry_edit)
@@ -268,13 +295,22 @@ class CurveRow(QTreeWidgetItem):
             # Gather device name/entry
             device_name = ""
             device_entry = ""
+
+            ## TODO: Move this to itemData
             if hasattr(self, "device_edit"):
-                device_name = self.device_edit.text()
+                device_name = self.device_edit.currentText()
             if hasattr(self, "entry_edit"):
-                device_entry = self.entry_validator.validate_signal(
-                    name=device_name, entry=self.entry_edit.text()
-                )
-                self.entry_edit.setText(device_entry)
+                device_entry = self.entry_edit.currentText()
+                index = self.entry_edit.findText(device_entry)
+                if index > -1:
+                    device_entry_info = self.entry_edit.itemData(index)
+                    if device_entry_info:
+                        device_entry = device_entry_info.get("obj_name", device_entry)
+                else:
+                    device_entry = self.entry_validator.validate_signal(
+                        name=device_name, entry=device_entry
+                    )
+
             self.config.signal = DeviceSignal(name=device_name, entry=device_entry)
             self.config.source = "device"
             self.config.label = f"{device_name}-{device_entry}"
@@ -390,13 +426,20 @@ class CurveTree(BECWidget, QWidget):
         self.tree = QTreeWidget()
         self.tree.setColumnCount(7)
         self.tree.setHeaderLabels(["Actions", "Name", "Entry", "Color", "Style", "Width", "Symbol"])
+
+        header = self.tree.header()
+        for idx in range(self.tree.columnCount()):
+            if idx in (1, 2):  # Device name and entry should stretch
+                header.setSectionResizeMode(idx, QHeaderView.Stretch)
+            else:
+                header.setSectionResizeMode(idx, QHeaderView.Fixed)
+        header.setStretchLastSection(False)
         self.tree.setColumnWidth(0, 90)
-        self.tree.setColumnWidth(1, 100)
-        self.tree.setColumnWidth(2, 100)
         self.tree.setColumnWidth(3, 70)
         self.tree.setColumnWidth(4, 80)
-        self.tree.setColumnWidth(5, 40)
-        self.tree.setColumnWidth(6, 40)
+        self.tree.setColumnWidth(5, 50)
+        self.tree.setColumnWidth(6, 50)
+
         self.layout.addWidget(self.tree)
 
     def _init_color_buffer(self, size: int):
