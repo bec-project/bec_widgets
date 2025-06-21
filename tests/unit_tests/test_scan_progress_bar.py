@@ -1,5 +1,8 @@
+from unittest import mock
+
 import numpy as np
 import pytest
+from bec_lib import messages
 
 from bec_widgets.widgets.progress.bec_progressbar.bec_progressbar import (
     BECProgressBar,
@@ -158,3 +161,176 @@ def test_set_progress_source_connections(scan_progressbar, monkeypatch):
     prev_connect_count = len(connect_calls)
     scan_progressbar.set_progress_source(ProgressSource.DEVICE_PROGRESS, device=device)
     assert len(connect_calls) == prev_connect_count, "No extra connect made for same source"
+
+
+def test_progressbar_queue_update(scan_progressbar):
+    """
+    Test that an empty queue update does not change the progress source.
+    """
+    msg = messages.ScanQueueStatusMessage(queue={"primary": {"info": [], "status": "RUNNING"}})
+    with mock.patch.object(scan_progressbar, "set_progress_source") as mock_set_source:
+        scan_progressbar.on_queue_update(
+            msg.content, msg.metadata, _override_slot_params={"verify_sender": False}
+        )
+        mock_set_source.assert_not_called()
+
+
+def test_progressbar_queue_update_with_scan(scan_progressbar):
+    """
+    Test that a queue update with a scan changes the progress source to SCAN_PROGRESS.
+    """
+    msg = messages.ScanQueueStatusMessage(
+        metadata={},
+        queue={
+            "primary": {
+                "info": [
+                    {
+                        "queue_id": "40831e2c-fbd1-4432-8072-ad168a7ad964",
+                        "scan_id": ["e3f50794-852c-4bb1-965e-41c585ab0aa9"],
+                        "status": "RUNNING",
+                        "active_request_block": {
+                            "msg": messages.ScanQueueMessage(
+                                metadata={
+                                    "file_suffix": None,
+                                    "file_directory": None,
+                                    "user_metadata": {"sample_name": ""},
+                                    "RID": "94949c6e-d5f2-4f01-837e-a5d36257dd5d",
+                                },
+                                scan_type="line_scan",
+                                parameter={
+                                    "args": {"samx": [-10.0, 10.0]},
+                                    "kwargs": {
+                                        "steps": 20,
+                                        "relative": False,
+                                        "exp_time": 0.1,
+                                        "burst_at_each_point": 1,
+                                        "system_config": {
+                                            "file_suffix": None,
+                                            "file_directory": None,
+                                        },
+                                    },
+                                },
+                                queue="primary",
+                            ),
+                            "scan_number": 1,
+                            "report_instructions": [{"scan_progress": 20}],
+                        },
+                    }
+                ],
+                "status": "RUNNING",
+            }
+        },
+    )
+
+    with mock.patch.object(scan_progressbar, "set_progress_source") as mock_set_source:
+        scan_progressbar.on_queue_update(
+            msg.content, msg.metadata, _override_slot_params={"verify_sender": False}
+        )
+        mock_set_source.assert_called_once_with(ProgressSource.SCAN_PROGRESS)
+
+
+def test_progressbar_queue_update_with_device(scan_progressbar):
+    """
+    Test that a queue update with a device changes the progress source to DEVICE_PROGRESS.
+    """
+    msg = messages.ScanQueueStatusMessage(
+        metadata={},
+        queue={
+            "primary": {
+                "info": [
+                    {
+                        "queue_id": "40831e2c-fbd1-4432-8072-ad168a7ad964",
+                        "scan_id": ["e3f50794-852c-4bb1-965e-41c585ab0aa9"],
+                        "status": "RUNNING",
+                        "active_request_block": {
+                            "msg": messages.ScanQueueMessage(
+                                metadata={
+                                    "file_suffix": None,
+                                    "file_directory": None,
+                                    "user_metadata": {"sample_name": ""},
+                                    "RID": "94949c6e-d5f2-4f01-837e-a5d36257dd5d",
+                                },
+                                scan_type="line_scan",
+                                parameter={
+                                    "args": {"samx": [-10.0, 10.0]},
+                                    "kwargs": {
+                                        "steps": 20,
+                                        "relative": False,
+                                        "exp_time": 0.1,
+                                        "burst_at_each_point": 1,
+                                        "system_config": {
+                                            "file_suffix": None,
+                                            "file_directory": None,
+                                        },
+                                    },
+                                },
+                                queue="primary",
+                            ),
+                            "scan_number": 1,
+                            "report_instructions": [{"device_progress": ["samx"]}],
+                        },
+                    }
+                ],
+                "status": "RUNNING",
+            }
+        },
+    )
+
+    with mock.patch.object(scan_progressbar, "set_progress_source") as mock_set_source:
+        scan_progressbar.on_queue_update(
+            msg.content, msg.metadata, _override_slot_params={"verify_sender": False}
+        )
+        mock_set_source.assert_called_once_with(ProgressSource.DEVICE_PROGRESS, device="samx")
+
+
+def test_progressbar_queue_update_with_no_scan_or_device(scan_progressbar):
+    """
+    Test that a queue update with neither scan nor device does not change the progress source.
+    """
+    msg = messages.ScanQueueStatusMessage(
+        metadata={},
+        queue={
+            "primary": {
+                "info": [
+                    {
+                        "queue_id": "40831e2c-fbd1-4432-8072-ad168a7ad964",
+                        "scan_id": ["e3f50794-852c-4bb1-965e-41c585ab0aa9"],
+                        "status": "RUNNING",
+                        "active_request_block": {
+                            "msg": messages.ScanQueueMessage(
+                                metadata={
+                                    "file_suffix": None,
+                                    "file_directory": None,
+                                    "user_metadata": {"sample_name": ""},
+                                    "RID": "94949c6e-d5f2-4f01-837e-a5d36257dd5d",
+                                },
+                                scan_type="line_scan",
+                                parameter={
+                                    "args": {"samx": [-10.0, 10.0]},
+                                    "kwargs": {
+                                        "steps": 20,
+                                        "relative": False,
+                                        "exp_time": 0.1,
+                                        "burst_at_each_point": 1,
+                                        "system_config": {
+                                            "file_suffix": None,
+                                            "file_directory": None,
+                                        },
+                                    },
+                                },
+                                queue="primary",
+                            ),
+                            "scan_number": 1,
+                        },
+                    }
+                ],
+                "status": "RUNNING",
+            }
+        },
+    )
+
+    with mock.patch.object(scan_progressbar, "set_progress_source") as mock_set_source:
+        scan_progressbar.on_queue_update(
+            msg.content, msg.metadata, _override_slot_params={"verify_sender": False}
+        )
+        mock_set_source.assert_not_called()
