@@ -1,6 +1,36 @@
 # CHANGELOG
 
 
+## v2.18.0 (2025-06-22)
+
+### Bug Fixes
+
+- Make settings dialog resizable
+  ([`5a564a5`](https://github.com/bec-project/bec_widgets/commit/5a564a5f3f3229e6407ea52a59d3e63319dc214a))
+
+- **curve settings**: Add initial size hint
+  ([`a9708f6`](https://github.com/bec-project/bec_widgets/commit/a9708f6d8f15c42b142488da1e392a8f3179932a))
+
+### Features
+
+- **curve settings**: Add combobox selection for device and signal
+  ([`eea5f7e`](https://github.com/bec-project/bec_widgets/commit/eea5f7ebbd2b477b3ed19c7efcc76390dd391f26))
+
+- **device combobox**: Emit reset event if validation fails
+  ([`4c2c0c5`](https://github.com/bec-project/bec_widgets/commit/4c2c0c5525d593d8ec7fd554336cb11adbe32de2))
+
+- **FilterIO**: Add support for item data
+  ([`8e8acd6`](https://github.com/bec-project/bec_widgets/commit/8e8acd672c0deb8dcd928886fb574452ac956de7))
+
+- **signal combobox**: Add reset_selection slot
+  ([`b51de1a`](https://github.com/bec-project/bec_widgets/commit/b51de1a00e4b17c44cab23e5097391c6fa8ea0e2))
+
+### Refactoring
+
+- **device input**: Refactor to SafeProperty and SafeSlot
+  ([`6e2f2ce`](https://github.com/bec-project/bec_widgets/commit/6e2f2cea91ba3af33e9891532506f4b0b65b90c8))
+
+
 ## v2.17.0 (2025-06-22)
 
 ### Bug Fixes
