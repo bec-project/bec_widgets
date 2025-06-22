@@ -6,10 +6,10 @@ from bec_lib.device import ComputedSignal, Device, Positioner, ReadoutPriority
 from bec_lib.device import Signal as BECSignal
 from bec_lib.logger import bec_logger
 from pydantic import field_validator
-from qtpy.QtCore import Property, Signal, Slot
 
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.filter_io import FilterIO
 from bec_widgets.utils.widget_io import WidgetIO
 
@@ -100,7 +100,7 @@ class DeviceInputBase(BECWidget):
 
     ### QtSlots ###
 
-    @Slot(str)
+    @SafeSlot(str)
     def set_device(self, device: str):
         """
         Set the device.
@@ -114,7 +114,7 @@ class DeviceInputBase(BECWidget):
         else:
             logger.warning(f"Device {device} is not in the filtered selection.")
 
-    @Slot()
+    @SafeSlot()
     def update_devices_from_filters(self):
         """Update the devices based on the current filter selection
         in self.device_filter and self.readout_filter. If apply_filter is False,
@@ -133,7 +133,7 @@ class DeviceInputBase(BECWidget):
         self.devices = [device.name for device in devs]
         self.set_device(current_device)
 
-    @Slot(list)
+    @SafeSlot(list)
     def set_available_devices(self, devices: list[str]):
         """
         Set the devices. If a device in the list is not valid, it will not be considered.
@@ -146,7 +146,7 @@ class DeviceInputBase(BECWidget):
 
     ### QtProperties ###
 
-    @Property(
+    @SafeProperty(
         "QStringList",
         doc="List of devices. If updated, it will disable the apply filters property.",
     )
@@ -165,7 +165,7 @@ class DeviceInputBase(BECWidget):
         self.config.devices = value
         FilterIO.set_selection(widget=self, selection=value)
 
-    @Property(str)
+    @SafeProperty(str)
     def default(self):
         """Get the default device name. If set through this property, it will update only if the device is within the filtered selection."""
         return self.config.default
@@ -177,7 +177,7 @@ class DeviceInputBase(BECWidget):
         self.config.default = value
         WidgetIO.set_value(widget=self, value=value)
 
-    @Property(bool)
+    @SafeProperty(bool)
     def apply_filter(self):
         """Apply the filters on the devices."""
         return self.config.apply_filter
@@ -187,7 +187,7 @@ class DeviceInputBase(BECWidget):
         self.config.apply_filter = value
         self.update_devices_from_filters()
 
-    @Property(bool)
+    @SafeProperty(bool)
     def filter_to_device(self):
         """Include devices in filters."""
         return BECDeviceFilter.DEVICE in self.device_filter
@@ -200,7 +200,7 @@ class DeviceInputBase(BECWidget):
             self._device_filter.remove(BECDeviceFilter.DEVICE)
         self.update_devices_from_filters()
 
-    @Property(bool)
+    @SafeProperty(bool)
     def filter_to_positioner(self):
         """Include devices of type Positioner in filters."""
         return BECDeviceFilter.POSITIONER in self.device_filter
@@ -213,7 +213,7 @@ class DeviceInputBase(BECWidget):
             self._device_filter.remove(BECDeviceFilter.POSITIONER)
         self.update_devices_from_filters()
 
-    @Property(bool)
+    @SafeProperty(bool)
     def filter_to_signal(self):
         """Include devices of type Signal in filters."""
         return BECDeviceFilter.SIGNAL in self.device_filter
@@ -226,7 +226,7 @@ class DeviceInputBase(BECWidget):
             self._device_filter.remove(BECDeviceFilter.SIGNAL)
         self.update_devices_from_filters()
 
-    @Property(bool)
+    @SafeProperty(bool)
     def filter_to_computed_signal(self):
         """Include devices of type ComputedSignal in filters."""
         return BECDeviceFilter.COMPUTED_SIGNAL in self.device_filter
@@ -239,7 +239,7 @@ class DeviceInputBase(BECWidget):
             self._device_filter.remove(BECDeviceFilter.COMPUTED_SIGNAL)
         self.update_devices_from_filters()
 
-    @Property(bool)
+    @SafeProperty(bool)
     def readout_monitored(self):
         """Include devices with readout priority Monitored in filters."""
         return ReadoutPriority.MONITORED in self.readout_filter
@@ -252,7 +252,7 @@ class DeviceInputBase(BECWidget):
             self._readout_filter.remove(ReadoutPriority.MONITORED)
         self.update_devices_from_filters()
 
-    @Property(bool)
+    @SafeProperty(bool)
     def readout_baseline(self):
         """Include devices with readout priority Baseline in filters."""
         return ReadoutPriority.BASELINE in self.readout_filter
@@ -265,7 +265,7 @@ class DeviceInputBase(BECWidget):
             self._readout_filter.remove(ReadoutPriority.BASELINE)
         self.update_devices_from_filters()
 
-    @Property(bool)
+    @SafeProperty(bool)
     def readout_async(self):
         """Include devices with readout priority Async in filters."""
         return ReadoutPriority.ASYNC in self.readout_filter
@@ -278,7 +278,7 @@ class DeviceInputBase(BECWidget):
             self._readout_filter.remove(ReadoutPriority.ASYNC)
         self.update_devices_from_filters()
 
-    @Property(bool)
+    @SafeProperty(bool)
     def readout_continuous(self):
         """Include devices with readout priority continuous in filters."""
         return ReadoutPriority.CONTINUOUS in self.readout_filter
@@ -291,7 +291,7 @@ class DeviceInputBase(BECWidget):
             self._readout_filter.remove(ReadoutPriority.CONTINUOUS)
         self.update_devices_from_filters()
 
-    @Property(bool)
+    @SafeProperty(bool)
     def readout_on_request(self):
         """Include devices with readout priority OnRequest in filters."""
         return ReadoutPriority.ON_REQUEST in self.readout_filter
