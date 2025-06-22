@@ -206,26 +206,23 @@ class ScanControl(BECWidget, QWidget):
         enabled = self.toggle.checked
         current_scan = self.comboBox_scan_selection.currentText()
         if enabled:
-            history = self.client.connector.lrange(MessageEndpoints.scan_queue_history(), 0, -1)
+            history = self.client.connector.xread(MessageEndpoints.scan_history(), from_start=True)
 
             for scan in history:
-                scan_name = scan.content["info"]["request_blocks"][-1]["msg"].content["scan_type"]
+                scan_data = scan.get("data")
+                if scan_data is None:
+                    continue
+                scan_name = scan_data.scan_name
                 if scan_name == current_scan:
-                    args_dict = scan.content["info"]["request_blocks"][-1]["msg"].content[
-                        "parameter"
-                    ]["args"]
-                    args_list = []
-                    for key, value in args_dict.items():
-                        args_list.append(key)
-                        args_list.extend(value)
+                    args_list = scan_data.request_inputs.get("arg_bundle", [])
                     if len(args_list) > 1 and self.arg_box is not None:
                         self.arg_box.set_parameters(args_list)
-                    kwargs = scan.content["info"]["request_blocks"][-1]["msg"].content["parameter"][
-                        "kwargs"
-                    ]
-                    if kwargs and self.kwarg_boxes:
+                    inputs = scan_data.request_inputs.get("inputs", {})
+                    kwargs = scan_data.request_inputs.get("kwargs", {})
+                    kwarg_box_inputs = {**inputs, **kwargs}
+                    if kwarg_box_inputs and self.kwarg_boxes:
                         for box in self.kwarg_boxes:
-                            box.set_parameters(kwargs)
+                            box.set_parameters(kwarg_box_inputs)
                     self.last_scan_found = True
                     break
                 else:

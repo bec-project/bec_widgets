@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from bec_lib.endpoints import MessageEndpoints
-from bec_lib.messages import AvailableResourceMessage, ScanQueueHistoryMessage, ScanQueueMessage
+from bec_lib.messages import AvailableResourceMessage, ScanHistoryMessage
 from qtpy.QtCore import QModelIndex, Qt
 
 from bec_widgets.utils.forms_from_types.items import StrFormItem
@@ -221,82 +221,36 @@ available_scans_message = AvailableResourceMessage(
     }
 )
 
-scan_history = ScanQueueHistoryMessage(
+scan_history = ScanHistoryMessage(
     metadata={},
-    status="COMPLETED",
-    queue_id="94d7cb39-aa70-4060-92de-addcfb64e3c0",
-    info={
-        "queue_id": "94d7cb39-aa70-4060-92de-addcfb64e3c0",
-        "scan_id": ["bc2aa11f-24f6-44d6-8717-95e97fb43015"],
-        "is_scan": [True],
-        "request_blocks": [
-            {
-                "msg": ScanQueueMessage(
-                    metadata={
-                        "file_suffix": None,
-                        "file_directory": None,
-                        "user_metadata": {},
-                        "RID": "99321ef7-00ac-4e0c-9120-ce689bd88a4d",
-                    },
-                    scan_type="line_scan",
-                    parameter={
-                        "args": {"samx": [0.0, 2.0]},
-                        "kwargs": {
-                            "steps": 10,
-                            "relative": False,
-                            "exp_time": 2.0,
-                            "burst_at_each_point": 1,
-                            "system_config": {"file_suffix": None, "file_directory": None},
-                        },
-                    },
-                    queue="primary",
-                ),
-                "RID": "99321ef7-00ac-4e0c-9120-ce689bd88a4d",
-                "scan_motors": ["samx"],
-                "readout_priority": {
-                    "monitored": ["samx"],
-                    "baseline": [],
-                    "on_request": [],
-                    "async": [],
-                },
-                "is_scan": True,
-                "scan_number": 176,
-                "scan_id": "bc2aa11f-24f6-44d6-8717-95e97fb43015",
-                "metadata": {
-                    "file_suffix": None,
-                    "file_directory": None,
-                    "user_metadata": {},
-                    "RID": "99321ef7-00ac-4e0c-9120-ce689bd88a4d",
-                },
-                "content": {
-                    "scan_type": "line_scan",
-                    "parameter": {
-                        "args": {"samx": [0.0, 2.0]},
-                        "kwargs": {
-                            "steps": 10,
-                            "relative": False,
-                            "exp_time": 2.0,
-                            "burst_at_each_point": 1,
-                            "system_config": {"file_suffix": None, "file_directory": None},
-                        },
-                    },
-                    "queue": "primary",
-                },
-                "report_instructions": [{"scan_progress": 10}],
-            }
-        ],
-        "scan_number": [176],
-        "status": "COMPLETED",
-        "active_request_block": None,
+    scan_id="79cbef20-9ebe-45bb-a44c-f518be27a25c",
+    scan_number=1,
+    dataset_number=1,
+    file_path="/somepath/scan_1.h5",
+    exit_status="closed",
+    start_time=1750618470.936856,
+    end_time=1750618473.668227,
+    scan_name="line_scan",
+    num_points=100,
+    request_inputs={
+        "arg_bundle": ["samx", 0.0, 2.0],
+        "inputs": {},
+        "kwargs": {
+            "steps": 10,
+            "exp_time": 2,
+            "relative": False,
+            "system_config": {"file_suffix": None, "file_directory": None},
+        },
     },
-    queue="primary",
 )
 
 
 @pytest.fixture(scope="function")
 def scan_control(qtbot, mocked_client):  # , mock_dev):
     mocked_client.connector.set(MessageEndpoints.available_scans(), available_scans_message)
-    mocked_client.connector.lpush(MessageEndpoints.scan_queue_history(), scan_history)
+    mocked_client.connector.xadd(
+        topic=MessageEndpoints.scan_history(), msg_dict={"data": scan_history}
+    )
     widget = ScanControl(client=mocked_client)
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
