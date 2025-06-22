@@ -203,32 +203,37 @@ class ScanControl(BECWidget, QWidget):
         """
         Requests the last executed scan parameters from BEC and restores them to the scan control widget.
         """
-        enabled = self.toggle.checked
-        current_scan = self.comboBox_scan_selection.currentText()
-        if enabled:
-            history = self.client.connector.xread(MessageEndpoints.scan_history(), from_start=True)
+        self.last_scan_found = False
+        if not self.toggle.checked:
+            return
 
-            for scan in history:
-                scan_data = scan.get("data")
-                if scan_data is None:
-                    continue
-                scan_name = scan_data.scan_name
-                if scan_name == current_scan:
-                    args_list = scan_data.request_inputs.get("arg_bundle", [])
-                    if len(args_list) > 1 and self.arg_box is not None:
-                        self.arg_box.set_parameters(args_list)
-                    inputs = scan_data.request_inputs.get("inputs", {})
-                    kwargs = scan_data.request_inputs.get("kwargs", {})
-                    kwarg_box_inputs = {**inputs, **kwargs}
-                    if kwarg_box_inputs and self.kwarg_boxes:
-                        for box in self.kwarg_boxes:
-                            box.set_parameters(kwarg_box_inputs)
-                    self.last_scan_found = True
-                    break
-                else:
-                    self.last_scan_found = False
-        else:
-            self.last_scan_found = False
+        current_scan = self.comboBox_scan_selection.currentText()
+        history = self.client.connector.xread(
+            MessageEndpoints.scan_history(), from_start=True, user_id=self.object_name
+        )
+
+        for scan in history:
+            scan_data = scan.get("data")
+            if not scan_data:
+                continue
+
+            if scan_data.scan_name != current_scan:
+                continue
+
+            ri = getattr(scan_data, "request_inputs", {}) or {}
+            args_list = ri.get("arg_bundle", [])
+            if args_list and self.arg_box:
+                self.arg_box.set_parameters(args_list)
+
+            inputs = ri.get("inputs", {})
+            kwargs = ri.get("kwargs", {})
+            merged = {**inputs, **kwargs}
+            if merged and self.kwarg_boxes:
+                for box in self.kwarg_boxes:
+                    box.set_parameters(merged)
+
+            self.last_scan_found = True
+            break
 
     @SafeProperty(str)
     def current_scan(self):
