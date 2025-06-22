@@ -1,6 +1,64 @@
 # CHANGELOG
 
 
+## v2.17.0 (2025-06-22)
+
+### Bug Fixes
+
+- **bec_progressbar**: Layout and sizing adjustments
+  ([`b02c870`](https://github.com/bec-project/bec_widgets/commit/b02c870dbfecb4bc6921ec4c915dac0e67beb9b4))
+
+- **launch_window**: Number of remaining connections increase to 2 to include the ScanProgressBar
+  ([`3bbb8da`](https://github.com/bec-project/bec_widgets/commit/3bbb8daa24348613f62bde667a446d37dcec8fb0))
+
+- **main_window**: Labels and sizing of scan progress adopted
+  ([`aca6efb`](https://github.com/bec-project/bec_widgets/commit/aca6efb567528eb3c68521a59b4f9903a5616c6f))
+
+- **scan_progressbar**: Cleanup adjusted
+  ([`e8ae972`](https://github.com/bec-project/bec_widgets/commit/e8ae9725fa86b7db52a147ca5a2acc62fa2ccf43))
+
+- **scan_progressbar**: Mapping of bec progress states to the progressbar enums
+  ([`88b42e4`](https://github.com/bec-project/bec_widgets/commit/88b42e49e30a0aa0edc2de4d970408f4be5bde6b))
+
+### Build System
+
+- Update min dependency of bec to 3.42.4
+  ([`a4274ff`](https://github.com/bec-project/bec_widgets/commit/a4274ff8cd9f3e73a61b2eaf902c172c028d21b0))
+
+### Features
+
+- **main_window**: Added scan progress bar to BECMainWindow status bar
+  ([`497e394`](https://github.com/bec-project/bec_widgets/commit/497e394deb5cfe36c8fc4f769fef26f109fd1c1f))
+
+- **main_window**: Timer to show hide scan progress when it is relevant only
+  ([`9ff1706`](https://github.com/bec-project/bec_widgets/commit/9ff170660edd9e03f99eccee60b5e20fc1cf5a8d))
+
+- **progressbar**: Added padding as designer property
+  ([`a451625`](https://github.com/bec-project/bec_widgets/commit/a451625a5ab804ca8259f9c9f83c4f9ebbea4a5b))
+
+- **progressbar**: State setting and dynamic corner radius
+  ([`d3a9e09`](https://github.com/bec-project/bec_widgets/commit/d3a9e0903a263d735ecab3a2ad9319c9d5e86092))
+
+- **scan_progressbar**: Added oneline design for compact applications
+  ([`d5ca7b8`](https://github.com/bec-project/bec_widgets/commit/d5ca7b84337cf60aa66f961d357ae66994f53c7a))
+
+- **scan_progressbar**: Added progressbar with hooks to scan progress and device progress
+  ([`c4b8538`](https://github.com/bec-project/bec_widgets/commit/c4b85381a41e4742567680864668ee83d498b1d1))
+
+### Refactoring
+
+- **progressbar**: Change slot / property to safeslot / safeproperty
+  ([`92d0ffe`](https://github.com/bec-project/bec_widgets/commit/92d0ffee65babc718fafd60131d0a4f291e5ca2b))
+
+### Testing
+
+- **scan progress**: Add test for queue update logic
+  ([`b2a46e2`](https://github.com/bec-project/bec_widgets/commit/b2a46e284d45e97dd9853d1a3c8e95de7e530267))
+
+- **scan_progress**: Tests extended
+  ([`6c04eac`](https://github.com/bec-project/bec_widgets/commit/6c04eac18c887526b333f58fc1118c3b4029abd8))
+
+
 ## v2.16.2 (2025-06-20)
 
 ### Bug Fixes
