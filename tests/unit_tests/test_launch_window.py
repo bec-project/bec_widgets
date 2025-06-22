@@ -109,6 +109,25 @@ def test_launch_window_launch_plugin_auto_update(bec_launch_window):
                 "dock_area": mock.MagicMock(),
                 "scan_progress": mock.MagicMock(),
             },
+            False,
+        ),
+        (
+            {
+                "launcher": mock.MagicMock(),
+                "dock_area": mock.MagicMock(),
+                "scan_progress_simple": mock.MagicMock(),
+                "scan_progress_full": mock.MagicMock(),
+            },
+            False,
+        ),
+        (
+            {
+                "launcher": mock.MagicMock(),
+                "dock_area": mock.MagicMock(),
+                "scan_progress_simple": mock.MagicMock(),
+                "scan_progress_full": mock.MagicMock(),
+                "hover_widget": mock.MagicMock(),
+            },
             True,
         ),
     ],
@@ -146,6 +165,25 @@ def test_gui_server_turns_off_the_lights(bec_launch_window, connections, hide):
                 "launcher": mock.MagicMock(),
                 "dock_area": mock.MagicMock(),
                 "scan_progress": mock.MagicMock(),
+            },
+            True,
+        ),
+        (
+            {
+                "launcher": mock.MagicMock(),
+                "dock_area": mock.MagicMock(),
+                "scan_progress_simple": mock.MagicMock(),
+                "scan_progress_full": mock.MagicMock(),
+            },
+            True,
+        ),
+        (
+            {
+                "launcher": mock.MagicMock(),
+                "dock_area": mock.MagicMock(),
+                "scan_progress_simple": mock.MagicMock(),
+                "scan_progress_full": mock.MagicMock(),
+                "hover_widget": mock.MagicMock(),
             },
             False,
         ),
