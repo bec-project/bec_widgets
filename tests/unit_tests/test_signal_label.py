@@ -121,11 +121,13 @@ def test_custom_label(signal_label: SignalLabel, qtbot):
 
 def test_units_in_display(signal_label: SignalLabel, qtbot):
     signal_label._value = "1.8"
+    signal_label._dtype = "float"
     signal_label.custom_units = "Mfurlong μfortnight⁻¹"
     assert signal_label._display.text() == "1.800 Mfurlong μfortnight⁻¹"
 
 
 def test_decimal_places(signal_label: SignalLabel, qtbot):
+    signal_label._dtype = "float"
     signal_label.decimal_places = 2
     signal_label.set_display_value("123.456")
     assert signal_label._display.text() == "123.46 m/s"
@@ -226,6 +228,7 @@ def test_handle_readback(signal_label: SignalLabel, qtbot):
     signal_label.device = "samx"
     signal_label.signal = "readback"
     signal_label.custom_units = "μm"
+    signal_label._dtype = "float"
     signal_label.on_device_readback({"random": {"stuff": "in", "corrupted": "reading"}}, {})
     assert signal_label._display.text() == "ERROR!"
     assert "Error processing incoming reading" in signal_label._display.toolTip()

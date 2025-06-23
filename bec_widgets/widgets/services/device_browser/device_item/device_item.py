@@ -6,10 +6,9 @@ from bec_lib.atlas_models import Device as DeviceConfigModel
 from bec_lib.devicemanager import DeviceContainer
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
-from PySide6.QtWidgets import QTabWidget, QVBoxLayout
 from qtpy.QtCore import QMimeData, QSize, Qt, Signal
 from qtpy.QtGui import QDrag
-from qtpy.QtWidgets import QApplication, QHBoxLayout, QToolButton, QWidget
+from qtpy.QtWidgets import QApplication, QHBoxLayout, QTabWidget, QToolButton, QVBoxLayout, QWidget
 
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.expandable_frame import ExpandableGroupFrame
