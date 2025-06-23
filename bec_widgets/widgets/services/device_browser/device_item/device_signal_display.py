@@ -1,9 +1,10 @@
+from bec_qthemes import material_icon
 from qtpy.QtCore import Qt
-from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QHBoxLayout, QLabel, QToolButton, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.error_popups import SafeProperty
+from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.widgets.containers.dock.dock import BECDock
 from bec_widgets.widgets.utility.signal_label.signal_label import SignalLabel
 
@@ -32,13 +33,34 @@ class SignalDisplay(BECWidget, QWidget):
         self._device = device
         self.device = device
 
+    @SafeSlot()
+    def _refresh(self):
+        if self.device in self.dev:
+            self.dev.get(self.device).read(cached=False)
+            self.dev.get(self.device).read_configuration(cached=False)
+
+    def _add_refresh_button(self):
+        button_holder = QWidget()
+        button_holder.setLayout(QHBoxLayout())
+        button_holder.layout().setAlignment(Qt.AlignmentFlag.AlignRight)
+        button_holder.layout().setContentsMargins(0, 0, 0, 0)
+        refresh_button = QToolButton()
+        refresh_button.setIcon(
+            material_icon(icon_name="refresh", size=(20, 20), convert_to_pixmap=False)
+        )
+        refresh_button.clicked.connect(self._refresh)
+        button_holder.layout().addWidget(refresh_button)
+        self._content_layout.addWidget(button_holder)
+
     def _populate(self):
         self._content.deleteLater()
         self._content = QWidget()
         self._layout.addWidget(self._content)
         self._content_layout = QVBoxLayout()
-        self._content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._content_layout.setContentsMargins(0, 0, 0, 0)
         self._content.setLayout(self._content_layout)
+
+        self._add_refresh_button()
 
         if self._device in self.dev:
             for sig in self.dev[self.device]._info.get("signals", {}).keys():

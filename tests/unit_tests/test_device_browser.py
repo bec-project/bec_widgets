@@ -3,6 +3,7 @@ from unittest import mock
 
 import pytest
 from qtpy.QtCore import QPoint, Qt
+from qtpy.QtWidgets import QTabWidget
 
 from bec_widgets.widgets.services.device_browser.device_browser import DeviceBrowser
 from bec_widgets.widgets.services.device_browser.device_item.device_config_form import (
@@ -86,8 +87,13 @@ def test_device_item_expansion(device_browser, qtbot):
     device_item: QListWidgetItem = device_browser.ui.device_list.itemAt(0, 0)
     widget: DeviceItem = device_browser.ui.device_list.itemWidget(device_item)
     qtbot.mouseClick(widget._expansion_button, Qt.MouseButton.LeftButton)
-    form = widget._contents.layout().itemAt(0).widget()
-    qtbot.waitUntil(lambda: isinstance(form, DeviceConfigForm), timeout=500)
+    tab_widget: QTabWidget = widget._contents.layout().itemAt(0).widget()
+    qtbot.waitUntil(lambda: tab_widget.widget(0) is not None, timeout=100)
+    qtbot.waitUntil(
+        lambda: isinstance(tab_widget.widget(0).layout().itemAt(0).widget(), DeviceConfigForm),
+        timeout=100,
+    )
+    form = tab_widget.widget(0).layout().itemAt(0).widget()
     assert widget.expanded
     assert (name_field := form.widget_dict.get("name")) is not None
     qtbot.waitUntil(lambda: name_field.getValue() == "samx", timeout=500)

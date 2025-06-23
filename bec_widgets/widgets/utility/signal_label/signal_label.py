@@ -179,6 +179,7 @@ class SignalLabel(BECWidget, QWidget):
         self._custom_units: str = custom_units
         self._show_default_units: bool = show_default_units
         self._decimal_places = 3
+        self._dtype = None
 
         self._show_hinted_signals: bool = True
         self._show_normal_signals: bool = False
@@ -240,8 +241,10 @@ class SignalLabel(BECWidget, QWidget):
         """Subscribe to the Redis topic for the device to display"""
         if not self._connected and self._device and self._device in self.dev:
             self._connected = True
-            self._readback_endpoint = MessageEndpoints.device_readback(self._device)
-            self.bec_dispatcher.connect_slot(self.on_device_readback, self._readback_endpoint)
+            self._read_endpoint = MessageEndpoints.device_read(self._device)
+            self._read_config_endpoint = MessageEndpoints.device_read_configuration(self._device)
+            self.bec_dispatcher.connect_slot(self.on_device_readback, self._read_endpoint)
+            self.bec_dispatcher.connect_slot(self.on_device_readback, self._read_config_endpoint)
             self._manual_read()
             self.set_display_value(self._value)
 
@@ -249,7 +252,8 @@ class SignalLabel(BECWidget, QWidget):
         """Unsubscribe from the Redis topic for the device to display"""
         if self._connected:
             self._connected = False
-            self.bec_dispatcher.disconnect_slot(self.on_device_readback, self._readback_endpoint)
+            self.bec_dispatcher.disconnect_slot(self.on_device_readback, self._read_endpoint)
+            self.bec_dispatcher.disconnect_slot(self.on_device_readback, self._read_config_endpoint)
 
     def _manual_read(self):
         if self._device is None or not isinstance(
@@ -258,8 +262,13 @@ class SignalLabel(BECWidget, QWidget):
             self._units = ""
             self._value = "__"
             return
-        signal: Signal = (
-            getattr(device, self.signal, None) if isinstance(device, Device) else device
+        signal, info = (
+            (
+                getattr(device, self.signal, None),
+                device._info.get("signals", {}).get(self._signal, {}).get("describe", {}),
+            )
+            if isinstance(device, Device)
+            else (device, device.describe().get(self._device))
         )
         if not isinstance(signal, Signal):  # Avoid getting other attributes of device, e.g. methods
             signal = None
@@ -268,7 +277,8 @@ class SignalLabel(BECWidget, QWidget):
             self._value = "__"
             return
         self._value = signal.get()
-        self._units = signal.get_device_config().get("egu", "")
+        self._units = info.get("egu", "")
+        self._dtype = info.get("dtype", "float")
 
     @SafeSlot(dict, dict)
     def on_device_readback(self, msg: dict, metadata: dict) -> None:
@@ -277,8 +287,10 @@ class SignalLabel(BECWidget, QWidget):
         """
         try:
             signal_to_read = self._patch_hinted_signal()
-            self._value = msg["signals"][signal_to_read]["value"]
-            self.set_display_value(self._value)
+            _value = msg["signals"].get(signal_to_read, {}).get("value")
+            if _value is not None:
+                self._value = _value
+                self.set_display_value(self._value)
         except Exception as e:
             self._display.setText("ERROR!")
             self._display.setToolTip(
@@ -400,7 +412,10 @@ class SignalLabel(BECWidget, QWidget):
         if self._decimal_places == 0:
             return value
         try:
-            return f"{float(value):0.{self._decimal_places}f}"
+            if self._dtype in ("integer", "float"):
+                return f"{float(value):0.{self._decimal_places}f}"
+            else:
+                return str(value)
         except ValueError:
             return value
 
