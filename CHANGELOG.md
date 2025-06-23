@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.19.1 (2025-06-23)
+
+### Bug Fixes
+
+- **launch_window**: Number of remaining connections extended to 4
+  ([`7484f51`](https://github.com/bec-project/bec_widgets/commit/7484f5160c8c6d632fd27996035ff6c0dda2e657))
+
+
 ## v2.19.0 (2025-06-23)
 
 ### Bug Fixes
