@@ -1,6 +1,25 @@
 # CHANGELOG
 
 
+## v2.19.0 (2025-06-23)
+
+### Bug Fixes
+
+- **ci**: Extend check for pyside import to tests
+  ([`d5a40da`](https://github.com/bec-project/bec_widgets/commit/d5a40dabc74753acad05e3eb6b121499fc1e03d7))
+
+### Features
+
+- (#494) add signal display to device browser
+  ([`f3da6e9`](https://github.com/bec-project/bec_widgets/commit/f3da6e959e0416827ee5d02e34e6ad0ecfc8e5e7))
+
+- (#494) add tabbed layout for device item
+  ([`3378051`](https://github.com/bec-project/bec_widgets/commit/337805125098c3e028a17b74ef6d9ae4b9ba3d6d))
+
+- (#494) display device signals
+  ([`3a10341`](https://github.com/bec-project/bec_widgets/commit/3a103410e7448256a56b59bb3276fee056ec42a0))
+
+
 ## v2.18.0 (2025-06-22)
 
 ### Bug Fixes
