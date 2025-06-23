@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v2.19.2 (2025-06-23)
+
+### Bug Fixes
+
+- **scan_control**: Scan parameters fetched from the scan_history, fix #707
+  ([`4456297`](https://github.com/bec-project/bec_widgets/commit/4456297beb940b147882f96caee6fb19aaf93c73))
+
+### Build System
+
+- Bec_lib 3.44 required
+  ([`9f3dcc3`](https://github.com/bec-project/bec_widgets/commit/9f3dcc3ab30a2c238ffffa8d594735ccaf6f1ca4))
+
+### Refactoring
+
+- **scan_control**: Request_last_executed_scan_parameters logic adjusted
+  ([`57f75bd`](https://github.com/bec-project/bec_widgets/commit/57f75bd4d506ca4d8dc982f3051d0d4c29b0d41c))
+
+
 ## v2.19.1 (2025-06-23)
 
 ### Bug Fixes
