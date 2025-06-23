@@ -21,7 +21,7 @@ jobs:
           isort --check --diff ./
       
       - name: Check for disallowed imports from PySide
-        run: '! grep -re "from PySide6\." bec_widgets/ | grep  -v -e "PySide6.QtDesigner" -e "PySide6.scripts"'
+        run: '! grep -re "from PySide6\." bec_widgets/ tests/ | grep  -v -e "PySide6.QtDesigner" -e "PySide6.scripts"'
 
   Pylint:
     runs-on: ubuntu-latest
