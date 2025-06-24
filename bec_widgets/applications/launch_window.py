@@ -24,6 +24,7 @@ from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.bec_plugin_helper import get_all_plugin_widgets
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.hover_gradient import enable_hover_gradient
 from bec_widgets.utils.name_utils import pascal_to_snake
 from bec_widgets.utils.plugin_utils import get_plugin_auto_updates
 from bec_widgets.utils.round_frame import RoundedFrame
@@ -56,6 +57,7 @@ class LaunchTile(RoundedFrame):
         description: str | None = None,
         show_selector: bool = False,
         tile_size: tuple[int, int] | None = None,
+        gradient: list[str] | None = None,
     ):
         super().__init__(parent=parent, orientation="vertical")
 
@@ -153,6 +155,8 @@ class LaunchTile(RoundedFrame):
         """
         )
         self.layout.addWidget(self.action_button, alignment=Qt.AlignCenter)
+        if gradient is not None:
+            enable_hover_gradient(self, colours=gradient)
 
     def _fit_label_to_width(self, label: QLabel, max_width: int, min_pt: int = 10):
         """
@@ -215,6 +219,7 @@ class LaunchWindow(BECMainWindow):
             description="Highly flexible and customizable dock area application with modular widgets.",
             action_button=lambda: self.launch("dock_area"),
             show_selector=False,
+            gradient=["#B73665", "#232770"],
         )
 
         self.available_auto_updates: dict[str, type[AutoUpdates]] = (
@@ -229,6 +234,7 @@ class LaunchWindow(BECMainWindow):
             action_button=self._open_auto_update,
             show_selector=True,
             selector_items=list(self.available_auto_updates.keys()) + ["Default"],
+            gradient=["#EE0678", "#FF6A00"],
         )
 
         self.register_tile(
@@ -239,6 +245,7 @@ class LaunchWindow(BECMainWindow):
             description="GUI application with custom UI file.",
             action_button=self._open_custom_ui_file,
             show_selector=False,
+            gradient=["#155799", "#179655"],
         )
 
         # plugin widgets
@@ -257,6 +264,7 @@ class LaunchWindow(BECMainWindow):
                 action_button=self._open_widget,
                 show_selector=True,
                 selector_items=list(self.available_widgets.keys()),
+                gradient=["#000046", "#1CB5E0"],
             )
 
         self._update_theme()
@@ -275,6 +283,7 @@ class LaunchWindow(BECMainWindow):
         action_button: Callable | None = None,
         show_selector: bool = False,
         selector_items: list[str] | None = None,
+        gradient: list[str] | None = None,
     ):
         """
         Register a tile in the launcher window.
@@ -297,6 +306,7 @@ class LaunchWindow(BECMainWindow):
             description=description,
             show_selector=show_selector,
             tile_size=self.TILE_SIZE,
+            gradient=gradient,
         )
         tile.setFixedWidth(self.TILE_SIZE[0])
         tile.setMinimumHeight(self.TILE_SIZE[1])

@@ -59,7 +59,7 @@ class _HoverGradientFilter(QtCore.QObject):
 
 
 # ─────────────────────────── painter helper ─────────────────────────────
-def _draw_hover_gradient(widget, painter, path):
+def _draw_hover_gradient(widget, painter, path, opacity):
     if not getattr(widget, "_hg_hover", False) or widget._hg_pos.x() < 0:
         return
 
@@ -71,7 +71,7 @@ def _draw_hover_gradient(widget, painter, path):
     grad = QtGui.QRadialGradient(widget._hg_pos, r)
 
     centre = QtGui.QColor(accent)
-    centre.setAlpha(180 if pressed else 110)
+    centre.setAlpha(opacity if pressed else opacity * 0.6)  # more opaque when pressed
     grad.setColorAt(0.0, centre)
 
     edge = cols[1] if len(cols) > 1 else QtCore.Qt.transparent
@@ -81,7 +81,7 @@ def _draw_hover_gradient(widget, painter, path):
 
 
 # ─────────────────────────── public API  ────────────────────────────────
-def enable_hover_gradient(frame: QtWidgets.QFrame, colours=None):
+def enable_hover_gradient(frame: QtWidgets.QFrame, colours=None, opacity=1.0):
     """
     Inject a radial hover-gradient ‘glow’ into *any* QFrame instance.
 
@@ -94,7 +94,7 @@ def enable_hover_gradient(frame: QtWidgets.QFrame, colours=None):
     """
     if getattr(frame, "_hg_enabled", False):  # hover gradient injected attribute
         return  # already done
-
+    opacity = 255 * opacity
     # normalise colours
     if colours is None:
         colours = ["#ffffff"]
@@ -128,7 +128,7 @@ def enable_hover_gradient(frame: QtWidgets.QFrame, colours=None):
         else:
             path.addRect(self.rect().adjusted(0, 0, -1, -1))
 
-        _draw_hover_gradient(self, painter, path)
+        _draw_hover_gradient(self, painter, path, opacity)
         painter.end()
 
     frame.paintEvent = types.MethodType(patched_paint, frame)
