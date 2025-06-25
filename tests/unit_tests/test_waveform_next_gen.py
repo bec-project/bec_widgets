@@ -797,7 +797,7 @@ def test_show_curve_settings_popup(qtbot, mocked_client):
     """
     wf = create_widget(qtbot, Waveform, client=mocked_client)
 
-    curve_action = wf.toolbar.widgets["curve"].action
+    curve_action = wf.toolbar.components.get_action("curve").action
     assert not curve_action.isChecked(), "Should start unchecked"
 
     wf.show_curve_settings_popup()
@@ -807,8 +807,9 @@ def test_show_curve_settings_popup(qtbot, mocked_client):
     assert curve_action.isChecked()
 
     # add a new row to the curve tree
-    wf.curve_settings_dialog.widget.curve_manager.toolbar.widgets["add"].action.trigger()
-    wf.curve_settings_dialog.widget.curve_manager.toolbar.widgets["add"].action.trigger()
+    add_action = wf.curve_settings_dialog.widget.curve_manager.toolbar.components.get_action("add")
+    add_action.action.trigger()
+    add_action.action.trigger()
     qtbot.wait(100)
     # Check that the new row is added
     assert wf.curve_settings_dialog.widget.curve_manager.tree.model().rowCount() == 2
@@ -824,9 +825,9 @@ def test_show_dap_summary_popup(qtbot, mocked_client):
     """
     wf = create_widget(qtbot, Waveform, client=mocked_client, popups=True)
 
-    assert "fit_params" in wf.toolbar.widgets
+    assert wf.toolbar.components.exists("fit_params")
 
-    fit_action = wf.toolbar.widgets["fit_params"].action
+    fit_action = wf.toolbar.components.get_action("fit_params").action
     assert fit_action.isChecked() is False
 
     wf.show_dap_summary_popup()

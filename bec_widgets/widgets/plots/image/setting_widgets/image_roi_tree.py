@@ -20,7 +20,9 @@ from qtpy.QtWidgets import (
 
 from bec_widgets import BECWidget
 from bec_widgets.utils import BECDispatcher, ConnectionConfig
-from bec_widgets.utils.toolbar import MaterialIconAction, ModularToolBar
+from bec_widgets.utils.toolbars.actions import WidgetAction
+from bec_widgets.utils.toolbars.bundles import ToolbarBundle
+from bec_widgets.utils.toolbars.toolbar import MaterialIconAction, ModularToolBar
 from bec_widgets.widgets.plots.roi.image_roi import (
     BaseROI,
     CircularROI,
@@ -121,20 +123,33 @@ class ROIPropertyTree(BECWidget, QWidget):
 
     # --------------------------------------------------------------------- UI
     def _init_toolbar(self):
-        tb = ModularToolBar(self, self, orientation="horizontal")
+        tb = self.toolbar = ModularToolBar(self, orientation="horizontal")
         self._draw_actions: dict[str, MaterialIconAction] = {}
         # --- ROI draw actions (toggleable) ---
-        self.add_rect_action = MaterialIconAction("add_box", "Add Rect ROI", True, self)
-        tb.add_action("Add Rect ROI", self.add_rect_action, self)
-        self._draw_actions["rect"] = self.add_rect_action
-        self.add_circle_action = MaterialIconAction("add_circle", "Add Circle ROI", True, self)
-        tb.add_action("Add Circle ROI", self.add_circle_action, self)
-        self._draw_actions["circle"] = self.add_circle_action
-        # --- Ellipse ROI draw action ---
-        self.add_ellipse_action = MaterialIconAction("vignette", "Add Ellipse ROI", True, self)
-        tb.add_action("Add Ellipse ROI", self.add_ellipse_action, self)
-        self._draw_actions["ellipse"] = self.add_ellipse_action
 
+        tb.components.add_safe(
+            "roi_rectangle",
+            MaterialIconAction("add_box", "Add Rect ROI", checkable=True, parent=self),
+        )
+        tb.components.add_safe(
+            "roi_circle",
+            MaterialIconAction("add_circle", "Add Circle ROI", checkable=True, parent=self),
+        )
+        tb.components.add_safe(
+            "roi_ellipse",
+            MaterialIconAction("vignette", "Add Ellipse ROI", checkable=True, parent=self),
+        )
+        bundle = ToolbarBundle("roi_draw", tb.components)
+        bundle.add_action("roi_rectangle")
+        bundle.add_action("roi_circle")
+        bundle.add_action("roi_ellipse")
+        tb.add_bundle(bundle)
+
+        self._draw_actions = {
+            "rect": tb.components.get_action("roi_rectangle"),
+            "circle": tb.components.get_action("roi_circle"),
+            "ellipse": tb.components.get_action("roi_ellipse"),
+        }
         for mode, act in self._draw_actions.items():
             act.action.toggled.connect(lambda on, m=mode: self._on_draw_action_toggled(m, on))
 
@@ -142,7 +157,7 @@ class ROIPropertyTree(BECWidget, QWidget):
         self.expand_toggle = MaterialIconAction(
             "unfold_more", "Expand/Collapse", checkable=True, parent=self  # icon when collapsed
         )
-        tb.add_action("Expand/Collapse", self.expand_toggle, self)
+        tb.components.add_safe("expand_toggle", self.expand_toggle)
 
         def _exp_toggled(on: bool):
             if on:
@@ -163,7 +178,7 @@ class ROIPropertyTree(BECWidget, QWidget):
         self.lock_all_action = MaterialIconAction(
             "lock_open_right", "Lock/Unlock all ROIs", checkable=True, parent=self
         )
-        tb.add_action("Lock/Unlock all ROIs", self.lock_all_action, self)
+        tb.components.add_safe("lock_unlock_all", self.lock_all_action)
 
         def _lock_all(checked: bool):
             # checked -> everything locked (movable = False)
@@ -178,11 +193,22 @@ class ROIPropertyTree(BECWidget, QWidget):
 
         # colormap widget
         self.cmap = BECColorMapWidget(cmap=self.controller.colormap)
-        tb.addWidget(QWidget())  # spacer
-        tb.addWidget(self.cmap)
+
+        tb.components.add_safe("roi_tree_spacer", WidgetAction(widget=QWidget()))
+        tb.components.add_safe("roi_tree_cmap", WidgetAction(widget=self.cmap))
+
         self.cmap.colormap_changed_signal.connect(self.controller.set_colormap)
         self.layout.addWidget(tb)
         self.controller.paletteChanged.connect(lambda cmap: setattr(self.cmap, "colormap", cmap))
+
+        bundle = ToolbarBundle("roi_tools", tb.components)
+        bundle.add_action("expand_toggle")
+        bundle.add_action("lock_unlock_all")
+        bundle.add_action("roi_tree_spacer")
+        bundle.add_action("roi_tree_cmap")
+        tb.add_bundle(bundle)
+
+        tb.show_bundles(["roi_draw", "roi_tools"])
 
         # ROI drawing state
         self._roi_draw_mode = None  # 'rect' | 'circle' | 'ellipse' | None

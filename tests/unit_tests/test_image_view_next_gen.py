@@ -242,10 +242,11 @@ def test_image_data_update_1d(qtbot, mocked_client):
 
 def test_toolbar_actions_presence(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
-    assert "autorange_image" in bec_image_view.toolbar.widgets
-    assert "lock_aspect_ratio" in bec_image_view.toolbar.bundles["mouse_interaction"]
-    assert "processing" in bec_image_view.toolbar.bundles
-    assert "selection" in bec_image_view.toolbar.bundles
+    assert bec_image_view.toolbar.components.exists("image_autorange")
+    assert bec_image_view.toolbar.components.exists("lock_aspect_ratio")
+    assert bec_image_view.toolbar.components.exists("image_processing_fft")
+    assert bec_image_view.toolbar.components.exists("image_device_combo")
+    assert bec_image_view.toolbar.components.exists("image_dim_combo")
 
 
 def test_image_processing_fft_toggle(qtbot, mocked_client):
@@ -304,8 +305,8 @@ def test_setting_vrange_with_colorbar(qtbot, mocked_client, colorbar_type):
 def test_setup_image_from_toolbar(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
 
-    bec_image_view.selection_bundle.device_combo_box.setCurrentText("eiger")
-    bec_image_view.selection_bundle.dim_combo_box.setCurrentText("2d")
+    bec_image_view.device_combo_box.setCurrentText("eiger")
+    bec_image_view.dim_combo_box.setCurrentText("2d")
 
     assert bec_image_view.monitor == "eiger"
     assert bec_image_view.subscriptions["main"].source == "device_monitor_2d"
@@ -318,17 +319,17 @@ def test_image_actions_interactions(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
     bec_image_view.autorange = False  # Change the initial state to False
 
-    bec_image_view.autorange_mean_action.action.trigger()
+    bec_image_view.toolbar.components.get_action("image_autorange_mean").action.trigger()
     assert bec_image_view.autorange is True
     assert bec_image_view.main_image.autorange is True
     assert bec_image_view.autorange_mode == "mean"
 
-    bec_image_view.autorange_max_action.action.trigger()
+    bec_image_view.toolbar.components.get_action("image_autorange_max").action.trigger()
     assert bec_image_view.autorange is True
     assert bec_image_view.main_image.autorange is True
     assert bec_image_view.autorange_mode == "max"
 
-    bec_image_view.toolbar.widgets["lock_aspect_ratio"].action.trigger()
+    bec_image_view.toolbar.components.get_action("lock_aspect_ratio").action.trigger()
     assert bec_image_view.lock_aspect_ratio is False
     assert bool(bec_image_view.plot_item.getViewBox().state["aspectLocked"]) is False
 
@@ -336,7 +337,7 @@ def test_image_actions_interactions(qtbot, mocked_client):
 def test_image_toggle_action_fft(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
 
-    bec_image_view.processing_bundle.fft.action.trigger()
+    bec_image_view.toolbar.components.get_action("image_processing_fft").action.trigger()
 
     assert bec_image_view.fft is True
     assert bec_image_view.main_image.fft is True
@@ -346,7 +347,7 @@ def test_image_toggle_action_fft(qtbot, mocked_client):
 def test_image_toggle_action_log(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
 
-    bec_image_view.processing_bundle.log.action.trigger()
+    bec_image_view.toolbar.components.get_action("image_processing_log").action.trigger()
 
     assert bec_image_view.log is True
     assert bec_image_view.main_image.log is True
@@ -356,7 +357,7 @@ def test_image_toggle_action_log(qtbot, mocked_client):
 def test_image_toggle_action_transpose(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
 
-    bec_image_view.processing_bundle.transpose.action.trigger()
+    bec_image_view.toolbar.components.get_action("image_processing_transpose").action.trigger()
 
     assert bec_image_view.transpose is True
     assert bec_image_view.main_image.transpose is True
@@ -366,7 +367,7 @@ def test_image_toggle_action_transpose(qtbot, mocked_client):
 def test_image_toggle_action_rotate_right(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
 
-    bec_image_view.processing_bundle.right.action.trigger()
+    bec_image_view.toolbar.components.get_action("image_processing_rotate_right").action.trigger()
 
     assert bec_image_view.num_rotation_90 == 3
     assert bec_image_view.main_image.num_rotation_90 == 3
@@ -376,7 +377,7 @@ def test_image_toggle_action_rotate_right(qtbot, mocked_client):
 def test_image_toggle_action_rotate_left(qtbot, mocked_client):
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
 
-    bec_image_view.processing_bundle.left.action.trigger()
+    bec_image_view.toolbar.components.get_action("image_processing_rotate_left").action.trigger()
 
     assert bec_image_view.num_rotation_90 == 1
     assert bec_image_view.main_image.num_rotation_90 == 1
@@ -392,7 +393,7 @@ def test_image_toggle_action_reset(qtbot, mocked_client):
     bec_image_view.transpose = True
     bec_image_view.num_rotation_90 = 2
 
-    bec_image_view.processing_bundle.reset.action.trigger()
+    bec_image_view.toolbar.components.get_action("image_processing_reset").action.trigger()
 
     assert bec_image_view.num_rotation_90 == 0
     assert bec_image_view.main_image.num_rotation_90 == 0
@@ -473,8 +474,8 @@ def test_show_roi_manager_popup(qtbot, mocked_client):
     view = create_widget(qtbot, Image, client=mocked_client, popups=True)
 
     # ROI-manager toggle is exposed via the toolbar.
-    assert "roi_mgr" in view.toolbar.widgets
-    roi_action = view.toolbar.widgets["roi_mgr"].action
+    assert view.toolbar.components.exists("roi_mgr")
+    roi_action = view.toolbar.components.get_action("roi_mgr").action
     assert roi_action.isChecked() is False, "Should start unchecked"
 
     # Open the popup.
@@ -497,10 +498,10 @@ def test_show_roi_manager_popup(qtbot, mocked_client):
 
 def test_crosshair_roi_panels_visibility(qtbot, mocked_client):
     """
-    Verify that enabling the ROI‑crosshair shows ROI panels and disabling hides them.
+    Verify that enabling the ROI-crosshair shows ROI panels and disabling hides them.
     """
     bec_image_view = create_widget(qtbot, Image, client=mocked_client)
-    switch = bec_image_view.toolbar.widgets["switch_crosshair"]
+    switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
 
     # Initially panels should be hidden
     assert bec_image_view.side_panel_x.panel_height == 0
@@ -548,7 +549,7 @@ def test_roi_plot_data_from_image(qtbot, mocked_client):
     bec_image_view.on_image_update_2d({"data": test_data}, {})
 
     # Activate ROI crosshair
-    switch = bec_image_view.toolbar.widgets["switch_crosshair"]
+    switch = bec_image_view.toolbar.components.get_action("image_switch_crosshair")
     switch.actions["crosshair_roi"].action.trigger()
     qtbot.wait(50)
 
@@ -579,11 +580,10 @@ def test_roi_plot_data_from_image(qtbot, mocked_client):
 def test_monitor_selection_reverse_device_items(qtbot, mocked_client):
     """
     Verify that _reverse_device_items correctly reverses the order of items in the
-    device combo‑box while preserving the current selection.
+    device combobox while preserving the current selection.
     """
     view = create_widget(qtbot, Image, client=mocked_client)
-    bundle = view.selection_bundle
-    combo = bundle.device_combo_box
+    combo = view.device_combo_box
 
     # Replace existing items with a deterministic list
     combo.clear()
@@ -593,7 +593,7 @@ def test_monitor_selection_reverse_device_items(qtbot, mocked_client):
     combo.setCurrentText("samy")
 
     # Reverse the items
-    bundle._reverse_device_items()
+    view._reverse_device_items()
 
     # Order should be reversed and selection preserved
     assert [combo.itemText(i) for i in range(combo.count())] == ["samz", "samy", "samx"]
@@ -606,7 +606,6 @@ def test_monitor_selection_populate_preview_signals(qtbot, mocked_client, monkey
     with the correct userData.
     """
     view = create_widget(qtbot, Image, client=mocked_client)
-    bundle = view.selection_bundle
 
     # Provide a deterministic fake device_manager with get_bec_signals
     class _FakeDM:
@@ -618,27 +617,26 @@ def test_monitor_selection_populate_preview_signals(qtbot, mocked_client, monkey
 
     monkeypatch.setattr(view.client, "device_manager", _FakeDM())
 
-    initial_count = bundle.device_combo_box.count()
+    initial_count = view.device_combo_box.count()
 
-    bundle._populate_preview_signals()
+    view._populate_preview_signals()
 
     # Two new entries should have been added
-    assert bundle.device_combo_box.count() == initial_count + 2
+    assert view.device_combo_box.count() == initial_count + 2
 
     # The first newly added item should carry tuple userData describing the device/signal
-    data = bundle.device_combo_box.itemData(initial_count)
+    data = view.device_combo_box.itemData(initial_count)
     assert isinstance(data, tuple) and data[0] == "eiger"
 
 
 def test_monitor_selection_adjust_and_connect(qtbot, mocked_client, monkeypatch):
     """
-    Verify that _adjust_and_connect performs the full set‑up:
-    ‑ fills the combo‑box with preview signals,
-    ‑ reverses their order,
-    ‑ and resets the currentText to an empty string.
+    Verify that _adjust_and_connect performs the full set-up:
+    - fills the combobox with preview signals,
+    - reverses their order,
+    - and resets the currentText to an empty string.
     """
     view = create_widget(qtbot, Image, client=mocked_client)
-    bundle = view.selection_bundle
 
     # Deterministic fake device_manager
     class _FakeDM:
@@ -647,14 +645,14 @@ def test_monitor_selection_adjust_and_connect(qtbot, mocked_client, monkeypatch)
 
     monkeypatch.setattr(view.client, "device_manager", _FakeDM())
 
-    combo = bundle.device_combo_box
+    combo = view.device_combo_box
     # Start from a clean state
     combo.clear()
     combo.addItem("", None)
     combo.setCurrentText("")
 
     # Execute the method under test
-    bundle._adjust_and_connect()
+    view._adjust_and_connect()
 
     # Expect exactly two items: preview label followed by the empty default
     assert combo.count() == 2

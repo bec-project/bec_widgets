@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import numpy as np
 import pyqtgraph as pg
 from bec_lib import bec_logger
 from bec_lib.endpoints import MessageEndpoints
@@ -15,12 +14,12 @@ from bec_widgets.utils import Colors, ConnectionConfig
 from bec_widgets.utils.colors import set_theme
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.settings_dialog import SettingsDialog
-from bec_widgets.utils.toolbar import MaterialIconAction
+from bec_widgets.utils.toolbars.toolbar import MaterialIconAction
 from bec_widgets.widgets.plots.motor_map.settings.motor_map_settings import MotorMapSettings
-from bec_widgets.widgets.plots.motor_map.toolbar_bundles.motor_selection import (
-    MotorSelectionToolbarBundle,
+from bec_widgets.widgets.plots.motor_map.toolbar_components.motor_selection import (
+    MotorSelectionAction,
 )
-from bec_widgets.widgets.plots.plot_base import PlotBase
+from bec_widgets.widgets.plots.plot_base import PlotBase, UIMode
 
 logger = bec_logger.logger
 
@@ -182,33 +181,60 @@ class MotorMap(PlotBase):
         self.proxy_update_plot = pg.SignalProxy(
             self.update_signal, rateLimit=25, slot=self._update_plot
         )
+        self._init_motor_map_toolbar()
         self._add_motor_map_settings()
 
     ################################################################################
     # Widget Specific GUI interactions
     ################################################################################
 
-    def _init_toolbar(self):
+    def _init_motor_map_toolbar(self):
         """
         Initialize the toolbar for the motor map widget.
         """
-        self.motor_selection_bundle = MotorSelectionToolbarBundle(
-            bundle_id="motor_selection", target_widget=self
-        )
-        self.toolbar.add_bundle(self.motor_selection_bundle, target_widget=self)
-        super()._init_toolbar()
-        self.toolbar.widgets["reset_legend"].action.setVisible(False)
+        motor_selection = MotorSelectionAction(parent=self)
+        self.toolbar.add_action("motor_selection", motor_selection)
 
-        self.reset_legend_action = MaterialIconAction(
-            icon_name="history", tooltip="Reset the position of legend."
+        motor_selection.motor_x.currentTextChanged.connect(self.on_motor_selection_changed)
+        motor_selection.motor_y.currentTextChanged.connect(self.on_motor_selection_changed)
+
+        self.toolbar.components.get_action("reset_legend").action.setVisible(False)
+
+        reset_legend = MaterialIconAction(
+            icon_name="history",
+            tooltip="Reset the position of legend.",
+            checkable=False,
+            parent=self,
         )
-        self.toolbar.add_action_to_bundle(
-            bundle_id="roi",
-            action_id="motor_map_history",
-            action=self.reset_legend_action,
-            target_widget=self,
+        self.toolbar.components.add_safe("reset_motor_map_legend", reset_legend)
+        self.toolbar.get_bundle("roi").add_action("reset_motor_map_legend")
+        reset_legend.action.triggered.connect(self.reset_history)
+
+        settings_brightness = MaterialIconAction(
+            icon_name="settings_brightness",
+            tooltip="Show Motor Map Settings",
+            checkable=True,
+            parent=self,
         )
-        self.reset_legend_action.action.triggered.connect(self.reset_history)
+        self.toolbar.components.add_safe("motor_map_settings", settings_brightness)
+        self.toolbar.get_bundle("axis_popup").add_action("motor_map_settings")
+
+        settings_brightness.action.triggered.connect(self.show_motor_map_settings)
+
+        bundles = ["motor_selection", "plot_export", "mouse_interaction", "roi"]
+        if self.ui_mode == UIMode.POPUP:
+            bundles.append("axis_popup")
+        self.toolbar.show_bundles(bundles)
+
+    @SafeSlot()
+    def on_motor_selection_changed(self, _):
+        action: MotorSelectionAction = self.toolbar.components.get_action("motor_selection")
+        motor_x = action.motor_x.currentText()
+        motor_y = action.motor_y.currentText()
+
+        if motor_x != "" and motor_y != "":
+            if motor_x != self.config.x_motor.name or motor_y != self.config.y_motor.name:
+                self.map(motor_x, motor_y)
 
     def _add_motor_map_settings(self):
         """Add the motor map settings to the side panel."""
@@ -221,32 +247,11 @@ class MotorMap(PlotBase):
             title="Motor Map Settings",
         )
 
-    def add_popups(self):
-        """
-        Add popups to the ScatterWaveform widget.
-        """
-        super().add_popups()
-        scatter_curve_setting_action = MaterialIconAction(
-            icon_name="settings_brightness",
-            tooltip="Show Motor Map Settings",
-            checkable=True,
-            parent=self,
-        )
-        self.toolbar.add_action_to_bundle(
-            bundle_id="popup_bundle",
-            action_id="motor_map_settings",
-            action=scatter_curve_setting_action,
-            target_widget=self,
-        )
-        self.toolbar.widgets["motor_map_settings"].action.triggered.connect(
-            self.show_motor_map_settings
-        )
-
     def show_motor_map_settings(self):
         """
         Show the DAP summary popup.
         """
-        action = self.toolbar.widgets["motor_map_settings"].action
+        action = self.toolbar.components.get_action("motor_map_settings").action
         if self.motor_map_settings is None or not self.motor_map_settings.isVisible():
             motor_map_settings = MotorMapSettings(parent=self, target_widget=self, popup=True)
             self.motor_map_settings = SettingsDialog(
@@ -272,7 +277,7 @@ class MotorMap(PlotBase):
         """
         self.motor_map_settings.deleteLater()
         self.motor_map_settings = None
-        self.toolbar.widgets["motor_map_settings"].action.setChecked(False)
+        self.toolbar.components.get_action("motor_map_settings").action.setChecked(False)
 
     ################################################################################
     # Widget Specific Properties
@@ -766,20 +771,21 @@ class MotorMap(PlotBase):
         """
         Sync the motor map selection toolbar with the current motor map.
         """
-        if self.motor_selection_bundle is not None:
-            motor_x = self.motor_selection_bundle.motor_x.currentText()
-            motor_y = self.motor_selection_bundle.motor_y.currentText()
+        motor_selection = self.toolbar.components.get_action("motor_selection")
 
-            if motor_x != self.config.x_motor.name:
-                self.motor_selection_bundle.motor_x.blockSignals(True)
-                self.motor_selection_bundle.motor_x.set_device(self.config.x_motor.name)
-                self.motor_selection_bundle.motor_x.check_validity(self.config.x_motor.name)
-                self.motor_selection_bundle.motor_x.blockSignals(False)
-            if motor_y != self.config.y_motor.name:
-                self.motor_selection_bundle.motor_y.blockSignals(True)
-                self.motor_selection_bundle.motor_y.set_device(self.config.y_motor.name)
-                self.motor_selection_bundle.motor_y.check_validity(self.config.y_motor.name)
-                self.motor_selection_bundle.motor_y.blockSignals(False)
+        motor_x = motor_selection.motor_x.currentText()
+        motor_y = motor_selection.motor_y.currentText()
+
+        if motor_x != self.config.x_motor.name:
+            motor_selection.motor_x.blockSignals(True)
+            motor_selection.motor_x.set_device(self.config.x_motor.name)
+            motor_selection.motor_x.check_validity(self.config.x_motor.name)
+            motor_selection.motor_x.blockSignals(False)
+        if motor_y != self.config.y_motor.name:
+            motor_selection.motor_y.blockSignals(True)
+            motor_selection.motor_y.set_device(self.config.y_motor.name)
+            motor_selection.motor_y.check_validity(self.config.y_motor.name)
+            motor_selection.motor_y.blockSignals(False)
 
     ################################################################################
     # Export Methods
@@ -794,10 +800,6 @@ class MotorMap(PlotBase):
         """
         data = {"x": self._buffer["x"], "y": self._buffer["y"]}
         return data
-
-    def cleanup(self):
-        self.motor_selection_bundle.cleanup()
-        super().cleanup()
 
 
 class DemoApp(QMainWindow):  # pragma: no cover

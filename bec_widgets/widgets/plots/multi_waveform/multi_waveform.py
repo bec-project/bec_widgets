@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
+from typing import TYPE_CHECKING, cast
 
 import pyqtgraph as pg
 from bec_lib.endpoints import MessageEndpoints
@@ -12,13 +13,15 @@ from qtpy.QtWidgets import QWidget
 from bec_widgets.utils import Colors, ConnectionConfig
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.side_panel import SidePanel
+from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.plots.multi_waveform.settings.control_panel import (
     MultiWaveformControlPanel,
 )
-from bec_widgets.widgets.plots.multi_waveform.toolbar_bundles.monitor_selection import (
-    MultiWaveformSelectionToolbarBundle,
+from bec_widgets.widgets.plots.multi_waveform.toolbar_components.monitor_selection import (
+    monitor_selection_bundle,
 )
 from bec_widgets.widgets.plots.plot_base import PlotBase
+from bec_widgets.widgets.utility.visual.colormap_widget.colormap_widget import BECColorMapWidget
 
 logger = bec_logger.logger
 
@@ -141,33 +144,54 @@ class MultiWaveform(PlotBase):
         self.visible_curves = []
         self.number_of_visible_curves = 0
 
-        self._init_control_panel()
+        self._init_multiwaveform_toolbar()
 
     ################################################################################
     # Widget Specific GUI interactions
     ################################################################################
-    def _init_toolbar(self):
-        self.monitor_selection_bundle = MultiWaveformSelectionToolbarBundle(
-            bundle_id="motor_selection", target_widget=self
+    def _init_multiwaveform_toolbar(self):
+        self.toolbar.add_bundle(
+            monitor_selection_bundle(self.toolbar.components, target_widget=self)
         )
-        self.toolbar.add_bundle(self.monitor_selection_bundle, target_widget=self)
-        super()._init_toolbar()
-        self.toolbar.widgets["reset_legend"].action.setVisible(False)
+        self.toolbar.toggle_action_visibility("reset_legend", visible=False)
+
+        combobox = self.toolbar.components.get_action("monitor_selection").widget
+        combobox.currentTextChanged.connect(self.connect_monitor)
+
+        cmap = self.toolbar.components.get_action("color_map").widget
+        cmap.colormap_changed_signal.connect(self.change_colormap)
+
+        bundles = self.toolbar.shown_bundles
+        bundles.insert(0, "monitor_selection")
+        self.toolbar.show_bundles(bundles)
+
+        self._init_control_panel()
 
     def _init_control_panel(self):
-        self.control_panel = SidePanel(self, orientation="top", panel_max_width=90)
-        self.layout_manager.add_widget_relative(
-            self.control_panel, self.round_plot_widget, "bottom"
-        )
+        control_panel = SidePanel(self, orientation="top", panel_max_width=90)
+        self.layout_manager.add_widget_relative(control_panel, self.round_plot_widget, "bottom")
         self.controls = MultiWaveformControlPanel(parent=self, target_widget=self)
-        self.control_panel.add_menu(
+        control_panel.add_menu(
             action_id="control",
             icon_name="tune",
             tooltip="Show Control panel",
             widget=self.controls,
             title=None,
         )
-        self.control_panel.toolbar.widgets["control"].action.trigger()
+        control_panel.toolbar.components.get_action("control").action.trigger()
+
+    @SafeSlot()
+    def connect_monitor(self, _):
+        combobox = self.toolbar.components.get_action("monitor_selection").widget
+        monitor = combobox.currentText()
+
+        if monitor != "":
+            if monitor != self.config.monitor:
+                self.config.monitor = monitor
+
+    @SafeSlot(str)
+    def change_colormap(self, colormap: str):
+        self.color_palette = colormap
 
     ################################################################################
     # Widget Specific Properties
@@ -488,23 +512,30 @@ class MultiWaveform(PlotBase):
         """
         Sync the motor map selection toolbar with the current motor map.
         """
-        if self.monitor_selection_bundle is not None:
-            monitor = self.monitor_selection_bundle.monitor.currentText()
-            color_palette = self.monitor_selection_bundle.colormap_widget.colormap
 
-            if monitor != self.config.monitor:
-                self.monitor_selection_bundle.monitor.blockSignals(True)
-                self.monitor_selection_bundle.monitor.set_device(self.config.monitor)
-                self.monitor_selection_bundle.monitor.check_validity(self.config.monitor)
-                self.monitor_selection_bundle.monitor.blockSignals(False)
+        combobox_widget: DeviceComboBox = cast(
+            DeviceComboBox, self.toolbar.components.get_action("monitor_selection").widget
+        )
+        cmap_widget: BECColorMapWidget = cast(
+            BECColorMapWidget, self.toolbar.components.get_action("color_map").widget
+        )
 
-            if color_palette != self.config.color_palette:
-                self.monitor_selection_bundle.colormap_widget.blockSignals(True)
-                self.monitor_selection_bundle.colormap_widget.colormap = self.config.color_palette
-                self.monitor_selection_bundle.colormap_widget.blockSignals(False)
+        monitor = combobox_widget.currentText()
+        color_palette = cmap_widget.colormap
+
+        if monitor != self.config.monitor:
+            combobox_widget.setCurrentText(monitor)
+            combobox_widget.blockSignals(True)
+            combobox_widget.set_device(self.config.monitor)
+            combobox_widget.check_validity(self.config.monitor)
+            combobox_widget.blockSignals(False)
+
+        if color_palette != self.config.color_palette:
+            cmap_widget.blockSignals(True)
+            cmap_widget.colormap = self.config.color_palette
+            cmap_widget.blockSignals(False)
 
     def cleanup(self):
         self._disconnect_monitor()
         self.clear_curves()
-        self.monitor_selection_bundle.cleanup()
         super().cleanup()

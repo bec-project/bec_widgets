@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Literal
+from typing import Literal
 
 import lmfit
 import numpy as np
@@ -29,7 +29,7 @@ from bec_widgets.utils.colors import Colors, set_theme
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.settings_dialog import SettingsDialog
-from bec_widgets.utils.toolbar import MaterialIconAction
+from bec_widgets.utils.toolbars.toolbar import MaterialIconAction
 from bec_widgets.widgets.dap.lmfit_dialog.lmfit_dialog import LMFitDialog
 from bec_widgets.widgets.plots.plot_base import PlotBase
 from bec_widgets.widgets.plots.waveform.curve import Curve, CurveConfig, DeviceSignal
@@ -182,6 +182,7 @@ class Waveform(PlotBase):
         self._init_roi_manager()
         self.dap_summary = None
         self.dap_summary_dialog = None
+        self._add_fit_parameters_popup()
         self._enable_roi_toolbar_action(False)  # default state where are no dap curves
         self._init_curve_dialog()
         self.curve_settings_dialog = None
@@ -213,6 +214,8 @@ class Waveform(PlotBase):
         self._connect_to_theme_change()
         # To fix the ViewAll action with clipToView activated
         self._connect_viewbox_menu_actions()
+
+        self.toolbar.show_bundles(["plot_export", "mouse_interaction", "roi", "axis_popup"])
 
     def _connect_viewbox_menu_actions(self):
         """Connect the viewbox menu action ViewAll to the custom reset_view method."""
@@ -247,21 +250,21 @@ class Waveform(PlotBase):
         super().add_side_menus()
         self._add_dap_summary_side_menu()
 
-    def add_popups(self):
+    def _add_fit_parameters_popup(self):
         """
         Add popups to the Waveform widget.
         """
-        super().add_popups()
-        LMFitDialog_action = MaterialIconAction(
-            icon_name="monitoring", tooltip="Open Fit Parameters", checkable=True, parent=self
+        self.toolbar.components.add_safe(
+            "fit_params",
+            MaterialIconAction(
+                icon_name="monitoring", tooltip="Open Fit Parameters", checkable=True, parent=self
+            ),
         )
-        self.toolbar.add_action_to_bundle(
-            bundle_id="popup_bundle",
-            action_id="fit_params",
-            action=LMFitDialog_action,
-            target_widget=self,
+        self.toolbar.get_bundle("axis_popup").add_action("fit_params")
+
+        self.toolbar.components.get_action("fit_params").action.triggered.connect(
+            self.show_dap_summary_popup
         )
-        self.toolbar.widgets["fit_params"].action.triggered.connect(self.show_dap_summary_popup)
 
     @SafeSlot()
     def _reset_view(self):
@@ -290,14 +293,17 @@ class Waveform(PlotBase):
         Initialize the ROI manager for the Waveform widget.
         """
         # Add toolbar icon
-        roi = MaterialIconAction(
-            icon_name="align_justify_space_between",
-            tooltip="Add ROI region for DAP",
-            checkable=True,
+        self.toolbar.components.add_safe(
+            "roi_linear",
+            MaterialIconAction(
+                icon_name="align_justify_space_between",
+                tooltip="Add ROI region for DAP",
+                checkable=True,
+                parent=self,
+            ),
         )
-        self.toolbar.add_action_to_bundle(
-            bundle_id="roi", action_id="roi_linear", action=roi, target_widget=self
-        )
+        self.toolbar.get_bundle("roi").add_action("roi_linear")
+
         self._roi_manager = WaveformROIManager(self.plot_item, parent=self)
 
         # Connect manager signals -> forward them via Waveform's own signals
@@ -307,23 +313,30 @@ class Waveform(PlotBase):
         # Example: connect ROI changed to re-request DAP
         self.roi_changed.connect(self._on_roi_changed_for_dap)
         self._roi_manager.roi_active.connect(self.request_dap_update)
-        self.toolbar.widgets["roi_linear"].action.toggled.connect(self._roi_manager.toggle_roi)
+        self.toolbar.components.get_action("roi_linear").action.toggled.connect(
+            self._roi_manager.toggle_roi
+        )
 
     def _init_curve_dialog(self):
         """
         Initializes the Curve dialog within the toolbar.
         """
-        curve_settings = MaterialIconAction(
-            icon_name="timeline", tooltip="Show Curve dialog.", checkable=True
+        self.toolbar.components.add_safe(
+            "curve",
+            MaterialIconAction(
+                icon_name="timeline", tooltip="Show Curve dialog.", checkable=True, parent=self
+            ),
         )
-        self.toolbar.add_action("curve", curve_settings, target_widget=self)
-        self.toolbar.widgets["curve"].action.triggered.connect(self.show_curve_settings_popup)
+        self.toolbar.get_bundle("axis_popup").add_action("curve")
+        self.toolbar.components.get_action("curve").action.triggered.connect(
+            self.show_curve_settings_popup
+        )
 
     def show_curve_settings_popup(self):
         """
         Displays the curve settings popup to allow users to modify curve-related configurations.
         """
-        curve_action = self.toolbar.widgets["curve"].action
+        curve_action = self.toolbar.components.get_action("curve").action
 
         if self.curve_settings_dialog is None or not self.curve_settings_dialog.isVisible():
             curve_setting = CurveSetting(parent=self, target_widget=self)
@@ -347,7 +360,7 @@ class Waveform(PlotBase):
         self.curve_settings_dialog.close()
         self.curve_settings_dialog.deleteLater()
         self.curve_settings_dialog = None
-        self.toolbar.widgets["curve"].action.setChecked(False)
+        self.toolbar.components.get_action("curve").action.setChecked(False)
 
     @property
     def roi_region(self) -> tuple[float, float] | None:
@@ -394,9 +407,9 @@ class Waveform(PlotBase):
         Args:
             enable(bool): Enable or disable the ROI toolbar action.
         """
-        self.toolbar.widgets["roi_linear"].action.setEnabled(enable)
+        self.toolbar.components.get_action("roi_linear").action.setEnabled(enable)
         if enable is False:
-            self.toolbar.widgets["roi_linear"].action.setChecked(False)
+            self.toolbar.components.get_action("roi_linear").action.setChecked(False)
             self._roi_manager.toggle_roi(False)
 
     ################################################################################
@@ -420,7 +433,7 @@ class Waveform(PlotBase):
         """
         Show the DAP summary popup.
         """
-        fit_action = self.toolbar.widgets["fit_params"].action
+        fit_action = self.toolbar.components.get_action("fit_params").action
         if self.dap_summary_dialog is None or not self.dap_summary_dialog.isVisible():
             self.dap_summary = LMFitDialog(parent=self)
             self.dap_summary_dialog = QDialog(modal=False)
@@ -446,7 +459,7 @@ class Waveform(PlotBase):
         self.dap_summary.deleteLater()
         self.dap_summary_dialog.deleteLater()
         self.dap_summary_dialog = None
-        self.toolbar.widgets["fit_params"].action.setChecked(False)
+        self.toolbar.components.get_action("fit_params").action.setChecked(False)
 
     def _get_dap_from_target_widget(self) -> None:
         """Get the DAP data from the target widget and update the DAP dialog manually on creation."""

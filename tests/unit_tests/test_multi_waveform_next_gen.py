@@ -244,15 +244,14 @@ def test_selection_toolbar_updates_widget(qtbot, mocked_client):
     updates the widget properties.
     """
     mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
-    toolbar = mw.monitor_selection_bundle
-    monitor_combo = toolbar.monitor
-    colormap_widget = toolbar.colormap_widget
+    monitor_selection_action = mw.toolbar.components.get_action("monitor_selection")
+    cmap_action = mw.toolbar.components.get_action("color_map")
 
-    monitor_combo.addItem("waveform1d")
-    monitor_combo.setCurrentText("waveform1d")
+    monitor_selection_action.combobox.addItem("waveform1d")
+    monitor_selection_action.combobox.setCurrentText("waveform1d")
     assert mw.monitor == "waveform1d"
 
-    colormap_widget.colormap = "viridis"
+    cmap_action.widget.colormap = "viridis"
     assert mw.color_palette == "viridis"
 
 
@@ -290,11 +289,10 @@ def test_control_panel_opacity_slider_spinbox(qtbot, mocked_client):
 def test_control_panel_highlight_slider_spinbox(qtbot, mocked_client):
     """
     Test that the slider and spinbox for curve highlighting update
-    the widget’s highlighted_index property, and are disabled if
+    the widget's highlighted_index property, and are disabled if
     highlight_last_curve is True.
     """
     mw = create_widget(qtbot, MultiWaveform, client=mocked_client)
-
     slider_index = mw.controls.ui.highlighted_index
     spinbox_index = mw.controls.ui.spinbox_index
     checkbox_highlight_last = mw.controls.ui.highlight_last_curve

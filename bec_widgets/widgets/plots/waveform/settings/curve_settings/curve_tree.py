@@ -25,7 +25,9 @@ from bec_widgets import SafeSlot
 from bec_widgets.utils import ConnectionConfig, EntryValidator
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import Colors
-from bec_widgets.utils.toolbar import MaterialIconAction, ModularToolBar
+from bec_widgets.utils.toolbars.actions import WidgetAction
+from bec_widgets.utils.toolbars.bundles import ToolbarBundle
+from bec_widgets.utils.toolbars.toolbar import MaterialIconAction, ModularToolBar
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
 from bec_widgets.widgets.dap.dap_combo_box.dap_combo_box import DapComboBox
@@ -379,42 +381,66 @@ class CurveTree(BECWidget, QWidget):
 
     def _init_toolbar(self):
         """Initialize the toolbar with actions: add, send, refresh, expand, collapse, renormalize."""
-        self.toolbar = ModularToolBar(parent=self, target_widget=self, orientation="horizontal")
-        add = MaterialIconAction(
-            icon_name="add", tooltip="Add new curve", checkable=False, parent=self
+        self.toolbar = ModularToolBar(parent=self, orientation="horizontal")
+        self.toolbar.components.add_safe(
+            "add",
+            MaterialIconAction(
+                icon_name="add", tooltip="Add new curve", checkable=False, parent=self
+            ),
         )
-        expand = MaterialIconAction(
-            icon_name="unfold_more", tooltip="Expand All DAP", checkable=False, parent=self
+        self.toolbar.components.add_safe(
+            "expand",
+            MaterialIconAction(
+                icon_name="unfold_more", tooltip="Expand All DAP", checkable=False, parent=self
+            ),
         )
-        collapse = MaterialIconAction(
-            icon_name="unfold_less", tooltip="Collapse All DAP", checkable=False, parent=self
+        self.toolbar.components.add_safe(
+            "collapse",
+            MaterialIconAction(
+                icon_name="unfold_less", tooltip="Collapse All DAP", checkable=False, parent=self
+            ),
         )
-
-        self.toolbar.add_action("add", add, self)
-        self.toolbar.add_action("expand_all", expand, self)
-        self.toolbar.add_action("collapse_all", collapse, self)
+        bundle = ToolbarBundle("curve_tree", self.toolbar.components)
+        bundle.add_action("add")
+        bundle.add_action("expand")
+        bundle.add_action("collapse")
+        self.toolbar.add_bundle(bundle)
 
         # Add colormap widget (not updating waveform's color_palette until Send is pressed)
-        self.spacer = QWidget()
-        self.spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.toolbar.addWidget(self.spacer)
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.toolbar.components.add_safe("spacer", WidgetAction(widget=spacer, adjust_size=False))
+        bundle.add_action("spacer")
 
         # Renormalize colors button
-        renorm_action = MaterialIconAction(
-            icon_name="palette", tooltip="Normalize All Colors", checkable=False, parent=self
+        self.toolbar.components.add_safe(
+            "renormalize_colors",
+            MaterialIconAction(
+                icon_name="palette", tooltip="Normalize All Colors", checkable=False, parent=self
+            ),
         )
-        self.toolbar.add_action("renormalize_colors", renorm_action, self)
+        bundle.add_action("renormalize_colors")
+        renorm_action = self.toolbar.components.get_action("renormalize_colors")
         renorm_action.action.triggered.connect(lambda checked: self.renormalize_colors())
 
         self.colormap_widget = BECColorMapWidget(cmap=self.color_palette or "plasma")
-        self.toolbar.addWidget(self.colormap_widget)
+        self.toolbar.components.add_safe(
+            "colormap_widget", WidgetAction(widget=self.colormap_widget)
+        )
+        bundle.add_action("colormap_widget")
         self.colormap_widget.colormap_changed_signal.connect(self.handle_colormap_changed)
 
+        add = self.toolbar.components.get_action("add")
+        expand = self.toolbar.components.get_action("expand")
+        collapse = self.toolbar.components.get_action("collapse")
         add.action.triggered.connect(lambda checked: self.add_new_curve())
         expand.action.triggered.connect(lambda checked: self.expand_all_daps())
         collapse.action.triggered.connect(lambda checked: self.collapse_all_daps())
 
         self.layout.addWidget(self.toolbar)
+
+        self.toolbar.show_bundles(["curve_tree"])
 
     def _init_tree(self):
         """Initialize the QTreeWidget with 7 columns and compact widths."""

@@ -13,7 +13,7 @@ from bec_widgets.utils import Colors, ConnectionConfig
 from bec_widgets.utils.colors import set_theme
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.settings_dialog import SettingsDialog
-from bec_widgets.utils.toolbar import MaterialIconAction
+from bec_widgets.utils.toolbars.toolbar import MaterialIconAction
 from bec_widgets.widgets.plots.plot_base import PlotBase, UIMode
 from bec_widgets.widgets.plots.scatter_waveform.scatter_curve import (
     ScatterCurve,
@@ -131,8 +131,8 @@ class ScatterWaveform(PlotBase):
         self.proxy_update_sync = pg.SignalProxy(
             self.sync_signal_update, rateLimit=25, slot=self.update_sync_curves
         )
-        if self.ui_mode == UIMode.SIDE:
-            self._init_scatter_curve_settings()
+
+        self._init_scatter_curve_settings()
         self.update_with_scan_history(-1)
 
     ################################################################################
@@ -143,44 +143,40 @@ class ScatterWaveform(PlotBase):
         """
         Initialize the scatter curve settings menu.
         """
+        if self.ui_mode == UIMode.SIDE:
+            self.scatter_curve_settings = ScatterCurveSettings(
+                parent=self, target_widget=self, popup=False
+            )
+            self.side_panel.add_menu(
+                action_id="scatter_curve",
+                icon_name="scatter_plot",
+                tooltip="Show Scatter Curve Settings",
+                widget=self.scatter_curve_settings,
+                title="Scatter Curve Settings",
+            )
+        else:
+            scatter_curve_action = MaterialIconAction(
+                icon_name="scatter_plot",
+                tooltip="Show Scatter Curve Settings",
+                checkable=True,
+                parent=self,
+            )
+            self.toolbar.components.add_safe("scatter_waveform_settings", scatter_curve_action)
+            self.toolbar.get_bundle("axis_popup").add_action("scatter_waveform_settings")
+            scatter_curve_action.action.triggered.connect(self.show_scatter_curve_settings)
 
-        self.scatter_curve_settings = ScatterCurveSettings(
-            parent=self, target_widget=self, popup=False
-        )
-        self.side_panel.add_menu(
-            action_id="scatter_curve",
-            icon_name="scatter_plot",
-            tooltip="Show Scatter Curve Settings",
-            widget=self.scatter_curve_settings,
-            title="Scatter Curve Settings",
-        )
-
-    def add_popups(self):
-        """
-        Add popups to the ScatterWaveform widget.
-        """
-        super().add_popups()
-        scatter_curve_setting_action = MaterialIconAction(
-            icon_name="scatter_plot",
-            tooltip="Show Scatter Curve Settings",
-            checkable=True,
-            parent=self,
-        )
-        self.toolbar.add_action_to_bundle(
-            bundle_id="popup_bundle",
-            action_id="scatter_waveform_settings",
-            action=scatter_curve_setting_action,
-            target_widget=self,
-        )
-        self.toolbar.widgets["scatter_waveform_settings"].action.triggered.connect(
-            self.show_scatter_curve_settings
-        )
+        shown_bundles = self.toolbar.shown_bundles
+        if "performance" in shown_bundles:
+            shown_bundles.remove("performance")
+        self.toolbar.show_bundles(shown_bundles)
 
     def show_scatter_curve_settings(self):
         """
         Show the scatter curve settings dialog.
         """
-        scatter_settings_action = self.toolbar.widgets["scatter_waveform_settings"].action
+        scatter_settings_action = self.toolbar.components.get_action(
+            "scatter_waveform_settings"
+        ).action
         if self.scatter_dialog is None or not self.scatter_dialog.isVisible():
             scatter_settings = ScatterCurveSettings(parent=self, target_widget=self, popup=True)
             self.scatter_dialog = SettingsDialog(
@@ -205,7 +201,7 @@ class ScatterWaveform(PlotBase):
         Slot for when the scatter curve settings dialog is closed.
         """
         self.scatter_dialog = None
-        self.toolbar.widgets["scatter_waveform_settings"].action.setChecked(False)
+        self.toolbar.components.get_action("scatter_waveform_settings").action.setChecked(False)
 
     ################################################################################
     # Widget Specific Properties

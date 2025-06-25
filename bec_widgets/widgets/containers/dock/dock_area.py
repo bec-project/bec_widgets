@@ -15,12 +15,13 @@ from bec_widgets.utils import ConnectionConfig, WidgetContainerUtils
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.name_utils import pascal_to_snake
-from bec_widgets.utils.toolbar import (
+from bec_widgets.utils.toolbars.actions import (
     ExpandableMenuAction,
     MaterialIconAction,
-    ModularToolBar,
-    SeparatorAction,
+    WidgetAction,
 )
+from bec_widgets.utils.toolbars.bundles import ToolbarBundle
+from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.widgets.containers.dock.dock import BECDock, DockConfig
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
@@ -104,151 +105,227 @@ class BECDockArea(BECWidget, QWidget):
 
         self.dark_mode_button = DarkModeButton(parent=self, toolbar=True)
         self.dock_area = DockArea(parent=self)
-        self.toolbar = ModularToolBar(
-            parent=self,
-            actions={
-                "menu_plots": ExpandableMenuAction(
-                    label="Add Plot ",
-                    actions={
-                        "waveform": MaterialIconAction(
-                            icon_name=Waveform.ICON_NAME, tooltip="Add Waveform", filled=True
-                        ),
-                        "scatter_waveform": MaterialIconAction(
-                            icon_name=ScatterWaveform.ICON_NAME,
-                            tooltip="Add Scatter Waveform",
-                            filled=True,
-                        ),
-                        "multi_waveform": MaterialIconAction(
-                            icon_name=MultiWaveform.ICON_NAME,
-                            tooltip="Add Multi Waveform",
-                            filled=True,
-                        ),
-                        "image": MaterialIconAction(
-                            icon_name=Image.ICON_NAME, tooltip="Add Image", filled=True
-                        ),
-                        "motor_map": MaterialIconAction(
-                            icon_name=MotorMap.ICON_NAME, tooltip="Add Motor Map", filled=True
-                        ),
-                    },
-                ),
-                "separator_0": SeparatorAction(),
-                "menu_devices": ExpandableMenuAction(
-                    label="Add Device Control ",
-                    actions={
-                        "scan_control": MaterialIconAction(
-                            icon_name=ScanControl.ICON_NAME, tooltip="Add Scan Control", filled=True
-                        ),
-                        "positioner_box": MaterialIconAction(
-                            icon_name=PositionerBox.ICON_NAME, tooltip="Add Device Box", filled=True
-                        ),
-                    },
-                ),
-                "separator_1": SeparatorAction(),
-                "menu_utils": ExpandableMenuAction(
-                    label="Add Utils ",
-                    actions={
-                        "queue": MaterialIconAction(
-                            icon_name=BECQueue.ICON_NAME, tooltip="Add Scan Queue", filled=True
-                        ),
-                        "vs_code": MaterialIconAction(
-                            icon_name=VSCodeEditor.ICON_NAME, tooltip="Add VS Code", filled=True
-                        ),
-                        "status": MaterialIconAction(
-                            icon_name=BECStatusBox.ICON_NAME,
-                            tooltip="Add BEC Status Box",
-                            filled=True,
-                        ),
-                        "progress_bar": MaterialIconAction(
-                            icon_name=RingProgressBar.ICON_NAME,
-                            tooltip="Add Circular ProgressBar",
-                            filled=True,
-                        ),
-                        # FIXME temporarily disabled  -> issue #644
-                        "log_panel": MaterialIconAction(
-                            icon_name=LogPanel.ICON_NAME,
-                            tooltip="Add LogPanel - Disabled",
-                            filled=True,
-                        ),
-                        "sbb_monitor": MaterialIconAction(
-                            icon_name="train", tooltip="Add SBB Monitor", filled=True
-                        ),
-                    },
-                ),
-                "separator_2": SeparatorAction(),
-                "attach_all": MaterialIconAction(
-                    icon_name="zoom_in_map", tooltip="Attach all floating docks"
-                ),
-                "save_state": MaterialIconAction(icon_name="bookmark", tooltip="Save Dock State"),
-                "restore_state": MaterialIconAction(
-                    icon_name="frame_reload", tooltip="Restore Dock State"
-                ),
-            },
-            target_widget=self,
-        )
+        self.toolbar = ModularToolBar(parent=self)
+        self._setup_toolbar()
 
         self.layout.addWidget(self.toolbar)
         self.layout.addWidget(self.dock_area)
-        self.spacer = QWidget(parent=self)
-        self.spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.toolbar.addWidget(self.spacer)
-        self.toolbar.addWidget(self.dark_mode_button)
+
         self._hook_toolbar()
+        self.toolbar.show_bundles(
+            ["menu_plots", "menu_devices", "menu_utils", "dock_actions", "dark_mode"]
+        )
 
     def minimumSizeHint(self):
         return QSize(800, 600)
 
+    def _setup_toolbar(self):
+
+        # Add plot menu
+        self.toolbar.components.add_safe(
+            "menu_plots",
+            ExpandableMenuAction(
+                label="Add Plot ",
+                actions={
+                    "waveform": MaterialIconAction(
+                        icon_name=Waveform.ICON_NAME,
+                        tooltip="Add Waveform",
+                        filled=True,
+                        parent=self,
+                    ),
+                    "scatter_waveform": MaterialIconAction(
+                        icon_name=ScatterWaveform.ICON_NAME,
+                        tooltip="Add Scatter Waveform",
+                        filled=True,
+                        parent=self,
+                    ),
+                    "multi_waveform": MaterialIconAction(
+                        icon_name=MultiWaveform.ICON_NAME,
+                        tooltip="Add Multi Waveform",
+                        filled=True,
+                        parent=self,
+                    ),
+                    "image": MaterialIconAction(
+                        icon_name=Image.ICON_NAME, tooltip="Add Image", filled=True, parent=self
+                    ),
+                    "motor_map": MaterialIconAction(
+                        icon_name=MotorMap.ICON_NAME,
+                        tooltip="Add Motor Map",
+                        filled=True,
+                        parent=self,
+                    ),
+                },
+            ),
+        )
+
+        bundle = ToolbarBundle("menu_plots", self.toolbar.components)
+        bundle.add_action("menu_plots")
+        self.toolbar.add_bundle(bundle)
+
+        # Add control menu
+        self.toolbar.components.add_safe(
+            "menu_devices",
+            ExpandableMenuAction(
+                label="Add Device Control ",
+                actions={
+                    "scan_control": MaterialIconAction(
+                        icon_name=ScanControl.ICON_NAME,
+                        tooltip="Add Scan Control",
+                        filled=True,
+                        parent=self,
+                    ),
+                    "positioner_box": MaterialIconAction(
+                        icon_name=PositionerBox.ICON_NAME,
+                        tooltip="Add Device Box",
+                        filled=True,
+                        parent=self,
+                    ),
+                },
+            ),
+        )
+        bundle = ToolbarBundle("menu_devices", self.toolbar.components)
+        bundle.add_action("menu_devices")
+        self.toolbar.add_bundle(bundle)
+
+        # Add utils menu
+        self.toolbar.components.add_safe(
+            "menu_utils",
+            ExpandableMenuAction(
+                label="Add Utils ",
+                actions={
+                    "queue": MaterialIconAction(
+                        icon_name=BECQueue.ICON_NAME,
+                        tooltip="Add Scan Queue",
+                        filled=True,
+                        parent=self,
+                    ),
+                    "vs_code": MaterialIconAction(
+                        icon_name=VSCodeEditor.ICON_NAME,
+                        tooltip="Add VS Code",
+                        filled=True,
+                        parent=self,
+                    ),
+                    "status": MaterialIconAction(
+                        icon_name=BECStatusBox.ICON_NAME,
+                        tooltip="Add BEC Status Box",
+                        filled=True,
+                        parent=self,
+                    ),
+                    "progress_bar": MaterialIconAction(
+                        icon_name=RingProgressBar.ICON_NAME,
+                        tooltip="Add Circular ProgressBar",
+                        filled=True,
+                        parent=self,
+                    ),
+                    # FIXME temporarily disabled -> issue #644
+                    "log_panel": MaterialIconAction(
+                        icon_name=LogPanel.ICON_NAME,
+                        tooltip="Add LogPanel - Disabled",
+                        filled=True,
+                        parent=self,
+                    ),
+                    "sbb_monitor": MaterialIconAction(
+                        icon_name="train", tooltip="Add SBB Monitor", filled=True, parent=self
+                    ),
+                },
+            ),
+        )
+        bundle = ToolbarBundle("menu_utils", self.toolbar.components)
+        bundle.add_action("menu_utils")
+        self.toolbar.add_bundle(bundle)
+
+        ########## Dock Actions ##########
+        spacer = QWidget(parent=self)
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.toolbar.components.add_safe("spacer", WidgetAction(widget=spacer, adjust_size=False))
+
+        self.toolbar.components.add_safe(
+            "dark_mode", WidgetAction(widget=self.dark_mode_button, adjust_size=False)
+        )
+
+        bundle = ToolbarBundle("dark_mode", self.toolbar.components)
+        bundle.add_action("spacer")
+        bundle.add_action("dark_mode")
+        self.toolbar.add_bundle(bundle)
+
+        self.toolbar.components.add_safe(
+            "attach_all",
+            MaterialIconAction(
+                icon_name="zoom_in_map", tooltip="Attach all floating docks", parent=self
+            ),
+        )
+
+        self.toolbar.components.add_safe(
+            "save_state",
+            MaterialIconAction(icon_name="bookmark", tooltip="Save Dock State", parent=self),
+        )
+        self.toolbar.components.add_safe(
+            "restore_state",
+            MaterialIconAction(icon_name="frame_reload", tooltip="Restore Dock State", parent=self),
+        )
+
+        bundle = ToolbarBundle("dock_actions", self.toolbar.components)
+        bundle.add_action("attach_all")
+        bundle.add_action("save_state")
+        bundle.add_action("restore_state")
+        self.toolbar.add_bundle(bundle)
+
     def _hook_toolbar(self):
-        # Menu Plot
-        self.toolbar.widgets["menu_plots"].widgets["waveform"].triggered.connect(
+        menu_plots = self.toolbar.components.get_action("menu_plots")
+        menu_devices = self.toolbar.components.get_action("menu_devices")
+        menu_utils = self.toolbar.components.get_action("menu_utils")
+
+        menu_plots.actions["waveform"].action.triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="Waveform")
         )
-        self.toolbar.widgets["menu_plots"].widgets["scatter_waveform"].triggered.connect(
+
+        menu_plots.actions["scatter_waveform"].action.triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="ScatterWaveform")
         )
-        self.toolbar.widgets["menu_plots"].widgets["multi_waveform"].triggered.connect(
+        menu_plots.actions["multi_waveform"].action.triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="MultiWaveform")
         )
-        self.toolbar.widgets["menu_plots"].widgets["image"].triggered.connect(
+        menu_plots.actions["image"].action.triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="Image")
         )
-        self.toolbar.widgets["menu_plots"].widgets["motor_map"].triggered.connect(
+        menu_plots.actions["motor_map"].action.triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="MotorMap")
         )
 
         # Menu Devices
-        self.toolbar.widgets["menu_devices"].widgets["scan_control"].triggered.connect(
+        menu_devices.actions["scan_control"].action.triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="ScanControl")
         )
-        self.toolbar.widgets["menu_devices"].widgets["positioner_box"].triggered.connect(
+        menu_devices.actions["positioner_box"].action.triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="PositionerBox")
         )
 
         # Menu Utils
-        self.toolbar.widgets["menu_utils"].widgets["queue"].triggered.connect(
+        menu_utils.actions["queue"].action.triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="BECQueue")
         )
-        self.toolbar.widgets["menu_utils"].widgets["status"].triggered.connect(
+        menu_utils.actions["status"].action.triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="BECStatusBox")
         )
-        self.toolbar.widgets["menu_utils"].widgets["vs_code"].triggered.connect(
+        menu_utils.actions["vs_code"].action.triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="VSCodeEditor")
         )
-        self.toolbar.widgets["menu_utils"].widgets["progress_bar"].triggered.connect(
+        menu_utils.actions["progress_bar"].action.triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="RingProgressBar")
         )
         # FIXME temporarily disabled -> issue #644
-        self.toolbar.widgets["menu_utils"].widgets["log_panel"].setEnabled(False)
-        # self.toolbar.widgets["menu_utils"].widgets["log_panel"].triggered.connect(
-        #     lambda: self._create_widget_from_toolbar(widget_name="LogPanel")
-        # )
-        self.toolbar.widgets["menu_utils"].widgets["sbb_monitor"].triggered.connect(
+        menu_utils.actions["log_panel"].action.setEnabled(False)
+
+        menu_utils.actions["sbb_monitor"].action.triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="SBBMonitor")
         )
 
         # Icons
-        self.toolbar.widgets["attach_all"].action.triggered.connect(self.attach_all)
-        self.toolbar.widgets["save_state"].action.triggered.connect(self.save_state)
-        self.toolbar.widgets["restore_state"].action.triggered.connect(self.restore_state)
+        self.toolbar.components.get_action("attach_all").action.triggered.connect(self.attach_all)
+        self.toolbar.components.get_action("save_state").action.triggered.connect(self.save_state)
+        self.toolbar.components.get_action("restore_state").action.triggered.connect(
+            self.restore_state
+        )
 
     @SafeSlot()
     def _create_widget_from_toolbar(self, widget_name: str) -> None:

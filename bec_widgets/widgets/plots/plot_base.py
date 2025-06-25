@@ -14,17 +14,25 @@ from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.fps_counter import FPSCounter
 from bec_widgets.utils.plot_indicator_items import BECArrowItem, BECTickItem
 from bec_widgets.utils.round_frame import RoundedFrame
-from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.side_panel import SidePanel
-from bec_widgets.utils.toolbar import MaterialIconAction, ModularToolBar, ToolbarBundle
+from bec_widgets.utils.toolbars.performance import PerformanceConnection, performance_bundle
+from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.widget_state_manager import WidgetStateManager
 from bec_widgets.widgets.containers.layout_manager.layout_manager import LayoutManagerWidget
 from bec_widgets.widgets.plots.setting_menus.axis_settings import AxisSettings
-from bec_widgets.widgets.plots.toolbar_bundles.mouse_interactions import (
-    MouseInteractionToolbarBundle,
+from bec_widgets.widgets.plots.toolbar_components.axis_settings_popup import (
+    AxisSettingsPopupConnection,
+    axis_popup_bundle,
 )
-from bec_widgets.widgets.plots.toolbar_bundles.plot_export import PlotExportBundle
-from bec_widgets.widgets.plots.toolbar_bundles.roi_bundle import ROIBundle
+from bec_widgets.widgets.plots.toolbar_components.mouse_interactions import (
+    MouseInteractionConnection,
+    mouse_interaction_bundle,
+)
+from bec_widgets.widgets.plots.toolbar_components.plot_export import (
+    PlotExportConnection,
+    plot_export_bundle,
+)
+from bec_widgets.widgets.plots.toolbar_components.roi import RoiConnection, roi_bundle
 
 logger = bec_logger.logger
 
@@ -102,8 +110,6 @@ class PlotBase(BECWidget, QWidget):
         self.plot_item = pg.PlotItem(viewBox=BECViewBox(enableMenu=True))
         self.plot_widget.addItem(self.plot_item)
         self.side_panel = SidePanel(self, orientation="left", panel_max_width=280)
-        self.toolbar = ModularToolBar(parent=self, target_widget=self, orientation="horizontal")
-        self._init_toolbar()
 
         # PlotItem Addons
         self.plot_item.addLegend()
@@ -121,6 +127,9 @@ class PlotBase(BECWidget, QWidget):
         # Plot Indicator Items
         self.tick_item = BECTickItem(parent=self, plot_item=self.plot_item)
         self.arrow_item = BECArrowItem(parent=self, plot_item=self.plot_item)
+
+        self.toolbar = ModularToolBar(parent=self, orientation="horizontal")
+        self._init_toolbar()
 
         self._init_ui()
 
@@ -146,36 +155,33 @@ class PlotBase(BECWidget, QWidget):
         self.plot_item.vb.sigStateChanged.connect(self.viewbox_state_changed)
 
     def _init_toolbar(self):
-        self.popup_bundle = None
-        self.performance_bundle = ToolbarBundle("performance")
-        self.plot_export_bundle = PlotExportBundle("plot_export", target_widget=self)
-        self.mouse_bundle = MouseInteractionToolbarBundle("mouse_interaction", target_widget=self)
-        # self.state_export_bundle = SaveStateBundle("state_export", target_widget=self) #TODO ATM disabled, cannot be used in DockArea, which is exposed to the user
-        self.roi_bundle = ROIBundle("roi", target_widget=self)
+        self.toolbar.add_bundle(performance_bundle(self.toolbar.components))
+        self.toolbar.add_bundle(plot_export_bundle(self.toolbar.components))
+        self.toolbar.add_bundle(mouse_interaction_bundle(self.toolbar.components))
+        self.toolbar.add_bundle(roi_bundle(self.toolbar.components))
+        self.toolbar.add_bundle(axis_popup_bundle(self.toolbar.components))
 
-        # Add elements to toolbar
-        self.toolbar.add_bundle(self.plot_export_bundle, target_widget=self)
-        # self.toolbar.add_bundle(self.state_export_bundle, target_widget=self) #TODO ATM disabled, cannot be used in DockArea, which is exposed to the user
-        self.toolbar.add_bundle(self.mouse_bundle, target_widget=self)
-        self.toolbar.add_bundle(self.roi_bundle, target_widget=self)
-
-        self.performance_bundle.add_action(
-            "fps_monitor",
-            MaterialIconAction(
-                icon_name="speed", tooltip="Show FPS Monitor", checkable=True, parent=self
-            ),
+        self.toolbar.connect_bundle(
+            "plot_base", PlotExportConnection(self.toolbar.components, self)
         )
-        self.toolbar.add_bundle(self.performance_bundle, target_widget=self)
-
-        self.toolbar.widgets["fps_monitor"].action.toggled.connect(
-            lambda checked: setattr(self, "enable_fps_monitor", checked)
+        self.toolbar.connect_bundle(
+            "plot_base", PerformanceConnection(self.toolbar.components, self)
+        )
+        self.toolbar.connect_bundle(
+            "plot_base", MouseInteractionConnection(self.toolbar.components, self)
+        )
+        self.toolbar.connect_bundle("plot_base", RoiConnection(self.toolbar.components, self))
+        self.toolbar.connect_bundle(
+            "plot_base", AxisSettingsPopupConnection(self.toolbar.components, self)
         )
 
         # hide some options by default
         self.toolbar.toggle_action_visibility("fps_monitor", False)
 
         # Get default viewbox state
-        self.mouse_bundle.get_viewbox_mode()
+        self.toolbar.show_bundles(
+            ["plot_export", "mouse_interaction", "roi", "performance", "axis_popup"]
+        )
 
     def add_side_menus(self):
         """Adds multiple menus to the side panel."""
@@ -191,45 +197,6 @@ class PlotBase(BECWidget, QWidget):
             )
         except ValueError:
             return
-
-    def add_popups(self):
-        """
-        Add popups to the toolbar.
-        """
-        self.popup_bundle = ToolbarBundle("popup_bundle")
-        settings = MaterialIconAction(
-            icon_name="settings", tooltip="Show Axis Settings", checkable=True, parent=self
-        )
-        self.popup_bundle.add_action("axis", settings)
-        self.toolbar.add_bundle(self.popup_bundle, target_widget=self)
-        self.toolbar.widgets["axis"].action.triggered.connect(self.show_axis_settings_popup)
-
-    def show_axis_settings_popup(self):
-        """
-        Show the axis settings dialog.
-        """
-        settings_action = self.toolbar.widgets["axis"].action
-        if self.axis_settings_dialog is None or not self.axis_settings_dialog.isVisible():
-            axis_setting = AxisSettings(parent=self, target_widget=self, popup=True)
-            self.axis_settings_dialog = SettingsDialog(
-                self, settings_widget=axis_setting, window_title="Axis Settings", modal=False
-            )
-            # When the dialog is closed, update the toolbar icon and clear the reference
-            self.axis_settings_dialog.finished.connect(self._axis_settings_closed)
-            self.axis_settings_dialog.show()
-            settings_action.setChecked(True)
-        else:
-            # If already open, bring it to the front
-            self.axis_settings_dialog.raise_()
-            self.axis_settings_dialog.activateWindow()
-            settings_action.setChecked(True)  # keep it toggled
-
-    def _axis_settings_closed(self):
-        """
-        Slot for when the axis settings dialog is closed.
-        """
-        self.axis_settings_dialog = None
-        self.toolbar.widgets["axis"].action.setChecked(False)
 
     def reset_legend(self):
         """In the case that the legend is not visible, reset it to be visible to top left corner"""
@@ -257,22 +224,23 @@ class PlotBase(BECWidget, QWidget):
             raise ValueError("ui_mode must be an instance of UIMode")
         self._ui_mode = mode
 
-        # First, clear both UI elements:
-        if self.popup_bundle is not None:
-            for action_id in self.toolbar.bundles["popup_bundle"]:
-                self.toolbar.widgets[action_id].action.setVisible(False)
-            if self.axis_settings_dialog is not None and self.axis_settings_dialog.isVisible():
-                self.axis_settings_dialog.close()
-        self.side_panel.hide()
-
         # Now, apply the new mode:
         if mode == UIMode.POPUP:
-            if self.popup_bundle is None:
-                self.add_popups()
-            else:
-                for action_id in self.toolbar.bundles["popup_bundle"]:
-                    self.toolbar.widgets[action_id].action.setVisible(True)
+            shown_bundles = self.toolbar.shown_bundles
+            if "axis_popup" not in shown_bundles:
+                shown_bundles.append("axis_popup")
+            self.toolbar.show_bundles(shown_bundles)
+            self.side_panel.hide()
+
         elif mode == UIMode.SIDE:
+            shown_bundles = self.toolbar.shown_bundles
+            if "axis_popup" in shown_bundles:
+                shown_bundles.remove("axis_popup")
+            self.toolbar.show_bundles(shown_bundles)
+            pb_connection = self.toolbar.bundles["axis_popup"].get_connection("plot_base")
+            if pb_connection.axis_settings_dialog is not None:
+                pb_connection.axis_settings_dialog.close()
+                pb_connection.axis_settings_dialog = None
             self.add_side_menus()
             self.side_panel.show()
 
@@ -1049,6 +1017,7 @@ class PlotBase(BECWidget, QWidget):
             self.axis_settings_dialog = None
         self.cleanup_pyqtgraph()
         self.round_plot_widget.close()
+        self.toolbar.cleanup()
         super().cleanup()
 
     def cleanup_pyqtgraph(self, item: pg.PlotItem | None = None):
@@ -1087,8 +1056,12 @@ if __name__ == "__main__":  # pragma: no cover:
 
     from qtpy.QtWidgets import QApplication
 
+    from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
+
     app = QApplication(sys.argv)
-    window = PlotBase()
-    window.show()
+    launch_window = BECMainWindow()
+    pb = PlotBase(popups=False)
+    launch_window.setCentralWidget(pb)
+    launch_window.show()
 
     sys.exit(app.exec_())

@@ -272,16 +272,15 @@ def test_motor_map_toolbar_selection(qtbot, mocked_client):
     mm = create_widget(qtbot, MotorMap, client=mocked_client)
 
     # Verify toolbar bundle was created during initialization
-    assert hasattr(mm, "motor_selection_bundle")
-    assert mm.motor_selection_bundle is not None
+    motor_selection = mm.toolbar.components.get_action("motor_selection")
 
-    mm.motor_selection_bundle.motor_x.setCurrentText("samx")
-    mm.motor_selection_bundle.motor_y.setCurrentText("samy")
+    motor_selection.motor_x.setCurrentText("samx")
+    motor_selection.motor_y.setCurrentText("samy")
 
     assert mm.config.x_motor.name == "samx"
     assert mm.config.y_motor.name == "samy"
 
-    mm.motor_selection_bundle.motor_y.setCurrentText("samz")
+    motor_selection.motor_y.setCurrentText("samz")
 
     assert mm.config.x_motor.name == "samx"
     assert mm.config.y_motor.name == "samz"
@@ -291,9 +290,9 @@ def test_motor_map_settings_dialog(qtbot, mocked_client):
     """Test the settings dialog for the motor map."""
     mm = create_widget(qtbot, MotorMap, client=mocked_client, popups=True)
 
-    assert "popup_bundle" in mm.toolbar.bundles
-    for action_id in mm.toolbar.bundles["popup_bundle"]:
-        assert mm.toolbar.widgets[action_id].action.isVisible() is True
+    assert "axis_popup" in mm.toolbar.bundles
+    for action_ref in mm.toolbar.bundles["axis_popup"].bundle_actions.values():
+        assert action_ref().action.isVisible()
 
     # set properties to be fetched by dialog
     mm.map(x_name="samx", y_name="samy")

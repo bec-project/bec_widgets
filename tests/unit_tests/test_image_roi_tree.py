@@ -39,9 +39,11 @@ def test_initialization(roi_tree, image_widget):
     assert len(roi_tree.tree.findItems("", Qt.MatchContains)) == 0  # Empty tree initially
 
     # Check toolbar actions
-    assert hasattr(roi_tree, "add_rect_action")
-    assert hasattr(roi_tree, "add_circle_action")
-    assert hasattr(roi_tree, "expand_toggle")
+    assert roi_tree.toolbar.components.get_action("roi_rectangle")
+    assert roi_tree.toolbar.components.get_action("roi_circle")
+    assert roi_tree.toolbar.components.get_action("roi_ellipse")
+    assert roi_tree.toolbar.components.get_action("expand_toggle")
+    assert roi_tree.toolbar.components.get_action("lock_unlock_all")
 
     # Check tree view setup
     assert roi_tree.tree.columnCount() == 3
@@ -216,23 +218,25 @@ def test_draw_mode_toggle(roi_tree, qtbot):
     assert roi_tree._roi_draw_mode is None
 
     # Toggle rect mode on
-    roi_tree.add_rect_action.action.toggle()
+    rect_action = roi_tree.toolbar.components.get_action("roi_rectangle").action
+    circle_action = roi_tree.toolbar.components.get_action("roi_circle").action
+    rect_action.toggle()
     assert roi_tree._roi_draw_mode == "rect"
-    assert roi_tree.add_rect_action.action.isChecked()
-    assert not roi_tree.add_circle_action.action.isChecked()
+    assert rect_action.isChecked()
+    assert not circle_action.isChecked()
 
     # Toggle circle mode on (should turn off rect mode)
-    roi_tree.add_circle_action.action.toggle()
+    circle_action.toggle()
     qtbot.wait(200)
     assert roi_tree._roi_draw_mode == "circle"
-    assert not roi_tree.add_rect_action.action.isChecked()
-    assert roi_tree.add_circle_action.action.isChecked()
+    assert not rect_action.isChecked()
+    assert circle_action.isChecked()
 
     # Toggle circle mode off
-    roi_tree.add_circle_action.action.toggle()
+    circle_action.toggle()
     assert roi_tree._roi_draw_mode is None
-    assert not roi_tree.add_rect_action.action.isChecked()
-    assert not roi_tree.add_circle_action.action.isChecked()
+    assert not circle_action.isChecked()
+    assert not rect_action.isChecked()
 
 
 def test_add_roi_from_toolbar(qtbot, mocked_client):
@@ -250,7 +254,7 @@ def test_add_roi_from_toolbar(qtbot, mocked_client):
 
     # Test rectangle ROI creation
     # 1. Activate rectangle drawing mode
-    roi_tree.add_rect_action.action.setChecked(True)
+    roi_tree.toolbar.components.get_action("roi_rectangle").action.setChecked(True)
     assert roi_tree._roi_draw_mode == "rect"
 
     # Get plot widget and view
@@ -294,8 +298,8 @@ def test_add_roi_from_toolbar(qtbot, mocked_client):
 
     # Test circle ROI creation
     # Reset ROI draw mode
-    roi_tree.add_rect_action.action.setChecked(False)
-    roi_tree.add_circle_action.action.setChecked(True)
+    roi_tree.toolbar.components.get_action("roi_rectangle").action.setChecked(False)
+    roi_tree.toolbar.components.get_action("roi_circle").action.setChecked(True)
     assert roi_tree._roi_draw_mode == "circle"
 
     # Define new positions for circle ROI

@@ -16,7 +16,8 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.utils.toolbar import MaterialIconAction, ModularToolBar
+from bec_widgets.utils.toolbars.bundles import ToolbarBundle
+from bec_widgets.utils.toolbars.toolbar import MaterialIconAction, ModularToolBar
 
 
 class SidePanel(QWidget):
@@ -61,7 +62,7 @@ class SidePanel(QWidget):
             self.main_layout.setContentsMargins(0, 0, 0, 0)
             self.main_layout.setSpacing(0)
 
-            self.toolbar = ModularToolBar(parent=self, target_widget=self, orientation="vertical")
+            self.toolbar = ModularToolBar(parent=self, orientation="vertical")
 
             self.container = QWidget()
             self.container.layout = QVBoxLayout(self.container)
@@ -92,7 +93,7 @@ class SidePanel(QWidget):
             self.main_layout.setContentsMargins(0, 0, 0, 0)
             self.main_layout.setSpacing(0)
 
-            self.toolbar = ModularToolBar(parent=self, target_widget=self, orientation="horizontal")
+            self.toolbar = ModularToolBar(parent=self, orientation="horizontal")
 
             self.container = QWidget()
             self.container.layout = QVBoxLayout(self.container)
@@ -288,8 +289,16 @@ class SidePanel(QWidget):
 
         # Add an action to the toolbar if action_id, icon_name, and tooltip are provided
         if action_id is not None and icon_name is not None and tooltip is not None:
-            action = MaterialIconAction(icon_name=icon_name, tooltip=tooltip, checkable=True)
-            self.toolbar.add_action(action_id, action, target_widget=self)
+            action = MaterialIconAction(
+                icon_name=icon_name, tooltip=tooltip, checkable=True, parent=self
+            )
+            self.toolbar.components.add_safe(action_id, action)
+            bundle = ToolbarBundle(action_id, self.toolbar.components)
+            bundle.add_action(action_id)
+            self.toolbar.add_bundle(bundle)
+            shown_bundles = self.toolbar.shown_bundles
+            shown_bundles.append(action_id)
+            self.toolbar.show_bundles(shown_bundles)
 
             def on_action_toggled(checked: bool):
                 if self.switching_actions:

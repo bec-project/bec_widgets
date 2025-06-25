@@ -9,7 +9,9 @@ from qtpy.QtWidgets import QHeaderView, QLabel, QTableWidget, QTableWidgetItem, 
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.compact_popup import CompactPopupWidget
-from bec_widgets.utils.toolbar import ModularToolBar, SeparatorAction, WidgetAction
+from bec_widgets.utils.toolbars.actions import WidgetAction
+from bec_widgets.utils.toolbars.bundles import ToolbarBundle
+from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.widgets.control.buttons.button_abort.button_abort import AbortButton
 from bec_widgets.widgets.control.buttons.button_reset.button_reset import ResetButton
 from bec_widgets.widgets.control.buttons.button_resume.button_resume import ResumeButton
@@ -76,17 +78,26 @@ class BECQueue(BECWidget, CompactPopupWidget):
         """
         widget_label = QLabel(text="Live Queue", parent=self)
         widget_label.setStyleSheet("font-weight: bold;")
-        self.toolbar = ModularToolBar(
-            parent=self,
-            actions={
-                "widget_label": WidgetAction(widget=widget_label),
-                "separator_1": SeparatorAction(),
-                "resume": WidgetAction(widget=ResumeButton(parent=self, toolbar=False)),
-                "stop": WidgetAction(widget=StopButton(parent=self, toolbar=False)),
-                "reset": WidgetAction(widget=ResetButton(parent=self, toolbar=False)),
-            },
-            target_widget=self,
+        self.toolbar = ModularToolBar(parent=self)
+        self.toolbar.components.add_safe("widget_label", WidgetAction(widget=widget_label))
+        bundle = ToolbarBundle("queue_label", self.toolbar.components)
+        bundle.add_action("widget_label")
+        self.toolbar.add_bundle(bundle)
+
+        self.toolbar.add_action(
+            "resume", WidgetAction(widget=ResumeButton(parent=self, toolbar=True))
         )
+        self.toolbar.add_action("stop", WidgetAction(widget=StopButton(parent=self, toolbar=True)))
+        self.toolbar.add_action(
+            "reset", WidgetAction(widget=ResetButton(parent=self, toolbar=True))
+        )
+
+        control_bundle = ToolbarBundle("control", self.toolbar.components)
+        control_bundle.add_action("resume")
+        control_bundle.add_action("stop")
+        control_bundle.add_action("reset")
+        self.toolbar.add_bundle(control_bundle)
+        self.toolbar.show_bundles(["queue_label", "control"])
 
         self.addWidget(self.toolbar)
 
