@@ -67,3 +67,14 @@ jobs:
       BEC_CORE_BRANCH: ${{ inputs.BEC_CORE_BRANCH || 'main' }}
       OPHYD_DEVICES_BRANCH: ${{ inputs.OPHYD_DEVICES_BRANCH || 'main'}} 
       BEC_WIDGETS_BRANCH: ${{ inputs.BEC_WIDGETS_BRANCH || github.head_ref || github.sha }}
+  
+  plugin_repos:
+    needs: [check_pr_status, formatter]
+    if: needs.check_pr_status.outputs.branch-pr == ''
+    uses: bec-project/bec/.github/workflows/plugin_repos.yml@main
+    with:
+      BEC_CORE_BRANCH: ${{ inputs.BEC_CORE_BRANCH || 'main' }}
+      BEC_WIDGETS_BRANCH: ${{ inputs.BEC_WIDGETS_BRANCH || github.head_ref || github.sha }}
+
+    secrets:
+      GH_READ_TOKEN: ${{ secrets.GH_READ_TOKEN }}
