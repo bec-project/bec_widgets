@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.19.3 (2025-06-25)
+
+### Bug Fixes
+
+- **scan_control**: Safeguard against empty history; reversed history to fetch the newest scan
+  ([`29a26b1`](https://github.com/bec-project/bec_widgets/commit/29a26b19f9ab829b0d877c3233613a0936db0a12))
+
+
 ## v2.19.2 (2025-06-23)
 
 ### Bug Fixes
