@@ -580,7 +580,4 @@ class CurveTree(BECWidget, QWidget):
         all_items = list(self.all_items)
         for item in all_items:
             item.remove_self()
-
-    def closeEvent(self, event):
-        self.cleanup()
-        return super().closeEvent(event)
+        super().cleanup()
