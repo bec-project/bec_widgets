@@ -263,6 +263,11 @@ class CurveRow(QTreeWidgetItem):
             self.device_edit.deleteLater()
             self.device_edit = None
 
+        if getattr(self, "entry_edit", None) is not None:
+            self.entry_edit.close()
+            self.entry_edit.deleteLater()
+            self.entry_edit = None
+
         if getattr(self, "dap_combo", None) is not None:
             self.dap_combo.close()
             self.dap_combo.deleteLater()
