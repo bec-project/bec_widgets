@@ -208,11 +208,14 @@ class ScanControl(BECWidget, QWidget):
             return
 
         current_scan = self.comboBox_scan_selection.currentText()
-        history = self.client.connector.xread(
-            MessageEndpoints.scan_history(), from_start=True, user_id=self.object_name
+        history = (
+            self.client.connector.xread(
+                MessageEndpoints.scan_history(), from_start=True, user_id=self.object_name
+            )
+            or []
         )
 
-        for scan in history:
+        for scan in reversed(history):
             scan_data = scan.get("data")
             if not scan_data:
                 continue
