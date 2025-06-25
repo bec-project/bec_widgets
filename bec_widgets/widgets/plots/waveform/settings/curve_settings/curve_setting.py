@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from qtpy.QtCore import QSize
+from qtpy.QtCore import QSize, Qt
 from qtpy.QtWidgets import (
     QComboBox,
     QGroupBox,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -16,9 +15,8 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.settings_dialog import SettingWidget
-from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit import (
-    DeviceLineEdit,
-)
+from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
+from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
 from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_tree import CurveTree
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -30,6 +28,7 @@ class CurveSetting(SettingWidget):
         super().__init__(parent=parent, *args, **kwargs)
         self.setProperty("skip_settings", True)
         self.target_widget = target_widget
+        self._x_settings_connected = False
 
         self.layout = QVBoxLayout(self)
 
@@ -56,10 +55,15 @@ class CurveSetting(SettingWidget):
         self.spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         self.device_x_label = QLabel("Device")
-        self.device_x = DeviceLineEdit(parent=self)
+        self.device_x = DeviceComboBox(parent=self)
+        self.device_x.insertItem(0, "")
+        self.device_x.setEditable(True)
 
         self.signal_x_label = QLabel("Signal")
-        self.signal_x = QLineEdit()
+        self.signal_x = SignalComboBox(parent=self)
+        self.signal_x.include_config_signals = False
+        self.signal_x.insertItem(0, "")
+        self.signal_x.setEditable(True)
 
         self._get_x_mode_from_waveform()
         self.switch_x_device_selection()
@@ -85,11 +89,41 @@ class CurveSetting(SettingWidget):
 
     def switch_x_device_selection(self):
         if self.mode_combo.currentText() == "device":
+            self._x_settings_connected = True
+            self.device_x.currentTextChanged.connect(self.signal_x.set_device)
+            self.device_x.device_reset.connect(self.signal_x.reset_selection)
+
             self.device_x.setEnabled(True)
-            self.device_x.setText(self.target_widget.x_axis_mode["name"])
-            self.signal_x.setText(self.target_widget.x_axis_mode["entry"])
+            self.signal_x.setEnabled(True)
+            item = self.device_x.findText(self.target_widget.x_axis_mode["name"])
+            self.device_x.setCurrentIndex(item if item != -1 else 0)
+            signal_x = self.target_widget.x_axis_mode.get("entry", "")
+            if signal_x:
+                for i in range(self.signal_x.count()):
+                    signal_data = self.signal_x.itemData(i)
+                    if signal_data and signal_data.get("obj_name") == signal_x:
+                        self.signal_x.setCurrentIndex(i)
+                        break
+            else:
+                # If no match is found, set to the first enabled item
+                for i in range(self.signal_x.count()):
+                    model = self.signal_x.model()
+                    if model.flags(model.index(i, 0)) & Qt.ItemIsEnabled:
+                        self.signal_x.setCurrentIndex(i)
+                        break
+                else:
+                    # If no enabled item is found, set to the first item
+                    self.signal_x.setCurrentIndex(0)
         else:
             self.device_x.setEnabled(False)
+            self.signal_x.setEnabled(False)
+            self.device_x.setCurrentIndex(0)
+            self.signal_x.setCurrentIndex(0)
+
+            if self._x_settings_connected:
+                self._x_settings_connected = False
+                self.device_x.currentTextChanged.disconnect(self.signal_x.set_device)
+                self.device_x.device_reset.disconnect(self.signal_x.reset_selection)
 
     def _init_y_box(self):
         self.y_axis_box = QGroupBox("Y Axis")
@@ -108,10 +142,11 @@ class CurveSetting(SettingWidget):
         Accepts the changes made in the settings widget and applies them to the target widget.
         """
         if self.mode_combo.currentText() == "device":
-            self.target_widget.x_mode = self.device_x.text()
-            signal_x = self.signal_x.text()
+            self.target_widget.x_mode = self.device_x.currentText()
+            signal_x = self.signal_x.currentText()
+            signal_data = self.signal_x.itemData(self.signal_x.currentIndex())
             if signal_x != "":
-                self.target_widget.x_entry = signal_x
+                self.target_widget.x_entry = signal_data.get("obj_name", signal_x)
         else:
             self.target_widget.x_mode = self.mode_combo.currentText()
         self.curve_manager.send_curve_json()
@@ -126,5 +161,7 @@ class CurveSetting(SettingWidget):
         """Cleanup the widget."""
         self.device_x.close()
         self.device_x.deleteLater()
+        self.signal_x.close()
+        self.signal_x.deleteLater()
         self.curve_manager.close()
         self.curve_manager.deleteLater()

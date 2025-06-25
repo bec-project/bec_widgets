@@ -93,7 +93,7 @@ def test_curve_setting_switch_device_mode(curve_setting_fixture, qtbot):
     assert curve_setting.device_x.isEnabled()
 
     # This line edit should reflect the waveform.x_axis_mode["name"], or be blank if none
-    assert curve_setting.device_x.text() == wf.x_axis_mode["name"]
+    assert curve_setting.device_x.currentText() == ""
 
 
 def test_curve_setting_refresh(curve_setting_fixture, qtbot):
@@ -127,8 +127,8 @@ def test_change_device_from_target_widget(curve_setting_fixture, qtbot):
 
     assert curve_setting.mode_combo.currentText() == "device"
     assert curve_setting.device_x.isEnabled()
-    assert curve_setting.device_x.text() == wf.x_axis_mode["name"]
-    assert curve_setting.signal_x.text() == wf.x_axis_mode["entry"]
+    assert curve_setting.device_x.currentText() == wf.x_axis_mode["name"]
+    assert curve_setting.signal_x.currentText() == f"{wf.x_axis_mode['entry']} (readback)"
 
 
 ##################################################
