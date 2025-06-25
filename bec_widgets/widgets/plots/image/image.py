@@ -7,11 +7,19 @@ import numpy as np
 from bec_lib import bec_logger
 from bec_lib.endpoints import MessageEndpoints
 from pydantic import BaseModel, Field, field_validator
-from qtpy.QtWidgets import QWidget
+from qtpy.QtCore import Qt, QTimer
+from qtpy.QtWidgets import QComboBox, QStyledItemDelegate, QWidget
 
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.colors import Colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.toolbars.actions import NoCheckDelegate, WidgetAction
+from bec_widgets.utils.toolbars.bundles import ToolbarBundle
+from bec_widgets.widgets.control.device_input.base_classes.device_input_base import (
+    BECDeviceFilter,
+    ReadoutPriority,
+)
+from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.plots.image.image_base import ImageBase
 from bec_widgets.widgets.plots.image.image_item import ImageItem
 
@@ -139,8 +147,118 @@ class Image(ImageBase):
         super().__init__(
             parent=parent, config=config, client=client, gui_id=gui_id, popups=popups, **kwargs
         )
+        self._init_toolbar_image()
         self.layer_removed.connect(self._on_layer_removed)
         self.scan_id = None
+
+    ##################################
+    ### Toolbar Initialization
+    ##################################
+
+    def _init_toolbar_image(self):
+        """
+        Initializes the toolbar for the image widget.
+        """
+        self.device_combo_box = DeviceComboBox(
+            parent=self,
+            device_filter=BECDeviceFilter.DEVICE,
+            readout_priority_filter=[ReadoutPriority.ASYNC],
+        )
+        self.device_combo_box.addItem("", None)
+        self.device_combo_box.setCurrentText("")
+        self.device_combo_box.setToolTip("Select Device")
+        self.device_combo_box.setFixedWidth(150)
+        self.device_combo_box.setItemDelegate(NoCheckDelegate(self.device_combo_box))
+
+        self.dim_combo_box = QComboBox(parent=self)
+        self.dim_combo_box.addItems(["auto", "1d", "2d"])
+        self.dim_combo_box.setCurrentText("auto")
+        self.dim_combo_box.setToolTip("Monitor Dimension")
+        self.dim_combo_box.setFixedWidth(100)
+        self.dim_combo_box.setItemDelegate(NoCheckDelegate(self.dim_combo_box))
+
+        self.toolbar.components.add_safe(
+            "image_device_combo", WidgetAction(widget=self.device_combo_box, adjust_size=False)
+        )
+        self.toolbar.components.add_safe(
+            "image_dim_combo", WidgetAction(widget=self.dim_combo_box, adjust_size=False)
+        )
+
+        bundle = ToolbarBundle("monitor_selection", self.toolbar.components)
+        bundle.add_action("image_device_combo")
+        bundle.add_action("image_dim_combo")
+
+        self.toolbar.add_bundle(bundle)
+        self.device_combo_box.currentTextChanged.connect(self.connect_monitor)
+        self.dim_combo_box.currentTextChanged.connect(self.connect_monitor)
+
+        crosshair_bundle = self.toolbar.get_bundle("image_crosshair")
+        crosshair_bundle.add_action("image_autorange")
+        crosshair_bundle.add_action("image_colorbar_switch")
+
+        self.toolbar.show_bundles(
+            [
+                "monitor_selection",
+                "plot_export",
+                "mouse_interaction",
+                "image_crosshair",
+                "image_processing",
+                "axis_popup",
+            ]
+        )
+
+        QTimer.singleShot(0, self._adjust_and_connect)
+
+    def _adjust_and_connect(self):
+        """
+        Adjust the size of the device combo box and populate it with preview signals.
+        Has to be done with QTimer.singleShot to ensure the UI is fully initialized, needed for testing.
+        """
+        self._populate_preview_signals()
+        self._reverse_device_items()
+        self.device_combo_box.setCurrentText("")  # set again default to empty string
+
+    def _populate_preview_signals(self) -> None:
+        """
+        Populate the device combo box with preview-signal devices in the
+        format '<device>_<signal>' and store the tuple(device, signal) in
+        the item's userData for later use.
+        """
+        preview_signals = self.client.device_manager.get_bec_signals("PreviewSignal")
+        for device, signal, signal_config in preview_signals:
+            label = signal_config.get("obj_name", f"{device}_{signal}")
+            self.device_combo_box.addItem(label, (device, signal, signal_config))
+
+    def _reverse_device_items(self) -> None:
+        """
+        Reverse the current order of items in the device combo box while
+        keeping their userData and restoring the previous selection.
+        """
+        current_text = self.device_combo_box.currentText()
+        items = [
+            (self.device_combo_box.itemText(i), self.device_combo_box.itemData(i))
+            for i in range(self.device_combo_box.count())
+        ]
+        self.device_combo_box.clear()
+        for text, data in reversed(items):
+            self.device_combo_box.addItem(text, data)
+        if current_text:
+            self.device_combo_box.setCurrentText(current_text)
+
+    @SafeSlot()
+    def connect_monitor(self, *args, **kwargs):
+        """
+        Connect the target widget to the selected monitor based on the current device and dimension.
+
+        If the selected device is a preview-signal device, it will use the tuple (device, signal) as the monitor.
+        """
+        dim = self.dim_combo_box.currentText()
+        data = self.device_combo_box.currentData()
+
+        if isinstance(data, tuple):
+            self.image(monitor=data, monitor_type="auto")
+        else:
+            self.image(monitor=self.device_combo_box.currentText(), monitor_type=dim)
 
     ################################################################################
     # Data Acquisition
@@ -227,35 +345,21 @@ class Image(ImageBase):
         """
         config = self.subscriptions["main"]
         if config.monitor is not None:
-            for combo in (
-                self.selection_bundle.device_combo_box,
-                self.selection_bundle.dim_combo_box,
-            ):
+            for combo in (self.device_combo_box, self.dim_combo_box):
                 combo.blockSignals(True)
             if isinstance(config.monitor, tuple):
-                self.selection_bundle.device_combo_box.setCurrentText(
-                    f"{config.monitor[0]}_{config.monitor[1]}"
-                )
+                self.device_combo_box.setCurrentText(f"{config.monitor[0]}_{config.monitor[1]}")
             else:
-                self.selection_bundle.device_combo_box.setCurrentText(config.monitor)
-            self.selection_bundle.dim_combo_box.setCurrentText(config.monitor_type)
-            for combo in (
-                self.selection_bundle.device_combo_box,
-                self.selection_bundle.dim_combo_box,
-            ):
+                self.device_combo_box.setCurrentText(config.monitor)
+            self.dim_combo_box.setCurrentText(config.monitor_type)
+            for combo in (self.device_combo_box, self.dim_combo_box):
                 combo.blockSignals(False)
         else:
-            for combo in (
-                self.selection_bundle.device_combo_box,
-                self.selection_bundle.dim_combo_box,
-            ):
+            for combo in (self.device_combo_box, self.dim_combo_box):
                 combo.blockSignals(True)
-            self.selection_bundle.device_combo_box.setCurrentText("")
-            self.selection_bundle.dim_combo_box.setCurrentText("auto")
-            for combo in (
-                self.selection_bundle.device_combo_box,
-                self.selection_bundle.dim_combo_box,
-            ):
+            self.device_combo_box.setCurrentText("")
+            self.dim_combo_box.setCurrentText("auto")
+            for combo in (self.device_combo_box, self.dim_combo_box):
                 combo.blockSignals(False)
 
     ################################################################################
@@ -554,8 +658,10 @@ class Image(ImageBase):
         self.subscriptions.clear()
 
         # Toolbar cleanup
-        self.toolbar.widgets["monitor"].widget.close()
-        self.toolbar.widgets["monitor"].widget.deleteLater()
+        self.device_combo_box.close()
+        self.device_combo_box.deleteLater()
+        self.dim_combo_box.close()
+        self.dim_combo_box.deleteLater()
         super().cleanup()
 
 
@@ -570,10 +676,10 @@ if __name__ == "__main__":  # pragma: no cover
     ml = QHBoxLayout(win)
 
     image_popup = Image(popups=True)
-    image_side_panel = Image(popups=False)
+    # image_side_panel = Image(popups=False)
 
     ml.addWidget(image_popup)
-    ml.addWidget(image_side_panel)
+    # ml.addWidget(image_side_panel)
 
     win.resize(1500, 800)
     win.show()

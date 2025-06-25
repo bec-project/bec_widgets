@@ -157,10 +157,10 @@ def test_curve_tree_init(curve_tree_fixture):
     assert curve_tree.color_palette == "plasma"
     assert curve_tree.tree.columnCount() == 7
 
-    assert "add" in curve_tree.toolbar.widgets
-    assert "expand_all" in curve_tree.toolbar.widgets
-    assert "collapse_all" in curve_tree.toolbar.widgets
-    assert "renormalize_colors" in curve_tree.toolbar.widgets
+    assert curve_tree.toolbar.components.exists("add")
+    assert curve_tree.toolbar.components.exists("expand")
+    assert curve_tree.toolbar.components.exists("collapse")
+    assert curve_tree.toolbar.components.exists("renormalize_colors")
 
 
 def test_add_new_curve(curve_tree_fixture):

@@ -12,14 +12,19 @@ from qtpy.QtWidgets import QDialog, QVBoxLayout
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.side_panel import SidePanel
-from bec_widgets.utils.toolbar import MaterialIconAction, SwitchableToolBarAction
+from bec_widgets.utils.toolbars.actions import MaterialIconAction, SwitchableToolBarAction
 from bec_widgets.widgets.plots.image.image_item import ImageItem
 from bec_widgets.widgets.plots.image.image_roi_plot import ImageROIPlot
 from bec_widgets.widgets.plots.image.setting_widgets.image_roi_tree import ROIPropertyTree
-from bec_widgets.widgets.plots.image.toolbar_bundles.image_selection import (
-    MonitorSelectionToolbarBundle,
+from bec_widgets.widgets.plots.image.toolbar_components.image_base_actions import (
+    ImageColorbarConnection,
+    ImageProcessingConnection,
+    ImageRoiConnection,
+    image_autorange,
+    image_colorbar,
+    image_processing,
+    image_roi_bundle,
 )
-from bec_widgets.widgets.plots.image.toolbar_bundles.processing import ImageProcessingToolbarBundle
 from bec_widgets.widgets.plots.plot_base import PlotBase
 from bec_widgets.widgets.plots.roi.image_roi import (
     BaseROI,
@@ -256,6 +261,7 @@ class ImageBase(PlotBase):
         self.x_roi = None
         self.y_roi = None
         super().__init__(*args, **kwargs)
+
         self.roi_controller = ROIController(colormap="viridis")
 
         # Headless controller keeps the canonical list.
@@ -264,6 +270,7 @@ class ImageBase(PlotBase):
             self, plot_item=self.plot_item, on_add=self.layer_added, on_remove=self.layer_removed
         )
         self.layer_manager.add("main")
+        self._init_image_base_toolbar()
 
         self.autorange = True
         self.autorange_mode = "mean"
@@ -273,6 +280,16 @@ class ImageBase(PlotBase):
 
         # Refresh theme for ROI plots
         self._update_theme()
+
+        self.toolbar.show_bundles(
+            [
+                "image_crosshair",
+                "mouse_interaction",
+                "image_autorange",
+                "image_colorbar",
+                "image_processing",
+            ]
+        )
 
     ################################################################################
     # Widget Specific GUI interactions
@@ -318,134 +335,65 @@ class ImageBase(PlotBase):
         """
         return list(self.layer_manager.layers.values())
 
-    def _init_toolbar(self):
+    def _init_image_base_toolbar(self):
 
         try:
-            # add to the first position
-            self.selection_bundle = MonitorSelectionToolbarBundle(
-                bundle_id="selection", target_widget=self
-            )
-            self.toolbar.add_bundle(self.selection_bundle, self)
 
-            super()._init_toolbar()
-
-            # Image specific changes to PlotBase toolbar
-            self.toolbar.widgets["reset_legend"].action.setVisible(False)
-
-            # ROI Bundle replacement with switchable crosshair
-            self.toolbar.remove_bundle("roi")
-            crosshair = MaterialIconAction(
-                icon_name="point_scan", tooltip="Show Crosshair", checkable=True, parent=self
-            )
-            crosshair_roi = MaterialIconAction(
-                icon_name="my_location",
-                tooltip="Show Crosshair with ROI plots",
-                checkable=True,
-                parent=self,
-            )
-            crosshair_roi.action.toggled.connect(self.toggle_roi_panels)
-            crosshair.action.toggled.connect(self.toggle_crosshair)
-            switch_crosshair = SwitchableToolBarAction(
-                actions={"crosshair_simple": crosshair, "crosshair_roi": crosshair_roi},
-                initial_action="crosshair_simple",
-                tooltip="Crosshair",
-                checkable=True,
-                parent=self,
-            )
-            self.toolbar.add_action(
-                action_id="switch_crosshair", action=switch_crosshair, target_widget=self
+            # ROI Actions
+            self.toolbar.add_bundle(image_roi_bundle(self.toolbar.components))
+            self.toolbar.connect_bundle(
+                "image_base", ImageRoiConnection(self.toolbar.components, target_widget=self)
             )
 
-            # Lock aspect ratio button
-            self.lock_aspect_ratio_action = MaterialIconAction(
+            # Lock Aspect Ratio Action
+            lock_aspect_ratio_action = MaterialIconAction(
                 icon_name="aspect_ratio", tooltip="Lock Aspect Ratio", checkable=True, parent=self
             )
-            self.toolbar.add_action_to_bundle(
-                bundle_id="mouse_interaction",
-                action_id="lock_aspect_ratio",
-                action=self.lock_aspect_ratio_action,
-                target_widget=self,
-            )
-            self.lock_aspect_ratio_action.action.toggled.connect(
+            self.toolbar.components.add_safe("lock_aspect_ratio", lock_aspect_ratio_action)
+            self.toolbar.get_bundle("mouse_interaction").add_action("lock_aspect_ratio")
+            lock_aspect_ratio_action.action.toggled.connect(
                 lambda checked: self.setProperty("lock_aspect_ratio", checked)
             )
-            self.lock_aspect_ratio_action.action.setChecked(True)
+            lock_aspect_ratio_action.action.setChecked(True)
 
-            self._init_autorange_action()
-            self._init_colorbar_action()
-
-            # Processing Bundle
-            self.processing_bundle = ImageProcessingToolbarBundle(
-                bundle_id="processing", target_widget=self
+            # Autorange Action
+            self.toolbar.add_bundle(image_autorange(self.toolbar.components))
+            action = self.toolbar.components.get_action("image_autorange")
+            action.actions["mean"].action.toggled.connect(
+                lambda checked: self.toggle_autorange(checked, mode="mean")
             )
-            self.toolbar.add_bundle(self.processing_bundle, target_widget=self)
+            action.actions["max"].action.toggled.connect(
+                lambda checked: self.toggle_autorange(checked, mode="max")
+            )
+
+            # Colorbar Actions
+            self.toolbar.add_bundle(image_colorbar(self.toolbar.components))
+
+            self.toolbar.connect_bundle(
+                "image_colorbar",
+                ImageColorbarConnection(self.toolbar.components, target_widget=self),
+            )
+
+            # Image Processing Actions
+            self.toolbar.add_bundle(image_processing(self.toolbar.components))
+            self.toolbar.connect_bundle(
+                "image_processing",
+                ImageProcessingConnection(self.toolbar.components, target_widget=self),
+            )
+
+            # ROI Manager Action
+            self.toolbar.components.add_safe(
+                "roi_mgr",
+                MaterialIconAction(
+                    icon_name="view_list", tooltip="ROI Manager", checkable=True, parent=self
+                ),
+            )
+            self.toolbar.get_bundle("axis_popup").add_action("roi_mgr")
+            self.toolbar.components.get_action("roi_mgr").action.triggered.connect(
+                self.show_roi_manager_popup
+            )
         except Exception as e:
             logger.error(f"Error initializing toolbar: {e}")
-
-    def _init_autorange_action(self):
-
-        self.autorange_mean_action = MaterialIconAction(
-            icon_name="hdr_auto", tooltip="Enable Auto Range (Mean)", checkable=True, parent=self
-        )
-        self.autorange_max_action = MaterialIconAction(
-            icon_name="hdr_auto",
-            tooltip="Enable Auto Range (Max)",
-            checkable=True,
-            filled=True,
-            parent=self,
-        )
-
-        self.autorange_switch = SwitchableToolBarAction(
-            actions={
-                "auto_range_mean": self.autorange_mean_action,
-                "auto_range_max": self.autorange_max_action,
-            },
-            initial_action="auto_range_mean",
-            tooltip="Enable Auto Range",
-            checkable=True,
-            parent=self,
-        )
-
-        self.toolbar.add_action(
-            action_id="autorange_image", action=self.autorange_switch, target_widget=self
-        )
-
-        self.autorange_mean_action.action.toggled.connect(
-            lambda checked: self.toggle_autorange(checked, mode="mean")
-        )
-        self.autorange_max_action.action.toggled.connect(
-            lambda checked: self.toggle_autorange(checked, mode="max")
-        )
-
-    def _init_colorbar_action(self):
-        self.full_colorbar_action = MaterialIconAction(
-            icon_name="edgesensor_low", tooltip="Enable Full Colorbar", checkable=True, parent=self
-        )
-        self.simple_colorbar_action = MaterialIconAction(
-            icon_name="smartphone", tooltip="Enable Simple Colorbar", checkable=True, parent=self
-        )
-
-        self.colorbar_switch = SwitchableToolBarAction(
-            actions={
-                "full_colorbar": self.full_colorbar_action,
-                "simple_colorbar": self.simple_colorbar_action,
-            },
-            initial_action="full_colorbar",
-            tooltip="Enable Full Colorbar",
-            checkable=True,
-            parent=self,
-        )
-
-        self.toolbar.add_action(
-            action_id="switch_colorbar", action=self.colorbar_switch, target_widget=self
-        )
-
-        self.simple_colorbar_action.action.toggled.connect(
-            lambda checked: self.enable_colorbar(checked, style="simple")
-        )
-        self.full_colorbar_action.action.toggled.connect(
-            lambda checked: self.enable_colorbar(checked, style="full")
-        )
 
     ########################################
     # ROI Gui Manager
@@ -461,20 +409,8 @@ class ImageBase(PlotBase):
             title="ROI Manager",
         )
 
-    def add_popups(self):
-        super().add_popups()  # keep Axis Settings
-
-        roi_action = MaterialIconAction(
-            icon_name="view_list", tooltip="ROI Manager", checkable=True, parent=self
-        )
-        # self.popup_bundle.add_action("roi_mgr", roi_action)
-        self.toolbar.add_action_to_bundle(
-            bundle_id="popup_bundle", action_id="roi_mgr", action=roi_action, target_widget=self
-        )
-        self.toolbar.widgets["roi_mgr"].action.triggered.connect(self.show_roi_manager_popup)
-
     def show_roi_manager_popup(self):
-        roi_action = self.toolbar.widgets["roi_mgr"].action
+        roi_action = self.toolbar.components.get_action("roi_mgr").action
         if self.roi_manager_dialog is None or not self.roi_manager_dialog.isVisible():
             self.roi_mgr = ROIPropertyTree(parent=self, image_widget=self)
             self.roi_manager_dialog = QDialog(modal=False)
@@ -494,7 +430,7 @@ class ImageBase(PlotBase):
         self.roi_manager_dialog.close()
         self.roi_manager_dialog.deleteLater()
         self.roi_manager_dialog = None
-        self.toolbar.widgets["roi_mgr"].action.setChecked(False)
+        self.toolbar.components.get_action("roi_mgr").action.setChecked(False)
 
     def enable_colorbar(
         self,
@@ -518,12 +454,11 @@ class ImageBase(PlotBase):
                 self.plot_widget.removeItem(self._color_bar)
                 self._color_bar = None
 
+            def disable_autorange():
+                print("Disabling autorange")
+                self.setProperty("autorange", False)
+
             if style == "simple":
-
-                def disable_autorange():
-                    print("Disabling autorange")
-                    self.setProperty("autorange", False)
-
                 self._color_bar = pg.ColorBarItem(colorMap=self.config.color_map)
                 self._color_bar.setImageItem(self.layer_manager["main"].image)
                 self._color_bar.sigLevelsChangeFinished.connect(disable_autorange)
@@ -532,9 +467,7 @@ class ImageBase(PlotBase):
                 self._color_bar = pg.HistogramLUTItem()
                 self._color_bar.setImageItem(self.layer_manager["main"].image)
                 self._color_bar.gradient.loadPreset(self.config.color_map)
-                self._color_bar.sigLevelsChanged.connect(
-                    lambda: self.setProperty("autorange", False)
-                )
+                self._color_bar.sigLevelsChanged.connect(disable_autorange)
 
             self.plot_widget.addItem(self._color_bar, row=0, col=1)
             self.config.color_bar = style
@@ -827,6 +760,9 @@ class ImageBase(PlotBase):
         Args:
             value(tuple | list | QPointF): The range of values to set.
         """
+        self._set_vrange(value, disable_autorange=True)
+
+    def _set_vrange(self, value: tuple | list | QPointF, disable_autorange: bool = True):
         if isinstance(value, (tuple, list)):
             value = self._tuple_to_qpointf(value)
 
@@ -835,7 +771,7 @@ class ImageBase(PlotBase):
         for layer in self.layer_manager:
             if not layer.sync.v_range:
                 continue
-            layer.image.v_range = (vmin, vmax)
+            layer.image.set_v_range((vmin, vmax), disable_autorange=disable_autorange)
 
         # propagate to colorbar if exists
         if self._color_bar:
@@ -845,7 +781,7 @@ class ImageBase(PlotBase):
                 self._color_bar.setLevels(min=vmin, max=vmax)
                 self._color_bar.setHistogramRange(vmin - 0.1 * vmin, vmax + 0.1 * vmax)
 
-        self.autorange_switch.set_state_all(False)
+        # self.toolbar.components.get_action("image_autorange").set_state_all(False)
 
     @property
     def v_min(self) -> float:
@@ -919,14 +855,27 @@ class ImageBase(PlotBase):
         Args:
             enabled(bool): Whether to enable autorange.
         """
+        self._set_autorange(enabled)
+
+    def _set_autorange(self, enabled: bool, sync: bool = True):
+        """
+        Set the autorange for all layers.
+
+        Args:
+            enabled(bool): Whether to enable autorange.
+            sync(bool): Whether to synchronize the autorange state across all layers.
+        """
+        print(f"Setting autorange to {enabled}")
         for layer in self.layer_manager:
             if not layer.sync.autorange:
                 continue
             layer.image.autorange = enabled
             if enabled and layer.image.raw_data is not None:
                 layer.image.apply_autorange()
+                # if sync:
                 self._sync_colorbar_levels()
         self._sync_autorange_switch()
+        print(f"Autorange set to {enabled}")
 
     @SafeProperty(str)
     def autorange_mode(self) -> str:
@@ -948,6 +897,7 @@ class ImageBase(PlotBase):
         Args:
             mode(str): The autorange mode. Options are "max" or "mean".
         """
+        print(f"Setting autorange mode to {mode}")
         # for qt Designer
         if mode not in ["max", "mean"]:
             return
@@ -969,7 +919,7 @@ class ImageBase(PlotBase):
         """
         if not self.layer_manager:
             return
-
+        print(f"Toggling autorange to {enabled} with mode {mode}")
         for layer in self.layer_manager:
             if layer.sync.autorange:
                 layer.image.autorange = enabled
@@ -981,19 +931,16 @@ class ImageBase(PlotBase):
             # We only need to apply autorange if we enabled it
             layer.image.apply_autorange()
 
-        if enabled:
-            self._sync_colorbar_levels()
+        self._sync_colorbar_levels()
 
     def _sync_autorange_switch(self):
         """
         Synchronize the autorange switch with the current autorange state and mode if changed from outside.
         """
-        self.autorange_switch.block_all_signals(True)
-        self.autorange_switch.set_default_action(
-            f"auto_range_{self.layer_manager['main'].image.autorange_mode}"
-        )
-        self.autorange_switch.set_state_all(self.layer_manager["main"].image.autorange)
-        self.autorange_switch.block_all_signals(False)
+        action: SwitchableToolBarAction = self.toolbar.components.get_action("image_autorange")  # type: ignore
+        with action.signal_blocker():
+            action.set_default_action(f"{self.layer_manager['main'].image.autorange_mode}")
+            action.set_state_all(self.layer_manager["main"].image.autorange)
 
     def _sync_colorbar_levels(self):
         """Immediately propagate current levels to the active colorbar."""
@@ -1009,20 +956,22 @@ class ImageBase(PlotBase):
             total_vrange = (min(total_vrange[0], img.v_min), max(total_vrange[1], img.v_max))
 
         self._color_bar.blockSignals(True)
-        self.v_range = total_vrange  # type: ignore
+        self._set_vrange(total_vrange, disable_autorange=False)  # type: ignore
         self._color_bar.blockSignals(False)
 
     def _sync_colorbar_actions(self):
         """
         Synchronize the colorbar actions with the current colorbar state.
         """
-        self.colorbar_switch.block_all_signals(True)
-        if self._color_bar is not None:
-            self.colorbar_switch.set_default_action(f"{self.config.color_bar}_colorbar")
-            self.colorbar_switch.set_state_all(True)
-        else:
-            self.colorbar_switch.set_state_all(False)
-        self.colorbar_switch.block_all_signals(False)
+        colorbar_switch: SwitchableToolBarAction = self.toolbar.components.get_action(
+            "image_colorbar_switch"
+        )
+        with colorbar_switch.signal_blocker():
+            if self._color_bar is not None:
+                colorbar_switch.set_default_action(f"{self.config.color_bar}_colorbar")
+                colorbar_switch.set_state_all(True)
+            else:
+                colorbar_switch.set_state_all(False)
 
     @staticmethod
     def cleanup_histogram_lut_item(histogram_lut_item: pg.HistogramLUTItem):

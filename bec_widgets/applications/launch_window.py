@@ -27,7 +27,7 @@ from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.name_utils import pascal_to_snake
 from bec_widgets.utils.plugin_utils import get_plugin_auto_updates
 from bec_widgets.utils.round_frame import RoundedFrame
-from bec_widgets.utils.toolbar import ModularToolBar
+from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.ui_loader import UILoader
 from bec_widgets.widgets.containers.auto_update.auto_updates import AutoUpdates
 from bec_widgets.widgets.containers.dock.dock_area import BECDockArea

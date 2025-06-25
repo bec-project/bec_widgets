@@ -5,19 +5,18 @@ from qtpy.QtCore import QPoint, Qt
 from qtpy.QtGui import QContextMenuEvent
 from qtpy.QtWidgets import QComboBox, QLabel, QMenu, QStyle, QToolButton, QWidget
 
-from bec_widgets.utils.toolbar import (
+from bec_widgets.utils.toolbars.actions import (
     DeviceSelectionAction,
     ExpandableMenuAction,
-    IconAction,
     LongPressToolButton,
     MaterialIconAction,
-    ModularToolBar,
     QtIconAction,
     SeparatorAction,
     SwitchableToolBarAction,
-    ToolbarBundle,
     WidgetAction,
 )
+from bec_widgets.utils.toolbars.bundles import ToolbarBundle
+from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 
 
 @pytest.fixture
@@ -34,14 +33,12 @@ def toolbar_fixture(qtbot, request, dummy_widget):
     """Parametrized fixture to create a ModularToolBar with different orientations."""
     orientation: Literal["horizontal", "vertical"] = request.param
     toolbar = ModularToolBar(
-        target_widget=dummy_widget,
         orientation=orientation,
         background_color="rgba(255, 255, 255, 255)",  # White background for testing
     )
     qtbot.addWidget(toolbar)
     qtbot.waitExposed(toolbar)
     yield toolbar
-    toolbar.close()
 
 
 @pytest.fixture
@@ -51,16 +48,18 @@ def separator_action():
 
 
 @pytest.fixture
-def icon_action():
-    """Fixture to create an IconAction."""
-    return IconAction(icon_path="assets/BEC-Icon.png", tooltip="Test Icon Action", checkable=True)
-
-
-@pytest.fixture
 def material_icon_action():
     """Fixture to create a MaterialIconAction."""
     return MaterialIconAction(
         icon_name="home", tooltip="Test Material Icon Action", checkable=False
+    )
+
+
+@pytest.fixture
+def material_icon_action_2():
+    """Fixture to create another MaterialIconAction."""
+    return MaterialIconAction(
+        icon_name="home", tooltip="Test Material Icon Action 2", checkable=False
     )
 
 
@@ -121,7 +120,7 @@ def test_initialization(toolbar_fixture):
     else:
         pytest.fail("Toolbar orientation is neither horizontal nor vertical.")
     assert toolbar.background_color == "rgba(255, 255, 255, 255)"
-    assert toolbar.widgets == {}
+    assert len(toolbar.components._components) == 1  # only the separator
     assert not toolbar.isMovable()
     assert not toolbar.isFloatable()
 
@@ -152,80 +151,60 @@ def test_set_orientation(toolbar_fixture, qtbot, dummy_widget):
         assert toolbar.orientation() == Qt.Vertical
 
 
-def test_add_action(
-    toolbar_fixture,
-    icon_action,
-    separator_action,
-    material_icon_action,
-    qt_icon_action,
-    dummy_widget,
-):
-    """Test adding different types of actions to the toolbar."""
+def test_add_action(toolbar_fixture, material_icon_action, qt_icon_action):
+    """Test adding different types of actions to the toolbar components."""
     toolbar = toolbar_fixture
 
-    # Add IconAction
-    toolbar.add_action("icon_action", icon_action, dummy_widget)
-    assert "icon_action" in toolbar.widgets
-    assert toolbar.widgets["icon_action"] == icon_action
-    assert icon_action.action in toolbar.actions()
-
-    # Add SeparatorAction
-    toolbar.add_action("separator_action", separator_action, dummy_widget)
-    assert "separator_action" in toolbar.widgets
-    assert toolbar.widgets["separator_action"] == separator_action
-
     # Add MaterialIconAction
-    toolbar.add_action("material_icon_action", material_icon_action, dummy_widget)
-    assert "material_icon_action" in toolbar.widgets
-    assert toolbar.widgets["material_icon_action"] == material_icon_action
-    assert material_icon_action.action in toolbar.actions()
+    toolbar.add_action("material_icon_action", material_icon_action)
+    assert toolbar.components.exists("material_icon_action")
+    assert toolbar.components.get_action("material_icon_action") == material_icon_action
 
     # Add QtIconAction
-    toolbar.add_action("qt_icon_action", qt_icon_action, dummy_widget)
-    assert "qt_icon_action" in toolbar.widgets
-    assert toolbar.widgets["qt_icon_action"] == qt_icon_action
-    assert qt_icon_action.action in toolbar.actions()
+    toolbar.add_action("qt_icon_action", qt_icon_action)
+    assert toolbar.components.exists("qt_icon_action")
+    assert toolbar.components.get_action("qt_icon_action") == qt_icon_action
 
 
-def test_hide_show_action(toolbar_fixture, icon_action, qtbot, dummy_widget):
+def test_hide_show_action(toolbar_fixture, qt_icon_action, qtbot):
     """Test hiding and showing actions on the toolbar."""
     toolbar = toolbar_fixture
 
     # Add an action
-    toolbar.add_action("icon_action", icon_action, dummy_widget)
-    assert icon_action.action.isVisible()
+    toolbar.add_action("icon_action", qt_icon_action)
+    assert qt_icon_action.action.isVisible()
 
     # Hide the action
     toolbar.hide_action("icon_action")
     qtbot.wait(100)
-    assert not icon_action.action.isVisible()
+    assert not qt_icon_action.action.isVisible()
 
     # Show the action
     toolbar.show_action("icon_action")
     qtbot.wait(100)
-    assert icon_action.action.isVisible()
+    assert qt_icon_action.action.isVisible()
 
 
-def test_add_duplicate_action(toolbar_fixture, icon_action, dummy_widget):
+def test_add_duplicate_action(toolbar_fixture, qt_icon_action):
     """Test that adding an action with a duplicate action_id raises a ValueError."""
     toolbar = toolbar_fixture
 
     # Add an action
-    toolbar.add_action("icon_action", icon_action, dummy_widget)
-    assert "icon_action" in toolbar.widgets
+    toolbar.add_action("qt_icon_action", qt_icon_action)
+    assert toolbar.components.exists("qt_icon_action")
 
     # Attempt to add another action with the same ID
     with pytest.raises(ValueError) as excinfo:
-        toolbar.add_action("icon_action", icon_action, dummy_widget)
-    assert "Action with ID 'icon_action' already exists." in str(excinfo.value)
+        toolbar.add_action("qt_icon_action", qt_icon_action)
+    assert "Bundle with name 'qt_icon_action' already exists." in str(excinfo.value)
 
 
-def test_update_material_icon_colors(toolbar_fixture, material_icon_action, dummy_widget):
+def test_update_material_icon_colors(toolbar_fixture, material_icon_action):
     """Test updating the color of MaterialIconAction icons."""
     toolbar = toolbar_fixture
 
     # Add MaterialIconAction
-    toolbar.add_action("material_icon_action", material_icon_action, dummy_widget)
+    toolbar.add_action("material_icon_action", material_icon_action)
     assert material_icon_action.action is not None
 
     # Initial icon
@@ -242,11 +221,12 @@ def test_update_material_icon_colors(toolbar_fixture, material_icon_action, dumm
     assert initial_icon != updated_icon
 
 
-def test_device_selection_action(toolbar_fixture, device_selection_action, dummy_widget):
+def test_device_selection_action(toolbar_fixture, device_selection_action):
     """Test adding a DeviceSelectionAction to the toolbar."""
     toolbar = toolbar_fixture
-    toolbar.add_action("device_selection", device_selection_action, dummy_widget)
-    assert "device_selection" in toolbar.widgets
+    toolbar.add_action("device_selection", device_selection_action)
+    assert toolbar.components.exists("device_selection")
+    toolbar.show_bundles(["device_selection"])
     # DeviceSelectionAction adds a QWidget, so it should be present in the toolbar's widgets
     # Check if the widget is added
     widget = device_selection_action.device_combobox.parentWidget()
@@ -256,11 +236,12 @@ def test_device_selection_action(toolbar_fixture, device_selection_action, dummy
     assert label.text() == "Select Device:"
 
 
-def test_widget_action(toolbar_fixture, widget_action, dummy_widget):
+def test_widget_action(toolbar_fixture, widget_action):
     """Test adding a WidgetAction to the toolbar."""
     toolbar = toolbar_fixture
-    toolbar.add_action("widget_action", widget_action, dummy_widget)
-    assert "widget_action" in toolbar.widgets
+    toolbar.add_action("widget_action", widget_action)
+    assert toolbar.components.exists("widget_action")
+    toolbar.show_bundles(["widget_action"])
     # WidgetAction adds a QWidget to the toolbar
     container = widget_action.widget.parentWidget()
     assert container in toolbar.findChildren(QWidget)
@@ -269,11 +250,12 @@ def test_widget_action(toolbar_fixture, widget_action, dummy_widget):
     assert label.text() == "Sample Label:"
 
 
-def test_expandable_menu_action(toolbar_fixture, expandable_menu_action, dummy_widget):
+def test_expandable_menu_action(toolbar_fixture, expandable_menu_action):
     """Test adding an ExpandableMenuAction to the toolbar."""
     toolbar = toolbar_fixture
-    toolbar.add_action("expandable_menu", expandable_menu_action, dummy_widget)
-    assert "expandable_menu" in toolbar.widgets
+    toolbar.add_action("expandable_menu", expandable_menu_action)
+    assert toolbar.components.exists("expandable_menu")
+    toolbar.show_bundles(["expandable_menu"])
     # ExpandableMenuAction adds a QToolButton with a QMenu
     # Find the QToolButton
     tool_buttons = toolbar.findChildren(QToolButton)
@@ -300,44 +282,47 @@ def test_update_material_icon_colors_no_material_actions(toolbar_fixture, dummy_
 
 
 def test_hide_action_nonexistent(toolbar_fixture):
-    """Test hiding an action that does not exist raises a ValueError."""
+    """Test hiding an action that does not exist raises a KeyError."""
     toolbar = toolbar_fixture
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(KeyError) as excinfo:
         toolbar.hide_action("nonexistent_action")
-    assert "Action with ID 'nonexistent_action' does not exist." in str(excinfo.value)
+    excinfo.match("Component with name 'nonexistent_action' does not exist.")
 
 
 def test_show_action_nonexistent(toolbar_fixture):
-    """Test showing an action that does not exist raises a ValueError."""
+    """Test showing an action that does not exist raises a KeyError."""
     toolbar = toolbar_fixture
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(KeyError) as excinfo:
         toolbar.show_action("nonexistent_action")
-    assert "Action with ID 'nonexistent_action' does not exist." in str(excinfo.value)
+    excinfo.match("Component with name 'nonexistent_action' does not exist.")
 
 
-def test_add_bundle(toolbar_fixture, dummy_widget, icon_action, material_icon_action):
+def test_add_bundle(toolbar_fixture, material_icon_action):
     """Test adding a bundle of actions to the toolbar."""
     toolbar = toolbar_fixture
-    bundle = ToolbarBundle(
-        bundle_id="test_bundle",
-        actions=[
-            ("icon_action_in_bundle", icon_action),
-            ("material_icon_in_bundle", material_icon_action),
-        ],
-    )
-    toolbar.add_bundle(bundle, dummy_widget)
-    assert "test_bundle" in toolbar.bundles
-    assert "icon_action_in_bundle" in toolbar.widgets
-    assert "material_icon_in_bundle" in toolbar.widgets
-    assert icon_action.action in toolbar.actions()
+    toolbar.add_action("material_icon_in_bundle", material_icon_action)
+    bundle = ToolbarBundle("test_bundle", toolbar.components)
+    bundle.add_action("material_icon_in_bundle")
+
+    toolbar.add_bundle(bundle)
+
+    assert toolbar.get_bundle("test_bundle")
+    assert toolbar.components.exists("material_icon_in_bundle")
+
+    toolbar.show_bundles(["test_bundle"])
+
     assert material_icon_action.action in toolbar.actions()
 
 
-def test_invalid_orientation(dummy_widget):
+def test_invalid_orientation():
     """Test that an invalid orientation raises a ValueError."""
-    toolbar = ModularToolBar(target_widget=dummy_widget, orientation="horizontal")
-    with pytest.raises(ValueError):
-        toolbar.set_orientation("diagonal")
+    try:
+        toolbar = ModularToolBar(orientation="horizontal")
+        with pytest.raises(ValueError):
+            toolbar.set_orientation("diagonal")
+    finally:
+        toolbar.close()
+        toolbar.deleteLater()
 
 
 def test_widget_action_calculate_minimum_width(qtbot):
@@ -353,24 +338,26 @@ def test_widget_action_calculate_minimum_width(qtbot):
 
 def test_add_action_to_bundle(toolbar_fixture, dummy_widget, material_icon_action):
     # Create an initial bundle with one action
-    bundle = ToolbarBundle(
-        bundle_id="test_bundle", actions=[("initial_action", material_icon_action)]
-    )
-    toolbar_fixture.add_bundle(bundle, dummy_widget)
+    toolbar_fixture.add_action("initial_action", material_icon_action)
+    bundle = ToolbarBundle("test_bundle", toolbar_fixture.components)
+    bundle.add_action("initial_action")
+    toolbar_fixture.add_bundle(bundle)
 
     # Create a new action to add to the existing bundle
     new_action = MaterialIconAction(
         icon_name="counter_1", tooltip="New Action", checkable=True, parent=dummy_widget
     )
-    toolbar_fixture.add_action_to_bundle("test_bundle", "new_action", new_action, dummy_widget)
+    toolbar_fixture.components.add_safe("new_action", new_action)
+    toolbar_fixture.get_bundle("test_bundle").add_action("new_action")
+
+    toolbar_fixture.show_bundles(["test_bundle"])
 
     # Verify the new action is registered in the toolbar's widgets
-    assert "new_action" in toolbar_fixture.widgets
-    assert toolbar_fixture.widgets["new_action"] == new_action
+    assert toolbar_fixture.components.exists("new_action")
+    assert toolbar_fixture.components.get_action("new_action") == new_action
 
     # Verify the new action is included in the bundle tracking
-    assert "new_action" in toolbar_fixture.bundles["test_bundle"]
-    assert toolbar_fixture.bundles["test_bundle"][-1] == "new_action"
+    assert toolbar_fixture.bundles["test_bundle"].bundle_actions["new_action"]() == new_action
 
     # Verify the new action's QAction is present in the toolbar's action list
     actions_list = toolbar_fixture.actions()
@@ -384,7 +371,7 @@ def test_add_action_to_bundle(toolbar_fixture, dummy_widget, material_icon_actio
 
 
 def test_context_menu_contains_added_actions(
-    toolbar_fixture, icon_action, material_icon_action, dummy_widget, monkeypatch
+    toolbar_fixture, material_icon_action, material_icon_action_2, monkeypatch
 ):
     """
     Test that the toolbar's context menu lists all added toolbar actions.
@@ -392,9 +379,13 @@ def test_context_menu_contains_added_actions(
     toolbar = toolbar_fixture
 
     # Add two different actions
-    toolbar.add_action("icon_action", icon_action, dummy_widget)
-    toolbar.add_action("material_icon_action", material_icon_action, dummy_widget)
+    toolbar.components.add_safe("material_icon_action", material_icon_action)
+    toolbar.components.add_safe("material_icon_action_2", material_icon_action_2)
+    bundle = toolbar.new_bundle("test_bundle")
+    bundle.add_action("material_icon_action")
+    bundle.add_action("material_icon_action_2")
 
+    toolbar.show_bundles(["test_bundle"])
     # Mock the QMenu.exec_ method to prevent the context menu from being displayed and block CI pipeline
     monkeypatch.setattr(QMenu, "exec_", lambda self, pos=None: None)
     event = QContextMenuEvent(QContextMenuEvent.Mouse, QPoint(10, 10))
@@ -404,23 +395,26 @@ def test_context_menu_contains_added_actions(
     assert len(menus) > 0
     menu = menus[-1]
     menu_action_texts = [action.text() for action in menu.actions()]
-    assert any(icon_action.tooltip in text or "icon_action" in text for text in menu_action_texts)
-    assert any(
-        material_icon_action.tooltip in text or "material_icon_action" in text
-        for text in menu_action_texts
-    )
+    tooltips = [
+        action.action.tooltip
+        for action in toolbar.components._components.values()
+        if not isinstance(action.action, SeparatorAction)
+    ]
+    menu_actions_tooltips = [
+        action.toolTip() for action in menu.actions() if action.toolTip() != ""
+    ]
+    assert menu_action_texts == tooltips
 
 
-def test_context_menu_toggle_action_visibility(
-    toolbar_fixture, icon_action, dummy_widget, monkeypatch
-):
+def test_context_menu_toggle_action_visibility(toolbar_fixture, material_icon_action, monkeypatch):
     """
     Test that toggling action visibility works correctly through the toolbar's context menu.
     """
     toolbar = toolbar_fixture
     # Add an action
-    toolbar.add_action("icon_action", icon_action, dummy_widget)
-    assert icon_action.action.isVisible()
+    toolbar.add_action("material_icon_action", material_icon_action)
+    toolbar.show_bundles(["material_icon_action"])
+    assert material_icon_action.action.isVisible()
 
     # Manually trigger the context menu event
     monkeypatch.setattr(QMenu, "exec_", lambda self, pos=None: None)
@@ -433,7 +427,7 @@ def test_context_menu_toggle_action_visibility(
     menu = menus[-1]
 
     # Locate the QAction in the menu
-    matching_actions = [m for m in menu.actions() if m.text() == icon_action.tooltip]
+    matching_actions = [m for m in menu.actions() if m.text() == material_icon_action.tooltip]
     assert len(matching_actions) == 1
     action_in_menu = matching_actions[0]
 
@@ -441,23 +435,24 @@ def test_context_menu_toggle_action_visibility(
     action_in_menu.setChecked(False)
     menu.triggered.emit(action_in_menu)
     # The action on the toolbar should now be hidden
-    assert not icon_action.action.isVisible()
+    assert not material_icon_action.action.isVisible()
 
     # Toggle it on (check)
     action_in_menu.setChecked(True)
     menu.triggered.emit(action_in_menu)
     # The action on the toolbar should be visible again
-    assert icon_action.action.isVisible()
+    assert material_icon_action.action.isVisible()
 
 
-def test_switchable_toolbar_action_add(toolbar_fixture, dummy_widget, switchable_toolbar_action):
+def test_switchable_toolbar_action_add(toolbar_fixture, switchable_toolbar_action):
     """Test that a switchable toolbar action can be added to the toolbar correctly."""
     toolbar = toolbar_fixture
-    toolbar.add_action("switch_action", switchable_toolbar_action, dummy_widget)
+    toolbar.add_action("switch_action", switchable_toolbar_action)
+    toolbar.show_bundles(["switch_action"])
 
     # Verify the action was added correctly
-    assert "switch_action" in toolbar.widgets
-    assert toolbar.widgets["switch_action"] == switchable_toolbar_action
+    assert toolbar.components.exists("switch_action")
+    assert toolbar.components.get_action("switch_action") == switchable_toolbar_action
 
     # Verify the button is present and is the correct type
     button = switchable_toolbar_action.main_button
@@ -468,11 +463,10 @@ def test_switchable_toolbar_action_add(toolbar_fixture, dummy_widget, switchable
     assert button.toolTip() == "Action 1"
 
 
-def test_switchable_toolbar_action_switching(
-    toolbar_fixture, dummy_widget, switchable_toolbar_action, qtbot
-):
+def test_switchable_toolbar_action_switching(toolbar_fixture, switchable_toolbar_action, qtbot):
     toolbar = toolbar_fixture
-    toolbar.add_action("switch_action", switchable_toolbar_action, dummy_widget)
+    toolbar.add_action("switch_action", switchable_toolbar_action)
+    toolbar.show_bundles(["switch_action"])
     # Verify initial state is set to action1
     assert switchable_toolbar_action.current_key == "action1"
     assert switchable_toolbar_action.main_button.toolTip() == "Action 1"
@@ -494,9 +488,10 @@ def test_switchable_toolbar_action_switching(
     assert switchable_toolbar_action.main_button.toolTip() == "Action 2"
 
 
-def test_long_pressbutton(toolbar_fixture, dummy_widget, switchable_toolbar_action, qtbot):
+def test_long_pressbutton(toolbar_fixture, switchable_toolbar_action, qtbot):
     toolbar = toolbar_fixture
-    toolbar.add_action("switch_action", switchable_toolbar_action, dummy_widget)
+    toolbar.add_action("switch_action", switchable_toolbar_action)
+    toolbar.show_bundles(["switch_action"])
 
     # Verify the button is a LongPressToolButton
     button = switchable_toolbar_action.main_button
@@ -521,92 +516,73 @@ def test_long_pressbutton(toolbar_fixture, dummy_widget, switchable_toolbar_acti
 
 
 # Additional tests for action/bundle removal
-def test_remove_standalone_action(toolbar_fixture, icon_action, dummy_widget):
+def test_remove_standalone_action(toolbar_fixture, material_icon_action):
     """
     Ensure that a standalone action is fully removed and no longer accessible.
     """
     toolbar = toolbar_fixture
     # Add the action and check it is present
-    toolbar.add_action("icon_action", icon_action, dummy_widget)
-    assert "icon_action" in toolbar.widgets
-    assert icon_action.action in toolbar.actions()
+    toolbar.add_action("icon_action", material_icon_action)
+
+    assert toolbar.components.exists("icon_action")
+
+    toolbar.show_bundles(["icon_action"])
+    assert material_icon_action.action in toolbar.actions()
 
     # Now remove it
-    toolbar.remove_action("icon_action")
+    toolbar.components.remove_action("icon_action")
 
     # Action bookkeeping
-    assert "icon_action" not in toolbar.widgets
+    assert not toolbar.components.exists("icon_action")
     # QAction list
-    assert icon_action.action not in toolbar.actions()
+    assert material_icon_action.action not in toolbar.actions()
     # Attempting to hide / show it should raise
-    with pytest.raises(ValueError):
+    with pytest.raises(KeyError):
         toolbar.hide_action("icon_action")
-    with pytest.raises(ValueError):
+    with pytest.raises(KeyError):
         toolbar.show_action("icon_action")
 
 
-def test_remove_action_from_bundle(
-    toolbar_fixture, dummy_widget, icon_action, material_icon_action
-):
+def test_remove_action_from_bundle(toolbar_fixture, material_icon_action, material_icon_action_2):
     """
-    Remove a single action that is part of a bundle and verify clean‑up.
+    Remove a single action that is part of a bundle. This should not remove the action
+    from the toolbar's components, but only from the bundle tracking.
     """
     toolbar = toolbar_fixture
-    bundle = ToolbarBundle(
-        bundle_id="test_bundle",
-        actions=[("icon_action", icon_action), ("material_action", material_icon_action)],
-    )
-    toolbar.add_bundle(bundle, dummy_widget)
+    bundle = toolbar.new_bundle("test_bundle")
+    # Add two actions to the bundle
+    toolbar.components.add_safe("material_action", material_icon_action)
+    toolbar.components.add_safe("material_action_2", material_icon_action_2)
+    bundle.add_action("material_action")
+    bundle.add_action("material_action_2")
+
+    toolbar.show_bundles(["test_bundle"])
 
     # Initial assertions
     assert "test_bundle" in toolbar.bundles
-    assert "icon_action" in toolbar.widgets
-    assert "material_action" in toolbar.widgets
+    assert toolbar.components.exists("material_action")
+    assert toolbar.components.exists("material_action_2")
 
     # Remove one action from the bundle
-    toolbar.remove_action("icon_action")
+    toolbar.get_bundle("test_bundle").remove_action("material_action")
 
-    # icon_action should be fully gone
-    assert "icon_action" not in toolbar.widgets
-    assert icon_action.action not in toolbar.actions()
-    # Bundle tracking should be updated
-    assert "icon_action" not in toolbar.bundles["test_bundle"]
-    # The other action must still exist
-    assert "material_action" in toolbar.widgets
-    assert material_icon_action.action in toolbar.actions()
+    # The bundle should still exist
+    assert "test_bundle" in toolbar.bundles
+    # The removed action should still exist in the components
+    assert toolbar.components.exists("material_action")
+
+    # The removed action should not be in the bundle anymore
+    assert "material_action" not in toolbar.bundles["test_bundle"].bundle_actions
 
 
-def test_remove_last_action_from_bundle_removes_bundle(toolbar_fixture, dummy_widget, icon_action):
-    """
-    Removing the final action from a bundle should delete the bundle entry itself.
-    """
+def test_remove_entire_bundle(toolbar_fixture, material_icon_action, material_icon_action_2):
     toolbar = toolbar_fixture
-    bundle = ToolbarBundle(bundle_id="single_action_bundle", actions=[("only_action", icon_action)])
-    toolbar.add_bundle(bundle, dummy_widget)
-
-    # Sanity check
-    assert "single_action_bundle" in toolbar.bundles
-    assert "only_action" in toolbar.widgets
-
-    # Remove the sole action
-    toolbar.remove_action("only_action")
-
-    # Bundle should be gone
-    assert "single_action_bundle" not in toolbar.bundles
-    # QAction removed
-    assert icon_action.action not in toolbar.actions()
-
-
-def test_remove_entire_bundle(toolbar_fixture, dummy_widget, icon_action, material_icon_action):
-    """
-    Ensure that removing a bundle deletes all its actions and separators.
-    """
-    toolbar = toolbar_fixture
-    bundle = ToolbarBundle(
-        bundle_id="to_remove",
-        actions=[("icon_action", icon_action), ("material_action", material_icon_action)],
-    )
-    toolbar.add_bundle(bundle, dummy_widget)
+    toolbar.components.add_safe("material_action", material_icon_action)
+    toolbar.components.add_safe("material_action_2", material_icon_action_2)
+    # Create a bundle with two actions
+    bundle = toolbar.new_bundle("to_remove")
+    bundle.add_action("material_action")
+    bundle.add_action("material_action_2")
 
     # Confirm bundle presence
     assert "to_remove" in toolbar.bundles
@@ -616,58 +592,23 @@ def test_remove_entire_bundle(toolbar_fixture, dummy_widget, icon_action, materi
 
     # Bundle mapping gone
     assert "to_remove" not in toolbar.bundles
-    # All actions gone
-    for aid, act in [("icon_action", icon_action), ("material_action", material_icon_action)]:
-        assert aid not in toolbar.widgets
-        assert act.action not in toolbar.actions()
-
-
-def test_trigger_removed_action_raises(toolbar_fixture, icon_action, dummy_widget, qtbot):
-    """
-    Add an action, connect a mock slot, then remove the action and verify that
-    attempting to trigger it afterwards raises RuntimeError (since the underlying
-    QAction has been deleted).
-    """
-    toolbar = toolbar_fixture
-
-    # Add the action and connect a mock slot
-    toolbar.add_action("icon_action", icon_action, dummy_widget)
-    called = []
-
-    def mock_slot():
-        called.append(True)
-
-    icon_action.action.triggered.connect(mock_slot)
-
-    # Trigger once to confirm connection works
-    icon_action.action.trigger()
-    assert called == [True]
-
-    # Now remove the action
-    toolbar.remove_action("icon_action")
-    # Allow deleteLater event to process
-    qtbot.wait(50)
-
-    # The underlying C++ object should be deleted; triggering should raise
-    with pytest.raises(RuntimeError):
-        icon_action.action.trigger()
 
 
 def test_remove_nonexistent_action(toolbar_fixture):
     """
-    Attempting to remove an action that does not exist should raise ValueError.
+    Attempting to remove an action that does not exist should raise KeyError.
     """
     toolbar = toolbar_fixture
-    with pytest.raises(ValueError) as excinfo:
-        toolbar.remove_action("nonexistent_action")
+    with pytest.raises(KeyError) as excinfo:
+        toolbar.components.remove_action("nonexistent_action")
     assert "Action with ID 'nonexistent_action' does not exist." in str(excinfo.value)
 
 
 def test_remove_nonexistent_bundle(toolbar_fixture):
     """
-    Attempting to remove a bundle that does not exist should raise ValueError.
+    Attempting to remove a bundle that does not exist should raise KeyError.
     """
     toolbar = toolbar_fixture
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(KeyError) as excinfo:
         toolbar.remove_bundle("nonexistent_bundle")
-    assert "Bundle 'nonexistent_bundle' does not exist." in str(excinfo.value)
+    excinfo.match("Bundle with name 'nonexistent_bundle' does not exist.")

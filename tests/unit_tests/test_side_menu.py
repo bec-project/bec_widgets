@@ -136,7 +136,7 @@ def test_add_menu(side_panel_fixture, menu_widget, qtbot):
 
     assert panel.stack_widget.count() == initial_count + 1
     # Verify the action is added to the toolbar
-    action = panel.toolbar.widgets.get("test_action")
+    action = panel.toolbar.components.get_action("test_action")
     assert action is not None
     assert action.tooltip == "Test Tooltip"
     assert action.action in panel.toolbar.actions()
@@ -155,7 +155,7 @@ def test_toggle_action_show_panel(side_panel_fixture, menu_widget, qtbot):
     )
     qtbot.wait(100)
 
-    action = panel.toolbar.widgets.get("toggle_action")
+    action = panel.toolbar.components.get_action("toggle_action")
     assert action is not None
 
     # Initially, panel should be hidden
@@ -199,8 +199,8 @@ def test_switch_actions(side_panel_fixture, menu_widget, qtbot):
     )
     qtbot.wait(100)
 
-    action1 = panel.toolbar.widgets.get("action1")
-    action2 = panel.toolbar.widgets.get("action2")
+    action1 = panel.toolbar.components.get_action("action1")
+    action2 = panel.toolbar.components.get_action("action2")
     assert action1 is not None
     assert action2 is not None
 
@@ -241,7 +241,7 @@ def test_multiple_add_menu(side_panel_fixture, menu_widget, qtbot):
         )
         qtbot.wait(100)
         assert panel.stack_widget.count() == initial_count + i + 1
-        action = panel.toolbar.widgets.get(f"action{i}")
+        action = panel.toolbar.components.get_action(f"action{i}")
         assert action is not None
         assert action.tooltip == f"Tooltip{i}"
         assert action.action in panel.toolbar.actions()
@@ -360,7 +360,7 @@ def test_add_multiple_menus(side_panel_fixture, menu_widget, qtbot):
         )
         qtbot.wait(100)
         assert panel.stack_widget.count() == initial_count + i + 1
-        action = panel.toolbar.widgets.get(f"action{i}")
+        action = panel.toolbar.components.get_action(f"action{i}")
         assert action is not None
         assert action.tooltip == f"Tooltip{i}"
         assert action.action in panel.toolbar.actions()
