@@ -806,6 +806,13 @@ def test_show_curve_settings_popup(qtbot, mocked_client):
     assert wf.curve_settings_dialog.isVisible()
     assert curve_action.isChecked()
 
+    # add a new row to the curve tree
+    wf.curve_settings_dialog.widget.curve_manager.toolbar.widgets["add"].action.trigger()
+    wf.curve_settings_dialog.widget.curve_manager.toolbar.widgets["add"].action.trigger()
+    qtbot.wait(100)
+    # Check that the new row is added
+    assert wf.curve_settings_dialog.widget.curve_manager.tree.model().rowCount() == 2
+
     wf.curve_settings_dialog.close()
     assert wf.curve_settings_dialog is None
     assert not curve_action.isChecked(), "Should be unchecked after closing dialog"
