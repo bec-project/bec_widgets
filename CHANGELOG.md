@@ -1,6 +1,29 @@
 # CHANGELOG
 
 
+## v2.20.0 (2025-06-26)
+
+### Bug Fixes
+
+- **curve_settings**: Larger minimalWidth for the x device combobox selection
+  ([`48a0e58`](https://github.com/bec-project/bec_widgets/commit/48a0e5831feccd30f24218821bbc9d73f8c47933))
+
+### Features
+
+- **waveform**: Move x axis selection to a combobox
+  ([`d10328c`](https://github.com/bec-project/bec_widgets/commit/d10328cb5c775a9b7b40ed4e9f2889e63eb039ff))
+
+### Refactoring
+
+- **curve settings**: Move signal logic to SignalCombobox
+  ([`e841468`](https://github.com/bec-project/bec_widgets/commit/e84146889210165de1c4e63eb20b39f30cc5c623))
+
+### Testing
+
+- **curve settings**: Add curve tree elements to the dialog test
+  ([`1e9dd4c`](https://github.com/bec-project/bec_widgets/commit/1e9dd4cd2561d37bdda1cd86b511295c259b2831))
+
+
 ## v2.19.4 (2025-06-26)
 
 ### Bug Fixes
