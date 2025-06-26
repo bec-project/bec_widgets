@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v2.19.4 (2025-06-26)
+
+### Bug Fixes
+
+- **curve tree**: Remove manual interception of the close event; call parent cleanup
+  ([`bc3085a`](https://github.com/bec-project/bec_widgets/commit/bc3085ab8cb6688da358df4a7c07fc213a99f2df))
+
+- **waveform**: Curve tree elements must clean up signal combobox
+  ([`9cba696`](https://github.com/bec-project/bec_widgets/commit/9cba696afd3300a76678dfdc4226604696cc3696))
+
+
 ## v2.19.3 (2025-06-25)
 
 ### Bug Fixes
