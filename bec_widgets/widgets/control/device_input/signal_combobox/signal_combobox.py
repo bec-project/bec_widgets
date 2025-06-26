@@ -90,6 +90,36 @@ class SignalComboBox(DeviceSignalInputBase, QComboBox):
                 self.insertItem(0, "Hinted Signals")
                 self.model().item(0).setEnabled(False)
 
+    def set_to_obj_name(self, obj_name: str) -> bool:
+        """
+        Set the combobox to the object name of the signal.
+
+        Args:
+            obj_name (str): Object name of the signal.
+
+        Returns:
+            bool: True if the object name was found and set, False otherwise.
+        """
+        for i in range(self.count()):
+            signal_data = self.itemData(i)
+            if signal_data and signal_data.get("obj_name") == obj_name:
+                self.setCurrentIndex(i)
+                return True
+        return False
+
+    def set_to_first_enabled(self) -> bool:
+        """
+        Set the combobox to the first enabled item.
+
+        Returns:
+            bool: True if an enabled item was found and set, False otherwise.
+        """
+        for i in range(self.count()):
+            if self.model().item(i).isEnabled():
+                self.setCurrentIndex(i)
+                return True
+        return False
+
     @SafeSlot()
     def reset_selection(self):
         """Reset the selection of the combobox."""
