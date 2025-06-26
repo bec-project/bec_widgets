@@ -50,6 +50,7 @@ class CurveSetting(SettingWidget):
         self.mode_combo_label = QLabel("Mode")
         self.mode_combo = QComboBox()
         self.mode_combo.addItems(["auto", "index", "timestamp", "device"])
+        self.mode_combo.setMinimumWidth(120)
 
         self.spacer = QWidget()
         self.spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -58,12 +59,14 @@ class CurveSetting(SettingWidget):
         self.device_x = DeviceComboBox(parent=self)
         self.device_x.insertItem(0, "")
         self.device_x.setEditable(True)
+        self.device_x.setMinimumWidth(180)
 
         self.signal_x_label = QLabel("Signal")
         self.signal_x = SignalComboBox(parent=self)
         self.signal_x.include_config_signals = False
         self.signal_x.insertItem(0, "")
         self.signal_x.setEditable(True)
+        self.signal_x.setMinimumWidth(180)
 
         self._get_x_mode_from_waveform()
         self.switch_x_device_selection()
