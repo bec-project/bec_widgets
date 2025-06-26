@@ -142,20 +142,10 @@ class CurveRow(QTreeWidgetItem):
                     # If the device name is not found, set the first enabled item
                     self.device_edit.setCurrentIndex(0)
 
-                for i in range(self.entry_edit.count()):
-                    entry_data = self.entry_edit.itemData(i)
-                    if entry_data and entry_data.get("obj_name") == self.config.signal.entry:
-                        # If the device name matches an object name, set it
-                        self.entry_edit.setCurrentIndex(i)
-                        break
-                else:
-                    # If no match found, set the first enabled item
-                    for i in range(self.entry_edit.count()):
-                        model = self.entry_edit.model()
-                        if model.flags(model.index(i, 0)) & Qt.ItemIsEnabled:
-                            self.entry_edit.setCurrentIndex(i)
-                            break
-                    else:
+                if not self.entry_edit.set_to_obj_name(self.config.signal.entry):
+                    # If the entry is not found, try to set it to the first enabled item
+                    if not self.entry_edit.set_to_first_enabled():
+                        # If no enabled item is found, set to the first item
                         self.entry_edit.setCurrentIndex(0)
 
             self.tree.setItemWidget(self, 1, self.device_edit)

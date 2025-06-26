@@ -102,19 +102,10 @@ class CurveSetting(SettingWidget):
             self.device_x.setCurrentIndex(item if item != -1 else 0)
             signal_x = self.target_widget.x_axis_mode.get("entry", "")
             if signal_x:
-                for i in range(self.signal_x.count()):
-                    signal_data = self.signal_x.itemData(i)
-                    if signal_data and signal_data.get("obj_name") == signal_x:
-                        self.signal_x.setCurrentIndex(i)
-                        break
+                self.signal_x.set_to_obj_name(signal_x)
             else:
                 # If no match is found, set to the first enabled item
-                for i in range(self.signal_x.count()):
-                    model = self.signal_x.model()
-                    if model.flags(model.index(i, 0)) & Qt.ItemIsEnabled:
-                        self.signal_x.setCurrentIndex(i)
-                        break
-                else:
+                if not self.signal_x.set_to_first_enabled():
                     # If no enabled item is found, set to the first item
                     self.signal_x.setCurrentIndex(0)
         else:
