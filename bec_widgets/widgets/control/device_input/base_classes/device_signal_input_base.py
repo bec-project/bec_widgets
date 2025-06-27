@@ -55,7 +55,7 @@ class DeviceSignalInputBase(BECWidget):
         self._hinted_signals = []
         self._normal_signals = []
         self._config_signals = []
-        self.bec_dispatcher.client.callbacks.register(
+        self._device_update_register = self.bec_dispatcher.client.callbacks.register(
             EventType.DEVICE_UPDATE, self.update_signals_from_filters
         )
 
@@ -289,3 +289,10 @@ class DeviceSignalInputBase(BECWidget):
         if config is None:
             return DeviceSignalInputBaseConfig(widget_class=self.__class__.__name__)
         return DeviceSignalInputBaseConfig.model_validate(config)
+
+    def cleanup(self):
+        """
+        Cleanup the widget.
+        """
+        self.bec_dispatcher.client.callbacks.remove(self._device_update_register)
+        super().cleanup()
