@@ -169,6 +169,9 @@ class BECDockArea(BECWidget, QWidget):
                             tooltip="Add LogPanel - Disabled",
                             filled=True,
                         ),
+                        "sbb_monitor": MaterialIconAction(
+                            icon_name="train", tooltip="Add SBB Monitor", filled=True
+                        ),
                     },
                 ),
                 "separator_2": SeparatorAction(),
@@ -238,6 +241,9 @@ class BECDockArea(BECWidget, QWidget):
         # self.toolbar.widgets["menu_utils"].widgets["log_panel"].triggered.connect(
         #     lambda: self._create_widget_from_toolbar(widget_name="LogPanel")
         # )
+        self.toolbar.widgets["menu_utils"].widgets["sbb_monitor"].triggered.connect(
+            lambda: self._create_widget_from_toolbar(widget_name="SBBMonitor")
+        )
 
         # Icons
         self.toolbar.widgets["attach_all"].action.triggered.connect(self.attach_all)
