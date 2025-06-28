@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.21.0 (2025-06-28)
+
+### Features
+
+- **sbb monitor**: Add sbb monitor widget
+  ([`3d59c25`](https://github.com/bec-project/bec_widgets/commit/3d59c25aa93590a62ab4d31a4ab08589402bf407))
+
+
 ## v2.20.1 (2025-06-28)
 
 ### Bug Fixes
