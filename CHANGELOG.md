@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.20.1 (2025-06-28)
+
+### Bug Fixes
+
+- **signal input base**: Unregister callback to avoid accessing deleted qt objects
+  ([`7ba8863`](https://github.com/bec-project/bec_widgets/commit/7ba8863d6a0c21f772e4ef8a5d4180c2a7ab49cb))
+
+
 ## v2.20.0 (2025-06-26)
 
 ### Bug Fixes
