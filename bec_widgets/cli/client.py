@@ -49,6 +49,7 @@ _Widgets = {
     "ResetButton": "ResetButton",
     "ResumeButton": "ResumeButton",
     "RingProgressBar": "RingProgressBar",
+    "SBBMonitor": "SBBMonitor",
     "ScanControl": "ScanControl",
     "ScatterWaveform": "ScatterWaveform",
     "SignalComboBox": "SignalComboBox",
@@ -3247,6 +3248,12 @@ class RingProgressBar(RPCBase):
         Returns:
             bool: True if scan segment updates are enabled.
         """
+
+
+class SBBMonitor(RPCBase):
+    """A widget to display the SBB monitor website."""
+
+    ...
 
 
 class ScanControl(RPCBase):
