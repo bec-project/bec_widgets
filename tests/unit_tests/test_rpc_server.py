@@ -29,4 +29,4 @@ def test_gui_server_get_service_config(gui_server):
     """
     Test that the server is started with the correct arguments.
     """
-    assert gui_server._get_service_config().config is ServiceConfig().config
+    assert gui_server._get_service_config().config == ServiceConfig().config
