@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.21.1 (2025-06-29)
+
+### Bug Fixes
+
+- **sbb monitor**: Add missing pyproject file
+  ([`371bc48`](https://github.com/bec-project/bec_widgets/commit/371bc485d060404433082c9e3e00780961ce6ae3))
+
+
 ## v2.21.0 (2025-06-28)
 
 ### Features
