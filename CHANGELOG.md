@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v2.21.2 (2025-06-30)
+
+### Bug Fixes
+
+- **waveform**: Fix waveform categorisation for aborted scans
+  ([`09c5a44`](https://github.com/bec-project/bec_widgets/commit/09c5a443aac675f02fa1e38179deb9863af152e2))
+
+### Testing
+
+- Assert config for equality, not identity
+  ([`3f5ab14`](https://github.com/bec-project/bec_widgets/commit/3f5ab142a3cb5446261c4faebdc7b13f10ef4a80))
+
+
 ## v2.21.1 (2025-06-29)
 
 ### Bug Fixes
