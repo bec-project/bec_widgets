@@ -1683,9 +1683,14 @@ class Waveform(PlotBase):
                 return None
 
         if hasattr(self.scan_item, "live_data"):
-            readout_priority = self.scan_item.status_message.info["readout_priority"]  # live data
+            readout_priority = self.scan_item.status_message.info.get(
+                "readout_priority"
+            )  # live data
         else:
-            readout_priority = self.scan_item.metadata["bec"]["readout_priority"]  # history
+            readout_priority = self.scan_item.metadata["bec"].get("readout_priority")  # history
+
+        if readout_priority is None:
+            return None
 
         # Reset sync/async curve lists
         self._async_curves.clear()
