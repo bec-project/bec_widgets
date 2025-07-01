@@ -504,6 +504,7 @@ class Waveform(PlotBase):
         if value not in ["timestamp", "index", "auto"]:
             self.x_axis_mode["entry"] = self.entry_validator.validate_signal(value, None)
         self._switch_x_axis_item(mode=value)
+        self._refresh_x_label_suffix()
         self.async_signal_update.emit()
         self.sync_signal_update.emit()
         self.plot_item.enableAutoRange(x=True)
@@ -531,6 +532,7 @@ class Waveform(PlotBase):
             return
         self.x_axis_mode["entry"] = self.entry_validator.validate_signal(self.x_mode, value)
         self._switch_x_axis_item(mode="device")
+        self._refresh_x_label_suffix()
         self.async_signal_update.emit()
         self.sync_signal_update.emit()
         self.plot_item.enableAutoRange(x=True)
@@ -1679,6 +1681,30 @@ class Waveform(PlotBase):
 
         self.x_axis_mode["label_suffix"] = new_suffix
         self.set_x_label_suffix(new_suffix)
+
+    def _refresh_x_label_suffix(self):
+        """
+        Update the x‑axis label suffix immediately based on the current
+        ``x_axis_mode`` dictionary, without waiting for the next data
+        update cycle.
+        """
+        mode = self.x_axis_mode.get("name", "auto")
+
+        if mode == "timestamp":
+            suffix = " (timestamp)"
+        elif mode == "index":
+            suffix = " (index)"
+        elif mode == "auto":
+            suffix = " (auto)"
+        else:
+            x_name = mode
+            x_entry = self.x_axis_mode.get("entry", None)
+            if x_entry:
+                suffix = f" (custom: {x_name}-{x_entry})"
+            else:
+                suffix = f" (custom: {x_name})"
+
+        self._update_x_label_suffix(suffix)
 
     def _switch_x_axis_item(self, mode: str):
         """
