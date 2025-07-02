@@ -62,7 +62,9 @@ class BECProgressBar(BECWidget, QWidget):
     ICON_NAME = "page_control"
 
     def __init__(self, parent=None, client=None, config=None, gui_id=None, **kwargs):
-        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
+        super().__init__(
+            parent=parent, client=client, gui_id=gui_id, config=config, theme_update=True, **kwargs
+        )
 
         accent_colors = get_accent_colors()
 
@@ -89,7 +91,14 @@ class BECProgressBar(BECWidget, QWidget):
 
         # Progress‑bar state handling
         self._state = ProgressState.NORMAL
-        self._state_colors = dict(PROGRESS_STATE_COLORS)
+        # self._state_colors = dict(PROGRESS_STATE_COLORS)
+
+        self._state_colors = {
+            ProgressState.NORMAL: accent_colors.default,
+            ProgressState.PAUSED: accent_colors.warning,
+            ProgressState.INTERRUPTED: accent_colors.emergency,
+            ProgressState.COMPLETED: accent_colors.success,
+        }
 
         # layout settings
         self._padding_left_right = 10
@@ -126,6 +135,16 @@ class BECProgressBar(BECWidget, QWidget):
 
         """
         return self._label_template
+
+    def apply_theme(self, theme=None):
+        """Apply the current theme to the progress bar."""
+        accent_colors = get_accent_colors()
+        self._state_colors = {
+            ProgressState.NORMAL: accent_colors.default,
+            ProgressState.PAUSED: accent_colors.warning,
+            ProgressState.INTERRUPTED: accent_colors.emergency,
+            ProgressState.COMPLETED: accent_colors.success,
+        }
 
     @label_template.setter
     def label_template(self, template):
