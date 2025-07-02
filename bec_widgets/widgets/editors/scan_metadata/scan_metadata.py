@@ -39,21 +39,25 @@ class ScanMetadata(PydanticModelForm):
 
         # self.populate() gets called in super().__init__
         # so make sure self._additional_metadata exists
-        self._additional_md_box = ExpandableGroupFrame(
-            parent, "Additional metadata", expanded=False
-        )
+        self._scan_name = scan_name or ""
+        self._md_schema = get_metadata_schema_for_scan(self._scan_name)
+        super().__init__(parent=parent, data_model=self._md_schema, client=client, **kwargs)
+
+        self._additional_md_box = ExpandableGroupFrame(self, "Additional metadata", expanded=False)
         self._additional_md_box_layout = QHBoxLayout()
         self._additional_md_box.set_layout(self._additional_md_box_layout)
 
-        self._additional_metadata = DictBackedTable(parent, initial_extras or [])
-        self._scan_name = scan_name or ""
-        self._md_schema = get_metadata_schema_for_scan(self._scan_name)
+        self._additional_metadata = DictBackedTable(self, initial_extras or [])
         self._additional_metadata.data_changed.connect(self.validate_form)
-
-        super().__init__(parent=parent, data_model=self._md_schema, client=client, **kwargs)
 
         self._layout.addWidget(self._additional_md_box)
         self._additional_md_box_layout.addWidget(self._additional_metadata)
+
+        self.populate()
+        self.enabled = self._enabled
+
+    def _post_init(self):
+        return
 
     @SafeSlot(str)
     def update_with_new_scan(self, scan_name: str):
