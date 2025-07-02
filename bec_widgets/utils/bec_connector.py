@@ -186,7 +186,6 @@ class BECConnector:
         except:
             logger.error(f"Error getting parent_id for {self.__class__.__name__}")
 
-    @SafeSlot()
     def _run_cleanup_on_deleted_parent(self) -> None:
         """
         Run cleanup on the deleted parent.
