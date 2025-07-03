@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v2.21.3 (2025-07-03)
+
+### Bug Fixes
+
+- **connector**: Remove safeslot for now
+  ([`25f28c4`](https://github.com/bec-project/bec_widgets/commit/25f28c47e32af1be7778803dc27d8c2a367172ed))
+
+### Refactoring
+
+- **toolbar**: Split toolbar into components, bundles and connections
+  ([`db720e8`](https://github.com/bec-project/bec_widgets/commit/db720e8fa46bb2fb10c73afa1b4f039cd256d68b))
+
+
 ## v2.21.2 (2025-06-30)
 
 ### Bug Fixes
