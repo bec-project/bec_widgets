@@ -567,7 +567,9 @@ class ImageBase(PlotBase):
         """
         # Create ROI plot widgets
         self.x_roi = ImageROIPlot(parent=self)
+        self.x_roi.plot_item.setXLink(self.plot_item)
         self.y_roi = ImageROIPlot(parent=self)
+        self.y_roi.plot_item.setYLink(self.plot_item)
         self.x_roi.apply_theme("dark")
         self.y_roi.apply_theme("dark")
 
@@ -638,7 +640,8 @@ class ImageBase(PlotBase):
         else:
             x = coordinates[1]
             y = coordinates[2]
-        image = self.layer_manager["main"].image.image
+        image_item = self.layer_manager["main"].image
+        image = image_item.image
         if image is None:
             return
         max_row, max_col = image.shape[0] - 1, image.shape[1] - 1
@@ -647,14 +650,27 @@ class ImageBase(PlotBase):
             return
         # Horizontal slice
         h_slice = image[:, col]
-        x_axis = np.arange(h_slice.shape[0])
+        x_pixel_indices = np.arange(h_slice.shape[0])
+        if image_item.image_transform is None:
+            h_world_x = np.arange(h_slice.shape[0])
+        else:
+            h_world_x = [
+                image_item.image_transform.map(xi + 0.5, col + 0.5)[0] for xi in x_pixel_indices
+            ]
         self.x_roi.plot_item.clear()
-        self.x_roi.plot_item.plot(x_axis, h_slice, pen=pg.mkPen(self.x_roi.curve_color, width=3))
+        self.x_roi.plot_item.plot(h_world_x, h_slice, pen=pg.mkPen(self.x_roi.curve_color, width=3))
+
         # Vertical slice
         v_slice = image[row, :]
-        y_axis = np.arange(v_slice.shape[0])
+        y_pixel_indices = np.arange(v_slice.shape[0])
+        if image_item.image_transform is None:
+            v_world_y = np.arange(v_slice.shape[0])
+        else:
+            v_world_y = [
+                image_item.image_transform.map(row + 0.5, yi + 0.5)[1] for yi in y_pixel_indices
+            ]
         self.y_roi.plot_item.clear()
-        self.y_roi.plot_item.plot(v_slice, y_axis, pen=pg.mkPen(self.y_roi.curve_color, width=3))
+        self.y_roi.plot_item.plot(v_slice, v_world_y, pen=pg.mkPen(self.y_roi.curve_color, width=3))
 
     ################################################################################
     # Widget Specific Properties

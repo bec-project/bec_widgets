@@ -2,8 +2,10 @@ import numpy as np
 import pyqtgraph as pg
 import pytest
 from qtpy.QtCore import QPointF, Qt
+from qtpy.QtGui import QTransform
 
 from bec_widgets.utils import Crosshair
+from bec_widgets.widgets.plots.image.image_item import ImageItem
 
 # pylint: disable = redefined-outer-name
 
@@ -27,7 +29,7 @@ def image_widget_with_crosshair(qtbot):
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
 
-    image_item = pg.ImageItem()
+    image_item = ImageItem()
     image_item.setImage(np.random.rand(100, 100))
 
     widget.addItem(image_item)
@@ -113,7 +115,7 @@ def test_mouse_moved_signals_2D(image_widget_with_crosshair):
 
     crosshair.mouse_moved(event_mock)
 
-    assert emitted_values_2D == [(str(id(image_item)), 21, 55)]
+    assert emitted_values_2D == [("ImageItem", 21, 55)]
 
 
 def test_mouse_moved_signals_2D_outside(image_widget_with_crosshair):
@@ -311,3 +313,53 @@ def test_crosshair_precision_properties_image(image_widget_with_crosshair):
 
     crosshair.precision = 2
     assert crosshair._current_precision() == 2
+
+
+def test_get_transformed_position(plot_widget_with_crosshair):
+    """Test that _get_transformed_position correctly transforms coordinates."""
+    crosshair, _ = plot_widget_with_crosshair
+
+    # Create a simple transform
+    transform = QTransform()
+    transform.translate(10, 20)  # Origin is now at (10, 20)
+
+    # Test coordinates
+    x, y = 5, 8
+
+    # Get the transformed position
+    row, col = crosshair._get_transformed_position(x, y, transform)
+
+    # Calculate expected values:
+    # row should be the y-offset from origin after transform
+    # col should be the x-offset from origin after transform
+    expected_row = QPointF(0, 8)  # y direction offset
+    expected_col = QPointF(5, 0)  # x direction offset
+
+    # Check that the results match expectations
+    assert row == expected_row
+    assert col == expected_col
+
+
+def test_get_transformed_position_with_scale(plot_widget_with_crosshair):
+    """Test that _get_transformed_position correctly handles scaling transformations."""
+    crosshair, _ = plot_widget_with_crosshair
+
+    # Create a transform with scaling
+    transform = QTransform()
+    transform.translate(10, 20)  # Origin is now at (10, 20)
+    transform.scale(2, 3)  # Scale x by 2 and y by 3
+
+    # Test coordinates
+    x, y = 5, 8
+
+    # Get the transformed position
+    row, col = crosshair._get_transformed_position(x, y, transform)
+
+    # Calculate expected values with scaling applied:
+    # For a scale transform, the offsets should be multiplied by the scale factors
+    expected_row = QPointF(0, 8 * 3)  # y direction offset with scale factor 3
+    expected_col = QPointF(5 * 2, 0)  # x direction offset with scale factor 2
+
+    # Check that the results match expectations
+    assert row == expected_row
+    assert col == expected_col
