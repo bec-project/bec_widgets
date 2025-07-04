@@ -27,7 +27,12 @@ class ImageStats:
         Returns:
             ImageStats: The statistics of the image data.
         """
-        return cls(maximum=np.max(data), minimum=np.min(data), mean=np.mean(data), std=np.std(data))
+        return cls(
+            maximum=np.nanmax(data),
+            minimum=np.nanmin(data),
+            mean=np.nanmean(data),
+            std=np.nanstd(data),
+        )
 
 
 # noinspection PyDataclass
@@ -81,7 +86,7 @@ class ImageProcessor(QObject):
         Returns:
             np.ndarray: The processed data.
         """
-        return np.abs(np.fft.fftshift(np.fft.fft2(data)))
+        return np.abs(np.fft.fftshift(np.fft.fft2(np.nan_to_num(data))))
 
     def rotation(self, data: np.ndarray, rotate_90: int) -> np.ndarray:
         """
