@@ -7,6 +7,7 @@ import pyqtgraph as pg
 from bec_lib.logger import bec_logger
 from pydantic import Field, ValidationError, field_validator
 from qtpy.QtCore import Signal
+from qtpy.QtGui import QTransform
 
 from bec_widgets.utils import BECConnector, Colors, ConnectionConfig
 from bec_widgets.widgets.plots.image.image_processor import (
@@ -88,6 +89,7 @@ class ImageItem(BECConnector, pg.ImageItem):
         super().__init__(config=config, gui_id=gui_id, **kwargs)
 
         self.raw_data = None
+        self.transform = None
         self.buffer = []
         self.max_len = 0
 
@@ -100,8 +102,9 @@ class ImageItem(BECConnector, pg.ImageItem):
     def parent(self):
         return self.parent_image
 
-    def set_data(self, data: np.ndarray):
+    def set_data(self, data: np.ndarray, transform: QTransform | None = None):
         self.raw_data = data
+        self.transform = transform
         self._process_image()
 
     ################################################################################
@@ -215,6 +218,8 @@ class ImageItem(BECConnector, pg.ImageItem):
             self._image_processor.set_config(self.config.processing)
             processed_data = self._image_processor.process_image(self.raw_data)
             self.setImage(processed_data, autoLevels=False)
+            if self.transform is not None:
+                self.setTransform(self.transform)
             self.autorange = autorange
 
     @property
