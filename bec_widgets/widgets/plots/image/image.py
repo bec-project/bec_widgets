@@ -140,7 +140,6 @@ class Image(ImageBase):
         if config is None:
             config = ImageConfig(widget_class=self.__class__.__name__)
         self.gui_id = config.gui_id
-        self._color_bar = None
         self.subscriptions: defaultdict[str, ImageLayerConfig] = defaultdict(
             lambda: ImageLayerConfig(monitor=None, monitor_type="auto", source="auto")
         )
