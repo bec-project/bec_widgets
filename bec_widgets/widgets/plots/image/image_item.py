@@ -86,10 +86,10 @@ class ImageItem(BECConnector, pg.ImageItem):
             self.set_parent(parent_image)
         else:
             self.parent_image = None
+        self.image_transform = None
         super().__init__(config=config, gui_id=gui_id, **kwargs)
 
         self.raw_data = None
-        self.transform = None
         self.buffer = []
         self.max_len = 0
 
@@ -104,7 +104,7 @@ class ImageItem(BECConnector, pg.ImageItem):
 
     def set_data(self, data: np.ndarray, transform: QTransform | None = None):
         self.raw_data = data
-        self.transform = transform
+        self.image_transform = transform
         self._process_image()
 
     ################################################################################
@@ -218,8 +218,8 @@ class ImageItem(BECConnector, pg.ImageItem):
             self._image_processor.set_config(self.config.processing)
             processed_data = self._image_processor.process_image(self.raw_data)
             self.setImage(processed_data, autoLevels=False)
-            if self.transform is not None:
-                self.setTransform(self.transform)
+            if self.image_transform is not None:
+                self.setTransform(self.image_transform)
             self.autorange = autorange
 
     @property

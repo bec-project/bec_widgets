@@ -5,8 +5,11 @@ from typing import Any
 
 import numpy as np
 import pyqtgraph as pg
-from qtpy.QtCore import QObject, Qt, Signal, Slot
+from qtpy.QtCore import QObject, QPointF, Qt, Signal, Slot
+from qtpy.QtGui import QTransform
 from qtpy.QtWidgets import QApplication
+
+from bec_widgets.widgets.plots.image.image_item import ImageItem
 
 
 class CrosshairScatterItem(pg.ScatterPlotItem):
@@ -265,12 +268,16 @@ class Crosshair(QObject):
                     [0, 0], size=[item.image.shape[0], 1], pen=pg.mkPen("r", width=2), movable=False
                 )
                 self.marker_2d_row.skip_auto_range = True
+                if item.image_transform is not None:
+                    self.marker_2d_row.setTransform(item.image_transform)
                 self.plot_item.addItem(self.marker_2d_row)
 
                 # Create vertical ROI for column highlighting
                 self.marker_2d_col = pg.ROI(
                     [0, 0], size=[1, item.image.shape[1]], pen=pg.mkPen("r", width=2), movable=False
                 )
+                if item.image_transform is not None:
+                    self.marker_2d_col.setTransform(item.image_transform)
                 self.marker_2d_col.skip_auto_range = True
                 self.plot_item.addItem(self.marker_2d_col)
 
@@ -316,9 +323,25 @@ class Crosshair(QObject):
                 image_2d = item.image
                 if image_2d is None:
                     continue
-                # Clip the x and y values to the image dimensions to avoid out of bounds errors
-                y_values[name] = int(np.clip(y, 0, image_2d.shape[1] - 1))
-                x_values[name] = int(np.clip(x, 0, image_2d.shape[0] - 1))
+                # Map scene coordinates (plot units) back to image pixel coordinates
+                if item.image_transform is not None:
+                    inv_transform, _ = item.image_transform.inverted()
+                    xy_trans = inv_transform.map(QPointF(x, y))
+                else:
+                    xy_trans = QPointF(x, y)
+
+                # Define valid pixel coordinate bounds
+                min_x_px, min_y_px = 0, 0
+                max_x_px = image_2d.shape[0] - 1  # columns
+                max_y_px = image_2d.shape[1] - 1  # rows
+
+                # Clip the mapped coordinates to the image bounds
+                px = int(np.clip(xy_trans.x(), min_x_px, max_x_px))
+                py = int(np.clip(xy_trans.y(), min_y_px, max_y_px))
+
+                # Store snapped pixel positions
+                x_values[name] = px
+                y_values[name] = py
 
         if x_values and y_values:
             if all(v is None for v in x_values.values()) or all(
@@ -404,10 +427,17 @@ class Crosshair(QObject):
                     x, y = x_snap_values[name], y_snap_values[name]
                     if x is None or y is None:
                         continue
-                    # Set position of horizontal ROI (row)
-                    self.marker_2d_row.setPos([0, y])
-                    # Set position of vertical ROI (column)
-                    self.marker_2d_col.setPos([x, 0])
+
+                    # Compute offsets that respect the image's transform so the ROIs
+                    if isinstance(item, ImageItem) and item.image_transform is not None:
+                        row, col = self._get_transformed_position(x, y, item.image_transform)
+
+                        self.marker_2d_row.setPos(row)
+                        self.marker_2d_col.setPos(col)
+                    else:
+                        self.marker_2d_row.setPos([0, y])
+                        self.marker_2d_col.setPos([x, 0])
+
                     coordinate_to_emit = (name, x, y)
                     self.coordinatesChanged2D.emit(coordinate_to_emit)
                 else:
@@ -462,14 +492,34 @@ class Crosshair(QObject):
                     x, y = x_snap_values[name], y_snap_values[name]
                     if x is None or y is None:
                         continue
-                    # Set position of horizontal ROI (row)
-                    self.marker_2d_row.setPos([0, y])
-                    # Set position of vertical ROI (column)
-                    self.marker_2d_col.setPos([x, 0])
+
+                    if isinstance(item, ImageItem) and item.image_transform is not None:
+                        row, col = self._get_transformed_position(x, y, item.image_transform)
+                        self.marker_2d_row.setPos(row)
+                        self.marker_2d_col.setPos(col)
+                    else:
+                        self.marker_2d_row.setPos([0, y])
+                        self.marker_2d_col.setPos([x, 0])
+
                     coordinate_to_emit = (name, x, y)
                     self.coordinatesClicked2D.emit(coordinate_to_emit)
                 else:
                     continue
+
+    def _get_transformed_position(
+        self, x: float, y: float, transform: QTransform
+    ) -> tuple[QPointF, QPointF]:
+        """
+        Maps the given x and y coordinates to the transformed position using the provided transform.
+        Args:
+            x (float): The x-coordinate to transform.
+            y (float): The y-coordinate to transform.
+            transform (QTransform): The transformation to apply.
+        """
+        origin = transform.map(QPointF(0, 0))
+        row = transform.map(QPointF(0, y)) - origin
+        col = transform.map(QPointF(x, 0)) - origin
+        return row, col
 
     def clear_markers(self):
         """Clears the markers from the plot."""
@@ -512,8 +562,18 @@ class Crosshair(QObject):
                 image = item.image
                 if image is None:
                     continue
-                ix = int(np.clip(x, 0, image.shape[0] - 1))
-                iy = int(np.clip(y, 0, image.shape[1] - 1))
+
+                if item.image_transform is not None:
+                    inv_transform, _ = item.image_transform.inverted()
+                    pt = inv_transform.map(QPointF(x, y))
+                    px, py = pt.x(), pt.y()
+                else:
+                    px, py = x, y
+
+                # Clip to valid pixel indices
+                ix = int(np.clip(px, 0, image.shape[0] - 1))  # column
+                iy = int(np.clip(py, 0, image.shape[1] - 1))  # row
+
                 intensity = image[ix, iy]
                 text += f"\nIntensity: {intensity:.{precision}f}"
                 break
