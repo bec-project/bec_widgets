@@ -260,6 +260,7 @@ class ImageBase(PlotBase):
         """
         self.x_roi = None
         self.y_roi = None
+        self._color_bar = None
         super().__init__(*args, **kwargs)
 
         self.roi_controller = ROIController(colormap="viridis")
