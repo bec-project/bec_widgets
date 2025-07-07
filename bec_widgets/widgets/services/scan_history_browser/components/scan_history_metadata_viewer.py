@@ -20,6 +20,9 @@ logger = bec_logger.logger
 class ScanHistoryMetadataViewer(BECWidget, QtWidgets.QGroupBox):
     """ScanHistoryView is a widget to display the metadata of a ScanHistoryMessage in a structured format."""
 
+    RPC = False
+    PLUGIN = False
+
     def __init__(
         self,
         client=None,
