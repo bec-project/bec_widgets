@@ -1,56 +1,66 @@
+"""Module for displaying scan history devices in a viewer widget."""
+
 from __future__ import annotations
 
-from bec_lib.endpoints import MessageEndpoints
+from typing import TYPE_CHECKING
+
 from bec_lib.logger import bec_logger
 from bec_lib.messages import ScanHistoryMessage
 from bec_qthemes import material_icon
-from qtpy import QtCore, QtGui, QtWidgets
+from qtpy import QtCore, QtWidgets
 
 from bec_widgets.utils.bec_widget import BECWidget, ConnectionConfig
 from bec_widgets.utils.colors import get_accent_colors
-from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.error_popups import SafeSlot
+
+if TYPE_CHECKING:  # pragma: no cover
+    from bec_lib.messages import _StoredDataInfo
 
 logger = bec_logger.logger
 
 
-# TODO check cleanup
-# Custom model
-class DeviceModel(QtCore.QAbstractListModel):
-    def __init__(self, devices=None):
-        super().__init__()
-        if devices is None:
-            devices = {}
-        self._devices = sorted(devices.items(), key=lambda x: -x[1])
+class SignalModel(QtCore.QAbstractListModel):
+    """Custom model for displaying scan history signals in a combo box."""
+
+    def __init__(self, parent=None, signals: dict[str, _StoredDataInfo] = None):
+        super().__init__(parent)
+        if signals is None:
+            signals = {}
+        self._signals: list[tuple[str, _StoredDataInfo]] = sorted(
+            signals.items(), key=lambda x: -x[1].shape[0]
+        )
 
     @property
-    def devices(self):
+    def signals(self) -> list[tuple[str, _StoredDataInfo]]:
         """Return the list of devices."""
-        return self._devices
+        return self._signals
 
-    @devices.setter
-    def devices(self, value: dict[str, int]):
+    @signals.setter
+    def signals(self, value: dict[str, _StoredDataInfo]):
         self.beginResetModel()
-        self._devices = sorted(value.items(), key=lambda x: -x[1])
+        self._signals = sorted(value.items(), key=lambda x: -x[1].shape[0])
         self.endResetModel()
 
     def rowCount(self, parent=QtCore.QModelIndex()):
-        return len(self.devices)
+        return len(self._signals)
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if not index.isValid():
             return None
-        name, num_points = self.devices[index.row()]
+        name, info = self.signals[index.row()]
         if role == QtCore.Qt.DisplayRole:
-            return f"{name} ({num_points})"  # fallback display
+            return f"{name} {info.shape}"  # fallback display
         elif role == QtCore.Qt.UserRole:
             return name
         elif role == QtCore.Qt.UserRole + 1:
-            return num_points
+            return info.shape
         return None
 
 
 # Custom delegate for better formatting
-class DeviceDelegate(QtWidgets.QStyledItemDelegate):
+class SignalDelegate(QtWidgets.QStyledItemDelegate):
+    """Custom delegate for displaying device names and points in the combo box."""
+
     def paint(self, painter, option, index):
         name = index.data(QtCore.Qt.UserRole)
         points = index.data(QtCore.Qt.UserRole + 1)
@@ -76,7 +86,7 @@ class ScanHistoryDeviceViewer(BECWidget, QtWidgets.QWidget):
     RPC = False
     PLUGIN = False
 
-    request_history_plot = QtCore.Signal(str, dict)  # (str, ScanHistoryMessage.model_dump())
+    request_history_plot = QtCore.Signal(str, str, str)  # (scan_id, device_name, signal_name)
 
     def __init__(
         self,
@@ -97,54 +107,93 @@ class ScanHistoryDeviceViewer(BECWidget, QtWidgets.QWidget):
         )
         # Current scan history message
         self.scan_history_msg: ScanHistoryMessage | None = None
-        self._selected_device: str = ""
+        self._last_device_name: str | None = None
+        self._last_signal_name: str | None = None
         # Init layout
-        layout = QtWidgets.QHBoxLayout(self)
+        layout = QtWidgets.QVBoxLayout(self)
         self.setLayout(layout)
-        # Init ComboBox
-        self.device_combo = QtWidgets.QComboBox(self)
+        # Init widgets
+        self.device_combo = QtWidgets.QComboBox(parent=self)
+        self.signal_combo = QtWidgets.QComboBox(parent=self)
         colors = get_accent_colors()
         self.request_plotting_button = QtWidgets.QPushButton(
             material_icon("play_arrow", size=(24, 24), color=colors.success),
             "Request Plotting",
             self,
         )
-        self.device_model = DeviceModel({})
-        self.device_combo.setModel(self.device_model)
-        layout.addWidget(self.device_combo)
-        layout.addWidget(self.request_plotting_button)
-        self.device_combo.setItemDelegate(DeviceDelegate())
+        self.signal_model = SignalModel(parent=self.signal_combo)
+        self.signal_combo.setModel(self.signal_model)
+        self.signal_combo.setItemDelegate(SignalDelegate())
+        self._init_layout()
         # Connect signals
         self.request_plotting_button.clicked.connect(self._on_request_plotting_clicked)
+        self.device_combo.currentTextChanged.connect(self._signal_combo_update)
 
-    @SafeProperty(str)
-    def device(self) -> str:
-        """Get the currently selected device name."""
-        return self._selected_device
+    def _init_layout(self):
+        """Initialize the layout for the device viewer."""
+        main_layout = self.layout()
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        # horzizontal layout for device combo and signal combo boxes
+        widget = QtWidgets.QWidget(self)
+        hor_layout = QtWidgets.QHBoxLayout()
+        hor_layout.setContentsMargins(0, 0, 0, 0)
+        hor_layout.setSpacing(0)
+        widget.setLayout(hor_layout)
+        hor_layout.addWidget(self.device_combo)
+        hor_layout.addWidget(self.signal_combo)
+        main_layout.addWidget(widget)
+        main_layout.addWidget(self.request_plotting_button)
 
-    @device.setter
-    def device(self, value: str):
-        """Set the currently selected device name."""
-        if not isinstance(value, str):
-            logger.info(f"Device name must be a string {value}.")
-        if value not in self.scan_history_msg.device_data_info:
-            logger.info(f"Device name must in the list of selected devices {value}.")
-        self._selected_device = value
+    @SafeSlot(dict, dict)
+    def update_devices_from_scan_history(self, msg: dict, metadata: dict | None = None) -> None:
+        """Update the device combo box with the scan history message.
 
-    @SafeSlot()
-    def update_devices_from_scan_history(self, msg: ScanHistoryMessage) -> None:
-        """Update the device combo box with the scan history message."""
-        if not isinstance(msg, ScanHistoryMessage):
-            logger.info(f"Received message of type {type(msg)} instead of ScanHistoryMessage.")
-            return
+        Args:
+            msg (ScanHistoryMessage): The scan history message containing device data.
+        """
+        msg = ScanHistoryMessage(**msg)
+        if metadata is not None:
+            msg.metadata = metadata
+        # Keep track of current device name
+        self._last_device_name = self.device_combo.currentText()
+
+        current_signal_index = self.signal_combo.currentIndex()
+        self._last_signal_name = self.signal_combo.model().data(
+            self.signal_combo.model().index(current_signal_index, 0), QtCore.Qt.UserRole
+        )
+        # Update the scan history message
         self.scan_history_msg = msg
-        self.device_model.devices = msg.device_data_info
+        self.device_combo.clear()
+        self.device_combo.addItems(msg.stored_data_info.keys())
+        index = self.device_combo.findData(self._last_device_name, role=QtCore.Qt.DisplayRole)
+        if index != -1:
+            self.device_combo.setCurrentIndex(index)
+
+    @SafeSlot(str)
+    def _signal_combo_update(self, device_name: str) -> None:
+        """Update the signal combo box based on the selected device."""
+        if not self.scan_history_msg:
+            logger.info("No scan history message available to update signals.")
+            return
+        if not device_name:
+            return
+        signal_data = self.scan_history_msg.stored_data_info.get(device_name, None)
+        if signal_data is None:
+            logger.info(f"No signal data found for device {device_name}.")
+            return
+        self.signal_model.signals = signal_data
+        if self._last_signal_name is not None:
+            # Try to restore the last selected signal
+            index = self.signal_combo.findData(self._last_signal_name, role=QtCore.Qt.UserRole)
+            if index != -1:
+                self.signal_combo.setCurrentIndex(index)
 
     @SafeSlot()
-    def clear_view(self, msg: ScanHistoryMessage | None = None) -> None:
+    def clear_view(self) -> None:
         """Clear the device combo box."""
         self.scan_history_msg = None
-        self.device_model.devices = {}
+        self.signal_model.signals = {}
         self.device_combo.clear()
 
     @SafeSlot()
@@ -153,20 +202,31 @@ class ScanHistoryDeviceViewer(BECWidget, QtWidgets.QWidget):
         if self.scan_history_msg is None:
             logger.info("No scan history message available for plotting.")
             return
-        current_index = self.device_combo.currentIndex()
-        device_name = self.device_combo.model().data(
-            self.device_combo.model().index(current_index, 0), QtCore.Qt.UserRole
+        device_name = self.device_combo.currentText()
+
+        signal_index = self.signal_combo.currentIndex()
+        signal_name = self.signal_combo.model().data(
+            self.device_combo.model().index(signal_index, 0), QtCore.Qt.UserRole
         )
         logger.info(
-            f"Requesting plotting for device: {device_name} with {self.scan_history_msg} points."
+            f"Requesting plotting clicked: Scan ID:{self.scan_history_msg.scan_id}, device name: {device_name} with signal name: {signal_name}."
         )
-        self.request_history_plot.emit((device_name, self.scan_history_msg))
+        self.request_history_plot.emit(self.scan_history_msg.scan_id, device_name, signal_name)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import sys
 
     app = QtWidgets.QApplication(sys.argv)
+
+    main_window = QtWidgets.QMainWindow()
+    central_widget = QtWidgets.QWidget()
+    main_window.setCentralWidget(central_widget)
+    ly = QtWidgets.QVBoxLayout(central_widget)
+    ly.setContentsMargins(0, 0, 0, 0)
+
     viewer = ScanHistoryDeviceViewer()
-    viewer.show()
-    sys.exit(app.exec_())
+    ly.addWidget(viewer)
+    main_window.show()
+    app.exec_()
+    app.exec_()
