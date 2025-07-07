@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from bec_lib.endpoints import MessageEndpoints
+from typing import TYPE_CHECKING
+
+from bec_lib.callback_handler import EventType
 from bec_lib.logger import bec_logger
 from bec_lib.messages import ScanHistoryMessage
 from qtpy import QtCore, QtGui, QtWidgets
@@ -8,9 +10,46 @@ from qtpy import QtCore, QtGui, QtWidgets
 from bec_widgets.utils.bec_widget import BECWidget, ConnectionConfig
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeSlot
-from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
+
+if TYPE_CHECKING:
+    from bec_lib.client import BECClient
+
 
 logger = bec_logger.logger
+
+
+class BECHistoryManager(QtCore.QObject):
+    """History manager for scan history operations. This class
+    is responsible for emitting signals when the scan history is updated.
+    """
+
+    # ScanHistoryMessage.model_dump() (dict)
+    scan_history_updated = QtCore.Signal(dict)
+
+    def __init__(self, parent, client: BECClient):
+        super().__init__(parent)
+        self.client = client
+        self._cb_id = self.client.callbacks.register(
+            event_type=EventType.SCAN_HISTORY_UPDATE, callback=self._on_scan_history_update
+        )
+
+    def refresh_scan_history(self) -> None:
+        """Refresh the scan history from the client."""
+        for scan_id in self.client.history._scan_ids:  # pylint: disable=protected-access
+            history_msg = self.client.history._scan_data.get(scan_id, None)
+            if history_msg is None:
+                logger.info(f"Scan history message for scan_id {scan_id} not found.")
+                continue
+            self.scan_history_updated.emit(history_msg.model_dump())
+
+    def _on_scan_history_update(self, history_msg: ScanHistoryMessage) -> None:
+        """Handle scan history updates from the client."""
+        self.scan_history_updated.emit(history_msg.model_dump())
+
+    def cleanup(self) -> None:
+        """Clean up the manager by disconnecting callbacks."""
+        self.client.callbacks.remove(self._cb_id)
+        self.scan_history_updated.disconnect()
 
 
 class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
@@ -19,8 +58,9 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
     RPC = False
     PLUGIN = False
 
-    scan_selected = QtCore.Signal(object)
-    scan_removed = QtCore.Signal(object)
+    # ScanHistoryMessage.content, ScanHistoryMessage.metadata
+    scan_selected = QtCore.Signal(dict, dict)
+    no_scan_selected = QtCore.Signal()
 
     def __init__(
         self,
@@ -50,13 +90,17 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
         self.column_header = ["Scan Nr", "Scan Name", "Status"]
         self.scan_history: list[ScanHistoryMessage] = []  # newest at index 0
         self.max_length = max_length  # Maximum number of scan history entries to keep
+        self.bec_scan_history_manager = BECHistoryManager(parent=self, client=self.client)
         self._set_policies()
         self.apply_theme()
-        self._start_subscription()
-        self.itemClicked.connect(self._on_item_clicked)
         self.currentItemChanged.connect(self._current_item_changed)
+        header = self.header()
+        header.setToolTip(f"Last {self.max_length} scans in history.")
+        self.bec_scan_history_manager.scan_history_updated.connect(self.update_history)
+        self.refresh()
 
     def _set_policies(self):
+        """Set the policies for the tree widget."""
         self.setColumnCount(len(self.column_header))
         self.setHeaderLabels(self.column_header)
         self.setRootIsDecorated(False)  # allow expand arrow for per‑scan details
@@ -74,6 +118,7 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
             header.setSectionResizeMode(column, QtWidgets.QHeaderView.ResizeMode.Stretch)
 
     def apply_theme(self, theme: str | None = None):
+        """Apply the theme to the widget."""
         colors = get_accent_colors()
         self.status_colors = {
             "closed": colors.success,
@@ -87,45 +132,35 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
     ):
         """
         Handle current item change events in the tree widget.
-        Emits a signal with the selected scan message when the current item changes.
+
+        Args:
+            current (QtWidgets.QTreeWidgetItem): The currently selected item.
+            previous (QtWidgets.QTreeWidgetItem): The previously selected item.
         """
         if not current:
             return
-        self._on_item_clicked(current, self.currentColumn())
-
-    def _on_item_clicked(self, item: QtWidgets.QTreeWidgetItem, column: int):
-        """
-        Handle item click events in the tree widget.
-        Emits a signal with the selected scan message when an item is clicked.
-        """
-        if not item:
-            return
-        index = self.indexOfTopLevelItem(item)
-        self.scan_selected.emit(self.scan_history[index])
-
-    def _start_subscription(self):
-        """
-        Subscribe to scan history updates.
-        """
-        self.bec_dispatcher.connect_slot(
-            slot=self.update_history, topics=MessageEndpoints.scan_history(), from_start=True
-        )
+        index = self.indexOfTopLevelItem(current)
+        self.scan_selected.emit(self.scan_history[index].content, self.scan_history[index].metadata)
 
     @SafeSlot()
-    def update_history(self, msg_content: dict, metdata: dict):
-        """
-        This method is called whenever a new scan history is available.
-        """
-        # TODO directly receive ScanHistoryMessage through dispatcher
-        msg = ScanHistoryMessage(**msg_content)
-        msg.metadata = metdata
+    def refresh(self):
+        """Refresh the scan history view."""
+        while len(self.scan_history) > 0:
+            self.remove_scan(index=0)
+        self.bec_scan_history_manager.refresh_scan_history()
+
+    @SafeSlot(dict)
+    def update_history(self, msg_dump: dict):
+        """Update the scan history with new scan data."""
+        msg = ScanHistoryMessage(**msg_dump)
         self.add_scan(msg)
         self.ensure_history_max_length()
 
     def ensure_history_max_length(self) -> None:
         """
-        Clean up the scan history by clearing the list.
-        This method can be called when the widget is closed or no longer needed.
+        Method to ensure the scan history does not exceed the maximum length.
+        If the length exceeds the maximum, it removes the oldest entry.
+        This is called after adding a new scan to the history.
         """
         while len(self.scan_history) > self.max_length:
             logger.warning(
@@ -136,9 +171,18 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
     def add_scan(self, msg: ScanHistoryMessage):
         """
         Add a scan entry to the tree widget.
+
         Args:
             msg (ScanHistoryMessage): The scan history message containing scan details.
         """
+        if msg.stored_data_info is None:
+            logger.info(
+                f"Old scan history entry fo scan {msg.scan_id} without stored_data_info, skipping."
+            )
+            return
+        if msg in self.scan_history:
+            logger.info(f"Scan {msg.scan_id} already in history, skipping.")
+            return
         self.scan_history.insert(0, msg)
         tree_item = QtWidgets.QTreeWidgetItem([str(msg.scan_number), msg.scan_name, ""])
         color = QtGui.QColor(self.status_colors.get(msg.exit_status, "#b0bec5"))
@@ -158,7 +202,9 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
 
     def remove_scan(self, index: int):
         """
-        Remove a scan entry from the tree widget. We supoprt negative indexing where -1, -2, etc. refer to the last, second last, etc. entry.
+        Remove a scan entry from the tree widget.
+        We supoprt negative indexing where -1, -2, etc.
+
         Args:
             index (int): The index of the scan entry to remove.
         """
@@ -166,11 +212,16 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
             index = len(self.scan_history) + index
         try:
             msg = self.scan_history.pop(index)
-            self.scan_removed.emit(msg)
+            self.no_scan_selected.emit()
         except IndexError:
             logger.warning(f"Invalid index {index} for removing scan entry from history.")
             return
         self.takeTopLevelItem(index)
+
+    def cleanup(self):
+        """Cleanup the widget"""
+        self.bec_scan_history_manager.cleanup()
+        super().cleanup()
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -203,8 +254,8 @@ if __name__ == "__main__":  # pragma: no cover
     layout.addWidget(device_viewer)
     browser.scan_selected.connect(view.update_view)
     browser.scan_selected.connect(device_viewer.update_devices_from_scan_history)
-    browser.scan_removed.connect(view.clear_view)
-    browser.scan_removed.connect(device_viewer.clear_view)
+    browser.no_scan_selected.connect(view.clear_view)
+    browser.no_scan_selected.connect(device_viewer.clear_view)
 
     main_window.show()
     app.exec_()

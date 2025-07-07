@@ -9,6 +9,11 @@ from bec_widgets.widgets.services.scan_history_browser.components import (
 
 
 class ScanHistoryBrowser(BECWidget, QtWidgets.QWidget):
+    """
+    ScanHistoryBrowser is a widget combining the scan history view, metadata viewer, and device viewer.
+
+    Target is to provide a popup view for the Waveform Widget to browse the scan history.
+    """
 
     RPC = False
     PLUGIN = False
@@ -22,6 +27,16 @@ class ScanHistoryBrowser(BECWidget, QtWidgets.QWidget):
         theme_update: bool = False,
         **kwargs,
     ):
+        """
+        Initialize the ScanHistoryBrowser widget.
+
+        Args:
+            parent (QtWidgets.QWidget, optional): The parent widget.
+            client: The BEC client.
+            config (ConnectionConfig, optional): The connection configuration.
+            gui_id (str, optional): The GUI ID.
+            theme_update (bool, optional): Whether to subscribe to theme updates. Defaults to False.
+        """
         super().__init__(
             parent=parent,
             client=client,
@@ -31,8 +46,8 @@ class ScanHistoryBrowser(BECWidget, QtWidgets.QWidget):
             **kwargs,
         )
         layout = QtWidgets.QHBoxLayout()
-
         self.setLayout(layout)
+
         self.scan_history_view = ScanHistoryView(
             parent=self, client=client, config=config, gui_id=gui_id, theme_update=theme_update
         )
@@ -45,10 +60,9 @@ class ScanHistoryBrowser(BECWidget, QtWidgets.QWidget):
 
         self.init_layout()
         self.connect_signals()
-        QtCore.QTimer.singleShot(0, self.select_first_history_entry)
 
     def init_layout(self):
-        """Initialize the layout of the widget."""
+        """Initialize compact layout for the widget."""
         # Add Scan history view
         layout: QtWidgets.QHBoxLayout = self.layout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -66,19 +80,15 @@ class ScanHistoryBrowser(BECWidget, QtWidgets.QWidget):
         layout.addWidget(widget)
 
     def connect_signals(self):
-        """Connect signals to the appropriate slots."""
+        """Connect signals from scan history components."""
         self.scan_history_view.scan_selected.connect(self.scan_history_metadata_viewer.update_view)
         self.scan_history_view.scan_selected.connect(
             self.scan_history_device_viewer.update_devices_from_scan_history
         )
-        self.scan_history_view.scan_removed.connect(self.scan_history_metadata_viewer.clear_view)
-        self.scan_history_view.scan_removed.connect(self.scan_history_device_viewer.clear_view)
-
-    def select_first_history_entry(self):
-        """Select the first entry in the scan history view."""
-        if self.scan_history_view.topLevelItemCount() > 0:
-            self.scan_history_view.setCurrentItem(self.scan_history_view.topLevelItem(0))
-            self.scan_history_view.itemActivated.emit(self.scan_history_view.topLevelItem(0), 0)
+        self.scan_history_view.no_scan_selected.connect(
+            self.scan_history_metadata_viewer.clear_view
+        )
+        self.scan_history_view.no_scan_selected.connect(self.scan_history_device_viewer.clear_view)
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -100,6 +110,6 @@ if __name__ == "__main__":  # pragma: no cover
     layout.addWidget(button)
     layout.addWidget(browser)
     main_window.setWindowTitle("Scan History Browser")
-    main_window.resize(800, 600)
+    main_window.resize(800, 400)
     main_window.show()
     app.exec_()
