@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.21.4 (2025-07-08)
+
+### Bug Fixes
+
+- **image_roi_tree**: Changing color dialog from ColorButtonNative is open once
+  ([`244bca4`](https://github.com/bec-project/bec_widgets/commit/244bca4e1ec7c00109534b9f503ff2eb125c1ffe))
+
+
 ## v2.21.3 (2025-07-03)
 
 ### Bug Fixes
