@@ -190,3 +190,23 @@ def test_widget_io_signal(qtbot, example_widget):
     toggle.checked = False
     qtbot.waitUntil(lambda: len(changes) > 4)
     assert changes[-1][1] == False
+
+
+def test_find_widgets(example_widget):
+    # Test find_widgets by class type
+    line_edits = WidgetIO.find_widgets(QLineEdit)
+    assert len(line_edits) == 2  # one LineEdit and one in the SpinBox
+    assert isinstance(line_edits[0], QLineEdit)
+
+    # Test find_widgets by class-name string
+    combo_boxes = WidgetIO.find_widgets("QComboBox")
+    assert len(combo_boxes) == 1
+    assert isinstance(combo_boxes[0], QComboBox)
+
+    # Test non-recursive search returns the same widgets
+    combo_boxes_flat = WidgetIO.find_widgets(QComboBox, recursive=False)
+    assert combo_boxes_flat == combo_boxes
+
+    # Test search for non-existent widget returns empty list
+    non_exist = WidgetIO.find_widgets("NonExistentWidget")
+    assert non_exist == []

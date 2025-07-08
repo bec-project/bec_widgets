@@ -264,6 +264,48 @@ class WidgetIO:
                 return WidgetIO._handlers[base]
         return None
 
+    @staticmethod
+    def find_widgets(widget_class: QWidget | str, recursive: bool = True) -> list[QWidget]:
+        """
+        Return widgets matching the given class (or class-name string).
+
+        Args:
+            widget_class: Either a QWidget subclass or its class-name as a string.
+            recursive: If True (default), traverse all top-level widgets and their children;
+                       if False, scan app.allWidgets() for a flat list.
+
+        Returns:
+            List of QWidget instances matching the class or class-name.
+        """
+        app = QApplication.instance()
+        if app is None:
+            raise RuntimeError("No QApplication instance found.")
+
+        # Match by class-name string
+        if isinstance(widget_class, str):
+            name = widget_class
+            if recursive:
+                result: list[QWidget] = []
+                for top in app.topLevelWidgets():
+                    if top.__class__.__name__ == name:
+                        result.append(top)
+                    result.extend(
+                        w for w in top.findChildren(QWidget) if w.__class__.__name__ == name
+                    )
+                return result
+            return [w for w in app.allWidgets() if w.__class__.__name__ == name]
+
+        # Match by actual class
+        if recursive:
+            result: list[QWidget] = []
+            for top in app.topLevelWidgets():
+                if isinstance(top, widget_class):
+                    result.append(top)
+                result.extend(top.findChildren(widget_class))
+            return result
+
+        return [w for w in app.allWidgets() if isinstance(w, widget_class)]
+
 
 ################## for exporting and importing widget hierarchies ##################
 
