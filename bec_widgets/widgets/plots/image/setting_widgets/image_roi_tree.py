@@ -363,7 +363,9 @@ class ROIPropertyTree(BECWidget, QWidget):
         # color button
         color_btn = ColorButtonNative(parent=self, color=roi.line_color)
         self.tree.setItemWidget(parent, self.COL_PROPS, color_btn)
-        color_btn.clicked.connect(lambda: self._pick_color(roi, color_btn))
+        color_btn.color_changed.connect(
+            lambda new_color, r=roi: setattr(r, "line_color", new_color)
+        )
 
         # child rows (3 columns: action, ROI, properties)
         QTreeWidgetItem(parent, ["", "Type", roi.__class__.__name__])
