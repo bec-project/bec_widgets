@@ -5,6 +5,7 @@ from bec_lib.atlas_models import Device as DeviceConfigModel
 from bec_lib.config_helper import CONF as DEVICE_CONF_KEYS
 from bec_lib.config_helper import ConfigHelper
 from bec_lib.logger import bec_logger
+from pydantic import ValidationError, field_validator
 from qtpy.QtCore import QSize, Qt, QThreadPool, Signal
 from qtpy.QtWidgets import (
     QApplication,
@@ -77,6 +78,7 @@ class DeviceConfigDialog(BECWidget, QDialog):
         if self._action == "update":
             self._form._validity.setVisible(False)
         else:
+            self._set_schema_to_check_devices()
             self._form._validity.setVisible(True)
             self._form.validity_proc.connect(self.enable_buttons_for_validity)
         self._add_overlay()
@@ -85,6 +87,17 @@ class DeviceConfigDialog(BECWidget, QDialog):
         self.setLayout(self._container)
         self._form.validate_form()
         self._overlay_widget.setVisible(False)
+
+    def _set_schema_to_check_devices(self):
+        class _NameValidatedConfigModel(DeviceConfigModel):
+            @field_validator("name")
+            @staticmethod
+            def _validate_name(value: str, *_):
+                if value in self.dev:
+                    raise ValueError(f"A device with name {value} already exists!")
+                return value
+
+        self._form.set_schema(_NameValidatedConfigModel)
 
     def _add_form(self):
         self._form_widget = QWidget()

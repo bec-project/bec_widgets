@@ -55,7 +55,9 @@ class DeviceConfigForm(PydanticModelForm):
             qapp.theme_signal.theme_updated.connect(self.set_pretty_display_theme)  # type: ignore
 
     def set_schema(self, schema: type[BaseModel]):
-        raise TypeError("This class doesn't support changing the schema")
+        if not issubclass(schema, DeviceConfigModel):
+            raise TypeError("This class doesn't support changing the schema")
+        super().set_schema(schema)
 
     def set_data(self, data: DeviceConfigModel):  # type: ignore # This class locks the type
         super().set_data(data)
