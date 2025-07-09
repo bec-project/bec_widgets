@@ -5,10 +5,11 @@ from typing import Any
 
 import numpy as np
 import pyqtgraph as pg
-from qtpy.QtCore import QObject, QPointF, Qt, Signal, Slot
+from qtpy.QtCore import QObject, QPointF, Qt, Signal
 from qtpy.QtGui import QTransform
 from qtpy.QtWidgets import QApplication
 
+from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.plots.image.image_item import ImageItem
 
 
@@ -163,7 +164,7 @@ class Crosshair(QObject):
             qapp.theme_signal.theme_updated.connect(self._update_theme)
             self._update_theme()
 
-    @Slot(str)
+    @SafeSlot(str)
     def _update_theme(self, theme: str | None = None):
         """Update the theme."""
         if theme is None:
@@ -190,7 +191,7 @@ class Crosshair(QObject):
         self.coord_label.fill = pg.mkBrush(label_bg_color)
         self.coord_label.border = pg.mkPen(None)
 
-    @Slot(int)
+    @SafeSlot(int)
     def update_highlighted_curve(self, curve_index: int):
         """
         Update the highlighted curve in the case of multiple curves in a plot item.
@@ -593,15 +594,19 @@ class Crosshair(QObject):
         self.is_derivative = self.plot_item.ctrl.derivativeCheck.isChecked()
         self.clear_markers()
 
-    def cleanup(self):
+    @SafeSlot()
+    def reset(self):
+        """Resets the crosshair to its initial state."""
         if self.marker_2d_row is not None:
             self.plot_item.removeItem(self.marker_2d_row)
             self.marker_2d_row = None
         if self.marker_2d_col is not None:
             self.plot_item.removeItem(self.marker_2d_col)
             self.marker_2d_col = None
+        self.clear_markers()
+
+    def cleanup(self):
+        self.reset()
         self.plot_item.removeItem(self.v_line)
         self.plot_item.removeItem(self.h_line)
         self.plot_item.removeItem(self.coord_label)
-
-        self.clear_markers()
