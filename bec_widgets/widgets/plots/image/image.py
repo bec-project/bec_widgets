@@ -565,6 +565,8 @@ class Image(ImageBase):
             self.main_image.clear()
             self.main_image.buffer = []
             self.main_image.max_len = 0
+            if self.crosshair is not None:
+                self.crosshair.reset()
         image_buffer = self.adjust_image_buffer(self.main_image, data)
         if self._color_bar is not None:
             self._color_bar.blockSignals(True)
