@@ -213,14 +213,19 @@ class ImageItem(BECConnector, pg.ImageItem):
         """
         Reprocess the current raw data and update the image display.
         """
-        if self.raw_data is not None:
-            autorange = self.config.autorange
-            self._image_processor.set_config(self.config.processing)
-            processed_data = self._image_processor.process_image(self.raw_data)
-            self.setImage(processed_data, autoLevels=False)
-            if self.image_transform is not None:
-                self.setTransform(self.image_transform)
-            self.autorange = autorange
+        if self.raw_data is None:
+            return
+
+        if np.all(np.isnan(self.raw_data)):
+            return
+
+        autorange = self.config.autorange
+        self._image_processor.set_config(self.config.processing)
+        processed_data = self._image_processor.process_image(self.raw_data)
+        self.setImage(processed_data, autoLevels=False)
+        if self.image_transform is not None:
+            self.setTransform(self.image_transform)
+        self.autorange = autorange
 
     @property
     def fft(self) -> bool:
