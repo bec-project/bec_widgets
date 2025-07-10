@@ -390,17 +390,29 @@ class ListFormItem(DynamicFormItem):
 
     def _add_buttons(self):
         self._button_holder = QWidget()
+        self._button_holder.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self._buttons = QVBoxLayout()
+        self._buttons.setContentsMargins(0, 0, 0, 0)
         self._button_holder.setLayout(self._buttons)
         self._layout.addWidget(self._button_holder)
+
+        self._add_remove_button_holder = QWidget()
+        self._add_remove_button_layout = QHBoxLayout()
+        self._add_remove_button_layout.setContentsMargins(0, 0, 0, 0)
+        self._add_remove_button_holder.setLayout(self._add_remove_button_layout)
+
         self._add_button = QPushButton("+")
+        self._add_button.setMinimumHeight(15)
         self._add_button.setToolTip("add a new row")
         self._remove_button = QPushButton("-")
+        self._remove_button.setMinimumHeight(15)
         self._remove_button.setToolTip("delete the focused row (if any)")
         self._add_button.clicked.connect(self._add_row)
         self._remove_button.clicked.connect(self._delete_row)
-        self._buttons.addWidget(self._add_button)
-        self._buttons.addWidget(self._remove_button)
+
+        self._buttons.addWidget(self._add_remove_button_holder)
+        self._add_remove_button_layout.addWidget(self._add_button)
+        self._add_remove_button_layout.addWidget(self._remove_button)
 
     def _set_pretty_display(self):
         super()._set_pretty_display()
