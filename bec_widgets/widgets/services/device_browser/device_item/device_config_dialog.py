@@ -30,6 +30,15 @@ from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 logger = bec_logger.logger
 
 
+def _try_literal_eval(value: str):
+    if value == "":
+        return ""
+    try:
+        return literal_eval(value)
+    except SyntaxError as e:
+        raise ValueError(f"Entered config value {value} is not a valid python value!") from e
+
+
 class DeviceConfigDialog(BECWidget, QDialog):
     RPC = False
     applied = Signal()
@@ -93,6 +102,10 @@ class DeviceConfigDialog(BECWidget, QDialog):
             @field_validator("name")
             @staticmethod
             def _validate_name(value: str, *_):
+                if not value.isidentifier():
+                    raise ValueError(
+                        f"Invalid device name: {value}. Device names must be valid Python identifiers."
+                    )
                 if value in self.dev:
                     raise ValueError(f"A device with name {value} already exists!")
                 return value
@@ -160,7 +173,7 @@ class DeviceConfigDialog(BECWidget, QDialog):
             diff["deviceConfig"].pop("device_access", None)
             # TODO: replace when https://github.com/bec-project/bec/issues/528 is resolved
             diff["deviceConfig"] = {
-                k: literal_eval(str(v)) for k, v in diff["deviceConfig"].items()
+                k: _try_literal_eval(str(v)) for k, v in diff["deviceConfig"].items() if k != ""
             }
         return diff
 
@@ -213,6 +226,10 @@ class DeviceConfigDialog(BECWidget, QDialog):
 
     @SafeSlot(Exception, popup_error=True)
     def update_error(self, e: Exception):
+        self._stop_waiting_display()
+        if self._action == "update":
+            self._fetch_config()
+            self._fill_form()
         raise RuntimeError("Failed to update device configuration") from e
 
     def _start_waiting_display(self):
