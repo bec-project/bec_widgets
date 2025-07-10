@@ -93,7 +93,6 @@ def test_logpanel_output(qtbot, log_panel: LogPanel):
     assert log_panel.plain_text == TEST_COMBINED_PLAINTEXT
 
     def display_queue_empty():
-        print(log_panel._log_manager._display_queue)
         return len(log_panel._log_manager._display_queue) == 0
 
     next_text = "datetime | error | test log message"

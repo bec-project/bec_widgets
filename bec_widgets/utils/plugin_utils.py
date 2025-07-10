@@ -37,7 +37,6 @@ def get_plugin_widgets() -> dict[str, BECConnector]:
     """
     modules = _get_available_plugins("bec.widgets.user_widgets")
     loaded_plugins = {}
-    print(modules)
     for module in modules:
         mods = inspect.getmembers(module, predicate=_filter_plugins)
         for name, mod_cls in mods:

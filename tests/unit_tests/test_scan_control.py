@@ -296,7 +296,6 @@ def test_on_scan_selected(scan_control, scan_name):
 
     # Check kwargs boxes
     kwargs_group = [param for param in expected_scan_info["gui_config"]["kwarg_groups"]]
-    print(kwargs_group)
 
     for kwarg_box, kwarg_group in zip(scan_control.kwarg_boxes, kwargs_group):
         assert kwarg_box.title() == kwarg_group["name"]

@@ -8,7 +8,6 @@ from bec_widgets.utils.bec_widget import BECWidget
 def suppress_qt_messages(type_, context, msg):
     if context.category in ["js", "default"]:
         return
-    print(msg)
 
 
 qInstallMessageHandler(suppress_qt_messages)

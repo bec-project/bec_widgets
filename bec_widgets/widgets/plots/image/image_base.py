@@ -865,7 +865,6 @@ class ImageBase(PlotBase):
             enabled(bool): Whether to enable autorange.
             sync(bool): Whether to synchronize the autorange state across all layers.
         """
-        print(f"Setting autorange to {enabled}")
         for layer in self.layer_manager:
             if not layer.sync.autorange:
                 continue
@@ -875,7 +874,6 @@ class ImageBase(PlotBase):
                 # if sync:
                 self._sync_colorbar_levels()
         self._sync_autorange_switch()
-        print(f"Autorange set to {enabled}")
 
     @SafeProperty(str)
     def autorange_mode(self) -> str:
@@ -897,7 +895,6 @@ class ImageBase(PlotBase):
         Args:
             mode(str): The autorange mode. Options are "max" or "mean".
         """
-        print(f"Setting autorange mode to {mode}")
         # for qt Designer
         if mode not in ["max", "mean"]:
             return
