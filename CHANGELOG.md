@@ -1,6 +1,37 @@
 # CHANGELOG
 
 
+## v2.22.0 (2025-07-10)
+
+### Bug Fixes
+
+- **crosshair**: Add slot to reset mouse markers
+  ([`adaad4f`](https://github.com/bec-project/bec_widgets/commit/adaad4f4d5ebf775a337e23a944ba9eb289d01a0))
+
+- **crosshair**: Fix crosshair support for transformations
+  ([`3ba0fc4`](https://github.com/bec-project/bec_widgets/commit/3ba0fc4b442e5926f27a13f09d628c30987f2cf8))
+
+- **image**: Reset crosshair on new scan
+  ([`e594de3`](https://github.com/bec-project/bec_widgets/commit/e594de3ca39970f91f5842693eeb1fac393eaa34))
+
+- **image item**: Fix processor for nans in images
+  ([`39c316d`](https://github.com/bec-project/bec_widgets/commit/39c316d6eadfdfbd483661b67720a7e224a46712))
+
+- **image_base**: Move cbar init to image base
+  ([`8929778`](https://github.com/bec-project/bec_widgets/commit/8929778f073c40a9eabba7eda2415fc9af1072bb))
+
+- **image_processor**: Support for nans in nd arrays
+  ([`a6fc799`](https://github.com/bec-project/bec_widgets/commit/a6fc7993a3d22cfd086310c8e6dad3f9f3d1e9fe))
+
+### Features
+
+- Add heatmap widget
+  ([`0c76b0c`](https://github.com/bec-project/bec_widgets/commit/0c76b0c49598d1456aab266b483de327788028fd))
+
+- **image_item**: Add support for qtransform
+  ([`324a5bd`](https://github.com/bec-project/bec_widgets/commit/324a5bd3d9ed278495c6ba62453b02061900ae32))
+
+
 ## v2.21.4 (2025-07-08)
 
 ### Bug Fixes
