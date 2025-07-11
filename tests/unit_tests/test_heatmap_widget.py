@@ -62,8 +62,15 @@ def test_heatmap_get_image_data_missing_data(heatmap_widget):
 
 def test_heatmap_get_image_data_grid_scan(heatmap_widget):
     scan_msg = messages.ScanStatusMessage(
-        scan_id="123", status="open", scan_name="grid_scan", metadata={}, info={}
+        scan_id="123",
+        status="open",
+        scan_name="grid_scan",
+        metadata={},
+        info={},
+        request_inputs={"arg_bundle": ["samx", -5, 5, 10, "samy", -5, 5, 10], "kwargs": {}},
     )
+    heatmap_widget.plot(x_name="samx", y_name="samy", z_name="bpm4i")
+
     heatmap_widget.status_message = scan_msg
     with mock.patch.object(heatmap_widget, "get_grid_scan_image") as mock_get_grid_scan_image:
         heatmap_widget.get_image_data(x_data=[1, 2], y_data=[3, 4], z_data=[5, 6])
