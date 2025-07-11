@@ -6,7 +6,7 @@ from typing import Any
 import numpy as np
 import pyqtgraph as pg
 from qtpy.QtCore import QObject, QPointF, Qt, Signal
-from qtpy.QtGui import QTransform
+from qtpy.QtGui import QCursor, QTransform
 from qtpy.QtWidgets import QApplication
 
 from bec_widgets.utils.error_popups import SafeSlot
@@ -282,6 +282,34 @@ class Crosshair(QObject):
                 self.marker_2d_col.skip_auto_range = True
                 self.plot_item.addItem(self.marker_2d_col)
 
+    @SafeSlot()
+    def update_markers_on_image_change(self):
+        """
+        Update markers when the image changes, e.g. when the
+        image shape or transformation changes.
+        """
+        for item in self.items:
+            if not isinstance(item, pg.ImageItem):
+                continue
+            if self.marker_2d_row is not None:
+                self.marker_2d_row.setSize([item.image.shape[0], 1])
+                self.marker_2d_row.setTransform(item.image_transform)
+            if self.marker_2d_col is not None:
+                self.marker_2d_col.setSize([1, item.image.shape[1]])
+                self.marker_2d_col.setTransform(item.image_transform)
+            # Get the current mouse position
+            views = self.plot_item.vb.scene().views()
+            if not views:
+                return
+            view = views[0]
+            global_pos = QCursor.pos()
+            view_pos = view.mapFromGlobal(global_pos)
+            scene_pos = view.mapToScene(view_pos)
+
+            if self.plot_item.vb.sceneBoundingRect().contains(scene_pos):
+                plot_pt = self.plot_item.vb.mapSceneToView(scene_pos)
+                self.mouse_moved(manual_pos=(plot_pt.x(), plot_pt.y()))
+
     def snap_to_data(
         self, x: float, y: float
     ) -> tuple[None, None] | tuple[defaultdict[Any, list], defaultdict[Any, list]]:
@@ -382,67 +410,74 @@ class Crosshair(QObject):
 
         return list_x[original_index], list_y[original_index]
 
-    def mouse_moved(self, event):
-        """Handles the mouse moved event, updating the crosshair position and emitting signals.
+    @SafeSlot(object, tuple)
+    def mouse_moved(self, event=None, manual_pos=None):
+        """
+        Handles the mouse moved event, updating the crosshair position and emitting signals.
 
         Args:
-            event: The mouse moved event
+            event(object): The mouse moved event, which contains the scene position.
+            manual_pos(tuple, optional): A tuple containing the (x, y) coordinates to manually set the crosshair position.
         """
-        pos = event[0]
+        # Determine target (x, y) in *plot* coordinates
+        if manual_pos is not None:
+            x, y = manual_pos
+        else:
+            if event is None:
+                return  # nothing to do
+            scene_pos = event[0]  # SignalProxy bundle
+            if not self.plot_item.vb.sceneBoundingRect().contains(scene_pos):
+                return
+            view_pos = self.plot_item.vb.mapSceneToView(scene_pos)
+            x, y = view_pos.x(), view_pos.y()
+
+        # Update cross‑hair visuals
+        self.v_line.setPos(x)
+        self.h_line.setPos(y)
+
         self.update_markers()
-        if self.plot_item.vb.sceneBoundingRect().contains(pos):
-            mouse_point = self.plot_item.vb.mapSceneToView(pos)
-            x, y = mouse_point.x(), mouse_point.y()
-            self.v_line.setPos(x)
-            self.h_line.setPos(y)
-            scaled_x, scaled_y = self.scale_emitted_coordinates(mouse_point.x(), mouse_point.y())
-            self.crosshairChanged.emit((scaled_x, scaled_y))
-            self.positionChanged.emit((x, y))
+        scaled_x, scaled_y = self.scale_emitted_coordinates(x, y)
+        self.crosshairChanged.emit((scaled_x, scaled_y))
+        self.positionChanged.emit((x, y))
 
-            x_snap_values, y_snap_values = self.snap_to_data(x, y)
-            if x_snap_values is None or y_snap_values is None:
-                return
-            if all(v is None for v in x_snap_values.values()) or all(
-                v is None for v in y_snap_values.values()
-            ):
-                # not sure how we got here, but just to be safe...
-                return
+        snap_x_vals, snap_y_vals = self.snap_to_data(x, y)
+        if snap_x_vals is None or snap_y_vals is None:
+            return
+        if all(v is None for v in snap_x_vals.values()) or all(
+            v is None for v in snap_y_vals.values()
+        ):
+            return
 
-            precision = self._current_precision()
-            for item in self.items:
-                if isinstance(item, pg.PlotDataItem):
-                    name = item.name() or str(id(item))
-                    x, y = x_snap_values[name], y_snap_values[name]
-                    if x is None or y is None:
-                        continue
-                    self.marker_moved_1d[name].setData([x], [y])
-                    x_snapped_scaled, y_snapped_scaled = self.scale_emitted_coordinates(x, y)
-                    coordinate_to_emit = (
-                        name,
-                        round(x_snapped_scaled, precision),
-                        round(y_snapped_scaled, precision),
-                    )
-                    self.coordinatesChanged1D.emit(coordinate_to_emit)
-                elif isinstance(item, pg.ImageItem):
-                    name = item.objectName() or str(id(item))
-                    x, y = x_snap_values[name], y_snap_values[name]
-                    if x is None or y is None:
-                        continue
+        precision = self._current_precision()
 
-                    # Compute offsets that respect the image's transform so the ROIs
-                    if isinstance(item, ImageItem) and item.image_transform is not None:
-                        row, col = self._get_transformed_position(x, y, item.image_transform)
-
-                        self.marker_2d_row.setPos(row)
-                        self.marker_2d_col.setPos(col)
-                    else:
-                        self.marker_2d_row.setPos([0, y])
-                        self.marker_2d_col.setPos([x, 0])
-
-                    coordinate_to_emit = (name, x, y)
-                    self.coordinatesChanged2D.emit(coordinate_to_emit)
-                else:
+        for item in self.items:
+            if isinstance(item, pg.PlotDataItem):
+                name = item.name() or str(id(item))
+                sx, sy = snap_x_vals[name], snap_y_vals[name]
+                if sx is None or sy is None:
                     continue
+                self.marker_moved_1d[name].setData([sx], [sy])
+                sx_s, sy_s = self.scale_emitted_coordinates(sx, sy)
+                self.coordinatesChanged1D.emit(
+                    (name, round(sx_s, precision), round(sy_s, precision))
+                )
+
+            elif isinstance(item, pg.ImageItem):
+                name = item.objectName() or str(id(item))
+                px, py = snap_x_vals[name], snap_y_vals[name]
+                if px is None or py is None:
+                    continue
+
+                # Respect image transforms
+                if isinstance(item, ImageItem) and item.image_transform is not None:
+                    row, col = self._get_transformed_position(px, py, item.image_transform)
+                    self.marker_2d_row.setPos(row)
+                    self.marker_2d_col.setPos(col)
+                else:
+                    self.marker_2d_row.setPos([0, py])
+                    self.marker_2d_col.setPos([px, 0])
+
+                self.coordinatesChanged2D.emit((name, px, py))
 
     def mouse_clicked(self, event):
         """Handles the mouse clicked event, updating the crosshair position and emitting signals.
