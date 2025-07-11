@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.22.2 (2025-07-11)
+
+### Bug Fixes
+
+- **plot_base**: Autorange takes into account only visible curves
+  ([`7643986`](https://github.com/bec-project/bec_widgets/commit/76439866c1fd09cb7d9d48dfccdc7b1943bfbc0f))
+
+
 ## v2.22.1 (2025-07-11)
 
 ### Bug Fixes
