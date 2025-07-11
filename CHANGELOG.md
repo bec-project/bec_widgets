@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v2.23.0 (2025-07-11)
+
+### Features
+
+- **widget_finder**: Widget to fetch any other widget by class from currently running app
+  ([`a9fce17`](https://github.com/bec-project/bec_widgets/commit/a9fce175b720ad85a5cefcab99d79fbcb971ff4a))
+
+- **widget_io**: Utility function to find widget in the app by class
+  ([`783d042`](https://github.com/bec-project/bec_widgets/commit/783d042e8c469774fc8407921462a99c96f6d408))
+
+
 ## v2.22.2 (2025-07-11)
 
 ### Bug Fixes
