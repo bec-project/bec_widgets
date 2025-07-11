@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v2.22.1 (2025-07-11)
+
+### Bug Fixes
+
+- **crosshair**: Crosshair mouse_moved can be set manually
+  ([`63a8da6`](https://github.com/bec-project/bec_widgets/commit/63a8da680d263a50102aacf463ec6f6252562f9d))
+
+- **heatmap**: Fix pixel size calculation for arbitrary shapes
+  ([`6c49425`](https://github.com/bec-project/bec_widgets/commit/6c494258f82059a2472f43bb8287390ce1aba704))
+
+
 ## v2.22.0 (2025-07-10)
 
 ### Bug Fixes
