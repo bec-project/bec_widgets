@@ -165,5 +165,4 @@ class MouseInteractionConnection(BundleConnection):
         Enable autorange on the plot widget.
         """
         if self.target_widget:
-            self.target_widget.auto_range_x = True
-            self.target_widget.auto_range_y = True
+            self.target_widget.auto_range()

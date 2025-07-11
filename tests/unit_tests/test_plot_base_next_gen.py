@@ -1,3 +1,5 @@
+import numpy as np
+
 from bec_widgets.widgets.plots.plot_base import PlotBase, UIMode
 
 from .client_mocks import mocked_client
@@ -124,6 +126,31 @@ def test_auto_range_x_y(qtbot, mocked_client):
     assert pb.plot_item.vb.state["autoRange"][0] is False
     pb.auto_range_y = False
     assert pb.plot_item.vb.state["autoRange"][1] is False
+
+
+def test_autorange_respects_visibility(qtbot, mocked_client):
+    """
+    Autorange must consider only the curves whose .isVisible() flag is True.
+    """
+
+    pb = create_widget(qtbot, PlotBase, client=mocked_client)
+
+    x = np.arange(10)
+    small = pb.plot_item.plot(x, x, pen=(255, 0, 0))  # 0‒9
+    medium = pb.plot_item.plot(x, x * 10, pen=(0, 255, 0))  # 0‒90
+    large = pb.plot_item.plot(x, x * 100, pen=(0, 0, 255))  # 0‒900
+
+    pb.auto_range(True)
+    qtbot.wait(200)
+    yspan_full = pb.plot_item.vb.viewRange()[1]
+    assert yspan_full[1] > 800, "Autorange must include the largest visible curve."
+
+    # Hide the largest curve, recompute autorange, and expect the span to shrink.
+    large.setVisible(False)
+    pb.auto_range(True)
+    qtbot.wait(200)
+    yspan_reduced = pb.plot_item.vb.viewRange()[1]
+    assert yspan_reduced[1] < 200, "Hidden curves must be excluded from autorange."
 
 
 def test_x_log_y_log(qtbot, mocked_client):

@@ -881,6 +881,38 @@ class PlotBase(BECWidget, QWidget):
         """
         self.plot_item.enableAutoRange(y=value)
 
+    def auto_range(self, value: bool = True):
+        """
+        On demand apply autorange to the plot item based on the visible curves.
+
+        Args:
+            value(bool): If True, apply autorange to the visible curves.
+        """
+        if not value:
+            self.plot_item.enableAutoRange(x=False, y=False)
+            return
+        self._apply_autorange_only_visible_curves()
+
+    def _fetch_visible_curves(self):
+        """
+        Fetch all visible curves from the plot item.
+        """
+        visible_curves = []
+        for curve in self.plot_item.curves:
+            if curve.isVisible():
+                visible_curves.append(curve)
+        return visible_curves
+
+    def _apply_autorange_only_visible_curves(self):
+        """
+        Apply autorange to the plot item based on the provided curves.
+
+        Args:
+            curves (list): List of curves to apply autorange to.
+        """
+        visible_curves = self._fetch_visible_curves()
+        self.plot_item.autoRange(items=visible_curves if visible_curves else None)
+
     @SafeProperty(int, doc="The font size of the legend font.")
     def legend_label_size(self) -> int:
         """
