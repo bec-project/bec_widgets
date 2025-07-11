@@ -4554,6 +4554,15 @@ class Waveform(RPCBase):
         Set auto range for the y-axis.
         """
 
+    @rpc_call
+    def auto_range(self, value: "bool" = True):
+        """
+        On demand apply autorange to the plot item based on the visible curves.
+
+        Args:
+            value(bool): If True, apply autorange to the visible curves.
+        """
+
     @property
     @rpc_call
     def x_log(self) -> "bool":
