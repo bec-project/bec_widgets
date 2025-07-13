@@ -5,6 +5,7 @@ from qtpy.QtGui import QPainter, QPaintEvent, QPen
 from qtpy.QtWidgets import QComboBox, QSizePolicy
 
 from bec_widgets.utils.colors import get_accent_colors
+from bec_widgets.utils.error_popups import SafeProperty
 from bec_widgets.widgets.control.device_input.base_classes.device_input_base import (
     BECDeviceFilter,
     DeviceInputBase,
@@ -61,6 +62,7 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         self._callback_id = None
         self._is_valid_input = False
         self._accent_colors = get_accent_colors()
+        self._set_first_element_as_empty = False
         # We do not consider the config that is passed here, this produced problems
         # with QtDesigner, since config and input arguments may differ and resolve properly
         # Implementing this logic and config recoverage is postponed.
@@ -92,6 +94,31 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         self.device_config_update.connect(self.update_devices_from_filters)
         self.currentTextChanged.connect(self.check_validity)
         self.check_validity(self.currentText())
+
+    @SafeProperty(bool)
+    def set_first_element_as_empty(self) -> bool:
+        """
+        Whether the first element in the combobox should be empty.
+        This is useful to allow the user to select a device from the list.
+        """
+        return self._set_first_element_as_empty
+
+    @set_first_element_as_empty.setter
+    def set_first_element_as_empty(self, value: bool) -> None:
+        """
+        Set whether the first element in the combobox should be empty.
+        This is useful to allow the user to select a device from the list.
+
+        Args:
+            value (bool): True if the first element should be empty, False otherwise.
+        """
+        self._set_first_element_as_empty = value
+        if self._set_first_element_as_empty:
+            self.insertItem(0, "")
+            self.setCurrentIndex(0)
+        else:
+            if self.count() > 0 and self.itemText(0) == "":
+                self.removeItem(0)
 
     def on_device_update(self, action: str, content: dict) -> None:
         """
