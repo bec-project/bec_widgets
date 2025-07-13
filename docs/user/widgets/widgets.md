@@ -61,6 +61,14 @@ Display a 1D waveforms with a third device on the z-axis.
 Display signal from 2D detector.
 ```
 
+```{grid-item-card}  Heatmap Widget
+:link: user.widgets.heatmap_widget
+:link-type: ref
+:img-top: /assets/widget_screenshots/heatmap_widget.png
+
+Display 2D grid data with color mapping.
+```
+
 ```{grid-item-card}  Motor Map Widget
 :link: user.widgets.motor_map
 :link-type: ref
@@ -275,6 +283,7 @@ waveform/waveform_widget.md
 scatter_waveform/scatter_waveform.md
 multi_waveform/multi_waveform.md
 image/image_widget.md
+heatmap/heatmap_widget.md
 motor_map/motor_map.md
 scan_control/scan_control.md
 progress_bar/ring_progress_bar.md

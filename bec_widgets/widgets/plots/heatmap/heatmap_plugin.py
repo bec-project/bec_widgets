@@ -27,7 +27,7 @@ class HeatmapPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return ""
+        return "Plot Widgets"
 
     def icon(self):
         return designer_material_icon(Heatmap.ICON_NAME)

@@ -1566,6 +1566,48 @@ class Heatmap(RPCBase):
 
     @property
     @rpc_call
+    def interpolation_method(self) -> "str":
+        """
+        The interpolation method used for the heatmap.
+        """
+
+    @interpolation_method.setter
+    @rpc_call
+    def interpolation_method(self) -> "str":
+        """
+        The interpolation method used for the heatmap.
+        """
+
+    @property
+    @rpc_call
+    def oversampling_factor(self) -> "float":
+        """
+        The oversampling factor for grid resolution.
+        """
+
+    @oversampling_factor.setter
+    @rpc_call
+    def oversampling_factor(self) -> "float":
+        """
+        The oversampling factor for grid resolution.
+        """
+
+    @property
+    @rpc_call
+    def enforce_interpolation(self) -> "bool":
+        """
+        Whether to enforce interpolation even for grid scans.
+        """
+
+    @enforce_interpolation.setter
+    @rpc_call
+    def enforce_interpolation(self) -> "bool":
+        """
+        Whether to enforce interpolation even for grid scans.
+        """
+
+    @property
+    @rpc_call
     def fft(self) -> "bool":
         """
         Whether FFT postprocessing is enabled.
@@ -1649,12 +1691,32 @@ class Heatmap(RPCBase):
         y_entry: "None | str" = None,
         z_entry: "None | str" = None,
         color_map: "str | None" = "plasma",
-        label: "str | None" = None,
         validate_bec: "bool" = True,
+        interpolation: "Literal['linear', 'nearest'] | None" = None,
+        enforce_interpolation: "bool | None" = None,
+        oversampling_factor: "float | None" = None,
+        lock_aspect_ratio: "bool | None" = None,
+        show_config_label: "bool | None" = None,
         reload: "bool" = False,
     ):
         """
         Plot the heatmap with the given x, y, and z data.
+
+        Args:
+            x_name (str): The name of the x-axis signal.
+            y_name (str): The name of the y-axis signal.
+            z_name (str): The name of the z-axis signal.
+            x_entry (str | None): The entry for the x-axis signal.
+            y_entry (str | None): The entry for the y-axis signal.
+            z_entry (str | None): The entry for the z-axis signal.
+            color_map (str | None): The color map to use for the heatmap.
+            validate_bec (bool): Whether to validate the entries against BEC signals.
+            interpolation (Literal["linear", "nearest"] | None): The interpolation method to use.
+            enforce_interpolation (bool | None): Whether to enforce interpolation even for grid scans.
+            oversampling_factor (float | None): Factor to oversample the grid resolution.
+            lock_aspect_ratio (bool | None): Whether to lock the aspect ratio of the image.
+            show_config_label (bool | None): Whether to show the configuration label in the heatmap.
+            reload (bool): Whether to reload the heatmap with new data.
         """
 
 

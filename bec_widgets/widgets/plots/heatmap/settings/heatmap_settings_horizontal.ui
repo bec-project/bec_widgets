@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>604</width>
-    <height>166</height>
+    <width>826</width>
+    <height>300</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,19 +17,161 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
-      <widget class="QLabel" name="label_7">
-       <property name="text">
-        <string>Validate BEC</string>
+      <widget class="QGroupBox" name="groupBox_4">
+       <property name="title">
+        <string>Interpolation</string>
        </property>
+       <layout class="QGridLayout" name="gridLayout_4">
+        <item row="1" column="2" alignment="Qt::AlignmentFlag::AlignRight">
+         <widget class="ToggleSwitch" name="enforce_interpolation">
+          <property name="toolTip">
+           <string>Use the interpolation mode even for grid scans</string>
+          </property>
+          <property name="checked" stdset="0">
+           <bool>false</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLabel" name="label_9">
+          <property name="toolTip">
+           <string>Use the interpolation mode even for grid scans</string>
+          </property>
+          <property name="text">
+           <string>Enforce Interpolation</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="2">
+         <widget class="QDoubleSpinBox" name="oversampling_factor">
+          <property name="decimals">
+           <number>1</number>
+          </property>
+          <property name="minimum">
+           <double>1.000000000000000</double>
+          </property>
+          <property name="maximum">
+           <double>10.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="2">
+         <widget class="QComboBox" name="interpolation">
+          <property name="minimumSize">
+           <size>
+            <width>100</width>
+            <height>26</height>
+           </size>
+          </property>
+          <item>
+           <property name="text">
+            <string>linear</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>nearest</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>clough</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item row="5" column="1">
+         <widget class="QLabel" name="label_10">
+          <property name="text">
+           <string>Oversampling</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QLabel" name="label_8">
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>50</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Interpolation Method</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </widget>
      </item>
      <item>
-      <widget class="ToggleSwitch" name="validate_bec"/>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>16</height>
+        </size>
+       </property>
+      </spacer>
      </item>
-     <item>
-      <widget class="BECColorMapWidget" name="color_map"/>
+     <item alignment="Qt::AlignmentFlag::AlignRight">
+      <widget class="QGroupBox" name="groupBox_5">
+       <property name="title">
+        <string>General</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_5">
+        <item row="2" column="1">
+         <widget class="QLabel" name="label_7">
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>50</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Validate BEC</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="3" alignment="Qt::AlignmentFlag::AlignRight">
+         <widget class="ToggleSwitch" name="validate_bec"/>
+        </item>
+        <item row="3" column="3" alignment="Qt::AlignmentFlag::AlignRight">
+         <widget class="BECColorMapWidget" name="color_map">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>50</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QLabel" name="label_11">
+          <property name="text">
+           <string>Colormap</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
      </item>
     </layout>
+   </item>
+   <item>
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Orientation::Horizontal</enum>
+     </property>
+    </widget>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
@@ -46,9 +188,6 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="1">
-         <widget class="DeviceLineEdit" name="x_name"/>
-        </item>
         <item row="1" column="0">
          <widget class="QLabel" name="label_2">
           <property name="text">
@@ -56,8 +195,22 @@
           </property>
          </widget>
         </item>
+        <item row="0" column="1">
+         <widget class="DeviceComboBox" name="x_name">
+          <property name="editable">
+           <bool>true</bool>
+          </property>
+          <property name="set_first_element_as_empty" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
         <item row="1" column="1">
-         <widget class="QLineEdit" name="x_entry"/>
+         <widget class="SignalComboBox" name="x_entry">
+          <property name="editable">
+           <bool>true</bool>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
@@ -75,9 +228,6 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="1">
-         <widget class="DeviceLineEdit" name="y_name"/>
-        </item>
         <item row="1" column="0">
          <widget class="QLabel" name="label_4">
           <property name="text">
@@ -85,8 +235,22 @@
           </property>
          </widget>
         </item>
+        <item row="0" column="1">
+         <widget class="DeviceComboBox" name="y_name">
+          <property name="editable">
+           <bool>true</bool>
+          </property>
+          <property name="set_first_element_as_empty" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
         <item row="1" column="1">
-         <widget class="QLineEdit" name="y_entry"/>
+         <widget class="SignalComboBox" name="y_entry">
+          <property name="editable">
+           <bool>true</bool>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
@@ -111,11 +275,22 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="1">
-         <widget class="QLineEdit" name="z_entry"/>
-        </item>
         <item row="0" column="1">
-         <widget class="DeviceLineEdit" name="z_name"/>
+         <widget class="DeviceComboBox" name="z_name">
+          <property name="editable">
+           <bool>true</bool>
+          </property>
+          <property name="set_first_element_as_empty" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="SignalComboBox" name="z_entry">
+          <property name="editable">
+           <bool>true</bool>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
@@ -126,9 +301,14 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>DeviceLineEdit</class>
-   <extends>QLineEdit</extends>
-   <header>device_line_edit</header>
+   <class>DeviceComboBox</class>
+   <extends>QComboBox</extends>
+   <header>device_combobox</header>
+  </customwidget>
+  <customwidget>
+   <class>SignalComboBox</class>
+   <extends>QComboBox</extends>
+   <header>signal_combo_box</header>
   </customwidget>
   <customwidget>
    <class>ToggleSwitch</class>
@@ -143,59 +323,109 @@
  </customwidgets>
  <tabstops>
   <tabstop>x_name</tabstop>
-  <tabstop>x_entry</tabstop>
   <tabstop>y_name</tabstop>
-  <tabstop>y_entry</tabstop>
   <tabstop>z_name</tabstop>
+  <tabstop>x_entry</tabstop>
+  <tabstop>y_entry</tabstop>
   <tabstop>z_entry</tabstop>
+  <tabstop>interpolation</tabstop>
+  <tabstop>oversampling_factor</tabstop>
  </tabstops>
  <resources/>
  <connections>
   <connection>
    <sender>x_name</sender>
-   <signal>textChanged(QString)</signal>
+   <signal>device_reset()</signal>
    <receiver>x_entry</receiver>
-   <slot>clear()</slot>
+   <slot>reset_selection()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>134</x>
-     <y>95</y>
+     <x>254</x>
+     <y>226</y>
     </hint>
     <hint type="destinationlabel">
-     <x>138</x>
-     <y>128</y>
+     <x>254</x>
+     <y>267</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>x_name</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>x_entry</receiver>
+   <slot>set_device(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>254</x>
+     <y>226</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>254</x>
+     <y>267</y>
     </hint>
    </hints>
   </connection>
   <connection>
    <sender>y_name</sender>
-   <signal>textChanged(QString)</signal>
+   <signal>device_reset()</signal>
    <receiver>y_entry</receiver>
-   <slot>clear()</slot>
+   <slot>reset_selection()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>351</x>
-     <y>91</y>
+     <x>526</x>
+     <y>226</y>
     </hint>
     <hint type="destinationlabel">
-     <x>349</x>
-     <y>121</y>
+     <x>526</x>
+     <y>267</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>y_name</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>y_entry</receiver>
+   <slot>set_device(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>526</x>
+     <y>226</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>526</x>
+     <y>267</y>
     </hint>
    </hints>
   </connection>
   <connection>
    <sender>z_name</sender>
-   <signal>textChanged(QString)</signal>
+   <signal>device_reset()</signal>
    <receiver>z_entry</receiver>
-   <slot>clear()</slot>
+   <slot>reset_selection()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>520</x>
-     <y>98</y>
+     <x>798</x>
+     <y>226</y>
     </hint>
     <hint type="destinationlabel">
-     <x>522</x>
-     <y>127</y>
+     <x>798</x>
+     <y>267</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>z_name</sender>
+   <signal>currentTextChanged(QString)</signal>
+   <receiver>z_entry</receiver>
+   <slot>set_device(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>798</x>
+     <y>226</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>798</x>
+     <y>267</y>
     </hint>
    </hints>
   </connection>

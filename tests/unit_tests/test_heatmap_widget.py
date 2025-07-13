@@ -3,6 +3,7 @@ from unittest import mock
 import numpy as np
 import pytest
 from bec_lib import messages
+from bec_lib.scan_history import ScanHistory
 
 from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap, HeatmapConfig, HeatmapDeviceSignal
 
@@ -323,7 +324,43 @@ def test_heatmap_settings_popup_show_settings(heatmap_widget, qtbot):
 
     # Check that the ui elements are correctly initialized
     assert dialog.widget.ui.color_map.colormap == heatmap_widget.color_map
-    assert dialog.widget.ui.x_name.text() == heatmap_widget._image_config.x_device.name
+    assert dialog.widget.ui.x_name.currentText() == heatmap_widget._image_config.x_device.name
 
     dialog.reject()
     qtbot.waitUntil(lambda: heatmap_widget.heatmap_dialog is None)
+
+
+def test_heatmap_widget_reset(heatmap_widget):
+    """
+    Test that the reset method clears the plot.
+    """
+    heatmap_widget.scan_item = create_dummy_scan_item()
+    heatmap_widget.plot(x_name="samx", y_name="samy", z_name="bpm4i")
+
+    heatmap_widget.reset()
+    assert heatmap_widget._grid_index is None
+    assert heatmap_widget.main_image.raw_data is None
+
+
+def test_heatmap_widget_update_plot_with_scan_history(heatmap_widget, grid_scan_history_msg, qtbot):
+    """
+    Test that the update_plot method updates the plot with scan history.
+    """
+    heatmap_widget.client.history = ScanHistory(heatmap_widget.client, False)
+    heatmap_widget.client.history._scan_data[grid_scan_history_msg.scan_id] = grid_scan_history_msg
+    heatmap_widget.client.history._scan_ids.append(grid_scan_history_msg.scan_id)
+    heatmap_widget.client.queue.scan_storage.current_scan = None
+    heatmap_widget.plot(
+        x_name="samx",
+        y_name="samy",
+        z_name="bpm4i",
+        x_entry="samx",
+        y_entry="samy",
+        z_entry="bpm4i",
+    )
+    qtbot.waitUntil(lambda: heatmap_widget.main_image.raw_data is not None)
+    qtbot.waitUntil(lambda: heatmap_widget.main_image.raw_data.shape == (10, 10))
+
+    heatmap_widget.enforce_interpolation = True
+    heatmap_widget.oversampling_factor = 2.0
+    qtbot.waitUntil(lambda: heatmap_widget.main_image.raw_data.shape == (20, 20))
