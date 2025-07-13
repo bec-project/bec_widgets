@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import functools
 import json
 from typing import Literal
 
@@ -11,7 +10,11 @@ from bec_lib.endpoints import MessageEndpoints
 from pydantic import BaseModel, Field, field_validator
 from qtpy.QtCore import QTimer, Signal
 from qtpy.QtGui import QTransform
-from scipy.interpolate import LinearNDInterpolator
+from scipy.interpolate import (
+    CloughTocher2DInterpolator,
+    LinearNDInterpolator,
+    NearestNDInterpolator,
+)
 from scipy.spatial import cKDTree
 from toolz import partition
 
@@ -43,6 +46,19 @@ class HeatmapConfig(ConnectionConfig):
     )
     color_bar: Literal["full", "simple"] | None = Field(
         None, description="The type of the color bar."
+    )
+    interpolation: Literal["linear", "nearest", "clough"] = Field(
+        "linear", description="The interpolation method for the heatmap."
+    )
+    oversampling_factor: float = Field(
+        1.0,
+        description="Factor to oversample the grid resolution (1.0 = no oversampling, 2.0 = 2x resolution).",
+    )
+    show_config_label: bool = Field(
+        True, description="Whether to show the configuration label in the heatmap."
+    )
+    enforce_interpolation: bool = Field(
+        False, description="Whether to use the interpolation mode even for grid scans."
     )
     lock_aspect_ratio: bool = Field(
         False, description="Whether to lock the aspect ratio of the image."
@@ -119,6 +135,12 @@ class Heatmap(ImageBase):
         "enable_simple_colorbar.setter",
         "enable_full_colorbar",
         "enable_full_colorbar.setter",
+        "interpolation_method",
+        "interpolation_method.setter",
+        "oversampling_factor",
+        "oversampling_factor.setter",
+        "enforce_interpolation",
+        "enforce_interpolation.setter",
         "fft",
         "fft.setter",
         "log",
@@ -141,8 +163,19 @@ class Heatmap(ImageBase):
 
     def __init__(self, parent=None, config: HeatmapConfig | None = None, **kwargs):
         if config is None:
-            config = HeatmapConfig(widget_class=self.__class__.__name__)
-        super().__init__(parent=parent, config=config, **kwargs)
+            config = HeatmapConfig(
+                widget_class=self.__class__.__name__,
+                parent_id=None,
+                color_map="plasma",
+                color_bar=None,
+                interpolation="linear",
+                oversampling_factor=1.0,
+                lock_aspect_ratio=False,
+                x_device=None,
+                y_device=None,
+                z_device=None,
+            )
+        super().__init__(parent=parent, config=config, theme_update=True, **kwargs)
         self._image_config = config
         self.scan_id = None
         self.old_scan_id = None
@@ -150,9 +183,16 @@ class Heatmap(ImageBase):
         self.status_message = None
         self._grid_index = None
         self.heatmap_dialog = None
+        bg_color = pg.mkColor((240, 240, 240, 150))
+        self.config_label = pg.LegendItem(
+            labelTextColor=(0, 0, 0), offset=(-30, 1), brush=pg.mkBrush(bg_color), horSpacing=0
+        )
+        self.config_label.setParentItem(self.plot_item.vb)
+        self.config_label.setVisible(False)
         self.reload = False
         self.bec_dispatcher.connect_slot(self.on_scan_status, MessageEndpoints.scan_status())
         self.bec_dispatcher.connect_slot(self.on_scan_progress, MessageEndpoints.scan_progress())
+        self.heatmap_property_changed.connect(lambda: self.sync_signal_update.emit())
 
         self.proxy_update_sync = pg.SignalProxy(
             self.sync_signal_update, rateLimit=5, slot=self.update_plot
@@ -168,6 +208,7 @@ class Heatmap(ImageBase):
                 "image_colorbar",
                 "image_processing",
                 "axis_popup",
+                "interpolation_info",
             ]
         )
 
@@ -180,6 +221,23 @@ class Heatmap(ImageBase):
     # Widget Specific GUI interactions
     ################################################################################
 
+    @SafeSlot(str)
+    def apply_theme(self, theme: str):
+        """
+        Apply the current theme to the heatmap widget.
+        """
+        super().apply_theme(theme)
+        if theme == "dark":
+            brush = pg.mkBrush(pg.mkColor(50, 50, 50, 150))
+            color = pg.mkColor(255, 255, 255)
+        else:
+            brush = pg.mkBrush(pg.mkColor(240, 240, 240, 150))
+            color = pg.mkColor(0, 0, 0)
+        if hasattr(self, "config_label"):
+            self.config_label.setBrush(brush)
+            self.config_label.setLabelTextColor(color)
+            self.redraw_config_label()
+
     @SafeSlot(popup_error=True)
     def plot(
         self,
@@ -190,12 +248,32 @@ class Heatmap(ImageBase):
         y_entry: None | str = None,
         z_entry: None | str = None,
         color_map: str | None = "plasma",
-        label: str | None = None,
         validate_bec: bool = True,
+        interpolation: Literal["linear", "nearest"] | None = None,
+        enforce_interpolation: bool | None = None,
+        oversampling_factor: float | None = None,
+        lock_aspect_ratio: bool | None = None,
+        show_config_label: bool | None = None,
         reload: bool = False,
     ):
         """
         Plot the heatmap with the given x, y, and z data.
+
+        Args:
+            x_name (str): The name of the x-axis signal.
+            y_name (str): The name of the y-axis signal.
+            z_name (str): The name of the z-axis signal.
+            x_entry (str | None): The entry for the x-axis signal.
+            y_entry (str | None): The entry for the y-axis signal.
+            z_entry (str | None): The entry for the z-axis signal.
+            color_map (str | None): The color map to use for the heatmap.
+            validate_bec (bool): Whether to validate the entries against BEC signals.
+            interpolation (Literal["linear", "nearest"] | None): The interpolation method to use.
+            enforce_interpolation (bool | None): Whether to enforce interpolation even for grid scans.
+            oversampling_factor (float | None): Factor to oversample the grid resolution.
+            lock_aspect_ratio (bool | None): Whether to lock the aspect ratio of the image.
+            show_config_label (bool | None): Whether to show the configuration label in the heatmap.
+            reload (bool): Whether to reload the heatmap with new data.
         """
         if validate_bec:
             x_entry = self.entry_validator.validate_signal(x_name, x_entry)
@@ -207,12 +285,33 @@ class Heatmap(ImageBase):
         if x_name is None or y_name is None or z_name is None:
             raise ValueError("x, y, and z names must be provided.")
 
+        if interpolation is None:
+            interpolation = self._image_config.interpolation
+
+        if oversampling_factor is None:
+            oversampling_factor = self._image_config.oversampling_factor
+
+        if enforce_interpolation is None:
+            enforce_interpolation = self._image_config.enforce_interpolation
+
+        if lock_aspect_ratio is None:
+            lock_aspect_ratio = self._image_config.lock_aspect_ratio
+
+        if show_config_label is None:
+            show_config_label = self._image_config.show_config_label
+
         self._image_config = HeatmapConfig(
             parent_id=self.gui_id,
             x_device=HeatmapDeviceSignal(name=x_name, entry=x_entry),
             y_device=HeatmapDeviceSignal(name=y_name, entry=y_entry),
             z_device=HeatmapDeviceSignal(name=z_name, entry=z_entry),
             color_map=color_map,
+            color_bar=None,
+            interpolation=interpolation,
+            oversampling_factor=oversampling_factor,
+            enforce_interpolation=enforce_interpolation,
+            lock_aspect_ratio=lock_aspect_ratio,
+            show_config_label=show_config_label,
         )
         self.color_map = color_map
         self.reload = reload
@@ -230,7 +329,6 @@ class Heatmap(ImageBase):
             self.scan_item = self.client.history[-1]
             self.scan_id = self.client.history._scan_ids[-1]
             self.old_scan_id = None
-            self.update_plot()
 
     def update_labels(self):
         """
@@ -279,6 +377,19 @@ class Heatmap(ImageBase):
             if name not in ["image_processing_fft", "image_processing_log"]:
                 action().action.setVisible(False)
 
+        self.toolbar.add_action(
+            "interpolation_info",
+            MaterialIconAction(
+                icon_name="info", tooltip="Show Interpolation Info", checkable=True, parent=self
+            ),
+        )
+        self.toolbar.components.get_action("interpolation_info").action.triggered.connect(
+            self.toggle_interpolation_info
+        )
+        self.toolbar.components.get_action("interpolation_info").action.setChecked(
+            self._image_config.show_config_label
+        )
+
     def show_heatmap_settings(self):
         """
         Show the heatmap settings dialog.
@@ -289,7 +400,7 @@ class Heatmap(ImageBase):
             self.heatmap_dialog = SettingsDialog(
                 self, settings_widget=heatmap_settings, window_title="Heatmap Settings", modal=False
             )
-            self.heatmap_dialog.resize(620, 200)
+            self.heatmap_dialog.resize(700, 350)
             # When the dialog is closed, update the toolbar icon and clear the reference
             self.heatmap_dialog.finished.connect(self._heatmap_dialog_closed)
             self.heatmap_dialog.show()
@@ -299,6 +410,16 @@ class Heatmap(ImageBase):
             self.heatmap_dialog.raise_()
             self.heatmap_dialog.activateWindow()
             heatmap_settings_action.setChecked(True)  # keep it toggled
+
+    def toggle_interpolation_info(self):
+        """
+        Toggle the visibility of the interpolation info label.
+        """
+        self._image_config.show_config_label = not self._image_config.show_config_label
+        self.toolbar.components.get_action("interpolation_info").action.setChecked(
+            self._image_config.show_config_label
+        )
+        self.redraw_config_label()
 
     def _heatmap_dialog_closed(self):
         """
@@ -397,6 +518,7 @@ class Heatmap(ImageBase):
             scan_id = metadata["scan_id"]
             scan_name = metadata["scan_name"]
             scan_type = metadata["scan_type"]
+            scan_number = metadata["scan_number"]
             request_inputs = metadata["request_inputs"]
             if "arg_bundle" in request_inputs and isinstance(request_inputs["arg_bundle"], str):
                 # Convert the arg_bundle from a JSON string to a dictionary
@@ -408,6 +530,7 @@ class Heatmap(ImageBase):
                 status=status,
                 scan_id=scan_id,
                 scan_name=scan_name,
+                scan_number=scan_number,
                 scan_type=scan_type,
                 request_inputs=request_inputs,
                 info={"positions": positions},
@@ -419,6 +542,9 @@ class Heatmap(ImageBase):
             logger.warning("Scan message is None; skipping update.")
             return
         self.status_message = scan_msg
+
+        if self._image_config.show_config_label:
+            self.redraw_config_label()
 
         img, transform = self.get_image_data(x_data=x_data, y_data=y_data, z_data=z_data)
         if img is None:
@@ -433,6 +559,25 @@ class Heatmap(ImageBase):
         self.image_updated.emit()
         if self.crosshair is not None:
             self.crosshair.update_markers_on_image_change()
+
+    def redraw_config_label(self):
+        scan_msg = self.status_message
+        if scan_msg is None:
+            return
+        if not self._image_config.show_config_label:
+            self.config_label.setVisible(False)
+            return
+        self.config_label.setVisible(True)
+        self.config_label.clear()
+        self.config_label.addItem(self.plot_item, f"Scan: {scan_msg.scan_number}")
+        self.config_label.addItem(self.plot_item, f"Scan Name: {scan_msg.scan_name}")
+        if scan_msg.scan_name != "grid_scan" or self._image_config.enforce_interpolation:
+            self.config_label.addItem(
+                self.plot_item, f"Interpolation: {self._image_config.interpolation}"
+            )
+            self.config_label.addItem(
+                self.plot_item, f"Oversampling: {self._image_config.oversampling_factor}x"
+            )
 
     def get_image_data(
         self,
@@ -458,7 +603,7 @@ class Heatmap(ImageBase):
             logger.warning("x, y, or z data is None; skipping update.")
             return None, None
 
-        if msg.scan_name == "grid_scan":
+        if msg.scan_name == "grid_scan" and not self._image_config.enforce_interpolation:
             # We only support the grid scan mode if both scanning motors
             # are configured in the heatmap config.
             device_x = self._image_config.x_device.entry
@@ -571,7 +716,16 @@ class Heatmap(ImageBase):
         grid_x, grid_y, transform = self.get_image_grid(xy_data)
 
         # Interpolate the z data onto the grid
-        interp = LinearNDInterpolator(xy_data, z_data)
+        if self._image_config.interpolation == "linear":
+            interp = LinearNDInterpolator(xy_data, z_data)
+        elif self._image_config.interpolation == "nearest":
+            interp = NearestNDInterpolator(xy_data, z_data)
+        elif self._image_config.interpolation == "clough":
+            interp = CloughTocher2DInterpolator(xy_data, z_data)
+        else:
+            raise ValueError(
+                "Interpolation method must be either 'linear', 'nearest', or 'clough'."
+            )
         grid_z = interp(grid_x, grid_y)
 
         return grid_z, transform
@@ -587,20 +741,24 @@ class Heatmap(ImageBase):
         Returns:
             tuple[np.ndarray, np.ndarray, QTransform]: The grid x and y coordinates and the QTransform.
         """
+        base_width, base_height = self.estimate_image_resolution(positions)
 
-        width, height = self.estimate_image_resolution(positions)
+        # Apply oversampling factor
+        factor = self._image_config.oversampling_factor
 
-        # Create a grid of points for interpolation
+        # Apply oversampling
+        width = int(base_width * factor)
+        height = int(base_height * factor)
+
+        # Create grid
         grid_x, grid_y = np.mgrid[
             min(positions[:, 0]) : max(positions[:, 0]) : width * 1j,
             min(positions[:, 1]) : max(positions[:, 1]) : height * 1j,
         ]
 
-        # Calculate the QTransform to put (0,0) at the axis origin
-        x_min = min(positions[:, 0])
-        y_min = min(positions[:, 1])
-        x_max = max(positions[:, 0])
-        y_max = max(positions[:, 1])
+        # Calculate transform
+        x_min, x_max = min(positions[:, 0]), max(positions[:, 0])
+        y_min, y_max = min(positions[:, 1]), max(positions[:, 1])
         x_range = x_max - x_min
         y_range = y_max - y_min
         x_scale = x_range / width
@@ -670,7 +828,7 @@ class Heatmap(ImageBase):
             # Optionally fetch the latest from history if nothing is set
             # self.update_with_scan_history(-1)
             if self.scan_item is None:
-                logger.info("No scan executed so far; skipping device curves categorisation.")
+                logger.info("No scan executed so far; skipping update.")
                 return "none", "none"
 
         if hasattr(self.scan_item, "live_data"):
@@ -687,6 +845,62 @@ class Heatmap(ImageBase):
         if self.crosshair is not None:
             self.crosshair.reset()
         super().reset()
+
+    @SafeProperty(str)
+    def interpolation_method(self) -> str:
+        """
+        The interpolation method used for the heatmap.
+        """
+        return self._image_config.interpolation
+
+    @interpolation_method.setter
+    def interpolation_method(self, value: str):
+        """
+        Set the interpolation method for the heatmap.
+        Args:
+            value(str): The interpolation method, either 'linear' or 'nearest'.
+        """
+        if value not in ["linear", "nearest"]:
+            raise ValueError("Interpolation method must be either 'linear' or 'nearest'.")
+        self._image_config.interpolation = value
+        self.heatmap_property_changed.emit()
+
+    @SafeProperty(float)
+    def oversampling_factor(self) -> float:
+        """
+        The oversampling factor for grid resolution.
+        """
+        return self._image_config.oversampling_factor
+
+    @oversampling_factor.setter
+    def oversampling_factor(self, value: float):
+        """
+        Set the oversampling factor for grid resolution.
+        Args:
+            value(float): The oversampling factor (1.0 = no oversampling, 2.0 = 2x resolution).
+        """
+        if value <= 0:
+            raise ValueError("Oversampling factor must be greater than 0.")
+        self._image_config.oversampling_factor = value
+        self.heatmap_property_changed.emit()
+
+    @SafeProperty(bool)
+    def enforce_interpolation(self) -> bool:
+        """
+        Whether to enforce interpolation even for grid scans.
+        """
+        return self._image_config.enforce_interpolation
+
+    @enforce_interpolation.setter
+    def enforce_interpolation(self, value: bool):
+        """
+        Set whether to enforce interpolation even for grid scans.
+
+        Args:
+            value(bool): Whether to enforce interpolation.
+        """
+        self._image_config.enforce_interpolation = value
+        self.heatmap_property_changed.emit()
 
     ################################################################################
     # Post Processing
@@ -768,6 +982,6 @@ if __name__ == "__main__":  # pragma: no cover
 
     app = QApplication(sys.argv)
     heatmap = Heatmap()
-    heatmap.plot(x_name="samx", y_name="samy", z_name="bpm4i")
+    heatmap.plot(x_name="samx", y_name="samy", z_name="bpm4i", oversampling_factor=5.0)
     heatmap.show()
     sys.exit(app.exec_())
