@@ -235,7 +235,7 @@ class DeviceConfigDialog(BECWidget, QDialog):
         if self._action == "update":
             self._fetch_config()
             self._fill_form()
-        raise RuntimeError("Failed to update device configuration") from e
+        raise e
 
     def _start_waiting_display(self):
         self._overlay_widget.setVisible(True)

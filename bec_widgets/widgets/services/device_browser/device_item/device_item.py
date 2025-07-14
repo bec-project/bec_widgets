@@ -113,7 +113,7 @@ class DeviceItem(ExpandableGroupFrame):
 
     @SafeSlot(Exception, popup_error=True)
     def _deletion_error(self, e: Exception):
-        raise RuntimeError(f"Failed to delete device {self.device}") from e
+        raise e
 
     @SafeSlot()
     def _deletion_done(self):
