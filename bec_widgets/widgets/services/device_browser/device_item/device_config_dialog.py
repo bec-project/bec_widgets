@@ -88,7 +88,8 @@ class DeviceConfigDialog(BECWidget, QDialog):
             self._form._validity.setVisible(False)
         else:
             self._set_schema_to_check_devices()
-            self._form._validity.setVisible(True)
+            # TODO: replace when https://github.com/bec-project/bec/issues/528 https://github.com/bec-project/bec/issues/547 are resolved
+            # self._form._validity.setVisible(True)
             self._form.validity_proc.connect(self.enable_buttons_for_validity)
         self._add_overlay()
         self._add_buttons()
@@ -171,7 +172,7 @@ class DeviceConfigDialog(BECWidget, QDialog):
             # TODO: special cased in some parts of device manager but not others, should
             # be removed in config update as with below issue
             diff["deviceConfig"].pop("device_access", None)
-            # TODO: replace when https://github.com/bec-project/bec/issues/528 is resolved
+            # TODO: replace when https://github.com/bec-project/bec/issues/528 https://github.com/bec-project/bec/issues/547 are resolved
             diff["deviceConfig"] = {
                 k: _try_literal_eval(str(v)) for k, v in diff["deviceConfig"].items() if k != ""
             }
@@ -179,8 +180,12 @@ class DeviceConfigDialog(BECWidget, QDialog):
 
     @SafeSlot(bool)
     def enable_buttons_for_validity(self, valid: bool):
-        self.button_box.button(QDialogButtonBox.Apply).setEnabled(valid)
-        self.button_box.button(QDialogButtonBox.Ok).setEnabled(valid)
+        # TODO: replace when https://github.com/bec-project/bec/issues/528 https://github.com/bec-project/bec/issues/547 are resolved
+        for button in [
+            self.button_box.button(b) for b in [QDialogButtonBox.Apply, QDialogButtonBox.Ok]
+        ]:
+            button.setEnabled(valid)
+            button.setToolTip(self._form._validity_message.text())
 
     @SafeSlot(popup_error=True)
     def apply(self):
