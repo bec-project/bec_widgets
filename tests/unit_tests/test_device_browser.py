@@ -9,6 +9,9 @@ from bec_widgets.widgets.services.device_browser.device_browser import DeviceBro
 from bec_widgets.widgets.services.device_browser.device_item.device_config_form import (
     DeviceConfigForm,
 )
+from bec_widgets.widgets.services.device_browser.device_item.device_signal_display import (
+    SignalDisplay,
+)
 
 from .client_mocks import mocked_client
 
@@ -142,3 +145,39 @@ def test_device_deletion(device_browser, qtbot):
     assert widget.device in device_browser._device_items
     qtbot.mouseClick(widget.delete_button, Qt.LeftButton)
     qtbot.waitUntil(lambda: widget.device not in device_browser._device_items, timeout=10000)
+
+
+def test_signal_display(mocked_client, qtbot):
+    signal_display = SignalDisplay(client=mocked_client, device="test_device")
+    qtbot.addWidget(signal_display)
+    device_mock = mock.MagicMock()
+    signal_display.dev = {"test_device": device_mock}
+    signal_display._refresh()
+    device_mock.read.assert_called()
+    device_mock.read_configuration.assert_called()
+
+
+def test_signal_display_no_device(mocked_client, qtbot):
+    device_mock = mock.MagicMock()
+    mocked_client.client.device_manager.devices = {"test_device_1": device_mock}
+    signal_display = SignalDisplay(client=mocked_client, device="test_device_2")
+    qtbot.addWidget(signal_display)
+    assert (
+        signal_display._content_layout.itemAt(1).widget().text()
+        == "Device test_device_2 not found in device manager!"
+    )
+    signal_display._refresh()
+    device_mock.read.assert_not_called()
+    device_mock.read_configuration.assert_not_called()
+
+
+def test_signal_display_omitted_not_added(mocked_client, qtbot):
+    device_mock = mock.MagicMock()
+    device_mock._info = {"signals": {"signal_1": {"kind_str": "omitted"}}}
+
+    signal_display = SignalDisplay(client=mocked_client, device="test_device_1")
+    signal_display.dev = {"test_device_1": device_mock}
+    signal_display._populate()
+
+    qtbot.addWidget(signal_display)
+    assert signal_display._content_layout.itemAt(1).widget() is None
