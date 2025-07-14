@@ -5,6 +5,7 @@ from qtpy.QtWidgets import QHBoxLayout, QLabel, QToolButton, QVBoxLayout, QWidge
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
+from bec_widgets.utils.ophyd_kind_util import Kind
 from bec_widgets.widgets.containers.dock.dock import BECDock
 from bec_widgets.widgets.utility.signal_label.signal_label import SignalLabel
 
@@ -35,9 +36,9 @@ class SignalDisplay(BECWidget, QWidget):
 
     @SafeSlot()
     def _refresh(self):
-        if self.device in self.dev:
-            self.dev.get(self.device).read(cached=False)
-            self.dev.get(self.device).read_configuration(cached=False)
+        if (dev := self.dev.get(self.device)) is not None:
+            dev.read()
+            dev.read_configuration()
 
     def _add_refresh_button(self):
         button_holder = QWidget()
@@ -63,15 +64,16 @@ class SignalDisplay(BECWidget, QWidget):
         self._add_refresh_button()
 
         if self._device in self.dev:
-            for sig in self.dev[self.device]._info.get("signals", {}).keys():
-                self._content_layout.addWidget(
-                    SignalLabel(
-                        device=self._device,
-                        signal=sig,
-                        show_select_button=False,
-                        show_default_units=True,
+            for sig, info in self.dev[self.device]._info.get("signals", {}).items():
+                if info.get("kind_str") in [Kind.hinted.name, Kind.normal.name, Kind.config.name]:
+                    self._content_layout.addWidget(
+                        SignalLabel(
+                            device=self._device,
+                            signal=sig,
+                            show_select_button=False,
+                            show_default_units=True,
+                        )
                     )
-                )
             self._content_layout.addStretch(1)
         else:
             self._content_layout.addWidget(
