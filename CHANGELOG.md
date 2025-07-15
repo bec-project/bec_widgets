@@ -1,6 +1,39 @@
 # CHANGELOG
 
 
+## v2.24.0 (2025-07-15)
+
+### Bug Fixes
+
+- Hide validity LED, show message as tooltip
+  ([`530797a`](https://github.com/bec-project/bec_widgets/commit/530797a5568957dde9f47f417310f5c4d2493906))
+
+- Validate some config data
+  ([`c660e51`](https://github.com/bec-project/bec_widgets/commit/c660e5141f191a782c224ee1b83536793639eecb))
+
+- **device_browser**: Un-nest exception
+  ([`8b2d605`](https://github.com/bec-project/bec_widgets/commit/8b2d6052e808f8b4063e5f45c40e4460524f044e))
+
+### Documentation
+
+- Docstring for config dialog
+  ([`1925e6a`](https://github.com/bec-project/bec_widgets/commit/1925e6ac7f98875eb5980637ae3293e22b459e28))
+
+### Features
+
+- (#495) add devices through browser
+  ([`170be0c`](https://github.com/bec-project/bec_widgets/commit/170be0c7d3bb1f6e5f2305958909ef68cd987fbd))
+
+- **#495**: Add validation against existing device names
+  ([`900153b`](https://github.com/bec-project/bec_widgets/commit/900153bc0b8cec7bad82e23b3772c66e84900a17))
+
+- **device_browser**: Connect update to item refresh
+  ([`130cc24`](https://github.com/bec-project/bec_widgets/commit/130cc24b351684358558ab81c0111f10f9abb11f))
+
+- **device_browser**: Device deletion from config
+  ([`8dc7265`](https://github.com/bec-project/bec_widgets/commit/8dc72656ef46ae7be886f9da59beb768f5381b4f))
+
+
 ## v2.23.0 (2025-07-11)
 
 ### Features
