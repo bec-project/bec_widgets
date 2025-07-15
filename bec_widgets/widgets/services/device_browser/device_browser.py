@@ -29,7 +29,8 @@ class DeviceBrowser(BECWidget, QWidget):
     DeviceBrowser is a widget that displays all available devices in the current BEC session.
     """
 
-    device_update: Signal = Signal()
+    devices_changed: Signal = Signal()
+    device_update: Signal = Signal(str, dict)
     PLUGIN = True
     ICON_NAME = "lists"
 
@@ -55,7 +56,7 @@ class DeviceBrowser(BECWidget, QWidget):
         self.bec_dispatcher.client.callbacks.register(
             EventType.DEVICE_UPDATE, self.on_device_update
         )
-        self.device_update.connect(self.update_device_list)
+        self.devices_changed.connect(self.update_device_list)
         self.ui.add_button.clicked.connect(self._create_add_dialog)
         self.ui.add_button.setIcon(material_icon("add", size=(20, 20), convert_to_pixmap=False))
 
@@ -85,7 +86,9 @@ class DeviceBrowser(BECWidget, QWidget):
             content (dict): The content of the config update.
         """
         if action in ["add", "remove", "reload"]:
-            self.device_update.emit()
+            self.devices_changed.emit()
+        if action in ["update", "reload"]:
+            self.device_update.emit(action, content)
 
     def init_device_list(self):
         self.dev_list.clear()
@@ -117,6 +120,7 @@ class DeviceBrowser(BECWidget, QWidget):
         )
         device_item.expansion_state_changed.connect(partial(_updatesize, item, device_item))
         device_item.imminent_deletion.connect(partial(_remove_item, item))
+        self.device_update.connect(device_item.config_update)
         tooltip = self.dev[device]._config.get("description", "")
         device_item.setToolTip(tooltip)
         device_item.broadcast_size_hint.connect(item.setSizeHint)

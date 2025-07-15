@@ -6,6 +6,7 @@ from bec_lib.atlas_models import Device as DeviceConfigModel
 from bec_lib.config_helper import ConfigHelper
 from bec_lib.devicemanager import DeviceContainer
 from bec_lib.logger import bec_logger
+from bec_lib.messages import ConfigAction
 from bec_qthemes import material_icon
 from qtpy.QtCore import QMimeData, QSize, Qt, QThreadPool, Signal
 from qtpy.QtGui import QDrag
@@ -138,6 +139,11 @@ class DeviceItem(ExpandableGroupFrame):
                 self.form.set_pretty_display_theme()
         self.adjustSize()
         self.broadcast_size_hint.emit(self.sizeHint())
+
+    @SafeSlot(str, dict)
+    def config_update(self, action: ConfigAction, content: dict) -> None:
+        if self.device in content:
+            self._reload_config()
 
     @SafeSlot(popup_error=True)
     def _reload_config(self, *_):

@@ -7,6 +7,7 @@ from qtpy.QtWidgets import QDialogButtonBox, QPushButton
 from bec_widgets.utils.forms_from_types.items import StrFormItem
 from bec_widgets.widgets.services.device_browser.device_item.device_config_dialog import (
     DeviceConfigDialog,
+    _try_literal_eval,
 )
 
 _BASIC_CONFIG = {
@@ -129,3 +130,12 @@ def test_add_form_validates_and_disables_on_init(add_dialog, qtbot):
     assert (ok_button := add_dialog.button_box.button(QDialogButtonBox.Ok)) is not None
     assert isinstance(ok_button, QPushButton)
     assert not ok_button.isEnabled()
+
+
+def test_try_literal_eval():
+    assert _try_literal_eval("") == ""
+    assert _try_literal_eval("[1, 2, 3]") == [1, 2, 3]
+    assert _try_literal_eval('"[,,]"') == "[,,]"
+    with pytest.raises(ValueError) as e:
+        _try_literal_eval("[,,]")
+        assert e.match("Entered config value [,,]")
