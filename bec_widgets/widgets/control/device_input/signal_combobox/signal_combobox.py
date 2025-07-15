@@ -142,6 +142,10 @@ class SignalComboBox(DeviceSignalInputBase, QComboBox):
             return
         self.device_signal_changed.emit(text)
 
+    @property
+    def selected_signal_comp_name(self) -> str:
+        return dict(self.signals).get(self.currentText(), {}).get("component_name", "")
+
 
 if __name__ == "__main__":  # pragma: no cover
     # pylint: disable=import-outside-toplevel
