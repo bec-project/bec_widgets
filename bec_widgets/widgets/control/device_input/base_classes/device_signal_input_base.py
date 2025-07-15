@@ -69,7 +69,7 @@ class DeviceSignalInputBase(BECWidget):
         Args:
             signal (str): signal name.
         """
-        if self.validate_signal(signal) is True:
+        if self.validate_signal(signal):
             WidgetIO.set_value(widget=self, value=signal)
             self.config.default = signal
         else:

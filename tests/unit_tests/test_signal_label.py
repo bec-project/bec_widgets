@@ -142,6 +142,7 @@ def test_choose_signal_dialog_sends_choices(signal_label: SignalLabel, qtbot):
     qtbot.waitUntil(dialog.button_box.button(QDialogButtonBox.Ok).isVisible, timeout=500)
     dialog._device_field.dev["test device"] = MagicMock()
     dialog._device_field.setText("test device")
+    dialog._signal_field._signals = [("test signal", {"component_name": "test signal"})]
     dialog._signal_field.addItem("test signal")
     dialog._signal_field.setCurrentIndex(0)
     qtbot.mouseClick(dialog.button_box.button(QDialogButtonBox.Ok), QtCore.Qt.LeftButton)
@@ -154,6 +155,7 @@ def test_dialog_handler_updates_devices(signal_label: SignalLabel, qtbot):
     qtbot.waitUntil(dialog.button_box.button(QDialogButtonBox.Ok).isVisible, timeout=500)
     dialog._device_field.dev["flux_capacitor"] = MagicMock()
     dialog._device_field.setText("flux_capacitor")
+    dialog._signal_field._signals = [("spin_speed", {"component_name": "spin_speed"})]
     dialog._signal_field.addItem("spin_speed")
     dialog._signal_field.setCurrentIndex(0)
     qtbot.mouseClick(dialog.button_box.button(QDialogButtonBox.Ok), QtCore.Qt.LeftButton)

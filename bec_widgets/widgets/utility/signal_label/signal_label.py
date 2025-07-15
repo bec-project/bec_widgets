@@ -10,7 +10,6 @@ from bec_qthemes import material_icon
 from qtpy.QtCore import Signal as QSignal
 from qtpy.QtWidgets import (
     QApplication,
-    QComboBox,
     QDialog,
     QDialogButtonBox,
     QGroupBox,
@@ -121,7 +120,9 @@ class ChoiceDialog(QDialog):
             self._signal_field.clear()
 
     def accept(self):
-        self.accepted_output.emit(self._device_field.text(), self._signal_field.currentText())
+        self.accepted_output.emit(
+            self._device_field.text(), self._signal_field.selected_signal_comp_name
+        )
         return super().accept()
 
 
