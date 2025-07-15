@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.24.1 (2025-07-15)
+
+### Bug Fixes
+
+- Update signal label for device_edit changes
+  ([`bde5238`](https://github.com/bec-project/bec_widgets/commit/bde523806fdb6ab224b485f65b615f89dfe20b7b))
+
+
 ## v2.24.0 (2025-07-15)
 
 ### Bug Fixes
