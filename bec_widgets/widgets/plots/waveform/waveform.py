@@ -1482,7 +1482,7 @@ class Waveform(PlotBase):
                 device_data = entry_obj.read()["value"] if entry_obj else None
             x_data = self._get_x_data(device_name, device_entry)
             if x_data is not None:
-                if len(x_data) == 1:
+                if np.isscalar(x_data):
                     self.clear_data()
                     return
             if device_data is not None and x_data is not None:
