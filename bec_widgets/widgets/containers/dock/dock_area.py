@@ -222,10 +222,9 @@ class BECDockArea(BECWidget, QWidget):
                         filled=True,
                         parent=self,
                     ),
-                    # FIXME temporarily disabled -> issue #644
                     "log_panel": MaterialIconAction(
                         icon_name=LogPanel.ICON_NAME,
-                        tooltip="Add LogPanel - Disabled",
+                        tooltip="Add LogPanel",
                         filled=True,
                         parent=self,
                     ),
@@ -326,9 +325,9 @@ class BECDockArea(BECWidget, QWidget):
         menu_utils.actions["progress_bar"].action.triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="RingProgressBar")
         )
-        # FIXME temporarily disabled -> issue #644
-        menu_utils.actions["log_panel"].action.setEnabled(False)
-
+        menu_utils.actions["log_panel"].action.triggered.connect(
+            lambda: self._create_widget_from_toolbar(widget_name="LogPanel")
+        )
         menu_utils.actions["sbb_monitor"].action.triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="SBBMonitor")
         )
