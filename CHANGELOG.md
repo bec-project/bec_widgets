@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.27.1 (2025-07-17)
+
+### Bug Fixes
+
+- **image_roi_tree**: Rois signals are disconnected when roi tree widget is closed
+  ([`00e3713`](https://github.com/bec-project/bec_widgets/commit/00e3713181916a432e4e9dec8a0d80205914cf77))
+
+
 ## v2.27.0 (2025-07-17)
 
 ### Features
