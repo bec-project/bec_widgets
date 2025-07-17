@@ -287,7 +287,7 @@ class SignalLabel(BECWidget, QWidget):
             self._units = ""
             self._value = "__"
             return
-        self._value = signal.get()
+        self._value = list(signal.read(cached=True).values())[0]["value"]
         self._units = info.get("egu", "")
         self._dtype = info.get("dtype", "float")
 
@@ -311,10 +311,12 @@ class SignalLabel(BECWidget, QWidget):
 
     def _patch_hinted_signal(self):
         if self.dev[self._device]._info["signals"] == {}:
-            return self._signal
+            return self._signal or self._device
         signal_info = self.dev[self._device]._info["signals"][self._signal]
         return (
-            signal_info["obj_name"] if signal_info["kind_str"] == Kind.hinted.name else self._signal
+            signal_info["obj_name"]
+            if signal_info["kind_str"] == Kind.hinted.name
+            else (self._signal or self._device)
         )
 
     @SafeProperty(str)
