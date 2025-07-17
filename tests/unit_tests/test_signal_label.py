@@ -188,6 +188,8 @@ def test_choice_dialog_with_no_client(qtbot):
 
 
 def test_dialog_has_signals(signal_label: SignalLabel, qtbot):
+    signal_label.show_config_signals = False
+    signal_label.show_normal_signals = False
     signal_label._process_dialog = MagicMock()
     dialog = signal_label.show_choice_dialog()
     qtbot.waitUntil(dialog.button_box.button(QDialogButtonBox.Ok).isVisible, timeout=500)
