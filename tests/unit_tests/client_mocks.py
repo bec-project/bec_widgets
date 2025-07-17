@@ -7,6 +7,7 @@ import pytest
 from bec_lib.bec_service import messages
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.redis_connector import RedisConnector
+from bec_lib.scan_history import ScanHistory
 
 from bec_widgets.tests.utils import DEVICES, DMMock, FakePositioner, Positioner
 
@@ -238,3 +239,18 @@ def create_dummy_scan_item():
         "scan_report_devices": ["samx"],
     }
     return dummy_scan
+
+
+def inject_scan_history(widget, scan_history_factory, *history_args):
+    """
+    Helper to inject scan history messages into client history.
+    """
+    history_msgs = []
+    for scan_id, scan_number in history_args:
+        history_msgs.append(scan_history_factory(scan_id=scan_id, scan_number=scan_number))
+    widget.client.history = ScanHistory(widget.client, False)
+    for msg in history_msgs:
+        widget.client.history._scan_data[msg.scan_id] = msg
+        widget.client.history._scan_ids.append(msg.scan_id)
+    widget.client.queue.scan_storage.current_scan = None
+    return history_msgs

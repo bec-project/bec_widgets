@@ -10,22 +10,19 @@ import pyqtgraph as pg
 import pytest
 from pyqtgraph.graphicsItems.DateAxisItem import DateAxisItem
 from qtpy.QtCore import QTimer
-from qtpy.QtWidgets import (
-    QApplication,
-    QCheckBox,
-    QDialog,
-    QDialogButtonBox,
-    QDoubleSpinBox,
-    QSpinBox,
-)
+from qtpy.QtWidgets import QApplication, QCheckBox, QDialog, QDialogButtonBox, QDoubleSpinBox
 
 from bec_widgets.widgets.plots.plot_base import UIMode
 from bec_widgets.widgets.plots.waveform.curve import DeviceSignal
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
+from bec_widgets.widgets.services.scan_history_browser.scan_history_browser import (
+    ScanHistoryBrowser,
+)
 from tests.unit_tests.client_mocks import (
     DummyData,
     create_dummy_scan_item,
     dap_plugin_message,
+    inject_scan_history,
     mocked_client,
     mocked_client_with_dap,
 )
@@ -841,6 +838,33 @@ def test_show_dap_summary_popup(qtbot, mocked_client):
     assert fit_action.isChecked() is False
 
 
+def test_show_scan_history_popup(qtbot, mocked_client):
+    """
+    Test that show_scan_history_popup displays the scan history browser dialog
+    and toggles the toolbar action correctly.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    scan_action = wf.toolbar.components.get_action("scan_history").action
+    # Initially unchecked and no dialog
+    assert not scan_action.isChecked()
+    assert wf.scan_history_dialog is None
+
+    # Show the popup
+    wf.show_scan_history_popup()
+    # Dialog should exist and be visible, action checked
+    assert wf.scan_history_dialog is not None
+    assert wf.scan_history_dialog.isVisible()
+    assert scan_action.isChecked()
+    # The embedded widget should be the correct type
+    assert isinstance(wf.scan_history_widget, ScanHistoryBrowser)
+
+    # Close the dialog (triggers _scan_history_closed)
+    wf.scan_history_dialog.close()
+    # Dialog reference should be cleared and action unchecked
+    assert wf.scan_history_dialog is None
+    assert not scan_action.isChecked()
+
+
 #####################################################
 # The following tests are for the async dataset guard
 #####################################################
@@ -1063,3 +1087,187 @@ def test_dialog_reject_real_interaction(qtbot, mocked_client):
     assert wf.skip_large_dataset_warning is True
     # Limit remains unchanged
     assert wf.max_dataset_size_mb == 1
+
+
+def test_update_with_scan_history_by_index(qtbot, mocked_client, scan_history_factory):
+    """
+    Test that update_with_scan_history by index loads the correct historical scan.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    hist1, hist2 = inject_scan_history(wf, scan_history_factory, ("hist1", 1), ("hist2", 2))
+
+    assert len(wf.client.history._scan_ids) == 2, "Expected two history scans"
+
+    # Do history curve plotting
+    wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id="hist1")
+    wf.plot(y_name="bpm4i", scan_number=2)
+
+    assert len(wf.plot_item.curves) == 2, "Expected two curves for history scans"
+    c1, c2 = wf.plot_item.curves
+    # First curve should be for hist1, second for hist2
+    assert c1.config.signal.name == "bpm4i"
+    assert c1.config.signal.entry == "bpm4i"
+    assert c1.config.scan_id == "hist1"
+    assert c1.config.scan_number == 1
+    assert c1.name() == "bpm4i-bpm4i-scan-1"
+
+    assert c2.config.signal.name == "bpm4i"
+    assert c2.config.signal.entry == "bpm4i"
+    assert c2.config.scan_id == "hist2"
+    assert c2.config.scan_number == 2
+    assert c2.name() == "bpm4i-bpm4i-scan-2"
+
+
+@pytest.mark.parametrize("mode", ["auto", "timestamp", "index", "samx"])
+def test_history_curve_x_modes_pre_plot(qtbot, mocked_client, scan_history_factory, mode):
+    """
+    Test that history curves respect x_mode when set before plotting.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    hist1, hist2 = inject_scan_history(wf, scan_history_factory, ("hist1", 1), ("hist2", 2))
+    wf.x_mode = mode
+    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id="hist1")
+    assert c.config.current_x_mode == mode
+
+
+@pytest.mark.parametrize("mode", ["auto", "timestamp", "index", "samx"])
+def test_history_curve_x_modes_post_plot(qtbot, mocked_client, scan_history_factory, mode):
+    """
+    Test that changing x_mode after plotting history curves updates the curve on refresh.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    hist1, hist2 = inject_scan_history(wf, scan_history_factory, ("hist1", 1), ("hist2", 2))
+    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id="hist1")
+    # Change x_mode after plotting
+    wf.x_mode = mode
+    # Refresh history curves
+    wf._refresh_history_curves()
+    assert c.config.current_x_mode == mode
+
+
+def test_history_curve_incompatible_x_mode_hides_curve(qtbot, mocked_client, scan_history_factory):
+    """
+    Test that setting an x_mode not present in stored data hides the history curve.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "nonexistent_device"
+    # Inject history scan for this test
+    [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_bad", 1))
+    # Plot history curve
+    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id=history_msg.scan_id)
+    # Curve should be hidden due to incompatible x_mode
+    assert not c.isVisible()
+
+
+def test_fetch_history_data_no_stored_data_raises(
+    qtbot, mocked_client, monkeypatch, suppress_message_box
+):
+    """
+    Test that fetching history data when stored_data_info is missing raises ValueError.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    # Create a dummy scan_item lacking stored_data_info
+    dummy_scan = SimpleNamespace(
+        _msg=SimpleNamespace(stored_data_info=None),
+        devices={},
+        metadata={"bec": {"scan_id": "dummy", "scan_number": 1, "scan_report_devices": []}},
+    )
+    # Force get_history_scan_item to return our dummy
+    monkeypatch.setattr(wf, "get_history_scan_item", lambda scan_id, scan_index: dummy_scan)
+    # Attempt to plot history curve should be suppressed by SafeSlot and return None
+    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id="dummy", scan_number=1)
+    assert c is None
+    assert len(wf.curves) == 0
+
+
+def test_history_curve_device_missing_returns_none(qtbot, mocked_client, scan_history_factory):
+    """
+    If the y-device is not in stored_data_info, plot should return None.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "index"
+    [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_dev_missing", 1))
+    c = wf.plot(y_name="non-existing", y_entry="non-existing", scan_id=history_msg.scan_id)
+    assert c is None
+
+
+def test_history_curve_custom_shape_mismatch_hides_curve(
+    qtbot, mocked_client, scan_history_factory
+):
+    """
+    For custom x-mode, if x and y shapes mismatch, curve should be hidden.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "async_device"
+    [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_custom_shape", 1))
+    # Force shape mismatch for x-data
+    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id=history_msg.scan_id)
+    assert c is not None
+    assert not c.isVisible()
+
+
+def test_history_curve_index_mode_plots_curve(qtbot, mocked_client, scan_history_factory):
+    """
+    Test that setting x_mode to 'index' plots and shows the history curve correctly.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "index"
+    [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_index", 1))
+    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id=history_msg.scan_id)
+    assert c is not None
+    assert c.isVisible()
+    assert c.config.current_x_mode == "index"
+
+
+def test_history_curve_timestamp_mode_plots_curve(qtbot, mocked_client, scan_history_factory):
+    """
+    Test that setting x_mode to 'timestamp' plots and shows the history curve correctly.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "timestamp"
+    [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_time", 1))
+    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id=history_msg.scan_id)
+    assert c is not None
+    assert c.isVisible()
+    assert c.config.current_x_mode == "timestamp"
+
+
+def test_history_curve_auto_valid_uses_first_report_device(
+    qtbot, mocked_client, scan_history_factory
+):
+    """
+    Test that 'auto' x_mode uses the first available report device and shows the curve.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "auto"
+    [history_msg] = inject_scan_history(wf, scan_history_factory, ("hist_auto_valid", 1))
+    # Plot history curve
+    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id=history_msg.scan_id)
+    assert c is not None
+    assert c.isVisible()
+    # Should have fallen back to the first scan_report_device
+    assert c.config.current_x_mode == "auto"
+
+
+def test_history_curve_file_not_found_returns_none(qtbot, mocked_client, scan_history_factory):
+    """
+    If the history file path does not exist, plot should return None.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "index"
+    # Inject a valid history message then corrupt its file_path
+    [history_msg] = inject_scan_history(wf, scan_history_factory, ("bad_file", 1))
+    history_msg.file_path = "/nonexistent/path.h5"
+    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id=history_msg.scan_id)
+    assert c is None
+
+
+def test_history_curve_scan_not_found_returns_none(qtbot, mocked_client):
+    """
+    If the requested scan_id is not in history, plot should return None.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    wf.x_mode = "index"
+    # No history scans injected for this widget
+    c = wf.plot(y_name="bpm4i", y_entry="bpm4i", scan_id="unknown_scan")
+    assert c is None
