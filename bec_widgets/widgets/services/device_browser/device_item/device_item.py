@@ -140,6 +140,11 @@ class DeviceItem(ExpandableGroupFrame):
         self.adjustSize()
         self.broadcast_size_hint.emit(self.sizeHint())
 
+    @SafeSlot(bool)
+    def set_editable(self, enabled: bool):
+        self.edit_button.setEnabled(enabled)
+        self.delete_button.setEnabled(enabled)
+
     @SafeSlot(str, dict)
     def config_update(self, action: ConfigAction, content: dict) -> None:
         if self.device in content:
