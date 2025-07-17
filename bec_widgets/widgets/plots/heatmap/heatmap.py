@@ -567,6 +567,8 @@ class Heatmap(ImageBase):
         if not self._image_config.show_config_label:
             self.config_label.setVisible(False)
             return
+
+        self.config_label.setOffset((-30, 1))
         self.config_label.setVisible(True)
         self.config_label.clear()
         self.config_label.addItem(self.plot_item, f"Scan: {scan_msg.scan_number}")
