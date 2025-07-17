@@ -5,8 +5,9 @@ import h5py
 import numpy as np
 import pytest
 from bec_lib import messages
+from bec_lib.messages import _StoredDataInfo
 from pytestqt.exceptions import TimeoutError as QtBotTimeoutError
-from qtpy.QtWidgets import QApplication
+from qtpy.QtWidgets import QApplication, QMessageBox
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils import bec_dispatcher as bec_dispatcher_module
@@ -123,9 +124,25 @@ def create_history_file(file_path, data: dict, metadata: dict) -> messages.ScanH
                     elif isinstance(sub_value, dict):
                         for sub_sub_key, sub_sub_value in sub_value.items():
                             sub_sub_group = metadata_bec[key].create_group(sub_key)
+                            # Handle _StoredDataInfo objects
+                            if isinstance(sub_sub_value, _StoredDataInfo):
+                                # Store the numeric shape
+                                sub_sub_group.create_dataset("shape", data=sub_sub_value.shape)
+                                # Store the dtype as a UTF-8 string
+                                dt = sub_sub_value.dtype or ""
+                                sub_sub_group.create_dataset(
+                                    "dtype", data=dt, dtype=h5py.string_dtype(encoding="utf-8")
+                                )
+                                continue
                             if isinstance(sub_sub_value, list):
-                                sub_sub_value = json.dumps(sub_sub_value)
-                            sub_sub_group.create_dataset(sub_sub_key, data=sub_sub_value)
+                                json_val = json.dumps(sub_sub_value)
+                                sub_sub_group.create_dataset(sub_sub_key, data=json_val)
+                            elif isinstance(sub_sub_value, dict):
+                                for k2, v2 in sub_sub_value.items():
+                                    val = json.dumps(v2) if isinstance(v2, list) else v2
+                                    sub_sub_group.create_dataset(k2, data=val)
+                            else:
+                                sub_sub_group.create_dataset(sub_sub_key, data=sub_sub_value)
                     else:
                         metadata_bec[key].create_dataset(sub_key, data=sub_value)
             else:
@@ -152,6 +169,8 @@ def create_history_file(file_path, data: dict, metadata: dict) -> messages.ScanH
         end_time=time.time(),
         num_points=metadata["num_points"],
         request_inputs=metadata["request_inputs"],
+        stored_data_info=metadata.get("stored_data_info"),
+        metadata={"scan_report_devices": metadata.get("scan_report_devices")},
     )
     return msg
 
@@ -202,3 +221,102 @@ def grid_scan_history_msg(tmpdir):
 
     file_path = str(tmpdir.join("scan_1.h5"))
     return create_history_file(file_path, data, metadata)
+
+
+@pytest.fixture
+def scan_history_factory(tmpdir):
+    """
+    Factory to create scan history messages with custom parameters.
+    Usage:
+        msg1 = scan_history_factory(scan_id="id1", scan_number=1, num_points=10)
+        msg2 = scan_history_factory(scan_id="id2", scan_number=2, scan_name="grid_scan", num_points=16)
+    """
+
+    def _factory(
+        scan_id: str = "test_scan",
+        scan_number: int = 1,
+        dataset_number: int = 1,
+        scan_name: str = "line_scan",
+        scan_type: str = "step",
+        num_points: int = 10,
+        x_range: tuple = (-5, 5),
+        y_range: tuple = (-5, 5),
+    ):
+        # Generate positions based on scan type
+        if scan_name == "grid_scan":
+            grid_size = int(np.sqrt(num_points))
+            x_grid, y_grid = np.meshgrid(
+                np.linspace(x_range[0], x_range[1], grid_size),
+                np.linspace(y_range[0], y_range[1], grid_size),
+            )
+            x_flat = x_grid.T.ravel()
+            y_flat = y_grid.T.ravel()
+        else:
+            x_flat = np.linspace(x_range[0], x_range[1], num_points)
+            y_flat = np.linspace(y_range[0], y_range[1], num_points)
+        positions = np.vstack((x_flat, y_flat)).T
+        num_pts = len(positions)
+        # Create dummy data
+        data = {
+            "baseline": {"bpm1a": {"bpm1a": {"value": [1], "timestamp": [100]}}},
+            "monitored": {
+                "bpm4i": {
+                    "bpm4i": {
+                        "value": np.random.rand(num_points),
+                        "timestamp": np.random.rand(num_points),
+                    }
+                },
+                "bpm3a": {
+                    "bpm3a": {
+                        "value": np.random.rand(num_points),
+                        "timestamp": np.random.rand(num_points),
+                    }
+                },
+                "samx": {"samx": {"value": x_flat, "timestamp": np.arange(num_pts)}},
+                "samy": {"samy": {"value": y_flat, "timestamp": np.arange(num_pts)}},
+            },
+            "async": {
+                "async_device": {
+                    "async_device": {
+                        "value": np.random.rand(num_pts * 10),
+                        "timestamp": np.random.rand(num_pts * 10),
+                    }
+                }
+            },
+        }
+        metadata = {
+            "scan_id": scan_id,
+            "scan_name": scan_name,
+            "scan_type": scan_type,
+            "exit_status": "closed",
+            "scan_number": scan_number,
+            "dataset_number": dataset_number,
+            "request_inputs": {
+                "arg_bundle": [
+                    "samx",
+                    x_range[0],
+                    x_range[1],
+                    num_pts,
+                    "samy",
+                    y_range[0],
+                    y_range[1],
+                    num_pts,
+                ],
+                "kwargs": {"relative": True},
+            },
+            "positions": positions.tolist(),
+            "num_points": num_pts,
+            "stored_data_info": {
+                "samx": {"samx": _StoredDataInfo(shape=(num_points,), dtype="float64")},
+                "samy": {"samy": _StoredDataInfo(shape=(num_points,), dtype="float64")},
+                "bpm4i": {"bpm4i": _StoredDataInfo(shape=(10,), dtype="float64")},
+                "async_device": {
+                    "async_device": _StoredDataInfo(shape=(num_points * 10,), dtype="float64")
+                },
+            },
+            "scan_report_devices": [b"samx"],
+        }
+        file_path = str(tmpdir.join(f"{scan_id}.h5"))
+        return create_history_file(file_path, data, metadata)
+
+    return _factory
