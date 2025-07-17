@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 import traceback
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from bec_lib.device import Device, Signal
 from bec_lib.endpoints import MessageEndpoints
@@ -149,6 +149,8 @@ class SignalLabel(BECWidget, QWidget):
         "show_normal_signals.setter",
         "show_config_signals",
         "show_config_signals.setter",
+        "display_array_data",
+        "display_array_data.setter",
     ]
 
     def __init__(
@@ -191,6 +193,7 @@ class SignalLabel(BECWidget, QWidget):
         self._show_hinted_signals: bool = True
         self._show_normal_signals: bool = True
         self._show_config_signals: bool = True
+        self._display_array_data: bool = False
 
         self._outer_layout = QHBoxLayout()
         self._layout = QHBoxLayout()
@@ -389,6 +392,16 @@ class SignalLabel(BECWidget, QWidget):
         self._update_label()
 
     @SafeProperty(bool)
+    def display_array_data(self) -> bool:
+        """Displays the full data from array signals if set to True."""
+        return self._display_array_data
+
+    @display_array_data.setter
+    def display_array_data(self, value: bool) -> None:
+        self._display_array_data = value
+        self.set_display_value(self._value)
+
+    @SafeProperty(bool)
     def show_hinted_signals(self) -> bool:
         """In the signal selection menu, show hinted signals"""
         return self._show_hinted_signals
@@ -415,7 +428,9 @@ class SignalLabel(BECWidget, QWidget):
     def show_normal_signals(self, value: bool) -> None:
         self._show_normal_signals = value
 
-    def _format_value(self, value: str):
+    def _format_value(self, value: Any):
+        if self._dtype == "array" and not self.display_array_data:
+            return "ARRAY DATA"
         if self._decimal_places == 0:
             return value
         try:
