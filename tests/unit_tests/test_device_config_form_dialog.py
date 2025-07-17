@@ -120,6 +120,37 @@ def test_update_cycle(update_dialog, qtbot):
     )
 
 
+@pytest.mark.parametrize(
+    ["changes", "result"],
+    [
+        ({}, {}),
+        ({"readOnly": True}, {"readOnly": True}),
+        ({"readOnly": False}, {}),
+        ({"readOnly": True, "description": "test"}, {"readOnly": True, "description": "test"}),
+        (
+            {"deviceConfig": {"param1": "'val1'"}},
+            {
+                "enabled": True,
+                "deviceClass": "TestDevice",
+                "deviceConfig": {"param1": "val1"},
+                "readoutPriority": "monitored",
+                "description": None,
+                "readOnly": False,
+                "softwareTrigger": False,
+                "deviceTags": set(),
+                "userParameter": {},
+                "name": "test_device",
+            },
+        ),
+        ({"deviceConfig": {}}, {}),
+    ],
+)
+def test_update_with_modified_deviceconfig(update_dialog, changes, result):
+    for k, v in changes.items():
+        update_dialog._form.widget_dict[k].setValue(v)
+    assert update_dialog.updated_config() == result
+
+
 def test_add_form_init_without_name(add_dialog, qtbot):
     assert (name_widget := add_dialog._form.widget_dict.get("name")) is not None
     assert isinstance(name_widget, StrFormItem)
