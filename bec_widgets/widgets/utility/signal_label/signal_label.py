@@ -206,7 +206,7 @@ class SignalLabel(BECWidget, QWidget):
         self._update_label()
         self._label.setLayout(self._layout)
 
-        self._value: str = ""
+        self._value: Any = ""
         self._display = QLabel()
         self._layout.addWidget(self._display)
 
@@ -235,6 +235,7 @@ class SignalLabel(BECWidget, QWidget):
 
     @SafeSlot()
     def _process_dialog(self, device: str, signal: str):
+        signal = signal or device
         self.disconnect_device()
         self.device = device
         self.signal = signal
@@ -250,12 +251,12 @@ class SignalLabel(BECWidget, QWidget):
     def connect_device(self):
         """Subscribe to the Redis topic for the device to display"""
         if not self._connected and self._device and self._device in self.dev:
-            self._connected = True
+            self._manual_read()
             self._read_endpoint = MessageEndpoints.device_read(self._device)
             self._read_config_endpoint = MessageEndpoints.device_read_configuration(self._device)
             self.bec_dispatcher.connect_slot(self.on_device_readback, self._read_endpoint)
             self.bec_dispatcher.connect_slot(self.on_device_readback, self._read_config_endpoint)
-            self._manual_read()
+            self._connected = True
             self.set_display_value(self._value)
 
     def disconnect_device(self):
@@ -295,6 +296,7 @@ class SignalLabel(BECWidget, QWidget):
         """
         Update the display with the new value.
         """
+
         try:
             signal_to_read = self._patch_hinted_signal()
             _value = msg["signals"].get(signal_to_read, {}).get("value")
