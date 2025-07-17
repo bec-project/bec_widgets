@@ -1,6 +1,35 @@
 # CHANGELOG
 
 
+## v2.26.0 (2025-07-17)
+
+### Bug Fixes
+
+- **config label**: Reset offset when toggling the label action
+  ([`b8ae7b2`](https://github.com/bec-project/bec_widgets/commit/b8ae7b2e96071b6dc59dae7ffa72bbedc6aaea23))
+
+- **performance_bundle**: Fix performance bundle cleanup
+  ([`23674cc`](https://github.com/bec-project/bec_widgets/commit/23674ccf592a2caa0b57ae64ad1499c270b7d469))
+
+### Features
+
+- **device combobox**: Add option to insert an empty element
+  ([`debd347`](https://github.com/bec-project/bec_widgets/commit/debd347b64a3d2ca07ddcd5ef3a3394d1ffb67e3))
+
+- **heatmap**: Add interpolation and oversampling UI components
+  ([`1d8069e`](https://github.com/bec-project/bec_widgets/commit/1d8069e391412e3096a3c1e7181398dd4e609650))
+
+### Refactoring
+
+- **image_base**: Cleanup
+  ([`46a9178`](https://github.com/bec-project/bec_widgets/commit/46a91784d237137128965ad585e38085e931e5d4))
+
+### Testing
+
+- **history**: Add history message helper methods to conftest
+  ([`44cc061`](https://github.com/bec-project/bec_widgets/commit/44cc06137ccfbc087bdd3005156ff28effe05f23))
+
+
 ## v2.25.0 (2025-07-17)
 
 ### Bug Fixes
