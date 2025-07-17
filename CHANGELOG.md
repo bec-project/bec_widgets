@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.27.0 (2025-07-17)
+
+### Features
+
+- Add monaco editor
+  ([`2373c7e`](https://github.com/bec-project/bec_widgets/commit/2373c7e996566a5b84c5a50e1c3e69de885713db))
+
+
 ## v2.26.0 (2025-07-17)
 
 ### Bug Fixes
