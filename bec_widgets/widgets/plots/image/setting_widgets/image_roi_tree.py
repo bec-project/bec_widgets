@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING
 
+from bec_lib import bec_logger
 from bec_qthemes import material_icon
 from qtpy.QtCore import QEvent, Qt
 from qtpy.QtGui import QColor
@@ -37,6 +38,9 @@ from bec_widgets.widgets.utility.visual.colormap_widget.colormap_widget import B
 
 if TYPE_CHECKING:
     from bec_widgets.widgets.plots.image.image import Image
+
+
+logger = bec_logger.logger
 
 
 class ROILockButton(QToolButton):
@@ -447,6 +451,18 @@ class ROIPropertyTree(BECWidget, QWidget):
     def cleanup(self):
         self.cmap.close()
         self.cmap.deleteLater()
+        if self.controller and hasattr(self.controller, "rois"):
+            for roi in self.controller.rois:  # disconnect all signals from ROIs
+                try:
+                    if isinstance(roi, RectangularROI):
+                        roi.edgesChanged.disconnect()
+                    else:
+                        roi.centerChanged.disconnect()
+                    roi.penChanged.disconnect()
+                    roi.nameChanged.disconnect()
+                except (RuntimeError, TypeError) as e:
+                    logger.error(f"Failed to disconnect roi qt signal: {e}")
+
         super().cleanup()
 
 
