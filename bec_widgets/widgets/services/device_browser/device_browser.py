@@ -4,12 +4,13 @@ from functools import partial
 
 from bec_lib.callback_handler import EventType
 from bec_lib.config_helper import ConfigHelper
+from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
-from bec_lib.messages import ConfigAction
+from bec_lib.messages import ConfigAction, ScanStatusMessage
 from bec_qthemes import material_icon
 from pyqtgraph import SignalProxy
 from qtpy.QtCore import QSize, QThreadPool, Signal
-from qtpy.QtWidgets import QListWidget, QListWidgetItem, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QLabel, QListWidget, QListWidgetItem, QToolButton, QVBoxLayout, QWidget
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.bec_widget import BECWidget
@@ -30,6 +31,7 @@ class DeviceBrowser(BECWidget, QWidget):
     """
 
     devices_changed: Signal = Signal()
+    editing_enabled: Signal = Signal(bool)
     device_update: Signal = Signal(str, dict)
     PLUGIN = True
     ICON_NAME = "lists"
@@ -47,7 +49,7 @@ class DeviceBrowser(BECWidget, QWidget):
         self._config_helper = ConfigHelper(self.client.connector, self.client._service_name)
         self._q_threadpool = QThreadPool()
         self.ui = None
-        self.ini_ui()
+        self.init_ui()
         self.dev_list: QListWidget = self.ui.device_list
         self.dev_list.setVerticalScrollMode(QListWidget.ScrollMode.ScrollPerPixel)
         self.proxy_device_update = SignalProxy(
@@ -56,14 +58,20 @@ class DeviceBrowser(BECWidget, QWidget):
         self.bec_dispatcher.client.callbacks.register(
             EventType.DEVICE_UPDATE, self.on_device_update
         )
+        self.bec_dispatcher.client.callbacks.register(
+            EventType.SCAN_STATUS, self.scan_status_changed
+        )
+
         self.devices_changed.connect(self.update_device_list)
         self.ui.add_button.clicked.connect(self._create_add_dialog)
         self.ui.add_button.setIcon(material_icon("add", size=(20, 20), convert_to_pixmap=False))
 
+        self.init_warning_label()
+
         self.init_device_list()
         self.update_device_list()
 
-    def ini_ui(self) -> None:
+    def init_ui(self) -> None:
         """
         Initialize the UI by loading the UI file and setting the layout.
         """
@@ -72,6 +80,15 @@ class DeviceBrowser(BECWidget, QWidget):
         self.ui = UILoader(self).loader(ui_file_path)
         layout.addWidget(self.ui)
         self.setLayout(layout)
+
+    def init_warning_label(self):
+        self.ui.scan_running_warning.setText("Warning: editing diabled while scan is running!")
+        self.ui.scan_running_warning.setStyleSheet(
+            "background-color: #fcba03; color: rgb(0, 0, 0);"
+        )
+        scan_status = self.bec_dispatcher.client.connector.get(MessageEndpoints.scan_status())
+        initial_status = scan_status.status if scan_status is not None else "closed"
+        self.set_editing_mode(initial_status not in ["open", "paused"])
 
     def _create_add_dialog(self):
         dialog = DeviceConfigDialog(parent=self, device=None, action="add")
@@ -120,6 +137,7 @@ class DeviceBrowser(BECWidget, QWidget):
         )
         device_item.expansion_state_changed.connect(partial(_updatesize, item, device_item))
         device_item.imminent_deletion.connect(partial(_remove_item, item))
+        self.editing_enabled.connect(device_item.set_editable)
         self.device_update.connect(device_item.config_update)
         tooltip = self.dev[device]._config.get("description", "")
         device_item.setToolTip(tooltip)
@@ -129,6 +147,17 @@ class DeviceBrowser(BECWidget, QWidget):
         self.dev_list.setItemWidget(item, device_item)
         self.dev_list.addItem(item)
         self._device_items[device] = item
+
+    @SafeSlot(bool)
+    def scan_status_changed(self, scan_info: dict, _: dict):
+        """disable editing when scans are running and enable editing when they are finished"""
+        msg = ScanStatusMessage.model_validate(scan_info)
+        self.set_editing_mode(msg.status not in ["open", "paused"])
+
+    def set_editing_mode(self, enabled: bool):
+        self.ui.add_button.setEnabled(enabled)
+        self.ui.scan_running_warning.setHidden(enabled)
+        self.editing_enabled.emit(enabled)
 
     @SafeSlot()
     def reset_device_list(self) -> None:
