@@ -1,3 +1,4 @@
+from bec_lib.device import Device
 from bec_qthemes import material_icon
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QToolButton, QVBoxLayout, QWidget
@@ -64,16 +65,30 @@ class SignalDisplay(BECWidget, QWidget):
         self._add_refresh_button()
 
         if self._device in self.dev:
-            for sig, info in self.dev[self.device]._info.get("signals", {}).items():
-                if info.get("kind_str") in [Kind.hinted.name, Kind.normal.name, Kind.config.name]:
-                    self._content_layout.addWidget(
-                        SignalLabel(
-                            device=self._device,
-                            signal=sig,
-                            show_select_button=False,
-                            show_default_units=True,
+            if isinstance(self.dev[self.device], Device):
+                for sig, info in self.dev[self.device]._info.get("signals", {}).items():
+                    if info.get("kind_str") in [
+                        Kind.hinted.name,
+                        Kind.normal.name,
+                        Kind.config.name,
+                    ]:
+                        self._content_layout.addWidget(
+                            SignalLabel(
+                                device=self._device,
+                                signal=sig,
+                                show_select_button=False,
+                                show_default_units=True,
+                            )
                         )
+            else:
+                self._content_layout.addWidget(
+                    SignalLabel(
+                        device=self._device,
+                        signal=self._device,
+                        show_select_button=False,
+                        show_default_units=True,
                     )
+                )
             self._content_layout.addStretch(1)
         else:
             self._content_layout.addWidget(
