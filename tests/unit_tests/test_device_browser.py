@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING
 from unittest import mock
 
 import pytest
+from bec_lib.device import Device
 from qtpy.QtCore import QPoint, Qt
 from qtpy.QtWidgets import QTabWidget
 
@@ -172,7 +173,7 @@ def test_signal_display_no_device(mocked_client, qtbot):
 
 
 def test_signal_display_omitted_not_added(mocked_client, qtbot):
-    device_mock = mock.MagicMock()
+    device_mock = mock.MagicMock(spec=Device)
     device_mock._info = {"signals": {"signal_1": {"kind_str": "omitted"}}}
 
     signal_display = SignalDisplay(client=mocked_client, device="test_device_1")
