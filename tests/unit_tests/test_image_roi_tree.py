@@ -399,3 +399,35 @@ def test_new_roi_respects_global_lock(roi_tree, image_widget, qtbot):
     assert not roi.movable
     # Disable global lock again
     roi_tree.lock_all_action.action.setChecked(False)
+
+
+def test_cleanup_disconnect_signals(roi_tree, image_widget):
+    """Test that cleanup disconnects ROI signals so further changes do not update the tree."""
+    # Add a rectangular ROI
+    roi = image_widget.add_roi(kind="rect", name="cleanup_test", pos=(10, 10), size=(20, 20))
+    item = roi_tree.roi_items[roi]
+
+    # Test that signals are connected before cleanup
+    pre_name = item.text(roi_tree.COL_ROI)
+    pre_coord = item.child(2).text(roi_tree.COL_PROPS)
+    # Change ROI properties to see updates
+    roi.label = "connected_name"
+    roi.setPos(30, 30)
+    # Verify that the tree item updated
+    assert item.text(roi_tree.COL_ROI) == "connected_name"
+    assert item.child(2).text(roi_tree.COL_PROPS) != pre_coord
+
+    # Perform cleanup to disconnect signals
+    roi_tree.cleanup()
+
+    # Store initial state
+    initial_name = item.text(roi_tree.COL_ROI)
+    initial_coord = item.child(2).text(roi_tree.COL_PROPS)
+
+    # Change ROI properties after cleanup
+    roi.label = "changed_name"
+    roi.setPos(50, 50)
+
+    # Verify that the tree item was not updated
+    assert item.text(roi_tree.COL_ROI) == initial_name
+    assert item.child(2).text(roi_tree.COL_PROPS) == initial_coord
