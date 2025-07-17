@@ -1,6 +1,35 @@
 # CHANGELOG
 
 
+## v2.25.0 (2025-07-17)
+
+### Bug Fixes
+
+- **bec-progressbar**: Add flag for theme update
+  ([`694a6c4`](https://github.com/bec-project/bec_widgets/commit/694a6c49608b68e25dc0c76b58855b96f3f0ef0b))
+
+### Continuous Integration
+
+- **bec**: Add child_repos test for bec (unit and e2e tests)
+  ([`a9c8995`](https://github.com/bec-project/bec_widgets/commit/a9c8995ac0b39f6bc327887f43f7d4d6e6e89db2))
+
+- **plugin**: Add plugin repository test to BW ci
+  ([`2b06e34`](https://github.com/bec-project/bec_widgets/commit/2b06e34ecff8c0a92a2b235f375e837729736b2a))
+
+### Features
+
+- **scan-history-browser**: Add history browser and history metadata viewer
+  ([`9caae4c`](https://github.com/bec-project/bec_widgets/commit/9caae4cf40d3876175b827abb735ae227ae0bcea))
+
+### Refactoring
+
+- Add additional components for history metadata, device view and popup ui
+  ([`cf97cc1`](https://github.com/bec-project/bec_widgets/commit/cf97cc1805e16073c7849d1f9375e2ebd2176b70))
+
+- Cleanup, add compact popup view for scan_history_browser and update tests
+  ([`25b2737`](https://github.com/bec-project/bec_widgets/commit/25b2737aacfaa45f255afb6ebf467d5781165a8e))
+
+
 ## v2.24.1 (2025-07-15)
 
 ### Bug Fixes
