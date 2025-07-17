@@ -168,6 +168,11 @@ class DeviceConfigDialog(BECWidget, QDialog):
         diff = {
             k: v for k, v in new_config.items() if self._initial_config.get(k) != new_config.get(k)
         }
+        if self._initial_config["deviceConfig"] in [{}, None] and new_config["deviceConfig"] in [
+            {},
+            None,
+        ]:
+            diff.pop("deviceConfig", None)
         if diff.get("deviceConfig") is not None:
             # TODO: special cased in some parts of device manager but not others, should
             # be removed in config update as with below issue
@@ -176,6 +181,11 @@ class DeviceConfigDialog(BECWidget, QDialog):
             diff["deviceConfig"] = {
                 k: _try_literal_eval(str(v)) for k, v in diff["deviceConfig"].items() if k != ""
             }
+
+        # Due to above issues, if deviceConfig changes we must remove and recreate the device - so we need the whole config
+        if "deviceConfig" in diff:
+            new_config["deviceConfig"] = diff["deviceConfig"]
+            return new_config
         return diff
 
     @SafeSlot(bool)
