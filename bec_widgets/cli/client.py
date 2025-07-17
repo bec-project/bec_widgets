@@ -4378,6 +4378,62 @@ class SignalLabel(RPCBase):
         Show the button to select the signal to display
         """
 
+    @property
+    @rpc_call
+    def show_hinted_signals(self) -> "bool":
+        """
+        In the signal selection menu, show hinted signals
+        """
+
+    @show_hinted_signals.setter
+    @rpc_call
+    def show_hinted_signals(self) -> "bool":
+        """
+        In the signal selection menu, show hinted signals
+        """
+
+    @property
+    @rpc_call
+    def show_normal_signals(self) -> "bool":
+        """
+        In the signal selection menu, show normal signals
+        """
+
+    @show_normal_signals.setter
+    @rpc_call
+    def show_normal_signals(self) -> "bool":
+        """
+        In the signal selection menu, show normal signals
+        """
+
+    @property
+    @rpc_call
+    def show_config_signals(self) -> "bool":
+        """
+        In the signal selection menu, show config signals
+        """
+
+    @show_config_signals.setter
+    @rpc_call
+    def show_config_signals(self) -> "bool":
+        """
+        In the signal selection menu, show config signals
+        """
+
+    @property
+    @rpc_call
+    def display_array_data(self) -> "bool":
+        """
+        Displays the full data from array signals if set to True.
+        """
+
+    @display_array_data.setter
+    @rpc_call
+    def display_array_data(self) -> "bool":
+        """
+        Displays the full data from array signals if set to True.
+        """
+
 
 class SignalLineEdit(RPCBase):
     """Line edit widget for device input with autocomplete for device names."""
