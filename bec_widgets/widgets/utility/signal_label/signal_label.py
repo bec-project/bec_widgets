@@ -143,6 +143,12 @@ class SignalLabel(BECWidget, QWidget):
         "show_default_units.setter",
         "show_select_button",
         "show_select_button.setter",
+        "show_hinted_signals",
+        "show_hinted_signals.setter",
+        "show_normal_signals",
+        "show_normal_signals.setter",
+        "show_config_signals",
+        "show_config_signals.setter",
     ]
 
     def __init__(
@@ -183,8 +189,8 @@ class SignalLabel(BECWidget, QWidget):
         self._dtype = None
 
         self._show_hinted_signals: bool = True
-        self._show_normal_signals: bool = False
-        self._show_config_signals: bool = False
+        self._show_normal_signals: bool = True
+        self._show_config_signals: bool = True
 
         self._outer_layout = QHBoxLayout()
         self._layout = QHBoxLayout()
