@@ -1040,6 +1040,7 @@ class PlotBase(BECWidget, QWidget):
             self.crosshair.update_markers()
 
     def cleanup(self):
+        self.toolbar.cleanup()
         self.unhook_crosshair()
         self.unhook_fps_monitor(delete_label=True)
         self.tick_item.cleanup()
@@ -1049,7 +1050,6 @@ class PlotBase(BECWidget, QWidget):
             self.axis_settings_dialog = None
         self.cleanup_pyqtgraph()
         self.round_plot_widget.close()
-        self.toolbar.cleanup()
         super().cleanup()
 
     def cleanup_pyqtgraph(self, item: pg.PlotItem | None = None):

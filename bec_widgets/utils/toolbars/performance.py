@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.connections import BundleConnection
@@ -42,11 +43,15 @@ class PerformanceConnection(BundleConnection):
         super().__init__()
         self._connected = False
 
+    @SafeSlot(bool)
+    def set_fps_monitor(self, enabled: bool):
+        setattr(self.target_widget, "enable_fps_monitor", enabled)
+
     def connect(self):
         self._connected = True
         # Connect the action to the target widget's method
         self.components.get_action_reference("fps_monitor")().action.toggled.connect(
-            lambda checked: setattr(self.target_widget, "enable_fps_monitor", checked)
+            self.set_fps_monitor
         )
 
     def disconnect(self):
@@ -54,5 +59,6 @@ class PerformanceConnection(BundleConnection):
             return
         # Disconnect the action from the target widget's method
         self.components.get_action_reference("fps_monitor")().action.toggled.disconnect(
-            lambda checked: setattr(self.target_widget, "enable_fps_monitor", checked)
+            self.set_fps_monitor
         )
+        self._connected = False
