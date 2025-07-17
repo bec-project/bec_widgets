@@ -1,7 +1,9 @@
 import os
 import re
 from functools import partial
+from typing import Callable
 
+import bec_lib
 from bec_lib.callback_handler import EventType
 from bec_lib.config_helper import ConfigHelper
 from bec_lib.endpoints import MessageEndpoints
@@ -10,7 +12,14 @@ from bec_lib.messages import ConfigAction, ScanStatusMessage
 from bec_qthemes import material_icon
 from pyqtgraph import SignalProxy
 from qtpy.QtCore import QSize, QThreadPool, Signal
-from qtpy.QtWidgets import QLabel, QListWidget, QListWidgetItem, QToolButton, QVBoxLayout, QWidget
+from qtpy.QtWidgets import (
+    QFileDialog,
+    QListWidget,
+    QListWidgetItem,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.bec_widget import BECWidget
@@ -61,12 +70,14 @@ class DeviceBrowser(BECWidget, QWidget):
         self.bec_dispatcher.client.callbacks.register(
             EventType.SCAN_STATUS, self.scan_status_changed
         )
+        self._default_config_dir = os.path.abspath(
+            os.path.join(os.path.dirname(bec_lib.__file__), "./configs/")
+        )
 
         self.devices_changed.connect(self.update_device_list)
-        self.ui.add_button.clicked.connect(self._create_add_dialog)
-        self.ui.add_button.setIcon(material_icon("add", size=(20, 20), convert_to_pixmap=False))
 
         self.init_warning_label()
+        self.init_tool_buttons()
 
         self.init_device_list()
         self.update_device_list()
@@ -89,6 +100,18 @@ class DeviceBrowser(BECWidget, QWidget):
         scan_status = self.bec_dispatcher.client.connector.get(MessageEndpoints.scan_status())
         initial_status = scan_status.status if scan_status is not None else "closed"
         self.set_editing_mode(initial_status not in ["open", "paused"])
+
+    def init_tool_buttons(self):
+        def _setup_button(button: QToolButton, icon: str, slot: Callable, tooltip: str = ""):
+            button.clicked.connect(slot)
+            button.setIcon(material_icon(icon, size=(20, 20), convert_to_pixmap=False))
+            button.setToolTip(tooltip)
+
+        _setup_button(self.ui.add_button, "add", self._create_add_dialog, "add new device")
+        _setup_button(self.ui.save_button, "save", self._save_to_file, "save config to file")
+        _setup_button(
+            self.ui.import_button, "input", self._load_from_file, "append/merge config from file"
+        )
 
     def _create_add_dialog(self):
         dialog = DeviceConfigDialog(parent=self, device=None, action="add")
@@ -148,7 +171,7 @@ class DeviceBrowser(BECWidget, QWidget):
         self.dev_list.addItem(item)
         self._device_items[device] = item
 
-    @SafeSlot(bool)
+    @SafeSlot(dict, dict)
     def scan_status_changed(self, scan_info: dict, _: dict):
         """disable editing when scans are running and enable editing when they are finished"""
         msg = ScanStatusMessage.model_validate(scan_info)
@@ -189,6 +212,22 @@ class DeviceBrowser(BECWidget, QWidget):
             return
         for device in self.dev:
             self._device_items[device].setHidden(not self.regex.search(device))
+
+    @SafeSlot()
+    def _load_from_file(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Update config from file", self._default_config_dir, "Config files (*.yml *.yaml)"
+        )
+        if file_path:
+            self._config_helper.update_session_with_file(file_path)
+
+    @SafeSlot()
+    def _save_to_file(self):
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save config to file", self._default_config_dir, "Config files (*.yml *.yaml)"
+        )
+        if file_path:
+            self._config_helper.save_current_session(file_path)
 
 
 if __name__ == "__main__":  # pragma: no cover
