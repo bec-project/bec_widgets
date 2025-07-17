@@ -1007,6 +1007,7 @@ class ImageBase(PlotBase):
         """
         Cleanup the widget.
         """
+        self.toolbar.cleanup()
 
         # Remove all ROIs
         rois = self.rois
