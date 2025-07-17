@@ -39,9 +39,10 @@ class CommunicateConfigAction(QRunnable):
                     raise ValueError(
                         "Must be updating a device or be supplied a name for a new device"
                     )
-                if "deviceConfig" not in self.config:
+                if "deviceConfig" not in self.config or self.action in ["add", "remove"]:
                     self.process_simple_action(dev_name)
                 else:
+                    # updating an existing device, but need to recreate it for this change
                     self.process_remove_readd(dev_name)
             else:
                 raise ValueError(f"action {self.action} is not supported")

@@ -68,7 +68,7 @@ class DeviceConfigDialog(BECWidget, QDialog):
             self.client.connector, self.client._service_name
         )
         self._device = device
-        self._action = action
+        self._action: Literal["update", "add"] = action
         self._q_threadpool = threadpool or QThreadPool()
         self.setWindowTitle(f"Edit config for: {device}")
         self._container = QStackedLayout()
@@ -168,10 +168,9 @@ class DeviceConfigDialog(BECWidget, QDialog):
         diff = {
             k: v for k, v in new_config.items() if self._initial_config.get(k) != new_config.get(k)
         }
-        if self._initial_config["deviceConfig"] in [{}, None] and new_config["deviceConfig"] in [
-            {},
-            None,
-        ]:
+        if self._initial_config.get("deviceConfig") in [{}, None] and new_config.get(
+            "deviceConfig"
+        ) in [{}, None]:
             diff.pop("deviceConfig", None)
         if diff.get("deviceConfig") is not None:
             # TODO: special cased in some parts of device manager but not others, should
@@ -222,7 +221,7 @@ class DeviceConfigDialog(BECWidget, QDialog):
             self._proc_device_config_change(updated_config)
 
     def _proc_device_config_change(self, config: dict):
-        logger.info(f"Sending request to update device config: {config}")
+        logger.info(f"Sending request to {self._action} device config: {config}")
 
         self._start_waiting_display()
         communicate_update = CommunicateConfigAction(
