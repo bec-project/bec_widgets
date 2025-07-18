@@ -48,8 +48,6 @@ class ScriptInterface(BECWidget, QWidget):
 
         self.toolbar.show_bundles(["run", "stop"])
 
-        self.web_console.write("bec --nogui")
-
     @property
     def current_script_id(self):
         return self._current_script_id
@@ -104,5 +102,6 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     script_interface = ScriptInterface()
+    script_interface.resize(800, 600)
     script_interface.show()
     sys.exit(app.exec_())
