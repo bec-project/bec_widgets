@@ -84,7 +84,15 @@ def test_initialization(signal_label: SignalLabel):
 
 
 def test_initialization_with_device(qtbot, mocked_client: MagicMock):
-    with patch.object(mocked_client.device_manager.devices.samx, "_info", SAMX_INFO_DICT):
+
+    with (
+        patch.object(mocked_client.device_manager.devices.samx, "_info", SAMX_INFO_DICT),
+        patch.object(
+            mocked_client.device_manager.devices.samx,
+            "_get_root_recursively",
+            lambda *_: (MagicMock(),),
+        ),
+    ):
         widget = SignalLabel(device="samx", signal="readback", client=mocked_client)
         qtbot.addWidget(widget)
         qtbot.waitExposed(widget)
