@@ -7,6 +7,7 @@ from qtpy.QtCore import Qt, QTimer
 from qtpy.QtGui import QValidator
 from qtpy.QtWidgets import QPushButton
 
+from bec_widgets.tests.utils import Positioner
 from bec_widgets.widgets.control.device_control.positioner_box import (
     PositionerBox,
     PositionerControlLine,
@@ -17,6 +18,18 @@ from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit 
 
 from .client_mocks import mocked_client
 from .conftest import create_widget
+
+
+class PositionerWithoutPrecision(Positioner):
+    """just placeholder for testing embedded isinstance check in DeviceCombobox"""
+
+    def __init__(self, precision, name="test", limits=None, read_value=1.0, enabled=True):
+        super().__init__(name, limits=limits, read_value=read_value, enabled=enabled)
+        self._precision = precision
+
+    @property
+    def precision(self):
+        return self._precision
 
 
 @pytest.fixture
@@ -165,3 +178,25 @@ def test_device_validity_check_rejects_non_positioner():
     positioner_box = mock.MagicMock(spec=PositionerBox)
     positioner_box.dev = {"test": 5.123}
     assert not PositionerBox._check_device_is_valid(positioner_box, "test")
+
+
+def test_positioner_box_device_without_precision(qtbot, positioner_box):
+    """Test positioner box with device without precision"""
+
+    for ii, mock_return in enumerate([None, 2, 2.0, True, "tmp"]):
+        dev_name = f"samy_{ii}"
+        device = PositionerWithoutPrecision(
+            precision=mock_return, name=dev_name, limits=[-5, 5], read_value=3.0
+        )
+        positioner_box.bec_dispatcher.client.device_manager.add_devices(devices=[device])
+
+        positioner_box.device = dev_name
+
+        def check_title():
+            return positioner_box.ui.device_box.title() == dev_name
+
+        qtbot.waitUntil(check_title, timeout=3000)
+        if not isinstance(mock_return, bool) and isinstance(mock_return, int):
+            assert positioner_box.ui.step_size.value() == 10**-mock_return * 10
+        else:
+            assert positioner_box.ui.step_size.value() == 10**-8 * 10
