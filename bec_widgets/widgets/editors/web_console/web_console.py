@@ -6,11 +6,12 @@ import time
 
 from bec_lib.logger import bec_logger
 from louie.saferef import safe_ref
-from qtpy.QtCore import QUrl, qInstallMessageHandler
+from qtpy.QtCore import QTimer, QUrl, Signal, qInstallMessageHandler
 from qtpy.QtWebEngineWidgets import QWebEnginePage, QWebEngineView
 from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.error_popups import SafeProperty
 
 logger = bec_logger.logger
 
@@ -165,11 +166,16 @@ class WebConsole(BECWidget, QWidget):
     A simple widget to display a website
     """
 
+    _js_callback = Signal(bool)
+    initialized = Signal()
+
     PLUGIN = True
     ICON_NAME = "terminal"
 
     def __init__(self, parent=None, config=None, client=None, gui_id=None, **kwargs):
         super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
+        self._startup_cmd = "bec --nogui"
+        self._is_initialized = False
         _web_console_registry.register(self)
         self._token = _web_console_registry._token
         layout = QVBoxLayout()
@@ -181,6 +187,48 @@ class WebConsole(BECWidget, QWidget):
         layout.addWidget(self.browser)
         self.setLayout(layout)
         self.page.setUrl(QUrl(f"http://localhost:{_web_console_registry._server_port}"))
+        self._startup_timer = QTimer()
+        self._startup_timer.setInterval(1000)
+        self._startup_timer.timeout.connect(self._check_page_ready)
+        self._startup_timer.start()
+        self._js_callback.connect(self._on_js_callback)
+
+    def _check_page_ready(self):
+        """
+        Check if the page is ready and stop the timer if it is.
+        """
+        if self.page.isLoading():
+            return
+
+        self.page.runJavaScript("window.term !== undefined", self._js_callback.emit)
+
+    def _on_js_callback(self, ready: bool):
+        """
+        Callback for when the JavaScript is ready.
+        """
+        if not ready:
+            return
+        self._is_initialized = True
+        self._startup_timer.stop()
+        if self._startup_cmd:
+            self.write(self._startup_cmd)
+        self.initialized.emit()
+
+    @SafeProperty(str)
+    def startup_cmd(self):
+        """
+        Get the startup command for the web console.
+        """
+        return self._startup_cmd
+
+    @startup_cmd.setter
+    def startup_cmd(self, cmd: str):
+        """
+        Set the startup command for the web console.
+        """
+        if not isinstance(cmd, str):
+            raise ValueError("Startup command must be a string.")
+        self._startup_cmd = cmd
 
     def write(self, data: str, send_return: bool = True):
         """
@@ -217,6 +265,7 @@ class WebConsole(BECWidget, QWidget):
         """
         Clean up the registry by removing any instances that are no longer valid.
         """
+        self._startup_timer.stop()
         _web_console_registry.unregister(self)
         super().cleanup()
 
