@@ -196,7 +196,8 @@ def test_positioner_box_device_without_precision(qtbot, positioner_box):
             return positioner_box.ui.device_box.title() == dev_name
 
         qtbot.waitUntil(check_title, timeout=3000)
-        if not isinstance(mock_return, bool) and isinstance(mock_return, int):
+        if isinstance(mock_return, (int, float)):
+            mock_return = int(mock_return)
             assert positioner_box.ui.step_size.value() == 10**-mock_return * 10
         else:
             assert positioner_box.ui.step_size.value() == 10**-8 * 10

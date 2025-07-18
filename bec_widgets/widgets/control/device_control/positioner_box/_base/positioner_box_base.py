@@ -138,7 +138,11 @@ class PositionerBoxBase(BECWidget, CompactPopupWidget):
         signals = msg_content.get("signals", {})
         # pylint: disable=protected-access
         hinted_signals = self.dev[device]._hints
-        precision = getattr(self.dev[device], "precision", None)
+        precision = getattr(self.dev[device], "precision", 8)
+        try:
+            precision = int(precision)
+        except (TypeError, ValueError):
+            precision = int(8)
 
         spinner = ui_components["spinner"]
         position_indicator = ui_components["position_indicator"]
@@ -178,18 +182,12 @@ class PositionerBoxBase(BECWidget, CompactPopupWidget):
             spinner.setVisible(False)
 
         if readback_val is not None:
-            if not isinstance(precision, bool) and isinstance(precision, int):
-                text = f"{readback_val:.{precision}f}"
-            else:
-                text = str(readback_val)
+            text = f"{readback_val:.{precision}f}"
             readback.setText(text)
             position_emit(readback_val)
 
         if setpoint_val is not None:
-            if not isinstance(precision, bool) and isinstance(precision, int):
-                text = f"{setpoint_val:.{precision}f}"
-            else:
-                text = str(setpoint_val)
+            text = f"{setpoint_val:.{precision}f}"
             setpoint.setText(text)
 
         limits = self.dev[device].limits
@@ -213,13 +211,13 @@ class PositionerBoxBase(BECWidget, CompactPopupWidget):
         ui["readback"].setToolTip(f"{device} readback")
         ui["setpoint"].setToolTip(f"{device} setpoint")
         ui["step_size"].setToolTip(f"Step size for {device}")
-        precision = getattr(self.dev[device], "precision", None)
-        if not isinstance(precision, bool) and isinstance(precision, int):
-            ui["step_size"].setDecimals(precision)
-            ui["step_size"].setValue(10**-precision * 10)
-        else:  # Default to 8 decimals if precision is not specified
-            ui["step_size"].setDecimals(8)
-            ui["step_size"].setValue(10**-8 * 10)
+        precision = getattr(self.dev[device], "precision", 8)
+        try:
+            precision = int(precision)
+        except (TypeError, ValueError):
+            precision = int(8)
+        ui["step_size"].setDecimals(precision)
+        ui["step_size"].setValue(10**-precision * 10)
 
     def _swap_readback_signal_connection(self, slot, old_device, new_device):
         self.bec_dispatcher.disconnect_slot(slot, MessageEndpoints.device_readback(old_device))

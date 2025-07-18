@@ -45,11 +45,12 @@ class PositionerGroupBox(QGroupBox):
 
     def _on_position_update(self, pos: float):
         self.position_update.emit(pos)
-        precision = getattr(self.widget.dev[self.widget.device], "precision", None)
-        if not isinstance(precision, bool) and isinstance(precision, int):
-            self.widget.label = f"{pos:.{precision}f}"
-        else:
-            self.widget.label = f"{pos}"
+        precision = getattr(self.widget.dev[self.widget.device], "precision", 8)
+        try:
+            precision = int(precision)
+        except (TypeError, ValueError):
+            precision = int(8)
+        self.widget.label = f"{pos:.{precision}f}"
 
     def close(self):
         self.widget.close()
