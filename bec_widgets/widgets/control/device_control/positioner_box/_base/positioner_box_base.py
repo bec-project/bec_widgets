@@ -138,7 +138,7 @@ class PositionerBoxBase(BECWidget, CompactPopupWidget):
         signals = msg_content.get("signals", {})
         # pylint: disable=protected-access
         hinted_signals = self.dev[device]._hints
-        precision = self.dev[device].precision
+        precision = getattr(self.dev[device], "precision", None)
 
         spinner = ui_components["spinner"]
         position_indicator = ui_components["position_indicator"]
@@ -178,11 +178,19 @@ class PositionerBoxBase(BECWidget, CompactPopupWidget):
             spinner.setVisible(False)
 
         if readback_val is not None:
-            readback.setText(f"{readback_val:.{precision}f}")
+            if not isinstance(precision, bool) and isinstance(precision, int):
+                text = f"{readback_val:.{precision}f}"
+            else:
+                text = str(readback_val)
+            readback.setText(text)
             position_emit(readback_val)
 
         if setpoint_val is not None:
-            setpoint.setText(f"{setpoint_val:.{precision}f}")
+            if not isinstance(precision, bool) and isinstance(precision, int):
+                text = f"{setpoint_val:.{precision}f}"
+            else:
+                text = str(setpoint_val)
+            setpoint.setText(text)
 
         limits = self.dev[device].limits
         limit_update(limits)
@@ -205,10 +213,13 @@ class PositionerBoxBase(BECWidget, CompactPopupWidget):
         ui["readback"].setToolTip(f"{device} readback")
         ui["setpoint"].setToolTip(f"{device} setpoint")
         ui["step_size"].setToolTip(f"Step size for {device}")
-        precision = self.dev[device].precision
-        if precision is not None:
+        precision = getattr(self.dev[device], "precision", None)
+        if not isinstance(precision, bool) and isinstance(precision, int):
             ui["step_size"].setDecimals(precision)
             ui["step_size"].setValue(10**-precision * 10)
+        else:  # Default to 8 decimals if precision is not specified
+            ui["step_size"].setDecimals(8)
+            ui["step_size"].setValue(10**-8 * 10)
 
     def _swap_readback_signal_connection(self, slot, old_device, new_device):
         self.bec_dispatcher.disconnect_slot(slot, MessageEndpoints.device_readback(old_device))
