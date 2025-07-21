@@ -10,8 +10,17 @@ from bec_lib.messages import ConfigAction
 from bec_qthemes import material_icon
 from qtpy.QtCore import QMimeData, QSize, Qt, QThreadPool, Signal
 from qtpy.QtGui import QDrag
-from qtpy.QtWidgets import QApplication, QHBoxLayout, QTabWidget, QToolButton, QVBoxLayout, QWidget
+from qtpy.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QLabel,
+    QTabWidget,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+)
 
+from bec_widgets.utils.compact_popup import LedLabel
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.expandable_frame import ExpandableGroupFrame
 from bec_widgets.widgets.services.device_browser.device_item.config_communicator import (
@@ -56,6 +65,10 @@ class DeviceItem(ExpandableGroupFrame):
         self._expanded_first_time = False
         self._data = None
         self.device = device
+        self._deleting = False
+
+        self._ro_pixmap = material_icon(icon_name="keyboard_off", size=(15, 15))
+        self._we_pixmap = material_icon(icon_name="keyboard", size=(15, 15))
 
         self._layout = QHBoxLayout()
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -78,6 +91,7 @@ class DeviceItem(ExpandableGroupFrame):
 
         self.set_layout(self._layout)
         self.adjustSize()
+        self._reload_config()
 
     def _create_title_layout(self, title: str, icon: str):
         super()._create_title_layout(title, icon)
@@ -91,6 +105,11 @@ class DeviceItem(ExpandableGroupFrame):
         self.delete_button.setIcon(material_icon(icon_name="delete", size=(15, 15)))
         self._title_layout.insertWidget(self._title_layout.count() - 1, self.delete_button)
         self.delete_button.clicked.connect(self._delete_device)
+
+        self.enabled_led = LedLabel()
+        self._title_layout.insertWidget(1, self.enabled_led)
+        self.readonly_label = QLabel()
+        self._title_layout.insertWidget(2, self.readonly_label)
 
     @SafeSlot()
     def _create_edit_dialog(self):
@@ -106,6 +125,7 @@ class DeviceItem(ExpandableGroupFrame):
 
     @SafeSlot()
     def _delete_device(self):
+        self._deleting = True
         self.expanded = False
         deleter = CommunicateConfigAction(self._config_helper, self.device, None, "remove")
         deleter.signals.error.connect(self._deletion_error)
@@ -147,7 +167,7 @@ class DeviceItem(ExpandableGroupFrame):
 
     @SafeSlot(str, dict)
     def config_update(self, action: ConfigAction, content: dict) -> None:
-        if self.device in content:
+        if (self.device in content or action == "reload") and not self._deleting:
             self._reload_config()
 
     @SafeSlot(popup_error=True)
@@ -158,6 +178,10 @@ class DeviceItem(ExpandableGroupFrame):
         """Set the displayed information from a device config dict, which must conform to the
         bec_lib.atlas_models.Device config model."""
         self._data = DeviceConfigModel.model_validate(config_dict)
+        self.enabled_led.setState("success" if self._data.enabled else "emergency")
+        self.enabled_led.setToolTip("enabled" if self._data.enabled else "disabled")
+        self.readonly_label.setPixmap(self._ro_pixmap if self._data.readOnly else self._we_pixmap)
+        self.readonly_label.setToolTip("read only" if self._data.readOnly else "writing enabled")
         if self._expanded_first_time:
             self.form.set_data(self._data)
 

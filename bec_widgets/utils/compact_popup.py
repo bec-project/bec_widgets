@@ -1,5 +1,6 @@
 import time
 from types import SimpleNamespace
+from typing import Literal
 
 from bec_qthemes import material_icon
 from qtpy.QtCore import Property, Qt, Signal
@@ -39,7 +40,7 @@ class LedLabel(QLabel):
         self.setState("default")
         self.setFixedSize(20, 20)
 
-    def setState(self, state: str):
+    def setState(self, state: Literal["success", "default", "warning", "emergency"]):
         match state:
             case "success":
                 r, g, b, a = self.palette.success.getRgb()

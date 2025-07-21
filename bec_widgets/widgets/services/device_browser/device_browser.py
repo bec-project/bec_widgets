@@ -125,10 +125,8 @@ class DeviceBrowser(BECWidget, QWidget):
             action (str): The action that triggered the event.
             content (dict): The content of the config update.
         """
-        if action in ["add", "remove", "reload"]:
-            self.devices_changed.emit()
-        if action in ["update", "reload"]:
-            self.device_update.emit(action, content)
+        self.devices_changed.emit()
+        self.device_update.emit(action, content)
 
     def init_device_list(self):
         self.dev_list.clear()
