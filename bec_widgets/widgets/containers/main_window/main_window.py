@@ -58,9 +58,7 @@ class BECMainWindow(BECWidget, QMainWindow):
 
         # Notification Centre overlay
         self.notification_centre = NotificationCentre(parent=self)  # Notification layer
-        self.notification_broker = BECNotificationBroker(
-            parent=self, centre=self.notification_centre
-        )
+        self.notification_broker = BECNotificationBroker()
         self._nc_margin = 16
         self._position_notification_centre()
 
@@ -490,9 +488,6 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._scan_progress_bar_full.deleteLater()
         self._scan_progress_hover.close()
         self._scan_progress_hover.deleteLater()
-        # Notification Centre cleanup
-        self.notification_broker.cleanup()
-        self.notification_broker.deleteLater()
         super().cleanup()
 
 
