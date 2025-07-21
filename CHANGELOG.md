@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v2.28.0 (2025-07-21)
+
+### Features
+
+- Disable editing while scan active
+  ([`1397655`](https://github.com/bec-project/bec_widgets/commit/13976557fbdb71a1161029521d81a655d25dd134))
+
+- Remove and readd device for config changes
+  ([`8489ef4`](https://github.com/bec-project/bec_widgets/commit/8489ef4a69d69b39648b1a9270012f14f95c6121))
+
+- Save and load config from devicebrowser
+  ([`7f0098f`](https://github.com/bec-project/bec_widgets/commit/7f0098f1533d419cc75801c4d6cbea485c7bbf94))
+
+
 ## v2.27.1 (2025-07-17)
 
 ### Bug Fixes
