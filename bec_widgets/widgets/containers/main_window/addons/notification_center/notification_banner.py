@@ -16,6 +16,7 @@ import sys
 from datetime import datetime
 from enum import Enum, auto
 from typing import Literal
+from uuid import uuid4
 
 import pyqtgraph as pg
 from bec_lib.alarm_handler import Alarms  # external enum
@@ -621,6 +622,8 @@ class NotificationCentre(QScrollArea):
         # watch parent resize so we can recompute max-height
         if self.parent():
             self.parent().installEventFilter(self)
+        self._replayed = False
+        QTimer.singleShot(0, self._replay_active_notifications)
 
     def _clear_btn_css(self, palette: dict[str, str]) -> str:
         """Return a stylesheet string for the clear‑all button."""
@@ -649,6 +652,7 @@ class NotificationCentre(QScrollArea):
         traceback: str | None = None,
         lifetime_ms: int = 5000,
         theme: str | None = None,
+        notification_id: str | None = None,
     ) -> NotificationToast:
         """
         Create a new toast and insert it just above the bottom spacer.
@@ -664,6 +668,9 @@ class NotificationCentre(QScrollArea):
         Returns:
             NotificationToast: The created toast widget.
         """
+        # ensure a shared ID for this notification
+        if notification_id is None:
+            notification_id = uuid4().hex
         # compute width available for a toast: viewport minus layout margins
         vp_w = self.viewport().width()  # viewport is always available
         margins = self._layout.contentsMargins().left() + self._layout.contentsMargins().right()
@@ -679,6 +686,11 @@ class NotificationCentre(QScrollArea):
             lifetime_ms=lifetime_ms,
             theme=theme or self._theme,
         )
+        # tag with shared ID and hook closures to the singleton broker
+        toast.notification_id = notification_id
+        broker = BECNotificationBroker()
+        toast.closed.connect(lambda nid=notification_id: broker.notification_closed.emit(nid))
+        toast.expired.connect(lambda nid=notification_id: broker.notification_closed.emit(nid))
         toast.closed.connect(lambda: self._hide_notification(toast))
         toast.expired.connect(lambda t=toast: self._handle_expire(t))
         toast.expanded.connect(self._adjust_height)
@@ -693,6 +705,12 @@ class NotificationCentre(QScrollArea):
         QTimer.singleShot(0, self._adjust_height)
         self._emit_counts()
         return toast
+
+    def remove_notification(self, notification_id: str) -> None:
+        """Close a specific notification in this centre if present."""
+        for toast in list(self.toasts):
+            if getattr(toast, "notification_id", None) == notification_id:
+                self._hide_notification(toast)
 
     # ------------------------------------------------------------------
     @SafeSlot(str)
@@ -775,6 +793,23 @@ class NotificationCentre(QScrollArea):
         if not any(t.isVisible() for t in self.toasts):
             self.setVisible(False)
         self._soft_hidden.add(toast)
+
+    def _replay_active_notifications(self):
+        """Replay notifications stored in broker for this centre."""
+        if self._replayed:
+            return
+        self._replayed = True
+        broker = BECNotificationBroker()
+        for nid, params in list(broker._active_notifications.items()):
+            toast = self.add_notification(
+                title=params["title"],
+                body=params["body"],
+                kind=params["kind"],
+                traceback=params["traceback"],
+                lifetime_ms=params["lifetime_ms"],
+                notification_id=nid,
+            )
+            self._soft_hide(toast)
 
     # batch operations
     def clear_all_across_app(self):
@@ -939,37 +974,94 @@ class NotificationIndicator(QWidget):
 
 class BECNotificationBroker(BECConnector, QObject):
     """
-    Notification broker that listens to the global notification signal and
-    posts notifications to the NotificationCentre.
-
-    Attributes:
-        centre(NotificationCentre): The notification centre to post to.
+    Singleton notification broker that listens to the global notification signal and
+    posts notifications to registered NotificationCentres.
     """
 
     RPC = False
 
-    def __init__(
-        self, parent=None, gui_id: str = None, client=None, *, centre: NotificationCentre, **kwargs
-    ):
-        super().__init__(parent=parent, gui_id=gui_id, client=client, **kwargs)
+    _instance: BECNotificationBroker | None = None
+    _initialized: bool = False
 
-        self.centre = centre
+    notification_closed = QtCore.Signal(str)
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self, parent=None, gui_id: str = None, client=None, **kwargs):
+        if self._initialized:
+            return
+        super().__init__(parent=parent, gui_id=gui_id, client=client, **kwargs)
         self._err_util = self.error_utility
+        # listen to incoming alarms and scan status
         self.bec_dispatcher.connect_slot(self.post_notification, MessageEndpoints.alarm())
         self.bec_dispatcher.connect_slot(self.on_scan_status, MessageEndpoints.scan_status())
+        # propagate any close events to all centres
+        self.notification_closed.connect(self._clear_across_centres)
+        self._initialized = True
+        # store active notifications to replay for new centres
+        self._active_notifications: dict[str, dict] = {}
 
-    # --------------------------------------------------------------
-    def _summarise_source(self, source) -> str:
-        """Return a concise one‑line summary of the *source* dict."""
-        if not isinstance(source, dict):
-            return str(source)
-        parts: list[str] = []
-        for k, v in source.items():
-            if isinstance(v, (str, int, float)):
-                parts.append(f"{k}={v}")
-            else:
-                parts.append(k)
-        return ", ".join(parts) if parts else str(source)
+    def _clear_across_centres(self, notification_id: str) -> None:
+        """Close the notification with this ID in every NotificationCentre."""
+        for centre in WidgetIO.find_widgets(NotificationCentre):
+            centre.remove_notification(notification_id)
+        # remove from active store once closed
+        self._active_notifications.pop(notification_id, None)
+
+    @SafeSlot(dict, dict)
+    def post_notification(self, msg: dict, meta: dict) -> None:
+        """
+        Called when a new alarm arrives. Builds and pushes a toast to each centre
+        with a shared notification_id, and hooks its close/expire signals.
+        """
+        centres = WidgetIO.find_widgets(NotificationCentre)
+        kind = self._banner_kind_from_severity(msg.get("severity", 0))
+        # build title and body
+        scan_id = meta.get("scan_id")
+        scan_number = meta.get("scan_number")
+        formatted_trace = self._err_util.format_traceback(msg.get("msg", ""))
+        short_msg = self._err_util.parse_error_message(formatted_trace)
+        title = msg.get("alarm_type", "Alarm")
+        if scan_number:
+            title += f" - Scan #{scan_number}"
+        body_text = short_msg
+        # build detailed traceback
+        sections: list[str] = []
+        if scan_id:
+            sections.extend(["-------- SCAN_ID --------\n", scan_id])
+        sections.extend(["-------- TRACEBACK --------", formatted_trace])
+        source = msg.get("source")
+        if source:
+            source_pretty = json.dumps(source, indent=4, default=str)
+            sections.extend(["", "-------- SOURCE --------", source_pretty])
+        detailed_trace = "\n".join(sections)
+        lifetime = 0 if kind == SeverityKind.MAJOR else 5_000
+
+        # generate one ID for all toasts of this event
+        notification_id = uuid4().hex
+        # record this notification for future centres
+        self._active_notifications[notification_id] = {
+            "title": title,
+            "body": body_text,
+            "kind": kind,
+            "traceback": detailed_trace,
+            "lifetime_ms": lifetime,
+        }
+        for centre in centres:
+            toast = centre.add_notification(
+                title=title,
+                body=body_text,
+                traceback=detailed_trace,
+                kind=kind,
+                lifetime_ms=lifetime,
+                notification_id=notification_id,
+            )
+            # broadcast any close or expire
+            toast.closed.connect(lambda nid=notification_id: self.notification_closed.emit(nid))
+            toast.expired.connect(lambda nid=notification_id: self.notification_closed.emit(nid))
 
     @SafeSlot(dict, dict)
     def on_scan_status(self, msg: dict, meta: dict) -> None:
@@ -983,43 +1075,10 @@ class BECNotificationBroker(BECConnector, QObject):
         msg = msg or {}
         status = msg.get("status")
         if status == "open":
-            self.centre.hide_all()
+            from bec_widgets.utils.widget_io import WidgetIO
 
-    @SafeSlot(dict, dict)
-    def post_notification(self, msg: dict, meta: dict) -> None:
-        kind = self._banner_kind_from_severity(msg.get("severity", 0))
-
-        scan_id = meta.get("scan_id")
-        scan_number = meta.get("scan_number")
-
-        raw_trace = msg.get("msg", "")
-        source = msg.get("source")
-
-        formatted_trace = self._err_util.format_traceback(raw_trace)
-        short_msg = self._err_util.parse_error_message(formatted_trace)
-
-        # Title
-        title = msg.get("alarm_type", "Alarm")
-        if scan_number:
-            title += f" - Scan #{scan_number}"
-        # banner body shows ONLY the short error line
-        body_text = short_msg
-
-        # build expanded details with clear sections
-        sections: list[str] = []
-        if scan_id:
-            sections.extend(["-------- SCAN_ID --------\n", scan_id])
-        sections.extend(["-------- TRACEBACK --------", formatted_trace])
-        if source:
-            source_pretty = json.dumps(source, indent=4, default=str)
-            sections.extend(["", "-------- SOURCE --------", source_pretty])
-        detailed_trace = "\n".join(sections)
-
-        lifetime = 0 if kind == "major" else 5_000
-
-        self.centre.add_notification(
-            title=title, body=body_text, traceback=detailed_trace, kind=kind, lifetime_ms=lifetime
-        )
+            for centre in WidgetIO.find_widgets(NotificationCentre):
+                centre.hide_all()
 
     @staticmethod
     def _banner_kind_from_severity(severity: int) -> "SeverityKind":
@@ -1031,6 +1090,14 @@ class BECNotificationBroker(BECConnector, QObject):
             return SeverityKind[Alarms(severity).name]  # e.g. WARNING → SeverityKind.WARNING
         except (ValueError, KeyError):
             return SeverityKind.WARNING
+
+    @classmethod
+    def reset_singleton(cls):
+        """
+        Reset the singleton instance of the BECNotificationBroker.
+        """
+        cls._instance = None
+        cls._initialized = False
 
     def cleanup(self):
         """Disconnect from the notification signal."""
@@ -1093,9 +1160,7 @@ class DemoWindow(QMainWindow):  # pragma: no cover
         self.notification_centre.raise_()  # keep above base content
 
         self.setCentralWidget(central_container)
-        self.notification_broker = BECNotificationBroker(
-            parent=self, centre=self.notification_centre
-        )
+        self.notification_broker = BECNotificationBroker(parent=self)
 
         # ----- wiring ------------------------------------------------------------
         self._counter = 1

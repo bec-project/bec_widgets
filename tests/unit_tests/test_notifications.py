@@ -149,12 +149,13 @@ def test_toast_paint_event(qtbot):
 
 
 @pytest.fixture
-def centre(qtbot):
+def centre(qtbot, mocked_client):
     """NotificationCentre embedded in a live parent widget kept alive for the test."""
     parent = QtWidgets.QWidget()
     parent.resize(600, 400)
 
     ctr = NotificationCentre(parent=parent, fixed_width=300, margin=8)
+    broker = BECNotificationBroker(client=mocked_client)
 
     layout = QtWidgets.QVBoxLayout(parent)
     layout.setContentsMargins(0, 0, 0, 0)
@@ -167,7 +168,8 @@ def centre(qtbot):
     qtbot.addWidget(ctr)
     parent.show()
     qtbot.waitExposed(parent)
-    return ctr
+    yield ctr
+    broker.reset_singleton()
 
 
 def _post(ctr: NotificationCentre, kind=SeverityKind.INFO, title="T", body="B"):
