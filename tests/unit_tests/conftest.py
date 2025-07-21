@@ -69,6 +69,14 @@ def clean_singleton():
     error_popups._popup_utility_instance = None
 
 
+@pytest.fixture(autouse=True)
+def suppress_message_box(monkeypatch):
+    """
+    Auto-suppress any QMessageBox.exec_ calls by returning Ok immediately.
+    """
+    monkeypatch.setattr(QMessageBox, "exec_", lambda *args, **kwargs: QMessageBox.Ok)
+
+
 def create_widget(qtbot, widget, *args, **kwargs):
     """
     Create a widget and add it to the qtbot for testing. This is a helper function that
