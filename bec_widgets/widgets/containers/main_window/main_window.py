@@ -34,12 +34,13 @@ from bec_widgets.widgets.progress.scan_progressbar.scan_progressbar import ScanP
 
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
+# Ensure the application does not use the native menu bar on macOS to be consistent with linux development.
 QApplication.setAttribute(Qt.AA_DontUseNativeMenuBar, True)
 
 
 class BECMainWindow(BECWidget, QMainWindow):
-    RPC = False
-    PLUGIN = False
+    RPC = True
+    PLUGIN = True
     SCAN_PROGRESS_WIDTH = 100  # px
     STATUS_BAR_WIDGETS_EXPIRE_TIME = 60_000  # milliseconds
 
@@ -493,15 +494,16 @@ class BECMainWindow(BECWidget, QMainWindow):
         super().cleanup()
 
 
-class UILaunchWindow(BECMainWindow):
-    RPC = True
+class BECMainWindowNoRPC(BECMainWindow):
+    RPC = False
+    PLUGIN = False
 
 
 if __name__ == "__main__":
     import sys
 
     app = QApplication(sys.argv)
-    main_window = UILaunchWindow()
+    main_window = BECMainWindow()
     main_window.show()
     main_window.resize(800, 600)
     sys.exit(app.exec())

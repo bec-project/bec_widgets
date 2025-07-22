@@ -27,6 +27,7 @@ class AutoUpdates(BECMainWindow):
     _default_dock: BECDock
     USER_ACCESS = ["enabled", "enabled.setter", "selected_device", "selected_device.setter"]
     RPC = True
+    PLUGIN = False
 
     # enforce that subclasses have the same rpc widget class
     rpc_widget_class = "AutoUpdates"
