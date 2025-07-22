@@ -300,7 +300,10 @@ class SignalLabel(BECWidget, QWidget):
 
     def _signal_key_and_info(self) -> tuple[str, dict]:
         if isinstance(self._device_obj, Device):
-            signal_info = self._device_obj._info["signals"][self._signal]
+            try:
+                signal_info = self._device_obj._info["signals"][self._signal]
+            except KeyError:
+                return "", {}
             if signal_info["kind_str"] == Kind.hinted.name:
                 return signal_info["obj_name"], signal_info
             else:
@@ -308,15 +311,6 @@ class SignalLabel(BECWidget, QWidget):
         elif isinstance(self._device_obj, Signal):
             return self._device, self._device_obj._info["describe_configuration"]
         return "", {}
-
-        # if self.dev[self._device]._info["signals"] == {}:
-        #     return self._signal or self._device
-        # signal_info = self.dev[self._device]._info["signals"][self._signal]
-        # return (
-        #     signal_info["obj_name"]
-        #     if signal_info["kind_str"] == Kind.hinted.name
-        #     else (self._signal or self._device)
-        # )
 
     @SafeProperty(str)
     def device(self) -> str:
