@@ -31,7 +31,7 @@ from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.ui_loader import UILoader
 from bec_widgets.widgets.containers.auto_update.auto_updates import AutoUpdates
 from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
-from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow, UILaunchWindow
+from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow, BECMainWindowNoRPC
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -395,20 +395,24 @@ class LaunchWindow(BECMainWindow):
             if isinstance(result_widget, BECMainWindow):
                 result_widget.show()
             else:
-                window = BECMainWindow()
+                window = BECMainWindowNoRPC()
                 window.setCentralWidget(result_widget)
                 window.setWindowTitle(f"BEC - {result_widget.objectName()}")
                 window.show()
             return result_widget
 
     def _launch_custom_ui_file(self, ui_file: str | None) -> BECMainWindow:
-        # Load the custom UI file
+        """
+        Load a custom .ui file. If the top-level widget is a MainWindow subclass,
+        instantiate it directly; otherwise, embed it in a UILaunchWindow.
+        """
         if ui_file is None:
             raise ValueError("UI file must be provided for custom UI file launch.")
         filename = os.path.basename(ui_file).split(".")[0]
 
         WidgetContainerUtils.raise_for_invalid_name(filename)
 
+        # Parse the UI to detect top-level widget class
         tree = ET.parse(ui_file)
         root = tree.getroot()
         # Check if the top-level widget is a QMainWindow
@@ -416,19 +420,22 @@ class LaunchWindow(BECMainWindow):
         if widget is None:
             raise ValueError("No widget found in the UI file.")
 
-        if widget.attrib.get("class") == "QMainWindow":
-            raise ValueError(
-                "Loading a QMainWindow from a UI file is currently not supported. "
-                "If you need this, please contact the BEC team or create a ticket on gitlab.psi.ch/bec/bec_widgets."
-            )
+        # Load the UI into a widget
+        loader = UILoader(None)
+        loaded = loader.loader(ui_file)
 
-        window = UILaunchWindow(object_name=filename)
+        # Display the UI in a BECMainWindow
+        if isinstance(loaded, BECMainWindow):
+            window = loaded
+            window.object_name = filename
+        else:
+            window = BECMainWindow(object_name=filename)
+            window.setCentralWidget(loaded)
+
         QApplication.processEvents()
-        result_widget = UILoader(window).loader(ui_file)
-        window.setCentralWidget(result_widget)
-        window.setWindowTitle(f"BEC - {window.object_name}")
+        window.setWindowTitle(f"BEC - {filename}")
         window.show()
-        logger.info(f"Object name of new instance: {result_widget.objectName()}, {window.gui_id}")
+        logger.info(f"Launched custom UI: {filename}, type: {type(window).__name__}")
         return window
 
     def _launch_auto_update(self, auto_update: str) -> AutoUpdates:
@@ -451,7 +458,7 @@ class LaunchWindow(BECMainWindow):
 
         WidgetContainerUtils.raise_for_invalid_name(name)
 
-        window = BECMainWindow()
+        window = BECMainWindowNoRPC()
 
         widget_instance = widget(root_widget=True, object_name=name)
         assert isinstance(widget_instance, QWidget)
