@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.30.1 (2025-07-22)
+
+### Bug Fixes
+
+- Ignore KeyError in SignalLabel
+  ([`608590c`](https://github.com/bec-project/bec_widgets/commit/608590c5421368d5bba0e4b0f5187d90cac323be))
+
+
 ## v2.30.0 (2025-07-22)
 
 ### Bug Fixes
