@@ -1,6 +1,14 @@
-import pytest
+from unittest.mock import MagicMock
 
-from bec_widgets.cli.rpc.rpc_base import DeletedWidgetError, RPCBase, RPCReference
+import pytest
+from bec_lib.device import DeviceBaseWithConfig, Signal
+
+from bec_widgets.cli.rpc.rpc_base import (
+    DeletedWidgetError,
+    RPCBase,
+    RPCReference,
+    _transform_args_kwargs,
+)
 
 
 @pytest.fixture
@@ -26,3 +34,20 @@ def test_rpc_base(rpc_base):
 
     with pytest.raises(DeletedWidgetError):
         ref._root  # Object no longer referenced in registry
+
+
+def test_transform_args_kwargs():
+    device_mock = MagicMock(spec=DeviceBaseWithConfig)
+    device_mock.full_name = "full name"
+    fallthrough_device_mock = MagicMock()
+    fallthrough_device_mock.name = "short name"
+    string_arg = "string_arg"
+    signal_mock = MagicMock(spec=Signal)
+    signal_mock.full_name = "full name"
+
+    args, kwargs = _transform_args_kwargs(
+        (device_mock, fallthrough_device_mock, string_arg, signal_mock),
+        {"a": device_mock, "b": fallthrough_device_mock, "c": string_arg, "d": signal_mock},
+    )
+    assert args == ("full name", "short name", "string_arg", "full name")
+    assert kwargs == {"a": "full name", "b": "short name", "c": "string_arg", "d": "full name"}
