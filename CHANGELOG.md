@@ -1,6 +1,39 @@
 # CHANGELOG
 
 
+## v2.30.0 (2025-07-22)
+
+### Bug Fixes
+
+- **device_browser**: Display signal for signals
+  ([`3384ca0`](https://github.com/bec-project/bec_widgets/commit/3384ca02bdb5a2798ad3339ecf3e2ba7c121e28f))
+
+- **device_signal_display**: Don't read omitted
+  ([`b9af36a`](https://github.com/bec-project/bec_widgets/commit/b9af36a4f1c91e910d4fc738b17b90e92287a7e3))
+
+- **signal_label**: Rewrite reading selection logic
+  ([`cd17a4a`](https://github.com/bec-project/bec_widgets/commit/cd17a4aad905296eb0460ecc27e5920f5c2e8fe5))
+
+- **signal_label**: Show all signals by default
+  ([`22beadc`](https://github.com/bec-project/bec_widgets/commit/22beadcad061b328c986414f30fef57b64bad693))
+
+- **signal_label**: Update signal from dialog correctly
+  ([`959cedb`](https://github.com/bec-project/bec_widgets/commit/959cedbbd5a123eef5f3370287bf6476c48caab9))
+
+- **signal_label**: Use read() instead of get() for init
+  ([`f0dc992`](https://github.com/bec-project/bec_widgets/commit/f0dc99258607a5cc8af51686d01f7fd54ae2779f))
+
+### Chores
+
+- Update client.py
+  ([`fd1f994`](https://github.com/bec-project/bec_widgets/commit/fd1f9941e046b7ae1e247dde39c20bcbc37ac189))
+
+### Features
+
+- **signal_label**: Property to display array data or not
+  ([`ca4f975`](https://github.com/bec-project/bec_widgets/commit/ca4f97503bf06363e8e8a5d494a9857223da4104))
+
+
 ## v2.29.0 (2025-07-22)
 
 ### Features
