@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v2.29.0 (2025-07-22)
+
+### Features
+
+- **notification_banner**: Notification centre for alarms implemented into BECMainWindow
+  ([`cd9d22d`](https://github.com/bec-project/bec_widgets/commit/cd9d22d0b40d633af76cb1188b57feb7b6a5dbf2))
+
+### Refactoring
+
+- **notification_banner**: Becnotificationbroker done as singleton to sync all windows in the
+  session
+  ([`7cda2ed`](https://github.com/bec-project/bec_widgets/commit/7cda2ed846d3c27799f4f15f6c5c667631b1ca55))
+
+
 ## v2.28.0 (2025-07-21)
 
 ### Features
