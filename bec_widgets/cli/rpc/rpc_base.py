@@ -7,6 +7,7 @@ from functools import wraps
 from typing import TYPE_CHECKING, Any, cast
 
 from bec_lib.client import BECClient
+from bec_lib.device import DeviceBaseWithConfig
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.utils.import_utils import lazy_import, lazy_import_from
 
@@ -49,12 +50,22 @@ def rpc_call(func):
 
         out = []
         for arg in args:
-            if hasattr(arg, "name"):
+            if isinstance(
+                arg, DeviceBaseWithConfig
+            ):  # if dev.<device> is passed to GUI, it passes full_name
+                if hasattr(arg, "full_name"):
+                    arg = arg.full_name
+            elif hasattr(arg, "name"):
                 arg = arg.name
             out.append(arg)
         args = tuple(out)
         for key, val in kwargs.items():
-            if hasattr(val, "name"):
+            if isinstance(
+                val, DeviceBaseWithConfig
+            ):  # if dev.<device> is passed to GUI, it passes full_name
+                if hasattr(val, "full_name"):
+                    kwargs[key] = val.full_name
+            elif hasattr(val, "name"):
                 kwargs[key] = val.name
         if not self._root._gui_is_alive():
             raise RuntimeError("GUI is not alive")

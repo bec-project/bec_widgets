@@ -28,6 +28,10 @@ class EntryValidator:
         if not available_entries:
             available_entries = [name]
 
+        # edge case for if name is passed instead of full_name, should not happen
+        if entry in signals_dict:
+            entry = signals_dict[entry].get("obj_name", entry)
+
         if entry is None or entry == "":
             entry = next(iter(device._hints), name) if hasattr(device, "_hints") else name
         if entry not in available_entries:
