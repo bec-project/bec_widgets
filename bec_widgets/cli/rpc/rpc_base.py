@@ -25,6 +25,20 @@ else:
 # pylint: disable=protected-access
 
 
+def _name_arg(arg):
+    if isinstance(arg, DeviceBaseWithConfig):
+        # if dev.<device> is passed to GUI, it passes full_name
+        if hasattr(arg, "full_name"):
+            return arg.full_name
+    elif hasattr(arg, "name"):
+        return arg.name
+    return arg
+
+
+def _transform_args_kwargs(args, kwargs) -> tuple[tuple, dict]:
+    return tuple(_name_arg(arg) for arg in args), {k: _name_arg(v) for k, v in kwargs.items()}
+
+
 def rpc_call(func):
     """
     A decorator for calling a function on the server.
@@ -48,25 +62,7 @@ def rpc_call(func):
                 return None  # func(*args, **kwargs)
             caller_frame = caller_frame.f_back
 
-        out = []
-        for arg in args:
-            if isinstance(
-                arg, DeviceBaseWithConfig
-            ):  # if dev.<device> is passed to GUI, it passes full_name
-                if hasattr(arg, "full_name"):
-                    arg = arg.full_name
-            elif hasattr(arg, "name"):
-                arg = arg.name
-            out.append(arg)
-        args = tuple(out)
-        for key, val in kwargs.items():
-            if isinstance(
-                val, DeviceBaseWithConfig
-            ):  # if dev.<device> is passed to GUI, it passes full_name
-                if hasattr(val, "full_name"):
-                    kwargs[key] = val.full_name
-            elif hasattr(val, "name"):
-                kwargs[key] = val.name
+        args, kwargs = _transform_args_kwargs(args, kwargs)
         if not self._root._gui_is_alive():
             raise RuntimeError("GUI is not alive")
         return self._run_rpc(func.__name__, *args, **kwargs)
