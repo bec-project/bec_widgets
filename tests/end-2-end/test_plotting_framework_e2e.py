@@ -254,3 +254,35 @@ def test_dap_rpc(qtbot, bec_client_lib, connected_client_gui_obj):
     res.wait()
 
     qtbot.waitUntil(wait_for_fit, timeout=10000)
+
+
+def test_waveform_passing_device(qtbot, bec_client_lib, connected_client_gui_obj):
+    gui = connected_client_gui_obj
+    client = bec_client_lib
+    dev = client.device_manager.devices
+    scans = client.scans
+
+    dock = gui.bec
+    wf = dock.new("wf_dock").new("Waveform")
+    c1 = wf.plot(
+        y_name=dev.samx, y_entry=dev.samx.setpoint
+    )  # using setpoint to not use readback signal
+
+    assert c1.object_name == "samx_samx_setpoint"
+
+    status = scans.line_scan(dev.samx, -5, 5, steps=5, exp_time=0.05, relative=False)
+    status.wait()
+
+    # Wait for the scan to finish and the data to be available in history
+    # Wait until scan_id is in history
+    def _wait_for_scan_in_history():
+        if len(client.history) == 0:
+            return False
+        # Once items appear in storage, the last one hast to be the one we just scanned
+        return client.history[-1].metadata.bec["scan_id"] == status.scan.scan_id
+
+    qtbot.waitUntil(_wait_for_scan_in_history, timeout=10000)
+    last_scan_data = client.history[-1]
+    # check plotted data
+    x_data, y_data = c1.get_data()
+    assert np.array_equal(y_data, last_scan_data.devices.samx.samx_setpoint.read().get("value"))
