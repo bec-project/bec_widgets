@@ -17,7 +17,7 @@ from qtpy.QtWidgets import (
 
 from bec_widgets import SafeProperty
 from bec_widgets.utils.widget_io import WidgetIO
-from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
+from bec_widgets.widgets.containers.main_window.main_window import BECMainWindowNoRPC
 from bec_widgets.widgets.plots.image.image import Image
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
@@ -179,7 +179,7 @@ class WidgetFinderComboBox(QComboBox):
         event.accept()
 
 
-class InspectorMainWindow(BECMainWindow):  # pragma: no cover
+class InspectorMainWindow(BECMainWindowNoRPC):  # pragma: no cover
     """
     A main window that includes a widget finder combobox to inspect widgets.
     """

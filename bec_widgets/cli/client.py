@@ -29,6 +29,7 @@ class _WidgetsEnumType(str, enum.Enum):
 _Widgets = {
     "AbortButton": "AbortButton",
     "BECDockArea": "BECDockArea",
+    "BECMainWindow": "BECMainWindow",
     "BECProgressBar": "BECProgressBar",
     "BECQueue": "BECQueue",
     "BECStatusBox": "BECStatusBox",
@@ -424,6 +425,14 @@ class BECDockArea(RPCBase):
             state(dict): The state to restore.
             missing(Literal['ignore','error']): What to do if a dock is missing.
             extra(str): Extra docks that are in the dockarea but that are not mentioned in state will be added to the bottom of the dockarea, unless otherwise specified by the extra argument.
+        """
+
+
+class BECMainWindow(RPCBase):
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
         """
 
 
@@ -4508,14 +4517,6 @@ class TextBox(RPCBase):
 
         Args:
             text (str): The text to set.
-        """
-
-
-class UILaunchWindow(RPCBase):
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
         """
 
 
