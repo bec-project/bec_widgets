@@ -64,10 +64,10 @@ class DeviceBrowser(BECWidget, QWidget):
         self.proxy_device_update = SignalProxy(
             self.ui.filter_input.textChanged, rateLimit=500, slot=self.update_device_list
         )
-        self.bec_dispatcher.client.callbacks.register(
+        self._device_update_callback_id = self.bec_dispatcher.client.callbacks.register(
             EventType.DEVICE_UPDATE, self.on_device_update
         )
-        self.bec_dispatcher.client.callbacks.register(
+        self._scan_status_callback_id = self.bec_dispatcher.client.callbacks.register(
             EventType.SCAN_STATUS, self.scan_status_changed
         )
         self._default_config_dir = os.path.abspath(
@@ -228,6 +228,11 @@ class DeviceBrowser(BECWidget, QWidget):
         )
         if file_path:
             self._config_helper.save_current_session(file_path)
+
+    def cleanup(self):
+        super().cleanup()
+        self.bec_dispatcher.client.callbacks.remove(self._scan_status_callback_id)
+        self.bec_dispatcher.client.callbacks.remove(self._device_update_callback_id)
 
 
 if __name__ == "__main__":  # pragma: no cover
