@@ -4563,6 +4563,20 @@ class SignalLabel(RPCBase):
         Displays the full data from array signals if set to True.
         """
 
+    @property
+    @rpc_call
+    def max_list_display_len(self) -> "int":
+        """
+        For small lists, the max length to display
+        """
+
+    @max_list_display_len.setter
+    @rpc_call
+    def max_list_display_len(self) -> "int":
+        """
+        For small lists, the max length to display
+        """
+
 
 class SignalLineEdit(RPCBase):
     """Line edit widget for device input with autocomplete for device names."""

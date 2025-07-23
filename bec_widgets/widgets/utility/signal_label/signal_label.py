@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import sys
 import traceback
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Sequence
 
+import numpy as np
 from bec_lib.device import Device, Signal
 from bec_lib.endpoints import MessageEndpoints
 from bec_qthemes import material_icon
@@ -127,7 +128,6 @@ class ChoiceDialog(QDialog):
 
 
 class SignalLabel(BECWidget, QWidget):
-
     ICON_NAME = "scoreboard"
     RPC = True
     PLUGIN = True
@@ -151,6 +151,8 @@ class SignalLabel(BECWidget, QWidget):
         "show_config_signals.setter",
         "display_array_data",
         "display_array_data.setter",
+        "max_list_display_len",
+        "max_list_display_len.setter",
     ]
 
     def __init__(
@@ -189,6 +191,7 @@ class SignalLabel(BECWidget, QWidget):
         self._show_default_units: bool = show_default_units
         self._decimal_places = 3
         self._dtype = None
+        self._max_list_display_len = 5
 
         self._show_hinted_signals: bool = True
         self._show_normal_signals: bool = True
@@ -280,7 +283,7 @@ class SignalLabel(BECWidget, QWidget):
             return
         self._value = value
         self._units = self._signal_info.get("egu", "")
-        self._dtype = self._signal_info.get("dtype", "float")
+        self._dtype = self._signal_info.get("dtype")
 
     @SafeSlot(dict, dict)
     def on_device_readback(self, msg: dict, metadata: dict) -> None:
@@ -305,11 +308,13 @@ class SignalLabel(BECWidget, QWidget):
             except KeyError:
                 return "", {}
             if signal_info["kind_str"] == Kind.hinted.name:
-                return signal_info["obj_name"], signal_info
+                return signal_info["obj_name"], signal_info.get("describe", {})
             else:
-                return f"{self._device}_{self._signal}", signal_info
+                return f"{self._device}_{self._signal}", signal_info.get("describe", {})
         elif isinstance(self._device_obj, Signal):
-            return self._device, self._device_obj._info["describe_configuration"]
+            info = self._device_obj._info["describe_configuration"][self._device]
+            info["egu"] = self._device_obj._info["describe_configuration"].get("egu")
+            return (self._device, info)
         return "", {}
 
     @SafeProperty(str)
@@ -368,6 +373,16 @@ class SignalLabel(BECWidget, QWidget):
     def custom_label(self, value: str) -> None:
         self._custom_label = value
         self._update_label()
+
+    @SafeProperty(str)
+    def max_list_display_len(self) -> int:
+        """For small lists, the max length to display"""
+        return self._max_list_display_len
+
+    @max_list_display_len.setter
+    def max_list_display_len(self, value: int) -> None:
+        self._max_list_display_len = value
+        self.set_display_value(self._value)
 
     @SafeProperty(str)
     def custom_units(self) -> str:
@@ -429,6 +444,11 @@ class SignalLabel(BECWidget, QWidget):
     def _format_value(self, value: Any):
         if self._dtype == "array" and not self.display_array_data:
             return "ARRAY DATA"
+        if not isinstance(value, str) and isinstance(value, (Sequence, np.ndarray)):
+            if len(value) < self._max_list_display_len:
+                return str(value)
+            else:
+                return "ARRAY DATA"
         if self._decimal_places == 0:
             return value
         try:
@@ -468,7 +488,6 @@ class SignalLabel(BECWidget, QWidget):
 
 
 if __name__ == "__main__":
-
     app = QApplication(sys.argv)
     w = QWidget()
     w.setLayout(QVBoxLayout())
