@@ -34,6 +34,8 @@ from bec_widgets.widgets.progress.scan_progressbar.scan_progressbar import ScanP
 
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
+QApplication.setAttribute(Qt.AA_DontUseNativeMenuBar, True)
+
 
 class BECMainWindow(BECWidget, QMainWindow):
     RPC = False
