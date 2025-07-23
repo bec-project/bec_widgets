@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.30.3 (2025-07-23)
+
+### Bug Fixes
+
+- Cleanup subscriptions in device browser
+  ([`0d81bdd`](https://github.com/bec-project/bec_widgets/commit/0d81bdd4ddb4ec474a414b107cbc7fc865253934))
+
+
 ## v2.30.2 (2025-07-23)
 
 ### Bug Fixes
