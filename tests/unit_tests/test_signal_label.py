@@ -256,3 +256,12 @@ def test_handle_readback(signal_label: SignalLabel, qtbot):
     )
     assert signal_label._display.text() == "0.993 μm"
     assert signal_label._display.toolTip() == ""
+
+
+def test_handle_lists(signal_label: SignalLabel, qtbot):
+    signal_label.custom_units = ""
+    signal_label.set_display_value([1, 2, 3, 4])
+    assert signal_label._display.text() == "[1, 2, 3, 4]"
+    signal_label.max_list_display_len = 2
+    signal_label.set_display_value([1, 2, 3, 4])
+    assert signal_label._display.text() == "ARRAY DATA"
