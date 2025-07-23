@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v2.30.2 (2025-07-23)
+
+### Bug Fixes
+
+- Factor out device name function and add test
+  ([`8eb8225`](https://github.com/bec-project/bec_widgets/commit/8eb8225a7f56014d6093aa142b3a5d071837982e))
+
+- **rpc_base**: Rpc_call wrapper passes full_name for Devices indeed of name
+  ([`491d044`](https://github.com/bec-project/bec_widgets/commit/491d04467c8ce4e116d61e614895d1dcc6b4b201))
+
+### Testing
+
+- **test_plotting_framework_e2e**: Added test for waveform with passing device from dev container
+  ([`3fd09fc`](https://github.com/bec-project/bec_widgets/commit/3fd09fceef2ffa7e7c3eee20176304bafb00d0db))
+
+
 ## v2.30.1 (2025-07-22)
 
 ### Bug Fixes
