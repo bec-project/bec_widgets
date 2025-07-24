@@ -213,6 +213,14 @@ class WebConsole(BECWidget, QWidget):
             "document.querySelector('textarea.xterm-helper-textarea').dispatchEvent(new KeyboardEvent('keypress', {charCode: 3}))"
         )
 
+    def set_readonly(self, readonly: bool):
+        """
+        Set the web console to read-only mode.
+        """
+        if not isinstance(readonly, bool):
+            raise ValueError("Readonly must be a boolean.")
+        self.setEnabled(not readonly)
+
     def cleanup(self):
         """
         Clean up the registry by removing any instances that are no longer valid.
