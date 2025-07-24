@@ -7,7 +7,7 @@ from qtpy.QtCore import QObject
 
 from bec_widgets.utils.name_utils import pascal_to_snake
 
-EXCLUDED_PLUGINS = ["BECConnector", "BECDockArea", "BECDock", "BECFigure"]
+EXCLUDED_PLUGINS = ["BECConnector", "BECDock"]
 _PARENT_ARG_REGEX = r".__init__\(\s*(?:parent\)|parent=parent,?|parent,?)"
 _SELF_PARENT_ARG_REGEX = r".__init__\(\s*self,\s*(?:parent\)|parent=parent,?|parent,?)"
 SUPER_INIT_REGEX = re.compile(r"super\(\)" + _PARENT_ARG_REGEX, re.MULTILINE)

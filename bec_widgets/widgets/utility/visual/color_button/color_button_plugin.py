@@ -1,8 +1,9 @@
-import os
+# Copyright (C) 2022 The Qt Company Ltd.
+# SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
+from qtpy.QtWidgets import QWidget
 
-import bec_widgets
 from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.utility.visual.color_button.color_button import ColorButton
 
@@ -12,7 +13,6 @@ DOM_XML = """
     </widget>
 </ui>
 """
-MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
 class ColorButtonPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
@@ -21,6 +21,8 @@ class ColorButtonPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         self._form_editor = None
 
     def createWidget(self, parent):
+        if parent is None:
+            return QWidget()
         t = ColorButton(parent)
         return t
 
@@ -28,7 +30,7 @@ class ColorButtonPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return "BEC Buttons"
+        return "BEC Visual Utils"
 
     def icon(self):
         return designer_material_icon(ColorButton.ICON_NAME)
@@ -49,7 +51,7 @@ class ColorButtonPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "ColorButton"
 
     def toolTip(self):
-        return "ColorButton which opens a color dialog."
+        return ""
 
     def whatsThis(self):
         return self.toolTip()

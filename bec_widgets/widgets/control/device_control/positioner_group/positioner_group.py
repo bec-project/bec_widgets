@@ -15,7 +15,7 @@ logger = bec_logger.logger
 
 
 class PositionerGroupBox(QGroupBox):
-    PLUGIN = True
+
     position_update = Signal(float)
 
     def __init__(self, parent, dev_name):
@@ -55,6 +55,7 @@ class PositionerGroupBox(QGroupBox):
 class PositionerGroup(BECWidget, QWidget):
     """Simple Widget to control a positioner in box form"""
 
+    PLUGIN = True
     ICON_NAME = "grid_view"
     USER_ACCESS = ["set_positioners"]
 

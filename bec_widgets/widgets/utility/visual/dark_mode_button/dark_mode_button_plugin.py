@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
+from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
@@ -20,6 +21,8 @@ class DarkModeButtonPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         self._form_editor = None
 
     def createWidget(self, parent):
+        if parent is None:
+            return QWidget()
         t = DarkModeButton(parent)
         return t
 
@@ -27,7 +30,7 @@ class DarkModeButtonPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return "BEC Buttons"
+        return "BEC Visual Utils"
 
     def icon(self):
         return designer_material_icon(DarkModeButton.ICON_NAME)
@@ -48,7 +51,7 @@ class DarkModeButtonPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "DarkModeButton"
 
     def toolTip(self):
-        return "Button to toggle between dark and light mode."
+        return "DarkModeButton"
 
     def whatsThis(self):
         return self.toolTip()

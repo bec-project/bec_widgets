@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
+from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.control.buttons.button_reset.button_reset import ResetButton
@@ -20,6 +21,8 @@ class ResetButtonPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         self._form_editor = None
 
     def createWidget(self, parent):
+        if parent is None:
+            return QWidget()
         t = ResetButton(parent)
         return t
 
@@ -48,7 +51,7 @@ class ResetButtonPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "ResetButton"
 
     def toolTip(self):
-        return "A button that reset the scan queue."
+        return "A button that resets the scan queue."
 
     def whatsThis(self):
         return self.toolTip()

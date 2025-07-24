@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
+from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.control.device_control.positioner_box.positioner_box_2d.positioner_box_2d import (
@@ -22,6 +23,8 @@ class PositionerBox2DPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         self._form_editor = None
 
     def createWidget(self, parent):
+        if parent is None:
+            return QWidget()
         t = PositionerBox2D(parent)
         return t
 
@@ -29,7 +32,7 @@ class PositionerBox2DPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return "Device Control"
+        return "BEC Device Control"
 
     def icon(self):
         return designer_material_icon(PositionerBox2D.ICON_NAME)

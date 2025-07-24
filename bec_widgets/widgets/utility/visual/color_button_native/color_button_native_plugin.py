@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
+from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.utility.visual.color_button_native.color_button_native import (
@@ -22,6 +23,8 @@ class ColorButtonNativePlugin(QDesignerCustomWidgetInterface):  # pragma: no cov
         self._form_editor = None
 
     def createWidget(self, parent):
+        if parent is None:
+            return QWidget()
         t = ColorButtonNative(parent)
         return t
 
@@ -29,7 +32,7 @@ class ColorButtonNativePlugin(QDesignerCustomWidgetInterface):  # pragma: no cov
         return DOM_XML
 
     def group(self):
-        return "BEC Buttons"
+        return "BEC Visual Utils"
 
     def icon(self):
         return designer_material_icon(ColorButtonNative.ICON_NAME)

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
+from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.dap.lmfit_dialog.lmfit_dialog import LMFitDialog
@@ -20,6 +21,8 @@ class LMFitDialogPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         self._form_editor = None
 
     def createWidget(self, parent):
+        if parent is None:
+            return QWidget()
         t = LMFitDialog(parent)
         return t
 
@@ -48,7 +51,7 @@ class LMFitDialogPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "LMFitDialog"
 
     def toolTip(self):
-        return "LMFitDialog"
+        return "Dialog for displaying the fit summary and params for LMFit DAP processes"
 
     def whatsThis(self):
         return self.toolTip()

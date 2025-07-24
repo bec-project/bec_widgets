@@ -23,6 +23,8 @@ from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
 
 class WidgetFinderComboBox(QComboBox):
+    ICON_NAME = "frame_inspect"
+    PLUGIN = True
 
     def __init__(self, parent=None, widget_class: type[QWidget] | str | None = None):
         super().__init__(parent)

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
+from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.control.scan_control.scan_control import ScanControl
@@ -20,6 +21,8 @@ class ScanControlPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         self._form_editor = None
 
     def createWidget(self, parent):
+        if parent is None:
+            return QWidget()
         t = ScanControl(parent)
         return t
 
@@ -27,7 +30,7 @@ class ScanControlPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return "Device Control"
+        return "BEC Device Control"
 
     def icon(self):
         return designer_material_icon(ScanControl.ICON_NAME)
@@ -48,7 +51,7 @@ class ScanControlPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "ScanControl"
 
     def toolTip(self):
-        return "ScanControl"
+        return ""
 
     def whatsThis(self):
         return self.toolTip()

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
+from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.editors.scan_metadata.scan_metadata import ScanMetadata
@@ -20,6 +21,8 @@ class ScanMetadataPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         self._form_editor = None
 
     def createWidget(self, parent):
+        if parent is None:
+            return QWidget()
         t = ScanMetadata(parent)
         return t
 
@@ -27,7 +30,7 @@ class ScanMetadataPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return ""
+        return "BEC Input Widgets"
 
     def icon(self):
         return designer_material_icon(ScanMetadata.ICON_NAME)
@@ -48,7 +51,7 @@ class ScanMetadataPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "ScanMetadata"
 
     def toolTip(self):
-        return "Dynamically generates a form for inclusion of metadata for a scan."
+        return "ScanMetadata"
 
     def whatsThis(self):
         return self.toolTip()

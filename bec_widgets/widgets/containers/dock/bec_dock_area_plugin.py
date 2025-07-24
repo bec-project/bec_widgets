@@ -5,17 +5,17 @@ from qtpy.QtDesigner import QDesignerCustomWidgetInterface
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_designer import designer_material_icon
-from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
+from bec_widgets.widgets.containers.dock.dock_area import BECDockArea
 
 DOM_XML = """
 <ui language='c++'>
-    <widget class='BECQueue' name='bec_queue'>
+    <widget class='BECDockArea' name='bec_dock_area'>
     </widget>
 </ui>
 """
 
 
-class BECQueuePlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
+class BECDockAreaPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
     def __init__(self):
         super().__init__()
         self._form_editor = None
@@ -23,20 +23,20 @@ class BECQueuePlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
     def createWidget(self, parent):
         if parent is None:
             return QWidget()
-        t = BECQueue(parent)
+        t = BECDockArea(parent)
         return t
 
     def domXml(self):
         return DOM_XML
 
     def group(self):
-        return "BEC Services"
+        return "BEC Containers"
 
     def icon(self):
-        return designer_material_icon(BECQueue.ICON_NAME)
+        return designer_material_icon(BECDockArea.ICON_NAME)
 
     def includeFile(self):
-        return "bec_queue"
+        return "bec_dock_area"
 
     def initialize(self, form_editor):
         self._form_editor = form_editor
@@ -48,10 +48,10 @@ class BECQueuePlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return self._form_editor is not None
 
     def name(self):
-        return "BECQueue"
+        return "BECDockArea"
 
     def toolTip(self):
-        return "Widget to display the BEC queue."
+        return ""
 
     def whatsThis(self):
         return self.toolTip()

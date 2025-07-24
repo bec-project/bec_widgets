@@ -1,10 +1,9 @@
 # Copyright (C) 2022 The Qt Company Ltd.
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
-import os
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
+from qtpy.QtWidgets import QWidget
 
-import bec_widgets
 from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.utility.visual.colormap_selector.colormap_selector import ColormapSelector
 
@@ -15,8 +14,6 @@ DOM_XML = """
 </ui>
 """
 
-MODULE_PATH = os.path.dirname(bec_widgets.__file__)
-
 
 class ColormapSelectorPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
     def __init__(self):
@@ -24,6 +21,8 @@ class ColormapSelectorPlugin(QDesignerCustomWidgetInterface):  # pragma: no cove
         self._form_editor = None
 
     def createWidget(self, parent):
+        if parent is None:
+            return QWidget()
         t = ColormapSelector(parent)
         return t
 
@@ -31,7 +30,7 @@ class ColormapSelectorPlugin(QDesignerCustomWidgetInterface):  # pragma: no cove
         return DOM_XML
 
     def group(self):
-        return "BEC Buttons"
+        return "BEC Visual Utils"
 
     def icon(self):
         return designer_material_icon(ColormapSelector.ICON_NAME)
