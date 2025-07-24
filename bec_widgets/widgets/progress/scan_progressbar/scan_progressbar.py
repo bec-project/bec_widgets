@@ -127,8 +127,10 @@ class ScanProgressBar(BECWidget, QWidget):
     progress_started = Signal()
     progress_finished = Signal()
 
-    def __init__(self, parent=None, client=None, config=None, gui_id=None, one_line_design=False):
-        super().__init__(parent=parent, client=client, config=config, gui_id=gui_id)
+    def __init__(
+        self, parent=None, client=None, config=None, gui_id=None, one_line_design=False, **kwargs
+    ):
+        super().__init__(parent=parent, client=client, config=config, gui_id=gui_id, **kwargs)
 
         self.get_bec_shortcuts()
         ui_file = os.path.join(
