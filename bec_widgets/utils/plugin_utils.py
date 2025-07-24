@@ -201,7 +201,7 @@ def get_custom_classes(repo_name: str) -> BECClassContainer:
                     class_info = BECClassInfo(name=name, module=module.__name__, file=path, obj=obj)
                     if issubclass(obj, BECConnector):
                         class_info.is_connector = True
-                    if issubclass(obj, BECWidget):
+                    if issubclass(obj, QWidget) or issubclass(obj, BECWidget):
                         class_info.is_widget = True
                     if len(subs) == 1 and (
                         issubclass(obj, QWidget) or issubclass(obj, QGraphicsWidget)
