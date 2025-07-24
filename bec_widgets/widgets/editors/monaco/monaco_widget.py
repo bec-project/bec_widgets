@@ -1,6 +1,7 @@
 from typing import Literal
 
 import qtmonaco
+from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
@@ -12,6 +13,7 @@ class MonacoWidget(BECWidget, QWidget):
     A simple Monaco editor widget
     """
 
+    text_changed = Signal(str)
     PLUGIN = True
     ICON_NAME = "code"
     USER_ACCESS = [
@@ -36,6 +38,7 @@ class MonacoWidget(BECWidget, QWidget):
         self.editor = qtmonaco.Monaco(self)
         layout.addWidget(self.editor)
         self.setLayout(layout)
+        self.editor.text_changed.connect(self.text_changed.emit)
         self.editor.initialized.connect(self.apply_theme)
 
     def apply_theme(self, theme: str | None = None) -> None:
