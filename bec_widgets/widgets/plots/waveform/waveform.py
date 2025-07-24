@@ -1634,18 +1634,25 @@ class Waveform(PlotBase):
             # 4.2 If there are sync curves, use the first device from the scan report
             else:
                 try:
-                    x_name = self._ensure_str_list(
+                    scan_report_devices = self._ensure_str_list(
                         self.scan_item.metadata["bec"]["scan_report_devices"]
-                    )[0]
-                except:
-                    x_name = self.scan_item.status_message.info["scan_report_devices"][0]
-                x_entry = self.entry_validator.validate_signal(x_name, None)
-                if access_key == "val":
-                    x_data = data.get(x_name, {}).get(x_entry, {}).get(access_key, None)
+                    )
+                except Exception:
+                    scan_report_devices = self.scan_item.status_message.info.get(
+                        "scan_report_devices", []
+                    )
+                if not scan_report_devices:
+                    x_data = None
+                    new_suffix = " (auto: index)"
                 else:
-                    entry_obj = data.get(x_name, {}).get(x_entry)
-                    x_data = entry_obj.read()["value"] if entry_obj else None
-                new_suffix = f" (auto: {x_name}-{x_entry})"
+                    x_name = scan_report_devices[0]
+                    x_entry = self.entry_validator.validate_signal(x_name, None)
+                    if access_key == "val":
+                        x_data = data.get(x_name, {}).get(x_entry, {}).get(access_key, None)
+                    else:
+                        entry_obj = data.get(x_name, {}).get(x_entry)
+                        x_data = entry_obj.read()["value"] if entry_obj else None
+                    new_suffix = f" (auto: {x_name}-{x_entry})"
         self._update_x_label_suffix(new_suffix)
         return x_data
 
