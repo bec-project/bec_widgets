@@ -4,13 +4,12 @@ import os
 from unittest import mock
 
 import pytest
-from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtGui import QFontMetrics
 
 import bec_widgets
 from bec_widgets.applications.launch_window import LaunchWindow
 from bec_widgets.widgets.containers.auto_update.auto_updates import AutoUpdates
-from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow, UILaunchWindow
+from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
 from .client_mocks import mocked_client
 
@@ -39,7 +38,7 @@ def test_launch_window_launch_ui_file(bec_launch_window):
     # Call the method to launch the custom UI file
     res = bec_launch_window.launch("custom_ui_file", ui_file=ui_file_path)
 
-    assert isinstance(res, UILaunchWindow)
+    assert isinstance(res, BECMainWindow)
 
     # Check if the custom UI file was launched correctly
     assert res.object_name == "positioner_box"
@@ -49,18 +48,6 @@ def test_launch_window_launch_ui_file(bec_launch_window):
     # In real usage, the GUIServer would handle this in the sigint handler in case of a ctrl-c initiated shutdown.
     res.close()
     res.deleteLater()
-
-
-def test_launch_window_launch_ui_file_raises_for_qmainwindow(bec_launch_window):
-    # Mock the file dialog to return a specific UI file path
-    # the selected file must contain a QMainWindow widget but can be any file
-    ui_file_path = os.path.join(base_path, "examples/general_app/general_app.ui")
-
-    # Call the method to launch the custom UI file
-    with pytest.raises(ValueError) as excinfo:
-        bec_launch_window.launch("custom_ui_file", ui_file=ui_file_path)
-
-    assert "Loading a QMainWindow from a UI file is currently not supported." in str(excinfo.value)
 
 
 def test_launch_window_launch_default_auto_update(bec_launch_window):
