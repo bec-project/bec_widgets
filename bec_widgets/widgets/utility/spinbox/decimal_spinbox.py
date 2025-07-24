@@ -13,26 +13,13 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.utils import ConnectionConfig
-from bec_widgets.utils.bec_widget import BECWidget
 
-
-class BECSpinBox(BECWidget, QDoubleSpinBox):
+class BECSpinBox(QDoubleSpinBox):
     PLUGIN = True
-    RPC = False
     ICON_NAME = "123"
 
-    def __init__(
-        self,
-        parent: QWidget | None = None,
-        config: ConnectionConfig | None = None,
-        client=None,
-        gui_id: str | None = None,
-        **kwargs,
-    ) -> None:
-        if config is None:
-            config = ConnectionConfig(widget_class=self.__class__.__name__)
-        super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
+    def __init__(self, parent: QWidget | None = None, **kwargs) -> None:
+        super().__init__(parent=parent, **kwargs)
 
         # Make the widget as compact as possible horizontally.
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
