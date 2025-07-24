@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
+from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_designer import designer_material_icon
 {widget_import}
@@ -20,6 +21,8 @@ class {plugin_name_pascal}Plugin(QDesignerCustomWidgetInterface):  # pragma: no 
         self._form_editor = None
 
     def createWidget(self, parent):
+        if parent is None:
+           return QWidget()
         t = {plugin_name_pascal}(parent)
         return t
 
