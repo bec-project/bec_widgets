@@ -7,7 +7,7 @@ from qtpy.QtWidgets import QColorDialog, QPushButton
 from bec_widgets import BECWidget, SafeProperty, SafeSlot
 
 
-class ColorButtonNative(BECWidget, QPushButton):
+class ColorButtonNative(QPushButton):
     """A QPushButton subclass that displays a color.
 
     The background is set to the given color and the button text is the hex code.
