@@ -51,7 +51,7 @@ def _filter_output(output: str) -> str:
 
 
 def _get_output(process, logger) -> None:
-    log_func = {process.stdout: logger.debug, process.stderr: logger.error}
+    log_func = {process.stdout: logger.debug, process.stderr: logger.info}
     stream_buffer = {process.stdout: [], process.stderr: []}
     try:
         os.set_blocking(process.stdout.fileno(), False)
