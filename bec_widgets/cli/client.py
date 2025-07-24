@@ -37,6 +37,7 @@ _Widgets = {
     "DeviceBrowser": "DeviceBrowser",
     "DeviceComboBox": "DeviceComboBox",
     "DeviceLineEdit": "DeviceLineEdit",
+    "FileBrowser": "FileBrowser",
     "Heatmap": "Heatmap",
     "Image": "Image",
     "LogPanel": "LogPanel",
@@ -1180,6 +1181,16 @@ class EllipticalROI(RPCBase):
         Args:
             x (float): The x-coordinate of the new position.
             y (float): The y-coordinate of the new position.
+        """
+
+
+class FileBrowser(RPCBase):
+    """A simple file browser widget."""
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
         """
 
 
