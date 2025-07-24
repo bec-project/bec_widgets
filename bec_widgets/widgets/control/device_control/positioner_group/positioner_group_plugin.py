@@ -1,9 +1,8 @@
 # Copyright (C) 2022 The Qt Company Ltd.
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
-import os
-
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
+from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.control.device_control.positioner_group.positioner_group import (
@@ -16,7 +15,6 @@ DOM_XML = """
     </widget>
 </ui>
 """
-MODULE_PATH = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 
 class PositionerGroupPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
@@ -25,6 +23,8 @@ class PositionerGroupPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         self._form_editor = None
 
     def createWidget(self, parent):
+        if parent is None:
+            return QWidget()
         t = PositionerGroup(parent)
         return t
 
@@ -32,7 +32,7 @@ class PositionerGroupPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return "Device Control"
+        return "BEC Device Control"
 
     def icon(self):
         return designer_material_icon(PositionerGroup.ICON_NAME)
@@ -53,7 +53,7 @@ class PositionerGroupPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "PositionerGroup"
 
     def toolTip(self):
-        return "Container Widget to control positioners in compact form, in a grid"
+        return "Simple Widget to control a positioner in box form"
 
     def whatsThis(self):
         return self.toolTip()

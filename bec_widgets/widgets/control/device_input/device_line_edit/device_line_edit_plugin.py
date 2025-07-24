@@ -1,10 +1,9 @@
 # Copyright (C) 2022 The Qt Company Ltd.
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
-import os
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
+from qtpy.QtWidgets import QWidget
 
-import bec_widgets
 from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit import (
     DeviceLineEdit,
@@ -17,8 +16,6 @@ DOM_XML = """
 </ui>
 """
 
-MODULE_PATH = os.path.dirname(bec_widgets.__file__)
-
 
 class DeviceLineEditPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
     def __init__(self):
@@ -26,6 +23,8 @@ class DeviceLineEditPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         self._form_editor = None
 
     def createWidget(self, parent):
+        if parent is None:
+            return QWidget()
         t = DeviceLineEdit(parent)
         return t
 
@@ -54,7 +53,7 @@ class DeviceLineEditPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "DeviceLineEdit"
 
     def toolTip(self):
-        return "Device LineEdit Example for BEC Widgets with autocomplete."
+        return ""
 
     def whatsThis(self):
         return self.toolTip()

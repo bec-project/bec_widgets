@@ -20,8 +20,8 @@ class ColorButton(QWidget):
     PLUGIN = True
     ICON_NAME = "colors"
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, parent=None, *args, **kwargs):
+        super().__init__(parent=parent, *args, **kwargs)
 
         self.layout = QHBoxLayout(self)
         self.layout.setSpacing(0)

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
+from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.control.device_input.signal_line_edit.signal_line_edit import (
@@ -22,6 +23,8 @@ class SignalLineEditPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         self._form_editor = None
 
     def createWidget(self, parent):
+        if parent is None:
+            return QWidget()
         t = SignalLineEdit(parent)
         return t
 
@@ -50,7 +53,7 @@ class SignalLineEditPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "SignalLineEdit"
 
     def toolTip(self):
-        return "Signal LineEdit Example for BEC Widgets with autocomplete."
+        return ""
 
     def whatsThis(self):
         return self.toolTip()

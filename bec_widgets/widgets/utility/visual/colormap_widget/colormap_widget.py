@@ -24,7 +24,7 @@ class RoundedColorMapButton(ColorMapButton):
         painter.end()
 
 
-class BECColorMapWidget(BECWidget, QWidget):
+class BECColorMapWidget(QWidget):
     colormap_changed_signal = Signal(str)
     ICON_NAME = "palette"
     PLUGIN = True

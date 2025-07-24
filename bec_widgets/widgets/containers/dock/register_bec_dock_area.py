@@ -6,7 +6,7 @@ def main():  # pragma: no cover
         return
     from PySide6.QtDesigner import QPyDesignerCustomWidgetCollection
 
-    from bec_widgets.widgets.containers.dock.dock_area_plugin import BECDockAreaPlugin
+    from bec_widgets.widgets.containers.dock.bec_dock_area_plugin import BECDockAreaPlugin
 
     QPyDesignerCustomWidgetCollection.addCustomWidget(BECDockAreaPlugin())
 

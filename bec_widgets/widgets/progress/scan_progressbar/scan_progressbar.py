@@ -124,6 +124,7 @@ class ScanProgressBar(BECWidget, QWidget):
     """
 
     ICON_NAME = "timelapse"
+    PLUGIN = True
     progress_started = Signal()
     progress_finished = Signal()
 

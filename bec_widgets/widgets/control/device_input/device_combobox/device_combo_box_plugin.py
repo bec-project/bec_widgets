@@ -1,21 +1,18 @@
 # Copyright (C) 2022 The Qt Company Ltd.
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
-import os
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
+from qtpy.QtWidgets import QWidget
 
-import bec_widgets
 from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 
 DOM_XML = """
 <ui language='c++'>
-    <widget class='DeviceComboBox' name='device_combobox'>
+    <widget class='DeviceComboBox' name='device_combo_box'>
     </widget>
 </ui>
 """
-
-MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
 class DeviceComboBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
@@ -24,6 +21,8 @@ class DeviceComboBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         self._form_editor = None
 
     def createWidget(self, parent):
+        if parent is None:
+            return QWidget()
         t = DeviceComboBox(parent)
         return t
 
@@ -37,7 +36,7 @@ class DeviceComboBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return designer_material_icon(DeviceComboBox.ICON_NAME)
 
     def includeFile(self):
-        return "device_combobox"
+        return "device_combo_box"
 
     def initialize(self, form_editor):
         self._form_editor = form_editor
@@ -52,7 +51,7 @@ class DeviceComboBoxPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "DeviceComboBox"
 
     def toolTip(self):
-        return "Device ComboBox Example for BEC Widgets"
+        return ""
 
     def whatsThis(self):
         return self.toolTip()

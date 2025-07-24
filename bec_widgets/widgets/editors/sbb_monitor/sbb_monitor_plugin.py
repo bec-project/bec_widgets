@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
 
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
+from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.editors.sbb_monitor.sbb_monitor import SBBMonitor
@@ -20,6 +21,8 @@ class SBBMonitorPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         self._form_editor = None
 
     def createWidget(self, parent):
+        if parent is None:
+            return QWidget()
         t = SBBMonitor(parent)
         return t
 
@@ -27,7 +30,7 @@ class SBBMonitorPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return ""
+        return "BEC Utils"
 
     def icon(self):
         return designer_material_icon(SBBMonitor.ICON_NAME)
