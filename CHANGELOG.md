@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.30.4 (2025-07-25)
+
+### Bug Fixes
+
+- **cli**: Remove stderr from cli output when not using rpc
+  ([`b4e0664`](https://github.com/bec-project/bec_widgets/commit/b4e0664011682cae9966aa2632210a6b60e11714))
+
+
 ## v2.30.3 (2025-07-23)
 
 ### Bug Fixes
