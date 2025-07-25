@@ -188,7 +188,7 @@ class WebConsole(BECWidget, QWidget):
         self.setLayout(layout)
         self.page.setUrl(QUrl(f"http://localhost:{_web_console_registry._server_port}"))
         self._startup_timer = QTimer()
-        self._startup_timer.setInterval(1000)
+        self._startup_timer.setInterval(500)
         self._startup_timer.timeout.connect(self._check_page_ready)
         self._startup_timer.start()
         self._js_callback.connect(self._on_js_callback)
