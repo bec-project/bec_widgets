@@ -95,14 +95,14 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
             "aborted": material_icon(
                 icon_name="fiber_manual_record", filled=True, color=colors.emergency
             ),
-            "unkown": material_icon(
+            "unknown": material_icon(
                 icon_name="fiber_manual_record", filled=True, color=QtGui.QColor("#b0bec5")
             ),
         }
         # self.status_colors = {"closed": "#00e676", "halted": "#ffca28", "aborted": "#ff5252"}
         self.column_header = ["Scan Nr", "Scan Name", "Status"]
         self.scan_history: list[ScanHistoryMessage] = []  # newest at index 0
-        self.scan_history_ids: list[str] = []  # scan IDs of the scan history
+        self.scan_history_ids: set[str] = set()  # scan IDs of the scan history
         self.max_length = max_length  # Maximum number of scan history entries to keep
         self.bec_scan_history_manager = BECHistoryManager(parent=self, client=self.client)
         self._set_policies()
@@ -145,7 +145,7 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
             "aborted": material_icon(
                 icon_name="fiber_manual_record", filled=True, color=colors.emergency
             ),
-            "unkown": material_icon(
+            "unknown": material_icon(
                 icon_name="fiber_manual_record", filled=True, color=QtGui.QColor("#b0bec5")
             ),
         }
@@ -225,7 +225,7 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
             QtWidgets.QTreeWidgetItem: The tree item representing the scan history message.
         """
         tree_item = QtWidgets.QTreeWidgetItem([str(msg.scan_number), msg.scan_name, ""])
-        icon = self.status_icons.get(msg.exit_status, self.status_icons["unkown"])
+        icon = self.status_icons.get(msg.exit_status, self.status_icons["unknown"])
         tree_item.setIcon(2, icon)
         tree_item.setExpanded(False)
         for col in range(tree_item.columnCount()):
@@ -247,8 +247,8 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
         if msg.scan_id in self.scan_history_ids:
             logger.info(f"Scan {msg.scan_id} already in history, skipping.")
             return
-        self.scan_history.insert(0, msg)
-        self.scan_history_ids.insert(0, msg.scan_id)
+        self.scan_history.append(msg)
+        self.scan_history_ids.add(msg.scan_id)
 
     def add_scans(self, messages: list[ScanHistoryMessage]):
         """
@@ -275,7 +275,7 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
             index = len(self.scan_history) + index
         try:
             msg = self.scan_history.pop(index)
-            self.scan_history_ids.pop(index)
+            self.scan_history_ids.remove(msg.scan_id)
             self.no_scan_selected.emit()
         except IndexError:
             logger.warning(f"Invalid index {index} for removing scan entry from history.")
