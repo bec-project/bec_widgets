@@ -88,3 +88,60 @@ def test_web_console_registry_wait_for_server_port_timeout():
     with mock.patch.object(_web_console_registry, "_server_process") as mock_subprocess:
         with pytest.raises(TimeoutError):
             _web_console_registry._wait_for_server_port(timeout=0.1)
+
+
+def test_web_console_startup_command_execution(console_widget, qtbot):
+    """Test that the startup command is triggered after successful initialization."""
+    # Set a custom startup command
+    console_widget.startup_cmd = "test startup command"
+
+    assert console_widget.startup_cmd == "test startup command"
+
+    # Generator to simulate JS initialization sequence
+    def js_readiness_sequence():
+        yield False  # First call: not ready yet
+        while True:
+            yield True  # Any subsequent calls: ready
+
+    readiness_gen = js_readiness_sequence()
+
+    def mock_run_js(script, callback=None):
+        # Check if this is the initialization check call
+        if "window.term !== undefined" in script and callback:
+            ready = next(readiness_gen)
+            callback(ready)
+        else:
+            # For other JavaScript calls (like paste), just call the callback
+            if callback:
+                callback(True)
+
+    with mock.patch.object(
+        console_widget.page, "runJavaScript", side_effect=mock_run_js
+    ) as mock_run_js_method:
+        # Reset initialization state and start the timer
+        console_widget._is_initialized = False
+        console_widget._startup_timer.start()
+
+        # Wait for the initialization to complete
+        qtbot.waitUntil(lambda: console_widget._is_initialized, timeout=3000)
+
+        # Verify that the startup command was executed
+        startup_calls = [
+            call
+            for call in mock_run_js_method.call_args_list
+            if "test startup command" in str(call)
+        ]
+        assert len(startup_calls) > 0, "Startup command should have been executed"
+
+        # Verify the initialized signal was emitted
+        assert console_widget._is_initialized is True
+        assert not console_widget._startup_timer.isActive()
+
+
+def test_web_console_set_readonly(console_widget):
+    # Test the set_readonly method
+    console_widget.set_readonly(True)
+    assert not console_widget.isEnabled()
+
+    console_widget.set_readonly(False)
+    assert console_widget.isEnabled()
