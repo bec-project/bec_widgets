@@ -109,6 +109,7 @@ class PlotBase(BECWidget, QWidget):
         self.plot_widget.ci.setContentsMargins(0, 0, 0, 0)
         self.plot_item = pg.PlotItem(viewBox=BECViewBox(enableMenu=True))
         self.plot_widget.addItem(self.plot_item)
+        self.plot_item.visible_items = lambda: self.visible_items
         self.side_panel = SidePanel(self, orientation="left", panel_max_width=280)
 
         # PlotItem Addons
@@ -893,15 +894,9 @@ class PlotBase(BECWidget, QWidget):
             return
         self._apply_autorange_only_visible_curves()
 
-    def _fetch_visible_curves(self):
-        """
-        Fetch all visible curves from the plot item.
-        """
-        visible_curves = []
-        for curve in self.plot_item.curves:
-            if curve.isVisible():
-                visible_curves.append(curve)
-        return visible_curves
+    @property
+    def visible_items(self):
+        return [item for item in self.plot_item.items if item.isVisible()]
 
     def _apply_autorange_only_visible_curves(self):
         """
@@ -910,8 +905,8 @@ class PlotBase(BECWidget, QWidget):
         Args:
             curves (list): List of curves to apply autorange to.
         """
-        visible_curves = self._fetch_visible_curves()
-        self.plot_item.autoRange(items=visible_curves if visible_curves else None)
+        visible_items = self.visible_items
+        self.plot_item.autoRange(items=visible_items if visible_items else None)
 
     @SafeProperty(int, doc="The font size of the legend font.")
     def legend_label_size(self) -> int:
