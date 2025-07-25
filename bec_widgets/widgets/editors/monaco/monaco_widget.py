@@ -27,6 +27,7 @@ class MonacoWidget(BECWidget, QWidget):
         "set_cursor",
         "current_cursor",
         "set_minimap_enabled",
+        "set_vim_mode_enabled",
     ]
 
     def __init__(self, parent=None, config=None, client=None, gui_id=None, **kwargs):
@@ -156,6 +157,15 @@ class MonacoWidget(BECWidget, QWidget):
         Clear any highlighted lines in the Monaco editor.
         """
         self.editor.clear_highlighted_lines()
+
+    def set_vim_mode_enabled(self, enabled: bool) -> None:
+        """
+        Enable or disable Vim mode in the Monaco editor.
+
+        Args:
+            enabled (bool): If True, Vim mode will be enabled; otherwise, it will be disabled.
+        """
+        self.editor.set_vim_mode_enabled(enabled)
 
 
 if __name__ == "__main__":  # pragma: no cover
