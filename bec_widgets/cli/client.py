@@ -2542,6 +2542,15 @@ class MonacoWidget(RPCBase):
             enabled (bool): If True, the minimap will be enabled; otherwise, it will be disabled.
         """
 
+    @rpc_call
+    def set_vim_mode_enabled(self, enabled: bool) -> None:
+        """
+        Enable or disable Vim mode in the Monaco editor.
+
+        Args:
+            enabled (bool): If True, Vim mode will be enabled; otherwise, it will be disabled.
+        """
+
 
 class MotorMap(RPCBase):
     """Motor map widget for plotting motor positions in 2D including a trace of the last points."""
