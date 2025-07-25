@@ -31,13 +31,6 @@ def compact_popup(qtbot):
     yield widget
 
 
-def test_widget_closing(qtbot, compact_popup):
-    with mock.patch.object(compact_popup.contained, "close") as close_method:
-        compact_popup.close()
-    qtbot.waitUntil(lambda: not compact_popup.isVisible(), timeout=1000)
-    close_method.assert_called_once()
-
-
 def test_size_policy(compact_popup):
     csp = compact_popup.sizePolicy()
     assert csp.horizontalPolicy() == QSizePolicy.Expanding

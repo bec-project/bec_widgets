@@ -389,6 +389,7 @@ class BECDock(BECWidget, Dock):
         if widget in self.widgets:
             self.widgets.remove(widget)
         widget.close()
+        widget.deleteLater()
 
     def delete_all(self):
         """

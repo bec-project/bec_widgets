@@ -161,8 +161,6 @@ class BECConnector:
 
         # 2) Enforce unique objectName among siblings with the same BECConnector parent
         self.setParent(parent)
-        if isinstance(self.parent(), QObject) and hasattr(self, "cleanup"):
-            self.parent().destroyed.connect(self._run_cleanup_on_deleted_parent)
 
         # Error popups
         self.error_utility = ErrorPopupUtility()
@@ -185,24 +183,6 @@ class BECConnector:
             return connector_parent.gui_id if connector_parent else None
         except:
             logger.error(f"Error getting parent_id for {self.__class__.__name__}")
-
-    def _run_cleanup_on_deleted_parent(self) -> None:
-        """
-        Run cleanup on the deleted parent.
-        This method is called when the parent is deleted.
-        """
-        if not hasattr(self, "cleanup"):
-            return
-        try:
-            if not self._destroyed:
-                self.cleanup()
-                self._destroyed = True
-        except Exception:
-            content = traceback.format_exc()
-            logger.info(
-                "Failed to run cleanup on deleted parent. "
-                f"This is not necessarily an error as the parent may be deleted before the child and includes already a cleanup. The following exception was raised:\n{content}"
-            )
 
     def change_object_name(self, name: str) -> None:
         """
