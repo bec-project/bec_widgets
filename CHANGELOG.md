@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v2.30.5 (2025-07-25)
+
+### Bug Fixes
+
+- **positioner-box**: Test to fix handling of none integer values for precision
+  ([`b718b43`](https://github.com/bec-project/bec_widgets/commit/b718b438bacff6eb6cd6015f1a67dcf75c05dce4))
+
+### Refactoring
+
+- **positioner-box**: Cleanup, accept float precision
+  ([`4d5df96`](https://github.com/bec-project/bec_widgets/commit/4d5df9608a9438b9f6d7508c323eb3772e53f37d))
+
+
 ## v2.30.4 (2025-07-25)
 
 ### Bug Fixes
