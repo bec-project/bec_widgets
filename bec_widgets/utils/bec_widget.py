@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import darkdetect
+import shiboken6
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import QObject, Slot
 from qtpy.QtWidgets import QApplication
@@ -102,6 +103,13 @@ class BECWidget(BECConnector):
             # All widgets need to call super().cleanup() in their cleanup method
             logger.info(f"Registry cleanup for widget {self.__class__.__name__}")
             self.rpc_register.remove_rpc(self)
+        children = self.findChildren(BECWidget)
+        for child in children:
+            if not shiboken6.isValid(child):
+                # If the child is not valid, it means it has already been deleted
+                continue
+            child.close()
+            child.deleteLater()
 
     def closeEvent(self, event):
         """Wrap the close even to ensure the rpc_register is cleaned up."""

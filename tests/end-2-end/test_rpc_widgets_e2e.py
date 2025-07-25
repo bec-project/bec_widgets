@@ -81,6 +81,7 @@ def test_available_widgets(qtbot, connected_client_gui_obj):
     # Number of top level widgets, should be 4
     top_level_widgets_count = 12
     assert len(gui._server_registry) == top_level_widgets_count
+    names = set(list(gui._server_registry.keys()))
     # Number of widgets with parent_id == None, should be 2
     widgets = [
         widget for widget in gui._server_registry.values() if widget["config"]["parent_id"] is None
@@ -151,7 +152,7 @@ def test_available_widgets(qtbot, connected_client_gui_obj):
             raise RuntimeError(
                 f"Widget {object_name} was not removed properly. The number of top level widgets "
                 f"is {len(gui._server_registry)} instead of {top_level_widgets_count}. The following "
-                f"widgets are still registered: {list(gui._server_registry.keys())}."
+                f"widgets are not cleaned up: {set(gui._server_registry.keys()) - names}"
             ) from exc
         # Number of widgets with parent_id == None, should be 2
         widgets = [

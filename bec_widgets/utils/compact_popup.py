@@ -259,12 +259,3 @@ class CompactPopupWidget(QWidget):
     @expand_popup.setter
     def expand_popup(self, popup: bool):
         self._expand_popup = popup
-
-    def closeEvent(self, event):
-        # Called by Qt, on closing - since the children widgets can be
-        # BECWidgets, it is good to explicitely call 'close' on them,
-        # to ensure proper resources cleanup
-        for child in self.container.findChildren(QWidget, options=Qt.FindDirectChildrenOnly):
-            child.close()
-
-        super().closeEvent(event)
