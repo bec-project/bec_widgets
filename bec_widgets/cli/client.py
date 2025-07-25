@@ -2438,6 +2438,26 @@ class MonacoWidget(RPCBase):
         """
 
     @rpc_call
+    def insert_text(self, text: str, line: int | None = None, column: int | None = None) -> None:
+        """
+        Insert text at the current cursor position or at a specified line and column.
+
+        Args:
+            text (str): The text to insert.
+            line (int, optional): The line number (1-based) to insert the text at. Defaults to None.
+            column (int, optional): The column number (1-based) to insert the text at. Defaults to None.
+        """
+
+    @rpc_call
+    def delete_line(self, line: int | None = None) -> None:
+        """
+        Delete a line in the Monaco editor.
+
+        Args:
+            line (int, optional): The line number (1-based) to delete. If None, the current line will be deleted.
+        """
+
+    @rpc_call
     def set_language(self, language: str) -> None:
         """
         Set the programming language for syntax highlighting in the Monaco editor.
@@ -2517,6 +2537,25 @@ class MonacoWidget(RPCBase):
 
         Args:
             enabled (bool): If True, Vim mode will be enabled; otherwise, it will be disabled.
+        """
+
+    @rpc_call
+    def set_lsp_header(self, header: str) -> None:
+        """
+        Set the LSP (Language Server Protocol) header for the Monaco editor.
+        The header is used to provide context for language servers but is not displayed in the editor.
+
+        Args:
+            header (str): The LSP header to set.
+        """
+
+    @rpc_call
+    def get_lsp_header(self) -> str:
+        """
+        Get the current LSP header set in the Monaco editor.
+
+        Returns:
+            str: The LSP header.
         """
 
 

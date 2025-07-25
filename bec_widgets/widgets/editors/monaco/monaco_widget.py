@@ -19,6 +19,8 @@ class MonacoWidget(BECWidget, QWidget):
     USER_ACCESS = [
         "set_text",
         "get_text",
+        "insert_text",
+        "delete_line",
         "set_language",
         "get_language",
         "set_theme",
@@ -28,6 +30,8 @@ class MonacoWidget(BECWidget, QWidget):
         "current_cursor",
         "set_minimap_enabled",
         "set_vim_mode_enabled",
+        "set_lsp_header",
+        "get_lsp_header",
     ]
 
     def __init__(self, parent=None, config=None, client=None, gui_id=None, **kwargs):
@@ -68,6 +72,26 @@ class MonacoWidget(BECWidget, QWidget):
         Get the current text from the Monaco editor.
         """
         return self.editor.get_text()
+
+    def insert_text(self, text: str, line: int | None = None, column: int | None = None) -> None:
+        """
+        Insert text at the current cursor position or at a specified line and column.
+
+        Args:
+            text (str): The text to insert.
+            line (int, optional): The line number (1-based) to insert the text at. Defaults to None.
+            column (int, optional): The column number (1-based) to insert the text at. Defaults to None.
+        """
+        self.editor.insert_text(text, line, column)
+
+    def delete_line(self, line: int | None = None) -> None:
+        """
+        Delete a line in the Monaco editor.
+
+        Args:
+            line (int, optional): The line number (1-based) to delete. If None, the current line will be deleted.
+        """
+        self.editor.delete_line(line)
 
     def set_cursor(
         self,
@@ -166,6 +190,25 @@ class MonacoWidget(BECWidget, QWidget):
             enabled (bool): If True, Vim mode will be enabled; otherwise, it will be disabled.
         """
         self.editor.set_vim_mode_enabled(enabled)
+
+    def set_lsp_header(self, header: str) -> None:
+        """
+        Set the LSP (Language Server Protocol) header for the Monaco editor.
+        The header is used to provide context for language servers but is not displayed in the editor.
+
+        Args:
+            header (str): The LSP header to set.
+        """
+        self.editor.set_lsp_header(header)
+
+    def get_lsp_header(self) -> str:
+        """
+        Get the current LSP header set in the Monaco editor.
+
+        Returns:
+            str: The LSP header.
+        """
+        return self.editor.get_lsp_header()
 
 
 if __name__ == "__main__":  # pragma: no cover
