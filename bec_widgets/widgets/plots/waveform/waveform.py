@@ -908,6 +908,10 @@ class Waveform(PlotBase):
             self.roi_enable.emit(True)  # Enable the ROI toolbar action
             self.request_dap()  # Request DAP update directly without blocking proxy
 
+        QTimer.singleShot(
+            150, self.auto_range
+        )  # autorange with a delay to ensure the plot is updated
+
         return curve
 
     def _add_curve_object(self, name: str, config: CurveConfig) -> Curve:
