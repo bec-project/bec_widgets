@@ -1034,7 +1034,8 @@ class ImageBase(PlotBase):
         if self.y_roi is not None:
             self.y_roi.cleanup_pyqtgraph()
 
-        self.layer_manager.clear()
-        self.layer_manager = None
+        if self.layer_manager is not None:
+            self.layer_manager.clear()
+            self.layer_manager = None
 
         super().cleanup()
