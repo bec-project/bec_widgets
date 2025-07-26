@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.30.6 (2025-07-26)
+
+### Bug Fixes
+
+- **waveform**: Autorange is applied with 150ms delay after curve is added
+  ([`61e5bde`](https://github.com/bec-project/bec_widgets/commit/61e5bde15f0e1ebe185ddbe81cd71ad581ae6009))
+
+
 ## v2.30.5 (2025-07-25)
 
 ### Bug Fixes
