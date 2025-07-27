@@ -84,6 +84,7 @@ class ScatterWaveform(PlotBase):
         "legend_label_size.setter",
         "minimal_crosshair_precision",
         "minimal_crosshair_precision.setter",
+        "screenshot",
         # Scatter Waveform Specific RPC Access
         "main_curve",
         "color_map",

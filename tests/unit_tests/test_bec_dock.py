@@ -1,5 +1,7 @@
 # pylint: disable=missing-function-docstring, missing-module-docstring, unused-import
 
+from unittest import mock
+
 import pytest
 from bec_lib.endpoints import MessageEndpoints
 
@@ -170,3 +172,62 @@ def test_toolbar_add_utils_progress_bar(bec_dock_area):
         bec_dock_area.panels["ring_progress_bar_0"].widgets[0].config.widget_class
         == "RingProgressBar"
     )
+
+
+def test_toolbar_screenshot_action(bec_dock_area, tmpdir):
+    """Test the screenshot functionality from the toolbar."""
+    # Create a test screenshot file path in tmpdir
+    screenshot_path = tmpdir.join("test_screenshot.png")
+
+    # Mock the QFileDialog.getSaveFileName to return a test filename
+    with mock.patch("bec_widgets.utils.bec_widget.QFileDialog.getSaveFileName") as mock_dialog:
+        mock_dialog.return_value = (str(screenshot_path), "PNG Files (*.png)")
+
+        # Mock the screenshot.save method
+        with mock.patch.object(bec_dock_area, "grab") as mock_grab:
+            mock_screenshot = mock.MagicMock()
+            mock_grab.return_value = mock_screenshot
+
+            # Trigger the screenshot action
+            bec_dock_area.toolbar.components.get_action("screenshot").action.trigger()
+
+            # Verify the dialog was called with correct parameters
+            mock_dialog.assert_called_once()
+            call_args = mock_dialog.call_args[0]
+            assert call_args[0] == bec_dock_area  # parent widget
+            assert call_args[1] == "Save Screenshot"  # dialog title
+            assert call_args[2].startswith("bec_")  # filename starts with bec_
+            assert call_args[2].endswith(".png")  # filename ends with .png
+            assert (
+                call_args[3] == "PNG Files (*.png);;JPEG Files (*.jpg *.jpeg);;All Files (*)"
+            )  # file filter
+
+            # Verify grab was called
+            mock_grab.assert_called_once()
+
+            # Verify save was called with the filename
+            mock_screenshot.save.assert_called_once_with(str(screenshot_path))
+
+
+def test_toolbar_screenshot_action_cancelled(bec_dock_area):
+    """Test the screenshot functionality when user cancels the dialog."""
+    # Mock the QFileDialog.getSaveFileName to return empty filename (cancelled)
+    with mock.patch("bec_widgets.utils.bec_widget.QFileDialog.getSaveFileName") as mock_dialog:
+        mock_dialog.return_value = ("", "")
+
+        # Mock the screenshot.save method
+        with mock.patch.object(bec_dock_area, "grab") as mock_grab:
+            mock_screenshot = mock.MagicMock()
+            mock_grab.return_value = mock_screenshot
+
+            # Trigger the screenshot action
+            bec_dock_area.toolbar.components.get_action("screenshot").action.trigger()
+
+            # Verify the dialog was called
+            mock_dialog.assert_called_once()
+
+            # Verify grab was called (screenshot is taken before dialog)
+            mock_grab.assert_called_once()
+
+            # Verify save was NOT called since dialog was cancelled
+            mock_screenshot.save.assert_not_called()

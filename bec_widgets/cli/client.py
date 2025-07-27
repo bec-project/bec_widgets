@@ -12,7 +12,7 @@ from typing import Literal, Optional
 
 from bec_lib.logger import bec_logger
 
-from bec_widgets.cli.rpc.rpc_base import RPCBase, rpc_call
+from bec_widgets.cli.rpc.rpc_base import RPCBase, rpc_call, rpc_timeout
 from bec_widgets.utils.bec_plugin_helper import get_all_plugin_widgets, get_plugin_client_module
 
 logger = bec_logger.logger
@@ -412,6 +412,13 @@ class BECDockArea(RPCBase):
 
         Returns:
             dict: The state of the dock area.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
         """
 
     @rpc_call
@@ -1426,6 +1433,13 @@ class Heatmap(RPCBase):
         Minimum decimal places for crosshair when dynamic precision is enabled.
         """
 
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
+        """
+
     @property
     @rpc_call
     def color_map(self) -> "str":
@@ -1962,6 +1976,13 @@ class Image(RPCBase):
     def minimal_crosshair_precision(self) -> "int":
         """
         Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
         """
 
     @property
@@ -2796,6 +2817,13 @@ class MotorMap(RPCBase):
         The font size of the legend font.
         """
 
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
+        """
+
     @property
     @rpc_call
     def color(self) -> "tuple":
@@ -3201,6 +3229,13 @@ class MultiWaveform(RPCBase):
         Minimum decimal places for crosshair when dynamic precision is enabled.
         """
 
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
+        """
+
     @property
     @rpc_call
     def highlighted_index(self):
@@ -3415,6 +3450,13 @@ class PositionerBox(RPCBase):
             positioner (Positioner | str) : Positioner to set, accepts str or the device
         """
 
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
+        """
+
 
 class PositionerBox2D(RPCBase):
     """Simple Widget to control two positioners in box form"""
@@ -3437,6 +3479,13 @@ class PositionerBox2D(RPCBase):
             positioner (Positioner | str) : Positioner to set, accepts str or the device
         """
 
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
+        """
+
 
 class PositionerControlLine(RPCBase):
     """A widget that controls a single device."""
@@ -3448,6 +3497,13 @@ class PositionerControlLine(RPCBase):
 
         Args:
             positioner (Positioner | str) : Positioner to set, accepts str or the device
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
         """
 
 
@@ -3908,6 +3964,13 @@ class ScanControl(RPCBase):
         Cleanup the BECConnector
         """
 
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
+        """
+
 
 class ScanProgressBar(RPCBase):
     """Widget to display a progress bar that is hooked up to the scan progress of a scan."""
@@ -4214,6 +4277,13 @@ class ScatterWaveform(RPCBase):
     def minimal_crosshair_precision(self) -> "int":
         """
         Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
         """
 
     @property
@@ -4831,6 +4901,13 @@ class Waveform(RPCBase):
     def minimal_crosshair_precision(self) -> "int":
         """
         Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
         """
 
     @property

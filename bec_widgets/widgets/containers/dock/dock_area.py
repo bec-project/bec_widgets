@@ -71,6 +71,7 @@ class BECDockArea(BECWidget, QWidget):
         "detach_dock",
         "attach_all",
         "save_state",
+        "screenshot",
         "restore_state",
     ]
 
@@ -267,11 +268,16 @@ class BECDockArea(BECWidget, QWidget):
             "restore_state",
             MaterialIconAction(icon_name="frame_reload", tooltip="Restore Dock State", parent=self),
         )
+        self.toolbar.components.add_safe(
+            "screenshot",
+            MaterialIconAction(icon_name="photo_camera", tooltip="Take Screenshot", parent=self),
+        )
 
         bundle = ToolbarBundle("dock_actions", self.toolbar.components)
         bundle.add_action("attach_all")
         bundle.add_action("save_state")
         bundle.add_action("restore_state")
+        bundle.add_action("screenshot")
         self.toolbar.add_bundle(bundle)
 
     def _hook_toolbar(self):
@@ -333,6 +339,7 @@ class BECDockArea(BECWidget, QWidget):
         self.toolbar.components.get_action("restore_state").action.triggered.connect(
             self.restore_state
         )
+        self.toolbar.components.get_action("screenshot").action.triggered.connect(self.screenshot)
 
     @SafeSlot()
     def _create_widget_from_toolbar(self, widget_name: str) -> None:
