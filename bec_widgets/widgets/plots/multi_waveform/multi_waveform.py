@@ -96,6 +96,7 @@ class MultiWaveform(PlotBase):
         "legend_label_size.setter",
         "minimal_crosshair_precision",
         "minimal_crosshair_precision.setter",
+        "screenshot",
         # MultiWaveform Specific RPC Access
         "highlighted_index",
         "highlighted_index.setter",

@@ -45,6 +45,7 @@ class ScanControl(BECWidget, QWidget):
     Widget to submit new scans to the queue.
     """
 
+    USER_ACCESS = ["remove", "screenshot"]
     PLUGIN = True
     ICON_NAME = "tune"
     ARG_BOX_POSITION: int = 2

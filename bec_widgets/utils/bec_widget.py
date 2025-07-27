@@ -1,16 +1,19 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 import darkdetect
 import shiboken6
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QObject, Slot
-from qtpy.QtWidgets import QApplication
+from qtpy.QtCore import QObject
+from qtpy.QtWidgets import QApplication, QFileDialog, QWidget
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
 from bec_widgets.utils.colors import set_theme
+from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.rpc_decorator import rpc_timeout
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_widgets.widgets.containers.dock import BECDock
@@ -88,7 +91,7 @@ class BECWidget(BECConnector):
                 theme = "dark"
         self.apply_theme(theme)
 
-    @Slot(str)
+    @SafeSlot(str)
     def apply_theme(self, theme: str):
         """
         Apply the theme to the widget.
@@ -96,6 +99,30 @@ class BECWidget(BECConnector):
         Args:
             theme(str, optional): The theme to be applied.
         """
+
+    @SafeSlot()
+    @SafeSlot(str)
+    @rpc_timeout(None)
+    def screenshot(self, file_name: str | None = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
+        """
+        if not isinstance(self, QWidget):
+            logger.error("Cannot take screenshot of non-QWidget instance")
+            return
+
+        screenshot = self.grab()
+        if file_name is None:
+            file_name, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save Screenshot",
+                f"bec_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
+                "PNG Files (*.png);;JPEG Files (*.jpg *.jpeg);;All Files (*)",
+            )
+        if not file_name:
+            return
+        screenshot.save(file_name)
+        logger.info(f"Screenshot saved to {file_name}")
 
     def cleanup(self):
         """Cleanup the widget."""

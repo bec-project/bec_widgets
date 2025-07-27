@@ -105,6 +105,7 @@ class Waveform(PlotBase):
         "legend_label_size.setter",
         "minimal_crosshair_precision",
         "minimal_crosshair_precision.setter",
+        "screenshot",
         # Waveform Specific RPC Access
         "curves",
         "x_mode",
