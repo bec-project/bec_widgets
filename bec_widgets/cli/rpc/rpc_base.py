@@ -39,6 +39,29 @@ def _transform_args_kwargs(args, kwargs) -> tuple[tuple, dict]:
     return tuple(_name_arg(arg) for arg in args), {k: _name_arg(v) for k, v in kwargs.items()}
 
 
+def rpc_timeout(timeout):
+    """
+    A decorator to set a timeout for an RPC call.
+
+    Args:
+        timeout: The timeout in seconds.
+
+    Returns:
+        The decorated function.
+    """
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            if "timeout" not in kwargs:
+                kwargs["timeout"] = timeout
+            return func(self, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
 def rpc_call(func):
     """
     A decorator for calling a function on the server.
