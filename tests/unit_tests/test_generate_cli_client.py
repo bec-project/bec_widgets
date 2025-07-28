@@ -79,7 +79,7 @@ def test_client_generator_with_black_formatting():
 
         from bec_lib.logger import bec_logger
 
-        from bec_widgets.cli.rpc.rpc_base import RPCBase, rpc_call
+        from bec_widgets.cli.rpc.rpc_base import RPCBase, rpc_call, rpc_timeout
         from bec_widgets.utils.bec_plugin_helper import (get_all_plugin_widgets,
                                                         get_plugin_client_module)
 

@@ -53,7 +53,7 @@ from __future__ import annotations
 {base_imports}
 from bec_lib.logger import bec_logger
 
-from bec_widgets.cli.rpc.rpc_base import RPCBase, rpc_call
+from bec_widgets.cli.rpc.rpc_base import RPCBase, rpc_call, rpc_timeout
 {"from bec_widgets.utils.bec_plugin_helper import get_all_plugin_widgets, get_plugin_client_module" if self._base else ""}
 
 logger = bec_logger.logger
@@ -180,7 +180,10 @@ class {class_name}(RPCBase):"""
                     f"Method {method} not found in class {cls.__name__}. "
                     f"Please check the USER_ACCESS list."
                 )
-
+            if hasattr(obj, "__rpc_timeout__"):
+                timeout = {"value": obj.__rpc_timeout__}
+            else:
+                timeout = {}
             if isinstance(obj, (property, QtProperty)):
                 # for the cli, we can map qt properties to regular properties
                 if is_property_setter:
@@ -205,13 +208,25 @@ class {class_name}(RPCBase):"""
     def {method}{str(sig_overload)}: ...
     """
 
-                self.content += """
-    @rpc_call"""
+                self.content += f"""
+    {self._rpc_call(timeout)}"""
             self.content += f"""
     def {method}{str(sig)}:
         \"\"\"
 {doc}
         \"\"\""""
+
+    def _rpc_call(self, timeout_info: dict[str, float | None]):
+        """
+        Decorator to mark a method as an RPC call.
+        This is used to generate the client code for the method.
+        """
+        if not timeout_info:
+            return "@rpc_call"
+        timeout = timeout_info.get("value", None)
+        return f"""
+    @rpc_timeout({timeout})
+    @rpc_call"""
 
     def write(self, file_name: str):
         """
