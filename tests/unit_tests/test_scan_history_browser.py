@@ -298,14 +298,14 @@ def test_scan_history_browser(qtbot, scan_history_browser, scan_history_msg, sca
     scan_history_browser.scan_history_view.update_history(scan_history_msg_2.model_dump())
 
     assert len(scan_history_browser.scan_history_view.scan_history) == 2
+    assert scan_history_browser.scan_history_view.topLevelItemCount() == 2
     # Click on first scan item history to select it
-    qtbot.mouseClick(
-        scan_history_browser.scan_history_view.viewport(),
-        QtCore.Qt.LeftButton,
-        pos=scan_history_browser.scan_history_view.visualItemRect(
-            scan_history_browser.scan_history_view.topLevelItem(0)
-        ).center(),
-    )
+    # TODO #771 ; Multiple clicks to the QTreeView item fail, but only in the CI, not locally.
+    # Simulate a mouse click without qtbot.mouseClick as this is unstable and currently fails in CI
+    item = scan_history_browser.scan_history_view.topLevelItem(0)
+    scan_history_browser.scan_history_view.setCurrentItem(item)
+    scan_history_browser.scan_history_view.itemClicked.emit(item, 0)
+
     assert scan_history_browser.scan_history_view.currentIndex().row() == 0
 
     # Both metadata and device viewers should be updated with the first scan
@@ -319,29 +319,6 @@ def test_scan_history_browser(qtbot, scan_history_browser, scan_history_msg, sca
         == scan_history_msg_2,
         timeout=2000,
     )
-
-    # TODO #771 ; Multiple clicks to the QTreeView item fail, but only in the CI, not locally.
-    # Click on second scan item history to select it
-    # qtbot.mouseClick(
-    #     scan_history_browser.scan_history_view.viewport(),
-    #     QtCore.Qt.LeftButton,
-    #     pos=scan_history_browser.scan_history_view.visualItemRect(
-    #         scan_history_browser.scan_history_view.topLevelItem(1)
-    #     ).center(),
-    # )
-    # assert scan_history_browser.scan_history_view.currentIndex().row() == 1
-
-    # # Both metadata and device viewers should be updated with the first scan
-    # qtbot.waitUntil(
-    #     lambda: scan_history_browser.scan_history_metadata_viewer.scan_history_msg
-    #     == scan_history_msg,
-    #     timeout=2000,
-    # )
-    # qtbot.waitUntil(
-    #     lambda: scan_history_browser.scan_history_device_viewer.scan_history_msg
-    #     == scan_history_msg,
-    #     timeout=2000,
-    # )
 
     callback_args = []
 

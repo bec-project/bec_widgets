@@ -84,22 +84,7 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
             theme_update=theme_update,
             **kwargs,
         )
-        colors = get_accent_colors()
-        self.status_icons = {
-            "closed": material_icon(
-                icon_name="fiber_manual_record", filled=True, color=colors.success
-            ),
-            "halted": material_icon(
-                icon_name="fiber_manual_record", filled=True, color=colors.warning
-            ),
-            "aborted": material_icon(
-                icon_name="fiber_manual_record", filled=True, color=colors.emergency
-            ),
-            "unknown": material_icon(
-                icon_name="fiber_manual_record", filled=True, color=QtGui.QColor("#b0bec5")
-            ),
-        }
-        # self.status_colors = {"closed": "#00e676", "halted": "#ffca28", "aborted": "#ff5252"}
+        self.status_icons = self._create_status_icons()
         self.column_header = ["Scan Nr", "Scan Name", "Status"]
         self.scan_history: list[ScanHistoryMessage] = []  # newest at index 0
         self.scan_history_ids: set[str] = set()  # scan IDs of the scan history
@@ -132,10 +117,10 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
         for column in range(1, self.columnCount()):
             header.setSectionResizeMode(column, QtWidgets.QHeaderView.ResizeMode.Stretch)
 
-    def apply_theme(self, theme: str | None = None):
-        """Apply the theme to the widget."""
+    def _create_status_icons(self) -> dict[str, QtGui.QIcon]:
+        """Create status icons for the scan history."""
         colors = get_accent_colors()
-        self.status_icons = {
+        return {
             "closed": material_icon(
                 icon_name="fiber_manual_record", filled=True, color=colors.success
             ),
@@ -149,6 +134,10 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
                 icon_name="fiber_manual_record", filled=True, color=QtGui.QColor("#b0bec5")
             ),
         }
+
+    def apply_theme(self, theme: str | None = None):
+        """Apply the theme to the widget."""
+        self.status_icons = self._create_status_icons()
         self.repaint()
 
     def _current_item_changed(
@@ -187,8 +176,9 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
         for msg_dump in all_messages:
             msg = ScanHistoryMessage(**msg_dump)
             messages.append(msg)
-        while len(messages) > self.max_length:
-            messages.pop(0)
+            if len(messages) >= self.max_length:
+                messages.pop(0)
+        messages.sort(key=lambda m: m.scan_number, reverse=False)
         self.add_scans(messages)
         self.ensure_history_max_length()
 
@@ -247,7 +237,7 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
         if msg.scan_id in self.scan_history_ids:
             logger.info(f"Scan {msg.scan_id} already in history, skipping.")
             return
-        self.scan_history.append(msg)
+        self.scan_history.insert(0, msg)
         self.scan_history_ids.add(msg.scan_id)
 
     def add_scans(self, messages: list[ScanHistoryMessage]):
@@ -261,7 +251,8 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
         for msg in messages:
             self._add_scan_to_scan_history(msg)
             tree_items.append(self._setup_tree_item(msg))
-        self.insertTopLevelItems(0, tree_items)
+        # Insert for insertTopLevelItems needs to reversed to keep order of scan_history list
+        self.insertTopLevelItems(0, tree_items[::-1])
 
     def remove_scan(self, index: int):
         """
