@@ -209,8 +209,11 @@ class Crosshair(QObject):
         if self.highlighted_curve_index is not None and hasattr(self.plot_item, "visible_curves"):
             # Focus on the highlighted curve only
             self.items = [self.plot_item.visible_curves[self.highlighted_curve_index]]
-        else:
-            # Handle all curves
+        elif hasattr(self.plot_item, "visible_items"):  # PlotBase general case
+            # Handle visible items in the plot item
+            self.items = self.plot_item.visible_items()
+        else:  # Non PlotBase case
+            # Handle all items
             self.items = self.plot_item.items
 
         # Create or update markers
