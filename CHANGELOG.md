@@ -1,6 +1,38 @@
 # CHANGELOG
 
 
+## v2.33.0 (2025-07-29)
+
+### Bug Fixes
+
+- **monaco**: Forward text changed signal
+  ([`a51ef04`](https://github.com/bec-project/bec_widgets/commit/a51ef04cdf0ac8abdb7008d78b13c75b86ce9e06))
+
+### Build System
+
+- Update bec and qtmonaco min dependencies
+  ([`5f925ba`](https://github.com/bec-project/bec_widgets/commit/5f925ba4e3840219e4473d6346ece6746076f718))
+
+### Features
+
+- **monaco**: Add insert, delete and lsp header
+  ([`fc68d2c`](https://github.com/bec-project/bec_widgets/commit/fc68d2cf2d6b161d8e3b9fc9daf6185d9197deba))
+
+- **monaco**: Add vim mode
+  ([`627b49b`](https://github.com/bec-project/bec_widgets/commit/627b49b33a30e45b2bfecb57f090eecfa31af09d))
+
+- **web console**: Add set_readonly method
+  ([`c2e1642`](https://github.com/bec-project/bec_widgets/commit/c2e16429c91de7cc0e672ba36224e9031c1c4234))
+
+- **web console**: Add signal to indicate when the js backend is initialized
+  ([`2b9fe6c`](https://github.com/bec-project/bec_widgets/commit/2b9fe6c9590c8d18b7542307273176e118828681))
+
+### Testing
+
+- **web console**: Add tests for the web console
+  ([`40f4bce`](https://github.com/bec-project/bec_widgets/commit/40f4bce2854bcf333ce261229bd1703b80ced538))
+
+
 ## v2.32.0 (2025-07-29)
 
 ### Features
