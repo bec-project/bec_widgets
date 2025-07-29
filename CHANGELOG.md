@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v2.32.0 (2025-07-29)
+
+### Features
+
+- **dock area**: Add screenshot toolbar action
+  ([`fd5af01`](https://github.com/bec-project/bec_widgets/commit/fd5af0184279400ca6d8e5d2042f31be88d180f3))
+
+- **rpc_timeout**: Add decorator to override the rpc timeout
+  ([`8a214c8`](https://github.com/bec-project/bec_widgets/commit/8a214c897899d0d94d5f262591a001c127d1b155))
+
+
 ## v2.31.3 (2025-07-29)
 
 ### Bug Fixes
