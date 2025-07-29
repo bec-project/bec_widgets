@@ -896,7 +896,18 @@ class PlotBase(BECWidget, QWidget):
 
     @property
     def visible_items(self):
-        return [item for item in self.plot_item.items if item.isVisible()]
+        crosshair_items = []
+        if self.crosshair:
+            crosshair_items = [
+                self.crosshair.v_line,
+                self.crosshair.h_line,
+                self.crosshair.coord_label,
+            ]
+        return [
+            item
+            for item in self.plot_item.items
+            if item.isVisible() and item not in crosshair_items
+        ]
 
     def _apply_autorange_only_visible_curves(self):
         """
@@ -906,6 +917,7 @@ class PlotBase(BECWidget, QWidget):
             curves (list): List of curves to apply autorange to.
         """
         visible_items = self.visible_items
+
         self.plot_item.autoRange(items=visible_items if visible_items else None)
 
     @SafeProperty(int, doc="The font size of the legend font.")
