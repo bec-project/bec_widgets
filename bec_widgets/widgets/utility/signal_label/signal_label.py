@@ -8,6 +8,7 @@ import numpy as np
 from bec_lib.device import Device, Signal
 from bec_lib.endpoints import MessageEndpoints
 from bec_qthemes import material_icon
+from qtpy.QtCore import Qt
 from qtpy.QtCore import Signal as QSignal
 from qtpy.QtWidgets import (
     QApplication,
@@ -61,6 +62,7 @@ class ChoiceDialog(QDialog):
         super().__init__(parent=parent)
         self.setWindowTitle("Choose device and signal...")
         self._accent_colors = get_accent_colors()
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
         layout = QHBoxLayout()
 
@@ -124,7 +126,18 @@ class ChoiceDialog(QDialog):
         self.accepted_output.emit(
             self._device_field.text(), self._signal_field.selected_signal_comp_name
         )
+        self.cleanup()
         return super().accept()
+
+    def reject(self):
+        self.cleanup()
+        return super().reject()
+
+    def cleanup(self):
+        self._device_field.cleanup()
+        self._signal_field.cleanup()
+        self._device_field.deleteLater()
+        self._signal_field.deleteLater()
 
 
 class SignalLabel(BECWidget, QWidget):
