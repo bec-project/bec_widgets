@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v2.31.3 (2025-07-29)
+
+### Bug Fixes
+
+- **waveform**: Fallback mechanism for auto mode to use index if scan_report_devices are not
+  available
+  ([`6bf84ae`](https://github.com/bec-project/bec_widgets/commit/6bf84aea2508ff01fe201c045ec055684da88593))
+
+
 ## v2.31.2 (2025-07-29)
 
 ### Bug Fixes
