@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.31.1 (2025-07-29)
+
+### Bug Fixes
+
+- **image_base**: Fix cleanup of uninitialized image layer
+  ([`c1bdc50`](https://github.com/bec-project/bec_widgets/commit/c1bdc506e8099f178acdccbe0e1109deeeaaca38))
+
+
 ## v2.31.0 (2025-07-29)
 
 ### Bug Fixes
