@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.31.2 (2025-07-29)
+
+### Bug Fixes
+
+- **bec widgets**: Always call cleanup of child widgets on cleanup
+  ([`bf86a03`](https://github.com/bec-project/bec_widgets/commit/bf86a030a08b325a08e031ff71d0716a2f2f122b))
+
+
 ## v2.31.1 (2025-07-29)
 
 ### Bug Fixes
