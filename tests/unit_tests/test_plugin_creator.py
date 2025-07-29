@@ -207,8 +207,10 @@ class TestAddWidgetVariants:
     @patch("bec_widgets.utils.bec_plugin_manager.edit_ui.open_designer")
     @patch("bec_widgets.utils.bec_plugin_manager.edit_ui.plugin_repo_path")
     @patch("bec_widgets.utils.bec_plugin_manager.create.widget.plugin_repo_path")
+    @patch("bec_widgets.utils.bec_plugin_manager.edit_ui.plugin_package_name")
     def test_widget_editor_watcher(
         self,
+        plugin_package_name,
         plugin_repo_path,
         plugin_repo_path_2,
         open_designer,
@@ -218,6 +220,7 @@ class TestAddWidgetVariants:
     ):
         plugin_repo_path.return_value = str(git_repo)
         plugin_repo_path_2.return_value = str(git_repo)
+        plugin_package_name.return_value = git_repo.name
 
         widget_dir = git_repo / "test_plugin" / "bec_widgets" / "widgets" / "test_widget_6"
         widget_ui_file = widget_dir / "test_widget_6.ui"

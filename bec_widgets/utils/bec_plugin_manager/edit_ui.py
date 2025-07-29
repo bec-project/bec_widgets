@@ -3,7 +3,7 @@ import subprocess
 from pathlib import Path
 
 from bec_lib.logger import bec_logger
-from bec_lib.plugin_helper import plugin_repo_path
+from bec_lib.plugin_helper import plugin_package_name, plugin_repo_path
 from watchdog.events import (
     DirCreatedEvent,
     DirModifiedEvent,
@@ -117,7 +117,7 @@ class RecompileHandler(FileSystemEventHandler):
 def open_and_watch_ui_editor(widget_name: str):
     logger.info(f"Opening the editor for {widget_name}, and watching")
     repo = Path(plugin_repo_path())
-    widget_dir = repo / repo.name / "bec_widgets" / "widgets" / widget_name
+    widget_dir = repo / plugin_package_name() / "bec_widgets" / "widgets" / widget_name
     ui_file = widget_dir / f"{widget_name}.ui"
     ui_outfile = widget_dir / f"{widget_name}_ui.py"
 
