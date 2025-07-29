@@ -929,7 +929,16 @@ class Waveform(PlotBase):
         curve = Curve(config=config, name=name, parent_item=self)
         self.plot_item.addItem(curve)
         self._categorise_device_curves()
+        curve.visibleChanged.connect(self._refresh_crosshair_markers)
+        curve.visibleChanged.connect(self.auto_range)
         return curve
+
+    def _refresh_crosshair_markers(self):
+        """
+        Refresh the crosshair markers when a curve visibility changes.
+        """
+        if self.crosshair is not None:
+            self.crosshair.clear_markers()
 
     def _generate_color_from_palette(self) -> str:
         """
