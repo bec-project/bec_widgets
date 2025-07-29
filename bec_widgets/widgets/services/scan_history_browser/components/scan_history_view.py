@@ -30,6 +30,7 @@ class BECHistoryManager(QtCore.QObject):
 
     def __init__(self, parent, client: BECClient):
         super().__init__(parent)
+        self._load_attempt = 0
         self.client = client
         self._cb_id = self.client.callbacks.register(
             event_type=EventType.SCAN_HISTORY_UPDATE, callback=self._on_scan_history_update
@@ -38,6 +39,19 @@ class BECHistoryManager(QtCore.QObject):
     def refresh_scan_history(self) -> None:
         """Refresh the scan history from the client."""
         all_messages = []
+        # pylint: disable=protected-access
+        self.client.history._scan_history_loaded_event.wait(timeout=1)
+        if not self.client.history._scan_history_loaded_event.is_set():
+            self._load_attempt += 1
+            if self._load_attempt < 3:
+                logger.warning(
+                    f"Scan history not loaded yet, retrying ({self._load_attempt}/3 attempts)."
+                )
+                QtCore.QTimer.singleShot(1000, self.refresh_scan_history)
+            else:
+                logger.error("Failed to load scan history after 3 attempts.")
+            return
+        self._load_attempt = 0
         for scan_id in self.client.history._scan_ids:  # pylint: disable=protected-access
             history_msg = self.client.history._scan_data.get(scan_id, None)
             if history_msg is None:
@@ -97,7 +111,7 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
         header.setToolTip(f"Last {self.max_length} scans in history.")
         self.bec_scan_history_manager.scan_history_updated.connect(self.update_history)
         self.bec_scan_history_manager.scan_history_refreshed.connect(self.update_full_history)
-        self.refresh()
+        QtCore.QTimer.singleShot(500, self.refresh)
 
     def _set_policies(self):
         """Set the policies for the tree widget."""
