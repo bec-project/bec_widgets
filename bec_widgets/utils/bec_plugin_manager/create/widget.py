@@ -32,24 +32,27 @@ def _editor_cb(ctx: typer.Context, value: bool):
     return value
 
 
+_bold_blue = "\033[34m\033[1m"
+_off = "\033[0m"
+_USE_UI_MSG = "Generate a .ui file for use in bec-designer."
+_OPEN_DESIGNER_MSG = f"""This app can watch for changes and recompile them to a python file imported to the widget whenever it is saved.
+To open this editor independently, you can use {_bold_blue}bec-plugin-manager edit-ui [widget_name]{_off}.
+Open the created widget .ui file in bec-designer now?"""
+
+
 @_app.command()
 def widget(
     name: Annotated[str, typer.Argument(help="Enter a name for your widget in snake_case")],
-    use_ui: Annotated[
-        bool, typer.Option(prompt=True, help="Generate a .ui file for use in bec-designer.")
-    ] = True,
+    use_ui: Annotated[bool, typer.Option(prompt=_USE_UI_MSG, help=_USE_UI_MSG)] = True,
     open_editor: Annotated[
-        bool,
-        typer.Option(
-            prompt=True, help="Open the created widget in bec-designer.", callback=_editor_cb
-        ),
+        bool, typer.Option(prompt=_OPEN_DESIGNER_MSG, help=_OPEN_DESIGNER_MSG, callback=_editor_cb)
     ] = True,
 ):
     """Create a new widget plugin with the given name.
 
 If [bold white]use_ui[/bold white] is set, a bec-designer .ui file will also be created. If \
 [bold white]open_editor[/bold white] is additionally set, the .ui file will be opened in \
-bec-designer and the compiled python version will be updated when changes are made."""
+bec-designer and the compiled python version will be updated when changes are made and saved."""
     if (formatted_name := name.lower().replace("-", "_")) != name:
         logger.warning(f"Adjusting widget name from {name} to {formatted_name}")
     if not formatted_name.isidentifier():

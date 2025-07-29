@@ -55,10 +55,42 @@ class RecompileHandler(FileSystemEventHandler):
             ["pyside6-uic", "--absolute-imports", self.in_file, "-o", self.out_file]
         )
         logger.success(f"compilation exited with code {code}")
-        if code == 0:
-            logger.success("updating imports...")
-            self._update_imports()
-            logger.success("done!")
+        if code != 0:
+            return
+        self._add_comment_to_file()
+        logger.success("updating imports...")
+        self._update_imports()
+        logger.success("formatting...")
+        code = subprocess.call(
+            ["black", "--line-length=100", "--skip-magic-trailing-comma", self.out_file]
+        )
+        if code != 0:
+            logger.error(f"Error while running black on {self.out_file}, code: {code}")
+            return
+        code = subprocess.call(
+            [
+                "isort",
+                "--line-length=100",
+                "--profile=black",
+                "--multi-line=3",
+                "--trailing-comma",
+                self.out_file,
+            ]
+        )
+        if code != 0:
+            logger.error(f"Error while running isort on {self.out_file}, code: {code}")
+            return
+        logger.success("done!")
+
+    def _add_comment_to_file(self):
+        with open(self.out_file, "r+") as f:
+            initial = f.read()
+            f.seek(0)
+            f.write(f"# Generated from {self.in_file} by bec-plugin-manager - do not edit! \n")
+            f.write(
+                "# Use 'bec-plugin-manager edit-ui [widget_name]' to make changes, and this file will be updated accordingly. \n\n"
+            )
+            f.write(initial)
 
     def _update_imports(self):
         with open(self.out_file, "r+") as f:
@@ -83,11 +115,15 @@ class RecompileHandler(FileSystemEventHandler):
 
 
 def open_and_watch_ui_editor(widget_name: str):
-    logger.info(f"Opening the editor for {widget_name}... ")
+    logger.info(f"Opening the editor for {widget_name}, and watching")
     repo = Path(plugin_repo_path())
     widget_dir = repo / repo.name / "bec_widgets" / "widgets" / widget_name
     ui_file = widget_dir / f"{widget_name}.ui"
     ui_outfile = widget_dir / f"{widget_name}_ui.py"
+
+    logger.info(
+        f"Opening the editor for {widget_name}, and watching {ui_file} for changes. Whenever you save the file, it will be recompiled to {ui_outfile}"
+    )
     recompile_handler = RecompileHandler(ui_file, ui_outfile)
     observer = Observer()
     observer.schedule(recompile_handler, str(ui_file.parent))
