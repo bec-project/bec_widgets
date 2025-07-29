@@ -1,6 +1,51 @@
 # CHANGELOG
 
 
+## v2.31.0 (2025-07-29)
+
+### Bug Fixes
+
+- **bec_main_window**: Main window have unified status bar on macOS
+  ([`1d0490f`](https://github.com/bec-project/bec_widgets/commit/1d0490fff428d51f2cdb7d35a954a7cd62cbb65c))
+
+- **color_button_native**: Removed BECWidget inheritance
+  ([`e42ffd7`](https://github.com/bec-project/bec_widgets/commit/e42ffd7c015a026d8e0967ac6b5866cbbea7bfed))
+
+- **decimal_spinbox**: Removed BECWidget inheritance
+  ([`2bd6d00`](https://github.com/bec-project/bec_widgets/commit/2bd6d0089955172134afb4d39939890026ed43f0))
+
+- **launch_window**: Logic for custom main window apps adjusted
+  ([`e090ac4`](https://github.com/bec-project/bec_widgets/commit/e090ac49b72fa15ebf1c09164ff3c6de577cb939))
+
+- **plugin_utils**: Plugins can be created from QWidgets, no need for BECWidget base class for
+  plugin creation
+  ([`c2a918e`](https://github.com/bec-project/bec_widgets/commit/c2a918ef4b77ccd7fa43d1bc0b907d55a17a6c95))
+
+- **scan_progressbar**: Added kwargs to init
+  ([`7073e75`](https://github.com/bec-project/bec_widgets/commit/7073e75adf0eeb81f4f8e27eb99fc1b7a395c751))
+
+- **utils**: Plugin template createWidget do not initialise widgets by default
+  ([`728d4ef`](https://github.com/bec-project/bec_widgets/commit/728d4efd9646ffcecd7d1a2f70988a7d7c799124))
+
+- **widgets**: Added missing __init__ files
+  ([`6bbf512`](https://github.com/bec-project/bec_widgets/commit/6bbf5126cf586063ed08d6cd489d6a9af28eac35))
+
+### Features
+
+- **bec_main_window**: Plugin and rpc created
+  ([`e4521d9`](https://github.com/bec-project/bec_widgets/commit/e4521d95286bbc598c3c05f357d247d950477b71))
+
+### Refactoring
+
+- **widgets**: All plugins regenerated
+  ([`10cbb9a`](https://github.com/bec-project/bec_widgets/commit/10cbb9a05cb96a791448caff4ffc4115b76146d7))
+
+### Testing
+
+- **launch_window**: Mainwindow raise test removed, features is supported now
+  ([`0854175`](https://github.com/bec-project/bec_widgets/commit/0854175acbda1d4de71358aec028539552a26448))
+
+
 ## v2.30.6 (2025-07-26)
 
 ### Bug Fixes
