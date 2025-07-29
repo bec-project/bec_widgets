@@ -6,6 +6,10 @@ from qtpy.QtGui import QTransform
 
 from bec_widgets.utils import Crosshair
 from bec_widgets.widgets.plots.image.image_item import ImageItem
+from bec_widgets.widgets.plots.waveform.waveform import Waveform
+from tests.unit_tests.client_mocks import mocked_client
+
+from .conftest import create_widget
 
 # pylint: disable = redefined-outer-name
 
@@ -363,3 +367,27 @@ def test_get_transformed_position_with_scale(plot_widget_with_crosshair):
     # Check that the results match expectations
     assert row == expected_row
     assert col == expected_col
+
+
+def test_ignore_invisible_curves_on_move(qtbot, mocked_client):
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    c0 = wf.plot(x=[1, 2, 3], y=[1, 4, 9], name="Curve_0")
+    c1 = wf.plot(x=[1, 2, 3], y=[2, 5, 10], name="Curve_1")
+    wf.hook_crosshair()
+
+    # # Simulate a mouse move at (2,5)
+    pos_in_view = QPointF(2, 5)
+    pos_in_scene = wf.plot_item.vb.mapViewToScene(pos_in_view)
+    event_mock = [pos_in_scene]
+
+    # 1) Both curves visible: expect markers for both
+    wf.crosshair.clear_markers()
+    wf.crosshair.mouse_moved(event_mock)
+    assert set(wf.crosshair.marker_moved_1d.keys()) == {"Curve_0", "Curve_1"}
+
+    # 2) Hide Curve B and repeat: only Curve_0 should remain
+    c1.setVisible(False)
+    wf.crosshair.clear_markers()
+    wf.crosshair.mouse_moved(event_mock)
+    qtbot.wait(200)
+    assert set(wf.crosshair.marker_moved_1d.keys()) == {"Curve_0"}
