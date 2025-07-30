@@ -112,7 +112,9 @@ class DeviceInputBase(BECWidget):
             WidgetIO.set_value(widget=self, value=device)
             self.config.default = device
         else:
-            logger.warning(f"Device {device} is not in the filtered selection.")
+            logger.warning(
+                f"Device {device} is not in the filtered selection of {self}: {self.devices}."
+            )
 
     @SafeSlot()
     def update_devices_from_filters(self):
@@ -131,7 +133,8 @@ class DeviceInputBase(BECWidget):
         # Filter based on readout priority
         devs = [dev for dev in devs if self._check_readout_filter(dev)]
         self.devices = [device.name for device in devs]
-        self.set_device(current_device)
+        if current_device != "":
+            self.set_device(current_device)
 
     @SafeSlot(list)
     def set_available_devices(self, devices: list[str]):
