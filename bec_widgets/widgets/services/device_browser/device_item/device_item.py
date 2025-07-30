@@ -172,7 +172,9 @@ class DeviceItem(ExpandableGroupFrame):
 
     @SafeSlot(popup_error=True)
     def _reload_config(self, *_):
-        self.set_display_config(self.dev[self.device]._config)
+        # Guard in case we attempt to reload config while a device is being removed/readded
+        if (dev := self.dev.get(self.device)) is not None:
+            self.set_display_config(dev._config)
 
     def set_display_config(self, config_dict: dict):
         """Set the displayed information from a device config dict, which must conform to the
