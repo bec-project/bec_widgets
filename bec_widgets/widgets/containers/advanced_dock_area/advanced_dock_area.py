@@ -1,13 +1,54 @@
 import PySide6QtAds as QtAds
-from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QIcon
 from bec_qthemes import material_icon
+from qtpy.QtWidgets import QApplication
 
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 from bec_widgets.widgets.control.scan_control import ScanControl
 from bec_widgets.widgets.editors.monaco.monaco_widget import MonacoWidget
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
 from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
+
+# ── Fancy dock styles ──
+_LIGHT_DOCK_QSS = """
+QDockWidget {
+    background: #fafafa;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+QTabBar::tab {
+    background: #e0e0e0;
+    padding: 6px;
+    margin: 1px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    color: #333;
+}
+QTabBar::tab:selected {
+    background: #fff;
+    font-weight: bold;
+}
+"""
+
+_DARK_DOCK_QSS = """
+QDockWidget {
+    background: #2b2b2b;
+    border: 1px solid #444;
+    border-radius: 4px;
+}
+QTabBar::tab {
+    background: #3c3f41;
+    padding: 6px;
+    margin: 1px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    color: #bbb;
+}
+QTabBar::tab:selected {
+    background: #323232;
+    color: #fff;
+    font-weight: bold;
+}
+"""
 
 
 class AdvancedDockArea(BECMainWindow):
@@ -63,6 +104,19 @@ class AdvancedDockArea(BECMainWindow):
             QtAds.DockWidgetArea.LeftDockWidgetArea, self.dock_monaco_1
         )
         self.dock_manager.addDockWidgetTabToArea(self.dock_monaco_2, editor_area)
+
+        theme = getattr(self.app, "theme", None)
+        current = theme.theme if theme else "light"
+        qss = _DARK_DOCK_QSS if current.lower() == "dark" else _LIGHT_DOCK_QSS
+        self.dock_manager.setStyleSheet(qss)
+        editor_area.resize(500, 1000)
+
+    def change_theme(self, theme: str):
+        # call base so palettes, icons, etc. switch
+        super().change_theme(theme)
+        # then reapply our dock QSS
+        qss = _DARK_DOCK_QSS if theme.lower() == "dark" else _LIGHT_DOCK_QSS
+        self.dock_manager.setStyleSheet(qss)
 
 
 if __name__ == "__main__":
