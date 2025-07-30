@@ -1,5 +1,7 @@
 import PySide6QtAds as QtAds
 from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QIcon
+from bec_qthemes import material_icon
 
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 from bec_widgets.widgets.control.scan_control import ScanControl
@@ -12,15 +14,12 @@ class AdvancedDockArea(BECMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Advanced Dock Area Example")
-        self.setMinimumSize(800, 600)
+        self.setMinimumSize(1400, 1000)
 
         # Set the dock manager configuration flags
         QtAds.CDockManager.setConfigFlag(QtAds.CDockManager.eConfigFlag.FocusHighlighting, True)
         QtAds.CDockManager.setConfigFlag(
             QtAds.CDockManager.eConfigFlag.DockAreaDynamicTabsMenuButtonVisibility, True
-        )
-        QtAds.CDockManager.setConfigFlag(
-            QtAds.CDockManager.eConfigFlag.ShowTabTextOnlyForActiveTab, True
         )
 
         # Initialize the dock manager
@@ -37,17 +36,23 @@ class AdvancedDockArea(BECMainWindow):
         # put them into docks
         self.dock_wf1 = QtAds.CDockWidget("Waveform 1")
         self.dock_wf1.setWidget(self.wf1)
+        self.dock_wf1.setIcon(material_icon(self.wf1.ICON_NAME))
 
         self.dock_sc = QtAds.CDockWidget("Scan Control")
         self.dock_sc.setWidget(self.sc)
+        self.dock_sc.setIcon(material_icon(self.sc.ICON_NAME))
 
         self.dock_qw = QtAds.CDockWidget("Queue")
         self.dock_qw.setWidget(self.qw)
+        self.dock_qw.setIcon(material_icon(self.qw.ICON_NAME))
 
+        # Create Monaco editor docks
         self.dock_monaco_1 = QtAds.CDockWidget("Script 1")
         self.dock_monaco_1.setWidget(self.monaco_1)
+        self.dock_monaco_1.setIcon(material_icon(self.monaco_1.ICON_NAME))
         self.dock_monaco_2 = QtAds.CDockWidget("Script 2")
         self.dock_monaco_2.setWidget(self.monaco_2)
+        self.dock_monaco_2.setIcon(material_icon(self.monaco_2.ICON_NAME))
 
         # Put docks into the dock manager
         self.dock_manager.addDockWidget(QtAds.DockWidgetArea.RightDockWidgetArea, self.dock_sc)
@@ -66,5 +71,4 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     main_window = AdvancedDockArea()
     main_window.show()
-    main_window.resize(1200, 1000)
     sys.exit(app.exec())
