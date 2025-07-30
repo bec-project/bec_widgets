@@ -151,8 +151,10 @@ def wait_for_server(client: BECGuiClient):
             raise RuntimeError("GUI is not alive")
     try:
         if client._gui_started_event.wait(timeout=timeout):
-            client._gui_started_timer.cancel()
-            client._gui_started_timer.join()
+            if client._gui_started_timer is not None:
+                # cancel the timer, we are done
+                client._gui_started_timer.cancel()
+                client._gui_started_timer.join()
         else:
             raise TimeoutError("Could not connect to GUI server")
     finally:
@@ -261,13 +263,20 @@ class BECGuiClient(RPCBase):
 
     def start(self, wait: bool = False) -> None:
         """Start the GUI server."""
+        logger.warning("Using <gui>.start() is deprecated, use <gui>.show() instead.")
         return self._start(wait=wait)
 
-    def show(self):
-        """Show the GUI window."""
+    def show(self, wait=True) -> None:
+        """
+        Show the GUI window.
+        If the GUI server is not running, it will be started.
+
+        Args:
+            wait(bool): Whether to wait for the server to start. Defaults to True.
+        """
         if self._check_if_server_is_alive():
             return self._show_all()
-        return self.start(wait=True)
+        return self._start(wait=wait)
 
     def hide(self):
         """Hide the GUI window."""
@@ -382,6 +391,9 @@ class BECGuiClient(RPCBase):
         """
         Start the GUI server, and execute callback when it is launched
         """
+        if self._gui_is_alive():
+            self._gui_started_event.set()
+            return
         if self._process is None or self._process.poll() is not None:
             logger.success("GUI starting...")
             self._startup_timeout = 5
@@ -524,7 +536,7 @@ if __name__ == "__main__":  # pragma: no cover
         # Test the client_utils.py module
         gui = BECGuiClient()
 
-        gui.start(wait=True)
+        gui.show(wait=True)
         gui.new().new(widget="Waveform")
         time.sleep(10)
     finally:

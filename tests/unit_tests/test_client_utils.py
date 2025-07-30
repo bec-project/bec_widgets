@@ -67,7 +67,7 @@ def test_client_utils_passes_client_config_to_server(bec_dispatcher):
         mixin._client = bec_dispatcher.client
         mixin._gui_id = "gui_id"
         mixin._gui_is_alive = mock.MagicMock()
-        mixin._gui_is_alive.side_effect = [True]
+        mixin._gui_is_alive.side_effect = [False, False, True]
 
         try:
             yield mixin
