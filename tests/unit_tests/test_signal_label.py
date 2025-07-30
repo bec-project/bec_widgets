@@ -215,9 +215,7 @@ def test_set_existing_device_and_signal(signal_label: SignalLabel, qtbot):
     signal_label.device = "samx"
     signal_label.signal = "readback"
     assert signal_label._device == "samx"
-    assert signal_label._config.device == "samx"
     assert signal_label._signal == "readback"
-    assert signal_label._config.default == "readback"
 
 
 def test_set_nonexisting_device_and_signal(signal_label: SignalLabel, qtbot):
@@ -225,12 +223,10 @@ def test_set_nonexisting_device_and_signal(signal_label: SignalLabel, qtbot):
     signal_label.device = "samq"
     signal_label.signal = "readfront"
     assert signal_label._device == "samq"
-    assert signal_label._config.device == "samq"
     signal_label._manual_read()
     signal_label.set_display_value(signal_label._value)
     assert signal_label._display.text() == "__"
     assert signal_label._signal == "readfront"
-    assert signal_label._config.default == "readfront"
     signal_label._manual_read()
     signal_label.set_display_value(signal_label._value)
     assert signal_label._display.text() == "__"

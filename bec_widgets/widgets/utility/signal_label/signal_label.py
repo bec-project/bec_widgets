@@ -22,17 +22,10 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.ophyd_kind_util import Kind
-from bec_widgets.widgets.control.device_input.base_classes.device_input_base import (
-    DeviceInputConfig,
-)
-from bec_widgets.widgets.control.device_input.base_classes.device_signal_input_base import (
-    DeviceSignalInputBaseConfig,
-)
 from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit import (
     DeviceLineEdit,
 )
@@ -50,8 +43,9 @@ class ChoiceDialog(QDialog):
     def __init__(
         self,
         parent: QWidget | None = None,
-        config: ConnectionConfig | None = None,
         client: BECClient | None = None,
+        device: str | None = None,
+        signal: str | None = None,
         show_hinted: bool = True,
         show_normal: bool = False,
         show_config: bool = False,
@@ -62,22 +56,11 @@ class ChoiceDialog(QDialog):
         super().__init__(parent=parent)
         self.setWindowTitle("Choose device and signal...")
         self._accent_colors = get_accent_colors()
-        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
         layout = QHBoxLayout()
 
-        config_dict = config.model_dump() if config is not None else {}
-        self._device_config = DeviceInputConfig.model_validate(config_dict)
-        self._signal_config = DeviceSignalInputBaseConfig.model_validate(config_dict)
-        self._device_field = DeviceLineEdit(
-            config=self._device_config, parent=parent, client=client
-        )
-        self._signal_field = SignalComboBox(
-            config=self._signal_config,
-            device=self._signal_config.device,
-            parent=parent,
-            client=client,
-        )
+        self._device_field = DeviceLineEdit(parent=parent, client=client)
+        self._signal_field = SignalComboBox(parent=parent, client=client)
         layout.addWidget(self._device_field)
         layout.addWidget(self._signal_field)
 
@@ -92,7 +75,10 @@ class ChoiceDialog(QDialog):
 
         self.setLayout(layout)
         self._device_field.textChanged.connect(self._update_device)
-        self._device_field.setText(config.device if config is not None else "")
+        if device:
+            self._device_field.set_device(device)
+        if signal and signal in set(s[0] for s in self._signal_field.signals):
+            self._signal_field.set_signal(signal)
 
     def _display_error(self):
         try:
@@ -134,10 +120,8 @@ class ChoiceDialog(QDialog):
         return super().reject()
 
     def cleanup(self):
-        self._device_field.cleanup()
-        self._signal_field.cleanup()
-        self._device_field.deleteLater()
-        self._signal_field.deleteLater()
+        self._device_field.close()
+        self._signal_field.close()
 
 
 class SignalLabel(BECWidget, QWidget):
@@ -193,7 +177,6 @@ class SignalLabel(BECWidget, QWidget):
             custom_label (str, optional): Custom label for the widget. Defaults to "".
             custom_units (str, optional): Custom units for the widget. Defaults to "".
         """
-        self._config = DeviceSignalInputBaseConfig(default=signal, device=device)
         super().__init__(parent=parent, client=client, **kwargs)
 
         self._device = device
@@ -243,9 +226,10 @@ class SignalLabel(BECWidget, QWidget):
 
     def _create_dialog(self):
         return ChoiceDialog(
-            config=self._config,
             parent=self,
             client=self.client,
+            device=self.device,
+            signal=self._signal_key,
             show_config=self.show_config_signals,
             show_normal=self.show_normal_signals,
             show_hinted=self.show_hinted_signals,
@@ -340,7 +324,6 @@ class SignalLabel(BECWidget, QWidget):
         self.disconnect_device()
         self._device = value
         self._device_obj = self.dev.get(self._device)
-        self._config.device = value
         self.connect_device()
         self._update_label()
 
@@ -353,7 +336,6 @@ class SignalLabel(BECWidget, QWidget):
     def signal(self, value: str) -> None:
         self.disconnect_device()
         self._signal = value
-        self._config.default = value
         self.connect_device()
         self._update_label()
 
