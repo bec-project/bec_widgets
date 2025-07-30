@@ -37,6 +37,7 @@ from bec_widgets.widgets.plots.waveform.waveform import Waveform
 from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_bar import RingProgressBar
 from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
 from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECStatusBox
+from bec_widgets.widgets.services.device_browser.device_browser import DeviceBrowser
 from bec_widgets.widgets.utility.logpanel.logpanel import LogPanel
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
@@ -185,6 +186,12 @@ class BECDockArea(BECWidget, QWidget):
                         filled=True,
                         parent=self,
                     ),
+                    "device_browser": MaterialIconAction(
+                        icon_name=DeviceBrowser.ICON_NAME,
+                        tooltip="Add Device Browser",
+                        filled=True,
+                        parent=self,
+                    ),
                 },
             ),
         )
@@ -311,6 +318,9 @@ class BECDockArea(BECWidget, QWidget):
         )
         menu_devices.actions["positioner_box"].action.triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="PositionerBox")
+        )
+        menu_devices.actions["device_browser"].action.triggered.connect(
+            lambda: self._create_widget_from_toolbar(widget_name="DeviceBrowser")
         )
 
         # Menu Utils
