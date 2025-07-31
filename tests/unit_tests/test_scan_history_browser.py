@@ -287,6 +287,23 @@ def test_scan_history_view_refresh(qtbot, scan_history_view, scan_history_msg, s
         assert scan_history_view.topLevelItemCount() == 0
 
 
+def test_scan_history_update_full_history(
+    qtbot, scan_history_view, scan_history_msg, scan_history_msg_2
+):
+    """Test the update_full_history method of ScanHistoryView."""
+    # Wait spinner should be visible
+    scan_history_view.update_full_history(
+        [scan_history_msg.model_dump(), scan_history_msg_2.model_dump()]
+    )
+    assert len(scan_history_view.scan_history) == 2
+    assert scan_history_view.topLevelItemCount() == 2
+    assert scan_history_view.scan_history[0] == scan_history_msg_2  # new first item
+    assert scan_history_view.scan_history[1] == scan_history_msg  # old second item
+    # Wait spinner should be hidden
+    assert scan_history_view._overlay_widget.isVisible() is False
+    assert scan_history_view._spinner.isVisible() is False
+
+
 def test_scan_history_browser(qtbot, scan_history_browser, scan_history_msg, scan_history_msg_2):
     """Test the initialization of ScanHistoryBrowser."""
     assert isinstance(scan_history_browser.scan_history_view, ScanHistoryView)
