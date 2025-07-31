@@ -1,6 +1,31 @@
 # CHANGELOG
 
 
+## v2.33.3 (2025-07-31)
+
+### Bug Fixes
+
+- **scan-history-view**: Account for async loading of scan history
+  ([`6df1d0c`](https://github.com/bec-project/bec_widgets/commit/6df1d0c31fb58c25b01e95e2247277ff2dd5d00e))
+
+### Refactoring
+
+- Improve scan history performance on loading full scan lists
+  ([`a5adf3a`](https://github.com/bec-project/bec_widgets/commit/a5adf3a97d9ff05cef833445c1e6cd8f35a9a2fa))
+
+- Make ids a set, cleanup
+  ([`c1f62ad`](https://github.com/bec-project/bec_widgets/commit/c1f62ad6cb00d9b392a8e0b6247f5260dfb37256))
+
+- Use client callback for scan history reload
+  ([`d22a331`](https://github.com/bec-project/bec_widgets/commit/d22a3317baeccfcc4e074dcef4e3912301d210c5))
+
+- **scan-history**: Add spinner for loading time of history
+  ([`50c84a7`](https://github.com/bec-project/bec_widgets/commit/50c84a766a2b021768fb2c0e8ee00b8e5f058ba7))
+
+- **scan-history**: Fix insert logic; cleanup
+  ([`946752a`](https://github.com/bec-project/bec_widgets/commit/946752a4b05804c2f59cb5c21e4c1d11709a7d44))
+
+
 ## v2.33.2 (2025-07-31)
 
 ### Bug Fixes
