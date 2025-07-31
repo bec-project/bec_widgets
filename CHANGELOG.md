@@ -1,6 +1,23 @@
 # CHANGELOG
 
 
+## v2.33.2 (2025-07-31)
+
+### Bug Fixes
+
+- Delete choice dialog on close
+  ([`23413cf`](https://github.com/bec-project/bec_widgets/commit/23413cffabe721e35bb5bb726ec34d74dc4ffe05))
+
+- Display short lists in SignalDisplay
+  ([`4bbb8fa`](https://github.com/bec-project/bec_widgets/commit/4bbb8fa519e8a90eebfcfa34e157493c9baa7880))
+
+- Don't warn on empty DeviceEdit init
+  ([`f18eeb9`](https://github.com/bec-project/bec_widgets/commit/f18eeb9c5dccbd9348b6ee6d1477a8b7925d40fc))
+
+- Remove config, directly set device+signal
+  ([`32ce8e2`](https://github.com/bec-project/bec_widgets/commit/32ce8e2818ceacda87e48399e3ed4df0cabb2335))
+
+
 ## v2.33.1 (2025-07-31)
 
 ### Bug Fixes
