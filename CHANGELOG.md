@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.33.1 (2025-07-31)
+
+### Bug Fixes
+
+- **cli**: Ensure guis are not started twice
+  ([`cd81e7f`](https://github.com/bec-project/bec_widgets/commit/cd81e7f9ba40be23f6b930d250f743276720b277))
+
+
 ## v2.33.0 (2025-07-29)
 
 ### Bug Fixes
