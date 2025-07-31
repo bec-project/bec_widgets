@@ -11,6 +11,7 @@ from qtpy import QtCore, QtGui, QtWidgets
 from bec_widgets.utils.bec_widget import BECWidget, ConnectionConfig
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 
 if TYPE_CHECKING:
     from bec_lib.client import BECClient
@@ -112,6 +113,11 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
         header.setToolTip(f"Last {self.max_length} scans in history.")
         self.bec_scan_history_manager.scan_history_updated.connect(self.update_history)
         self.bec_scan_history_manager.scan_history_refreshed.connect(self.update_full_history)
+        self._container = QtWidgets.QStackedLayout()
+        self._container.setStackingMode(QtWidgets.QStackedLayout.StackAll)
+        self.setLayout(self._container)
+        self._add_overlay()
+        self._start_waiting_display()
         self.refresh()
 
     def _set_policies(self):
@@ -155,6 +161,29 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
         self.status_icons = self._create_status_icons()
         self.repaint()
 
+    def _add_overlay(self):
+        self._overlay_widget = QtWidgets.QWidget()
+        self._overlay_widget.setStyleSheet("background-color: rgba(240, 240, 240, 180);")
+        self._overlay_widget.setAutoFillBackground(True)
+        self._overlay_layout = QtWidgets.QVBoxLayout()
+        self._overlay_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self._overlay_widget.setLayout(self._overlay_layout)
+
+        self._spinner = SpinnerWidget(parent=self)
+        self._spinner.setFixedSize(QtCore.QSize(32, 32))
+        self._overlay_layout.addWidget(self._spinner)
+        self._container.addWidget(self._overlay_widget)
+
+    def _start_waiting_display(self):
+        self._overlay_widget.setVisible(True)
+        self._spinner.start()
+        QtWidgets.QApplication.processEvents()
+
+    def _stop_waiting_display(self):
+        self._overlay_widget.setVisible(False)
+        self._spinner.stop()
+        QtWidgets.QApplication.processEvents()
+
     def _current_item_changed(
         self, current: QtWidgets.QTreeWidgetItem, previous: QtWidgets.QTreeWidgetItem
     ):
@@ -173,9 +202,8 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
     @SafeSlot()
     def refresh(self):
         """Refresh the scan history view."""
-        if (
-            self.client.history._scan_history_loaded_event.is_set()
-        ):  # pylint: disable=protected-access
+        # pylint: disable=protected-access
+        if self.client.history._scan_history_loaded_event.is_set():
             while len(self.scan_history) > 0:
                 self.remove_scan(index=0)
             self.bec_scan_history_manager.refresh_scan_history()
@@ -202,6 +230,7 @@ class ScanHistoryView(BECWidget, QtWidgets.QTreeWidget):
         messages.sort(key=lambda m: m.scan_number, reverse=False)
         self.add_scans(messages)
         self.ensure_history_max_length()
+        self._stop_waiting_display()
 
     def ensure_history_max_length(self) -> None:
         """
