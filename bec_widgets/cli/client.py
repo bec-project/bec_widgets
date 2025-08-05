@@ -119,6 +119,72 @@ class AbortButton(RPCBase):
         """
 
 
+class AdvancedDockArea(RPCBase):
+    @rpc_call
+    def new(
+        self,
+        widget: "BECWidget | str",
+        closable: "bool" = True,
+        floatable: "bool" = True,
+        movable: "bool" = True,
+        start_floating: "bool" = False,
+    ) -> "BECWidget":
+        """
+        Creates a new widget or reuses an existing one and schedules its dock creation.
+
+        Args:
+            widget (BECWidget | str): The widget instance or a string specifying the
+                type of widget to create.
+            closable (bool): Whether the dock should be closable. Defaults to True.
+            floatable (bool): Whether the dock should be floatable. Defaults to True.
+            movable (bool): Whether the dock should be movable. Defaults to True.
+            start_floating (bool): Whether to start the dock in a floating state. Defaults to False.
+
+        Returns:
+            widget: The widget instance.
+        """
+
+    @rpc_call
+    def widget_map(self) -> "dict[str, QWidget]":
+        """
+        Return a dictionary mapping widget names to their corresponding BECWidget instances.
+
+        Returns:
+            dict: A dictionary mapping widget names to BECWidget instances.
+        """
+
+    @rpc_call
+    def widget_list(self) -> "list[QWidget]":
+        """
+        Return a list of all BECWidget instances in the dock area.
+
+        Returns:
+            list: A list of all BECWidget instances in the dock area.
+        """
+
+    @property
+    @rpc_call
+    def lock_workspace(self) -> "bool":
+        """
+        Get or set the lock state of the workspace.
+
+        Returns:
+            bool: True if the workspace is locked, False otherwise.
+        """
+
+    @rpc_call
+    def attach_all(self):
+        """
+        Return all floating docks to the dock area, preserving tab groups within each floating container.
+        """
+
+    @rpc_call
+    def delete_all(self):
+        """
+        Delete all docks and widgets.
+        """
+
+
 class AutoUpdates(RPCBase):
     @property
     @rpc_call
