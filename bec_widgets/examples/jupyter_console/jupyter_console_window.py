@@ -16,6 +16,7 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.widget_io import WidgetHierarchy as wh
+from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
 from bec_widgets.widgets.containers.dock import BECDockArea
 from bec_widgets.widgets.containers.layout_manager.layout_manager import LayoutManagerWidget
 from bec_widgets.widgets.editors.jupyter_console.jupyter_console import BECJupyterConsole
@@ -44,6 +45,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     "wh": wh,
                     "dock": self.dock,
                     "im": self.im,
+                    "ads": self.ads,
                     # "mi": self.mi,
                     # "mm": self.mm,
                     # "lm": self.lm,
@@ -120,14 +122,12 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
         tab_widget.addTab(sixth_tab, "Image Next Gen")
         tab_widget.setCurrentIndex(1)
         #
-        # seventh_tab = QWidget()
-        # seventh_tab_layout = QVBoxLayout(seventh_tab)
-        # self.scatter = ScatterWaveform()
-        # self.scatter_mi = self.scatter.main_curve
-        # self.scatter.plot("samx", "samy", "bpm4i")
-        # seventh_tab_layout.addWidget(self.scatter)
-        # tab_widget.addTab(seventh_tab, "Scatter Waveform")
-        # tab_widget.setCurrentIndex(6)
+        seventh_tab = QWidget()
+        seventh_tab_layout = QVBoxLayout(seventh_tab)
+        self.ads = AdvancedDockArea(gui_id="ads")
+        seventh_tab_layout.addWidget(self.ads)
+        tab_widget.addTab(seventh_tab, "ADS")
+        tab_widget.setCurrentIndex(2)
         #
         # eighth_tab = QWidget()
         # eighth_tab_layout = QVBoxLayout(eighth_tab)
