@@ -553,6 +553,20 @@ class WidgetHierarchy:
                     WidgetIO.set_value(child, value)
                 WidgetHierarchy.import_config_from_dict(child, widget_config, set_values)
 
+    @staticmethod
+    def get_bec_connectors_from_parent(widget) -> list:
+        """
+        Return all BECConnector instances that are descendants of the given widget,
+        including the widget itself if it is a BECConnector.
+        """
+        from bec_widgets.utils import BECConnector
+
+        connectors = []
+        if isinstance(widget, BECConnector):
+            connectors.append(widget)
+        connectors.extend(widget.findChildren(BECConnector))
+        return connectors
+
 
 # Example usage
 def hierarchy_example():  # pragma: no cover
