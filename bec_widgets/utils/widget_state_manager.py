@@ -31,35 +31,47 @@ class WidgetStateManager:
     def __init__(self, widget):
         self.widget = widget
 
-    def save_state(self, filename: str = None):
+    def save_state(self, filename: str | None = None, settings: QSettings | None = None):
         """
         Save the state of the widget to an INI file.
 
         Args:
             filename(str): The filename to save the state to.
+            settings(QSettings): Optional QSettings object to save the state to.
         """
-        if not filename:
+        if not filename and not settings:
             filename, _ = QFileDialog.getSaveFileName(
                 self.widget, "Save Settings", "", "INI Files (*.ini)"
             )
         if filename:
             settings = QSettings(filename, QSettings.IniFormat)
             self._save_widget_state_qsettings(self.widget, settings)
+        elif settings:
+            # If settings are provided, save the state to the provided QSettings object
+            self._save_widget_state_qsettings(self.widget, settings)
+        else:
+            logger.warning("No filename or settings provided for saving state.")
 
-    def load_state(self, filename: str = None):
+    def load_state(self, filename: str | None = None, settings: QSettings | None = None):
         """
         Load the state of the widget from an INI file.
 
         Args:
             filename(str): The filename to load the state from.
+            settings(QSettings): Optional QSettings object to load the state from.
         """
-        if not filename:
+        if not filename and not settings:
             filename, _ = QFileDialog.getOpenFileName(
                 self.widget, "Load Settings", "", "INI Files (*.ini)"
             )
         if filename:
             settings = QSettings(filename, QSettings.IniFormat)
             self._load_widget_state_qsettings(self.widget, settings)
+        elif settings:
+            # If settings are provided, load the state from the provided QSettings object
+            self._load_widget_state_qsettings(self.widget, settings)
+        else:
+            logger.warning("No filename or settings provided for saving state.")
 
     def _save_widget_state_qsettings(
         self, widget: QWidget, settings: QSettings, recursive: bool = True
