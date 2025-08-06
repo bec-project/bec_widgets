@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Type, TypeVar, cast
 
 import shiboken6 as shb
+from bec_lib import bec_logger
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -20,6 +22,13 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
+
+if TYPE_CHECKING:  # pragma: no cover
+    from bec_widgets.utils import BECConnector
+
+logger = bec_logger.logger
+
+TAncestor = TypeVar("TAncestor", bound=QWidget)
 
 
 class WidgetHandler(ABC):
@@ -465,13 +474,19 @@ class WidgetHierarchy:
         """
         from bec_widgets.utils import BECConnector
 
+        # Guard against deleted/invalid Qt wrappers
         if not shb.isValid(widget):
             return None
-        parent = widget.parent()
+
+        # Retrieve first parent
+        parent = widget.parent() if hasattr(widget, "parent") else None
+        # Walk up, validating each step
         while parent is not None:
+            if not shb.isValid(parent):
+                return None
             if isinstance(parent, BECConnector):
                 return parent
-            parent = parent.parent()
+            parent = parent.parent() if hasattr(parent, "parent") else None
         return None
 
     @staticmethod
@@ -552,6 +567,70 @@ class WidgetHierarchy:
                 if set_values and value is not None:
                     WidgetIO.set_value(child, value)
                 WidgetHierarchy.import_config_from_dict(child, widget_config, set_values)
+
+    @staticmethod
+    def get_bec_connectors_from_parent(widget) -> list:
+        """
+        Return all BECConnector instances whose closest BECConnector ancestor is the given widget,
+        including the widget itself if it is a BECConnector.
+        """
+        from bec_widgets.utils import BECConnector
+
+        connectors: list[BECConnector] = []
+        if isinstance(widget, BECConnector):
+            connectors.append(widget)
+        for child in widget.findChildren(BECConnector):
+            if WidgetHierarchy._get_becwidget_ancestor(child) is widget:
+                connectors.append(child)
+        return connectors
+
+    @staticmethod
+    def find_ancestor(
+        widget: QWidget | BECConnector, ancestor_class: Type[TAncestor] | str
+    ) -> TAncestor | None:
+        """
+        Find the closest ancestor of the specified class (or class-name string).
+
+        Args:
+            widget(QWidget): The starting widget.
+            ancestor_class(Type[TAncestor] | str): The ancestor class or class-name string to search for.
+
+        Returns:
+            TAncestor | None: The closest ancestor of the specified class, or None if not found.
+        """
+        if widget is None or not shb.isValid(widget):
+            return None
+
+        try:
+            from bec_widgets.utils import BECConnector  # local import to avoid cycles
+
+            is_bec_target = False
+            if isinstance(ancestor_class, str):
+                is_bec_target = ancestor_class == "BECConnector"
+            elif isinstance(ancestor_class, type):
+                is_bec_target = issubclass(ancestor_class, BECConnector)
+
+            if is_bec_target:
+                ancestor = WidgetHierarchy._get_becwidget_ancestor(widget)
+                return cast(TAncestor, ancestor)
+        except Exception as e:
+            logger.error(f"Error importing BECConnector: {e}")
+
+        parent = widget.parent() if hasattr(widget, "parent") else None
+        while parent is not None:
+            if not shb.isValid(parent):
+                return None
+            try:
+                if isinstance(ancestor_class, str):
+                    if parent.__class__.__name__ == ancestor_class:
+                        return cast(TAncestor, parent)
+                else:
+                    if isinstance(parent, ancestor_class):
+                        return cast(TAncestor, parent)
+            except Exception as e:
+                logger.error(f"Error checking ancestor class: {e}")
+            parent = parent.parent() if hasattr(parent, "parent") else None
+        return None
 
 
 # Example usage
