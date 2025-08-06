@@ -78,6 +78,7 @@ class BECConnector:
     USER_ACCESS = ["_config_dict", "_get_all_rpc", "_rpc_id"]
     EXIT_HANDLERS = {}
     remove_signal = Signal()
+    name_established_signal = Signal(str)
 
     def __init__(
         self,
@@ -205,6 +206,10 @@ class BECConnector:
         self._enforce_unique_sibling_name()
         # 2) Register the object for RPC
         self.rpc_register.add_rpc(self)
+        try:
+            self.name_established_signal.emit(self.object_name)
+        except RuntimeError:
+            return
 
     def _enforce_unique_sibling_name(self):
         """
