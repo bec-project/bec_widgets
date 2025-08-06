@@ -15,6 +15,8 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_widgets.utils.widget_io import WidgetHierarchy
+
 logger = bec_logger.logger
 
 
@@ -29,43 +31,58 @@ class WidgetStateManager:
     def __init__(self, widget):
         self.widget = widget
 
-    def save_state(self, filename: str = None):
+    def save_state(self, filename: str | None = None, settings: QSettings | None = None):
         """
         Save the state of the widget to an INI file.
 
         Args:
             filename(str): The filename to save the state to.
+            settings(QSettings): Optional QSettings object to save the state to.
         """
-        if not filename:
+        if not filename and not settings:
             filename, _ = QFileDialog.getSaveFileName(
                 self.widget, "Save Settings", "", "INI Files (*.ini)"
             )
         if filename:
             settings = QSettings(filename, QSettings.IniFormat)
             self._save_widget_state_qsettings(self.widget, settings)
+        elif settings:
+            # If settings are provided, save the state to the provided QSettings object
+            self._save_widget_state_qsettings(self.widget, settings)
+        else:
+            logger.warning("No filename or settings provided for saving state.")
 
-    def load_state(self, filename: str = None):
+    def load_state(self, filename: str | None = None, settings: QSettings | None = None):
         """
         Load the state of the widget from an INI file.
 
         Args:
             filename(str): The filename to load the state from.
+            settings(QSettings): Optional QSettings object to load the state from.
         """
-        if not filename:
+        if not filename and not settings:
             filename, _ = QFileDialog.getOpenFileName(
                 self.widget, "Load Settings", "", "INI Files (*.ini)"
             )
         if filename:
             settings = QSettings(filename, QSettings.IniFormat)
             self._load_widget_state_qsettings(self.widget, settings)
+        elif settings:
+            # If settings are provided, load the state from the provided QSettings object
+            self._load_widget_state_qsettings(self.widget, settings)
+        else:
+            logger.warning("No filename or settings provided for saving state.")
 
-    def _save_widget_state_qsettings(self, widget: QWidget, settings: QSettings):
+    def _save_widget_state_qsettings(
+        self, widget: QWidget, settings: QSettings, recursive: bool = True
+    ):
         """
         Save the state of the widget to QSettings.
 
         Args:
             widget(QWidget): The widget to save the state for.
             settings(QSettings): The QSettings object to save the state to.
+            recursive(bool): Whether to recursively save the state of child widgets.
         """
         if widget.property("skip_settings") is True:
             return
@@ -88,21 +105,32 @@ class WidgetStateManager:
         settings.endGroup()
 
         # Recursively process children (only if they aren't skipped)
-        for child in widget.children():
+        if not recursive:
+            return
+
+        direct_children = widget.children()
+        bec_connector_children = WidgetHierarchy.get_bec_connectors_from_parent(widget)
+        all_children = list(
+            set(direct_children) | set(bec_connector_children)
+        )  # to avoid duplicates
+        for child in all_children:
             if (
                 child.objectName()
                 and child.property("skip_settings") is not True
                 and not isinstance(child, QLabel)
             ):
-                self._save_widget_state_qsettings(child, settings)
+                self._save_widget_state_qsettings(child, settings, False)
 
-    def _load_widget_state_qsettings(self, widget: QWidget, settings: QSettings):
+    def _load_widget_state_qsettings(
+        self, widget: QWidget, settings: QSettings, recursive: bool = True
+    ):
         """
         Load the state of the widget from QSettings.
 
         Args:
             widget(QWidget): The widget to load the state for.
             settings(QSettings): The QSettings object to load the state from.
+            recursive(bool): Whether to recursively load the state of child widgets.
         """
         if widget.property("skip_settings") is True:
             return
@@ -118,14 +146,21 @@ class WidgetStateManager:
                 widget.setProperty(name, value)
         settings.endGroup()
 
+        if not recursive:
+            return
         # Recursively process children (only if they aren't skipped)
-        for child in widget.children():
+        direct_children = widget.children()
+        bec_connector_children = WidgetHierarchy.get_bec_connectors_from_parent(widget)
+        all_children = list(
+            set(direct_children) | set(bec_connector_children)
+        )  # to avoid duplicates
+        for child in all_children:
             if (
                 child.objectName()
                 and child.property("skip_settings") is not True
                 and not isinstance(child, QLabel)
             ):
-                self._load_widget_state_qsettings(child, settings)
+                self._load_widget_state_qsettings(child, settings, False)
 
     def _get_full_widget_name(self, widget: QWidget):
         """
