@@ -567,6 +567,34 @@ class WidgetHierarchy:
         connectors.extend(widget.findChildren(BECConnector))
         return connectors
 
+    @staticmethod
+    def find_ancestor(widget, ancestor_class) -> QWidget | None:
+        """
+        Traverse up the parent chain to find the nearest ancestor matching ancestor_class.
+        ancestor_class may be a class or a class-name string.
+        Returns the matching ancestor, or None if none is found.
+        """
+
+        parent = getattr(widget, "parent", None)
+        # First call parent() if widget has that method
+        if callable(parent):
+            parent = parent()
+        # Otherwise assume widget.parent attribute
+        while parent is not None and isinstance(parent, QWidget):
+            try:
+                if isinstance(ancestor_class, str):
+                    if parent.__class__.__name__ == ancestor_class:
+                        return parent
+                else:
+                    if isinstance(parent, ancestor_class):
+                        return parent
+            except Exception:
+                # In case ancestor_class isn't a valid type or parent.inspect fails
+                pass
+            # Move up one level
+            parent = parent.parent() if hasattr(parent, "parent") else None
+        return None
+
 
 # Example usage
 def hierarchy_example():  # pragma: no cover
