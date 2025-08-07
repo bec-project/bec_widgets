@@ -63,6 +63,10 @@ class Waveform(PlotBase):
     RPC = True
     ICON_NAME = "show_chart"
     USER_ACCESS = [
+        # BECWidget Base Class
+        "attach",
+        "detach",
+        "screenshot",
         # General PlotBase Settings
         "_config_dict",
         "enable_toolbar",
@@ -105,7 +109,6 @@ class Waveform(PlotBase):
         "legend_label_size.setter",
         "minimal_crosshair_precision",
         "minimal_crosshair_precision.setter",
-        "screenshot",
         # Waveform Specific RPC Access
         "curves",
         "x_mode",
