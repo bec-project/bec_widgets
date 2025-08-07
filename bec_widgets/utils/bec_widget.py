@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 import darkdetect
+import PySide6QtAds as QtAds
 import shiboken6
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import QObject
@@ -14,6 +15,7 @@ from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
 from bec_widgets.utils.colors import set_theme
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.rpc_decorator import rpc_timeout
+from bec_widgets.utils.widget_io import WidgetHierarchy
 
 if TYPE_CHECKING:  # pragma: no cover
     from bec_widgets.widgets.containers.dock import BECDock
@@ -27,7 +29,7 @@ class BECWidget(BECConnector):
     # The icon name is the name of the icon in the icon theme, typically a name taken
     # from fonts.google.com/icons. Override this in subclasses to set the icon name.
     ICON_NAME = "widgets"
-    USER_ACCESS = ["remove"]
+    USER_ACCESS = ["remove", "attach", "detach"]
 
     # pylint: disable=too-many-arguments
     def __init__(
@@ -123,6 +125,26 @@ class BECWidget(BECConnector):
             return
         screenshot.save(file_name)
         logger.info(f"Screenshot saved to {file_name}")
+
+    def attach(self):
+        dock = WidgetHierarchy.find_ancestor(self, QtAds.CDockWidget)
+        if dock is None:
+            return
+
+        if not dock.isFloating():
+            return
+        dock.dockManager().addDockWidget(QtAds.DockWidgetArea.RightDockWidgetArea, dock)
+
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+        dock = WidgetHierarchy.find_ancestor(self, QtAds.CDockWidget)
+        if dock is None:
+            return
+        if dock.isFloating():
+            return
+        dock.setFloating()
 
     def cleanup(self):
         """Cleanup the widget."""

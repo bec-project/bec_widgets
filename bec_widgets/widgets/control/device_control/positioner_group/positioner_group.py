@@ -62,7 +62,7 @@ class PositionerGroup(BECWidget, QWidget):
 
     PLUGIN = True
     ICON_NAME = "grid_view"
-    USER_ACCESS = ["set_positioners"]
+    USER_ACCESS = ["set_positioners", "attach", "detach", "screenshot"]
 
     # Signal emitted to inform listeners about a position update of the first positioner
     position_update = Signal(float)
