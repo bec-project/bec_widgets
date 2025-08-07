@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 from bec_lib import messages
 from bec_lib.messages import _StoredDataInfo
+from bec_qthemes import apply_theme
 from pytestqt.exceptions import TimeoutError as QtBotTimeoutError
 from qtpy.QtWidgets import QApplication, QMessageBox
 
@@ -25,6 +26,10 @@ def pytest_runtest_makereport(item, call):
 
 @pytest.fixture(autouse=True)
 def qapplication(qtbot, request, testable_qtimer_class):  # pylint: disable=unused-argument
+    qapp = QApplication.instance()
+    apply_theme("light")
+    qapp.processEvents()
+
     yield
 
     # if the test failed, we don't want to check for open widgets as
@@ -36,7 +41,6 @@ def qapplication(qtbot, request, testable_qtimer_class):  # pylint: disable=unus
     bec_dispatcher.stop_cli_server()
 
     testable_qtimer_class.check_all_stopped(qtbot)
-    qapp = QApplication.instance()
     qapp.processEvents()
     if hasattr(qapp, "os_listener") and qapp.os_listener:
         qapp.removeEventFilter(qapp.os_listener)
