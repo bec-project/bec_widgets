@@ -15,16 +15,23 @@ classifiers = [
 dependencies = [
     "bec_ipython_client~=3.70", # needed for jupyter console
     "bec_lib~=3.70",
-    "bec_qthemes~=0.7, >=0.7",
-    "black~=25.0",              # needed for bw-generate-cli
-    "isort~=5.13, >=5.13.2",    # needed for bw-generate-cli
+    "bec_qthemes~=1.0, >=1.1.2",
+    "black~=25.0",               # needed for bw-generate-cli
+    "isort~=5.13, >=5.13.2",     # needed for bw-generate-cli
+    "ophyd_devices~=1.29, >=1.29.1",
     "pydantic~=2.0",
     "pyqtgraph==0.13.7",
     "PySide6==6.9.0",
-    "qtconsole~=5.5, >=5.5.1",  # needed for jupyter console
+    "qtconsole~=5.5, >=5.5.1",   # needed for jupyter console
     "qtpy~=2.4",
-    "qtmonaco~=0.5",
     "thefuzz~=0.22",
+    "qtmonaco~=0.8, >=0.8.1",
+    "darkdetect~=0.8",
+    "PySide6-QtAds==4.4.0",
+    "pylsp-bec~=1.2",
+    "copier~=9.7",
+    "typer~=0.15",
+    "markdown~=3.9",
 ]
 
 
@@ -41,7 +48,6 @@ dev = [
     "pytest-cov~=6.1.1",
     "watchdog~=6.0",
     "pre_commit~=4.2",
-
 ]
 
 [project.urls]
