@@ -106,6 +106,18 @@ class AbortButton(RPCBase):
         Cleanup the BECConnector
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
 
 class AutoUpdates(RPCBase):
     @property
@@ -442,6 +454,18 @@ class BECMainWindow(RPCBase):
         Cleanup the BECConnector
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
 
 class BECProgressBar(RPCBase):
     """A custom progress bar with smooth transitions. The displayed text can be customized using a template."""
@@ -525,6 +549,18 @@ class BECQueue(RPCBase):
         Cleanup the BECConnector
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
 
 class BECStatusBox(RPCBase):
     """An autonomous widget to display the status of BEC services."""
@@ -539,6 +575,25 @@ class BECStatusBox(RPCBase):
     def remove(self):
         """
         Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
         """
 
 
@@ -1002,6 +1057,18 @@ class DarkModeButton(RPCBase):
         Cleanup the BECConnector
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
 
 class DeviceBrowser(RPCBase):
     """DeviceBrowser is a widget that displays all available devices in the current BEC session."""
@@ -1010,6 +1077,18 @@ class DeviceBrowser(RPCBase):
     def remove(self):
         """
         Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
 
@@ -1043,6 +1122,18 @@ class DeviceInputBase(RPCBase):
     def remove(self):
         """
         Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
 
@@ -1431,6 +1522,18 @@ class Heatmap(RPCBase):
     def minimal_crosshair_precision(self) -> "int":
         """
         Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
     @rpc_timeout(None)
@@ -1976,6 +2079,18 @@ class Image(RPCBase):
     def minimal_crosshair_precision(self) -> "int":
         """
         Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
     @rpc_timeout(None)
@@ -2590,6 +2705,25 @@ class MonacoWidget(RPCBase):
             str: The LSP header.
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
+        """
+
 
 class MotorMap(RPCBase):
     """Motor map widget for plotting motor positions in 2D including a trace of the last points."""
@@ -2863,6 +2997,18 @@ class MotorMap(RPCBase):
     def legend_label_size(self) -> "int":
         """
         The font size of the legend font.
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
     @rpc_timeout(None)
@@ -3277,6 +3423,18 @@ class MultiWaveform(RPCBase):
         Minimum decimal places for crosshair when dynamic precision is enabled.
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
     @rpc_timeout(None)
     @rpc_call
     def screenshot(self, file_name: "str | None" = None):
@@ -3498,6 +3656,18 @@ class PositionerBox(RPCBase):
             positioner (Positioner | str) : Positioner to set, accepts str or the device
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
     @rpc_timeout(None)
     @rpc_call
     def screenshot(self, file_name: "str | None" = None):
@@ -3527,6 +3697,18 @@ class PositionerBox2D(RPCBase):
             positioner (Positioner | str) : Positioner to set, accepts str or the device
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
     @rpc_timeout(None)
     @rpc_call
     def screenshot(self, file_name: "str | None" = None):
@@ -3547,6 +3729,18 @@ class PositionerControlLine(RPCBase):
             positioner (Positioner | str) : Positioner to set, accepts str or the device
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
     @rpc_timeout(None)
     @rpc_call
     def screenshot(self, file_name: "str | None" = None):
@@ -3564,6 +3758,25 @@ class PositionerGroup(RPCBase):
         Redraw grid with positioners from device_names string
 
         Device names must be separated by space
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
         """
 
 
@@ -3705,6 +3918,18 @@ class ResetButton(RPCBase):
         Cleanup the BECConnector
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
 
 class ResumeButton(RPCBase):
     """A button that continue scan queue."""
@@ -3713,6 +3938,18 @@ class ResumeButton(RPCBase):
     def remove(self):
         """
         Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
 
@@ -3996,6 +4233,25 @@ class RingProgressBar(RPCBase):
             bool: True if scan segment updates are enabled.
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
+        """
+
 
 class SBBMonitor(RPCBase):
     """A widget to display the SBB monitor website."""
@@ -4007,9 +4263,15 @@ class ScanControl(RPCBase):
     """Widget to submit new scans to the queue."""
 
     @rpc_call
-    def remove(self):
+    def attach(self):
         """
-        Cleanup the BECConnector
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
     @rpc_timeout(None)
@@ -4027,6 +4289,18 @@ class ScanProgressBar(RPCBase):
     def remove(self):
         """
         Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
 
@@ -4325,6 +4599,18 @@ class ScatterWaveform(RPCBase):
     def minimal_crosshair_precision(self) -> "int":
         """
         Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
     @rpc_timeout(None)
@@ -4629,6 +4915,18 @@ class StopButton(RPCBase):
         Cleanup the BECConnector
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
 
 class TextBox(RPCBase):
     """A widget that displays text in plain and HTML format"""
@@ -4660,6 +4958,25 @@ class VSCodeEditor(RPCBase):
 
 class Waveform(RPCBase):
     """Widget for plotting waveforms."""
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
+        """
 
     @property
     @rpc_call
@@ -4965,13 +5282,6 @@ class Waveform(RPCBase):
         Minimum decimal places for crosshair when dynamic precision is enabled.
         """
 
-    @rpc_timeout(None)
-    @rpc_call
-    def screenshot(self, file_name: "str | None" = None):
-        """
-        Take a screenshot of the dock area and save it to a file.
-        """
-
     @property
     @rpc_call
     def curves(self) -> "list[Curve]":
@@ -5213,6 +5523,18 @@ class WebConsole(RPCBase):
         Cleanup the BECConnector
         """
 
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
 
 class WebsiteWidget(RPCBase):
     """A simple widget to display a website"""
@@ -5251,4 +5573,23 @@ class WebsiteWidget(RPCBase):
     def forward(self):
         """
         Go forward in the history
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+    @rpc_timeout(None)
+    @rpc_call
+    def screenshot(self, file_name: "str | None" = None):
+        """
+        Take a screenshot of the dock area and save it to a file.
         """
