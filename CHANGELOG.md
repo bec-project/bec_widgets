@@ -1,6 +1,28 @@
 # CHANGELOG
 
 
+## v2.34.0 (2025-08-07)
+
+### Bug Fixes
+
+- Plugin widget import machinery
+  ([`9de5484`](https://github.com/bec-project/bec_widgets/commit/9de548446b9975c0f692757c66ffa07b9a849f15))
+
+- lazy import client so plugin widgets can import BECWidgets which use it indirectly - exclude
+  classes originating from bec_widgets core from plugin discovery - better errors
+
+- Use better source for plugin repo name
+  ([`f4af6eb`](https://github.com/bec-project/bec_widgets/commit/f4af6ebc5fabf5b62ec87b580476d93d52690b08))
+
+### Features
+
+- Autoformat compiled file and add docs
+  ([`a923f12`](https://github.com/bec-project/bec_widgets/commit/a923f12c974192909222fcada9eca97325866d74))
+
+- **plugin manager**: Add cli commands
+  ([`49ac7de`](https://github.com/bec-project/bec_widgets/commit/49ac7decf7d4cf461e6437f7285dc6967ee36d96))
+
+
 ## v2.33.3 (2025-07-31)
 
 ### Bug Fixes
