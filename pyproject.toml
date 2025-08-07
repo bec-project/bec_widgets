@@ -24,6 +24,7 @@ dependencies = [
     "qtconsole~=5.5, >=5.5.1",  # needed for jupyter console
     "qtpy~=2.4",
     "qtmonaco~=0.5",
+    "PySide6-QtAds==4.4.0",
 ]
 
 
