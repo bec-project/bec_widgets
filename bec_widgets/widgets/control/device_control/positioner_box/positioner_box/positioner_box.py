@@ -33,7 +33,7 @@ class PositionerBox(PositionerBoxBase):
     PLUGIN = True
     RPC = True
 
-    USER_ACCESS = ["set_positioner", "screenshot"]
+    USER_ACCESS = ["set_positioner", "attach", "detach", "screenshot"]
     device_changed = Signal(str, str)
     # Signal emitted to inform listeners about a position update
     position_update = Signal(float)

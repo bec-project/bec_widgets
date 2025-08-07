@@ -128,6 +128,8 @@ class MotorMap(PlotBase):
         "y_log.setter",
         "legend_label_size",
         "legend_label_size.setter",
+        "attach",
+        "detach",
         "screenshot",
         # motor_map specific
         "color",

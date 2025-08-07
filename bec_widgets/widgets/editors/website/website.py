@@ -21,7 +21,16 @@ class WebsiteWidget(BECWidget, QWidget):
 
     PLUGIN = True
     ICON_NAME = "travel_explore"
-    USER_ACCESS = ["set_url", "get_url", "reload", "back", "forward"]
+    USER_ACCESS = [
+        "set_url",
+        "get_url",
+        "reload",
+        "back",
+        "forward",
+        "attach",
+        "detach",
+        "screenshot",
+    ]
 
     def __init__(
         self, parent=None, url: str = None, config=None, client=None, gui_id=None, **kwargs

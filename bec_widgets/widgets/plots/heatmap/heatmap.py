@@ -115,6 +115,8 @@ class Heatmap(ImageBase):
         "auto_range_y.setter",
         "minimal_crosshair_precision",
         "minimal_crosshair_precision.setter",
+        "attach",
+        "detach",
         "screenshot",
         # ImageView Specific Settings
         "color_map",

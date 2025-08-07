@@ -34,7 +34,7 @@ class PositionerBox2D(PositionerBoxBase):
 
     PLUGIN = True
     RPC = True
-    USER_ACCESS = ["set_positioner_hor", "set_positioner_ver", "screenshot"]
+    USER_ACCESS = ["set_positioner_hor", "set_positioner_ver", "attach", "detach", "screenshot"]
 
     device_changed_hor = Signal(str, str)
     device_changed_ver = Signal(str, str)

@@ -92,6 +92,9 @@ class RingProgressBar(BECWidget, QWidget):
         "set_diameter",
         "reset_diameter",
         "enable_auto_updates",
+        "attach",
+        "detach",
+        "screenshot",
     ]
 
     def __init__(
