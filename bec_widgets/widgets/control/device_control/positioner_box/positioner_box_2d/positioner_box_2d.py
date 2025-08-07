@@ -37,6 +37,8 @@ class PositionerBox2D(PositionerBoxBase):
     USER_ACCESS = [
         "set_positioner_hor",
         "set_positioner_ver",
+        "attach",
+        "detach",
         "screenshot",
         "enable_controls_hor",
         "enable_controls_hor.setter",

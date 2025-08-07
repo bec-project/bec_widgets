@@ -32,6 +32,9 @@ class MonacoWidget(BECWidget, QWidget):
         "set_vim_mode_enabled",
         "set_lsp_header",
         "get_lsp_header",
+        "attach",
+        "detach",
+        "screenshot",
     ]
 
     def __init__(self, parent=None, config=None, client=None, gui_id=None, **kwargs):
