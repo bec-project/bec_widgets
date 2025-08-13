@@ -357,7 +357,7 @@ class BECMainWindow(BECWidget, QMainWindow):
 
         ########################################
         # Theme menu
-        theme_menu = menu_bar.addMenu("Theme")
+        theme_menu = menu_bar.addMenu("View")
 
         theme_group = QActionGroup(self)
         light_theme_action = QAction("Light Theme", self, checkable=True)
