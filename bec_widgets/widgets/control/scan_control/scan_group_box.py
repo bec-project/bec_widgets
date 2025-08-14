@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Sequence
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
@@ -36,7 +36,7 @@ class ScanArgType:
     BOOL = "bool"
     STR = "str"
     DEVICEBASE = "DeviceBase"
-    LITERALS = "dict"
+    LITERALS_DICT = "dict"  # Used when the type is provided as a dict with Literal key
 
 
 class SettingsDialog(QDialog):
@@ -81,6 +81,39 @@ class ScanSpinBox(QSpinBox):
         self.setRange(-2147483647, 2147483647)  # 2147483647 is the largest int which qt allows
         if default is not None:
             self.setValue(default)
+
+
+class ScanLiteralsComboBox(QComboBox):
+    def __init__(
+        self, parent=None, arg_name: str | None = None, default: str | None = None, *args, **kwargs
+    ):
+        super().__init__(parent=parent, *args, **kwargs)
+        self.arg_name = arg_name
+        self.default = default
+        if default is not None:
+            self.setCurrentText(default)
+
+    def set_literals(self, literals: Sequence[str | int | float | None]) -> None:
+        """
+        Set the list of literals for the combo box.
+
+        Args:
+            literals: List of literal values (can be strings, integers, floats or None)
+        """
+        self.clear()
+        literals = set(literals)  # Remove duplicates
+        if None in literals:
+            literals.remove(None)
+            self.addItem("")
+
+        self.addItems([str(value) for value in literals])
+
+        # find index of the default value
+        index = max(self.findText(str(self.default)), 0)
+        self.setCurrentIndex(index)
+
+    def get_value(self) -> str | None:
+        return self.currentText() if self.currentText() else None
 
 
 class ScanDoubleSpinBox(QDoubleSpinBox):
@@ -137,7 +170,7 @@ class ScanGroupBox(QGroupBox):
         ScanArgType.INT: ScanSpinBox,
         ScanArgType.BOOL: ScanCheckBox,
         ScanArgType.STR: ScanLineEdit,
-        ScanArgType.LITERALS: QComboBox,  # TODO figure out combobox logic
+        ScanArgType.LITERALS_DICT: ScanLiteralsComboBox,
     }
 
     device_selected = Signal(str)
@@ -226,7 +259,11 @@ class ScanGroupBox(QGroupBox):
         for column_index, item in enumerate(group_inputs):
             arg_name = item.get("name", None)
             default = item.get("default", None)
-            widget_class = self.WIDGET_HANDLER.get(item["type"], None)
+            item_type = item.get("type", None)
+            if isinstance(item_type, dict) and "Literal" in item_type:
+                widget_class = self.WIDGET_HANDLER.get(ScanArgType.LITERALS_DICT, None)
+            else:
+                widget_class = self.WIDGET_HANDLER.get(item["type"], None)
             if widget_class is None:
                 logger.error(
                     f"Unsupported annotation '{item['type']}' for parameter '{item['name']}'"
@@ -239,6 +276,8 @@ class ScanGroupBox(QGroupBox):
                 widget.set_device_filter(BECDeviceFilter.DEVICE)
                 self.selected_devices[widget] = ""
                 widget.device_selected.connect(self.emit_device_selected)
+            if isinstance(widget, ScanLiteralsComboBox):
+                widget.set_literals(item["type"].get("Literal", []))
             tooltip = item.get("tooltip", None)
             if tooltip is not None:
                 widget.setToolTip(item["tooltip"])
@@ -336,6 +375,8 @@ class ScanGroupBox(QGroupBox):
             widget = self.layout.itemAtPosition(1, i).widget()
             if isinstance(widget, DeviceLineEdit) and device_object:
                 value = widget.get_current_device().name
+            elif isinstance(widget, ScanLiteralsComboBox):
+                value = widget.get_value()
             else:
                 value = WidgetIO.get_value(widget)
             kwargs[widget.arg_name] = value
