@@ -210,6 +210,15 @@ available_scans_message = AvailableResourceMessage(
                                 "default": False,
                                 "expert": False,
                             },
+                            {
+                                "arg": False,
+                                "name": "optim_trajectory",
+                                "type": {"Literal": ("option1", "option2", "option3", None)},
+                                "display_name": "Optim Trajectory",
+                                "tooltip": None,
+                                "default": None,
+                                "expert": False,
+                            },
                         ],
                     }
                 ],
@@ -304,7 +313,10 @@ def test_on_scan_selected(scan_control, scan_name):
             label = kwarg_box.layout.itemAtPosition(0, index).widget()
             assert label.text() == kwarg_info["display_name"]
             widget = kwarg_box.layout.itemAtPosition(1, index).widget()
-            expected_widget_type = kwarg_box.WIDGET_HANDLER.get(kwarg_info["type"], None)
+            if isinstance(kwarg_info["type"], dict) and "Literal" in kwarg_info["type"]:
+                expected_widget_type = kwarg_box.WIDGET_HANDLER.get("dict", None)
+            else:
+                expected_widget_type = kwarg_box.WIDGET_HANDLER.get(kwarg_info["type"], None)
             assert isinstance(widget, expected_widget_type)
 
 
@@ -441,7 +453,7 @@ def test_run_grid_scan_with_parameters(scan_control, mocked_client):
         args_row2["steps"],
     ]
     assert called_args == tuple(expected_args_list)
-    assert called_kwargs == kwargs | {"metadata": {"sample_name": ""}}
+    assert called_kwargs == kwargs | {"metadata": {"sample_name": ""}, "optim_trajectory": None}
 
     # Check the emitted signal
     mock_slot.assert_called_once()
