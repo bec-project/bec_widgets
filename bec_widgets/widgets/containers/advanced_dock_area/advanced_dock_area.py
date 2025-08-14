@@ -847,8 +847,6 @@ class AdvancedDockArea(BECMainWindow):
 if __name__ == "__main__":
     import sys
 
-    if sys.platform.startswith("linux"):
-        os.environ["QT_QPA_PLATFORM"] = "xcb"
     app = QApplication(sys.argv)
     dispatcher = BECDispatcher(gui_id="ads")
     main_window = AdvancedDockArea()
