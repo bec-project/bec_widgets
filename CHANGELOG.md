@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v2.35.0 (2025-08-14)
+
+### Build System
+
+- Pyside6 upgraded to 6.9.0
+  ([`44ba720`](https://github.com/bec-project/bec_widgets/commit/44ba7201b4914d63281bbed5e62d07e5c240595a))
+
+### Features
+
+- **property_manager**: Property manager widget
+  ([`926d722`](https://github.com/bec-project/bec_widgets/commit/926d7229559d189d382fe034b3afbc544e709efa))
+
+
 ## v2.34.0 (2025-08-07)
 
 ### Bug Fixes
