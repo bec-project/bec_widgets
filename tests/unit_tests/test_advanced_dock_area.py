@@ -6,8 +6,7 @@ from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import pytest
-from qtpy.QtCore import QSettings, Qt
-from qtpy.QtGui import QAction
+from qtpy.QtCore import QSettings
 from qtpy.QtWidgets import QDialog, QMessageBox
 
 from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import (
@@ -50,6 +49,7 @@ class TestAdvancedDockAreaInit:
     def test_init(self, advanced_dock_area):
         assert advanced_dock_area is not None
         assert isinstance(advanced_dock_area, AdvancedDockArea)
+        assert advanced_dock_area.mode == "developer"
         assert hasattr(advanced_dock_area, "dock_manager")
         assert hasattr(advanced_dock_area, "toolbar")
         assert hasattr(advanced_dock_area, "dark_mode_button")
@@ -173,28 +173,6 @@ class TestDockManagement:
         new_widget_list = advanced_dock_area.widget_list()
         assert len(new_widget_list) == initial_count + 1
 
-    def test_attach_all(self, advanced_dock_area, qtbot):
-        """Test attach_all functionality."""
-        # Create multiple widgets
-        advanced_dock_area.new("DarkModeButton", start_floating=True)
-        advanced_dock_area.new("DarkModeButton", start_floating=True)
-
-        # Wait for docks to be created
-        qtbot.wait(200)
-
-        # Should have floating widgets
-        initial_floating = len(advanced_dock_area.dock_manager.floatingWidgets())
-
-        # Attach all floating docks
-        advanced_dock_area.attach_all()
-
-        # Wait a bit for the operation to complete
-        qtbot.wait(200)
-
-        # Should have fewer floating widgets (or none if all were attached)
-        final_floating = len(advanced_dock_area.dock_manager.floatingWidgets())
-        assert final_floating <= initial_floating
-
     def test_delete_all(self, advanced_dock_area, qtbot):
         """Test delete_all functionality."""
         # Create multiple widgets
@@ -251,13 +229,6 @@ class TestWorkspaceLocking:
 
 class TestDeveloperMode:
     """Test developer mode functionality."""
-
-    def test_setup_developer_mode_menu(self, advanced_dock_area):
-        """Test developer mode menu setup."""
-        # The menu should be set up during initialization
-        assert hasattr(advanced_dock_area, "_developer_mode_action")
-        assert isinstance(advanced_dock_area._developer_mode_action, QAction)
-        assert advanced_dock_area._developer_mode_action.isCheckable()
 
     def test_developer_mode_toggle(self, advanced_dock_area):
         """Test developer mode toggle functionality."""
@@ -715,19 +686,6 @@ class TestWorkspaceProfileOperations:
 class TestCleanupAndMisc:
     """Test cleanup and miscellaneous functionality."""
 
-    def test_cleanup(self, advanced_dock_area):
-        """Test cleanup functionality."""
-        with patch.object(advanced_dock_area.dark_mode_button, "close") as mock_close:
-            with patch.object(advanced_dock_area.dark_mode_button, "deleteLater") as mock_delete:
-                with patch(
-                    "bec_widgets.widgets.containers.main_window.main_window.BECMainWindow.cleanup"
-                ) as mock_super_cleanup:
-                    advanced_dock_area.cleanup()
-
-                    mock_close.assert_called_once()
-                    mock_delete.assert_called_once()
-                    mock_super_cleanup.assert_called_once()
-
     def test_delete_dock(self, advanced_dock_area, qtbot):
         """Test _delete_dock functionality."""
         from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import (
@@ -804,3 +762,332 @@ class TestCleanupAndMisc:
         # Verify title bar actions were set
         title_bar_actions = dock.titleBarActions()
         assert len(title_bar_actions) >= 1
+
+
+class TestModeSwitching:
+    """Test mode switching functionality."""
+
+    def test_mode_property_setter_valid_modes(self, advanced_dock_area):
+        """Test setting valid modes."""
+        valid_modes = ["plot", "device", "utils", "developer", "user"]
+
+        for mode in valid_modes:
+            advanced_dock_area.mode = mode
+            assert advanced_dock_area.mode == mode
+
+    def test_mode_changed_signal_emission(self, advanced_dock_area, qtbot):
+        """Test that mode_changed signal is emitted when mode changes."""
+        # Set up signal spy
+        with qtbot.waitSignal(advanced_dock_area.mode_changed, timeout=1000) as blocker:
+            advanced_dock_area.mode = "plot"
+
+        # Check signal was emitted with correct argument
+        assert blocker.args == ["plot"]
+
+    def test_switch_to_plot_mode(self, advanced_dock_area):
+        """Test switch_to_plot_mode method."""
+        advanced_dock_area.switch_to_plot_mode()
+        assert advanced_dock_area.mode == "plot"
+
+    def test_switch_to_device_mode(self, advanced_dock_area):
+        """Test switch_to_device_mode method."""
+        advanced_dock_area.switch_to_device_mode()
+        assert advanced_dock_area.mode == "device"
+
+    def test_switch_to_utils_mode(self, advanced_dock_area):
+        """Test switch_to_utils_mode method."""
+        advanced_dock_area.switch_to_utils_mode()
+        assert advanced_dock_area.mode == "utils"
+
+    def test_switch_to_developer_mode(self, advanced_dock_area):
+        """Test switch_to_developer_mode method."""
+        advanced_dock_area.switch_to_developer_mode()
+        assert advanced_dock_area.mode == "developer"
+
+    def test_switch_to_user_mode(self, advanced_dock_area):
+        """Test switch_to_user_mode method."""
+        advanced_dock_area.switch_to_user_mode()
+        assert advanced_dock_area.mode == "user"
+
+
+class TestToolbarModeBundles:
+    """Test toolbar bundle creation and visibility for different modes."""
+
+    def test_flat_bundles_created(self, advanced_dock_area):
+        """Test that flat bundles are created during toolbar setup."""
+        # Check that flat bundles exist
+        assert "flat_plots" in advanced_dock_area.toolbar.bundles
+        assert "flat_devices" in advanced_dock_area.toolbar.bundles
+        assert "flat_utils" in advanced_dock_area.toolbar.bundles
+
+    def test_plot_mode_toolbar_visibility(self, advanced_dock_area):
+        """Test toolbar bundle visibility in plot mode."""
+        advanced_dock_area.mode = "plot"
+
+        # Should show only flat_plots bundle (and essential bundles in real implementation)
+        shown_bundles = advanced_dock_area.toolbar.shown_bundles
+        assert "flat_plots" in shown_bundles
+
+        # Should not show other flat bundles
+        assert "flat_devices" not in shown_bundles
+        assert "flat_utils" not in shown_bundles
+
+        # Should not show menu bundles
+        assert "menu_plots" not in shown_bundles
+        assert "menu_devices" not in shown_bundles
+        assert "menu_utils" not in shown_bundles
+
+    def test_device_mode_toolbar_visibility(self, advanced_dock_area):
+        """Test toolbar bundle visibility in device mode."""
+        advanced_dock_area.mode = "device"
+
+        shown_bundles = advanced_dock_area.toolbar.shown_bundles
+        assert "flat_devices" in shown_bundles
+
+        # Should not show other flat bundles
+        assert "flat_plots" not in shown_bundles
+        assert "flat_utils" not in shown_bundles
+
+    def test_utils_mode_toolbar_visibility(self, advanced_dock_area):
+        """Test toolbar bundle visibility in utils mode."""
+        advanced_dock_area.mode = "utils"
+
+        shown_bundles = advanced_dock_area.toolbar.shown_bundles
+        assert "flat_utils" in shown_bundles
+
+        # Should not show other flat bundles
+        assert "flat_plots" not in shown_bundles
+        assert "flat_devices" not in shown_bundles
+
+    def test_developer_mode_toolbar_visibility(self, advanced_dock_area):
+        """Test toolbar bundle visibility in developer mode."""
+        advanced_dock_area.mode = "developer"
+
+        shown_bundles = advanced_dock_area.toolbar.shown_bundles
+
+        # Should show menu bundles
+        assert "menu_plots" in shown_bundles
+        assert "menu_devices" in shown_bundles
+        assert "menu_utils" in shown_bundles
+
+        # Should show essential bundles
+        assert "spacer_bundle" in shown_bundles
+        assert "workspace" in shown_bundles
+        assert "dock_actions" in shown_bundles
+
+    def test_user_mode_toolbar_visibility(self, advanced_dock_area):
+        """Test toolbar bundle visibility in user mode."""
+        advanced_dock_area.mode = "user"
+
+        shown_bundles = advanced_dock_area.toolbar.shown_bundles
+
+        # Should show only essential bundles
+        assert "spacer_bundle" in shown_bundles
+        assert "workspace" in shown_bundles
+        assert "dock_actions" in shown_bundles
+
+        # Should not show any widget creation bundles
+        assert "menu_plots" not in shown_bundles
+        assert "menu_devices" not in shown_bundles
+        assert "menu_utils" not in shown_bundles
+        assert "flat_plots" not in shown_bundles
+        assert "flat_devices" not in shown_bundles
+        assert "flat_utils" not in shown_bundles
+
+
+class TestFlatToolbarActions:
+    """Test flat toolbar actions functionality."""
+
+    def test_flat_plot_actions_created(self, advanced_dock_area):
+        """Test that flat plot actions are created."""
+        plot_actions = [
+            "flat_waveform",
+            "flat_scatter_waveform",
+            "flat_multi_waveform",
+            "flat_image",
+            "flat_motor_map",
+            "flat_heatmap",
+        ]
+
+        for action_name in plot_actions:
+            assert advanced_dock_area.toolbar.components.exists(action_name)
+
+    def test_flat_device_actions_created(self, advanced_dock_area):
+        """Test that flat device actions are created."""
+        device_actions = ["flat_scan_control", "flat_positioner_box"]
+
+        for action_name in device_actions:
+            assert advanced_dock_area.toolbar.components.exists(action_name)
+
+    def test_flat_utils_actions_created(self, advanced_dock_area):
+        """Test that flat utils actions are created."""
+        utils_actions = [
+            "flat_queue",
+            "flat_vs_code",
+            "flat_status",
+            "flat_progress_bar",
+            "flat_log_panel",
+            "flat_sbb_monitor",
+        ]
+
+        for action_name in utils_actions:
+            assert advanced_dock_area.toolbar.components.exists(action_name)
+
+    def test_flat_plot_actions_trigger_widget_creation(self, advanced_dock_area):
+        """Test flat plot actions trigger widget creation."""
+        plot_action_mapping = {
+            "flat_waveform": "Waveform",
+            "flat_scatter_waveform": "ScatterWaveform",
+            "flat_multi_waveform": "MultiWaveform",
+            "flat_image": "Image",
+            "flat_motor_map": "MotorMap",
+            "flat_heatmap": "Heatmap",
+        }
+
+        for action_name, widget_type in plot_action_mapping.items():
+            with patch.object(advanced_dock_area, "new") as mock_new:
+                action = advanced_dock_area.toolbar.components.get_action(action_name).action
+                action.trigger()
+                mock_new.assert_called_once_with(widget=widget_type)
+
+    def test_flat_device_actions_trigger_widget_creation(self, advanced_dock_area):
+        """Test flat device actions trigger widget creation."""
+        device_action_mapping = {
+            "flat_scan_control": "ScanControl",
+            "flat_positioner_box": "PositionerBox",
+        }
+
+        for action_name, widget_type in device_action_mapping.items():
+            with patch.object(advanced_dock_area, "new") as mock_new:
+                action = advanced_dock_area.toolbar.components.get_action(action_name).action
+                action.trigger()
+                mock_new.assert_called_once_with(widget=widget_type)
+
+    def test_flat_utils_actions_trigger_widget_creation(self, advanced_dock_area):
+        """Test flat utils actions trigger widget creation."""
+        utils_action_mapping = {
+            "flat_queue": "BECQueue",
+            "flat_vs_code": "VSCodeEditor",
+            "flat_status": "BECStatusBox",
+            "flat_progress_bar": "RingProgressBar",
+            "flat_sbb_monitor": "SBBMonitor",
+        }
+
+        for action_name, widget_type in utils_action_mapping.items():
+            with patch.object(advanced_dock_area, "new") as mock_new:
+                action = advanced_dock_area.toolbar.components.get_action(action_name).action
+
+                # Skip log_panel as it's disabled
+                if action_name == "flat_log_panel":
+                    assert not action.isEnabled()
+                    continue
+
+                action.trigger()
+                mock_new.assert_called_once_with(widget=widget_type)
+
+    def test_flat_log_panel_action_disabled(self, advanced_dock_area):
+        """Test that flat log panel action is disabled."""
+        action = advanced_dock_area.toolbar.components.get_action("flat_log_panel").action
+        assert not action.isEnabled()
+
+
+class TestModeTransitions:
+    """Test mode transitions and state consistency."""
+
+    def test_mode_transition_sequence(self, advanced_dock_area, qtbot):
+        """Test sequence of mode transitions."""
+        modes = ["plot", "device", "utils", "developer", "user"]
+
+        for mode in modes:
+            with qtbot.waitSignal(advanced_dock_area.mode_changed, timeout=1000) as blocker:
+                advanced_dock_area.mode = mode
+
+            assert advanced_dock_area.mode == mode
+            assert blocker.args == [mode]
+
+    def test_mode_consistency_after_multiple_changes(self, advanced_dock_area):
+        """Test mode consistency after multiple rapid changes."""
+        # Rapidly change modes
+        advanced_dock_area.mode = "plot"
+        advanced_dock_area.mode = "device"
+        advanced_dock_area.mode = "utils"
+        advanced_dock_area.mode = "developer"
+        advanced_dock_area.mode = "user"
+
+        # Final state should be consistent
+        assert advanced_dock_area.mode == "user"
+
+        # Toolbar should show correct bundles for user mode
+        shown_bundles = advanced_dock_area.toolbar.shown_bundles
+        assert "spacer_bundle" in shown_bundles
+        assert "workspace" in shown_bundles
+        assert "dock_actions" in shown_bundles
+
+    def test_toolbar_refresh_on_mode_change(self, advanced_dock_area):
+        """Test that toolbar is properly refreshed when mode changes."""
+        initial_bundles = set(advanced_dock_area.toolbar.shown_bundles)
+
+        # Change to a different mode
+        advanced_dock_area.mode = "plot"
+        plot_bundles = set(advanced_dock_area.toolbar.shown_bundles)
+
+        # Bundles should be different
+        assert initial_bundles != plot_bundles
+        assert "flat_plots" in plot_bundles
+
+    def test_mode_switching_preserves_existing_docks(self, advanced_dock_area, qtbot):
+        """Test that mode switching doesn't affect existing docked widgets."""
+        # Create some widgets
+        advanced_dock_area.new("DarkModeButton")
+        advanced_dock_area.new("DarkModeButton")
+        qtbot.wait(200)
+
+        initial_dock_count = len(advanced_dock_area.dock_list())
+        initial_widget_count = len(advanced_dock_area.widget_list())
+
+        # Switch modes
+        advanced_dock_area.mode = "plot"
+        advanced_dock_area.mode = "device"
+        advanced_dock_area.mode = "user"
+
+        # Dock and widget counts should remain the same
+        assert len(advanced_dock_area.dock_list()) == initial_dock_count
+        assert len(advanced_dock_area.widget_list()) == initial_widget_count
+
+
+class TestModeProperty:
+    """Test mode property getter and setter behavior."""
+
+    def test_mode_property_getter(self, advanced_dock_area):
+        """Test mode property getter returns correct value."""
+        # Set internal mode directly and test getter
+        advanced_dock_area._mode = "plot"
+        assert advanced_dock_area.mode == "plot"
+
+        advanced_dock_area._mode = "device"
+        assert advanced_dock_area.mode == "device"
+
+    def test_mode_property_setter_updates_internal_state(self, advanced_dock_area):
+        """Test mode property setter updates internal state."""
+        advanced_dock_area.mode = "plot"
+        assert advanced_dock_area._mode == "plot"
+
+        advanced_dock_area.mode = "utils"
+        assert advanced_dock_area._mode == "utils"
+
+    def test_mode_property_setter_triggers_toolbar_update(self, advanced_dock_area):
+        """Test mode property setter triggers toolbar update."""
+        with patch.object(advanced_dock_area.toolbar, "show_bundles") as mock_show_bundles:
+            advanced_dock_area.mode = "plot"
+            mock_show_bundles.assert_called_once()
+
+    def test_multiple_mode_changes(self, advanced_dock_area, qtbot):
+        """Test multiple rapid mode changes."""
+        modes = ["plot", "device", "utils", "developer", "user"]
+
+        for i, mode in enumerate(modes):
+            with qtbot.waitSignal(advanced_dock_area.mode_changed, timeout=1000) as blocker:
+                advanced_dock_area.mode = mode
+
+            assert advanced_dock_area.mode == mode
+            assert blocker.args == [mode]

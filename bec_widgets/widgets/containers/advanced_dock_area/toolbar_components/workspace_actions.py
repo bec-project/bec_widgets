@@ -7,6 +7,11 @@ from qtpy.QtWidgets import QComboBox, QSizePolicy, QWidget
 from bec_widgets import SafeSlot
 from bec_widgets.utils.toolbars.actions import MaterialIconAction, WidgetAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle, ToolbarComponents
+from bec_widgets.utils.toolbars.connections import BundleConnection
+from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
+    is_profile_readonly,
+    list_profiles,
+)
 
 
 class ProfileComboBox(QComboBox):
@@ -18,7 +23,6 @@ class ProfileComboBox(QComboBox):
 
     def refresh_profiles(self):
         """Refresh the profile list with appropriate icons."""
-        from ..advanced_dock_area import is_profile_readonly, list_profiles
 
         current_text = self.currentText()
         self.blockSignals(True)
@@ -107,18 +111,18 @@ def workspace_bundle(components: ToolbarComponents) -> ToolbarBundle:
     return bundle
 
 
-class WorkspaceConnection:
+class WorkspaceConnection(BundleConnection):
     """
     Connection class for workspace actions in AdvancedDockArea.
     """
 
     def __init__(self, components: ToolbarComponents, target_widget=None):
+        super().__init__(parent=components.toolbar)
         self.bundle_name = "workspace"
         self.components = components
         self.target_widget = target_widget
         if not hasattr(self.target_widget, "lock_workspace"):
             raise AttributeError("Target widget must implement 'lock_workspace'.")
-        super().__init__()
         self._connected = False
 
     def connect(self):
@@ -155,6 +159,7 @@ class WorkspaceConnection:
         self.components.get_action("delete_workspace").action.triggered.disconnect(
             self.target_widget.delete_profile
         )
+        self._connected = False
 
     @SafeSlot(bool)
     def _lock_workspace(self, value: bool):
