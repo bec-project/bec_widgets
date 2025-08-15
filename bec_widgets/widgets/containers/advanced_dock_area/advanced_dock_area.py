@@ -5,8 +5,7 @@ from typing import cast
 
 import PySide6QtAds as QtAds
 from PySide6QtAds import CDockManager, CDockWidget
-from qtpy.QtCore import QSettings, QSize, Qt
-from qtpy.QtGui import QAction
+from qtpy.QtCore import Property, QSettings, QSize, Signal
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -39,7 +38,7 @@ from bec_widgets.widgets.containers.advanced_dock_area.toolbar_components.worksp
     WorkspaceConnection,
     workspace_bundle,
 )
-from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
+from bec_widgets.widgets.containers.main_window.main_window import BECMainWindowNoRPC
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox
 from bec_widgets.widgets.control.scan_control import ScanControl
 from bec_widgets.widgets.editors.vscode.vscode import VSCodeEditor
@@ -200,31 +199,46 @@ class SaveProfileDialog(QDialog):
         return self.readonly_checkbox.isChecked()
 
 
-class AdvancedDockArea(BECMainWindow):
+class AdvancedDockArea(BECWidget, QWidget):
     RPC = True
     PLUGIN = False
     USER_ACCESS = ["new", "widget_map", "widget_list", "lock_workspace", "attach_all", "delete_all"]
 
-    def __init__(self, parent=None, *args, **kwargs):
+    # Define a signal for mode changes
+    mode_changed = Signal(str)
+
+    def __init__(self, parent=None, mode: str = "developer", *args, **kwargs):
         super().__init__(parent=parent, *args, **kwargs)
+
+        # Title (as a top-level QWidget it can have a window title)
+        self.setWindowTitle("Advanced Dock Area")
+
+        # Top-level layout hosting a toolbar and the dock manager
+        self._root_layout = QVBoxLayout(self)
+        self._root_layout.setContentsMargins(0, 0, 0, 0)
+        self._root_layout.setSpacing(0)
 
         # Setting the dock manager with flags
         QtAds.CDockManager.setConfigFlag(QtAds.CDockManager.eConfigFlag.FocusHighlighting, True)
         QtAds.CDockManager.setConfigFlag(
             QtAds.CDockManager.eConfigFlag.RetainTabSizeWhenCloseButtonHidden, True
         )
-        QtAds.CDockManager.setConfigFlag(
-            QtAds.CDockManager.eConfigFlag.HideSingleCentralWidgetTitleBar, True
-        )
         self.dock_manager = CDockManager(self)
 
         # Dock manager helper variables
         self._locked = False  # Lock state of the workspace
 
+        # Initialize mode property first (before toolbar setup)
+        self._mode = "developer"
+
         # Toolbar
         self.dark_mode_button = DarkModeButton(parent=self, toolbar=True)
         self._setup_toolbar()
         self._hook_toolbar()
+
+        # Place toolbar and dock manager into layout
+        self._root_layout.addWidget(self.toolbar)
+        self._root_layout.addWidget(self.dock_manager, 1)
 
         # Populate and hook the workspace combo
         self._refresh_workspace_list()
@@ -232,13 +246,17 @@ class AdvancedDockArea(BECMainWindow):
         # State manager
         self.state_manager = WidgetStateManager(self)
 
-        # Insert Mode menu
+        # Developer mode state
         self._editable = None
-        self._setup_developer_mode_menu()
+        # Initialize default editable state based on current lock
+        self._set_editable(True)  # default to editable; will sync toolbar toggle below
 
-        # Notification center re-raise
-        self.notification_centre.raise_()
-        self.statusBar().raise_()
+        # Sync Developer toggle icon state after initial setup
+        dev_action = self.toolbar.components.get_action("developer_mode").action
+        dev_action.setChecked(self._editable)
+
+        # Apply the requested mode after everything is set up
+        self.mode = mode
 
     def minimumSizeHint(self):
         return QSize(1200, 800)
@@ -350,6 +368,7 @@ class AdvancedDockArea(BECMainWindow):
             "sbb_monitor": ("train", "Add SBB Monitor", "SBBMonitor"),
         }
 
+        # Create expandable menu actions (original behavior)
         def _build_menu(key: str, label: str, mapping: dict[str, tuple[str, str, str]]):
             self.toolbar.components.add_safe(
                 key,
@@ -370,6 +389,27 @@ class AdvancedDockArea(BECMainWindow):
         _build_menu("menu_plots", "Add Plot ", PLOT_ACTIONS)
         _build_menu("menu_devices", "Add Device Control ", DEVICE_ACTIONS)
         _build_menu("menu_utils", "Add Utils ", UTIL_ACTIONS)
+
+        # Create flat toolbar bundles for each widget type
+        def _build_flat_bundles(category: str, mapping: dict[str, tuple[str, str, str]]):
+            bundle = ToolbarBundle(f"flat_{category}", self.toolbar.components)
+
+            for action_id, (icon_name, tooltip, widget_type) in mapping.items():
+                # Create individual action for each widget type
+                flat_action_id = f"flat_{action_id}"
+                self.toolbar.components.add_safe(
+                    flat_action_id,
+                    MaterialIconAction(
+                        icon_name=icon_name, tooltip=tooltip, filled=True, parent=self
+                    ),
+                )
+                bundle.add_action(flat_action_id)
+
+            self.toolbar.add_bundle(bundle)
+
+        _build_flat_bundles("plots", PLOT_ACTIONS)
+        _build_flat_bundles("devices", DEVICE_ACTIONS)
+        _build_flat_bundles("utils", UTIL_ACTIONS)
 
         # Workspace
         spacer_bundle = ToolbarBundle("spacer_bundle", self.toolbar.components)
@@ -398,12 +438,21 @@ class AdvancedDockArea(BECMainWindow):
         self.toolbar.components.add_safe(
             "dark_mode", WidgetAction(widget=self.dark_mode_button, adjust_size=False, parent=self)
         )
+        # Developer mode toggle (moved from menu into toolbar)
+        self.toolbar.components.add_safe(
+            "developer_mode",
+            MaterialIconAction(
+                icon_name="code", tooltip="Developer Mode", checkable=True, parent=self
+            ),
+        )
         bda = ToolbarBundle("dock_actions", self.toolbar.components)
         bda.add_action("attach_all")
         bda.add_action("screenshot")
         bda.add_action("dark_mode")
+        bda.add_action("developer_mode")
         self.toolbar.add_bundle(bda)
 
+        # Default bundle configuration (show menus by default)
         self.toolbar.show_bundles(
             [
                 "menu_plots",
@@ -414,7 +463,6 @@ class AdvancedDockArea(BECMainWindow):
                 "dock_actions",
             ]
         )
-        self.addToolBar(Qt.TopToolBarArea, self.toolbar)
 
         # Store mappings on self for use in _hook_toolbar
         self._ACTION_MAPPINGS = {
@@ -439,42 +487,26 @@ class AdvancedDockArea(BECMainWindow):
         _connect_menu("menu_devices")
         _connect_menu("menu_utils")
 
+        # Connect flat toolbar actions
+        def _connect_flat_actions(category: str, mapping: dict[str, tuple[str, str, str]]):
+            for action_id, (_, _, widget_type) in mapping.items():
+                flat_action_id = f"flat_{action_id}"
+                flat_action = self.toolbar.components.get_action(flat_action_id).action
+                if widget_type == "LogPanel":
+                    flat_action.setEnabled(False)  # keep disabled per issue #644
+                else:
+                    flat_action.triggered.connect(lambda _, t=widget_type: self.new(widget=t))
+
+        _connect_flat_actions("plots", self._ACTION_MAPPINGS["menu_plots"])
+        _connect_flat_actions("devices", self._ACTION_MAPPINGS["menu_devices"])
+        _connect_flat_actions("utils", self._ACTION_MAPPINGS["menu_utils"])
+
         self.toolbar.components.get_action("attach_all").action.triggered.connect(self.attach_all)
         self.toolbar.components.get_action("screenshot").action.triggered.connect(self.screenshot)
-
-    def _setup_developer_mode_menu(self):
-        """Add a 'Developer' checkbox to the View menu after theme actions."""
-        mb = self.menuBar()
-
-        # Find the View menu (inherited from BECMainWindow)
-        view_menu = None
-        for action in mb.actions():
-            if action.menu() and action.menu().title() == "View":
-                view_menu = action.menu()
-                break
-
-        if view_menu is None:
-            # If View menu doesn't exist, create it
-            view_menu = mb.addMenu("View")
-
-        # Add separator after existing theme actions
-        view_menu.addSeparator()
-
-        # Add Developer mode checkbox
-        self._developer_mode_action = QAction("Developer", self, checkable=True)
-
-        # Default selection based on current lock state
-        self._editable = not self.lock_workspace
-        self._developer_mode_action.setChecked(self._editable)
-
-        # Wire up action
-        self._developer_mode_action.triggered.connect(self._on_developer_mode_toggled)
-
-        view_menu.addAction(self._developer_mode_action)
-
-    def _on_developer_mode_toggled(self, checked: bool) -> None:
-        """Handle developer mode checkbox toggle."""
-        self._set_editable(checked)
+        # Developer mode toggle
+        self.toolbar.components.get_action("developer_mode").action.toggled.connect(
+            self._on_developer_mode_toggled
+        )
 
     def _set_editable(self, editable: bool) -> None:
         self.lock_workspace = not editable
@@ -504,8 +536,11 @@ class AdvancedDockArea(BECMainWindow):
             self.toolbar.show_bundles(["spacer_bundle", "workspace", "dock_actions"])
 
         # Keep Developer mode UI in sync
-        if hasattr(self, "_developer_mode_action"):
-            self._developer_mode_action.setChecked(editable)
+        self.toolbar.components.get_action("developer_mode").action.setChecked(editable)
+
+    def _on_developer_mode_toggled(self, checked: bool) -> None:
+        """Handle developer mode checkbox toggle."""
+        self._set_editable(checked)
 
     ################################################################################
     # Adding widgets
@@ -718,7 +753,9 @@ class AdvancedDockArea(BECMainWindow):
         # Save the profile
         settings = open_settings(name)
         settings.setValue(SETTINGS_KEYS["geom"], self.saveGeometry())
-        settings.setValue(SETTINGS_KEYS["state"], self.saveState())
+        settings.setValue(
+            SETTINGS_KEYS["state"], b""
+        )  # No QMainWindow state; placeholder for backward compat
         settings.setValue(SETTINGS_KEYS["ads_state"], self.dock_manager.saveState())
         self.dock_manager.addPerspective(name)
         self.dock_manager.savePerspectives(settings)
@@ -766,9 +803,8 @@ class AdvancedDockArea(BECMainWindow):
         geom = settings.value(SETTINGS_KEYS["geom"])
         if geom:
             self.restoreGeometry(geom)
-        window_state = settings.value(SETTINGS_KEYS["state"])
-        if window_state:
-            self.restoreState(window_state)
+        # No window state for QWidget-based host; keep for backwards compat read
+        # window_state = settings.value(SETTINGS_KEYS["state"])  # ignored
         dock_state = settings.value(SETTINGS_KEYS["ads_state"])
         if dock_state:
             self.dock_manager.restoreState(dock_state)
@@ -831,8 +867,59 @@ class AdvancedDockArea(BECMainWindow):
             combo.blockSignals(False)
 
     ################################################################################
-    # Styling
+    # Mode Switching
     ################################################################################
+
+    @SafeProperty(str)
+    def mode(self) -> str:
+        return self._mode
+
+    @mode.setter
+    def mode(self, new_mode: str):
+        if new_mode not in ["plot", "device", "utils", "developer", "user"]:
+            raise ValueError(f"Invalid mode: {new_mode}")
+        self._mode = new_mode
+        self.mode_changed.emit(new_mode)
+
+        # Update toolbar visibility based on mode
+        if new_mode == "user":
+            # User mode: show only essential tools
+            self.toolbar.show_bundles(["spacer_bundle", "workspace", "dock_actions"])
+        elif new_mode == "developer":
+            # Developer mode: show all tools (use menu bundles)
+            self.toolbar.show_bundles(
+                [
+                    "menu_plots",
+                    "menu_devices",
+                    "menu_utils",
+                    "spacer_bundle",
+                    "workspace",
+                    "dock_actions",
+                ]
+            )
+        elif new_mode in ["plot", "device", "utils"]:
+            # Specific modes: show flat toolbar for that category
+            bundle_name = f"flat_{new_mode}s" if new_mode != "utils" else "flat_utils"
+            self.toolbar.show_bundles([bundle_name])
+            # self.toolbar.show_bundles([bundle_name, "spacer_bundle", "workspace", "dock_actions"])
+        else:
+            # Fallback to user mode
+            self.toolbar.show_bundles(["spacer_bundle", "workspace", "dock_actions"])
+
+    def switch_to_plot_mode(self):
+        self.mode = "plot"
+
+    def switch_to_device_mode(self):
+        self.mode = "device"
+
+    def switch_to_utils_mode(self):
+        self.mode = "utils"
+
+    def switch_to_developer_mode(self):
+        self.mode = "developer"
+
+    def switch_to_user_mode(self):
+        self.mode = "user"
 
     def cleanup(self):
         """
@@ -841,6 +928,7 @@ class AdvancedDockArea(BECMainWindow):
         self.delete_all()
         self.dark_mode_button.close()
         self.dark_mode_button.deleteLater()
+        self.toolbar.cleanup()
         super().cleanup()
 
 
@@ -849,7 +937,9 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     dispatcher = BECDispatcher(gui_id="ads")
-    main_window = AdvancedDockArea()
-    main_window.show()
-    main_window.resize(800, 600)
+    window = BECMainWindowNoRPC()
+    ads = AdvancedDockArea(parent=window, mode="developer")
+    window.setCentralWidget(ads)
+    window.show()
+    window.resize(800, 600)
     sys.exit(app.exec())
