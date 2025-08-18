@@ -1,11 +1,15 @@
+import re
 from functools import partial
+from re import Pattern
 from typing import Generic, Iterable, NamedTuple, TypeVar
 
 from bec_lib.logger import bec_logger
+from more_itertools import consume
 from PySide6.QtWidgets import QListWidgetItem, QWidget
 from qtpy.QtCore import QSize
 from qtpy.QtWidgets import QListWidget
 
+from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.expandable_frame import ExpandableGroupFrame
 
 logger = bec_logger.logger
@@ -54,29 +58,61 @@ class ListOfExpandableFrames(QListWidget, Generic[_EF]):
 
         item_widget.expansion_state_changed.connect(partial(_updatesize, item, item_widget))
         item_widget.imminent_deletion.connect(partial(_remove_item, item))
-
         item_widget.broadcast_size_hint.connect(item.setSizeHint)
-        item.setSizeHint(item_widget.sizeHint())
 
         self.setItemWidget(item, item_widget)
         self.addItem(item)
         self._item_dict[id] = self.item_tuple(item, item_widget)
 
+        item.setSizeHint(item_widget.sizeHint())
         return item_widget
+
+    def item_widget_pairs(self):
+        return self._item_dict.values()
+
+    def widgets(self):
+        return (i.widget for i in self._item_dict.values())
 
     def get_item_widget(self, id: str):
         if (item := self._item_dict.get(id)) is None:
             return None
         return item
 
+    def set_hidden_pattern(self, pattern: Pattern):
+        self.hide_all()
+        self._set_hidden(filter(pattern.search, self._item_dict.keys()), False)
+
     def set_hidden(self, ids: Iterable[str]):
+        self._set_hidden(ids, True)
+
+    def _set_hidden(self, ids: Iterable[str], hidden: bool):
         for id in ids:
             if (_item := self._item_dict.get(id)) is not None:
-                _item.widget.setHidden(True)
+                _item.item.setHidden(hidden)
+                _item.widget.setHidden(hidden)
             else:
                 logger.warning(
                     f"List {self.__qualname__} does not have an item with ID {id} to hide!"
                 )
+        self.sortItems()
+
+    def hide_all(self):
+        self.set_hidden_state_on_all(True)
 
     def unhide_all(self):
-        map(lambda i: i.widget.setHidden(False), self._item_dict.values())
+        self.set_hidden_state_on_all(False)
+
+    def set_hidden_state_on_all(self, hidden: bool):
+        for _item in self._item_dict.values():
+            _item.item.setHidden(hidden)
+            _item.widget.setHidden(hidden)
+        self.sortItems()
+
+    @SafeSlot(str)
+    def update_filter(self, value: str):
+        if value == "":
+            return self.unhide_all()
+        try:
+            self.set_hidden_pattern(re.compile(value, re.IGNORECASE))
+        except Exception:
+            self.unhide_all()

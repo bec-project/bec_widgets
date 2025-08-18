@@ -176,18 +176,11 @@ class DeviceBrowser(BECWidget, QWidget):
 
         Either way, the function will filter the devices based on the filter input text and update the device list.
         """
-        filter_text = self.ui.filter_input.text()
         for device in self.dev:
             if device not in self.dev_list:
                 # it is possible the device has just been added to the config
                 self._add_item_to_list(device, self.dev[device])
-        try:
-            self.regex = re.compile(filter_text, re.IGNORECASE)
-        except re.error:
-            self.regex = None  # Invalid regex, disable filtering
-            self.dev_list.unhide_all()
-            return
-        self.dev_list.set_hidden(filter(lambda d: not self.regex.search(d), self.dev.keys()))
+        self.dev_list.update_filter(self.ui.filter_input.text())
 
     @SafeSlot()
     def _load_from_file(self):
