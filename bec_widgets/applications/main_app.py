@@ -3,6 +3,7 @@ from qtpy.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QWidget
 from bec_widgets.applications.navigation_centre.reveal_animator import ANIMATION_DURATION
 from bec_widgets.applications.navigation_centre.side_bar import SideBar
 from bec_widgets.applications.navigation_centre.side_bar_components import NavigationItem
+from bec_widgets.applications.views.developer_view.developer_view import DeveloperView
 from bec_widgets.applications.views.device_manager_view.device_manager_widget import (
     DeviceManagerWidget,
 )
@@ -48,6 +49,7 @@ class BECMainApp(BECMainWindow):
         self.add_section("BEC Applications", "bec_apps")
         self.ads = AdvancedDockArea(self)
         self.device_manager = DeviceManagerWidget(self)
+        self.developer_view = DeveloperView(self)
 
         self.add_view(
             icon="widgets", title="Dock Area", id="dock_area", widget=self.ads, mini_text="Docks"
@@ -58,6 +60,13 @@ class BECMainApp(BECMainWindow):
             id="device_manager",
             widget=self.device_manager,
             mini_text="DM",
+        )
+        self.add_view(
+            icon="code_blocks",
+            title="IDE",
+            widget=self.developer_view,
+            id="developer_view",
+            exclusive=True,
         )
 
         if self._show_examples:
@@ -142,6 +151,8 @@ class BECMainApp(BECMainWindow):
         # Wrap plain widgets into a ViewBase so enter/exit hooks are available
         if isinstance(widget, ViewBase):
             view_widget = widget
+            view_widget.view_id = id
+            view_widget.view_title = title
         else:
             view_widget = ViewBase(content=widget, parent=self, id=id, title=title)
 
@@ -195,7 +206,21 @@ if __name__ == "__main__":  # pragma: no cover
     app = QApplication([sys.argv[0], *qt_args])
     apply_theme("dark")
     w = BECMainApp(show_examples=args.examples)
-    w.resize(1920, 1200)
+
+    screen = app.primaryScreen()
+    screen_geometry = screen.availableGeometry()
+    screen_width = screen_geometry.width()
+    screen_height = screen_geometry.height()
+    # 70% of screen height, keep 16:9 ratio
+    height = int(screen_height * 0.9)
+    width = int(height * (16 / 9))
+
+    # If width exceeds screen width, scale down
+    if width > screen_width * 0.9:
+        width = int(screen_width * 0.9)
+        height = int(width / (16 / 9))
+
+    w.resize(width, height)
     w.show()
 
     sys.exit(app.exec())
