@@ -55,11 +55,6 @@ class TestAdvancedDockAreaInit:
         assert hasattr(advanced_dock_area, "dark_mode_button")
         assert hasattr(advanced_dock_area, "state_manager")
 
-    def test_minimum_size_hint(self, advanced_dock_area):
-        size_hint = advanced_dock_area.minimumSizeHint()
-        assert size_hint.width() == 1200
-        assert size_hint.height() == 800
-
     def test_rpc_and_plugin_flags(self):
         assert AdvancedDockArea.RPC is True
         assert AdvancedDockArea.PLUGIN is False
@@ -97,7 +92,7 @@ class TestDockManagement:
         assert widget is not None
         assert hasattr(widget, "name_established")
 
-    def test_new_widget_instance(self, advanced_dock_area):
+    def test_new_widget_instance(self, advanced_dock_area, qtbot):
         """Test creating dock with existing widget instance."""
         from bec_widgets.widgets.plots.waveform.waveform import Waveform
 
@@ -113,8 +108,9 @@ class TestDockManagement:
         # Should return the same instance
         assert result == widget_instance
 
-        # No new dock created since we passed an instance, not a string
-        assert len(advanced_dock_area.dock_list()) == initial_count
+        qtbot.wait(200)
+
+        assert len(advanced_dock_area.dock_list()) == initial_count + 1
 
     def test_dock_map(self, advanced_dock_area, qtbot):
         """Test dock_map returns correct mapping."""
@@ -783,31 +779,6 @@ class TestModeSwitching:
 
         # Check signal was emitted with correct argument
         assert blocker.args == ["plot"]
-
-    def test_switch_to_plot_mode(self, advanced_dock_area):
-        """Test switch_to_plot_mode method."""
-        advanced_dock_area.switch_to_plot_mode()
-        assert advanced_dock_area.mode == "plot"
-
-    def test_switch_to_device_mode(self, advanced_dock_area):
-        """Test switch_to_device_mode method."""
-        advanced_dock_area.switch_to_device_mode()
-        assert advanced_dock_area.mode == "device"
-
-    def test_switch_to_utils_mode(self, advanced_dock_area):
-        """Test switch_to_utils_mode method."""
-        advanced_dock_area.switch_to_utils_mode()
-        assert advanced_dock_area.mode == "utils"
-
-    def test_switch_to_developer_mode(self, advanced_dock_area):
-        """Test switch_to_developer_mode method."""
-        advanced_dock_area.switch_to_developer_mode()
-        assert advanced_dock_area.mode == "developer"
-
-    def test_switch_to_user_mode(self, advanced_dock_area):
-        """Test switch_to_user_mode method."""
-        advanced_dock_area.switch_to_user_mode()
-        assert advanced_dock_area.mode == "user"
 
 
 class TestToolbarModeBundles:

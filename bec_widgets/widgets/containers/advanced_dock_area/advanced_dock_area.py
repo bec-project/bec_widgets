@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import os
-from typing import cast
+from typing import cast, Literal
 
 import PySide6QtAds as QtAds
 from PySide6QtAds import CDockManager, CDockWidget
-from qtpy.QtCore import Property, QSettings, QSize, Signal
+from qtpy.QtCore import QSettings, Signal
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -202,12 +202,28 @@ class SaveProfileDialog(QDialog):
 class AdvancedDockArea(BECWidget, QWidget):
     RPC = True
     PLUGIN = False
-    USER_ACCESS = ["new", "widget_map", "widget_list", "lock_workspace", "attach_all", "delete_all"]
+    USER_ACCESS = [
+        "new",
+        "widget_map",
+        "widget_list",
+        "lock_workspace",
+        "attach_all",
+        "delete_all",
+        "mode",
+        "mode.setter",
+    ]
 
     # Define a signal for mode changes
     mode_changed = Signal(str)
 
-    def __init__(self, parent=None, mode: str = "developer", *args, **kwargs):
+    def __init__(
+        self,
+        parent=None,
+        mode: str = "developer",
+        default_add_direction: Literal["left", "right", "top", "bottom"] = "right",
+        *args,
+        **kwargs,
+    ):
         super().__init__(parent=parent, *args, **kwargs)
 
         # Title (as a top-level QWidget it can have a window title)
@@ -219,10 +235,10 @@ class AdvancedDockArea(BECWidget, QWidget):
         self._root_layout.setSpacing(0)
 
         # Setting the dock manager with flags
-        QtAds.CDockManager.setConfigFlag(QtAds.CDockManager.eConfigFlag.FocusHighlighting, True)
-        QtAds.CDockManager.setConfigFlag(
-            QtAds.CDockManager.eConfigFlag.RetainTabSizeWhenCloseButtonHidden, True
-        )
+        # QtAds.CDockManager.setConfigFlag(QtAds.CDockManager.eConfigFlag.FocusHighlighting, True)
+        # QtAds.CDockManager.setConfigFlag(
+        #     QtAds.CDockManager.eConfigFlag.RetainTabSizeWhenCloseButtonHidden, True
+        # )
         self.dock_manager = CDockManager(self)
 
         # Dock manager helper variables
@@ -230,6 +246,11 @@ class AdvancedDockArea(BECWidget, QWidget):
 
         # Initialize mode property first (before toolbar setup)
         self._mode = "developer"
+        self._default_add_direction = (
+            default_add_direction
+            if default_add_direction in ("left", "right", "top", "bottom")
+            else "right"
+        )
 
         # Toolbar
         self.dark_mode_button = DarkModeButton(parent=self, toolbar=True)
@@ -257,9 +278,6 @@ class AdvancedDockArea(BECWidget, QWidget):
 
         # Apply the requested mode after everything is set up
         self.mode = mode
-
-    def minimumSizeHint(self):
-        return QSize(1200, 800)
 
     def _make_dock(
         self,
@@ -331,6 +349,19 @@ class AdvancedDockArea(BECWidget, QWidget):
         if isValid(dock):
             dock.closeDockWidget()
             dock.deleteDockWidget()
+
+    def _area_from_where(self, where: str | None) -> QtAds.DockWidgetArea:
+        """Return ADS DockWidgetArea from a human-friendly direction string.
+        If *where* is None, fall back to instance default.
+        """
+        d = (where or getattr(self, "_default_add_direction", "right") or "right").lower()
+        mapping = {
+            "left": QtAds.DockWidgetArea.LeftDockWidgetArea,
+            "right": QtAds.DockWidgetArea.RightDockWidgetArea,
+            "top": QtAds.DockWidgetArea.TopDockWidgetArea,
+            "bottom": QtAds.DockWidgetArea.BottomDockWidgetArea,
+        }
+        return mapping.get(d, QtAds.DockWidgetArea.RightDockWidgetArea)
 
     ################################################################################
     # Toolbar Setup
@@ -553,22 +584,25 @@ class AdvancedDockArea(BECWidget, QWidget):
         floatable: bool = True,
         movable: bool = True,
         start_floating: bool = False,
+        where: Literal["left", "right", "top", "bottom"] | None = None,
     ) -> BECWidget:
         """
-        Creates a new widget or reuses an existing one and schedules its dock creation.
+        Create a new widget (or reuse an instance) and add it as a dock.
 
         Args:
-            widget (BECWidget | str): The widget instance or a string specifying the
-                type of widget to create.
-            closable (bool): Whether the dock should be closable. Defaults to True.
-            floatable (bool): Whether the dock should be floatable. Defaults to True.
-            movable (bool): Whether the dock should be movable. Defaults to True.
-            start_floating (bool): Whether to start the dock in a floating state. Defaults to False.
-
+            widget: Widget instance or a string widget type (factory-created).
+            closable: Whether the dock is closable.
+            floatable: Whether the dock is floatable.
+            movable: Whether the dock is movable.
+            start_floating: Start the dock in a floating state.
+            where: Preferred area to add the dock: "left" | "right" | "top" | "bottom".
+                   If None, uses the instance default passed at construction time.
         Returns:
-            widget: The widget instance.
+            The widget instance.
         """
-        # 1) Instantiate or look up the widget (this schedules the BECConnector naming logic)
+        target_area = self._area_from_where(where)
+
+        # 1) Instantiate or look up the widget
         if isinstance(widget, str):
             widget = cast(BECWidget, widget_handler.create_widget(widget_type=widget, parent=self))
             widget.name_established.connect(
@@ -578,8 +612,20 @@ class AdvancedDockArea(BECWidget, QWidget):
                     floatable=floatable,
                     movable=movable,
                     start_floating=start_floating,
+                    area=target_area,
                 )
             )
+            return widget
+
+        # If a widget instance is passed, dock it immediately
+        self._create_dock_with_name(
+            widget=widget,
+            closable=closable,
+            floatable=floatable,
+            movable=movable,
+            start_floating=start_floating,
+            area=target_area,
+        )
         return widget
 
     def _create_dock_with_name(
@@ -589,13 +635,15 @@ class AdvancedDockArea(BECWidget, QWidget):
         floatable: bool = False,
         movable: bool = True,
         start_floating: bool = False,
+        area: QtAds.DockWidgetArea | None = None,
     ):
+        target_area = area or self._area_from_where(None)
         self._make_dock(
             widget,
             closable=closable,
             floatable=floatable,
             movable=movable,
-            area=QtAds.DockWidgetArea.RightDockWidgetArea,
+            area=target_area,
             start_floating=start_floating,
         )
         self.dock_manager.setFocus()
@@ -906,21 +954,6 @@ class AdvancedDockArea(BECWidget, QWidget):
             # Fallback to user mode
             self.toolbar.show_bundles(["spacer_bundle", "workspace", "dock_actions"])
 
-    def switch_to_plot_mode(self):
-        self.mode = "plot"
-
-    def switch_to_device_mode(self):
-        self.mode = "device"
-
-    def switch_to_utils_mode(self):
-        self.mode = "utils"
-
-    def switch_to_developer_mode(self):
-        self.mode = "developer"
-
-    def switch_to_user_mode(self):
-        self.mode = "user"
-
     def cleanup(self):
         """
         Cleanup the dock area.
@@ -938,7 +971,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     dispatcher = BECDispatcher(gui_id="ads")
     window = BECMainWindowNoRPC()
-    ads = AdvancedDockArea(parent=window, mode="developer")
+    ads = AdvancedDockArea(mode="developer", root_widget=True)
     window.setCentralWidget(ads)
     window.show()
     window.resize(800, 600)
