@@ -1,10 +1,12 @@
+import ast
 import os
 from pathlib import Path
+from typing import Any
 
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QModelIndex, QRect, QRegularExpression, QSortFilterProxyModel, Qt, Signal
-from qtpy.QtGui import QPainter
-from qtpy.QtWidgets import QFileSystemModel, QStyledItemDelegate, QTreeView, QVBoxLayout, QWidget
+from qtpy.QtCore import QModelIndex, QRect, Qt, Signal
+from qtpy.QtGui import QPainter, QStandardItem, QStandardItemModel
+from qtpy.QtWidgets import QStyledItemDelegate, QTreeView, QVBoxLayout, QWidget
 
 from bec_widgets.utils.colors import get_theme_palette
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
@@ -12,30 +14,23 @@ from bec_widgets.utils.toolbars.actions import MaterialIconAction
 logger = bec_logger.logger
 
 
-class FileItemDelegate(QStyledItemDelegate):
-    """Custom delegate to show action buttons on hover"""
+class MacroItemDelegate(QStyledItemDelegate):
+    """Custom delegate to show action buttons on hover for macro functions"""
 
-    def __init__(self, tree_widget):
-        super().__init__(tree_widget)
-        self.setObjectName("file_item_delegate")
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.hovered_index = QModelIndex()
-        self.file_actions = []
-        self.dir_actions = []
-        self.button_rects = []
-        self.current_file_path = ""
+        self.macro_actions: list[Any] = []
+        self.button_rects: list[QRect] = []
+        self.current_macro_info = {}
 
-    def add_file_action(self, action) -> None:
-        """Add an action for files"""
-        self.file_actions.append(action)
-
-    def add_dir_action(self, action) -> None:
-        """Add an action for directories"""
-        self.dir_actions.append(action)
+    def add_macro_action(self, action: Any) -> None:
+        """Add an action for macro functions"""
+        self.macro_actions.append(action)
 
     def clear_actions(self) -> None:
         """Remove all actions"""
-        self.file_actions.clear()
-        self.dir_actions.clear()
+        self.macro_actions.clear()
 
     def paint(self, painter, option, index):
         """Paint the item with action buttons on hover"""
@@ -46,29 +41,21 @@ class FileItemDelegate(QStyledItemDelegate):
         if index != self.hovered_index:
             return
 
-        tree_view = self.parent()
-        if not isinstance(tree_view, QTreeView):
+        # Only show actions for macro functions (not directories)
+        item = index.model().itemFromIndex(index)
+        if not item or not item.data(Qt.ItemDataRole.UserRole):
             return
 
-        proxy_model = tree_view.model()
-        if not isinstance(proxy_model, QSortFilterProxyModel):
+        macro_info = item.data(Qt.ItemDataRole.UserRole)
+        if not isinstance(macro_info, dict) or "function_name" not in macro_info:
             return
 
-        source_index = proxy_model.mapToSource(index)
-        source_model = proxy_model.sourceModel()
-        if not isinstance(source_model, QFileSystemModel):
-            return
+        self.current_macro_info = macro_info
 
-        is_dir = source_model.isDir(source_index)
-        file_path = source_model.filePath(source_index)
-        self.current_file_path = file_path
+        if self.macro_actions:
+            self._draw_action_buttons(painter, option, self.macro_actions)
 
-        # Choose appropriate actions based on item type
-        actions = self.dir_actions if is_dir else self.file_actions
-        if actions:
-            self._draw_action_buttons(painter, option, actions)
-
-    def _draw_action_buttons(self, painter, option, actions):
+    def _draw_action_buttons(self, painter, option, actions: list[Any]):
         """Draw action buttons on the right side"""
         button_size = 18
         margin = 4
@@ -130,22 +117,8 @@ class FileItemDelegate(QStyledItemDelegate):
         ):
             return super().editorEvent(event, model, option, index)
 
-        # Early return if not a proxy model
-        if not isinstance(model, QSortFilterProxyModel):
-            return super().editorEvent(event, model, option, index)
-
-        source_index = model.mapToSource(index)
-        source_model = model.sourceModel()
-
-        # Early return if not a file system model
-        if not isinstance(source_model, QFileSystemModel):
-            return super().editorEvent(event, model, option, index)
-
-        is_dir = source_model.isDir(source_index)
-        actions = self.dir_actions if is_dir else self.file_actions
-
         # Check which button was clicked
-        visible_actions = [action for action in actions if action.isVisible()]
+        visible_actions = [action for action in self.macro_actions if action.isVisible()]
         for i, button_rect in enumerate(self.button_rects):
             if button_rect.contains(event.pos()) and i < len(visible_actions):
                 # Trigger the action
@@ -159,12 +132,11 @@ class FileItemDelegate(QStyledItemDelegate):
         self.hovered_index = index
 
 
-class ScriptTreeWidget(QWidget):
-    """A simple tree widget for scripts using QFileSystemModel - designed to be injected into CollapsibleSection"""
+class MacroTreeWidget(QWidget):
+    """A tree widget that displays macro functions from Python files"""
 
-    file_selected = Signal(str)  # Script file path selected
-    file_open_requested = Signal(str)  # File open button clicked
-    file_renamed = Signal(str, str)  # Old path, new path
+    macro_selected = Signal(str, str)  # Function name, file path
+    macro_open_requested = Signal(str, str)  # Function name, file path
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -179,38 +151,29 @@ class ScriptTreeWidget(QWidget):
         self.tree.setHeaderHidden(True)
         self.tree.setRootIsDecorated(True)
 
+        # Disable editing to prevent renaming on double-click
+        self.tree.setEditTriggers(QTreeView.EditTrigger.NoEditTriggers)
+
         # Enable mouse tracking for hover effects
         self.tree.setMouseTracking(True)
 
-        # Create file system model
-        self.model = QFileSystemModel()
-        self.model.setNameFilters(["*.py"])
-        self.model.setNameFilterDisables(False)
-
-        # Create proxy model to filter out underscore directories
-        self.proxy_model = QSortFilterProxyModel()
-        self.proxy_model.setFilterRegularExpression(QRegularExpression("^[^_].*"))
-        self.proxy_model.setSourceModel(self.model)
-        self.tree.setModel(self.proxy_model)
+        # Create model for macro functions
+        self.model = QStandardItemModel()
+        self.tree.setModel(self.model)
 
         # Create and set custom delegate
-        self.delegate = FileItemDelegate(self.tree)
+        self.delegate = MacroItemDelegate(self.tree)
         self.tree.setItemDelegate(self.delegate)
 
-        # Add default open button for files
-        action = MaterialIconAction(icon_name="file_open", tooltip="Open file", parent=self)
-        action.action.triggered.connect(self._on_file_open_requested)
-        self.delegate.add_file_action(action.action)
-
-        # Remove unnecessary columns
-        self.tree.setColumnHidden(1, True)  # Hide size column
-        self.tree.setColumnHidden(2, True)  # Hide type column
-        self.tree.setColumnHidden(3, True)  # Hide date modified column
+        # Add default open button for macros
+        action = MaterialIconAction(icon_name="file_open", tooltip="Open macro file", parent=self)
+        action.action.triggered.connect(self._on_macro_open_requested)
+        self.delegate.add_macro_action(action.action)
 
         # Apply BEC styling
         self._apply_styling()
 
-        # Script specific properties
+        # Macro specific properties
         self.directory = None
 
         # Connect signals
@@ -294,83 +257,137 @@ class ScriptTreeWidget(QWidget):
         return super().eventFilter(obj, event)
 
     def set_directory(self, directory):
-        """Set the scripts directory"""
+        """Set the macros directory and scan for macro functions"""
         self.directory = directory
 
         # Early return if directory doesn't exist
         if not directory or not os.path.exists(directory):
             return
 
-        root_index = self.model.setRootPath(directory)
-        # Map the source model index to proxy model index
-        proxy_root_index = self.proxy_model.mapFromSource(root_index)
-        self.tree.setRootIndex(proxy_root_index)
+        self._scan_macro_functions()
+
+    def _scan_macro_functions(self):
+        """Scan the directory for Python files and extract macro functions"""
+        self.model.clear()
+        self.model.setHorizontalHeaderLabels(["Macros"])
+
+        if not self.directory or not os.path.exists(self.directory):
+            return
+
+        # Get all Python files in the directory
+        python_files = list(Path(self.directory).glob("*.py"))
+
+        for py_file in python_files:
+            # Skip files starting with underscore
+            if py_file.name.startswith("_"):
+                continue
+
+            try:
+                functions = self._extract_functions_from_file(py_file)
+                if functions:
+                    # Create a file node
+                    file_item = QStandardItem(py_file.stem)
+                    file_item.setData(
+                        {"file_path": str(py_file), "type": "file"}, Qt.ItemDataRole.UserRole
+                    )
+
+                    # Add function nodes
+                    for func_name, func_info in functions.items():
+                        func_item = QStandardItem(func_name)
+                        func_data = {
+                            "function_name": func_name,
+                            "file_path": str(py_file),
+                            "line_number": func_info.get("line_number", 1),
+                            "type": "function",
+                        }
+                        func_item.setData(func_data, Qt.ItemDataRole.UserRole)
+                        file_item.appendRow(func_item)
+
+                    self.model.appendRow(file_item)
+            except Exception as e:
+                logger.warning(f"Failed to parse {py_file}: {e}")
+
         self.tree.expandAll()
+
+    def _extract_functions_from_file(self, file_path: Path) -> dict:
+        """Extract function definitions from a Python file"""
+        functions = {}
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            # Parse the AST
+            tree = ast.parse(content)
+
+            # Only get top-level function definitions
+            for node in tree.body:
+                if isinstance(node, ast.FunctionDef):
+                    functions[node.name] = {
+                        "line_number": node.lineno,
+                        "docstring": ast.get_docstring(node) or "",
+                    }
+
+        except Exception as e:
+            logger.warning(f"Failed to parse {file_path}: {e}")
+
+        return functions
 
     def _on_item_clicked(self, index: QModelIndex):
         """Handle item clicks"""
-        # Map proxy index back to source index
-        source_index = self.proxy_model.mapToSource(index)
-
-        # Early return for directories
-        if self.model.isDir(source_index):
+        item = self.model.itemFromIndex(index)
+        if not item:
             return
 
-        file_path = self.model.filePath(source_index)
-
-        # Early return if not a valid file
-        if not file_path or not os.path.isfile(file_path):
+        data = item.data(Qt.ItemDataRole.UserRole)
+        if not data:
             return
 
-        path_obj = Path(file_path)
-
-        # Only emit signal for Python files
-        if path_obj.suffix.lower() == ".py":
-            logger.info(f"Script selected: {file_path}")
-            self.file_selected.emit(file_path)
+        if data.get("type") == "function":
+            function_name = data.get("function_name")
+            file_path = data.get("file_path")
+            if function_name and file_path:
+                logger.info(f"Macro function selected: {function_name} in {file_path}")
+                self.macro_selected.emit(function_name, file_path)
 
     def _on_item_double_clicked(self, index: QModelIndex):
         """Handle item double-clicks"""
-        # Map proxy index back to source index
-        source_index = self.proxy_model.mapToSource(index)
-
-        # Early return for directories
-        if self.model.isDir(source_index):
+        item = self.model.itemFromIndex(index)
+        if not item:
             return
 
-        file_path = self.model.filePath(source_index)
-
-        # Early return if not a valid file
-        if not file_path or not os.path.isfile(file_path):
+        data = item.data(Qt.ItemDataRole.UserRole)
+        if not data:
             return
 
-        # Emit signal to open the file
-        logger.info(f"File open requested via double-click: {file_path}")
-        self.file_open_requested.emit(file_path)
+        if data.get("type") == "function":
+            function_name = data.get("function_name")
+            file_path = data.get("file_path")
+            if function_name and file_path:
+                logger.info(
+                    f"Macro open requested via double-click: {function_name} in {file_path}"
+                )
+                self.macro_open_requested.emit(function_name, file_path)
 
-    def _on_file_open_requested(self):
-        """Handle file open action triggered"""
-        logger.info("File open requested")
+    def _on_macro_open_requested(self):
+        """Handle macro open action triggered"""
+        logger.info("Macro open requested")
         # Early return if no hovered item
         if not self.delegate.hovered_index.isValid():
             return
 
-        source_index = self.proxy_model.mapToSource(self.delegate.hovered_index)
-        file_path = self.model.filePath(source_index)
-
-        # Early return if not a valid file
-        if not file_path or not os.path.isfile(file_path):
+        macro_info = self.delegate.current_macro_info
+        if not macro_info or macro_info.get("type") != "function":
             return
 
-        self.file_open_requested.emit(file_path)
+        function_name = macro_info.get("function_name")
+        file_path = macro_info.get("file_path")
+        if function_name and file_path:
+            self.macro_open_requested.emit(function_name, file_path)
 
-    def add_file_action(self, action) -> None:
-        """Add an action for file items"""
-        self.delegate.add_file_action(action)
-
-    def add_dir_action(self, action) -> None:
-        """Add an action for directory items"""
-        self.delegate.add_dir_action(action)
+    def add_macro_action(self, action: Any) -> None:
+        """Add an action for macro items"""
+        self.delegate.add_macro_action(action)
 
     def clear_actions(self) -> None:
         """Remove all actions from items"""
@@ -380,10 +397,7 @@ class ScriptTreeWidget(QWidget):
         """Refresh the tree view"""
         if self.directory is None:
             return
-        self.model.setRootPath("")  # Reset
-        root_index = self.model.setRootPath(self.directory)
-        proxy_root_index = self.proxy_model.mapFromSource(root_index)
-        self.tree.setRootIndex(proxy_root_index)
+        self._scan_macro_functions()
 
     def expand_all(self):
         """Expand all items in the tree"""
