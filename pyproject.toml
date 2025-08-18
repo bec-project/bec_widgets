@@ -41,6 +41,7 @@ dev = [
     "pytest-cov~=6.1.1",
     "watchdog~=6.0",
     "pre_commit~=4.2",
+    "thefuzz~=0.22",
 ]
 
 [project.urls]
