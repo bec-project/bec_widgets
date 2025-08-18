@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.36.0 (2025-08-18)
+
+### Features
+
+- **scan control**: Add support for literals
+  ([`f2e5a85`](https://github.com/bec-project/bec_widgets/commit/f2e5a85e616aa76d4b7ad3b3c76a24ba114ebdd1))
+
+
 ## v2.35.0 (2025-08-14)
 
 ### Build System
