@@ -1,11 +1,24 @@
-from typing import Literal
+from __future__ import annotations
 
+import os
+import traceback
+from typing import TYPE_CHECKING, Literal
+
+import black
+import isort
 import qtmonaco
+from bec_lib.logger import bec_logger
 from qtpy.QtCore import Signal
-from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QApplication, QDialog, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_theme_name
+from bec_widgets.utils.error_popups import SafeSlot
+
+if TYPE_CHECKING:
+    from bec_widgets.widgets.editors.monaco.scan_control_dialog import ScanControlDialog
+
+logger = bec_logger.logger
 
 
 class MonacoWidget(BECWidget, QWidget):
@@ -14,6 +27,7 @@ class MonacoWidget(BECWidget, QWidget):
     """
 
     text_changed = Signal(str)
+    save_enabled = Signal(bool)
     PLUGIN = True
     ICON_NAME = "code"
     USER_ACCESS = [
@@ -21,6 +35,7 @@ class MonacoWidget(BECWidget, QWidget):
         "get_text",
         "insert_text",
         "delete_line",
+        "open_file",
         "set_language",
         "get_language",
         "set_theme",
@@ -37,7 +52,9 @@ class MonacoWidget(BECWidget, QWidget):
         "screenshot",
     ]
 
-    def __init__(self, parent=None, config=None, client=None, gui_id=None, **kwargs):
+    def __init__(
+        self, parent=None, config=None, client=None, gui_id=None, init_lsp: bool = True, **kwargs
+    ):
         super().__init__(
             parent=parent, client=client, gui_id=gui_id, config=config, theme_update=True, **kwargs
         )
@@ -47,7 +64,30 @@ class MonacoWidget(BECWidget, QWidget):
         layout.addWidget(self.editor)
         self.setLayout(layout)
         self.editor.text_changed.connect(self.text_changed.emit)
+        self.editor.text_changed.connect(self._check_save_status)
         self.editor.initialized.connect(self.apply_theme)
+        self.editor.initialized.connect(self._setup_context_menu)
+        self.editor.context_menu_action_triggered.connect(self._handle_context_menu_action)
+        self._current_file = None
+        self._original_content = ""
+        self.metadata = {}
+        if init_lsp:
+            self.editor.update_workspace_configuration(
+                {
+                    "pylsp": {
+                        "plugins": {
+                            "pylsp-bec": {"service_config": self.client._service_config.config}
+                        }
+                    }
+                }
+            )
+
+    @property
+    def current_file(self):
+        """
+        Get the current file being edited.
+        """
+        return self._current_file
 
     def apply_theme(self, theme: str | None = None) -> None:
         """
@@ -61,20 +101,51 @@ class MonacoWidget(BECWidget, QWidget):
         editor_theme = "vs" if theme == "light" else "vs-dark"
         self.set_theme(editor_theme)
 
-    def set_text(self, text: str) -> None:
+    def set_text(self, text: str, file_name: str | None = None, reset: bool = False) -> None:
         """
         Set the text in the Monaco editor.
 
         Args:
             text (str): The text to set in the editor.
+            file_name (str): Set the file name
+            reset (bool): If True, reset the original content to the new text.
         """
-        self.editor.set_text(text)
+        self._current_file = file_name if file_name else self._current_file
+        if reset:
+            self._original_content = text
+        self.editor.set_text(text, uri=file_name)
 
     def get_text(self) -> str:
         """
         Get the current text from the Monaco editor.
         """
         return self.editor.get_text()
+
+    def format(self) -> None:
+        """
+        Format the current text in the Monaco editor.
+        """
+        if not self.editor:
+            return
+        try:
+            content = self.get_text()
+            try:
+                formatted_content = black.format_str(content, mode=black.Mode(line_length=100))
+            except Exception:  # black.NothingChanged or other formatting exceptions
+                formatted_content = content
+
+            config = isort.Config(
+                profile="black",
+                line_length=100,
+                multi_line_output=3,
+                include_trailing_comma=False,
+                known_first_party=["bec_widgets"],
+            )
+            formatted_content = isort.code(formatted_content, config=config)
+            self.set_text(formatted_content, file_name=self.current_file)
+        except Exception:
+            content = traceback.format_exc()
+            logger.info(content)
 
     def insert_text(self, text: str, line: int | None = None, column: int | None = None) -> None:
         """
@@ -95,6 +166,32 @@ class MonacoWidget(BECWidget, QWidget):
             line (int, optional): The line number (1-based) to delete. If None, the current line will be deleted.
         """
         self.editor.delete_line(line)
+
+    def open_file(self, file_name: str) -> None:
+        """
+        Open a file in the editor.
+
+        Args:
+            file_name (str): The path + file name of the file that needs to be displayed.
+        """
+
+        if not os.path.exists(file_name):
+            raise FileNotFoundError(f"The specified file does not exist: {file_name}")
+
+        with open(file_name, "r", encoding="utf-8") as file:
+            content = file.read()
+        self.set_text(content, file_name=file_name, reset=True)
+
+    @property
+    def modified(self) -> bool:
+        """
+        Check if the editor content has been modified.
+        """
+        return self._original_content != self.get_text()
+
+    @SafeSlot(str)
+    def _check_save_status(self, _text: str) -> None:
+        self.save_enabled.emit(self.modified)
 
     def set_cursor(
         self,
@@ -213,6 +310,46 @@ class MonacoWidget(BECWidget, QWidget):
         """
         return self.editor.get_lsp_header()
 
+    def _setup_context_menu(self):
+        """Setup custom context menu actions for the Monaco editor."""
+        # Add the "Insert Scan" action to the context menu
+        self.editor.add_action("insert_scan", "Insert Scan", "python")
+        # Add the "Format Code" action to the context menu
+        self.editor.add_action("format_code", "Format Code", "python")
+
+    def _handle_context_menu_action(self, action_id: str):
+        """Handle context menu action triggers."""
+        if action_id == "insert_scan":
+            self._show_scan_control_dialog()
+        elif action_id == "format_code":
+            self._format_code()
+
+    def _show_scan_control_dialog(self):
+        """Show the scan control dialog and insert the generated scan code."""
+        # Import here to avoid circular imports
+        from bec_widgets.widgets.editors.monaco.scan_control_dialog import ScanControlDialog
+
+        dialog = ScanControlDialog(self, client=self.client)
+        self._run_dialog_and_insert_code(dialog)
+
+    def _run_dialog_and_insert_code(self, dialog: ScanControlDialog):
+        """
+        Run the dialog and insert the generated scan code if accepted.
+        It is a separate method to allow easier testing.
+
+        Args:
+            dialog (ScanControlDialog): The scan control dialog instance.
+        """
+        if dialog.exec_() == QDialog.DialogCode.Accepted:
+            scan_code = dialog.get_scan_code()
+            if scan_code:
+                # Insert the scan code at the current cursor position
+                self.insert_text(scan_code)
+
+    def _format_code(self):
+        """Format the current code in the editor."""
+        self.format()
+
 
 if __name__ == "__main__":  # pragma: no cover
     qapp = QApplication([])
@@ -234,7 +371,7 @@ if TYPE_CHECKING:
     scans: Scans
 
 #######################################
-########## User Script #####################
+########## User Script ################
 #######################################
 
 # This is a comment

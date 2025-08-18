@@ -1,7 +1,7 @@
 # Copyright (C) 2022 The Qt Company Ltd.
 # SPDX-License-Identifier: LicenseRef-Qt-Commercial OR BSD-3-Clause
-
 from qtpy.QtDesigner import QDesignerCustomWidgetInterface
+from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_designer import designer_material_icon
 from bec_widgets.widgets.utility.ide_explorer.ide_explorer import IDEExplorer
@@ -20,6 +20,8 @@ class IDEExplorerPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         self._form_editor = None
 
     def createWidget(self, parent):
+        if parent is None:
+            return QWidget()
         t = IDEExplorer(parent)
         return t
 
