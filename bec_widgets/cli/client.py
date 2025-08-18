@@ -128,20 +128,21 @@ class AdvancedDockArea(RPCBase):
         floatable: "bool" = True,
         movable: "bool" = True,
         start_floating: "bool" = False,
+        where: "Literal['left', 'right', 'top', 'bottom'] | None" = None,
     ) -> "BECWidget":
         """
-        Creates a new widget or reuses an existing one and schedules its dock creation.
+        Create a new widget (or reuse an instance) and add it as a dock.
 
         Args:
-            widget (BECWidget | str): The widget instance or a string specifying the
-                type of widget to create.
-            closable (bool): Whether the dock should be closable. Defaults to True.
-            floatable (bool): Whether the dock should be floatable. Defaults to True.
-            movable (bool): Whether the dock should be movable. Defaults to True.
-            start_floating (bool): Whether to start the dock in a floating state. Defaults to False.
-
+            widget: Widget instance or a string widget type (factory-created).
+            closable: Whether the dock is closable.
+            floatable: Whether the dock is floatable.
+            movable: Whether the dock is movable.
+            start_floating: Start the dock in a floating state.
+            where: Preferred area to add the dock: "left" | "right" | "top" | "bottom".
+                   If None, uses the instance default passed at construction time.
         Returns:
-            widget: The widget instance.
+            The widget instance.
         """
 
     @rpc_call
@@ -182,6 +183,20 @@ class AdvancedDockArea(RPCBase):
     def delete_all(self):
         """
         Delete all docks and widgets.
+        """
+
+    @property
+    @rpc_call
+    def mode(self) -> "str":
+        """
+        None
+        """
+
+    @mode.setter
+    @rpc_call
+    def mode(self) -> "str":
+        """
+        None
         """
 
 
