@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import cast, Literal
+from typing import Literal, cast
 
 import PySide6QtAds as QtAds
 from PySide6QtAds import CDockManager, CDockWidget
@@ -234,11 +234,7 @@ class AdvancedDockArea(BECWidget, QWidget):
         self._root_layout.setContentsMargins(0, 0, 0, 0)
         self._root_layout.setSpacing(0)
 
-        # Setting the dock manager with flags
-        # QtAds.CDockManager.setConfigFlag(QtAds.CDockManager.eConfigFlag.FocusHighlighting, True)
-        # QtAds.CDockManager.setConfigFlag(
-        #     QtAds.CDockManager.eConfigFlag.RetainTabSizeWhenCloseButtonHidden, True
-        # )
+        # Init Dock Manager
         self.dock_manager = CDockManager(self)
 
         # Dock manager helper variables
