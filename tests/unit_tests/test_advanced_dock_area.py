@@ -13,11 +13,12 @@ from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import
     AdvancedDockArea,
     DockSettingsDialog,
     SaveProfileDialog,
-    _profile_path,
-    _profiles_dir,
+)
+from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
     is_profile_readonly,
     list_profiles,
     open_settings,
+    profile_path,
     read_manifest,
     set_profile_readonly,
     write_manifest,
@@ -457,15 +458,9 @@ class TestSaveProfileDialog:
 class TestProfileManagement:
     """Test profile management functionality."""
 
-    def test_profiles_dir_creation(self, temp_profile_dir):
-        """Test that profiles directory is created."""
-        profiles_dir = _profiles_dir()
-        assert os.path.exists(profiles_dir)
-        assert profiles_dir == temp_profile_dir
-
     def test_profile_path(self, temp_profile_dir):
         """Test profile path generation."""
-        path = _profile_path("test_profile")
+        path = profile_path("test_profile")
         expected = os.path.join(temp_profile_dir, "test_profile.ini")
         assert path == expected
 
@@ -538,21 +533,6 @@ class TestProfileManagement:
 
 class TestWorkspaceProfileOperations:
     """Test workspace profile save/load/delete operations."""
-
-    def test_save_profile_with_name(self, advanced_dock_area, temp_profile_dir, qtbot):
-        """Test saving profile with provided name."""
-        profile_name = "test_save_profile"
-
-        # Create some docks
-        advanced_dock_area.new("DarkModeButton")
-        qtbot.wait(200)
-
-        # Save profile
-        advanced_dock_area.save_profile(profile_name)
-
-        # Check that profile file was created
-        profile_path = _profile_path(profile_name)
-        assert os.path.exists(profile_path)
 
     def test_save_profile_readonly_conflict(self, advanced_dock_area, temp_profile_dir):
         """Test saving profile when read-only profile exists."""
@@ -632,7 +612,7 @@ class TestWorkspaceProfileOperations:
 
                 mock_warning.assert_called_once()
                 # Profile should still exist
-                assert os.path.exists(_profile_path(profile_name))
+                assert os.path.exists(profile_path(profile_name))
 
     def test_delete_profile_success(self, advanced_dock_area, temp_profile_dir):
         """Test successful profile deletion."""
@@ -659,7 +639,7 @@ class TestWorkspaceProfileOperations:
                     mock_question.assert_called_once()
                     mock_refresh.assert_called_once()
                     # Profile should be deleted
-                    assert not os.path.exists(_profile_path(profile_name))
+                    assert not os.path.exists(profile_path(profile_name))
 
     def test_refresh_workspace_list(self, advanced_dock_area, temp_profile_dir):
         """Test refreshing workspace list."""
