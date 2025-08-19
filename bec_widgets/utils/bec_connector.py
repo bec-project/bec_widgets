@@ -77,8 +77,8 @@ class BECConnector:
 
     USER_ACCESS = ["_config_dict", "_get_all_rpc", "_rpc_id"]
     EXIT_HANDLERS = {}
-    remove_signal = Signal()
-    name_established_signal = Signal(str)
+    widget_removed = Signal()
+    name_established = Signal(str)
 
     def __init__(
         self,
@@ -207,7 +207,7 @@ class BECConnector:
         # 2) Register the object for RPC
         self.rpc_register.add_rpc(self)
         try:
-            self.name_established_signal.emit(self.object_name)
+            self.name_established.emit(self.object_name)
         except RuntimeError:
             return
 
@@ -456,7 +456,7 @@ class BECConnector:
         # i.e. Curve Item from Waveform
         else:
             self.rpc_register.remove_rpc(self)
-        self.remove_signal.emit()  # Emit the remove signal to notify listeners (eg docks in QtADS)
+        self.widget_removed.emit()  # Emit the remove signal to notify listeners (eg docks in QtADS)
 
     def get_config(self, dict_output: bool = True) -> dict | BaseModel:
         """
