@@ -25,7 +25,7 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
-from bec_widgets.utils.colors import Colors, set_theme
+from bec_widgets.utils.colors import Colors, apply_theme
 from bec_widgets.utils.container_utils import WidgetContainerUtils
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.settings_dialog import SettingsDialog
@@ -2069,7 +2069,7 @@ if __name__ == "__main__":  # pragma: no cover
     import sys
 
     app = QApplication(sys.argv)
-    set_theme("dark")
+    apply_theme("dark")
     widget = DemoApp()
     widget.show()
     widget.resize(1400, 600)
