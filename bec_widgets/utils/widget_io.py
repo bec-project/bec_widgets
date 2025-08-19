@@ -465,13 +465,19 @@ class WidgetHierarchy:
         """
         from bec_widgets.utils import BECConnector
 
+        # Guard against deleted/invalid Qt wrappers
         if not shb.isValid(widget):
             return None
-        parent = widget.parent()
+
+        # Retrieve first parent
+        parent = widget.parent() if hasattr(widget, "parent") else None
+        # Walk up, validating each step
         while parent is not None:
+            if not shb.isValid(parent):
+                return None
             if isinstance(parent, BECConnector):
                 return parent
-            parent = parent.parent()
+            parent = parent.parent() if hasattr(parent, "parent") else None
         return None
 
     @staticmethod
@@ -556,15 +562,17 @@ class WidgetHierarchy:
     @staticmethod
     def get_bec_connectors_from_parent(widget) -> list:
         """
-        Return all BECConnector instances that are descendants of the given widget,
+        Return all BECConnector instances whose closest BECConnector ancestor is the given widget,
         including the widget itself if it is a BECConnector.
         """
         from bec_widgets.utils import BECConnector
 
-        connectors = []
+        connectors: list[BECConnector] = []
         if isinstance(widget, BECConnector):
             connectors.append(widget)
-        connectors.extend(widget.findChildren(BECConnector))
+        for child in widget.findChildren(BECConnector):
+            if WidgetHierarchy._get_becwidget_ancestor(child) is widget:
+                connectors.append(child)
         return connectors
 
     @staticmethod
@@ -574,13 +582,29 @@ class WidgetHierarchy:
         ancestor_class may be a class or a class-name string.
         Returns the matching ancestor, or None if none is found.
         """
+        # Guard against deleted/invalid Qt wrappers
+        if not shb.isValid(widget):
+            return None
 
+        # If searching for BECConnector specifically, reuse the dedicated helper
+        try:
+            from bec_widgets.utils import BECConnector  # local import to avoid cycles
+
+            if ancestor_class is BECConnector or (
+                isinstance(ancestor_class, str) and ancestor_class == "BECConnector"
+            ):
+                return WidgetHierarchy._get_becwidget_ancestor(widget)
+        except Exception:
+            # If import fails, fall back to generic traversal below
+            pass
+
+        # Generic traversal across QObject parent chain
         parent = getattr(widget, "parent", None)
-        # First call parent() if widget has that method
         if callable(parent):
             parent = parent()
-        # Otherwise assume widget.parent attribute
-        while parent is not None and isinstance(parent, QWidget):
+        while parent is not None:
+            if not shb.isValid(parent):
+                return None
             try:
                 if isinstance(ancestor_class, str):
                     if parent.__class__.__name__ == ancestor_class:
@@ -589,9 +613,7 @@ class WidgetHierarchy:
                     if isinstance(parent, ancestor_class):
                         return parent
             except Exception:
-                # In case ancestor_class isn't a valid type or parent.inspect fails
                 pass
-            # Move up one level
             parent = parent.parent() if hasattr(parent, "parent") else None
         return None
 
