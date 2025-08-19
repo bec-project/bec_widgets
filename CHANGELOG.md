@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.38.0 (2025-08-19)
+
+### Features
+
+- **device_manager**: Devicemanager view of config session
+  ([`6e05157`](https://github.com/bec-project/bec_widgets/commit/6e05157abb61ec569eec10ff7295c28cb6a2ec45))
+
+
 ## v2.37.0 (2025-08-19)
 
 ### Features
