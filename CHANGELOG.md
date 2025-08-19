@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.37.0 (2025-08-19)
+
+### Features
+
+- Add explorer widget
+  ([`1bec9bd`](https://github.com/bec-project/bec_widgets/commit/1bec9bd9b2238ed484e8d25e691326efe5730f6b))
+
+
 ## v2.36.0 (2025-08-18)
 
 ### Features
