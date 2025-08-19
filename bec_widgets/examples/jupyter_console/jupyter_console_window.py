@@ -15,6 +15,7 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils import BECDispatcher
+from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.widget_io import WidgetHierarchy as wh
 from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
 from bec_widgets.widgets.containers.dock import BECDockArea
@@ -169,6 +170,7 @@ if __name__ == "__main__":  # pragma: no cover
     module_path = os.path.dirname(bec_widgets.__file__)
 
     app = QApplication(sys.argv)
+    apply_theme("dark")
     app.setApplicationName("Jupyter Console")
     app.setApplicationDisplayName("Jupyter Console")
     icon = material_icon("terminal", color=(255, 255, 255, 255), filled=True)
