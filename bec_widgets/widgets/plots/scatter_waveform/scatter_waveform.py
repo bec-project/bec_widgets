@@ -10,7 +10,6 @@ from qtpy.QtCore import QTimer, Signal
 from qtpy.QtWidgets import QHBoxLayout, QMainWindow, QWidget
 
 from bec_widgets.utils import Colors, ConnectionConfig
-from bec_widgets.utils.colors import set_theme
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.toolbars.toolbar import MaterialIconAction
@@ -546,8 +545,10 @@ if __name__ == "__main__":  # pragma: no cover
 
     from qtpy.QtWidgets import QApplication
 
+    from bec_widgets.utils.colors import apply_theme
+
     app = QApplication(sys.argv)
-    set_theme("dark")
+    apply_theme("dark")
     widget = DemoApp()
     widget.show()
     widget.resize(1400, 600)
