@@ -49,7 +49,7 @@ class SpinnerWidget(QWidget):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         size = min(self.width(), self.height())
         rect = QRect(0, 0, size, size)
 
@@ -63,14 +63,14 @@ class SpinnerWidget(QWidget):
         rect.adjust(line_width, line_width, -line_width, -line_width)
 
         # Background arc
-        painter.setPen(QPen(background_color, line_width, Qt.SolidLine))
+        painter.setPen(QPen(background_color, line_width, Qt.PenStyle.SolidLine))
         adjusted_rect = QRect(rect.left(), rect.top(), rect.width(), rect.height())
         painter.drawArc(adjusted_rect, 0, 360 * 16)
 
         if self._started:
             # Foreground arc
-            pen = QPen(color, line_width, Qt.SolidLine)
-            pen.setCapStyle(Qt.RoundCap)
+            pen = QPen(color, line_width, Qt.PenStyle.SolidLine)
+            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             painter.setPen(pen)
             proportion = 1 / 4
             angle_span = int(proportion * 360 * 16)

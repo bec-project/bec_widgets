@@ -171,6 +171,7 @@ class AdvancedDockArea(BECWidget, QWidget):
 
         # Init Dock Manager
         self.dock_manager = CDockManager(self)
+        self.dock_manager.setStyleSheet("")
 
         # Dock manager helper variables
         self._locked = False  # Lock state of the workspace
@@ -928,4 +929,5 @@ if __name__ == "__main__":
     window.setCentralWidget(ads)
     window.show()
     window.resize(800, 600)
+
     sys.exit(app.exec())

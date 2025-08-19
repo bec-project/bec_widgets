@@ -19,7 +19,7 @@ from qtpy.QtWidgets import (
 import bec_widgets
 from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import apply_theme, set_theme
+from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.widgets.containers.main_window.addons.hover_widget import HoverWidget
@@ -320,11 +320,12 @@ class BECMainWindow(BECWidget, QMainWindow):
         dark_theme_action.triggered.connect(lambda: self.change_theme("dark"))
 
         # Set the default theme
-        theme = self.app.theme.theme
-        if theme == "light":
-            light_theme_action.setChecked(True)
-        elif theme == "dark":
-            dark_theme_action.setChecked(True)
+        if hasattr(self.app, "theme") and self.app.theme:
+            theme_name = self.app.theme.theme.lower()
+            if "light" in theme_name:
+                light_theme_action.setChecked(True)
+            elif "dark" in theme_name:
+                dark_theme_action.setChecked(True)
 
         ########################################
         # Help menu
@@ -394,7 +395,7 @@ class BECMainWindow(BECWidget, QMainWindow):
         Args:
             theme(str): Either "light" or "dark".
         """
-        set_theme(theme)  # emits theme_updated and applies palette globally
+        apply_theme(theme)  # emits theme_updated and applies palette globally
 
     def event(self, event):
         if event.type() == QEvent.Type.StatusTip:

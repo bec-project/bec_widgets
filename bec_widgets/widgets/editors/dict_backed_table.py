@@ -249,10 +249,10 @@ class DictBackedTable(QWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    from bec_widgets.utils.colors import set_theme
+    from bec_widgets.utils.colors import apply_theme
 
     app = QApplication([])
-    set_theme("dark")
+    apply_theme("dark")
 
     window = DictBackedTable(None, [["key1", "value1"], ["key2", "value2"], ["key3", "value3"]])
     window.show()

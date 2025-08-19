@@ -252,8 +252,15 @@ class BECQueue(BECWidget, CompactPopupWidget):
         abort_button.button.setIcon(
             material_icon("cancel", color="#cc181e", filled=True, convert_to_pixmap=False)
         )
-        abort_button.button.setStyleSheet("background-color:  rgba(0,0,0,0) ")
-        abort_button.button.setFlat(True)
+        abort_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: transparent;
+                border: none;
+            }
+            """
+        )
+
         return abort_button
 
     def delete_selected_row(self):

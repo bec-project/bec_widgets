@@ -179,7 +179,7 @@ class PlotBase(BECWidget, QWidget):
         self._init_ui()
 
         self._connect_to_theme_change()
-        self._update_theme()
+        self._update_theme(None)
 
     def apply_theme(self, theme: str):
         self.round_plot_widget.apply_theme(theme)
@@ -187,6 +187,8 @@ class PlotBase(BECWidget, QWidget):
     def _init_ui(self):
         self.layout.addWidget(self.layout_manager)
         self.round_plot_widget = RoundedFrame(parent=self, content_widget=self.plot_widget)
+        self.round_plot_widget.setProperty("variant", "plot_background")
+        self.round_plot_widget.setProperty("frameless", True)
 
         self.layout_manager.add_widget(self.round_plot_widget)
         self.layout_manager.add_widget_relative(self.fps_label, self.round_plot_widget, "top")
