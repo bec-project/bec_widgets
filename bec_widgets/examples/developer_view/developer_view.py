@@ -9,6 +9,7 @@ from bec_widgets import BECWidget
 from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
 from bec_widgets.widgets.editors.monaco.monaco_tab import MonacoDock
 from bec_widgets.widgets.editors.web_console.web_console import WebConsole
+from bec_widgets.widgets.utility.ide_explorer.ide_explorer import IDEExplorer
 
 
 def set_splitter_weights(splitter: QSplitter, weights: List[float]) -> None:
@@ -58,14 +59,14 @@ class DeveloperView(BECWidget, QWidget):
         self._root_layout.addWidget(self.dock_manager)
 
         # Initialize the widgets
-        self.tree_widget = QTreeWidget(self)  # TODO will be replaced by explorer widget
+        self.explorer = IDEExplorer(self)  # TODO will be replaced by explorer widget
         self.console = WebConsole(self)
         self.monaco = MonacoDock(self)
         self.plotting_ads = AdvancedDockArea(self, mode="plot", default_add_direction="bottom")
 
         # Create the dock widgets
-        self.tree_dock = QtAds.CDockWidget("Explorer", self)
-        self.tree_dock.setWidget(self.tree_widget)
+        self.explorer_dock = QtAds.CDockWidget("Explorer", self)
+        self.explorer_dock.setWidget(self.explorer)
 
         self.console_dock = QtAds.CDockWidget("Console", self)
         self.console_dock.setWidget(self.console)
@@ -83,7 +84,7 @@ class DeveloperView(BECWidget, QWidget):
         self.dock_manager.addDockWidget(
             QtAds.DockWidgetArea.BottomDockWidgetArea, self.console_dock
         )
-        self.dock_manager.addDockWidget(QtAds.DockWidgetArea.LeftDockWidgetArea, self.tree_dock)
+        self.dock_manager.addDockWidget(QtAds.DockWidgetArea.LeftDockWidgetArea, self.explorer_dock)
         self.dock_manager.addDockWidget(
             QtAds.DockWidgetArea.RightDockWidgetArea, self.plotting_ads_dock
         )
