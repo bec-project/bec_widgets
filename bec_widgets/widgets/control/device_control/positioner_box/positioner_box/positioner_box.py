@@ -12,7 +12,7 @@ from qtpy.QtGui import QDoubleValidator
 from qtpy.QtWidgets import QDoubleSpinBox
 
 from bec_widgets.utils import UILoader
-from bec_widgets.utils.colors import get_accent_colors, set_theme
+from bec_widgets.utils.colors import apply_theme, get_accent_colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.widgets.control.device_control.positioner_box._base import PositionerBoxBase
 from bec_widgets.widgets.control.device_control.positioner_box._base.positioner_box_base import (
@@ -259,7 +259,7 @@ if __name__ == "__main__":  # pragma: no cover
     from qtpy.QtWidgets import QApplication  # pylint: disable=ungrouped-imports
 
     app = QApplication(sys.argv)
-    set_theme("dark")
+    apply_theme("dark")
     widget = PositionerBox(device="bpm4i")
 
     widget.show()

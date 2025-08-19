@@ -262,12 +262,12 @@ def main():  # pragma: no cover
 
     from qtpy.QtWidgets import QApplication, QLineEdit, QPushButton, QWidget
 
-    from bec_widgets.utils.colors import set_theme
+    from bec_widgets.utils.colors import apply_theme
 
     dialog = None
 
     app = QApplication(sys.argv)
-    set_theme("light")
+    apply_theme("light")
     widget = QWidget()
     widget.setLayout(QVBoxLayout())
 

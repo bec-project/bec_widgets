@@ -5,7 +5,7 @@ from qtpy.QtCore import Property, Qt, Slot
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QPushButton, QToolButton, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import set_theme
+from bec_widgets.utils.colors import apply_theme
 
 
 class DarkModeButton(BECWidget, QWidget):
@@ -85,7 +85,7 @@ class DarkModeButton(BECWidget, QWidget):
         """
         self.dark_mode_enabled = not self.dark_mode_enabled
         self.update_mode_button()
-        set_theme("dark" if self.dark_mode_enabled else "light")
+        apply_theme("dark" if self.dark_mode_enabled else "light")
 
     def update_mode_button(self):
         icon = material_icon(
@@ -100,7 +100,7 @@ class DarkModeButton(BECWidget, QWidget):
 if __name__ == "__main__":
 
     app = QApplication([])
-    set_theme("auto")
+    apply_theme("dark")
     w = DarkModeButton()
     w.show()
 

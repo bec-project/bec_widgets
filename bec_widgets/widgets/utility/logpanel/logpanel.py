@@ -35,7 +35,7 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils.bec_connector import BECConnector
-from bec_widgets.utils.colors import get_theme_palette, set_theme
+from bec_widgets.utils.colors import apply_theme, get_theme_palette
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.editors.text_box.text_box import TextBox
 from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECServiceStatusMixin
@@ -544,7 +544,7 @@ if __name__ == "__main__":  # pragma: no cover
     from qtpy.QtWidgets import QApplication  # pylint: disable=ungrouped-imports
 
     app = QApplication(sys.argv)
-    set_theme("dark")
+    apply_theme("dark")
     widget = LogPanel()
 
     widget.show()

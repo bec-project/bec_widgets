@@ -12,7 +12,7 @@ from qtpy.QtWidgets import QApplication, QFileDialog, QWidget
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
-from bec_widgets.utils.colors import set_theme
+from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.rpc_decorator import rpc_timeout
 from bec_widgets.utils.widget_io import WidgetHierarchy
@@ -69,9 +69,9 @@ class BECWidget(BECConnector):
             # DO NOT SET THE THEME TO AUTO! Otherwise, the qwebengineview will segfault
             # Instead, we will set the theme to the system setting on startup
             if darkdetect.isDark():
-                set_theme("dark")
+                apply_theme("dark")
             else:
-                set_theme("light")
+                apply_theme("light")
 
         if theme_update:
             logger.debug(f"Subscribing to theme updates for {self.__class__.__name__}")

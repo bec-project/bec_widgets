@@ -110,10 +110,10 @@ if __name__ == "__main__":  # pragma: no cover
 
     from qtpy.QtWidgets import QApplication
 
-    from bec_widgets.utils.colors import set_theme
+    from bec_widgets.utils.colors import apply_theme
 
     app = QApplication(sys.argv)
-    set_theme("light")
+    apply_theme("light")
     widget = SignalDisplay(device="samx")
     widget.show()
     sys.exit(app.exec_())

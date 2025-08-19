@@ -3,10 +3,9 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Literal
 
-import bec_qthemes
 import numpy as np
 import pyqtgraph as pg
-from bec_qthemes._os_appearance.listener import OSThemeSwitchListener
+from bec_qthemes import apply_theme as apply_theme_global
 from pydantic_core import PydanticCustomError
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QApplication
@@ -23,7 +22,10 @@ def get_theme_name():
 
 
 def get_theme_palette():
-    return bec_qthemes.load_palette(get_theme_name())
+    # FIXME this is legacy code, should be removed in the future
+    app = QApplication.instance()
+    palette = app.palette()
+    return palette
 
 
 def get_accent_colors() -> AccentColors | None:
@@ -34,38 +36,6 @@ def get_accent_colors() -> AccentColors | None:
     if QApplication.instance() is None or not hasattr(QApplication.instance(), "theme"):
         return None
     return QApplication.instance().theme.accent_colors
-
-
-def _theme_update_callback():
-    """
-    Internal callback function to update the theme based on the system theme.
-    """
-    app = QApplication.instance()
-    # pylint: disable=protected-access
-    app.theme.theme = app.os_listener._theme.lower()
-    app.theme_signal.theme_updated.emit(app.theme.theme)
-    apply_theme(app.os_listener._theme.lower())
-
-
-def set_theme(theme: Literal["dark", "light", "auto"]):
-    """
-    Set the theme for the application.
-
-    Args:
-        theme (Literal["dark", "light", "auto"]): The theme to set. "auto" will automatically switch between dark and light themes based on the system theme.
-    """
-    app = QApplication.instance()
-    bec_qthemes.setup_theme(theme, install_event_filter=False)
-
-    app.theme_signal.theme_updated.emit(theme)
-    apply_theme(theme)
-
-    if theme != "auto":
-        return
-
-    if not hasattr(app, "os_listener") or app.os_listener is None:
-        app.os_listener = OSThemeSwitchListener(_theme_update_callback)
-        app.installEventFilter(app.os_listener)
 
 
 def apply_theme(theme: Literal["dark", "light"]):
@@ -133,8 +103,9 @@ def apply_theme(theme: Literal["dark", "light"]):
         histogram.axis.setTextPen(pg.mkPen(color=label_color))
 
     # now define stylesheet according to theme and apply it
-    style = bec_qthemes.load_stylesheet(theme)
-    app.setStyleSheet(style)
+    apply_theme_global(theme)  # TODO for now this is patch
+    # style = bec_qthemes.load_stylesheet(theme)
+    # app.setStyleSheet(style)
 
 
 class Colors:

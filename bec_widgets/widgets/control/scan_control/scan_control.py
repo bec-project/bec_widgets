@@ -20,7 +20,7 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.utils import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import get_accent_colors
+from bec_widgets.utils.colors import apply_theme, get_accent_colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.widgets.control.buttons.stop_button.stop_button import StopButton
 from bec_widgets.widgets.control.scan_control.scan_group_box import ScanGroupBox
@@ -136,13 +136,8 @@ class ScanControl(BECWidget, QWidget):
         self.scan_control_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.button_layout = QHBoxLayout(self.scan_control_group)
         self.button_run_scan = QPushButton("Start", self.scan_control_group)
-        self.button_run_scan.setStyleSheet(
-            f"background-color: {palette.success.name()}; color: white"
-        )
+        self.button_run_scan.setProperty("variant", "success")
         self.button_stop_scan = StopButton(parent=self.scan_control_group)
-        self.button_stop_scan.setStyleSheet(
-            f"background-color: {palette.emergency.name()}; color: white"
-        )
         self.button_layout.addWidget(self.button_run_scan)
         self.button_layout.addWidget(self.button_stop_scan)
         self.layout.addWidget(self.scan_control_group)
@@ -547,12 +542,10 @@ class ScanControl(BECWidget, QWidget):
 
 # Application example
 if __name__ == "__main__":  # pragma: no cover
-    from bec_widgets.utils.colors import set_theme
-
     app = QApplication([])
     scan_control = ScanControl()
 
-    set_theme("auto")
+    apply_theme("dark")
     window = scan_control
     window.show()
     app.exec()
