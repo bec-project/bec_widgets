@@ -96,7 +96,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     from bec_lib.metadata_schema import BasicScanMetadata
 
-    from bec_widgets.utils.colors import set_theme
+    from bec_widgets.utils.colors import apply_theme
 
     class ExampleSchema1(BasicScanMetadata):
         abc: int = Field(gt=0, lt=2000, description="Heating temperature abc", title="A B C")
@@ -140,7 +140,7 @@ if __name__ == "__main__":  # pragma: no cover
         layout.addWidget(selection)
         layout.addWidget(scan_metadata)
 
-        set_theme("dark")
+        apply_theme("dark")
         window = w
         window.show()
         app.exec()

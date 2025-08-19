@@ -616,10 +616,10 @@ if __name__ == "__main__":  # pragma: no cover
 
     import sys
 
-    from bec_widgets.utils.colors import set_theme
+    from bec_widgets.utils.colors import apply_theme
 
     app = QApplication([])
-    set_theme("auto")
+    apply_theme("dark")
     dock_area = BECDockArea()
     dock_1 = dock_area.new(name="dock_0", widget="DarkModeButton")
     dock_1.new(widget="DarkModeButton")

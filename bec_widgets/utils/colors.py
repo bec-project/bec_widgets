@@ -1,18 +1,16 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
-import bec_qthemes
 import numpy as np
 import pyqtgraph as pg
-from bec_qthemes._os_appearance.listener import OSThemeSwitchListener
+from bec_qthemes import apply_theme as apply_theme_global
+from bec_qthemes._theme import AccentColors
 from pydantic_core import PydanticCustomError
+from qtpy.QtCore import QEvent, QEventLoop
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QApplication
-
-if TYPE_CHECKING:  # pragma: no cover
-    from bec_qthemes._main import AccentColors
 
 
 def get_theme_name():
@@ -23,118 +21,35 @@ def get_theme_name():
 
 
 def get_theme_palette():
-    return bec_qthemes.load_palette(get_theme_name())
+    # FIXME this is legacy code, should be removed in the future
+    app = QApplication.instance()
+    palette = app.palette()
+    return palette
 
 
-def get_accent_colors() -> AccentColors | None:
+def get_accent_colors() -> AccentColors:
     """
     Get the accent colors for the current theme. These colors are extensions of the color palette
     and are used to highlight specific elements in the UI.
     """
     if QApplication.instance() is None or not hasattr(QApplication.instance(), "theme"):
-        return None
+        accent_colors = AccentColors()
+        return accent_colors
     return QApplication.instance().theme.accent_colors
 
 
-def _theme_update_callback():
-    """
-    Internal callback function to update the theme based on the system theme.
-    """
-    app = QApplication.instance()
-    # pylint: disable=protected-access
-    app.theme.theme = app.os_listener._theme.lower()
-    app.theme_signal.theme_updated.emit(app.theme.theme)
-    apply_theme(app.os_listener._theme.lower())
-
-
-def set_theme(theme: Literal["dark", "light", "auto"]):
-    """
-    Set the theme for the application.
-
-    Args:
-        theme (Literal["dark", "light", "auto"]): The theme to set. "auto" will automatically switch between dark and light themes based on the system theme.
-    """
-    app = QApplication.instance()
-    bec_qthemes.setup_theme(theme, install_event_filter=False)
-
-    app.theme_signal.theme_updated.emit(theme)
-    apply_theme(theme)
-
-    if theme != "auto":
-        return
-
-    if not hasattr(app, "os_listener") or app.os_listener is None:
-        app.os_listener = OSThemeSwitchListener(_theme_update_callback)
-        app.installEventFilter(app.os_listener)
+def process_all_deferred_deletes(qapp):
+    qapp.sendPostedEvents(None, QEvent.DeferredDelete)
+    qapp.processEvents(QEventLoop.AllEvents)
 
 
 def apply_theme(theme: Literal["dark", "light"]):
     """
-    Apply the theme to all pyqtgraph widgets. Do not use this function directly. Use set_theme instead.
+    Apply the theme via the global theming API. This updates QSS, QPalette, and pyqtgraph globally.
     """
-    app = QApplication.instance()
-    graphic_layouts = [
-        child
-        for top in app.topLevelWidgets()
-        for child in top.findChildren(pg.GraphicsLayoutWidget)
-    ]
-
-    plot_items = [
-        item
-        for gl in graphic_layouts
-        for item in gl.ci.items.keys()  # ci is internal pg.GraphicsLayout that hosts all items
-        if isinstance(item, pg.PlotItem)
-    ]
-
-    histograms = [
-        item
-        for gl in graphic_layouts
-        for item in gl.ci.items.keys()  # ci is internal pg.GraphicsLayout that hosts all items
-        if isinstance(item, pg.HistogramLUTItem)
-    ]
-
-    # Update background color based on the theme
-    if theme == "light":
-        background_color = "#e9ecef"  # Subtle contrast for light mode
-        foreground_color = "#141414"
-        label_color = "#000000"
-        axis_color = "#666666"
-    else:
-        background_color = "#141414"  # Dark mode
-        foreground_color = "#e9ecef"
-        label_color = "#FFFFFF"
-        axis_color = "#CCCCCC"
-
-    # update GraphicsLayoutWidget
-    pg.setConfigOptions(foreground=foreground_color, background=background_color)
-    for pg_widget in graphic_layouts:
-        pg_widget.setBackground(background_color)
-
-    # update PlotItems
-    for plot_item in plot_items:
-        for axis in ["left", "right", "top", "bottom"]:
-            plot_item.getAxis(axis).setPen(pg.mkPen(color=axis_color))
-            plot_item.getAxis(axis).setTextPen(pg.mkPen(color=label_color))
-
-        # Change title color
-        plot_item.titleLabel.setText(plot_item.titleLabel.text, color=label_color)
-
-        # Change legend color
-        if hasattr(plot_item, "legend") and plot_item.legend is not None:
-            plot_item.legend.setLabelTextColor(label_color)
-            # if legend is in plot item and theme is changed, has to be like that because of pg opt logic
-            for sample, label in plot_item.legend.items:
-                label_text = label.text
-                label.setText(label_text, color=label_color)
-
-    # update HistogramLUTItem
-    for histogram in histograms:
-        histogram.axis.setPen(pg.mkPen(color=axis_color))
-        histogram.axis.setTextPen(pg.mkPen(color=label_color))
-
-    # now define stylesheet according to theme and apply it
-    style = bec_qthemes.load_stylesheet(theme)
-    app.setStyleSheet(style)
+    process_all_deferred_deletes(QApplication.instance())
+    apply_theme_global(theme)
+    process_all_deferred_deletes(QApplication.instance())
 
 
 class Colors:

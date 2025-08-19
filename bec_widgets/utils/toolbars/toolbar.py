@@ -10,7 +10,7 @@ from qtpy.QtCore import QSize, Qt
 from qtpy.QtGui import QAction, QColor
 from qtpy.QtWidgets import QApplication, QLabel, QMainWindow, QMenu, QToolBar, QVBoxLayout, QWidget
 
-from bec_widgets.utils.colors import get_theme_name, set_theme
+from bec_widgets.utils.colors import apply_theme, get_theme_name
 from bec_widgets.utils.toolbars.actions import MaterialIconAction, ToolBarAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle, ToolbarComponents
 from bec_widgets.utils.toolbars.connections import BundleConnection
@@ -507,7 +507,7 @@ if __name__ == "__main__":  # pragma: no cover
                 self.test_label.setText("FPS Monitor Disabled")
 
     app = QApplication(sys.argv)
-    set_theme("light")
+    apply_theme("light")
     main_window = MainWindow()
     main_window.show()
     sys.exit(app.exec_())

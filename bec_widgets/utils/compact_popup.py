@@ -11,6 +11,7 @@ from qtpy.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QSpacerItem,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -122,15 +123,14 @@ class CompactPopupWidget(QWidget):
         self.compact_view_widget = QWidget(self)
         self.compact_view_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         QHBoxLayout(self.compact_view_widget)
-        self.compact_view_widget.layout().setSpacing(0)
+        self.compact_view_widget.layout().setSpacing(5)
         self.compact_view_widget.layout().setContentsMargins(0, 0, 0, 0)
         self.compact_view_widget.layout().addSpacerItem(
             QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Fixed)
         )
         self.compact_label = QLabel(self.compact_view_widget)
         self.compact_status = LedLabel(self.compact_view_widget)
-        self.compact_show_popup = QPushButton(self.compact_view_widget)
-        self.compact_show_popup.setFlat(True)
+        self.compact_show_popup = QToolButton(self.compact_view_widget)
         self.compact_show_popup.setIcon(
             material_icon(icon_name="expand_content", size=(10, 10), convert_to_pixmap=False)
         )

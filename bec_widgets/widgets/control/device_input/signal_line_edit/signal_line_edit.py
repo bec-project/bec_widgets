@@ -147,13 +147,13 @@ if __name__ == "__main__":  # pragma: no cover
     # pylint: disable=import-outside-toplevel
     from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
-    from bec_widgets.utils.colors import set_theme
+    from bec_widgets.utils.colors import apply_theme
     from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import (
         DeviceComboBox,
     )
 
     app = QApplication([])
-    set_theme("dark")
+    apply_theme("dark")
     widget = QWidget()
     widget.setFixedSize(200, 200)
     layout = QVBoxLayout()

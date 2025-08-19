@@ -1,11 +1,12 @@
 import pyqtgraph as pg
-from qtpy.QtCore import Property
+from qtpy.QtCore import Property, Qt
 from qtpy.QtWidgets import QApplication, QFrame, QHBoxLayout, QVBoxLayout, QWidget
 
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
 
 class RoundedFrame(QFrame):
+    # TODO this should be removed completely in favor of QSS styling, no time now
     """
     A custom QFrame with rounded corners and optional theme updates.
     The frame can contain any QWidget, however it is mainly designed to wrap PlotWidgets to provide a consistent look and feel with other BEC Widgets.
@@ -28,6 +29,9 @@ class RoundedFrame(QFrame):
         self.setProperty("skip_settings", True)
         self.setObjectName("roundedFrame")
 
+        # Ensure QSS can paint background/border on this widget
+        self.setAttribute(Qt.WA_StyledBackground, True)
+
         # Create a layout for the frame
         if orientation == "vertical":
             self.layout = QVBoxLayout(self)
@@ -45,22 +49,10 @@ class RoundedFrame(QFrame):
 
         # Automatically apply initial styles to the GraphicalLayoutWidget if applicable
         self.apply_plot_widget_style()
+        self.update_style()
 
     def apply_theme(self, theme: str):
-        """
-        Apply the theme to the frame and its content if theme updates are enabled.
-        """
-        if self.content_widget is not None and isinstance(
-            self.content_widget, pg.GraphicsLayoutWidget
-        ):
-            self.content_widget.setBackground(self.background_color)
-
-        # Update background color based on the theme
-        if theme == "light":
-            self.background_color = "#e9ecef"  # Subtle contrast for light mode
-        else:
-            self.background_color = "#141414"  # Dark mode
-
+        """Deprecated: RoundedFrame no longer handles theme; styling is QSS-driven."""
         self.update_style()
 
     @Property(int)
@@ -77,34 +69,21 @@ class RoundedFrame(QFrame):
         """
         Update the style of the frame based on the background color.
         """
-        if self.background_color:
-            self.setStyleSheet(
-                f"""
+        self.setStyleSheet(
+            f"""
                 QFrame#roundedFrame {{
-                    background-color: {self.background_color}; 
-                    border-radius: {self._radius}; /* Rounded corners */
+                    border-radius: {self._radius}px;
                 }}
             """
-            )
+        )
         self.apply_plot_widget_style()
 
     def apply_plot_widget_style(self, border: str = "none"):
         """
-        Automatically apply background, border, and axis styles to the PlotWidget.
-
-        Args:
-            border (str): Border style (e.g., 'none', '1px solid red').
+        Let QSS/pyqtgraph handle plot styling; avoid overriding here.
         """
         if isinstance(self.content_widget, pg.GraphicsLayoutWidget):
-            # Apply border style via stylesheet
-            self.content_widget.setStyleSheet(
-                f"""
-                GraphicsLayoutWidget {{
-                    border: {border}; /* Explicitly set the border */
-                }}
-            """
-            )
-            self.content_widget.setBackground(self.background_color)
+            self.content_widget.setStyleSheet("")
 
 
 class ExampleApp(QWidget):  # pragma: no cover
@@ -128,24 +107,14 @@ class ExampleApp(QWidget):  # pragma: no cover
         plot_item_2.plot([1, 2, 4, 8, 16, 32], pen="r")
         plot2.plot_item = plot_item_2
 
-        # Wrap PlotWidgets in RoundedFrame
-        rounded_plot1 = RoundedFrame(parent=self, content_widget=plot1)
-        rounded_plot2 = RoundedFrame(parent=self, content_widget=plot2)
-
-        # Add to layout
+        # Add to layout (no RoundedFrame wrapper; QSS styles plots)
         layout.addWidget(dark_button)
-        layout.addWidget(rounded_plot1)
-        layout.addWidget(rounded_plot2)
+        layout.addWidget(plot1)
+        layout.addWidget(plot2)
 
         self.setLayout(layout)
 
-        from qtpy.QtCore import QTimer
-
-        def change_theme():
-            rounded_plot1.apply_theme("light")
-            rounded_plot2.apply_theme("dark")
-
-        QTimer.singleShot(100, change_theme)
+        # Theme flip demo removed; global theming applies automatically
 
 
 if __name__ == "__main__":  # pragma: no cover

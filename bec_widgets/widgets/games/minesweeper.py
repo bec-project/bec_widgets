@@ -407,10 +407,10 @@ class Minesweeper(BECWidget, QWidget):
 
 
 if __name__ == "__main__":
-    from bec_widgets.utils.colors import set_theme
+    from bec_widgets.utils.colors import apply_theme
 
     app = QApplication([])
-    set_theme("light")
+    apply_theme("light")
     widget = Minesweeper()
     widget.show()
 
