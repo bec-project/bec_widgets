@@ -5,7 +5,7 @@ from typing import Literal, cast
 
 import PySide6QtAds as QtAds
 from PySide6QtAds import CDockManager, CDockWidget
-from qtpy.QtCore import QSettings, Signal
+from qtpy.QtCore import Signal
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -34,6 +34,16 @@ from bec_widgets.utils.toolbars.actions import (
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.widget_state_manager import WidgetStateManager
+from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
+    SETTINGS_KEYS,
+    is_profile_readonly,
+    list_profiles,
+    open_settings,
+    profile_path,
+    read_manifest,
+    set_profile_readonly,
+    write_manifest,
+)
 from bec_widgets.widgets.containers.advanced_dock_area.toolbar_components.workspace_actions import (
     WorkspaceConnection,
     workspace_bundle,
@@ -53,81 +63,6 @@ from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
 from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECStatusBox
 from bec_widgets.widgets.utility.logpanel import LogPanel
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
-
-MODULE_PATH = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-_DEFAULT_PROFILES_DIR = os.path.join(os.path.dirname(__file__), "states", "default")
-_USER_PROFILES_DIR = os.path.join(os.path.dirname(__file__), "states", "user")
-
-
-def _profiles_dir() -> str:
-    path = os.environ.get("BECWIDGETS_PROFILE_DIR", _USER_PROFILES_DIR)
-    os.makedirs(path, exist_ok=True)
-    return path
-
-
-def _profile_path(name: str) -> str:
-    return os.path.join(_profiles_dir(), f"{name}.ini")
-
-
-SETTINGS_KEYS = {
-    "geom": "mainWindow/Geometry",
-    "state": "mainWindow/State",
-    "ads_state": "mainWindow/DockingState",
-    "manifest": "manifest/widgets",
-    "readonly": "profile/readonly",
-}
-
-
-def list_profiles() -> list[str]:
-    return sorted(os.path.splitext(f)[0] for f in os.listdir(_profiles_dir()) if f.endswith(".ini"))
-
-
-def is_profile_readonly(name: str) -> bool:
-    """Check if a profile is marked as read-only."""
-    settings = open_settings(name)
-    return settings.value(SETTINGS_KEYS["readonly"], False, type=bool)
-
-
-def set_profile_readonly(name: str, readonly: bool) -> None:
-    """Set the read-only status of a profile."""
-    settings = open_settings(name)
-    settings.setValue(SETTINGS_KEYS["readonly"], readonly)
-    settings.sync()
-
-
-def open_settings(name: str) -> QSettings:
-    return QSettings(_profile_path(name), QSettings.IniFormat)
-
-
-def write_manifest(settings: QSettings, docks: list[CDockWidget]) -> None:
-    settings.beginWriteArray(SETTINGS_KEYS["manifest"], len(docks))
-    for i, dock in enumerate(docks):
-        settings.setArrayIndex(i)
-        w = dock.widget()
-        settings.setValue("object_name", w.objectName())
-        settings.setValue("widget_class", w.__class__.__name__)
-        settings.setValue("closable", getattr(dock, "_default_closable", True))
-        settings.setValue("floatable", getattr(dock, "_default_floatable", True))
-        settings.setValue("movable", getattr(dock, "_default_movable", True))
-    settings.endArray()
-
-
-def read_manifest(settings: QSettings) -> list[dict]:
-    items: list[dict] = []
-    count = settings.beginReadArray(SETTINGS_KEYS["manifest"])
-    for i in range(count):
-        settings.setArrayIndex(i)
-        items.append(
-            {
-                "object_name": settings.value("object_name"),
-                "widget_class": settings.value("widget_class"),
-                "closable": settings.value("closable", type=bool),
-                "floatable": settings.value("floatable", type=bool),
-                "movable": settings.value("movable", type=bool),
-            }
-        )
-    settings.endArray()
-    return items
 
 
 class DockSettingsDialog(QDialog):
@@ -751,7 +686,7 @@ class AdvancedDockArea(BECWidget, QWidget):
             readonly = dialog.is_readonly()
 
             # Check if profile already exists and is read-only
-            if os.path.exists(_profile_path(name)) and is_profile_readonly(name):
+            if os.path.exists(profile_path(name)) and is_profile_readonly(name):
                 suggested_name = f"{name}_custom"
                 reply = QMessageBox.warning(
                     self,
@@ -771,14 +706,14 @@ class AdvancedDockArea(BECWidget, QWidget):
                     readonly = dialog.is_readonly()
 
                     # Check again if the new name is also read-only (recursive protection)
-                    if os.path.exists(_profile_path(name)) and is_profile_readonly(name):
+                    if os.path.exists(profile_path(name)) and is_profile_readonly(name):
                         return self.save_profile()
                 else:
                     return
         else:
             # If name is provided directly, assume not read-only unless already exists
             readonly = False
-            if os.path.exists(_profile_path(name)) and is_profile_readonly(name):
+            if os.path.exists(profile_path(name)) and is_profile_readonly(name):
                 QMessageBox.warning(
                     self,
                     "Read-only Profile",
@@ -889,7 +824,7 @@ class AdvancedDockArea(BECWidget, QWidget):
         if reply != QMessageBox.Yes:
             return
 
-        file_path = _profile_path(name)
+        file_path = profile_path(name)
         try:
             os.remove(file_path)
         except FileNotFoundError:
