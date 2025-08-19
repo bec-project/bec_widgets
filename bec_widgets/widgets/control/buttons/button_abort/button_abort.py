@@ -38,9 +38,6 @@ class AbortButton(BECWidget, QWidget):
         else:
             self.button = QPushButton()
             self.button.setText("Abort")
-            self.button.setStyleSheet(
-                "background-color:  #666666; color: white; font-weight: bold; font-size: 12px;"
-            )
         self.button.clicked.connect(self.abort_scan)
 
         self.layout.addWidget(self.button)

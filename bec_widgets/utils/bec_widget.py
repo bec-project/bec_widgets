@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-import darkdetect
 import PySide6QtAds as QtAds
 import shiboken6
 from bec_lib.logger import bec_logger
@@ -12,7 +11,6 @@ from qtpy.QtWidgets import QApplication, QFileDialog, QWidget
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
-from bec_widgets.utils.colors import set_theme
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.rpc_decorator import rpc_timeout
 from bec_widgets.utils.widget_io import WidgetHierarchy
@@ -47,8 +45,7 @@ class BECWidget(BECConnector):
 
         >>> class MyWidget(BECWidget, QWidget):
         >>>     def __init__(self, parent=None, client=None, config=None, gui_id=None):
-        >>>         super().__init__(client=client, config=config, gui_id=gui_id)
-        >>>         QWidget.__init__(self, parent=parent)
+        >>>         super().__init__(parent=parent, client=client, config=config, gui_id=gui_id)
 
 
         Args:
@@ -64,14 +61,6 @@ class BECWidget(BECConnector):
         )
         if not isinstance(self, QObject):
             raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")
-        app = QApplication.instance()
-        if not hasattr(app, "theme"):
-            # DO NOT SET THE THEME TO AUTO! Otherwise, the qwebengineview will segfault
-            # Instead, we will set the theme to the system setting on startup
-            if darkdetect.isDark():
-                set_theme("dark")
-            else:
-                set_theme("light")
 
         if theme_update:
             logger.debug(f"Subscribing to theme updates for {self.__class__.__name__}")
@@ -80,9 +69,11 @@ class BECWidget(BECConnector):
     def _connect_to_theme_change(self):
         """Connect to the theme change signal."""
         qapp = QApplication.instance()
-        if hasattr(qapp, "theme_signal"):
-            qapp.theme_signal.theme_updated.connect(self._update_theme)
+        if hasattr(qapp, "theme"):
+            qapp.theme.theme_changed.connect(self._update_theme)
 
+    @SafeSlot(str, verify_sender=True)
+    @SafeSlot(verify_sender=True)
     def _update_theme(self, theme: str | None = None):
         """Update the theme."""
         if theme is None:
