@@ -115,7 +115,7 @@ class MonacoDock(BECWidget, QWidget):
 if __name__ == "__main__":
     import sys
 
-    from PySide6.QtWidgets import QApplication
+    from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
     dock = MonacoDock()
