@@ -105,6 +105,8 @@ class DeviceTagGroup(QWidget, Ui_DeviceTagGroup):
             self._add_item(device)
         self.device_list.sortItems()
 
+        self.add_to_composition_button.clicked.connect(self.test)
+
     def _add_item(self, device: HashableDevice):
         item = QListWidgetItem(self.device_list)
         widget = _DeviceEntryWidget(device, self)
@@ -134,6 +136,14 @@ class DeviceTagGroup(QWidget, Ui_DeviceTagGroup):
         super().resizeEvent(event)
         self.setMinimumHeight(self.sizeHint().height())
         self.setMaximumHeight(self.sizeHint().height())
+
+    def get_selection(self) -> set[HashableDevice]:
+        selection = self.device_list.selectedItems()
+        widgets = (w.widget for _, w in self._devices.items() if w.list_item in selection)
+        return set(w._device_spec for w in widgets)
+
+    def test(self, *args):
+        print(self.get_selection())
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}: {self.title.text()}"
