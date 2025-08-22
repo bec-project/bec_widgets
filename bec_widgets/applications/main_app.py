@@ -3,6 +3,9 @@ from qtpy.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QWidget
 from bec_widgets.applications.navigation_centre.reveal_animator import ANIMATION_DURATION
 from bec_widgets.applications.navigation_centre.side_bar import SideBar
 from bec_widgets.applications.navigation_centre.side_bar_components import NavigationItem
+from bec_widgets.applications.views.device_manager_view.device_manager_widget import (
+    DeviceManagerWidget,
+)
 from bec_widgets.applications.views.view import ViewBase, WaveformViewInline, WaveformViewPopup
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
@@ -44,9 +47,17 @@ class BECMainApp(BECMainWindow):
     def _add_views(self):
         self.add_section("BEC Applications", "bec_apps")
         self.ads = AdvancedDockArea(self)
+        self.device_manager = DeviceManagerWidget(self)
 
         self.add_view(
             icon="widgets", title="Dock Area", id="dock_area", widget=self.ads, mini_text="Docks"
+        )
+        self.add_view(
+            icon="display_settings",
+            title="Device Manager",
+            id="device_manager",
+            widget=self.device_manager,
+            mini_text="DM",
         )
 
         if self._show_examples:
@@ -184,6 +195,7 @@ if __name__ == "__main__":  # pragma: no cover
     app = QApplication([sys.argv[0], *qt_args])
     apply_theme("dark")
     w = BECMainApp(show_examples=args.examples)
+    w.resize(1920, 1200)
     w.show()
 
     sys.exit(app.exec())

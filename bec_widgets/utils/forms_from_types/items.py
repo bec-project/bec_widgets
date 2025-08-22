@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import typing
 from abc import abstractmethod
 from decimal import Decimal
@@ -14,8 +15,10 @@ from typing import (
     NamedTuple,
     Optional,
     OrderedDict,
+    Protocol,
     TypeVar,
     get_args,
+    runtime_checkable,
 )
 
 from bec_lib.logger import bec_logger
@@ -170,9 +173,10 @@ class DynamicFormItem(QWidget):
         self._desc = self._spec.info.description
         self.setLayout(self._layout)
         self._add_main_widget()
+        # Sadly, QWidget and ABC are not compatible
         assert isinstance(self._main_widget, QWidget), "Please set a widget in _add_main_widget()"  # type: ignore
-        self._main_widget.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self._main_widget.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         if not spec.pretty_display:
             if clearable_required(spec.info):
                 self._add_clear_button()
@@ -187,6 +191,7 @@ class DynamicFormItem(QWidget):
 
     @abstractmethod
     def _add_main_widget(self) -> None:
+        self._main_widget: QWidget
         """Add the main data entry widget to self._main_widget and appply any
         constraints from the field info"""
 
@@ -404,7 +409,7 @@ class ListFormItem(DynamicFormItem):
 
     def sizeHint(self):
         default = super().sizeHint()
-        return QSize(default.width(), QFontMetrics(self.font()).height() * 6)
+        return QSize(default.width(), QFontMetrics(self.font()).height() * 4)
 
     def _add_main_widget(self) -> None:
         self._main_widget = QListWidget()
@@ -454,10 +459,17 @@ class ListFormItem(DynamicFormItem):
         self._add_list_item(val)
         self._repop(self._data)
 
+    def _item_height(self):
+        return int(QFontMetrics(self.font()).height() * 1.5)
+
     def _add_list_item(self, val):
         item = QListWidgetItem(self._main_widget)
         item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEditable)
         item_widget = self._types.widget(parent=self)
+        item_widget.setMinimumHeight(self._item_height())
+        self._main_widget.setGridSize(QSize(0, self._item_height()))
+        if (layout := item_widget.layout()) is not None:
+            layout.setContentsMargins(0, 0, 0, 0)
         WidgetIO.set_value(item_widget, val)
         self._main_widget.setItemWidget(item, item_widget)
         self._main_widget.addItem(item)
@@ -494,14 +506,11 @@ class ListFormItem(DynamicFormItem):
         self._data = list(value)
         self._repop(self._data)
 
-    def _line_height(self):
-        return QFontMetrics(self._main_widget.font()).height()
-
     def set_max_height_in_lines(self, lines: int):
         outer_inc = 1 if self._spec.pretty_display else 3
-        self._main_widget.setFixedHeight(self._line_height() * max(lines, self._min_lines))
-        self._button_holder.setFixedHeight(self._line_height() * (max(lines, self._min_lines) + 1))
-        self.setFixedHeight(self._line_height() * (max(lines, self._min_lines) + outer_inc))
+        self._main_widget.setFixedHeight(self._item_height() * max(lines, self._min_lines))
+        self._button_holder.setFixedHeight(self._item_height() * (max(lines, self._min_lines) + 1))
+        self.setFixedHeight(self._item_height() * (max(lines, self._min_lines) + outer_inc))
 
     def scale_to_data(self, *_):
         self.set_max_height_in_lines(self._main_widget.count() + 1)
@@ -584,6 +593,16 @@ class OptionalStrLiteralFormItem(StrLiteralFormItem):
 WidgetTypeRegistry = OrderedDict[str, tuple[Callable[[FormItemSpec], bool], type[DynamicFormItem]]]
 
 
+@runtime_checkable
+class _ItemTypeFn(Protocol):
+    def __call__(self, spec: FormItemSpec) -> type[DynamicFormItem]: ...
+
+
+WidgetTypeRegistry = OrderedDict[
+    str, tuple[Callable[[FormItemSpec], bool], type[DynamicFormItem] | _ItemTypeFn]
+]
+
+
 def _is_string_literal(t: type):
     return type(t) is type(Literal[""]) and set(type(arg) for arg in get_args(t)) == {str}
 
@@ -637,7 +656,10 @@ def widget_from_type(
     widget_types = widget_types or DEFAULT_WIDGET_TYPES
     for predicate, widget_type in widget_types.values():
         if predicate(spec):
-            return widget_type
+            if inspect.isclass(widget_type) and issubclass(widget_type, DynamicFormItem):
+                return widget_type
+            return widget_type(spec)
+
     logger.warning(
         f"Type {spec.item_type=} / {spec.info.annotation=} is not (yet) supported in dynamic form creation."
     )
