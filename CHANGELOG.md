@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.38.1 (2025-08-22)
+
+### Bug Fixes
+
+- Move thefuzz dependency to prod
+  ([`ad7cdc6`](https://github.com/bec-project/bec_widgets/commit/ad7cdc60dd6da6c5291f8b42932aacb12aa671a6))
+
+
 ## v2.38.0 (2025-08-19)
 
 ### Features
