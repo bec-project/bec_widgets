@@ -1,5 +1,4 @@
-from textwrap import dedent
-from typing import Callable, NamedTuple
+from typing import NamedTuple
 
 from bec_qthemes import material_icon
 from qtpy.QtCore import QSize
@@ -13,6 +12,20 @@ from bec_widgets.widgets.control.device_manager.components.available_device_reso
 )
 
 DEVICE_HASH_ROLE = 101
+
+
+def _warning_string(spec: HashableDevice):
+    name_warning = (
+        f"Device defined with multiple names! Please check:\n  {'\n  '.join(spec.names)}\n"
+        if len(spec.names) > 1
+        else ""
+    )
+    source_warning = (
+        f"Device found in multiple source files! Please check:\n  {'\n  '.join(spec.source_files)}"
+        if len(spec.source_files) > 1
+        else ""
+    )
+    return f"{name_warning}{source_warning}"
 
 
 class _DeviceEntryWidget(QFrame):
@@ -32,6 +45,7 @@ class _DeviceEntryWidget(QFrame):
         self.setMinimumSize(self._grid_size)
 
         self.setup_title_layout(device_spec)
+        self.check_and_display_warning()
 
         self.setToolTip(device_spec.rich_text())
 
@@ -42,18 +56,17 @@ class _DeviceEntryWidget(QFrame):
 
     def setup_title_layout(self, device_spec: HashableDevice):
         self._title_layout = QHBoxLayout()
+        self._title_layout.setContentsMargins(0, 0, 0, 0)
         self._title_container = QWidget(parent=self)
         self._title_container.setLayout(self._title_layout)
+
+        self._warning_label = QLabel()
+        self._title_layout.addWidget(self._warning_label)
 
         self.title = QLabel(device_spec.name)
         self.title.setToolTip(device_spec.name)
         self.title.setStyleSheet(self.title_style("#FF0000"))
         self._title_layout.addWidget(self.title)
-
-        self._title_layout.addStretch(1)
-
-        self._warning_label = QLabel()
-        self._title_layout.addWidget(self._warning_label)
 
         self._layout.addWidget(self._title_container)
 
@@ -62,15 +75,8 @@ class _DeviceEntryWidget(QFrame):
             self._warning_label.setText("")
             self._warning_label.setToolTip("")
         else:
-            self._warning_label.setPixmap(material_icon("warning", color="#FFAA00"))
-            self._warning_label.setToolTip(
-                dedent(
-                    f"""
-                    {f"Device has multiple names! Please check! \n names: {self._device_spec.names}" if len(self._device_spec.names)>1 else ""}
-                    {f"Device found in multiple source files! Please check! \n files: {self._device_spec.names}" if len(self._device_spec.names)>1 else ""}
-                    """
-                )
-            )
+            self._warning_label.setPixmap(material_icon("warning", size=(12, 12), color="#FFAA00"))
+            self._warning_label.setToolTip(_warning_string(self._device_spec))
 
     @property
     def device_hash(self):
@@ -104,6 +110,7 @@ class DeviceTagGroup(QWidget, Ui_DeviceTagGroup):
         for device in data:
             self._add_item(device)
         self.device_list.sortItems()
+        self._update_num_included()
 
         self.add_to_composition_button.clicked.connect(self.test)
 
@@ -114,6 +121,11 @@ class DeviceTagGroup(QWidget, Ui_DeviceTagGroup):
         self.device_list.setItemWidget(item, widget)
         self.device_list.addItem(item)
         self._devices[device.name] = _DeviceEntry(item, widget)
+
+    def reset_devices_state(self):
+        for dev in self._devices.values():
+            dev.widget.set_included(False)
+        self._update_num_included()
 
     def set_item_state(self, /, device_hash: int, included: bool):
         for dev in self._devices.values():

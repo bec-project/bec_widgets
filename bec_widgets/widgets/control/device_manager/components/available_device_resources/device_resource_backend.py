@@ -88,6 +88,11 @@ class DeviceResourceBackend(Protocol):
         """A set of all availble devices. The same device may not appear more than once."""
         ...
 
+    @property
+    def untagged_devices(self) -> set[HashableDevice]:
+        """A set of all untagged devices. The same device may not appear more than once."""
+        ...
+
     def tags(self) -> set[str]:
         """Returns a set of all the tags in all available devices."""
         ...
@@ -97,26 +102,33 @@ class DeviceResourceBackend(Protocol):
         ...
 
 
+def _devices_from_file(file: str, include_source: bool = True):
+    data = yaml_load(file, process_includes=False)
+    return _HashableDeviceSet(
+        HashableDevice.model_validate(
+            dev | {"name": name, "source_files": {file} if include_source else set()}
+        )
+        for name, dev in data.items()
+    )
+
+
 class _ConfigFileBackend(DeviceResourceBackend):
     def __init__(self) -> None:
-        self._raw_device_set: set[HashableDevice] = self._get_config_from_files(
+        self._raw_device_set: set[
+            HashableDevice
+        ] = self._get_config_from_backup_file() | self._get_configs_from_plugin_files(
             Path(plugin_repo_path()) / plugin_package_name() / "device_configs/"
         )
         self._tag_groups = self._get_tag_groups()
 
-    def _get_config_from_files(self, dir: Path):
+    def _get_config_from_backup_file(self):
+        return _devices_from_file(
+            "/home/perl_d/Development/bec/bec/logs/device_configs/recovery_configs/recovery_config_2025-08-22_14-02-29.yaml"
+        )
+
+    def _get_configs_from_plugin_files(self, dir: Path):
         files = glob("*.yaml", root_dir=dir, recursive=True)
-
-        def devices_from_file(file: str):
-            data = yaml_load(str(dir / file))
-            return set(
-                HashableDevice.model_validate(
-                    dev | {"name": name, "source_files": {str(dir / file)}}
-                )
-                for name, dev in data.items()
-            )
-
-        return reduce(operator.or_, map(devices_from_file, files))
+        return reduce(operator.or_, map(_devices_from_file, (str(dir / f) for f in files)))
 
     def _get_tag_groups(self) -> dict[str, set[HashableDevice]]:
         return {
@@ -131,6 +143,10 @@ class _ConfigFileBackend(DeviceResourceBackend):
     @property
     def all_devices(self):
         return self._raw_device_set
+
+    @property
+    def untagged_devices(self):
+        return {d for d in self._raw_device_set if d.deviceTags == set()}
 
     def tags(self) -> set[str]:
         return reduce(operator.or_, (dev.deviceTags for dev in self._raw_device_set))

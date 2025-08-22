@@ -115,6 +115,9 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
     Sort logic is implemented directly on the data of the table view.
     """
 
+    device_added = QtCore.Signal(dict)
+    devices_reset = QtCore.Signal(list)
+
     def __init__(self, device_config: list[dict] | None = None, parent=None):
         super().__init__(parent)
         self._device_config = device_config or []
@@ -250,6 +253,7 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
         self.beginResetModel()
         self._device_config = list(device_config)
         self.endResetModel()
+        self.devices_reset.emit(self._device_config)
 
     @SafeSlot(dict)
     def add_device(self, device: dict):

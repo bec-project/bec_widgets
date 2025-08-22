@@ -91,8 +91,8 @@ class DeviceManagerView(BECWidget, QWidget):
         self.ophyd_test_dock.setWidget(self.ophyd_test)
 
         # Create the dock widgets
-        self.explorer_dock = QtAds.CDockWidget("Explorer", self)
-        self.explorer_dock.setWidget(self.available_devices)
+        self.available_devices_dock = QtAds.CDockWidget("Explorer", self)
+        self.available_devices_dock.setWidget(self.available_devices)
 
         self.device_table_view_dock = QtAds.CDockWidget("Device Table", self)
         self.device_table_view_dock.setWidget(self.device_table_view)
@@ -104,7 +104,9 @@ class DeviceManagerView(BECWidget, QWidget):
         self.dm_config_view_dock.setWidget(self.dm_config_view)
 
         # Add the dock widgets to the dock manager
-        self.dock_manager.addDockWidget(QtAds.DockWidgetArea.LeftDockWidgetArea, self.explorer_dock)
+        self.dock_manager.addDockWidget(
+            QtAds.DockWidgetArea.LeftDockWidgetArea, self.available_devices_dock
+        )
         monaco_yaml_area = self.dock_manager.addDockWidget(
             QtAds.DockWidgetArea.RightDockWidgetArea, self.dm_config_view_dock
         )
@@ -129,6 +131,9 @@ class DeviceManagerView(BECWidget, QWidget):
 
         # Connect slots
         self.device_table_view.selected_device.connect(self.dm_config_view.on_select_config)
+        self.device_table_view.model.devices_reset.connect(
+            self.available_devices.update_devices_state
+        )
 
     ####### Default view has to be done with setting up splitters ########
     def set_default_view(self, horizontal_weights: list, vertical_weights: list):
