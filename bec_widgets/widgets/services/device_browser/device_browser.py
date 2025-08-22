@@ -1,6 +1,4 @@
 import os
-import re
-from functools import partial
 from typing import Callable
 
 import bec_lib
@@ -11,23 +9,17 @@ from bec_lib.logger import bec_logger
 from bec_lib.messages import ConfigAction, ScanStatusMessage
 from bec_qthemes import material_icon
 from pyqtgraph import SignalProxy
-from qtpy.QtCore import QSize, QThreadPool, Signal
-from qtpy.QtWidgets import (
-    QFileDialog,
-    QListWidget,
-    QListWidgetItem,
-    QToolButton,
-    QVBoxLayout,
-    QWidget,
-)
+from qtpy.QtCore import QThreadPool, Signal
+from qtpy.QtWidgets import QFileDialog, QListWidget, QToolButton, QVBoxLayout, QWidget
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.list_of_expandable_frames import ListOfExpandableFrames
 from bec_widgets.utils.ui_loader import UILoader
 from bec_widgets.widgets.services.device_browser.device_item import DeviceItem
 from bec_widgets.widgets.services.device_browser.device_item.device_config_dialog import (
-    DeviceConfigDialog,
+    DirectUpdateDeviceConfigDialog,
 )
 from bec_widgets.widgets.services.device_browser.util import map_device_type_to_icon
 
@@ -61,7 +53,8 @@ class DeviceBrowser(BECWidget, QWidget):
         self._q_threadpool = QThreadPool()
         self.ui = None
         self.init_ui()
-        self.dev_list: QListWidget = self.ui.device_list
+        self.dev_list = ListOfExpandableFrames(self, DeviceItem)
+        self.ui.verticalLayout.addWidget(self.dev_list)
         self.dev_list.setVerticalScrollMode(QListWidget.ScrollMode.ScrollPerPixel)
         self.proxy_device_update = SignalProxy(
             self.ui.filter_input.textChanged, rateLimit=500, slot=self.update_device_list
@@ -116,7 +109,7 @@ class DeviceBrowser(BECWidget, QWidget):
         )
 
     def _create_add_dialog(self):
-        dialog = DeviceConfigDialog(parent=self, device=None, action="add")
+        dialog = DirectUpdateDeviceConfigDialog(parent=self, device=None, action="add")
         dialog.open()
 
     def on_device_update(self, action: ConfigAction, content: dict) -> None:
@@ -134,25 +127,15 @@ class DeviceBrowser(BECWidget, QWidget):
 
     def init_device_list(self):
         self.dev_list.clear()
-        self._device_items: dict[str, QListWidgetItem] = {}
 
         with RPCRegister.delayed_broadcast():
             for device, device_obj in self.dev.items():
                 self._add_item_to_list(device, device_obj)
 
     def _add_item_to_list(self, device: str, device_obj):
-        def _updatesize(item: QListWidgetItem, device_item: DeviceItem):
-            device_item.adjustSize()
-            item.setSizeHint(QSize(device_item.width(), device_item.height()))
-            logger.debug(f"Adjusting {item} size to {device_item.width(), device_item.height()}")
 
-        def _remove_item(item: QListWidgetItem):
-            self.dev_list.takeItem(self.dev_list.row(item))
-            del self._device_items[device]
-            self.dev_list.sortItems()
-
-        item = QListWidgetItem(self.dev_list)
-        device_item = DeviceItem(
+        _, device_item = self.dev_list.add_item(
+            id=device,
             parent=self,
             device=device,
             devices=self.dev,
@@ -160,18 +143,11 @@ class DeviceBrowser(BECWidget, QWidget):
             config_helper=self._config_helper,
             q_threadpool=self._q_threadpool,
         )
-        device_item.expansion_state_changed.connect(partial(_updatesize, item, device_item))
-        device_item.imminent_deletion.connect(partial(_remove_item, item))
+
         self.editing_enabled.connect(device_item.set_editable)
         self.device_update.connect(device_item.config_update)
         tooltip = self.dev[device]._config.get("description", "")
         device_item.setToolTip(tooltip)
-        device_item.broadcast_size_hint.connect(item.setSizeHint)
-        item.setSizeHint(device_item.sizeHint())
-
-        self.dev_list.setItemWidget(item, device_item)
-        self.dev_list.addItem(item)
-        self._device_items[device] = item
 
     @SafeSlot(dict, dict)
     def scan_status_changed(self, scan_info: dict, _: dict):
@@ -200,20 +176,11 @@ class DeviceBrowser(BECWidget, QWidget):
 
         Either way, the function will filter the devices based on the filter input text and update the device list.
         """
-        filter_text = self.ui.filter_input.text()
         for device in self.dev:
-            if device not in self._device_items:
+            if device not in self.dev_list:
                 # it is possible the device has just been added to the config
                 self._add_item_to_list(device, self.dev[device])
-        try:
-            self.regex = re.compile(filter_text, re.IGNORECASE)
-        except re.error:
-            self.regex = None  # Invalid regex, disable filtering
-            for device in self.dev:
-                self._device_items[device].setHidden(False)
-            return
-        for device in self.dev:
-            self._device_items[device].setHidden(not self.regex.search(device))
+        self.dev_list.update_filter(self.ui.filter_input.text())
 
     @SafeSlot()
     def _load_from_file(self):

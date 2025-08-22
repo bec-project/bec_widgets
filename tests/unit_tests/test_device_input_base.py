@@ -43,7 +43,7 @@ def test_device_input_base_init(device_input_base):
     assert device_input_base.devices == []
 
 
-def test_device_input_base_init_with_config(mocked_client):
+def test_device_input_base_init_with_config(qtbot, mocked_client):
     """Test init with Config"""
     config = {
         "widget_class": "DeviceInputWidget",
@@ -55,6 +55,10 @@ def test_device_input_base_init_with_config(mocked_client):
     widget2 = DeviceInputWidget(
         client=mocked_client, config=DeviceInputConfig.model_validate(config)
     )
+    qtbot.addWidget(widget)
+    qtbot.addWidget(widget2)
+    qtbot.waitExposed(widget)
+    qtbot.waitExposed(widget2)
     for w in [widget, widget2]:
         assert w.config.gui_id == "test_gui_id"
         assert w.config.device_filter == ["Positioner"]

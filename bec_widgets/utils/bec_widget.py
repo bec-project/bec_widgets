@@ -192,6 +192,7 @@ class BECWidget(BECConnector):
         Returns:
             str: The help text in markdown format.
         """
+        return ""
 
     @SafeSlot()
     @SafeSlot(str)

@@ -18,7 +18,7 @@ from bec_widgets.widgets.services.device_browser.device_item.config_communicator
     CommunicateConfigAction,
 )
 from bec_widgets.widgets.services.device_browser.device_item.device_config_dialog import (
-    DeviceConfigDialog,
+    DirectUpdateDeviceConfigDialog,
 )
 from bec_widgets.widgets.services.device_browser.device_item.device_config_form import (
     DeviceConfigForm,
@@ -35,9 +35,6 @@ logger = bec_logger.logger
 
 
 class DeviceItem(ExpandableGroupFrame):
-    broadcast_size_hint = Signal(QSize)
-    imminent_deletion = Signal()
-
     RPC = False
 
     def __init__(
@@ -94,7 +91,7 @@ class DeviceItem(ExpandableGroupFrame):
 
     @SafeSlot()
     def _create_edit_dialog(self):
-        dialog = DeviceConfigDialog(
+        dialog = DirectUpdateDeviceConfigDialog(
             parent=self,
             device=self.device,
             config_helper=self._config_helper,
