@@ -41,16 +41,24 @@ class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
         self.tag_groups_list.clear()
         self._items = {}
         for tag_group, devices in self._backend.tag_groups.items():
-            item = QListWidgetItem(self.tag_groups_list)
-            tag_group_widget = DeviceTagGroup(self.tag_groups_list, tag_group, devices)
-            self.tag_groups_list.setItemWidget(item, tag_group_widget)
-            self.tag_groups_list.addItem(item)
-            self._items[tag_group] = (item, tag_group_widget)
-            item.setSizeHint(QSize(tag_group_widget.width(), tag_group_widget.height()))
+            self._add_tag_group(tag_group, devices)
+        self._add_tag_group("Untagged devices", self._backend.untagged_devices)
+
+    def _add_tag_group(self, tag_group: str, devices: set[HashableDevice]):
+        item = QListWidgetItem(self.tag_groups_list)
+        tag_group_widget = DeviceTagGroup(self.tag_groups_list, tag_group, devices)
+        self.tag_groups_list.setItemWidget(item, tag_group_widget)
+        self.tag_groups_list.addItem(item)
+        self._items[tag_group] = (item, tag_group_widget)
+        item.setSizeHint(QSize(tag_group_widget.width(), tag_group_widget.height()))
+
+    def _reset_devices_state(self):
+        for _, tag_group in self._items.values():
+            tag_group.reset_devices_state()
 
     def set_devices_state(self, devices: Iterable[HashableDevice], included: bool):
-        for _, tag_group in self._items.values():
-            for device in devices:
+        for device in devices:
+            for _, tag_group in self._items.values():
                 tag_group.set_item_state(hash(device), included)
 
     def resizeEvent(self, event):
