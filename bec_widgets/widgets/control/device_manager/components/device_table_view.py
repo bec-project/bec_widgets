@@ -23,20 +23,14 @@ FUZZY_SEARCH_THRESHOLD = 80
 class DictToolTipDelegate(QtWidgets.QStyledItemDelegate):
     """Delegate that shows all key-value pairs of a rows's data as a YAML-like tooltip."""
 
-    @staticmethod
-    def dict_to_str(d: dict) -> str:
-        """Convert a dictionary to a formatted string."""
-        return json.dumps(d, indent=4)
-
     def helpEvent(self, event, view, option, index):
         """Override to show tooltip when hovering."""
         if event.type() != QtCore.QEvent.ToolTip:
             return super().helpEvent(event, view, option, index)
         model: DeviceFilterProxyModel = index.model()
         model_index = model.mapToSource(index)
-        row_dict = model.sourceModel().row_data(model_index)
-        row_dict.pop("description", None)
-        QtWidgets.QToolTip.showText(event.globalPos(), self.dict_to_str(row_dict), view)
+        row_dict = model.sourceModel().get_row_data(model_index)
+        QtWidgets.QToolTip.showText(event.globalPos(), row_dict["description"], view)
         return True
 
 
@@ -47,10 +41,10 @@ class CenterCheckBoxDelegate(DictToolTipDelegate):
         super().__init__(parent)
         colors = get_accent_colors()
         self._icon_checked = material_icon(
-            "check_box", size=QtCore.QSize(16, 16), color=colors.default
+            "check_box", size=QtCore.QSize(16, 16), color=colors.default, filled=True
         )
         self._icon_unchecked = material_icon(
-            "check_box_outline_blank", size=QtCore.QSize(16, 16), color=colors.default
+            "check_box_outline_blank", size=QtCore.QSize(16, 16), color=colors.default, filled=True
         )
 
     def apply_theme(self, theme: str | None = None):
@@ -128,10 +122,9 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
             "name",
             "deviceClass",
             "readoutPriority",
+            "deviceTags",
             "enabled",
             "readOnly",
-            "deviceTags",
-            "description",
         ]
         self._checkable_columns_enabled = {"enabled": True, "readOnly": True}
 
@@ -150,7 +143,7 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
             return self.headers[section]
         return None
 
-    def row_data(self, index: QtCore.QModelIndex) -> dict:
+    def get_row_data(self, index: QtCore.QModelIndex) -> dict:
         """Return the row data for the given index."""
         if not index.isValid():
             return {}
@@ -169,6 +162,8 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
                 return bool(value)
             if key == "deviceTags":
                 return ", ".join(str(tag) for tag in value) if value else ""
+            if key == "deviceClass":
+                return str(value).split(".")[-1]
             return str(value) if value is not None else ""
         if role == QtCore.Qt.CheckStateRole and key in ("enabled", "readOnly"):
             return QtCore.Qt.Checked if value else QtCore.Qt.Unchecked
@@ -436,6 +431,8 @@ class DeviceFilterProxyModel(QtCore.QSortFilterProxyModel):
 class DeviceTableView(BECWidget, QtWidgets.QWidget):
     """Device Table View for the device manager."""
 
+    selected_device = QtCore.Signal(dict)
+
     RPC = False
     PLUGIN = False
     devices_removed = QtCore.Signal(list)
@@ -508,10 +505,9 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
         self.table.setItemDelegateForColumn(0, self.tool_tip_delegate)  # name
         self.table.setItemDelegateForColumn(1, self.tool_tip_delegate)  # deviceClass
         self.table.setItemDelegateForColumn(2, self.tool_tip_delegate)  # readoutPriority
-        self.table.setItemDelegateForColumn(3, self.checkbox_delegate)  # enabled
-        self.table.setItemDelegateForColumn(4, self.checkbox_delegate)  # readOnly
-        self.table.setItemDelegateForColumn(5, self.wrap_delegate)  # deviceTags
-        self.table.setItemDelegateForColumn(6, self.wrap_delegate)  # description
+        self.table.setItemDelegateForColumn(3, self.wrap_delegate)  # deviceTags
+        self.table.setItemDelegateForColumn(4, self.checkbox_delegate)  # enabled
+        self.table.setItemDelegateForColumn(5, self.checkbox_delegate)  # readOnly
 
         # Column resize policies
         # TODO maybe we need here a flexible header options as deviceClass
@@ -520,13 +516,12 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
         header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)  # name
         header.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)  # deviceClass
         header.setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeToContents)  # readoutPriority
-        header.setSectionResizeMode(3, QtWidgets.QHeaderView.Fixed)  # enabled
-        header.setSectionResizeMode(4, QtWidgets.QHeaderView.Fixed)  # readOnly
-        # TODO maybe better stretch...
-        header.setSectionResizeMode(5, QtWidgets.QHeaderView.ResizeToContents)  # deviceTags
-        header.setSectionResizeMode(6, QtWidgets.QHeaderView.Stretch)  # description
-        self.table.setColumnWidth(3, 82)
-        self.table.setColumnWidth(4, 82)
+        header.setSectionResizeMode(3, QtWidgets.QHeaderView.Stretch)  # deviceTags
+        header.setSectionResizeMode(4, QtWidgets.QHeaderView.Fixed)  # enabled
+        header.setSectionResizeMode(5, QtWidgets.QHeaderView.Fixed)  # readOnly
+
+        self.table.setColumnWidth(3, 70)
+        self.table.setColumnWidth(4, 70)
 
         # Ensure column widths stay fixed
         header.setMinimumSectionSize(70)
@@ -538,6 +533,8 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
         # Selection behavior
         self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.table.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        # Connect to selection model to get selection changes
+        self.table.selectionModel().selectionChanged.connect(self._on_selection_changed)
         self.table.horizontalHeader().setHighlightSections(False)
 
         # QtCore.QTimer.singleShot(0, lambda: header.sectionResized.emit(0, 0, 0))
@@ -565,6 +562,45 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
             option = QtWidgets.QStyleOptionViewItem()
             height = delegate.sizeHint(option, index).height()
             self.table.setRowHeight(row, height)
+
+    @SafeSlot(QtCore.QItemSelection, QtCore.QItemSelection)
+    def _on_selection_changed(
+        self, selected: QtCore.QItemSelection, deselected: QtCore.QItemSelection
+    ) -> None:
+        """
+        Handle selection changes in the device table.
+
+        Args:
+            selected (QtCore.QItemSelection): The selected items.
+            deselected (QtCore.QItemSelection): The deselected items.
+        """
+        # TODO also hook up logic if a config update is propagated from somewhere!
+        # selected_indexes = selected.indexes()
+        selected_indexes = self.table.selectionModel().selectedIndexes()
+        if not selected_indexes:
+            return
+
+        source_indexes = [self.proxy.mapToSource(idx) for idx in selected_indexes]
+        source_rows = {idx.row() for idx in source_indexes}
+        # Ignore if multiple are selected
+        if len(source_rows) > 1:
+            self.selected_device.emit({})
+            return
+
+        # Get the single row
+        (row,) = source_rows
+        source_index = self.model.index(row, 0)  # pick column 0 or whichever
+        device = self.model.get_row_data(source_index)
+        self.selected_device.emit(device)
+
+    @SafeSlot(QtCore.QModelIndex)
+    def _on_row_selected(self, index: QtCore.QModelIndex):
+        """Handle row selection in the device table."""
+        if not index.isValid():
+            return
+        source_index = self.proxy.mapToSource(index)
+        device = self.model.get_device_at_index(source_index)
+        self.selected_device.emit(device)
 
     ######################################
     ##### Ext.  Slot API #################
