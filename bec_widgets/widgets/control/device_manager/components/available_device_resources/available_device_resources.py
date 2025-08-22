@@ -1,10 +1,11 @@
 from random import randint
-from typing import Iterable
+from typing import Any, Callable, Generator, Iterable, TypeVar
 
 from qtpy.QtCore import QSize
 from qtpy.QtWidgets import QListWidgetItem, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
+from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.control.device_manager.components.available_device_resources.available_device_resources_ui import (
     Ui_availableDeviceResources,
 )
@@ -15,6 +16,17 @@ from bec_widgets.widgets.control.device_manager.components.available_device_reso
 from bec_widgets.widgets.control.device_manager.components.available_device_resources.device_tag_group import (
     DeviceTagGroup,
 )
+
+_T = TypeVar("_T")
+_RT = TypeVar("_RT")
+
+
+def _yield_only_passing(fn: Callable[[_T], _RT], vals: Iterable[_T]) -> Generator[_RT, Any, None]:
+    for v in vals:
+        try:
+            yield fn(v)
+        except BaseException:
+            pass
 
 
 class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
@@ -45,6 +57,12 @@ class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
         super().resizeEvent(event)
         for list_item, tag_group_widget in self._items.values():
             list_item.setSizeHint(tag_group_widget.sizeHint())
+
+    @SafeSlot(list)
+    def update_devices_state(self, config_list: list[dict[str, Any]]):
+        self.set_devices_state(
+            _yield_only_passing(HashableDevice.model_validate, config_list), True
+        )
 
 
 if __name__ == "__main__":
