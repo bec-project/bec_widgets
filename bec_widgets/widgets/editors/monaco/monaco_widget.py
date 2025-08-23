@@ -1,3 +1,4 @@
+import os
 from typing import Literal
 
 import qtmonaco
@@ -6,6 +7,7 @@ from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_theme_name
+from bec_widgets.utils.error_popups import SafeSlot
 
 
 class MonacoWidget(BECWidget, QWidget):
@@ -14,6 +16,7 @@ class MonacoWidget(BECWidget, QWidget):
     """
 
     text_changed = Signal(str)
+    save_enabled = Signal(bool)
     PLUGIN = True
     ICON_NAME = "code"
     USER_ACCESS = [
@@ -21,6 +24,7 @@ class MonacoWidget(BECWidget, QWidget):
         "get_text",
         "insert_text",
         "delete_line",
+        "open_file",
         "set_language",
         "get_language",
         "set_theme",
@@ -47,7 +51,17 @@ class MonacoWidget(BECWidget, QWidget):
         layout.addWidget(self.editor)
         self.setLayout(layout)
         self.editor.text_changed.connect(self.text_changed.emit)
+        self.editor.text_changed.connect(self._check_save_status)
         self.editor.initialized.connect(self.apply_theme)
+        self._current_file = None
+        self._original_content = ""
+
+    @property
+    def current_file(self):
+        """
+        Get the current file being edited.
+        """
+        return self._current_file
 
     def apply_theme(self, theme: str | None = None) -> None:
         """
@@ -61,14 +75,16 @@ class MonacoWidget(BECWidget, QWidget):
         editor_theme = "vs" if theme == "light" else "vs-dark"
         self.set_theme(editor_theme)
 
-    def set_text(self, text: str) -> None:
+    def set_text(self, text: str, file_name: str | None = None) -> None:
         """
         Set the text in the Monaco editor.
 
         Args:
             text (str): The text to set in the editor.
+            file_name (str): Set the file name
         """
-        self.editor.set_text(text)
+        self.editor.set_text(text, uri=file_name)
+        self._current_file = file_name
 
     def get_text(self) -> str:
         """
@@ -95,6 +111,33 @@ class MonacoWidget(BECWidget, QWidget):
             line (int, optional): The line number (1-based) to delete. If None, the current line will be deleted.
         """
         self.editor.delete_line(line)
+
+    def open_file(self, file_name: str) -> None:
+        """
+        Open a file in the editor.
+
+        Args:
+            file_name (str): The path + file name of the file that needs to be displayed.
+        """
+
+        if not os.path.exists(file_name):
+            raise FileNotFoundError(f"The specified file does not exist: {file_name}")
+
+        with open(file_name, "r", encoding="utf-8") as file:
+            content = file.read()
+        self._original_content = content
+        self.set_text(content, file_name=file_name)
+
+    @property
+    def modified(self) -> bool:
+        """
+        Check if the editor content has been modified.
+        """
+        return self._original_content != self.get_text()
+
+    @SafeSlot(str)
+    def _check_save_status(self, _text: str) -> None:
+        self.save_enabled.emit(self.modified)
 
     def set_cursor(
         self,
