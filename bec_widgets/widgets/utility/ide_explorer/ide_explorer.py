@@ -2,6 +2,7 @@ import datetime
 import importlib
 import os
 
+from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QInputDialog, QMessageBox, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
@@ -16,6 +17,9 @@ class IDEExplorer(BECWidget, QWidget):
 
     PLUGIN = True
     RPC = False
+
+    file_open_requested = Signal(str, str)
+    file_preview_requested = Signal(str, str)
 
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent=parent, **kwargs)
@@ -51,10 +55,11 @@ class IDEExplorer(BECWidget, QWidget):
 
     def add_script_section(self):
         section = CollapsibleSection(parent=self, title="SCRIPTS", indentation=0)
-        section.expanded = False
 
         script_explorer = Explorer(parent=self)
         script_widget = ScriptTreeWidget(parent=self)
+        script_widget.file_open_requested.connect(self._emit_file_open_scripts_local)
+        script_widget.file_selected.connect(self._emit_file_preview_scripts_local)
         local_scripts_section = CollapsibleSection(title="Local", show_add_button=True, parent=self)
         local_scripts_section.header_add_button.clicked.connect(self._add_local_script)
         local_scripts_section.set_widget(script_widget)
@@ -85,6 +90,12 @@ class IDEExplorer(BECWidget, QWidget):
         # macros_section = CollapsibleSection("MACROS", indentation=0)
         # macros_section.set_widget(QLabel("Macros will be implemented later"))
         # self.main_explorer.add_section(macros_section)
+
+    def _emit_file_open_scripts_local(self, file_name: str):
+        self.file_open_requested.emit(file_name, "scripts/local")
+
+    def _emit_file_preview_scripts_local(self, file_name: str):
+        self.file_preview_requested.emit(file_name, "scripts/local")
 
     def _add_local_script(self):
         """Show a dialog to enter the name of a new script and create it."""
