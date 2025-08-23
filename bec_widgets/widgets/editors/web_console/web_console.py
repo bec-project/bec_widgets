@@ -172,9 +172,17 @@ class WebConsole(BECWidget, QWidget):
     PLUGIN = True
     ICON_NAME = "terminal"
 
-    def __init__(self, parent=None, config=None, client=None, gui_id=None, **kwargs):
+    def __init__(
+        self,
+        parent=None,
+        config=None,
+        client=None,
+        gui_id=None,
+        startup_cmd="bec --nogui",
+        **kwargs,
+    ):
         super().__init__(parent=parent, client=client, gui_id=gui_id, config=config, **kwargs)
-        self._startup_cmd = "bec --nogui"
+        self._startup_cmd = startup_cmd
         self._is_initialized = False
         _web_console_registry.register(self)
         self._token = _web_console_registry._token
