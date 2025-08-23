@@ -18,8 +18,8 @@ class Explorer(BECWidget, QWidget):
     RPC = False
     PLUGIN = False
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent=parent, **kwargs)
 
         # Main layout
         self.main_layout = QVBoxLayout(self)
