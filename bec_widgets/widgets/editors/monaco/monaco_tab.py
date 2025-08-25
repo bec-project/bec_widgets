@@ -4,12 +4,15 @@ import os
 from typing import Any, cast
 
 import PySide6QtAds as QtAds
+from bec_lib.logger import bec_logger
 from PySide6QtAds import CDockWidget
 from qtpy.QtCore import QEvent, QTimer, Signal
 from qtpy.QtWidgets import QFileDialog, QMessageBox, QToolButton, QVBoxLayout, QWidget
 
 from bec_widgets import BECWidget
 from bec_widgets.widgets.editors.monaco.monaco_widget import MonacoWidget
+
+logger = bec_logger.logger
 
 
 class MonacoDock(BECWidget, QWidget):
@@ -74,6 +77,8 @@ class MonacoDock(BECWidget, QWidget):
             return
 
         widget = cast(MonacoWidget, editor.widget())
+        if widget.modified:
+            logger.info(f"Editor '{widget.current_file}' has unsaved changes: {widget.get_text()}")
         self.save_enabled.emit(widget.modified)
 
     def _on_signature_change(self, signature: dict):
@@ -157,6 +162,7 @@ class MonacoDock(BECWidget, QWidget):
             idx = tb.indexOf(tb.tabBar())
             tb.insertWidget(idx + 1, plus_btn)
             plus_btn.clicked.connect(lambda: self.add_editor(area))
+            # pylint: disable=protected-access
             area._monaco_plus_btn = plus_btn
 
     def _scan_and_fix_areas(self):
@@ -244,8 +250,9 @@ class MonacoDock(BECWidget, QWidget):
         if not widget:
             return
         if widget.current_file and not force_save_as:
-            with open(widget.current_file, "w") as f:
+            with open(widget.current_file, "w", encoding="utf-8") as f:
                 f.write(widget.get_text())
+            # pylint: disable=protected-access
             widget._original_content = widget.get_text()
             widget.save_enabled.emit(False)
             return
@@ -268,7 +275,12 @@ class MonacoDock(BECWidget, QWidget):
         print(f"Save file called, last focused editor: {self.last_focused_editor}")
 
     def set_vim_mode(self, enabled: bool):
-        # Toggle Vim mode for all editor widgets
+        """
+        Set Vim mode for all editor widgets.
+
+        Args:
+            enabled (bool): Whether to enable or disable Vim mode.
+        """
         for widget in self.dock_manager.dockWidgets():
             editor_widget = cast(MonacoWidget, widget.widget())
             editor_widget.set_vim_mode_enabled(enabled)
@@ -295,6 +307,6 @@ if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    dock = MonacoDock()
-    dock.show()
+    _dock = MonacoDock()
+    _dock.show()
     sys.exit(app.exec())
