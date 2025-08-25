@@ -3,9 +3,14 @@ from typing import List
 import PySide6QtAds as QtAds
 from PySide6QtAds import CDockManager, CDockWidget
 from qtpy.QtCore import Qt, QTimer
-from qtpy.QtWidgets import QSplitter, QTreeWidget, QVBoxLayout, QWidget
+from qtpy.QtGui import QKeySequence, QShortcut
+from qtpy.QtWidgets import QSplitter, QTextEdit, QVBoxLayout, QWidget
 
 from bec_widgets import BECWidget
+from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.toolbars.actions import MaterialIconAction
+from bec_widgets.utils.toolbars.bundles import ToolbarBundle
+from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
 from bec_widgets.widgets.editors.monaco.monaco_tab import MonacoDock
 from bec_widgets.widgets.editors.web_console.web_console import WebConsole
@@ -48,21 +53,36 @@ def set_splitter_weights(splitter: QSplitter, weights: List[float]) -> None:
 
 class DeveloperView(BECWidget, QWidget):
 
-    def __init__(self, parent=None, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent=parent, **kwargs)
 
         # Top-level layout hosting a toolbar and the dock manager
         self._root_layout = QVBoxLayout(self)
         self._root_layout.setContentsMargins(0, 0, 0, 0)
         self._root_layout.setSpacing(0)
+        self.toolbar = ModularToolBar(self)
+        self.init_developer_toolbar()
+        self._root_layout.addWidget(self.toolbar)
+
         self.dock_manager = CDockManager(self)
         self._root_layout.addWidget(self.dock_manager)
 
         # Initialize the widgets
-        self.explorer = IDEExplorer(self)  # TODO will be replaced by explorer widget
+        self.explorer = IDEExplorer(self)
         self.console = WebConsole(self)
+        self.terminal = WebConsole(self, startup_cmd="")
         self.monaco = MonacoDock(self)
+        self.monaco.save_enabled.connect(self._on_save_enabled_update)
         self.plotting_ads = AdvancedDockArea(self, mode="plot", default_add_direction="bottom")
+        self.signature_help = QTextEdit(self)
+        self.signature_help.setAcceptRichText(True)
+        self.signature_help.setReadOnly(True)
+        self.signature_help.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+        opt = self.signature_help.document().defaultTextOption()
+        opt.setWrapMode(opt.WrapMode.WrapAnywhere)  # wrap everything, including code
+        self.signature_help.document().setDefaultTextOption(opt)
+
+        self.monaco.signature_help.connect(self.signature_help.setMarkdown)
 
         # Create the dock widgets
         self.explorer_dock = QtAds.CDockWidget("Explorer", self)
@@ -74,20 +94,22 @@ class DeveloperView(BECWidget, QWidget):
         self.monaco_dock = QtAds.CDockWidget("Monaco Editor", self)
         self.monaco_dock.setWidget(self.monaco)
 
-        self.plotting_ads_dock = QtAds.CDockWidget("Plotting Area", self)
-        self.plotting_ads_dock.setWidget(self.plotting_ads)
+        self.terminal_dock = QtAds.CDockWidget("Terminal", self)
+        self.terminal_dock.setWidget(self.terminal)
 
         # Monaco will be central widget
         self.dock_manager.setCentralWidget(self.monaco_dock)
 
         # Add the dock widgets to the dock manager
-        self.dock_manager.addDockWidget(
+        area_bottom = self.dock_manager.addDockWidget(
             QtAds.DockWidgetArea.BottomDockWidgetArea, self.console_dock
         )
-        self.dock_manager.addDockWidget(QtAds.DockWidgetArea.LeftDockWidgetArea, self.explorer_dock)
-        self.dock_manager.addDockWidget(
-            QtAds.DockWidgetArea.RightDockWidgetArea, self.plotting_ads_dock
+        self.dock_manager.addDockWidgetTabToArea(self.terminal_dock, area_bottom)
+
+        area_left = self.dock_manager.addDockWidget(
+            QtAds.DockWidgetArea.LeftDockWidgetArea, self.explorer_dock
         )
+        area_left.titleBar().setVisible(False)
 
         for dock in self.dock_manager.dockWidgets():
             # dock.setFeature(CDockWidget.DockWidgetDeleteOnClose, True)#TODO implement according to MonacoDock or AdvancedDockArea
@@ -96,13 +118,71 @@ class DeveloperView(BECWidget, QWidget):
             dock.setFeature(CDockWidget.DockWidgetFloatable, False)
             dock.setFeature(CDockWidget.DockWidgetMovable, False)
 
-        # Fetch all dock areas of the dock widgets (on our case always one dock area)
-        for dock in self.dock_manager.dockWidgets():
-            area = dock.dockAreaWidget()
-            area.titleBar().setVisible(False)
+        self.plotting_ads_dock = QtAds.CDockWidget("Plotting Area", self)
+        self.plotting_ads_dock.setWidget(self.plotting_ads)
+
+        self.signature_dock = QtAds.CDockWidget("Signature Help", self)
+        self.signature_dock.setWidget(self.signature_help)
+
+        area_right = self.dock_manager.addDockWidget(
+            QtAds.DockWidgetArea.RightDockWidgetArea, self.plotting_ads_dock
+        )
+        self.dock_manager.addDockWidgetTabToArea(self.signature_dock, area_right)
 
         # Apply stretch after the layout is done
-        self.set_default_view([2, 5, 3], [5, 5])
+        self.set_default_view([2, 5, 3], [7, 3])
+
+        # Connect editor signals
+        self.explorer.file_open_requested.connect(self._open_new_file)
+
+        self.toolbar.show_bundles(["save", "execution", "settings"])
+
+    def init_developer_toolbar(self):
+        """Initialize the developer toolbar with necessary actions and widgets."""
+        save_button = MaterialIconAction(icon_name="save", tooltip="Save", parent=self)
+        save_button.action.triggered.connect(self.on_save)
+        self.toolbar.components.add_safe("save", save_button)
+
+        save_as_button = MaterialIconAction(icon_name="save_as", tooltip="Save As", parent=self)
+        self.toolbar.components.add_safe("save_as", save_as_button)
+
+        save_bundle = ToolbarBundle("save", self.toolbar.components)
+        save_bundle.add_action("save")
+        save_bundle.add_action("save_as")
+        self.toolbar.add_bundle(save_bundle)
+
+        self.toolbar.components.add_safe(
+            "run",
+            MaterialIconAction(
+                icon_name="play_arrow", tooltip="Run current file", filled=True, parent=self
+            ),
+        )
+        self.toolbar.components.add_safe(
+            "stop",
+            MaterialIconAction(
+                icon_name="stop", tooltip="Stop current execution", filled=True, parent=self
+            ),
+        )
+
+        execution_bundle = ToolbarBundle("execution", self.toolbar.components)
+        execution_bundle.add_action("run")
+        execution_bundle.add_action("stop")
+        self.toolbar.add_bundle(execution_bundle)
+
+        vim_action = MaterialIconAction(
+            icon_name="text_ad", tooltip="Vim", filled=True, parent=self, checkable=True
+        )
+        self.toolbar.components.add_safe("vim", vim_action)
+        vim_action.action.triggered.connect(self.on_vim_triggered)
+
+        settings_bundle = ToolbarBundle("settings", self.toolbar.components)
+        settings_bundle.add_action("vim")
+        self.toolbar.add_bundle(settings_bundle)
+
+        save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
+        save_shortcut.activated.connect(self.on_save)
+        save_as_shortcut = QShortcut(QKeySequence("Ctrl+Shift+S"), self)
+        save_as_shortcut.activated.connect(self.on_save_as)
 
     ####### Default view has to be done with setting up splitters ########
     def set_default_view(self, horizontal_weights: list, vertical_weights: list):
@@ -166,6 +246,26 @@ class DeveloperView(BECWidget, QWidget):
             v = [1, 1]
         self.set_default_view(h, v)
 
+    def _open_new_file(self, file_name: str, scope: str):
+        self.monaco.open_file(file_name)
+
+    @SafeSlot()
+    def on_save(self):
+        self.monaco.save_file()
+
+    @SafeSlot()
+    def on_save_as(self):
+        self.monaco.save_file(force_save_as=True)
+
+    @SafeSlot()
+    def on_vim_triggered(self):
+        self.monaco.set_vim_mode(self.toolbar.components.get_action("vim").action.isChecked())
+
+    @SafeSlot(bool)
+    def _on_save_enabled_update(self, enabled: bool):
+        self.toolbar.components.get_action("save").action.setEnabled(enabled)
+        self.toolbar.components.get_action("save_as").action.setEnabled(enabled)
+
 
 if __name__ == "__main__":
     import sys
@@ -176,6 +276,6 @@ if __name__ == "__main__":
     developer_view = DeveloperView()
     developer_view.show()
     developer_view.setWindowTitle("Developer View")
-    developer_view.resize(1200, 800)
+    developer_view.resize(1920, 1080)
     # developer_view.set_stretch(horizontal=[1, 3, 2], vertical=[5, 5]) #can be set during runtime
     sys.exit(app.exec_())

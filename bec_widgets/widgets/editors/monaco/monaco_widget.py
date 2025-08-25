@@ -83,8 +83,9 @@ class MonacoWidget(BECWidget, QWidget):
             text (str): The text to set in the editor.
             file_name (str): Set the file name
         """
-        self.editor.set_text(text, uri=file_name)
         self._current_file = file_name
+        self._original_content = text
+        self.editor.set_text(text, uri=file_name)
 
     def get_text(self) -> str:
         """
@@ -125,7 +126,6 @@ class MonacoWidget(BECWidget, QWidget):
 
         with open(file_name, "r", encoding="utf-8") as file:
             content = file.read()
-        self._original_content = content
         self.set_text(content, file_name=file_name)
 
     @property
@@ -277,7 +277,7 @@ if TYPE_CHECKING:
     scans: Scans
 
 #######################################
-########## User Script #####################
+########## User Script ################
 #######################################
 
 # This is a comment
