@@ -1,9 +1,8 @@
 import time
 from types import SimpleNamespace
 
-from PySide6.QtWidgets import QToolButton
-
 from bec_qthemes import material_icon
+from PySide6.QtWidgets import QToolButton
 from qtpy.QtCore import Property, Qt, Signal
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import (
