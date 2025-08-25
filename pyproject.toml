@@ -25,6 +25,7 @@ dependencies = [
     "qtpy~=2.4",
     "qtmonaco~=0.5",
     "thefuzz~=0.22",
+    "darkdetect~=0.8",
     "PySide6-QtAds==4.4.0",
 ]
 
