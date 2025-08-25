@@ -3,12 +3,11 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from qtpy.QtWidgets import QApplication
-
 from bec_lib.logger import bec_logger
 from bec_qthemes._icon.material_icons import material_icon
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
+    QApplication,
     QComboBox,
     QHBoxLayout,
     QHeaderView,
