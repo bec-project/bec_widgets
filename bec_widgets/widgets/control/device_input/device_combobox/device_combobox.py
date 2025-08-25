@@ -147,24 +147,6 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         dev_name = self.currentText()
         return self.get_device_object(dev_name)
 
-    def paintEvent(self, event: QPaintEvent) -> None:
-        """Extend the paint event to set the border color based on the validity of the input.
-
-        Args:
-            event (PySide6.QtGui.QPaintEvent) : Paint event.
-        """
-        # logger.info(f"Received paint event: {event} in {self.__class__}")
-        super().paintEvent(event)
-
-        if self._is_valid_input is False and self.isEnabled() is True:
-            painter = QPainter(self)
-            pen = QPen()
-            pen.setWidth(2)
-            pen.setColor(self._accent_colors.emergency)
-            painter.setPen(pen)
-            painter.drawRect(self.rect().adjusted(1, 1, -1, -1))
-            painter.end()
-
     @Slot(str)
     def check_validity(self, input_text: str) -> None:
         """
@@ -173,10 +155,12 @@ class DeviceComboBox(DeviceInputBase, QComboBox):
         if self.validate_device(input_text) is True:
             self._is_valid_input = True
             self.device_selected.emit(input_text)
+            self.setStyleSheet("border: 1px solid transparent;")
         else:
             self._is_valid_input = False
             self.device_reset.emit()
-        self.update()
+            if self.isEnabled():
+                self.setStyleSheet("border: 1px solid red;")
 
     def validate_device(self, device: str) -> bool:  # type: ignore[override]
         """
