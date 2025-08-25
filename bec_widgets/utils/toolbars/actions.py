@@ -446,6 +446,8 @@ class ExpandableMenuAction(ToolBarAction):
 
     def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
         button = QToolButton(toolbar)
+        button.setObjectName("toolbarMenuButton")
+        button.setAutoRaise(True)
         if self.icon_path:
             button.setIcon(QIcon(self.icon_path))
         button.setText(self.tooltip)
