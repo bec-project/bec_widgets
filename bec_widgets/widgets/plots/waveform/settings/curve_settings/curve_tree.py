@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
+from qtpy.QtWidgets import QApplication
+
 from bec_lib.logger import bec_logger
 from bec_qthemes._icon.material_icons import material_icon
 from qtpy.QtCore import Qt
@@ -70,6 +72,7 @@ class CurveRow(QTreeWidgetItem):
             # A top-level device row.
             super().__init__(tree)
 
+        self.app = QApplication.instance()
         self.tree = tree
         self.parent_item = parent_item
         self.curve_tree = tree.parent()  # The CurveTree widget
@@ -115,7 +118,16 @@ class CurveRow(QTreeWidgetItem):
 
         # If device row, add "Add DAP" button
         if self.source == "device":
-            self.add_dap_button = QPushButton("DAP")
+            self.add_dap_button = QToolButton()
+            analysis_icon = material_icon(
+                "monitoring",
+                size=(20, 20),
+                convert_to_pixmap=False,
+                filled=False,
+                color=self.app.theme.colors["FG"].toTuple(),
+            )
+            self.add_dap_button.setIcon(analysis_icon)
+            self.add_dap_button.setToolTip("Add DAP")
             self.add_dap_button.clicked.connect(lambda: self.add_dap_row())
             actions_layout.addWidget(self.add_dap_button)
 
