@@ -59,6 +59,7 @@ jobs:
 
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
+        if: failure()
         with:
           name: image-references
           path: tests/reference_failures/
