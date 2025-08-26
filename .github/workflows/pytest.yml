@@ -57,6 +57,13 @@ jobs:
         id: coverage
         run: pytest --random-order --cov=bec_widgets --cov-config=pyproject.toml --cov-branch --cov-report=xml --no-cov-on-fail tests/unit_tests/
 
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-references
+          path: tests/reference_failures/
+          if-no-files-found: ignore
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
