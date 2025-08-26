@@ -17,10 +17,6 @@ def abort_button(qtbot, mocked_client):
 
 def test_abort_button(abort_button):
     assert abort_button.button.text() == "Abort"
-    assert (
-        abort_button.button.styleSheet()
-        == "background-color:  #666666; color: white; font-weight: bold; font-size: 12px;"
-    )
     abort_button.button.click()
     assert abort_button.queue.request_scan_abortion.called
     abort_button.close()

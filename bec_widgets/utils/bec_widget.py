@@ -83,6 +83,8 @@ class BECWidget(BECConnector):
         if hasattr(qapp, "theme"):
             qapp.theme.theme_changed.connect(self._update_theme)
 
+    @SafeSlot(str)
+    @SafeSlot()
     def _update_theme(self, theme: str | None = None):
         """Update the theme."""
         if theme is None:
