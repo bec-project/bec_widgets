@@ -7,7 +7,7 @@ import darkdetect
 import PySide6QtAds as QtAds
 import shiboken6
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QObject
+from qtpy.QtCore import QObject, QTimer
 from qtpy.QtWidgets import QApplication, QFileDialog, QWidget
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
@@ -47,8 +47,7 @@ class BECWidget(BECConnector):
 
         >>> class MyWidget(BECWidget, QWidget):
         >>>     def __init__(self, parent=None, client=None, config=None, gui_id=None):
-        >>>         super().__init__(client=client, config=config, gui_id=gui_id)
-        >>>         QWidget.__init__(self, parent=parent)
+        >>>         super().__init__(parent=parent, client=client, config=config, gui_id=gui_id)
 
 
         Args:
@@ -83,8 +82,8 @@ class BECWidget(BECConnector):
         if hasattr(qapp, "theme"):
             qapp.theme.theme_changed.connect(self._update_theme)
 
-    @SafeSlot(str)
-    @SafeSlot()
+    @SafeSlot(str, verify_sender=True)
+    @SafeSlot(verify_sender=True)
     def _update_theme(self, theme: str | None = None):
         """Update the theme."""
         if theme is None:
