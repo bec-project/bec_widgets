@@ -13,15 +13,15 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "bec_ipython_client~=3.52", # needed for jupyter console
+    "bec_ipython_client~=3.52",  # needed for jupyter console
     "bec_lib~=3.52",
-    "bec_qthemes~=1.0",
-    "black~=25.0",              # needed for bw-generate-cli
-    "isort~=5.13, >=5.13.2",    # needed for bw-generate-cli
+    "bec_qthemes~=1.0, >=1.1.1",
+    "black~=25.0",               # needed for bw-generate-cli
+    "isort~=5.13, >=5.13.2",     # needed for bw-generate-cli
     "pydantic~=2.0",
     "pyqtgraph~=0.13",
     "PySide6==6.9.0",
-    "qtconsole~=5.5, >=5.5.1",  # needed for jupyter console
+    "qtconsole~=5.5, >=5.5.1",   # needed for jupyter console
     "qtpy~=2.4",
     "qtmonaco~=0.5",
     "thefuzz~=0.22",
