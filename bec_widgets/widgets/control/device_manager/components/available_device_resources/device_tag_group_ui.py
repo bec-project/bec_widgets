@@ -5,13 +5,10 @@ from bec_qthemes import material_icon
 from qtpy.QtCore import QMetaObject, QSize, Qt
 from qtpy.QtWidgets import (
     QAbstractItemView,
-    QFrame,
     QHBoxLayout,
     QLabel,
     QListView,
     QListWidget,
-    QSizePolicy,
-    QSpacerItem,
     QToolButton,
     QVBoxLayout,
 )
@@ -64,58 +61,40 @@ class Ui_DeviceTagGroup(object):
         if not DeviceTagGroup.objectName():
             DeviceTagGroup.setObjectName("DeviceTagGroup")
         DeviceTagGroup.setMinimumWidth(150)
-        self.verticalLayout = QVBoxLayout(DeviceTagGroup)
+        self.verticalLayout = QVBoxLayout()
         self.verticalLayout.setObjectName("verticalLayout")
-        self.frame = QFrame(DeviceTagGroup)
-        self.frame.setObjectName("frame")
-        self.frame.setFrameShape(QFrame.Shape.StyledPanel)
-        self.frame.setFrameShadow(QFrame.Shadow.Raised)
-        self.verticalLayout_2 = QVBoxLayout(self.frame)
-        self.verticalLayout_2.setObjectName("verticalLayout_2")
-        self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setObjectName("horizontalLayout")
+        DeviceTagGroup.set_layout(self.verticalLayout)
 
-        self.title = QLabel(self.frame)
-        self.title.setObjectName("title")
-        self.horizontalLayout.addWidget(self.title)
+        title_layout = DeviceTagGroup.get_title_layout()
 
-        self.n_included = QLabel(self.frame, text="...")
+        self.n_included = QLabel(DeviceTagGroup, text="...")
         self.n_included.setObjectName("n_included")
-        self.horizontalLayout.addWidget(self.n_included)
+        title_layout.addWidget(self.n_included)
 
-        self.horizontalSpacer = QSpacerItem(
-            40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
-        )
-        self.horizontalLayout.addItem(self.horizontalSpacer)
-
-        self.delete_tag_button = QToolButton(self.frame)
+        self.delete_tag_button = QToolButton(DeviceTagGroup)
         self.delete_tag_button.setObjectName("delete_tag_button")
-        self.horizontalLayout.addWidget(self.delete_tag_button)
+        title_layout.addWidget(self.delete_tag_button)
 
-        self.remove_from_composition_button = QToolButton(self.frame)
+        self.remove_from_composition_button = QToolButton(DeviceTagGroup)
         self.remove_from_composition_button.setObjectName("remove_from_composition_button")
-        self.horizontalLayout.addWidget(self.remove_from_composition_button)
+        title_layout.addWidget(self.remove_from_composition_button)
 
-        self.add_to_composition_button = QToolButton(self.frame)
+        self.add_to_composition_button = QToolButton(DeviceTagGroup)
         self.add_to_composition_button.setObjectName("add_to_composition_button")
-        self.horizontalLayout.addWidget(self.add_to_composition_button)
+        title_layout.addWidget(self.add_to_composition_button)
 
-        self.remove_all_button = QToolButton(self.frame)
+        self.remove_all_button = QToolButton(DeviceTagGroup)
         self.remove_all_button.setObjectName("remove_all_from_composition_button")
-        self.horizontalLayout.addWidget(self.remove_all_button)
+        title_layout.addWidget(self.remove_all_button)
 
-        self.add_all_button = QToolButton(self.frame)
+        self.add_all_button = QToolButton(DeviceTagGroup)
         self.add_all_button.setObjectName("add_all_to_composition_button")
-        self.horizontalLayout.addWidget(self.add_all_button)
+        title_layout.addWidget(self.add_all_button)
 
-        self.verticalLayout_2.addLayout(self.horizontalLayout)
-
-        self.device_list = AutoHeightListWidget(self.frame)
+        self.device_list = AutoHeightListWidget(DeviceTagGroup)
         self.device_list.setObjectName("device_list")
 
-        self.verticalLayout_2.addWidget(self.device_list)
-
-        self.verticalLayout.addWidget(self.frame)
+        self.verticalLayout.addWidget(self.device_list)
 
         self.set_icons()
 

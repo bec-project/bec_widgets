@@ -4,6 +4,7 @@ from bec_qthemes import material_icon
 from qtpy.QtCore import QSize
 from qtpy.QtWidgets import QFrame, QHBoxLayout, QLabel, QListWidgetItem, QVBoxLayout, QWidget
 
+from bec_widgets.utils.expandable_frame import ExpandableGroupFrame
 from bec_widgets.widgets.control.device_manager.components.available_device_resources.device_resource_backend import (
     HashableDevice,
 )
@@ -98,13 +99,13 @@ class _DeviceEntry(NamedTuple):
     widget: _DeviceEntryWidget
 
 
-class DeviceTagGroup(QWidget, Ui_DeviceTagGroup):
+class DeviceTagGroup(ExpandableGroupFrame, Ui_DeviceTagGroup):
     def __init__(
         self, parent=None, name: str = "TagGroupTitle", data: set[HashableDevice] = set(), **kwargs
     ):
         super().__init__(parent=parent, **kwargs)
         self.setupUi(self)
-        self.title.setText(name)
+        self.title_text = name
         self._devices: dict[str, _DeviceEntry] = {}
         for device in data:
             self._add_item(device)

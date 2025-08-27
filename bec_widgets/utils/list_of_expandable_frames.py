@@ -54,14 +54,13 @@ class ListOfExpandableFrames(QListWidget, Generic[_EF]):
 
         item_widget.expansion_state_changed.connect(partial(_updatesize, item, item_widget))
         item_widget.imminent_deletion.connect(partial(_remove_item, item))
-
         item_widget.broadcast_size_hint.connect(item.setSizeHint)
-        item.setSizeHint(item_widget.sizeHint())
 
         self.setItemWidget(item, item_widget)
         self.addItem(item)
         self._item_dict[id] = self.item_tuple(item, item_widget)
 
+        item.setSizeHint(item_widget.sizeHint())
         return item_widget
 
     def get_item_widget(self, id: str):

@@ -45,12 +45,9 @@ class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
         self._add_tag_group("Untagged devices", self._backend.untagged_devices)
 
     def _add_tag_group(self, tag_group: str, devices: set[HashableDevice]):
-        item = QListWidgetItem(self.tag_groups_list)
-        tag_group_widget = DeviceTagGroup(self.tag_groups_list, tag_group, devices)
-        self.tag_groups_list.setItemWidget(item, tag_group_widget)
-        self.tag_groups_list.addItem(item)
-        self._items[tag_group] = (item, tag_group_widget)
-        item.setSizeHint(QSize(tag_group_widget.width(), tag_group_widget.height()))
+        self.tag_groups_list.add_item(
+            tag_group, self.tag_groups_list, tag_group, devices, expanded=False
+        )
 
     def _reset_devices_state(self):
         for _, tag_group in self._items.values():

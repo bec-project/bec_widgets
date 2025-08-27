@@ -32,6 +32,7 @@ class ExpandableGroupFrame(QFrame):
         super().__init__(parent=parent)
         self._expanded = expanded
 
+        self._title_text = f"<b>{title}</b>"
         self.setFrameStyle(QFrame.Shape.StyledPanel | QFrame.Shadow.Plain)
         self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         self._layout = QVBoxLayout()
@@ -50,20 +51,26 @@ class ExpandableGroupFrame(QFrame):
     def _create_title_layout(self, title: str, icon: str):
         self._title_layout = QHBoxLayout()
         self._layout.addLayout(self._title_layout)
+        self._internal_title_layout = QHBoxLayout()
+        self._title_layout.addLayout(self._internal_title_layout)
 
-        self._title = ClickableLabel(f"<b>{title}</b>")
+        self._title = ClickableLabel()
+        self._set_title_text(self._title_text)
         self._title_icon = ClickableLabel()
-        self._title_layout.addWidget(self._title_icon)
-        self._title_layout.addWidget(self._title)
+        self._internal_title_layout.addWidget(self._title_icon)
+        self._internal_title_layout.addWidget(self._title)
         self.icon_name = icon
         self._title.clicked.connect(self.switch_expanded_state)
         self._title_icon.clicked.connect(self.switch_expanded_state)
 
-        self._title_layout.addStretch(1)
+        self._internal_title_layout.addStretch(1)
 
         self._expansion_button = QToolButton()
         self._update_expansion_icon()
         self._title_layout.addWidget(self._expansion_button, stretch=1)
+
+    def get_title_layout(self) -> QHBoxLayout:
+        return self._internal_title_layout
 
     def set_layout(self, layout: QLayout) -> None:
         self._contents.setLayout(layout)
@@ -112,6 +119,18 @@ class ExpandableGroupFrame(QFrame):
             )
         else:
             self._title_icon.setVisible(False)
+
+    @SafeProperty(str)
+    def title_text(self):  # type: ignore
+        return self._title_text
+
+    @title_text.setter
+    def title_text(self, title_text: str):
+        self._title_text = title_text
+        self._set_title_text(self._title_text)
+
+    def _set_title_text(self, title_text: str):
+        self._title.setText(title_text)
 
 
 # Application example
