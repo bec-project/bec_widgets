@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import operator
 from functools import reduce
 from glob import glob
@@ -29,7 +30,12 @@ class HashableDevice(Device):
         config_values = sorted(
             (str(kv) for kv in self.deviceConfig.items()) if self.deviceConfig else []
         )
-        return (reduce(operator.add, (self.name, self.deviceClass, *config_values))).__hash__()
+        return int(
+            hashlib.md5(
+                (reduce(operator.add, (self.name, self.deviceClass, *config_values))).encode()
+            ).hexdigest(),
+            16,
+        )
 
     def __eq__(self, value: object) -> bool:
         if not isinstance(value, self.__class__):
