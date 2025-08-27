@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import os
+
+from bec_lib.bec_yaml_loader import yaml_load
+from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from qtpy import QtCore, QtWidgets
 
 from bec_widgets.examples.device_manager_view.device_manager_view import DeviceManagerView
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
+
+logger = bec_logger.logger
 
 
 class DeviceManagerWidget(BECWidget, QtWidgets.QWidget):
@@ -41,19 +47,50 @@ class DeviceManagerWidget(BECWidget, QtWidgets.QWidget):
         self._overlay_widget.setSizePolicy(
             QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding
         )
+        # Load current config
         self.button_load_current_config = QtWidgets.QPushButton("Load Current Config")
         icon = material_icon(icon_name="database", size=(24, 24), convert_to_pixmap=False)
         self.button_load_current_config.setIcon(icon)
         self._overlay_layout.addWidget(self.button_load_current_config)
         self.button_load_current_config.clicked.connect(self._load_config_clicked)
+        # Load config from disk
+        self.button_load_config_from_file = QtWidgets.QPushButton("Load Config From File")
+        icon = material_icon(icon_name="folder", size=(24, 24), convert_to_pixmap=False)
+        self.button_load_config_from_file.setIcon(icon)
+        self._overlay_layout.addWidget(self.button_load_config_from_file)
+        self.button_load_config_from_file.clicked.connect(self._load_config_from_file_clicked)
         self._overlay_widget.setVisible(True)
+
+    def _load_config_from_file_clicked(self):
+        """Handle click on 'Load Config From File' button."""
+        start_dir = os.path.expanduser("~")
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, caption="Select Config File", dir=start_dir
+        )
+        if file_path:
+            self._load_config_from_file(file_path)
+
+    def _load_config_from_file(self, file_path: str):
+        try:
+            config = yaml_load(file_path)
+        except Exception as e:
+            logger.error(f"Failed to load config from file {file_path}. Error: {e}")
+            return
+        config_list = []
+        for name, cfg in config.items():
+            config_list.append(cfg)
+            config_list[-1]["name"] = name
+        self.device_manager_view.device_table_view.set_device_config(config_list)
+        # self.device_manager_view.ophyd_test.on_device_config_update(config)
+        self.stacked_layout.setCurrentWidget(self.device_manager_view)
 
     @SafeSlot()
     def _load_config_clicked(self):
         """Handle click on 'Load Current Config' button."""
         config = self.client.device_manager._get_redis_device_config()
+        config.append({"name": "wrong_device", "some_value": 1})
         self.device_manager_view.device_table_view.set_device_config(config)
-        self.device_manager_view.ophyd_test.on_device_config_update(config)
+        # self.device_manager_view.ophyd_test.on_device_config_update(config)
         self.stacked_layout.setCurrentWidget(self.device_manager_view)
 
 

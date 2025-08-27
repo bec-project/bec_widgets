@@ -3,16 +3,18 @@
 from __future__ import annotations
 
 import copy
-import json
+import time
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from qtpy import QtCore, QtGui, QtWidgets
 from thefuzz import fuzz
 
+from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import get_accent_colors
+from bec_widgets.utils.colors import get_accent_colors, get_theme_palette
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.widgets.control.device_manager.components.dm_ophyd_test import ValidationStatus
 
 logger = bec_logger.logger
 
@@ -30,21 +32,25 @@ class DictToolTipDelegate(QtWidgets.QStyledItemDelegate):
         model: DeviceFilterProxyModel = index.model()
         model_index = model.mapToSource(index)
         row_dict = model.sourceModel().get_row_data(model_index)
-        QtWidgets.QToolTip.showText(event.globalPos(), row_dict["description"], view)
+        description = row_dict.get("description", "")
+        QtWidgets.QToolTip.showText(event.globalPos(), description, view)
         return True
 
 
 class CenterCheckBoxDelegate(DictToolTipDelegate):
     """Custom checkbox delegate to center checkboxes in table cells."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, colors=None):
         super().__init__(parent)
-        colors = get_accent_colors()
+        self._colors = colors if colors else get_accent_colors()
         self._icon_checked = material_icon(
-            "check_box", size=QtCore.QSize(16, 16), color=colors.default, filled=True
+            "check_box", size=QtCore.QSize(16, 16), color=self._colors.default, filled=True
         )
         self._icon_unchecked = material_icon(
-            "check_box_outline_blank", size=QtCore.QSize(16, 16), color=colors.default, filled=True
+            "check_box_outline_blank",
+            size=QtCore.QSize(16, 16),
+            color=self._colors.default,
+            filled=True,
         )
 
     def apply_theme(self, theme: str | None = None):
@@ -75,8 +81,50 @@ class CenterCheckBoxDelegate(DictToolTipDelegate):
         return model.setData(index, new_state, QtCore.Qt.CheckStateRole)
 
 
+class DeviceValidatedDelegate(DictToolTipDelegate):
+    """Custom delegate for displaying validated device configurations."""
+
+    def __init__(self, parent=None, colors=None):
+        super().__init__(parent)
+        self._colors = colors if colors else get_accent_colors()
+        self._icons = {
+            ValidationStatus.PENDING: material_icon(
+                icon_name="circle", size=(12, 12), color=self._colors.default, filled=True
+            ),
+            ValidationStatus.VALID: material_icon(
+                icon_name="circle", size=(12, 12), color=self._colors.success, filled=True
+            ),
+            ValidationStatus.FAILED: material_icon(
+                icon_name="circle", size=(12, 12), color=self._colors.emergency, filled=True
+            ),
+        }
+
+    def apply_theme(self, theme: str | None = None):
+        colors = get_accent_colors()
+        for status, icon in self._icons.items():
+            icon.setColor(colors[status])
+
+    def paint(self, painter, option, index):
+        status = index.model().data(index, QtCore.Qt.DisplayRole)
+        if status is None:
+            return super().paint(painter, option, index)
+
+        pixmap = self._icons.get(status)
+        if pixmap:
+            rect = option.rect
+            pix_rect = pixmap.rect()
+            pix_rect.moveCenter(rect.center())
+            painter.drawPixmap(pix_rect.topLeft(), pixmap)
+
+        super().paint(painter, option, index)
+
+
 class WrappingTextDelegate(DictToolTipDelegate):
     """Custom delegate for wrapping text in table cells."""
+
+    def __init__(self, table: BECTableView, parent=None):
+        super().__init__(parent)
+        self._table = table
 
     def paint(self, painter, option, index):
         text = index.model().data(index, QtCore.Qt.DisplayRole)
@@ -91,12 +139,14 @@ class WrappingTextDelegate(DictToolTipDelegate):
 
     def sizeHint(self, option, index):
         text = str(index.model().data(index, QtCore.Qt.DisplayRole) or "")
-        # if not text:
-        #     return super().sizeHint(option, index)
+        column_width = self._table.columnWidth(index.column()) - 8  # -4 & 4
 
-        # Use the actual column width
-        table = index.model().parent()  # or store reference to QTableView
-        column_width = table.columnWidth(index.column())  # - 8
+        # Avoid pathological heights for too-narrow columns
+        min_width = option.fontMetrics.averageCharWidth() * 4
+        if column_width < min_width:
+            fm = QtGui.QFontMetrics(option.font)
+            elided = fm.elidedText(text, QtCore.Qt.ElideRight, column_width)
+            return QtCore.QSize(column_width, fm.height() + 4)
 
         doc = QtGui.QTextDocument()
         doc.setDefaultFont(option.font)
@@ -104,8 +154,25 @@ class WrappingTextDelegate(DictToolTipDelegate):
         doc.setPlainText(text)
 
         layout_height = doc.documentLayout().documentSize().height()
-        height = int(layout_height) + 4  # Needs some extra padding, otherwise it gets cut off
-        return QtCore.QSize(column_width, height)
+        return QtCore.QSize(column_width, int(layout_height) + 4)
+
+    # def sizeHint(self, option, index):
+    #     text = str(index.model().data(index, QtCore.Qt.DisplayRole) or "")
+    #     # if not text:
+    #     #     return super().sizeHint(option, index)
+
+    #     # Use the actual column width
+    #     table = index.model().parent()  # or store reference to QTableView
+    #     column_width = table.columnWidth(index.column())  # - 8
+
+    #     doc = QtGui.QTextDocument()
+    #     doc.setDefaultFont(option.font)
+    #     doc.setTextWidth(column_width)
+    #     doc.setPlainText(text)
+
+    #     layout_height = doc.documentLayout().documentSize().height()
+    #     height = int(layout_height) + 4  # Needs some extra padding, otherwise it gets cut off
+    #     return QtCore.QSize(column_width, height)
 
 
 class DeviceTableModel(QtCore.QAbstractTableModel):
@@ -115,10 +182,16 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
     Sort logic is implemented directly on the data of the table view.
     """
 
-    def __init__(self, device_config: list[dict] | None = None, parent=None):
+    device_configs_added = QtCore.Signal(dict)  # Dict[str, dict] of configs that were added
+    devices_removed = QtCore.Signal(list)  # List of strings with device names that were removed
+
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self._device_config = device_config or []
+        self._device_config: dict[str, dict] = {}
+        self._list_items: list[dict] = []
+        self._validation_status: dict[str, ValidationStatus] = {}
         self.headers = [
+            "",
             "name",
             "deviceClass",
             "readoutPriority",
@@ -133,7 +206,7 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
     ###############################################
 
     def rowCount(self, parent=QtCore.QModelIndex()) -> int:
-        return len(self._device_config)
+        return len(self._list_items)
 
     def columnCount(self, parent=QtCore.QModelIndex()) -> int:
         return len(self.headers)
@@ -147,15 +220,20 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
         """Return the row data for the given index."""
         if not index.isValid():
             return {}
-        return copy.deepcopy(self._device_config[index.row()])
+        return copy.deepcopy(self._list_items[index.row()])
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
         """Return data for the given index and role."""
         if not index.isValid():
             return None
         row, col = index.row(), index.column()
+
+        if col == 0 and role == QtCore.Qt.DisplayRole:  # QtCore.Qt.DisplayRole:
+            dev_name = self._list_items[row].get("name", "")
+            return self._validation_status.get(dev_name, ValidationStatus.PENDING)
+
         key = self.headers[col]
-        value = self._device_config[row].get(key)
+        value = self._list_items[row].get(key)
 
         if role == QtCore.Qt.DisplayRole:
             if key in ("enabled", "readOnly"):
@@ -210,7 +288,7 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
         if key in ("enabled", "readOnly") and role == QtCore.Qt.CheckStateRole:
             if not self._checkable_columns_enabled.get(key, True):
                 return False  # ignore changes if column is disabled
-            self._device_config[row][key] = value == QtCore.Qt.Checked
+            self._list_items[row][key] = value == QtCore.Qt.Checked
             self.dataChanged.emit(index, index, [QtCore.Qt.CheckStateRole])
             return True
         return False
@@ -219,87 +297,115 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
     ############ Public methods ########
     ####################################
 
-    def get_device_config(self) -> list[dict]:
-        """Return the current device config (with checkbox updates applied)."""
+    def get_device_config(self) -> dict[str, dict]:
+        """Method to get the device configuration."""
         return self._device_config
 
-    def set_checkbox_enabled(self, column_name: str, enabled: bool):
+    def add_device_configs(self, device_configs: dict[str, dict]):
         """
-        Enable/Disable the checkbox column.
+        Add devices to the model.
 
         Args:
-            column_name (str): The name of the column to modify.
-            enabled (bool): Whether the checkbox should be enabled or disabled.
+            device_configs (dict[str, dict]): A dictionary of device configurations to add.
         """
-        if column_name in self._checkable_columns_enabled:
-            self._checkable_columns_enabled[column_name] = enabled
-            col = self.headers.index(column_name)
-            top_left = self.index(0, col)
-            bottom_right = self.index(self.rowCount() - 1, col)
-            self.dataChanged.emit(
-                top_left, bottom_right, [QtCore.Qt.CheckStateRole, QtCore.Qt.DisplayRole]
-            )
+        already_in_list = []
+        for k, cfg in device_configs.items():
+            if k in self._device_config:
+                logger.warning(f"Device {k} already exists in the model.")
+                already_in_list.append(k)
+                continue
+            self._device_config[k] = cfg
+            new_list_cfg = copy.deepcopy(cfg)
+            new_list_cfg["name"] = k
+            row = len(self._list_items)
+            self.beginInsertRows(QtCore.QModelIndex(), row, row)
+            self._list_items.append(new_list_cfg)
+            self.endInsertRows()
+        for k in already_in_list:
+            device_configs.pop(k)
+        self.device_configs_added.emit(device_configs)
 
-    def set_device_config(self, device_config: list[dict]):
+    def set_device_config(self, device_configs: dict[str, dict]):
         """
         Replace the device config.
 
         Args:
-            device_config (list[dict]): The new device config to set.
+            device_config (dict[str, dict]): The new device config to set.
         """
+        diff_names = set(device_configs.keys()) - set(self._device_config.keys())
         self.beginResetModel()
-        self._device_config = list(device_config)
+        self._device_config.clear()
+        self._list_items.clear()
+        for k, cfg in device_configs.items():
+            self._device_config[k] = cfg
+            new_list_cfg = copy.deepcopy(cfg)
+            new_list_cfg["name"] = k
+            self._list_items.append(new_list_cfg)
         self.endResetModel()
+        self.devices_removed.emit(diff_names)
+        self.device_configs_added.emit(device_configs)
 
-    @SafeSlot(dict)
-    def add_device(self, device: dict):
+    def remove_device_configs(self, device_configs: dict[str, dict]):
         """
-        Add an extra device to the device config at the bottom.
-
-        Args:
-            device (dict): The device configuration to add.
-        """
-        row = len(self._device_config)
-        self.beginInsertRows(QtCore.QModelIndex(), row, row)
-        self._device_config.append(device)
-        self.endInsertRows()
-
-    @SafeSlot(int)
-    def remove_device_by_row(self, row: int):
-        """
-        Remove one device row by index. This maps to the row to the source of the data model
+        Remove devices from the model.
 
         Args:
-            row (int): The index of the device row to remove.
+            device_configs (dict[str, dict]): A dictionary of device configurations to remove.
         """
-        if 0 <= row < len(self._device_config):
+        removed = []
+        for k in device_configs.keys():
+            if k not in self._device_config:
+                logger.warning(f"Device {k} does not exist in the model.")
+                continue
+            new_cfg = self._device_config.pop(k)
+            new_cfg["name"] = k
+            row = self._list_items.index(new_cfg)
             self.beginRemoveRows(QtCore.QModelIndex(), row, row)
-            self._device_config.pop(row)
+            self._list_items.pop(row)
             self.endRemoveRows()
+            removed.append(k)
+        self.devices_removed.emit(removed)
 
-    @SafeSlot(list)
-    def remove_devices_by_rows(self, rows: list[int]):
+    def clear_table(self):
         """
-        Remove multiple device rows by their indices.
+        Clear the table.
+        """
+        device_names = list(self._device_config.keys())
+        self.beginResetModel()
+        self._device_config.clear()
+        self._list_items.clear()
+        self.endResetModel()
+        self.devices_removed.emit(device_names)
+
+    def update_validation_status(self, device_name: str, status: int | ValidationStatus):
+        """
+        Handle device status changes.
 
         Args:
-            rows (list[int]): The indices of the device rows to remove.
+            device_name (str): The name of the device.
+            status (int): The new status of the device.
         """
-        for row in sorted(rows, reverse=True):
-            self.remove_device_by_row(row)
-
-    @SafeSlot(str)
-    def remove_device_by_name(self, name: str):
-        """
-        Remove one device row by name.
-
-        Args:
-            name (str): The name of the device to remove.
-        """
-        for row, device in enumerate(self._device_config):
-            if device.get("name") == name:
-                self.remove_device_by_row(row)
+        if isinstance(status, int):
+            status = ValidationStatus(status)
+        if device_name not in self._device_config:
+            logger.warning(
+                f"Device {device_name} not found in device_config dict {self._device_config}"
+            )
+            return
+        self._validation_status[device_name] = status
+        row = None
+        for ii, item in enumerate(self._list_items):
+            if item["name"] == device_name:
+                row = ii
                 break
+        if row is None:
+            logger.warning(
+                f"Device {device_name} not found in device_status dict {self._validation_status}"
+            )
+            return
+        # Emit dataChanged for column 0 (status column)
+        index = self.index(row, 0)
+        self.dataChanged.emit(index, index, [QtCore.Qt.DisplayRole])
 
 
 class BECTableView(QtWidgets.QTableView):
@@ -319,12 +425,7 @@ class BECTableView(QtWidgets.QTableView):
         if not proxy_indexes:
             return
 
-        # Get unique rows (proxy indices) in reverse order so removal indexes stay valid
-        proxy_rows = sorted({idx.row() for idx in proxy_indexes}, reverse=True)
-        # Map to source model rows
-        source_rows = [
-            self.model().mapToSource(self.model().index(row, 0)).row() for row in proxy_rows
-        ]
+        source_rows = self._get_source_rows(proxy_indexes)
 
         model: DeviceTableModel = self.model().sourceModel()  # access underlying model
         # Delegate confirmation and removal to helper
@@ -332,14 +433,28 @@ class BECTableView(QtWidgets.QTableView):
         if not removed:
             return
 
+    def _get_source_rows(self, proxy_indexes: list[QtWidgets.QModelIndex]) -> list[int]:
+        """
+        Map proxy model indices to source model row indices.
+
+        Args:
+            proxy_indexes (list[QModelIndex]): List of proxy model indices.
+
+        Returns:
+            list[int]: List of source model row indices.
+        """
+        proxy_rows = sorted({idx for idx in proxy_indexes}, reverse=True)
+        source_rows = [self.model().mapToSource(idx).row() for idx in proxy_rows]
+        return list(set(source_rows))
+
     def _confirm_and_remove_rows(self, model: DeviceTableModel, source_rows: list[int]) -> bool:
         """
         Prompt the user to confirm removal of rows and remove them from the model if accepted.
 
         Returns True if rows were removed, False otherwise.
         """
-        cfg = model.get_device_config()
-        names = [str(cfg[r].get("name", "<unknown>")) for r in sorted(source_rows)]
+        configs = [model._list_items[r] for r in sorted(source_rows)]
+        names = [cfg.get("name", "<unknown>") for cfg in configs]
 
         msg = QtWidgets.QMessageBox(self)
         msg.setIcon(QtWidgets.QMessageBox.Warning)
@@ -354,8 +469,8 @@ class BECTableView(QtWidgets.QTableView):
 
         res = msg.exec_()
         if res == QtWidgets.QMessageBox.Ok:
-            model.remove_devices_by_rows(source_rows)
-            # TODO add signal for removed devices
+            configs_to_be_removed = {model._device_config[name] for name in names}
+            model.remove_device_configs(configs_to_be_removed)
             return True
         return False
 
@@ -367,7 +482,7 @@ class DeviceFilterProxyModel(QtCore.QSortFilterProxyModel):
         self._hidden_rows = set()
         self._filter_text = ""
         self._enable_fuzzy = True
-        self._filter_columns = [0, 1]  # name and deviceClass for search
+        self._filter_columns = [1, 2]  # name and deviceClass for search
 
     def hide_rows(self, row_indices: list[int]):
         """
@@ -431,11 +546,12 @@ class DeviceFilterProxyModel(QtCore.QSortFilterProxyModel):
 class DeviceTableView(BECWidget, QtWidgets.QWidget):
     """Device Table View for the device manager."""
 
-    selected_device = QtCore.Signal(dict)
+    selected_device = QtCore.Signal(dict)  # Selected device configuration dict[str,dict]
+    device_configs_added = QtCore.Signal(dict)  # Dict[str, dict] of configs that were added
+    devices_removed = QtCore.Signal(list)  # List of strings with device names that were removed
 
     RPC = False
     PLUGIN = False
-    devices_removed = QtCore.Signal(list)
 
     def __init__(self, parent=None, client=None):
         super().__init__(client=client, parent=parent, theme_update=True)
@@ -451,6 +567,10 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
         # Add widgets to main layout
         self.layout.addLayout(self.search_controls)
         self.layout.addWidget(self.table)
+
+        # Connect signals
+        self._model.devices_removed.connect(self.devices_removed.emit)
+        self._model.device_configs_added.connect(self.device_configs_added.emit)
 
     def _setup_search(self):
         """Create components related to the search functionality"""
@@ -492,43 +612,48 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
         """Setup the table view."""
         # Model + Proxy
         self.table = BECTableView(self)
-        self.model = DeviceTableModel(parent=self.table)
+        self._model = DeviceTableModel(parent=self.table)
         self.proxy = DeviceFilterProxyModel(parent=self.table)
-        self.proxy.setSourceModel(self.model)
+        self.proxy.setSourceModel(self._model)
         self.table.setModel(self.proxy)
         self.table.setSortingEnabled(True)
 
         # Delegates
-        self.checkbox_delegate = CenterCheckBoxDelegate(self.table)
+        colors = get_accent_colors()
+        self.checkbox_delegate = CenterCheckBoxDelegate(self.table, colors=colors)
         self.wrap_delegate = WrappingTextDelegate(self.table)
         self.tool_tip_delegate = DictToolTipDelegate(self.table)
-        self.table.setItemDelegateForColumn(0, self.tool_tip_delegate)  # name
-        self.table.setItemDelegateForColumn(1, self.tool_tip_delegate)  # deviceClass
-        self.table.setItemDelegateForColumn(2, self.tool_tip_delegate)  # readoutPriority
-        self.table.setItemDelegateForColumn(3, self.wrap_delegate)  # deviceTags
-        self.table.setItemDelegateForColumn(4, self.checkbox_delegate)  # enabled
-        self.table.setItemDelegateForColumn(5, self.checkbox_delegate)  # readOnly
+        self.validated_delegate = DeviceValidatedDelegate(self.table, colors=colors)
+        self.table.setItemDelegateForColumn(0, self.validated_delegate)  # ValidationStatus
+        self.table.setItemDelegateForColumn(1, self.tool_tip_delegate)  # name
+        self.table.setItemDelegateForColumn(2, self.tool_tip_delegate)  # deviceClass
+        self.table.setItemDelegateForColumn(3, self.tool_tip_delegate)  # readoutPriority
+        self.table.setItemDelegateForColumn(4, self.wrap_delegate)  # deviceTags
+        self.table.setItemDelegateForColumn(5, self.checkbox_delegate)  # enabled
+        self.table.setItemDelegateForColumn(6, self.checkbox_delegate)  # readOnly
 
         # Column resize policies
-        # TODO maybe we need here a flexible header options as deviceClass
-        # may get quite long for beamlines plugin repos
         header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)  # name
-        header.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)  # deviceClass
-        header.setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeToContents)  # readoutPriority
-        header.setSectionResizeMode(3, QtWidgets.QHeaderView.Stretch)  # deviceTags
-        header.setSectionResizeMode(4, QtWidgets.QHeaderView.Fixed)  # enabled
-        header.setSectionResizeMode(5, QtWidgets.QHeaderView.Fixed)  # readOnly
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.Fixed)  # ValidationStatus
+        header.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)  # name
+        header.setSectionResizeMode(2, QtWidgets.QHeaderView.ResizeToContents)  # deviceClass
+        header.setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeToContents)  # readoutPriority
+        header.setSectionResizeMode(4, QtWidgets.QHeaderView.Stretch)  # deviceTags
+        header.setSectionResizeMode(5, QtWidgets.QHeaderView.Fixed)  # enabled
+        header.setSectionResizeMode(6, QtWidgets.QHeaderView.Fixed)  # readOnly
 
-        self.table.setColumnWidth(3, 70)
-        self.table.setColumnWidth(4, 70)
+        self.table.setColumnWidth(0, 25)
+        self.table.setColumnWidth(5, 70)
+        self.table.setColumnWidth(6, 70)
 
         # Ensure column widths stay fixed
-        header.setMinimumSectionSize(70)
+        header.setMinimumSectionSize(25)
         header.setDefaultSectionSize(90)
 
         # Enable resizing of column
-        header.sectionResized.connect(self.on_table_resized)
+        self._geometry_resize_proxy = BECSignalProxy(
+            header.geometriesChanged, rateLimit=10, slot=self._on_table_resized
+        )
 
         # Selection behavior
         self.table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
@@ -539,28 +664,26 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
 
         # QtCore.QTimer.singleShot(0, lambda: header.sectionResized.emit(0, 0, 0))
 
-    def device_config(self) -> list[dict]:
+    def get_device_config(self) -> dict[str, dict]:
         """Get the device config."""
-        return self.model.get_device_config()
+        return self._model.get_device_config()
 
     def apply_theme(self, theme: str | None = None):
         self.checkbox_delegate.apply_theme(theme)
+        self.validated_delegate.apply_theme(theme)
 
     ######################################
     ########### Slot API #################
     ######################################
 
-    @SafeSlot(int, int, int)
-    def on_table_resized(self, column, old_width, new_width):
+    @SafeSlot()
+    def _on_table_resized(self, *args):
         """Handle changes to the table column resizing."""
-        if column != len(self.model.headers) - 1:
-            return
-
-        for row in range(self.table.model().rowCount()):
-            index = self.table.model().index(row, column)
-            delegate = self.table.itemDelegate(index)
-            option = QtWidgets.QStyleOptionViewItem()
-            height = delegate.sizeHint(option, index).height()
+        option = QtWidgets.QStyleOptionViewItem()
+        model = self.table.model()
+        for row in range(model.rowCount()):
+            index = model.index(row, 4)
+            height = self.wrap_delegate.sizeHint(option, index).height()
             self.table.setRowHeight(row, height)
 
     @SafeSlot(QtCore.QItemSelection, QtCore.QItemSelection)
@@ -582,86 +705,106 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
 
         source_indexes = [self.proxy.mapToSource(idx) for idx in selected_indexes]
         source_rows = {idx.row() for idx in source_indexes}
-        # Ignore if multiple are selected
-        if len(source_rows) > 1:
-            self.selected_device.emit({})
-            return
-
-        # Get the single row
-        (row,) = source_rows
-        source_index = self.model.index(row, 0)  # pick column 0 or whichever
-        device = self.model.get_row_data(source_index)
-        self.selected_device.emit(device)
-
-    @SafeSlot(QtCore.QModelIndex)
-    def _on_row_selected(self, index: QtCore.QModelIndex):
-        """Handle row selection in the device table."""
-        if not index.isValid():
-            return
-        source_index = self.proxy.mapToSource(index)
-        device = self.model.get_device_at_index(source_index)
-        self.selected_device.emit(device)
+        configs = [copy.deepcopy(self._model._list_items[r]) for r in sorted(source_rows)]
+        names = [cfg.pop("name") for cfg in configs]
+        selected_cfgs = {name: cfg for name, cfg in zip(names, configs)}
+        self.selected_device.emit(selected_cfgs)
 
     ######################################
     ##### Ext.  Slot API #################
     ######################################
 
-    @SafeSlot(list)
-    def set_device_config(self, config: list[dict]):
+    @SafeSlot(dict)
+    def set_device_config(self, device_configs: dict[str, dict]):
         """
         Set the device config.
 
         Args:
-            config (list[dict]): The device config to set.
+            config (dict[str,dict]): The device config to set.
         """
-        self.model.set_device_config(config)
+        self._model.set_device_config(device_configs)
 
     @SafeSlot()
-    def clear_device_config(self):
-        """
-        Clear the device config.
-        """
-        self.model.set_device_config([])
+    def clear_device_configs(self):
+        """Clear the device configs."""
+        self._model.clear_table()
 
     @SafeSlot(dict)
-    def add_device(self, device: dict):
+    def add_device_configs(self, device_configs: dict[str, dict]):
         """
-        Add a device to the config.
+        Add devices to the config.
 
         Args:
-            device (dict): The device to add.
+            device_configs (dict[str, dict]): The device configs to add.
         """
-        self.model.add_device(device)
+        self._model.add_device_configs(device_configs)
 
-    @SafeSlot(int)
+    @SafeSlot(dict)
+    def remove_device_configs(self, device_configs: dict[str, dict]):
+        """
+        Remove devices from the config.
+
+        Args:
+            device_configs (dict[str, dict]): The device configs to remove.
+        """
+        self._model.remove_device_configs(device_configs)
+
     @SafeSlot(str)
-    def remove_device(self, dev: int | str):
+    def remove_device(self, device_name: str):
         """
-        Remove the device from the config either by row id, or device name.
+        Remove a device from the config.
 
         Args:
-            dev (int | str): The device to remove, either by row id or device name.
+            device_name (str): The name of the device to remove.
         """
-        if isinstance(dev, int):
-            # TODO test this properly, check with proxy index and source index
-            # Use the proxy model to map to the correct row
-            model_source_index = self.table.model().mapToSource(self.table.model().index(dev, 0))
-            self.model.remove_device_by_row(model_source_index.row())
+        cfg = self._model._device_config.get(device_name, None)
+        if cfg is None:
+            logger.warning(f"Device {device_name} not found in device_config dict")
             return
-        if isinstance(dev, str):
-            self.model.remove_device_by_name(dev)
-            return
+        self._model.remove_device_configs({device_name: cfg})
+
+    @SafeSlot(str, int)
+    def update_device_validation(
+        self, device_name: str, validation_status: int | ValidationStatus
+    ) -> None:
+        """
+        Update the validation status of a device.
+
+        Args:
+            device_name (str): The name of the device.
+            validation_status (int | ValidationStatus): The new validation status.
+        """
+        self._model.update_validation_status(device_name, validation_status)
 
 
 if __name__ == "__main__":
     import sys
 
+    import numpy as np
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
+    widget = QtWidgets.QWidget()
+    layout = QtWidgets.QVBoxLayout(widget)
+    layout.setContentsMargins(0, 0, 0, 0)
     window = DeviceTableView()
+    layout.addWidget(window)
+    # QPushButton
+    button = QtWidgets.QPushButton("Test status_update")
+    layout.addWidget(button)
+
+    def _button_clicked():
+        names = list(window._model._device_config.keys())
+        for name in names:
+            window.update_device_validation(
+                name, ValidationStatus.VALID if np.random.rand() > 0.5 else ValidationStatus.FAILED
+            )
+
+    button.clicked.connect(_button_clicked)
     # pylint: disable=protected-access
     config = window.client.device_manager._get_redis_device_config()
-    window.set_device_config(config)
-    window.show()
+    names = [cfg.pop("name") for cfg in config]
+    config_dict = {name: cfg for name, cfg in zip(names, config)}
+    window.set_device_config(config_dict)
+    widget.show()
     sys.exit(app.exec_())
