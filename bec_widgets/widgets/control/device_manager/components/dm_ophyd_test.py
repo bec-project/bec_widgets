@@ -1,18 +1,24 @@
-"""Module to run a static test for the current config and see if it is valid."""
+"""Module to run a static tests for devices from a yaml config."""
 
 from __future__ import annotations
 
 import enum
+import re
+import traceback
+from html import escape
+from typing import TYPE_CHECKING
 
 import bec_lib
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
+from ophyd import status
 from qtpy import QtCore, QtGui, QtWidgets
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.widgets.editors.web_console.web_console import WebConsole
+from bec_widgets.widgets.utility.spinner.spinner import SpinnerWidget
 
 READY_TO_TEST = False
 
@@ -28,305 +34,380 @@ except ImportError:
     ophyd_devices = None
     bec_server = None
 
+if TYPE_CHECKING:  # pragma no cover
+    try:
+        from ophyd_devices.utils.static_device_test import StaticDeviceTest
+    except ImportError:
+        StaticDeviceTest = None
+
 
 class ValidationStatus(int, enum.Enum):
     """Validation status for device configurations."""
 
-    UNKNOWN = 0  # colors.default
-    ERROR = 1  # colors.emergency
-    VALID = 2  # colors.highlight
-    CANT_CONNECT = 3  # colors.warning
-    CONNECTED = 4  # colors.success
+    PENDING = 0  # colors.default
+    VALID = 1  # colors.highlight
+    FAILED = 2  # colors.emergency
 
 
-class DeviceValidationListItem(QtWidgets.QWidget):
-    """Custom list item widget showing device name and validation status."""
+class DeviceValidationResult(QtCore.QObject):
+    """Simple object to inject validation signals into QRunnable."""
 
-    status_changed = QtCore.Signal(int)  # Signal emitted when status changes -> ValidationStatus
-    # Signal emitted when device was validated with name, success, msg
-    device_validated = QtCore.Signal(str, str)
+    # Device validation signal, device_name, ValidationStatus as int, error message or ''
+    device_validated = QtCore.Signal(str, bool, str)
+
+
+class DeviceValidationRunnable(QtCore.QRunnable):
+    """Runnable for validating a device configuration."""
 
     def __init__(
         self,
-        device_config: dict[str, dict],
-        status: ValidationStatus,
-        status_icons: dict[ValidationStatus, QtGui.QPixmap],
-        validate_icon: QtGui.QPixmap,
-        parent=None,
-        static_device_test=None,
+        device_name: str,
+        config: dict,
+        static_device_test: StaticDeviceTest | None,
+        connect: bool = False,
     ):
-        super().__init__(parent)
-        if len(device_config.keys()) > 1:
-            logger.warning(
-                f"Multiple devices found for config: {list(device_config.keys())}, using first one"
-            )
+        """
+        Initialize the device validation runnable.
+
+        Args:
+            device_name (str): The name of the device to validate.
+            config (dict): The configuration dictionary for the device.
+            static_device_test (StaticDeviceTest): The static device test instance.
+            connect (bool, optional): Whether to connect to the device. Defaults to False.
+        """
+        super().__init__()
+        self.device_name = device_name
+        self.config = config
+        self._connect = connect
         self._static_device_test = static_device_test
-        self.device_name = list(device_config.keys())[0]
+        self.signals = DeviceValidationResult()
+
+    def run(self):
+        """Run method for device validation."""
+        if self._static_device_test is None:
+            logger.error(
+                f"Ophyd devices or bec_server not available, cannot run validation for device {self.device_name}."
+            )
+            return
+        try:
+            self._static_device_test.config = {self.device_name: self.config}
+            results = self._static_device_test.run_with_list_output(connect=self._connect)
+            success = results[0].success
+            msg = results[0].message
+            self.signals.device_validated.emit(self.device_name, success, msg)
+        except Exception:
+            content = traceback.format_exc()
+            logger.error(f"Validation failed for device {self.device_name}. Exception: {content}")
+            self.signals.device_validated.emit(self.device_name, False, content)
+
+
+class ValidationListItem(QtWidgets.QWidget):
+    """Custom list item widget showing device name and validation status."""
+
+    def __init__(self, device_name: str, device_config: dict, parent=None):
+        """
+        Initialize the validation list item.
+
+        Args:
+            device_name (str): The name of the device.
+            device_config (dict): The configuration of the device.
+            validation_colors (dict[ValidationStatus, QtGui.QColor]): The colors for each validation status.
+            parent (QtWidgets.QWidget, optional): The parent widget.
+        """
+        super().__init__(parent)
+        self.main_layout = QtWidgets.QHBoxLayout(self)
+        self.main_layout.setContentsMargins(2, 2, 2, 2)
+        self.main_layout.setSpacing(4)
+        self.device_name = device_name
         self.device_config = device_config
-        self.status: ValidationStatus = status
-        colors = get_accent_colors()
-        self._status_icon = status_icons
-        self._validate_icon = validate_icon
+        self.validation_msg = "Validation in progress..."
         self._setup_ui()
-        self._update_status_indicator()
 
     def _setup_ui(self):
         """Setup the UI for the list item."""
-        layout = QtWidgets.QHBoxLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
+        label = QtWidgets.QLabel(self.device_name)
+        self.main_layout.addWidget(label)
+        self.main_layout.addStretch()
+        self._spinner = SpinnerWidget(parent=self)
+        self._spinner.speed = 80
+        self._spinner.setFixedSize(24, 24)
+        self.main_layout.addWidget(self._spinner)
+        self._base_style = "font-weight: bold;"
+        self.setStyleSheet(self._base_style)
+        self._start_spinner()
 
-        # Device name label
-        self.name_label = QtWidgets.QLabel(self.device_name)
-        self.name_label.setStyleSheet("font-weight: bold;")
-        layout.addWidget(self.name_label)
+    def _start_spinner(self):
+        """Start the spinner animation."""
+        self._spinner.start()
+        QtWidgets.QApplication.processEvents()
 
-        # Make sure status is on the right
-        layout.addStretch()
-        self.request_validation_button = QtWidgets.QPushButton("Validate")
-        self.request_validation_button.setIcon(self._validate_icon)
-        if self._static_device_test is None:
-            self.request_validation_button.setDisabled(True)
-        else:
-            self.request_validation_button.clicked.connect(self.on_request_validation)
-            # self.request_validation_button.setVisible(False) -> Hide it??
-        layout.addWidget(self.request_validation_button)
-        # Status indicator
-        self.status_indicator = QtWidgets.QLabel()
-        self._update_status_indicator()
-        layout.addWidget(self.status_indicator)
+    def _stop_spinner(self):
+        """Stop the spinner animation."""
+        self._spinner.stop()
+        self._spinner.setVisible(False)
 
     @SafeSlot()
-    def on_request_validation(self):
-        """Handle validate button click."""
-        if self._static_device_test is None:
-            logger.warning("Static device test not available.")
-            return
-        self._static_device_test.config = self.device_config
-        # TODO logic if connect is allowed
-        ret = self._static_device_test.run_with_list_output(connect=False)[0]
-        if ret.success:
-            self.set_status(ValidationStatus.VALID)
-        else:
-            self.set_status(ValidationStatus.ERROR)
-        self.device_validated.emit(ret.name, ret.message)
+    def on_validation_restart(self):
+        """Handle validation restart."""
+        self.validation_msg = ""
+        self._start_spinner()
+        self.setStyleSheet("")  # Check if this works as expected
 
-    def _update_status_indicator(self):
-        """Update the status indicator color based on validation status."""
-        self.status_indicator.setPixmap(self._status_icon[self.status])
-
-    def set_status(self, status: ValidationStatus):
-        """Update the validation status."""
-        self.status = status
-        self._update_status_indicator()
-        self.status_changed.emit(self.status)
-
-    def get_status(self) -> ValidationStatus:
-        """Get the current validation status."""
-        return self.status
+    @SafeSlot(str)
+    def on_validation_failed(self, error_msg: str):
+        """Handle validation failure."""
+        self.validation_msg = error_msg
+        colors = get_accent_colors()
+        self._stop_spinner()
+        self.main_layout.removeWidget(self._spinner)
+        self._spinner.deleteLater()
+        label = QtWidgets.QLabel("")
+        icon = material_icon("error", color=colors.emergency, size=(24, 24))
+        label.setPixmap(icon)
+        self.main_layout.addWidget(label)
 
 
-class DeviceManagerOphydTest(BECWidget, QtWidgets.QWidget):
+class DMOphydTest(BECWidget, QtWidgets.QWidget):
+    """Widget to test device configurations using ophyd devices."""
 
-    config_changed = QtCore.Signal(
-        dict, dict
-    )  # Signal emitted when the device config changed, new_config, old_config
+    # Signal to emit the validation status of a device
+    device_validated = QtCore.Signal(str, int)
 
     def __init__(self, parent=None, client=None):
         super().__init__(parent=parent, client=client)
         if not READY_TO_TEST:
-            self._set_disabled()
-            static_device_test = None
+            self.setDisabled(True)
+            self.static_device_test = None
         else:
             from ophyd_devices.utils.static_device_test import StaticDeviceTest
 
-            static_device_test = StaticDeviceTest(config_dict={})
-        self._static_device_test = static_device_test
-        self._device_config: dict[str, dict] = {}
+            self.static_device_test = StaticDeviceTest(config_dict={})
+        self._device_list_items: dict[str, QtWidgets.QListWidgetItem] = {}
+        self._thread_pool = QtCore.QThreadPool.globalInstance()
+
         self._main_layout = QtWidgets.QVBoxLayout(self)
         self._main_layout.setContentsMargins(0, 0, 0, 0)
         self._main_layout.setSpacing(4)
 
-        # Setup icons
-        colors = get_accent_colors()
-        self._validate_icon = material_icon(
-            icon_name="play_arrow", color=colors.default, filled=True
-        )
-        self._status_icons = {
-            ValidationStatus.UNKNOWN: material_icon(
-                icon_name="circle", size=(12, 12), color=colors.default, filled=True
-            ),
-            ValidationStatus.ERROR: material_icon(
-                icon_name="circle", size=(12, 12), color=colors.emergency, filled=True
-            ),
-            ValidationStatus.VALID: material_icon(
-                icon_name="circle", size=(12, 12), color=colors.highlight, filled=True
-            ),
-            ValidationStatus.CANT_CONNECT: material_icon(
-                icon_name="circle", size=(12, 12), color=colors.warning, filled=True
-            ),
-            ValidationStatus.CONNECTED: material_icon(
-                icon_name="circle", size=(12, 12), color=colors.success, filled=True
-            ),
-        }
-
-        self.setLayout(self._main_layout)
-
-        # splitter
+        # We add a splitter between the list and the text box
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
         self._main_layout.addWidget(self.splitter)
 
-        # Add custom list
-        self.setup_device_validation_list()
+        self._setup_list_ui()
+        self._setup_textbox_ui()
 
-        # Setup text box
-        self.setup_text_box()
-
+    def _setup_list_ui(self):
+        """Setup the list UI."""
+        self._list_widget = QtWidgets.QListWidget(self)
+        self._list_widget.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.splitter.addWidget(self._list_widget)
         # Connect signals
-        self.config_changed.connect(self.on_config_updated)
+        self._list_widget.currentItemChanged.connect(self._on_current_item_changed)
 
-    @SafeSlot(list)
-    def on_device_config_update(self, config: list[dict]):
-        old_cfg = self._device_config
-        self._device_config = self._compile_device_config_list(config)
-        self.config_changed.emit(self._device_config, old_cfg)
+    def _setup_textbox_ui(self):
+        """Setup the text box UI."""
+        self._text_box = QtWidgets.QTextEdit(self)
+        self._text_box.setReadOnly(True)
+        self._text_box.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.splitter.addWidget(self._text_box)
 
-    def _compile_device_config_list(self, config: list[dict]) -> dict[str, dict]:
-        return {dev["name"]: {k: v for k, v in dev.items() if k != "name"} for dev in config}
-
-    @SafeSlot(dict, dict)
-    def on_config_updated(self, new_config: dict, old_config: dict):
-        """Handle config updates and refresh the validation list."""
-        # Find differences for potential re-validation
-        diffs = self._find_diffs(new_config, old_config)
-        # Check diff first
-        for diff in diffs:
-            if not diff:
-                continue
-            if len(diff) > 1:
-                logger.warning(f"Multiple devices found in diff: {diff}, using first one")
-            name = list(diff.keys())[0]
-            if name in self.client.device_manager.devices:
-                status = ValidationStatus.CONNECTED
-            else:
-                status = ValidationStatus.UNKNOWN
-            if self.get_device_status(diff) is None:
-                self.add_device(diff, status)
-            else:
-                self.update_device_status(diff, status)
-
-    def _find_diffs(self, new_config: dict, old_config: dict) -> list[dict]:
-        """
-        Return list of keys/paths where d1 and d2 differ. This goes recursively through the dictionary.
+    @SafeSlot(dict)
+    def add_device_configs(self, device_configs: dict[str, dict]) -> None:
+        """Receive an update with device configs.
 
         Args:
-            new_config: The first dictionary to compare.
-            old_config: The second dictionary to compare.
+            device_configs (dict[str, dict]): The updated device configurations.
         """
-        diffs = []
-        keys = set(new_config.keys()) | set(old_config.keys())
-        for k in keys:
-            if k not in old_config:  # New device
-                diffs.append({k: new_config[k]})
-                continue
-            if k not in new_config:  # Removed device
-                diffs.append({k: old_config[k]})
-                continue
-            # Compare device config if exists in both
-            v1, v2 = old_config[k], new_config[k]
-            if isinstance(v1, dict) and isinstance(v2, dict):
-                if self._find_diffs(v2, v1):  # recurse: something inside changed
-                    diffs.append({k: new_config[k]})
-            elif v1 != v2:
-                diffs.append({k: new_config[k]})
-        return diffs
+        for device_name, device_config in device_configs.items():
+            if device_name in self._device_list_items:
+                logger.error(f"Device {device_name} is already in the list.")
+                return
+            item = QtWidgets.QListWidgetItem(self._list_widget)
+            widget = ValidationListItem(device_name=device_name, device_config=device_config)
 
-    def setup_device_validation_list(self):
-        """Setup the device validation list."""
-        # Create the custom validation list widget
-        self.validation_list = QtWidgets.QListWidget()
-        self.validation_list.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
-        self.splitter.addWidget(self.validation_list)
-        # self._main_layout.addWidget(self.validation_list)
+            # wrap it in a QListWidgetItem
+            item.setSizeHint(widget.sizeHint())
+            self._list_widget.addItem(item)
+            self._list_widget.setItemWidget(item, widget)
+            self._device_list_items[device_name] = item
+            self._run_device_validation(widget)
 
-    def setup_text_box(self):
-        """Setup the text box for device validation messages."""
-        self.validation_text_box = QtWidgets.QTextEdit()
-        self.validation_text_box.setReadOnly(True)
-        self.splitter.addWidget(self.validation_text_box)
-        # self._main_layout.addWidget(self.validation_text_box)
+    @SafeSlot(dict)
+    def remove_device_configs(self, device_configs: dict[str, dict]) -> None:
+        """Remove device configs from the list.
 
-    @SafeSlot(str, str)
-    def on_device_validated(self, device_name: str, message: str):
-        """Handle device validation results."""
-        text = f"Device {device_name} was validated. Message: {message}"
-        self.validation_text_box.setText(text)
+        Args:
+            device_name (str): The name of the device to remove.
+        """
+        for device_name in device_configs.keys():
+            if device_name not in self._device_list_items:
+                logger.warning(f"Device {device_name} not found in list.")
+                return
+            self._remove_list_item(device_name)
 
-    def _set_disabled(self) -> None:
-        """Disable the full view"""
-        self.setDisabled(True)
+    def _remove_list_item(self, device_name: str):
+        """Remove a device from the list."""
+        # Get the list item
+        item = self._device_list_items.pop(device_name)
 
-    def add_device(
-        self, device_config: dict[str, dict], status: ValidationStatus = ValidationStatus.UNKNOWN
+        # Retrieve the custom widget attached to the item
+        widget = self._list_widget.itemWidget(item)
+        if widget is not None:
+            widget.deleteLater()  # clean up custom widget
+
+        # Remove the item from the QListWidget
+        row = self._list_widget.row(item)
+        self._list_widget.takeItem(row)
+
+    def _run_device_validation(self, widget: ValidationListItem):
+        """
+        Run the device validation in a separate thread.
+
+        Args:
+            widget (ValidationListItem): The widget to validate.
+        """
+        if not READY_TO_TEST:
+            logger.error("Ophyd devices or bec_server not available, cannot run validation.")
+            return
+        if (
+            widget.device_name in self.client.device_manager.devices
+        ):  # TODO and config has to be exact the same..
+            self._on_device_validated(
+                widget.device_name,
+                ValidationStatus.VALID,
+                f"Device {widget.device_name} is already in active config",
+            )
+            return
+        runnable = DeviceValidationRunnable(
+            device_name=widget.device_name,
+            config=widget.device_config,
+            static_device_test=self.static_device_test,
+            connect=False,
+        )
+        runnable.signals.device_validated.connect(self._on_device_validated)
+        self._thread_pool.start(runnable)
+
+    @SafeSlot(str, bool, str)
+    def _on_device_validated(self, device_name: str, success: bool, message: str):
+        """Handle the device validation result.
+
+        Args:
+            device_name (str): The name of the device.
+            success (bool): Whether the validation was successful.
+            message (str): The validation message.
+        """
+        logger.info(f"Device {device_name} validation result: {success}, message: {message}")
+        item = self._device_list_items.get(device_name, None)
+        if not item:
+            logger.error(f"Device {device_name} not found in the list.")
+            return
+        if success:
+            self._remove_list_item(device_name=device_name)
+            self.device_validated.emit(device_name, ValidationStatus.VALID.value)
+        else:
+            widget: ValidationListItem = self._list_widget.itemWidget(item)
+            widget.on_validation_failed(message)
+            self.device_validated.emit(device_name, ValidationStatus.FAILED.value)
+
+    def _on_current_item_changed(
+        self, current: QtWidgets.QListWidgetItem, previous: QtWidgets.QListWidgetItem
     ):
-        """Add a device to the validation list."""
-        # Create the custom widget
-        item_widget = DeviceValidationListItem(
-            device_config=device_config,
-            status=status,
-            status_icons=self._status_icons,
-            validate_icon=self._validate_icon,
-            static_device_test=self._static_device_test,
+        """Handle the current item change in the list widget.
+
+        Args:
+            current (QListWidgetItem): The currently selected item.
+            previous (QListWidgetItem): The previously selected item.
+        """
+        widget: ValidationListItem = self._list_widget.itemWidget(current)
+        if widget:
+            try:
+                formatted_html = self._format_validation_message(widget.validation_msg)
+                self._text_box.setHtml(formatted_html)
+            except Exception as e:
+                logger.error(f"Error formatting validation message: {e}")
+                self._text_box.setPlainText(widget.validation_msg)
+
+    def _format_validation_message(self, raw_msg: str) -> str:
+        """Simple HTML formatting for validation messages, wrapping text naturally."""
+        if not raw_msg.strip():
+            return "<i>Validation in progress...</i>"
+        if raw_msg == "Validation in progress...":
+            return "<i>Validation in progress...</i>"
+
+        raw_msg = escape(raw_msg)
+
+        # Split into lines
+        lines = raw_msg.splitlines()
+        summary = lines[0] if lines else "Validation Result"
+        rest = "\n".join(lines[1:]).strip()
+
+        # Split traceback / final ERROR
+        tb_match = re.search(r"(Traceback.*|ERROR:.*)$", rest, re.DOTALL | re.MULTILINE)
+        if tb_match:
+            main_text = rest[: tb_match.start()].strip()
+            error_detail = tb_match.group().strip()
+        else:
+            main_text = rest
+            error_detail = ""
+
+        # Highlight field names in orange (simple regex for word: Field)
+        main_text_html = re.sub(
+            r"(\b\w+\b)(?=: Field required)",
+            r'<span style="color:#FF8C00; font-weight:bold;">\1</span>',
+            main_text,
+        )
+        # Wrap in div for monospace, allowing wrapping
+        main_text_html = (
+            f'<div style="white-space: pre-wrap;">{main_text_html}</div>' if main_text_html else ""
         )
 
-        # Create a list widget item
-        list_item = QtWidgets.QListWidgetItem()
-        list_item.setSizeHint(item_widget.sizeHint())
+        # Traceback / error in red
+        error_html = (
+            f'<div style="white-space: pre-wrap; color:#A00000;">{error_detail}</div>'
+            if error_detail
+            else ""
+        )
 
-        # Add item to list and set custom widget
-        self.validation_list.addItem(list_item)
-        self.validation_list.setItemWidget(list_item, item_widget)
-        item_widget.device_validated.connect(self.on_device_validated)
+        # Summary at top, dark red
+        html = (
+            f'<div style="font-family: monospace; font-size:13px; white-space: pre-wrap;">'
+            f'<div style="font-weight:bold; color:#8B0000; margin-bottom:4px;">{summary}</div>'
+            f"{main_text_html}"
+            f"{error_html}"
+            f"</div>"
+        )
+        return html
 
-    def update_device_status(self, device_config: dict[str, dict], status: ValidationStatus):
-        """Update the validation status for a specific device."""
-        for i in range(self.validation_list.count()):
-            item = self.validation_list.item(i)
-            widget = self.validation_list.itemWidget(item)
-            if (
-                isinstance(widget, DeviceValidationListItem)
-                and widget.device_config == device_config
-            ):
-                widget.set_status(status)
-                break
+    @SafeSlot()
+    def clear_list(self):
+        """Clear the device list."""
+        self._thread_pool.clear()
+        if self._thread_pool.waitForDone(2000) is False:  # Wait for threads to finish
+            logger.error("Failed to wait for threads to finish. Removing items from the list.")
+        self._device_list_items.clear()
+        self._list_widget.clear()
 
-    def clear_devices(self):
-        """Clear all devices from the list."""
-        self.validation_list.clear()
-
-    def get_device_status(self, device_config: dict[str, dict]) -> ValidationStatus | None:
-        """Get the validation status for a specific device."""
-        for i in range(self.validation_list.count()):
-            item = self.validation_list.item(i)
-            widget = self.validation_list.itemWidget(item)
-            if (
-                isinstance(widget, DeviceValidationListItem)
-                and widget.device_config == device_config
-            ):
-                return widget.get_status()
-        return None
+    def remove_device(self, device_name: str):
+        """Remove a device from the list."""
+        item = self._device_list_items.pop(device_name, None)
+        if item:
+            self._list_widget.removeItemWidget(item)
 
 
 if __name__ == "__main__":
     import sys
 
+    from bec_lib.bec_yaml_loader import yaml_load
+
     # pylint: disable=ungrouped-imports
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    device_manager_ophyd_test = DeviceManagerOphydTest()
-    cfg = device_manager_ophyd_test.client.device_manager._get_redis_device_config()
-    cfg.append({"name": "Wrong_Device", "type": "test"})
-    device_manager_ophyd_test.on_device_config_update(cfg)
+    device_manager_ophyd_test = DMOphydTest()
+    config_path = "/Users/appel_c/work_psi_awi/bec_workspace/csaxs_bec/csaxs_bec/device_configs/endstation.yaml"
+    cfg = yaml_load(config_path)
+    cfg.update({"device_will_fail": {"name": "device_will_fail", "some_param": 1}})
+    device_manager_ophyd_test.add_device_configs(cfg)
     device_manager_ophyd_test.show()
     device_manager_ophyd_test.setWindowTitle("Device Manager Ophyd Test")
     device_manager_ophyd_test.resize(800, 600)
