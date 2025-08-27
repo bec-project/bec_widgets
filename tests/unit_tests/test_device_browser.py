@@ -37,11 +37,11 @@ def device_browser(qtbot, mocked_client):
     yield dev_browser
 
 
-def test_device_browser_init_with_devices(device_browser):
+def test_device_browser_init_with_devices(device_browser: DeviceBrowser):
     """
     Test that the device browser is initialized with the correct number of devices.
     """
-    device_list = device_browser.ui.device_list
+    device_list = device_browser.dev_list
     assert device_list.count() == len(device_browser.dev)
 
 
@@ -58,11 +58,11 @@ def test_device_browser_filtering(
     expected = expected_num_visible if expected_num_visible >= 0 else len(device_browser.dev)
 
     def num_visible(item_dict):
-        return len(list(filter(lambda i: not i.isHidden(), item_dict.values())))
+        return len(list(filter(lambda i: not i.widget.isHidden(), item_dict.values())))
 
     device_browser.ui.filter_input.setText(search_term)
     qtbot.wait(100)
-    assert num_visible(device_browser._device_items) == expected
+    assert num_visible(device_browser.dev_list._item_dict) == expected
 
 
 def test_device_item_mouse_press_event(device_browser, qtbot):
@@ -70,8 +70,8 @@ def test_device_item_mouse_press_event(device_browser, qtbot):
     Test that the mousePressEvent is triggered correctly.
     """
     # Simulate a left mouse press event on the device item
-    device_item: QListWidgetItem = device_browser.ui.device_list.itemAt(0, 0)
-    widget: DeviceItem = device_browser.ui.device_list.itemWidget(device_item)
+    device_item: QListWidgetItem = device_browser.dev_list.itemAt(0, 0)
+    widget: DeviceItem = device_browser.dev_list.itemWidget(device_item)
     qtbot.mouseClick(widget._title, Qt.MouseButton.LeftButton)
 
 
@@ -88,8 +88,8 @@ def test_device_item_expansion(device_browser, qtbot):
     Test that the form is displayed when the item is expanded, and that the expansion is triggered
     by clicking on the expansion button, the title, or the device icon
     """
-    device_item: QListWidgetItem = device_browser.ui.device_list.itemAt(0, 0)
-    widget: DeviceItem = device_browser.ui.device_list.itemWidget(device_item)
+    device_item: QListWidgetItem = device_browser.dev_list.itemAt(0, 0)
+    widget: DeviceItem = device_browser.dev_list.itemWidget(device_item)
     qtbot.mouseClick(widget._expansion_button, Qt.MouseButton.LeftButton)
     tab_widget: QTabWidget = widget._contents.layout().itemAt(0).widget()
     qtbot.waitUntil(lambda: tab_widget.widget(0) is not None, timeout=100)
@@ -115,8 +115,8 @@ def test_device_item_mouse_press_and_move_events_creates_drag(device_browser, qt
     """
     Test that the mousePressEvent is triggered correctly and initiates a drag.
     """
-    device_item: QListWidgetItem = device_browser.ui.device_list.itemAt(0, 0)
-    widget: DeviceItem = device_browser.ui.device_list.itemWidget(device_item)
+    device_item: QListWidgetItem = device_browser.dev_list.itemAt(0, 0)
+    widget: DeviceItem = device_browser.dev_list.itemWidget(device_item)
     device_name = widget.device
     with mock.patch("qtpy.QtGui.QDrag.exec_") as mock_exec:
         with mock.patch("qtpy.QtGui.QDrag.setMimeData") as mock_set_mimedata:
@@ -133,19 +133,19 @@ def test_device_item_double_click_event(device_browser, qtbot):
     Test that the mouseDoubleClickEvent is triggered correctly.
     """
     # Simulate a left mouse press event on the device item
-    device_item: QListWidgetItem = device_browser.ui.device_list.itemAt(0, 0)
-    widget: DeviceItem = device_browser.ui.device_list.itemWidget(device_item)
+    device_item: QListWidgetItem = device_browser.dev_list.itemAt(0, 0)
+    widget: DeviceItem = device_browser.dev_list.itemWidget(device_item)
     qtbot.mouseDClick(widget, Qt.LeftButton)
 
 
 def test_device_deletion(device_browser, qtbot):
-    device_item: QListWidgetItem = device_browser.ui.device_list.itemAt(0, 0)
-    widget: DeviceItem = device_browser.ui.device_list.itemWidget(device_item)
+    device_item: QListWidgetItem = device_browser.dev_list.itemAt(0, 0)
+    widget: DeviceItem = device_browser.dev_list.itemWidget(device_item)
     widget._config_helper = mock.MagicMock()
 
-    assert widget.device in device_browser._device_items
+    assert widget.device in device_browser.dev_list._item_dict
     qtbot.mouseClick(widget.delete_button, Qt.LeftButton)
-    qtbot.waitUntil(lambda: widget.device not in device_browser._device_items, timeout=10000)
+    qtbot.waitUntil(lambda: widget.device not in device_browser.dev_list._item_dict, timeout=10000)
 
 
 def test_signal_display(mocked_client, qtbot):

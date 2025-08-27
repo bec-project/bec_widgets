@@ -35,9 +35,6 @@ logger = bec_logger.logger
 
 
 class DeviceItem(ExpandableGroupFrame):
-    broadcast_size_hint = Signal(QSize)
-    imminent_deletion = Signal()
-
     RPC = False
 
     def __init__(
