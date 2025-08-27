@@ -20,9 +20,9 @@ from qtpy.QtWidgets import (
 class AutoHeightListWidget(QListWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setViewMode(QListView.ViewMode.IconMode)
+        self.setViewMode(QListView.ViewMode.ListMode)
         self.setResizeMode(QListView.ResizeMode.Adjust)
-        self.setWrapping(True)
+        self.setWrapping(False)
         self.setUniformItemSizes(True)
         self.setMovement(QListView.Movement.Static)
         self.setAcceptDrops(False)

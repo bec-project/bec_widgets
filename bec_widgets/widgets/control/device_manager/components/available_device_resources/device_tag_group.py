@@ -7,7 +7,7 @@ from qtpy.QtWidgets import QFrame, QHBoxLayout, QLabel, QListWidgetItem, QVBoxLa
 from bec_widgets.widgets.control.device_manager.components.available_device_resources.device_resource_backend import (
     HashableDevice,
 )
-from bec_widgets.widgets.control.device_manager.components.available_device_resources.device_tag_group_item_ui import (
+from bec_widgets.widgets.control.device_manager.components.available_device_resources.device_tag_group_ui import (
     Ui_DeviceTagGroup,
 )
 
@@ -29,7 +29,7 @@ def _warning_string(spec: HashableDevice):
 
 
 class _DeviceEntryWidget(QFrame):
-    _grid_size = QSize(120, 80)
+    # _grid_size = QSize(120, 80)
 
     def __init__(self, device_spec: HashableDevice, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
@@ -42,17 +42,17 @@ class _DeviceEntryWidget(QFrame):
         self._layout = QVBoxLayout()
         self._layout.setContentsMargins(5, 5, 5, 5)
         self.setLayout(self._layout)
-        self.setMinimumSize(self._grid_size)
+        # self.setMinimumSize(self._grid_size)
 
         self.setup_title_layout(device_spec)
         self.check_and_display_warning()
 
         self.setToolTip(device_spec.rich_text())
 
-        self.details = QLabel(f"Tags:\n{', '.join(device_spec.deviceTags)}")
-        self.details.setStyleSheet("QLabel { font-size: 8pt; }")
-        self.details.setWordWrap(True)
-        self._layout.addWidget(self.details)
+        # self.details = QLabel(f"Tags:\n{', '.join(device_spec.deviceTags)}")
+        # self.details.setStyleSheet("QLabel { font-size: 8pt; }")
+        # self.details.setWordWrap(True)
+        # self._layout.addWidget(self.details)
 
     def setup_title_layout(self, device_spec: HashableDevice):
         self._title_layout = QHBoxLayout()
@@ -104,7 +104,6 @@ class DeviceTagGroup(QWidget, Ui_DeviceTagGroup):
     ):
         super().__init__(parent=parent, **kwargs)
         self.setupUi(self)
-        self.device_list.setGridSize(_DeviceEntryWidget._grid_size)
         self.title.setText(name)
         self._devices: dict[str, _DeviceEntry] = {}
         for device in data:

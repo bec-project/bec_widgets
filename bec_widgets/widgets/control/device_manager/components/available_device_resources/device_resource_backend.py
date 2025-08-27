@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import hashlib
 import operator
+import os
 from enum import Enum, auto
-from functools import reduce
+from functools import partial, reduce
 from glob import glob
 from pathlib import Path
 from textwrap import dedent
 from typing import AbstractSet, Protocol
 
+import bec_lib
 from bec_lib.atlas_models import Device
 from bec_lib.bec_yaml_loader import yaml_load
 from bec_lib.logger import bec_logger
@@ -18,6 +20,7 @@ from pydantic import model_validator
 logger = bec_logger.logger
 
 DEVICE_HASH_MODEL_KEY = "_hash_model"
+_BASE_REPO_PATH = Path(os.path.dirname(bec_lib.__file__)) / "../.."
 
 
 class HashModel(str, Enum):
@@ -40,6 +43,7 @@ def _hash_input(device: HashableDevice) -> bytes:
         return (reduce(operator.add, (device.name, device.deviceClass, *config_values))).encode()
 
     def _default_epics(device: HashableDevice):
+        """For EPICS devices, we care about the class and the PV prefix"""
         if device.deviceConfig is None or "prefix" not in device.deviceConfig:
             logger.warning(
                 f"Device {device.name} doesn't specify a prefix, reverting to default HashModel"
@@ -168,14 +172,17 @@ class _ConfigFileBackend(DeviceResourceBackend):
     def __init__(self) -> None:
         self._raw_device_set: set[
             HashableDevice
-        ] = self._get_config_from_backup_file() | self._get_configs_from_plugin_files(
+        ] = self._get_config_from_backup_files() | self._get_configs_from_plugin_files(
             Path(plugin_repo_path()) / plugin_package_name() / "device_configs/"
         )
         self._tag_groups = self._get_tag_groups()
 
-    def _get_config_from_backup_file(self):
-        return _devices_from_file(
-            "/home/perl_d/Development/bec/bec/logs/device_configs/recovery_configs/recovery_config_2025-08-22_14-02-29.yaml"
+    def _get_config_from_backup_files(self):
+        dir = _BASE_REPO_PATH / "logs/device_configs/recovery_configs"
+        files = glob("*.yaml", root_dir=dir)
+        return reduce(
+            operator.or_,
+            map(partial(_devices_from_file, include_source=False), (str(dir / f) for f in files)),
         )
 
     def _get_configs_from_plugin_files(self, dir: Path):
