@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import operator
+from enum import Enum, auto
 from functools import reduce
 from glob import glob
 from pathlib import Path
@@ -10,8 +11,61 @@ from typing import AbstractSet, Protocol
 
 from bec_lib.atlas_models import Device
 from bec_lib.bec_yaml_loader import yaml_load
+from bec_lib.logger import bec_logger
 from bec_lib.plugin_helper import plugin_package_name, plugin_repo_path
 from pydantic import model_validator
+
+logger = bec_logger.logger
+
+DEVICE_HASH_MODEL_KEY = "_hash_model"
+
+
+class HashModel(str, Enum):
+    DEFAULT = auto()
+    DEFAULT_DEVICECONFIG = auto()
+    DEFAULT_EPICS = auto()
+
+
+def _hash_input(device: HashableDevice) -> bytes:
+    """Get the data for the hash for this device as a byte string"""
+
+    def _default(device: HashableDevice):
+        """By default, we use name and device class"""
+        return (device.name + device.deviceClass).encode()
+
+    def _default_deviceconfig(device: HashableDevice):
+        config_values = sorted(
+            (str(kv) for kv in device.deviceConfig.items()) if device.deviceConfig else []
+        )
+        return (reduce(operator.add, (device.name, device.deviceClass, *config_values))).encode()
+
+    def _default_epics(device: HashableDevice):
+        if device.deviceConfig is None or "prefix" not in device.deviceConfig:
+            logger.warning(
+                f"Device {device.name} doesn't specify a prefix, reverting to default HashModel"
+            )
+            return _default(device)
+        return (device.deviceClass + device.deviceConfig.get("prefix", "")).encode()
+
+    if device.deviceConfig is None or DEVICE_HASH_MODEL_KEY not in device.deviceConfig:
+        return _default(device)
+    try:
+        hash_model = HashModel[device.deviceConfig[DEVICE_HASH_MODEL_KEY]]
+    except KeyError:
+        logger.warning(
+            f"Device {device.name} has invalid config parameter {DEVICE_HASH_MODEL_KEY}:{device.deviceConfig[DEVICE_HASH_MODEL_KEY]}. Please choose one of: {[m.name for m in HashModel]}"
+        )
+        hash_model = HashModel.DEFAULT
+
+    # Type checking should check that all cases are accounted for, otherwise
+    # the return type declaration for the function will be marked wrong.
+    match hash_model:
+        case HashModel.DEFAULT:
+            return _default(device)
+        case HashModel.DEFAULT_DEVICECONFIG:
+            return _default_deviceconfig(device)
+        case HashModel.DEFAULT_EPICS:
+            return _default_epics(device)
 
 
 class HashableDevice(Device):
@@ -27,15 +81,7 @@ class HashableDevice(Device):
         return Device.model_validate(self)
 
     def __hash__(self) -> int:
-        config_values = sorted(
-            (str(kv) for kv in self.deviceConfig.items()) if self.deviceConfig else []
-        )
-        return int(
-            hashlib.md5(
-                (reduce(operator.add, (self.name, self.deviceClass, *config_values))).encode()
-            ).hexdigest(),
-            16,
-        )
+        return int(hashlib.md5(_hash_input(self)).hexdigest(), 16)
 
     def __eq__(self, value: object) -> bool:
         if not isinstance(value, self.__class__):
