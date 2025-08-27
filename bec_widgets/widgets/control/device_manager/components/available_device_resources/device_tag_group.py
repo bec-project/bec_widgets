@@ -15,17 +15,21 @@ DEVICE_HASH_ROLE = 101
 
 
 def _warning_string(spec: HashableDevice):
-    name_warning = (
-        f"Device defined with multiple names! Please check:\n  {'\n  '.join(spec.names)}\n"
+
+    names_str = "\n  ".join(spec.names)
+    msg = (
+        f"Device defined with multiple names! Please check:\n  {names_str}\n"
         if len(spec.names) > 1
         else ""
     )
+
+    source_str = "\n  ".join(spec.source_files)
     source_warning = (
-        f"Device found in multiple source files! Please check:\n  {'\n  '.join(spec.source_files)}"
+        f"Device found in multiple source files! Please check:\n  {source_str}"
         if len(spec.source_files) > 1
         else ""
     )
-    return f"{name_warning}{source_warning}"
+    return f"{msg}{source_warning}"
 
 
 class _DeviceEntryWidget(QFrame):

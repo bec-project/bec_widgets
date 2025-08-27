@@ -116,15 +116,16 @@ class _ConfigFileBackend(DeviceResourceBackend):
     def __init__(self) -> None:
         self._raw_device_set: set[
             HashableDevice
-        ] = self._get_config_from_backup_file() | self._get_configs_from_plugin_files(
+        ] = self._get_config_from_backup_file() or self._get_configs_from_plugin_files(
             Path(plugin_repo_path()) / plugin_package_name() / "device_configs/"
         )
         self._tag_groups = self._get_tag_groups()
 
     def _get_config_from_backup_file(self):
-        return _devices_from_file(
-            "/home/perl_d/Development/bec/bec/logs/device_configs/recovery_configs/recovery_config_2025-08-22_14-02-29.yaml"
-        )
+        return None
+        # return _devices_from_file(
+        #     "/home/perl_d/Development/bec/bec/logs/device_configs/recovery_configs/recovery_config_2025-08-22_14-02-29.yaml"
+        # )
 
     def _get_configs_from_plugin_files(self, dir: Path):
         files = glob("*.yaml", root_dir=dir, recursive=True)

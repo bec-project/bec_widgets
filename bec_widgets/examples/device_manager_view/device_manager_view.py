@@ -1,35 +1,39 @@
-from typing import List
+from __future__ import annotations
+
+import os
+from typing import TYPE_CHECKING, List
 
 import PySide6QtAds as QtAds
 import yaml
-from bec_qthemes import material_icon
+from bec_lib.bec_yaml_loader import yaml_load
+from bec_lib.file_utils import DeviceConfigWriter
+from bec_lib.logger import bec_logger
+from bec_lib.plugin_helper import plugin_package_name, plugin_repo_path
+from bec_qthemes import apply_theme
 from PySide6QtAds import CDockManager, CDockWidget
 from qtpy.QtCore import Qt, QTimer
-from qtpy.QtWidgets import (
-    QPushButton,
-    QSizePolicy,
-    QSplitter,
-    QStackedLayout,
-    QTreeWidget,
-    QVBoxLayout,
-    QWidget,
-)
+from qtpy.QtWidgets import QFileDialog, QMessageBox, QSplitter, QVBoxLayout, QWidget
 
 from bec_widgets import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.toolbars.actions import MaterialIconAction
+from bec_widgets.utils.toolbars.bundles import ToolbarBundle
+from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
+from bec_widgets.widgets.control.device_manager.components import (
+    DeviceTableView,
+    DMConfigView,
+    DMOphydTest,
+    DocstringView,
+)
 from bec_widgets.widgets.control.device_manager.components.available_device_resources.available_device_resources import (
     AvailableDeviceResources,
 )
-from bec_widgets.widgets.control.device_manager.components.device_table_view import DeviceTableView
-from bec_widgets.widgets.control.device_manager.components.dm_config_view import DMConfigView
-from bec_widgets.widgets.control.device_manager.components.dm_ophyd_test import (
-    DeviceManagerOphydTest,
-)
-from bec_widgets.widgets.editors.monaco.monaco_widget import MonacoWidget
-from bec_widgets.widgets.editors.web_console.web_console import WebConsole
-from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECStatusBox
-from bec_widgets.widgets.utility.ide_explorer.ide_explorer import IDEExplorer
+
+if TYPE_CHECKING:
+    from bec_lib.client import BECClient
+
+logger = bec_logger.logger
 
 
 def set_splitter_weights(splitter: QSplitter, weights: List[float]) -> None:
@@ -69,7 +73,7 @@ def set_splitter_weights(splitter: QSplitter, weights: List[float]) -> None:
 class DeviceManagerView(BECWidget, QWidget):
 
     def __init__(self, parent=None, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
+        super().__init__(parent=parent, client=None, *args, **kwargs)
 
         # Top-level layout hosting a toolbar and the dock manager
         self._root_layout = QVBoxLayout(self)
@@ -78,40 +82,52 @@ class DeviceManagerView(BECWidget, QWidget):
         self.dock_manager = CDockManager(self)
         self._root_layout.addWidget(self.dock_manager)
 
-        # Initialize the widgets
+        # Available Resources Widget
         self.available_devices = AvailableDeviceResources(self)
-        self.device_table_view = DeviceTableView(self)
-        # Placeholder
-        self.dm_config_view = DMConfigView(self)
-
-        # Placeholder for ophyd test
-        WebConsole.startup_cmd = "ipython"
-        self.ophyd_test = DeviceManagerOphydTest(self)
-        self.ophyd_test_dock = QtAds.CDockWidget("Ophyd Test", self)
-        self.ophyd_test_dock.setWidget(self.ophyd_test)
-
-        # Create the dock widgets
-        self.available_devices_dock = QtAds.CDockWidget("Explorer", self)
+        self.available_devices_dock = QtAds.CDockWidget("Available Devices", self)
         self.available_devices_dock.setWidget(self.available_devices)
 
+        # Device Table View widget
+        self.device_table_view = DeviceTableView(self)
         self.device_table_view_dock = QtAds.CDockWidget("Device Table", self)
         self.device_table_view_dock.setWidget(self.device_table_view)
 
-        # Device Table will be central widget
-        self.dock_manager.setCentralWidget(self.device_table_view_dock)
-
-        self.dm_config_view_dock = QtAds.CDockWidget("YAML Editor", self)
+        # Device Config View widget
+        self.dm_config_view = DMConfigView(self)
+        self.dm_config_view_dock = QtAds.CDockWidget("Device Config View", self)
         self.dm_config_view_dock.setWidget(self.dm_config_view)
 
-        # Add the dock widgets to the dock manager
+        # Docstring View
+        self.dm_docs_view = DocstringView(self)
+        self.dm_docs_view_dock = QtAds.CDockWidget("Docstring View", self)
+        self.dm_docs_view_dock.setWidget(self.dm_docs_view)
+
+        # Ophyd Test view
+        self.ophyd_test_view = DMOphydTest(self)
+        self.ophyd_test_dock_view = QtAds.CDockWidget("Ophyd Test View", self)
+        self.ophyd_test_dock_view.setWidget(self.ophyd_test_view)
+
+        # Arrange widgets within the QtAds dock manager
+
+        # Central widget area
+        self.central_dock_area = self.dock_manager.setCentralWidget(self.device_table_view_dock)
         self.dock_manager.addDockWidget(
+            QtAds.DockWidgetArea.BottomDockWidgetArea,
+            self.dm_docs_view_dock,
+            self.central_dock_area,
+        )
+
+        # Left Area
+        self.left_dock_area = self.dock_manager.addDockWidget(
             QtAds.DockWidgetArea.LeftDockWidgetArea, self.available_devices_dock
         )
-        monaco_yaml_area = self.dock_manager.addDockWidget(
-            QtAds.DockWidgetArea.RightDockWidgetArea, self.dm_config_view_dock
-        )
         self.dock_manager.addDockWidget(
-            QtAds.DockWidgetArea.BottomDockWidgetArea, self.ophyd_test_dock, monaco_yaml_area
+            QtAds.DockWidgetArea.BottomDockWidgetArea, self.dm_config_view_dock, self.left_dock_area
+        )
+
+        # Right area
+        self.dock_manager.addDockWidget(
+            QtAds.DockWidgetArea.RightDockWidgetArea, self.ophyd_test_dock_view
         )
 
         for dock in self.dock_manager.dockWidgets():
@@ -127,12 +143,251 @@ class DeviceManagerView(BECWidget, QWidget):
             area.titleBar().setVisible(False)
 
         # Apply stretch after the layout is done
-        self.set_default_view([2, 5, 3], [5, 5])
+        self.set_default_view([2, 8, 2], [3, 1])
+        # self.set_default_view([2, 8, 2], [2, 2, 4])
 
         # Connect slots
         self.device_table_view.selected_device.connect(self.dm_config_view.on_select_config)
-        self.device_table_view.model.devices_reset.connect(
-            self.available_devices.update_devices_state
+        self.device_table_view.selected_device.connect(self.dm_docs_view.on_select_config)
+        self.ophyd_test_view.device_validated.connect(
+            self.device_table_view.update_device_validation
+        )
+        self.device_table_view.device_configs_added.connect(self.ophyd_test_view.add_device_configs)
+
+        self._add_toolbar()
+
+    def _add_toolbar(self):
+        self.toolbar = ModularToolBar(self)
+
+        # Add IO actions
+        self._add_io_actions()
+        self._add_table_actions()
+        self.toolbar.show_bundles(["IO", "Table"])
+        self._root_layout.insertWidget(0, self.toolbar)
+
+    def _add_io_actions(self):
+        # Create IO bundle
+        io_bundle = ToolbarBundle("IO", self.toolbar.components)
+
+        # Add load config from plugin dir
+        self.toolbar.add_bundle(io_bundle)
+
+        load = MaterialIconAction(
+            icon_name="file_open", parent=self, tooltip="Load configuration file from disk"
+        )
+        self.toolbar.components.add_safe("load", load)
+        load.action.triggered.connect(self._load_file_action)
+        io_bundle.add_action("load")
+
+        # Add safe to disk
+        safe_to_disk = MaterialIconAction(
+            icon_name="file_save", parent=self, tooltip="Save config to disk"
+        )
+        self.toolbar.components.add_safe("safe_to_disk", safe_to_disk)
+        safe_to_disk.action.triggered.connect(self._safe_to_disk_action)
+        io_bundle.add_action("safe_to_disk")
+
+        # Add load config from redis
+        load_redis = MaterialIconAction(
+            icon_name="cached", parent=self, tooltip="Load current config from Redis"
+        )
+        load_redis.action.triggered.connect(self._load_redis_action)
+        self.toolbar.components.add_safe("load_redis", load_redis)
+        io_bundle.add_action("load_redis")
+
+        # Update config action
+        update_config_redis = MaterialIconAction(
+            icon_name="cloud_upload", parent=self, tooltip="Update current config in Redis"
+        )
+        update_config_redis.action.triggered.connect(self._update_redis_action)
+        self.toolbar.components.add_safe("update_config_redis", update_config_redis)
+        io_bundle.add_action("update_config_redis")
+
+    # Table actions
+
+    def _add_table_actions(self) -> None:
+        table_bundle = ToolbarBundle("Table", self.toolbar.components)
+
+        # Add load config from plugin dir
+        self.toolbar.add_bundle(table_bundle)
+
+        # Reset composed view
+        reset_composed = MaterialIconAction(
+            icon_name="delete_sweep", parent=self, tooltip="Reset current composed config view"
+        )
+        reset_composed.action.triggered.connect(self._reset_composed_view)
+        self.toolbar.components.add_safe("reset_composed", reset_composed)
+        table_bundle.add_action("reset_composed")
+
+        # Add device
+        add_device = MaterialIconAction(icon_name="add", parent=self, tooltip="Add new device")
+        add_device.action.triggered.connect(self._add_device_action)
+        self.toolbar.components.add_safe("add_device", add_device)
+        table_bundle.add_action("add_device")
+
+        # Remove device
+        remove_device = MaterialIconAction(icon_name="remove", parent=self, tooltip="Remove device")
+        remove_device.action.triggered.connect(self._remove_device_action)
+        self.toolbar.components.add_safe("remove_device", remove_device)
+        table_bundle.add_action("remove_device")
+
+        # Rerun validation
+        rerun_validation = MaterialIconAction(
+            icon_name="checklist", parent=self, tooltip="Run device validation on selected devices"
+        )
+        rerun_validation.action.triggered.connect(self._rerun_validation_action)
+        self.toolbar.components.add_safe("rerun_validation", rerun_validation)
+        table_bundle.add_action("rerun_validation")
+
+        # Most likly, no actions on available devices
+        # Actions (vielleicht bundle fuer available devices )
+        # - reset composed view
+        # - add new device (EpicsMotor, EpicsMotorECMC, EpicsSignal, CustomDevice)
+        # - remove device
+        # - rerun validation (with/without connect)
+
+    # IO actions
+
+    @SafeSlot()
+    def _load_file_action(self):
+        """Action for the 'load' action to load a config from disk for the io_bundle of the toolbar."""
+        # Check if plugin repo is installed...
+        try:
+            plugin_path = plugin_repo_path()
+            plugin_name = plugin_package_name()
+            config_path = os.path.join(plugin_path, plugin_name, "device_configs")
+        except ValueError:
+            # Get the recovery config path as fallback
+            config_path = self._get_recovery_config_path()
+            logger.warning(
+                f"No plugin repository installed, fallback to recovery config path: {config_path}"
+            )
+
+        # Implement the file loading logic here
+        start_dir = os.path.abspath(config_path)
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, caption="Select Config File", dir=start_dir
+        )
+        if file_path:
+            try:
+                config = yaml_load(file_path)
+            except Exception as e:
+                logger.error(f"Failed to load config from file {file_path}. Error: {e}")
+                return
+            self.device_table_view.set_device_config(
+                config
+            )  # TODO ADD QDialog with 'replace', 'add' & 'cancel'
+
+    # TODO would we ever like to add the current config to an existing composition
+    @SafeSlot()
+    def _load_redis_action(self):
+        """Action for the 'load_redis' action to load the current config from Redis for the io_bundle of the toolbar."""
+        reply = QMessageBox.question(
+            self,
+            "Load currently active config",
+            "Do you really want to flush the current config and reload?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if reply == QMessageBox.Yes:
+            cfg = {}
+            config_list = self.client.device_manager._get_redis_device_config()
+            for item in config_list:
+                k = item["name"]
+                item.pop("name")
+                cfg[k] = item
+            self.device_table_view.set_device_config(cfg)
+        else:
+            return
+
+    @SafeSlot()
+    def _safe_to_disk_action(self):
+        """Action for the 'safe_to_disk' action to save the current config to disk."""
+        # Check if plugin repo is installed...
+        try:
+            config_path = self._get_recovery_config_path()
+        except ValueError:
+            # Get the recovery config path as fallback
+            config_path = os.path.abspath(os.path.expanduser("~"))
+            logger.warning(f"Failed to find recovery config path, fallback to: {config_path}")
+
+        # Implement the file loading logic here
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, caption="Save Config File", dir=config_path
+        )
+        if file_path:
+            config = self.device_table_view.get_device_config()
+            with open(file_path, "w") as file:
+                file.write(yaml.dump(config))
+
+    # TODO add here logic, should be asyncronous, but probably block UI, and show a loading spinner. If failed, it should report..
+    @SafeSlot()
+    def _update_redis_action(self):
+        """Action for the 'update_redis' action to update the current config in Redis."""
+        config = self.device_table_view.get_device_config()
+        reply = QMessageBox.question(
+            self,
+            "Not implemented yet",
+            "This feature has not been implemented yet, will be coming soon...!!",
+            QMessageBox.Cancel,
+            QMessageBox.Cancel,
+        )
+
+    # Table actions
+
+    @SafeSlot()
+    def _reset_composed_view(self):
+        """Action for the 'reset_composed_view' action to reset the composed view."""
+        reply = QMessageBox.question(
+            self,
+            "Clear View",
+            "You are about to clear the current composed config view, please confirm...",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if reply == QMessageBox.Yes:
+            self.device_table_view.clear_device_configs()
+
+    # TODO Here we would like to implement a custom popup view, that allows to add new devices
+    # We want to have a combobox to choose from EpicsMotor, EpicsMotorECMC, EpicsSignal, EpicsSignalRO, and maybe EpicsSignalWithRBV and custom Device
+    # For all default Epics devices, we would like to preselect relevant fields, and prompt them with the proper deviceConfig args already, i.e. 'prefix', 'read_pv', 'write_pv' etc..
+    # For custom Device, they should receive all options. It might be cool to get a side panel with docstring view of the class upon inspecting it to make it easier in case deviceConfig entries are required..
+    @SafeSlot()
+    def _add_device_action(self):
+        """Action for the 'add_device' action to add a new device."""
+        # Implement the logic to add a new device
+        reply = QMessageBox.question(
+            self,
+            "Not implemented yet",
+            "This feature has not been implemented yet, will be coming soon...!!",
+            QMessageBox.Cancel,
+            QMessageBox.Cancel,
+        )
+
+    # TODO fix the device table remove actions. This is currently not working properly...
+    @SafeSlot()
+    def _remove_device_action(self):
+        """Action for the 'remove_device' action to remove a device."""
+        reply = QMessageBox.question(
+            self,
+            "Not implemented yet",
+            "This feature has not been implemented yet, will be coming soon...!!",
+            QMessageBox.Cancel,
+            QMessageBox.Cancel,
+        )
+
+    # TODO implement proper logic for validation. We should also carefully review how these jobs update the table, and how we can cancel pending validations
+    # in case they are no longer relevant. We might want to 'block' the interactivity on the items for which validation runs with 'connect'!
+    @SafeSlot()
+    def _rerun_validation_action(self):
+        """Action for the 'rerun_validation' action to rerun validation on selected devices."""
+        # Implement the logic to rerun validation on selected devices
+        reply = QMessageBox.question(
+            self,
+            "Not implemented yet",
+            "This feature has not been implemented yet, will be coming soon...!!",
+            QMessageBox.Cancel,
+            QMessageBox.Cancel,
         )
 
     ####### Default view has to be done with setting up splitters ########
@@ -197,18 +452,40 @@ class DeviceManagerView(BECWidget, QWidget):
             v = [1, 1]
         self.set_default_view(h, v)
 
+    def _get_recovery_config_path(self) -> str:
+        """Get the recovery config path from the log_writer config."""
+        # pylint: disable=protected-access
+        log_writer_config: BECClient = self.client._service_config.config.get("log_writer", {})
+        writer = DeviceConfigWriter(service_config=log_writer_config)
+        return os.path.abspath(os.path.expanduser(writer.get_recovery_directory()))
+
 
 if __name__ == "__main__":
     import sys
+    from copy import deepcopy
 
+    from bec_lib.bec_yaml_loader import yaml_load
     from qtpy.QtWidgets import QApplication
 
+    from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
+
     app = QApplication(sys.argv)
+    w = QWidget()
+    l = QVBoxLayout()
+    w.setLayout(l)
+    apply_theme("dark")
+    button = DarkModeButton()
+    l.addWidget(button)
     device_manager_view = DeviceManagerView()
-    config = device_manager_view.client.device_manager._get_redis_device_config()
-    device_manager_view.device_table_view.set_device_config(config)
-    device_manager_view.show()
-    device_manager_view.setWindowTitle("Device Manager View")
-    device_manager_view.resize(1200, 800)
+    l.addWidget(device_manager_view)
+    config_path = "/Users/appel_c/work_psi_awi/bec_workspace/csaxs_bec/csaxs_bec/device_configs/first_light.yaml"
+    cfg = yaml_load(config_path)
+    cfg.update({"device_will_fail": {"name": "device_will_fail", "some_param": 1}})
+
+    # config = device_manager_view.client.device_manager._get_redis_device_config()
+    device_manager_view.device_table_view.set_device_config(cfg)
+    w.show()
+    w.setWindowTitle("Device Manager View")
+    w.resize(1920, 1080)
     # developer_view.set_stretch(horizontal=[1, 3, 2], vertical=[5, 5]) #can be set during runtime
     sys.exit(app.exec_())
