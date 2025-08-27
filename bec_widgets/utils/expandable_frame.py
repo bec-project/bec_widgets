@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from bec_qthemes import material_icon
-from qtpy.QtCore import Signal
+from qtpy.QtCore import QSize, Signal
 from qtpy.QtWidgets import (
     QApplication,
     QFrame,
@@ -19,7 +19,8 @@ from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 
 
 class ExpandableGroupFrame(QFrame):
-
+    broadcast_size_hint = Signal(QSize)
+    imminent_deletion = Signal()
     expansion_state_changed = Signal()
 
     EXPANDED_ICON_NAME: str = "collapse_all"
