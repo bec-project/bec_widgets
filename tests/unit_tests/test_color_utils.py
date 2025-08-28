@@ -147,6 +147,7 @@ class ExamplePlotWidget(BECWidget, QWidget):
 
 def test_apply_theme(qtbot, mocked_client):
     widget = create_widget(qtbot, ExamplePlotWidget, client=mocked_client)
+
     apply_theme("dark")
 
     # Get the default state of dark theme
