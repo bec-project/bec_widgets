@@ -27,8 +27,7 @@ def pytest_runtest_makereport(item, call):
 @pytest.fixture(autouse=True)
 def qapplication(qtbot, request, testable_qtimer_class):  # pylint: disable=unused-argument
     qapp = QApplication.instance()
-    if not hasattr(qapp, "theme"):
-        apply_theme("light")
+    apply_theme("light")
     qapp.processEvents()
 
     yield
@@ -42,7 +41,6 @@ def qapplication(qtbot, request, testable_qtimer_class):  # pylint: disable=unus
     bec_dispatcher.stop_cli_server()
 
     testable_qtimer_class.check_all_stopped(qtbot)
-    qapp = QApplication.instance()
     qapp.processEvents()
     if hasattr(qapp, "os_listener") and qapp.os_listener:
         qapp.removeEventFilter(qapp.os_listener)
