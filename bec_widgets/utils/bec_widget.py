@@ -3,16 +3,14 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-import darkdetect
 import PySide6QtAds as QtAds
 import shiboken6
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QObject, QTimer
+from qtpy.QtCore import QObject
 from qtpy.QtWidgets import QApplication, QFileDialog, QWidget
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
-from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.rpc_decorator import rpc_timeout
 from bec_widgets.utils.widget_io import WidgetHierarchy
@@ -63,14 +61,6 @@ class BECWidget(BECConnector):
         )
         if not isinstance(self, QObject):
             raise RuntimeError(f"{repr(self)} is not a subclass of QWidget")
-        app = QApplication.instance()
-        if not hasattr(app, "theme"):
-            # DO NOT SET THE THEME TO AUTO! Otherwise, the qwebengineview will segfault
-            # Instead, we will set the theme to the system setting on startup
-            if darkdetect.isDark():
-                apply_theme("dark")
-            else:
-                apply_theme("light")
 
         if theme_update:
             logger.debug(f"Subscribing to theme updates for {self.__class__.__name__}")
