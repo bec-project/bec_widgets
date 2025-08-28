@@ -7,8 +7,10 @@ import signal
 import sys
 from contextlib import redirect_stderr, redirect_stdout
 
+import darkdetect
 from bec_lib.logger import bec_logger
 from bec_lib.service_config import ServiceConfig
+from bec_qthemes import apply_theme
 from qtmonaco.pylsp_provider import pylsp_server
 from qtpy.QtCore import QSize, Qt
 from qtpy.QtGui import QIcon
@@ -92,6 +94,11 @@ class GUIServer:
         Run the GUI server.
         """
         self.app = QApplication(sys.argv)
+        if darkdetect.isDark():
+            apply_theme("dark")
+        else:
+            apply_theme("light")
+
         self.app.setApplicationName("BEC")
         self.app.gui_id = self.gui_id  # type: ignore
         self.setup_bec_icon()
