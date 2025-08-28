@@ -5,6 +5,7 @@ import h5py
 import numpy as np
 import pytest
 from bec_lib import messages
+from bec_qthemes import apply_theme
 from pytestqt.exceptions import TimeoutError as QtBotTimeoutError
 from qtpy.QtWidgets import QApplication
 
@@ -24,6 +25,11 @@ def pytest_runtest_makereport(item, call):
 
 @pytest.fixture(autouse=True)
 def qapplication(qtbot, request, testable_qtimer_class):  # pylint: disable=unused-argument
+    qapp = QApplication.instance()
+    if not hasattr(qapp, "theme"):
+        apply_theme("light")
+    qapp.processEvents()
+
     yield
 
     # if the test failed, we don't want to check for open widgets as
