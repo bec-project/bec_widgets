@@ -2,7 +2,9 @@ import functools
 import sys
 import traceback
 
+import shiboken6
 from bec_lib.logger import bec_logger
+from louie.saferef import safe_ref
 from qtpy.QtCore import Property, QObject, Qt, Signal, Slot
 from qtpy.QtWidgets import QApplication, QMessageBox, QPushButton, QVBoxLayout, QWidget
 
@@ -88,6 +90,52 @@ def SafeProperty(prop_type, *prop_args, popup_error: bool = False, default=None,
         return PropertyWrapper(py_getter)
 
     return decorator
+
+
+def _safe_connect_slot(weak_instance, weak_slot, *connect_args):
+    """Internal function used by SafeConnect to handle weak references to slots."""
+    instance = weak_instance()
+    slot_func = weak_slot()
+
+    # Check if the python object has already been garbage collected
+    if instance is None or slot_func is None:
+        return
+
+    # Check if the python object has already been marked for deletion
+    if getattr(instance, "_destroyed", False):
+        return
+
+    # Check if the C++ object is still valid
+    if not shiboken6.isValid(instance):
+        return
+
+    if connect_args:
+        slot_func(*connect_args)
+    slot_func()
+
+
+def SafeConnect(instance, signal, slot):  # pylint: disable=invalid-name
+    """
+    Method to safely handle Qt signal-slot connections. The python object is only forwarded
+    as a weak reference to avoid stale objects.
+
+    Args:
+        instance: The instance to connect.
+        signal: The signal to connect to.
+        slot: The slot to connect.
+
+    Example:
+        >>> SafeConnect(self, qapp.theme.theme_changed, self._update_theme)
+
+    """
+    weak_instance = safe_ref(instance)
+    weak_slot = safe_ref(slot)
+
+    # Create a partial function that will check weak references before calling the actual slot
+    safe_slot = functools.partial(_safe_connect_slot, weak_instance, weak_slot)
+
+    # Connect the signal to the safe connect slot wrapper
+    return signal.connect(safe_slot)
 
 
 def SafeSlot(*slot_args, **slot_kwargs):  # pylint: disable=invalid-name
