@@ -7,6 +7,7 @@ import numpy as np
 import pyqtgraph as pg
 from bec_qthemes import apply_theme as apply_theme_global
 from pydantic_core import PydanticCustomError
+from qtpy.QtCore import QEvent, QEventLoop
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QApplication
 
@@ -38,11 +39,18 @@ def get_accent_colors() -> AccentColors | None:
     return QApplication.instance().theme.accent_colors
 
 
+def process_all_deferred_deletes(qapp):
+    qapp.sendPostedEvents(None, QEvent.DeferredDelete)
+    qapp.processEvents(QEventLoop.AllEvents)
+
+
 def apply_theme(theme: Literal["dark", "light"]):
     """
     Apply the theme via the global theming API. This updates QSS, QPalette, and pyqtgraph globally.
     """
+    process_all_deferred_deletes(QApplication.instance())
     apply_theme_global(theme)
+    process_all_deferred_deletes(QApplication.instance())
 
 
 class Colors:

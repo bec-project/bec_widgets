@@ -8,6 +8,7 @@ from bec_lib import messages
 from bec_lib.messages import _StoredDataInfo
 from bec_qthemes import apply_theme
 from pytestqt.exceptions import TimeoutError as QtBotTimeoutError
+from qtpy.QtCore import QEvent, QEventLoop
 from qtpy.QtWidgets import QApplication, QMessageBox
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
@@ -24,9 +25,15 @@ def pytest_runtest_makereport(item, call):
     item.stash["failed"] = rep.failed
 
 
+def process_all_deferred_deletes(qapp):
+    qapp.sendPostedEvents(None, QEvent.DeferredDelete)
+    qapp.processEvents(QEventLoop.AllEvents)
+
+
 @pytest.fixture(autouse=True)
 def qapplication(qtbot, request, testable_qtimer_class):  # pylint: disable=unused-argument
     qapp = QApplication.instance()
+    process_all_deferred_deletes(qapp)
     apply_theme("light")
     qapp.processEvents()
 
