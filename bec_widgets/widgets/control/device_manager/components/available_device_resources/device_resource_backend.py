@@ -42,12 +42,22 @@ class DeviceResourceBackend(Protocol):
         """A set of all untagged devices. The same device may not appear more than once."""
         ...
 
+    @property
+    def allowed_sort_keys(self) -> set[str]:
+        """A set of all fields which you may group devices by"""
+        ...
+
     def tags(self) -> set[str]:
         """Returns a set of all the tags in all available devices."""
         ...
 
     def tag_group(self, tag: str) -> set[HashableDevice]:
         """Returns a set of the devices in the tag group with the given key."""
+        ...
+
+    def group_by_key(self, key: str) -> dict[str, set[HashableDevice]]:
+        """Return a dict of all devices, organised by the specified key, which must be one of
+        the string keys in the Device model."""
         ...
 
 
@@ -68,7 +78,7 @@ class _ConfigFileBackend(DeviceResourceBackend):
         ] = self._get_config_from_backup_files() | self._get_configs_from_plugin_files(
             Path(plugin_repo_path()) / plugin_package_name() / "device_configs/"
         )
-        self._tag_groups = self._get_tag_groups()
+        self._device_groups = self._get_tag_groups()
 
     def _get_config_from_backup_files(self):
         dir = _BASE_REPO_PATH / "logs/device_configs/recovery_configs"
@@ -90,7 +100,7 @@ class _ConfigFileBackend(DeviceResourceBackend):
 
     @property
     def tag_groups(self):
-        return self._tag_groups
+        return self._device_groups
 
     @property
     def all_devices(self):
@@ -100,11 +110,21 @@ class _ConfigFileBackend(DeviceResourceBackend):
     def untagged_devices(self):
         return {d for d in self._raw_device_set if d.deviceTags == set()}
 
+    @property
+    def allowed_sort_keys(self) -> set[str]:
+        return {n for n, info in HashableDevice.model_fields.items() if info.annotation is str}
+
     def tags(self) -> set[str]:
         return reduce(operator.or_, (dev.deviceTags for dev in self._raw_device_set))
 
     def tag_group(self, tag: str) -> set[HashableDevice]:
         return self.tag_groups[tag]
+
+    def group_by_key(self, key: str) -> dict[str, set[HashableDevice]]:
+        if key not in self.allowed_sort_keys:
+            raise ValueError(f"Cannot group available devices by model key {key}")
+        group_names: set[str] = {getattr(item, key) for item in self._raw_device_set}
+        return {g: {d for d in self._raw_device_set if getattr(d, key) == g} for g in group_names}
 
 
 def get_backend() -> DeviceResourceBackend:

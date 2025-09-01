@@ -42,6 +42,7 @@ class Ui_AvailableDeviceGroup(object):
         title_layout.addWidget(self.add_all_button)
 
         self.device_list = QListWidget(AvailableDeviceGroup)
+        self.device_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         self.device_list.setObjectName("device_list")
         self.device_list.setFrameStyle(0)
 

@@ -5,14 +5,17 @@ from typing import Generic, Iterable, NamedTuple, TypeVar
 
 from bec_lib.logger import bec_logger
 from more_itertools import consume
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QListWidgetItem, QWidget
-from qtpy.QtCore import QSize
+from qtpy.QtCore import QSize, Qt
 from qtpy.QtWidgets import QListWidget
 
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.expandable_frame import ExpandableGroupFrame
 
 logger = bec_logger.logger
+
+_SORT_KEY_ROLE = 117
 
 _EF = TypeVar("_EF", bound=ExpandableGroupFrame)
 
@@ -54,18 +57,30 @@ class ListOfExpandableFrames(QListWidget, Generic[_EF]):
             item.setSizeHint(QSize(item_widget.width(), item_widget.height()))
 
         item = QListWidgetItem(self)
-        item_widget = self._item_class(*args, **kwargs)
+        item.setData(_SORT_KEY_ROLE, id)  # used for sorting
 
+        item_widget = self._item_class(*args, **kwargs)
         item_widget.expansion_state_changed.connect(partial(_updatesize, item, item_widget))
         item_widget.imminent_deletion.connect(partial(_remove_item, item))
         item_widget.broadcast_size_hint.connect(item.setSizeHint)
 
-        self.setItemWidget(item, item_widget)
         self.addItem(item)
+        self.setItemWidget(item, item_widget)
         self._item_dict[id] = self.item_tuple(item, item_widget)
 
         item.setSizeHint(item_widget.sizeHint())
         return item_widget
+
+    def sort_by_key(self, role=_SORT_KEY_ROLE, order=Qt.SortOrder.AscendingOrder):
+        items = [self.takeItem(0) for i in range(self.count())]
+        items.sort(key=lambda it: it.data(role), reverse=(order == Qt.SortOrder.DescendingOrder))
+
+        for it in items:
+            self.addItem(it)
+            # reattach its custom widget
+            widget = self.itemWidget(it)
+            if widget:
+                self.setItemWidget(it, widget)
 
     def item_widget_pairs(self):
         return self._item_dict.values()
