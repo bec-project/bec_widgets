@@ -170,7 +170,7 @@ class DeveloperView(BECWidget, QWidget):
         self.toolbar.add_bundle(execution_bundle)
 
         vim_action = MaterialIconAction(
-            icon_name="text_ad", tooltip="Vim", filled=True, parent=self, checkable=True
+            icon_name="vim", tooltip="Vim", filled=True, parent=self, checkable=True
         )
         self.toolbar.components.add_safe("vim", vim_action)
         vim_action.action.triggered.connect(self.on_vim_triggered)
@@ -270,9 +270,12 @@ class DeveloperView(BECWidget, QWidget):
 if __name__ == "__main__":
     import sys
 
+    from bec_qthemes import apply_theme
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
+    apply_theme("light")
+
     developer_view = DeveloperView()
     developer_view.show()
     developer_view.setWindowTitle("Developer View")
