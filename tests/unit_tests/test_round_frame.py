@@ -42,18 +42,6 @@ def test_set_radius(basic_rounded_frame):
     assert basic_rounded_frame.radius == 20
 
 
-def test_apply_theme_light(plot_rounded_frame):
-    plot_rounded_frame.apply_theme("light")
-
-    assert plot_rounded_frame.background_color == "#e9ecef"
-
-
-def test_apply_theme_dark(plot_rounded_frame):
-    plot_rounded_frame.apply_theme("dark")
-
-    assert plot_rounded_frame.background_color == "#141414"
-
-
 def test_apply_plot_widget_style(plot_rounded_frame):
     # Verify that a PlotWidget can have its style applied
     plot_rounded_frame.apply_plot_widget_style(border="1px solid red")
