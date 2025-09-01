@@ -1,10 +1,13 @@
 from random import randint
-from typing import Any, Callable, Generator, Iterable, TypeVar
+from typing import Any, Iterable
 
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.widgets.control.device_manager.components.available_device_resources._util import (
+    yield_only_passing,
+)
 from bec_widgets.widgets.control.device_manager.components.available_device_resources.available_device_resources_ui import (
     Ui_availableDeviceResources,
 )
@@ -12,17 +15,6 @@ from bec_widgets.widgets.control.device_manager.components.available_device_reso
     HashableDevice,
     get_backend,
 )
-
-_T = TypeVar("_T")
-_RT = TypeVar("_RT")
-
-
-def _yield_only_passing(fn: Callable[[_T], _RT], vals: Iterable[_T]) -> Generator[_RT, Any, None]:
-    for v in vals:
-        try:
-            yield fn(v)
-        except BaseException:
-            pass
 
 
 class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
@@ -60,9 +52,7 @@ class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
 
     @SafeSlot(list)
     def update_devices_state(self, config_list: list[dict[str, Any]]):
-        self.set_devices_state(
-            _yield_only_passing(HashableDevice.model_validate, config_list), True
-        )
+        self.set_devices_state(yield_only_passing(HashableDevice.model_validate, config_list), True)
 
 
 if __name__ == "__main__":

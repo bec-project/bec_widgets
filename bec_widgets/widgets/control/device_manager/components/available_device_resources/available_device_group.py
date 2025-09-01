@@ -6,14 +6,12 @@ from qtpy.QtCore import QSize
 from qtpy.QtWidgets import QFrame, QHBoxLayout, QLabel, QListWidgetItem, QVBoxLayout, QWidget
 
 from bec_widgets.utils.expandable_frame import ExpandableGroupFrame
+from bec_widgets.widgets.control.device_manager.components.available_device_resources.available_device_group_ui import (
+    Ui_AvailableDeviceGroup,
+)
 from bec_widgets.widgets.control.device_manager.components.available_device_resources.device_resource_backend import (
     HashableDevice,
 )
-from bec_widgets.widgets.control.device_manager.components.available_device_resources.device_tag_group_ui import (
-    Ui_DeviceTagGroup,
-)
-
-DEVICE_HASH_ROLE = 101
 
 
 def _warning_string(spec: HashableDevice):
@@ -107,7 +105,7 @@ class _DeviceEntry(NamedTuple):
     widget: _DeviceEntryWidget
 
 
-class DeviceTagGroup(ExpandableGroupFrame, Ui_DeviceTagGroup):
+class AvailableDeviceGroup(ExpandableGroupFrame, Ui_AvailableDeviceGroup):
     def __init__(
         self, parent=None, name: str = "TagGroupTitle", data: set[HashableDevice] = set(), **kwargs
     ):
@@ -184,7 +182,7 @@ if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    widget = DeviceTagGroup(name="Tag group 1")
+    widget = AvailableDeviceGroup(name="Tag group 1")
     for item in [
         HashableDevice(
             **{

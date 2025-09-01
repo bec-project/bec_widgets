@@ -6,42 +6,42 @@ from qtpy.QtCore import QMetaObject
 from qtpy.QtWidgets import QLabel, QListWidget, QToolButton, QVBoxLayout
 
 
-class Ui_DeviceTagGroup(object):
-    def setupUi(self, DeviceTagGroup):
-        if not DeviceTagGroup.objectName():
-            DeviceTagGroup.setObjectName("DeviceTagGroup")
-        DeviceTagGroup.setMinimumWidth(150)
+class Ui_AvailableDeviceGroup(object):
+    def setupUi(self, AvailableDeviceGroup):
+        if not AvailableDeviceGroup.objectName():
+            AvailableDeviceGroup.setObjectName("AvailableDeviceGroup")
+        AvailableDeviceGroup.setMinimumWidth(150)
         self.verticalLayout = QVBoxLayout()
         self.verticalLayout.setObjectName("verticalLayout")
-        DeviceTagGroup.set_layout(self.verticalLayout)
+        AvailableDeviceGroup.set_layout(self.verticalLayout)
 
-        title_layout = DeviceTagGroup.get_title_layout()
+        title_layout = AvailableDeviceGroup.get_title_layout()
 
-        self.n_included = QLabel(DeviceTagGroup, text="...")
+        self.n_included = QLabel(AvailableDeviceGroup, text="...")
         self.n_included.setObjectName("n_included")
         title_layout.addWidget(self.n_included)
 
-        self.delete_tag_button = QToolButton(DeviceTagGroup)
+        self.delete_tag_button = QToolButton(AvailableDeviceGroup)
         self.delete_tag_button.setObjectName("delete_tag_button")
         title_layout.addWidget(self.delete_tag_button)
 
-        self.remove_from_composition_button = QToolButton(DeviceTagGroup)
+        self.remove_from_composition_button = QToolButton(AvailableDeviceGroup)
         self.remove_from_composition_button.setObjectName("remove_from_composition_button")
         title_layout.addWidget(self.remove_from_composition_button)
 
-        self.add_to_composition_button = QToolButton(DeviceTagGroup)
+        self.add_to_composition_button = QToolButton(AvailableDeviceGroup)
         self.add_to_composition_button.setObjectName("add_to_composition_button")
         title_layout.addWidget(self.add_to_composition_button)
 
-        self.remove_all_button = QToolButton(DeviceTagGroup)
+        self.remove_all_button = QToolButton(AvailableDeviceGroup)
         self.remove_all_button.setObjectName("remove_all_from_composition_button")
         title_layout.addWidget(self.remove_all_button)
 
-        self.add_all_button = QToolButton(DeviceTagGroup)
+        self.add_all_button = QToolButton(AvailableDeviceGroup)
         self.add_all_button.setObjectName("add_all_to_composition_button")
         title_layout.addWidget(self.add_all_button)
 
-        self.device_list = QListWidget(DeviceTagGroup)
+        self.device_list = QListWidget(AvailableDeviceGroup)
         self.device_list.setObjectName("device_list")
         self.device_list.setFrameStyle(0)
 
@@ -49,7 +49,7 @@ class Ui_DeviceTagGroup(object):
 
         self.set_icons()
 
-        QMetaObject.connectSlotsByName(DeviceTagGroup)
+        QMetaObject.connectSlotsByName(AvailableDeviceGroup)
 
     def set_icons(self):
         icon = partial(material_icon, size=(15, 15), convert_to_pixmap=False)
