@@ -1,6 +1,14 @@
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit
 from qtpy.QtCore import QMetaObject, Qt
-from qtpy.QtWidgets import QAbstractItemView, QListView, QListWidget, QVBoxLayout
+from qtpy.QtWidgets import (
+    QAbstractItemView,
+    QComboBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListView,
+    QListWidget,
+    QVBoxLayout,
+)
 
 from bec_widgets.utils.list_of_expandable_frames import ListOfExpandableFrames
 from bec_widgets.widgets.control.device_manager.components.available_device_resources.available_device_group import (
@@ -17,9 +25,12 @@ class Ui_availableDeviceResources(object):
 
         self.search_layout = QHBoxLayout()
         self.verticalLayout.addLayout(self.search_layout)
-        self.search_layout.addWidget(QLabel("Filter tags: "))
+        self.search_layout.addWidget(QLabel("Filter groups: "))
         self.search_box = QLineEdit()
         self.search_layout.addWidget(self.search_box)
+        self.search_layout.addWidget(QLabel("Group by: "))
+        self.grouping_selector = QComboBox()
+        self.grouping_selector.addItems(["deviceTags", "deviceClass"])
 
         self.tag_groups_list = ListOfExpandableFrames(
             availableDeviceResources, AvailableDeviceGroup
