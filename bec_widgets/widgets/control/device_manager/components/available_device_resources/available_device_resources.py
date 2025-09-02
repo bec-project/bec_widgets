@@ -15,6 +15,7 @@ from bec_widgets.widgets.control.device_manager.components.available_device_reso
     HashableDevice,
     get_backend,
 )
+from bec_widgets.widgets.control.device_manager.components.constants import CONFIG_DATA_ROLE
 
 
 class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
@@ -37,9 +38,10 @@ class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
         self.device_groups_list.sortItems()
 
     def _add_device_group(self, device_group: str, devices: set[HashableDevice]):
-        self.device_groups_list.add_item(
+        item, widget = self.device_groups_list.add_item(
             device_group, self.device_groups_list, device_group, devices, expanded=False
         )
+        item.setData(CONFIG_DATA_ROLE, widget.create_mime_data())
 
     def _reset_devices_state(self):
         for device_group in self.device_groups_list.widgets():
