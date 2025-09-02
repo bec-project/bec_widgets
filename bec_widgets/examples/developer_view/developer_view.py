@@ -1,6 +1,8 @@
 from typing import List
 
 import PySide6QtAds as QtAds
+from bec_lib.endpoints import MessageEndpoints
+from bec_lib.script_executor import upload_script
 from PySide6QtAds import CDockManager, CDockWidget
 from qtpy.QtCore import Qt, QTimer
 from qtpy.QtGui import QKeySequence, QShortcut
@@ -151,18 +153,17 @@ class DeveloperView(BECWidget, QWidget):
         save_bundle.add_action("save_as")
         self.toolbar.add_bundle(save_bundle)
 
-        self.toolbar.components.add_safe(
-            "run",
-            MaterialIconAction(
-                icon_name="play_arrow", tooltip="Run current file", filled=True, parent=self
-            ),
+        run_action = MaterialIconAction(
+            icon_name="play_arrow", tooltip="Run current file", filled=True, parent=self
         )
-        self.toolbar.components.add_safe(
-            "stop",
-            MaterialIconAction(
-                icon_name="stop", tooltip="Stop current execution", filled=True, parent=self
-            ),
+        run_action.action.triggered.connect(self.on_execute)
+        self.toolbar.components.add_safe("run", run_action)
+
+        stop_action = MaterialIconAction(
+            icon_name="stop", tooltip="Stop current execution", filled=True, parent=self
         )
+        stop_action.action.triggered.connect(self.on_stop)
+        self.toolbar.components.add_safe("stop", stop_action)
 
         execution_bundle = ToolbarBundle("execution", self.toolbar.components)
         execution_bundle.add_action("run")
@@ -266,6 +267,55 @@ class DeveloperView(BECWidget, QWidget):
         self.toolbar.components.get_action("save").action.setEnabled(enabled)
         self.toolbar.components.get_action("save_as").action.setEnabled(enabled)
 
+    @SafeSlot()
+    def on_execute(self):
+        self.script_editor_tab = self.monaco.last_focused_editor
+        if not self.script_editor_tab:
+            return
+        self.current_script_id = upload_script(
+            self.client.connector, self.script_editor_tab.widget().get_text()
+        )
+        self.console.write(f'bec._run_script("{self.current_script_id}")')
+        print(f"Uploaded script with ID: {self.current_script_id}")
+
+    @SafeSlot()
+    def on_stop(self):
+        print("Stopping execution...")
+
+    @property
+    def current_script_id(self):
+        return self._current_script_id
+
+    @current_script_id.setter
+    def current_script_id(self, value):
+        if not isinstance(value, str):
+            raise ValueError("Script ID must be a string.")
+        self._current_script_id = value
+        self._update_subscription()
+
+    def _update_subscription(self):
+        if self.current_script_id:
+            self.bec_dispatcher.connect_slot(
+                self.on_script_execution_info,
+                MessageEndpoints.script_execution_info(self.current_script_id),
+            )
+        else:
+            self.bec_dispatcher.disconnect_slot(
+                self.on_script_execution_info,
+                MessageEndpoints.script_execution_info(self.current_script_id),
+            )
+
+    @SafeSlot(dict, dict)
+    def on_script_execution_info(self, content: dict, metadata: dict):
+        print(f"Script execution info: {content}")
+        current_lines = content.get("current_lines")
+        if not current_lines:
+            self.script_editor_tab.widget().clear_highlighted_lines()
+            return
+        line_number = current_lines[0]
+        self.script_editor_tab.widget().clear_highlighted_lines()
+        self.script_editor_tab.widget().set_highlighted_lines(line_number, line_number)
+
 
 if __name__ == "__main__":
     import sys
@@ -274,7 +324,7 @@ if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    apply_theme("light")
+    apply_theme("dark")
 
     developer_view = DeveloperView()
     developer_view.show()
