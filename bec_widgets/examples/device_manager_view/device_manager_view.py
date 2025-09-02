@@ -26,6 +26,7 @@ from bec_widgets.widgets.control.device_manager.components import (
     DMOphydTest,
     DocstringView,
 )
+from bec_widgets.widgets.control.device_manager.components._util import SharedSelectionSignal
 from bec_widgets.widgets.control.device_manager.components.available_device_resources.available_device_resources import (
     AvailableDeviceResources,
 )
@@ -75,6 +76,8 @@ class DeviceManagerView(BECWidget, QWidget):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, client=None, *args, **kwargs)
 
+        self._shared_selection = SharedSelectionSignal()
+
         # Top-level layout hosting a toolbar and the dock manager
         self._root_layout = QVBoxLayout(self)
         self._root_layout.setContentsMargins(0, 0, 0, 0)
@@ -83,12 +86,16 @@ class DeviceManagerView(BECWidget, QWidget):
         self._root_layout.addWidget(self.dock_manager)
 
         # Available Resources Widget
-        self.available_devices = AvailableDeviceResources(self)
+        self.available_devices = AvailableDeviceResources(
+            self, shared_selection_signal=self._shared_selection
+        )
         self.available_devices_dock = QtAds.CDockWidget("Available Devices", self)
         self.available_devices_dock.setWidget(self.available_devices)
 
         # Device Table View widget
-        self.device_table_view = DeviceTableView(self)
+        self.device_table_view = DeviceTableView(
+            self, shared_selection_signal=self._shared_selection
+        )
         self.device_table_view_dock = QtAds.CDockWidget("Device Table", self)
         self.device_table_view_dock.setWidget(self.device_table_view)
 
