@@ -1,13 +1,19 @@
 import os
+import traceback
 from typing import Literal
 
+import black
+import isort
 import qtmonaco
+from bec_lib.logger import bec_logger
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_theme_name
 from bec_widgets.utils.error_popups import SafeSlot
+
+logger = bec_logger.logger
 
 
 class MonacoWidget(BECWidget, QWidget):
@@ -92,6 +98,32 @@ class MonacoWidget(BECWidget, QWidget):
         Get the current text from the Monaco editor.
         """
         return self.editor.get_text()
+
+    def format(self) -> None:
+        """
+        Format the current text in the Monaco editor.
+        """
+        if not self.editor:
+            return
+        try:
+            content = self.get_text()
+            try:
+                formatted_content = black.format_str(content, mode=black.Mode(line_length=100))
+            except black.NothingChanged:
+                formatted_content = content
+
+            config = isort.Config(
+                profile="black",
+                line_length=100,
+                multi_line_output=3,
+                include_trailing_comma=False,
+                known_first_party=["bec_widgets"],
+            )
+            formatted_content = isort.code(formatted_content, config=config)
+            self.set_text(formatted_content, file_name=self.current_file)
+        except Exception:
+            content = traceback.format_exc()
+            logger.info(content)
 
     def insert_text(self, text: str, line: int | None = None, column: int | None = None) -> None:
         """
