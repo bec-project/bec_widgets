@@ -12,16 +12,17 @@ from bec_widgets.widgets.control.device_manager.components.available_device_reso
 from bec_widgets.widgets.control.device_manager.components.available_device_resources.device_resource_backend import (
     HashableDevice,
 )
+from bec_widgets.widgets.control.device_manager.components.constants import CONFIG_DATA_ROLE
 
 
 def _warning_string(spec: HashableDevice):
     name_warning = (
-        f"Device defined with multiple names! Please check:\n  {'\n  '.join(spec.names)}\n"
+        "Device defined with multiple names! Please check:\n  " + "\n  ".join(spec.names)
         if len(spec.names) > 1
         else ""
     )
     source_warning = (
-        f"Device found in multiple source files! Please check:\n  {'\n  '.join(spec._source_files)}"
+        "Device found in multiple source files! Please check:\n  " + "\n  ".join(spec._source_files)
         if len(spec._source_files) > 1
         else ""
     )
@@ -112,6 +113,7 @@ class AvailableDeviceGroup(ExpandableGroupFrame, Ui_AvailableDeviceGroup):
         super().__init__(parent=parent, **kwargs)
         self.setupUi(self)
         self.title_text = name  # type: ignore
+        self._mime_data = []
         self._devices: dict[str, _DeviceEntry] = {}
         for device in data:
             self._add_item(device)
@@ -123,11 +125,17 @@ class AvailableDeviceGroup(ExpandableGroupFrame, Ui_AvailableDeviceGroup):
 
     def _add_item(self, device: HashableDevice):
         item = QListWidgetItem(self.device_list)
+        device_dump = device.model_dump(exclude_defaults=True)
+        item.setData(CONFIG_DATA_ROLE, device_dump)
+        self._mime_data.append(device_dump)
         widget = _DeviceEntryWidget(device, self)
         item.setSizeHint(QSize(widget.width(), widget.height()))
         self.device_list.setItemWidget(item, widget)
         self.device_list.addItem(item)
         self._devices[device.name] = _DeviceEntry(item, widget)
+
+    def create_mime_data(self):
+        return self._mime_data
 
     def reset_devices_state(self):
         for dev in self._devices.values():
