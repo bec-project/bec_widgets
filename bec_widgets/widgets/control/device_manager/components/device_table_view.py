@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import copy
-import time
+import json
+from typing import List
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
@@ -12,8 +13,9 @@ from thefuzz import fuzz
 
 from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import get_accent_colors, get_theme_palette
+from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.widgets.control.device_manager.components.constants import MIME_DEVICE_CONFIG
 from bec_widgets.widgets.control.device_manager.components.dm_ophyd_test import ValidationStatus
 
 logger = bec_logger.logger
@@ -260,13 +262,18 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
             return QtCore.Qt.NoItemFlags
         key = self.headers[index.column()]
 
+        base_flags = super().flags(index) | (
+            QtCore.Qt.ItemFlag.ItemIsEnabled
+            | QtCore.Qt.ItemFlag.ItemIsSelectable
+            | QtCore.Qt.ItemFlag.ItemIsDropEnabled
+        )
+
         if key in ("enabled", "readOnly"):
-            base_flags = QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
             if self._checkable_columns_enabled.get(key, True):
-                return base_flags | QtCore.Qt.ItemIsUserCheckable
+                return base_flags | QtCore.Qt.ItemFlag.ItemIsUserCheckable
             else:
                 return base_flags  # disable editing but still visible
-        return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+        return base_flags
 
     def setData(self, index, value, role=QtCore.Qt.EditRole) -> bool:
         """
@@ -292,6 +299,25 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
             self.dataChanged.emit(index, index, [QtCore.Qt.CheckStateRole])
             return True
         return False
+
+    ####################################
+    ############ Drag and Drop #########
+    ####################################
+
+    def mimeTypes(self) -> List[str]:
+        return [*super().mimeTypes(), MIME_DEVICE_CONFIG]
+
+    def supportedDropActions(self):
+        return QtCore.Qt.DropAction.CopyAction | QtCore.Qt.DropAction.MoveAction
+
+    def dropMimeData(self, data, action, row, column, parent):
+        if action not in [QtCore.Qt.DropAction.CopyAction, QtCore.Qt.DropAction.MoveAction]:
+            return False
+        if (raw_data := data.data(MIME_DEVICE_CONFIG)) is None:
+            return False
+        device_list = json.loads(raw_data.toStdString())
+        self.add_device_configs({dev.pop("name"): dev for dev in device_list})
+        return True
 
     ####################################
     ############ Public methods ########
@@ -410,6 +436,12 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
 
 class BECTableView(QtWidgets.QTableView):
     """Table View with custom keyPressEvent to delete rows with backspace or delete key"""
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.setAcceptDrops(True)
+        self.setDropIndicatorShown(True)
+        self.setDragDropMode(QtWidgets.QTableView.DragDropMode.DropOnly)
 
     def keyPressEvent(self, event) -> None:
         """
@@ -541,6 +573,19 @@ class DeviceFilterProxyModel(QtCore.QSortFilterProxyModel):
                 if text in data.lower():
                     return True
         return False
+
+    def flags(self, index):
+        return super().flags(index) | QtCore.Qt.ItemFlag.ItemIsDropEnabled
+
+    def supportedDropActions(self):
+        return self.sourceModel().supportedDropActions()
+
+    def mimeTypes(self):
+        return self.sourceModel().mimeTypes()
+
+    def dropMimeData(self, data, action, row, column, parent):
+        sp = self.mapToSource(parent) if parent.isValid() else QtCore.QModelIndex()
+        return self.sourceModel().dropMimeData(data, action, row, column, sp)
 
 
 class DeviceTableView(BECWidget, QtWidgets.QWidget):
