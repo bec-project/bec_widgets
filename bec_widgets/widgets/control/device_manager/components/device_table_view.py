@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 from typing import List
+from uuid import uuid4
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
@@ -15,6 +16,7 @@ from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.widgets.control.device_manager.components._util import SharedSelectionSignal
 from bec_widgets.widgets.control.device_manager.components.constants import MIME_DEVICE_CONFIG
 from bec_widgets.widgets.control.device_manager.components.dm_ophyd_test import ValidationStatus
 
@@ -598,8 +600,12 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
     RPC = False
     PLUGIN = False
 
-    def __init__(self, parent=None, client=None):
+    def __init__(self, parent=None, client=None, shared_selection_signal=SharedSelectionSignal()):
         super().__init__(client=client, parent=parent, theme_update=True)
+
+        self._shared_selection_signal = shared_selection_signal
+        self._shared_selection_uuid = str(uuid4())
+        self._shared_selection_signal.proc.connect(self._handle_shared_selection_signal)
 
         self.layout = QtWidgets.QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
@@ -731,6 +737,11 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
             height = self.wrap_delegate.sizeHint(option, index).height()
             self.table.setRowHeight(row, height)
 
+    @SafeSlot(str)
+    def _handle_shared_selection_signal(self, uuid: str):
+        if uuid != self._shared_selection_uuid:
+            self.table.clearSelection()
+
     @SafeSlot(QtCore.QItemSelection, QtCore.QItemSelection)
     def _on_selection_changed(
         self, selected: QtCore.QItemSelection, deselected: QtCore.QItemSelection
@@ -742,6 +753,9 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
             selected (QtCore.QItemSelection): The selected items.
             deselected (QtCore.QItemSelection): The deselected items.
         """
+
+        self._shared_selection_signal.proc.emit(self._shared_selection_uuid)
+
         # TODO also hook up logic if a config update is propagated from somewhere!
         # selected_indexes = selected.indexes()
         selected_indexes = self.table.selectionModel().selectedIndexes()
