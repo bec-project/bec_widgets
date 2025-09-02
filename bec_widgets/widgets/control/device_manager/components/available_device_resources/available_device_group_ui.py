@@ -1,9 +1,27 @@
+import json
 from functools import partial
 
+from bec_lib.utils.json import ExtendedEncoder
 from bec_qthemes import material_icon
-from PySide6.QtWidgets import QFrame
-from qtpy.QtCore import QMetaObject
+from qtpy.QtCore import QByteArray, QMetaObject, QMimeData, Qt
 from qtpy.QtWidgets import QLabel, QListWidget, QToolButton, QVBoxLayout
+
+from bec_widgets.widgets.control.device_manager.components.constants import (
+    CONFIG_DATA_ROLE,
+    MIME_DEVICE_CONFIG,
+)
+
+
+class _DeviceListWiget(QListWidget):
+    def mimeTypes(self):
+        return [MIME_DEVICE_CONFIG]
+
+    def mimeData(self, items):
+        mime_obj = QMimeData()
+        data = [item.data(CONFIG_DATA_ROLE) for item in items]
+        byte_array = QByteArray(json.dumps(data, cls=ExtendedEncoder).encode("utf-8"))
+        mime_obj.setData(MIME_DEVICE_CONFIG, byte_array)
+        return mime_obj
 
 
 class Ui_AvailableDeviceGroup(object):
@@ -41,11 +59,13 @@ class Ui_AvailableDeviceGroup(object):
         self.add_all_button.setObjectName("add_all_to_composition_button")
         title_layout.addWidget(self.add_all_button)
 
-        self.device_list = QListWidget(AvailableDeviceGroup)
+        self.device_list = _DeviceListWiget(AvailableDeviceGroup)
         self.device_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         self.device_list.setObjectName("device_list")
         self.device_list.setFrameStyle(0)
-
+        self.device_list.setDragEnabled(True)
+        self.device_list.setAcceptDrops(False)
+        self.device_list.setDefaultDropAction(Qt.DropAction.CopyAction)
         self.verticalLayout.addWidget(self.device_list)
 
         self.set_icons()
