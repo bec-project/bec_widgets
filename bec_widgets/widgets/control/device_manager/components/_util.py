@@ -1,6 +1,9 @@
 from typing import Any, Callable, Generator, Iterable, TypeVar
 
+from PySide6.QtCore import QObject, Signal
 from qtpy.QtWidgets import QListWidgetItem
+
+from bec_widgets.widgets.control.device_manager.components.constants import SORT_KEY_ROLE
 
 _T = TypeVar("_T")
 _RT = TypeVar("_RT")
@@ -12,9 +15,6 @@ def yield_only_passing(fn: Callable[[_T], _RT], vals: Iterable[_T]) -> Generator
             yield fn(v)
         except BaseException:
             pass
-
-
-SORT_KEY_ROLE = 117
 
 
 class SortableQListWidgetItem(QListWidgetItem):
@@ -34,3 +34,7 @@ class SortableQListWidgetItem(QListWidgetItem):
         ) is None:
             return False
         return self_key.lower() < other_key.lower()
+
+
+class SharedSelectionSignal(QObject):
+    proc = Signal(str)

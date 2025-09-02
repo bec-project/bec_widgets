@@ -9,7 +9,7 @@ from qtpy.QtWidgets import QListWidget, QListWidgetItem, QWidget
 
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.expandable_frame import ExpandableGroupFrame
-from bec_widgets.widgets.control.device_manager.components.available_device_resources._util import (
+from bec_widgets.widgets.control.device_manager.components._util import (
     SORT_KEY_ROLE,
     SortableQListWidgetItem,
 )

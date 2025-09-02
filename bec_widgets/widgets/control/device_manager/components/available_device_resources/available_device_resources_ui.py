@@ -27,7 +27,6 @@ from bec_widgets.widgets.control.device_manager.components.constants import (
 
 
 class _ListOfDeviceGroups(ListOfExpandableFrames[AvailableDeviceGroup]):
-
     def mimeTypes(self):
         return [MIME_DEVICE_CONFIG]
 

@@ -1,11 +1,14 @@
 from textwrap import dedent
 from typing import NamedTuple
+from uuid import uuid4
 
 from bec_qthemes import material_icon
-from qtpy.QtCore import QSize
+from qtpy.QtCore import QItemSelection, QSize
 from qtpy.QtWidgets import QFrame, QHBoxLayout, QLabel, QListWidgetItem, QVBoxLayout, QWidget
 
+from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.expandable_frame import ExpandableGroupFrame
+from bec_widgets.widgets.control.device_manager.components._util import SharedSelectionSignal
 from bec_widgets.widgets.control.device_manager.components.available_device_resources.available_device_group_ui import (
     Ui_AvailableDeviceGroup,
 )
@@ -108,10 +111,21 @@ class _DeviceEntry(NamedTuple):
 
 class AvailableDeviceGroup(ExpandableGroupFrame, Ui_AvailableDeviceGroup):
     def __init__(
-        self, parent=None, name: str = "TagGroupTitle", data: set[HashableDevice] = set(), **kwargs
+        self,
+        parent=None,
+        name: str = "TagGroupTitle",
+        data: set[HashableDevice] = set(),
+        shared_selection_signal=SharedSelectionSignal(),
+        **kwargs,
     ):
         super().__init__(parent=parent, **kwargs)
         self.setupUi(self)
+
+        self._shared_selection_signal = shared_selection_signal
+        self._shared_selection_uuid = str(uuid4())
+        self._shared_selection_signal.proc.connect(self._handle_shared_selection_signal)
+        self.device_list.selectionModel().selectionChanged.connect(self._on_selection_changed)
+
         self.title_text = name  # type: ignore
         self._mime_data = []
         self._devices: dict[str, _DeviceEntry] = {}
@@ -164,6 +178,15 @@ class AvailableDeviceGroup(ExpandableGroupFrame, Ui_AvailableDeviceGroup):
             max(150, self.device_list.viewport().width()),
             self.device_list.sizeHintForRow(0) * self.device_list.count() + 50,
         )
+
+    @SafeSlot(QItemSelection, QItemSelection)
+    def _on_selection_changed(self, selected: QItemSelection, deselected: QItemSelection) -> None:
+        self._shared_selection_signal.proc.emit(self._shared_selection_uuid)
+
+    @SafeSlot(str)
+    def _handle_shared_selection_signal(self, uuid: str):
+        if uuid != self._shared_selection_uuid:
+            self.device_list.clearSelection()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

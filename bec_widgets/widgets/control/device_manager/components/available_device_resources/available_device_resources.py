@@ -1,11 +1,14 @@
 from random import randint
 from typing import Any, Iterable
+from uuid import uuid4
 
+from PySide6.QtCore import QItemSelection
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
-from bec_widgets.widgets.control.device_manager.components.available_device_resources._util import (
+from bec_widgets.widgets.control.device_manager.components._util import (
+    SharedSelectionSignal,
     yield_only_passing,
 )
 from bec_widgets.widgets.control.device_manager.components.available_device_resources.available_device_resources_ui import (
@@ -19,10 +22,16 @@ from bec_widgets.widgets.control.device_manager.components.constants import CONF
 
 
 class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
-    def __init__(self, parent=None, **kwargs):
+    def __init__(self, parent=None, shared_selection_signal=SharedSelectionSignal(), **kwargs):
         super().__init__(parent=parent, **kwargs)
         self.setupUi(self)
         self._backend = get_backend()
+        self._shared_selection_signal = shared_selection_signal
+        self._shared_selection_uuid = str(uuid4())
+        self._shared_selection_signal.proc.connect(self._handle_shared_selection_signal)
+        self.device_groups_list.selectionModel().selectionChanged.connect(
+            self._on_selection_changed
+        )
         self.grouping_selector.addItem("deviceTags")
         self.grouping_selector.addItems(self._backend.allowed_sort_keys)
         self._grouping_selection_changed("deviceTags")
@@ -39,7 +48,12 @@ class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
 
     def _add_device_group(self, device_group: str, devices: set[HashableDevice]):
         item, widget = self.device_groups_list.add_item(
-            device_group, self.device_groups_list, device_group, devices, expanded=False
+            device_group,
+            self.device_groups_list,
+            device_group,
+            devices,
+            shared_selection_signal=self._shared_selection_signal,
+            expanded=False,
         )
         item.setData(CONFIG_DATA_ROLE, widget.create_mime_data())
 
@@ -56,6 +70,15 @@ class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
         super().resizeEvent(event)
         for list_item, device_group_widget in self.device_groups_list.item_widget_pairs():
             list_item.setSizeHint(device_group_widget.sizeHint())
+
+    @SafeSlot(QItemSelection, QItemSelection)
+    def _on_selection_changed(self, selected: QItemSelection, deselected: QItemSelection) -> None:
+        self._shared_selection_signal.proc.emit(self._shared_selection_uuid)
+
+    @SafeSlot(str)
+    def _handle_shared_selection_signal(self, uuid: str):
+        if uuid != self._shared_selection_uuid:
+            self.device_groups_list.clearSelection()
 
     @SafeSlot(dict)
     def update_devices_state_name_outside(self, configs: dict):
