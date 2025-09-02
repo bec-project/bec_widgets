@@ -1,9 +1,14 @@
+import json
 from typing import Any, Callable, Generator, Iterable, TypeVar
 
-from PySide6.QtCore import QObject, Signal
+from bec_lib.utils.json import ExtendedEncoder
+from qtpy.QtCore import QByteArray, QMimeData, QObject, Signal  # type: ignore
 from qtpy.QtWidgets import QListWidgetItem
 
-from bec_widgets.widgets.control.device_manager.components.constants import SORT_KEY_ROLE
+from bec_widgets.widgets.control.device_manager.components.constants import (
+    MIME_DEVICE_CONFIG,
+    SORT_KEY_ROLE,
+)
 
 _T = TypeVar("_T")
 _RT = TypeVar("_RT")
@@ -17,8 +22,16 @@ def yield_only_passing(fn: Callable[[_T], _RT], vals: Iterable[_T]) -> Generator
             pass
 
 
+def mimedata_from_configs(configs: Iterable[dict]) -> QMimeData:
+    """Takes an iterable of device configs, gives a QMimeData with the configs json-encoded under the type MIME_DEVICE_CONFIG"""
+    mime_obj = QMimeData()
+    byte_array = QByteArray(json.dumps(list(configs), cls=ExtendedEncoder).encode("utf-8"))
+    mime_obj.setData(MIME_DEVICE_CONFIG, byte_array)
+    return mime_obj
+
+
 class SortableQListWidgetItem(QListWidgetItem):
-    """Store a sorting string key with .setData(SORT_KEY_ROLE, key) to be able to sort a list with \
+    """Store a sorting string key with .setData(SORT_KEY_ROLE, key) to be able to sort a list with
     custom widgets and this item."""
 
     def __gt__(self, other):

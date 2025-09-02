@@ -1,11 +1,10 @@
-import json
 from functools import partial
 
-from bec_lib.utils.json import ExtendedEncoder
 from bec_qthemes import material_icon
-from qtpy.QtCore import QByteArray, QMetaObject, QMimeData, Qt
+from qtpy.QtCore import QMetaObject, Qt
 from qtpy.QtWidgets import QLabel, QListWidget, QToolButton, QVBoxLayout
 
+from bec_widgets.widgets.control.device_manager.components._util import mimedata_from_configs
 from bec_widgets.widgets.control.device_manager.components.constants import (
     CONFIG_DATA_ROLE,
     MIME_DEVICE_CONFIG,
@@ -17,11 +16,7 @@ class _DeviceListWiget(QListWidget):
         return [MIME_DEVICE_CONFIG]
 
     def mimeData(self, items):
-        mime_obj = QMimeData()
-        data = [item.data(CONFIG_DATA_ROLE) for item in items]
-        byte_array = QByteArray(json.dumps(data, cls=ExtendedEncoder).encode("utf-8"))
-        mime_obj.setData(MIME_DEVICE_CONFIG, byte_array)
-        return mime_obj
+        return mimedata_from_configs(item.data(CONFIG_DATA_ROLE) for item in items)
 
 
 class Ui_AvailableDeviceGroup(object):

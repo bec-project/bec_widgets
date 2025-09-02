@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import itertools
-import json
 
-from bec_lib.utils.json import ExtendedEncoder
-from qtpy.QtCore import QByteArray, QMetaObject, QMimeData, Qt
+from qtpy.QtCore import QMetaObject, Qt
 from qtpy.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -17,6 +15,7 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils.list_of_expandable_frames import ListOfExpandableFrames
+from bec_widgets.widgets.control.device_manager.components._util import mimedata_from_configs
 from bec_widgets.widgets.control.device_manager.components.available_device_resources.available_device_group import (
     AvailableDeviceGroup,
 )
@@ -31,11 +30,9 @@ class _ListOfDeviceGroups(ListOfExpandableFrames[AvailableDeviceGroup]):
         return [MIME_DEVICE_CONFIG]
 
     def mimeData(self, items):
-        mime_obj = QMimeData()
-        data = list(itertools.chain.from_iterable(item.data(CONFIG_DATA_ROLE) for item in items))
-        byte_array = QByteArray(json.dumps(data, cls=ExtendedEncoder).encode("utf-8"))
-        mime_obj.setData(MIME_DEVICE_CONFIG, byte_array)
-        return mime_obj
+        return mimedata_from_configs(
+            itertools.chain.from_iterable(item.data(CONFIG_DATA_ROLE) for item in items)
+        )
 
 
 class Ui_availableDeviceResources(object):
