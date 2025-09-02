@@ -26,6 +26,9 @@ from bec_widgets.widgets.control.device_manager.components import (
     DMOphydTest,
     DocstringView,
 )
+from bec_widgets.widgets.control.device_manager.components.available_device_resources.available_device_resources import (
+    AvailableDeviceResources,
+)
 
 if TYPE_CHECKING:
     from bec_lib.client import BECClient
@@ -80,7 +83,7 @@ class DeviceManagerView(BECWidget, QWidget):
         self._root_layout.addWidget(self.dock_manager)
 
         # Available Resources Widget
-        self.available_devices = QWidget(self)
+        self.available_devices = AvailableDeviceResources(self)
         self.available_devices_dock = QtAds.CDockWidget("Available Devices", self)
         self.available_devices_dock.setWidget(self.available_devices)
 
