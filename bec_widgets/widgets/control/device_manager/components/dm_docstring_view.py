@@ -30,7 +30,7 @@ class DocstringView(QtWidgets.QTextEdit):
     def __init__(self, parent: QtWidgets.QWidget | None = None):
         super().__init__(parent)
         self.setReadOnly(True)
-        self.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
         if not READY_TO_VIEW:
             self._set_text("Ophyd or ophyd_devices not installed, cannot show docstrings.")
             self.setEnabled(False)
@@ -92,13 +92,12 @@ class DocstringView(QtWidgets.QTextEdit):
         # self.setHtml(self._format_docstring(text))
         self.setReadOnly(True)
 
-    @SafeSlot(dict)
-    def on_select_config(self, device: dict):
+    @SafeSlot(list)
+    def on_select_config(self, device: list[dict]):
         if len(device) != 1:
             self._set_text("")
             return
-        k = next(iter(device))
-        device_class = device[k].get("deviceClass", "")
+        device_class = device[0].get("deviceClass", "")
         self.set_device_class(device_class)
 
     @SafeSlot(str)

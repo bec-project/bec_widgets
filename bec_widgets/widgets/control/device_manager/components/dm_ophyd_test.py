@@ -6,7 +6,7 @@ import enum
 import re
 import traceback
 from html import escape
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import bec_lib
 from bec_lib.logger import bec_logger
@@ -212,38 +212,32 @@ class DMOphydTest(BECWidget, QtWidgets.QWidget):
         self.splitter.addWidget(self._text_box)
 
     @SafeSlot(dict)
-    def add_device_configs(self, device_configs: dict[str, dict]) -> None:
+    def change_device_configs(self, device_configs: list[dict[str, Any]], added: bool) -> None:
         """Receive an update with device configs.
 
         Args:
-            device_configs (dict[str, dict]): The updated device configurations.
+            device_configs (list[dict[str, Any]]): The updated device configurations.
         """
-        for device_name, device_config in device_configs.items():
-            if device_name in self._device_list_items:
-                logger.error(f"Device {device_name} is already in the list.")
+        for cfg in device_configs:
+            name = cfg.get("name", "<not found>")
+            if added:
+                if name in self._device_list_items:
+                    return
+                return self._add_device(name, cfg)
+            if name not in self._device_list_items:
                 return
-            item = QtWidgets.QListWidgetItem(self._list_widget)
-            widget = ValidationListItem(device_name=device_name, device_config=device_config)
+            self._remove_list_item(name)
 
-            # wrap it in a QListWidgetItem
-            item.setSizeHint(widget.sizeHint())
-            self._list_widget.addItem(item)
-            self._list_widget.setItemWidget(item, widget)
-            self._device_list_items[device_name] = item
-            self._run_device_validation(widget)
+    def _add_device(self, name, cfg):
+        item = QtWidgets.QListWidgetItem(self._list_widget)
+        widget = ValidationListItem(device_name=name, device_config=cfg)
 
-    @SafeSlot(dict)
-    def remove_device_configs(self, device_configs: dict[str, dict]) -> None:
-        """Remove device configs from the list.
-
-        Args:
-            device_name (str): The name of the device to remove.
-        """
-        for device_name in device_configs.keys():
-            if device_name not in self._device_list_items:
-                logger.warning(f"Device {device_name} not found in list.")
-                return
-            self._remove_list_item(device_name)
+        # wrap it in a QListWidgetItem
+        item.setSizeHint(widget.sizeHint())
+        self._list_widget.addItem(item)
+        self._list_widget.setItemWidget(item, widget)
+        self._device_list_items[name] = item
+        self._run_device_validation(widget)
 
     def _remove_list_item(self, device_name: str):
         """Remove a device from the list."""

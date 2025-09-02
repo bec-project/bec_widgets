@@ -57,15 +57,6 @@ class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
         )
         item.setData(CONFIG_DATA_ROLE, widget.create_mime_data())
 
-    def _reset_devices_state(self):
-        for device_group in self.device_groups_list.widgets():
-            device_group.reset_devices_state()
-
-    def set_devices_state(self, devices: Iterable[HashableDevice], included: bool):
-        for device in devices:
-            for device_group in self.device_groups_list.widgets():
-                device_group.set_item_state(hash(device), included)
-
     def resizeEvent(self, event):
         super().resizeEvent(event)
         for list_item, device_group_widget in self.device_groups_list.item_widget_pairs():
@@ -80,19 +71,19 @@ class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
         if uuid != self._shared_selection_uuid:
             self.device_groups_list.clearSelection()
 
-    @SafeSlot(dict)
-    def update_devices_state_name_outside(self, configs: dict):
-        """Set the display color of individual devices and update the group display
-        of numbers included. Accepts a dict with the structure {"device_name": config_dict, ...}
-        as used in server calls."""
-        self.update_devices_state([{"name": k, **v} for k, v in configs.items()])
+    def _set_devices_state(self, devices: Iterable[HashableDevice], included: bool):
+        for device in devices:
+            for device_group in self.device_groups_list.widgets():
+                device_group.set_item_state(hash(device), included)
 
     @SafeSlot(list)
-    def update_devices_state(self, config_list: list[dict[str, Any]]):
+    def mark_devices_used(self, config_list: list[dict[str, Any]], used: bool):
         """Set the display color of individual devices and update the group display of numbers
         included. Accepts a list of dicts with the complete config as used in
         bec_lib.atlas_models.Device."""
-        self.set_devices_state(yield_only_passing(HashableDevice.model_validate, config_list), True)
+        self._set_devices_state(
+            yield_only_passing(HashableDevice.model_validate, config_list), used
+        )
 
     @SafeSlot(str)
     def _grouping_selection_changed(self, sort_key: str):
@@ -111,7 +102,7 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     widget = AvailableDeviceResources()
-    widget.set_devices_state(
+    widget._set_devices_state(
         list(filter(lambda _: randint(0, 1) == 1, widget._backend.all_devices)), True
     )
     widget.show()

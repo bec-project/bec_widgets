@@ -52,14 +52,14 @@ class DMConfigView(BECWidget, QtWidgets.QWidget):
         )
 
     @SafeSlot(dict)
-    def on_select_config(self, device: dict):
+    def on_select_config(self, device: list[dict]):
         """Handle selection of a device from the device table."""
         if len(device) != 1:
             text = ""
             self.stacked_layout.setCurrentWidget(self._overlay_widget)
         else:
             try:
-                text = yaml.dump(device, default_flow_style=False)
+                text = yaml.dump(device[0], default_flow_style=False)
                 self.stacked_layout.setCurrentWidget(self.monaco_editor)
             except Exception:
                 content = traceback.format_exc()
