@@ -57,6 +57,10 @@ class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
         for list_item, device_group_widget in self.device_groups_list.item_widget_pairs():
             list_item.setSizeHint(device_group_widget.sizeHint())
 
+    @SafeSlot(dict)
+    def update_devices_state_name_outside(self, configs: dict):
+        self.update_devices_state([{"name": k, **v} for k, v in configs.items()])
+
     @SafeSlot(list)
     def update_devices_state(self, config_list: list[dict[str, Any]]):
         self.set_devices_state(yield_only_passing(HashableDevice.model_validate, config_list), True)
