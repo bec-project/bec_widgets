@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import pathlib
 from typing import Any, cast
 
 import PySide6QtAds as QtAds
@@ -237,7 +238,9 @@ class MonacoDock(BECWidget, QWidget):
         widget = cast(MonacoWidget, editor_dock.widget())
         widget.open_file(file_name)
 
-    def save_file(self, widget: MonacoWidget | None = None, force_save_as: bool = False) -> None:
+    def save_file(
+        self, widget: MonacoWidget | None = None, force_save_as: bool = False, format_on_save=True
+    ) -> None:
         """
         Save the currently focused file.
 
@@ -250,6 +253,8 @@ class MonacoDock(BECWidget, QWidget):
         if not widget:
             return
         if widget.current_file and not force_save_as:
+            if format_on_save and pathlib.Path(widget.current_file).suffix == ".py":
+                widget.format()
             with open(widget.current_file, "w", encoding="utf-8") as f:
                 f.write(widget.get_text())
             # pylint: disable=protected-access
@@ -258,19 +263,21 @@ class MonacoDock(BECWidget, QWidget):
             return
 
         # Save as option
-        file_dialog = QFileDialog(self, "Save File As")
-        file_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
-        file_dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
-        file_dialog.setNameFilter("Text files (*.txt);;All files (*)")
-        file_dialog.setDefaultSuffix("txt")
+        save_file = QFileDialog.getSaveFileName(self, "Save File As", "", "All files (*)")
 
-        if file_dialog.exec_() == QFileDialog.Accepted:
-            selected_files = file_dialog.selectedFiles()
-            if selected_files:
-                with open(selected_files[0], "w") as f:
-                    f.write(widget.get_text())
-                widget._original_content = widget.get_text()
-                widget.save_enabled.emit(False)
+        if save_file:
+            # check if we have suffix specified
+            file = pathlib.Path(save_file[0])
+            if file.suffix == "":
+                file = file.with_suffix(".py")
+            if format_on_save and file.suffix == ".py":
+                widget.format()
+
+            text = widget.get_text()
+            with open(file, "w", encoding="utf-8") as f:
+                f.write(text)
+            widget._original_content = text
+            widget.save_enabled.emit(False)
 
         print(f"Save file called, last focused editor: {self.last_focused_editor}")
 
