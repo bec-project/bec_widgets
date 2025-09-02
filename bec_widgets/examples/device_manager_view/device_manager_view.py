@@ -19,7 +19,6 @@ from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
-from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
 from bec_widgets.widgets.control.device_manager.components import (
     DeviceTableView,
     DMConfigView,
@@ -54,7 +53,9 @@ def set_splitter_weights(splitter: QSplitter, weights: List[float]) -> None:
             w = [1.0] * n
             tot_w = float(n)
         total_px = (
-            splitter.width() if splitter.orientation() == Qt.Horizontal else splitter.height()
+            splitter.width()
+            if splitter.orientation() == Qt.Orientation.Horizontal
+            else splitter.height()
         )
         if total_px < 2:
             QTimer.singleShot(0, apply)
@@ -154,15 +155,16 @@ class DeviceManagerView(BECWidget, QWidget):
         # self.set_default_view([2, 8, 2], [2, 2, 4])
 
         # Connect slots
-        self.device_table_view.selected_device.connect(self.dm_config_view.on_select_config)
-        self.device_table_view.selected_device.connect(self.dm_docs_view.on_select_config)
+        self.device_table_view.selected_devices.connect(self.dm_config_view.on_select_config)
+        self.device_table_view.selected_devices.connect(self.dm_docs_view.on_select_config)
         self.ophyd_test_view.device_validated.connect(
             self.device_table_view.update_device_validation
         )
-        self.device_table_view.device_configs_added.connect(self.ophyd_test_view.add_device_configs)
-        self.device_table_view.device_configs_added.connect(
-            self.available_devices.update_devices_state_name_outside
-        )
+        for slot in [
+            self.ophyd_test_view.change_device_configs,
+            self.available_devices.mark_devices_used,
+        ]:
+            self.device_table_view.device_configs_changed.connect(slot)
 
         self._add_toolbar()
 
@@ -296,10 +298,10 @@ class DeviceManagerView(BECWidget, QWidget):
             self,
             "Load currently active config",
             "Do you really want to flush the current config and reload?",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
         )
-        if reply == QMessageBox.Yes:
+        if reply == QMessageBox.StandardButton.Yes and self.client.device_manager is not None:
             cfg = {}
             config_list = self.client.device_manager._get_redis_device_config()
             for item in config_list:
@@ -339,8 +341,8 @@ class DeviceManagerView(BECWidget, QWidget):
             self,
             "Not implemented yet",
             "This feature has not been implemented yet, will be coming soon...!!",
-            QMessageBox.Cancel,
-            QMessageBox.Cancel,
+            QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
         )
 
     # Table actions
@@ -352,10 +354,10 @@ class DeviceManagerView(BECWidget, QWidget):
             self,
             "Clear View",
             "You are about to clear the current composed config view, please confirm...",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
         )
-        if reply == QMessageBox.Yes:
+        if reply == QMessageBox.StandardButton.Yes:
             self.device_table_view.clear_device_configs()
 
     # TODO Here we would like to implement a custom popup view, that allows to add new devices
@@ -370,21 +372,14 @@ class DeviceManagerView(BECWidget, QWidget):
             self,
             "Not implemented yet",
             "This feature has not been implemented yet, will be coming soon...!!",
-            QMessageBox.Cancel,
-            QMessageBox.Cancel,
+            QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
         )
 
-    # TODO fix the device table remove actions. This is currently not working properly...
     @SafeSlot()
     def _remove_device_action(self):
         """Action for the 'remove_device' action to remove a device."""
-        reply = QMessageBox.question(
-            self,
-            "Not implemented yet",
-            "This feature has not been implemented yet, will be coming soon...!!",
-            QMessageBox.Cancel,
-            QMessageBox.Cancel,
-        )
+        self.device_table_view.remove_selected_rows()
 
     # TODO implement proper logic for validation. We should also carefully review how these jobs update the table, and how we can cancel pending validations
     # in case they are no longer relevant. We might want to 'block' the interactivity on the items for which validation runs with 'connect'!
@@ -396,8 +391,8 @@ class DeviceManagerView(BECWidget, QWidget):
             self,
             "Not implemented yet",
             "This feature has not been implemented yet, will be coming soon...!!",
-            QMessageBox.Cancel,
-            QMessageBox.Cancel,
+            QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
         )
 
     ####### Default view has to be done with setting up splitters ########
@@ -411,9 +406,9 @@ class DeviceManagerView(BECWidget, QWidget):
         splitters_h = []
         splitters_v = []
         for splitter in self.findChildren(QSplitter):
-            if splitter.orientation() == Qt.Horizontal:
+            if splitter.orientation() == Qt.Orientation.Horizontal:
                 splitters_h.append(splitter)
-            elif splitter.orientation() == Qt.Vertical:
+            elif splitter.orientation() == Qt.Orientation.Vertical:
                 splitters_v.append(splitter)
 
         def apply_all():
@@ -465,7 +460,7 @@ class DeviceManagerView(BECWidget, QWidget):
     def _get_recovery_config_path(self) -> str:
         """Get the recovery config path from the log_writer config."""
         # pylint: disable=protected-access
-        log_writer_config: BECClient = self.client._service_config.config.get("log_writer", {})
+        log_writer_config = self.client._service_config.config.get("log_writer", {})
         writer = DeviceConfigWriter(service_config=log_writer_config)
         return os.path.abspath(os.path.expanduser(writer.get_recovery_directory()))
 
