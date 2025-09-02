@@ -153,6 +153,9 @@ class DeviceManagerView(BECWidget, QWidget):
             self.device_table_view.update_device_validation
         )
         self.device_table_view.device_configs_added.connect(self.ophyd_test_view.add_device_configs)
+        self.device_table_view.device_configs_added.connect(
+            self.available_devices.update_devices_state_name_outside
+        )
 
         self._add_toolbar()
 
