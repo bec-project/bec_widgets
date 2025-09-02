@@ -2,7 +2,7 @@ from random import randint
 from typing import Any, Iterable
 from uuid import uuid4
 
-from PySide6.QtCore import QItemSelection
+from qtpy.QtCore import QItemSelection
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
@@ -82,10 +82,16 @@ class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
 
     @SafeSlot(dict)
     def update_devices_state_name_outside(self, configs: dict):
+        """Set the display color of individual devices and update the group display
+        of numbers included. Accepts a dict with the structure {"device_name": config_dict, ...}
+        as used in server calls."""
         self.update_devices_state([{"name": k, **v} for k, v in configs.items()])
 
     @SafeSlot(list)
     def update_devices_state(self, config_list: list[dict[str, Any]]):
+        """Set the display color of individual devices and update the group display of numbers
+        included. Accepts a list of dicts with the complete config as used in
+        bec_lib.atlas_models.Device."""
         self.set_devices_state(yield_only_passing(HashableDevice.model_validate, config_list), True)
 
     @SafeSlot(str)
