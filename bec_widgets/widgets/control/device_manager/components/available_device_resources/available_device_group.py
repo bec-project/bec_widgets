@@ -121,8 +121,6 @@ class AvailableDeviceGroup(ExpandableGroupFrame, Ui_AvailableDeviceGroup):
         self.setMinimumSize(self.device_list.sizeHint())
         self._update_num_included()
 
-        self.add_to_composition_button.clicked.connect(self.test)
-
     def _add_item(self, device: HashableDevice):
         item = QListWidgetItem(self.device_list)
         device_dump = device.model_dump(exclude_defaults=True)
