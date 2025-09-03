@@ -23,8 +23,8 @@ dependencies = [
     "PySide6==6.9.0",
     "qtconsole~=5.5, >=5.5.1",   # needed for jupyter console
     "qtpy~=2.4",
-    "qtmonaco~=0.5",
     "thefuzz~=0.22",
+    "qtmonaco~=0.7",
     "darkdetect~=0.8",
     "PySide6-QtAds==4.4.0",
 ]
