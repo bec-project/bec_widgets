@@ -12,7 +12,7 @@ from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QApplication
 
 if TYPE_CHECKING:  # pragma: no cover
-    from bec_qthemes._main import AccentColors
+    from bec_qthemes._theme import AccentColors
 
 
 def get_theme_name():
