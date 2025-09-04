@@ -2,7 +2,7 @@ from random import randint
 from typing import Any, Iterable
 from uuid import uuid4
 
-from qtpy.QtCore import QItemSelection, Signal
+from qtpy.QtCore import QItemSelection, Signal  # type: ignore
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
@@ -24,6 +24,8 @@ from bec_widgets.widgets.control.device_manager.components.constants import CONF
 class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
 
     selected_devices = Signal(list)  # list[dict[str,Any]] of device configs currently selected
+    add_selected_devices = Signal(list)
+    del_selected_devices = Signal(list)
 
     def __init__(self, parent=None, shared_selection_signal=SharedSelectionSignal(), **kwargs):
         super().__init__(parent=parent, **kwargs)
@@ -40,6 +42,9 @@ class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
         self._grouping_selection_changed("deviceTags")
         self.grouping_selector.currentTextChanged.connect(self._grouping_selection_changed)
         self.search_box.textChanged.connect(self.device_groups_list.update_filter)
+
+        self.tb_add_selected.action.triggered.connect(self._add_selected_action)
+        self.tb_del_selected.action.triggered.connect(self._del_selected_action)
 
     def refresh_full_list(self, device_groups: dict[str, set[HashableDevice]]):
         self.device_groups_list.clear()
@@ -67,9 +72,17 @@ class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
         for list_item, device_group_widget in self.device_groups_list.item_widget_pairs():
             list_item.setSizeHint(device_group_widget.sizeHint())
 
+    @SafeSlot()
+    def _add_selected_action(self):
+        self.add_selected_devices.emit(self.device_groups_list.any_selected_devices())
+
+    @SafeSlot()
+    def _del_selected_action(self):
+        self.del_selected_devices.emit(self.device_groups_list.any_selected_devices())
+
     @SafeSlot(QItemSelection, QItemSelection)
     def _on_selection_changed(self, selected: QItemSelection, deselected: QItemSelection) -> None:
-        self.selected_devices.emit(self.device_groups_list.selected_devices())
+        self.selected_devices.emit(self.device_groups_list.selected_devices_from_groups())
         self._shared_selection_signal.proc.emit(self._shared_selection_uuid)
 
     @SafeSlot(str)
