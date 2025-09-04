@@ -25,6 +25,7 @@ from shiboken6 import isValid
 from bec_widgets import BECWidget, SafeProperty, SafeSlot
 from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 from bec_widgets.utils import BECDispatcher
+from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.property_editor import PropertyEditor
 from bec_widgets.utils.toolbars.actions import (
     ExpandableMenuAction,
@@ -923,6 +924,7 @@ if __name__ == "__main__":
     import sys
 
     app = QApplication(sys.argv)
+    apply_theme("dark")
     dispatcher = BECDispatcher(gui_id="ads")
     window = BECMainWindowNoRPC()
     ads = AdvancedDockArea(mode="developer", root_widget=True)
