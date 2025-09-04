@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import itertools
+from functools import partial
 from typing import Generator
 
+from bec_qthemes import material_icon
+from PySide6.QtWidgets import QListWidgetItem, QWidget
 from qtpy.QtCore import QMetaObject, Qt
 from qtpy.QtWidgets import (
     QAbstractItemView,
@@ -16,6 +19,9 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils.list_of_expandable_frames import ListOfExpandableFrames
+from bec_widgets.utils.toolbars.actions import MaterialIconAction
+from bec_widgets.utils.toolbars.bundles import ToolbarBundle
+from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.widgets.control.device_manager.components._util import mimedata_from_configs
 from bec_widgets.widgets.control.device_manager.components.available_device_resources.available_device_group import (
     AvailableDeviceGroup,
@@ -28,11 +34,21 @@ from bec_widgets.widgets.control.device_manager.components.constants import (
 
 class _ListOfDeviceGroups(ListOfExpandableFrames[AvailableDeviceGroup]):
 
-    def selected_devices(self):
+    def itemWidget(self, item: QListWidgetItem) -> AvailableDeviceGroup:
+        return super().itemWidget(item)  # type: ignore
+
+    def any_selected_devices(self):
+        return self.selected_individual_devices() or self.selected_devices_from_groups()
+
+    def selected_individual_devices(self):
+        for widget in (self.itemWidget(self.item(i)) for i in range(self.count())):
+            if (selected := widget.get_selection()) != set():
+                return [dev.as_normal_device().model_dump() for dev in selected]
+        return []
+
+    def selected_devices_from_groups(self):
         selected_items = (self.item(r.row()) for r in self.selectionModel().selectedRows())
-        widgets: Generator[AvailableDeviceGroup, None, None] = (
-            self.itemWidget(item) for item in selected_items  # type: ignore
-        )
+        widgets = (self.itemWidget(item) for item in selected_items)
         return list(itertools.chain.from_iterable(w.device_list.all_configs() for w in widgets))
 
     def mimeTypes(self):
@@ -50,6 +66,8 @@ class Ui_availableDeviceResources(object):
             availableDeviceResources.setObjectName("availableDeviceResources")
         self.verticalLayout = QVBoxLayout(availableDeviceResources)
         self.verticalLayout.setObjectName("verticalLayout")
+
+        self._add_toolbar()
 
         self.search_layout = QHBoxLayout()
         self.verticalLayout.addLayout(self.search_layout)
@@ -82,3 +100,23 @@ class Ui_availableDeviceResources(object):
         self.verticalLayout.addWidget(self.device_groups_list)
 
         QMetaObject.connectSlotsByName(availableDeviceResources)
+
+    def _add_toolbar(self):
+        self.toolbar = ModularToolBar(self)
+        io_bundle = ToolbarBundle("IO", self.toolbar.components)
+        self.toolbar.add_bundle(io_bundle)
+
+        self.tb_add_selected = MaterialIconAction(
+            icon_name="add_box", parent=self, tooltip="Add selected devices to composition"
+        )
+        self.toolbar.components.add_safe("add_selected", self.tb_add_selected)
+        io_bundle.add_action("add_selected")
+
+        self.tb_del_selected = MaterialIconAction(
+            icon_name="chips", parent=self, tooltip="Remove selected devices from composition"
+        )
+        self.toolbar.components.add_safe("del_selected", self.tb_del_selected)
+        io_bundle.add_action("del_selected")
+
+        self.verticalLayout.addWidget(self.toolbar)
+        self.toolbar.show_bundles(["IO"])
