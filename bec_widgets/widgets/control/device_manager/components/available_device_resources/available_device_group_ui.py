@@ -12,6 +12,13 @@ from bec_widgets.widgets.control.device_manager.components.constants import (
 
 
 class _DeviceListWiget(QListWidget):
+
+    def _item_iter(self):
+        return (self.item(i) for i in range(self.count()))
+
+    def all_configs(self):
+        return [item.data(CONFIG_DATA_ROLE) for item in self._item_iter()]
+
     def mimeTypes(self):
         return [MIME_DEVICE_CONFIG]
 
