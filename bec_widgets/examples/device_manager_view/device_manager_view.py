@@ -152,18 +152,37 @@ class DeviceManagerView(BECWidget, QWidget):
         # self.set_default_view([2, 8, 2], [2, 2, 4])
 
         # Connect slots
-        self.device_table_view.selected_devices.connect(self.dm_config_view.on_select_config)
-        self.device_table_view.selected_devices.connect(self.dm_docs_view.on_select_config)
-        self.available_devices.selected_devices.connect(self.dm_config_view.on_select_config)
-        self.available_devices.selected_devices.connect(self.dm_docs_view.on_select_config)
-        self.ophyd_test_view.device_validated.connect(
-            self.device_table_view.update_device_validation
-        )
-        for slot in [
-            self.ophyd_test_view.change_device_configs,
-            self.available_devices.mark_devices_used,
+        for signal, slots in [
+            (
+                self.device_table_view.selected_devices,
+                (self.dm_config_view.on_select_config, self.dm_docs_view.on_select_config),
+            ),
+            (
+                self.available_devices.selected_devices,
+                (self.dm_config_view.on_select_config, self.dm_docs_view.on_select_config),
+            ),
+            (
+                self.ophyd_test_view.device_validated,
+                (self.device_table_view.update_device_validation,),
+            ),
+            (
+                self.device_table_view.device_configs_changed,
+                (
+                    self.ophyd_test_view.change_device_configs,
+                    self.available_devices.mark_devices_used,
+                ),
+            ),
+            (
+                self.available_devices.add_selected_devices,
+                (self.device_table_view.add_device_configs,),
+            ),
+            (
+                self.available_devices.del_selected_devices,
+                (self.device_table_view.remove_device_configs,),
+            ),
         ]:
-            self.device_table_view.device_configs_changed.connect(slot)
+            for slot in slots:
+                signal.connect(slot)
 
         self._add_toolbar()
 
