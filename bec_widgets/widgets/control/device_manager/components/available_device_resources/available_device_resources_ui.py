@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+from typing import Generator
 
 from qtpy.QtCore import QMetaObject, Qt
 from qtpy.QtWidgets import (
@@ -26,6 +27,14 @@ from bec_widgets.widgets.control.device_manager.components.constants import (
 
 
 class _ListOfDeviceGroups(ListOfExpandableFrames[AvailableDeviceGroup]):
+
+    def selected_devices(self):
+        selected_items = (self.item(r.row()) for r in self.selectionModel().selectedRows())
+        widgets: Generator[AvailableDeviceGroup, None, None] = (
+            self.itemWidget(item) for item in selected_items  # type: ignore
+        )
+        return list(itertools.chain.from_iterable(w.device_list.all_configs() for w in widgets))
+
     def mimeTypes(self):
         return [MIME_DEVICE_CONFIG]
 

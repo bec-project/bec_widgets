@@ -3,7 +3,7 @@ from typing import NamedTuple
 from uuid import uuid4
 
 from bec_qthemes import material_icon
-from qtpy.QtCore import QItemSelection, QSize
+from qtpy.QtCore import QItemSelection, QSize, Signal
 from qtpy.QtWidgets import QFrame, QHBoxLayout, QLabel, QListWidgetItem, QVBoxLayout, QWidget
 
 from bec_widgets.utils.error_popups import SafeSlot
@@ -110,6 +110,9 @@ class _DeviceEntry(NamedTuple):
 
 
 class AvailableDeviceGroup(ExpandableGroupFrame, Ui_AvailableDeviceGroup):
+
+    selected_devices = Signal(list)
+
     def __init__(
         self,
         parent=None,
@@ -182,6 +185,8 @@ class AvailableDeviceGroup(ExpandableGroupFrame, Ui_AvailableDeviceGroup):
     @SafeSlot(QItemSelection, QItemSelection)
     def _on_selection_changed(self, selected: QItemSelection, deselected: QItemSelection) -> None:
         self._shared_selection_signal.proc.emit(self._shared_selection_uuid)
+        config = [dev.as_normal_device().model_dump() for dev in self.get_selection()]
+        self.selected_devices.emit(config)
 
     @SafeSlot(str)
     def _handle_shared_selection_signal(self, uuid: str):
@@ -197,9 +202,6 @@ class AvailableDeviceGroup(ExpandableGroupFrame, Ui_AvailableDeviceGroup):
         selection = self.device_list.selectedItems()
         widgets = (w.widget for _, w in self._devices.items() if w.list_item in selection)
         return set(w._device_spec for w in widgets)
-
-    def test(self, *args):
-        print(self.get_selection())
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}: {self.title_text}"

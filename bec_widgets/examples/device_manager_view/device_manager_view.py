@@ -30,9 +30,6 @@ from bec_widgets.widgets.control.device_manager.components.available_device_reso
     AvailableDeviceResources,
 )
 
-if TYPE_CHECKING:
-    from bec_lib.client import BECClient
-
 logger = bec_logger.logger
 
 
@@ -157,6 +154,8 @@ class DeviceManagerView(BECWidget, QWidget):
         # Connect slots
         self.device_table_view.selected_devices.connect(self.dm_config_view.on_select_config)
         self.device_table_view.selected_devices.connect(self.dm_docs_view.on_select_config)
+        self.available_devices.selected_devices.connect(self.dm_config_view.on_select_config)
+        self.available_devices.selected_devices.connect(self.dm_docs_view.on_select_config)
         self.ophyd_test_view.device_validated.connect(
             self.device_table_view.update_device_validation
         )
@@ -260,6 +259,15 @@ class DeviceManagerView(BECWidget, QWidget):
 
     # IO actions
 
+    def _coming_soon(self):
+        return QMessageBox.question(
+            self,
+            "Not implemented yet",
+            "This feature has not been implemented yet, will be coming soon...!!",
+            QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+
     @SafeSlot()
     def _load_file_action(self):
         """Action for the 'load' action to load a config from disk for the io_bundle of the toolbar."""
@@ -282,7 +290,7 @@ class DeviceManagerView(BECWidget, QWidget):
         )
         if file_path:
             try:
-                config = yaml_load(file_path)
+                config = [{"name": k, **v} for k, v in yaml_load(file_path).items()]
             except Exception as e:
                 logger.error(f"Failed to load config from file {file_path}. Error: {e}")
                 return
@@ -297,18 +305,14 @@ class DeviceManagerView(BECWidget, QWidget):
         reply = QMessageBox.question(
             self,
             "Load currently active config",
-            "Do you really want to flush the current config and reload?",
+            "Do you really want to discard the current config and reload?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes and self.client.device_manager is not None:
-            cfg = {}
-            config_list = self.client.device_manager._get_redis_device_config()
-            for item in config_list:
-                k = item["name"]
-                item.pop("name")
-                cfg[k] = item
-            self.device_table_view.set_device_config(cfg)
+            self.device_table_view.set_device_config(
+                self.client.device_manager._get_redis_device_config()
+            )
         else:
             return
 
@@ -328,7 +332,7 @@ class DeviceManagerView(BECWidget, QWidget):
             self, caption="Save Config File", dir=config_path
         )
         if file_path:
-            config = self.device_table_view.get_device_config()
+            config = {cfg.pop("name"): cfg for cfg in self.device_table_view.get_device_config()}
             with open(file_path, "w") as file:
                 file.write(yaml.dump(config))
 
@@ -337,13 +341,7 @@ class DeviceManagerView(BECWidget, QWidget):
     def _update_redis_action(self):
         """Action for the 'update_redis' action to update the current config in Redis."""
         config = self.device_table_view.get_device_config()
-        reply = QMessageBox.question(
-            self,
-            "Not implemented yet",
-            "This feature has not been implemented yet, will be coming soon...!!",
-            QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Cancel,
-        )
+        reply = self._coming_soon()
 
     # Table actions
 
@@ -368,13 +366,7 @@ class DeviceManagerView(BECWidget, QWidget):
     def _add_device_action(self):
         """Action for the 'add_device' action to add a new device."""
         # Implement the logic to add a new device
-        reply = QMessageBox.question(
-            self,
-            "Not implemented yet",
-            "This feature has not been implemented yet, will be coming soon...!!",
-            QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Cancel,
-        )
+        reply = self._coming_soon()
 
     @SafeSlot()
     def _remove_device_action(self):
@@ -387,13 +379,7 @@ class DeviceManagerView(BECWidget, QWidget):
     def _rerun_validation_action(self):
         """Action for the 'rerun_validation' action to rerun validation on selected devices."""
         # Implement the logic to rerun validation on selected devices
-        reply = QMessageBox.question(
-            self,
-            "Not implemented yet",
-            "This feature has not been implemented yet, will be coming soon...!!",
-            QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Cancel,
-        )
+        reply = self._coming_soon()
 
     ####### Default view has to be done with setting up splitters ########
     def set_default_view(self, horizontal_weights: list, vertical_weights: list):

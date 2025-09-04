@@ -147,8 +147,10 @@ class WrappingTextDelegate(DictToolTipDelegate):
 
         painter.save()
         painter.setClipRect(option.rect)
-        text_option = Qt.TextWordWrap | Qt.AlignLeft | Qt.AlignTop
-        painter.drawText(option.rect.adjusted(4, 2, -4, -2), text_option, text)
+        text_option = (
+            Qt.TextFlag.TextWordWrap | Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
+        )
+        painter.drawText(option.rect.adjusted(4, 2, -5, -2), text_option, text)
         painter.restore()
 
     def sizeHint(self, option, index):
