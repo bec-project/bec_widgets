@@ -2,7 +2,7 @@ from random import randint
 from typing import Any, Iterable
 from uuid import uuid4
 
-from qtpy.QtCore import QItemSelection
+from qtpy.QtCore import QItemSelection, Signal
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
@@ -22,6 +22,9 @@ from bec_widgets.widgets.control.device_manager.components.constants import CONF
 
 
 class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
+
+    selected_devices = Signal(list)  # list[dict[str,Any]] of device configs currently selected
+
     def __init__(self, parent=None, shared_selection_signal=SharedSelectionSignal(), **kwargs):
         super().__init__(parent=parent, **kwargs)
         self.setupUi(self)
@@ -56,6 +59,8 @@ class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
             expanded=False,
         )
         item.setData(CONFIG_DATA_ROLE, widget.create_mime_data())
+        # Re-emit the selected items from a subgroup - all other selections should be disabled anyway
+        widget.selected_devices.connect(self.selected_devices)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -64,6 +69,7 @@ class AvailableDeviceResources(BECWidget, QWidget, Ui_availableDeviceResources):
 
     @SafeSlot(QItemSelection, QItemSelection)
     def _on_selection_changed(self, selected: QItemSelection, deselected: QItemSelection) -> None:
+        self.selected_devices.emit(self.device_groups_list.selected_devices())
         self._shared_selection_signal.proc.emit(self._shared_selection_uuid)
 
     @SafeSlot(str)
