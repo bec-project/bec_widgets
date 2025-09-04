@@ -222,10 +222,11 @@ class DMOphydTest(BECWidget, QtWidgets.QWidget):
             name = cfg.get("name", "<not found>")
             if added:
                 if name in self._device_list_items:
-                    return
-                return self._add_device(name, cfg)
+                    continue
+                self._add_device(name, cfg)
+                continue
             if name not in self._device_list_items:
-                return
+                continue
             self._remove_list_item(name)
 
     def _add_device(self, name, cfg):
