@@ -1,6 +1,4 @@
 import os
-import re
-from functools import partial
 from typing import Callable
 
 import bec_lib
@@ -21,7 +19,7 @@ from bec_widgets.utils.list_of_expandable_frames import ListOfExpandableFrames
 from bec_widgets.utils.ui_loader import UILoader
 from bec_widgets.widgets.services.device_browser.device_item import DeviceItem
 from bec_widgets.widgets.services.device_browser.device_item.device_config_dialog import (
-    DeviceConfigDialog,
+    DirectUpdateDeviceConfigDialog,
 )
 from bec_widgets.widgets.services.device_browser.util import map_device_type_to_icon
 
@@ -109,7 +107,7 @@ class DeviceBrowser(BECWidget, QWidget):
         )
 
     def _create_add_dialog(self):
-        dialog = DeviceConfigDialog(parent=self, device=None, action="add")
+        dialog = DirectUpdateDeviceConfigDialog(parent=self, device=None, action="add")
         dialog.open()
 
     def on_device_update(self, action: ConfigAction, content: dict) -> None:
@@ -134,7 +132,7 @@ class DeviceBrowser(BECWidget, QWidget):
 
     def _add_item_to_list(self, device: str, device_obj):
 
-        device_item = self.dev_list.add_item(
+        _, device_item = self.dev_list.add_item(
             id=device,
             parent=self,
             device=device,
