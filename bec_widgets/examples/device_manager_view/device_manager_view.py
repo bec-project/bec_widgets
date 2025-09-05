@@ -29,6 +29,10 @@ from bec_widgets.widgets.control.device_manager.components._util import SharedSe
 from bec_widgets.widgets.control.device_manager.components.available_device_resources.available_device_resources import (
     AvailableDeviceResources,
 )
+from bec_widgets.widgets.services.device_browser.device_item.device_config_dialog import (
+    DeviceConfigDialog,
+    PresetClassDeviceConfigDialog,
+)
 
 logger = bec_logger.logger
 
@@ -277,7 +281,6 @@ class DeviceManagerView(BECWidget, QWidget):
         # - rerun validation (with/without connect)
 
     # IO actions
-
     def _coming_soon(self):
         return QMessageBox.question(
             self,
@@ -377,15 +380,20 @@ class DeviceManagerView(BECWidget, QWidget):
         if reply == QMessageBox.StandardButton.Yes:
             self.device_table_view.clear_device_configs()
 
-    # TODO Here we would like to implement a custom popup view, that allows to add new devices
-    # We want to have a combobox to choose from EpicsMotor, EpicsMotorECMC, EpicsSignal, EpicsSignalRO, and maybe EpicsSignalWithRBV and custom Device
+    # TODO We want to have a combobox to choose from EpicsMotor, EpicsMotorECMC, EpicsSignal, EpicsSignalRO, and maybe EpicsSignalWithRBV and custom Device
     # For all default Epics devices, we would like to preselect relevant fields, and prompt them with the proper deviceConfig args already, i.e. 'prefix', 'read_pv', 'write_pv' etc..
     # For custom Device, they should receive all options. It might be cool to get a side panel with docstring view of the class upon inspecting it to make it easier in case deviceConfig entries are required..
     @SafeSlot()
     def _add_device_action(self):
         """Action for the 'add_device' action to add a new device."""
         # Implement the logic to add a new device
-        reply = self._coming_soon()
+        dialog = PresetClassDeviceConfigDialog(parent=self)
+        dialog.accepted_data.connect(self._add_to_table_from_dialog)
+        dialog.open()
+
+    @SafeSlot(dict)
+    def _add_to_table_from_dialog(self, data):
+        self.device_table_view.add_device_configs([data])
 
     @SafeSlot()
     def _remove_device_action(self):

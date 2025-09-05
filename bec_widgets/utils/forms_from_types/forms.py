@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from types import NoneType
+from types import GenericAlias, NoneType, UnionType
 from typing import NamedTuple
 
 from bec_lib.logger import bec_logger
@@ -11,7 +11,7 @@ from qtpy.QtWidgets import QApplication, QGridLayout, QLabel, QSizePolicy, QVBox
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.compact_popup import CompactPopupWidget
-from bec_widgets.utils.error_popups import SafeProperty
+from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 from bec_widgets.utils.forms_from_types import styles
 from bec_widgets.utils.forms_from_types.items import (
     DynamicFormItem,
@@ -216,6 +216,9 @@ class PydanticModelForm(TypedForm):
 
         self._connect_to_theme_change()
 
+    @SafeSlot()
+    def clear(self): ...
+
     def set_pretty_display_theme(self, theme: str = "dark"):
         if self._pretty_display:
             self.setStyleSheet(styles.pretty_display_theme(theme))
@@ -280,3 +283,24 @@ class PydanticModelForm(TypedForm):
             self.form_data_cleared.emit(None)
             self.validity_proc.emit(False)
             return False
+
+
+class PydanticModelFormItem(DynamicFormItem):
+    def __init__(
+        self, parent: QWidget | None = None, *, spec: FormItemSpec, model: type[BaseModel]
+    ) -> None:
+        self._data_model = model
+
+        super().__init__(parent=parent, spec=spec)
+        self._main_widget.form_data_updated.connect(self._value_changed)
+
+    def _add_main_widget(self) -> None:
+
+        self._main_widget = PydanticModelForm(data_model=self._data_model)
+        self._layout.addWidget(self._main_widget)
+
+    def getValue(self):
+        return self._main_widget.get_form_data()
+
+    def setValue(self, value: dict):
+        self._main_widget.set_data(self._data_model.model_validate(value))
