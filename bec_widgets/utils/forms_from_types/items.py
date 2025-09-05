@@ -442,10 +442,17 @@ class ListFormItem(DynamicFormItem):
         self._add_list_item(val)
         self._repop(self._data)
 
+    def _item_height(self):
+        return int(QFontMetrics(self.font()).height() * 1.5)
+
     def _add_list_item(self, val):
         item = QListWidgetItem(self._main_widget)
         item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEditable)
         item_widget = self._types.widget(parent=self)
+        item_widget.setMinimumHeight(self._item_height())
+        self._main_widget.setGridSize(QSize(0, self._item_height()))
+        if (layout := item_widget.layout()) is not None:
+            layout.setContentsMargins(0, 0, 0, 0)
         WidgetIO.set_value(item_widget, val)
         self._main_widget.setItemWidget(item, item_widget)
         self._main_widget.addItem(item)
@@ -482,14 +489,11 @@ class ListFormItem(DynamicFormItem):
         self._data = list(value)
         self._repop(self._data)
 
-    def _line_height(self):
-        return QFontMetrics(self._main_widget.font()).height()
-
     def set_max_height_in_lines(self, lines: int):
         outer_inc = 1 if self._spec.pretty_display else 3
-        self._main_widget.setFixedHeight(self._line_height() * max(lines, self._min_lines))
-        self._button_holder.setFixedHeight(self._line_height() * (max(lines, self._min_lines) + 1))
-        self.setFixedHeight(self._line_height() * (max(lines, self._min_lines) + outer_inc))
+        self._main_widget.setFixedHeight(self._item_height() * max(lines, self._min_lines))
+        self._button_holder.setFixedHeight(self._item_height() * (max(lines, self._min_lines) + 1))
+        self.setFixedHeight(self._item_height() * (max(lines, self._min_lines) + outer_inc))
 
     def scale_to_data(self, *_):
         self.set_max_height_in_lines(self._main_widget.count() + 1)
