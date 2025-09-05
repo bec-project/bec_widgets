@@ -5,7 +5,8 @@ from bec_lib.atlas_models import Device as DeviceConfigModel
 from bec_lib.config_helper import CONF as DEVICE_CONF_KEYS
 from bec_lib.config_helper import ConfigHelper
 from bec_lib.logger import bec_logger
-from pydantic import field_validator
+from pydantic import BaseModel, field_validator
+from PySide6.QtWidgets import QComboBox, QHBoxLayout
 from qtpy.QtCore import QSize, Qt, QThreadPool, Signal  # type: ignore
 from qtpy.QtWidgets import (
     QApplication,
@@ -19,6 +20,7 @@ from qtpy.QtWidgets import (
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.forms_from_types.items import DynamicFormItem, DynamicFormItemType
 from bec_widgets.widgets.services.device_browser.device_item.config_communicator import (
     CommunicateConfigAction,
 )
@@ -44,32 +46,33 @@ def _try_literal_eval(value: str):
 class DeviceConfigDialog(QDialog):
     RPC = False
     applied = Signal()
+    accepted_data = Signal(dict)
 
-    def __init__(self, *, parent=None, **kwargs):
-        """A dialog to edit the configuration of a device in BEC. Generated from the pydantic model
-        for device specification in bec_lib.atlas_models.
+    def __init__(
+        self, *, parent=None, class_deviceconfig_item: type[DynamicFormItem] | None = None, **kwargs
+    ):
 
-        Args:
-            parent (QObject): the parent QObject
-            device (str | None): the name of the device. used with the "update" action to prefill the dialog and validate entries.
-            config_helper (ConfigHelper | None): a ConfigHelper object for communication with Redis, will be created if necessary.
-            action (Literal["update", "add"]): the action which the form should perform on application or acceptance.
-        """
         self._initial_config = {}
+        self._class_deviceconfig_item = class_deviceconfig_item
         super().__init__(parent=parent, **kwargs)
 
         self._container = QStackedLayout()
         self._container.setStackingMode(QStackedLayout.StackingMode.StackAll)
 
         self._layout = QVBoxLayout()
-
+        self._data = {}
         self._add_form()
         self._add_overlay()
         self._add_buttons()
         self.setWindowTitle("Add new device")
         self.setLayout(self._container)
-        self._form.validate_form()
         self._overlay_widget.setVisible(False)
+        self._form._validity.setVisible(True)
+        self._connect_form()
+
+    def _connect_form(self):
+        self._form.validity_proc.connect(self.enable_buttons_for_validity)
+        self._form.validate_form()
 
     def _add_form(self):
         self._form_widget = QWidget()
@@ -133,7 +136,11 @@ class DeviceConfigDialog(QDialog):
             button.setEnabled(valid)
             button.setToolTip(self._form._validity_message.text())
 
-    def _process_action(self): ...
+    def _process_action(self):
+        self.accepted_data.emit(self._form.get_form_data())
+
+    def get_data(self):
+        return self._data
 
     @SafeSlot(popup_error=True)
     def apply(self):
@@ -144,6 +151,48 @@ class DeviceConfigDialog(QDialog):
     def accept(self):
         self._process_action()
         return super().accept()
+
+
+class EpicsDeviceConfig(BaseModel):
+    prefix: str
+
+
+class PresetClassDeviceConfigDialog(DeviceConfigDialog):
+    def __init__(self, *, parent=None, **kwargs):
+        super().__init__(parent=parent, **kwargs)
+        self._create_selection_box()
+        self._selection_box.currentTextChanged.connect(self._replace_form)
+        self._device_models = {
+            "Custom": (None, {}),
+            "EpicsMotor": (EpicsDeviceConfig, {"deviceClass": ("ophyd.EpicsMotor", False)}),
+            "EpicsSignal": (EpicsDeviceConfig, {"deviceClass": ("ophyd.EpicsSignal", False)}),
+        }
+
+    def _apply_constraints(self, constraints: dict[str, tuple[DynamicFormItemType, bool]]):
+        for field_name, (value, editable) in constraints.items():
+            if (widget := self._form.widget_dict.get(field_name)) is not None:
+                widget.setValue(value)
+                if not editable:
+                    widget._set_pretty_display()
+
+    def _replace_form(self, deviceconfig_cls_key):
+        self._form.deleteLater()
+        if (devmodel_params := self._device_models.get(deviceconfig_cls_key)) is not None:
+            devmodel, params = devmodel_params
+        else:
+            devmodel, params = None, {}
+        self._form = DeviceConfigForm(class_deviceconfig_item=devmodel)
+        self._apply_constraints(params)
+        self._layout.insertWidget(1, self._form)
+        self._connect_form()
+
+    def _create_selection_box(self):
+        layout = QHBoxLayout()
+        self._selection_box = QComboBox()
+        self._selection_box.addItems(["Custom", "EpicsMotor", "EpicsSignal"])
+        layout.addWidget(QLabel("Choose a device class: "))
+        layout.addWidget(self._selection_box)
+        self._layout.insertLayout(0, layout)
 
 
 class DirectUpdateDeviceConfigDialog(BECWidget, DeviceConfigDialog):
@@ -157,6 +206,15 @@ class DirectUpdateDeviceConfigDialog(BECWidget, DeviceConfigDialog):
         threadpool: QThreadPool | None = None,
         **kwargs,
     ):
+        """A dialog to edit the configuration of a device in BEC. Generated from the pydantic model
+        for device specification in bec_lib.atlas_models.
+
+        Args:
+            parent (QObject): the parent QObject
+            device (str | None): the name of the device. used with the "update" action to prefill the dialog and validate entries.
+            config_helper (ConfigHelper | None): a ConfigHelper object for communication with Redis, will be created if necessary.
+            action (Literal["update", "add"]): the action which the form should perform on application or acceptance.
+        """
         self._device = device
         self._q_threadpool = threadpool or QThreadPool()
         self._config_helper = config_helper or ConfigHelper(
@@ -178,11 +236,11 @@ class DirectUpdateDeviceConfigDialog(BECWidget, DeviceConfigDialog):
 
         if self._action == "update":
             self._modify_for_update()
+            self._form.validity_proc.disconnect(self.enable_buttons_for_validity)
         else:
             self._set_schema_to_check_devices()
             # TODO: replace when https://github.com/bec-project/bec/issues/528 https://github.com/bec-project/bec/issues/547 are resolved
             # self._form._validity.setVisible(True)
-            self._form.validity_proc.connect(self.enable_buttons_for_validity)
 
     def _modify_for_update(self):
         for row in self._form.enumerate_form_widgets():
@@ -291,8 +349,8 @@ def main():  # pragma: no cover
     def _show_dialog(*_):
         nonlocal dialog
         if dialog is None:
-            kwargs = {"device": dev} if (dev := device.text()) else {"action": "add"}
-            dialog = DirectUpdateDeviceConfigDialog(**kwargs)  # type: ignore
+            kwargs = {}  # kwargs = {"device": dev} if (dev := device.text()) else {"action": "add"}
+            dialog = PresetClassDeviceConfigDialog(**kwargs)  # type: ignore
             dialog.accepted.connect(accept)
             dialog.rejected.connect(_destroy_dialog)
             dialog.open()
