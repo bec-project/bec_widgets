@@ -6,7 +6,7 @@ from qtpy.QtWidgets import QDialogButtonBox, QPushButton
 
 from bec_widgets.utils.forms_from_types.items import StrFormItem
 from bec_widgets.widgets.services.device_browser.device_item.device_config_dialog import (
-    DeviceConfigDialog,
+    DirectUpdateDeviceConfigDialog,
     _try_literal_eval,
 )
 
@@ -29,7 +29,7 @@ def mock_client():
 @pytest.fixture
 def update_dialog(mock_client, qtbot):
     """Fixture to create a DeviceConfigDialog instance."""
-    update_dialog = DeviceConfigDialog(
+    update_dialog = DirectUpdateDeviceConfigDialog(
         device="test_device", config_helper=MagicMock(), client=mock_client
     )
     qtbot.addWidget(update_dialog)
@@ -39,7 +39,7 @@ def update_dialog(mock_client, qtbot):
 @pytest.fixture
 def add_dialog(mock_client, qtbot):
     """Fixture to create a DeviceConfigDialog instance."""
-    add_dialog = DeviceConfigDialog(
+    add_dialog = DirectUpdateDeviceConfigDialog(
         device=None, config_helper=MagicMock(), client=mock_client, action="add"
     )
     qtbot.addWidget(add_dialog)
