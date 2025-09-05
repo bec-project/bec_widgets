@@ -5,11 +5,15 @@ from __future__ import annotations
 import copy
 import json
 from contextlib import contextmanager
+from functools import partial
 from typing import TYPE_CHECKING, Any, Iterable, List
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
+from PySide6.QtCore import QPoint, QRect, QSize
+from PySide6.QtWidgets import QStyle, QStyleOption, QStyleOptionViewItem, QWidget
 from qtpy import QtCore, QtGui, QtWidgets
 from qtpy.QtCore import QModelIndex, QPersistentModelIndex, Qt, QTimer
 from qtpy.QtWidgets import QAbstractItemView, QHeaderView, QMessageBox
@@ -33,6 +37,9 @@ _DeviceCfgIter = Iterable[dict[str, Any]]
 # Threshold for fuzzy matching, careful with adjusting this. 80 seems good
 FUZZY_SEARCH_THRESHOLD = 80
 
+#
+USER_CHECK_DATA_ROLE = 101
+
 
 class DictToolTipDelegate(QtWidgets.QStyledItemDelegate):
     """Delegate that shows all key-value pairs of a rows's data as a YAML-like tooltip."""
@@ -49,68 +56,72 @@ class DictToolTipDelegate(QtWidgets.QStyledItemDelegate):
         return True
 
 
-class CenterCheckBoxDelegate(DictToolTipDelegate):
+class CustomDisplayDelegate(DictToolTipDelegate):
+    _paint_test_role = Qt.ItemDataRole.DisplayRole
+
+    def displayText(self, value: Any, locale: QtCore.QLocale | QtCore.QLocale.Language) -> str:
+        return ""
+
+    def _test_custom_paint(self, painter, option, index):
+        v = index.model().data(index, self._paint_test_role)
+        return (v is not None), v
+
+    def _do_custom_paint(self, painter, option, index, value): ...
+
+    def paint(self, painter, option, index) -> None:
+        (check, value) = self._test_custom_paint(painter, option, index)
+        if not check:
+            return super().paint(painter, option, index)
+        super().paint(painter, option, index)
+        painter.save()
+        self._do_custom_paint(painter, option, index, value)
+        painter.restore()
+
+
+class CenterCheckBoxDelegate(CustomDisplayDelegate):
     """Custom checkbox delegate to center checkboxes in table cells."""
+
+    _paint_test_role = USER_CHECK_DATA_ROLE
 
     def __init__(self, parent=None, colors=None):
         super().__init__(parent)
         self._colors: AccentColors = colors if colors else get_accent_colors()  # type: ignore
-        self._icon_checked = material_icon(
-            "check_box", size=QtCore.QSize(16, 16), color=self._colors.default, filled=True
-        )
-        self._icon_unchecked = material_icon(
-            "check_box_outline_blank",
-            size=QtCore.QSize(16, 16),
-            color=self._colors.default,
-            filled=True,
-        )
+        _icon = partial(material_icon, size=(16, 16), color=self._colors.default, filled=True)
+        self._icon_checked = _icon("check_box")
+        self._icon_unchecked = _icon("check_box_outline_blank")
 
     def apply_theme(self, theme: str | None = None):
         colors = get_accent_colors()
         self._icon_checked.setColor(colors.default)
         self._icon_unchecked.setColor(colors.default)
 
-    def paint(self, painter, option, index):
-        value = index.model().data(index, Qt.ItemDataRole.CheckStateRole)
-        if value is None:
-            super().paint(painter, option, index)
-            return
-
-        # Choose icon based on state
+    def _do_custom_paint(self, painter, option, index, value):
         pixmap = self._icon_checked if value == Qt.CheckState.Checked else self._icon_unchecked
-
-        # Draw icon centered
-        rect = option.rect
         pix_rect = pixmap.rect()
-        pix_rect.moveCenter(rect.center())
+        pix_rect.moveCenter(option.rect.center())
         painter.drawPixmap(pix_rect.topLeft(), pixmap)
 
     def editorEvent(self, event, model, option, index):
         if event.type() != QtCore.QEvent.Type.MouseButtonRelease:
             return False
-        current = model.data(index, Qt.ItemDataRole.CheckStateRole)
+        current = model.data(index, USER_CHECK_DATA_ROLE)
         new_state = (
             Qt.CheckState.Unchecked if current == Qt.CheckState.Checked else Qt.CheckState.Checked
         )
-        return model.setData(index, new_state, Qt.ItemDataRole.CheckStateRole)
+        return model.setData(index, new_state, USER_CHECK_DATA_ROLE)
 
 
-class DeviceValidatedDelegate(DictToolTipDelegate):
+class DeviceValidatedDelegate(CustomDisplayDelegate):
     """Custom delegate for displaying validated device configurations."""
 
     def __init__(self, parent=None, colors=None):
         super().__init__(parent)
         self._colors = colors if colors else get_accent_colors()
+        _icon = partial(material_icon, icon_name="circle", size=(12, 12), filled=True)
         self._icons = {
-            ValidationStatus.PENDING: material_icon(
-                icon_name="circle", size=(12, 12), color=self._colors.default, filled=True
-            ),
-            ValidationStatus.VALID: material_icon(
-                icon_name="circle", size=(12, 12), color=self._colors.success, filled=True
-            ),
-            ValidationStatus.FAILED: material_icon(
-                icon_name="circle", size=(12, 12), color=self._colors.emergency, filled=True
-            ),
+            ValidationStatus.PENDING: _icon(color=self._colors.default),
+            ValidationStatus.VALID: _icon(color=self._colors.success),
+            ValidationStatus.FAILED: _icon(color=self._colors.emergency),
         }
 
     def apply_theme(self, theme: str | None = None):
@@ -118,40 +129,26 @@ class DeviceValidatedDelegate(DictToolTipDelegate):
         for status, icon in self._icons.items():
             icon.setColor(colors[status])
 
-    def paint(self, painter, option, index):
-        status = index.model().data(index, Qt.ItemDataRole.DisplayRole)
-        if status is None:
-            return super().paint(painter, option, index)
-
-        pixmap = self._icons.get(status)
-        if pixmap:
-            rect = option.rect
+    def _do_custom_paint(self, painter, option, index, value):
+        if pixmap := self._icons.get(value):
             pix_rect = pixmap.rect()
-            pix_rect.moveCenter(rect.center())
+            pix_rect.moveCenter(option.rect.center())
             painter.drawPixmap(pix_rect.topLeft(), pixmap)
 
-        super().paint(painter, option, index)
 
-
-class WrappingTextDelegate(DictToolTipDelegate):
+class WrappingTextDelegate(CustomDisplayDelegate):
     """Custom delegate for wrapping text in table cells."""
 
     def __init__(self, table: BECTableView, parent=None):
         super().__init__(parent)
         self._table = table
 
-    def paint(self, painter, option, index):
-        text = index.model().data(index, Qt.ItemDataRole.DisplayRole)
-        if not text:
-            return super().paint(painter, option, index)
-
-        painter.save()
+    def _do_custom_paint(self, painter, option, index, value):
         painter.setClipRect(option.rect)
         text_option = (
             Qt.TextFlag.TextWordWrap | Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
         )
-        painter.drawText(option.rect.adjusted(4, 2, -5, -2), text_option, text)
-        painter.restore()
+        painter.drawText(option.rect.adjusted(4, 2, -5, -2), text_option, value)
 
     def sizeHint(self, option, index):
         text = str(index.model().data(index, Qt.ItemDataRole.DisplayRole) or "")
@@ -161,7 +158,6 @@ class WrappingTextDelegate(DictToolTipDelegate):
         min_width = option.fontMetrics.averageCharWidth() * 4
         if column_width < min_width:
             fm = QtGui.QFontMetrics(option.font)
-            elided = fm.elidedText(text, Qt.ElideRight, column_width)
             return QtCore.QSize(column_width, fm.height() + 4)
 
         doc = QtGui.QTextDocument()
@@ -199,7 +195,7 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
         self._checkable_columns_enabled = {"enabled": True, "readOnly": True}
 
     ###############################################
-    ########## Overwrite custom Qt methods ########
+    ########## Override custom Qt methods #########
     ###############################################
 
     def rowCount(self, parent: QModelIndex | QPersistentModelIndex = QtCore.QModelIndex()) -> int:
@@ -242,7 +238,7 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
             if key == "deviceClass":
                 return str(value).split(".")[-1]
             return str(value) if value is not None else ""
-        if role == Qt.ItemDataRole.CheckStateRole and key in ("enabled", "readOnly"):
+        if role == USER_CHECK_DATA_ROLE and key in ("enabled", "readOnly"):
             return Qt.CheckState.Checked if value else Qt.CheckState.Unchecked
         if role == Qt.ItemDataRole.TextAlignmentRole:
             if key in ("enabled", "readOnly"):
@@ -285,13 +281,11 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
         if not index.isValid():
             return False
         key = self.headers[index.column()]
-        row = index.row()
-
-        if key in ("enabled", "readOnly") and role == Qt.ItemDataRole.CheckStateRole:
+        if key in ("enabled", "readOnly") and role == USER_CHECK_DATA_ROLE:
             if not self._checkable_columns_enabled.get(key, True):
                 return False  # ignore changes if column is disabled
-            self._device_config[row][key] = value == Qt.CheckState.Checked
-            self.dataChanged.emit(index, index, [Qt.ItemDataRole.CheckStateRole])
+            self._device_config[index.row()][key] = value == Qt.CheckState.Checked
+            self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole, USER_CHECK_DATA_ROLE])
             return True
         return False
 
