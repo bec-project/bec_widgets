@@ -91,29 +91,31 @@ class DeviceManagerView(BECWidget, QWidget):
         self.available_devices = AvailableDeviceResources(
             self, shared_selection_signal=self._shared_selection
         )
-        self.available_devices_dock = QtAds.CDockWidget("Available Devices", self)
+        self.available_devices_dock = QtAds.CDockWidget(
+            self.dock_manager, "Available Devices", self
+        )
         self.available_devices_dock.setWidget(self.available_devices)
 
         # Device Table View widget
         self.device_table_view = DeviceTableView(
             self, shared_selection_signal=self._shared_selection
         )
-        self.device_table_view_dock = QtAds.CDockWidget("Device Table", self)
+        self.device_table_view_dock = QtAds.CDockWidget(self.dock_manager, "Device Table", self)
         self.device_table_view_dock.setWidget(self.device_table_view)
 
         # Device Config View widget
         self.dm_config_view = DMConfigView(self)
-        self.dm_config_view_dock = QtAds.CDockWidget("Device Config View", self)
+        self.dm_config_view_dock = QtAds.CDockWidget(self.dock_manager, "Device Config View", self)
         self.dm_config_view_dock.setWidget(self.dm_config_view)
 
         # Docstring View
         self.dm_docs_view = DocstringView(self)
-        self.dm_docs_view_dock = QtAds.CDockWidget("Docstring View", self)
+        self.dm_docs_view_dock = QtAds.CDockWidget(self.dock_manager, "Docstring View", self)
         self.dm_docs_view_dock.setWidget(self.dm_docs_view)
 
         # Ophyd Test view
         self.ophyd_test_view = DMOphydTest(self)
-        self.ophyd_test_dock_view = QtAds.CDockWidget("Ophyd Test View", self)
+        self.ophyd_test_dock_view = QtAds.CDockWidget(self.dock_manager, "Ophyd Test View", self)
         self.ophyd_test_dock_view.setWidget(self.ophyd_test_view)
 
         # Arrange widgets within the QtAds dock manager
@@ -203,9 +205,6 @@ class DeviceManagerView(BECWidget, QWidget):
         # Create IO bundle
         io_bundle = ToolbarBundle("IO", self.toolbar.components)
 
-        # Add load config from plugin dir
-        self.toolbar.add_bundle(io_bundle)
-
         load = MaterialIconAction(
             icon_name="file_open", parent=self, tooltip="Load configuration file from disk"
         )
@@ -237,13 +236,13 @@ class DeviceManagerView(BECWidget, QWidget):
         self.toolbar.components.add_safe("update_config_redis", update_config_redis)
         io_bundle.add_action("update_config_redis")
 
+        # Add load config from plugin dir
+        self.toolbar.add_bundle(io_bundle)
+
     # Table actions
 
     def _add_table_actions(self) -> None:
         table_bundle = ToolbarBundle("Table", self.toolbar.components)
-
-        # Add load config from plugin dir
-        self.toolbar.add_bundle(table_bundle)
 
         # Reset composed view
         reset_composed = MaterialIconAction(
@@ -272,6 +271,9 @@ class DeviceManagerView(BECWidget, QWidget):
         rerun_validation.action.triggered.connect(self._rerun_validation_action)
         self.toolbar.components.add_safe("rerun_validation", rerun_validation)
         table_bundle.add_action("rerun_validation")
+
+        # Add load config from plugin dir
+        self.toolbar.add_bundle(table_bundle)
 
         # Most likly, no actions on available devices
         # Actions (vielleicht bundle fuer available devices )
