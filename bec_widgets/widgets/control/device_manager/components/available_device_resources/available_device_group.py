@@ -39,11 +39,10 @@ class _DeviceEntryWidget(QFrame):
         self._device_spec = device_spec
         self.included: bool = False
 
-        self.setFrameShape(QFrame.Shape.StyledPanel)
-        self.setFrameShadow(QFrame.Shadow.Raised)
+        self.setFrameStyle(0)
 
         self._layout = QVBoxLayout()
-        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setContentsMargins(2, 2, 2, 2)
         self.setLayout(self._layout)
 
         self.setup_title_layout(device_spec)
