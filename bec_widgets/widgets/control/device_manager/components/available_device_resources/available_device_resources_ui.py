@@ -86,7 +86,7 @@ class Ui_availableDeviceResources(object):
         self.device_groups_list.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.device_groups_list.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.device_groups_list.setMovement(QListView.Movement.Static)
-        self.device_groups_list.setSpacing(2)
+        self.device_groups_list.setSpacing(4)
         self.device_groups_list.setDragDropMode(QListWidget.DragDropMode.DragOnly)
         self.device_groups_list.setSelectionBehavior(QListWidget.SelectionBehavior.SelectItems)
         self.device_groups_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
