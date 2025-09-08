@@ -33,10 +33,10 @@ class ExpandableGroupFrame(QFrame):
         self._expanded = expanded
 
         self._title_text = f"<b>{title}</b>"
-        self.setFrameStyle(QFrame.Shape.StyledPanel | QFrame.Shadow.Plain)
+        self.setFrameStyle(QFrame.Shape.StyledPanel | QFrame.Shadow.Raised)
         self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         self._layout = QVBoxLayout()
-        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setContentsMargins(5, 0, 0, 0)
         self.setLayout(self._layout)
 
         self._create_title_layout(title, icon)
