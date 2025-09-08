@@ -217,7 +217,7 @@ class DeviceManagerView(BECWidget, QWidget):
             icon_name="file_save", parent=self, tooltip="Save config to disk"
         )
         self.toolbar.components.add_safe("safe_to_disk", safe_to_disk)
-        safe_to_disk.action.triggered.connect(self._safe_to_disk_action)
+        safe_to_disk.action.triggered.connect(self._save_to_disk_action)
         io_bundle.add_action("safe_to_disk")
 
         # Add load config from redis
@@ -341,7 +341,7 @@ class DeviceManagerView(BECWidget, QWidget):
             return
 
     @SafeSlot()
-    def _safe_to_disk_action(self):
+    def _save_to_disk_action(self):
         """Action for the 'safe_to_disk' action to save the current config to disk."""
         # Check if plugin repo is installed...
         try:
