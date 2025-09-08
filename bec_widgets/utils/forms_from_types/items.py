@@ -171,9 +171,10 @@ class DynamicFormItem(QWidget):
         self._desc = self._spec.info.description
         self.setLayout(self._layout)
         self._add_main_widget()
+        # Sadly, QWidget and ABC are not compatible
         assert isinstance(self._main_widget, QWidget), "Please set a widget in _add_main_widget()"  # type: ignore
-        self._main_widget.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self._main_widget.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         if not spec.pretty_display:
             if clearable_required(spec.info):
                 self._add_clear_button()
@@ -188,6 +189,7 @@ class DynamicFormItem(QWidget):
 
     @abstractmethod
     def _add_main_widget(self) -> None:
+        self._main_widget: QWidget
         """Add the main data entry widget to self._main_widget and appply any
         constraints from the field info"""
 
@@ -395,7 +397,7 @@ class ListFormItem(DynamicFormItem):
 
     def sizeHint(self):
         default = super().sizeHint()
-        return QSize(default.width(), QFontMetrics(self.font()).height() * 6)
+        return QSize(default.width(), QFontMetrics(self.font()).height() * 4)
 
     def _add_main_widget(self) -> None:
         self._main_widget = QListWidget()
