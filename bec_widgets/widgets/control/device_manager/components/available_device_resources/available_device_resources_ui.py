@@ -104,7 +104,6 @@ class Ui_availableDeviceResources(object):
     def _add_toolbar(self):
         self.toolbar = ModularToolBar(self)
         io_bundle = ToolbarBundle("IO", self.toolbar.components)
-        self.toolbar.add_bundle(io_bundle)
 
         self.tb_add_selected = MaterialIconAction(
             icon_name="add_box", parent=self, tooltip="Add selected devices to composition"
@@ -119,4 +118,5 @@ class Ui_availableDeviceResources(object):
         io_bundle.add_action("del_selected")
 
         self.verticalLayout.addWidget(self.toolbar)
+        self.toolbar.add_bundle(io_bundle)
         self.toolbar.show_bundles(["IO"])
