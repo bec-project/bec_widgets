@@ -34,7 +34,11 @@ class CommunicateConfigAction(QRunnable):
     @SafeSlot()
     def run(self):
         try:
-            if self.action in ["add", "update", "remove"]:
+            if self.action == "set":
+                self._process(
+                    {"action": self.action, "config": self.config, "wait_for_response": False}
+                )
+            elif self.action in ["add", "update", "remove"]:
                 if (dev_name := self.device or self.config.get("name")) is None:
                     raise ValueError(
                         "Must be updating a device or be supplied a name for a new device"
@@ -57,6 +61,9 @@ class CommunicateConfigAction(QRunnable):
             "config": {dev_name: self.config},
             "wait_for_response": False,
         }
+        self._process(req_args)
+
+    def _process(self, req_args: dict):
         timeout = (
             self.config_helper.suggested_timeout_s(self.config) if self.config is not None else 20
         )
