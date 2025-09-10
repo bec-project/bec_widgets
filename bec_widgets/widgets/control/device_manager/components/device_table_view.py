@@ -313,7 +313,7 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
 
     def get_device_config(self) -> list[dict[str, Any]]:
         """Method to get the device configuration."""
-        return self._device_config
+        return copy.deepcopy(self._device_config)
 
     def device_names(self, configs: _DeviceCfgIter | None = None) -> set[str]:
         _configs = self._device_config if configs is None else configs
@@ -431,6 +431,9 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
         index = self.index(row, 0)
         self.dataChanged.emit(index, index, [Qt.ItemDataRole.DisplayRole])
 
+    def validation_statuses(self):
+        return copy.deepcopy(self._validation_status)
+
 
 class BECTableView(QtWidgets.QTableView):
     """Table View with custom keyPressEvent to delete rows with backspace or delete key"""
@@ -454,6 +457,12 @@ class BECTableView(QtWidgets.QTableView):
         if event.key() in (Qt.Key.Key_Backspace, Qt.Key.Key_Delete):
             return self.delete_selected()
         return super().keyPressEvent(event)
+
+    def contains_invalid_devices(self):
+        return ValidationStatus.FAILED in self.model().sourceModel().validation_statuses().values()
+
+    def all_configs(self):
+        return self.model().sourceModel().get_device_config()
 
     def selected_configs(self):
         return self.model().get_row_data(self.selectionModel().selectedRows())
