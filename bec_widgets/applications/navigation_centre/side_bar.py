@@ -32,7 +32,7 @@ class SideBar(QScrollArea):
         parent=None,
         title: str = "Control Panel",
         collapsed_width: int = 56,
-        expanded_width: int = 200,
+        expanded_width: int = 250,
         anim_duration: int = ANIMATION_DURATION,
     ):
         super().__init__(parent=parent)
@@ -59,7 +59,7 @@ class SideBar(QScrollArea):
         self.content = QWidget(self)
         self.content_layout = QVBoxLayout(self.content)
         self.content_layout.setContentsMargins(0, 0, 0, 0)
-        self.content_layout.setSpacing(2)
+        self.content_layout.setSpacing(4)
         self.setWidget(self.content)
 
         # Track active navigation item
@@ -291,14 +291,15 @@ class SideBar(QScrollArea):
         item.activated.connect(lambda id=id: self.activate_item(id))
         return item
 
-    def activate_item(self, target_id: str):
+    def activate_item(self, target_id: str, *, emit_signal: bool = True):
         target = self.components.get(target_id)
         if target is None:
             return
         # Non-toggleable acts like an action: do not change any toggled states
         if hasattr(target, "toggleable") and not target.toggleable:
             self._active_id = target_id
-            self.view_selected.emit(target_id)
+            if emit_signal:
+                self.view_selected.emit(target_id)
             return
 
         is_exclusive = getattr(target, "exclusive", True)
@@ -319,7 +320,8 @@ class SideBar(QScrollArea):
             target.set_active(not target.is_active())
 
         self._active_id = target_id
-        self.view_selected.emit(target_id)
+        if emit_signal:
+            self.view_selected.emit(target_id)
 
     def add_dark_mode_item(
         self, id: str = "dark_mode", position: int | None = None
