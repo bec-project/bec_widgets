@@ -1124,7 +1124,8 @@ class Waveform(PlotBase):
             self.reset()
             self.new_scan.emit()
             self.new_scan_id.emit(current_scan_id)
-            self.auto_range(True)
+            self.auto_range_x = True
+            self.auto_range_y = True
             self.old_scan_id = self.scan_id
             self.scan_id = current_scan_id
             self.scan_item = self.queue.scan_storage.find_scan_by_ID(self.scan_id)  # live scan
