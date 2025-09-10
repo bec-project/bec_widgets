@@ -373,6 +373,9 @@ class DMOphydTest(BECWidget, QtWidgets.QWidget):
         )
         return html
 
+    def validation_running(self):
+        return self._device_list_items != {}
+
     @SafeSlot()
     def clear_list(self):
         """Clear the device list."""

@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 import os
+from functools import partial
 from typing import TYPE_CHECKING, List
 
 import PySide6QtAds as QtAds
 import yaml
+from bec_lib import config_helper
 from bec_lib.bec_yaml_loader import yaml_load
 from bec_lib.file_utils import DeviceConfigWriter
 from bec_lib.logger import bec_logger
 from bec_lib.plugin_helper import plugin_package_name, plugin_repo_path
 from bec_qthemes import apply_theme
 from PySide6QtAds import CDockManager, CDockWidget
-from qtpy.QtCore import Qt, QTimer
+from qtpy.QtCore import Qt, QThreadPool, QTimer
 from qtpy.QtWidgets import QFileDialog, QMessageBox, QSplitter, QVBoxLayout, QWidget
 
 from bec_widgets import BECWidget
@@ -29,12 +31,20 @@ from bec_widgets.widgets.control.device_manager.components._util import SharedSe
 from bec_widgets.widgets.control.device_manager.components.available_device_resources.available_device_resources import (
     AvailableDeviceResources,
 )
+from bec_widgets.widgets.services.device_browser.device_item.config_communicator import (
+    CommunicateConfigAction,
+)
 from bec_widgets.widgets.services.device_browser.device_item.device_config_dialog import (
-    DeviceConfigDialog,
     PresetClassDeviceConfigDialog,
 )
 
 logger = bec_logger.logger
+
+_yes_no_question = partial(
+    QMessageBox.question,
+    buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+    defaultButton=QMessageBox.StandardButton.No,
+)
 
 
 def set_splitter_weights(splitter: QSplitter, weights: List[float]) -> None:
@@ -78,6 +88,7 @@ class DeviceManagerView(BECWidget, QWidget):
     def __init__(self, parent=None, *args, **kwargs):
         super().__init__(parent=parent, client=None, *args, **kwargs)
 
+        self._config_helper = config_helper.ConfigHelper(self.client.connector)
         self._shared_selection = SharedSelectionSignal()
 
         # Top-level layout hosting a toolbar and the dock manager
@@ -326,12 +337,10 @@ class DeviceManagerView(BECWidget, QWidget):
     @SafeSlot()
     def _load_redis_action(self):
         """Action for the 'load_redis' action to load the current config from Redis for the io_bundle of the toolbar."""
-        reply = QMessageBox.question(
+        reply = _yes_no_question(
             self,
             "Load currently active config",
             "Do you really want to discard the current config and reload?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes and self.client.device_manager is not None:
             self.device_table_view.set_device_config(
@@ -339,6 +348,32 @@ class DeviceManagerView(BECWidget, QWidget):
             )
         else:
             return
+
+    @SafeSlot()
+    def _update_redis_action(self):
+        """Action to push the current composition to Redis"""
+        reply = _yes_no_question(
+            self,
+            "Push composition to Redis",
+            "Do you really want to replace the active configuration in the BEC server with the current composition? ",
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        if self.device_table_view.table.contains_invalid_devices():
+            return QMessageBox.warning(
+                self, "Validation has errors!", "Please resolve before proceeding."
+            )
+        if self.ophyd_test_view.validation_running():
+            return QMessageBox.warning(
+                self, "Validation has not completed.", "Please wait for the validation to finish."
+            )
+        self._push_compositiion_to_redis()
+
+    def _push_compositiion_to_redis(self):
+        config = {cfg.pop("name"): cfg for cfg in self.device_table_view.table.all_configs()}
+        threadpool = QThreadPool.globalInstance()
+        comm = CommunicateConfigAction(self._config_helper, None, config, "set")
+        threadpool.start(comm)
 
     @SafeSlot()
     def _save_to_disk_action(self):
@@ -360,24 +395,15 @@ class DeviceManagerView(BECWidget, QWidget):
             with open(file_path, "w") as file:
                 file.write(yaml.dump(config))
 
-    # TODO add here logic, should be asyncronous, but probably block UI, and show a loading spinner. If failed, it should report..
-    @SafeSlot()
-    def _update_redis_action(self):
-        """Action for the 'update_redis' action to update the current config in Redis."""
-        config = self.device_table_view.get_device_config()
-        reply = self._coming_soon()
-
     # Table actions
 
     @SafeSlot()
     def _reset_composed_view(self):
         """Action for the 'reset_composed_view' action to reset the composed view."""
-        reply = QMessageBox.question(
+        reply = _yes_no_question(
             self,
             "Clear View",
             "You are about to clear the current composed config view, please confirm...",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
             self.device_table_view.clear_device_configs()
