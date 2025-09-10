@@ -16,6 +16,8 @@ from bec_lib.plugin_helper import plugin_package_name, plugin_repo_path, plugins
 
 logger = bec_logger.logger
 
+# use the last n recovery files
+_N_RECOVERY_FILES = 3
 _BASE_REPO_PATH = Path(os.path.dirname(bec_lib.__file__)) / "../.."
 
 
@@ -75,10 +77,6 @@ def _devices_from_file(file: str, include_source: bool = True):
     )
 
 
-# use the last n recovery files
-_N_RECOVERY_FILES = 3
-
-
 class _ConfigFileBackend(DeviceResourceBackend):
     def __init__(self) -> None:
         self._raw_device_set: set[HashableDevice] = self._get_config_from_backup_files()
@@ -94,14 +92,13 @@ class _ConfigFileBackend(DeviceResourceBackend):
         dir = _BASE_REPO_PATH / "logs/device_configs/recovery_configs"
         files = sorted(glob("*.yaml", root_dir=dir))
         last_n_files = files[-_N_RECOVERY_FILES:]
-        if len(last_n_files) == 0:
-            return set()
         return reduce(
             operator.or_,
             map(
                 partial(_devices_from_file, include_source=False),
                 (str(dir / f) for f in last_n_files),
             ),
+            set(),
         )
 
     def _get_configs_from_plugin_files(self, dir: Path):
@@ -131,7 +128,7 @@ class _ConfigFileBackend(DeviceResourceBackend):
         return {n for n, info in HashableDevice.model_fields.items() if info.annotation is str}
 
     def tags(self) -> set[str]:
-        return reduce(operator.or_, (dev.deviceTags for dev in self._raw_device_set), {})
+        return reduce(operator.or_, (dev.deviceTags for dev in self._raw_device_set), set())
 
     def tag_group(self, tag: str) -> set[HashableDevice]:
         return self.tag_groups[tag]
