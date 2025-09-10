@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from functools import partial
-from typing import TYPE_CHECKING, List
+from typing import List
 
 import PySide6QtAds as QtAds
 import yaml
