@@ -323,12 +323,19 @@ if __name__ == "__main__":
     from bec_qthemes import apply_theme
     from qtpy.QtWidgets import QApplication
 
+    from bec_widgets.applications.main_app import BECMainApp
+
     app = QApplication(sys.argv)
     apply_theme("dark")
 
+    _app = BECMainApp()
     developer_view = DeveloperView()
-    developer_view.show()
-    developer_view.setWindowTitle("Developer View")
-    developer_view.resize(1920, 1080)
+    _app.add_view(
+        icon="code_blocks", title="IDE", widget=developer_view, id="developer_view", exclusive=True
+    )
+    _app.show()
+    # developer_view.show()
+    # developer_view.setWindowTitle("Developer View")
+    # developer_view.resize(1920, 1080)
     # developer_view.set_stretch(horizontal=[1, 3, 2], vertical=[5, 5]) #can be set during runtime
     sys.exit(app.exec_())
