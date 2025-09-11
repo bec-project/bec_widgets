@@ -27,6 +27,7 @@ dependencies = [
     "qtmonaco~=0.7",
     "darkdetect~=0.8",
     "PySide6-QtAds==4.4.0",
+    "pylsp-bec",
 ]
 
 
