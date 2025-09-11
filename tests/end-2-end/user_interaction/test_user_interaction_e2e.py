@@ -577,6 +577,13 @@ def test_widgets_e2e_ring_progress_bar(qtbot, connected_client_gui_obj, random_g
     dock: client.BECDock
     widget: client.RingProgressBar
 
+    widget.set_number_of_bars(3)
+    widget.rings[0].set_update("manual")
+    widget.rings[0].set_value(30)
+    widget.rings[0].set_min_max_values(0, 100)
+    widget.rings[1].set_update("scan")
+    widget.rings[2].set_update("device", device="samx")
+
     # Test rpc calls
     dev = bec.device_manager.devices
     scans = bec.scans
