@@ -1,6 +1,38 @@
 # CHANGELOG
 
 
+## v2.38.2 (2025-09-11)
+
+### Bug Fixes
+
+- **crosshair**: Ignore fetching data and markers from invisible items
+  ([`72b6f74`](https://github.com/bec-project/bec_widgets/commit/72b6f74252e1f36339945c549049b166cccf3561))
+
+- **plot_base**: Crosshair items are excluded from visible curves and from auto_range
+  ([`4dc4ede`](https://github.com/bec-project/bec_widgets/commit/4dc4ede1d251d081e5bcf3d37fcc784982c9258e))
+
+- **plot_base**: Visible items injected into plot item
+  ([`b703b37`](https://github.com/bec-project/bec_widgets/commit/b703b37bbdbf97182b58ac4c69c1384fa78d0c12))
+
+- **waveform**: Changing curve visibility refresh markers
+  ([`556832f`](https://github.com/bec-project/bec_widgets/commit/556832fd48bcb16b95df8cf91417d7045bbca2a3))
+
+### Continuous Integration
+
+- Fix stale issues job permissions; add workflow dispatch option
+  ([`fe67a4f`](https://github.com/bec-project/bec_widgets/commit/fe67a4f325cbd41f13102e5698d86ed9e90b048e))
+
+### Documentation
+
+- Move to autoapi
+  ([`18ef35f`](https://github.com/bec-project/bec_widgets/commit/18ef35f22a1b7496b13f833e63a4f3875e1497e3))
+
+### Testing
+
+- **crosshair**: Visibility test added with plotbase fixture
+  ([`3a2ec9f`](https://github.com/bec-project/bec_widgets/commit/3a2ec9f1b74c4bb5f239940b874576a877ce45c0))
+
+
 ## v2.38.1 (2025-08-22)
 
 ### Bug Fixes
