@@ -87,6 +87,8 @@ class IDEExplorer(BECWidget, QWidget):
         shared_script_section.set_widget(shared_script_widget)
         shared_script_widget.set_directory(plugin_scripts_dir)
         script_explorer.add_section(shared_script_section)
+        shared_script_widget.file_open_requested.connect(self._emit_file_open_scripts_shared)
+        shared_script_widget.file_selected.connect(self._emit_file_preview_scripts_shared)
         # macros_section = CollapsibleSection("MACROS", indentation=0)
         # macros_section.set_widget(QLabel("Macros will be implemented later"))
         # self.main_explorer.add_section(macros_section)
@@ -96,6 +98,12 @@ class IDEExplorer(BECWidget, QWidget):
 
     def _emit_file_preview_scripts_local(self, file_name: str):
         self.file_preview_requested.emit(file_name, "scripts/local")
+
+    def _emit_file_open_scripts_shared(self, file_name: str):
+        self.file_open_requested.emit(file_name, "scripts/shared")
+
+    def _emit_file_preview_scripts_shared(self, file_name: str):
+        self.file_preview_requested.emit(file_name, "scripts/shared")
 
     def _add_local_script(self):
         """Show a dialog to enter the name of a new script and create it."""
