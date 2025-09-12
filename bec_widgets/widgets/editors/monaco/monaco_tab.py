@@ -34,6 +34,7 @@ class MonacoDock(BECWidget, QWidget):
         self._root_layout.setSpacing(0)
 
         self.dock_manager = QtAds.CDockManager(self)
+        self.dock_manager.setStyleSheet("")
         self.dock_manager.focusedDockWidgetChanged.connect(self._on_focus_event)
         self._root_layout.addWidget(self.dock_manager)
         self.dock_manager.installEventFilter(self)

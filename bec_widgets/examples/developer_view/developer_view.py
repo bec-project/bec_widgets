@@ -67,6 +67,7 @@ class DeveloperView(BECWidget, QWidget):
         self._root_layout.addWidget(self.toolbar)
 
         self.dock_manager = CDockManager(self)
+        self.dock_manager.setStyleSheet("")
         self._root_layout.addWidget(self.dock_manager)
 
         # Initialize the widgets
