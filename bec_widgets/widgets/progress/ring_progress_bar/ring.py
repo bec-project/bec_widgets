@@ -12,8 +12,8 @@ from bec_widgets.utils import BECConnector, ConnectionConfig
 
 
 class ProgressbarConnections(BaseModel):
-    slot: Literal["on_scan_progress", "on_device_readback"] = None
-    endpoint: EndpointInfo | str = None
+    slot: Literal["on_scan_progress", "on_device_readback", None] = None
+    endpoint: EndpointInfo | str | None = None
     model_config: dict = {"validate_assignment": True}
 
     @field_validator("endpoint")
@@ -222,9 +222,10 @@ class Ring(BECConnector, QObject):
             device(str): Device name for the device readback mode, only used when mode is "device"
         """
         if mode == "manual":
-            self.bec_dispatcher.disconnect_slot(
-                getattr(self, self.config.connections.slot), self.config.connections.endpoint
-            )
+            if self.config.connections.slot is not None:
+                self.bec_dispatcher.disconnect_slot(
+                    getattr(self, self.config.connections.slot), self.config.connections.endpoint
+                )
             self.config.connections.slot = None
             self.config.connections.endpoint = None
         elif mode == "scan":
