@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+import time
 import traceback
 import types
 from contextlib import contextmanager
@@ -229,6 +230,8 @@ class RPCServer:
         if wait:
             while not self.rpc_register.object_is_registered(connector):
                 QApplication.processEvents()
+                logger.info(f"Waiting for {connector} to be registered...")
+                time.sleep(0.1)
 
         widget_class = getattr(connector, "rpc_widget_class", None)
         if not widget_class:
