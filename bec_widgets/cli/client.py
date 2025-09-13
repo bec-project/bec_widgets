@@ -3880,7 +3880,7 @@ class RingProgressBar(RPCBase):
         """
 
     @rpc_call
-    def set_precision(self, precision: "int", bar_index: "int" = None):
+    def set_precision(self, precision: "int", bar_index: "int | None" = None):
         """
         Set the precision for the progress bars. If bar_index is not provide, the precision will be set for all progress bars.
 
