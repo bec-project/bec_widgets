@@ -213,7 +213,7 @@ class BECConnector:
           - If there's a nearest BECConnector parent, only compare with children of that parent.
           - If parent is None (i.e., top-level object), compare with all other top-level BECConnectors.
         """
-        QApplication.processEvents()
+        QApplication.sendPostedEvents()
         parent_bec = WidgetHierarchy._get_becwidget_ancestor(self)
 
         if parent_bec:
