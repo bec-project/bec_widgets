@@ -51,6 +51,11 @@ class MonacoDock(BECWidget, QWidget):
         dock = CDockWidget(f"Untitled_{count + 1}")
         dock.setWidget(widget)
 
+        # Connect to modification status changes to update tab titles
+        widget.save_enabled.connect(
+            lambda modified: self._update_tab_title_for_modification(dock, modified)
+        )
+
         dock.setFeature(CDockWidget.DockWidgetDeleteOnClose, True)
         dock.setFeature(CDockWidget.CustomCloseHandling, True)
         dock.setFeature(CDockWidget.DockWidgetClosable, True)
@@ -83,6 +88,24 @@ class MonacoDock(BECWidget, QWidget):
             logger.info(f"Editor '{widget.current_file}' has unsaved changes: {widget.get_text()}")
         self.save_enabled.emit(widget.modified)
 
+    def _update_tab_title_for_modification(self, dock: CDockWidget, modified: bool):
+        """Update the tab title to show modification status with a dot indicator."""
+        current_title = dock.windowTitle()
+
+        # Remove existing modification indicator (dot and space)
+        if current_title.startswith("• "):
+            base_title = current_title[2:]  # Remove "• "
+        else:
+            base_title = current_title
+
+        # Add or remove the modification indicator
+        if modified:
+            new_title = f"• {base_title}"
+        else:
+            new_title = base_title
+
+        dock.setWindowTitle(new_title)
+
     def _on_signature_change(self, signature: dict):
         signatures = signature.get("signatures", [])
         if not signatures:
@@ -108,8 +131,11 @@ class MonacoDock(BECWidget, QWidget):
             self.last_focused_editor = new_widget
 
     def _on_editor_close_requested(self, dock: CDockWidget, widget: QWidget):
+        # Cast widget to MonacoWidget since we know that's what it is
+        monaco_widget = cast(MonacoWidget, widget)
+
         # Check if we have unsaved changes
-        if widget.modified:
+        if monaco_widget.modified:
             # Prompt the user to save changes
             response = QMessageBox.question(
                 self,
@@ -120,7 +146,7 @@ class MonacoDock(BECWidget, QWidget):
                 | QMessageBox.StandardButton.Cancel,
             )
             if response == QMessageBox.StandardButton.Yes:
-                self.save_file(widget)
+                self.save_file(monaco_widget)
             elif response == QMessageBox.StandardButton.Cancel:
                 return
 
@@ -128,14 +154,16 @@ class MonacoDock(BECWidget, QWidget):
         total = len(self.dock_manager.dockWidgets())
         if total <= 1:
             # Do not remove the last dock; just wipe its editor content
-            if hasattr(widget, "set_text"):
-                widget.set_text("")
+            # Temporarily disable read-only mode if the editor is read-only
+            # so we can clear the content for reuse
+            monaco_widget.set_readonly(False)
+            monaco_widget.set_text("")
             dock.setWindowTitle("Untitled")
             dock.setTabToolTip("Untitled")
             return
 
         # Otherwise, proceed to close and delete the dock
-        widget.close()
+        monaco_widget.close()
         dock.closeDockWidget()
         dock.deleteDockWidget()
         if self.last_focused_editor is dock:
@@ -278,7 +306,17 @@ class MonacoDock(BECWidget, QWidget):
             with open(file, "w", encoding="utf-8") as f:
                 f.write(text)
             widget._original_content = text
+
+            # Update the current_file before emitting save_enabled to ensure proper tracking
+            widget._current_file = str(file)
             widget.save_enabled.emit(False)
+
+            # Find the dock widget containing this monaco widget and update title
+            for dock in self.dock_manager.dockWidgets():
+                if dock.widget() == widget:
+                    dock.setWindowTitle(file.name)
+                    dock.setTabToolTip(str(file))
+                    break
 
         print(f"Save file called, last focused editor: {self.last_focused_editor}")
 
@@ -307,6 +345,41 @@ class MonacoDock(BECWidget, QWidget):
             if editor_widget.current_file == file_name:
                 return widget
         return None
+
+    def set_file_readonly(self, file_name: str, read_only: bool = True) -> bool:
+        """
+        Set a specific file's editor to read-only mode.
+
+        Args:
+            file_name (str): The file path to set read-only
+            read_only (bool): Whether to set read-only mode (default: True)
+
+        Returns:
+            bool: True if the file was found and read-only was set, False otherwise
+        """
+        editor_dock = self._get_editor_dock(file_name)
+        if editor_dock:
+            editor_widget = cast(MonacoWidget, editor_dock.widget())
+            editor_widget.set_readonly(read_only)
+            return True
+        return False
+
+    def set_file_icon(self, file_name: str, icon) -> bool:
+        """
+        Set an icon for a specific file's tab.
+
+        Args:
+            file_name (str): The file path to set icon for
+            icon: The QIcon to set on the tab
+
+        Returns:
+            bool: True if the file was found and icon was set, False otherwise
+        """
+        editor_dock = self._get_editor_dock(file_name)
+        if editor_dock:
+            editor_dock.setIcon(icon)
+            return True
+        return False
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@ from typing import List
 import PySide6QtAds as QtAds
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.script_executor import upload_script
+from bec_qthemes import material_icon
 from PySide6QtAds import CDockManager, CDockWidget
 from qtpy.QtCore import Qt, QTimer
 from qtpy.QtGui import QKeySequence, QShortcut
@@ -250,6 +251,20 @@ class DeveloperView(BECWidget, QWidget):
 
     def _open_new_file(self, file_name: str, scope: str):
         self.monaco.open_file(file_name)
+
+        # Set read-only mode for shared files
+        if "shared" in scope:
+            self.monaco.set_file_readonly(file_name, True)
+
+        # Add appropriate icon based on file type
+        if "script" in scope:
+            # Use script icon for script files
+            icon = material_icon("script", size=(24, 24))
+            self.monaco.set_file_icon(file_name, icon)
+        elif "macro" in scope:
+            # Use function icon for macro files
+            icon = material_icon("function", size=(24, 24))
+            self.monaco.set_file_icon(file_name, icon)
 
     @SafeSlot()
     def on_save(self):
