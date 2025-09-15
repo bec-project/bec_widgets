@@ -1,11 +1,7 @@
 from __future__ import annotations
 
 import itertools
-from functools import partial
-from typing import Generator
 
-from bec_qthemes import material_icon
-from PySide6.QtWidgets import QListWidgetItem, QWidget
 from qtpy.QtCore import QMetaObject, Qt
 from qtpy.QtWidgets import (
     QAbstractItemView,
@@ -15,6 +11,7 @@ from qtpy.QtWidgets import (
     QLineEdit,
     QListView,
     QListWidget,
+    QListWidgetItem,
     QVBoxLayout,
 )
 
