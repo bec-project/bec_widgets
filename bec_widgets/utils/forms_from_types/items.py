@@ -4,7 +4,17 @@ import typing
 from abc import abstractmethod
 from decimal import Decimal
 from types import GenericAlias, UnionType
-from typing import Callable, Final, Iterable, Literal, NamedTuple, OrderedDict, get_args
+from typing import (
+    Callable,
+    Final,
+    Generic,
+    Iterable,
+    Literal,
+    NamedTuple,
+    OrderedDict,
+    TypeVar,
+    get_args,
+)
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
@@ -350,11 +360,13 @@ class DictFormItem(DynamicFormItem):
         self._main_widget.replace_data(value)
 
 
-class _ItemAndWidgetType(NamedTuple):
-    # TODO: this should be generic but not supported in 3.10
-    item: type[int | float | str]
+_IW = TypeVar("_IW", bound=int | float | str)
+
+
+class _ItemAndWidgetType(NamedTuple, Generic[_IW]):
+    item: type[_IW]
     widget: type[QWidget]
-    default: int | float | str
+    default: _IW
 
 
 class ListFormItem(DynamicFormItem):

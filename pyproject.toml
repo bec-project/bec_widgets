@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "bec_widgets"
 version = "2.38.2"
 description = "BEC Widgets"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",
