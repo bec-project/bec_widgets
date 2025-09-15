@@ -103,7 +103,7 @@ class _ConfigFileBackend(DeviceResourceBackend):
 
     def _get_configs_from_plugin_files(self, dir: Path):
         files = glob("*.yaml", root_dir=dir, recursive=True)
-        return reduce(operator.or_, map(_devices_from_file, (str(dir / f) for f in files)))
+        return reduce(operator.or_, map(_devices_from_file, (str(dir / f) for f in files)), set())
 
     def _get_tag_groups(self) -> dict[str, set[HashableDevice]]:
         return {
