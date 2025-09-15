@@ -6,8 +6,8 @@ import black
 import isort
 import qtmonaco
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import Signal
-from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
+from PySide6.QtCore import Signal
+from qtpy.QtWidgets import QApplication, QDialog, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_theme_name
@@ -59,6 +59,8 @@ class MonacoWidget(BECWidget, QWidget):
         self.editor.text_changed.connect(self.text_changed.emit)
         self.editor.text_changed.connect(self._check_save_status)
         self.editor.initialized.connect(self.apply_theme)
+        self.editor.initialized.connect(self._setup_context_menu)
+        self.editor.context_menu_action_triggered.connect(self._handle_context_menu_action)
         self._current_file = None
         self._original_content = ""
 
@@ -109,7 +111,7 @@ class MonacoWidget(BECWidget, QWidget):
             content = self.get_text()
             try:
                 formatted_content = black.format_str(content, mode=black.Mode(line_length=100))
-            except black.NothingChanged:
+            except Exception:  # black.NothingChanged or other formatting exceptions
                 formatted_content = content
 
             config = isort.Config(
@@ -287,6 +289,36 @@ class MonacoWidget(BECWidget, QWidget):
             str: The LSP header.
         """
         return self.editor.get_lsp_header()
+
+    def _setup_context_menu(self):
+        """Setup custom context menu actions for the Monaco editor."""
+        # Add the "Insert Scan" action to the context menu
+        self.editor.add_action("insert_scan", "Insert Scan", "python")
+        # Add the "Format Code" action to the context menu
+        self.editor.add_action("format_code", "Format Code", "python")
+
+    def _handle_context_menu_action(self, action_id: str):
+        """Handle context menu action triggers."""
+        if action_id == "insert_scan":
+            self._show_scan_control_dialog()
+        elif action_id == "format_code":
+            self._format_code()
+
+    def _show_scan_control_dialog(self):
+        """Show the scan control dialog and insert the generated scan code."""
+        # Import here to avoid circular imports
+        from bec_widgets.widgets.editors.monaco.scan_control_dialog import ScanControlDialog
+
+        dialog = ScanControlDialog(self, client=self.client)
+        if dialog.exec_() == QDialog.DialogCode.Accepted:
+            scan_code = dialog.get_scan_code()
+            if scan_code:
+                # Insert the scan code at the current cursor position
+                self.insert_text(scan_code)
+
+    def _format_code(self):
+        """Format the current code in the editor."""
+        self.format()
 
 
 if __name__ == "__main__":  # pragma: no cover
