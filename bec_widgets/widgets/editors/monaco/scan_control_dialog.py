@@ -7,11 +7,14 @@ into the Monaco editor.
 """
 
 from bec_lib.device import Device
+from bec_lib.logger import bec_logger
 from PySide6.QtCore import QSize
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QDialog, QDialogButtonBox, QPushButton, QVBoxLayout
 
 from bec_widgets.widgets.control.scan_control import ScanControl
+
+logger = bec_logger.logger
 
 
 class ScanControlDialog(QDialog):
@@ -78,68 +81,44 @@ class ScanControlDialog(QDialog):
             # Generate the Python code string
             code_parts = []
 
-            # Add scan function call
-            if processed_args and processed_kwargs:
-                # Format arguments
-                args_str = ", ".join(processed_args)
-                # Format keyword arguments
-                kwargs_str = ", ".join(
-                    f"{k}={v}" for k, v in processed_kwargs.items() if k != "metadata"
-                )
+            # Process arguments and keyword arguments
+            all_args = []
 
-                if args_str and kwargs_str:
-                    code_parts.append(f"scans.{scan_name}({args_str}, {kwargs_str})")
-                elif args_str:
-                    code_parts.append(f"scans.{scan_name}({args_str})")
-                elif kwargs_str:
-                    code_parts.append(f"scans.{scan_name}({kwargs_str})")
-                else:
-                    code_parts.append(f"scans.{scan_name}()")
-            elif processed_args:
-                args_str = ", ".join(processed_args)
+            # Add positional arguments
+            if processed_args:
+                all_args.extend(processed_args)
+
+            # Add keyword arguments (excluding metadata)
+            if processed_kwargs:
+                kwargs_strs = [f"{k}={v}" for k, v in processed_kwargs.items() if k != "metadata"]
+                all_args.extend(kwargs_strs)
+
+            # Join all arguments and create the scan call
+            args_str = ", ".join(all_args)
+            if args_str:
                 code_parts.append(f"scans.{scan_name}({args_str})")
-            elif processed_kwargs:
-                kwargs_str = ", ".join(
-                    f"{k}={v}" for k, v in processed_kwargs.items() if k != "metadata"
-                )
-                if kwargs_str:
-                    code_parts.append(f"scans.{scan_name}({kwargs_str})")
-                else:
-                    code_parts.append(f"scans.{scan_name}()")
             else:
                 code_parts.append(f"scans.{scan_name}()")
 
             self._scan_code = "\n".join(code_parts)
 
         except Exception as e:
-            print(f"Error generating scan code: {e}")
+            logger.error(f"Error generating scan code: {e}")
             self._scan_code = f"# Error generating scan code: {e}\n"
 
     def _process_arguments_for_code_generation(self, args):
         """Process arguments to add device prefixes and proper formatting."""
-        processed = []
-
-        for arg in args:
-            if isinstance(arg, Device):
-                processed.append(f"dev.{arg.name}")
-            else:
-                # Regular argument - format appropriately
-                processed.append(repr(arg))
-
-        return processed
+        return [self._format_value_for_code(arg) for arg in args]
 
     def _process_kwargs_for_code_generation(self, kwargs):
         """Process keyword arguments to add device prefixes and proper formatting."""
-        processed = {}
+        return {key: self._format_value_for_code(value) for key, value in kwargs.items()}
 
-        for key, value in kwargs.items():
-
-            if isinstance(value, Device):
-                processed[key] = f"dev.{value.name}"
-            else:
-                processed[key] = repr(value)
-
-        return processed
+    def _format_value_for_code(self, value):
+        """Format a single value for code generation."""
+        if isinstance(value, Device):
+            return f"dev.{value.name}"
+        return repr(value)
 
     def get_scan_code(self) -> str:
         """
