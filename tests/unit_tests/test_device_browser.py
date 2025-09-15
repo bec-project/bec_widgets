@@ -100,7 +100,7 @@ def test_device_item_expansion(device_browser, qtbot):
     form = tab_widget.widget(0).layout().itemAt(0).widget()
     assert widget.expanded
     assert (name_field := form.widget_dict.get("name")) is not None
-    qtbot.waitUntil(lambda: name_field.getValue() == "samx", timeout=500)
+    qtbot.waitUntil(lambda: name_field.getValue() == "aptrx", timeout=500)
     qtbot.mouseClick(widget._expansion_button, Qt.MouseButton.LeftButton)
     assert not widget.expanded
 
