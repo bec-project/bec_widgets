@@ -9,7 +9,6 @@ from bec_widgets.utils.forms_from_types.items import FormItemSpec, ListFormItem
 from bec_widgets.utils.widget_io import WidgetIO
 
 
-@pytest.mark.skipif(sys.version_info < (3, 11), reason="Generic types don't support this in 3.10")
 @pytest.mark.parametrize(
     ["input", "validity"],
     [

@@ -28,8 +28,7 @@ def test_plugins_dont_clobber_client_globals(bec_logger: MagicMock):
     bec_logger.logger.warning.assert_called_with(
         "Plugin widget Widgets from namespace(Widgets=<class 'tests.unit_tests.test_client_plugin_widgets._TestGlobalPlugin'>) conflicts with a built-in class!"
     )
-    if sys.version_info >= (3, 11):  # No EnumType in python3.10
-        assert isinstance(client.Widgets, enum.EnumType)
+    assert isinstance(client.Widgets, enum.EnumType)
 
 
 class _TestDuplicatePlugin(RPCBase): ...
