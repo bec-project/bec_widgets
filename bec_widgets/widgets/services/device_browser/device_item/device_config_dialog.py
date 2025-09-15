@@ -1,17 +1,18 @@
 from ast import literal_eval
-from typing import Any, Literal
+from typing import Literal
 
 from bec_lib.atlas_models import Device as DeviceConfigModel
 from bec_lib.config_helper import CONF as DEVICE_CONF_KEYS
 from bec_lib.config_helper import ConfigHelper
 from bec_lib.logger import bec_logger
 from pydantic import BaseModel, field_validator
-from PySide6.QtWidgets import QComboBox, QHBoxLayout
 from qtpy.QtCore import QSize, Qt, QThreadPool, Signal  # type: ignore
 from qtpy.QtWidgets import (
     QApplication,
+    QComboBox,
     QDialog,
     QDialogButtonBox,
+    QHBoxLayout,
     QLabel,
     QStackedLayout,
     QVBoxLayout,
