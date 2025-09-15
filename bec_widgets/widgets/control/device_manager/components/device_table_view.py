@@ -12,11 +12,17 @@ from uuid import uuid4
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
-from PySide6.QtCore import QPoint, QRect, QSize
-from PySide6.QtWidgets import QStyle, QStyleOption, QStyleOptionViewItem, QWidget
 from qtpy import QtCore, QtGui, QtWidgets
-from qtpy.QtCore import QModelIndex, QPersistentModelIndex, Qt, QTimer
-from qtpy.QtWidgets import QAbstractItemView, QHeaderView, QMessageBox
+from qtpy.QtCore import QModelIndex, QPersistentModelIndex, QPoint, QRect, QSize, Qt, QTimer
+from qtpy.QtWidgets import (
+    QAbstractItemView,
+    QHeaderView,
+    QMessageBox,
+    QStyle,
+    QStyleOption,
+    QStyleOptionViewItem,
+    QWidget,
+)
 from thefuzz import fuzz
 
 from bec_widgets.utils.bec_signal_proxy import BECSignalProxy

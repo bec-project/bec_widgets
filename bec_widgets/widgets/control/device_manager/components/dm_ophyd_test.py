@@ -12,7 +12,6 @@ from typing import Any, Iterable
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
-from PySide6.QtCore import QThreadPool
 from qtpy import QtCore, QtWidgets
 
 from bec_widgets.utils.bec_widget import BECWidget
@@ -90,7 +89,6 @@ class DeviceTester(QtCore.QRunnable):
                     fut.__dict__["__device_name"] = item
                     fut.add_done_callback(self._done_cb)
             self._safe_check_and_clear()
-
         self._cleanup()
 
     def submit(self, devices: Iterable[tuple[str, dict]]):
@@ -208,7 +206,7 @@ class DMOphydTest(BECWidget, QtWidgets.QWidget):
         else:
             self.tester = DeviceTester({})
             self.tester.signals.device_validated.connect(self._on_device_validated)
-            QThreadPool.globalInstance().start(self.tester)
+            QtCore.QThreadPool.globalInstance().start(self.tester)
         self._device_list_items: dict[str, QtWidgets.QListWidgetItem] = {}
         self._thread_pool = QtCore.QThreadPool(maxThreadCount=1)
 
