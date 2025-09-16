@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import typing
 from abc import abstractmethod
 from decimal import Decimal
@@ -12,8 +13,10 @@ from typing import (
     Literal,
     NamedTuple,
     OrderedDict,
+    Protocol,
     TypeVar,
     get_args,
+    runtime_checkable,
 )
 
 from bec_lib.logger import bec_logger
@@ -563,7 +566,14 @@ class StrLiteralFormItem(DynamicFormItem):
         self._main_widget.setCurrentIndex(-1)
 
 
-WidgetTypeRegistry = OrderedDict[str, tuple[Callable[[FormItemSpec], bool], type[DynamicFormItem]]]
+@runtime_checkable
+class _ItemTypeFn(Protocol):
+    def __call__(self, spec: FormItemSpec) -> type[DynamicFormItem]: ...
+
+
+WidgetTypeRegistry = OrderedDict[
+    str, tuple[Callable[[FormItemSpec], bool], type[DynamicFormItem] | _ItemTypeFn]
+]
 
 DEFAULT_WIDGET_TYPES: Final[WidgetTypeRegistry] = OrderedDict() | {
     # dict literals are ordered already but TypedForm subclasses may modify coppies of this dict
@@ -604,7 +614,10 @@ def widget_from_type(
     widget_types = widget_types or DEFAULT_WIDGET_TYPES
     for predicate, widget_type in widget_types.values():
         if predicate(spec):
-            return widget_type
+            if inspect.isclass(widget_type) and issubclass(widget_type, DynamicFormItem):
+                return widget_type
+            return widget_type(spec)
+
     logger.warning(
         f"Type {spec.item_type=} / {spec.info.annotation=} is not (yet) supported in dynamic form creation."
     )
