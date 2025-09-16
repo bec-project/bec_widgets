@@ -154,20 +154,30 @@ class DeviceConfigDialog(QDialog):
         return super().accept()
 
 
-class EpicsDeviceConfig(BaseModel):
+class EpicsMotorConfig(BaseModel):
     prefix: str
+
+
+class EpicsSignalROConfig(BaseModel):
+    read_pv: str
+
+
+class EpicsSignalConfig(BaseModel):
+    read_pv: str
+    write_pv: str | None = None
 
 
 class PresetClassDeviceConfigDialog(DeviceConfigDialog):
     def __init__(self, *, parent=None, **kwargs):
         super().__init__(parent=parent, **kwargs)
+        self._device_models = {
+            "EpicsMotor": (EpicsMotorConfig, {"deviceClass": ("ophyd.EpicsMotor", False)}),
+            "EpicsSignalRO": (EpicsSignalROConfig, {"deviceClass": ("ophyd.EpicsSignalRO", False)}),
+            "EpicsSignal": (EpicsSignalConfig, {"deviceClass": ("ophyd.EpicsSignal", False)}),
+            "Custom": (None, {}),
+        }
         self._create_selection_box()
         self._selection_box.currentTextChanged.connect(self._replace_form)
-        self._device_models = {
-            "Custom": (None, {}),
-            "EpicsMotor": (EpicsDeviceConfig, {"deviceClass": ("ophyd.EpicsMotor", False)}),
-            "EpicsSignal": (EpicsDeviceConfig, {"deviceClass": ("ophyd.EpicsSignal", False)}),
-        }
 
     def _apply_constraints(self, constraints: dict[str, tuple[DynamicFormItemType, bool]]):
         for field_name, (value, editable) in constraints.items():
@@ -190,7 +200,7 @@ class PresetClassDeviceConfigDialog(DeviceConfigDialog):
     def _create_selection_box(self):
         layout = QHBoxLayout()
         self._selection_box = QComboBox()
-        self._selection_box.addItems(["Custom", "EpicsMotor", "EpicsSignal"])
+        self._selection_box.addItems(list(self._device_models.keys()))
         layout.addWidget(QLabel("Choose a device class: "))
         layout.addWidget(self._selection_box)
         self._layout.insertLayout(0, layout)
