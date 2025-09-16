@@ -96,6 +96,7 @@ class DeviceManagerView(BECWidget, QWidget):
         self._root_layout.setContentsMargins(0, 0, 0, 0)
         self._root_layout.setSpacing(0)
         self.dock_manager = CDockManager(self)
+        self.dock_manager.setStyleSheet("""""")
         self._root_layout.addWidget(self.dock_manager)
 
         # Available Resources Widget

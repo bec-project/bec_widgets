@@ -31,7 +31,7 @@ class SideBar(QScrollArea):
         self,
         parent=None,
         title: str = "Control Panel",
-        collapsed_width: int = 56,
+        collapsed_width: int = 65,
         expanded_width: int = 250,
         anim_duration: int = ANIMATION_DURATION,
     ):

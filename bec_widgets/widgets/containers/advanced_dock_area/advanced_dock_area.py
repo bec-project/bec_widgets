@@ -167,7 +167,7 @@ class AdvancedDockArea(BECWidget, QWidget):
 
         # Top-level layout hosting a toolbar and the dock manager
         self._root_layout = QVBoxLayout(self)
-        self._root_layout.setContentsMargins(0, 0, 0, 0)
+        self._root_layout.setContentsMargins(0, 0, 0, 6)
         self._root_layout.setSpacing(0)
 
         # Init Dock Manager
@@ -302,6 +302,8 @@ class AdvancedDockArea(BECWidget, QWidget):
 
     def _setup_toolbar(self):
         self.toolbar = ModularToolBar(parent=self)
+        self.toolbar.setProperty("variant", "primary")
+        # self.toolbar.setStyleSheet(f"QToolBar {{ border-bottom: 1px; }}")
 
         PLOT_ACTIONS = {
             "waveform": (Waveform.ICON_NAME, "Add Waveform", "Waveform"),

@@ -1,9 +1,12 @@
+from bec_qthemes.qss_editor.qss_editor import ThemeWidget
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QWidget
 
 from bec_widgets.applications.navigation_centre.reveal_animator import ANIMATION_DURATION
 from bec_widgets.applications.navigation_centre.side_bar import SideBar
 from bec_widgets.applications.navigation_centre.side_bar_components import NavigationItem
 from bec_widgets.applications.views.view import ViewBase, WaveformViewInline, WaveformViewPopup
+from bec_widgets.examples.developer_view.developer_view import DeveloperView
+from bec_widgets.examples.device_manager_view.device_manager_view import DeviceManagerView
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
@@ -28,8 +31,8 @@ class BECMainApp(BECMainWindow):
 
         container = QWidget(self)
         layout = QHBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 6, 0)
+        layout.setSpacing(6)
         layout.addWidget(self.sidebar, 0)
         layout.addWidget(self.stack, 1)
         self.setCentralWidget(container)
@@ -44,9 +47,25 @@ class BECMainApp(BECMainWindow):
     def _add_views(self):
         self.add_section("BEC Applications", "bec_apps")
         self.ads = AdvancedDockArea(self)
+        self.developer_view = DeveloperView(self)
+        self.device_manager_view = DeviceManagerView(self)
 
         self.add_view(
             icon="widgets", title="Dock Area", id="dock_area", widget=self.ads, mini_text="Docks"
+        )
+        self.add_view(
+            icon="code_blocks",
+            title="Developer View",
+            id="developer_view",
+            widget=self.developer_view,
+            mini_text="Dev",
+        )
+        self.add_view(
+            icon="display_settings",
+            title="Device Manager",
+            id="device_manager",
+            widget=self.device_manager_view,
+            mini_text="Devices",
         )
 
         if self._show_examples:
@@ -185,5 +204,7 @@ if __name__ == "__main__":  # pragma: no cover
     apply_theme("dark")
     w = BECMainApp(show_examples=args.examples)
     w.show()
+    # theme_widget = ThemeWidget()
+    # theme_widget.show()
 
     sys.exit(app.exec())
