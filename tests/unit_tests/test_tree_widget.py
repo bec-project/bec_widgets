@@ -8,7 +8,6 @@ class DummyTree(QWidget):
     def __init__(self):
         super().__init__()
         tree = QTreeView(self)
-        apply_theme("dark")
 
 
 @pytest.fixture
