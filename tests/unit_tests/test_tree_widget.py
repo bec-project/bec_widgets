@@ -1,5 +1,5 @@
 import pytest
-from PySide6.QtWidgets import QTreeView, QWidget
+from qtpy.QtWidgets import QTreeView, QWidget
 
 from bec_widgets.utils.colors import apply_theme
 
