@@ -947,11 +947,15 @@ class Waveform(PlotBase):
         """
         scan_item: ScanDataContainer | None = None
         if config.source == "history":
-            # Convert 1-based scan_number (from user/API) to 0-based list index
-            list_index = config.scan_number - 1 if config.scan_number is not None else None
-            scan_item = self.get_history_scan_item(scan_id=config.scan_id, scan_index=list_index)
+            scan_item = self.get_history_scan_item(
+                scan_id=config.scan_id, scan_index=config.scan_number
+            )
+            if scan_item is None:
+                raise ValueError(
+                    f"Could not find scan item for history curve '{config.label}' with scan_id='{config.scan_id}' and scan_number='{config.scan_number}'."
+                )
+
             config.scan_id = scan_item.metadata["bec"]["scan_id"]
-            # Preserve the 1-based scan_number for external labeling
             config.scan_number = scan_item.metadata["bec"]["scan_number"]
 
         label = config.label
@@ -2081,7 +2085,14 @@ class Waveform(PlotBase):
             logger.info("No scans executed so far. Cannot fetch scan history.")
             return None
 
-        return self.client.history[scan_index]
+        # check if scan_index is negative, then fetch it just from the list from the end
+        if int(scan_index) < 0:
+            return self.client.history[scan_index]
+        scan_item = self.client.history.get_by_scan_number(scan_index)
+        if scan_item is None:
+            logger.warning(f"Scan with scan_number {scan_index} not found in history.")
+            return None
+        return scan_item
 
     @SafeSlot(int)
     @SafeSlot(str)
