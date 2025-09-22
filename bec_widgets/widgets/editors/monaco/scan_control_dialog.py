@@ -8,8 +8,7 @@ into the Monaco editor.
 
 from bec_lib.device import Device
 from bec_lib.logger import bec_logger
-from PySide6.QtCore import QSize
-from qtpy.QtCore import Qt
+from qtpy.QtCore import QSize, Qt
 from qtpy.QtWidgets import QDialog, QDialogButtonBox, QPushButton, QVBoxLayout
 
 from bec_widgets.widgets.control.scan_control import ScanControl

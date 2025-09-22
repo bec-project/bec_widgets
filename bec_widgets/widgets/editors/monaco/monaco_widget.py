@@ -6,7 +6,7 @@ import black
 import isort
 import qtmonaco
 from bec_lib.logger import bec_logger
-from PySide6.QtCore import Signal
+from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QApplication, QDialog, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
