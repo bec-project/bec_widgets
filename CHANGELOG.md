@@ -1,6 +1,30 @@
 # CHANGELOG
 
 
+## v2.38.3 (2025-09-23)
+
+### Bug Fixes
+
+- **connector**: Only flush pending events
+  ([`475ca9f`](https://github.com/bec-project/bec_widgets/commit/475ca9f2d81bcc2bb0c7b104c0712b13d6616c08))
+
+- **ringprogressbar**: Fix client signature
+  ([`65bc5f5`](https://github.com/bec-project/bec_widgets/commit/65bc5f5421077da70ef5068d51e36119e1055955))
+
+- **ringprogressbar**: Various fixes and improvements
+  ([`bbb5fc6`](https://github.com/bec-project/bec_widgets/commit/bbb5fc6ce17248a948c6fd4a7652d17d64a79d2a))
+
+### Chores
+
+- Deprecate 3.10, add 3.13
+  ([`3e33934`](https://github.com/bec-project/bec_widgets/commit/3e339348dd3d0a3b12522312132fca139dc22835))
+
+### Testing
+
+- **ringprogressbar**: Extend e2e test
+  ([`b1b6c5e`](https://github.com/bec-project/bec_widgets/commit/b1b6c5e6a5dd81965baa5c742e9bdae8cdb4f09b))
+
+
 ## v2.38.2 (2025-09-11)
 
 ### Bug Fixes
