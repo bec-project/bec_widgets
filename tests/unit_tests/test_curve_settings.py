@@ -418,6 +418,7 @@ def test_export_data_history_curve(curve_tree_fixture, scan_history_factory):
     for m in msgs:
         wf.client.history._scan_data[m.scan_id] = m
         wf.client.history._scan_ids.append(m.scan_id)
+        wf.client.history._scan_numbers.append(m.scan_number)
     wf.client.queue.scan_storage.current_scan = None
 
     # Create a device row and select scan index "2"

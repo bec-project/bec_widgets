@@ -127,13 +127,13 @@ class CurveRow(QTreeWidgetItem):
         # Populate 'live' and all available history scan indices
         self.scan_index_combo.addItem("live")
         history = getattr(self.curve_tree.client, "history", None)
-        num_scans = len(history) if history is not None else 0
+        scan_number_list = history._scan_numbers  # len(history) if history is not None else 0
         # Restrict input to 'live' or valid scan numbers
-        validator = ScanIndexValidator(num_scans, self.scan_index_combo)
+        validator = ScanIndexValidator(len(scan_number_list), self.scan_index_combo)
         self.scan_index_combo.lineEdit().setValidator(validator)
-        for idx in range(num_scans):
+        for idx in scan_number_list:
             # Display scan numbers starting at 1
-            self.scan_index_combo.addItem(str(idx + 1))
+            self.scan_index_combo.addItem(str(idx))
         # Select current scan number if set, otherwise default to 'live'
         if getattr(self.config, "scan_number", None) is not None:
             self.scan_index_combo.setCurrentText(str(self.config.scan_number))
