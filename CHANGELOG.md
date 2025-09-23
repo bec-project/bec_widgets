@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.38.4 (2025-09-23)
+
+### Bug Fixes
+
+- **image**: Add support for specifying preview signals through cli
+  ([`108ddae`](https://github.com/bec-project/bec_widgets/commit/108ddae6ca3501a57b499c7080a36cf41a653074))
+
+
 ## v2.38.3 (2025-09-23)
 
 ### Bug Fixes
