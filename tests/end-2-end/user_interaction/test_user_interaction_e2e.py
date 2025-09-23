@@ -371,6 +371,13 @@ def test_widgets_e2e_image(qtbot, connected_client_gui_obj, random_generator_fro
     )  # Get last image from Redis monitor 2D endpoint
     assert np.allclose(img.get_data(), last_img)
 
+    # Now add a device with a preview signal
+    img = widget.image(["eiger", "preview"])
+    s = scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False)
+    s.wait()
+
+    qtbot.waitUntil(_wait_for_scan_in_history, timeout=7000)
+
     # Test removing the widget, or leaving it open for the next test
     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
 

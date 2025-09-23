@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Literal
+from typing import Literal, Sequence
 
 import numpy as np
 from bec_lib import bec_logger
@@ -307,7 +307,7 @@ class Image(ImageBase):
         Set the image source and update the image.
 
         Args:
-            monitor(str): The name of the monitor to use for the image.
+            monitor(str|tuple|None): The name of the monitor to use for the image, or a tuple of (device, signal) for preview signals. If None or empty string, the current monitor will be disconnected.
             monitor_type(str): The type of monitor to use. Options are "1d", "2d", or "auto".
             color_map(str): The color map to use for the image.
             color_bar(str): The type of color bar to use. Options are "simple" or "full".
@@ -322,10 +322,13 @@ class Image(ImageBase):
         if monitor is None or monitor == "":
             logger.warning(f"No monitor specified, cannot set image, old monitor is unsubscribed")
             return None
-        if isinstance(monitor, tuple):
+
+        if isinstance(monitor, str):
+            self.entry_validator.validate_monitor(monitor)
+        elif isinstance(monitor, Sequence):
             self.entry_validator.validate_monitor(monitor[0])
         else:
-            self.entry_validator.validate_monitor(monitor)
+            raise ValueError(f"Invalid monitor type: {type(monitor)}")
 
         self.set_image_update(monitor=monitor, type=monitor_type)
         if color_map is not None:
@@ -347,7 +350,7 @@ class Image(ImageBase):
         if config.monitor is not None:
             for combo in (self.device_combo_box, self.dim_combo_box):
                 combo.blockSignals(True)
-            if isinstance(config.monitor, tuple):
+            if isinstance(config.monitor, (list, tuple)):
                 self.device_combo_box.setCurrentText(f"{config.monitor[0]}_{config.monitor[1]}")
             else:
                 self.device_combo_box.setCurrentText(config.monitor)
@@ -452,7 +455,7 @@ class Image(ImageBase):
         """
 
         # TODO consider moving connecting and disconnecting logic to Image itself if multiple images
-        if isinstance(monitor, tuple):
+        if isinstance(monitor, (list, tuple)):
             device = self.dev[monitor[0]]
             signal = monitor[1]
             if len(monitor) == 3:
@@ -520,7 +523,7 @@ class Image(ImageBase):
         Args:
             monitor(str|tuple): The name of the monitor to disconnect, or a tuple of (device, signal) for preview signals.
         """
-        if isinstance(monitor, tuple):
+        if isinstance(monitor, (list, tuple)):
             if self.subscriptions["main"].source == "device_monitor_1d":
                 self.bec_dispatcher.disconnect_slot(
                     self.on_image_update_1d, MessageEndpoints.device_preview(monitor[0], monitor[1])

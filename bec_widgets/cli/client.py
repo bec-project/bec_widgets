@@ -2218,7 +2218,7 @@ class Image(RPCBase):
         Set the image source and update the image.
 
         Args:
-            monitor(str): The name of the monitor to use for the image.
+            monitor(str|tuple|None): The name of the monitor to use for the image, or a tuple of (device, signal) for preview signals. If None or empty string, the current monitor will be disconnected.
             monitor_type(str): The type of monitor to use. Options are "1d", "2d", or "auto".
             color_map(str): The color map to use for the image.
             color_bar(str): The type of color bar to use. Options are "simple" or "full".
