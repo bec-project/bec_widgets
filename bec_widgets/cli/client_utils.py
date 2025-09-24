@@ -443,8 +443,8 @@ class BECGuiClient(RPCBase):
         self._update_dynamic_namespace(self._server_registry)
 
     def _do_show_all(self):
-        rpc_client = RPCBase(gui_id=f"{self._gui_id}:launcher", parent=self)
-        rpc_client._run_rpc("show")  # pylint: disable=protected-access
+        if self.launcher and len(self._top_level) == 0:
+            self.launcher._run_rpc("show")  # pylint: disable=protected-access
         for window in self._top_level.values():
             window.show()
 
@@ -454,11 +454,11 @@ class BECGuiClient(RPCBase):
 
     def _hide_all(self):
         with wait_for_server(self):
-            rpc_client = RPCBase(gui_id=f"{self._gui_id}:launcher", parent=self)
-            rpc_client._run_rpc("hide")  # pylint: disable=protected-access
-            if not self._killed:
-                for window in self._top_level.values():
-                    window.hide()
+            if self._killed:
+                return
+            self.launcher._run_rpc("hide")
+            for window in self._top_level.values():
+                window.hide()
 
     def _update_dynamic_namespace(self, server_registry: dict):
         """
