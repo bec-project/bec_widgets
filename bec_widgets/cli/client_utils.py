@@ -285,6 +285,18 @@ class BECGuiClient(RPCBase):
         """Hide the GUI window."""
         return self._hide_all()
 
+    def raise_window(self, wait: bool = True) -> None:
+        """
+        Bring GUI windows to the front.
+        If the GUI server is not running, it will be started.
+
+        Args:
+            wait(bool): Whether to wait for the server to start. Defaults to True.
+        """
+        if self._check_if_server_is_alive():
+            return self._raise_all()
+        return self._start(wait=wait)
+
     def new(
         self,
         name: str | None = None,
@@ -459,6 +471,19 @@ class BECGuiClient(RPCBase):
             self.launcher._run_rpc("hide")
             for window in self._top_level.values():
                 window.hide()
+
+    def _do_raise_all(self):
+        """Bring GUI windows to the front."""
+        if self.launcher and len(self._top_level) == 0:
+            self.launcher._run_rpc("raise")  # pylint: disable=protected-access
+        for window in self._top_level.values():
+            window._run_rpc("raise")  # type: ignore[attr-defined]
+
+    def _raise_all(self):
+        with wait_for_server(self):
+            if self._killed:
+                return
+            return self._do_raise_all()
 
     def _update_dynamic_namespace(self, server_registry: dict):
         """
