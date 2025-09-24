@@ -202,6 +202,11 @@ class RPCBase:
             parent = parent._parent
         return parent  # type: ignore
 
+    def raise_window(self):
+        """Bring this widget (or its container) to the front."""
+        # Use explicit call to ensure action name is 'raise' (not 'raise_')
+        return self._run_rpc("raise")
+
     def _run_rpc(
         self,
         method,
@@ -225,7 +230,7 @@ class RPCBase:
         Returns:
             The result of the RPC call.
         """
-        if method in ["show", "hide"] and gui_id is None:
+        if method in ["show", "hide", "raise"] and gui_id is None:
             obj = self._root._server_registry.get(self._gui_id)
             if obj is None:
                 raise ValueError(f"Widget {self._gui_id} not found.")
