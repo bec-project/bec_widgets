@@ -225,6 +225,12 @@ class RPCBase:
         Returns:
             The result of the RPC call.
         """
+        if method in ["show", "hide"] and gui_id is None:
+            obj = self._root._server_registry.get(self._gui_id)
+            if obj is None:
+                raise ValueError(f"Widget {self._gui_id} not found.")
+            gui_id = obj.get("container_proxy")  # type: ignore
+
         request_id = str(uuid.uuid4())
         rpc_msg = messages.GUIInstructionMessage(
             action=method,
