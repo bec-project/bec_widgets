@@ -286,3 +286,85 @@ def test_waveform_passing_device(qtbot, bec_client_lib, connected_client_gui_obj
     # check plotted data
     x_data, y_data = c1.get_data()
     assert np.array_equal(y_data, last_scan_data.devices.samx.samx_setpoint.read().get("value"))
+
+
+@pytest.mark.timeout(120)
+@pytest.mark.parametrize(
+    "history_selector", ["scan_id", "scan_number"]
+)  # ensure unique curves per run
+def test_rpc_waveform_history_curve(
+    qtbot, bec_client_lib, connected_client_gui_obj, history_selector
+):
+    """
+    E2E test for the new history curve feature:
+    - Run 3 scans
+    - For each scan, fetch history curve data using either scan_id OR scan_number (parametrized)
+    - Compare waveform data with BEC client scan data
+    Note: Parameterization prevents adding the same logical curve twice (which would collide on label).
+    """
+    gui = connected_client_gui_obj
+    dock = gui.bec
+    client = bec_client_lib
+    dev = client.device_manager.devices
+    scans = client.scans
+    queue = client.queue
+
+    wf = dock.new("wf_dock").new("Waveform")
+
+    # Collect references for validation
+    scan_meta = []  # list of dicts with scan_id, scan_number, data
+
+    # Run 3 scans and collect their metadata and data
+    for i in range(3):
+        status = scans.line_scan(dev.samx, -5 + i, 5 + i, steps=10, exp_time=0.01, relative=False)
+        status.wait()
+
+        # Wait until the history entry appears and corresponds to this scan
+        def _wait_for_scan_in_history():
+            if len(client.history) == 0:
+                return False
+            return client.history[-1].metadata.bec.get("scan_id", None) == status.scan.scan_id
+
+        qtbot.waitUntil(_wait_for_scan_in_history, timeout=10000)
+
+        hist_item = client.history[-1]
+        item = queue.scan_storage.storage[-1]
+        data = item.live_data if hasattr(item, "live_data") else item.data
+        scan_meta.append(
+            {
+                "scan_id": hist_item.metadata.bec.get("scan_id"),
+                "scan_number": hist_item.metadata.bec.get("scan_number"),
+                "data": data,
+            }
+        )
+
+    # For each scan, fetch history curve by the chosen selector and compare to client data
+    for meta in scan_meta:
+        sel_value = meta[history_selector]
+        scan_data = meta["data"]
+
+        # Add curve from history using the chosen selector; single curve per scan to avoid duplicates
+        kwargs = {history_selector: sel_value}
+        curve = wf.plot(x_name="samx", y_name="bpm4i", **kwargs)
+
+        num_elements = 10
+
+        # Wait until curve has the expected number of points
+        def _curve_ready():
+            try:
+                x, y = curve.get_data()
+            except Exception:
+                return False
+            return x is not None and len(x) == num_elements and len(y) == num_elements
+
+        qtbot.waitUntil(_curve_ready, timeout=10000)
+
+        # Get plotted data
+        x_vals, y_vals = curve.get_data()
+
+        # Compare against BEC client scan data
+        np.testing.assert_equal(x_vals, np.array(scan_data["samx"]["samx"].val))
+        np.testing.assert_equal(y_vals, np.array(scan_data["bpm4i"]["bpm4i"].val))
+
+        # Clean up
+        curve.remove()
