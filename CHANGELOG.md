@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v2.39.0 (2025-09-24)
+
+### Bug Fixes
+
+- **rpc**: Fix hide/show
+  ([`975404f`](https://github.com/bec-project/bec_widgets/commit/975404f483ddae041d9f4d819f39c53cec191439))
+
+### Features
+
+- **rpc_base**: Windows can be raised to front from CLI
+  ([`565c0bd`](https://github.com/bec-project/bec_widgets/commit/565c0bd1e7f4684d8401b6a2827c35422b1125c4))
+
+
 ## v2.38.4 (2025-09-23)
 
 ### Bug Fixes
