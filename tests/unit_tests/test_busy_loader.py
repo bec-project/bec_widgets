@@ -1,0 +1,145 @@
+import pytest
+from qtpy.QtWidgets import QLabel, QVBoxLayout, QWidget
+
+from bec_widgets import BECWidget
+
+from .client_mocks import mocked_client
+
+
+class _TestBusyWidget(BECWidget, QWidget):
+    def __init__(
+        self,
+        parent=None,
+        *,
+        start_busy: bool = False,
+        busy_text: str = "Loading…",
+        theme_update: bool = False,
+        **kwargs,
+    ):
+        super().__init__(
+            parent=parent,
+            theme_update=theme_update,
+            start_busy=start_busy,
+            busy_text=busy_text,
+            **kwargs,
+        )
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.addWidget(QLabel("content", self))
+
+
+@pytest.fixture
+def widget_busy(qtbot, mocked_client):
+    w = _TestBusyWidget(client=mocked_client, start_busy=True, busy_text="Initializing…")
+    qtbot.addWidget(w)
+    w.resize(320, 200)
+    w.show()
+    qtbot.waitExposed(w)
+    return w
+
+
+@pytest.fixture
+def widget_idle(qtbot):
+    w = _TestBusyWidget(client=mocked_client, start_busy=False)
+    qtbot.addWidget(w)
+    w.resize(320, 200)
+    w.show()
+    qtbot.waitExposed(w)
+    return w
+
+
+def test_becwidget_start_busy_shows_overlay(qtbot, widget_busy):
+    overlay = getattr(widget_busy, "_busy_overlay", None)
+    assert overlay is not None, "BECWidget should create a busy overlay in __init__"
+    qtbot.waitUntil(lambda: overlay.geometry() == widget_busy.rect())
+    qtbot.waitUntil(lambda: overlay.isVisible())
+
+
+def test_becwidget_set_busy_toggle_and_text(qtbot, widget_idle):
+    overlay = getattr(widget_idle, "_busy_overlay", None)
+    assert overlay is None, "Overlay should be lazily created when idle"
+
+    widget_idle.set_busy(True, "Fetching data…")
+    overlay = getattr(widget_idle, "_busy_overlay")
+    qtbot.waitUntil(lambda: overlay.isVisible())
+
+    lbl = getattr(overlay, "_label")
+    assert lbl.text() == "Fetching data…"
+
+    widget_idle.set_busy(False)
+    qtbot.waitUntil(lambda: overlay.isHidden())
+
+
+def test_becwidget_overlay_tracks_resize(qtbot, widget_busy):
+    overlay = getattr(widget_busy, "_busy_overlay")
+    qtbot.waitUntil(lambda: overlay.geometry() == widget_busy.rect())
+
+    widget_busy.resize(480, 260)
+    qtbot.waitUntil(lambda: overlay.geometry() == widget_busy.rect())
+
+
+def test_becwidget_overlay_frame_geometry_and_style(qtbot, widget_busy):
+    overlay = getattr(widget_busy, "_busy_overlay")
+    qtbot.waitUntil(lambda: overlay.isVisible())
+
+    frame = getattr(overlay, "_frame", None)
+    assert frame is not None, "Busy overlay must use an internal QFrame for visuals"
+
+    # Insets are 10 px in the implementation
+    outer = overlay.rect()
+    # Ensure resizeEvent has run and frame geometry is updated
+    qtbot.waitUntil(
+        lambda: frame.geometry().width() == outer.width() - 20
+        and frame.geometry().height() == outer.height() - 20
+    )
+
+    inner = frame.geometry()
+    assert inner.left() == outer.left() + 10
+    assert inner.top() == outer.top() + 10
+    assert inner.right() == outer.right() - 10
+    assert inner.bottom() == outer.bottom() - 10
+
+    # Style: dashed border + semi-transparent grey background
+    ss = frame.styleSheet()
+    assert "dashed" in ss
+    assert "border" in ss
+    assert "rgba(128, 128, 128, 110)" in ss
+
+
+def test_becwidget_apply_busy_text_without_toggle(qtbot, widget_idle):
+    overlay = getattr(widget_idle, "_busy_overlay", None)
+    assert overlay is None, "Overlay should be created on first text update"
+
+    widget_idle.set_busy_text("Preparing…")
+    overlay = getattr(widget_idle, "_busy_overlay")
+    assert overlay is not None
+    assert overlay.isHidden()
+
+    lbl = getattr(overlay, "_label")
+    assert lbl.text() == "Preparing…"
+
+
+def test_becwidget_busy_cycle_start_on_off_on(qtbot, widget_busy):
+    overlay = getattr(widget_busy, "_busy_overlay", None)
+    assert overlay is not None, "Busy overlay should exist on a start_busy widget"
+
+    # Initially visible because start_busy=True
+    qtbot.waitUntil(lambda: overlay.isVisible())
+
+    # Switch OFF
+    widget_busy.set_busy(False)
+    qtbot.waitUntil(lambda: overlay.isHidden())
+
+    # Switch ON again (with new text)
+    widget_busy.set_busy(True, "Back to work…")
+    qtbot.waitUntil(lambda: overlay.isVisible())
+
+    # Same overlay instance reused (no duplication)
+    assert getattr(widget_busy, "_busy_overlay") is overlay
+
+    # Label updated
+    lbl = getattr(overlay, "_label")
+    assert lbl.text() == "Back to work…"
+
+    # Geometry follows parent after re-show
+    qtbot.waitUntil(lambda: overlay.geometry() == widget_busy.rect())
