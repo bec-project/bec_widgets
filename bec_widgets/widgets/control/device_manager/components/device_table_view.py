@@ -133,39 +133,6 @@ class DeviceValidatedDelegate(CustomDisplayDelegate):
             painter.drawPixmap(pix_rect.topLeft(), pixmap)
 
 
-class WrappingTextDelegate(CustomDisplayDelegate):
-    """Custom delegate for wrapping text in table cells."""
-
-    def __init__(self, table: BECTableView, parent=None):
-        super().__init__(parent)
-        self._table = table
-
-    def _do_custom_paint(self, painter, option, index, value):
-        painter.setClipRect(option.rect)
-        text_option = (
-            Qt.TextFlag.TextWordWrap | Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
-        )
-        painter.drawText(option.rect.adjusted(4, 2, -5, -2), text_option, value)
-
-    def sizeHint(self, option, index):
-        text = str(index.model().data(index, Qt.ItemDataRole.DisplayRole) or "")
-        column_width = self._table.columnWidth(index.column()) - 8  # -4 & 4
-
-        # Avoid pathological heights for too-narrow columns
-        min_width = option.fontMetrics.averageCharWidth() * 4
-        if column_width < min_width:
-            fm = QtGui.QFontMetrics(option.font)
-            return QtCore.QSize(column_width, fm.height() + 4)
-
-        doc = QtGui.QTextDocument()
-        doc.setDefaultFont(option.font)
-        doc.setTextWidth(column_width)
-        doc.setPlainText(text)
-
-        layout_height = doc.documentLayout().documentSize().height()
-        return QtCore.QSize(column_width, int(layout_height) + 4)
-
-
 class DeviceTableModel(QtCore.QAbstractTableModel):
     """
     Custom Device Table Model for managing device configurations.
@@ -364,9 +331,10 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
 
     def get_by_name(self, name: str) -> dict[str, Any] | None:
         for cfg in self._device_config:
-            if cfg.get(name) == name:
+            if cfg.get("name") == name:
                 return cfg
         logger.warning(f"Device {name} does not exist in the model.")
+        return None
 
     @contextmanager
     def _remove_row(self, row: int):
@@ -683,24 +651,31 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
         # Delegates
         colors = get_accent_colors()
         self.checkbox_delegate = CenterCheckBoxDelegate(self.table, colors=colors)
-        self.wrap_delegate = WrappingTextDelegate(self.table)
         self.tool_tip_delegate = DictToolTipDelegate(self.table)
         self.validated_delegate = DeviceValidatedDelegate(self.table, colors=colors)
         self.table.setItemDelegateForColumn(0, self.validated_delegate)  # ValidationStatus
         self.table.setItemDelegateForColumn(1, self.tool_tip_delegate)  # name
         self.table.setItemDelegateForColumn(2, self.tool_tip_delegate)  # deviceClass
         self.table.setItemDelegateForColumn(3, self.tool_tip_delegate)  # readoutPriority
-        self.table.setItemDelegateForColumn(4, self.wrap_delegate)  # deviceTags
+        self.table.setItemDelegateForColumn(
+            4, self.tool_tip_delegate
+        )  # deviceTags (was wrap_delegate)
         self.table.setItemDelegateForColumn(5, self.checkbox_delegate)  # enabled
         self.table.setItemDelegateForColumn(6, self.checkbox_delegate)  # readOnly
+
+        # Disable wrapping, use eliding, and smooth scrolling
+        self.table.setWordWrap(False)
+        self.table.setTextElideMode(QtCore.Qt.TextElideMode.ElideRight)
+        self.table.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        self.table.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
 
         # Column resize policies
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)  # ValidationStatus
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)  # name
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)  # deviceClass
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)  # readoutPriority
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)  # deviceTags
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)  # name
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)  # deviceClass
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Interactive)  # readoutPriority
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)  # deviceTags: expand to fill
         header.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)  # enabled
         header.setSectionResizeMode(6, QHeaderView.ResizeMode.Fixed)  # readOnly
 
@@ -711,11 +686,7 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
         # Ensure column widths stay fixed
         header.setMinimumSectionSize(25)
         header.setDefaultSectionSize(90)
-
-        # Enable resizing of column
-        self._geometry_resize_proxy = BECSignalProxy(
-            header.geometriesChanged, rateLimit=10, slot=self._on_table_resized
-        )
+        header.setStretchLastSection(False)
 
         # Selection behavior
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -724,7 +695,10 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
         self.table.selectionModel().selectionChanged.connect(self._on_selection_changed)
         self.table.horizontalHeader().setHighlightSections(False)
 
-        # Qtimer.singleShot(0, lambda: header.sectionResized.emit(0, 0, 0))
+        # Connect model signals to autosize request
+        self._model.rowsInserted.connect(self._request_autosize_columns)
+        self._model.modelReset.connect(self._request_autosize_columns)
+        self._model.dataChanged.connect(self._request_autosize_columns)
 
     def remove_selected_rows(self):
         self.table.delete_selected()
@@ -741,16 +715,19 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
     ########### Slot API #################
     ######################################
 
-    # TODO RESIZING IS not working as it should be !!
+    def _request_autosize_columns(self, *args):
+        if not hasattr(self, "_autosize_timer"):
+            self._autosize_timer = QtCore.QTimer(self)
+            self._autosize_timer.setSingleShot(True)
+            self._autosize_timer.timeout.connect(self._autosize_columns)
+        self._autosize_timer.start(0)
+
     @SafeSlot()
-    def _on_table_resized(self, *args):
-        """Handle changes to the table column resizing."""
-        option = QtWidgets.QStyleOptionViewItem()
-        model = self.table.model()
-        for row in range(model.rowCount()):
-            index = model.index(row, 4)
-            height = self.wrap_delegate.sizeHint(option, index).height()
-            self.table.setRowHeight(row, height)
+    def _autosize_columns(self):
+        if self._model.rowCount() == 0:
+            return
+        for col in (1, 2, 3):
+            self.table.resizeColumnToContents(col)
 
     @SafeSlot(str)
     def _handle_shared_selection_signal(self, uuid: str):
