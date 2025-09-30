@@ -324,12 +324,12 @@ class DirectUpdateDeviceConfigDialog(BECWidget, DeviceConfigDialog):
     def _start_waiting_display(self):
         self._overlay_widget.setVisible(True)
         self._spinner.start()
-        QApplication.processEvents()
+        QApplication.processEvents()  # TODO check if this kills performance and scheduling!
 
     def _stop_waiting_display(self):
         self._overlay_widget.setVisible(False)
         self._spinner.stop()
-        QApplication.processEvents()
+        QApplication.processEvents()  # TODO check if this kills performance and scheduling!
 
 
 def main():  # pragma: no cover
