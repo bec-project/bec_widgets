@@ -440,7 +440,9 @@ class DeviceManagerView(BECWidget, QWidget):
         self.ophyd_test_view.change_device_configs(configs, True, True)
 
     ####### Default view has to be done with setting up splitters ########
-    def set_default_view(self, horizontal_weights: list, vertical_weights: list):
+    def set_default_view(
+        self, horizontal_weights: list, vertical_weights: list
+    ):  # TODO separate logic for all ads based widgets
         """Apply initial weights to every horizontal and vertical splitter.
 
         Examples:
@@ -463,7 +465,9 @@ class DeviceManagerView(BECWidget, QWidget):
 
         QTimer.singleShot(0, apply_all)
 
-    def set_stretch(self, *, horizontal=None, vertical=None):
+    def set_stretch(
+        self, *, horizontal=None, vertical=None
+    ):  # TODO separate logic for all ads based widgets
         """Update splitter weights and re-apply to all splitters.
 
         Accepts either a list/tuple of weights (e.g., [1,3,2,1]) or a role dict
