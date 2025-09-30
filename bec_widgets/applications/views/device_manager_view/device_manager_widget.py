@@ -9,13 +9,14 @@ from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from qtpy import QtCore, QtWidgets
 
-from bec_widgets.examples.device_manager_view.device_manager_view import DeviceManagerView
+from bec_widgets.applications.views.device_manager_view.device_manager_view import DeviceManagerView
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
 
 logger = bec_logger.logger
 
 
+#TODO what is this for???
 class DeviceManagerWidget(BECWidget, QtWidgets.QWidget):
 
     def __init__(self, parent=None, client=None):
