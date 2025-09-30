@@ -16,7 +16,6 @@ from bec_widgets.utils.error_popups import SafeSlot
 logger = bec_logger.logger
 
 
-#TODO what is this for???
 class DeviceManagerWidget(BECWidget, QtWidgets.QWidget):
 
     def __init__(self, parent=None, client=None):
@@ -38,9 +37,6 @@ class DeviceManagerWidget(BECWidget, QtWidgets.QWidget):
         self.stacked_layout.setCurrentWidget(self._overlay_widget)
 
     def _customize_overlay(self):
-        self._overlay_widget.setStyleSheet(
-            "background: qlineargradient(x1:0, y1:0, x2:0, y2:1,stop:0 #ffffff, stop:1 #e0e0e0);"
-        )
         self._overlay_widget.setAutoFillBackground(True)
         self._overlay_layout = QtWidgets.QVBoxLayout()
         self._overlay_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
@@ -89,13 +85,11 @@ class DeviceManagerWidget(BECWidget, QtWidgets.QWidget):
     def _load_config_clicked(self):
         """Handle click on 'Load Current Config' button."""
         config = self.client.device_manager._get_redis_device_config()
-        config.append({"name": "wrong_device", "some_value": 1})
         self.device_manager_view.device_table_view.set_device_config(config)
-        # self.device_manager_view.ophyd_test.on_device_config_update(config)
         self.stacked_layout.setCurrentWidget(self.device_manager_view)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import sys
 
     from qtpy.QtWidgets import QApplication
