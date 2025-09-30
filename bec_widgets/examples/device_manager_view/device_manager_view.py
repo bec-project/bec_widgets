@@ -96,6 +96,7 @@ class DeviceManagerView(BECWidget, QWidget):
         self._root_layout.setContentsMargins(0, 0, 0, 0)
         self._root_layout.setSpacing(0)
         self.dock_manager = CDockManager(self)
+        self.dock_manager.setStyleSheet("")
         self._root_layout.addWidget(self.dock_manager)
 
         # Available Resources Widget
@@ -277,7 +278,9 @@ class DeviceManagerView(BECWidget, QWidget):
 
         # Rerun validation
         rerun_validation = MaterialIconAction(
-            icon_name="checklist", parent=self, tooltip="Run device validation on selected devices"
+            icon_name="checklist",
+            parent=self,
+            tooltip="Run device validation with 'connect' on selected devices",
         )
         rerun_validation.action.triggered.connect(self._rerun_validation_action)
         self.toolbar.components.add_safe("rerun_validation", rerun_validation)
@@ -433,8 +436,8 @@ class DeviceManagerView(BECWidget, QWidget):
     @SafeSlot()
     def _rerun_validation_action(self):
         """Action for the 'rerun_validation' action to rerun validation on selected devices."""
-        # Implement the logic to rerun validation on selected devices
-        reply = self._coming_soon()
+        configs = self.device_table_view.table.selected_configs()
+        self.ophyd_test_view.change_device_configs(configs, True, True)
 
     ####### Default view has to be done with setting up splitters ########
     def set_default_view(self, horizontal_weights: list, vertical_weights: list):
