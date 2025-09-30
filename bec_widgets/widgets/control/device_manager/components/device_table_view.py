@@ -7,22 +7,13 @@ import json
 from contextlib import contextmanager
 from functools import partial
 from typing import TYPE_CHECKING, Any, Iterable, List
-from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from qtpy import QtCore, QtGui, QtWidgets
-from qtpy.QtCore import QModelIndex, QPersistentModelIndex, QPoint, QRect, QSize, Qt, QTimer
-from qtpy.QtWidgets import (
-    QAbstractItemView,
-    QHeaderView,
-    QMessageBox,
-    QStyle,
-    QStyleOption,
-    QStyleOptionViewItem,
-    QWidget,
-)
+from qtpy.QtCore import QModelIndex, QPersistentModelIndex, Qt, QTimer
+from qtpy.QtWidgets import QAbstractItemView, QHeaderView, QMessageBox
 from thefuzz import fuzz
 
 from bec_widgets.utils.bec_signal_proxy import BECSignalProxy
@@ -91,8 +82,8 @@ class CenterCheckBoxDelegate(CustomDisplayDelegate):
 
     def __init__(self, parent=None, colors=None):
         super().__init__(parent)
-        self._colors: AccentColors = colors if colors else get_accent_colors()  # type: ignore
-        _icon = partial(material_icon, size=(16, 16), color=self._colors.default, filled=True)
+        colors: AccentColors = colors if colors else get_accent_colors()  # type: ignore
+        _icon = partial(material_icon, size=(16, 16), color=colors.default, filled=True)
         self._icon_checked = _icon("check_box")
         self._icon_unchecked = _icon("check_box_outline_blank")
 
@@ -122,12 +113,12 @@ class DeviceValidatedDelegate(CustomDisplayDelegate):
 
     def __init__(self, parent=None, colors=None):
         super().__init__(parent)
-        self._colors = colors if colors else get_accent_colors()
+        colors = colors if colors else get_accent_colors()
         _icon = partial(material_icon, icon_name="circle", size=(12, 12), filled=True)
         self._icons = {
-            ValidationStatus.PENDING: _icon(color=self._colors.default),
-            ValidationStatus.VALID: _icon(color=self._colors.success),
-            ValidationStatus.FAILED: _icon(color=self._colors.emergency),
+            ValidationStatus.PENDING: _icon(color=colors.default),
+            ValidationStatus.VALID: _icon(color=colors.success),
+            ValidationStatus.FAILED: _icon(color=colors.emergency),
         }
 
     def apply_theme(self, theme: str | None = None):
@@ -750,6 +741,7 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
     ########### Slot API #################
     ######################################
 
+    # TODO RESIZING IS not working as it should be !!
     @SafeSlot()
     def _on_table_resized(self, *args):
         """Handle changes to the table column resizing."""
@@ -870,8 +862,8 @@ if __name__ == "__main__":
     button.clicked.connect(_button_clicked)
     # pylint: disable=protected-access
     config = window.client.device_manager._get_redis_device_config()
-    names = [cfg.pop("name") for cfg in config]
-    config_dict = {name: cfg for name, cfg in zip(names, config)}
-    window.set_device_config(config_dict)
+    # names = [cfg.pop("name") for cfg in config]
+    # config_dict = {name: cfg for name, cfg in zip(names, config)}
+    window.set_device_config(config)
     widget.show()
     sys.exit(app.exec_())
