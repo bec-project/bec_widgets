@@ -6,12 +6,13 @@ from qtpy.QtCore import QMetaObject, Qt
 from qtpy.QtWidgets import (
     QAbstractItemView,
     QComboBox,
-    QHBoxLayout,
+    QGridLayout,
     QLabel,
     QLineEdit,
     QListView,
     QListWidget,
     QListWidgetItem,
+    QSizePolicy,
     QVBoxLayout,
 )
 
@@ -66,14 +67,29 @@ class Ui_availableDeviceResources(object):
 
         self._add_toolbar()
 
-        self.search_layout = QHBoxLayout()
-        self.verticalLayout.addLayout(self.search_layout)
-        self.search_layout.addWidget(QLabel("Filter groups: "))
-        self.search_box = QLineEdit()
-        self.search_layout.addWidget(self.search_box)
-        self.search_layout.addWidget(QLabel("Group by: "))
+        # Main area with search and filter using a grid layout
+        self.search_layout = QVBoxLayout()
+        self.grid_layout = QGridLayout()
+
         self.grouping_selector = QComboBox()
-        self.search_layout.addWidget(self.grouping_selector)
+        self.grouping_selector.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        lbl_group = QLabel("Group by:")
+        lbl_group.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.grid_layout.addWidget(lbl_group, 0, 0)
+        self.grid_layout.addWidget(self.grouping_selector, 0, 1)
+
+        self.search_box = QLineEdit()
+        self.search_box.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        lbl_filter = QLabel("Filter:")
+        lbl_filter.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.grid_layout.addWidget(lbl_filter, 1, 0)
+        self.grid_layout.addWidget(self.search_box, 1, 1)
+
+        self.grid_layout.setColumnStretch(0, 0)
+        self.grid_layout.setColumnStretch(1, 1)
+
+        self.search_layout.addLayout(self.grid_layout)
+        self.verticalLayout.addLayout(self.search_layout)
 
         self.device_groups_list = _ListOfDeviceGroups(
             availableDeviceResources, AvailableDeviceGroup
