@@ -9,7 +9,6 @@ from bec_lib.logger import bec_logger
 from qtpy import QtCore, QtWidgets
 
 from bec_widgets.utils.bec_widget import BECWidget
-from bec_widgets.utils.colors import get_accent_colors, get_theme_palette
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.editors.monaco.monaco_widget import MonacoWidget
 
@@ -78,6 +77,24 @@ if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
+    widget = QtWidgets.QWidget()
+    layout = QtWidgets.QVBoxLayout(widget)
+    widget.setLayout(layout)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(0)
     config_view = DMConfigView()
-    config_view.show()
+    layout.addWidget(config_view)
+    combo_box = QtWidgets.QComboBox()
+    config = config_view.client.device_manager._get_redis_device_config()
+    combo_box.addItems([""] + [str(v) for v, item in enumerate(config)])
+
+    def on_select(text):
+        if text == "":
+            config_view.on_select_config([])
+        else:
+            config_view.on_select_config([config[int(text)]])
+
+    combo_box.currentTextChanged.connect(on_select)
+    layout.addWidget(combo_box)
+    widget.show()
     sys.exit(app.exec_())

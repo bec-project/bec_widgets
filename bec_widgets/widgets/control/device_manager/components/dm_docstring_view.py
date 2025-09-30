@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import inspect
 import re
+import textwrap
 import traceback
 
 from bec_lib.logger import bec_logger
@@ -26,6 +27,45 @@ except ImportError:
     ophyd = None
 
 
+def docstring_to_markdown(obj) -> str:
+    """
+    Convert a Python docstring to Markdown suitable for QTextEdit.setMarkdown.
+    """
+    raw = inspect.getdoc(obj) or "*No docstring available.*"
+
+    # Dedent and normalize newlines
+    text = textwrap.dedent(raw).strip()
+
+    md = ""
+    if hasattr(obj, "__name__"):
+        md += f"# {obj.__name__}\n\n"
+
+    # Highlight section headers for Markdown
+    headers = ["Parameters", "Args", "Returns", "Raises", "Attributes", "Examples", "Notes"]
+    for h in headers:
+        doc = re.sub(rf"(?m)^({h})\s*:?\s*$", rf"### \1", text)
+
+    # Preserve code blocks (4+ space indented lines)
+    def fence_code(match: re.Match) -> str:
+        block = re.sub(r"^ {4}", "", match.group(0), flags=re.M)
+        return f"```\n{block}\n```"
+
+    doc = re.sub(r"(?m)(^ {4,}.*(\n {4,}.*)*)", fence_code, text)
+
+    # Preserve normal line breaks for Markdown
+    lines = doc.splitlines()
+    processed_lines = []
+    for line in lines:
+        if line.strip() == "":
+            processed_lines.append("")
+        else:
+            processed_lines.append(line + "  ")
+    doc = "\n".join(processed_lines)
+
+    md += doc
+    return md
+
+
 class DocstringView(QtWidgets.QTextEdit):
     def __init__(self, parent: QtWidgets.QWidget | None = None):
         super().__init__(parent)
@@ -36,60 +76,9 @@ class DocstringView(QtWidgets.QTextEdit):
             self.setEnabled(False)
             return
 
-    def _format_docstring(self, doc: str | None) -> str:
-        if not doc:
-            return "<i>No docstring available.</i>"
-
-        # Escape HTML
-        doc = doc.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-
-        # Remove leading/trailing blank lines from the entire docstring
-        lines = [line.rstrip() for line in doc.splitlines()]
-        while lines and lines[0].strip() == "":
-            lines.pop(0)
-        while lines and lines[-1].strip() == "":
-            lines.pop()
-        doc = "\n".join(lines)
-
-        # Improved regex: match section header + all following indented lines
-        section_regex = re.compile(
-            r"(?m)^(Parameters|Args|Returns|Examples|Attributes|Raises)\b(?:\n([ \t]+.*))*",
-            re.MULTILINE,
-        )
-
-        def strip_section(match: re.Match) -> str:
-            # Capture all lines in the match
-            block = match.group(0)
-            lines = block.splitlines()
-            # Remove leading/trailing empty lines within the section
-            lines = [line for line in lines if line.strip() != ""]
-            return "\n".join(lines)
-
-        doc = section_regex.sub(strip_section, doc)
-
-        # Highlight section titles
-        doc = re.sub(
-            r"(?m)^(Parameters|Args|Returns|Examples|Attributes|Raises)\b", r"<b>\1</b>", doc
-        )
-
-        # Convert indented blocks to <pre> and strip leading/trailing newlines
-        def pre_block(match: re.Match) -> str:
-            text = match.group(0).strip("\n")
-            return f"<pre>{text}</pre>"
-
-        doc = re.sub(r"(?m)(?:\n[ \t]+.*)+", pre_block, doc)
-
-        # Replace remaining newlines with <br> and collapse multiple <br>
-        doc = doc.replace("\n", "<br>")
-        doc = re.sub(r"(<br>)+", r"<br>", doc)
-        doc = doc.strip("<br>")
-
-        return f"<div style='font-family: sans-serif; font-size: 12pt;'>{doc}</div>"
-
     def _set_text(self, text: str):
         self.setReadOnly(False)
         self.setMarkdown(text)
-        # self.setHtml(self._format_docstring(text))
         self.setReadOnly(True)
 
     @SafeSlot(list)
@@ -102,17 +91,15 @@ class DocstringView(QtWidgets.QTextEdit):
 
     @SafeSlot(str)
     def set_device_class(self, device_class_str: str) -> None:
-        docstring = ""
         if not READY_TO_VIEW:
             return
         try:
             module_cls = get_plugin_class(device_class_str, [ophyd_devices, ophyd])
-            docstring = inspect.getdoc(module_cls)
-            self._set_text(docstring or "No docstring available.")
+            markdown = docstring_to_markdown(module_cls)
+            self._set_text(markdown)
         except Exception:
-            content = traceback.format_exc()
-            logger.error(f"Error retrieving docstring for {device_class_str}: {content}")
-            self._set_text(f"Error retrieving docstring for {device_class_str}")
+            logger.exception("Error retrieving docstring")
+            self._set_text(f"*Error retrieving docstring for `{device_class_str}`*")
 
 
 if __name__ == "__main__":
@@ -121,7 +108,26 @@ if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
+    widget = QtWidgets.QWidget()
+    layout = QtWidgets.QVBoxLayout(widget)
+    widget.setLayout(layout)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(0)
+
     config_view = DocstringView()
     config_view.set_device_class("ophyd_devices.sim.sim_camera.SimCamera")
-    config_view.show()
+    layout.addWidget(config_view)
+    combo = QtWidgets.QComboBox()
+    combo.addItems(
+        [
+            "",
+            "ophyd_devices.sim.sim_camera.SimCamera",
+            "ophyd.EpicsSignalWithRBV",
+            "ophyd.EpicsMotor",
+            "csaxs_bec.devices.epics.mcs_card.mcs_card_csaxs.MCSCardCSAXS",
+        ]
+    )
+    combo.currentTextChanged.connect(config_view.set_device_class)
+    layout.addWidget(combo)
+    widget.show()
     sys.exit(app.exec_())

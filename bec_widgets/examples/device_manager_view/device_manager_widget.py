@@ -100,10 +100,24 @@ if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
+    from bec_widgets.utils.colors import apply_theme
+
+    apply_theme("light")
+
+    widget = QtWidgets.QWidget()
+    layout = QtWidgets.QVBoxLayout(widget)
+    widget.setLayout(layout)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(0)
     device_manager = DeviceManagerWidget()
     # config = device_manager.client.device_manager._get_redis_device_config()
     # device_manager.device_table_view.set_device_config(config)
-    device_manager.show()
+    layout.addWidget(device_manager)
+    from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
+
+    dark_mode_button = DarkModeButton()
+    layout.addWidget(dark_mode_button)
+    widget.show()
     device_manager.setWindowTitle("Device Manager View")
     device_manager.resize(1600, 1200)
     # developer_view.set_stretch(horizontal=[1, 3, 2], vertical=[5, 5]) #can be set during runtime

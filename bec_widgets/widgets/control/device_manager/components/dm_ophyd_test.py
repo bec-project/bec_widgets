@@ -83,23 +83,23 @@ class DeviceTester(QtCore.QRunnable):
                 continue
             with self._lock:
                 if len(self._pending_queue) > 0:
-                    item, cfg = self._pending_queue.pop()
+                    item, cfg, connect = self._pending_queue.pop()
                     self._active.add(item)
-                    fut = self._test_executor.submit(self._run_test, item, {item: cfg})
+                    fut = self._test_executor.submit(self._run_test, item, {item: cfg}, connect)
                     fut.__dict__["__device_name"] = item
                     fut.add_done_callback(self._done_cb)
             self._safe_check_and_clear()
         self._cleanup()
 
-    def submit(self, devices: Iterable[tuple[str, dict]]):
+    def submit(self, devices: Iterable[tuple[str, dict, bool]]):
         with self._lock:
             self._pending_queue.extend(devices)
             self._pending_event.set()
 
     @staticmethod
-    def _run_test(name: str, config: dict) -> tuple[str, bool, str]:
+    def _run_test(name: str, config: dict, connect: bool) -> tuple[str, bool, str]:
         tester = StaticDeviceTest(config_dict=config)  # type: ignore # we exit early if it is None
-        results = tester.run_with_list_output(connect=False)
+        results = tester.run_with_list_output(connect=connect)
         return name, results[0].success, results[0].message
 
     def _safe_check_and_clear(self):
@@ -164,7 +164,6 @@ class ValidationListItem(QtWidgets.QWidget):
     def _start_spinner(self):
         """Start the spinner animation."""
         self._spinner.start()
-        QtWidgets.QApplication.processEvents()
 
     def _stop_spinner(self):
         """Stop the spinner animation."""
@@ -197,6 +196,8 @@ class DMOphydTest(BECWidget, QtWidgets.QWidget):
 
     # Signal to emit the validation status of a device
     device_validated = QtCore.Signal(str, int)
+    # validation_msg in markdown format
+    validation_msg_md = QtCore.Signal(str)
 
     def __init__(self, parent=None, client=None):
         super().__init__(parent=parent, client=client)
@@ -208,18 +209,18 @@ class DMOphydTest(BECWidget, QtWidgets.QWidget):
             self.tester.signals.device_validated.connect(self._on_device_validated)
             QtCore.QThreadPool.globalInstance().start(self.tester)
         self._device_list_items: dict[str, QtWidgets.QListWidgetItem] = {}
-        self._thread_pool = QtCore.QThreadPool(maxThreadCount=1)
+        # TODO Consider using the thread pool from BECConnector instead of fetching the global instance!
+        self._thread_pool = QtCore.QThreadPool.globalInstance()
 
         self._main_layout = QtWidgets.QVBoxLayout(self)
         self._main_layout.setContentsMargins(0, 0, 0, 0)
-        self._main_layout.setSpacing(4)
+        self._main_layout.setSpacing(0)
 
         # We add a splitter between the list and the text box
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Vertical)
         self._main_layout.addWidget(self.splitter)
 
         self._setup_list_ui()
-        self._setup_textbox_ui()
 
     def _setup_list_ui(self):
         """Setup the list UI."""
@@ -229,15 +230,11 @@ class DMOphydTest(BECWidget, QtWidgets.QWidget):
         # Connect signals
         self._list_widget.currentItemChanged.connect(self._on_current_item_changed)
 
-    def _setup_textbox_ui(self):
-        """Setup the text box UI."""
-        self._text_box = QtWidgets.QTextEdit(self)
-        self._text_box.setReadOnly(True)
-        self._text_box.setFocusPolicy(QtCore.Qt.NoFocus)
-        self.splitter.addWidget(self._text_box)
-
-    @SafeSlot(dict)
-    def change_device_configs(self, device_configs: list[dict[str, Any]], added: bool) -> None:
+    @SafeSlot(list, bool)
+    @SafeSlot(list, bool, bool)
+    def change_device_configs(
+        self, device_configs: list[dict[str, Any]], added: bool, connect: bool = False
+    ) -> None:
         """Receive an update with device configs.
 
         Args:
@@ -250,7 +247,7 @@ class DMOphydTest(BECWidget, QtWidgets.QWidget):
                     continue
                 if self.tester:
                     self._add_device(name, cfg)
-                    self.tester.submit([(name, cfg)])
+                    self.tester.submit([(name, cfg, connect)])
                 continue
             if name not in self._device_list_items:
                 continue
@@ -314,62 +311,39 @@ class DMOphydTest(BECWidget, QtWidgets.QWidget):
         widget: ValidationListItem = self._list_widget.itemWidget(current)
         if widget:
             try:
-                formatted_html = self._format_validation_message(widget.validation_msg)
-                self._text_box.setHtml(formatted_html)
+                formatted_md = self._format_markdown_text(widget.device_name, widget.validation_msg)
+                self.validation_msg_md.emit(formatted_md)
             except Exception as e:
-                logger.error(f"Error formatting validation message: {e}")
-                self._text_box.setPlainText(widget.validation_msg)
+                logger.error(
+                    f"##Error formatting validation message for device {widget.device_name}:\n{e}"
+                )
+                self.validation_msg_md.emit(widget.validation_msg)
+        else:
+            self.validation_msg_md.emit("")
 
-    def _format_validation_message(self, raw_msg: str) -> str:
+    def _format_markdown_text(self, device_name: str, raw_msg: str) -> str:
         """Simple HTML formatting for validation messages, wrapping text naturally."""
         if not raw_msg.strip():
-            return "<i>Validation in progress...</i>"
+            return f"### Validation in progress for {device_name}... \n\n"
         if raw_msg == "Validation in progress...":
-            return "<i>Validation in progress...</i>"
+            return f"### Validation in progress for {device_name}... \n\n"
 
-        raw_msg = escape(raw_msg)
+        m = re.search(r"ERROR:\s*([^\s]+)\s+is not valid:\s*(.+?errors?)", raw_msg)
+        device, summary = m.group(1), m.group(2)
+        lines = [f"## Error for '{device}'", f"'{device}' is not valid: {summary}"]
 
-        # Split into lines
-        lines = raw_msg.splitlines()
-        summary = lines[0] if lines else "Validation Result"
-        rest = "\n".join(lines[1:]).strip()
-
-        # Split traceback / final ERROR
-        tb_match = re.search(r"(Traceback.*|ERROR:.*)$", rest, re.DOTALL | re.MULTILINE)
-        if tb_match:
-            main_text = rest[: tb_match.start()].strip()
-            error_detail = tb_match.group().strip()
-        else:
-            main_text = rest
-            error_detail = ""
-
-        # Highlight field names in orange (simple regex for word: Field)
-        main_text_html = re.sub(
-            r"(\b\w+\b)(?=: Field required)",
-            r'<span style="color:#FF8C00; font-weight:bold;">\1</span>',
-            main_text,
-        )
-        # Wrap in div for monospace, allowing wrapping
-        main_text_html = (
-            f'<div style="white-space: pre-wrap;">{main_text_html}</div>' if main_text_html else ""
+        # Find each field block:  \n<field>\n  Field required ...
+        field_pat = re.compile(
+            r"\n(?P<field>\w+)\n\s+(?P<rest>Field required.*?(?=\n\w+\n|$))", re.DOTALL
         )
 
-        # Traceback / error in red
-        error_html = (
-            f'<div style="white-space: pre-wrap; color:#A00000;">{error_detail}</div>'
-            if error_detail
-            else ""
-        )
+        for m in field_pat.finditer(raw_msg):
+            field = m.group("field")
+            rest = m.group("rest").rstrip()
+            lines.append(f"### {field}")
+            lines.append(rest)
 
-        # Summary at top, dark red
-        html = (
-            f'<div style="font-family: monospace; font-size:13px; white-space: pre-wrap;">'
-            f'<div style="font-weight:bold; color:#8B0000; margin-bottom:4px;">{summary}</div>'
-            f"{main_text_html}"
-            f"{error_html}"
-            f"</div>"
-        )
-        return html
+        return "\n".join(lines)
 
     def validation_running(self):
         return self._device_list_items != {}
@@ -382,6 +356,7 @@ class DMOphydTest(BECWidget, QtWidgets.QWidget):
             logger.error("Failed to wait for threads to finish. Removing items from the list.")
         self._device_list_items.clear()
         self._list_widget.clear()
+        self.validation_msg_md.emit("")
 
     def remove_device(self, device_name: str):
         """Remove a device from the list."""
@@ -404,12 +379,32 @@ if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
+    wid = QtWidgets.QWidget()
+    layout = QtWidgets.QVBoxLayout(wid)
+    wid.setLayout(layout)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(0)
     device_manager_ophyd_test = DMOphydTest()
-    config_path = "/Users/appel_c/work_psi_awi/bec_workspace/csaxs_bec/csaxs_bec/device_configs/endstation.yaml"
-    cfg = yaml_load(config_path)
-    cfg.update({"device_will_fail": {"name": "device_will_fail", "some_param": 1}})
-    device_manager_ophyd_test.add_device_configs(cfg)
-    device_manager_ophyd_test.show()
+    try:
+        config_path = "/Users/appel_c/work_psi_awi/bec_workspace/csaxs_bec/csaxs_bec/device_configs/endstation.yaml"
+        config = [{"name": k, **v} for k, v in yaml_load(config_path).items()]
+    except Exception as e:
+        logger.error(f"Error loading config: {e}")
+        import os
+
+        import bec_lib
+
+        config_path = os.path.join(os.path.dirname(bec_lib.__file__), "configs", "demo_config.yaml")
+        config = [{"name": k, **v} for k, v in yaml_load(config_path).items()]
+
+    config.append({"name": "non_existing_device", "type": "NonExistingDevice"})
+    device_manager_ophyd_test.change_device_configs(config, True, True)
+    layout.addWidget(device_manager_ophyd_test)
     device_manager_ophyd_test.setWindowTitle("Device Manager Ophyd Test")
     device_manager_ophyd_test.resize(800, 600)
+    text_box = QtWidgets.QTextEdit()
+    text_box.setReadOnly(True)
+    layout.addWidget(text_box)
+    device_manager_ophyd_test.validation_msg_md.connect(text_box.setMarkdown)
+    wid.show()
     sys.exit(app.exec_())
