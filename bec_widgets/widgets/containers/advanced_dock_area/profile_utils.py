@@ -1,5 +1,6 @@
 import os
 
+from bec_lib.client import BECClient
 from PySide6QtAds import CDockWidget
 from qtpy.QtCore import QSettings
 
@@ -9,7 +10,18 @@ _USER_PROFILES_DIR = os.path.join(os.path.dirname(__file__), "states", "user")
 
 
 def profiles_dir() -> str:
-    path = os.environ.get("BECWIDGETS_PROFILE_DIR", _USER_PROFILES_DIR)
+    client = BECClient()
+    bec_widgets_settings = client._service_config.config.get("bec_widgets_settings")
+    if bec_widgets_settings is not None:
+        bec_widgets_setting_path = bec_widgets_settings.get("base_path")
+    else:
+        bec_widgets_setting_path = None
+    if bec_widgets_setting_path:
+        default_path = os.path.join(bec_widgets_setting_path, "profiles")
+    else:
+        default_path = _USER_PROFILES_DIR
+
+    path = os.environ.get("BECWIDGETS_PROFILE_DIR", default_path)
     os.makedirs(path, exist_ok=True)
     return path
 
