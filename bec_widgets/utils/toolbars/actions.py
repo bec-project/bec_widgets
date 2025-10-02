@@ -33,6 +33,26 @@ logger = bec_logger.logger
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 
+def create_action_with_text(toolbar_action, toolbar: QToolBar):
+    """
+    Helper function to create a toolbar button with text beside or under the icon.
+
+    Args:
+        toolbar_action(ToolBarAction): The toolbar action to create the button for.
+        toolbar(ModularToolBar): The toolbar to add the button to.
+    """
+
+    btn = QToolButton(parent=toolbar)
+    btn.setDefaultAction(toolbar_action.action)
+    btn.setAutoRaise(True)
+    if toolbar_action.text_position == "under":
+        btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+    else:
+        btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+    btn.setText(toolbar_action.label_text)
+    toolbar.addWidget(btn)
+
+
 class NoCheckDelegate(QStyledItemDelegate):
     """To reduce space in combo boxes by removing the checkmark."""
 
@@ -114,15 +134,39 @@ class SeparatorAction(ToolBarAction):
 
 
 class QtIconAction(ToolBarAction):
-    def __init__(self, standard_icon, tooltip=None, checkable=False, parent=None):
+    def __init__(
+        self,
+        standard_icon,
+        tooltip=None,
+        checkable=False,
+        label_text: str | None = None,
+        text_position: Literal["beside", "under"] | None = None,
+        parent=None,
+    ):
+        """
+        Action with a standard Qt icon for the toolbar.
+
+        Args:
+            standard_icon: The standard icon from QStyle.
+            tooltip(str, optional): The tooltip for the action. Defaults to None.
+            checkable(bool, optional): Whether the action is checkable. Defaults to False.
+            label_text(str | None, optional): Optional label text to display beside or under the icon.
+            text_position(Literal["beside", "under"] | None, optional): Position of text relative to icon.
+            parent(QWidget or None, optional): Parent widget for the underlying QAction.
+        """
         super().__init__(icon_path=None, tooltip=tooltip, checkable=checkable)
         self.standard_icon = standard_icon
         self.icon = QApplication.style().standardIcon(standard_icon)
         self.action = QAction(icon=self.icon, text=self.tooltip, parent=parent)
         self.action.setCheckable(self.checkable)
+        self.label_text = label_text
+        self.text_position = text_position
 
     def add_to_toolbar(self, toolbar, target):
-        toolbar.addAction(self.action)
+        if self.label_text is not None:
+            create_action_with_text(toolbar_action=self, toolbar=toolbar)
+        else:
+            toolbar.addAction(self.action)
 
     def get_icon(self):
         return self.icon
@@ -139,6 +183,8 @@ class MaterialIconAction(ToolBarAction):
         filled (bool, optional): Whether the icon is filled. Defaults to False.
         color (str | tuple | QColor | dict[Literal["dark", "light"], str] | None, optional): The color of the icon.
             Defaults to None.
+        label_text (str | None, optional): Optional label text to display beside or under the icon.
+        text_position (Literal["beside", "under"] | None, optional): Position of text relative to icon.
         parent (QWidget or None, optional): Parent widget for the underlying QAction.
     """
 
@@ -149,12 +195,20 @@ class MaterialIconAction(ToolBarAction):
         checkable: bool = False,
         filled: bool = False,
         color: str | tuple | QColor | dict[Literal["dark", "light"], str] | None = None,
+        label_text: str | None = None,
+        text_position: Literal["beside", "under"] | None = None,
         parent=None,
     ):
+        """
+        MaterialIconAction for toolbar: if label_text and text_position are provided, show text beside or under icon.
+        This enables per-action icon text without breaking the existing API.
+        """
         super().__init__(icon_path=None, tooltip=tooltip, checkable=checkable)
         self.icon_name = icon_name
         self.filled = filled
         self.color = color
+        self.label_text = label_text
+        self.text_position = text_position
         # Generate the icon using the material_icon helper
         self.icon = material_icon(
             self.icon_name,
@@ -178,7 +232,10 @@ class MaterialIconAction(ToolBarAction):
             toolbar(QToolBar): The toolbar to add the action to.
             target(QWidget): The target widget for the action.
         """
-        toolbar.addAction(self.action)
+        if self.label_text is not None:
+            create_action_with_text(toolbar_action=self, toolbar=toolbar)
+        else:
+            toolbar.addAction(self.action)
 
     def get_icon(self):
         """
