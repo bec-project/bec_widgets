@@ -218,7 +218,10 @@ class DeviceManagerView(BECWidget, QWidget):
         io_bundle = ToolbarBundle("IO", self.toolbar.components)
 
         load = MaterialIconAction(
-            icon_name="file_open", parent=self, tooltip="Load configuration file from disk"
+            icon_name="file_open",
+            parent=self,
+            tooltip="Load configuration file from disk",
+            label_text="Load Config",
         )
         self.toolbar.components.add_safe("load", load)
         load.action.triggered.connect(self._load_file_action)
@@ -226,7 +229,10 @@ class DeviceManagerView(BECWidget, QWidget):
 
         # Add safe to disk
         safe_to_disk = MaterialIconAction(
-            icon_name="file_save", parent=self, tooltip="Save config to disk"
+            icon_name="file_save",
+            parent=self,
+            tooltip="Save config to disk",
+            label_text="Save Config",
         )
         self.toolbar.components.add_safe("safe_to_disk", safe_to_disk)
         safe_to_disk.action.triggered.connect(self._save_to_disk_action)
@@ -234,7 +240,10 @@ class DeviceManagerView(BECWidget, QWidget):
 
         # Add load config from redis
         load_redis = MaterialIconAction(
-            icon_name="cached", parent=self, tooltip="Load current config from Redis"
+            icon_name="cached",
+            parent=self,
+            tooltip="Load current config from Redis",
+            label_text="Reload Config",
         )
         load_redis.action.triggered.connect(self._load_redis_action)
         self.toolbar.components.add_safe("load_redis", load_redis)
@@ -242,7 +251,10 @@ class DeviceManagerView(BECWidget, QWidget):
 
         # Update config action
         update_config_redis = MaterialIconAction(
-            icon_name="cloud_upload", parent=self, tooltip="Update current config in Redis"
+            icon_name="cloud_upload",
+            parent=self,
+            tooltip="Update current config in Redis",
+            label_text="Update Config",
         )
         update_config_redis.action.triggered.connect(self._update_redis_action)
         self.toolbar.components.add_safe("update_config_redis", update_config_redis)
@@ -258,20 +270,27 @@ class DeviceManagerView(BECWidget, QWidget):
 
         # Reset composed view
         reset_composed = MaterialIconAction(
-            icon_name="delete_sweep", parent=self, tooltip="Reset current composed config view"
+            icon_name="delete_sweep",
+            parent=self,
+            tooltip="Reset current composed config view",
+            label_text="Reset Config",
         )
         reset_composed.action.triggered.connect(self._reset_composed_view)
         self.toolbar.components.add_safe("reset_composed", reset_composed)
         table_bundle.add_action("reset_composed")
 
         # Add device
-        add_device = MaterialIconAction(icon_name="add", parent=self, tooltip="Add new device")
+        add_device = MaterialIconAction(
+            icon_name="add", parent=self, tooltip="Add new device", label_text="Add Device"
+        )
         add_device.action.triggered.connect(self._add_device_action)
         self.toolbar.components.add_safe("add_device", add_device)
         table_bundle.add_action("add_device")
 
         # Remove device
-        remove_device = MaterialIconAction(icon_name="remove", parent=self, tooltip="Remove device")
+        remove_device = MaterialIconAction(
+            icon_name="remove", parent=self, tooltip="Remove device", label_text="Remove Device"
+        )
         remove_device.action.triggered.connect(self._remove_device_action)
         self.toolbar.components.add_safe("remove_device", remove_device)
         table_bundle.add_action("remove_device")
@@ -281,6 +300,7 @@ class DeviceManagerView(BECWidget, QWidget):
             icon_name="checklist",
             parent=self,
             tooltip="Run device validation with 'connect' on selected devices",
+            label_text="Rerun Validation",
         )
         rerun_validation.action.triggered.connect(self._rerun_validation_action)
         self.toolbar.components.add_safe("rerun_validation", rerun_validation)
