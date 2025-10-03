@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import copy
 import json
+import textwrap
 from contextlib import contextmanager
 from functools import partial
 from typing import TYPE_CHECKING, Any, Iterable, List
 from uuid import uuid4
 
+from bec_lib.atlas_models import Device
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from qtpy import QtCore, QtGui, QtWidgets
@@ -21,7 +23,10 @@ from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.widgets.control.device_manager.components._util import SharedSelectionSignal
-from bec_widgets.widgets.control.device_manager.components.constants import MIME_DEVICE_CONFIG
+from bec_widgets.widgets.control.device_manager.components.constants import (
+    HEADERS_HELP_MD,
+    MIME_DEVICE_CONFIG,
+)
 from bec_widgets.widgets.control.device_manager.components.dm_ophyd_test import ValidationStatus
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -75,6 +80,111 @@ class CustomDisplayDelegate(DictToolTipDelegate):
         painter.restore()
 
 
+class WrappingTextDelegate(CustomDisplayDelegate):
+    """A lightweight delegate that wraps text without expensive size recalculation."""
+
+    def __init__(self, parent=None, max_width=300, margin=6):
+        super().__init__(parent)
+        self._parent = parent
+        self.max_width = max_width
+        self.margin = margin
+        self._cache = {}  # cache text metrics for performance
+
+    def _do_custom_paint(self, painter, option, index, value: str):
+        text = str(value)
+        if not text:
+            return
+        painter.save()
+        painter.setClipRect(option.rect)
+
+        # Use cached layout if available
+        cache_key = (text, option.rect.width())
+        layout = self._cache.get(cache_key)
+        if layout is None:
+            layout = QtGui.QTextLayout(text, option.font)
+            layout.beginLayout()
+            height = 0
+            while True:
+                line = layout.createLine()
+                if not line.isValid():
+                    break
+                line.setLineWidth(option.rect.width() - self.margin)
+                line.setPosition(QtCore.QPointF(self.margin / 2, height))
+                height += line.height()
+            layout.endLayout()
+            self._cache[cache_key] = layout
+
+        # # Draw background if selected
+        # if option.state & QtWidgets.QStyle.State_Selected:
+        #     painter.fillRect(option.rect, option.palette.highlight())
+
+        # Draw text
+        painter.setPen(option.palette.text().color())
+        layout.draw(painter, option.rect.topLeft())
+
+        painter.restore()
+
+    def sizeHint(self, option, index):
+        """Return a cached or approximate height; avoids costly recomputation."""
+        text = str(index.data(QtCore.Qt.DisplayRole) or "")
+        view = self._parent
+        view.initViewItemOption(option)
+        if view.isColumnHidden(index.column()) or not view.isVisible() or not text:
+            return QtCore.QSize(0, option.fontMetrics.height() + 2 * self.margin)
+
+        # Use cache for consistent size computation
+        cache_key = (text, self.max_width)
+        if cache_key in self._cache:
+            layout = self._cache[cache_key]
+            height = 0
+            for i in range(layout.lineCount()):
+                height += layout.lineAt(i).height()
+            return QtCore.QSize(self.max_width, int(height + self.margin))
+
+        # Approximate without layout (fast path)
+        metrics = option.fontMetrics
+        pixel_width = max(self._parent.columnWidth(index.column()), 100)
+        if pixel_width > 2000:  # safeguard against uninitialized columns, may return large values
+            pixel_width = 100
+        char_per_line = self.estimate_chars_per_line(text, option, pixel_width - 2 * self.margin)
+        wrapped_lines = textwrap.wrap(text, width=char_per_line)
+        lines = len(wrapped_lines)
+        return QtCore.QSize(pixel_width, lines * (metrics.height()) + 2 * self.margin)
+
+    def estimate_chars_per_line(self, text: str, option, column_width: int) -> int:
+        """Estimate number of characters that fit in a line for given width."""
+        metrics = option.fontMetrics
+        elided = metrics.elidedText(text, Qt.ElideRight, column_width)
+        return len(elided.rstrip("…"))
+
+    @SafeSlot(int, int, int)
+    def _on_section_resized(self, logical_index, old_size=None, new_size=None):
+        """Only update rows if a wrapped column was resized."""
+        self._cache.clear()
+        self._update_row_heights()
+
+    def _update_row_heights(self):
+        """Efficiently adjust row heights based on wrapped columns."""
+        view = self._parent
+        proxy = view.model()
+        model = proxy.sourceModel()
+        option = QtWidgets.QStyleOptionViewItem()
+        view.initViewItemOption(option)
+        # wrapping delegates
+        wrap_delegate_columns = []
+        for row in range(proxy.rowCount()):
+            max_height = 18
+            for column in [5, 6]:  # TODO don't hardcode columns.. to be improved
+                index = proxy.index(row, column)
+                # model_index = proxy.mapToSource(index)
+                # delegate = view.itemDelegateForColumn(model_index) or view.itemDelegate()
+                delegate = view.itemDelegateForColumn(column)
+                hint = delegate.sizeHint(option, index)
+                max_height = max(max_height, hint.height())
+            if view.rowHeight(row) != max_height:
+                view.setRowHeight(row, max_height)
+
+
 class CenterCheckBoxDelegate(CustomDisplayDelegate):
     """Custom checkbox delegate to center checkboxes in table cells."""
 
@@ -89,8 +199,9 @@ class CenterCheckBoxDelegate(CustomDisplayDelegate):
 
     def apply_theme(self, theme: str | None = None):
         colors = get_accent_colors()
-        self._icon_checked.setColor(colors.default)
-        self._icon_unchecked.setColor(colors.default)
+        _icon = partial(material_icon, size=(16, 16), color=colors.default, filled=True)
+        self._icon_checked = _icon("check_box")
+        self._icon_unchecked = _icon("check_box_outline_blank")
 
     def _do_custom_paint(self, painter, option, index, value):
         pixmap = self._icon_checked if value == Qt.CheckState.Checked else self._icon_unchecked
@@ -123,8 +234,12 @@ class DeviceValidatedDelegate(CustomDisplayDelegate):
 
     def apply_theme(self, theme: str | None = None):
         colors = get_accent_colors()
-        for status, icon in self._icons.items():
-            icon.setColor(colors[status])
+        _icon = partial(material_icon, icon_name="circle", size=(12, 12), filled=True)
+        self._icons = {
+            ValidationStatus.PENDING: _icon(color=colors.default),
+            ValidationStatus.VALID: _icon(color=colors.success),
+            ValidationStatus.FAILED: _icon(color=colors.emergency),
+        }
 
     def _do_custom_paint(self, painter, option, index, value):
         if pixmap := self._icons.get(value):
@@ -148,15 +263,19 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
         self._device_config: list[dict[str, Any]] = []
         self._validation_status: dict[str, ValidationStatus] = {}
         self.headers = [
-            "",
+            "status",
             "name",
             "deviceClass",
             "readoutPriority",
+            "onFailure",
             "deviceTags",
+            "description",
             "enabled",
             "readOnly",
+            "softwareTrigger",
         ]
         self._checkable_columns_enabled = {"enabled": True, "readOnly": True}
+        self._device_model_schema = Device.model_json_schema()
 
     ###############################################
     ########## Override custom Qt methods #########
@@ -172,6 +291,8 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
 
     def headerData(self, section, orientation, role=int(Qt.ItemDataRole.DisplayRole)):
         if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
+            if section == 9:  # softwareTrigger
+                return "softTrig"
             return self.headers[section]
         return None
 
@@ -192,20 +313,24 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
             return self._validation_status.get(dev_name, ValidationStatus.PENDING)
 
         key = self.headers[col]
-        value = self._device_config[row].get(key)
+        value = self._device_config[row].get(key, None)
+        if value is None:
+            value = (
+                self._device_model_schema.get("properties", {}).get(key, {}).get("default", None)
+            )
 
         if role == Qt.ItemDataRole.DisplayRole:
-            if key in ("enabled", "readOnly"):
+            if key in ("enabled", "readOnly", "softwareTrigger"):
                 return bool(value)
             if key == "deviceTags":
                 return ", ".join(str(tag) for tag in value) if value else ""
             if key == "deviceClass":
                 return str(value).split(".")[-1]
             return str(value) if value is not None else ""
-        if role == USER_CHECK_DATA_ROLE and key in ("enabled", "readOnly"):
+        if role == USER_CHECK_DATA_ROLE and key in ("enabled", "readOnly", "softwareTrigger"):
             return Qt.CheckState.Checked if value else Qt.CheckState.Unchecked
         if role == Qt.ItemDataRole.TextAlignmentRole:
-            if key in ("enabled", "readOnly"):
+            if key in ("enabled", "readOnly", "softwareTrigger"):
                 return Qt.AlignmentFlag.AlignCenter
             return Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
         if role == Qt.ItemDataRole.FontRole:
@@ -223,7 +348,7 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
             Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsDropEnabled
         )
 
-        if key in ("enabled", "readOnly"):
+        if key in ("enabled", "readOnly", "softwareTrigger"):
             if self._checkable_columns_enabled.get(key, True):
                 return base_flags | Qt.ItemFlag.ItemIsUserCheckable
             else:
@@ -245,7 +370,7 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
         if not index.isValid():
             return False
         key = self.headers[index.column()]
-        if key in ("enabled", "readOnly") and role == USER_CHECK_DATA_ROLE:
+        if key in ("enabled", "readOnly", "softwareTrigger") and role == USER_CHECK_DATA_ROLE:
             if not self._checkable_columns_enabled.get(key, True):
                 return False  # ignore changes if column is disabled
             self._device_config[index.row()][key] = value == Qt.CheckState.Checked
@@ -301,6 +426,7 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
             if self._name_exists_in_config(name := cfg.get("name", "<not found>"), True):
                 logger.warning(f"Device {name} already exists in the model.")
                 already_in_list.append(name)
+                # TODO add a warning that some devices were already in the list, how is this handled...
                 continue
             row = len(self._device_config)
             self.beginInsertRows(QtCore.QModelIndex(), row, row)
@@ -489,6 +615,12 @@ class DeviceFilterProxyModel(QtCore.QSortFilterProxyModel):
         self._filter_text = ""
         self._enable_fuzzy = True
         self._filter_columns = [1, 2]  # name and deviceClass for search
+        # TODO refactor if enums are changed!!
+        self._status_order = {
+            ValidationStatus.VALID: 0,
+            ValidationStatus.PENDING: 1,
+            ValidationStatus.FAILED: 2,
+        }
 
     def get_row_data(self, rows: Iterable[QModelIndex]) -> Iterable[dict[str, Any]]:
         return (self.sourceModel().get_row_data(self.mapToSource(idx)) for idx in rows)
@@ -505,6 +637,14 @@ class DeviceFilterProxyModel(QtCore.QSortFilterProxyModel):
         """
         self._hidden_rows.update(row_indices)
         self.invalidateFilter()
+
+    def lessThan(self, left, right):
+        """Add custom sorting for the status column"""
+        if left.column() != 0 or right.column() != 0:
+            return super().lessThan(left, right)
+        left_data = self.sourceModel().data(left, Qt.ItemDataRole.DisplayRole)
+        right_data = self.sourceModel().data(right, Qt.ItemDataRole.DisplayRole)
+        return self._status_order.get(left_data, 99) < self._status_order.get(right_data, 99)
 
     def show_rows(self, row_indices: list[int]):
         """
@@ -602,6 +742,21 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
         # Connect signals
         self._model.configs_changed.connect(self.device_configs_changed.emit)
 
+    def get_help_md(self) -> str:
+        """
+        Generate Markdown help for a cell or header.
+        """
+        pos = self.table.mapFromGlobal(QtGui.QCursor.pos())
+        model: DeviceTableModel = self._model  # access underlying model
+        index = self.table.indexAt(pos)
+        if index.isValid():
+            column = index.column()
+            label = model.headerData(column, QtCore.Qt.Horizontal, QtCore.Qt.DisplayRole)
+            if label == "softTrig":
+                label = "softwareTrigger"
+            return HEADERS_HELP_MD.get(label, "")
+        return ""
+
     def _setup_search(self):
         """Create components related to the search functionality"""
 
@@ -653,15 +808,20 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
         self.checkbox_delegate = CenterCheckBoxDelegate(self.table, colors=colors)
         self.tool_tip_delegate = DictToolTipDelegate(self.table)
         self.validated_delegate = DeviceValidatedDelegate(self.table, colors=colors)
-        self.table.setItemDelegateForColumn(0, self.validated_delegate)  # ValidationStatus
+        self.wrapped_delegate = WrappingTextDelegate(self.table, max_width=300)
+        # Add resize handling for wrapped delegate
+        header = self.table.horizontalHeader()
+
+        self.table.setItemDelegateForColumn(0, self.validated_delegate)  # status
         self.table.setItemDelegateForColumn(1, self.tool_tip_delegate)  # name
         self.table.setItemDelegateForColumn(2, self.tool_tip_delegate)  # deviceClass
         self.table.setItemDelegateForColumn(3, self.tool_tip_delegate)  # readoutPriority
-        self.table.setItemDelegateForColumn(
-            4, self.tool_tip_delegate
-        )  # deviceTags (was wrap_delegate)
-        self.table.setItemDelegateForColumn(5, self.checkbox_delegate)  # enabled
-        self.table.setItemDelegateForColumn(6, self.checkbox_delegate)  # readOnly
+        self.table.setItemDelegateForColumn(4, self.tool_tip_delegate)  # onFailure
+        self.table.setItemDelegateForColumn(5, self.wrapped_delegate)  # deviceTags
+        self.table.setItemDelegateForColumn(6, self.wrapped_delegate)  # description
+        self.table.setItemDelegateForColumn(7, self.checkbox_delegate)  # enabled
+        self.table.setItemDelegateForColumn(8, self.checkbox_delegate)  # readOnly
+        self.table.setItemDelegateForColumn(9, self.checkbox_delegate)  # softwareTrigger
 
         # Disable wrapping, use eliding, and smooth scrolling
         self.table.setWordWrap(False)
@@ -675,18 +835,34 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)  # name
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)  # deviceClass
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.Interactive)  # readoutPriority
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)  # deviceTags: expand to fill
-        header.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)  # enabled
-        header.setSectionResizeMode(6, QHeaderView.ResizeMode.Fixed)  # readOnly
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Interactive)  # onFailure
+        header.setSectionResizeMode(
+            5, QHeaderView.ResizeMode.Interactive
+        )  # deviceTags: expand to fill
+        header.setSectionResizeMode(6, QHeaderView.ResizeMode.Stretch)  # descript: expand to fill
+        header.setSectionResizeMode(7, QHeaderView.ResizeMode.Fixed)  # enabled
+        header.setSectionResizeMode(8, QHeaderView.ResizeMode.Fixed)  # readOnly
+        header.setSectionResizeMode(9, QHeaderView.ResizeMode.Fixed)  # softwareTrigger
 
-        self.table.setColumnWidth(0, 25)
-        self.table.setColumnWidth(5, 70)
-        self.table.setColumnWidth(6, 70)
+        self.table.setColumnWidth(0, 70)
+        self.table.setColumnWidth(5, 200)
+        self.table.setColumnWidth(6, 200)
+        self.table.setColumnWidth(7, 70)
+        self.table.setColumnWidth(8, 70)
+        self.table.setColumnWidth(9, 70)
 
         # Ensure column widths stay fixed
         header.setMinimumSectionSize(25)
         header.setDefaultSectionSize(90)
         header.setStretchLastSection(False)
+
+        # Resize policy for wrapped text delegate
+        self._resize_proxy = BECSignalProxy(
+            header.sectionResized,
+            rateLimit=25,
+            slot=self.wrapped_delegate._on_section_resized,
+            timeout=1.0,
+        )
 
         # Selection behavior
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
