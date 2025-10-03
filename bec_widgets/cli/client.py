@@ -27,7 +27,6 @@ class _WidgetsEnumType(str, enum.Enum):
 
 
 _Widgets = {
-    "AbortButton": "AbortButton",
     "BECDockArea": "BECDockArea",
     "BECMainWindow": "BECMainWindow",
     "BECProgressBar": "BECProgressBar",
@@ -50,7 +49,6 @@ _Widgets = {
     "PositionerBox2D": "PositionerBox2D",
     "PositionerControlLine": "PositionerControlLine",
     "PositionerGroup": "PositionerGroup",
-    "ResetButton": "ResetButton",
     "ResumeButton": "ResumeButton",
     "RingProgressBar": "RingProgressBar",
     "SBBMonitor": "SBBMonitor",
@@ -60,7 +58,6 @@ _Widgets = {
     "SignalComboBox": "SignalComboBox",
     "SignalLabel": "SignalLabel",
     "SignalLineEdit": "SignalLineEdit",
-    "StopButton": "StopButton",
     "TextBox": "TextBox",
     "VSCodeEditor": "VSCodeEditor",
     "Waveform": "Waveform",
@@ -95,28 +92,6 @@ try:
                 globals()[plugin_name] = plugin_class
 except ImportError as e:
     logger.error(f"Failed loading plugins: \n{reduce(add, traceback.format_exception(e))}")
-
-
-class AbortButton(RPCBase):
-    """A button that abort the scan."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-    @rpc_call
-    def attach(self):
-        """
-        None
-        """
-
-    @rpc_call
-    def detach(self):
-        """
-        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
-        """
 
 
 class AdvancedDockArea(RPCBase):
@@ -4052,28 +4027,6 @@ class RectangularROI(RPCBase):
         """
 
 
-class ResetButton(RPCBase):
-    """A button that resets the scan queue."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-    @rpc_call
-    def attach(self):
-        """
-        None
-        """
-
-    @rpc_call
-    def detach(self):
-        """
-        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
-        """
-
-
 class ResumeButton(RPCBase):
     """A button that continue scan queue."""
 
@@ -5046,28 +4999,6 @@ class SignalLineEdit(RPCBase):
 
         Returns:
             list[str]: List of device signals.
-        """
-
-
-class StopButton(RPCBase):
-    """A button that stops the current scan."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-    @rpc_call
-    def attach(self):
-        """
-        None
-        """
-
-    @rpc_call
-    def detach(self):
-        """
-        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
 
