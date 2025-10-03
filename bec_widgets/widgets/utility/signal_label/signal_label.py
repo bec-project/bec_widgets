@@ -8,7 +8,6 @@ import numpy as np
 from bec_lib.device import Device, Signal
 from bec_lib.endpoints import MessageEndpoints
 from bec_qthemes import material_icon
-from qtpy.QtCore import Qt
 from qtpy.QtCore import Signal as QSignal
 from qtpy.QtWidgets import (
     QApplication,
@@ -480,6 +479,11 @@ class SignalLabel(BECWidget, QWidget):
         self._label.setTitle(
             self._custom_label if self._custom_label else f"{self._default_label}:"
         )
+
+    def cleanup(self):
+        self.disconnect_device()
+        self._device_obj = None
+        super().cleanup()
 
 
 if __name__ == "__main__":
