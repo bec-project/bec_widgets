@@ -126,8 +126,17 @@ class CurveRow(QTreeWidgetItem):
         self.scan_index_combo.setEditable(True)
         # Populate 'live' and all available history scan indices
         self.scan_index_combo.addItem("live")
-        history = getattr(self.curve_tree.client, "history", None)
-        scan_number_list = history._scan_numbers  # len(history) if history is not None else 0
+
+        scan_number_list = []
+        try:
+            history = getattr(self.curve_tree.client, "history", None)
+            if history is not None:
+                scan_number_list = history._scan_numbers
+        except Exception as e:
+            logger.error(f"Cannot fetch scan numbers from BEC client: {e}")
+            # If scan numbers cannot be fetched, only provide 'live' option
+            scan_number_list = []
+
         # Restrict input to 'live' or valid scan numbers
         validator = ScanIndexValidator(len(scan_number_list), self.scan_index_combo)
         self.scan_index_combo.lineEdit().setValidator(validator)
