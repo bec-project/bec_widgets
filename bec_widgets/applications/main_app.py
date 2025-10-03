@@ -195,6 +195,7 @@ if __name__ == "__main__":  # pragma: no cover
     app = QApplication([sys.argv[0], *qt_args])
     apply_theme("dark")
     w = BECMainApp(show_examples=args.examples)
+    w.resize(1920, 1200)
     w.show()
 
     sys.exit(app.exec())

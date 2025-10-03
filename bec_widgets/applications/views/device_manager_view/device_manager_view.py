@@ -14,10 +14,23 @@ from bec_lib.plugin_helper import plugin_package_name, plugin_repo_path
 from bec_qthemes import apply_theme
 from PySide6QtAds import CDockManager, CDockWidget
 from qtpy.QtCore import Qt, QThreadPool, QTimer
-from qtpy.QtWidgets import QFileDialog, QMessageBox, QSplitter, QVBoxLayout, QWidget
+from qtpy.QtWidgets import (
+    QDialog,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QSizePolicy,
+    QSplitter,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 from bec_widgets import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.help_inspector.help_inspector import HelpInspector
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
@@ -83,6 +96,53 @@ def set_splitter_weights(splitter: QSplitter, weights: List[float]) -> None:
     QTimer.singleShot(0, apply)
 
 
+class ConfigChoiceDialog(QDialog):
+    REPLACE = 1
+    ADD = 2
+    CANCEL = 0
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Load Config")
+        layout = QVBoxLayout(self)
+
+        label = QLabel("Do you want to replace the current config or add to it?")
+        label.setWordWrap(True)
+        layout.addWidget(label)
+
+        # Buttons: equal size, stacked vertically
+        self.replace_btn = QPushButton("Replace")
+        self.add_btn = QPushButton("Add")
+        self.cancel_btn = QPushButton("Cancel")
+        btn_layout = QHBoxLayout()
+        for btn in (self.replace_btn, self.add_btn, self.cancel_btn):
+            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            btn_layout.addWidget(btn)
+        layout.addLayout(btn_layout)
+
+        # Connect signals to explicit slots
+        self.replace_btn.clicked.connect(self.accept_replace)
+        self.add_btn.clicked.connect(self.accept_add)
+        self.cancel_btn.clicked.connect(self.reject_cancel)
+
+        self._result = self.CANCEL
+
+    def accept_replace(self):
+        self._result = self.REPLACE
+        self.accept()
+
+    def accept_add(self):
+        self._result = self.ADD
+        self.accept()
+
+    def reject_cancel(self):
+        self._result = self.CANCEL
+        self.reject()
+
+    def result(self):
+        return self._result
+
+
 class DeviceManagerView(BECWidget, QWidget):
 
     def __init__(self, parent=None, *args, **kwargs):
@@ -99,14 +159,14 @@ class DeviceManagerView(BECWidget, QWidget):
         self.dock_manager.setStyleSheet("")
         self._root_layout.addWidget(self.dock_manager)
 
-        # Available Resources Widget
-        self.available_devices = AvailableDeviceResources(
-            self, shared_selection_signal=self._shared_selection
-        )
-        self.available_devices_dock = QtAds.CDockWidget(
-            self.dock_manager, "Available Devices", self
-        )
-        self.available_devices_dock.setWidget(self.available_devices)
+        # # Available Resources Widget
+        # self.available_devices = AvailableDeviceResources(
+        #     self, shared_selection_signal=self._shared_selection
+        # )
+        # self.available_devices_dock = QtAds.CDockWidget(
+        #     self.dock_manager, "Available Devices", self
+        # )
+        # self.available_devices_dock.setWidget(self.available_devices)
 
         # Device Table View widget
         self.device_table_view = DeviceTableView(
@@ -130,28 +190,61 @@ class DeviceManagerView(BECWidget, QWidget):
         self.ophyd_test_dock_view = QtAds.CDockWidget(self.dock_manager, "Ophyd Test View", self)
         self.ophyd_test_dock_view.setWidget(self.ophyd_test_view)
 
-        # Arrange widgets within the QtAds dock manager
+        # Help Inspector
+        widget = QWidget(self)
+        layout = QVBoxLayout(widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self.help_inspector = HelpInspector(self)
+        layout.addWidget(self.help_inspector)
+        text_box = QTextEdit(self)
+        text_box.setReadOnly(False)
+        text_box.setPlaceholderText("Help text will appear here...")
+        layout.addWidget(text_box)
+        self.help_inspector_dock = QtAds.CDockWidget(self.dock_manager, "Help Inspector", self)
+        self.help_inspector_dock.setWidget(widget)
 
+        # # Hook inspector signals
+        # def _class_cb(text: str):
+        #     print(text)
+
+        # # Register callback
+        self.help_inspector.bec_widget_help.connect(text_box.setMarkdown)
+
+        # Error Logs View
+        self.error_logs_view = QTextEdit(self)
+        self.error_logs_view.setReadOnly(True)
+        self.error_logs_view.setPlaceholderText("Error logs will appear here...")
+        self.error_logs_dock = QtAds.CDockWidget(self.dock_manager, "Error Logs", self)
+        self.error_logs_dock.setWidget(self.error_logs_view)
+        self.ophyd_test_view.validation_msg_md.connect(self.error_logs_view.setMarkdown)
+
+        # Arrange widgets within the QtAds dock manager
         # Central widget area
         self.central_dock_area = self.dock_manager.setCentralWidget(self.device_table_view_dock)
+        # Right area - should be pushed into view if something is active
         self.dock_manager.addDockWidget(
-            QtAds.DockWidgetArea.BottomDockWidgetArea,
-            self.dm_docs_view_dock,
+            QtAds.DockWidgetArea.RightDockWidgetArea,
+            self.ophyd_test_dock_view,
             self.central_dock_area,
         )
-
-        # Left Area
-        self.left_dock_area = self.dock_manager.addDockWidget(
-            QtAds.DockWidgetArea.LeftDockWidgetArea, self.available_devices_dock
-        )
-        self.dock_manager.addDockWidget(
-            QtAds.DockWidgetArea.BottomDockWidgetArea, self.dm_config_view_dock, self.left_dock_area
+        # create bottom area (2-arg -> area)
+        self.bottom_dock_area = self.dock_manager.addDockWidget(
+            QtAds.DockWidgetArea.BottomDockWidgetArea, self.dm_docs_view_dock
         )
 
-        # Right area
+        # YAML view left of docstrings (docks relative to bottom area)
         self.dock_manager.addDockWidget(
-            QtAds.DockWidgetArea.RightDockWidgetArea, self.ophyd_test_dock_view
+            QtAds.DockWidgetArea.LeftDockWidgetArea, self.dm_config_view_dock, self.bottom_dock_area
         )
+
+        # Error/help area right of docstrings (dock relative to bottom area)
+        area = self.dock_manager.addDockWidget(
+            QtAds.DockWidgetArea.RightDockWidgetArea,
+            self.help_inspector_dock,
+            self.bottom_dock_area,
+        )
+        self.dock_manager.addDockWidgetTabToArea(self.error_logs_dock, area)
 
         for dock in self.dock_manager.dockWidgets():
             # dock.setFeature(CDockWidget.DockWidgetDeleteOnClose, True)#TODO implement according to MonacoDock or AdvancedDockArea
@@ -160,13 +253,16 @@ class DeviceManagerView(BECWidget, QWidget):
             dock.setFeature(CDockWidget.DockWidgetFloatable, False)
             dock.setFeature(CDockWidget.DockWidgetMovable, False)
 
+        # TODO decide if we like to hide the title bars..
         # Fetch all dock areas of the dock widgets (on our case always one dock area)
-        for dock in self.dock_manager.dockWidgets():
-            area = dock.dockAreaWidget()
-            area.titleBar().setVisible(False)
+        # for dock in self.dock_manager.dockWidgets():
+        #     if dock.objectName() in ["Help Inspector", "Error Logs"]:
+        #         continue
+        #     area = dock.dockAreaWidget()
+        #     area.titleBar().setVisible(False)
 
         # Apply stretch after the layout is done
-        self.set_default_view([2, 8, 2], [3, 1])
+        self.set_default_view([2, 8, 2], [7, 3])
         # self.set_default_view([2, 8, 2], [2, 2, 4])
 
         # Connect slots
@@ -175,29 +271,29 @@ class DeviceManagerView(BECWidget, QWidget):
                 self.device_table_view.selected_devices,
                 (self.dm_config_view.on_select_config, self.dm_docs_view.on_select_config),
             ),
-            (
-                self.available_devices.selected_devices,
-                (self.dm_config_view.on_select_config, self.dm_docs_view.on_select_config),
-            ),
+            # (
+            #     self.available_devices.selected_devices,
+            #     (self.dm_config_view.on_select_config, self.dm_docs_view.on_select_config),
+            # ),
             (
                 self.ophyd_test_view.device_validated,
                 (self.device_table_view.update_device_validation,),
             ),
-            (
-                self.device_table_view.device_configs_changed,
-                (
-                    self.ophyd_test_view.change_device_configs,
-                    self.available_devices.mark_devices_used,
-                ),
-            ),
-            (
-                self.available_devices.add_selected_devices,
-                (self.device_table_view.add_device_configs,),
-            ),
-            (
-                self.available_devices.del_selected_devices,
-                (self.device_table_view.remove_device_configs,),
-            ),
+            # (
+            #     self.device_table_view.device_configs_changed,
+            #     (
+            #         self.ophyd_test_view.change_device_configs,
+            #         self.available_devices.mark_devices_used,
+            #     ),
+            # ),
+            # (
+            #     self.available_devices.add_selected_devices,
+            #     (self.device_table_view.add_device_configs,),
+            # ),
+            # (
+            #     self.available_devices.del_selected_devices,
+            #     (self.device_table_view.remove_device_configs,),
+            # ),
         ]:
             for slot in slots:
                 signal.connect(slot)
@@ -217,7 +313,9 @@ class DeviceManagerView(BECWidget, QWidget):
         # Create IO bundle
         io_bundle = ToolbarBundle("IO", self.toolbar.components)
 
+        # Load from disk
         load = MaterialIconAction(
+            text_position="under",
             icon_name="file_open",
             parent=self,
             tooltip="Load configuration file from disk",
@@ -229,6 +327,7 @@ class DeviceManagerView(BECWidget, QWidget):
 
         # Add safe to disk
         safe_to_disk = MaterialIconAction(
+            text_position="under",
             icon_name="file_save",
             parent=self,
             tooltip="Save config to disk",
@@ -240,10 +339,11 @@ class DeviceManagerView(BECWidget, QWidget):
 
         # Add load config from redis
         load_redis = MaterialIconAction(
+            text_position="under",
             icon_name="cached",
             parent=self,
             tooltip="Load current config from Redis",
-            label_text="Reload Config",
+            label_text="Get Current Config",
         )
         load_redis.action.triggered.connect(self._load_redis_action)
         self.toolbar.components.add_safe("load_redis", load_redis)
@@ -251,11 +351,13 @@ class DeviceManagerView(BECWidget, QWidget):
 
         # Update config action
         update_config_redis = MaterialIconAction(
+            text_position="under",
             icon_name="cloud_upload",
             parent=self,
             tooltip="Update current config in Redis",
             label_text="Update Config",
         )
+        update_config_redis.action.setEnabled(False)
         update_config_redis.action.triggered.connect(self._update_redis_action)
         self.toolbar.components.add_safe("update_config_redis", update_config_redis)
         io_bundle.add_action("update_config_redis")
@@ -270,6 +372,7 @@ class DeviceManagerView(BECWidget, QWidget):
 
         # Reset composed view
         reset_composed = MaterialIconAction(
+            text_position="under",
             icon_name="delete_sweep",
             parent=self,
             tooltip="Reset current composed config view",
@@ -281,7 +384,11 @@ class DeviceManagerView(BECWidget, QWidget):
 
         # Add device
         add_device = MaterialIconAction(
-            icon_name="add", parent=self, tooltip="Add new device", label_text="Add Device"
+            text_position="under",
+            icon_name="add",
+            parent=self,
+            tooltip="Add new device",
+            label_text="Add Device",
         )
         add_device.action.triggered.connect(self._add_device_action)
         self.toolbar.components.add_safe("add_device", add_device)
@@ -289,7 +396,11 @@ class DeviceManagerView(BECWidget, QWidget):
 
         # Remove device
         remove_device = MaterialIconAction(
-            icon_name="remove", parent=self, tooltip="Remove device", label_text="Remove Device"
+            text_position="under",
+            icon_name="remove",
+            parent=self,
+            tooltip="Remove device",
+            label_text="Remove Device",
         )
         remove_device.action.triggered.connect(self._remove_device_action)
         self.toolbar.components.add_safe("remove_device", remove_device)
@@ -297,10 +408,11 @@ class DeviceManagerView(BECWidget, QWidget):
 
         # Rerun validation
         rerun_validation = MaterialIconAction(
+            text_position="under",
             icon_name="checklist",
             parent=self,
             tooltip="Run device validation with 'connect' on selected devices",
-            label_text="Rerun Validation",
+            label_text="Validate Connection",
         )
         rerun_validation.action.triggered.connect(self._rerun_validation_action)
         self.toolbar.components.add_safe("rerun_validation", rerun_validation)
@@ -346,15 +458,26 @@ class DeviceManagerView(BECWidget, QWidget):
         file_path, _ = QFileDialog.getOpenFileName(
             self, caption="Select Config File", dir=start_dir
         )
-        if file_path:
-            try:
-                config = [{"name": k, **v} for k, v in yaml_load(file_path).items()]
-            except Exception as e:
-                logger.error(f"Failed to load config from file {file_path}. Error: {e}")
-                return
-            self.device_table_view.set_device_config(
-                config
-            )  # TODO ADD QDialog with 'replace', 'add' & 'cancel'
+        self._load_config_from_file(file_path)
+
+    def _load_config_from_file(self, file_path: str):
+        """
+        Load device config from a given file path and update the device table view.
+
+        Args:
+            file_path (str): Path to the configuration file.
+        """
+        try:
+            config = [{"name": k, **v} for k, v in yaml_load(file_path).items()]
+        except Exception as e:
+            logger.error(f"Failed to load config from file {file_path}. Error: {e}")
+            return
+        dialog = ConfigChoiceDialog(self)
+        if dialog.exec():
+            if dialog.result() == ConfigChoiceDialog.REPLACE:
+                self.device_table_view.set_device_config(config)
+            elif dialog.result() == ConfigChoiceDialog.ADD:
+                self.device_table_view.add_device_configs(config)
 
     # TODO would we ever like to add the current config to an existing composition
     @SafeSlot()
