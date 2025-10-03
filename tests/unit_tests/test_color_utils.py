@@ -144,6 +144,19 @@ class ExamplePlotWidget(BECWidget, QWidget):
         self.glw.addItem(self.pi)
         self.pi.plot([1, 2, 3, 4, 5], pen="r")
 
+    def cleanup_pyqtgraph(self, item: pg.PlotItem | None = None):
+        """Cleanup pyqtgraph items."""
+        if item is None:
+            item = self.pi
+        item.vb.menu.close()
+        item.vb.menu.deleteLater()
+        item.ctrlMenu.close()
+        item.ctrlMenu.deleteLater()
+
+    def cleanup(self):
+        self.cleanup_pyqtgraph()
+        super().cleanup()
+
 
 def test_apply_theme(qtbot, mocked_client):
     widget = create_widget(qtbot, ExamplePlotWidget, client=mocked_client)
