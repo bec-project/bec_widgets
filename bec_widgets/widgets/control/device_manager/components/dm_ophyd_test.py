@@ -322,28 +322,36 @@ class DMOphydTest(BECWidget, QtWidgets.QWidget):
             self.validation_msg_md.emit("")
 
     def _format_markdown_text(self, device_name: str, raw_msg: str) -> str:
-        """Simple HTML formatting for validation messages, wrapping text naturally."""
-        if not raw_msg.strip():
-            return f"### Validation in progress for {device_name}... \n\n"
-        if raw_msg == "Validation in progress...":
+        """
+        Simple HTML formatting for validation messages, wrapping text naturally.
+
+        Args:
+            device_name (str): The name of the device.
+            raw_msg (str): The raw validation message.
+        """
+        if not raw_msg.strip() or raw_msg.strip() == "Validation in progress...":
             return f"### Validation in progress for {device_name}... \n\n"
 
-        m = re.search(r"ERROR:\s*([^\s]+)\s+is not valid:\s*(.+?errors?)", raw_msg)
-        device, summary = m.group(1), m.group(2)
-        lines = [f"## Error for '{device}'", f"'{device}' is not valid: {summary}"]
-
-        # Find each field block:  \n<field>\n  Field required ...
-        field_pat = re.compile(
-            r"\n(?P<field>\w+)\n\s+(?P<rest>Field required.*?(?=\n\w+\n|$))", re.DOTALL
+        # Regex to capture repeated ERROR patterns
+        pat = re.compile(
+            r"ERROR:\s*(?P<device>[^\s]+)\s+"
+            r"(?P<status>is not valid|is not connectable|failed):\s*"
+            r"(?P<detail>.*?)(?=ERROR:|$)",
+            re.DOTALL,
         )
+        blocks = []
+        for m in pat.finditer(raw_msg):
+            dev = m.group("device")
+            status = m.group("status")
+            detail = m.group("detail").strip()
+            lines = [f"## Error for {dev}", f"**{dev} {status}**", f"```\n{detail}\n```"]
+            blocks.append("\n\n".join(lines))
 
-        for m in field_pat.finditer(raw_msg):
-            field = m.group("field")
-            rest = m.group("rest").rstrip()
-            lines.append(f"### {field}")
-            lines.append(rest)
+        # Fallback: If no patterns matched, return the raw message
+        if not blocks:
+            return f"## Error for {device_name}\n```\n{raw_msg.strip()}\n```"
 
-        return "\n".join(lines)
+        return "\n\n---\n\n".join(blocks)
 
     def validation_running(self):
         return self._device_list_items != {}
@@ -386,7 +394,7 @@ if __name__ == "__main__":
     layout.setSpacing(0)
     device_manager_ophyd_test = DMOphydTest()
     try:
-        config_path = "/Users/appel_c/work_psi_awi/bec_workspace/csaxs_bec/csaxs_bec/device_configs/endstation.yaml"
+        config_path = "/Users/appel_c/work_psi_awi/bec_workspace/csaxs_bec/csaxs_bec/device_configs/first_light.yaml"
         config = [{"name": k, **v} for k, v in yaml_load(config_path).items()]
     except Exception as e:
         logger.error(f"Error loading config: {e}")

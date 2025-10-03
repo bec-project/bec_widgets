@@ -11,6 +11,7 @@ from qtpy import QtCore, QtWidgets
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import AccentColors, get_accent_colors
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.widget_io import WidgetHierarchy
 
 logger = bec_logger.logger
 
@@ -100,7 +101,7 @@ class HelpInspector(BECWidget, QtWidgets.QWidget):
             self._button.setChecked(False)
             QtWidgets.QApplication.restoreOverrideCursor()
 
-    def eventFilter(self, obj, event):
+    def eventFilter(self, obj: QtWidgets.QWidget, event: QtCore.QEvent) -> bool:
         """
         Filter events to capture Key_Escape event, and mouse clicks
         if event filter is active. Any click event on a widget is suppressed, if
@@ -111,25 +112,32 @@ class HelpInspector(BECWidget, QtWidgets.QWidget):
             obj (QObject): The object that received the event.
             event (QEvent): The event to filter.
         """
-        if (
-            event.type() == QtCore.QEvent.KeyPress
-            and event.key() == QtCore.Qt.Key_Escape
-            and self._active
-        ):
+        # If not active, return immediately
+        if not self._active:
+            return super().eventFilter(obj, event)
+        # If active, handle escape key
+        if event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Escape:
             self._toggle_mode(False)
             return super().eventFilter(obj, event)
-        if self._active and event.type() == QtCore.QEvent.MouseButtonPress:
+        # If active, and left mouse button pressed, handle click
+        if event.type() == QtCore.QEvent.MouseButtonPress:
             if event.button() == QtCore.Qt.LeftButton:
                 widget = self._app.widgetAt(event.globalPos())
+                if widget is None:
+                    return super().eventFilter(obj, event)
+                # Get BECWidget ancestor
+                # TODO check what happens if the HELP Inspector itself is embedded in another BECWidget
+                # I suppose we would like to get the first ancestor that is a BECWidget, not the topmost one
+                widget = WidgetHierarchy._get_becwidget_ancestor(widget)
                 if widget:
-                    if widget is self or self.isAncestorOf(widget):
+                    if widget is self:
                         self._toggle_mode(False)
                         return True
                     for cb in self._callbacks.values():
                         try:
                             cb(widget)
                         except Exception as e:
-                            print(f"Error occurred in callback {cb}: {e}")
+                            logger.error(f"Error occurred in callback {cb}: {e}")
                     return True
         return super().eventFilter(obj, event)
 
