@@ -1,27 +1,44 @@
 # pylint: disable=missing-function-docstring, missing-module-docstring, unused-import
 
+import base64
 import os
-import tempfile
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import pytest
-from qtpy.QtCore import QSettings
+from qtpy.QtCore import QSettings, Qt
+from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import QDialog, QMessageBox
 
+import bec_widgets.widgets.containers.advanced_dock_area.profile_utils as profile_utils
 from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import (
     AdvancedDockArea,
     DockSettingsDialog,
     SaveProfileDialog,
 )
 from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
-    is_profile_readonly,
+    default_profile_path,
+    get_profile_info,
+    is_profile_read_only,
+    is_quick_select,
     list_profiles,
-    open_settings,
-    profile_path,
+    load_default_profile_screenshot,
+    load_user_profile_screenshot,
+    open_default_settings,
+    open_user_settings,
+    plugin_profiles_dir,
     read_manifest,
-    set_profile_readonly,
+    restore_user_from_default,
+    set_quick_select,
+    user_profile_path,
     write_manifest,
+)
+from bec_widgets.widgets.containers.advanced_dock_area.settings.dialogs import (
+    PreviewPanel,
+    RestoreProfileDialog,
+)
+from bec_widgets.widgets.containers.advanced_dock_area.settings.workspace_manager import (
+    WorkSpaceManager,
 )
 
 from .client_mocks import mocked_client
@@ -36,12 +53,96 @@ def advanced_dock_area(qtbot, mocked_client):
     yield widget
 
 
+@pytest.fixture(autouse=True)
+def isolate_profile_storage(tmp_path, monkeypatch):
+    """Ensure each test writes profiles into a unique temporary directory."""
+    root = tmp_path / "profiles_root"
+    root.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("BECWIDGETS_PROFILE_DIR", str(root))
+    yield
+
+
 @pytest.fixture
 def temp_profile_dir():
-    """Create a temporary directory for profile testing."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        with patch.dict(os.environ, {"BECWIDGETS_PROFILE_DIR": temp_dir}):
-            yield temp_dir
+    """Return the current temporary profile directory."""
+    return os.environ["BECWIDGETS_PROFILE_DIR"]
+
+
+@pytest.fixture
+def module_profile_factory(monkeypatch, tmp_path):
+    """Provide a helper to create synthetic module-level (read-only) profiles."""
+    module_dir = tmp_path / "module_profiles"
+    module_dir.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(profile_utils, "module_profiles_dir", lambda: str(module_dir))
+    monkeypatch.setattr(profile_utils, "plugin_profiles_dir", lambda: None)
+
+    def _create(name="readonly_profile", content="[profile]\n"):
+        path = module_dir / f"{name}.ini"
+        path.write_text(content)
+        return name
+
+    return _create
+
+
+@pytest.fixture
+def workspace_manager_target():
+    class _Signal:
+        def __init__(self):
+            self._slot = None
+
+        def connect(self, slot):
+            self._slot = slot
+
+        def emit(self, value):
+            if self._slot:
+                self._slot(value)
+
+    class _Combo:
+        def __init__(self):
+            self.current_text = ""
+
+        def setCurrentText(self, text):
+            self.current_text = text
+
+    class _Action:
+        def __init__(self, widget):
+            self.widget = widget
+
+    class _Components:
+        def __init__(self, combo):
+            self._combo = combo
+
+        def get_action(self, name):
+            return _Action(self._combo)
+
+    class _Toolbar:
+        def __init__(self, combo):
+            self.components = _Components(combo)
+
+    class _Target:
+        def __init__(self):
+            self.profile_changed = _Signal()
+            self._combo = _Combo()
+            self.toolbar = _Toolbar(self._combo)
+            self._current_profile_name = None
+            self.load_profile_calls = []
+            self.save_called = False
+            self.refresh_calls = 0
+
+        def load_profile(self, name):
+            self.load_profile_calls.append(name)
+            self._current_profile_name = name
+
+        def save_profile(self):
+            self.save_called = True
+
+        def _refresh_workspace_list(self):
+            self.refresh_calls += 1
+
+    def _factory():
+        return _Target()
+
+    return _factory
 
 
 class TestAdvancedDockAreaInit:
@@ -81,7 +182,7 @@ class TestDockManagement:
         initial_count = len(advanced_dock_area.dock_list())
 
         # Create a widget by string name
-        widget = advanced_dock_area.new("Waveform")
+        widget = advanced_dock_area.new("DarkModeButton")
 
         # Wait for the dock to be created (since it's async)
         qtbot.wait(200)
@@ -430,7 +531,6 @@ class TestSaveProfileDialog:
         assert dialog.windowTitle() == "Save Workspace Profile"
         assert dialog.isModal()
         assert dialog.name_edit.text() == "test_profile"
-        assert hasattr(dialog, "readonly_checkbox")
 
     def test_save_profile_dialog_get_values(self, qtbot):
         """Test getting values from SaveProfileDialog."""
@@ -438,10 +538,10 @@ class TestSaveProfileDialog:
         qtbot.addWidget(dialog)
 
         dialog.name_edit.setText("my_profile")
-        dialog.readonly_checkbox.setChecked(True)
+        dialog.quick_select_checkbox.setChecked(True)
 
         assert dialog.get_profile_name() == "my_profile"
-        assert dialog.is_readonly() is True
+        assert dialog.is_quick_select() is True
 
     def test_save_button_enabled_state(self, qtbot):
         """Test save button is enabled/disabled based on name input."""
@@ -459,56 +559,568 @@ class TestSaveProfileDialog:
         dialog.name_edit.setText("")
         assert not dialog.save_btn.isEnabled()
 
+    def test_accept_blocks_empty_name(self, qtbot):
+        dialog = SaveProfileDialog(None)
+        qtbot.addWidget(dialog)
+        dialog.name_edit.clear()
+
+        dialog.accept()
+
+        assert dialog.result() == QDialog.Rejected
+        assert dialog.overwrite_existing is False
+
+    def test_accept_readonly_suggests_unique_name(self, qtbot, monkeypatch):
+        info_calls = []
+        monkeypatch.setattr(
+            QMessageBox,
+            "information",
+            lambda *args, **kwargs: info_calls.append((args, kwargs)) or QMessageBox.Ok,
+        )
+
+        dialog = SaveProfileDialog(
+            None,
+            name_exists=lambda name: name == "readonly_custom",
+            profile_origin=lambda name: "module" if name == "readonly" else "unknown",
+            origin_label=lambda name: "ModuleDefaults",
+        )
+        qtbot.addWidget(dialog)
+        dialog.name_edit.setText("readonly")
+
+        dialog.accept()
+
+        assert dialog.result() == QDialog.Rejected
+        assert dialog.name_edit.text().startswith("readonly_custom")
+        assert dialog.overwrite_checkbox.isChecked() is False
+        assert info_calls, "Expected informational prompt for read-only profile"
+
+    def test_accept_existing_profile_confirm_yes(self, qtbot, monkeypatch):
+        monkeypatch.setattr(QMessageBox, "question", lambda *args, **kwargs: QMessageBox.Yes)
+
+        dialog = SaveProfileDialog(
+            None,
+            current_profile_name="profile_a",
+            name_exists=lambda name: name == "profile_a",
+            profile_origin=lambda name: "settings" if name == "profile_a" else "unknown",
+        )
+        qtbot.addWidget(dialog)
+        dialog.name_edit.setText("profile_a")
+
+        dialog.accept()
+
+        assert dialog.result() == QDialog.Accepted
+        assert dialog.overwrite_existing is True
+
+    def test_accept_existing_profile_confirm_no(self, qtbot, monkeypatch):
+        monkeypatch.setattr(QMessageBox, "question", lambda *args, **kwargs: QMessageBox.No)
+
+        dialog = SaveProfileDialog(
+            None,
+            current_profile_name="profile_a",
+            name_exists=lambda name: False,
+            profile_origin=lambda name: "settings" if name == "profile_a" else "unknown",
+        )
+        qtbot.addWidget(dialog)
+        dialog.name_edit.setText("profile_a")
+
+        dialog.accept()
+
+        assert dialog.result() == QDialog.Rejected
+        assert dialog.name_edit.text().startswith("profile_a_custom")
+        assert dialog.overwrite_existing is False
+        assert dialog.overwrite_checkbox.isChecked() is False
+
+    def test_overwrite_toggle_sets_and_restores_name(self, qtbot):
+        dialog = SaveProfileDialog(
+            None, current_name="custom_name", current_profile_name="existing_profile"
+        )
+        qtbot.addWidget(dialog)
+
+        dialog.overwrite_checkbox.setChecked(True)
+        assert dialog.name_edit.text() == "existing_profile"
+        dialog.name_edit.setText("existing_profile")
+        dialog.overwrite_checkbox.setChecked(False)
+        assert dialog.name_edit.text() == "custom_name"
+
+
+class TestPreviewPanel:
+    """Test preview panel scaling behavior."""
+
+    def test_preview_panel_without_pixmap(self, qtbot):
+        panel = PreviewPanel("Current", None)
+        qtbot.addWidget(panel)
+        assert "No preview available" in panel.image_label.text()
+
+    def test_preview_panel_with_pixmap(self, qtbot):
+        pixmap = QPixmap(40, 20)
+        pixmap.fill(Qt.red)
+        panel = PreviewPanel("Current", pixmap)
+        qtbot.addWidget(panel)
+        assert panel.image_label.pixmap() is not None
+
+    def test_preview_panel_set_pixmap_resets_placeholder(self, qtbot):
+        panel = PreviewPanel("Current", None)
+        qtbot.addWidget(panel)
+        pixmap = QPixmap(30, 30)
+        pixmap.fill(Qt.blue)
+        panel.setPixmap(pixmap)
+        assert panel.image_label.pixmap() is not None
+        panel.setPixmap(None)
+        assert panel.image_label.pixmap() is None or panel.image_label.pixmap().isNull()
+        assert "No preview available" in panel.image_label.text()
+
+
+class TestRestoreProfileDialog:
+    """Test restore dialog confirmation flow."""
+
+    def test_confirm_accepts(self, monkeypatch):
+        monkeypatch.setattr(RestoreProfileDialog, "exec", lambda self: QDialog.Accepted)
+        assert RestoreProfileDialog.confirm(None, QPixmap(), QPixmap()) is True
+
+    def test_confirm_rejects(self, monkeypatch):
+        monkeypatch.setattr(RestoreProfileDialog, "exec", lambda self: QDialog.Rejected)
+        assert RestoreProfileDialog.confirm(None, QPixmap(), QPixmap()) is False
+
+
+class TestProfileInfoAndScreenshots:
+    """Tests for profile utilities metadata and screenshot helpers."""
+
+    PNG_BYTES = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAACXBIWXMAAA9hAAAPYQGoP6dpAAAAFUlEQVQYlWP8//8/A27AhEduBEsDAKXjAxHmByO3AAAAAElFTkSuQmCC"
+    )
+
+    def _write_manifest(self, settings, count=2):
+        settings.beginWriteArray(profile_utils.SETTINGS_KEYS["manifest"], count)
+        for i in range(count):
+            settings.setArrayIndex(i)
+            settings.setValue("object_name", f"widget_{i}")
+            settings.setValue("widget_class", "Dummy")
+            settings.setValue("closable", True)
+            settings.setValue("floatable", True)
+            settings.setValue("movable", True)
+        settings.endArray()
+        settings.sync()
+
+    def test_get_profile_info_user_origin(self, temp_profile_dir):
+        name = "info_user"
+        settings = open_user_settings(name)
+        settings.setValue(profile_utils.SETTINGS_KEYS["created_at"], "2023-01-01T00:00:00Z")
+        settings.setValue("profile/author", "Custom")
+        set_quick_select(name, True)
+        self._write_manifest(settings, count=3)
+
+        info = get_profile_info(name)
+
+        assert info.name == name
+        assert info.origin == "settings"
+        assert info.is_read_only is False
+        assert info.is_quick_select is True
+        assert info.widget_count == 3
+        assert info.author == "User"
+        assert info.user_path.endswith(f"{name}.ini")
+        assert info.size_kb >= 0
+
+    def test_get_profile_info_default_only(self, temp_profile_dir):
+        name = "info_default"
+        settings = open_default_settings(name)
+        self._write_manifest(settings, count=1)
+
+        user_path = user_profile_path(name)
+        if os.path.exists(user_path):
+            os.remove(user_path)
+
+        info = get_profile_info(name)
+
+        assert info.origin == "settings"
+        assert info.user_path.endswith(f"{name}.ini")
+        assert info.widget_count == 1
+
+    def test_get_profile_info_module_readonly(self, module_profile_factory):
+        name = module_profile_factory("info_readonly")
+        info = get_profile_info(name)
+        assert info.origin == "module"
+        assert info.is_read_only is True
+        assert info.author == "BEC Widgets"
+
+    def test_get_profile_info_unknown_profile(self):
+        name = "nonexistent_profile"
+        if os.path.exists(user_profile_path(name)):
+            os.remove(user_profile_path(name))
+        if os.path.exists(default_profile_path(name)):
+            os.remove(default_profile_path(name))
+
+        info = get_profile_info(name)
+
+        assert info.origin == "unknown"
+        assert info.is_read_only is False
+        assert info.widget_count == 0
+
+    def test_load_user_profile_screenshot(self, temp_profile_dir):
+        name = "user_screenshot"
+        settings = open_user_settings(name)
+        settings.setValue(profile_utils.SETTINGS_KEYS["screenshot"], self.PNG_BYTES)
+        settings.sync()
+
+        pix = load_user_profile_screenshot(name)
+
+        assert pix is not None and not pix.isNull()
+
+    def test_load_default_profile_screenshot(self, temp_profile_dir):
+        name = "default_screenshot"
+        settings = open_default_settings(name)
+        settings.setValue(profile_utils.SETTINGS_KEYS["screenshot"], self.PNG_BYTES)
+        settings.sync()
+
+        pix = load_default_profile_screenshot(name)
+
+        assert pix is not None and not pix.isNull()
+
+    def test_load_screenshot_from_settings_invalid(self, temp_profile_dir):
+        name = "invalid_screenshot"
+        settings = open_user_settings(name)
+        settings.setValue(profile_utils.SETTINGS_KEYS["screenshot"], "not-an-image")
+        settings.sync()
+
+        pix = profile_utils._load_screenshot_from_settings(settings)
+
+        assert pix is None
+
+    def test_load_screenshot_from_settings_bytes(self, temp_profile_dir):
+        name = "bytes_screenshot"
+        settings = open_user_settings(name)
+        settings.setValue(profile_utils.SETTINGS_KEYS["screenshot"], self.PNG_BYTES)
+        settings.sync()
+
+        pix = profile_utils._load_screenshot_from_settings(settings)
+
+        assert pix is not None and not pix.isNull()
+
+
+class TestWorkSpaceManager:
+    """Test workspace manager interactions."""
+
+    @staticmethod
+    def _create_profiles(names):
+        for name in names:
+            settings = open_user_settings(name)
+            settings.setValue("meta", "value")
+            settings.sync()
+
+    def test_render_table_populates_rows(self, qtbot):
+        profile_names = ["profile_a", "profile_b"]
+        self._create_profiles(profile_names)
+
+        manager = WorkSpaceManager(target_widget=None)
+        qtbot.addWidget(manager)
+
+        assert manager.profile_table.rowCount() >= len(profile_names)
+
+    def test_switch_profile_updates_target(self, qtbot, workspace_manager_target):
+        name = "profile_switch"
+        self._create_profiles([name])
+        target = workspace_manager_target()
+        manager = WorkSpaceManager(target_widget=target)
+        qtbot.addWidget(manager)
+
+        manager.switch_profile(name)
+
+        assert target.load_profile_calls == [name]
+        assert target._combo.current_text == name
+        assert manager._current_selected_profile() == name
+
+    def test_toggle_quick_select_updates_flag(self, qtbot, workspace_manager_target):
+        name = "profile_toggle"
+        self._create_profiles([name])
+        target = workspace_manager_target()
+        manager = WorkSpaceManager(target_widget=target)
+        qtbot.addWidget(manager)
+
+        initial = is_quick_select(name)
+        manager.toggle_quick_select(name)
+
+        assert is_quick_select(name) is (not initial)
+        assert target.refresh_calls >= 1
+
+    def test_save_current_as_profile_with_target(self, qtbot, workspace_manager_target):
+        name = "profile_save"
+        self._create_profiles([name])
+        target = workspace_manager_target()
+        target._current_profile_name = name
+        manager = WorkSpaceManager(target_widget=target)
+        qtbot.addWidget(manager)
+
+        manager.save_current_as_profile()
+
+        assert target.save_called is True
+        assert manager._current_selected_profile() == name
+
+    def test_delete_profile_removes_files(self, qtbot, workspace_manager_target, monkeypatch):
+        name = "profile_delete"
+        self._create_profiles([name])
+        target = workspace_manager_target()
+        target._current_profile_name = name
+        manager = WorkSpaceManager(target_widget=target)
+        qtbot.addWidget(manager)
+
+        monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.Yes)
+
+        manager.delete_profile(name)
+
+        assert not os.path.exists(user_profile_path(name))
+        assert target.refresh_calls >= 1
+
+    def test_delete_readonly_profile_shows_message(
+        self, qtbot, workspace_manager_target, module_profile_factory, monkeypatch
+    ):
+        readonly = module_profile_factory("readonly_delete")
+        list_profiles()
+        info_calls = []
+        monkeypatch.setattr(
+            QMessageBox,
+            "information",
+            lambda *args, **kwargs: info_calls.append((args, kwargs)) or QMessageBox.Ok,
+        )
+        manager = WorkSpaceManager(target_widget=workspace_manager_target())
+        qtbot.addWidget(manager)
+
+        manager.delete_profile(readonly)
+
+        assert info_calls, "Expected informational prompt for read-only profile"
+
+
+class TestAdvancedDockAreaRestoreAndDialogs:
+    """Additional coverage for restore flows and workspace dialogs."""
+
+    def test_restore_user_profile_from_default_confirm_true(self, advanced_dock_area, monkeypatch):
+        profile_name = "profile_restore_true"
+        open_default_settings(profile_name).sync()
+        open_user_settings(profile_name).sync()
+        advanced_dock_area._current_profile_name = profile_name
+        advanced_dock_area.isVisible = lambda: False
+        pix = QPixmap(8, 8)
+        pix.fill(Qt.red)
+        monkeypatch.setattr(
+            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.load_user_profile_screenshot",
+            lambda name: pix,
+        )
+        monkeypatch.setattr(
+            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.load_default_profile_screenshot",
+            lambda name: pix,
+        )
+        monkeypatch.setattr(
+            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.RestoreProfileDialog.confirm",
+            lambda *args, **kwargs: True,
+        )
+
+        with (
+            patch(
+                "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.restore_user_from_default"
+            ) as mock_restore,
+            patch.object(advanced_dock_area, "delete_all") as mock_delete_all,
+            patch.object(advanced_dock_area, "load_profile") as mock_load_profile,
+        ):
+            advanced_dock_area.restore_user_profile_from_default()
+
+        mock_restore.assert_called_once_with(profile_name)
+        mock_delete_all.assert_called_once()
+        mock_load_profile.assert_called_once_with(profile_name)
+
+    def test_restore_user_profile_from_default_confirm_false(self, advanced_dock_area, monkeypatch):
+        profile_name = "profile_restore_false"
+        open_default_settings(profile_name).sync()
+        open_user_settings(profile_name).sync()
+        advanced_dock_area._current_profile_name = profile_name
+        advanced_dock_area.isVisible = lambda: False
+        monkeypatch.setattr(
+            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.load_user_profile_screenshot",
+            lambda name: QPixmap(),
+        )
+        monkeypatch.setattr(
+            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.load_default_profile_screenshot",
+            lambda name: QPixmap(),
+        )
+        monkeypatch.setattr(
+            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.RestoreProfileDialog.confirm",
+            lambda *args, **kwargs: False,
+        )
+
+        with patch(
+            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.restore_user_from_default"
+        ) as mock_restore:
+            advanced_dock_area.restore_user_profile_from_default()
+
+        mock_restore.assert_not_called()
+
+    def test_restore_user_profile_from_default_no_target(self, advanced_dock_area, monkeypatch):
+        advanced_dock_area._current_profile_name = None
+        with patch(
+            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.RestoreProfileDialog.confirm"
+        ) as mock_confirm:
+            advanced_dock_area.restore_user_profile_from_default()
+        mock_confirm.assert_not_called()
+
+    def test_refresh_workspace_list_with_refresh_profiles(self, advanced_dock_area):
+        profile_name = "refresh_profile"
+        open_user_settings(profile_name).sync()
+        advanced_dock_area._current_profile_name = profile_name
+        combo = advanced_dock_area.toolbar.components.get_action("workspace_combo").widget
+        combo.refresh_profiles = MagicMock()
+
+        advanced_dock_area._refresh_workspace_list()
+
+        combo.refresh_profiles.assert_called_once_with(profile_name)
+
+    def test_refresh_workspace_list_fallback(self, advanced_dock_area):
+        class ComboStub:
+            def __init__(self):
+                self.items = []
+                self.tooltip = ""
+                self.block_calls = []
+                self.cleared = False
+                self.current_index = -1
+
+            def blockSignals(self, value):
+                self.block_calls.append(value)
+
+            def clear(self):
+                self.items.clear()
+                self.cleared = True
+
+            def addItems(self, items):
+                self.items.extend(items)
+
+            def findText(self, text):
+                try:
+                    return self.items.index(text)
+                except ValueError:
+                    return -1
+
+            def setCurrentIndex(self, idx):
+                self.current_index = idx
+
+            def setToolTip(self, text):
+                self.tooltip = text
+
+        active = "active_profile"
+        quick = "quick_profile"
+        open_user_settings(active).sync()
+        open_user_settings(quick).sync()
+        set_quick_select(quick, True)
+
+        combo_stub = ComboStub()
+
+        class StubAction:
+            def __init__(self, widget):
+                self.widget = widget
+
+        with patch.object(
+            advanced_dock_area.toolbar.components, "get_action", return_value=StubAction(combo_stub)
+        ):
+            advanced_dock_area._current_profile_name = active
+            advanced_dock_area._refresh_workspace_list()
+
+        assert combo_stub.block_calls == [True, False]
+        assert combo_stub.items[0] == active
+        assert combo_stub.tooltip == "Active profile is not in quick select"
+
+    def test_show_workspace_manager_creates_dialog(self, qtbot, advanced_dock_area):
+        action = advanced_dock_area.toolbar.components.get_action("manage_workspaces").action
+        assert not action.isChecked()
+
+        advanced_dock_area._current_profile_name = "manager_profile"
+        open_user_settings("manager_profile").sync()
+
+        advanced_dock_area.show_workspace_manager()
+
+        assert advanced_dock_area.manage_dialog is not None
+        assert advanced_dock_area.manage_dialog.isVisible()
+        assert action.isChecked()
+        assert isinstance(advanced_dock_area.manage_widget, WorkSpaceManager)
+
+        advanced_dock_area.manage_dialog.close()
+        qtbot.waitUntil(lambda: advanced_dock_area.manage_dialog is None)
+        assert not action.isChecked()
+
+    def test_manage_dialog_closed(self, advanced_dock_area):
+        widget_mock = MagicMock()
+        dialog_mock = MagicMock()
+        advanced_dock_area.manage_widget = widget_mock
+        advanced_dock_area.manage_dialog = dialog_mock
+        action = advanced_dock_area.toolbar.components.get_action("manage_workspaces").action
+        action.setChecked(True)
+
+        advanced_dock_area._manage_dialog_closed()
+
+        widget_mock.close.assert_called_once()
+        widget_mock.deleteLater.assert_called_once()
+        dialog_mock.deleteLater.assert_called_once()
+        assert advanced_dock_area.manage_dialog is None
+        assert not action.isChecked()
+
 
 class TestProfileManagement:
     """Test profile management functionality."""
 
     def test_profile_path(self, temp_profile_dir):
         """Test profile path generation."""
-        path = profile_path("test_profile")
-        expected = os.path.join(temp_profile_dir, "test_profile.ini")
+        path = user_profile_path("test_profile")
+        expected = os.path.join(temp_profile_dir, "user", "test_profile.ini")
         assert path == expected
+
+        default_path = default_profile_path("test_profile")
+        expected_default = os.path.join(temp_profile_dir, "default", "test_profile.ini")
+        assert default_path == expected_default
 
     def test_open_settings(self, temp_profile_dir):
         """Test opening settings for a profile."""
-        settings = open_settings("test_profile")
+        settings = open_user_settings("test_profile")
         assert isinstance(settings, QSettings)
 
     def test_list_profiles_empty(self, temp_profile_dir):
         """Test listing profiles when directory is empty."""
+        try:
+            module_defaults = {
+                os.path.splitext(f)[0]
+                for f in os.listdir(profile_utils.module_profiles_dir())
+                if f.endswith(".ini")
+            }
+        except FileNotFoundError:
+            module_defaults = set()
         profiles = list_profiles()
-        assert profiles == []
+        assert module_defaults.issubset(set(profiles))
 
     def test_list_profiles_with_files(self, temp_profile_dir):
         """Test listing profiles with existing files."""
         # Create some test profile files
         profile_names = ["profile1", "profile2", "profile3"]
         for name in profile_names:
-            settings = open_settings(name)
+            settings = open_user_settings(name)
             settings.setValue("test", "value")
             settings.sync()
 
         profiles = list_profiles()
-        assert sorted(profiles) == sorted(profile_names)
+        for name in profile_names:
+            assert name in profiles
 
-    def test_readonly_profile_operations(self, temp_profile_dir):
+    def test_readonly_profile_operations(self, temp_profile_dir, module_profile_factory):
         """Test read-only profile functionality."""
-        profile_name = "readonly_profile"
+        profile_name = "user_profile"
 
         # Initially should not be read-only
-        assert not is_profile_readonly(profile_name)
+        assert not is_profile_read_only(profile_name)
 
-        # Set as read-only
-        set_profile_readonly(profile_name, True)
-        assert is_profile_readonly(profile_name)
+        # Create a user profile and ensure it's writable
+        settings = open_user_settings(profile_name)
+        settings.setValue("test", "value")
+        settings.sync()
+        assert not is_profile_read_only(profile_name)
 
-        # Unset read-only
-        set_profile_readonly(profile_name, False)
-        assert not is_profile_readonly(profile_name)
+        # Verify a bundled module profile is detected as read-only
+        readonly_name = module_profile_factory("module_default")
+        assert is_profile_read_only(readonly_name)
 
     def test_write_and_read_manifest(self, temp_profile_dir, advanced_dock_area, qtbot):
         """Test writing and reading dock manifest."""
-        settings = open_settings("test_manifest")
+        settings = open_user_settings("test_manifest")
 
         # Create real docks
         advanced_dock_area.new("DarkModeButton")
@@ -535,44 +1147,65 @@ class TestProfileManagement:
             assert "floatable" in item
             assert "movable" in item
 
+    def test_restore_preserves_quick_select(self, temp_profile_dir):
+        """Ensure restoring keeps the quick select flag when it was enabled."""
+        profile_name = "restorable_profile"
+        default_settings = open_default_settings(profile_name)
+        default_settings.setValue("test", "default")
+        default_settings.sync()
+
+        user_settings = open_user_settings(profile_name)
+        user_settings.setValue("test", "user")
+        user_settings.sync()
+
+        set_quick_select(profile_name, True)
+        assert is_quick_select(profile_name)
+
+        restore_user_from_default(profile_name)
+
+        assert is_quick_select(profile_name)
+
 
 class TestWorkspaceProfileOperations:
     """Test workspace profile save/load/delete operations."""
 
-    def test_save_profile_readonly_conflict(self, advanced_dock_area, temp_profile_dir):
+    def test_save_profile_readonly_conflict(
+        self, advanced_dock_area, temp_profile_dir, module_profile_factory
+    ):
         """Test saving profile when read-only profile exists."""
-        profile_name = "readonly_profile"
+        profile_name = module_profile_factory("readonly_profile")
+        new_profile = f"{profile_name}_custom"
+        target_path = user_profile_path(new_profile)
+        if os.path.exists(target_path):
+            os.remove(target_path)
 
-        # Create a read-only profile
-        set_profile_readonly(profile_name, True)
-        settings = open_settings(profile_name)
-        settings.setValue("test", "value")
-        settings.sync()
+        class StubDialog:
+            def __init__(self, *args, **kwargs):
+                self.overwrite_existing = False
+
+            def exec(self):
+                return QDialog.Accepted
+
+            def get_profile_name(self):
+                return new_profile
+
+            def is_quick_select(self):
+                return False
 
         with patch(
-            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.SaveProfileDialog"
-        ) as mock_dialog_class:
-            mock_dialog = MagicMock()
-            mock_dialog.exec.return_value = QDialog.Accepted
-            mock_dialog.get_profile_name.return_value = profile_name
-            mock_dialog.is_readonly.return_value = False
-            mock_dialog_class.return_value = mock_dialog
+            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.SaveProfileDialog",
+            StubDialog,
+        ):
+            advanced_dock_area.save_profile(profile_name)
 
-            with patch(
-                "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.QMessageBox.warning"
-            ) as mock_warning:
-                mock_warning.return_value = QMessageBox.No
-
-                advanced_dock_area.save_profile()
-
-                mock_warning.assert_called_once()
+        assert os.path.exists(target_path)
 
     def test_load_profile_with_manifest(self, advanced_dock_area, temp_profile_dir, qtbot):
         """Test loading profile with widget manifest."""
         profile_name = "test_load_profile"
 
         # Create a profile with manifest
-        settings = open_settings(profile_name)
+        settings = open_user_settings(profile_name)
         settings.beginWriteArray("manifest/widgets", 1)
         settings.setArrayIndex(0)
         settings.setValue("object_name", "test_widget")
@@ -582,8 +1215,6 @@ class TestWorkspaceProfileOperations:
         settings.setValue("movable", True)
         settings.endArray()
         settings.sync()
-
-        initial_count = len(advanced_dock_area.widget_map())
 
         # Load profile
         advanced_dock_area.load_profile(profile_name)
@@ -595,15 +1226,96 @@ class TestWorkspaceProfileOperations:
         widget_map = advanced_dock_area.widget_map()
         assert "test_widget" in widget_map
 
-    def test_delete_profile_readonly(self, advanced_dock_area, temp_profile_dir):
-        """Test deleting read-only profile shows warning."""
-        profile_name = "readonly_profile"
+    def test_save_as_skips_autosave_source_profile(
+        self, advanced_dock_area, temp_profile_dir, qtbot
+    ):
+        """Saving a new profile avoids overwriting the source profile during the switch."""
+        source_profile = "autosave_source"
+        new_profile = "autosave_new"
 
-        # Create read-only profile
-        set_profile_readonly(profile_name, True)
-        settings = open_settings(profile_name)
+        settings = open_user_settings(source_profile)
+        settings.beginWriteArray("manifest/widgets", 1)
+        settings.setArrayIndex(0)
+        settings.setValue("object_name", "source_widget")
+        settings.setValue("widget_class", "DarkModeButton")
+        settings.setValue("closable", True)
+        settings.setValue("floatable", True)
+        settings.setValue("movable", True)
+        settings.endArray()
+        settings.sync()
+
+        advanced_dock_area.load_profile(source_profile)
+        qtbot.wait(500)
+        advanced_dock_area.new("DarkModeButton")
+        qtbot.wait(500)
+
+        class StubDialog:
+            def __init__(self, *args, **kwargs):
+                self.overwrite_existing = False
+
+            def exec(self):
+                return QDialog.Accepted
+
+            def get_profile_name(self):
+                return new_profile
+
+            def is_quick_select(self):
+                return False
+
+        with patch(
+            "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.SaveProfileDialog",
+            StubDialog,
+        ):
+            advanced_dock_area.save_profile()
+
+        qtbot.wait(500)
+        source_manifest = read_manifest(open_user_settings(source_profile))
+        new_manifest = read_manifest(open_user_settings(new_profile))
+
+        assert len(source_manifest) == 1
+        assert len(new_manifest) == 2
+
+    def test_switch_autosaves_previous_profile(self, advanced_dock_area, temp_profile_dir, qtbot):
+        """Regular profile switches should persist the outgoing layout."""
+        profile_a = "autosave_keep"
+        profile_b = "autosave_target"
+
+        for profile in (profile_a, profile_b):
+            settings = open_user_settings(profile)
+            settings.beginWriteArray("manifest/widgets", 1)
+            settings.setArrayIndex(0)
+            settings.setValue("object_name", f"{profile}_widget")
+            settings.setValue("widget_class", "DarkModeButton")
+            settings.setValue("closable", True)
+            settings.setValue("floatable", True)
+            settings.setValue("movable", True)
+            settings.endArray()
+            settings.sync()
+
+        advanced_dock_area.load_profile(profile_a)
+        qtbot.wait(500)
+        advanced_dock_area.new("DarkModeButton")
+        qtbot.wait(500)
+
+        advanced_dock_area.load_profile(profile_b)
+        qtbot.wait(500)
+
+        manifest_a = read_manifest(open_user_settings(profile_a))
+        assert len(manifest_a) == 2
+
+    def test_delete_profile_readonly(
+        self, advanced_dock_area, temp_profile_dir, module_profile_factory
+    ):
+        """Test deleting bundled profile removes only the writable copy."""
+        profile_name = module_profile_factory("readonly_profile")
+        list_profiles()  # ensure default and user copies are materialized
+        settings = open_user_settings(profile_name)
         settings.setValue("test", "value")
         settings.sync()
+        user_path = user_profile_path(profile_name)
+        default_path = default_profile_path(profile_name)
+        assert os.path.exists(user_path)
+        assert os.path.exists(default_path)
 
         with patch.object(advanced_dock_area.toolbar.components, "get_action") as mock_get_action:
             mock_combo = MagicMock()
@@ -611,22 +1323,27 @@ class TestWorkspaceProfileOperations:
             mock_get_action.return_value.widget = mock_combo
 
             with patch(
-                "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.QMessageBox.warning"
-            ) as mock_warning:
+                "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.QMessageBox.question"
+            ) as mock_question:
+                mock_question.return_value = QMessageBox.Yes
+
                 advanced_dock_area.delete_profile()
 
-                mock_warning.assert_called_once()
-                # Profile should still exist
-                assert os.path.exists(profile_path(profile_name))
+                mock_question.assert_called_once()
+                # User copy should be removed, default remains
+                assert not os.path.exists(user_path)
+                assert os.path.exists(default_path)
 
     def test_delete_profile_success(self, advanced_dock_area, temp_profile_dir):
         """Test successful profile deletion."""
         profile_name = "deletable_profile"
 
         # Create regular profile
-        settings = open_settings(profile_name)
+        settings = open_user_settings(profile_name)
         settings.setValue("test", "value")
         settings.sync()
+        user_path = user_profile_path(profile_name)
+        assert os.path.exists(user_path)
 
         with patch.object(advanced_dock_area.toolbar.components, "get_action") as mock_get_action:
             mock_combo = MagicMock()
@@ -644,13 +1361,13 @@ class TestWorkspaceProfileOperations:
                     mock_question.assert_called_once()
                     mock_refresh.assert_called_once()
                     # Profile should be deleted
-                    assert not os.path.exists(profile_path(profile_name))
+                    assert not os.path.exists(user_path)
 
     def test_refresh_workspace_list(self, advanced_dock_area, temp_profile_dir):
         """Test refreshing workspace list."""
         # Create some profiles
         for name in ["profile1", "profile2"]:
-            settings = open_settings(name)
+            settings = open_user_settings(name)
             settings.setValue("test", "value")
             settings.sync()
 
