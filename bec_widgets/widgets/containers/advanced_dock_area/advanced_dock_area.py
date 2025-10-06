@@ -4,18 +4,15 @@ import os
 from typing import Literal, cast
 
 import PySide6QtAds as QtAds
+from bec_lib import bec_logger
 from PySide6QtAds import CDockManager, CDockWidget
-from qtpy.QtCore import Signal
+from qtpy.QtCore import QTimer, Signal
+from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import (
     QApplication,
-    QCheckBox,
     QDialog,
-    QHBoxLayout,
     QInputDialog,
-    QLabel,
-    QLineEdit,
     QMessageBox,
-    QPushButton,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -37,13 +34,29 @@ from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.widget_state_manager import WidgetStateManager
 from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
     SETTINGS_KEYS,
-    is_profile_readonly,
-    list_profiles,
-    open_settings,
-    profile_path,
+    default_profile_path,
+    get_last_profile,
+    is_quick_select,
+    load_default_profile_screenshot,
+    load_user_profile_screenshot,
+    now_iso_utc,
+    open_default_settings,
+    open_user_settings,
+    profile_origin,
+    profile_origin_display,
     read_manifest,
-    set_profile_readonly,
+    restore_user_from_default,
+    set_last_profile,
+    set_quick_select,
+    user_profile_path,
     write_manifest,
+)
+from bec_widgets.widgets.containers.advanced_dock_area.settings.dialogs import (
+    RestoreProfileDialog,
+    SaveProfileDialog,
+)
+from bec_widgets.widgets.containers.advanced_dock_area.settings.workspace_manager import (
+    WorkSpaceManager,
 )
 from bec_widgets.widgets.containers.advanced_dock_area.toolbar_components.workspace_actions import (
     WorkspaceConnection,
@@ -65,6 +78,8 @@ from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECStatus
 from bec_widgets.widgets.utility.logpanel import LogPanel
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
+logger = bec_logger.logger
+
 
 class DockSettingsDialog(QDialog):
 
@@ -77,62 +92,6 @@ class DockSettingsDialog(QDialog):
         # Property editor
         self.prop_editor = PropertyEditor(target, self, show_only_bec=True)
         layout.addWidget(self.prop_editor)
-
-
-class SaveProfileDialog(QDialog):
-    """Dialog for saving workspace profiles with read-only option."""
-
-    def __init__(self, parent: QWidget, current_name: str = ""):
-        super().__init__(parent)
-        self.setWindowTitle("Save Workspace Profile")
-        self.setModal(True)
-        self.resize(400, 150)
-        layout = QVBoxLayout(self)
-
-        # Name input
-        name_row = QHBoxLayout()
-        name_row.addWidget(QLabel("Profile Name:"))
-        self.name_edit = QLineEdit(current_name)
-        self.name_edit.setPlaceholderText("Enter profile name...")
-        name_row.addWidget(self.name_edit)
-        layout.addLayout(name_row)
-
-        # Read-only checkbox
-        self.readonly_checkbox = QCheckBox("Mark as read-only (cannot be overwritten or deleted)")
-        layout.addWidget(self.readonly_checkbox)
-
-        # Info label
-        info_label = QLabel("Read-only profiles are protected from modification and deletion.")
-        info_label.setStyleSheet("color: gray; font-size: 10px;")
-        layout.addWidget(info_label)
-
-        # Buttons
-        btn_row = QHBoxLayout()
-        btn_row.addStretch(1)
-        self.save_btn = QPushButton("Save")
-        self.save_btn.setDefault(True)
-        cancel_btn = QPushButton("Cancel")
-        self.save_btn.clicked.connect(self.accept)
-        cancel_btn.clicked.connect(self.reject)
-        btn_row.addWidget(self.save_btn)
-        btn_row.addWidget(cancel_btn)
-        layout.addLayout(btn_row)
-
-        # Enable/disable save button based on name input
-        self.name_edit.textChanged.connect(self._update_save_button)
-        self._update_save_button()
-
-    def _update_save_button(self):
-        """Enable save button only when name is not empty."""
-        self.save_btn.setEnabled(bool(self.name_edit.text().strip()))
-
-    def get_profile_name(self) -> str:
-        """Get the entered profile name."""
-        return self.name_edit.text().strip()
-
-    def is_readonly(self) -> bool:
-        """Check if the profile should be marked as read-only."""
-        return self.readonly_checkbox.isChecked()
 
 
 class AdvancedDockArea(BECWidget, QWidget):
@@ -151,6 +110,7 @@ class AdvancedDockArea(BECWidget, QWidget):
 
     # Define a signal for mode changes
     mode_changed = Signal(str)
+    profile_changed = Signal(str)
 
     def __init__(
         self,
@@ -190,12 +150,18 @@ class AdvancedDockArea(BECWidget, QWidget):
         self._setup_toolbar()
         self._hook_toolbar()
 
+        # Popups
+        self.save_dialog = None
+        self.manage_dialog = None
+
         # Place toolbar and dock manager into layout
         self._root_layout.addWidget(self.toolbar)
         self._root_layout.addWidget(self.dock_manager, 1)
 
         # Populate and hook the workspace combo
         self._refresh_workspace_list()
+        self._current_profile_name = None
+        self._pending_autosave_skip: tuple[str, str] | None = None
 
         # State manager
         self.state_manager = WidgetStateManager(self)
@@ -211,6 +177,23 @@ class AdvancedDockArea(BECWidget, QWidget):
 
         # Apply the requested mode after everything is set up
         self.mode = mode
+        QTimer.singleShot(
+            0, self._fetch_initial_profile
+        )  # To allow full init before loading profile and prevent segfault on exit
+
+    def _fetch_initial_profile(self):
+        # Restore last-used profile if available; otherwise fall back to combo selection
+        combo = self.toolbar.components.get_action("workspace_combo").widget
+        last = get_last_profile()
+        if last and (
+            os.path.exists(user_profile_path(last)) or os.path.exists(default_profile_path(last))
+        ):
+            init_profile = last
+        else:
+            init_profile = combo.currentText()
+        if init_profile:
+            self.load_profile(init_profile)
+            combo.setCurrentText(init_profile)
 
     def _make_dock(
         self,
@@ -494,11 +477,6 @@ class AdvancedDockArea(BECWidget, QWidget):
         self.lock_workspace = not editable
         self._editable = editable
 
-        # Sync the toolbar lock toggle with current mode
-        lock_action = self.toolbar.components.get_action("lock").action
-        lock_action.setChecked(not editable)
-        lock_action.setVisible(editable)
-
         attach_all_action = self.toolbar.components.get_action("attach_all").action
         attach_all_action.setVisible(editable)
 
@@ -689,63 +667,64 @@ class AdvancedDockArea(BECWidget, QWidget):
         self._locked = value
         self._apply_dock_lock(value)
         self.toolbar.components.get_action("save_workspace").action.setVisible(not value)
-        self.toolbar.components.get_action("delete_workspace").action.setVisible(not value)
         for dock in self.dock_list():
             dock.setting_action.setVisible(not value)
+
+    def _write_snapshot_to_settings(self, settings, save_preview: bool = True) -> None:
+        settings.setValue(SETTINGS_KEYS["geom"], self.saveGeometry())
+        settings.setValue(SETTINGS_KEYS["state"], b"")
+        settings.setValue(SETTINGS_KEYS["ads_state"], self.dock_manager.saveState())
+        self.dock_manager.addPerspective(self.windowTitle())
+        self.dock_manager.savePerspectives(settings)
+        self.state_manager.save_state(settings=settings)
+        write_manifest(settings, self.dock_list())
+        if save_preview:
+            ba = self.screenshot_bytes()
+            if ba and len(ba) > 0:
+                settings.setValue(SETTINGS_KEYS["screenshot"], ba)
+                settings.setValue(SETTINGS_KEYS["screenshot_at"], now_iso_utc())
+
+        logger.info(f"Workspace snapshot written to settings: {settings.fileName()}")
 
     @SafeSlot(str)
     def save_profile(self, name: str | None = None):
         """
         Save the current workspace profile.
 
+        On first save of a given name:
+          - writes a default copy to states/default/<name>.ini with tag=default and created_at
+          - writes a user copy   to states/user/<name>.ini    with tag=user    and created_at
+        On subsequent saves of user-owned profiles:
+          - updates both the default and user copies so restore uses the latest snapshot.
+        Read-only bundled profiles cannot be overwritten.
+
         Args:
-            name (str | None): The name of the profile. If None, a dialog will prompt for a name.
+            name (str | None): The name of the profile to save. If None, prompts the user.
         """
-        if not name:
-            # Use the new SaveProfileDialog instead of QInputDialog
-            dialog = SaveProfileDialog(self)
-            if dialog.exec() != QDialog.Accepted:
-                return
-            name = dialog.get_profile_name()
-            readonly = dialog.is_readonly()
 
-            # Check if profile already exists and is read-only
-            if os.path.exists(profile_path(name)) and is_profile_readonly(name):
-                suggested_name = f"{name}_custom"
-                reply = QMessageBox.warning(
-                    self,
-                    "Read-only Profile",
-                    f"The profile '{name}' is marked as read-only and cannot be overwritten.\n\n"
-                    f"Would you like to save it with a different name?\n"
-                    f"Suggested name: '{suggested_name}'",
-                    QMessageBox.Yes | QMessageBox.No,
-                    QMessageBox.Yes,
-                )
-                if reply == QMessageBox.Yes:
-                    # Show dialog again with suggested name pre-filled
-                    dialog = SaveProfileDialog(self, suggested_name)
-                    if dialog.exec() != QDialog.Accepted:
-                        return
-                    name = dialog.get_profile_name()
-                    readonly = dialog.is_readonly()
+        def _profile_exists(profile_name: str) -> bool:
+            return profile_origin(profile_name) != "unknown"
 
-                    # Check again if the new name is also read-only (recursive protection)
-                    if os.path.exists(profile_path(name)) and is_profile_readonly(name):
-                        return self.save_profile()
-                else:
-                    return
-        else:
-            # If name is provided directly, assume not read-only unless already exists
-            readonly = False
-            if os.path.exists(profile_path(name)) and is_profile_readonly(name):
-                QMessageBox.warning(
-                    self,
-                    "Read-only Profile",
-                    f"The profile '{name}' is marked as read-only and cannot be overwritten.",
-                    QMessageBox.Ok,
-                )
-                return
+        initial_name = name or ""
+        quickselect_default = is_quick_select(name) if name else False
 
+        current_profile = getattr(self, "_current_profile_name", "") or ""
+        dialog = SaveProfileDialog(
+            self,
+            current_name=initial_name,
+            current_profile_name=current_profile,
+            name_exists=_profile_exists,
+            profile_origin=profile_origin,
+            origin_label=profile_origin_display,
+            quick_select_checked=quickselect_default,
+        )
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        name = dialog.get_profile_name()
+        quickselect = dialog.is_quick_select()
+        origin_before_save = profile_origin(name)
+        overwrite_default = dialog.overwrite_existing and origin_before_save == "settings"
         # Display saving placeholder
         workspace_combo = self.toolbar.components.get_action("workspace_combo").widget
         workspace_combo.blockSignals(True)
@@ -753,42 +732,75 @@ class AdvancedDockArea(BECWidget, QWidget):
         workspace_combo.setCurrentIndex(0)
         workspace_combo.blockSignals(False)
 
-        # Save the profile
-        settings = open_settings(name)
-        settings.setValue(SETTINGS_KEYS["geom"], self.saveGeometry())
-        settings.setValue(
-            SETTINGS_KEYS["state"], b""
-        )  # No QMainWindow state; placeholder for backward compat
-        settings.setValue(SETTINGS_KEYS["ads_state"], self.dock_manager.saveState())
-        self.dock_manager.addPerspective(name)
-        self.dock_manager.savePerspectives(settings)
-        self.state_manager.save_state(settings=settings)
-        write_manifest(settings, self.dock_list())
+        # Create or update default copy controlled by overwrite flag
+        should_write_default = overwrite_default or not os.path.exists(default_profile_path(name))
+        if should_write_default:
+            ds = open_default_settings(name)
+            self._write_snapshot_to_settings(ds)
+            if not ds.value(SETTINGS_KEYS["created_at"], ""):
+                ds.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
+            # Ensure new profiles are not quick-select by default
+            if not ds.value(SETTINGS_KEYS["is_quick_select"], None):
+                ds.setValue(SETTINGS_KEYS["is_quick_select"], False)
 
-        # Set read-only status if specified
-        if readonly:
-            set_profile_readonly(name, readonly)
+        # Always (over)write the user copy
+        us = open_user_settings(name)
+        self._write_snapshot_to_settings(us)
+        if not us.value(SETTINGS_KEYS["created_at"], ""):
+            us.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
+        # Ensure new profiles are not quick-select by default (only if missing)
+        if not us.value(SETTINGS_KEYS["is_quick_select"], None):
+            us.setValue(SETTINGS_KEYS["is_quick_select"], False)
 
-        settings.sync()
+        # set quick select
+        if quickselect:
+            set_quick_select(name, quickselect)
+
         self._refresh_workspace_list()
+        if current_profile and current_profile != name and not dialog.overwrite_existing:
+            self._pending_autosave_skip = (current_profile, name)
+        else:
+            self._pending_autosave_skip = None
         workspace_combo.setCurrentText(name)
+        self._current_profile_name = name
+        self.profile_changed.emit(name)
+        set_last_profile(name)
+        combo = self.toolbar.components.get_action("workspace_combo").widget
+        combo.refresh_profiles(active_profile=name)
 
     def load_profile(self, name: str | None = None):
         """
         Load a workspace profile.
 
-        Args:
-            name (str | None): The name of the profile. If None, a dialog will prompt for a name.
+        Before switching, persist the current profile to the user copy.
+        Prefer loading the user copy; fall back to the default copy.
         """
-        # FIXME this has to be tweaked
-        if not name:
+        if not name:  # Gui fallback if the name is not provided
             name, ok = QInputDialog.getText(
                 self, "Load Workspace", "Enter the name of the workspace profile to load:"
             )
             if not ok or not name:
                 return
-        settings = open_settings(name)
 
+        prev_name = getattr(self, "_current_profile_name", None)
+        skip_pair = getattr(self, "_pending_autosave_skip", None)
+        if prev_name and prev_name != name:
+            if skip_pair and skip_pair == (prev_name, name):
+                self._pending_autosave_skip = None
+            else:
+                us_prev = open_user_settings(prev_name)
+                self._write_snapshot_to_settings(us_prev, save_preview=False)
+
+        # Choose source settings: user first, else default
+        if os.path.exists(user_profile_path(name)):
+            settings = open_user_settings(name)
+        elif os.path.exists(default_profile_path(name)):
+            settings = open_default_settings(name)
+        else:
+            QMessageBox.warning(self, "Profile not found", f"Profile '{name}' not found.")
+            return
+
+        # Rebuild widgets and restore states
         for item in read_manifest(settings):
             obj_name = item["object_name"]
             widget_class = item["widget_class"]
@@ -806,14 +818,48 @@ class AdvancedDockArea(BECWidget, QWidget):
         geom = settings.value(SETTINGS_KEYS["geom"])
         if geom:
             self.restoreGeometry(geom)
-        # No window state for QWidget-based host; keep for backwards compat read
-        # window_state = settings.value(SETTINGS_KEYS["state"])  # ignored
         dock_state = settings.value(SETTINGS_KEYS["ads_state"])
         if dock_state:
             self.dock_manager.restoreState(dock_state)
         self.dock_manager.loadPerspectives(settings)
         self.state_manager.load_state(settings=settings)
         self._set_editable(self._editable)
+
+        self._current_profile_name = name
+        self.profile_changed.emit(name)
+        set_last_profile(name)
+        combo = self.toolbar.components.get_action("workspace_combo").widget
+        combo.refresh_profiles(active_profile=name)
+
+    @SafeSlot()
+    @SafeSlot(str)
+    def restore_user_profile_from_default(self, name: str | None = None):
+        """
+        Overwrite the user copy of *name* with the default baseline.
+        If *name* is None, target the currently active profile.
+
+        Args:
+            name (str | None): The name of the profile to restore. If None, uses the current profile.
+        """
+        target = name or getattr(self, "_current_profile_name", None)
+        if not target:
+            return
+
+        current_pixmap = None
+        if self.isVisible():
+            current_pixmap = QPixmap()
+            ba = bytes(self.screenshot_bytes())
+            current_pixmap.loadFromData(ba)
+        if current_pixmap is None or current_pixmap.isNull():
+            current_pixmap = load_user_profile_screenshot(target)
+        default_pixmap = load_default_profile_screenshot(target)
+
+        if not RestoreProfileDialog.confirm(self, current_pixmap, default_pixmap):
+            return
+
+        restore_user_from_default(target)
+        self.delete_all()
+        self.load_profile(target)
 
     @SafeSlot()
     def delete_profile(self):
@@ -823,17 +869,6 @@ class AdvancedDockArea(BECWidget, QWidget):
         combo = self.toolbar.components.get_action("workspace_combo").widget
         name = combo.currentText()
         if not name:
-            return
-
-        # Check if profile is read-only
-        if is_profile_readonly(name):
-            QMessageBox.warning(
-                self,
-                "Read-only Profile",
-                f"The profile '{name}' is marked as read-only and cannot be deleted.\n\n"
-                f"Read-only profiles are protected from modification and deletion.",
-                QMessageBox.Ok,
-            )
             return
 
         # Confirm deletion for regular profiles
@@ -848,7 +883,7 @@ class AdvancedDockArea(BECWidget, QWidget):
         if reply != QMessageBox.Yes:
             return
 
-        file_path = profile_path(name)
+        file_path = user_profile_path(name)
         try:
             os.remove(file_path)
         except FileNotFoundError:
@@ -860,14 +895,68 @@ class AdvancedDockArea(BECWidget, QWidget):
         Populate the workspace combo box with all saved profile names (without .ini).
         """
         combo = self.toolbar.components.get_action("workspace_combo").widget
+        active_profile = getattr(self, "_current_profile_name", None)
         if hasattr(combo, "refresh_profiles"):
-            combo.refresh_profiles()
+            combo.refresh_profiles(active_profile)
         else:
             # Fallback for regular QComboBox
+            from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
+                list_quick_profiles,
+            )
+
             combo.blockSignals(True)
             combo.clear()
-            combo.addItems(list_profiles())
+            quick_profiles = list_quick_profiles()
+            items = list(quick_profiles)
+            if active_profile and active_profile not in items:
+                items.insert(0, active_profile)
+            combo.addItems(items)
+            if active_profile:
+                idx = combo.findText(active_profile)
+                if idx >= 0:
+                    combo.setCurrentIndex(idx)
+            if active_profile and active_profile not in quick_profiles:
+                combo.setToolTip("Active profile is not in quick select")
+            else:
+                combo.setToolTip("")
             combo.blockSignals(False)
+
+    ################################################################################
+    # Dialog Popups
+    ################################################################################
+
+    @SafeSlot()
+    def show_workspace_manager(self):
+        """
+        Show the workspace manager dialog.
+        """
+        manage_action = self.toolbar.components.get_action("manage_workspaces").action
+        if self.manage_dialog is None or not self.manage_dialog.isVisible():
+            self.manage_widget = WorkSpaceManager(
+                self, target_widget=self, default_profile=self._current_profile_name
+            )
+            self.manage_dialog = QDialog(modal=False)
+
+            self.manage_dialog.setWindowTitle("Workspace Manager")
+            self.manage_dialog.setMinimumSize(1200, 500)
+            self.manage_dialog.layout = QVBoxLayout(self.manage_dialog)
+            self.manage_dialog.layout.addWidget(self.manage_widget)
+            self.manage_dialog.finished.connect(self._manage_dialog_closed)
+            self.manage_dialog.show()
+            self.manage_dialog.resize(300, 300)
+            manage_action.setChecked(True)
+        else:
+            # If already open, bring it to the front
+            self.manage_dialog.raise_()
+            self.manage_dialog.activateWindow()
+            manage_action.setChecked(True)  # keep it toggle
+
+    def _manage_dialog_closed(self):
+        self.manage_widget.close()
+        self.manage_widget.deleteLater()
+        self.manage_dialog.deleteLater()
+        self.manage_dialog = None
+        self.toolbar.components.get_action("manage_workspaces").action.setChecked(False)
 
     ################################################################################
     # Mode Switching
@@ -913,6 +1002,15 @@ class AdvancedDockArea(BECWidget, QWidget):
         """
         Cleanup the dock area.
         """
+        # before cleanup save current profile (user copy)
+        name = getattr(self, "_current_profile_name", None)
+        if name:
+            us = open_user_settings(name)
+            self._write_snapshot_to_settings(us)
+            set_last_profile(name)
+        if self.manage_dialog is not None:
+            self.manage_dialog.reject()
+            self.manage_dialog = None
         self.delete_all()
         self.dark_mode_button.close()
         self.dark_mode_button.deleteLater()
@@ -920,7 +1018,7 @@ class AdvancedDockArea(BECWidget, QWidget):
         super().cleanup()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import sys
 
     app = QApplication(sys.argv)
