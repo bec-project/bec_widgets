@@ -384,23 +384,23 @@ def test_export_data_dap(curve_tree_fixture):
 def test_scan_index_validator_behavior():
     """
     Test ScanIndexValidator allows empty, 'live', partial 'live', valid scan numbers,
-    and rejects out-of-range or invalid inputs.
+    and rejects invalid or disallowed inputs under the new allowed-set API.
     """
-    validator = ScanIndexValidator(max_scan=3)
+    validator = ScanIndexValidator(allowed_scans={1, 2, 3})
 
     def state(txt):
         s, _, _ = validator.validate(txt, 0)
         return s
 
-    assert state("") == QValidator.Acceptable
-    assert state("live") == QValidator.Acceptable
-    assert state("l") == QValidator.Intermediate
-    assert state("liv") == QValidator.Intermediate
-    assert state("1") == QValidator.Acceptable
-    assert state("3") == QValidator.Acceptable
-    assert state("4") == QValidator.Invalid
-    assert state("0") == QValidator.Invalid
-    assert state("abc") == QValidator.Invalid
+    assert state("") == QValidator.State.Acceptable
+    assert state("live") == QValidator.State.Acceptable
+    assert state("l") == QValidator.State.Intermediate
+    assert state("liv") == QValidator.State.Intermediate
+    assert state("1") == QValidator.State.Acceptable
+    assert state("3") == QValidator.State.Acceptable
+    assert state("4") == QValidator.State.Invalid
+    assert state("0") == QValidator.State.Invalid
+    assert state("abc") == QValidator.State.Invalid
 
 
 def test_export_data_history_curve(curve_tree_fixture, scan_history_factory):
