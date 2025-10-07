@@ -185,6 +185,14 @@ class BECWidget(BECConnector):
         except Exception:
             logger.warning(f"Failed to apply theme {theme} to {self}")
 
+    def get_help_md(self) -> str:
+        """
+        Method to override in subclasses to provide help text in markdown format.
+
+        Returns:
+            str: The help text in markdown format.
+        """
+
     @SafeSlot()
     @SafeSlot(str)
     @rpc_timeout(None)
