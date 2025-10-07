@@ -2095,6 +2095,12 @@ class Waveform(PlotBase):
         if scan_item is None:
             logger.warning(f"Scan with scan_number {scan_index} not found in history.")
             return None
+        if isinstance(scan_item, list):
+            if len(scan_item) > 1:
+                logger.warning(
+                    f"Multiple scans found with scan_number {scan_index}. Returning the latest one."
+                )
+            scan_item = scan_item[-1]
         return scan_item
 
     @SafeSlot(int)
