@@ -52,7 +52,6 @@ from bec_widgets.widgets.containers.advanced_dock_area.toolbar_components.worksp
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindowNoRPC
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox
 from bec_widgets.widgets.control.scan_control import ScanControl
-from bec_widgets.widgets.editors.vscode.vscode import VSCodeEditor
 from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap
 from bec_widgets.widgets.plots.image.image import Image
 from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
@@ -321,7 +320,6 @@ class AdvancedDockArea(BECWidget, QWidget):
         }
         UTIL_ACTIONS = {
             "queue": (BECQueue.ICON_NAME, "Add Scan Queue", "BECQueue"),
-            "vs_code": (VSCodeEditor.ICON_NAME, "Add VS Code", "VSCodeEditor"),
             "status": (BECStatusBox.ICON_NAME, "Add BEC Status Box", "BECStatusBox"),
             "progress_bar": (
                 RingProgressBar.ICON_NAME,
