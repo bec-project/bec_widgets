@@ -45,10 +45,10 @@ def create_action_with_text(toolbar_action, toolbar: QToolBar):
     btn = QToolButton(parent=toolbar)
     btn.setDefaultAction(toolbar_action.action)
     btn.setAutoRaise(True)
-    if toolbar_action.text_position == "under":
-        btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
-    else:
+    if toolbar_action.text_position == "beside":
         btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+    else:
+        btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
     btn.setText(toolbar_action.label_text)
     toolbar.addWidget(btn)
 
