@@ -2054,17 +2054,18 @@ class Waveform(PlotBase):
     ) -> ScanDataContainer | None:
         """
         Get scan item from history based on scan_id or scan_index.
-        Provide only one of scan_id or scan_index.
+        If both are provided, scan_id takes precedence and the resolved scan_number
+        will be read from the fetched item.
 
         Args:
             scan_id (str, optional): ScanID of the scan to fetch. Defaults to None.
-            scan_index (int, optional): Index of the scan to fetch. Defaults to None.
+            scan_index (int, optional): Index (scan number) of the scan to fetch. Defaults to None.
 
         Returns:
             ScanDataContainer | None: The fetched scan item or None if no item was found.
         """
         if scan_index is not None and scan_id is not None:
-            scan_index = None  # Only one of scan_id or scan_index can be provided -> scan id is more reliable
+            scan_index = None  # Prefer scan_id when both are given
 
         if scan_index is None and scan_id is None:
             logger.warning("Neither scan_id or scan_number was provided, fetching the latest scan")
@@ -2100,11 +2101,11 @@ class Waveform(PlotBase):
     def update_with_scan_history(self, scan_index: int = None, scan_id: str = None):
         """
         Update the scan curves with the data from the scan storage.
-        Provide only one of scan_id or scan_index.
+        If both arguments are provided, scan_id takes precedence and scan_index is ignored.
 
         Args:
             scan_id(str, optional): ScanID of the scan to be updated. Defaults to None.
-            scan_index(int, optional): Index of the scan to be updated. Defaults to None.
+            scan_index(int, optional): Index (scan number) of the scan to be updated. Defaults to None.
         """
         self.scan_item = self.get_history_scan_item(scan_index=scan_index, scan_id=scan_id)
 

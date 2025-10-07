@@ -5149,11 +5149,11 @@ class Waveform(RPCBase):
     def update_with_scan_history(self, scan_index: "int" = None, scan_id: "str" = None):
         """
         Update the scan curves with the data from the scan storage.
-        Provide only one of scan_id or scan_index.
+        If both arguments are provided, scan_id takes precedence and scan_index is ignored.
 
         Args:
             scan_id(str, optional): ScanID of the scan to be updated. Defaults to None.
-            scan_index(int, optional): Index of the scan to be updated. Defaults to None.
+            scan_index(int, optional): Index (scan number) of the scan to be updated. Defaults to None.
         """
 
     @rpc_call
