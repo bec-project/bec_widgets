@@ -9,25 +9,28 @@ from qtpy.QtGui import QValidator
 
 
 class ScanIndexValidator(QValidator):
-    """Validator to allow only 'live' or integer scan numbers within range."""
+    """Validator to allow only 'live' or integer scan numbers from an allowed set."""
 
-    def __init__(self, max_scan: int, parent=None):
+    def __init__(self, allowed_scans: set[int] | None = None, parent=None):
         super().__init__(parent)
-        self.max_scan = max_scan
+        self.allowed_scans = allowed_scans or set()
 
     def validate(self, input_str: str, pos: int):
         # Accept empty or 'live'
         if input_str == "" or input_str == "live":
-            return QValidator.Acceptable, input_str, pos
+            return QValidator.State.Acceptable, input_str, pos
         # Allow partial editing of "live"
         if "live".startswith(input_str):
-            return QValidator.Intermediate, input_str, pos
-        # Accept integer within [1, max_scan]
+            return QValidator.State.Intermediate, input_str, pos
+        # Accept integer only if present in the allowed set
         if input_str.isdigit():
-            num = int(input_str)
-            if 1 <= num <= self.max_scan:
-                return QValidator.Acceptable, input_str, pos
-        return QValidator.Invalid, input_str, pos
+            try:
+                num = int(input_str)
+            except ValueError:
+                return QValidator.State.Invalid, input_str, pos
+            if num in self.allowed_scans:
+                return QValidator.State.Acceptable, input_str, pos
+        return QValidator.State.Invalid, input_str, pos
 
 
 from qtpy.QtWidgets import (
@@ -125,29 +128,48 @@ class CurveRow(QTreeWidgetItem):
         self.scan_index_combo = QComboBox()
         self.scan_index_combo.setEditable(True)
         # Populate 'live' and all available history scan indices
-        self.scan_index_combo.addItem("live")
+        self.scan_index_combo.addItem("live", None)
 
         scan_number_list = []
+        scan_id_list = []
         try:
             history = getattr(self.curve_tree.client, "history", None)
             if history is not None:
-                scan_number_list = history._scan_numbers
+                scan_number_list = getattr(history, "_scan_numbers", []) or []
+                scan_id_list = getattr(history, "_scan_ids", []) or []
         except Exception as e:
             logger.error(f"Cannot fetch scan numbers from BEC client: {e}")
             # If scan numbers cannot be fetched, only provide 'live' option
             scan_number_list = []
+            scan_id_list = []
 
         # Restrict input to 'live' or valid scan numbers
-        validator = ScanIndexValidator(len(scan_number_list), self.scan_index_combo)
+        allowed = set()
+        try:
+            allowed = set(int(n) for n in scan_number_list if isinstance(n, (int, str)))
+        except Exception:
+            allowed = set()
+        validator = ScanIndexValidator(allowed, self.scan_index_combo)
         self.scan_index_combo.lineEdit().setValidator(validator)
-        for idx in scan_number_list:
-            # Display scan numbers starting at 1
-            self.scan_index_combo.addItem(str(idx))
-        # Select current scan number if set, otherwise default to 'live'
-        if getattr(self.config, "scan_number", None) is not None:
-            self.scan_index_combo.setCurrentText(str(self.config.scan_number))
+
+        # Add items: show scan numbers, store scan IDs as item data
+        if scan_number_list and scan_id_list and len(scan_number_list) == len(scan_id_list):
+            for num, sid in zip(scan_number_list, scan_id_list):
+                self.scan_index_combo.addItem(str(num), sid)
         else:
+            logger.error("Scan number and ID lists are mismatched or empty.")
+
+        # Select current based on existing config
+        selected = False
+        if getattr(self.config, "scan_id", None):  # scan_id matching only
+            for i in range(self.scan_index_combo.count()):
+                if self.scan_index_combo.itemData(i) == self.config.scan_id:
+                    self.scan_index_combo.setCurrentIndex(i)
+                    selected = True
+                    break
+        if not selected:
             self.scan_index_combo.setCurrentText("live")
+
         self.tree.setItemWidget(self, 3, self.scan_index_combo)
 
     def _init_actions(self):
@@ -377,7 +399,7 @@ class CurveRow(QTreeWidgetItem):
                 except ValueError:
                     scan_num = None
                 self.config.scan_number = scan_num
-                self.config.scan_id = None  # has to be reset to fetch by scan number, not by scan id, can cause leak of old scan ids
+                self.config.scan_id = self.scan_index_combo.currentData()
                 self.config.source = "history"
                 # Label history curves with scan number suffix
                 if scan_num is not None:
