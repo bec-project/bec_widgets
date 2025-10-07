@@ -1039,7 +1039,9 @@ class Waveform(PlotBase):
         device = curve.config.signal.name
         entry = curve.config.signal.entry
 
-        all_devices_used = scan_item._msg.stored_data_info
+        all_devices_used = getattr(
+            getattr(scan_item, "_msg", None), "stored_data_info", None
+        ) or getattr(scan_item, "stored_data_info", None)
         if all_devices_used is None:
             curve.remove()
             raise ValueError(
