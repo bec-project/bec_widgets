@@ -104,6 +104,7 @@ class AdvancedDockArea(RPCBase):
         movable: "bool" = True,
         start_floating: "bool" = False,
         where: "Literal['left', 'right', 'top', 'bottom'] | None" = None,
+        **kwargs,
     ) -> "BECWidget":
         """
         Create a new widget (or reuse an instance) and add it as a dock.
@@ -116,6 +117,7 @@ class AdvancedDockArea(RPCBase):
             start_floating: Start the dock in a floating state.
             where: Preferred area to add the dock: "left" | "right" | "top" | "bottom".
                    If None, uses the instance default passed at construction time.
+            **kwargs: The keyword arguments for the widget.
         Returns:
             The widget instance.
         """
