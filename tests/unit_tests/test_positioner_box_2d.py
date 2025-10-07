@@ -29,8 +29,8 @@ def test_positioner_box_2d(positioner_box_2d):
     """Test init of 2D positioner box"""
     assert positioner_box_2d.device_hor == "samx"
     assert positioner_box_2d.device_ver == "samy"
-    data_hor = positioner_box_2d.dev["samx"].read()
-    data_ver = positioner_box_2d.dev["samy"].read()
+    data_hor = positioner_box_2d.dev["samx"].read(cached=True)
+    data_ver = positioner_box_2d.dev["samy"].read(cached=True)
     # Avoid check for Positioner class from BEC in _init_device
 
     setpoint_hor_text = positioner_box_2d.ui.setpoint_hor.text()

@@ -88,7 +88,7 @@ class PositionerBoxBase(BECWidget, CompactPopupWidget):
         if not self._check_device_is_valid(device):
             return
 
-        data = self.dev[device].read()
+        data = self.dev[device].read(cached=True)
         self._on_device_readback(
             device,
             self._device_ui_components(device),

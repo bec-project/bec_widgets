@@ -765,7 +765,7 @@ class MotorMap(PlotBase):
             float: Motor initial position.
         """
         entry = self.entry_validator.validate_signal(name, None)
-        init_position = round(float(self.dev[name].read()[entry]["value"]), precision)
+        init_position = round(float(self.dev[name].read(cached=True)[entry]["value"]), precision)
         return init_position
 
     def _sync_motor_map_selection_toolbar(self):

@@ -273,7 +273,9 @@ class SignalLabel(BECWidget, QWidget):
         if not isinstance(self._device_obj, Device | Signal):
             self._value, self._units = "__", ""
             return
-        reading = (self._device_obj.read() or {}) | (self._device_obj.read_configuration() or {})
+        reading = (self._device_obj.read(cached=True) or {}) | (
+            self._device_obj.read_configuration(cached=True) or {}
+        )
         value = reading.get(self._signal_key, {}).get("value")
         if value is None:
             self._value, self._units = "__", ""
