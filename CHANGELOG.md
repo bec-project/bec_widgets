@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.39.1 (2025-10-07)
+
+### Bug Fixes
+
+- Explicitly pass the cached readout flag
+  ([`50696bc`](https://github.com/bec-project/bec_widgets/commit/50696bce4ce14c61b4bdda8c6fb40967972e6b23))
+
+
 ## v2.39.0 (2025-09-24)
 
 ### Bug Fixes
