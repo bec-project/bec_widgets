@@ -52,6 +52,7 @@ from bec_widgets.widgets.containers.advanced_dock_area.toolbar_components.worksp
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindowNoRPC
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox
 from bec_widgets.widgets.control.scan_control import ScanControl
+from bec_widgets.widgets.editors.web_console.web_console import WebConsole
 from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap
 from bec_widgets.widgets.plots.image.image import Image
 from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
@@ -326,6 +327,8 @@ class AdvancedDockArea(BECWidget, QWidget):
                 "Add Circular ProgressBar",
                 "RingProgressBar",
             ),
+            "terminal": (WebConsole.ICON_NAME, "Add Terminal", "WebConsole"),
+            "bec_shell": (WebConsole.ICON_NAME, "Add BEC Shell", "WebConsole"),
             "log_panel": (LogPanel.ICON_NAME, "Add LogPanel - Disabled", "LogPanel"),
             "sbb_monitor": ("train", "Add SBB Monitor", "SBBMonitor"),
         }
@@ -442,6 +445,18 @@ class AdvancedDockArea(BECWidget, QWidget):
                 act = menu.actions[key].action
                 if widget_type == "LogPanel":
                     act.setEnabled(False)  # keep disabled per issue #644
+                elif key == "terminal":
+                    act.triggered.connect(
+                        lambda _, t=widget_type: self.new(widget=t, closable=True, startup_cmd=None)
+                    )
+                elif key == "bec_shell":
+                    act.triggered.connect(
+                        lambda _, t=widget_type: self.new(
+                            widget=t,
+                            closable=True,
+                            startup_cmd=f"bec --gui-id {self.bec_dispatcher.cli_server.gui_id}",
+                        )
+                    )
                 else:
                     act.triggered.connect(lambda _, t=widget_type: self.new(widget=t))
 
@@ -516,6 +531,7 @@ class AdvancedDockArea(BECWidget, QWidget):
         movable: bool = True,
         start_floating: bool = False,
         where: Literal["left", "right", "top", "bottom"] | None = None,
+        **kwargs,
     ) -> BECWidget:
         """
         Create a new widget (or reuse an instance) and add it as a dock.
@@ -528,6 +544,7 @@ class AdvancedDockArea(BECWidget, QWidget):
             start_floating: Start the dock in a floating state.
             where: Preferred area to add the dock: "left" | "right" | "top" | "bottom".
                    If None, uses the instance default passed at construction time.
+            **kwargs: The keyword arguments for the widget.
         Returns:
             The widget instance.
         """
@@ -535,7 +552,9 @@ class AdvancedDockArea(BECWidget, QWidget):
 
         # 1) Instantiate or look up the widget
         if isinstance(widget, str):
-            widget = cast(BECWidget, widget_handler.create_widget(widget_type=widget, parent=self))
+            widget = cast(
+                BECWidget, widget_handler.create_widget(widget_type=widget, parent=self, **kwargs)
+            )
             widget.name_established.connect(
                 lambda: self._create_dock_with_name(
                     widget=widget,
