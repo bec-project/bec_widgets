@@ -143,11 +143,15 @@ class DeveloperView(BECWidget, QWidget):
 
     def init_developer_toolbar(self):
         """Initialize the developer toolbar with necessary actions and widgets."""
-        save_button = MaterialIconAction(icon_name="save", tooltip="Save", parent=self)
+        save_button = MaterialIconAction(
+            icon_name="save", tooltip="Save", label_text="Save", filled=True, parent=self
+        )
         save_button.action.triggered.connect(self.on_save)
         self.toolbar.components.add_safe("save", save_button)
 
-        save_as_button = MaterialIconAction(icon_name="save_as", tooltip="Save As", parent=self)
+        save_as_button = MaterialIconAction(
+            icon_name="save_as", tooltip="Save As", label_text="Save As", parent=self
+        )
         self.toolbar.components.add_safe("save_as", save_as_button)
 
         save_bundle = ToolbarBundle("save", self.toolbar.components)
@@ -156,13 +160,21 @@ class DeveloperView(BECWidget, QWidget):
         self.toolbar.add_bundle(save_bundle)
 
         run_action = MaterialIconAction(
-            icon_name="play_arrow", tooltip="Run current file", filled=True, parent=self
+            icon_name="play_arrow",
+            tooltip="Run current file",
+            label_text="Run",
+            filled=True,
+            parent=self,
         )
         run_action.action.triggered.connect(self.on_execute)
         self.toolbar.components.add_safe("run", run_action)
 
         stop_action = MaterialIconAction(
-            icon_name="stop", tooltip="Stop current execution", filled=True, parent=self
+            icon_name="stop",
+            tooltip="Stop current execution",
+            label_text="Stop",
+            filled=True,
+            parent=self,
         )
         stop_action.action.triggered.connect(self.on_stop)
         self.toolbar.components.add_safe("stop", stop_action)
@@ -173,7 +185,12 @@ class DeveloperView(BECWidget, QWidget):
         self.toolbar.add_bundle(execution_bundle)
 
         vim_action = MaterialIconAction(
-            icon_name="vim", tooltip="Vim", filled=True, parent=self, checkable=True
+            icon_name="vim",
+            tooltip="Toggle Vim Mode",
+            label_text="Vim",
+            filled=True,
+            parent=self,
+            checkable=True,
         )
         self.toolbar.components.add_safe("vim", vim_action)
         vim_action.action.triggered.connect(self.on_vim_triggered)
