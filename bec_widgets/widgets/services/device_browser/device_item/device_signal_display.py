@@ -38,8 +38,8 @@ class SignalDisplay(BECWidget, QWidget):
     @SafeSlot()
     def _refresh(self):
         if (dev := self.dev.get(self.device)) is not None:
-            dev.read()
-            dev.read_configuration()
+            dev.read(cached=True)
+            dev.read_configuration(cached=True)
 
     def _add_refresh_button(self):
         button_holder = QWidget()

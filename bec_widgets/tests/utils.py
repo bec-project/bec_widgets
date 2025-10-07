@@ -173,7 +173,7 @@ class FakePositioner(BECPositioner):
     def set_read_value(self, value):
         self.read_value = value
 
-    def read(self):
+    def read(self, cached=False):
         return self.signals
 
     def set_limits(self, limits):

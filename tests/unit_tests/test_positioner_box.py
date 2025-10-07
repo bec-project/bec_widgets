@@ -50,7 +50,7 @@ def positioner_box(qtbot, mocked_client):
 def test_positioner_box(positioner_box):
     """Test init of positioner box"""
     assert positioner_box.device == "samx"
-    data = positioner_box.dev["samx"].read()
+    data = positioner_box.dev["samx"].read(cached=True)
     # Avoid check for Positioner class from BEC in _init_device
 
     setpoint_text = positioner_box.ui.setpoint.text()
