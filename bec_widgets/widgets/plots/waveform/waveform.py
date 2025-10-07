@@ -467,6 +467,8 @@ class Waveform(PlotBase):
         """
         Slot for when the scan history dialog is closed.
         """
+        if self.scan_history_dialog is None:
+            return
         self.scan_history_widget.close()
         self.scan_history_widget.deleteLater()
         self.scan_history_dialog.deleteLater()
