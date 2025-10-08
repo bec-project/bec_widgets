@@ -1,21 +1,22 @@
 import re
 
 import markdown
-import PySide6QtAds as QtAds
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.script_executor import upload_script
 from bec_qthemes import material_icon
-from PySide6QtAds import CDockManager, CDockWidget
 from qtpy.QtGui import QKeySequence, QShortcut
 from qtpy.QtWidgets import QTextEdit, QVBoxLayout, QWidget
+from shiboken6 import isValid
 
+import bec_widgets.widgets.containers.ads as QtAds
 from bec_widgets import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
+from bec_widgets.widgets.containers.ads import CDockManager, CDockWidget
 from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
-from bec_widgets.widgets.editors.monaco.monaco_tab import MonacoDock
+from bec_widgets.widgets.editors.monaco.monaco_dock import MonacoDock
 from bec_widgets.widgets.editors.web_console.web_console import WebConsole
 from bec_widgets.widgets.utility.ide_explorer.ide_explorer import IDEExplorer
 
@@ -110,6 +111,7 @@ class DeveloperWidget(BECWidget, QWidget):
         self.monaco.signature_help.connect(
             lambda text: self.signature_help.setHtml(markdown_to_html(text))
         )
+        self._current_script_id: str | None = None
 
         # Create the dock widgets
         self.explorer_dock = QtAds.CDockWidget("Explorer", self)
@@ -141,9 +143,9 @@ class DeveloperWidget(BECWidget, QWidget):
         for dock in self.dock_manager.dockWidgets():
             # dock.setFeature(CDockWidget.DockWidgetDeleteOnClose, True)#TODO implement according to MonacoDock or AdvancedDockArea
             # dock.setFeature(CDockWidget.CustomCloseHandling, True) #TODO same
-            dock.setFeature(CDockWidget.DockWidgetClosable, False)
-            dock.setFeature(CDockWidget.DockWidgetFloatable, False)
-            dock.setFeature(CDockWidget.DockWidgetMovable, False)
+            dock.setFeature(CDockWidget.DockWidgetFeature.DockWidgetClosable, False)
+            dock.setFeature(CDockWidget.DockWidgetFeature.DockWidgetFloatable, False)
+            dock.setFeature(CDockWidget.DockWidgetFeature.DockWidgetMovable, False)
 
         self.plotting_ads_dock = QtAds.CDockWidget("Plotting Area", self)
         self.plotting_ads_dock.setWidget(self.plotting_ads)
@@ -174,6 +176,7 @@ class DeveloperWidget(BECWidget, QWidget):
             icon_name="save_as", tooltip="Save As", label_text="Save As", parent=self
         )
         self.toolbar.components.add_safe("save_as", save_as_button)
+        save_as_button.action.triggered.connect(self.on_save_as)
 
         save_bundle = ToolbarBundle("save", self.toolbar.components)
         save_bundle.add_action("save")
@@ -272,29 +275,30 @@ class DeveloperWidget(BECWidget, QWidget):
 
     @SafeSlot()
     def on_stop(self):
-        print("Stopping execution...")
+        if not self.current_script_id:
+            return
+        self.console.send_ctrl_c()
 
     @property
     def current_script_id(self):
         return self._current_script_id
 
     @current_script_id.setter
-    def current_script_id(self, value):
-        if not isinstance(value, str):
+    def current_script_id(self, value: str | None):
+        if value is not None and not isinstance(value, str):
             raise ValueError("Script ID must be a string.")
+        old_script_id = self._current_script_id
         self._current_script_id = value
-        self._update_subscription()
+        self._update_subscription(value, old_script_id)
 
-    def _update_subscription(self):
-        if self.current_script_id:
-            self.bec_dispatcher.connect_slot(
-                self.on_script_execution_info,
-                MessageEndpoints.script_execution_info(self.current_script_id),
-            )
-        else:
+    def _update_subscription(self, new_script_id: str | None, old_script_id: str | None):
+        if old_script_id is not None:
             self.bec_dispatcher.disconnect_slot(
-                self.on_script_execution_info,
-                MessageEndpoints.script_execution_info(self.current_script_id),
+                self.on_script_execution_info, MessageEndpoints.script_execution_info(old_script_id)
+            )
+        if new_script_id is not None:
+            self.bec_dispatcher.connect_slot(
+                self.on_script_execution_info, MessageEndpoints.script_execution_info(new_script_id)
             )
 
     @SafeSlot(dict, dict)
@@ -307,6 +311,20 @@ class DeveloperWidget(BECWidget, QWidget):
         line_number = current_lines[0]
         self.script_editor_tab.widget().clear_highlighted_lines()
         self.script_editor_tab.widget().set_highlighted_lines(line_number, line_number)
+
+    def cleanup(self):
+        for dock in self.dock_manager.dockWidgets():
+            self._delete_dock(dock)
+        return super().cleanup()
+
+    def _delete_dock(self, dock: CDockWidget) -> None:
+        w = dock.widget()
+        if w and isValid(w):
+            w.close()
+            w.deleteLater()
+        if isValid(dock):
+            dock.closeDockWidget()
+            dock.deleteDockWidget()
 
 
 if __name__ == "__main__":
@@ -321,24 +339,6 @@ if __name__ == "__main__":
     apply_theme("dark")
 
     _app = BECMainApp()
-    screen = app.primaryScreen()
-    screen_geometry = screen.availableGeometry()
-    screen_width = screen_geometry.width()
-    screen_height = screen_geometry.height()
-    # 70% of screen height, keep 16:9 ratio
-    height = int(screen_height * 0.9)
-    width = int(height * (16 / 9))
-
-    # If width exceeds screen width, scale down
-    if width > screen_width * 0.9:
-        width = int(screen_width * 0.9)
-        height = int(width / (16 / 9))
-
-    _app.resize(width, height)
-    developer_view = DeveloperView()
-    _app.add_view(
-        icon="code_blocks", title="IDE", widget=developer_view, id="developer_view", exclusive=True
-    )
     _app.show()
     # developer_view.show()
     # developer_view.setWindowTitle("Developer View")

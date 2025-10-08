@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import os
 import pathlib
-from typing import Any, Literal, cast
+from typing import Any, cast
 
-import PySide6QtAds as QtAds
 from bec_lib.logger import bec_logger
 from bec_lib.macro_update_handler import has_executable_code
-from PySide6QtAds import CDockWidget
 from qtpy.QtCore import QEvent, QTimer, Signal
 from qtpy.QtWidgets import QFileDialog, QMessageBox, QToolButton, QVBoxLayout, QWidget
 
+import bec_widgets.widgets.containers.ads as QtAds
 from bec_widgets import BECWidget
+from bec_widgets.widgets.containers.ads import CDockAreaWidget, CDockWidget
 from bec_widgets.widgets.editors.monaco.monaco_widget import MonacoWidget
 
 logger = bec_logger.logger
@@ -40,13 +40,14 @@ class MonacoDock(BECWidget, QWidget):
         self.dock_manager.focusedDockWidgetChanged.connect(self._on_focus_event)
         self._root_layout.addWidget(self.dock_manager)
         self.dock_manager.installEventFilter(self)
-        self._last_focused_editor: MonacoWidget | None = None
+        self._last_focused_editor: CDockWidget | None = None
         self.focused_editor.connect(self._on_last_focused_editor_changed)
         self.add_editor()
         self._open_files = {}
 
     def _create_editor(self):
-        widget = MonacoWidget(self)
+        init_lsp = len(self.dock_manager.dockWidgets()) == 0
+        widget = MonacoWidget(self, init_lsp=init_lsp)
         widget.save_enabled.connect(self.save_enabled.emit)
         widget.editor.signature_help_triggered.connect(self._on_signature_change)
         count = len(self.dock_manager.dockWidgets())
@@ -58,11 +59,11 @@ class MonacoDock(BECWidget, QWidget):
             lambda modified: self._update_tab_title_for_modification(dock, modified)
         )
 
-        dock.setFeature(CDockWidget.DockWidgetDeleteOnClose, True)
-        dock.setFeature(CDockWidget.CustomCloseHandling, True)
-        dock.setFeature(CDockWidget.DockWidgetClosable, True)
-        dock.setFeature(CDockWidget.DockWidgetFloatable, False)
-        dock.setFeature(CDockWidget.DockWidgetMovable, True)
+        dock.setFeature(CDockWidget.DockWidgetFeature.DockWidgetDeleteOnClose, True)
+        dock.setFeature(CDockWidget.DockWidgetFeature.CustomCloseHandling, True)
+        dock.setFeature(CDockWidget.DockWidgetFeature.DockWidgetClosable, True)
+        dock.setFeature(CDockWidget.DockWidgetFeature.DockWidgetFloatable, False)
+        dock.setFeature(CDockWidget.DockWidgetFeature.DockWidgetMovable, True)
 
         dock.closeRequested.connect(lambda: self._on_editor_close_requested(dock, widget))
 
@@ -73,6 +74,10 @@ class MonacoDock(BECWidget, QWidget):
         """
         Get the last focused editor.
         """
+        dock_widget = self.dock_manager.focusedDockWidget()
+        if dock_widget is not None and isinstance(dock_widget.widget(), MonacoWidget):
+            self.last_focused_editor = dock_widget
+
         return self._last_focused_editor
 
     @last_focused_editor.setter
@@ -199,7 +204,7 @@ class MonacoDock(BECWidget, QWidget):
 
     def _scan_and_fix_areas(self):
         # Find all dock areas under this manager and ensure each single-tab area has a plus button
-        areas = self.dock_manager.findChildren(QtAds.CDockAreaWidget)
+        areas = self.dock_manager.findChildren(CDockAreaWidget)
         for a in areas:
             self._ensure_area_plus(a)
 
@@ -226,7 +231,9 @@ class MonacoDock(BECWidget, QWidget):
         if tooltip is not None:
             new_dock.setTabToolTip(tooltip)
         if area is None:
-            area_obj = self.dock_manager.addDockWidgetTab(QtAds.TopDockWidgetArea, new_dock)
+            area_obj = self.dock_manager.addDockWidgetTab(
+                QtAds.DockWidgetArea.TopDockWidgetArea, new_dock
+            )
             self._ensure_area_plus(area_obj)
         else:
             # If an area is provided, add the dock to that area
@@ -253,8 +260,13 @@ class MonacoDock(BECWidget, QWidget):
         # For now, the dock manager is only for the editor docks. We can therefore safely assume
         # that all docks are editor docks.
         dock_area = self.dock_manager.dockArea(0)
+        if not dock_area:
+            return
 
         editor_dock = dock_area.currentDockWidget()
+        if not editor_dock:
+            return
+
         editor_widget = editor_dock.widget() if editor_dock else None
         if editor_widget:
             editor_widget = cast(MonacoWidget, editor_dock.widget())
@@ -262,14 +274,17 @@ class MonacoDock(BECWidget, QWidget):
                 editor_dock.setWindowTitle(file)
                 editor_dock.setTabToolTip(file_name)
                 editor_widget.open_file(file_name)
-                editor_widget.metadata["scope"] = scope
+                if scope is not None:
+                    editor_widget.metadata["scope"] = scope
                 return
 
         # File is not open, create a new editor
         editor_dock = self.add_editor(title=file, tooltip=file_name)
         widget = cast(MonacoWidget, editor_dock.widget())
         widget.open_file(file_name)
-        widget.metadata["scope"] = scope
+        if scope is not None:
+            widget.metadata["scope"] = scope
+        editor_dock.setAsCurrentTab()
 
     def save_file(
         self, widget: MonacoWidget | None = None, force_save_as: bool = False, format_on_save=True
@@ -309,35 +324,36 @@ class MonacoDock(BECWidget, QWidget):
         # Save as option
         save_file = QFileDialog.getSaveFileName(self, "Save File As", "", "All files (*)")
 
-        if save_file:
-            # check if we have suffix specified
-            file = pathlib.Path(save_file[0])
-            if file.suffix == "":
-                file = file.with_suffix(".py")
-            if format_on_save and file.suffix == ".py":
-                widget.format()
+        if not save_file or not save_file[0]:
+            return
+        # check if we have suffix specified
+        file = pathlib.Path(save_file[0])
+        if file.suffix == "":
+            file = file.with_suffix(".py")
+        if format_on_save and file.suffix == ".py":
+            widget.format()
 
-            text = widget.get_text()
-            with open(file, "w", encoding="utf-8") as f:
-                f.write(text)
-            widget._original_content = text
+        text = widget.get_text()
+        with open(file, "w", encoding="utf-8") as f:
+            f.write(text)
+        widget._original_content = text
 
-            # Update the current_file before emitting save_enabled to ensure proper tracking
-            widget._current_file = str(file)
-            widget.save_enabled.emit(False)
+        # Update the current_file before emitting save_enabled to ensure proper tracking
+        widget._current_file = str(file)
+        widget.save_enabled.emit(False)
 
-            # Find the dock widget containing this monaco widget and update title
-            for dock in self.dock_manager.dockWidgets():
-                if dock.widget() == widget:
-                    dock.setWindowTitle(file.name)
-                    dock.setTabToolTip(str(file))
-                    break
-            if "macros" in widget.metadata.get("scope", ""):
-                self._update_macros(widget)
-                # Emit signal to refresh macro tree widget
-                self.macro_file_updated.emit(str(file))
+        # Find the dock widget containing this monaco widget and update title
+        for dock in self.dock_manager.dockWidgets():
+            if dock.widget() == widget:
+                dock.setWindowTitle(file.name)
+                dock.setTabToolTip(str(file))
+                break
+        if "macros" in widget.metadata.get("scope", ""):
+            self._update_macros(widget)
+            # Emit signal to refresh macro tree widget
+            self.macro_file_updated.emit(str(file))
 
-        print(f"Save file called, last focused editor: {self.last_focused_editor}")
+        logger.debug(f"Save file called, last focused editor: {self.last_focused_editor}")
 
     def _validate_macros(self, source: str) -> bool:
         # pylint: disable=protected-access
@@ -398,7 +414,7 @@ class MonacoDock(BECWidget, QWidget):
                 open_files.append(editor_widget.current_file)
         return open_files
 
-    def _get_editor_dock(self, file_name: str) -> CDockWidget | None:
+    def _get_editor_dock(self, file_name: str) -> QtAds.CDockWidget | None:
         for widget in self.dock_manager.dockWidgets():
             editor_widget = cast(MonacoWidget, widget.widget())
             if editor_widget.current_file == file_name:
