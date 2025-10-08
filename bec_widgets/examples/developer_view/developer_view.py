@@ -1,5 +1,7 @@
+import re
 from typing import List
 
+import markdown
 import PySide6QtAds as QtAds
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.script_executor import upload_script
@@ -54,6 +56,62 @@ def set_splitter_weights(splitter: QSplitter, weights: List[float]) -> None:
     QTimer.singleShot(0, apply)
 
 
+def markdown_to_html(md_text: str) -> str:
+    """Convert Markdown with syntax highlighting to HTML (Qt-compatible)."""
+
+    # Preprocess: convert consecutive >>> lines to Python code blocks
+    def replace_python_examples(match):
+        indent = match.group(1)
+        examples = match.group(2)
+        # Remove >>> prefix and clean up the code
+        lines = []
+        for line in examples.strip().split("\n"):
+            line = line.strip()
+            if line.startswith(">>> "):
+                lines.append(line[4:])  # Remove '>>> '
+            elif line.startswith(">>>"):
+                lines.append(line[3:])  # Remove '>>>'
+        code = "\n".join(lines)
+
+        return f"{indent}```python\n{indent}{code}\n{indent}```"
+
+    # Match one or more consecutive >>> lines (with same indentation)
+    pattern = r"^(\s*)((?:>>> .+(?:\n|$))+)"
+    md_text = re.sub(pattern, replace_python_examples, md_text, flags=re.MULTILINE)
+
+    extensions = ["fenced_code", "codehilite", "tables", "sane_lists"]
+    html = markdown.markdown(
+        md_text,
+        extensions=extensions,
+        extension_configs={
+            "codehilite": {"linenums": False, "guess_lang": False, "noclasses": True}
+        },
+        output_format="html",
+    )
+
+    # Remove hardcoded background colors that conflict with themes
+    html = re.sub(r'style="background: #[^"]*"', 'style="background: transparent"', html)
+    html = re.sub(r"background: #[^;]*;", "", html)
+
+    # Add CSS to force code blocks to wrap
+    css = """
+    <style>
+    pre, code {
+        white-space: pre-wrap !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+    }
+    .codehilite pre {
+        white-space: pre-wrap !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+    }
+    </style>
+    """
+
+    return css + html
+
+
 class DeveloperView(BECWidget, QWidget):
 
     def __init__(self, parent=None, **kwargs):
@@ -83,10 +141,11 @@ class DeveloperView(BECWidget, QWidget):
         self.signature_help.setReadOnly(True)
         self.signature_help.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
         opt = self.signature_help.document().defaultTextOption()
-        opt.setWrapMode(opt.WrapMode.WrapAnywhere)  # wrap everything, including code
+        opt.setWrapMode(opt.WrapMode.WrapAnywhere)
         self.signature_help.document().setDefaultTextOption(opt)
-
-        self.monaco.signature_help.connect(self.signature_help.setMarkdown)
+        self.monaco.signature_help.connect(
+            lambda text: self.signature_help.setHtml(markdown_to_html(text))
+        )
 
         # Create the dock widgets
         self.explorer_dock = QtAds.CDockWidget("Explorer", self)
