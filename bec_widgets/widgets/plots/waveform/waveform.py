@@ -2360,6 +2360,9 @@ class Waveform(PlotBase):
         if self.dap_summary_dialog is not None:
             self.dap_summary_dialog.reject()
             self.dap_summary_dialog = None
+        if self.scan_history_dialog is not None:
+            self.scan_history_dialog.reject()
+            self.scan_history_dialog = None
         super().cleanup()
 
 
