@@ -7,6 +7,7 @@ from bec_widgets.applications.views.device_manager_view.device_manager_widget im
     DeviceManagerWidget,
 )
 from bec_widgets.applications.views.view import ViewBase, WaveformViewInline, WaveformViewPopup
+from bec_widgets.examples.developer_view.developer_view import DeveloperView
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
@@ -48,6 +49,7 @@ class BECMainApp(BECMainWindow):
         self.add_section("BEC Applications", "bec_apps")
         self.ads = AdvancedDockArea(self)
         self.device_manager = DeviceManagerWidget(self)
+        self.developer_view = DeveloperView(self)
 
         self.add_view(
             icon="widgets", title="Dock Area", id="dock_area", widget=self.ads, mini_text="Docks"
@@ -58,6 +60,13 @@ class BECMainApp(BECMainWindow):
             id="device_manager",
             widget=self.device_manager,
             mini_text="DM",
+        )
+        self.add_view(
+            icon="code_blocks",
+            title="IDE",
+            widget=self.developer_view,
+            id="developer_view",
+            exclusive=True,
         )
 
         if self._show_examples:
@@ -195,6 +204,21 @@ if __name__ == "__main__":  # pragma: no cover
     app = QApplication([sys.argv[0], *qt_args])
     apply_theme("dark")
     w = BECMainApp(show_examples=args.examples)
+
+    screen = app.primaryScreen()
+    screen_geometry = screen.availableGeometry()
+    screen_width = screen_geometry.width()
+    screen_height = screen_geometry.height()
+    # 70% of screen height, keep 16:9 ratio
+    height = int(screen_height * 0.9)
+    width = int(height * (16 / 9))
+
+    # If width exceeds screen width, scale down
+    if width > screen_width * 0.9:
+        width = int(screen_width * 0.9)
+        height = int(width / (16 / 9))
+
+    w.resize(width, height)
     w.show()
 
     sys.exit(app.exec())
