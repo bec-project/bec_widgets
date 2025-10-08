@@ -2,27 +2,23 @@ import os
 from pathlib import Path
 
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QModelIndex, QRect, QRegularExpression, QSortFilterProxyModel, Qt, Signal
-from qtpy.QtGui import QPainter
-from qtpy.QtWidgets import QFileSystemModel, QStyledItemDelegate, QTreeView, QVBoxLayout, QWidget
+from qtpy.QtCore import QModelIndex, QRegularExpression, QSortFilterProxyModel, Signal
+from qtpy.QtWidgets import QFileSystemModel, QTreeView, QVBoxLayout, QWidget
 
 from bec_widgets.utils.colors import get_theme_palette
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
+from bec_widgets.widgets.containers.explorer.explorer_delegate import ExplorerDelegate
 
 logger = bec_logger.logger
 
 
-class FileItemDelegate(QStyledItemDelegate):
+class FileItemDelegate(ExplorerDelegate):
     """Custom delegate to show action buttons on hover"""
 
     def __init__(self, tree_widget):
         super().__init__(tree_widget)
-        self.setObjectName("file_item_delegate")
-        self.hovered_index = QModelIndex()
         self.file_actions = []
         self.dir_actions = []
-        self.button_rects = []
-        self.current_file_path = ""
 
     def add_file_action(self, action) -> None:
         """Add an action for files"""
@@ -37,126 +33,18 @@ class FileItemDelegate(QStyledItemDelegate):
         self.file_actions.clear()
         self.dir_actions.clear()
 
-    def paint(self, painter, option, index):
-        """Paint the item with action buttons on hover"""
-        # Paint the default item
-        super().paint(painter, option, index)
-
-        # Early return if not hovering over this item
-        if index != self.hovered_index:
-            return
-
-        tree_view = self.parent()
-        if not isinstance(tree_view, QTreeView):
-            return
-
-        proxy_model = tree_view.model()
-        if not isinstance(proxy_model, QSortFilterProxyModel):
-            return
-
-        source_index = proxy_model.mapToSource(index)
-        source_model = proxy_model.sourceModel()
-        if not isinstance(source_model, QFileSystemModel):
-            return
-
-        is_dir = source_model.isDir(source_index)
-        file_path = source_model.filePath(source_index)
-        self.current_file_path = file_path
-
-        # Choose appropriate actions based on item type
-        actions = self.dir_actions if is_dir else self.file_actions
-        if actions:
-            self._draw_action_buttons(painter, option, actions)
-
-    def _draw_action_buttons(self, painter, option, actions):
-        """Draw action buttons on the right side"""
-        button_size = 18
-        margin = 4
-        spacing = 2
-
-        # Calculate total width needed for all buttons
-        total_width = len(actions) * button_size + (len(actions) - 1) * spacing
-
-        # Clear previous button rects and create new ones
-        self.button_rects.clear()
-
-        # Calculate starting position (right side of the item)
-        start_x = option.rect.right() - total_width - margin
-        current_x = start_x
-
-        painter.save()
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        # Get theme colors for better integration
-        palette = get_theme_palette()
-        button_bg = palette.button().color()
-        button_bg.setAlpha(150)  # Semi-transparent
-
-        for action in actions:
-            if not action.isVisible():
-                continue
-
-            # Calculate button position
-            button_rect = QRect(
-                current_x,
-                option.rect.top() + (option.rect.height() - button_size) // 2,
-                button_size,
-                button_size,
-            )
-            self.button_rects.append(button_rect)
-
-            # Draw button background
-            painter.setBrush(button_bg)
-            painter.setPen(palette.mid().color())
-            painter.drawRoundedRect(button_rect, 3, 3)
-
-            # Draw action icon
-            icon = action.icon()
-            if not icon.isNull():
-                icon_rect = button_rect.adjusted(2, 2, -2, -2)
-                icon.paint(painter, icon_rect)
-
-            # Move to next button position
-            current_x += button_size + spacing
-
-        painter.restore()
-
-    def editorEvent(self, event, model, option, index):
-        """Handle mouse events for action buttons"""
-        # Early return if not a left click
-        if not (
-            event.type() == event.Type.MouseButtonPress
-            and event.button() == Qt.MouseButton.LeftButton
-        ):
-            return super().editorEvent(event, model, option, index)
-
-        # Early return if not a proxy model
+    def get_actions_for_current_item(self, model, index) -> list[MaterialIconAction] | None:
+        """Get actions for the current item based on its type"""
         if not isinstance(model, QSortFilterProxyModel):
-            return super().editorEvent(event, model, option, index)
+            return None
 
         source_index = model.mapToSource(index)
         source_model = model.sourceModel()
-
-        # Early return if not a file system model
         if not isinstance(source_model, QFileSystemModel):
-            return super().editorEvent(event, model, option, index)
+            return None
 
         is_dir = source_model.isDir(source_index)
-        actions = self.dir_actions if is_dir else self.file_actions
-
-        # Check which button was clicked
-        visible_actions = [action for action in actions if action.isVisible()]
-        for i, button_rect in enumerate(self.button_rects):
-            if button_rect.contains(event.pos()) and i < len(visible_actions):
-                # Trigger the action
-                visible_actions[i].trigger()
-                return True
-
-        return super().editorEvent(event, model, option, index)
-
-    def set_hovered_index(self, index):
-        """Set the currently hovered index"""
-        self.hovered_index = index
+        return self.dir_actions if is_dir else self.file_actions
 
 
 class ScriptTreeWidget(QWidget):
@@ -293,13 +181,13 @@ class ScriptTreeWidget(QWidget):
 
         return super().eventFilter(obj, event)
 
-    def set_directory(self, directory):
+    def set_directory(self, directory: str) -> None:
         """Set the scripts directory"""
-        self.directory = directory
-
         # Early return if directory doesn't exist
-        if not directory or not os.path.exists(directory):
+        if not directory or not isinstance(directory, str) or not os.path.exists(directory):
             return
+
+        self.directory = directory
 
         root_index = self.model.setRootPath(directory)
         # Map the source model index to proxy model index

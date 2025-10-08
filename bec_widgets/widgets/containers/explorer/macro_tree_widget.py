@@ -5,24 +5,25 @@ from typing import Any
 
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import QModelIndex, QRect, Qt, Signal
-from qtpy.QtGui import QPainter, QStandardItem, QStandardItemModel
-from qtpy.QtWidgets import QStyledItemDelegate, QTreeView, QVBoxLayout, QWidget
+from qtpy.QtGui import QStandardItem, QStandardItemModel
+from qtpy.QtWidgets import QAction, QTreeView, QVBoxLayout, QWidget
 
 from bec_widgets.utils.colors import get_theme_palette
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
+from bec_widgets.widgets.containers.explorer.explorer_delegate import ExplorerDelegate
 
 logger = bec_logger.logger
 
 
-class MacroItemDelegate(QStyledItemDelegate):
+class MacroItemDelegate(ExplorerDelegate):
     """Custom delegate to show action buttons on hover for macro functions"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.hovered_index = QModelIndex()
         self.macro_actions: list[Any] = []
         self.button_rects: list[QRect] = []
         self.current_macro_info = {}
+        self.target_model = QStandardItemModel
 
     def add_macro_action(self, action: Any) -> None:
         """Add an action for macro functions"""
@@ -32,15 +33,7 @@ class MacroItemDelegate(QStyledItemDelegate):
         """Remove all actions"""
         self.macro_actions.clear()
 
-    def paint(self, painter, option, index):
-        """Paint the item with action buttons on hover"""
-        # Paint the default item
-        super().paint(painter, option, index)
-
-        # Early return if not hovering over this item
-        if index != self.hovered_index:
-            return
-
+    def get_actions_for_current_item(self, model, index) -> list[QAction] | None:
         # Only show actions for macro functions (not directories)
         item = index.model().itemFromIndex(index)
         if not item or not item.data(Qt.ItemDataRole.UserRole):
@@ -51,85 +44,7 @@ class MacroItemDelegate(QStyledItemDelegate):
             return
 
         self.current_macro_info = macro_info
-
-        if self.macro_actions:
-            self._draw_action_buttons(painter, option, self.macro_actions)
-
-    def _draw_action_buttons(self, painter, option, actions: list[Any]):
-        """Draw action buttons on the right side"""
-        button_size = 18
-        margin = 4
-        spacing = 2
-
-        # Calculate total width needed for all buttons
-        total_width = len(actions) * button_size + (len(actions) - 1) * spacing
-
-        # Clear previous button rects and create new ones
-        self.button_rects.clear()
-
-        # Calculate starting position (right side of the item)
-        start_x = option.rect.right() - total_width - margin
-        current_x = start_x
-
-        painter.save()
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        # Get theme colors for better integration
-        palette = get_theme_palette()
-        button_bg = palette.button().color()
-        button_bg.setAlpha(150)  # Semi-transparent
-
-        for action in actions:
-            if not action.isVisible():
-                continue
-
-            # Calculate button position
-            button_rect = QRect(
-                current_x,
-                option.rect.top() + (option.rect.height() - button_size) // 2,
-                button_size,
-                button_size,
-            )
-            self.button_rects.append(button_rect)
-
-            # Draw button background
-            painter.setBrush(button_bg)
-            painter.setPen(palette.mid().color())
-            painter.drawRoundedRect(button_rect, 3, 3)
-
-            # Draw action icon
-            icon = action.icon()
-            if not icon.isNull():
-                icon_rect = button_rect.adjusted(2, 2, -2, -2)
-                icon.paint(painter, icon_rect)
-
-            # Move to next button position
-            current_x += button_size + spacing
-
-        painter.restore()
-
-    def editorEvent(self, event, model, option, index):
-        """Handle mouse events for action buttons"""
-        # Early return if not a left click
-        if not (
-            event.type() == event.Type.MouseButtonPress
-            and event.button() == Qt.MouseButton.LeftButton
-        ):
-            return super().editorEvent(event, model, option, index)
-
-        # Check which button was clicked
-        visible_actions = [action for action in self.macro_actions if action.isVisible()]
-        for i, button_rect in enumerate(self.button_rects):
-            if button_rect.contains(event.pos()) and i < len(visible_actions):
-                # Trigger the action
-                visible_actions[i].trigger()
-                return True
-
-        return super().editorEvent(event, model, option, index)
-
-    def set_hovered_index(self, index):
-        """Set the currently hovered index"""
-        self.hovered_index = index
+        return self.macro_actions
 
 
 class MacroTreeWidget(QWidget):
