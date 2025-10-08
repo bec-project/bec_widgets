@@ -1,6 +1,78 @@
 # CHANGELOG
 
 
+## v2.40.0 (2025-10-08)
+
+### Bug Fixes
+
+- **curve_tree**: Fetching scan numbers directly from the bec client
+  ([`8111a4a`](https://github.com/bec-project/bec_widgets/commit/8111a4a21b7c1bd75316e9a1f1166b88ea52326d))
+
+- **curve_tree**: Safeguard fetching scan numbers from BEC client
+  ([`df8065e`](https://github.com/bec-project/bec_widgets/commit/df8065ea4000b24235520756515aa18f812bb390))
+
+- **curve_tree**: Scans are always fetched by scan ids
+  ([`20a59af`](https://github.com/bec-project/bec_widgets/commit/20a59af648a9808057df2226a3a3c12893cc5059))
+
+- **waveform**: Cleanup of scan_history dialog if not closed manually before widget
+  ([`d681ba5`](https://github.com/bec-project/bec_widgets/commit/d681ba538be9ccec45a1ebd412cbc33c8c7c0ae2))
+
+- **waveform**: Fetching scan number is not done from list but from .get_by_scan_number
+  ([`962ab77`](https://github.com/bec-project/bec_widgets/commit/962ab774e6afc73a321a5680e2862d9e41812888))
+
+- **waveform**: If scan id and scan number is provided, the scan is fetched from the scan id
+  ([`e59f27a`](https://github.com/bec-project/bec_widgets/commit/e59f27a22de490768c814c80642a7a91bebfef5b))
+
+- **waveform**: Safeguard added to the fetching history data
+  ([`540cfc3`](https://github.com/bec-project/bec_widgets/commit/540cfc37be65afcf721773564adc85de681a9d07))
+
+- **waveform**: Safeguard for _scan_history_closed
+  ([`2bf4896`](https://github.com/bec-project/bec_widgets/commit/2bf489600e96bb5b47d89bed261614f62c970ca9))
+
+- **waveform**: Safeguard for if scan_item is a list
+  ([`7e88a00`](https://github.com/bec-project/bec_widgets/commit/7e88a002b6ca40fc85fde993282b8706f140d9aa))
+
+- **waveform**: Update x suffix label with x property change, do not wait for next update cycle
+  ([`d19001c`](https://github.com/bec-project/bec_widgets/commit/d19001c94e652c0c3e18f8d7903fd1ccff1111cd))
+
+- **waveform**: X_data checked with is scalar instead of len()
+  ([`db7dd4f`](https://github.com/bec-project/bec_widgets/commit/db7dd4f8d4b1210e65c852f6193fc8cf0f4809a5))
+
+### Build System
+
+- **bec_lib**: Bec_lib dependency raised to 3.68
+  ([`2f3dc2c`](https://github.com/bec-project/bec_widgets/commit/2f3dc2ce6b7133fc5582bd6996a674590cf1002d))
+
+### Chores
+
+- Add dependabot config
+  ([`f25f865`](https://github.com/bec-project/bec_widgets/commit/f25f86522f0a2e9dd24ca862ea8de89873951f83))
+
+### Features
+
+- **waveform**: New type of curve - history curve
+  ([`f083dff`](https://github.com/bec-project/bec_widgets/commit/f083dff6128c6256443b49f54ab12b54f1b90d66))
+
+### Refactoring
+
+- **test_waveform**: Test waveform renamed
+  ([`2f798be`](https://github.com/bec-project/bec_widgets/commit/2f798be7b0d43d304ccbd0e992a9d62f1aa1dd5f))
+
+- **waveform**: Separate method to fetch scan item from history
+  ([`4be7058`](https://github.com/bec-project/bec_widgets/commit/4be70580a60293204b135c6ea77978f1dcf8aa5f))
+
+### Testing
+
+- **conftest**: Suppress_message_box for error popups fixture autouse True
+  ([`0844a9e`](https://github.com/bec-project/bec_widgets/commit/0844a9e11975a34780b1dc413f5145517d1a1a22))
+
+- **plotting_framework_e2e**: Fetching history curve
+  ([`a006f95`](https://github.com/bec-project/bec_widgets/commit/a006f95f211ad115019967e365a6627d9678a1e3))
+
+- **waveform,curve_tree**: Test extended to cover history curve behaviour
+  ([`5a5d323`](https://github.com/bec-project/bec_widgets/commit/5a5d32312b08e1edeb69243daddfaaa9bac22273))
+
+
 ## v2.39.1 (2025-10-07)
 
 ### Bug Fixes
