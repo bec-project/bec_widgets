@@ -151,6 +151,8 @@ class BECMainApp(BECMainWindow):
         # Wrap plain widgets into a ViewBase so enter/exit hooks are available
         if isinstance(widget, ViewBase):
             view_widget = widget
+            view_widget.view_id = id
+            view_widget.view_title = title
         else:
             view_widget = ViewBase(content=widget, parent=self, id=id, title=title)
 

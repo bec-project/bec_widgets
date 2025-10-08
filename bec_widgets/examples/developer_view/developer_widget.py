@@ -158,6 +158,7 @@ class DeveloperWidget(BECWidget, QWidget):
 
         # Connect editor signals
         self.explorer.file_open_requested.connect(self._open_new_file)
+        self.monaco.macro_file_updated.connect(self.explorer.refresh_macro_file)
 
         self.toolbar.show_bundles(["save", "execution", "settings"])
 
@@ -225,7 +226,7 @@ class DeveloperWidget(BECWidget, QWidget):
         save_as_shortcut.activated.connect(self.on_save_as)
 
     def _open_new_file(self, file_name: str, scope: str):
-        self.monaco.open_file(file_name)
+        self.monaco.open_file(file_name, scope)
 
         # Set read-only mode for shared files
         if "shared" in scope:

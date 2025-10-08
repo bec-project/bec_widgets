@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import os
 import pathlib
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import PySide6QtAds as QtAds
 from bec_lib.logger import bec_logger
+from bec_lib.macro_update_handler import has_executable_code
 from PySide6QtAds import CDockWidget
 from qtpy.QtCore import QEvent, QTimer, Signal
 from qtpy.QtWidgets import QFileDialog, QMessageBox, QToolButton, QVBoxLayout, QWidget
@@ -25,6 +26,7 @@ class MonacoDock(BECWidget, QWidget):
     focused_editor = Signal(object)  # Emitted when the focused editor changes
     save_enabled = Signal(bool)  # Emitted when the save action is enabled/disabled
     signature_help = Signal(str)  # Emitted when signature help is requested
+    macro_file_updated = Signal(str)  # Emitted when a macro file is saved
 
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent=parent, **kwargs)
@@ -234,7 +236,7 @@ class MonacoDock(BECWidget, QWidget):
         QTimer.singleShot(0, self._scan_and_fix_areas)
         return new_dock
 
-    def open_file(self, file_name: str):
+    def open_file(self, file_name: str, scope: str | None = None) -> None:
         """
         Open a file in the specified area. If the file is already open, activate it.
         """
@@ -260,12 +262,14 @@ class MonacoDock(BECWidget, QWidget):
                 editor_dock.setWindowTitle(file)
                 editor_dock.setTabToolTip(file_name)
                 editor_widget.open_file(file_name)
+                editor_widget.metadata["scope"] = scope
                 return
 
         # File is not open, create a new editor
         editor_dock = self.add_editor(title=file, tooltip=file_name)
         widget = cast(MonacoWidget, editor_dock.widget())
         widget.open_file(file_name)
+        widget.metadata["scope"] = scope
 
     def save_file(
         self, widget: MonacoWidget | None = None, force_save_as: bool = False, format_on_save=True
@@ -281,11 +285,22 @@ class MonacoDock(BECWidget, QWidget):
             widget = self.last_focused_editor.widget() if self.last_focused_editor else None
         if not widget:
             return
+        if "macros" in widget.metadata.get("scope", ""):
+            if not self._validate_macros(widget.get_text()):
+                return
+
         if widget.current_file and not force_save_as:
             if format_on_save and pathlib.Path(widget.current_file).suffix == ".py":
                 widget.format()
+
             with open(widget.current_file, "w", encoding="utf-8") as f:
                 f.write(widget.get_text())
+
+            if "macros" in widget.metadata.get("scope", ""):
+                self._update_macros(widget)
+                # Emit signal to refresh macro tree widget
+                self.macro_file_updated.emit(widget.current_file)
+
             # pylint: disable=protected-access
             widget._original_content = widget.get_text()
             widget.save_enabled.emit(False)
@@ -317,8 +332,52 @@ class MonacoDock(BECWidget, QWidget):
                     dock.setWindowTitle(file.name)
                     dock.setTabToolTip(str(file))
                     break
+            if "macros" in widget.metadata.get("scope", ""):
+                self._update_macros(widget)
+                # Emit signal to refresh macro tree widget
+                self.macro_file_updated.emit(str(file))
 
         print(f"Save file called, last focused editor: {self.last_focused_editor}")
+
+    def _validate_macros(self, source: str) -> bool:
+        # pylint: disable=protected-access
+        # Ensure the macro does not contain executable code before saving
+        exec_code, line_number = has_executable_code(source)
+        if exec_code:
+            if line_number is None:
+                msg = "The macro contains executable code. Please remove it before saving."
+            else:
+                msg = f"The macro contains executable code on line {line_number}. Please remove it before saving."
+            QMessageBox.warning(self, "Save Error", msg)
+            return False
+        return True
+
+    def _update_macros(self, widget: MonacoWidget):
+        # pylint: disable=protected-access
+        if not widget.current_file:
+            return
+        # Check which macros have changed and broadcast the change
+        macros = self.client.macros._update_handler.get_macros_from_file(widget.current_file)
+        existing_macros = self.client.macros._update_handler.get_existing_macros(
+            widget.current_file
+        )
+
+        removed_macros = set(existing_macros.keys()) - set(macros.keys())
+        added_macros = set(macros.keys()) - set(existing_macros.keys())
+        for name, info in macros.items():
+            if name in added_macros:
+                self.client.macros._update_handler.broadcast(
+                    action="add", name=name, file_path=widget.current_file
+                )
+            if (
+                name in existing_macros
+                and info.get("source", "") != existing_macros[name]["source"]
+            ):
+                self.client.macros._update_handler.broadcast(
+                    action="reload", name=name, file_path=widget.current_file
+                )
+        for name in removed_macros:
+            self.client.macros._update_handler.broadcast(action="remove", name=name)
 
     def set_vim_mode(self, enabled: bool):
         """

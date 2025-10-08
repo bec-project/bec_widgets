@@ -63,6 +63,7 @@ class MonacoWidget(BECWidget, QWidget):
         self.editor.context_menu_action_triggered.connect(self._handle_context_menu_action)
         self._current_file = None
         self._original_content = ""
+        self.metadata = {}
 
     @property
     def current_file(self):
