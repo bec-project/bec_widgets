@@ -2686,26 +2686,54 @@ class LogPanel(RPCBase):
 class Minesweeper(RPCBase): ...
 
 
+class MonacoDock(RPCBase):
+    """MonacoDock is a dock widget that contains Monaco editor instances."""
+
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+
 class MonacoWidget(RPCBase):
     """A simple Monaco editor widget"""
 
     @rpc_call
-    def set_text(self, text: str) -> None:
+    def set_text(
+        self, text: "str", file_name: "str | None" = None, reset: "bool" = False
+    ) -> "None":
         """
         Set the text in the Monaco editor.
 
         Args:
             text (str): The text to set in the editor.
+            file_name (str): Set the file name
+            reset (bool): If True, reset the original content to the new text.
         """
 
     @rpc_call
-    def get_text(self) -> str:
+    def get_text(self) -> "str":
         """
         Get the current text from the Monaco editor.
         """
 
     @rpc_call
-    def insert_text(self, text: str, line: int | None = None, column: int | None = None) -> None:
+    def insert_text(
+        self, text: "str", line: "int | None" = None, column: "int | None" = None
+    ) -> "None":
         """
         Insert text at the current cursor position or at a specified line and column.
 
@@ -2716,7 +2744,7 @@ class MonacoWidget(RPCBase):
         """
 
     @rpc_call
-    def delete_line(self, line: int | None = None) -> None:
+    def delete_line(self, line: "int | None" = None) -> "None":
         """
         Delete a line in the Monaco editor.
 
@@ -2725,7 +2753,16 @@ class MonacoWidget(RPCBase):
         """
 
     @rpc_call
-    def set_language(self, language: str) -> None:
+    def open_file(self, file_name: "str") -> "None":
+        """
+        Open a file in the editor.
+
+        Args:
+            file_name (str): The path + file name of the file that needs to be displayed.
+        """
+
+    @rpc_call
+    def set_language(self, language: "str") -> "None":
         """
         Set the programming language for syntax highlighting in the Monaco editor.
 
@@ -2734,13 +2771,13 @@ class MonacoWidget(RPCBase):
         """
 
     @rpc_call
-    def get_language(self) -> str:
+    def get_language(self) -> "str":
         """
         Get the current programming language set in the Monaco editor.
         """
 
     @rpc_call
-    def set_theme(self, theme: str) -> None:
+    def set_theme(self, theme: "str") -> "None":
         """
         Set the theme for the Monaco editor.
 
@@ -2749,13 +2786,13 @@ class MonacoWidget(RPCBase):
         """
 
     @rpc_call
-    def get_theme(self) -> str:
+    def get_theme(self) -> "str":
         """
         Get the current theme of the Monaco editor.
         """
 
     @rpc_call
-    def set_readonly(self, read_only: bool) -> None:
+    def set_readonly(self, read_only: "bool") -> "None":
         """
         Set the Monaco editor to read-only mode.
 
@@ -2766,10 +2803,10 @@ class MonacoWidget(RPCBase):
     @rpc_call
     def set_cursor(
         self,
-        line: int,
-        column: int = 1,
-        move_to_position: Literal[None, "center", "top", "position"] = None,
-    ) -> None:
+        line: "int",
+        column: "int" = 1,
+        move_to_position: "Literal[None, 'center', 'top', 'position']" = None,
+    ) -> "None":
         """
         Set the cursor position in the Monaco editor.
 
@@ -2780,7 +2817,7 @@ class MonacoWidget(RPCBase):
         """
 
     @rpc_call
-    def current_cursor(self) -> dict[str, int]:
+    def current_cursor(self) -> "dict[str, int]":
         """
         Get the current cursor position in the Monaco editor.
 
@@ -2789,7 +2826,7 @@ class MonacoWidget(RPCBase):
         """
 
     @rpc_call
-    def set_minimap_enabled(self, enabled: bool) -> None:
+    def set_minimap_enabled(self, enabled: "bool") -> "None":
         """
         Enable or disable the minimap in the Monaco editor.
 
@@ -2798,7 +2835,7 @@ class MonacoWidget(RPCBase):
         """
 
     @rpc_call
-    def set_vim_mode_enabled(self, enabled: bool) -> None:
+    def set_vim_mode_enabled(self, enabled: "bool") -> "None":
         """
         Enable or disable Vim mode in the Monaco editor.
 
@@ -2807,7 +2844,7 @@ class MonacoWidget(RPCBase):
         """
 
     @rpc_call
-    def set_lsp_header(self, header: str) -> None:
+    def set_lsp_header(self, header: "str") -> "None":
         """
         Set the LSP (Language Server Protocol) header for the Monaco editor.
         The header is used to provide context for language servers but is not displayed in the editor.
@@ -2817,7 +2854,7 @@ class MonacoWidget(RPCBase):
         """
 
     @rpc_call
-    def get_lsp_header(self) -> str:
+    def get_lsp_header(self) -> "str":
         """
         Get the current LSP header set in the Monaco editor.
 

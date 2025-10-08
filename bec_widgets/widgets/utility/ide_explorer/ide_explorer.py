@@ -3,6 +3,7 @@ import importlib
 import importlib.metadata
 import os
 import re
+from typing import Literal
 
 from bec_qthemes import material_icon
 from qtpy.QtCore import Signal
@@ -65,6 +66,17 @@ class IDEExplorer(BECWidget, QWidget):
             case _:
                 pass
 
+    def _remove_section(self, section_name):
+        section = self.main_explorer.get_section(section_name.upper())
+        if section:
+            self.main_explorer.remove_section(section)
+            self._sections.remove(section_name)
+
+    def clear(self):
+        """Clear all sections from the explorer."""
+        for section in reversed(self._sections):
+            self._remove_section(section)
+
     def add_script_section(self):
         section = CollapsibleSection(parent=self, title="SCRIPTS", indentation=0)
 
@@ -84,13 +96,7 @@ class IDEExplorer(BECWidget, QWidget):
         section.set_widget(script_explorer)
         self.main_explorer.add_section(section)
 
-        plugin_scripts_dir = None
-        plugins = importlib.metadata.entry_points(group="bec")
-        for plugin in plugins:
-            if plugin.name == "plugin_bec":
-                plugin = plugin.load()
-                plugin_scripts_dir = os.path.join(plugin.__path__[0], "scripts")
-                break
+        plugin_scripts_dir = self._get_plugin_dir("scripts")
 
         if not plugin_scripts_dir or not os.path.exists(plugin_scripts_dir):
             return
@@ -102,9 +108,6 @@ class IDEExplorer(BECWidget, QWidget):
         script_explorer.add_section(shared_script_section)
         shared_script_widget.file_open_requested.connect(self._emit_file_open_scripts_shared)
         shared_script_widget.file_selected.connect(self._emit_file_preview_scripts_shared)
-        # macros_section = CollapsibleSection("MACROS", indentation=0)
-        # macros_section.set_widget(QLabel("Macros will be implemented later"))
-        # self.main_explorer.add_section(macros_section)
 
     def add_macro_section(self):
         section = CollapsibleSection(
@@ -134,13 +137,7 @@ class IDEExplorer(BECWidget, QWidget):
         section.set_widget(macro_explorer)
         self.main_explorer.add_section(section)
 
-        plugin_macros_dir = None
-        plugins = importlib.metadata.entry_points(group="bec")
-        for plugin in plugins:
-            if plugin.name == "plugin_bec":
-                plugin = plugin.load()
-                plugin_macros_dir = os.path.join(plugin.__path__[0], "macros")
-                break
+        plugin_macros_dir = self._get_plugin_dir("macros")
 
         if not plugin_macros_dir or not os.path.exists(plugin_macros_dir):
             return
@@ -152,6 +149,19 @@ class IDEExplorer(BECWidget, QWidget):
         macro_explorer.add_section(shared_macro_section)
         shared_macro_widget.macro_open_requested.connect(self._emit_file_open_macros_shared)
         shared_macro_widget.macro_selected.connect(self._emit_file_preview_macros_shared)
+
+    def _get_plugin_dir(self, dir_name: Literal["scripts", "macros"]) -> str | None:
+        """Get the path to the specified directory within the BEC plugin.
+
+        Returns:
+            The path to the specified directory, or None if not found.
+        """
+        plugins = importlib.metadata.entry_points(group="bec")
+        for plugin in plugins:
+            if plugin.name == "plugin_bec":
+                plugin = plugin.load()
+                return os.path.join(plugin.__path__[0], dir_name)
+        return None
 
     def _emit_file_open_scripts_local(self, file_name: str):
         self.file_open_requested.emit(file_name, "scripts/local")
@@ -281,7 +291,7 @@ def {function_name}():
     
     Add your macro implementation here.
     """
-    print(f"Executing macro: {function_name}")
+    print("Executing macro: {function_name}")
     # TODO: Add your macro code here
     pass
 '''

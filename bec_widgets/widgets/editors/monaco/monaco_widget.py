@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import os
 import traceback
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import black
 import isort
@@ -12,6 +14,9 @@ from qtpy.QtWidgets import QApplication, QDialog, QVBoxLayout, QWidget
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import get_theme_name
 from bec_widgets.utils.error_popups import SafeSlot
+
+if TYPE_CHECKING:
+    from bec_widgets.widgets.editors.monaco.scan_control_dialog import ScanControlDialog
 
 logger = bec_logger.logger
 
@@ -47,7 +52,9 @@ class MonacoWidget(BECWidget, QWidget):
         "screenshot",
     ]
 
-    def __init__(self, parent=None, config=None, client=None, gui_id=None, **kwargs):
+    def __init__(
+        self, parent=None, config=None, client=None, gui_id=None, init_lsp: bool = True, **kwargs
+    ):
         super().__init__(
             parent=parent, client=client, gui_id=gui_id, config=config, theme_update=True, **kwargs
         )
@@ -64,6 +71,16 @@ class MonacoWidget(BECWidget, QWidget):
         self._current_file = None
         self._original_content = ""
         self.metadata = {}
+        if init_lsp:
+            self.editor.update_workspace_configuration(
+                {
+                    "pylsp": {
+                        "plugins": {
+                            "pylsp-bec": {"service_config": self.client._service_config.config}
+                        }
+                    }
+                }
+            )
 
     @property
     def current_file(self):
@@ -84,16 +101,18 @@ class MonacoWidget(BECWidget, QWidget):
         editor_theme = "vs" if theme == "light" else "vs-dark"
         self.set_theme(editor_theme)
 
-    def set_text(self, text: str, file_name: str | None = None) -> None:
+    def set_text(self, text: str, file_name: str | None = None, reset: bool = False) -> None:
         """
         Set the text in the Monaco editor.
 
         Args:
             text (str): The text to set in the editor.
             file_name (str): Set the file name
+            reset (bool): If True, reset the original content to the new text.
         """
-        self._current_file = file_name
-        self._original_content = text
+        self._current_file = file_name if file_name else self._current_file
+        if reset:
+            self._original_content = text
         self.editor.set_text(text, uri=file_name)
 
     def get_text(self) -> str:
@@ -161,7 +180,7 @@ class MonacoWidget(BECWidget, QWidget):
 
         with open(file_name, "r", encoding="utf-8") as file:
             content = file.read()
-        self.set_text(content, file_name=file_name)
+        self.set_text(content, file_name=file_name, reset=True)
 
     @property
     def modified(self) -> bool:
@@ -311,6 +330,16 @@ class MonacoWidget(BECWidget, QWidget):
         from bec_widgets.widgets.editors.monaco.scan_control_dialog import ScanControlDialog
 
         dialog = ScanControlDialog(self, client=self.client)
+        self._run_dialog_and_insert_code(dialog)
+
+    def _run_dialog_and_insert_code(self, dialog: ScanControlDialog):
+        """
+        Run the dialog and insert the generated scan code if accepted.
+        It is a separate method to allow easier testing.
+
+        Args:
+            dialog (ScanControlDialog): The scan control dialog instance.
+        """
         if dialog.exec_() == QDialog.DialogCode.Accepted:
             scan_code = dialog.get_scan_code()
             if scan_code:

@@ -24,12 +24,13 @@ dependencies = [
     "qtconsole~=5.5, >=5.5.1",   # needed for jupyter console
     "qtpy~=2.4",
     "thefuzz~=0.22",
-    "qtmonaco~=0.7",
+    "qtmonaco~=0.8, >=0.8.1",
     "darkdetect~=0.8",
     "PySide6-QtAds==4.4.0",
-    "pylsp-bec",
+    "pylsp-bec~=1.2",
     "copier~=9.7",
     "typer~=0.15",
+    "markdown~=3.9",
 ]
 
 
