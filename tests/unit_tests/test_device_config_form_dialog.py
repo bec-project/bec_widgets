@@ -137,6 +137,7 @@ def test_update_cycle(update_dialog, qtbot):
                 "description": None,
                 "readOnly": False,
                 "softwareTrigger": False,
+                "onFailure": "retry",
                 "deviceTags": set(),
                 "userParameter": {},
                 "name": "test_device",
