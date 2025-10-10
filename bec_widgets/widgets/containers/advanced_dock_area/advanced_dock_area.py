@@ -50,7 +50,7 @@ from bec_widgets.widgets.containers.advanced_dock_area.toolbar_components.worksp
     workspace_bundle,
 )
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindowNoRPC
-from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox
+from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox, PositionerBox2D
 from bec_widgets.widgets.control.scan_control import ScanControl
 from bec_widgets.widgets.editors.web_console.web_console import WebConsole
 from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap
@@ -318,6 +318,11 @@ class AdvancedDockArea(BECWidget, QWidget):
         DEVICE_ACTIONS = {
             "scan_control": (ScanControl.ICON_NAME, "Add Scan Control", "ScanControl"),
             "positioner_box": (PositionerBox.ICON_NAME, "Add Device Box", "PositionerBox"),
+            "positioner_box_2D": (
+                PositionerBox2D.ICON_NAME,
+                "Add Device 2D Box",
+                "PositionerBox2D",
+            ),
         }
         UTIL_ACTIONS = {
             "queue": (BECQueue.ICON_NAME, "Add Scan Queue", "BECQueue"),
