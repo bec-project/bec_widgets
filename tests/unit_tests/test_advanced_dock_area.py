@@ -306,7 +306,7 @@ class TestToolbarFunctionality:
 
     def test_toolbar_utils_actions(self, advanced_dock_area):
         """Test utils toolbar actions trigger widget creation."""
-        utils_actions = ["queue", "vs_code", "status", "progress_bar", "sbb_monitor"]
+        utils_actions = ["queue", "terminal", "status", "progress_bar", "sbb_monitor"]
 
         for action_name in utils_actions:
             with patch.object(advanced_dock_area, "new") as mock_new:
@@ -322,7 +322,12 @@ class TestToolbarFunctionality:
                 widget_type = advanced_dock_area._ACTION_MAPPINGS["menu_utils"][action_name][2]
 
                 action.trigger()
-                mock_new.assert_called_once_with(widget=widget_type)
+                if action_name == "terminal":
+                    mock_new.assert_called_once_with(
+                        widget="WebConsole", closable=True, startup_cmd=None
+                    )
+                else:
+                    mock_new.assert_called_once_with(widget=widget_type)
 
     def test_attach_all_action(self, advanced_dock_area, qtbot):
         """Test attach_all toolbar action."""
@@ -874,9 +879,10 @@ class TestFlatToolbarActions:
         """Test that flat utils actions are created."""
         utils_actions = [
             "flat_queue",
-            "flat_vs_code",
             "flat_status",
             "flat_progress_bar",
+            "flat_terminal",
+            "flat_bec_shell",
             "flat_log_panel",
             "flat_sbb_monitor",
         ]
@@ -918,9 +924,10 @@ class TestFlatToolbarActions:
         """Test flat utils actions trigger widget creation."""
         utils_action_mapping = {
             "flat_queue": "BECQueue",
-            "flat_vs_code": "VSCodeEditor",
             "flat_status": "BECStatusBox",
             "flat_progress_bar": "RingProgressBar",
+            "flat_terminal": "WebConsole",
+            "flat_bec_shell": "WebConsole",
             "flat_sbb_monitor": "SBBMonitor",
         }
 
