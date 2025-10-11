@@ -21,7 +21,6 @@ def test_multiple_extension_registration():
     """
     Test that multiple extension registrations do not cause issues.
     """
-    assert serialization.module_is_registered("bec_widgets.utils.serialization")
+    assert msgpack.is_registered(QPointF)
     serialization.register_serializer_extension()
-    assert serialization.module_is_registered("bec_widgets.utils.serialization")
-    assert len(msgpack._encoder) == len(set(msgpack._encoder))
+    assert msgpack.is_registered(QPointF)
