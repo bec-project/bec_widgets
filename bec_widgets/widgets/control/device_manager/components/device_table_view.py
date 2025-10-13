@@ -150,6 +150,9 @@ class WrappingTextDelegate(CustomDisplayDelegate):
     ) -> QtGui.QTextLayout:
         """Compute and return the text layout for given text and option."""
         layout = self._get_layout(text, option.font)
+        text_option = QtGui.QTextOption()
+        text_option.setWrapMode(QtGui.QTextOption.WrapAnywhere)
+        layout.setTextOption(text_option)
         layout.beginLayout()
         height = 0
         max_lines = 100  # safety cap, should never be more than 100 lines..
@@ -211,7 +214,8 @@ class WrappingTextDelegate(CustomDisplayDelegate):
     ):
         """Only update rows if a wrapped column was resized."""
         self._cache.clear()
-        self._update_row_heights()
+        # Make sure layout is computed first
+        QtCore.QTimer.singleShot(0, self._update_row_heights)
 
     def _update_row_heights(self):
         """Efficiently adjust row heights based on wrapped columns."""
@@ -662,7 +666,24 @@ class BECTableView(QtWidgets.QTableView):
         """
         configs = [model.get_row_data(r) for r in sorted(source_rows, key=lambda r: r.row())]
         names = [cfg.get("name", "<unknown>") for cfg in configs]
+        if not names:
+            logger.warning("No device names found for selected rows.")
+            return False
+        if self._remove_rows_msg_dialog(names):
+            model.remove_device_configs(configs)
+            return True
+        return False
 
+    def _remove_rows_msg_dialog(self, names: list[str]) -> bool:
+        """
+        Prompt the user to confirm removal of rows and remove them from the model if accepted.
+
+        Args:
+            names (list[str]): List of device names to be removed.
+
+        Returns:
+            bool: True if the user confirmed removal, False otherwise.
+        """
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Icon.Warning)
         msg.setWindowTitle("Confirm device removal")
@@ -676,7 +697,6 @@ class BECTableView(QtWidgets.QTableView):
 
         res = msg.exec_()
         if res == QMessageBox.StandardButton.Ok:
-            model.remove_device_configs(configs)
             return True
         return False
 
@@ -946,6 +966,7 @@ class DeviceTableView(BECWidget, QtWidgets.QWidget):
 
         # Connect model signals to autosize request
         self._model.rowsInserted.connect(self._request_autosize_columns)
+        self._model.rowsRemoved.connect(self._request_autosize_columns)
         self._model.modelReset.connect(self._request_autosize_columns)
         self._model.dataChanged.connect(self._request_autosize_columns)
 
@@ -1088,8 +1109,21 @@ if __name__ == "__main__":
     button.clicked.connect(_button_clicked)
     # pylint: disable=protected-access
     config = window.client.device_manager._get_redis_device_config()
+    config.insert(
+        0,
+        {
+            "name": "TestDevice",
+            "deviceClass": "bec.devices.MockDevice",
+            "description": "Thisisaverylongsinglestringwhichisquiteannoyingmoreover, this is a test device with a very long description that should wrap around in the table view to test the wrapping functionality.",
+            "deviceTags": ["test", "mock", "longtagnameexample"],
+            "enabled": True,
+            "readOnly": False,
+            "softwareTrigger": True,
+        },
+    )
     # names = [cfg.pop("name") for cfg in config]
     # config_dict = {name: cfg for name, cfg in zip(names, config)}
     window.set_device_config(config)
+    window.resize(1920, 1200)
     widget.show()
     sys.exit(app.exec_())
