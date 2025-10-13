@@ -20,7 +20,7 @@ dependencies = [
     "isort~=5.13, >=5.13.2",    # needed for bw-generate-cli
     "pydantic~=2.0",
     "pyqtgraph~=0.13",
-    "PySide6==6.9.0",
+    "PySide6==6.10.0",
     "qtconsole~=5.5, >=5.5.1",  # needed for jupyter console
     "qtpy~=2.4",
     "qtmonaco~=0.5",
