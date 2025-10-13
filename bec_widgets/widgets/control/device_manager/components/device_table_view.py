@@ -7,7 +7,7 @@ import json
 import textwrap
 from contextlib import contextmanager
 from functools import partial
-from typing import TYPE_CHECKING, Any, Iterable, List
+from typing import TYPE_CHECKING, Any, Iterable, List, Literal
 from uuid import uuid4
 
 from bec_lib.atlas_models import Device
@@ -46,7 +46,13 @@ USER_CHECK_DATA_ROLE = 101
 class DictToolTipDelegate(QtWidgets.QStyledItemDelegate):
     """Delegate that shows all key-value pairs of a rows's data as a YAML-like tooltip."""
 
-    def helpEvent(self, event, view, option, index):
+    def helpEvent(
+        self,
+        event: QtCore.QEvent,
+        view: QtWidgets.QAbstractItemView,
+        option: QtWidgets.QStyleOptionViewItem,
+        index: QModelIndex,
+    ):
         """Override to show tooltip when hovering."""
         if event.type() != QtCore.QEvent.Type.ToolTip:
             return super().helpEvent(event, view, option, index)
@@ -64,13 +70,23 @@ class CustomDisplayDelegate(DictToolTipDelegate):
     def displayText(self, value: Any, locale: QtCore.QLocale | QtCore.QLocale.Language) -> str:
         return ""
 
-    def _test_custom_paint(self, painter, option, index):
+    def _test_custom_paint(
+        self, painter: QtGui.QPainter, option: QtWidgets.QStyleOptionViewItem, index: QModelIndex
+    ):
         v = index.model().data(index, self._paint_test_role)
         return (v is not None), v
 
-    def _do_custom_paint(self, painter, option, index, value): ...
+    def _do_custom_paint(
+        self,
+        painter: QtGui.QPainter,
+        option: QtWidgets.QStyleOptionViewItem,
+        index: QModelIndex,
+        value: Any,
+    ): ...
 
-    def paint(self, painter, option, index) -> None:
+    def paint(
+        self, painter: QtGui.QPainter, option: QtWidgets.QStyleOptionViewItem, index: QModelIndex
+    ) -> None:
         (check, value) = self._test_custom_paint(painter, option, index)
         if not check:
             return super().paint(painter, option, index)
@@ -83,14 +99,34 @@ class CustomDisplayDelegate(DictToolTipDelegate):
 class WrappingTextDelegate(CustomDisplayDelegate):
     """A lightweight delegate that wraps text without expensive size recalculation."""
 
-    def __init__(self, parent=None, max_width=300, margin=6):
+    def __init__(self, parent: BECTableView | None = None, max_width: int = 300, margin: int = 6):
         super().__init__(parent)
         self._parent = parent
         self.max_width = max_width
         self.margin = margin
         self._cache = {}  # cache text metrics for performance
+        self._wrapping_text_columns = None
 
-    def _do_custom_paint(self, painter, option, index, value: str):
+    @property
+    def wrapping_text_columns(self) -> List[int]:
+        # Compute once, cache for later
+        if self._wrapping_text_columns is None:
+            self._wrapping_text_columns = []
+            view = self._parent
+            proxy: DeviceFilterProxyModel = self._parent.model()
+            for col in range(proxy.columnCount()):
+                delegate = view.itemDelegateForColumn(col)
+                if isinstance(delegate, WrappingTextDelegate):
+                    self._wrapping_text_columns.append(col)
+        return self._wrapping_text_columns
+
+    def _do_custom_paint(
+        self,
+        painter: QtGui.QPainter,
+        option: QtWidgets.QStyleOptionViewItem,
+        index: QModelIndex,
+        value: str,
+    ):
         text = str(value)
         if not text:
             return
@@ -101,30 +137,39 @@ class WrappingTextDelegate(CustomDisplayDelegate):
         cache_key = (text, option.rect.width())
         layout = self._cache.get(cache_key)
         if layout is None:
-            layout = QtGui.QTextLayout(text, option.font)
-            layout.beginLayout()
-            height = 0
-            while True:
-                line = layout.createLine()
-                if not line.isValid():
-                    break
-                line.setLineWidth(option.rect.width() - self.margin)
-                line.setPosition(QtCore.QPointF(self.margin / 2, height))
-                height += line.height()
-            layout.endLayout()
+            layout = self._compute_layout(text, option)
             self._cache[cache_key] = layout
-
-        # # Draw background if selected
-        # if option.state & QtWidgets.QStyle.State_Selected:
-        #     painter.fillRect(option.rect, option.palette.highlight())
 
         # Draw text
         painter.setPen(option.palette.text().color())
         layout.draw(painter, option.rect.topLeft())
-
         painter.restore()
 
-    def sizeHint(self, option, index):
+    def _compute_layout(
+        self, text: str, option: QtWidgets.QStyleOptionViewItem
+    ) -> QtGui.QTextLayout:
+        """Compute and return the text layout for given text and option."""
+        layout = self._get_layout(text, option.font)
+        layout.beginLayout()
+        height = 0
+        max_lines = 100  # safety cap, should never be more than 100 lines..
+        for _ in range(max_lines):
+            line = layout.createLine()
+            if not line.isValid():
+                break
+            line.setLineWidth(option.rect.width() - self.margin)
+            line.setPosition(QtCore.QPointF(self.margin / 2, height))
+            line_height = line.height()
+            if line_height <= 0:
+                break  # avoid negative or zero height lines to be added
+            height += line_height
+        layout.endLayout()
+        return layout
+
+    def _get_layout(self, text: str, font_option: QtGui.QFont) -> QtGui.QTextLayout:
+        return QtGui.QTextLayout(text, font_option)
+
+    def sizeHint(self, option: QtWidgets.QStyleOptionViewItem, index: QModelIndex) -> QtCore.QSize:
         """Return a cached or approximate height; avoids costly recomputation."""
         text = str(index.data(QtCore.Qt.DisplayRole) or "")
         view = self._parent
@@ -151,14 +196,19 @@ class WrappingTextDelegate(CustomDisplayDelegate):
         lines = len(wrapped_lines)
         return QtCore.QSize(pixel_width, lines * (metrics.height()) + 2 * self.margin)
 
-    def estimate_chars_per_line(self, text: str, option, column_width: int) -> int:
+    def estimate_chars_per_line(
+        self, text: str, option: QtWidgets.QStyleOptionViewItem, column_width: int
+    ) -> int:
         """Estimate number of characters that fit in a line for given width."""
         metrics = option.fontMetrics
         elided = metrics.elidedText(text, Qt.ElideRight, column_width)
         return len(elided.rstrip("…"))
 
     @SafeSlot(int, int, int)
-    def _on_section_resized(self, logical_index, old_size=None, new_size=None):
+    @SafeSlot(int)
+    def _on_section_resized(
+        self, logical_index: int, old_size: int | None = None, new_size: int | None = None
+    ):
         """Only update rows if a wrapped column was resized."""
         self._cache.clear()
         self._update_row_heights()
@@ -167,17 +217,12 @@ class WrappingTextDelegate(CustomDisplayDelegate):
         """Efficiently adjust row heights based on wrapped columns."""
         view = self._parent
         proxy = view.model()
-        model = proxy.sourceModel()
         option = QtWidgets.QStyleOptionViewItem()
         view.initViewItemOption(option)
-        # wrapping delegates
-        wrap_delegate_columns = []
         for row in range(proxy.rowCount()):
             max_height = 18
-            for column in [5, 6]:  # TODO 884 don't hardcode columns.. to be improved
+            for column in self.wrapping_text_columns:
                 index = proxy.index(row, column)
-                # model_index = proxy.mapToSource(index)
-                # delegate = view.itemDelegateForColumn(model_index) or view.itemDelegate()
                 delegate = view.itemDelegateForColumn(column)
                 hint = delegate.sizeHint(option, index)
                 max_height = max(max_height, hint.height())
@@ -190,7 +235,7 @@ class CenterCheckBoxDelegate(CustomDisplayDelegate):
 
     _paint_test_role = USER_CHECK_DATA_ROLE
 
-    def __init__(self, parent=None, colors=None):
+    def __init__(self, parent: BECTableView | None = None, colors: AccentColors | None = None):
         super().__init__(parent)
         colors: AccentColors = colors if colors else get_accent_colors()  # type: ignore
         _icon = partial(material_icon, size=(16, 16), color=colors.default, filled=True)
@@ -203,13 +248,27 @@ class CenterCheckBoxDelegate(CustomDisplayDelegate):
         self._icon_checked = _icon("check_box")
         self._icon_unchecked = _icon("check_box_outline_blank")
 
-    def _do_custom_paint(self, painter, option, index, value):
+    def _do_custom_paint(
+        self,
+        painter: QtGui.QPainter,
+        option: QtWidgets.QStyleOptionViewItem,
+        index: QModelIndex,
+        value: Literal[
+            Qt.CheckState.Checked | Qt.CheckState.Unchecked | Qt.CheckState.PartiallyChecked
+        ],
+    ):
         pixmap = self._icon_checked if value == Qt.CheckState.Checked else self._icon_unchecked
         pix_rect = pixmap.rect()
         pix_rect.moveCenter(option.rect.center())
         painter.drawPixmap(pix_rect.topLeft(), pixmap)
 
-    def editorEvent(self, event, model, option, index):
+    def editorEvent(
+        self,
+        event: QtCore.QEvent,
+        model: QtCore.QSortFilterProxyModel,
+        option: QtWidgets.QStyleOptionViewItem,
+        index: QModelIndex,
+    ):
         if event.type() != QtCore.QEvent.Type.MouseButtonRelease:
             return False
         current = model.data(index, USER_CHECK_DATA_ROLE)
@@ -222,7 +281,7 @@ class CenterCheckBoxDelegate(CustomDisplayDelegate):
 class DeviceValidatedDelegate(CustomDisplayDelegate):
     """Custom delegate for displaying validated device configurations."""
 
-    def __init__(self, parent=None, colors=None):
+    def __init__(self, parent: BECTableView | None = None, colors: AccentColors | None = None):
         super().__init__(parent)
         colors = colors if colors else get_accent_colors()
         _icon = partial(material_icon, icon_name="circle", size=(12, 12), filled=True)
@@ -241,7 +300,23 @@ class DeviceValidatedDelegate(CustomDisplayDelegate):
             ValidationStatus.FAILED: _icon(color=colors.emergency),
         }
 
-    def _do_custom_paint(self, painter, option, index, value):
+    def _do_custom_paint(
+        self,
+        painter: QtGui.QPainter,
+        option: QtWidgets.QStyleOptionViewItem,
+        index: QModelIndex,
+        value: Literal[0, 1, 2],
+    ):
+        """
+        Paint the validation status icon centered in the cell.
+
+        Args:
+            painter (QtGui.QPainter): The painter object.
+            option (QtWidgets.QStyleOptionViewItem): The style options for the item.
+            index (QModelIndex): The model index of the item.
+            value (Literal[0,1,2]): The validation status value, where 0=Pending, 1=Valid, 2=Failed.
+                                    Relates to ValidationStatus enum.
+        """
         if pixmap := self._icons.get(value):
             pix_rect = pixmap.rect()
             pix_rect.moveCenter(option.rect.center())
@@ -258,7 +333,7 @@ class DeviceTableModel(QtCore.QAbstractTableModel):
     # tuple of list[dict[str, Any]] of configs which were added and bool True if added or False if removed
     configs_changed = QtCore.Signal(list, bool)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: DeviceTableModel | None = None):
         super().__init__(parent)
         self._device_config: list[dict[str, Any]] = []
         self._validation_status: dict[str, ValidationStatus] = {}
