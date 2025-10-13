@@ -43,7 +43,7 @@ def docstring_to_markdown(obj) -> str:
     # Highlight section headers for Markdown
     headers = ["Parameters", "Args", "Returns", "Raises", "Attributes", "Examples", "Notes"]
     for h in headers:
-        doc = re.sub(rf"(?m)^({h})\s*:?\s*$", rf"### \1", text)
+        text = re.sub(rf"(?m)^({h})\s*:?\s*$", rf"### \1", text)
 
     # Preserve code blocks (4+ space indented lines)
     def fence_code(match: re.Match) -> str:
