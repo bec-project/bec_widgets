@@ -143,6 +143,9 @@ class ConfigChoiceDialog(QDialog):
         return self._result
 
 
+AVAILABLE_RESOURCE_IS_READY = False
+
+
 class DeviceManagerView(BECWidget, QWidget):
 
     def __init__(self, parent=None, *args, **kwargs):
@@ -158,15 +161,6 @@ class DeviceManagerView(BECWidget, QWidget):
         self.dock_manager = CDockManager(self)
         self.dock_manager.setStyleSheet("")
         self._root_layout.addWidget(self.dock_manager)
-
-        # # Available Resources Widget
-        # self.available_devices = AvailableDeviceResources(
-        #     self, shared_selection_signal=self._shared_selection
-        # )
-        # self.available_devices_dock = QtAds.CDockWidget(
-        #     self.dock_manager, "Available Devices", self
-        # )
-        # self.available_devices_dock.setWidget(self.available_devices)
 
         # Device Table View widget
         self.device_table_view = DeviceTableView(
@@ -204,11 +198,7 @@ class DeviceManagerView(BECWidget, QWidget):
         self.help_inspector_dock = QtAds.CDockWidget(self.dock_manager, "Help Inspector", self)
         self.help_inspector_dock.setWidget(widget)
 
-        # # Hook inspector signals
-        # def _class_cb(text: str):
-        #     print(text)
-
-        # # Register callback
+        # Register callback
         self.help_inspector.bec_widget_help.connect(text_box.setMarkdown)
 
         # Error Logs View
@@ -247,57 +237,63 @@ class DeviceManagerView(BECWidget, QWidget):
         self.dock_manager.addDockWidgetTabToArea(self.error_logs_dock, area)
 
         for dock in self.dock_manager.dockWidgets():
-            # dock.setFeature(CDockWidget.DockWidgetDeleteOnClose, True)#TODO implement according to MonacoDock or AdvancedDockArea
-            # dock.setFeature(CDockWidget.CustomCloseHandling, True) #TODO same
             dock.setFeature(CDockWidget.DockWidgetClosable, False)
             dock.setFeature(CDockWidget.DockWidgetFloatable, False)
             dock.setFeature(CDockWidget.DockWidgetMovable, False)
 
-        # TODO decide if we like to hide the title bars..
-        # Fetch all dock areas of the dock widgets (on our case always one dock area)
-        # for dock in self.dock_manager.dockWidgets():
-        #     if dock.objectName() in ["Help Inspector", "Error Logs"]:
-        #         continue
-        #     area = dock.dockAreaWidget()
-        #     area.titleBar().setVisible(False)
-
         # Apply stretch after the layout is done
         self.set_default_view([2, 8, 2], [7, 3])
-        # self.set_default_view([2, 8, 2], [2, 2, 4])
 
-        # Connect slots
         for signal, slots in [
             (
                 self.device_table_view.selected_devices,
                 (self.dm_config_view.on_select_config, self.dm_docs_view.on_select_config),
             ),
-            # (
-            #     self.available_devices.selected_devices,
-            #     (self.dm_config_view.on_select_config, self.dm_docs_view.on_select_config),
-            # ),
             (
                 self.ophyd_test_view.device_validated,
                 (self.device_table_view.update_device_validation,),
             ),
-            # (
-            #     self.device_table_view.device_configs_changed,
-            #     (
-            #         self.ophyd_test_view.change_device_configs,
-            #         self.available_devices.mark_devices_used,
-            #     ),
-            # ),
-            # (
-            #     self.available_devices.add_selected_devices,
-            #     (self.device_table_view.add_device_configs,),
-            # ),
-            # (
-            #     self.available_devices.del_selected_devices,
-            #     (self.device_table_view.remove_device_configs,),
-            # ),
+            (
+                self.device_table_view.device_configs_changed,
+                (self.ophyd_test_view.change_device_configs,),
+            ),
         ]:
             for slot in slots:
                 signal.connect(slot)
 
+        # Once available resource is ready, add it to the view again
+        if AVAILABLE_RESOURCE_IS_READY:
+            # Available Resources Widget
+            self.available_devices = AvailableDeviceResources(
+                self, shared_selection_signal=self._shared_selection
+            )
+            self.available_devices_dock = QtAds.CDockWidget(
+                self.dock_manager, "Available Devices", self
+            )
+            self.available_devices_dock.setWidget(self.available_devices)
+            # Connect slots for available reosource
+            for signal, slots in [
+                (
+                    self.available_devices.selected_devices,
+                    (self.dm_config_view.on_select_config, self.dm_docs_view.on_select_config),
+                ),
+                (
+                    self.device_table_view.device_configs_changed,
+                    (self.available_devices.mark_devices_used,),
+                ),
+                (
+                    self.available_devices.add_selected_devices,
+                    (self.device_table_view.add_device_configs,),
+                ),
+                (
+                    self.available_devices.del_selected_devices,
+                    (self.device_table_view.remove_device_configs,),
+                ),
+            ]:
+                for slot in slots:
+                    signal.connect(slot)
+
+        # Add toolbar
         self._add_toolbar()
 
     def _add_toolbar(self):
@@ -421,13 +417,6 @@ class DeviceManagerView(BECWidget, QWidget):
         # Add load config from plugin dir
         self.toolbar.add_bundle(table_bundle)
 
-        # Most likly, no actions on available devices
-        # Actions (vielleicht bundle fuer available devices )
-        # - reset composed view
-        # - add new device (EpicsMotor, EpicsMotorECMC, EpicsSignal, CustomDevice)
-        # - remove device
-        # - rerun validation (with/without connect)
-
     # IO actions
     def _coming_soon(self):
         return QMessageBox.question(
@@ -441,7 +430,6 @@ class DeviceManagerView(BECWidget, QWidget):
     @SafeSlot()
     def _load_file_action(self):
         """Action for the 'load' action to load a config from disk for the io_bundle of the toolbar."""
-        # Check if plugin repo is installed...
         try:
             plugin_path = plugin_repo_path()
             plugin_name = plugin_package_name()
@@ -542,7 +530,6 @@ class DeviceManagerView(BECWidget, QWidget):
                 file.write(yaml.dump(config))
 
     # Table actions
-
     @SafeSlot()
     def _reset_composed_view(self):
         """Action for the 'reset_composed_view' action to reset the composed view."""
@@ -554,13 +541,10 @@ class DeviceManagerView(BECWidget, QWidget):
         if reply == QMessageBox.StandardButton.Yes:
             self.device_table_view.clear_device_configs()
 
-    # TODO We want to have a combobox to choose from EpicsMotor, EpicsMotorECMC, EpicsSignal, EpicsSignalRO, and maybe EpicsSignalWithRBV and custom Device
-    # For all default Epics devices, we would like to preselect relevant fields, and prompt them with the proper deviceConfig args already, i.e. 'prefix', 'read_pv', 'write_pv' etc..
-    # For custom Device, they should receive all options. It might be cool to get a side panel with docstring view of the class upon inspecting it to make it easier in case deviceConfig entries are required..
+    # TODO Bespoke Form to add a new device
     @SafeSlot()
     def _add_device_action(self):
         """Action for the 'add_device' action to add a new device."""
-        # Implement the logic to add a new device
         dialog = PresetClassDeviceConfigDialog(parent=self)
         dialog.accepted_data.connect(self._add_to_table_from_dialog)
         dialog.open()
@@ -574,13 +558,12 @@ class DeviceManagerView(BECWidget, QWidget):
         """Action for the 'remove_device' action to remove a device."""
         self.device_table_view.remove_selected_rows()
 
-    # TODO implement proper logic for validation. We should also carefully review how these jobs update the table, and how we can cancel pending validations
-    # in case they are no longer relevant. We might want to 'block' the interactivity on the items for which validation runs with 'connect'!
     @SafeSlot()
-    def _rerun_validation_action(self):
+    @SafeSlot(bool)
+    def _rerun_validation_action(self, connect: bool = True):
         """Action for the 'rerun_validation' action to rerun validation on selected devices."""
         configs = self.device_table_view.table.selected_configs()
-        self.ophyd_test_view.change_device_configs(configs, True, True)
+        self.ophyd_test_view.change_device_configs(configs, True, connect)
 
     ####### Default view has to be done with setting up splitters ########
     def set_default_view(
