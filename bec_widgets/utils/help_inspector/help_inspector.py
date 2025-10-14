@@ -128,7 +128,8 @@ class HelpInspector(BECWidget, QtWidgets.QWidget):
                 # Get BECWidget ancestor
                 # TODO check what happens if the HELP Inspector itself is embedded in another BECWidget
                 # I suppose we would like to get the first ancestor that is a BECWidget, not the topmost one
-                widget = WidgetHierarchy._get_becwidget_ancestor(widget)
+                if not isinstance(widget, BECWidget):
+                    widget = WidgetHierarchy._get_becwidget_ancestor(widget)
                 if widget:
                     if widget is self:
                         self._toggle_mode(False)
