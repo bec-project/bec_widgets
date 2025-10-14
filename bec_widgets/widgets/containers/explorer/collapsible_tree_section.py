@@ -24,7 +24,14 @@ class CollapsibleSection(QWidget):
 
     section_reorder_requested = Signal(str, str)  # (source_title, target_title)
 
-    def __init__(self, parent=None, title="", indentation=10, show_add_button=False):
+    def __init__(
+        self,
+        parent=None,
+        title="",
+        indentation=10,
+        show_add_button=False,
+        tooltip: str | None = None,
+    ):
         super().__init__(parent=parent)
         self.title = title
         self.content_widget = None
@@ -50,6 +57,8 @@ class CollapsibleSection(QWidget):
         self.header_button.mouseMoveEvent = self._header_mouse_move_event
         self.header_button.dragEnterEvent = self._header_drag_enter_event
         self.header_button.dropEvent = self._header_drop_event
+        if tooltip:
+            self.header_button.setToolTip(tooltip)
 
         self.drag_start_position = None
 
