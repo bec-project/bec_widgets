@@ -44,7 +44,7 @@ jobs:
         run: |
           cd ./bec
           pip install pytest pytest-random-order
-          pytest -v --maxfail=2 --junitxml=report.xml --random-order ./bec_server/tests ./bec_ipython_client/tests/client_tests ./bec_lib/tests
+          python -m pytest -v --maxfail=2 --junitxml=report.xml --random-order ./bec_server/tests ./bec_ipython_client/tests/client_tests ./bec_lib/tests
   bec-e2e-test:
     name: BEC End2End Tests
     runs-on: ubuntu-latest
