@@ -266,6 +266,45 @@ class MacroTreeWidget(QWidget):
 
         self._scan_macro_functions()
 
+    def _create_file_item(self, py_file: Path) -> QStandardItem | None:
+        """Create a file item with its functions
+
+        Args:
+            py_file: Path to the Python file
+
+        Returns:
+            QStandardItem representing the file, or None if no functions found
+        """
+        # Skip files starting with underscore
+        if py_file.name.startswith("_"):
+            return None
+
+        try:
+            functions = self._extract_functions_from_file(py_file)
+            if not functions:
+                return None
+
+            # Create a file node
+            file_item = QStandardItem(py_file.stem)
+            file_item.setData({"file_path": str(py_file), "type": "file"}, Qt.ItemDataRole.UserRole)
+
+            # Add function nodes
+            for func_name, func_info in functions.items():
+                func_item = QStandardItem(func_name)
+                func_data = {
+                    "function_name": func_name,
+                    "file_path": str(py_file),
+                    "line_number": func_info.get("line_number", 1),
+                    "type": "function",
+                }
+                func_item.setData(func_data, Qt.ItemDataRole.UserRole)
+                file_item.appendRow(func_item)
+
+            return file_item
+        except Exception as e:
+            logger.warning(f"Failed to parse {py_file}: {e}")
+            return None
+
     def _scan_macro_functions(self):
         """Scan the directory for Python files and extract macro functions"""
         self.model.clear()
@@ -278,34 +317,9 @@ class MacroTreeWidget(QWidget):
         python_files = list(Path(self.directory).glob("*.py"))
 
         for py_file in python_files:
-            # Skip files starting with underscore
-            if py_file.name.startswith("_"):
-                continue
-
-            try:
-                functions = self._extract_functions_from_file(py_file)
-                if functions:
-                    # Create a file node
-                    file_item = QStandardItem(py_file.stem)
-                    file_item.setData(
-                        {"file_path": str(py_file), "type": "file"}, Qt.ItemDataRole.UserRole
-                    )
-
-                    # Add function nodes
-                    for func_name, func_info in functions.items():
-                        func_item = QStandardItem(func_name)
-                        func_data = {
-                            "function_name": func_name,
-                            "file_path": str(py_file),
-                            "line_number": func_info.get("line_number", 1),
-                            "type": "function",
-                        }
-                        func_item.setData(func_data, Qt.ItemDataRole.UserRole)
-                        file_item.appendRow(func_item)
-
-                    self.model.appendRow(file_item)
-            except Exception as e:
-                logger.warning(f"Failed to parse {py_file}: {e}")
+            file_item = self._create_file_item(py_file)
+            if file_item:
+                self.model.appendRow(file_item)
 
         self.tree.expandAll()
 
@@ -398,6 +412,51 @@ class MacroTreeWidget(QWidget):
         if self.directory is None:
             return
         self._scan_macro_functions()
+
+    def refresh_file_item(self, file_path: str):
+        """Refresh a single file item by re-scanning its functions
+
+        Args:
+            file_path: Path to the Python file to refresh
+        """
+        if not file_path or not os.path.exists(file_path):
+            logger.warning(f"Cannot refresh file item: {file_path} does not exist")
+            return
+
+        py_file = Path(file_path)
+
+        # Find existing file item in the model
+        existing_item = None
+        existing_row = -1
+        for row in range(self.model.rowCount()):
+            item = self.model.item(row)
+            if not item or not item.data(Qt.ItemDataRole.UserRole):
+                continue
+            item_data = item.data(Qt.ItemDataRole.UserRole)
+            if item_data.get("type") == "file" and item_data.get("file_path") == str(py_file):
+                existing_item = item
+                existing_row = row
+                break
+
+        # Store expansion state if item exists
+        was_expanded = existing_item and self.tree.isExpanded(existing_item.index())
+
+        # Remove existing item if found
+        if existing_item and existing_row >= 0:
+            self.model.removeRow(existing_row)
+
+        # Create new item using the helper method
+        new_item = self._create_file_item(py_file)
+        if new_item:
+            # Insert at the same position or append if it was a new file
+            insert_row = existing_row if existing_row >= 0 else self.model.rowCount()
+            self.model.insertRow(insert_row, new_item)
+
+            # Restore expansion state
+            if was_expanded:
+                self.tree.expand(new_item.index())
+            else:
+                self.tree.expand(new_item.index())
 
     def expand_all(self):
         """Expand all items in the tree"""

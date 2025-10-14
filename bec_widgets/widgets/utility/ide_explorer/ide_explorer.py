@@ -108,7 +108,11 @@ class IDEExplorer(BECWidget, QWidget):
 
     def add_macro_section(self):
         section = CollapsibleSection(
-            parent=self, title="MACROS", indentation=0, show_add_button=True
+            parent=self,
+            title="MACROS",
+            indentation=0,
+            show_add_button=True,
+            tooltip="Macros are reusable functions that can be called from scripts or the console.",
         )
         section.header_add_button.setIcon(material_icon("refresh", size=(20, 20)))
         section.header_add_button.setToolTip("Reload all macros")
@@ -314,6 +318,42 @@ def {function_name}():
                 QMessageBox.warning(self, "Reload Macros", "Macros functionality is not available.")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to reload macros: {str(e)}")
+
+    def refresh_macro_file(self, file_path: str):
+        """Refresh a single macro file in the tree widget.
+
+        Args:
+            file_path: Path to the macro file that was updated
+        """
+        target_section = self.main_explorer.get_section("MACROS")
+        if not target_section or not hasattr(target_section, "content_widget"):
+            return
+
+        # Determine if this is a local or shared macro based on the file path
+        local_section = target_section.content_widget.get_section("Local")
+        shared_section = target_section.content_widget.get_section("Shared")
+
+        # Check if file belongs to local macros directory
+        if (
+            local_section
+            and hasattr(local_section, "content_widget")
+            and hasattr(local_section.content_widget, "directory")
+        ):
+            local_macro_dir = local_section.content_widget.directory
+            if local_macro_dir and file_path.startswith(local_macro_dir):
+                local_section.content_widget.refresh_file_item(file_path)
+                return
+
+        # Check if file belongs to shared macros directory
+        if (
+            shared_section
+            and hasattr(shared_section, "content_widget")
+            and hasattr(shared_section.content_widget, "directory")
+        ):
+            shared_macro_dir = shared_section.content_widget.directory
+            if shared_macro_dir and file_path.startswith(shared_macro_dir):
+                shared_section.content_widget.refresh_file_item(file_path)
+                return
 
 
 if __name__ == "__main__":
