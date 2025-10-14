@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from functools import partial
-from typing import List
+from typing import List, Literal
 
 import PySide6QtAds as QtAds
 import yaml
@@ -443,10 +443,20 @@ class DeviceManagerView(BECWidget, QWidget):
 
         # Implement the file loading logic here
         start_dir = os.path.abspath(config_path)
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, caption="Select Config File", dir=start_dir
-        )
-        self._load_config_from_file(file_path)
+        file_path = self._get_file_path(start_dir, "open_file")
+        if file_path:
+            self._load_config_from_file(file_path)
+
+    def _get_file_path(self, start_dir: str, mode: Literal["open_file", "save_file"]) -> str:
+        if mode == "open_file":
+            file_path, _ = QFileDialog.getOpenFileName(
+                self, caption="Select Config File", dir=start_dir
+            )
+        else:
+            file_path, _ = QFileDialog.getSaveFileName(
+                self, caption="Save Config File", dir=start_dir
+            )
+        return file_path
 
     def _load_config_from_file(self, file_path: str):
         """
@@ -460,6 +470,15 @@ class DeviceManagerView(BECWidget, QWidget):
         except Exception as e:
             logger.error(f"Failed to load config from file {file_path}. Error: {e}")
             return
+        self._open_config_choice_dialog(config)
+
+    def _open_config_choice_dialog(self, config: List[dict]):
+        """
+        Open a dialog to choose whether to replace or add the loaded config.
+
+        Args:
+            config (List[dict]): List of device configurations loaded from the file.
+        """
         dialog = ConfigChoiceDialog(self)
         if dialog.exec():
             if dialog.result() == ConfigChoiceDialog.REPLACE:
@@ -484,7 +503,7 @@ class DeviceManagerView(BECWidget, QWidget):
             return
 
     @SafeSlot()
-    def _update_redis_action(self):
+    def _update_redis_action(self) -> None | QMessageBox.StandardButton:
         """Action to push the current composition to Redis"""
         reply = _yes_no_question(
             self,
@@ -521,9 +540,7 @@ class DeviceManagerView(BECWidget, QWidget):
             logger.warning(f"Failed to find recovery config path, fallback to: {config_path}")
 
         # Implement the file loading logic here
-        file_path, _ = QFileDialog.getSaveFileName(
-            self, caption="Save Config File", dir=config_path
-        )
+        file_path = self._get_file_path(config_path, "save_file")
         if file_path:
             config = {cfg.pop("name"): cfg for cfg in self.device_table_view.get_device_config()}
             with open(file_path, "w") as file:
