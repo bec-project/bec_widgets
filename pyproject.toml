@@ -27,6 +27,9 @@ dependencies = [
     "qtmonaco~=0.7",
     "darkdetect~=0.8",
     "PySide6-QtAds==4.4.0",
+    "pylsp-bec",
+    "copier~=9.7",
+    "typer~=0.15",
 ]
 
 
@@ -44,7 +47,6 @@ dev = [
     "pytest-cov~=6.1.1",
     "watchdog~=6.0",
     "pre_commit~=4.2",
-
 ]
 
 [project.urls]
