@@ -29,6 +29,14 @@ def roi_tree(qtbot, image_widget):
     yield tree
 
 
+@pytest.fixture
+def compact_roi_tree(qtbot, image_widget):
+    tree = create_widget(
+        qtbot, ROIPropertyTree, image_widget=image_widget, compact=True, compact_color="#00BCD4"
+    )
+    yield tree
+
+
 def test_initialization(roi_tree, image_widget):
     """Test that the widget initializes correctly with the right components."""
     # Check the widget has the right structure
@@ -431,3 +439,120 @@ def test_cleanup_disconnect_signals(roi_tree, image_widget):
     # Verify that the tree item was not updated
     assert item.text(roi_tree.COL_ROI) == initial_name
     assert item.child(2).text(roi_tree.COL_PROPS) == initial_coord
+
+
+def test_compact_initialization_minimal_toolbar(compact_roi_tree):
+    assert compact_roi_tree.compact is True
+    assert compact_roi_tree.tree is None
+
+    # Draw actions exist
+    assert compact_roi_tree.toolbar.components.get_action("roi_rectangle")
+    assert compact_roi_tree.toolbar.components.get_action("roi_circle")
+    assert compact_roi_tree.toolbar.components.get_action("roi_ellipse")
+
+    # Full-mode actions are absent
+    import pytest
+
+    with pytest.raises(KeyError):
+        compact_roi_tree.toolbar.components.get_action("expand_toggle")
+    with pytest.raises(KeyError):
+        compact_roi_tree.toolbar.components.get_action("lock_unlock_all")
+    with pytest.raises(KeyError):
+        compact_roi_tree.toolbar.components.get_action("roi_tree_cmap")
+
+    assert not hasattr(compact_roi_tree, "lock_all_action")
+
+
+def test_compact_single_roi_enforced_programmatic(compact_roi_tree, image_widget):
+    # Add first ROI
+    roi1 = image_widget.add_roi(kind="rect", name="r1")
+    assert len(image_widget.roi_controller.rois) == 1
+    assert roi1.line_color == "#00BCD4"
+
+    # Add second ROI; the first should be removed automatically
+    roi2 = image_widget.add_roi(kind="circle", name="c1")
+    rois = image_widget.roi_controller.rois
+    assert len(rois) == 1
+    assert rois[0] is roi2
+
+    from bec_widgets.widgets.plots.roi.image_roi import CircularROI
+
+    assert isinstance(rois[0], CircularROI)
+    assert rois[0].line_color == "#00BCD4"
+
+
+def test_compact_add_roi_from_toolbar_single_enforced(qtbot, compact_roi_tree, image_widget):
+    # Ensure view is ready
+    plot_item = image_widget.plot_item
+    view = plot_item.vb.scene().views()[0]
+    qtbot.waitExposed(view)
+
+    # Activate rectangle drawing
+    rect_action = compact_roi_tree.toolbar.components.get_action("roi_rectangle").action
+    rect_action.setChecked(True)
+
+    # Draw rectangle
+    start_pos = QPointF(10, 10)
+    end_pos = QPointF(50, 40)
+    start_scene = plot_item.vb.mapViewToScene(start_pos)
+    end_scene = plot_item.vb.mapViewToScene(end_pos)
+    start_widget = view.mapFromScene(start_scene)
+    end_widget = view.mapFromScene(end_scene)
+    qtbot.mousePress(view.viewport(), Qt.LeftButton, pos=start_widget)
+    qtbot.mouseMove(view.viewport(), pos=end_widget)
+    qtbot.mouseRelease(view.viewport(), Qt.LeftButton, pos=end_widget)
+    qtbot.wait(100)
+
+    rois = image_widget.roi_controller.rois
+    from bec_widgets.widgets.plots.roi.image_roi import CircularROI, RectangularROI
+
+    assert len(rois) == 1
+    assert isinstance(rois[0], RectangularROI)
+    assert rois[0].line_color == "#00BCD4"
+
+    # Now draw a circle; rectangle should be removed automatically
+    rect_action.setChecked(False)
+    circle_action = compact_roi_tree.toolbar.components.get_action("roi_circle").action
+    circle_action.setChecked(True)
+
+    start_pos = QPointF(20, 20)
+    end_pos = QPointF(40, 40)
+    start_scene = plot_item.vb.mapViewToScene(start_pos)
+    end_scene = plot_item.vb.mapViewToScene(end_pos)
+    start_widget = view.mapFromScene(start_scene)
+    end_widget = view.mapFromScene(end_scene)
+    qtbot.mousePress(view.viewport(), Qt.LeftButton, pos=start_widget)
+    qtbot.mouseMove(view.viewport(), pos=end_widget)
+    qtbot.mouseRelease(view.viewport(), Qt.LeftButton, pos=end_widget)
+    qtbot.wait(100)
+
+    rois = image_widget.roi_controller.rois
+    assert len(rois) == 1
+    assert isinstance(rois[0], CircularROI)
+    assert rois[0].line_color == "#00BCD4"
+
+
+def test_compact_draw_mode_toggle(compact_roi_tree):
+    # Initially no draw mode
+    assert compact_roi_tree._roi_draw_mode is None
+
+    rect_action = compact_roi_tree.toolbar.components.get_action("roi_rectangle").action
+    circle_action = compact_roi_tree.toolbar.components.get_action("roi_circle").action
+
+    # Toggle rect on
+    rect_action.toggle()
+    assert compact_roi_tree._roi_draw_mode == "rect"
+    assert rect_action.isChecked()
+    assert not circle_action.isChecked()
+
+    # Toggle circle on; rect should toggle off
+    circle_action.toggle()
+    assert compact_roi_tree._roi_draw_mode == "circle"
+    assert circle_action.isChecked()
+    assert not rect_action.isChecked()
+
+    # Toggle circle off → none
+    circle_action.toggle()
+    assert compact_roi_tree._roi_draw_mode is None
+    assert not rect_action.isChecked()
+    assert not circle_action.isChecked()
