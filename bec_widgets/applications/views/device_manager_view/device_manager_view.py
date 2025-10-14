@@ -322,16 +322,16 @@ class DeviceManagerView(BECWidget, QWidget):
         io_bundle.add_action("load")
 
         # Add safe to disk
-        safe_to_disk = MaterialIconAction(
+        save_to_disk = MaterialIconAction(
             text_position="under",
             icon_name="file_save",
             parent=self,
             tooltip="Save config to disk",
             label_text="Save Config",
         )
-        self.toolbar.components.add_safe("safe_to_disk", safe_to_disk)
-        safe_to_disk.action.triggered.connect(self._save_to_disk_action)
-        io_bundle.add_action("safe_to_disk")
+        self.toolbar.components.add_safe("save_to_disk", save_to_disk)
+        save_to_disk.action.triggered.connect(self._save_to_disk_action)
+        io_bundle.add_action("save_to_disk")
 
         # Add load config from redis
         load_redis = MaterialIconAction(
@@ -501,9 +501,9 @@ class DeviceManagerView(BECWidget, QWidget):
             return QMessageBox.warning(
                 self, "Validation has not completed.", "Please wait for the validation to finish."
             )
-        self._push_compositiion_to_redis()
+        self._push_composition_to_redis()
 
-    def _push_compositiion_to_redis(self):
+    def _push_composition_to_redis(self):
         config = {cfg.pop("name"): cfg for cfg in self.device_table_view.table.all_configs()}
         threadpool = QThreadPool.globalInstance()
         comm = CommunicateConfigAction(self._config_helper, None, config, "set")
@@ -511,7 +511,7 @@ class DeviceManagerView(BECWidget, QWidget):
 
     @SafeSlot()
     def _save_to_disk_action(self):
-        """Action for the 'safe_to_disk' action to save the current config to disk."""
+        """Action for the 'save_to_disk' action to save the current config to disk."""
         # Check if plugin repo is installed...
         try:
             config_path = self._get_recovery_config_path()
