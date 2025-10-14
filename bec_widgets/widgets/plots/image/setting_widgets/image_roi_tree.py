@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from bec_lib import bec_logger
 from bec_qthemes import material_icon
@@ -73,11 +73,16 @@ class ROIPropertyTree(BECWidget, QWidget):
     - Children: type, line-width (spin box), coordinates (auto-updating).
 
     Args:
+        parent (QWidget, optional): Parent widget. Defaults to None.
         image_widget (Image): The main Image widget that displays the ImageItem.
             Provides ``plot_item`` and owns an ROIController already.
         controller (ROIController, optional): Optionally pass an external controller.
             If None, the manager uses ``image_widget.roi_controller``.
-        parent (QWidget, optional): Parent widget. Defaults to None.
+        compact (bool, optional): If True, use a compact mode with no tree view,
+            only a toolbar with draw actions. Defaults to False.
+        compact_orientation (str, optional): Orientation of the toolbar in compact mode.
+            Either "vertical" or "horizontal". Defaults to "vertical".
+        compact_color (str, optional): Color of the single active ROI in compact mode.
     """
 
     PLUGIN = False
@@ -92,11 +97,18 @@ class ROIPropertyTree(BECWidget, QWidget):
         parent: QWidget = None,
         image_widget: Image,
         controller: ROIController | None = None,
+        compact: bool = False,
+        compact_orientation: Literal["vertical", "horizontal"] = "vertical",
+        compact_color: str = "#f0f0f0",
     ):
 
         super().__init__(
             parent=parent, config=ConnectionConfig(widget_class=self.__class__.__name__)
         )
+        self.compact = compact
+        self.compact_orient = compact_orientation
+        self.compact_color = compact_color
+        self.single_active_roi: BaseROI | None = None
 
         if controller is None:
             # Use the controller already belonging to the Image widget
@@ -112,22 +124,29 @@ class ROIPropertyTree(BECWidget, QWidget):
 
         self.layout = QVBoxLayout(self)
         self._init_toolbar()
-        self._init_tree()
+        if not self.compact:
+            self._init_tree()
+        else:
+            self.tree = None
 
         # connect controller
         self.controller.roiAdded.connect(self._on_roi_added)
         self.controller.roiRemoved.connect(self._on_roi_removed)
-        self.controller.cleared.connect(self.tree.clear)
+        if not self.compact:
+            self.controller.cleared.connect(self.tree.clear)
 
         # initial load
         for r in self.controller.rois:
             self._on_roi_added(r)
 
-        self.tree.collapseAll()
+        if not self.compact:
+            self.tree.collapseAll()
 
     # --------------------------------------------------------------------- UI
     def _init_toolbar(self):
-        tb = self.toolbar = ModularToolBar(self, orientation="horizontal")
+        tb = self.toolbar = ModularToolBar(
+            self, orientation=self.compact_orient if self.compact else "horizontal"
+        )
         self._draw_actions: dict[str, MaterialIconAction] = {}
         # --- ROI draw actions (toggleable) ---
 
@@ -156,6 +175,17 @@ class ROIPropertyTree(BECWidget, QWidget):
         }
         for mode, act in self._draw_actions.items():
             act.action.toggled.connect(lambda on, m=mode: self._on_draw_action_toggled(m, on))
+
+        if self.compact:
+            tb.show_bundles(["roi_draw"])
+            self.layout.addWidget(tb)
+
+            # ROI drawing state (needed even in compact mode)
+            self._roi_draw_mode = None
+            self._roi_start_pos = None
+            self._temp_roi = None
+            self.plot.scene().installEventFilter(self)
+            return
 
         # Expand/Collapse toggle
         self.expand_toggle = MaterialIconAction(
@@ -327,13 +357,21 @@ class ROIPropertyTree(BECWidget, QWidget):
             self._set_roi_draw_mode(None)
             # register via controller
             self.controller.add_roi(final_roi)
+            if self.compact:
+                final_roi.line_color = self.compact_color
             return True
         return super().eventFilter(obj, event)
 
     # --------------------------------------------------------- controller slots
     def _on_roi_added(self, roi: BaseROI):
+        if self.compact:
+            roi.line_color = self.compact_color
+            if self.single_active_roi is not None and self.single_active_roi is not roi:
+                self.controller.remove_roi(self.single_active_roi)
+            self.single_active_roi = roi
+            return
         # check the global setting from the toolbar
-        if self.lock_all_action.action.isChecked():
+        if hasattr(self, "lock_all_action") and self.lock_all_action.action.isChecked():
             roi.movable = False
         # parent row with blank action column, name in ROI column
         parent = QTreeWidgetItem(self.tree, ["", "", ""])
@@ -424,6 +462,10 @@ class ROIPropertyTree(BECWidget, QWidget):
         roi.movable = not roi.movable
 
     def _on_roi_removed(self, roi: BaseROI):
+        if self.compact:
+            if self.single_active_roi is roi:
+                self.single_active_roi = None
+            return
         item = self.roi_items.pop(roi, None)
         if item:
             idx = self.tree.indexOfTopLevelItem(item)
@@ -449,8 +491,9 @@ class ROIPropertyTree(BECWidget, QWidget):
         self.controller.remove_roi(roi)
 
     def cleanup(self):
-        self.cmap.close()
-        self.cmap.deleteLater()
+        if hasattr(self, "cmap"):
+            self.cmap.close()
+            self.cmap.deleteLater()
         if self.controller and hasattr(self.controller, "rois"):
             for roi in self.controller.rois:  # disconnect all signals from ROIs
                 try:
@@ -491,8 +534,8 @@ if __name__ == "__main__":  # pragma: no cover
     # Add the image widget on the left
     ml.addWidget(image_widget)
 
-    # ROI manager linked to that image
-    mgr = ROIPropertyTree(parent=image_widget, image_widget=image_widget)
+    # ROI manager linked to that image with compact mode
+    mgr = ROIPropertyTree(parent=image_widget, image_widget=image_widget, compact=True)
     mgr.setFixedWidth(350)
     ml.addWidget(mgr)
 
