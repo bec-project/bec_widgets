@@ -174,6 +174,8 @@ class BaseROI(BECConnector):
         self.remove_scale_handles()  # remove any existing handles from pyqtgraph.RectROI
         if movable:
             self.add_scale_handle()  # add custom scale handles
+        if hasattr(self, "sigRemoveRequested"):
+            self.sigRemoveRequested.connect(self.remove)
 
     def set_parent(self, parent: Image):
         """
