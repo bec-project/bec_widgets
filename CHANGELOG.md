@@ -1,6 +1,37 @@
 # CHANGELOG
 
 
+## v2.41.0 (2025-10-15)
+
+### Bug Fixes
+
+- **image_roi**: Delete button added to compact version
+  ([`ef27de4`](https://github.com/bec-project/bec_widgets/commit/ef27de40ceee8375d95a0f3a8e451b7d05d0ae2c))
+
+- **image_roi**: Rois can be removed with right click context menu
+  ([`37df95e`](https://github.com/bec-project/bec_widgets/commit/37df95ead8d6a07a6c5794a97a486d9f380004cc))
+
+### Build System
+
+- **bec_lib**: Version bump to 3.69.3
+  ([`28ac9c5`](https://github.com/bec-project/bec_widgets/commit/28ac9c5cc369bdfa712c70c45591243631c65066))
+
+### Features
+
+- **image_roi_tree**: Compact mode added
+  ([`c87a6cf`](https://github.com/bec-project/bec_widgets/commit/c87a6cfce9c36588b32f5279e63072bc2646c36f))
+
+### Refactoring
+
+- **serializer**: Upgrade to new serializer interface
+  ([`3d807ea`](https://github.com/bec-project/bec_widgets/commit/3d807eaa63980fd2bb11661696c4d8548fffde8c))
+
+### Testing
+
+- **deviceconfig-form-update**: Add onFailure default to test
+  ([`1dd20d5`](https://github.com/bec-project/bec_widgets/commit/1dd20d5986485f3bfe7ee02596ca23027ec4b756))
+
+
 ## v2.40.0 (2025-10-08)
 
 ### Bug Fixes
