@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.41.1 (2025-10-15)
+
+### Bug Fixes
+
+- **dependencies**: Bec lib versions fixed
+  ([`3941050`](https://github.com/bec-project/bec_widgets/commit/3941050883a791f800ab7178af2435ac14f837b6))
+
+
 ## v2.41.0 (2025-10-15)
 
 ### Bug Fixes
