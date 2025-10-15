@@ -177,6 +177,18 @@ class ROIPropertyTree(BECWidget, QWidget):
             act.action.toggled.connect(lambda on, m=mode: self._on_draw_action_toggled(m, on))
 
         if self.compact:
+            tb.components.add_safe(
+                "compact_delete",
+                MaterialIconAction("delete", "Delete Current Roi", checkable=False, parent=self),
+            )
+            bundle.add_action("compact_delete")
+            tb.components.get_action("compact_delete").action.triggered.connect(
+                lambda _: (
+                    self.controller.remove_roi(self.single_active_roi)
+                    if self.single_active_roi is not None
+                    else None
+                )
+            )
             tb.show_bundles(["roi_draw"])
             self.layout.addWidget(tb)
 
