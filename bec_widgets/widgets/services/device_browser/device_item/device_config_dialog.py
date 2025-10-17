@@ -5,7 +5,7 @@ from bec_lib.atlas_models import Device as DeviceConfigModel
 from bec_lib.config_helper import CONF as DEVICE_CONF_KEYS
 from bec_lib.config_helper import ConfigHelper
 from bec_lib.logger import bec_logger
-from pydantic import ValidationError, field_validator
+from pydantic import field_validator
 from qtpy.QtCore import QSize, Qt, QThreadPool, Signal
 from qtpy.QtWidgets import (
     QApplication,
