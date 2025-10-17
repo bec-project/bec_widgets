@@ -3,14 +3,16 @@ from __future__ import annotations
 import typing
 from abc import abstractmethod
 from decimal import Decimal
-from types import GenericAlias, UnionType
+from types import GenericAlias, NoneType, UnionType
 from typing import (
+    Any,
     Callable,
     Final,
     Generic,
     Iterable,
     Literal,
     NamedTuple,
+    Optional,
     OrderedDict,
     TypeVar,
     get_args,
@@ -71,7 +73,7 @@ class FormItemSpec(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    item_type: type | UnionType | GenericAlias
+    item_type: type | UnionType | GenericAlias | Optional[Any]
     name: str
     info: FieldInfo = FieldInfo()
     pretty_display: bool = Field(
@@ -188,6 +190,10 @@ class DynamicFormItem(QWidget):
         """Add the main data entry widget to self._main_widget and appply any
         constraints from the field info"""
 
+    @SafeSlot()
+    def clear(self, *_):
+        return
+
     def _set_pretty_display(self):
         self.setEnabled(False)
         if button := getattr(self, "_clear_button", None):
@@ -204,7 +210,7 @@ class DynamicFormItem(QWidget):
         self._layout.addWidget(self._clear_button)
         # the widget added in _add_main_widget must implement .clear() if value is not required
         self._clear_button.setToolTip("Clear value or reset to default.")
-        self._clear_button.clicked.connect(self._main_widget.clear)  # type: ignore
+        self._clear_button.clicked.connect(self.clear)  # type: ignore
 
     def _value_changed(self, *_, **__):
         self.valueChanged.emit()
@@ -548,11 +554,14 @@ class StrLiteralFormItem(DynamicFormItem):
         self._layout.addWidget(self._main_widget)
 
     def getValue(self):
+        if self._main_widget.currentIndex() == -1:
+            return None
         return self._main_widget.currentText()
 
     def setValue(self, value: str | None):
         if value is None:
             self.clear()
+            return
         for i in range(self._main_widget.count()):
             if self._main_widget.itemText(i) == value:
                 self._main_widget.setCurrentIndex(i)
@@ -563,15 +572,39 @@ class StrLiteralFormItem(DynamicFormItem):
         self._main_widget.setCurrentIndex(-1)
 
 
+class OptionalStrLiteralFormItem(StrLiteralFormItem):
+    def _add_main_widget(self) -> None:
+        self._main_widget = QComboBox()
+        self._options = get_args(get_args(self._spec.info.annotation)[0])
+        for opt in self._options:
+            self._main_widget.addItem(opt)
+        self._layout.addWidget(self._main_widget)
+
+
 WidgetTypeRegistry = OrderedDict[str, tuple[Callable[[FormItemSpec], bool], type[DynamicFormItem]]]
+
+
+def _is_string_literal(t: type):
+    return type(t) is type(Literal[""]) and set(type(arg) for arg in get_args(t)) == {str}
+
+
+def _is_optional_string_literal(t: type):
+    if not hasattr(t, "__args__"):
+        return False
+    if len(t.__args__) != 2:
+        return False
+    if _is_string_literal(t.__args__[0]) and t.__args__[1] is NoneType:
+        return True
+    return False
+
 
 DEFAULT_WIDGET_TYPES: Final[WidgetTypeRegistry] = OrderedDict() | {
     # dict literals are ordered already but TypedForm subclasses may modify coppies of this dict
     # and delete/insert keys or change the order
-    "literal_str": (
-        lambda spec: type(spec.info.annotation) is type(Literal[""])
-        and set(type(arg) for arg in get_args(spec.info.annotation)) == {str},
-        StrLiteralFormItem,
+    "literal_str": (lambda spec: _is_string_literal(spec.info.annotation), StrLiteralFormItem),
+    "optional_literal_str": (
+        lambda spec: _is_optional_string_literal(spec.info.annotation),
+        OptionalStrLiteralFormItem,
     ),
     "str": (lambda spec: spec.item_type in [str, str | None, None], StrFormItem),
     "int": (lambda spec: spec.item_type in [int, int | None], IntFormItem),
@@ -622,6 +655,8 @@ if __name__ == "__main__":  # pragma: no cover
         value5: int | None = Field()
         value6: list[int] = Field()
         value7: list = Field()
+        literal: Literal["a", "b", "c"]
+        nullable_literal: Literal["a", "b", "c"] | None = None
 
     app = QApplication([])
     w = QWidget()
@@ -629,7 +664,7 @@ if __name__ == "__main__":  # pragma: no cover
     w.setLayout(layout)
     items = []
     for i, (field_name, info) in enumerate(TestModel.model_fields.items()):
-        spec = spec = FormItemSpec(item_type=info.annotation, name=field_name, info=info)
+        spec = FormItemSpec(item_type=info.annotation, name=field_name, info=info)
         layout.addWidget(QLabel(field_name), i, 0)
         widg = widget_from_type(spec)(spec=spec)
         items.append(widg)
