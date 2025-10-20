@@ -4787,6 +4787,26 @@ class PositionerGroup(RPCBase):
         """
 
 
+class ProcedureControl(RPCBase):
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
+    @rpc_call
+    def attach(self):
+        """
+        None
+        """
+
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        """
+
+
 class RectangularROI(RPCBase):
     """Defines a rectangular Region of Interest (ROI) with additional functionality."""
 
