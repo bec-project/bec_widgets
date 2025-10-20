@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING
 import PySide6QtAds as QtAds
 import shiboken6
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QObject
+from qtpy.QtCore import QBuffer, QByteArray, QIODevice, QObject, Qt
+from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import QApplication, QFileDialog, QWidget
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
@@ -57,7 +58,6 @@ class BECWidget(BECConnector):
             theme_update(bool, optional): Whether to subscribe to theme updates. Defaults to False. When set to True, the
                 widget's apply_theme method will be called when the theme changes.
         """
-
         super().__init__(
             client=client, config=config, gui_id=gui_id, parent_dock=parent_dock, **kwargs
         )
@@ -217,6 +217,44 @@ class BECWidget(BECConnector):
             return
         screenshot.save(file_name)
         logger.info(f"Screenshot saved to {file_name}")
+
+    def screenshot_bytes(
+        self,
+        *,
+        max_width: int | None = None,
+        max_height: int | None = None,
+        fmt: str = "PNG",
+        quality: int = -1,
+    ) -> QByteArray:
+        """
+        Grab this widget, optionally scale to a max size, and return encoded image bytes.
+
+        If max_width/max_height are omitted (the default), capture at full resolution.
+
+        Args:
+            max_width(int, optional): Maximum width of the screenshot.
+            max_height(int, optional): Maximum height of the screenshot.
+            fmt(str, optional): Image format (e.g., "PNG", "JPEG").
+            quality(int, optional): Image quality (0-100), -1 for default.
+
+        Returns:
+            QByteArray: The screenshot image bytes.
+        """
+        if not isinstance(self, QWidget):
+            return QByteArray()
+        pixmap: QPixmap = self.grab()
+        if pixmap.isNull():
+            return QByteArray()
+        if max_width is not None or max_height is not None:
+            w = max_width if max_width is not None else pixmap.width()
+            h = max_height if max_height is not None else pixmap.height()
+            pixmap = pixmap.scaled(w, h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        ba = QByteArray()
+        buf = QBuffer(ba)
+        buf.open(QIODevice.WriteOnly)
+        pixmap.save(buf, fmt, quality)
+        buf.close()
+        return ba
 
     def attach(self):
         dock = WidgetHierarchy.find_ancestor(self, QtAds.CDockWidget)
