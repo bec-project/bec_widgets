@@ -81,7 +81,7 @@ def test_data_extraction_matches_coordinates(bec_image_widget_with_roi):
 
     # For rectangular ROI: pixel bounding box equals coordinate bbox
     if isinstance(roi, RectangularROI):
-        (x0, y0), (_, _), (_, _), (x1, y1) = roi.get_coordinates(typed=False)
+        (x0, y0), (_, _), (_, _), (x1, y1), *_ = roi.get_coordinates(typed=False)
         # ensure ints inside image shape
         x0, y0, x1, y1 = map(int, (x0, y0, x1, y1))
         expected = widget.main_image.image[y0:y1, x0:x1]
