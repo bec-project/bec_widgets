@@ -80,3 +80,60 @@ def test_positioner_box_setpoint_changes(positioner_box_2d: PositionerBox2D):
         positioner_box_2d.ui.setpoint_ver.setText("100")
         positioner_box_2d.on_setpoint_change_ver()
         mock_move.assert_called_once_with(100, relative=False)
+
+
+def _hor_buttons(widget: PositionerBox2D):
+    return [
+        widget.ui.tweak_increase_hor,
+        widget.ui.tweak_decrease_hor,
+        widget.ui.step_increase_hor,
+        widget.ui.step_decrease_hor,
+    ]
+
+
+def _ver_buttons(widget: PositionerBox2D):
+    return [
+        widget.ui.tweak_increase_ver,
+        widget.ui.tweak_decrease_ver,
+        widget.ui.step_increase_ver,
+        widget.ui.step_decrease_ver,
+    ]
+
+
+def test_controls_default_enabled(positioner_box_2d: PositionerBox2D):
+    """By default both axes controls are enabled and UI reflects it."""
+    assert positioner_box_2d.enable_controls_hor is True
+    assert positioner_box_2d.enable_controls_ver is True
+    assert all(w.isEnabled() for w in _hor_buttons(positioner_box_2d))
+    assert all(w.isEnabled() for w in _ver_buttons(positioner_box_2d))
+
+
+def test_disable_enable_controls_and_persist_across_device_change(
+    positioner_box_2d: PositionerBox2D, qtbot
+):
+    """Disabling an axis should disable its buttons and remain disabled after device (re)binding."""
+    # Disable horizontal and verify UI
+    positioner_box_2d.enable_controls_hor = False
+    assert positioner_box_2d.enable_controls_hor is False
+    assert all(not w.isEnabled() for w in _hor_buttons(positioner_box_2d))
+
+    # Simulate a horizontal device change; state must persist after queued re-apply
+    positioner_box_2d.on_device_change_hor("samx", "samx")
+    qtbot.waitUntil(lambda: all(not w.isEnabled() for w in _hor_buttons(positioner_box_2d)))
+
+    # Re-enable and verify UI
+    positioner_box_2d.enable_controls_hor = True
+    qtbot.waitUntil(lambda: all(w.isEnabled() for w in _hor_buttons(positioner_box_2d)))
+
+    # Disable vertical and verify UI
+    positioner_box_2d.enable_controls_ver = False
+    assert positioner_box_2d.enable_controls_ver is False
+    assert all(not w.isEnabled() for w in _ver_buttons(positioner_box_2d))
+
+    # Simulate a vertical device change; state must persist after queued re-apply
+    positioner_box_2d.on_device_change_ver("samy", "samy")
+    qtbot.waitUntil(lambda: all(not w.isEnabled() for w in _ver_buttons(positioner_box_2d)))
+
+    # Re-enable and verify UI
+    positioner_box_2d.enable_controls_ver = True
+    qtbot.waitUntil(lambda: all(w.isEnabled() for w in _ver_buttons(positioner_box_2d)))

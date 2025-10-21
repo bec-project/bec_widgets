@@ -34,7 +34,15 @@ class PositionerBox2D(PositionerBoxBase):
 
     PLUGIN = True
     RPC = True
-    USER_ACCESS = ["set_positioner_hor", "set_positioner_ver", "screenshot"]
+    USER_ACCESS = [
+        "set_positioner_hor",
+        "set_positioner_ver",
+        "screenshot",
+        "enable_controls_hor",
+        "enable_controls_hor.setter",
+        "enable_controls_ver",
+        "enable_controls_ver.setter",
+    ]
 
     device_changed_hor = Signal(str, str)
     device_changed_ver = Signal(str, str)
@@ -63,6 +71,8 @@ class PositionerBox2D(PositionerBoxBase):
         self._limits_hor = None
         self._limits_ver = None
         self._dialog = None
+        self._enable_controls_hor = True
+        self._enable_controls_ver = True
         if self.current_path == "":
             self.current_path = os.path.dirname(__file__)
         self.init_ui()
@@ -281,6 +291,7 @@ class PositionerBox2D(PositionerBoxBase):
             self.on_device_readback_hor,
             self._device_ui_components_hv("horizontal"),
         )
+        self._apply_controls_enabled("horizontal")
 
     @SafeSlot(str, str)
     def on_device_change_ver(self, old_device: str, new_device: str):
@@ -300,6 +311,7 @@ class PositionerBox2D(PositionerBoxBase):
             self.on_device_readback_ver,
             self._device_ui_components_hv("vertical"),
         )
+        self._apply_controls_enabled("vertical")
 
     def _device_ui_components_hv(self, device: DeviceId) -> DeviceUpdateUIComponents:
         if device == "horizontal":
@@ -336,6 +348,25 @@ class PositionerBox2D(PositionerBoxBase):
             return self._device_ui_components_hv("horizontal")
         if device == self.device_ver:
             return self._device_ui_components_hv("vertical")
+
+    def _apply_controls_enabled(self, axis: DeviceId):
+        state = self._enable_controls_hor if axis == "horizontal" else self._enable_controls_ver
+        if axis == "horizontal":
+            widgets = [
+                self.ui.tweak_increase_hor,
+                self.ui.tweak_decrease_hor,
+                self.ui.step_increase_hor,
+                self.ui.step_decrease_hor,
+            ]
+        else:
+            widgets = [
+                self.ui.tweak_increase_ver,
+                self.ui.tweak_decrease_ver,
+                self.ui.step_increase_ver,
+                self.ui.step_decrease_ver,
+            ]
+        for w in widgets:
+            w.setEnabled(state)
 
     @SafeSlot(dict, dict)
     def on_device_readback_hor(self, msg_content: dict, metadata: dict):
@@ -416,6 +447,26 @@ class PositionerBox2D(PositionerBoxBase):
     def step_size_ver(self, val: float):
         """Step size for tweak"""
         self.ui.step_size_ver.setValue(val)
+
+    @SafeProperty(bool)
+    def enable_controls_hor(self) -> bool:
+        """Persisted switch for horizontal control buttons (tweak/step)."""
+        return self._enable_controls_hor
+
+    @enable_controls_hor.setter
+    def enable_controls_hor(self, value: bool):
+        self._enable_controls_hor = value
+        self._apply_controls_enabled("horizontal")
+
+    @SafeProperty(bool)
+    def enable_controls_ver(self) -> bool:
+        """Persisted switch for vertical control buttons (tweak/step)."""
+        return self._enable_controls_ver
+
+    @enable_controls_ver.setter
+    def enable_controls_ver(self, value: bool):
+        self._enable_controls_ver = value
+        self._apply_controls_enabled("vertical")
 
     @SafeSlot()
     def on_tweak_inc_hor(self):

@@ -3534,6 +3534,34 @@ class PositionerBox2D(RPCBase):
         Take a screenshot of the dock area and save it to a file.
         """
 
+    @property
+    @rpc_call
+    def enable_controls_hor(self) -> "bool":
+        """
+        Persisted switch for horizontal control buttons (tweak/step).
+        """
+
+    @enable_controls_hor.setter
+    @rpc_call
+    def enable_controls_hor(self) -> "bool":
+        """
+        Persisted switch for horizontal control buttons (tweak/step).
+        """
+
+    @property
+    @rpc_call
+    def enable_controls_ver(self) -> "bool":
+        """
+        Persisted switch for vertical control buttons (tweak/step).
+        """
+
+    @enable_controls_ver.setter
+    @rpc_call
+    def enable_controls_ver(self) -> "bool":
+        """
+        Persisted switch for vertical control buttons (tweak/step).
+        """
+
 
 class PositionerControlLine(RPCBase):
     """A widget that controls a single device."""
