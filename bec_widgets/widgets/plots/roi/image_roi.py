@@ -558,8 +558,8 @@ class RectangularROI(BaseROI, pg.RectROI):
 
     def get_coordinates(self, typed: bool | None = None) -> dict | tuple:
         """
-        Returns the coordinates of a rectangle's corners. Supports returning them
-        as either a dictionary with descriptive keys or a tuple of coordinates.
+        Returns the coordinates of a rectangle's corners, rectangle center and dimensions.
+        Supports returning them as either a dictionary with descriptive keys or a tuple of coordinates.
 
         Args:
             typed (bool | None): If True, returns coordinates as a dictionary with
@@ -567,13 +567,17 @@ class RectangularROI(BaseROI, pg.RectROI):
                 the value of `self.description`.
 
         Returns:
-            dict | tuple: The rectangle's corner coordinates, where the format
+            dict | tuple: The rectangle's corner coordinates, rectangle center and dimensions, where the format
                 depends on the `typed` parameter.
         """
         if typed is None:
             typed = self.description
 
         x_left, y_bottom, x_right, y_top = self._normalized_edges()
+        width = x_right - x_left
+        height = y_top - y_bottom
+        cx = x_left + width / 2
+        cy = y_bottom + height / 2
 
         if typed:
             return {
@@ -581,8 +585,19 @@ class RectangularROI(BaseROI, pg.RectROI):
                 "bottom_right": (x_right, y_bottom),
                 "top_left": (x_left, y_top),
                 "top_right": (x_right, y_top),
+                "center_x": cx,
+                "center_y": cy,
+                "width": width,
+                "height": height,
             }
-        return (x_left, y_bottom), (x_right, y_bottom), (x_left, y_top), (x_right, y_top)
+        return (
+            (x_left, y_bottom),
+            (x_right, y_bottom),
+            (x_left, y_top),
+            (x_right, y_top),
+            (cx, cy),
+            (width, height),
+        )
 
     def _lookup_scene_image(self):
         """

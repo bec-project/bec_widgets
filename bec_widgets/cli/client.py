@@ -3653,8 +3653,8 @@ class RectangularROI(RPCBase):
     @rpc_call
     def get_coordinates(self, typed: "bool | None" = None) -> "dict | tuple":
         """
-        Returns the coordinates of a rectangle's corners. Supports returning them
-        as either a dictionary with descriptive keys or a tuple of coordinates.
+        Returns the coordinates of a rectangle's corners, rectangle center and dimensions.
+        Supports returning them as either a dictionary with descriptive keys or a tuple of coordinates.
 
         Args:
             typed (bool | None): If True, returns coordinates as a dictionary with
@@ -3662,7 +3662,7 @@ class RectangularROI(RPCBase):
                 the value of `self.description`.
 
         Returns:
-            dict | tuple: The rectangle's corner coordinates, where the format
+            dict | tuple: The rectangle's corner coordinates, rectangle center and dimensions, where the format
                 depends on the `typed` parameter.
         """
 
