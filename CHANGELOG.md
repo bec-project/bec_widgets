@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v2.42.0 (2025-10-21)
+
+### Features
+
+- **image_roi**: Enhance get_coordinates to include rectangle center and dimensions
+  ([`96664c3`](https://github.com/bec-project/bec_widgets/commit/96664c3923737df0b09aa8f35df388f9fd630b55))
+
+- **positioner_box_2d**: Added properties to enable/disable vertical and horizontal controls
+  ([`1e19092`](https://github.com/bec-project/bec_widgets/commit/1e190923196f8b28c92dfdd83b9ce90873dd792d))
+
+
 ## v2.41.1 (2025-10-15)
 
 ### Bug Fixes
