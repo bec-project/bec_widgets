@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 
+import shiboken6
 from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import QEvent, QSize, Qt, QTimer
 from qtpy.QtGui import QAction, QActionGroup, QIcon
@@ -414,9 +415,9 @@ class BECMainWindow(BECWidget, QMainWindow):
             for child in children:
                 ancestor = WidgetHierarchy._get_becwidget_ancestor(child)
                 if ancestor is self:
-                    child.cleanup()
-                    child.close()
-                    child.deleteLater()
+                    if shiboken6.isValid(child):
+                        child.close()
+                        child.deleteLater()
 
         # Timer cleanup
         if hasattr(self, "_client_info_expire_timer") and self._client_info_expire_timer.isActive():
