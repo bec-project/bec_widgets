@@ -23,7 +23,7 @@ from pytestqt.exceptions import TimeoutError as QtBotTimeoutError
 from qtpy.QtCore import QEvent, QEventLoop
 from qtpy.QtWidgets import QApplication, QMessageBox
 
-from bec_widgets.tests.utils import DEVICES, DMMock
+from bec_widgets.tests.fake_devices import DEVICES, DMMock
 from bec_widgets.utils import bec_dispatcher as bec_dispatcher_module
 from bec_widgets.utils import error_popups
 from bec_widgets.utils.bec_dispatcher import QtRedisConnector
