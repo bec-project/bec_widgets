@@ -25,6 +25,7 @@ from qtpy.QtWidgets import (
 )
 
 import bec_widgets
+from bec_widgets.utils.guided_tour import GuidedTour
 from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 
@@ -587,3 +588,74 @@ class DeviceComboBoxAction(WidgetAction):
             self.combobox.close()
             self.combobox.deleteLater()
         return super().cleanup()
+
+
+class TutorialAction(MaterialIconAction):
+    """
+    Action for starting a guided tutorial/help tour.
+
+    This action automatically initializes a GuidedTour instance and provides
+    methods to register widgets and start tours.
+
+    Args:
+        main_window (QWidget): The main window widget for the guided tour overlay.
+        tooltip (str, optional): The tooltip for the action. Defaults to "Start Guided Tutorial".
+        parent (QWidget or None, optional): Parent widget for the underlying QAction.
+    """
+
+    def __init__(self, main_window: QWidget, tooltip: str = "Start Guided Tutorial", parent=None):
+        super().__init__(
+            icon_name="help",
+            tooltip=tooltip,
+            checkable=False,
+            filled=False,
+            color=None,
+            parent=parent,
+        )
+
+        self.guided_help = GuidedTour(main_window)
+        self.main_window = main_window
+
+        # Connect the action to start the tour
+        self.action.triggered.connect(self.start_tour)
+
+    def register_widget(self, widget: QWidget, text: str, widget_name: str = "") -> str:
+        """
+        Register a widget for the guided tour.
+
+        Args:
+            widget (QWidget): The widget to highlight during the tour.
+            text (str): The help text to display.
+            widget_name (str, optional): Optional name for the widget.
+
+        Returns:
+            str: Unique ID for the registered widget.
+        """
+        return self.guided_help.register_widget(widget, text, widget_name)
+
+    def start_tour(self):
+        """Start the guided tour with all registered widgets."""
+        registered_widgets = self.guided_help.get_registered_widgets()
+        if registered_widgets:
+            # Create tour from all registered widgets
+            step_ids = list(registered_widgets.keys())
+            if self.guided_help.create_tour(step_ids):
+                self.guided_help.start_tour()
+            else:
+                logger.warning("Failed to create guided tour")
+        else:
+            logger.warning("No widgets registered for guided tour")
+
+    def has_registered_widgets(self) -> bool:
+        """Check if any widgets have been registered for the tour."""
+        return len(self.guided_help.get_registered_widgets()) > 0
+
+    def clear_registered_widgets(self):
+        """Clear all registered widgets."""
+        self.guided_help.clear_registrations()
+
+    def cleanup(self):
+        """Clean up the guided help instance."""
+        if hasattr(self, "guided_help"):
+            self.guided_help.stop_tour()
+        super().cleanup()
