@@ -2,10 +2,9 @@ import pytest
 from bec_lib.scan_history import ScanHistory
 from qtpy.QtCore import Qt
 
-from bec_widgets.widgets.utility.scan_index_combobox.scan_index_combobox import ScanIndexComboBox
-
 # pylint: disable=unused-import
-from tests.unit_tests.client_mocks import mocked_client
+from bec_widgets.tests.client_mocks import mocked_client
+from bec_widgets.widgets.utility.scan_index_combobox.scan_index_combobox import ScanIndexComboBox
 from tests.unit_tests.conftest import create_widget
 
 

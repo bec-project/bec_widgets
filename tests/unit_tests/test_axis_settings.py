@@ -1,9 +1,9 @@
 import pytest
 from qtpy.QtWidgets import QDoubleSpinBox, QLineEdit
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.plots.plot_base import PlotBase
 from bec_widgets.widgets.plots.setting_menus.axis_settings import AxisSettings
-from tests.unit_tests.client_mocks import mocked_client
 from tests.unit_tests.conftest import create_widget
 
 

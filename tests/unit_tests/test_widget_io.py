@@ -15,12 +15,11 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils.widget_io import WidgetHierarchy, WidgetIO, WidgetTreeNode
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
 from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
-
-from .client_mocks import mocked_client
 
 
 @pytest.fixture(scope="function")
