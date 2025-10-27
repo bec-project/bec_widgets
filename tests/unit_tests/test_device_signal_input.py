@@ -4,7 +4,7 @@ import pytest
 from bec_lib.device import Signal
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.tests.utils import FakeDevice
+from bec_widgets.tests.fake_devices import FakeDevice
 from bec_widgets.utils.ophyd_kind_util import Kind
 from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
 from bec_widgets.widgets.control.device_input.base_classes.device_signal_input_base import (

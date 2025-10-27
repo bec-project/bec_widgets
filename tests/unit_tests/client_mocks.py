@@ -9,7 +9,7 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.redis_connector import RedisConnector
 from bec_lib.scan_history import ScanHistory
 
-from bec_widgets.tests.utils import DEVICES, DMMock, FakePositioner, Positioner
+from bec_widgets.tests.fake_devices import DEVICES, DMMock, FakePositioner, Positioner
 
 
 def fake_redis_server(host, port):
