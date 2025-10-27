@@ -4,7 +4,7 @@ import pytest
 from bec_lib.device import Signal
 from qtpy.QtWidgets import QWidget
 
-from bec_widgets.tests.fake_devices import FakeDevice
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils.ophyd_kind_util import Kind
 from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
 from bec_widgets.widgets.control.device_input.base_classes.device_signal_input_base import (
@@ -16,7 +16,6 @@ from bec_widgets.widgets.control.device_input.signal_line_edit.signal_line_edit 
     SignalLineEdit,
 )
 
-from .client_mocks import mocked_client
 from .conftest import create_widget
 
 

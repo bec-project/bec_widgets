@@ -4,10 +4,10 @@ import pytest
 from qtpy.QtCore import QPointF, Qt
 from qtpy.QtGui import QTransform
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils import Crosshair
 from bec_widgets.widgets.plots.image.image_item import ImageItem
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
-from tests.unit_tests.client_mocks import mocked_client
 
 from .conftest import create_widget
 

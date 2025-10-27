@@ -4,14 +4,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from qtpy import QtCore
-from qtpy.QtWidgets import QDialogButtonBox, QLabel
+from qtpy.QtWidgets import QDialogButtonBox
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.control.device_input.base_classes.device_signal_input_base import (
     DeviceSignalInputBaseConfig,
 )
 from bec_widgets.widgets.utility.signal_label.signal_label import ChoiceDialog, SignalLabel
-
-from .client_mocks import mocked_client
 
 SAMX_INFO_DICT = {
     "signals": {

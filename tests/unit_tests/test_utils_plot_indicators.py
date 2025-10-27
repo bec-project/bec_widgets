@@ -1,9 +1,8 @@
 import pytest
 from qtpy.QtCore import QPointF
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
-
-from .client_mocks import mocked_client
 
 
 @pytest.fixture

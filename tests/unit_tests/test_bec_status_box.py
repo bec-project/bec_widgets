@@ -4,12 +4,11 @@ from unittest import mock
 import pytest
 from bec_lib.messages import BECStatus, ServiceMetricMessage, StatusMessage
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.services.bec_status_box.bec_status_box import (
     BECServiceInfoContainer,
     BECStatusBox,
 )
-
-from .client_mocks import mocked_client
 
 
 @pytest.fixture

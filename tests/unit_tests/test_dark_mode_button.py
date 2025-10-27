@@ -4,11 +4,10 @@ import pytest
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QApplication
 
+# pylint: disable=unused-import
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils.colors import set_theme
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
-
-# pylint: disable=unused-import
-from .client_mocks import mocked_client
 
 # pylint: disable=redefined-outer-name
 
