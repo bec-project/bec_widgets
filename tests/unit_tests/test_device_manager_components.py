@@ -14,6 +14,7 @@ from ophyd_devices.interfaces.device_config_templates.ophyd_templates import (
 from ophyd_devices.utils.static_device_test import TestResult
 from qtpy import QtCore, QtGui, QtWidgets
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils.bec_list import BECList
 from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.widgets.control.device_manager import DeviceTable, DMConfigView, DocstringView
@@ -56,8 +57,6 @@ from bec_widgets.widgets.control.device_manager.components.ophyd_validation.vali
     ValidationListItem,
 )
 from bec_widgets.widgets.utility.toggle.toggle import ToggleSwitch
-
-from .client_mocks import mocked_client
 
 
 class TestConstants:

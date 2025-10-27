@@ -1,9 +1,9 @@
 from qtpy.QtWidgets import QComboBox
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils.filter_io import get_bec_signals_for_classes, replace_combobox_items
 from bec_widgets.widgets.dap.dap_combo_box.dap_combo_box import DapComboBox
 
-from .client_mocks import mocked_client
 from .conftest import create_widget
 
 

@@ -3,6 +3,12 @@ from unittest.mock import patch
 import numpy as np
 from bec_lib.scan_data_container import ScanDataContainer
 
+from bec_widgets.tests.client_mocks import (
+    DummyData,
+    create_dummy_scan_item,
+    inject_scan_history,
+    mocked_client,
+)
 from bec_widgets.widgets.plots.scatter_waveform.scatter_curve import (
     ScatterCurveConfig,
     ScatterDeviceSignal,
@@ -10,12 +16,6 @@ from bec_widgets.widgets.plots.scatter_waveform.scatter_curve import (
 from bec_widgets.widgets.plots.scatter_waveform.scatter_waveform import ScatterWaveform
 from bec_widgets.widgets.plots.scatter_waveform.settings.scatter_curve_setting import (
     ScatterCurveSettings,
-)
-from tests.unit_tests.client_mocks import (
-    DummyData,
-    create_dummy_scan_item,
-    inject_scan_history,
-    mocked_client,
 )
 
 from .conftest import create_widget

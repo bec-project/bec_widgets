@@ -7,6 +7,8 @@ from bec_lib.scan_history import ScanHistory
 from qtpy.QtCore import QPointF
 from qtpy.QtGui import QTransform
 
+# pytest: disable=unused-import
+from bec_widgets.tests.client_mocks import create_dummy_scan_item, mocked_client
 from bec_widgets.widgets.plots.heatmap.heatmap import (
     Heatmap,
     HeatmapConfig,
@@ -15,11 +17,6 @@ from bec_widgets.widgets.plots.heatmap.heatmap import (
     _StepInterpolationWorker,
 )
 from bec_widgets.widgets.plots.plot_info_label import TextOnlyLegendSample
-
-# pytest: disable=unused-import
-from tests.unit_tests.client_mocks import mocked_client
-
-from .client_mocks import create_dummy_scan_item
 
 
 @pytest.fixture

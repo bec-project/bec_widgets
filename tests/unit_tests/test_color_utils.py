@@ -4,11 +4,11 @@ from pydantic import ValidationError
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QApplication, QVBoxLayout, QWidget
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils.bec_connector import ConnectionConfig
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import Colors, apply_theme, get_theme_name, rgba, theme_color
 from bec_widgets.widgets.plots.waveform.curve import CurveConfig
-from tests.unit_tests.client_mocks import mocked_client
 from tests.unit_tests.conftest import create_widget
 
 

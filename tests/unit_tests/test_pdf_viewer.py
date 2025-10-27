@@ -2,9 +2,8 @@ import pytest
 from qtpy.QtPdf import QPdfDocument
 from qtpy.QtPdfWidgets import QPdfView
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.utility.pdf_viewer.pdf_viewer import PdfViewerWidget
-
-from .client_mocks import mocked_client
 
 
 @pytest.fixture

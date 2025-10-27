@@ -7,6 +7,7 @@ from bec_lib.callback_handler import EventType
 from bec_lib.device import Signal
 from qtpy.QtCore import Qt
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils.ophyd_kind_util import Kind
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import (
     BECDeviceFilter,
@@ -17,7 +18,6 @@ from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox im
     SignalComboBoxConfig,
 )
 
-from .client_mocks import mocked_client
 from .conftest import create_widget
 
 

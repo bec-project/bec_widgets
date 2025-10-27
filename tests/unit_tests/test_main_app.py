@@ -4,13 +4,12 @@ from qtpy.QtWidgets import QWidget
 
 from bec_widgets.applications.main_app import BECMainApp
 from bec_widgets.applications.views.view import ViewBase
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.widgets.containers.dock_area.profile_utils import (
     is_experimental_features_enabled,
     set_experimental_features_enabled,
 )
-
-from .client_mocks import mocked_client
 
 ANIM_TEST_DURATION = 60  # ms
 

@@ -8,13 +8,12 @@ from qtpy.QtCore import QEvent, QPoint, QPointF, Qt
 from qtpy.QtGui import QColor, QMouseEvent
 from qtpy.QtWidgets import QApplication
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils.colors import Colors
 from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_bar import (
     RingProgressBar,
     RingProgressContainerWidget,
 )
-
-from .client_mocks import mocked_client
 
 
 @pytest.fixture

@@ -159,7 +159,9 @@ when practical. Create widgets with `create_widget(...)` from `tests/unit_tests/
 registers the widget with `qtbot` so it is closed at test end; the autouse conftest fixtures handle the
 rest of the teardown (dispatcher disconnect, singleton resets) and fail the test if any top-level
 widget is left open. Before adding a new fixture, check for reusable fixtures in
-`tests/unit_tests/conftest.py` and fake devices in `bec_widgets/tests/fake_devices.py`.
+`tests/unit_tests/conftest.py` and the packaged helpers in `bec_widgets/tests/`: `client_mocks.py`
+(`mocked_client`, `mocked_client_with_dap`), `fake_devices.py`, and `utils.py`, which holds the
+bodies of the autouse fixtures so plugin repositories can reuse them.
 
 Mock BEC, Redis, and hardware in unit tests. Reuse existing helpers such as `FakeDevice`,
 `FakePositioner`, `DMMock`, and the shared autouse fixtures rather than rolling your own.

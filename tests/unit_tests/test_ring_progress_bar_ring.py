@@ -6,13 +6,12 @@ import pytest
 from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtGui import QColor
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.tests.fake_devices import FakeDevice
 from bec_widgets.widgets.progress.ring_progress_bar.ring import ProgressbarConfig, Ring
 from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_bar import (
     RingProgressContainerWidget,
 )
-
-from .client_mocks import mocked_client
 
 
 @pytest.fixture

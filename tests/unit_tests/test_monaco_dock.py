@@ -5,10 +5,9 @@ from unittest import mock
 import pytest
 from qtpy.QtWidgets import QFileDialog, QMessageBox
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.editors.monaco.monaco_dock import MonacoDock
 from bec_widgets.widgets.editors.monaco.monaco_widget import MonacoWidget
-
-from .client_mocks import mocked_client
 
 
 @pytest.fixture

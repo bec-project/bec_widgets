@@ -1,9 +1,8 @@
 import pytest
 from bec_lib import messages
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
-
-from .client_mocks import mocked_client
 
 
 @pytest.fixture

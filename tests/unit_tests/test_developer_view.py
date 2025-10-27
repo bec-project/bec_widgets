@@ -18,11 +18,10 @@ import pytest
 from qtpy.QtWidgets import QDialog
 
 from bec_widgets.applications.views.developer_view.developer_widget import DeveloperWidget
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.editors.monaco.monaco_dock import MonacoDock
 from bec_widgets.widgets.editors.monaco.monaco_widget import MonacoWidget
 from bec_widgets.widgets.utility.ide_explorer.ide_explorer import IDEExplorer
-
-from .client_mocks import mocked_client
 
 
 @pytest.fixture

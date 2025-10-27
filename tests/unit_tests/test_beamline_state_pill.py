@@ -3,6 +3,7 @@ from bec_lib import bl_states, messages
 from qtpy.QtCore import QCoreApplication, QEvent, Qt
 from qtpy.QtWidgets import QDialog, QMessageBox, QStyleOptionViewItem
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils.eliding_label import ElidingLabel
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.widget_io import WidgetIO
@@ -12,7 +13,6 @@ from bec_widgets.widgets.services.beamline_states.beamline_state_manager import 
 from bec_widgets.widgets.services.beamline_states.beamline_state_pill import BeamlineStatePill
 from bec_widgets.widgets.services.beamline_states.dialogs import AddBeamlineStateDialog
 
-from .client_mocks import mocked_client
 from .conftest import create_widget
 
 

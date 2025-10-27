@@ -8,6 +8,7 @@ from qtpy.QtTest import QTest
 from qtpy.QtWidgets import QApplication, QWidget
 
 import bec_widgets.widgets.editors.bec_console.bec_console as bec_console_module
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.editors.bec_console.bec_console import (
     BecConsole,
     BECShell,
@@ -15,8 +16,6 @@ from bec_widgets.widgets.editors.bec_console.bec_console import (
     _bec_console_registry,
 )
 from bec_widgets.widgets.utility.bec_term.qtermwidget_wrapper import BecQTerm
-
-from .client_mocks import mocked_client
 
 
 def process_deferred_deletes():

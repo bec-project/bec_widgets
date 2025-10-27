@@ -12,10 +12,9 @@ from bec_lib.logger import LogLevel
 from bec_lib.messages import LogMessage
 from qtpy.QtCore import QDateTime, Qt
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils.colors import apply_theme, get_accent_colors, get_theme_name
 from bec_widgets.widgets.utility.logpanel.logpanel import LogPanel, TimestampUpdate
-
-from .client_mocks import mocked_client
 
 TEST_LOG_MESSAGES = [
     {"data": msg}
