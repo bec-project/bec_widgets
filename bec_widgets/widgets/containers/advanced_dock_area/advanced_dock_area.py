@@ -171,9 +171,9 @@ class AdvancedDockArea(BECWidget, QWidget):
         # Initialize default editable state based on current lock
         self._set_editable(True)  # default to editable; will sync toolbar toggle below
 
-        # Sync Developer toggle icon state after initial setup
-        dev_action = self.toolbar.components.get_action("developer_mode").action
-        dev_action.setChecked(self._editable)
+        # Sync Developer toggle icon state after initial setup #TODO temporary disable
+        # dev_action = self.toolbar.components.get_action("developer_mode").action
+        # dev_action.setChecked(self._editable)
 
         # Apply the requested mode after everything is set up
         self.mode = mode
@@ -391,18 +391,18 @@ class AdvancedDockArea(BECWidget, QWidget):
         self.toolbar.components.add_safe(
             "dark_mode", WidgetAction(widget=self.dark_mode_button, adjust_size=False, parent=self)
         )
-        # Developer mode toggle (moved from menu into toolbar)
-        self.toolbar.components.add_safe(
-            "developer_mode",
-            MaterialIconAction(
-                icon_name="code", tooltip="Developer Mode", checkable=True, parent=self
-            ),
-        )
+        # Developer mode toggle (moved from menu into toolbar) #TODO temporary disable
+        # self.toolbar.components.add_safe(
+        #     "developer_mode",
+        #     MaterialIconAction(
+        #         icon_name="code", tooltip="Developer Mode", checkable=True, parent=self
+        #     ),
+        # )
         bda = ToolbarBundle("dock_actions", self.toolbar.components)
         bda.add_action("attach_all")
         bda.add_action("screenshot")
         bda.add_action("dark_mode")
-        bda.add_action("developer_mode")
+        # bda.add_action("developer_mode") #TODO temporary disable
         self.toolbar.add_bundle(bda)
 
         # Default bundle configuration (show menus by default)
@@ -468,10 +468,10 @@ class AdvancedDockArea(BECWidget, QWidget):
 
         self.toolbar.components.get_action("attach_all").action.triggered.connect(self.attach_all)
         self.toolbar.components.get_action("screenshot").action.triggered.connect(self.screenshot)
-        # Developer mode toggle
-        self.toolbar.components.get_action("developer_mode").action.toggled.connect(
-            self._on_developer_mode_toggled
-        )
+        # Developer mode toggle #TODO temporary disable
+        # self.toolbar.components.get_action("developer_mode").action.toggled.connect(
+        #     self._on_developer_mode_toggled
+        # )
 
     def _set_editable(self, editable: bool) -> None:
         self.lock_workspace = not editable
@@ -495,8 +495,8 @@ class AdvancedDockArea(BECWidget, QWidget):
         else:
             self.toolbar.show_bundles(["spacer_bundle", "workspace", "dock_actions"])
 
-        # Keep Developer mode UI in sync
-        self.toolbar.components.get_action("developer_mode").action.setChecked(editable)
+        # Keep Developer mode UI in sync #TODO temporary disable
+        # self.toolbar.components.get_action("developer_mode").action.setChecked(editable)
 
     def _on_developer_mode_toggled(self, checked: bool) -> None:
         """Handle developer mode checkbox toggle."""
