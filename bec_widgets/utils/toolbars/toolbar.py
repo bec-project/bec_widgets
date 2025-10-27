@@ -6,7 +6,7 @@ from collections import defaultdict
 from typing import DefaultDict, Literal
 
 from bec_lib.logger import bec_logger
-from qtpy.QtCore import QSize, Qt
+from qtpy.QtCore import QSize, Qt, QTimer
 from qtpy.QtGui import QAction, QColor
 from qtpy.QtWidgets import QApplication, QLabel, QMainWindow, QMenu, QToolBar, QVBoxLayout, QWidget
 
@@ -492,9 +492,32 @@ if __name__ == "__main__":  # pragma: no cover
             self.toolbar.connect_bundle(
                 "base", PerformanceConnection(self.toolbar.components, self)
             )
+            self.toolbar.components.add_safe(
+                "text",
+                MaterialIconAction(
+                    "text_fields",
+                    tooltip="Test Text Action",
+                    checkable=True,
+                    label_text="text",
+                    text_position="under",
+                ),
+            )
             self.toolbar.show_bundles(["performance", "plot_export"])
             self.toolbar.get_bundle("performance").add_action("save")
+            self.toolbar.get_bundle("performance").add_action("text")
             self.toolbar.refresh()
+
+            # Timer to disable and enable text button each 2s
+            self.timer = QTimer()
+            self.timer.timeout.connect(self.toggle_text_action)
+            self.timer.start(2000)
+
+        def toggle_text_action(self):
+            text_action = self.toolbar.components.get_action("text")
+            if text_action.action.isEnabled():
+                text_action.action.setEnabled(False)
+            else:
+                text_action.action.setEnabled(True)
 
         def enable_fps_monitor(self, enabled: bool):
             """
