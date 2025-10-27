@@ -6,7 +6,7 @@ from bec_lib.endpoints import MessageEndpoints
 
 from bec_widgets.cli.client import Image, MotorMap, MultiWaveform, ScatterWaveform, Waveform
 from bec_widgets.cli.rpc.rpc_base import RPCReference
-from bec_widgets.tests.utils import check_remote_data_size
+from bec_widgets.tests.fake_devices import check_remote_data_size
 
 
 def test_rpc_waveform1d_custom_curve(qtbot, connected_client_gui_obj):
