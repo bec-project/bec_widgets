@@ -9,7 +9,7 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.scan_history import ScanHistory
 from bec_lib.scan_items import ScanItem
 
-from bec_widgets.tests.utils import FakePositioner, Positioner
+from bec_widgets.tests.fake_devices import FakePositioner, Positioner
 
 
 @pytest.fixture(scope="function")
