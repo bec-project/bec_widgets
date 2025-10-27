@@ -13,6 +13,7 @@ from qtpy.QtWidgets import QDialog, QMessageBox, QToolButton, QWidget
 import bec_widgets.widgets.containers.dock_area.basic_dock_area as basic_dock_module
 import bec_widgets.widgets.containers.dock_area.dock_area as dock_area_module
 import bec_widgets.widgets.containers.dock_area.profile_utils as profile_utils
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.containers.dock_area.basic_dock_area import (
     DockAreaWidget,
     DockSettingsDialog,
@@ -43,8 +44,6 @@ from bec_widgets.widgets.containers.dock_area.settings.dialogs import (
 )
 from bec_widgets.widgets.containers.dock_area.settings.workspace_manager import WorkSpaceManager
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
-
-from .client_mocks import mocked_client
 
 
 @pytest.fixture

@@ -10,6 +10,7 @@ from bec_lib.scan_history import ScanHistory
 from qtpy.QtCore import QModelIndex, QPoint, Qt
 from qtpy.QtWidgets import QCheckBox, QComboBox, QDialog, QStyle
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils.forms_from_types.items import StrFormItem
 from bec_widgets.utils.widget_io import WidgetIO
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
@@ -18,8 +19,6 @@ from bec_widgets.widgets.control.scan_control import scan_control as scan_contro
 from bec_widgets.widgets.control.scan_control.scan_control import ScanControlConfig
 from bec_widgets.widgets.control.scan_control.scan_info_adapter import ScanInfoAdapter
 from bec_widgets.widgets.control.scan_control.scan_selection_dialog import ScanSelectionDialog
-
-from .client_mocks import mocked_client
 
 # pylint: disable=no-member
 # pylint: disable=missing-function-docstring

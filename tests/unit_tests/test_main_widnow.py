@@ -8,6 +8,7 @@ from qtpy.QtCore import QEvent, QPoint, QPointF, QSettings
 from qtpy.QtGui import QEnterEvent
 from qtpy.QtWidgets import QApplication, QFrame, QLabel, QMessageBox
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.containers.dock_area.profile_utils import SETTINGS_KEYS
 from bec_widgets.widgets.containers.main_window.addons.hover_widget import (
     HoverWidget,
@@ -17,7 +18,6 @@ from bec_widgets.widgets.containers.main_window.addons.scroll_label import Scrol
 from bec_widgets.widgets.containers.main_window.addons.web_links import BECWebLinksMixin
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
 
-from .client_mocks import mocked_client
 from .conftest import create_widget
 
 

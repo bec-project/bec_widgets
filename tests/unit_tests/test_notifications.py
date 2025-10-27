@@ -1,6 +1,7 @@
 import pytest
 from qtpy import QtCore, QtGui, QtWidgets
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils.error_popups import ErrorPopupUtility
 from bec_widgets.widgets.containers.main_window.addons.notification_center.notification_banner import (
     DARK_PALETTE,
@@ -12,8 +13,6 @@ from bec_widgets.widgets.containers.main_window.addons.notification_center.notif
     NotificationToast,
     SeverityKind,
 )
-
-from .client_mocks import mocked_client
 
 
 @pytest.fixture
