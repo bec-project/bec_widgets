@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.42.1 (2025-10-28)
+
+### Bug Fixes
+
+- **rpc_server**: Raise window, even if minimized
+  ([`6bc1c3c`](https://github.com/bec-project/bec_widgets/commit/6bc1c3c5f1b3e57ab8e8aeabcc1c0a52a56bbf0a))
+
+
 ## v2.42.0 (2025-10-21)
 
 ### Features
