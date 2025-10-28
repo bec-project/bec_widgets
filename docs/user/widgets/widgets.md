@@ -270,6 +270,14 @@ Select DAP model from a list of DAP processes.
 
 Show and filter logs from the BEC Redis server.
 ```
+
+```{grid-item-card} PDF Viewer Widget
+:link: user.widgets.pdf_viewer_widget
+:link-type: ref
+:img-top: /assets/widget_screenshots/pdf_viewer.png
+
+Display and navigate PDF documents.
+```
 ````
 
 ```{toctree}
@@ -307,6 +315,7 @@ dap_combo_box/dap_combo_box.md
 games/games.md
 log_panel/log_panel.md
 signal_label/signal_label.md
+pdf_viewer/pdf_viewer_widget.md
 
 
 ```
