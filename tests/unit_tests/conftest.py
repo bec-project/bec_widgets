@@ -41,6 +41,10 @@ def qapplication(qtbot, request, testable_qtimer_class):  # pylint: disable=unus
 
     # if the test failed, we don't want to check for open widgets as
     # it simply pollutes the output
+    # stop pyepics dispatcher for leaking tests
+    from ophyd._pyepics_shim import _dispatcher
+
+    _dispatcher.stop()
     if request.node.stash._storage.get("failed"):
         print("Test failed, skipping cleanup checks")
         return
