@@ -11,7 +11,7 @@ from bec_lib.client import BECClient
 from bec_lib.endpoints import MessageEndpoints
 from bec_lib.logger import bec_logger
 from bec_lib.utils.import_utils import lazy_import
-from qtpy.QtCore import QTimer
+from qtpy.QtCore import Qt, QTimer
 from qtpy.QtWidgets import QApplication
 from redis.exceptions import RedisError
 
@@ -129,16 +129,44 @@ class RPCServer:
         # Run with rpc registry broadcast, but only once
         with RPCRegister.delayed_broadcast():
             logger.debug(f"Running RPC instruction: {method} with args: {args}, kwargs: {kwargs}")
-            method_obj = getattr(obj, method)
-            # check if the method accepts args and kwargs
-            if not callable(method_obj):
-                if not args:
-                    res = method_obj
-                else:
-                    setattr(obj, method, args[0])
-                    res = None
+            if method == "raise" and hasattr(
+                obj, "setWindowState"
+            ):  # special case for raising windows, should work even if minimized
+                # this is a special case for raising windows for gnome on rethat 9 systems where changing focus is supressed by default
+                # The procedure is as follows:
+                # 1. Get the current window state to check if the window is minimized and remove minimized flag
+                # 2. Then in order to force gnome to raise the window, we set the window to stay on top temporarily
+                #    and call raise_() and activateWindow()
+                #    This forces gnome to raise the window even if focus stealing is prevented
+                # 3. Flag for stay on top is removed again to restore the original window state
+                # 4. Finally, we call show() to ensure the window is visible
+
+                state = getattr(obj, "windowState", lambda: Qt.WindowNoState)()
+                target_state = state | Qt.WindowActive
+                if state & Qt.WindowMinimized:
+                    target_state &= ~Qt.WindowMinimized
+                obj.setWindowState(target_state)
+                if hasattr(obj, "showNormal") and state & Qt.WindowMinimized:
+                    obj.showNormal()
+                if hasattr(obj, "raise_"):
+                    obj.setWindowFlags(obj.windowFlags() | Qt.WindowStaysOnTopHint)
+                    obj.raise_()
+                if hasattr(obj, "activateWindow"):
+                    obj.activateWindow()
+                obj.setWindowFlags(obj.windowFlags() & ~Qt.WindowStaysOnTopHint)
+                obj.show()
+                res = None
             else:
-                res = method_obj(*args, **kwargs)
+                method_obj = getattr(obj, method)
+                # check if the method accepts args and kwargs
+                if not callable(method_obj):
+                    if not args:
+                        res = method_obj
+                    else:
+                        setattr(obj, method, args[0])
+                        res = None
+                else:
+                    res = method_obj(*args, **kwargs)
 
             if isinstance(res, list):
                 res = [self.serialize_object(obj) for obj in res]
