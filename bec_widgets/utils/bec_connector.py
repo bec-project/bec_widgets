@@ -129,6 +129,17 @@ class BECConnector:
             def terminate(client=self.client, dispatcher=self.bec_dispatcher):
                 logger.info("Disconnecting", repr(dispatcher))
                 dispatcher.disconnect_all()
+
+                try:  # shutdown ophyd threads if any
+                    from ophyd._pyepics_shim import _dispatcher
+
+                    _dispatcher.stop()
+                    logger.info("Ophyd dispatcher shut down successfully.")
+                except Exception as e:
+                    logger.warning(
+                        f"Error shutting down ophyd dispatcher: {e}\n{traceback.format_exc()}"
+                    )
+
                 logger.info("Shutting down BEC Client", repr(client))
                 client.shutdown()
 
