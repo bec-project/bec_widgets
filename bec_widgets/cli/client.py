@@ -45,6 +45,7 @@ _Widgets = {
     "MonacoWidget": "MonacoWidget",
     "MotorMap": "MotorMap",
     "MultiWaveform": "MultiWaveform",
+    "PdfViewerWidget": "PdfViewerWidget",
     "PositionIndicator": "PositionIndicator",
     "PositionerBox": "PositionerBox",
     "PositionerBox2D": "PositionerBox2D",
@@ -3418,6 +3419,137 @@ class MultiWaveform(RPCBase):
     def clear_curves(self):
         """
         Remove all curves from the plot, excluding crosshair items.
+        """
+
+
+class PdfViewerWidget(RPCBase):
+    """A widget to display PDF documents with toolbar controls."""
+
+    @rpc_call
+    def load_pdf(self, file_path: str):
+        """
+        Load a PDF file into the viewer.
+
+        Args:
+            file_path (str): Path to the PDF file to load.
+        """
+
+    @rpc_call
+    def zoom_in(self):
+        """
+        Zoom in the PDF view.
+        """
+
+    @rpc_call
+    def zoom_out(self):
+        """
+        Zoom out the PDF view.
+        """
+
+    @rpc_call
+    def fit_to_width(self):
+        """
+        Fit PDF to width.
+        """
+
+    @rpc_call
+    def fit_to_page(self):
+        """
+        Fit PDF to page.
+        """
+
+    @rpc_call
+    def reset_zoom(self):
+        """
+        Reset zoom to 100% (1.0 factor).
+        """
+
+    @rpc_call
+    def previous_page(self):
+        """
+        Go to previous page.
+        """
+
+    @rpc_call
+    def next_page(self):
+        """
+        Go to next page.
+        """
+
+    @rpc_call
+    def toggle_continuous_scroll(self, checked: bool):
+        """
+        Toggle between single page and continuous scroll mode.
+
+        Args:
+            checked (bool): True to enable continuous scroll, False for single page mode.
+        """
+
+    @property
+    @rpc_call
+    def page_spacing(self):
+        """
+        Get the spacing between pages in continuous scroll mode.
+        """
+
+    @page_spacing.setter
+    @rpc_call
+    def page_spacing(self):
+        """
+        Get the spacing between pages in continuous scroll mode.
+        """
+
+    @property
+    @rpc_call
+    def side_margins(self):
+        """
+        Get the horizontal margins (side spacing) around the PDF content.
+        """
+
+    @side_margins.setter
+    @rpc_call
+    def side_margins(self):
+        """
+        Get the horizontal margins (side spacing) around the PDF content.
+        """
+
+    @rpc_call
+    def go_to_first_page(self):
+        """
+        Go to the first page.
+        """
+
+    @rpc_call
+    def go_to_last_page(self):
+        """
+        Go to the last page.
+        """
+
+    @rpc_call
+    def jump_to_page(self, page_number: int):
+        """
+        Jump to a specific page number (1-based index).
+        """
+
+    @property
+    @rpc_call
+    def current_page(self):
+        """
+        Get the current page number (1-based index).
+        """
+
+    @property
+    @rpc_call
+    def current_file_path(self):
+        """
+        Get the current PDF file path.
+        """
+
+    @current_file_path.setter
+    @rpc_call
+    def current_file_path(self):
+        """
+        Get the current PDF file path.
         """
 
 
