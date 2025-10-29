@@ -189,10 +189,10 @@ def test_bec_shell_startup_contains_gui_id(bec_shell_widget):
     assert bec_shell._is_bec_shell
     assert bec_shell._unique_id == "bec_shell"
 
-    assert bec_shell.startup_cmd == "bec --nogui"
+    with mock.patch.object(bec_shell.bec_dispatcher, "cli_server", None):
+        assert bec_shell.startup_cmd == "bec --nogui"
 
-    with mock.patch.object(bec_shell.bec_dispatcher, "cli_server") as mock_cli_server:
-        mock_cli_server.gui_id = "test_gui_id"
+    with mock.patch.object(bec_shell.bec_dispatcher.cli_server, "gui_id", "test_gui_id"):
         assert bec_shell.startup_cmd == "bec --gui-id test_gui_id"
 
 
