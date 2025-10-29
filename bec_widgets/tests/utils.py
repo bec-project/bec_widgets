@@ -1,6 +1,7 @@
 # pylint: skip-file
 from unittest.mock import MagicMock
 
+from bec_lib.config_helper import ConfigHelper
 from bec_lib.device import Device as BECDevice
 from bec_lib.device import Positioner as BECPositioner
 from bec_lib.device import ReadoutPriority
@@ -219,7 +220,9 @@ class Device(FakeDevice):
 
 
 class DMMock:
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        self._service = args[0]
+        self.config_helper = ConfigHelper(self._service.connector, self._service._service_name)
         self.devices = DeviceContainer()
         self.enabled_devices = [device for device in self.devices if device.enabled]
 
@@ -272,6 +275,10 @@ class DMMock:
         for device in self.devices.values():
             configs.append(device._config)
         return configs
+
+    def initialize(*_): ...
+
+    def shutdown(self): ...
 
 
 DEVICES = [

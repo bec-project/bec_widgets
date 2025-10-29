@@ -146,12 +146,12 @@ def test_signal_lineedit(device_signal_line_edit):
 
 
 def test_device_signal_input_base_cleanup(qtbot, mocked_client):
+    with mock.patch.object(mocked_client.callbacks, "remove"):
+        widget = DeviceInputWidget(client=mocked_client)
+        widget.close()
+        widget.deleteLater()
 
-    widget = DeviceInputWidget(client=mocked_client)
-    widget.close()
-    widget.deleteLater()
-
-    mocked_client.callbacks.remove.assert_called_once_with(widget._device_update_register)
+        mocked_client.callbacks.remove.assert_called_once_with(widget._device_update_register)
 
 
 def test_signal_combobox_get_signal_name_with_item_data(qtbot, device_signal_combobox):
