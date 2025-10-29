@@ -4,10 +4,45 @@ import time
 from unittest import mock
 
 import pytest
+from bec_lib import service_config
 from bec_lib.messages import ScanMessage
 from bec_lib.serialization import MsgpackSerialization
 
-from bec_widgets.utils.bec_dispatcher import QtRedisConnector, QtThreadSafeCallback
+from bec_widgets.utils.bec_dispatcher import BECDispatcher, QtRedisConnector, QtThreadSafeCallback
+
+
+def test_init_handles_client_and_config_arg():
+    # Client passed
+    self_mock = mock.MagicMock(_initialized=False)
+    with mock.patch.object(BECDispatcher, "start_cli_server"):
+        BECDispatcher.__init__(self_mock, client=mock.MagicMock(name="test_client"))
+        assert "test_client" in repr(self_mock.client)
+
+    # No client, service config object
+    self_mock.reset_mock()
+    self_mock._initialized = False
+    with (
+        mock.patch.object(BECDispatcher, "start_cli_server"),
+        mock.patch("bec_widgets.utils.bec_dispatcher.BECClient") as client_cls,
+    ):
+        config = service_config.ServiceConfig()
+        BECDispatcher.__init__(self_mock, client=None, config=config)
+        client_cls.assert_called_with(
+            config=config, connector_cls=QtRedisConnector, name="BECWidgets"
+        )
+
+    # No client, service config string
+    self_mock.reset_mock()
+    self_mock._initialized = False
+    with (
+        mock.patch.object(BECDispatcher, "start_cli_server"),
+        mock.patch("bec_widgets.utils.bec_dispatcher.BECClient"),
+        mock.patch("bec_widgets.utils.bec_dispatcher.ServiceConfig") as svc_cfg,
+        mock.patch("bec_widgets.utils.bec_dispatcher.isinstance", return_value=False),
+    ):
+        config = service_config.ServiceConfig()
+        BECDispatcher.__init__(self_mock, client=None, config="test_str")
+        svc_cfg.assert_called_with("test_str")
 
 
 @pytest.fixture

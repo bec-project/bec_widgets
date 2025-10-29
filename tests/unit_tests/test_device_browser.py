@@ -160,7 +160,7 @@ def test_signal_display(mocked_client, qtbot):
 
 def test_signal_display_no_device(mocked_client, qtbot):
     device_mock = mock.MagicMock()
-    mocked_client.client.device_manager.devices = {"test_device_1": device_mock}
+    mocked_client.device_manager.devices = {"test_device_1": device_mock}
     signal_display = SignalDisplay(client=mocked_client, device="test_device_2")
     qtbot.addWidget(signal_display)
     assert (

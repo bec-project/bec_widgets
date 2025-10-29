@@ -1,47 +1,18 @@
 # pylint: disable = no-name-in-module,missing-class-docstring, missing-module-docstring
 from math import inf
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import fakeredis
 import pytest
 from bec_lib.bec_service import messages
 from bec_lib.endpoints import MessageEndpoints
-from bec_lib.redis_connector import RedisConnector
 from bec_lib.scan_history import ScanHistory
 
-from bec_widgets.tests.utils import DEVICES, DMMock, FakePositioner, Positioner
-
-
-def fake_redis_server(host, port, **kwargs):
-    redis = fakeredis.FakeRedis()
-    return redis
+from bec_widgets.tests.utils import FakePositioner, Positioner
 
 
 @pytest.fixture(scope="function")
 def mocked_client(bec_dispatcher):
-    connector = RedisConnector("localhost:1", redis_cls=fake_redis_server)
-    # Create a MagicMock object
-    client = MagicMock()  # TODO change to real BECClient
-
-    # Shutdown the original client
-    bec_dispatcher.client.shutdown()
-    # Mock the connector attribute
-    bec_dispatcher.client = client
-
-    # Mock the device_manager.devices attribute
-    client.connector = connector
-    client.device_manager = DMMock()
-    client.device_manager.add_devices(DEVICES)
-
-    def mock_mv(*args, relative=False):
-        # Extracting motor and value pairs
-        for i in range(0, len(args), 2):
-            motor = args[i]
-            value = args[i + 1]
-            motor.move(value, relative=relative)
-        return MagicMock(wait=MagicMock())
-
-    client.scans = MagicMock(mv=mock_mv)
 
     # Ensure isinstance check for Positioner passes
     original_isinstance = isinstance
@@ -52,8 +23,8 @@ def mocked_client(bec_dispatcher):
         return original_isinstance(obj, class_info)
 
     with patch("builtins.isinstance", new=isinstance_mock):
-        yield client
-    connector.shutdown()  # TODO change to real BECClient
+        yield bec_dispatcher.client
+    bec_dispatcher.client.connector.shutdown()
 
 
 ##################################################
@@ -190,17 +161,16 @@ def mocked_client_with_dap(mocked_client, dap_plugin_message):
             name="LmfitService1D", status=1, info={}
         ),
     }
-    client = mocked_client
-    client.service_status = dap_services
-    client.connector.set(
+    type(mocked_client).service_status = PropertyMock(return_value=dap_services)
+    mocked_client.connector.set(
         topic=MessageEndpoints.dap_available_plugins("dap"), msg=dap_plugin_message
     )
 
     # Patch the client's DAP attribute so that the available models include "GaussianModel"
     patched_models = {"GaussianModel": {}, "LorentzModel": {}, "SineModel": {}}
-    client.dap._available_dap_plugins = patched_models
+    mocked_client.dap._available_dap_plugins = patched_models
 
-    yield client
+    yield mocked_client
 
 
 class DummyData:
@@ -233,7 +203,6 @@ def create_dummy_scan_item():
             "readout_priority": {"monitored": ["bpm4i"], "async": ["async_device"]},
         }
     }
-    dummy_scan.status_message = MagicMock()
     dummy_scan.status_message.info = {
         "readout_priority": {"monitored": ["bpm4i"], "async": ["async_device"]},
         "scan_report_devices": ["samx"],

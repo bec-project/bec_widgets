@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 
@@ -53,14 +53,16 @@ def test_scatter_waveform_update_with_scan_history(qtbot, mocked_client, monkeyp
     swf = create_widget(qtbot, ScatterWaveform, client=mocked_client)
 
     dummy_scan = create_dummy_scan_item()
+    mocked_client.history = MagicMock()
+    # .get_by_scan_id() typically returns historical data, but we abuse it here
+    # to return mock live data
     mocked_client.history.get_by_scan_id.return_value = dummy_scan
     mocked_client.history.__getitem__.return_value = dummy_scan
 
     swf.plot("samx", "samy", "bpm4i", label="test_curve")
     swf.update_with_scan_history(scan_id="dummy")
-    qtbot.wait(500)
-
-    assert swf.scan_item == dummy_scan
+    qtbot.waitUntil(lambda: swf.scan_item == dummy_scan, timeout=500)
+    qtbot.wait(200)
 
     x_data, y_data = swf.main_curve.getData()
     np.testing.assert_array_equal(x_data, [10, 20, 30])
