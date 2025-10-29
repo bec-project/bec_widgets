@@ -8,7 +8,7 @@ from .client_mocks import mocked_client
 
 @pytest.fixture
 def plot_widget_with_arrow_item(qtbot, mocked_client):
-    widget = Waveform(client=mocked_client())
+    widget = Waveform(client=mocked_client)
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
 
@@ -17,7 +17,7 @@ def plot_widget_with_arrow_item(qtbot, mocked_client):
 
 @pytest.fixture
 def plot_widget_with_tick_item(qtbot, mocked_client):
-    widget = Waveform(client=mocked_client())
+    widget = Waveform(client=mocked_client)
     qtbot.addWidget(widget)
     qtbot.waitExposed(widget)
 

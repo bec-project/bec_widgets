@@ -123,17 +123,16 @@ class BECDispatcher:
         self._registered_slots: DefaultDict[Hashable, QtThreadSafeCallback] = (
             collections.defaultdict()
         )
-        self.client = client
 
-        if self.client is None:
-            if config is not None:
-                if not isinstance(config, ServiceConfig):
-                    # config is supposed to be a path
-                    config = ServiceConfig(config)
+        if client is None:
+            if config is not None and not isinstance(config, ServiceConfig):
+                # config is supposed to be a path
+                config = ServiceConfig(config)
             self.client = BECClient(
                 config=config, connector_cls=QtRedisConnector, name="BECWidgets"
             )
         else:
+            self.client = client
             if self.client.started:
                 # have to reinitialize client to use proper connector
                 logger.info("Shutting down BECClient to switch to QtRedisConnector")
