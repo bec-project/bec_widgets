@@ -116,5 +116,5 @@ def test_monaco_widget_get_scan_control_code(monaco_widget: MonacoWidget, qtbot,
     scan_control_dialog.accept()
     out = scan_control_dialog.get_scan_code()
 
-    expected_code = "scans.grid_scan(dev.samx, -10.0, 10.0, 20, dev.samy, -5.0, 5.0, 10, exp_time=0.2, settling_time=0.1, burst_at_each_point=2, relative=False, optim_trajectory=None)"
+    expected_code = "scans.grid_scan(dev.samx, -10.0, 10.0, 20, dev.samy, -5.0, 5.0, 10, exp_time=0.2, settling_time=0.1, burst_at_each_point=2, relative=False, optim_trajectory=None, metadata={'sample_name': ''})"
     assert out == expected_code
