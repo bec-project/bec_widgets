@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.43.0 (2025-10-30)
+
+### Features
+
+- Add pdf viewer widget
+  ([`13a9175`](https://github.com/bec-project/bec_widgets/commit/13a9175ba5f5e1e2404d7302404d9511872aafc7))
+
+
 ## v2.42.1 (2025-10-28)
 
 ### Bug Fixes
