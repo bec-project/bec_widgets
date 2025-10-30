@@ -89,7 +89,7 @@ class ScanControlDialog(QDialog):
 
             # Add keyword arguments (excluding metadata)
             if processed_kwargs:
-                kwargs_strs = [f"{k}={v}" for k, v in processed_kwargs.items() if k != "metadata"]
+                kwargs_strs = [f"{k}={v}" for k, v in processed_kwargs.items()]
                 all_args.extend(kwargs_strs)
 
             # Join all arguments and create the scan call
