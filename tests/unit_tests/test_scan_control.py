@@ -505,7 +505,13 @@ def test_get_scan_parameters_from_redis(scan_control, mocked_client):
     args, kwargs = scan_control.get_scan_parameters(bec_object=False)
 
     assert args == ["samx", 0.0, 2.0]
-    assert kwargs == {"steps": 10, "relative": False, "exp_time": 2.0, "burst_at_each_point": 1}
+    assert kwargs == {
+        "steps": 10,
+        "relative": False,
+        "exp_time": 2.0,
+        "burst_at_each_point": 1,
+        "metadata": {"sample_name": ""},
+    }
 
 
 TEST_MD = {"sample_name": "Test Sample", "test key 1": "test value 1", "test key 2": "test value 2"}
@@ -557,7 +563,7 @@ def test_scan_metadata_is_passed_to_scan_function(scan_control: ScanControl):
     scans = SimpleNamespace(grid_scan=MagicMock())
     with (
         patch.object(scan_control, "scans", scans),
-        patch.object(scan_control, "get_scan_parameters", lambda: ((), {})),
+        patch.object(scan_control, "get_scan_parameters", lambda: ((), {"metadata": TEST_MD})),
     ):
         scan_control.run_scan()
     scans.grid_scan.assert_called_once_with(metadata=TEST_MD)

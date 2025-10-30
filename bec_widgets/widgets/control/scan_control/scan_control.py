@@ -467,6 +467,8 @@ class ScanControl(BECWidget, QWidget):
         for box in self.kwarg_boxes:
             box_kwargs = box.get_parameters(bec_object)
             kwargs.update(box_kwargs)
+        if self._scan_metadata is not None:
+            kwargs["metadata"] = self._scan_metadata
         return args, kwargs
 
     def restore_scan_parameters(self, scan_name: str):
@@ -519,7 +521,6 @@ class ScanControl(BECWidget, QWidget):
     def run_scan(self):
         """Starts the selected scan with the given parameters."""
         args, kwargs = self.get_scan_parameters()
-        kwargs["metadata"] = self._scan_metadata
         self.scan_args.emit(args)
         scan_function = getattr(self.scans, self.comboBox_scan_selection.currentText())
         if callable(scan_function):
