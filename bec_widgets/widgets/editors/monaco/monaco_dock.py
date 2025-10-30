@@ -295,6 +295,7 @@ class MonacoDock(BECWidget, QWidget):
         Args:
             widget (MonacoWidget | None): The widget to save. If None, the last focused editor will be used.
             force_save_as (bool): If True, the "Save As" dialog will be shown even if the file is already saved.
+            format_on_save (bool): If True, format the code before saving if it's a Python file.
         """
         if widget is None:
             widget = self.last_focused_editor.widget() if self.last_focused_editor else None
