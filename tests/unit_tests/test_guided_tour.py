@@ -1,9 +1,11 @@
 from unittest import mock
 
 import pytest
-from qtpy.QtWidgets import QWidget
+from qtpy.QtWidgets import QVBoxLayout, QWidget
 
 from bec_widgets.utils.guided_tour import GuidedTour
+from bec_widgets.utils.toolbars.actions import ExpandableMenuAction, MaterialIconAction
+from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 
 
 @pytest.fixture
@@ -18,7 +20,7 @@ def main_window(qtbot):
 @pytest.fixture
 def guided_help(main_window):
     """Create a GuidedTour instance for testing."""
-    return GuidedTour(main_window)
+    return GuidedTour(main_window, enforce_visibility=False)
 
 
 @pytest.fixture
@@ -243,6 +245,33 @@ class TestGuidedTour:
         overlay = guided_help.overlay
         assert overlay is not None
         assert overlay.step_label.text() == "Step 1 of 2"
+
+    def test_register_expandable_menu_action(self, qtbot):
+        """Ensure toolbar menu actions can be registered directly."""
+        window = QWidget()
+        layout = QVBoxLayout(window)
+        toolbar = ModularToolBar(parent=window)
+        layout.addWidget(toolbar)
+        qtbot.addWidget(window)
+
+        tools_action = ExpandableMenuAction(
+            label="Tools ",
+            actions={
+                "notes": MaterialIconAction(
+                    icon_name="note_add", tooltip="Add note", filled=True, parent=window
+                )
+            },
+        )
+        toolbar.components.add_safe("menu_tools", tools_action)
+        bundle = toolbar.new_bundle("menu_tools")
+        bundle.add_action("menu_tools")
+        toolbar.show_bundles(["menu_tools"])
+
+        guided = GuidedTour(window, enforce_visibility=False)
+        guided.register_widget(widget=tools_action, text="Toolbar tools menu")
+        guided.start_tour()
+
+        assert guided._active is True
 
     @mock.patch("bec_widgets.utils.guided_tour.logger")
     def test_error_handling(self, mock_logger, guided_help):
