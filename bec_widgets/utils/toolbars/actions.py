@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import weakref
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from typing import Dict, Literal
@@ -25,7 +26,6 @@ from qtpy.QtWidgets import (
 )
 
 import bec_widgets
-from bec_widgets.utils.guided_tour import GuidedTour
 from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 
@@ -507,6 +507,8 @@ class ExpandableMenuAction(ToolBarAction):
     def __init__(self, label: str, actions: dict, icon_path: str = None):
         super().__init__(icon_path, label)
         self.actions = actions
+        self._button_ref: weakref.ReferenceType[QToolButton] | None = None
+        self._menu_ref: weakref.ReferenceType[QMenu] | None = None
 
     def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
         button = QToolButton(toolbar)
@@ -542,6 +544,14 @@ class ExpandableMenuAction(ToolBarAction):
             menu.addAction(action)
         button.setMenu(menu)
         toolbar.addWidget(button)
+        self._button_ref = weakref.ref(button)
+        self._menu_ref = weakref.ref(menu)
+
+    def get_toolbar_button(self) -> QToolButton | None:
+        return self._button_ref() if self._button_ref else None
+
+    def get_menu(self) -> QMenu | None:
+        return self._menu_ref() if self._menu_ref else None
 
 
 class DeviceComboBoxAction(WidgetAction):
@@ -612,6 +622,8 @@ class TutorialAction(MaterialIconAction):
             color=None,
             parent=parent,
         )
+
+        from bec_widgets.utils.guided_tour import GuidedTour
 
         self.guided_help = GuidedTour(main_window)
         self.main_window = main_window

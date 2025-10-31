@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 import weakref
-from typing import Callable, Dict, List, Optional, TypedDict
+from typing import Callable, Dict, List, TypedDict
 from uuid import uuid4
 
 import louie
@@ -12,19 +12,24 @@ from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from louie import saferef
 from qtpy.QtCore import QEvent, QObject, QRect, Qt, Signal
-from qtpy.QtGui import QColor, QPainter, QPen
+from qtpy.QtGui import QAction, QColor, QPainter, QPen
 from qtpy.QtWidgets import (
     QApplication,
     QFrame,
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QMenuBar,
     QPushButton,
+    QToolBar,
     QVBoxLayout,
     QWidget,
 )
 
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.toolbars.actions import ExpandableMenuAction, MaterialIconAction
+from bec_widgets.utils.toolbars.bundles import ToolbarBundle
+from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 
 logger = bec_logger.logger
 
@@ -34,8 +39,10 @@ class TourStep(TypedDict):
 
     widget_ref: (
         louie.saferef.BoundMethodWeakref
-        | weakref.ReferenceType[QWidget | Callable[[], tuple[QWidget, str | None]]]
-        | Callable[[], tuple[QWidget, str | None]]
+        | weakref.ReferenceType[
+            QWidget | QAction | Callable[[], tuple[QWidget | QAction, str | None]]
+        ]
+        | Callable[[], tuple[QWidget | QAction, str | None]]
         | None
     )
     text: str
@@ -158,6 +165,13 @@ class TutorialOverlay(QWidget):
         """
         rect must already be in the overlay's coordinate space (i.e. mapped).
         This method positions the message box so it does not overlap the rect.
+
+        Args:
+            rect(QRect): rectangle to highlight
+            title(str): Title text for the step
+            text(str): Main content text for the step
+            current_step(int):  Current step number
+            total_steps(int): Total number of steps in the tour
         """
         self.current_rect = rect
 
@@ -226,8 +240,9 @@ class GuidedTour(QObject):
     tour_finished = Signal()
     step_changed = Signal(int, int)  # current_step, total_steps
 
-    def __init__(self, main_window: QWidget):
+    def __init__(self, main_window: QWidget, *, enforce_visibility: bool = True):
         super().__init__()
+        self._visible_check: bool = enforce_visibility
         self.main_window_ref = saferef.safe_ref(main_window)
         self.overlay = None
         self._registered_widgets: Dict[str, TourStep] = {}
@@ -236,7 +251,7 @@ class GuidedTour(QObject):
         self._active = False
 
     @property
-    def main_window(self) -> Optional[QWidget]:
+    def main_window(self) -> QWidget | None:
         """Get the main window from weak reference."""
         if self.main_window_ref and callable(self.main_window_ref):
             widget = self.main_window_ref()
@@ -247,7 +262,7 @@ class GuidedTour(QObject):
     def register_widget(
         self,
         *,
-        widget: QWidget | Callable[[], tuple[QWidget, str | None]],
+        widget: QWidget | QAction | Callable[[], tuple[QWidget | QAction, str | None]],
         text: str = "",
         title: str = "",
     ) -> str:
@@ -255,31 +270,69 @@ class GuidedTour(QObject):
         Register a widget with help text for tours.
 
         Args:
-            widget (QWidget | Callable[[], tuple[QWidget, str | None]]): The target widget or a callable that returns the widget and its help text.
+            widget (QWidget | QAction | Callable[[], tuple[QWidget | QAction, str | None]]): The target widget or a callable that returns the widget and its help text.
             text (str): The help text for the widget. This will be shown during the tour.
-            title (str, optional): A title for the widget (defaults to its class name).
+            title (str, optional): A title for the widget (defaults to its class name or action text).
 
         Returns:
             str: The unique ID for the registered widget.
         """
         step_id = str(uuid4())
-
-        # Check if it is a bound method
+        # If it's a plain callable
         if callable(widget) and not hasattr(widget, "__self__"):
-            # We are dealing with a plain callable
             widget_ref = widget
+            default_title = "Widget"
+        elif isinstance(widget, QAction):
+            widget_ref = weakref.ref(widget)
+            default_title = widget.text() or "Action"
+        elif hasattr(widget, "get_toolbar_button") and callable(widget.get_toolbar_button):
+
+            def _resolve_toolbar_button(toolbar_action=widget):
+                button = toolbar_action.get_toolbar_button()
+                return (button, None)
+
+            widget_ref = _resolve_toolbar_button
+            default_title = getattr(widget, "tooltip", "Toolbar Menu")
         else:
-            # Create weak reference for QWidget instances
             widget_ref = saferef.safe_ref(widget)
+            default_title = widget.__class__.__name__ if hasattr(widget, "__class__") else "Widget"
 
         self._registered_widgets[step_id] = {
             "widget_ref": widget_ref,
             "text": text,
-            "title": title
-            or (widget.__class__.__name__ if hasattr(widget, "__class__") else "Widget"),
+            "title": title or default_title,
         }
-        logger.debug(f"Registered widget {title} with ID {step_id}")
+        logger.debug(f"Registered widget {title or default_title} with ID {step_id}")
         return step_id
+
+    def _action_highlight_rect(self, action: QAction) -> QRect | None:
+        """
+        Try to find the QRect in main_window coordinates that should be highlighted for the given QAction.
+        Returns None if not found (e.g. not visible).
+        """
+        mw = self.main_window
+        if mw is None:
+            return None
+        # Try toolbars first
+        for tb in mw.findChildren(QToolBar):
+            btn = tb.widgetForAction(action)
+            if btn and btn.isVisible():
+                rect = btn.rect()
+                top_left = btn.mapTo(mw, rect.topLeft())
+                return QRect(top_left, rect.size())
+        # Try menu bars
+        menubars = []
+        if hasattr(mw, "menuBar") and callable(getattr(mw, "menuBar", None)):
+            mb = mw.menuBar()
+            if mb and mb not in menubars:
+                menubars.append(mb)
+        menubars += [mb for mb in mw.findChildren(QMenuBar) if mb not in menubars]
+        for mb in menubars:
+            if action in mb.actions():
+                ar = mb.actionGeometry(action)
+                top_left = mb.mapTo(mw, ar.topLeft())
+                return QRect(top_left, ar.size())
+        return None
 
     def unregister_widget(self, step_id: str) -> bool:
         """
@@ -306,6 +359,9 @@ class GuidedTour(QObject):
 
         Args:
             step_ids (List[str], optional): List of registered widget IDs to include in the tour. If None, all registered widgets will be included.
+
+        Returns:
+            bool: True if the tour was created successfully, False if any step IDs were not found
         """
         if step_ids is None:
             step_ids = list(self._registered_widgets.keys())
@@ -404,57 +460,28 @@ class GuidedTour(QObject):
             return
 
         step = self._tour_steps[self._current_index]
-        widget_ref = step.get("widget_ref")
-
         step_title = step["title"]
-        widget = None
-        step_text = step["text"]
 
-        # Resolve weak reference
-        if isinstance(widget_ref, (louie.saferef.BoundMethodWeakref, weakref.ReferenceType)):
-            widget = widget_ref()
-        else:
-            widget = widget_ref
-
-        # If the widget does not exist, log warning and skip to next step or stop tour
-        if not widget:
-            logger.warning(
-                f"Widget for step {step['title']} no longer exists (weak reference is dead)"
-            )
-            # Skip to next step or stop tour if this was the last step
-            if self._current_index < len(self._tour_steps) - 1:
-                self._current_index += 1
-                self._show_current_step()
-            else:
-                self.stop_tour()
+        target, step_text = self._resolve_step_target(step)
+        if target is None:
+            self._advance_past_invalid_step(step_title, reason="Step target no longer exists.")
             return
 
-        # If the user provided a callable, resolve it to get the widget and optional alt text
-        if callable(widget):
-            widget, alt_text = widget()
-            if alt_text:
-                step_text = alt_text
-
-        if not widget.isVisible():
-            logger.warning(f"Widget for step {step['title']} is not visible")
-            return
-
-        # Map widget coordinates to overlay coordinates
         main_window = self.main_window
         if main_window is None:
             logger.error("Main window no longer exists (weak reference is dead)")
             self.stop_tour()
             return
 
-        rect = widget.rect()
-        top_left = widget.mapTo(main_window, rect.topLeft())
-        global_rect = QRect(top_left, rect.size())
+        highlight_rect = self._get_highlight_rect(main_window, target, step_title)
+        if highlight_rect is None:
+            return
 
         # Calculate step numbers
         current_step = self._current_index + 1
         total_steps = len(self._tour_steps)
 
-        self.overlay.show_step(global_rect, step_title, step_text, current_step, total_steps)
+        self.overlay.show_step(highlight_rect, step_title, step_text, current_step, total_steps)
 
         # Update button states
         self.overlay.back_btn.setEnabled(self._current_index > 0)
@@ -472,6 +499,89 @@ class GuidedTour(QObject):
 
         self.step_changed.emit(self._current_index + 1, len(self._tour_steps))
 
+    def _resolve_step_target(self, step: TourStep) -> tuple[QWidget | QAction | None, str]:
+        """
+        Resolve the target widget/action for the given step.
+
+        Args:
+            step(TourStep): The tour step to resolve.
+
+        Returns:
+            tuple[QWidget | QAction | None, str]: The resolved target and the step text.
+        """
+        widget_ref = step.get("widget_ref")
+        step_text = step.get("text", "")
+
+        if isinstance(widget_ref, (louie.saferef.BoundMethodWeakref, weakref.ReferenceType)):
+            target = widget_ref()
+        else:
+            target = widget_ref
+
+        if target is None:
+            return None, step_text
+
+        if callable(target) and not isinstance(target, (QWidget, QAction)):
+            result = target()
+            if isinstance(result, tuple):
+                target, alt_text = result
+                if alt_text:
+                    step_text = alt_text
+            else:
+                target = result
+
+        return target, step_text
+
+    def _get_highlight_rect(
+        self, main_window: QWidget, target: QWidget | QAction, step_title: str
+    ) -> QRect | None:
+        """
+        Get the QRect in main_window coordinates to highlight for the given target.
+
+        Args:
+            main_window(QWidget): The main window containing the target.
+            target(QWidget | QAction): The target widget or action to highlight.
+            step_title(str): The title of the current step (for logging purposes).
+
+        Returns:
+            QRect | None: The rectangle to highlight, or None if not found/visible.
+        """
+        if isinstance(target, QAction):
+            rect = self._action_highlight_rect(target)
+            if rect is None:
+                self._advance_past_invalid_step(
+                    step_title,
+                    reason=f"Could not find visible widget or menu for QAction {target.text()!r}.",
+                )
+                return None
+            return rect
+
+        if isinstance(target, QWidget):
+            if self._visible_check:
+                if not target.isVisible():
+                    self._advance_past_invalid_step(
+                        step_title, reason=f"Widget {target!r} is not visible."
+                    )
+                    return None
+            rect = target.rect()
+            top_left = target.mapTo(main_window, rect.topLeft())
+            return QRect(top_left, rect.size())
+
+        self._advance_past_invalid_step(
+            step_title, reason=f"Unsupported step target type: {type(target)}"
+        )
+        return None
+
+    def _advance_past_invalid_step(self, step_title: str, *, reason: str):
+        """
+        Skip the current step (or stop the tour) when the target cannot be visualised.
+        """
+        logger.warning("%s Skipping step %r.", reason, step_title)
+        if self._current_index < len(self._tour_steps) - 1:
+            self._current_index += 1
+            self._show_current_step()
+        else:
+            self.stop_tour()
+
     def get_registered_widgets(self) -> Dict[str, TourStep]:
         """Get all registered widgets."""
         return self._registered_widgets.copy()
@@ -483,6 +593,10 @@ class GuidedTour(QObject):
         self._registered_widgets.clear()
         self._tour_steps.clear()
         logger.info("Cleared all registrations")
+
+    def set_visibility_enforcement(self, enabled: bool):
+        """Enable or disable visibility checks when highlighting widgets."""
+        self._visible_check = enabled
 
     def eventFilter(self, obj, event):
         """Handle window resize/move events to update step positioning."""
@@ -500,51 +614,114 @@ class GuidedTour(QObject):
 class MainWindow(QMainWindow):  # pragma: no cover
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Guided Help Demo")
+        self.setWindowTitle("Guided Tour Demo")
         central = QWidget()
         layout = QVBoxLayout(central)
+        layout.setSpacing(12)
 
-        # Create demo widgets
-        self.btn1 = QPushButton("Button 1")
-        self.btn2 = QPushButton("Button 2")
+        layout.addWidget(QLabel("Welcome to the guided tour demo with toolbar support."))
+        self.btn1 = QPushButton("Primary Button")
+        self.btn2 = QPushButton("Secondary Button")
+        self.status_label = QLabel("Use the controls below or the toolbar to interact.")
         self.start_tour_btn = QPushButton("Start Guided Tour")
 
-        layout.addWidget(QLabel("Welcome to the Guided Help Demo!"))
         layout.addWidget(self.btn1)
         layout.addWidget(self.btn2)
-        layout.addWidget(self.start_tour_btn)
+        layout.addWidget(self.status_label)
         layout.addStretch()
+        layout.addWidget(self.start_tour_btn)
         self.setCentralWidget(central)
 
-        # Create guided help system
+        # Guided tour system
         self.guided_help = GuidedTour(self)
 
-        # Register widgets with help text
-        self.guided_help.register_widget(
+        # Menus for demonstrating QAction support in menu bars
+        self._init_menu_bar()
+
+        # Modular toolbar showcasing QAction targets
+        self._init_toolbar()
+
+        # Register widgets and actions with help text
+        primary_step = self.guided_help.register_widget(
             widget=self.btn1,
-            text="This is the first button. It demonstrates how to highlight a widget and show help text next to it.",
-            title="First Button",
+            text="The primary button updates the status text when clicked.",
+            title="Primary Button",
         )
-
-        def widget_with_alt_text():
-            import numpy as np
-
-            if np.random.randint(0, 10) % 2 == 0:
-                return (self.btn2, None)
-            return (self.btn2, "This is an alternative help text for Button 2.")
-
-        self.guided_help.register_widget(
-            widget=widget_with_alt_text,
-            text="This is the second button. Notice how the help tooltip is positioned smartly to stay visible.",
-            title="Second Button",
+        secondary_step = self.guided_help.register_widget(
+            widget=self.btn2,
+            text="The secondary button complements the demo layout.",
+            title="Secondary Button",
+        )
+        toolbar_action_step = self.guided_help.register_widget(
+            widget=self.toolbar_tour_action.action,
+            text="Toolbar actions are supported in the guided tour. This one also starts the tour.",
+            title="Toolbar Tour Action",
+        )
+        tools_menu_step = self.guided_help.register_widget(
+            widget=self.toolbar.components.get_action("menu_tools"),
+            text="Expandable toolbar menus group related actions. This button opens the tools menu.",
+            title="Tools Menu",
         )
 
         # Create tour from registered widgets
-        widget_ids = list(self.guided_help.get_registered_widgets().keys())
+        self.tour_step_ids = [primary_step, secondary_step, toolbar_action_step, tools_menu_step]
+        widget_ids = self.tour_step_ids
         self.guided_help.create_tour(widget_ids)
 
         # Connect start button
         self.start_tour_btn.clicked.connect(self.guided_help.start_tour)
+
+    def _init_menu_bar(self):
+        menu_bar = self.menuBar()
+        info_menu = menu_bar.addMenu("Info")
+        info_menu.setObjectName("info-menu")
+        self.info_menu = info_menu
+        self.info_menu_action = info_menu.menuAction()
+        self.about_action = info_menu.addAction("About This Demo")
+
+    def _init_toolbar(self):
+        self.toolbar = ModularToolBar(parent=self)
+        self.addToolBar(self.toolbar)
+
+        self.toolbar_tour_action = MaterialIconAction(
+            "play_circle", tooltip="Start the guided tour", parent=self
+        )
+        self.toolbar.components.add_safe("tour-start", self.toolbar_tour_action)
+
+        self.toolbar_highlight_action = MaterialIconAction(
+            "visibility", tooltip="Highlight the primary button", parent=self
+        )
+        self.toolbar.components.add_safe("inspect-primary", self.toolbar_highlight_action)
+
+        demo_bundle = self.toolbar.new_bundle("demo")
+        demo_bundle.add_action("tour-start")
+        demo_bundle.add_action("inspect-primary")
+
+        self._setup_tools_menu()
+        self.toolbar.show_bundles(["demo", "menu_tools"])
+        self.toolbar.refresh()
+
+        self.toolbar_tour_action.action.triggered.connect(self.guided_help.start_tour)
+
+    def _setup_tools_menu(self):
+        self.tools_menu_actions: dict[str, MaterialIconAction] = {
+            "notes": MaterialIconAction(
+                icon_name="note_add", tooltip="Add a note", filled=True, parent=self
+            ),
+            "bookmark": MaterialIconAction(
+                icon_name="bookmark_add", tooltip="Bookmark current view", filled=True, parent=self
+            ),
+            "settings": MaterialIconAction(
+                icon_name="tune", tooltip="Adjust settings", filled=True, parent=self
+            ),
+        }
+        self.tools_menu_action = ExpandableMenuAction(
+            label="Tools ", actions=self.tools_menu_actions
+        )
+        self.toolbar.components.add_safe("menu_tools", self.tools_menu_action)
+        bundle = ToolbarBundle("menu_tools", self.toolbar.components)
+        bundle.add_action("menu_tools")
+        self.toolbar.add_bundle(bundle)
 
 
 if __name__ == "__main__":  # pragma: no cover
