@@ -32,15 +32,15 @@ class ProcedureLogs(BECWidget, QWidget):
         self._layout.addWidget(self.widget)
 
     @SafeSlot(dict, dict)
-    def _trigger_update(self, msg, _):
+    def _update(self, msg, _):
         self.widget.append(msg.get("data").strip())
 
-    def _update(self):
+    def _init_content(self):
         if self._queue is None:
             self.widget.setText("")
             return
-        if msgs := self._conn.xread(MessageEndpoints.procedure_logs(self._queue)):
-            self.widget.append("".join(msg.get("data").data.strip() for msg in msgs))
+        if msgs := self._conn.xread(MessageEndpoints.procedure_logs(self._queue), from_start=True):
+            self.widget.append("\n".join(msg.get("data").data.strip() for msg in msgs))
 
     @SafeSlot(None)
     @SafeSlot(str)
@@ -53,16 +53,18 @@ class ProcedureLogs(BECWidget, QWidget):
 
     @queue.setter
     def queue(self, queue: str | None) -> None:
+        if self._queue == queue:
+            return
         if self._queue is not None:
             self.bec_dispatcher.disconnect_slot(
-                self._trigger_update, MessageEndpoints.procedure_logs(self._queue)
+                self._update, MessageEndpoints.procedure_logs(self._queue)
             )
-        self._queue = queue
+        self._queue = queue or None
         if self._queue is not None:
             self.bec_dispatcher.connect_slot(
-                self._trigger_update, MessageEndpoints.procedure_logs(self._queue)
+                self._update, MessageEndpoints.procedure_logs(self._queue)
             )
-        self._update()
+        self._init_content()
 
 
 if __name__ == "__main__":

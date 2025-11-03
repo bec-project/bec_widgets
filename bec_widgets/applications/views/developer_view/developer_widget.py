@@ -4,9 +4,10 @@ import re
 
 import markdown
 from bec_lib.endpoints import MessageEndpoints
+from bec_lib.messages import ProcedureRequestMessage
 from bec_lib.script_executor import upload_script
 from bec_qthemes import material_icon
-from qtpy.QtGui import QKeySequence, QShortcut
+from qtpy.QtGui import QKeySequence, QShortcut  # type: ignore
 from qtpy.QtWidgets import QTextEdit
 
 from bec_widgets.utils.error_popups import SafeSlot
@@ -16,6 +17,7 @@ from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.widgets.containers.dock_area.basic_dock_area import DockAreaWidget
 from bec_widgets.widgets.containers.dock_area.dock_area import BECDockArea
 from bec_widgets.widgets.containers.qt_ads import CDockWidget
+from bec_widgets.widgets.control.procedure_control.procedure_panel import ProcedurePanel
 from bec_widgets.widgets.editors.monaco.monaco_dock import MonacoDock
 from bec_widgets.widgets.editors.monaco.monaco_widget import MonacoWidget
 from bec_widgets.widgets.editors.web_console.web_console import BECShell, WebConsole
@@ -125,6 +127,9 @@ class DeveloperWidget(DockAreaWidget):
         self._current_script_id: str | None = None
         self.script_editor_tab = None
 
+        self.procedures = ProcedurePanel(self)
+        self.procedures.setObjectName("Procedure Control")
+
         self._initialize_layout()
 
         # Connect editor signals
@@ -183,24 +188,16 @@ class DeveloperWidget(DockAreaWidget):
         )
 
         # Plotting area on the right with signature help tabbed alongside
-        self.plotting_ads_dock = self.new(
-            self.plotting_ads,
-            where="right",
-            closable=False,
-            floatable=False,
-            movable=False,
-            return_dock=True,
-            title_buttons={"float": True},
-        )
-        self.signature_dock = self.new(
-            self.signature_help,
-            closable=False,
-            floatable=False,
-            movable=False,
-            tab_with=self.plotting_ads_dock,
-            return_dock=True,
-            title_buttons={"float": False, "close": False},
-        )
+        _r_panel = {
+            "closable": False,
+            "floatable": False,
+            "movable": False,
+            "return_dock": True,
+            "title_buttons": {"float": True},
+        }
+        self.plotting_dock = self.new(self.plotting_ads, where="right", **_r_panel)
+        self.signature_dock = self.new(self.signature_help, **_r_panel, tab_with=self.plotting_dock)
+        self.procedure_dock = self.new(self.procedures, **_r_panel, tab_with=self.plotting_dock)
 
         self.set_layout_ratios(horizontal=[2, 5, 3], vertical=[7, 3])
 
@@ -233,6 +230,16 @@ class DeveloperWidget(DockAreaWidget):
         run_action.action.triggered.connect(self.on_execute)
         self.toolbar.components.add_safe("run", run_action)
 
+        submit_action = MaterialIconAction(
+            icon_name="animated_images",
+            tooltip="Run current file as a BEC procedure",
+            label_text="Run on server",
+            filled=True,
+            parent=self,
+        )
+        submit_action.action.triggered.connect(self.on_submit_procedure)
+        self.toolbar.components.add_safe("run_proc", submit_action)
+
         stop_action = MaterialIconAction(
             icon_name="stop",
             tooltip="Stop current execution",
@@ -246,6 +253,7 @@ class DeveloperWidget(DockAreaWidget):
         execution_bundle = ToolbarBundle("execution", self.toolbar.components)
         execution_bundle.add_action("run")
         execution_bundle.add_action("stop")
+        execution_bundle.add_action("run_proc")
         self.toolbar.add_bundle(execution_bundle)
 
         vim_action = MaterialIconAction(
@@ -305,24 +313,41 @@ class DeveloperWidget(DockAreaWidget):
         self.toolbar.components.get_action("save").action.setEnabled(enabled)
         self.toolbar.components.get_action("save_as").action.setEnabled(enabled)
 
-    @SafeSlot()
-    def on_execute(self):
-        """Upload and run the currently focused script in the Monaco editor."""
+    def _try_upload(self) -> str | None:
         self.script_editor_tab = self.monaco.last_focused_editor
         if not self.script_editor_tab:
-            return
-        widget = self.script_editor_tab.widget()
-        if not isinstance(widget, MonacoWidget):
-            return
+            return None
+        if not isinstance(widget := self.script_editor_tab.widget(), MonacoWidget):
+            return None
         if widget.modified:
             # Save the file before execution if there are unsaved changes
             self.monaco.save_file()
             if widget.modified:
                 # If still modified, user likely cancelled save dialog
-                return
-        self.current_script_id = upload_script(self.client.connector, widget.get_text())
-        self.console.write(f'bec._run_script("{self.current_script_id}")')
+                return None
+        return upload_script(self.client.connector, widget.get_text())
+
+    @SafeSlot()
+    def on_execute(self):
+        """Upload and run the currently focused script in the Monaco editor."""
         print(f"Uploaded script with ID: {self.current_script_id}")
+        if (script_id := self._try_upload()) is not None:
+            self.current_script_id = script_id
+            self.console.write(f'bec._run_script("{self.current_script_id}")')
+            print(f"Uploaded script with ID: {self.current_script_id}")
+
+    @SafeSlot()
+    def on_submit_procedure(self):
+        """Upload and run the currently focused script in the Monaco editor as a procedure."""
+        if (script_id := self._try_upload()) is not None:
+            self.current_script_id = script_id
+            print(f"Uploaded script with ID: {self.current_script_id}")
+            self.client.connector.xadd(
+                MessageEndpoints.procedure_request(),
+                ProcedureRequestMessage(
+                    identifier="run_script", args_kwargs=((self.current_script_id,), {})
+                ).model_dump(),
+            )
 
     @SafeSlot()
     def on_stop(self):
