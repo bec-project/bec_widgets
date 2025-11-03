@@ -12,8 +12,12 @@ from bec_lib.messages import (
 from bec_qthemes._icon.material_icons import material_icon
 from bec_server.scan_server.procedures.helper import FrontendProcedureHelper
 from pydantic import BaseModel, ConfigDict
+from qtpy.QtCore import QSize, Qt, Signal
 from qtpy.QtWidgets import (
+    QDialog,
+    QDialogButtonBox,
     QHBoxLayout,
+    QPushButton,
     QToolButton,
     QTreeWidget,
     QTreeWidgetItem,
@@ -107,6 +111,9 @@ class JobItem(_ActionItem):
         self._msg = config.msg
         self._init_params_display()
 
+    def queue(self):
+        return self._msg.queue
+
     def _init_params_display(self):
         self.setText(self._config.params_column, self._short_params_text())
         self.setToolTip(self._config.params_column, self._long_params_html())
@@ -176,6 +183,9 @@ class QueueItem(_ActionItem):
                 _ItemConfig(base=self._config, msg=msg),
             )
 
+    def queue(self):
+        return self._queue
+
     @SafeSlot()
     def _abort_self(self):
         self._config.helper.request.abort_queue(self._queue)
@@ -203,9 +213,12 @@ class CategoryItem(QTreeWidgetItem):
             self._queues[queue] = QueueItem(
                 self, [queue], _QueueConfig(base=self._config, queue=queue, msgs=msgs)
             )
+            self._queues[queue].setExpanded(True)
 
 
 class ProcedureControl(BECWidget, QWidget):
+
+    queue_selected = Signal(str)
 
     def __init__(self, parent=None, client=None, config=None, gui_id: str | None = None, **kwargs):
         config = config or ConnectionConfig()
@@ -215,6 +228,17 @@ class ProcedureControl(BECWidget, QWidget):
         self._setup_ui()
         self.bec_dispatcher.connect_slot(self._update, MessageEndpoints.procedure_queue_notif())
         self._init_queues()
+        self._content.itemSelectionChanged.connect(self.on_selection_changed)
+
+    def on_selection_changed(self):
+        selected_items = self._content.selectedItems()
+        if len(selected_items) != 1:
+            self.queue_selected.emit("")
+            return
+        if isinstance((item := selected_items[0]), (QueueItem, JobItem)):
+            self.queue_selected.emit(item.queue())
+            return
+        self.queue_selected.emit("")
 
     @SafeSlot(ProcedureQNotifMessage, dict)
     def _update(self, msg: dict | ProcedureQNotifMessage, _):
@@ -235,7 +259,6 @@ class ProcedureControl(BECWidget, QWidget):
         self._content.setAlternatingRowColors(True)
         self._content.setHeaderLabels(["name", "status", "params", "actions"])
         self._layout.addWidget(self._content)
-        self._content.header().resizeSection(0, 250)
 
         config = partial(_BaseConfig, helper=self._helper, tree=self._content, actions_column=3)
 
@@ -245,6 +268,7 @@ class ProcedureControl(BECWidget, QWidget):
             config(actions={"abort"}, child_actions={"abort"}, active_queue=True),
         )
         self._content.addTopLevelItem(self._active_queues)
+        self._active_queues.setExpanded(True)
 
         self._unhandled_queues = CategoryItem(
             self._content,
@@ -252,12 +276,54 @@ class ProcedureControl(BECWidget, QWidget):
             config(actions={"delete"}, child_actions={"delete", "resubmit"}),
         )
         self._content.addTopLevelItem(self._unhandled_queues)
+        self._active_queues.setExpanded(True)
 
     def _init_queues(self):
         for queue in self._helper.get.active_and_pending_queue_names():
             self._active_queues.update(queue, self._helper.get.exec_queue(queue))
         for queue in self._helper.get.queue_names("unhandled"):
             self._unhandled_queues.update(queue, self._helper.get.unhandled_queue(queue))
+
+
+class ProcedureSubmissionOptionsDialog(QDialog):
+    """
+    Dialog to customize procedure options
+    """
+
+    def __init__(self, parent=None, client=None):
+        super().__init__(parent)
+        self.setWindowTitle("Procedure execution options")
+
+        self._setup_ui()
+
+    def sizeHint(self) -> QSize:
+        return QSize(600, 800)
+
+    def _setup_ui(self):
+        """Setup the dialog UI with ScanControl widget and buttons."""
+        layout = QVBoxLayout(self)
+
+        # Create the scan control widget
+
+        # Create dialog buttons
+        button_box = QDialogButtonBox(Qt.Orientation.Horizontal, self)
+
+        # Create custom buttons with appropriate text
+        insert_button = QPushButton("Insert")
+        cancel_button = QPushButton("Cancel")
+
+        button_box.addButton(insert_button, QDialogButtonBox.ButtonRole.AcceptRole)
+        button_box.addButton(cancel_button, QDialogButtonBox.ButtonRole.RejectRole)
+
+        layout.addWidget(button_box)
+
+        # Connect button signals
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+
+    def accept(self):
+        """Override accept to generate code before closing."""
+        super().accept()
 
 
 if __name__ == "__main__":
