@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import partial
 
+from bec_lib import bec_logger
 from bec_qthemes import material_icon
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QPixmap
@@ -11,8 +12,6 @@ from qtpy.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QLineEdit,
-    QMainWindow,
     QMessageBox,
     QPushButton,
     QSizePolicy,
@@ -28,7 +27,7 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets import BECWidget, SafeSlot
-from bec_widgets.utils.colors import apply_theme, get_accent_colors
+from bec_widgets.utils.colors import get_accent_colors
 from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
     delete_profile_files,
     get_profile_info,
@@ -37,6 +36,8 @@ from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
     load_profile_screenshot,
     set_quick_select,
 )
+
+logger = bec_logger.logger
 
 
 class WorkSpaceManager(BECWidget, QWidget):
@@ -52,6 +53,9 @@ class WorkSpaceManager(BECWidget, QWidget):
     ):
         super().__init__(parent=parent, **kwargs)
         self.target_widget = target_widget
+        self.profile_namespace = (
+            getattr(target_widget, "profile_namespace", None) if target_widget else None
+        )
         self.accent_colors = get_accent_colors()
         self._init_ui()
         if self.target_widget is not None and hasattr(self.target_widget, "profile_changed"):
@@ -144,7 +148,7 @@ class WorkSpaceManager(BECWidget, QWidget):
 
     def render_table(self):
         self.profile_table.setRowCount(0)
-        for profile in list_profiles():
+        for profile in list_profiles(namespace=self.profile_namespace):
             self._add_profile_row(profile)
 
     def _add_profile_row(self, name: str):
@@ -156,7 +160,7 @@ class WorkSpaceManager(BECWidget, QWidget):
         actions_items_layout = QHBoxLayout(actions_items)
         actions_items_layout.setContentsMargins(0, 0, 0, 0)
 
-        info = get_profile_info(name)
+        info = get_profile_info(name, namespace=self.profile_namespace)
 
         # Flags
         is_active = (
@@ -237,7 +241,7 @@ class WorkSpaceManager(BECWidget, QWidget):
         return item.text() if item else None
 
     def _show_profile_details(self, name: str) -> None:
-        info = get_profile_info(name)
+        info = get_profile_info(name, namespace=self.profile_namespace)
         self.profile_details_tree.clear()
         entries = [
             ("Name", info.name),
@@ -255,7 +259,7 @@ class WorkSpaceManager(BECWidget, QWidget):
         self.profile_details_tree.expandAll()
 
         # Render screenshot preview from profile INI
-        pm = load_profile_screenshot(name)
+        pm = load_profile_screenshot(name, namespace=self.profile_namespace)
         if pm is not None and not pm.isNull():
             scaled = pm.scaled(
                 self.screenshot_label.width() or 800,
@@ -299,16 +303,16 @@ class WorkSpaceManager(BECWidget, QWidget):
                 "workspace_combo"
             ).widget.setCurrentText(profile_name)
         except Exception as e:
-            print(f"Warning: Could not update workspace combo box. {e}")
-            pass
+            logger.warning(f"Warning: Could not update workspace combo box. {e}")
+
         self.render_table()
         self._select_by_name(profile_name)
         self._show_profile_details(profile_name)
 
     @SafeSlot(str)
     def toggle_quick_select(self, profile_name: str):
-        enabled = is_quick_select(profile_name)
-        set_quick_select(profile_name, not enabled)
+        enabled = is_quick_select(profile_name, namespace=self.profile_namespace)
+        set_quick_select(profile_name, not enabled, namespace=self.profile_namespace)
         self.render_table()
         if self.target_widget is not None:
             self.target_widget._refresh_workspace_list()
@@ -337,7 +341,7 @@ class WorkSpaceManager(BECWidget, QWidget):
 
     @SafeSlot(str)
     def delete_profile(self, profile_name: str):
-        info = get_profile_info(profile_name)
+        info = get_profile_info(profile_name, namespace=self.profile_namespace)
         if info.is_read_only:
             QMessageBox.information(
                 self, "Delete Profile", "This profile is read-only and cannot be deleted."
@@ -358,7 +362,7 @@ class WorkSpaceManager(BECWidget, QWidget):
             return
 
         try:
-            removed = delete_profile_files(profile_name)
+            removed = delete_profile_files(profile_name, namespace=self.profile_namespace)
         except OSError as exc:
             QMessageBox.warning(
                 self, "Delete Profile", f"Failed to delete profile '{profile_name}': {exc}"
@@ -378,7 +382,7 @@ class WorkSpaceManager(BECWidget, QWidget):
                 self.target_widget._refresh_workspace_list()
 
         self.render_table()
-        remaining_profiles = list_profiles()
+        remaining_profiles = list_profiles(namespace=self.profile_namespace)
         if remaining_profiles:
             next_profile = remaining_profiles[0]
             self._select_by_name(next_profile)
@@ -392,7 +396,7 @@ class WorkSpaceManager(BECWidget, QWidget):
         name = self._current_selected_profile()
         if not name:
             return
-        pm = load_profile_screenshot(name)
+        pm = load_profile_screenshot(name, namespace=self.profile_namespace)
         if pm is None or pm.isNull():
             return
         scaled = pm.scaled(

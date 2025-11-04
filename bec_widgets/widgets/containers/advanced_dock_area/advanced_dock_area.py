@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import os
-from typing import Literal, cast
+from typing import Callable, Literal, Mapping, Sequence
 
 import PySide6QtAds as QtAds
 from bec_lib import bec_logger
-from PySide6QtAds import CDockManager, CDockWidget
+from PySide6QtAds import CDockWidget
 from qtpy.QtCore import QTimer, Signal
 from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import (
@@ -17,13 +17,11 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from shiboken6 import isValid
 
 from bec_widgets import BECWidget, SafeProperty, SafeSlot
 from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 from bec_widgets.utils import BECDispatcher
 from bec_widgets.utils.colors import apply_theme
-from bec_widgets.utils.property_editor import PropertyEditor
 from bec_widgets.utils.toolbars.actions import (
     ExpandableMenuAction,
     MaterialIconAction,
@@ -32,11 +30,15 @@ from bec_widgets.utils.toolbars.actions import (
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.utils.widget_state_manager import WidgetStateManager
+from bec_widgets.widgets.containers.advanced_dock_area.basic_dock_area import DockAreaWidget
 from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
     SETTINGS_KEYS,
-    default_profile_path,
+    default_profile_candidates,
+    delete_profile_files,
     get_last_profile,
+    is_profile_read_only,
     is_quick_select,
+    list_quick_profiles,
     load_default_profile_screenshot,
     load_user_profile_screenshot,
     now_iso_utc,
@@ -46,9 +48,10 @@ from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
     profile_origin_display,
     read_manifest,
     restore_user_from_default,
+    sanitize_namespace,
     set_last_profile,
     set_quick_select,
-    user_profile_path,
+    user_profile_candidates,
     write_manifest,
 )
 from bec_widgets.widgets.containers.advanced_dock_area.settings.dialogs import (
@@ -80,30 +83,26 @@ from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import
 
 logger = bec_logger.logger
 
+_PROFILE_NAMESPACE_UNSET = object()
 
-class DockSettingsDialog(QDialog):
-
-    def __init__(self, parent: QWidget, target: QWidget):
-        super().__init__(parent)
-        self.setWindowTitle("Dock Settings")
-        self.setModal(True)
-        layout = QVBoxLayout(self)
-
-        # Property editor
-        self.prop_editor = PropertyEditor(target, self, show_only_bec=True)
-        layout.addWidget(self.prop_editor)
+PROFILE_STATE_KEYS = {key: SETTINGS_KEYS[key] for key in ("geom", "state", "ads_state")}
 
 
-class AdvancedDockArea(BECWidget, QWidget):
+class AdvancedDockArea(DockAreaWidget):
     RPC = True
     PLUGIN = False
     USER_ACCESS = [
         "new",
+        "dock_map",
+        "dock_list",
         "widget_map",
         "widget_list",
         "lock_workspace",
         "attach_all",
         "delete_all",
+        "set_layout_ratios",
+        "describe_layout",
+        "print_layout_structure",
         "mode",
         "mode.setter",
     ]
@@ -115,38 +114,34 @@ class AdvancedDockArea(BECWidget, QWidget):
     def __init__(
         self,
         parent=None,
-        mode: str = "developer",
+        mode: Literal["plot", "device", "utils", "user", "creator"] = "creator",
         default_add_direction: Literal["left", "right", "top", "bottom"] = "right",
-        *args,
+        profile_namespace: str | None = None,
+        auto_profile_namespace: bool = True,
+        auto_save_upon_exit: bool = True,
+        enable_profile_management: bool = True,
+        restore_initial_profile: bool = True,
         **kwargs,
     ):
-        super().__init__(parent=parent, *args, **kwargs)
-
-        # Title (as a top-level QWidget it can have a window title)
-        self.setWindowTitle("Advanced Dock Area")
-
-        # Top-level layout hosting a toolbar and the dock manager
-        self._root_layout = QVBoxLayout(self)
-        self._root_layout.setContentsMargins(0, 0, 0, 0)
-        self._root_layout.setSpacing(0)
-
-        # Init Dock Manager
-        self.dock_manager = CDockManager(self)
-        self.dock_manager.setStyleSheet("")
-
-        # Dock manager helper variables
-        self._locked = False  # Lock state of the workspace
+        self._profile_namespace_hint = profile_namespace
+        self._profile_namespace_auto = auto_profile_namespace
+        self._profile_namespace_resolved: str | None | object = _PROFILE_NAMESPACE_UNSET
+        self._auto_save_upon_exit = auto_save_upon_exit
+        self._profile_management_enabled = enable_profile_management
+        self._restore_initial_profile = restore_initial_profile
+        super().__init__(
+            parent,
+            default_add_direction=default_add_direction,
+            title="Advanced Dock Area",
+            **kwargs,
+        )
 
         # Initialize mode property first (before toolbar setup)
-        self._mode = "developer"
-        self._default_add_direction = (
-            default_add_direction
-            if default_add_direction in ("left", "right", "top", "bottom")
-            else "right"
-        )
+        self._mode = mode
 
         # Toolbar
         self.dark_mode_button = DarkModeButton(parent=self, toolbar=True)
+        self.dark_mode_button.setVisible(enable_profile_management)
         self._setup_toolbar()
         self._hook_toolbar()
 
@@ -154,14 +149,14 @@ class AdvancedDockArea(BECWidget, QWidget):
         self.save_dialog = None
         self.manage_dialog = None
 
-        # Place toolbar and dock manager into layout
-        self._root_layout.addWidget(self.toolbar)
-        self._root_layout.addWidget(self.dock_manager, 1)
+        # Place toolbar above the dock manager provided by the base class
+        self._root_layout.insertWidget(0, self.toolbar)
 
         # Populate and hook the workspace combo
         self._refresh_workspace_list()
         self._current_profile_name = None
         self._pending_autosave_skip: tuple[str, str] | None = None
+        self._exit_snapshot_written = False
 
         # State manager
         self.state_manager = WidgetStateManager(self)
@@ -177,107 +172,102 @@ class AdvancedDockArea(BECWidget, QWidget):
 
         # Apply the requested mode after everything is set up
         self.mode = mode
-        QTimer.singleShot(
-            0, self._fetch_initial_profile
-        )  # To allow full init before loading profile and prevent segfault on exit
+        if self._restore_initial_profile:
+            self._fetch_initial_profile()
 
     def _fetch_initial_profile(self):
         # Restore last-used profile if available; otherwise fall back to combo selection
         combo = self.toolbar.components.get_action("workspace_combo").widget
-        last = get_last_profile()
-        if last and (
-            os.path.exists(user_profile_path(last)) or os.path.exists(default_profile_path(last))
-        ):
-            init_profile = last
+        namespace = self.profile_namespace
+        last = get_last_profile(namespace)
+        if last:
+            user_exists = any(
+                os.path.exists(path) for path in user_profile_candidates(last, namespace)
+            )
+            default_exists = any(
+                os.path.exists(path) for path in default_profile_candidates(last, namespace)
+            )
+            init_profile = last if (user_exists or default_exists) else None
         else:
             init_profile = combo.currentText()
+        if not init_profile:
+            general_exists = any(
+                os.path.exists(path) for path in user_profile_candidates("general", namespace)
+            ) or any(
+                os.path.exists(path) for path in default_profile_candidates("general", namespace)
+            )
+            if general_exists:
+                init_profile = "general"
         if init_profile:
-            self.load_profile(init_profile)
-            combo.setCurrentText(init_profile)
+            # Defer initial load to the event loop so child widgets exist before state restore.
+            QTimer.singleShot(0, lambda: self._load_initial_profile(init_profile))
 
-    def _make_dock(
+    def _load_initial_profile(self, name: str) -> None:
+        """Load the initial profile after construction when the event loop is running."""
+        self.load_profile(name)
+        combo = self.toolbar.components.get_action("workspace_combo").widget
+        combo.blockSignals(True)
+        combo.setCurrentText(name)
+        combo.blockSignals(False)
+
+    def _customize_dock(self, dock: CDockWidget, widget: QWidget) -> None:
+        prefs = getattr(dock, "_dock_preferences", {}) or {}
+        if prefs.get("show_settings_action") is None:
+            prefs = dict(prefs)
+            prefs["show_settings_action"] = True
+            dock._dock_preferences = prefs
+        super()._customize_dock(dock, widget)
+
+    @SafeSlot(popup_error=True)
+    def new(
         self,
-        widget: QWidget,
+        widget: QWidget | str,
         *,
-        closable: bool,
-        floatable: bool,
+        closable: bool = True,
+        floatable: bool = True,
         movable: bool = True,
-        area: QtAds.DockWidgetArea = QtAds.DockWidgetArea.RightDockWidgetArea,
         start_floating: bool = False,
-    ) -> CDockWidget:
-        dock = CDockWidget(widget.objectName())
-        dock.setWidget(widget)
-        dock.setFeature(CDockWidget.DockWidgetDeleteOnClose, True)
-        dock.setFeature(CDockWidget.CustomCloseHandling, True)
-        dock.setFeature(CDockWidget.DockWidgetClosable, closable)
-        dock.setFeature(CDockWidget.DockWidgetFloatable, floatable)
-        dock.setFeature(CDockWidget.DockWidgetMovable, movable)
+        where: Literal["left", "right", "top", "bottom"] | None = None,
+        on_close: Callable[[CDockWidget, QWidget], None] | None = None,
+        tab_with: CDockWidget | QWidget | str | None = None,
+        relative_to: CDockWidget | QWidget | str | None = None,
+        return_dock: bool = False,
+        show_title_bar: bool | None = None,
+        title_buttons: Mapping[str, bool] | Sequence[str] | str | None = None,
+        show_settings_action: bool | None = None,
+        promote_central: bool = False,
+        **widget_kwargs,
+    ) -> QWidget | CDockWidget | BECWidget:
+        """
+        Override the base helper so dock settings are available by default.
 
-        self._install_dock_settings_action(dock, widget)
-
-        def on_dock_close():
-            widget.close()
-            dock.closeDockWidget()
-            dock.deleteDockWidget()
-
-        def on_widget_destroyed():
-            if not isValid(dock):
-                return
-            dock.closeDockWidget()
-            dock.deleteDockWidget()
-
-        dock.closeRequested.connect(on_dock_close)
-        if hasattr(widget, "widget_removed"):
-            widget.widget_removed.connect(on_widget_destroyed)
-
-        dock.setMinimumSizeHintMode(CDockWidget.eMinimumSizeHintMode.MinimumSizeHintFromDockWidget)
-        self.dock_manager.addDockWidget(area, dock)
-        if start_floating:
-            dock.setFloating()
-        return dock
-
-    def _install_dock_settings_action(self, dock: CDockWidget, widget: QWidget) -> None:
-        action = MaterialIconAction(
-            icon_name="settings", tooltip="Dock settings", filled=True, parent=self
-        ).action
-        action.setToolTip("Dock settings")
-        action.setObjectName("dockSettingsAction")
-        action.triggered.connect(lambda: self._open_dock_settings_dialog(dock, widget))
-        dock.setTitleBarActions([action])
-        dock.setting_action = action
-
-    def _open_dock_settings_dialog(self, dock: CDockWidget, widget: QWidget) -> None:
-        dlg = DockSettingsDialog(self, widget)
-        dlg.resize(600, 600)
-        dlg.exec()
+        The flag remains user-configurable (pass ``False`` to hide the action).
+        """
+        if show_settings_action is None:
+            show_settings_action = True
+        return super().new(
+            widget,
+            closable=closable,
+            floatable=floatable,
+            movable=movable,
+            start_floating=start_floating,
+            where=where,
+            on_close=on_close,
+            tab_with=tab_with,
+            relative_to=relative_to,
+            return_dock=return_dock,
+            show_title_bar=show_title_bar,
+            title_buttons=title_buttons,
+            show_settings_action=show_settings_action,
+            promote_central=promote_central,
+            **widget_kwargs,
+        )
 
     def _apply_dock_lock(self, locked: bool) -> None:
         if locked:
             self.dock_manager.lockDockWidgetFeaturesGlobally()
         else:
             self.dock_manager.lockDockWidgetFeaturesGlobally(QtAds.CDockWidget.NoDockWidgetFeatures)
-
-    def _delete_dock(self, dock: CDockWidget) -> None:
-        w = dock.widget()
-        if w and isValid(w):
-            w.close()
-            w.deleteLater()
-        if isValid(dock):
-            dock.closeDockWidget()
-            dock.deleteDockWidget()
-
-    def _area_from_where(self, where: str | None) -> QtAds.DockWidgetArea:
-        """Return ADS DockWidgetArea from a human-friendly direction string.
-        If *where* is None, fall back to instance default.
-        """
-        d = (where or getattr(self, "_default_add_direction", "right") or "right").lower()
-        mapping = {
-            "left": QtAds.DockWidgetArea.LeftDockWidgetArea,
-            "right": QtAds.DockWidgetArea.RightDockWidgetArea,
-            "top": QtAds.DockWidgetArea.TopDockWidgetArea,
-            "bottom": QtAds.DockWidgetArea.BottomDockWidgetArea,
-        }
-        return mapping.get(d, QtAds.DockWidgetArea.RightDockWidgetArea)
 
     ################################################################################
     # Toolbar Setup
@@ -353,7 +343,12 @@ class AdvancedDockArea(BECWidget, QWidget):
                 self.toolbar.components.add_safe(
                     flat_action_id,
                     MaterialIconAction(
-                        icon_name=icon_name, tooltip=tooltip, filled=True, parent=self
+                        icon_name=icon_name,
+                        tooltip=tooltip,
+                        filled=True,
+                        parent=self,
+                        label_text=widget_type,
+                        text_position="under",
                     ),
                 )
                 bundle.add_action(flat_action_id)
@@ -372,7 +367,9 @@ class AdvancedDockArea(BECWidget, QWidget):
         spacer_bundle.add_action("spacer")
         self.toolbar.add_bundle(spacer_bundle)
 
-        self.toolbar.add_bundle(workspace_bundle(self.toolbar.components))
+        self.toolbar.add_bundle(
+            workspace_bundle(self.toolbar.components, enable_tools=self._profile_management_enabled)
+        )
         self.toolbar.connect_bundle(
             "workspace", WorkspaceConnection(components=self.toolbar.components, target_widget=self)
         )
@@ -384,20 +381,22 @@ class AdvancedDockArea(BECWidget, QWidget):
                 icon_name="zoom_in_map", tooltip="Attach all floating docks", parent=self
             ),
         )
+        self.toolbar.components.get_action("attach_all").action.setVisible(
+            self._profile_management_enabled
+        )
         self.toolbar.components.add_safe(
             "screenshot",
             MaterialIconAction(icon_name="photo_camera", tooltip="Take Screenshot", parent=self),
         )
-        self.toolbar.components.add_safe(
-            "dark_mode", WidgetAction(widget=self.dark_mode_button, adjust_size=False, parent=self)
+        self.toolbar.components.get_action("screenshot").action.setVisible(
+            self._profile_management_enabled
         )
-        # Developer mode toggle (moved from menu into toolbar) #TODO temporary disable
-        # self.toolbar.components.add_safe(
-        #     "developer_mode",
-        #     MaterialIconAction(
-        #         icon_name="code", tooltip="Developer Mode", checkable=True, parent=self
-        #     ),
-        # )
+        dark_mode_action = WidgetAction(
+            widget=self.dark_mode_button, adjust_size=False, parent=self
+        )
+        dark_mode_action.widget.setVisible(self._profile_management_enabled)
+        self.toolbar.components.add_safe("dark_mode", dark_mode_action)
+
         bda = ToolbarBundle("dock_actions", self.toolbar.components)
         bda.add_action("attach_all")
         bda.add_action("screenshot")
@@ -405,17 +404,7 @@ class AdvancedDockArea(BECWidget, QWidget):
         # bda.add_action("developer_mode") #TODO temporary disable
         self.toolbar.add_bundle(bda)
 
-        # Default bundle configuration (show menus by default)
-        self.toolbar.show_bundles(
-            [
-                "menu_plots",
-                "menu_devices",
-                "menu_utils",
-                "spacer_bundle",
-                "workspace",
-                "dock_actions",
-            ]
-        )
+        self._apply_toolbar_layout()
 
         # Store mappings on self for use in _hook_toolbar
         self._ACTION_MAPPINGS = {
@@ -425,10 +414,11 @@ class AdvancedDockArea(BECWidget, QWidget):
         }
 
     def _hook_toolbar(self):
-
         def _connect_menu(menu_key: str):
             menu = self.toolbar.components.get_action(menu_key)
             mapping = self._ACTION_MAPPINGS[menu_key]
+
+            # first two items not needed for this part
             for key, (_, _, widget_type) in mapping.items():
                 act = menu.actions[key].action
                 if widget_type == "LogPanel":
@@ -443,6 +433,7 @@ class AdvancedDockArea(BECWidget, QWidget):
                             widget=t,
                             closable=True,
                             startup_cmd=f"bec --gui-id {self.bec_dispatcher.cli_server.gui_id}",
+                            show_settings_action=True,
                         )
                     )
                 else:
@@ -452,196 +443,32 @@ class AdvancedDockArea(BECWidget, QWidget):
         _connect_menu("menu_devices")
         _connect_menu("menu_utils")
 
-        # Connect flat toolbar actions
-        def _connect_flat_actions(category: str, mapping: dict[str, tuple[str, str, str]]):
+        def _connect_flat_actions(mapping: dict[str, tuple[str, str, str]]):
             for action_id, (_, _, widget_type) in mapping.items():
                 flat_action_id = f"flat_{action_id}"
                 flat_action = self.toolbar.components.get_action(flat_action_id).action
                 if widget_type == "LogPanel":
                     flat_action.setEnabled(False)  # keep disabled per issue #644
                 else:
-                    flat_action.triggered.connect(lambda _, t=widget_type: self.new(widget=t))
+                    flat_action.triggered.connect(lambda _, t=widget_type: self.new(t))
 
-        _connect_flat_actions("plots", self._ACTION_MAPPINGS["menu_plots"])
-        _connect_flat_actions("devices", self._ACTION_MAPPINGS["menu_devices"])
-        _connect_flat_actions("utils", self._ACTION_MAPPINGS["menu_utils"])
+        _connect_flat_actions(self._ACTION_MAPPINGS["menu_plots"])
+        _connect_flat_actions(self._ACTION_MAPPINGS["menu_devices"])
+        _connect_flat_actions(self._ACTION_MAPPINGS["menu_utils"])
 
         self.toolbar.components.get_action("attach_all").action.triggered.connect(self.attach_all)
         self.toolbar.components.get_action("screenshot").action.triggered.connect(self.screenshot)
-        # Developer mode toggle #TODO temporary disable
-        # self.toolbar.components.get_action("developer_mode").action.toggled.connect(
-        #     self._on_developer_mode_toggled
-        # )
 
     def _set_editable(self, editable: bool) -> None:
         self.lock_workspace = not editable
         self._editable = editable
 
-        attach_all_action = self.toolbar.components.get_action("attach_all").action
-        attach_all_action.setVisible(editable)
-
-        # Show full creation menus only when editable; otherwise keep minimal set
-        if editable:
-            self.toolbar.show_bundles(
-                [
-                    "menu_plots",
-                    "menu_devices",
-                    "menu_utils",
-                    "spacer_bundle",
-                    "workspace",
-                    "dock_actions",
-                ]
-            )
-        else:
-            self.toolbar.show_bundles(["spacer_bundle", "workspace", "dock_actions"])
-
-        # Keep Developer mode UI in sync #TODO temporary disable
-        # self.toolbar.components.get_action("developer_mode").action.setChecked(editable)
+        if self._profile_management_enabled:
+            self.toolbar.components.get_action("attach_all").action.setVisible(editable)
 
     def _on_developer_mode_toggled(self, checked: bool) -> None:
         """Handle developer mode checkbox toggle."""
         self._set_editable(checked)
-
-    ################################################################################
-    # Adding widgets
-    ################################################################################
-    @SafeSlot(popup_error=True)
-    def new(
-        self,
-        widget: BECWidget | str,
-        closable: bool = True,
-        floatable: bool = True,
-        movable: bool = True,
-        start_floating: bool = False,
-        where: Literal["left", "right", "top", "bottom"] | None = None,
-        **kwargs,
-    ) -> BECWidget:
-        """
-        Create a new widget (or reuse an instance) and add it as a dock.
-
-        Args:
-            widget: Widget instance or a string widget type (factory-created).
-            closable: Whether the dock is closable.
-            floatable: Whether the dock is floatable.
-            movable: Whether the dock is movable.
-            start_floating: Start the dock in a floating state.
-            where: Preferred area to add the dock: "left" | "right" | "top" | "bottom".
-                   If None, uses the instance default passed at construction time.
-            **kwargs: The keyword arguments for the widget.
-        Returns:
-            The widget instance.
-        """
-        target_area = self._area_from_where(where)
-
-        # 1) Instantiate or look up the widget
-        if isinstance(widget, str):
-            widget = cast(
-                BECWidget, widget_handler.create_widget(widget_type=widget, parent=self, **kwargs)
-            )
-            widget.name_established.connect(
-                lambda: self._create_dock_with_name(
-                    widget=widget,
-                    closable=closable,
-                    floatable=floatable,
-                    movable=movable,
-                    start_floating=start_floating,
-                    area=target_area,
-                )
-            )
-            return widget
-
-        # If a widget instance is passed, dock it immediately
-        self._create_dock_with_name(
-            widget=widget,
-            closable=closable,
-            floatable=floatable,
-            movable=movable,
-            start_floating=start_floating,
-            area=target_area,
-        )
-        return widget
-
-    def _create_dock_with_name(
-        self,
-        widget: BECWidget,
-        closable: bool = True,
-        floatable: bool = False,
-        movable: bool = True,
-        start_floating: bool = False,
-        area: QtAds.DockWidgetArea | None = None,
-    ):
-        target_area = area or self._area_from_where(None)
-        self._make_dock(
-            widget,
-            closable=closable,
-            floatable=floatable,
-            movable=movable,
-            area=target_area,
-            start_floating=start_floating,
-        )
-        self.dock_manager.setFocus()
-
-    ################################################################################
-    # Dock Management
-    ################################################################################
-
-    def dock_map(self) -> dict[str, CDockWidget]:
-        """
-        Return the dock widgets map as dictionary with names as keys and dock widgets as values.
-
-        Returns:
-            dict: A dictionary mapping widget names to their corresponding dock widgets.
-        """
-        return self.dock_manager.dockWidgetsMap()
-
-    def dock_list(self) -> list[CDockWidget]:
-        """
-        Return the list of dock widgets.
-
-        Returns:
-            list: A list of all dock widgets in the dock area.
-        """
-        return self.dock_manager.dockWidgets()
-
-    def widget_map(self) -> dict[str, QWidget]:
-        """
-        Return a dictionary mapping widget names to their corresponding BECWidget instances.
-
-        Returns:
-            dict: A dictionary mapping widget names to BECWidget instances.
-        """
-        return {dock.objectName(): dock.widget() for dock in self.dock_list()}
-
-    def widget_list(self) -> list[QWidget]:
-        """
-        Return a list of all BECWidget instances in the dock area.
-
-        Returns:
-            list: A list of all BECWidget instances in the dock area.
-        """
-        return [dock.widget() for dock in self.dock_list() if isinstance(dock.widget(), QWidget)]
-
-    @SafeSlot()
-    def attach_all(self):
-        """
-        Return all floating docks to the dock area, preserving tab groups within each floating container.
-        """
-        for container in self.dock_manager.floatingWidgets():
-            docks = container.dockWidgets()
-            if not docks:
-                continue
-            target = docks[0]
-            self.dock_manager.addDockWidget(QtAds.DockWidgetArea.RightDockWidgetArea, target)
-            for d in docks[1:]:
-                self.dock_manager.addDockWidgetTab(
-                    QtAds.DockWidgetArea.RightDockWidgetArea, d, target
-                )
-
-    @SafeSlot()
-    def delete_all(self):
-        """Delete all docks and widgets."""
-        for dock in list(self.dock_manager.dockWidgets()):
-            self._delete_dock(dock)
 
     ################################################################################
     # Workspace Management
@@ -666,16 +493,49 @@ class AdvancedDockArea(BECWidget, QWidget):
         """
         self._locked = value
         self._apply_dock_lock(value)
-        self.toolbar.components.get_action("save_workspace").action.setVisible(not value)
+        if self._profile_management_enabled:
+            self.toolbar.components.get_action("save_workspace").action.setVisible(not value)
         for dock in self.dock_list():
             dock.setting_action.setVisible(not value)
 
+    def _resolve_profile_namespace(self) -> str | None:
+        if self._profile_namespace_resolved is not _PROFILE_NAMESPACE_UNSET:
+            return self._profile_namespace_resolved  # type: ignore[return-value]
+
+        candidate = self._profile_namespace_hint
+        if self._profile_namespace_auto:
+            if not candidate:
+                obj_name = self.objectName()
+                candidate = obj_name if obj_name else None
+            if not candidate:
+                title = self.windowTitle()
+                candidate = title if title and title.strip() else None
+            if not candidate:
+                mode_name = getattr(self, "_mode", None) or "creator"
+                candidate = f"{mode_name}_workspace"
+            if not candidate:
+                candidate = self.__class__.__name__
+
+        resolved = sanitize_namespace(candidate) if candidate else None
+        if not resolved:
+            resolved = "general"
+        self._profile_namespace_resolved = resolved  # type: ignore[assignment]
+        return resolved
+
+    @property
+    def profile_namespace(self) -> str | None:
+        """Namespace used to scope user/default profile files for this dock area."""
+        return self._resolve_profile_namespace()
+
+    def _active_profile_name_or_default(self) -> str:
+        name = getattr(self, "_current_profile_name", None)
+        if not name:
+            name = "general"
+            self._current_profile_name = name
+        return name
+
     def _write_snapshot_to_settings(self, settings, save_preview: bool = True) -> None:
-        settings.setValue(SETTINGS_KEYS["geom"], self.saveGeometry())
-        settings.setValue(SETTINGS_KEYS["state"], b"")
-        settings.setValue(SETTINGS_KEYS["ads_state"], self.dock_manager.saveState())
-        self.dock_manager.addPerspective(self.windowTitle())
-        self.dock_manager.savePerspectives(settings)
+        self.save_to_settings(settings, keys=PROFILE_STATE_KEYS)
         self.state_manager.save_state(settings=settings)
         write_manifest(settings, self.dock_list())
         if save_preview:
@@ -702,11 +562,13 @@ class AdvancedDockArea(BECWidget, QWidget):
             name (str | None): The name of the profile to save. If None, prompts the user.
         """
 
+        namespace = self.profile_namespace
+
         def _profile_exists(profile_name: str) -> bool:
-            return profile_origin(profile_name) != "unknown"
+            return profile_origin(profile_name, namespace=namespace) != "unknown"
 
         initial_name = name or ""
-        quickselect_default = is_quick_select(name) if name else False
+        quickselect_default = is_quick_select(name, namespace=namespace) if name else False
 
         current_profile = getattr(self, "_current_profile_name", "") or ""
         dialog = SaveProfileDialog(
@@ -714,8 +576,8 @@ class AdvancedDockArea(BECWidget, QWidget):
             current_name=initial_name,
             current_profile_name=current_profile,
             name_exists=_profile_exists,
-            profile_origin=profile_origin,
-            origin_label=profile_origin_display,
+            profile_origin=lambda n: profile_origin(n, namespace=namespace),
+            origin_label=lambda n: profile_origin_display(n, namespace=namespace),
             quick_select_checked=quickselect_default,
         )
         if dialog.exec() != QDialog.Accepted:
@@ -723,7 +585,7 @@ class AdvancedDockArea(BECWidget, QWidget):
 
         name = dialog.get_profile_name()
         quickselect = dialog.is_quick_select()
-        origin_before_save = profile_origin(name)
+        origin_before_save = profile_origin(name, namespace=namespace)
         overwrite_default = dialog.overwrite_existing and origin_before_save == "settings"
         # Display saving placeholder
         workspace_combo = self.toolbar.components.get_action("workspace_combo").widget
@@ -733,9 +595,11 @@ class AdvancedDockArea(BECWidget, QWidget):
         workspace_combo.blockSignals(False)
 
         # Create or update default copy controlled by overwrite flag
-        should_write_default = overwrite_default or not os.path.exists(default_profile_path(name))
+        should_write_default = overwrite_default or not any(
+            os.path.exists(path) for path in default_profile_candidates(name, namespace)
+        )
         if should_write_default:
-            ds = open_default_settings(name)
+            ds = open_default_settings(name, namespace=namespace)
             self._write_snapshot_to_settings(ds)
             if not ds.value(SETTINGS_KEYS["created_at"], ""):
                 ds.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
@@ -744,7 +608,7 @@ class AdvancedDockArea(BECWidget, QWidget):
                 ds.setValue(SETTINGS_KEYS["is_quick_select"], False)
 
         # Always (over)write the user copy
-        us = open_user_settings(name)
+        us = open_user_settings(name, namespace=namespace)
         self._write_snapshot_to_settings(us)
         if not us.value(SETTINGS_KEYS["created_at"], ""):
             us.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
@@ -754,7 +618,7 @@ class AdvancedDockArea(BECWidget, QWidget):
 
         # set quick select
         if quickselect:
-            set_quick_select(name, quickselect)
+            set_quick_select(name, quickselect, namespace=namespace)
 
         self._refresh_workspace_list()
         if current_profile and current_profile != name and not dialog.overwrite_existing:
@@ -764,7 +628,7 @@ class AdvancedDockArea(BECWidget, QWidget):
         workspace_combo.setCurrentText(name)
         self._current_profile_name = name
         self.profile_changed.emit(name)
-        set_last_profile(name)
+        set_last_profile(name, namespace=namespace)
         combo = self.toolbar.components.get_action("workspace_combo").widget
         combo.refresh_profiles(active_profile=name)
 
@@ -782,21 +646,22 @@ class AdvancedDockArea(BECWidget, QWidget):
             if not ok or not name:
                 return
 
+        namespace = self.profile_namespace
         prev_name = getattr(self, "_current_profile_name", None)
         skip_pair = getattr(self, "_pending_autosave_skip", None)
         if prev_name and prev_name != name:
             if skip_pair and skip_pair == (prev_name, name):
                 self._pending_autosave_skip = None
             else:
-                us_prev = open_user_settings(prev_name)
-                self._write_snapshot_to_settings(us_prev, save_preview=False)
+                us_prev = open_user_settings(prev_name, namespace=namespace)
+                self._write_snapshot_to_settings(us_prev, save_preview=True)
 
-        # Choose source settings: user first, else default
-        if os.path.exists(user_profile_path(name)):
-            settings = open_user_settings(name)
-        elif os.path.exists(default_profile_path(name)):
-            settings = open_default_settings(name)
-        else:
+        settings = None
+        if any(os.path.exists(path) for path in user_profile_candidates(name, namespace)):
+            settings = open_user_settings(name, namespace=namespace)
+        elif any(os.path.exists(path) for path in default_profile_candidates(name, namespace)):
+            settings = open_default_settings(name, namespace=namespace)
+        if settings is None:
             QMessageBox.warning(self, "Profile not found", f"Profile '{name}' not found.")
             return
 
@@ -815,19 +680,13 @@ class AdvancedDockArea(BECWidget, QWidget):
                     area=QtAds.DockWidgetArea.RightDockWidgetArea,
                 )
 
-        geom = settings.value(SETTINGS_KEYS["geom"])
-        if geom:
-            self.restoreGeometry(geom)
-        dock_state = settings.value(SETTINGS_KEYS["ads_state"])
-        if dock_state:
-            self.dock_manager.restoreState(dock_state)
-        self.dock_manager.loadPerspectives(settings)
+        self.load_from_settings(settings, keys=PROFILE_STATE_KEYS)
         self.state_manager.load_state(settings=settings)
         self._set_editable(self._editable)
 
         self._current_profile_name = name
         self.profile_changed.emit(name)
-        set_last_profile(name)
+        set_last_profile(name, namespace=namespace)
         combo = self.toolbar.components.get_action("workspace_combo").widget
         combo.refresh_profiles(active_profile=name)
 
@@ -844,6 +703,7 @@ class AdvancedDockArea(BECWidget, QWidget):
         target = name or getattr(self, "_current_profile_name", None)
         if not target:
             return
+        namespace = self.profile_namespace
 
         current_pixmap = None
         if self.isVisible():
@@ -851,13 +711,13 @@ class AdvancedDockArea(BECWidget, QWidget):
             ba = bytes(self.screenshot_bytes())
             current_pixmap.loadFromData(ba)
         if current_pixmap is None or current_pixmap.isNull():
-            current_pixmap = load_user_profile_screenshot(target)
-        default_pixmap = load_default_profile_screenshot(target)
+            current_pixmap = load_user_profile_screenshot(target, namespace=namespace)
+        default_pixmap = load_default_profile_screenshot(target, namespace=namespace)
 
         if not RestoreProfileDialog.confirm(self, current_pixmap, default_pixmap):
             return
 
-        restore_user_from_default(target)
+        restore_user_from_default(target, namespace=namespace)
         self.delete_all()
         self.load_profile(target)
 
@@ -869,6 +729,13 @@ class AdvancedDockArea(BECWidget, QWidget):
         combo = self.toolbar.components.get_action("workspace_combo").widget
         name = combo.currentText()
         if not name:
+            return
+
+        # Protect bundled/module/plugin profiles from deletion
+        if is_profile_read_only(name, namespace=self.profile_namespace):
+            QMessageBox.information(
+                self, "Delete Profile", f"Profile '{name}' is read-only and cannot be deleted."
+            )
             return
 
         # Confirm deletion for regular profiles
@@ -883,11 +750,8 @@ class AdvancedDockArea(BECWidget, QWidget):
         if reply != QMessageBox.Yes:
             return
 
-        file_path = user_profile_path(name)
-        try:
-            os.remove(file_path)
-        except FileNotFoundError:
-            return
+        namespace = self.profile_namespace
+        delete_profile_files(name, namespace=namespace)
         self._refresh_workspace_list()
 
     def _refresh_workspace_list(self):
@@ -896,17 +760,16 @@ class AdvancedDockArea(BECWidget, QWidget):
         """
         combo = self.toolbar.components.get_action("workspace_combo").widget
         active_profile = getattr(self, "_current_profile_name", None)
+        namespace = self.profile_namespace
+        if hasattr(combo, "set_quick_profile_provider"):
+            combo.set_quick_profile_provider(lambda ns=namespace: list_quick_profiles(namespace=ns))
         if hasattr(combo, "refresh_profiles"):
             combo.refresh_profiles(active_profile)
         else:
             # Fallback for regular QComboBox
-            from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
-                list_quick_profiles,
-            )
-
             combo.blockSignals(True)
             combo.clear()
-            quick_profiles = list_quick_profiles()
+            quick_profiles = list_quick_profiles(namespace=namespace)
             items = list(quick_profiles)
             if active_profile and active_profile not in items:
                 items.insert(0, active_profile)
@@ -968,46 +831,70 @@ class AdvancedDockArea(BECWidget, QWidget):
 
     @mode.setter
     def mode(self, new_mode: str):
-        if new_mode not in ["plot", "device", "utils", "developer", "user"]:
+        allowed_modes = ["plot", "device", "utils", "user", "creator"]
+        if new_mode not in allowed_modes:
             raise ValueError(f"Invalid mode: {new_mode}")
         self._mode = new_mode
         self.mode_changed.emit(new_mode)
+        self._apply_toolbar_layout()
 
-        # Update toolbar visibility based on mode
-        if new_mode == "user":
-            # User mode: show only essential tools
-            self.toolbar.show_bundles(["spacer_bundle", "workspace", "dock_actions"])
-        elif new_mode == "developer":
-            # Developer mode: show all tools (use menu bundles)
-            self.toolbar.show_bundles(
-                [
-                    "menu_plots",
-                    "menu_devices",
-                    "menu_utils",
-                    "spacer_bundle",
-                    "workspace",
-                    "dock_actions",
-                ]
-            )
-        elif new_mode in ["plot", "device", "utils"]:
-            # Specific modes: show flat toolbar for that category
-            bundle_name = f"flat_{new_mode}s" if new_mode != "utils" else "flat_utils"
-            self.toolbar.show_bundles([bundle_name])
-            # self.toolbar.show_bundles([bundle_name, "spacer_bundle", "workspace", "dock_actions"])
+    def _apply_toolbar_layout(self) -> None:
+        mode_key = getattr(self, "_mode", "creator")
+        if mode_key == "user":
+            bundles = ["spacer_bundle", "workspace", "dock_actions"]
+        elif mode_key == "creator":
+            bundles = [
+                "menu_plots",
+                "menu_devices",
+                "menu_utils",
+                "spacer_bundle",
+                "workspace",
+                "dock_actions",
+            ]
+        elif mode_key == "plot":
+            bundles = ["flat_plots", "spacer_bundle", "workspace", "dock_actions"]
+        elif mode_key == "device":
+            bundles = ["flat_devices", "spacer_bundle", "workspace", "dock_actions"]
+        elif mode_key == "utils":
+            bundles = ["flat_utils", "spacer_bundle", "workspace", "dock_actions"]
         else:
-            # Fallback to user mode
-            self.toolbar.show_bundles(["spacer_bundle", "workspace", "dock_actions"])
+            bundles = ["spacer_bundle", "workspace", "dock_actions"]
+
+        if not self._profile_management_enabled:
+            flat_only = [b for b in bundles if b.startswith("flat_")]
+            if not flat_only:
+                flat_only = ["flat_plots", "flat_devices", "flat_utils"]
+            bundles = flat_only
+
+        self.toolbar.show_bundles(bundles)
+
+    def prepare_for_shutdown(self) -> None:
+        """
+        Persist the current workspace snapshot while the UI is still fully visible.
+        Called by the main window before initiating widget teardown to avoid capturing
+        close-triggered visibility changes.
+        """
+        if (
+            not self._auto_save_upon_exit
+            or getattr(self, "_exit_snapshot_written", False)
+            or getattr(self, "_destroyed", False)
+        ):
+            logger.info("ADS prepare_for_shutdown: skipping (already handled or destroyed)")
+            return
+
+        name = self._active_profile_name_or_default()
+
+        namespace = self.profile_namespace
+        settings = open_user_settings(name, namespace=namespace)
+        self._write_snapshot_to_settings(settings)
+        set_last_profile(name, namespace=namespace)
+        self._exit_snapshot_written = True
 
     def cleanup(self):
         """
         Cleanup the dock area.
         """
-        # before cleanup save current profile (user copy)
-        name = getattr(self, "_current_profile_name", None)
-        if name:
-            us = open_user_settings(name)
-            self._write_snapshot_to_settings(us)
-            set_last_profile(name)
+        self.prepare_for_shutdown()
         if self.manage_dialog is not None:
             self.manage_dialog.reject()
             self.manage_dialog = None
@@ -1025,7 +912,7 @@ if __name__ == "__main__":  # pragma: no cover
     apply_theme("dark")
     dispatcher = BECDispatcher(gui_id="ads")
     window = BECMainWindowNoRPC()
-    ads = AdvancedDockArea(mode="developer", root_widget=True)
+    ads = AdvancedDockArea(mode="creator", root_widget=True, enable_profile_management=True)
     window.setCentralWidget(ads)
     window.show()
     window.resize(800, 600)

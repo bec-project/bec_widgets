@@ -5,7 +5,6 @@ from typing import Callable, Literal
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import (
-    QApplication,
     QCheckBox,
     QDialog,
     QGroupBox,
@@ -183,10 +182,10 @@ class SaveProfileDialog(QDialog):
                     "Overwriting will update both the saved profile and its restore default.\n"
                     "Do you want to continue?"
                 ),
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
             )
-            if reply != QMessageBox.Yes:
+            if reply != QMessageBox.StandardButton.Yes:
                 suggestion = self._generate_unique_name(name)
                 self._block_name_signals = True
                 self.name_edit.setText(suggestion)
@@ -206,16 +205,15 @@ class PreviewPanel(QGroupBox):
 
     def __init__(self, title: str, pixmap: QPixmap | None, parent: QWidget | None = None):
         super().__init__(title, parent)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._original: QPixmap | None = pixmap if (pixmap and not pixmap.isNull()) else None
 
         layout = QVBoxLayout(self)
-        # layout.setContentsMargins(0,0,0,0)  # leave room for group title and frame
 
         self.image_label = QLabel()
-        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.image_label.setMinimumSize(360, 240)
-        self.image_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.image_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         layout.addWidget(self.image_label, 1)
 
         if self._original:
@@ -227,6 +225,13 @@ class PreviewPanel(QGroupBox):
             )
 
     def setPixmap(self, pixmap: QPixmap | None):
+        """
+        Set the pixmap to display in the preview panel.
+
+        Args:
+            pixmap(QPixmap | None): The pixmap to display. If None or null, clears the preview.
+
+        """
         self._original = pixmap if (pixmap and not pixmap.isNull()) else None
         if self._original:
             self.image_label.setText("")
