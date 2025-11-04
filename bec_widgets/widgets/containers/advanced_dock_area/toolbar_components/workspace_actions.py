@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Callable
+
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QFont
 from qtpy.QtWidgets import QComboBox, QSizePolicy
@@ -17,6 +19,10 @@ class ProfileComboBox(QComboBox):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self._quick_provider: Callable[[], list[str]] = list_quick_profiles
+
+    def set_quick_profile_provider(self, provider: Callable[[], list[str]]) -> None:
+        self._quick_provider = provider
 
     def refresh_profiles(self, active_profile: str | None = None):
         """
@@ -30,7 +36,7 @@ class ProfileComboBox(QComboBox):
         self.blockSignals(True)
         self.clear()
 
-        quick_profiles = list_quick_profiles()
+        quick_profiles = self._quick_provider()
         quick_set = set(quick_profiles)
 
         items = list(quick_profiles)
@@ -76,7 +82,7 @@ class ProfileComboBox(QComboBox):
             self.setToolTip("")
 
 
-def workspace_bundle(components: ToolbarComponents) -> ToolbarBundle:
+def workspace_bundle(components: ToolbarComponents, enable_tools: bool = True) -> ToolbarBundle:
     """
     Creates a workspace toolbar bundle for AdvancedDockArea.
 
@@ -88,9 +94,9 @@ def workspace_bundle(components: ToolbarComponents) -> ToolbarBundle:
     """
     # Workspace combo
     combo = ProfileComboBox(parent=components.toolbar)
+    combo.setVisible(enable_tools)
     components.add_safe("workspace_combo", WidgetAction(widget=combo, adjust_size=False))
 
-    # Save the current workspace icon
     components.add_safe(
         "save_workspace",
         MaterialIconAction(
@@ -100,7 +106,8 @@ def workspace_bundle(components: ToolbarComponents) -> ToolbarBundle:
             parent=components.toolbar,
         ),
     )
-    # Delete workspace icon
+    components.get_action("save_workspace").action.setVisible(enable_tools)
+
     components.add_safe(
         "reset_default_workspace",
         MaterialIconAction(
@@ -110,17 +117,15 @@ def workspace_bundle(components: ToolbarComponents) -> ToolbarBundle:
             parent=components.toolbar,
         ),
     )
-    # Workspace Manager icon
+    components.get_action("reset_default_workspace").action.setVisible(enable_tools)
+
     components.add_safe(
         "manage_workspaces",
         MaterialIconAction(
-            icon_name="manage_accounts",
-            tooltip="Manage",
-            checkable=True,
-            parent=components.toolbar,
-            label_text="Manage",
+            icon_name="manage_accounts", tooltip="Manage", checkable=True, parent=components.toolbar
         ),
     )
+    components.get_action("manage_workspaces").action.setVisible(enable_tools)
 
     bundle = ToolbarBundle("workspace", components)
     bundle.add_action("workspace_combo")
@@ -147,35 +152,40 @@ class WorkspaceConnection(BundleConnection):
     def connect(self):
         self._connected = True
         # Connect the action to the target widget's method
-        self.components.get_action("save_workspace").action.triggered.connect(
-            self.target_widget.save_profile
-        )
+        save_action = self.components.get_action("save_workspace").action
+        if save_action.isVisible():
+            save_action.triggered.connect(self.target_widget.save_profile)
+
         self.components.get_action("workspace_combo").widget.currentTextChanged.connect(
             self.target_widget.load_profile
         )
-        self.components.get_action("reset_default_workspace").action.triggered.connect(
-            self._reset_workspace_to_default
-        )
-        self.components.get_action("manage_workspaces").action.triggered.connect(
-            self.target_widget.show_workspace_manager
-        )
+
+        reset_action = self.components.get_action("reset_default_workspace").action
+        if reset_action.isVisible():
+            reset_action.triggered.connect(self._reset_workspace_to_default)
+
+        manage_action = self.components.get_action("manage_workspaces").action
+        if manage_action.isVisible():
+            manage_action.triggered.connect(self.target_widget.show_workspace_manager)
 
     def disconnect(self):
         if not self._connected:
             return
         # Disconnect the action from the target widget's method
-        self.components.get_action("save_workspace").action.triggered.disconnect(
-            self.target_widget.save_profile
-        )
+        save_action = self.components.get_action("save_workspace").action
+        if save_action.isVisible():
+            save_action.triggered.disconnect(self.target_widget.save_profile)
         self.components.get_action("workspace_combo").widget.currentTextChanged.disconnect(
             self.target_widget.load_profile
         )
-        self.components.get_action("reset_default_workspace").action.triggered.disconnect(
-            self._reset_workspace_to_default
-        )
-        self.components.get_action("manage_workspaces").action.triggered.disconnect(
-            self.target_widget.show_workspace_manager
-        )
+
+        reset_action = self.components.get_action("reset_default_workspace").action
+        if reset_action.isVisible():
+            reset_action.triggered.disconnect(self._reset_workspace_to_default)
+
+        manage_action = self.components.get_action("manage_workspaces").action
+        if manage_action.isVisible():
+            manage_action.triggered.disconnect(self.target_widget.show_workspace_manager)
         self._connected = False
 
     @SafeSlot()
