@@ -3,7 +3,7 @@ from __future__ import annotations
 from bec_qthemes import material_icon
 from qtpy.QtCore import QMimeData, Qt, Signal
 from qtpy.QtGui import QDrag
-from qtpy.QtWidgets import QHBoxLayout, QPushButton, QSizePolicy, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QHBoxLayout, QPushButton, QSizePolicy, QToolButton, QVBoxLayout, QWidget
 
 from bec_widgets.utils.colors import get_theme_palette
 from bec_widgets.utils.error_popups import SafeProperty
@@ -66,13 +66,16 @@ class CollapsibleSection(QWidget):
         header_layout.addWidget(self.header_button)
         header_layout.addStretch()
 
-        self.header_add_button = QPushButton()
+        # Add button in header (icon-only)
+        self.header_add_button = QToolButton()
         self.header_add_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        self.header_add_button.setFixedSize(20, 20)
+        self.header_add_button.setFixedSize(28, 28)
         self.header_add_button.setToolTip("Add item")
         self.header_add_button.setVisible(show_add_button)
+        self.header_add_button.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self.header_add_button.setAutoRaise(True)
 
-        self.header_add_button.setIcon(material_icon("add", size=(20, 20)))
+        self.header_add_button.setIcon(material_icon("add", size=(28, 28)))
         header_layout.addWidget(self.header_add_button)
 
         self.main_layout.addLayout(header_layout)
