@@ -1,7 +1,7 @@
 from qtpy.QtWidgets import QWidget
 
+from bec_widgets.applications.views.developer_view.developer_widget import DeveloperWidget
 from bec_widgets.applications.views.view import ViewBase
-from bec_widgets.examples.developer_view.developer_widget import DeveloperWidget
 
 
 class DeveloperView(ViewBase):

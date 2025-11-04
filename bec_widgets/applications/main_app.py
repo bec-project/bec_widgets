@@ -3,11 +3,11 @@ from qtpy.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QWidget
 from bec_widgets.applications.navigation_centre.reveal_animator import ANIMATION_DURATION
 from bec_widgets.applications.navigation_centre.side_bar import SideBar
 from bec_widgets.applications.navigation_centre.side_bar_components import NavigationItem
+from bec_widgets.applications.views.developer_view.developer_view import DeveloperView
 from bec_widgets.applications.views.device_manager_view.device_manager_widget import (
     DeviceManagerWidget,
 )
 from bec_widgets.applications.views.view import ViewBase, WaveformViewInline, WaveformViewPopup
-from bec_widgets.examples.developer_view.developer_view import DeveloperView
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
