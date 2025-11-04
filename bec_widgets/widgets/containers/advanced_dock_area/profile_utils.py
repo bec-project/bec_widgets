@@ -10,11 +10,13 @@ Policy:
 from __future__ import annotations
 
 import os
+import re
 import shutil
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
+from bec_lib import bec_logger
 from bec_lib.client import BECClient
 from bec_lib.plugin_helper import plugin_package_name, plugin_repo_path
 from pydantic import BaseModel, Field
@@ -22,18 +24,32 @@ from PySide6QtAds import CDockWidget
 from qtpy.QtCore import QByteArray, QDateTime, QSettings, Qt
 from qtpy.QtGui import QPixmap
 
+logger = bec_logger.logger
+
 MODULE_PATH = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 ProfileOrigin = Literal["module", "plugin", "settings", "unknown"]
 
 
 def module_profiles_dir() -> str:
-    """Return the read-only module-bundled profiles directory (no writes here)."""
+    """
+    Return the built-in AdvancedDockArea profiles directory bundled with the module.
+
+    Returns:
+        str: Absolute path of the read-only module profiles directory.
+    """
     return os.path.join(MODULE_PATH, "containers", "advanced_dock_area", "profiles")
 
 
 @lru_cache(maxsize=1)
 def _plugin_repo_root() -> Path | None:
+    """
+    Resolve the plugin repository root path if running inside a plugin context.
+
+    Returns:
+        Path | None: Root path of the active plugin repository, or ``None`` when
+            no plugin context is detected.
+    """
     try:
         return Path(plugin_repo_path())
     except ValueError:
@@ -42,6 +58,13 @@ def _plugin_repo_root() -> Path | None:
 
 @lru_cache(maxsize=1)
 def _plugin_display_name() -> str | None:
+    """
+    Determine a user-friendly plugin name for provenance labels.
+
+    Returns:
+        str | None: Human-readable name inferred from the plugin repo or package,
+            or ``None`` if it cannot be determined.
+    """
     repo_root = _plugin_repo_root()
     if not repo_root:
         return None
@@ -57,7 +80,13 @@ def _plugin_display_name() -> str | None:
 
 @lru_cache(maxsize=1)
 def plugin_profiles_dir() -> str | None:
-    """Return the read-only plugin-bundled profiles directory if available."""
+    """
+    Locate the read-only profiles directory shipped with a beamline plugin.
+
+    Returns:
+        str | None: Directory containing bundled plugin profiles, or ``None`` if
+            no plugin profiles are available.
+    """
     repo_root = _plugin_repo_root()
     if not repo_root:
         return None
@@ -66,8 +95,8 @@ def plugin_profiles_dir() -> str | None:
     try:
         package_root = repo_root.joinpath(*plugin_package_name().split("."))
         candidates.append(package_root.joinpath("bec_widgets", "profiles"))
-    except ValueError:
-        pass
+    except ValueError as e:
+        logger.error(f"Could not determine plugin package name: {e}")
 
     for candidate in candidates:
         if candidate.is_dir():
@@ -76,7 +105,12 @@ def plugin_profiles_dir() -> str | None:
 
 
 def _settings_profiles_root() -> str:
-    """Return the writable profiles root provided by BEC client (or env fallback)."""
+    """
+    Resolve the writable profiles root provided by the BEC client.
+
+    Returns:
+        str: Absolute path to the profiles root. The directory is created if missing.
+    """
     client = BECClient()
     bec_widgets_settings = client._service_config.config.get("bec_widgets_settings")
     bec_widgets_setting_path = (
@@ -88,63 +122,282 @@ def _settings_profiles_root() -> str:
     return root
 
 
-def default_profiles_dir() -> str:
-    path = os.path.join(_settings_profiles_root(), "default")
+def sanitize_namespace(namespace: str | None) -> str | None:
+    """
+    Clean user-provided namespace labels for filesystem compatibility.
+
+    Args:
+        namespace (str | None): Arbitrary namespace identifier supplied by the caller.
+
+    Returns:
+        str | None: Sanitized namespace containing only safe characters, or ``None``
+            when the input is empty.
+    """
+    if not namespace:
+        return None
+    ns = namespace.strip()
+    if not ns:
+        return None
+    return re.sub(r"[^0-9A-Za-z._-]+", "_", ns)
+
+
+def _profiles_dir(segment: str, namespace: str | None) -> str:
+    """
+    Build (and ensure) the directory that holds profiles for a namespace segment.
+
+    Args:
+        segment (str): Either ``"user"`` or ``"default"``.
+        namespace (str | None): Optional namespace label to scope profiles.
+
+    Returns:
+        str: Absolute directory path for the requested segment/namespace pair.
+    """
+    base = os.path.join(_settings_profiles_root(), segment)
+    ns = sanitize_namespace(namespace)
+    path = os.path.join(base, ns) if ns else base
     os.makedirs(path, exist_ok=True)
     return path
 
 
-def user_profiles_dir() -> str:
-    path = os.path.join(_settings_profiles_root(), "user")
-    os.makedirs(path, exist_ok=True)
-    return path
+def _user_path_candidates(name: str, namespace: str | None) -> list[str]:
+    """
+    Generate candidate user-profile paths honoring namespace fallbacks.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None): Optional namespace label.
+
+    Returns:
+        list[str]: Ordered list of candidate user profile paths (.ini files).
+    """
+    ns = sanitize_namespace(namespace)
+    primary = os.path.join(_profiles_dir("user", ns), f"{name}.ini")
+    if not ns:
+        return [primary]
+    legacy = os.path.join(_profiles_dir("user", None), f"{name}.ini")
+    return [primary, legacy] if legacy != primary else [primary]
 
 
-def default_profile_path(name: str) -> str:
-    return os.path.join(default_profiles_dir(), f"{name}.ini")
+def _default_path_candidates(name: str, namespace: str | None) -> list[str]:
+    """
+    Generate candidate default-profile paths honoring namespace fallbacks.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None): Optional namespace label.
+
+    Returns:
+        list[str]: Ordered list of candidate default profile paths (.ini files).
+    """
+    ns = sanitize_namespace(namespace)
+    primary = os.path.join(_profiles_dir("default", ns), f"{name}.ini")
+    if not ns:
+        return [primary]
+    legacy = os.path.join(_profiles_dir("default", None), f"{name}.ini")
+    return [primary, legacy] if legacy != primary else [primary]
 
 
-def user_profile_path(name: str) -> str:
-    return os.path.join(user_profiles_dir(), f"{name}.ini")
+def default_profiles_dir(namespace: str | None = None) -> str:
+    """
+    Return the directory that stores default profiles for the namespace.
+
+    Args:
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        str: Absolute path to the default profile directory.
+    """
+    return _profiles_dir("default", namespace)
+
+
+def user_profiles_dir(namespace: str | None = None) -> str:
+    """
+    Return the directory that stores user profiles for the namespace.
+
+    Args:
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        str: Absolute path to the user profile directory.
+    """
+    return _profiles_dir("user", namespace)
+
+
+def default_profile_path(name: str, namespace: str | None = None) -> str:
+    """
+    Compute the canonical default profile path for a profile name.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        str: Absolute path to the default profile file (.ini).
+    """
+    return _default_path_candidates(name, namespace)[0]
+
+
+def user_profile_path(name: str, namespace: str | None = None) -> str:
+    """
+    Compute the canonical user profile path for a profile name.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        str: Absolute path to the user profile file (.ini).
+    """
+    return _user_path_candidates(name, namespace)[0]
+
+
+def user_profile_candidates(name: str, namespace: str | None = None) -> list[str]:
+    """
+    List all user profile path candidates for a profile name.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        list[str]: De-duplicated list of candidate user profile paths.
+    """
+    return list(dict.fromkeys(_user_path_candidates(name, namespace)))
+
+
+def default_profile_candidates(name: str, namespace: str | None = None) -> list[str]:
+    """
+    List all default profile path candidates for a profile name.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        list[str]: De-duplicated list of candidate default profile paths.
+    """
+    return list(dict.fromkeys(_default_path_candidates(name, namespace)))
+
+
+def _existing_user_settings(name: str, namespace: str | None = None) -> QSettings | None:
+    """
+    Resolve the first existing user profile settings object.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label to search. Defaults to ``None``.
+
+    Returns:
+        QSettings | None: Config for the first existing user profile candidate, or ``None``
+            when no files are present.
+    """
+    for path in user_profile_candidates(name, namespace):
+        if os.path.exists(path):
+            return QSettings(path, QSettings.IniFormat)
+    return None
+
+
+def _existing_default_settings(name: str, namespace: str | None = None) -> QSettings | None:
+    """
+    Resolve the first existing default profile settings object.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label to search. Defaults to ``None``.
+
+    Returns:
+        QSettings | None: Config for the first existing default profile candidate, or ``None``
+            when no files are present.
+    """
+    for path in default_profile_candidates(name, namespace):
+        if os.path.exists(path):
+            return QSettings(path, QSettings.IniFormat)
+    return None
 
 
 def module_profile_path(name: str) -> str:
+    """
+    Build the absolute path to a bundled module profile.
+
+    Args:
+        name (str): Profile name without extension.
+
+    Returns:
+        str: Absolute path to the module's read-only profile file.
+    """
     return os.path.join(module_profiles_dir(), f"{name}.ini")
 
 
 def plugin_profile_path(name: str) -> str | None:
+    """
+    Build the absolute path to a bundled plugin profile if available.
+
+    Args:
+        name (str): Profile name without extension.
+
+    Returns:
+        str | None: Absolute plugin profile path, or ``None`` when plugins do not
+            provide profiles.
+    """
     directory = plugin_profiles_dir()
     if not directory:
         return None
     return os.path.join(directory, f"{name}.ini")
 
 
-def profile_origin(name: str) -> ProfileOrigin:
+def profile_origin(name: str, namespace: str | None = None) -> ProfileOrigin:
     """
     Determine where a profile originates from.
 
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label to consider. Defaults to ``None``.
+
     Returns:
-        ProfileOrigin: "module" for bundled BEC profiles, "plugin" for beamline plugin bundles,
-        "settings" for user-defined ones, and "unknown" if no backing files are found.
+        ProfileOrigin: ``"module"`` for bundled BEC profiles, ``"plugin"`` for beamline
+            plugin bundles, ``"settings"`` for writable copies, and ``"unknown"`` when
+            no backing files are found.
     """
     if os.path.exists(module_profile_path(name)):
         return "module"
     plugin_path = plugin_profile_path(name)
     if plugin_path and os.path.exists(plugin_path):
         return "plugin"
-    if os.path.exists(user_profile_path(name)) or os.path.exists(default_profile_path(name)):
-        return "settings"
+    for path in user_profile_candidates(name, namespace) + default_profile_candidates(
+        name, namespace
+    ):
+        if os.path.exists(path):
+            return "settings"
     return "unknown"
 
 
-def is_profile_read_only(name: str) -> bool:
-    """Return True when the profile originates from bundled module or plugin directories."""
-    return profile_origin(name) in {"module", "plugin"}
+def is_profile_read_only(name: str, namespace: str | None = None) -> bool:
+    """
+    Check whether a profile is read-only because it originates from bundles.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label to consider. Defaults to ``None``.
+
+    Returns:
+        bool: ``True`` if the profile originates from module or plugin bundles.
+    """
+    return profile_origin(name, namespace) in {"module", "plugin"}
 
 
-def profile_origin_display(name: str) -> str | None:
-    """Return a human-readable label for the profile's origin."""
-    origin = profile_origin(name)
+def profile_origin_display(name: str, namespace: str | None = None) -> str | None:
+    """
+    Build a user-facing label describing a profile's origin.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label to consider. Defaults to ``None``.
+
+    Returns:
+        str | None: Localized display label such as ``"BEC Widgets"`` or ``"User"``,
+            or ``None`` when origin cannot be determined.
+    """
+    origin = profile_origin(name, namespace)
     if origin == "module":
         return "BEC Widgets"
     if origin == "plugin":
@@ -154,26 +407,39 @@ def profile_origin_display(name: str) -> str | None:
     return None
 
 
-def delete_profile_files(name: str) -> bool:
+def delete_profile_files(name: str, namespace: str | None = None) -> bool:
     """
     Delete the profile files from the writable settings directories.
 
-    Removes both the user and default copies (if they exist) and clears the last profile
-    metadata when applicable. Returns True when at least one file was removed.
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label scoped to the profile. Defaults
+            to ``None``.
+
+    Returns:
+        bool: ``True`` if at least one file was removed.
     """
-    if is_profile_read_only(name):
-        return False
+    read_only = is_profile_read_only(name, namespace)
 
     removed = False
-    for path in {user_profile_path(name), default_profile_path(name)}:
+    # Always allow removing user copies; keep default copies for read-only origins.
+    for path in set(user_profile_candidates(name, namespace)):
         try:
             os.remove(path)
             removed = True
         except FileNotFoundError:
             continue
 
-    if removed and get_last_profile() == name:
-        set_last_profile(None)
+    if not read_only:
+        for path in set(default_profile_candidates(name, namespace)):
+            try:
+                os.remove(path)
+                removed = True
+            except FileNotFoundError:
+                continue
+
+    if removed and get_last_profile(namespace) == name:
+        set_last_profile(None, namespace)
 
     return removed
 
@@ -191,12 +457,32 @@ SETTINGS_KEYS = {
 }
 
 
-def list_profiles() -> list[str]:
-    # Collect profiles from writable settings (default + user)
-    defaults = {
-        os.path.splitext(f)[0] for f in os.listdir(default_profiles_dir()) if f.endswith(".ini")
-    }
-    users = {os.path.splitext(f)[0] for f in os.listdir(user_profiles_dir()) if f.endswith(".ini")}
+def list_profiles(namespace: str | None = None) -> list[str]:
+    """
+    Enumerate all known profile names, syncing bundled defaults when missing locally.
+
+    Args:
+        namespace (str | None, optional): Namespace label scoped to the profile set.
+            Defaults to ``None``.
+
+    Returns:
+        list[str]: Sorted unique profile names.
+    """
+    ns = sanitize_namespace(namespace)
+
+    def _collect_from(directory: str) -> set[str]:
+        if not os.path.isdir(directory):
+            return set()
+        return {os.path.splitext(f)[0] for f in os.listdir(directory) if f.endswith(".ini")}
+
+    settings_dirs = {default_profiles_dir(namespace), user_profiles_dir(namespace)}
+    if ns:
+        settings_dirs.add(default_profiles_dir(None))
+        settings_dirs.add(user_profiles_dir(None))
+
+    settings_names: set[str] = set()
+    for directory in settings_dirs:
+        settings_names |= _collect_from(directory)
 
     # Also consider read-only defaults from core module and beamline plugin repositories
     read_only_sources: dict[str, tuple[str, str]] = {}
@@ -214,62 +500,127 @@ def list_profiles() -> list[str]:
             read_only_sources.setdefault(name, (origin, os.path.join(directory, filename)))
 
     for name, (_origin, src) in sorted(read_only_sources.items()):
-        # Ensure a copy in the settings default directory so existing code paths work unchanged
-        dst_default = default_profile_path(name)
+        # Ensure a copy in the namespace-specific settings default directory
+        dst_default = default_profile_path(name, namespace)
         if not os.path.exists(dst_default):
             os.makedirs(os.path.dirname(dst_default), exist_ok=True)
             shutil.copyfile(src, dst_default)
         # Ensure a user copy exists to allow edits in the writable settings area
-        dst_user = user_profile_path(name)
+        dst_user = user_profile_path(name, namespace)
         if not os.path.exists(dst_user):
             os.makedirs(os.path.dirname(dst_user), exist_ok=True)
             shutil.copyfile(src, dst_user)
-            # Minimal metadata touch-up to align with existing expectations
-            s = open_user_settings(name)
-            if not s.value(SETTINGS_KEYS["created_at"], ""):
+            s = open_user_settings(name, namespace)
+            if s.value(SETTINGS_KEYS["created_at"], "") == "":
                 s.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
 
-    defaults |= set(read_only_sources.keys())
-    users |= set(read_only_sources.keys())
+    settings_names |= set(read_only_sources.keys())
 
     # Return union of all discovered names
-    return sorted(defaults | users)
+    return sorted(settings_names)
 
 
-def open_default_settings(name: str) -> QSettings:
-    return QSettings(default_profile_path(name), QSettings.IniFormat)
+def open_default_settings(name: str, namespace: str | None = None) -> QSettings:
+    """
+    Open (and create if necessary) the default profile settings file.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        QSettings: Settings instance targeting the default profile file.
+    """
+    return QSettings(default_profile_path(name, namespace), QSettings.IniFormat)
 
 
-def open_user_settings(name: str) -> QSettings:
-    return QSettings(user_profile_path(name), QSettings.IniFormat)
+def open_user_settings(name: str, namespace: str | None = None) -> QSettings:
+    """
+    Open (and create if necessary) the user profile settings file.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        QSettings: Settings instance targeting the user profile file.
+    """
+    return QSettings(user_profile_path(name, namespace), QSettings.IniFormat)
 
 
 def _app_settings() -> QSettings:
-    """Return app-wide settings file for AdvancedDockArea metadata."""
+    """
+    Access the application-wide metadata settings file for dock profiles.
+
+    Returns:
+        QSettings: Handle to the ``_meta.ini`` metadata store under the profiles root.
+    """
     return QSettings(os.path.join(_settings_profiles_root(), "_meta.ini"), QSettings.IniFormat)
 
 
-def get_last_profile() -> str | None:
-    """Return the last-used profile name if stored, else None."""
+def _last_profile_key(namespace: str | None) -> str:
+    """
+    Build the QSettings key used to store the last profile per namespace.
+
+    Args:
+        namespace (str | None): Namespace label.
+
+    Returns:
+        str: Scoped key string.
+    """
+    ns = sanitize_namespace(namespace)
+    key = SETTINGS_KEYS["last_profile"]
+    return f"{key}/{ns}" if ns else key
+
+
+def get_last_profile(namespace: str | None = None) -> str | None:
+    """
+    Retrieve the last-used profile name persisted in app settings.
+
+    Args:
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        str | None: Profile name or ``None`` if none has been stored.
+    """
     s = _app_settings()
-    name = s.value(SETTINGS_KEYS["last_profile"], "", type=str)
+    name = s.value(_last_profile_key(namespace), "", type=str)
     return name or None
 
 
-def set_last_profile(name: str | None) -> None:
-    """Persist the last-used profile name (or clear it if None)."""
+def set_last_profile(name: str | None, namespace: str | None = None) -> None:
+    """
+    Persist the last-used profile name (or clear the value when ``None``).
+
+    Args:
+        name (str | None): Profile name to store.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+    """
     s = _app_settings()
     if name:
-        s.setValue(SETTINGS_KEYS["last_profile"], name)
+        s.setValue(_last_profile_key(namespace), name)
     else:
-        s.remove(SETTINGS_KEYS["last_profile"])
+        s.remove(_last_profile_key(namespace))
 
 
 def now_iso_utc() -> str:
+    """
+    Return the current UTC timestamp formatted in ISO 8601.
+
+    Returns:
+        str: UTC timestamp string (e.g., ``"2024-06-05T12:34:56Z"``).
+    """
     return QDateTime.currentDateTimeUtc().toString(Qt.ISODate)
 
 
 def write_manifest(settings: QSettings, docks: list[CDockWidget]) -> None:
+    """
+    Write the manifest of dock widgets to settings.
+
+    Args:
+        settings(QSettings): Settings object to write to.
+        docks(list[CDockWidget]): List of dock widgets to serialize.
+    """
     settings.beginWriteArray(SETTINGS_KEYS["manifest"], len(docks))
     for i, dock in enumerate(docks):
         settings.setArrayIndex(i)
@@ -283,6 +634,15 @@ def write_manifest(settings: QSettings, docks: list[CDockWidget]) -> None:
 
 
 def read_manifest(settings: QSettings) -> list[dict]:
+    """
+    Read the manifest of dock widgets from settings.
+
+    Args:
+        settings(QSettings): Settings object to read from.
+
+    Returns:
+        list[dict]: List of dock widget metadata dictionaries.
+    """
     items: list[dict] = []
     count = settings.beginReadArray(SETTINGS_KEYS["manifest"])
     for i in range(count):
@@ -300,47 +660,88 @@ def read_manifest(settings: QSettings) -> list[dict]:
     return items
 
 
-def restore_user_from_default(name: str) -> None:
-    """Overwrite the user profile with the default baseline (keep default intact)."""
-    src = default_profile_path(name)
-    dst = user_profile_path(name)
-    if not os.path.exists(src):
+def restore_user_from_default(name: str, namespace: str | None = None) -> None:
+    """
+    Copy the default profile to the user profile, preserving quick-select flag.
+
+    Args:
+        name(str): Profile name without extension.
+        namespace(str | None, optional): Namespace label. Defaults to ``None``.
+    """
+    src = None
+    for candidate in default_profile_candidates(name, namespace):
+        if os.path.exists(candidate):
+            src = candidate
+            break
+    if not src:
         return
-    preserve_quick_select = is_quick_select(name)
+    dst = user_profile_path(name, namespace)
+    preserve_quick_select = is_quick_select(name, namespace)
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     shutil.copyfile(src, dst)
-    s = open_user_settings(name)
+    s = open_user_settings(name, namespace)
     if not s.value(SETTINGS_KEYS["created_at"], ""):
         s.setValue(SETTINGS_KEYS["created_at"], now_iso_utc())
     if preserve_quick_select:
         s.setValue(SETTINGS_KEYS["is_quick_select"], True)
 
 
-def is_quick_select(name: str) -> bool:
-    """Return True if profile is marked to appear in quick-select combo."""
-    s = (
-        open_user_settings(name)
-        if os.path.exists(user_profile_path(name))
-        else (open_default_settings(name) if os.path.exists(default_profile_path(name)) else None)
-    )
+def is_quick_select(name: str, namespace: str | None = None) -> bool:
+    """
+    Return True if profile is marked to appear in quick-select combo.
+
+    Args:
+        name(str): Profile name without extension.
+        namespace(str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        bool: True if quick-select is enabled for the profile.
+    """
+    s = _existing_user_settings(name, namespace)
+    if s is None:
+        s = _existing_default_settings(name, namespace)
     if s is None:
         return False
     return s.value(SETTINGS_KEYS["is_quick_select"], False, type=bool)
 
 
-def set_quick_select(name: str, enabled: bool) -> None:
-    """Set/unset the quick-select flag on the USER copy (creates it if missing)."""
-    s = open_user_settings(name)
+def set_quick_select(name: str, enabled: bool, namespace: str | None = None) -> None:
+    """
+    Set or clear the quick-select flag for a profile.
+
+    Args:
+        name(str): Profile name without extension.
+        enabled(bool): True to enable quick-select, False to disable.
+        namespace(str | None, optional): Namespace label. Defaults to ``None``.
+    """
+    s = open_user_settings(name, namespace)
     s.setValue(SETTINGS_KEYS["is_quick_select"], bool(enabled))
 
 
-def list_quick_profiles() -> list[str]:
-    """List only profiles that have quick-select enabled (user wins over default)."""
-    names = list_profiles()
-    return [n for n in names if is_quick_select(n)]
+def list_quick_profiles(namespace: str | None = None) -> list[str]:
+    """
+    List only profiles that have quick-select enabled (user wins over default).
+
+    Args:
+        namespace(str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        list[str]: Sorted list of profile names with quick-select enabled.
+    """
+    names = list_profiles(namespace)
+    return [n for n in names if is_quick_select(n, namespace)]
 
 
 def _file_modified_iso(path: str) -> str:
+    """
+    Get the file modification time as an ISO 8601 UTC string.
+
+    Args:
+        path(str): Path to the file.
+
+    Returns:
+        str: ISO 8601 UTC timestamp of last modification, or current time if unavailable.
+    """
     try:
         mtime = os.path.getmtime(path)
         return QDateTime.fromSecsSinceEpoch(int(mtime), Qt.UTC).toString(Qt.ISODate)
@@ -349,12 +750,30 @@ def _file_modified_iso(path: str) -> str:
 
 
 def _manifest_count(settings: QSettings) -> int:
+    """
+    Get the number of widgets recorded in the manifest.
+
+    Args:
+        settings(QSettings): Settings object to read from.
+
+    Returns:
+        int: Number of widgets in the manifest.
+    """
     n = settings.beginReadArray(SETTINGS_KEYS["manifest"])
     settings.endArray()
     return int(n or 0)
 
 
 def _load_screenshot_from_settings(settings: QSettings) -> QPixmap | None:
+    """
+    Load the screenshot pixmap stored in the given settings.
+
+    Args:
+        settings(QSettings): Settings object to read from.
+
+    Returns:
+        QPixmap | None: Screenshot pixmap or ``None`` if unavailable.
+    """
     data = settings.value(SETTINGS_KEYS["screenshot"], None)
     if not data:
         return None
@@ -379,6 +798,8 @@ def _load_screenshot_from_settings(settings: QSettings) -> QPixmap | None:
 
 
 class ProfileInfo(BaseModel):
+    """Pydantic model capturing profile metadata surfaced in the UI."""
+
     name: str
     author: str = "BEC Widgets"
     notes: str = ""
@@ -393,21 +814,30 @@ class ProfileInfo(BaseModel):
     is_read_only: bool = False
 
 
-def get_profile_info(name: str) -> ProfileInfo:
+def get_profile_info(name: str, namespace: str | None = None) -> ProfileInfo:
     """
-    Return merged metadata for a profile as a validated Pydantic model.
-    Prefers the USER copy; falls back to DEFAULT if the user copy is missing.
+    Assemble metadata and statistics for a profile.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        ProfileInfo: Structured profile metadata, preferring the user copy when present.
     """
-    u_path = user_profile_path(name)
-    d_path = default_profile_path(name)
-    origin = profile_origin(name)
-    prefer_user = os.path.exists(u_path)
+    user_paths = user_profile_candidates(name, namespace)
+    default_paths = default_profile_candidates(name, namespace)
+    u_path = next((p for p in user_paths if os.path.exists(p)), user_paths[0])
+    d_path = next((p for p in default_paths if os.path.exists(p)), default_paths[0])
+    origin = profile_origin(name, namespace)
     read_only = origin in {"module", "plugin"}
-    s = (
-        open_user_settings(name)
-        if prefer_user
-        else (open_default_settings(name) if os.path.exists(d_path) else None)
-    )
+    prefer_user = os.path.exists(u_path)
+    if prefer_user:
+        s = QSettings(u_path, QSettings.IniFormat)
+    elif os.path.exists(d_path):
+        s = QSettings(d_path, QSettings.IniFormat)
+    else:
+        s = None
     if s is None:
         if origin == "module":
             author = "BEC Widgets"
@@ -456,7 +886,7 @@ def get_profile_info(name: str) -> ProfileInfo:
         notes=s.value("profile/notes", "", type=str) or "",
         created=created,
         modified=modified,
-        is_quick_select=is_quick_select(name),
+        is_quick_select=is_quick_select(name, namespace),
         widget_count=count,
         size_kb=size_kb,
         user_path=u_path,
@@ -466,29 +896,54 @@ def get_profile_info(name: str) -> ProfileInfo:
     )
 
 
-def load_profile_screenshot(name: str) -> QPixmap | None:
-    """Load the stored screenshot pixmap for a profile from settings (user preferred)."""
-    u_path = user_profile_path(name)
-    d_path = default_profile_path(name)
-    s = (
-        open_user_settings(name)
-        if os.path.exists(u_path)
-        else (open_default_settings(name) if os.path.exists(d_path) else None)
-    )
+def load_profile_screenshot(name: str, namespace: str | None = None) -> QPixmap | None:
+    """
+    Load the stored screenshot pixmap for a profile from settings (user preferred).
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        QPixmap | None: Screenshot pixmap or ``None`` if unavailable.
+    """
+    s = _existing_user_settings(name, namespace)
+    if s is None:
+        s = _existing_default_settings(name, namespace)
     if s is None:
         return None
     return _load_screenshot_from_settings(s)
 
 
-def load_user_profile_screenshot(name: str) -> QPixmap | None:
-    """Load the screenshot from the user profile copy, if available."""
-    if not os.path.exists(user_profile_path(name)):
+def load_default_profile_screenshot(name: str, namespace: str | None = None) -> QPixmap | None:
+    """
+    Load the screenshot from the default profile copy, if available.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        QPixmap | None: Screenshot pixmap or ``None`` if unavailable.
+    """
+    s = _existing_default_settings(name, namespace)
+    if s is None:
         return None
-    return _load_screenshot_from_settings(open_user_settings(name))
+    return _load_screenshot_from_settings(s)
 
 
-def load_default_profile_screenshot(name: str) -> QPixmap | None:
-    """Load the screenshot from the default profile copy, if available."""
-    if not os.path.exists(default_profile_path(name)):
+def load_user_profile_screenshot(name: str, namespace: str | None = None) -> QPixmap | None:
+    """
+    Load the screenshot from the user profile copy, if available.
+
+    Args:
+        name (str): Profile name without extension.
+        namespace (str | None, optional): Namespace label. Defaults to ``None``.
+
+    Returns:
+        QPixmap | None: Screenshot pixmap or ``None`` if unavailable.
+    """
+    s = _existing_user_settings(name, namespace)
+    if s is None:
         return None
-    return _load_screenshot_from_settings(open_default_settings(name))
+    return _load_screenshot_from_settings(s)
