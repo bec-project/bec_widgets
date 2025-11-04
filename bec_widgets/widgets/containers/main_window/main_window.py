@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 
-import shiboken6
 from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import QEvent, QSize, Qt, QTimer
 from qtpy.QtGui import QAction, QActionGroup, QIcon
@@ -22,7 +21,6 @@ from bec_widgets.utils import UILoader
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.error_popups import SafeSlot
-from bec_widgets.utils.widget_io import WidgetHierarchy
 from bec_widgets.widgets.containers.main_window.addons.hover_widget import HoverWidget
 from bec_widgets.widgets.containers.main_window.addons.notification_center.notification_banner import (
     BECNotificationBroker,

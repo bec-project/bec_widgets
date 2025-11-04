@@ -6,15 +6,19 @@ from unittest import mock
 from unittest.mock import MagicMock, patch
 
 import pytest
-from qtpy.QtCore import QSettings, Qt
+from qtpy.QtCore import QSettings, Qt, QTimer
 from qtpy.QtGui import QPixmap
-from qtpy.QtWidgets import QDialog, QMessageBox
+from qtpy.QtWidgets import QDialog, QMessageBox, QWidget
 
+import bec_widgets.widgets.containers.advanced_dock_area.basic_dock_area as basic_dock_module
 import bec_widgets.widgets.containers.advanced_dock_area.profile_utils as profile_utils
 from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import (
     AdvancedDockArea,
-    DockSettingsDialog,
     SaveProfileDialog,
+)
+from bec_widgets.widgets.containers.advanced_dock_area.basic_dock_area import (
+    DockAreaWidget,
+    DockSettingsDialog,
 )
 from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
     default_profile_path,
@@ -145,13 +149,372 @@ def workspace_manager_target():
     return _factory
 
 
+@pytest.fixture
+def basic_dock_area(qtbot, mocked_client):
+    """Create a namesake DockAreaWidget without the advanced toolbar."""
+    widget = DockAreaWidget(client=mocked_client, title="Test Dock Area")
+    qtbot.addWidget(widget)
+    qtbot.waitExposed(widget)
+    yield widget
+
+
+class _NamespaceProfiles:
+    """Helper that routes profile file helpers through a namespace."""
+
+    def __init__(self, widget: AdvancedDockArea):
+        self.namespace = widget.profile_namespace
+
+    def open_user(self, name: str):
+        return open_user_settings(name, namespace=self.namespace)
+
+    def open_default(self, name: str):
+        return open_default_settings(name, namespace=self.namespace)
+
+    def user_path(self, name: str) -> str:
+        return user_profile_path(name, namespace=self.namespace)
+
+    def default_path(self, name: str) -> str:
+        return default_profile_path(name, namespace=self.namespace)
+
+    def list_profiles(self) -> list[str]:
+        return list_profiles(namespace=self.namespace)
+
+    def set_quick_select(self, name: str, enabled: bool):
+        set_quick_select(name, enabled, namespace=self.namespace)
+
+    def is_quick_select(self, name: str) -> bool:
+        return is_quick_select(name, namespace=self.namespace)
+
+
+def profile_helper(widget: AdvancedDockArea) -> _NamespaceProfiles:
+    """Return a helper wired to the widget's profile namespace."""
+    return _NamespaceProfiles(widget)
+
+
+class TestBasicDockArea:
+    """Focused coverage for the lightweight DockAreaWidget base."""
+
+    def test_new_widget_instance_registers_in_maps(self, basic_dock_area):
+        panel = QWidget(parent=basic_dock_area)
+        panel.setObjectName("basic_panel")
+
+        dock = basic_dock_area.new(panel, return_dock=True)
+
+        assert dock.objectName() == "basic_panel"
+        assert basic_dock_area.dock_map()["basic_panel"] is dock
+        assert basic_dock_area.widget_map()["basic_panel"] is panel
+
+    def test_new_widget_string_creates_widget(self, basic_dock_area, qtbot):
+        basic_dock_area.new("DarkModeButton")
+        qtbot.waitUntil(lambda: len(basic_dock_area.dock_list()) > 0, timeout=1000)
+
+        assert basic_dock_area.widget_list()
+
+    def test_custom_close_handler_invoked(self, basic_dock_area, qtbot):
+        class CloseAwareWidget(QWidget):
+            def __init__(self, parent=None):
+                super().__init__(parent)
+                self.setObjectName("closable")
+                self.closed = False
+
+            def handle_dock_close(self, dock, widget):  # pragma: no cover - exercised via signal
+                self.closed = True
+                dock.closeDockWidget()
+                dock.deleteDockWidget()
+
+        widget = CloseAwareWidget(parent=basic_dock_area)
+        dock = basic_dock_area.new(widget, return_dock=True)
+
+        dock.closeRequested.emit()
+        qtbot.waitUntil(lambda: widget.closed, timeout=1000)
+
+        assert widget.closed is True
+        assert "closable" not in basic_dock_area.dock_map()
+
+    def test_attach_all_and_delete_all(self, basic_dock_area):
+        first = QWidget(parent=basic_dock_area)
+        first.setObjectName("floating_one")
+        second = QWidget(parent=basic_dock_area)
+        second.setObjectName("floating_two")
+
+        dock_one = basic_dock_area.new(first, return_dock=True, start_floating=True)
+        dock_two = basic_dock_area.new(second, return_dock=True, start_floating=True)
+        assert dock_one.isFloating() and dock_two.isFloating()
+
+        basic_dock_area.attach_all()
+
+        assert not dock_one.isFloating()
+        assert not dock_two.isFloating()
+
+        basic_dock_area.delete_all()
+        assert basic_dock_area.dock_list() == []
+
+    def test_splitter_weight_coercion_supports_aliases(self, basic_dock_area):
+        weights = {"default": 0.5, "left": 2, "center": 3, "right": 4}
+
+        result = basic_dock_area._coerce_weights(weights, 3, Qt.Orientation.Horizontal)
+
+        assert result == [2.0, 3.0, 4.0]
+        assert basic_dock_area._coerce_weights([0.0], 3, Qt.Orientation.Vertical) == [0.0, 1.0, 1.0]
+        assert basic_dock_area._coerce_weights([0.0, 0.0], 2, Qt.Orientation.Vertical) == [1.0, 1.0]
+
+    def test_splitter_override_keys_are_normalized(self, basic_dock_area):
+        overrides = {0: [1, 2], (1, 0): [3, 4], "2.1": [5], " / ": [6]}
+
+        normalized = basic_dock_area._normalize_override_keys(overrides)
+
+        assert normalized == {(0,): [1, 2], (1, 0): [3, 4], (2, 1): [5], (): [6]}
+
+    def test_schedule_splitter_weights_sets_sizes(self, basic_dock_area, monkeypatch):
+        monkeypatch.setattr(QTimer, "singleShot", lambda *_args: _args[-1]())
+
+        class DummySplitter:
+            def __init__(self):
+                self._children = [object(), object(), object()]
+                self.sizes = None
+                self.stretch = []
+
+            def count(self):
+                return len(self._children)
+
+            def orientation(self):
+                return Qt.Orientation.Horizontal
+
+            def width(self):
+                return 300
+
+            def height(self):
+                return 120
+
+            def setSizes(self, sizes):
+                self.sizes = sizes
+
+            def setStretchFactor(self, idx, value):
+                self.stretch.append((idx, value))
+
+        splitter = DummySplitter()
+
+        basic_dock_area._schedule_splitter_weights(splitter, [1, 2, 1])
+
+        assert splitter.sizes == [75, 150, 75]
+        assert splitter.stretch == [(0, 100), (1, 200), (2, 100)]
+
+    def test_apply_splitter_tree_honors_overrides(self, basic_dock_area, monkeypatch):
+        class DummySplitter:
+            def __init__(self, orientation, children=None, label="splitter"):
+                self._orientation = orientation
+                self._children = list(children or [])
+                self.label = label
+
+            def count(self):
+                return len(self._children)
+
+            def orientation(self):
+                return self._orientation
+
+            def widget(self, idx):
+                return self._children[idx]
+
+        monkeypatch.setattr(basic_dock_module.QtAds, "CDockSplitter", DummySplitter)
+
+        leaf = DummySplitter(Qt.Orientation.Horizontal, [], label="leaf")
+        column_one = DummySplitter(Qt.Orientation.Vertical, [leaf], label="column_one")
+        column_zero = DummySplitter(Qt.Orientation.Vertical, [], label="column_zero")
+        root = DummySplitter(Qt.Orientation.Horizontal, [column_zero, column_one], label="root")
+
+        calls = []
+
+        def fake_schedule(self, splitter, weights):
+            calls.append((splitter.label, weights))
+
+        monkeypatch.setattr(DockAreaWidget, "_schedule_splitter_weights", fake_schedule)
+
+        overrides = {(): ["root_override"], (0,): ["column_override"]}
+
+        basic_dock_area._apply_splitter_tree(
+            root, (), horizontal=[1, 2], vertical=[3, 4], overrides=overrides
+        )
+
+        assert calls[0] == ("root", ["root_override"])
+        assert calls[1] == ("column_zero", ["column_override"])
+        assert calls[2] == ("column_one", [3, 4])
+        assert calls[3] == ("leaf", ["column_override"])
+
+    def test_set_layout_ratios_normalizes_and_applies(self, basic_dock_area, monkeypatch):
+        class DummyContainer:
+            def __init__(self, splitter):
+                self._splitter = splitter
+
+            def rootSplitter(self):
+                return self._splitter
+
+        root_one = object()
+        root_two = object()
+        containers = [DummyContainer(root_one), DummyContainer(None), DummyContainer(root_two)]
+
+        monkeypatch.setattr(basic_dock_area.dock_manager, "dockContainers", lambda: containers)
+
+        calls = []
+
+        def fake_apply(self, splitter, path, horizontal, vertical, overrides):
+            calls.append((splitter, path, horizontal, vertical, overrides))
+
+        monkeypatch.setattr(DockAreaWidget, "_apply_splitter_tree", fake_apply)
+
+        basic_dock_area.set_layout_ratios(
+            horizontal=[1, 1, 1], vertical=[2, 3], splitter_overrides={"1/0": [5, 5], "": [9]}
+        )
+
+        assert len(calls) == 2
+        for splitter, path, horizontal, vertical, overrides in calls:
+            assert splitter in {root_one, root_two}
+            assert path == ()
+            assert horizontal == [1, 1, 1]
+            assert vertical == [2, 3]
+            assert overrides == {(): [9], (1, 0): [5, 5]}
+
+    def test_show_settings_action_defaults_disabled(self, basic_dock_area):
+        widget = QWidget(parent=basic_dock_area)
+        widget.setObjectName("settings_default")
+
+        dock = basic_dock_area.new(widget, return_dock=True)
+
+        assert dock._dock_preferences.get("show_settings_action") is False
+        assert not hasattr(dock, "setting_action")
+
+    def test_show_settings_action_can_be_enabled(self, basic_dock_area):
+        widget = QWidget(parent=basic_dock_area)
+        widget.setObjectName("settings_enabled")
+
+        dock = basic_dock_area.new(widget, return_dock=True, show_settings_action=True)
+
+        assert dock._dock_preferences.get("show_settings_action") is True
+        assert hasattr(dock, "setting_action")
+        assert dock.setting_action.toolTip() == "Dock settings"
+
+    def test_collect_splitter_info_describes_children(self, basic_dock_area, monkeypatch):
+        class DummyDockWidget:
+            def __init__(self, name):
+                self._name = name
+
+            def objectName(self):
+                return self._name
+
+        class DummyDockArea:
+            def __init__(self, dock_names):
+                self._docks = [DummyDockWidget(name) for name in dock_names]
+
+            def dockWidgets(self):
+                return self._docks
+
+        class DummySplitter:
+            def __init__(self, orientation, children=None):
+                self._orientation = orientation
+                self._children = list(children or [])
+
+            def orientation(self):
+                return self._orientation
+
+            def count(self):
+                return len(self._children)
+
+            def widget(self, idx):
+                return self._children[idx]
+
+        class Spacer:
+            pass
+
+        monkeypatch.setattr(basic_dock_module, "CDockSplitter", DummySplitter)
+        monkeypatch.setattr(basic_dock_module, "CDockAreaWidget", DummyDockArea)
+        monkeypatch.setattr(basic_dock_module, "CDockWidget", DummyDockWidget)
+
+        nested_splitter = DummySplitter(Qt.Orientation.Horizontal)
+        dock_area_child = DummyDockArea(["left", "right"])
+        dock_child = DummyDockWidget("solo")
+        spacer = Spacer()
+        root_splitter = DummySplitter(
+            Qt.Orientation.Vertical, [nested_splitter, dock_area_child, dock_child, spacer]
+        )
+
+        results = []
+
+        basic_dock_area._collect_splitter_info(root_splitter, (2,), results, container_index=5)
+
+        assert len(results) == 2
+        root_entry = results[0]
+        assert root_entry["container"] == 5
+        assert root_entry["path"] == (2,)
+        assert root_entry["orientation"] == "vertical"
+        assert root_entry["children"] == [
+            {"index": 0, "type": "splitter"},
+            {"index": 1, "type": "dock_area", "docks": ["left", "right"]},
+            {"index": 2, "type": "dock", "name": "solo"},
+            {"index": 3, "type": "Spacer"},
+        ]
+        nested_entry = results[1]
+        assert nested_entry["path"] == (2, 0)
+        assert nested_entry["orientation"] == "horizontal"
+
+    def test_describe_layout_aggregates_containers(self, basic_dock_area, monkeypatch):
+        class DummyContainer:
+            def __init__(self, splitter):
+                self._splitter = splitter
+
+            def rootSplitter(self):
+                return self._splitter
+
+        containers = [DummyContainer("root0"), DummyContainer(None), DummyContainer("root2")]
+        monkeypatch.setattr(basic_dock_area.dock_manager, "dockContainers", lambda: containers)
+
+        calls = []
+
+        def recorder(self, splitter, path, results, container_index):
+            entry = {"container": container_index, "splitter": splitter, "path": path}
+            results.append(entry)
+            calls.append(entry)
+
+        monkeypatch.setattr(DockAreaWidget, "_collect_splitter_info", recorder)
+
+        info = basic_dock_area.describe_layout()
+
+        assert info == calls
+        assert [entry["splitter"] for entry in info] == ["root0", "root2"]
+        assert [entry["container"] for entry in info] == [0, 2]
+        assert all(entry["path"] == () for entry in info)
+
+    def test_print_layout_structure_formats_output(self, basic_dock_area, monkeypatch, capsys):
+        entries = [
+            {
+                "container": 1,
+                "path": (0,),
+                "orientation": "horizontal",
+                "children": [
+                    {"index": 0, "type": "dock_area", "docks": ["alpha", "beta"]},
+                    {"index": 1, "type": "dock", "name": "solo"},
+                    {"index": 2, "type": "splitter"},
+                    {"index": 3, "type": "Placeholder"},
+                ],
+            }
+        ]
+
+        monkeypatch.setattr(DockAreaWidget, "describe_layout", lambda self: entries)
+
+        basic_dock_area.print_layout_structure()
+
+        captured = capsys.readouterr().out.strip().splitlines()
+        assert captured == [
+            "container=1 path=(0,) orientation=horizontal -> "
+            "[0:dock_area[alpha, beta], 1:dock(solo), 2:splitter, 3:Placeholder]"
+        ]
+
+
 class TestAdvancedDockAreaInit:
     """Test initialization and basic properties."""
 
     def test_init(self, advanced_dock_area):
         assert advanced_dock_area is not None
         assert isinstance(advanced_dock_area, AdvancedDockArea)
-        assert advanced_dock_area.mode == "developer"
+        assert advanced_dock_area.mode == "creator"
         assert hasattr(advanced_dock_area, "dock_manager")
         assert hasattr(advanced_dock_area, "toolbar")
         assert hasattr(advanced_dock_area, "dark_mode_button")
@@ -291,6 +654,29 @@ class TestDockManagement:
 
         # Should have no docks
         assert len(advanced_dock_area.dock_list()) == 0
+
+
+class TestAdvancedDockSettingsAction:
+    """Ensure AdvancedDockArea exposes dock settings actions by default."""
+
+    def test_settings_action_installed_by_default(self, advanced_dock_area):
+        widget = QWidget(parent=advanced_dock_area)
+        widget.setObjectName("advanced_default_settings")
+
+        dock = advanced_dock_area.new(widget, return_dock=True)
+
+        assert hasattr(dock, "setting_action")
+        assert dock.setting_action.toolTip() == "Dock settings"
+        assert dock._dock_preferences.get("show_settings_action") is True
+
+    def test_settings_action_can_be_disabled(self, advanced_dock_area):
+        widget = QWidget(parent=advanced_dock_area)
+        widget.setObjectName("advanced_settings_off")
+
+        dock = advanced_dock_area.new(widget, return_dock=True, show_settings_action=False)
+
+        assert not hasattr(dock, "setting_action")
+        assert dock._dock_preferences.get("show_settings_action") is False
 
 
 class TestWorkspaceLocking:
@@ -873,6 +1259,11 @@ class TestWorkSpaceManager:
     ):
         readonly = module_profile_factory("readonly_delete")
         list_profiles()
+        monkeypatch.setattr(
+            profile_utils,
+            "get_profile_info",
+            lambda *a, **k: profile_utils.ProfileInfo(name=readonly, is_read_only=True),
+        )
         info_calls = []
         monkeypatch.setattr(
             QMessageBox,
@@ -892,19 +1283,20 @@ class TestAdvancedDockAreaRestoreAndDialogs:
 
     def test_restore_user_profile_from_default_confirm_true(self, advanced_dock_area, monkeypatch):
         profile_name = "profile_restore_true"
-        open_default_settings(profile_name).sync()
-        open_user_settings(profile_name).sync()
+        helper = profile_helper(advanced_dock_area)
+        helper.open_default(profile_name).sync()
+        helper.open_user(profile_name).sync()
         advanced_dock_area._current_profile_name = profile_name
         advanced_dock_area.isVisible = lambda: False
         pix = QPixmap(8, 8)
         pix.fill(Qt.red)
         monkeypatch.setattr(
             "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.load_user_profile_screenshot",
-            lambda name: pix,
+            lambda name, namespace=None: pix,
         )
         monkeypatch.setattr(
             "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.load_default_profile_screenshot",
-            lambda name: pix,
+            lambda name, namespace=None: pix,
         )
         monkeypatch.setattr(
             "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.RestoreProfileDialog.confirm",
@@ -920,14 +1312,18 @@ class TestAdvancedDockAreaRestoreAndDialogs:
         ):
             advanced_dock_area.restore_user_profile_from_default()
 
-        mock_restore.assert_called_once_with(profile_name)
+        assert mock_restore.call_count == 1
+        args, kwargs = mock_restore.call_args
+        assert args == (profile_name,)
+        assert kwargs.get("namespace") == advanced_dock_area.profile_namespace
         mock_delete_all.assert_called_once()
         mock_load_profile.assert_called_once_with(profile_name)
 
     def test_restore_user_profile_from_default_confirm_false(self, advanced_dock_area, monkeypatch):
         profile_name = "profile_restore_false"
-        open_default_settings(profile_name).sync()
-        open_user_settings(profile_name).sync()
+        helper = profile_helper(advanced_dock_area)
+        helper.open_default(profile_name).sync()
+        helper.open_user(profile_name).sync()
         advanced_dock_area._current_profile_name = profile_name
         advanced_dock_area.isVisible = lambda: False
         monkeypatch.setattr(
@@ -960,7 +1356,8 @@ class TestAdvancedDockAreaRestoreAndDialogs:
 
     def test_refresh_workspace_list_with_refresh_profiles(self, advanced_dock_area):
         profile_name = "refresh_profile"
-        open_user_settings(profile_name).sync()
+        helper = profile_helper(advanced_dock_area)
+        helper.open_user(profile_name).sync()
         advanced_dock_area._current_profile_name = profile_name
         combo = advanced_dock_area.toolbar.components.get_action("workspace_combo").widget
         combo.refresh_profiles = MagicMock()
@@ -1002,9 +1399,10 @@ class TestAdvancedDockAreaRestoreAndDialogs:
 
         active = "active_profile"
         quick = "quick_profile"
-        open_user_settings(active).sync()
-        open_user_settings(quick).sync()
-        set_quick_select(quick, True)
+        helper = profile_helper(advanced_dock_area)
+        helper.open_user(active).sync()
+        helper.open_user(quick).sync()
+        helper.set_quick_select(quick, True)
 
         combo_stub = ComboStub()
 
@@ -1027,7 +1425,8 @@ class TestAdvancedDockAreaRestoreAndDialogs:
         assert not action.isChecked()
 
         advanced_dock_area._current_profile_name = "manager_profile"
-        open_user_settings("manager_profile").sync()
+        helper = profile_helper(advanced_dock_area)
+        helper.open_user("manager_profile").sync()
 
         advanced_dock_area.show_workspace_manager()
 
@@ -1175,7 +1574,8 @@ class TestWorkspaceProfileOperations:
         """Test saving profile when read-only profile exists."""
         profile_name = module_profile_factory("readonly_profile")
         new_profile = f"{profile_name}_custom"
-        target_path = user_profile_path(new_profile)
+        helper = profile_helper(advanced_dock_area)
+        target_path = helper.user_path(new_profile)
         if os.path.exists(target_path):
             os.remove(target_path)
 
@@ -1203,9 +1603,10 @@ class TestWorkspaceProfileOperations:
     def test_load_profile_with_manifest(self, advanced_dock_area, temp_profile_dir, qtbot):
         """Test loading profile with widget manifest."""
         profile_name = "test_load_profile"
+        helper = profile_helper(advanced_dock_area)
 
         # Create a profile with manifest
-        settings = open_user_settings(profile_name)
+        settings = helper.open_user(profile_name)
         settings.beginWriteArray("manifest/widgets", 1)
         settings.setArrayIndex(0)
         settings.setValue("object_name", "test_widget")
@@ -1232,8 +1633,9 @@ class TestWorkspaceProfileOperations:
         """Saving a new profile avoids overwriting the source profile during the switch."""
         source_profile = "autosave_source"
         new_profile = "autosave_new"
+        helper = profile_helper(advanced_dock_area)
 
-        settings = open_user_settings(source_profile)
+        settings = helper.open_user(source_profile)
         settings.beginWriteArray("manifest/widgets", 1)
         settings.setArrayIndex(0)
         settings.setValue("object_name", "source_widget")
@@ -1269,8 +1671,8 @@ class TestWorkspaceProfileOperations:
             advanced_dock_area.save_profile()
 
         qtbot.wait(500)
-        source_manifest = read_manifest(open_user_settings(source_profile))
-        new_manifest = read_manifest(open_user_settings(new_profile))
+        source_manifest = read_manifest(helper.open_user(source_profile))
+        new_manifest = read_manifest(helper.open_user(new_profile))
 
         assert len(source_manifest) == 1
         assert len(new_manifest) == 2
@@ -1279,9 +1681,10 @@ class TestWorkspaceProfileOperations:
         """Regular profile switches should persist the outgoing layout."""
         profile_a = "autosave_keep"
         profile_b = "autosave_target"
+        helper = profile_helper(advanced_dock_area)
 
         for profile in (profile_a, profile_b):
-            settings = open_user_settings(profile)
+            settings = helper.open_user(profile)
             settings.beginWriteArray("manifest/widgets", 1)
             settings.setArrayIndex(0)
             settings.setValue("object_name", f"{profile}_widget")
@@ -1300,7 +1703,7 @@ class TestWorkspaceProfileOperations:
         advanced_dock_area.load_profile(profile_b)
         qtbot.wait(500)
 
-        manifest_a = read_manifest(open_user_settings(profile_a))
+        manifest_a = read_manifest(helper.open_user(profile_a))
         assert len(manifest_a) == 2
 
     def test_delete_profile_readonly(
@@ -1308,12 +1711,14 @@ class TestWorkspaceProfileOperations:
     ):
         """Test deleting bundled profile removes only the writable copy."""
         profile_name = module_profile_factory("readonly_profile")
-        list_profiles()  # ensure default and user copies are materialized
-        settings = open_user_settings(profile_name)
+        helper = profile_helper(advanced_dock_area)
+        helper.list_profiles()  # ensure default and user copies are materialized
+        helper.open_default(profile_name).sync()
+        settings = helper.open_user(profile_name)
         settings.setValue("test", "value")
         settings.sync()
-        user_path = user_profile_path(profile_name)
-        default_path = default_profile_path(profile_name)
+        user_path = helper.user_path(profile_name)
+        default_path = helper.default_path(profile_name)
         assert os.path.exists(user_path)
         assert os.path.exists(default_path)
 
@@ -1322,27 +1727,34 @@ class TestWorkspaceProfileOperations:
             mock_combo.currentText.return_value = profile_name
             mock_get_action.return_value.widget = mock_combo
 
-            with patch(
-                "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.QMessageBox.question"
-            ) as mock_question:
-                mock_question.return_value = QMessageBox.Yes
-
+            with (
+                patch(
+                    "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.QMessageBox.question",
+                    return_value=QMessageBox.Yes,
+                ) as mock_question,
+                patch(
+                    "bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area.QMessageBox.information",
+                    return_value=None,
+                ) as mock_info,
+            ):
                 advanced_dock_area.delete_profile()
 
-                mock_question.assert_called_once()
-                # User copy should be removed, default remains
-                assert not os.path.exists(user_path)
+                mock_question.assert_not_called()
+                mock_info.assert_called_once()
+                # Read-only profile should remain intact (user + default copies)
+                assert os.path.exists(user_path)
                 assert os.path.exists(default_path)
 
     def test_delete_profile_success(self, advanced_dock_area, temp_profile_dir):
         """Test successful profile deletion."""
         profile_name = "deletable_profile"
+        helper = profile_helper(advanced_dock_area)
 
         # Create regular profile
-        settings = open_user_settings(profile_name)
+        settings = helper.open_user(profile_name)
         settings.setValue("test", "value")
         settings.sync()
-        user_path = user_profile_path(profile_name)
+        user_path = helper.user_path(profile_name)
         assert os.path.exists(user_path)
 
         with patch.object(advanced_dock_area.toolbar.components, "get_action") as mock_get_action:
@@ -1366,8 +1778,9 @@ class TestWorkspaceProfileOperations:
     def test_refresh_workspace_list(self, advanced_dock_area, temp_profile_dir):
         """Test refreshing workspace list."""
         # Create some profiles
+        helper = profile_helper(advanced_dock_area)
         for name in ["profile1", "profile2"]:
-            settings = open_user_settings(name)
+            settings = helper.open_user(name)
             settings.setValue("test", "value")
             settings.sync()
 
@@ -1451,15 +1864,18 @@ class TestCleanupAndMisc:
         widget = DarkModeButton(parent=advanced_dock_area)
         widget.setObjectName("test_widget")
 
-        dock = advanced_dock_area._make_dock(widget, closable=True, floatable=True, movable=True)
+        with patch.object(advanced_dock_area, "_open_dock_settings_dialog") as mock_open_dialog:
+            dock = advanced_dock_area._make_dock(
+                widget, closable=True, floatable=True, movable=True
+            )
 
-        # Verify dock has settings action
-        assert hasattr(dock, "setting_action")
-        assert dock.setting_action is not None
+            # Verify dock has settings action
+            assert hasattr(dock, "setting_action")
+            assert dock.setting_action is not None
+            assert dock.setting_action.toolTip() == "Dock settings"
 
-        # Verify title bar actions were set
-        title_bar_actions = dock.titleBarActions()
-        assert len(title_bar_actions) >= 1
+            dock.setting_action.trigger()
+            mock_open_dialog.assert_called_once_with(dock, widget)
 
 
 class TestModeSwitching:
@@ -1467,7 +1883,7 @@ class TestModeSwitching:
 
     def test_mode_property_setter_valid_modes(self, advanced_dock_area):
         """Test setting valid modes."""
-        valid_modes = ["plot", "device", "utils", "developer", "user"]
+        valid_modes = ["plot", "device", "utils", "creator", "user"]
 
         for mode in valid_modes:
             advanced_dock_area.mode = mode
@@ -1534,7 +1950,7 @@ class TestToolbarModeBundles:
 
     def test_developer_mode_toolbar_visibility(self, advanced_dock_area):
         """Test toolbar bundle visibility in developer mode."""
-        advanced_dock_area.mode = "developer"
+        advanced_dock_area.mode = "creator"
 
         shown_bundles = advanced_dock_area.toolbar.shown_bundles
 
@@ -1622,7 +2038,7 @@ class TestFlatToolbarActions:
             with patch.object(advanced_dock_area, "new") as mock_new:
                 action = advanced_dock_area.toolbar.components.get_action(action_name).action
                 action.trigger()
-                mock_new.assert_called_once_with(widget=widget_type)
+                mock_new.assert_called_once_with(widget_type)
 
     def test_flat_device_actions_trigger_widget_creation(self, advanced_dock_area):
         """Test flat device actions trigger widget creation."""
@@ -1635,7 +2051,7 @@ class TestFlatToolbarActions:
             with patch.object(advanced_dock_area, "new") as mock_new:
                 action = advanced_dock_area.toolbar.components.get_action(action_name).action
                 action.trigger()
-                mock_new.assert_called_once_with(widget=widget_type)
+                mock_new.assert_called_once_with(widget_type)
 
     def test_flat_utils_actions_trigger_widget_creation(self, advanced_dock_area):
         """Test flat utils actions trigger widget creation."""
@@ -1658,7 +2074,7 @@ class TestFlatToolbarActions:
                     continue
 
                 action.trigger()
-                mock_new.assert_called_once_with(widget=widget_type)
+                mock_new.assert_called_once_with(widget_type)
 
     def test_flat_log_panel_action_disabled(self, advanced_dock_area):
         """Test that flat log panel action is disabled."""
@@ -1671,7 +2087,7 @@ class TestModeTransitions:
 
     def test_mode_transition_sequence(self, advanced_dock_area, qtbot):
         """Test sequence of mode transitions."""
-        modes = ["plot", "device", "utils", "developer", "user"]
+        modes = ["plot", "device", "utils", "creator", "user"]
 
         for mode in modes:
             with qtbot.waitSignal(advanced_dock_area.mode_changed, timeout=1000) as blocker:
@@ -1686,7 +2102,7 @@ class TestModeTransitions:
         advanced_dock_area.mode = "plot"
         advanced_dock_area.mode = "device"
         advanced_dock_area.mode = "utils"
-        advanced_dock_area.mode = "developer"
+        advanced_dock_area.mode = "creator"
         advanced_dock_area.mode = "user"
 
         # Final state should be consistent
@@ -1758,7 +2174,7 @@ class TestModeProperty:
 
     def test_multiple_mode_changes(self, advanced_dock_area, qtbot):
         """Test multiple rapid mode changes."""
-        modes = ["plot", "device", "utils", "developer", "user"]
+        modes = ["plot", "device", "utils", "creator", "user"]
 
         for i, mode in enumerate(modes):
             with qtbot.waitSignal(advanced_dock_area.mode_changed, timeout=1000) as blocker:
