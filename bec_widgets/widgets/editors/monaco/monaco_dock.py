@@ -7,17 +7,16 @@ from typing import Any, cast
 from bec_lib.logger import bec_logger
 from bec_lib.macro_update_handler import has_executable_code
 from qtpy.QtCore import QEvent, QTimer, Signal
-from qtpy.QtWidgets import QFileDialog, QMessageBox, QToolButton, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QFileDialog, QMessageBox, QToolButton, QWidget
 
-import bec_widgets.widgets.containers.ads as QtAds
-from bec_widgets import BECWidget
 from bec_widgets.widgets.containers.ads import CDockAreaWidget, CDockWidget
+from bec_widgets.widgets.containers.advanced_dock_area.basic_dock_area import DockAreaWidget
 from bec_widgets.widgets.editors.monaco.monaco_widget import MonacoWidget
 
 logger = bec_logger.logger
 
 
-class MonacoDock(BECWidget, QWidget):
+class MonacoDock(DockAreaWidget):
     """
     MonacoDock is a dock widget that contains Monaco editor instances.
     It is used to manage multiple Monaco editors in a dockable interface.
@@ -29,55 +28,34 @@ class MonacoDock(BECWidget, QWidget):
     macro_file_updated = Signal(str)  # Emitted when a macro file is saved
 
     def __init__(self, parent=None, **kwargs):
-        super().__init__(parent=parent, **kwargs)
-        # Top-level layout hosting a toolbar and the dock manager
-        self._root_layout = QVBoxLayout(self)
-        self._root_layout.setContentsMargins(0, 0, 0, 0)
-        self._root_layout.setSpacing(0)
-
-        self.dock_manager = QtAds.CDockManager(self)
-        self.dock_manager.setStyleSheet("")
+        super().__init__(
+            parent=parent,
+            variant="compact",
+            title="Monaco Editors",
+            default_add_direction="top",
+            **kwargs,
+        )
         self.dock_manager.focusedDockWidgetChanged.connect(self._on_focus_event)
-        self._root_layout.addWidget(self.dock_manager)
         self.dock_manager.installEventFilter(self)
         self._last_focused_editor: CDockWidget | None = None
         self.focused_editor.connect(self._on_last_focused_editor_changed)
-        self.add_editor()
-        self._open_files = {}
+        initial_editor = self.add_editor()
+        if isinstance(initial_editor, CDockWidget):
+            self.last_focused_editor = initial_editor
 
-    def _create_editor(self):
+    def _create_editor_widget(self) -> MonacoWidget:
+        """Create a configured Monaco editor widget."""
         init_lsp = len(self.dock_manager.dockWidgets()) == 0
         widget = MonacoWidget(self, init_lsp=init_lsp)
         widget.save_enabled.connect(self.save_enabled.emit)
         widget.editor.signature_help_triggered.connect(self._on_signature_change)
-        count = len(self.dock_manager.dockWidgets())
-        dock = CDockWidget(f"Untitled_{count + 1}")
-        dock.setWidget(widget)
-
-        # Connect to modification status changes to update tab titles
-        widget.save_enabled.connect(
-            lambda modified: self._update_tab_title_for_modification(dock, modified)
-        )
-
-        dock.setFeature(CDockWidget.DockWidgetFeature.DockWidgetDeleteOnClose, True)
-        dock.setFeature(CDockWidget.DockWidgetFeature.CustomCloseHandling, True)
-        dock.setFeature(CDockWidget.DockWidgetFeature.DockWidgetClosable, True)
-        dock.setFeature(CDockWidget.DockWidgetFeature.DockWidgetFloatable, False)
-        dock.setFeature(CDockWidget.DockWidgetFeature.DockWidgetMovable, True)
-
-        dock.closeRequested.connect(lambda: self._on_editor_close_requested(dock, widget))
-
-        return dock
+        return widget
 
     @property
     def last_focused_editor(self) -> CDockWidget | None:
         """
         Get the last focused editor.
         """
-        dock_widget = self.dock_manager.focusedDockWidget()
-        if dock_widget is not None and isinstance(dock_widget.widget(), MonacoWidget):
-            self.last_focused_editor = dock_widget
-
         return self._last_focused_editor
 
     @last_focused_editor.setter
@@ -221,27 +199,55 @@ class MonacoDock(BECWidget, QWidget):
 
     def add_editor(
         self, area: Any | None = None, title: str | None = None, tooltip: str | None = None
-    ):  # Any as qt ads does not return a proper type
+    ) -> CDockWidget:
         """
-        Adds a new Monaco editor dock widget to the dock manager.
+        Add a new Monaco editor dock to the specified area.
+
+        Args:
+            area(Any | None): The area to add the editor to. If None, adds to the main area.
+            title(str | None): The title of the editor tab. If None, a default title is used.
+            tooltip(str | None): The tooltip for the editor tab. If None, no tooltip is set.
+
+        Returns:
+            CDockWidget: The created dock widget containing the Monaco editor.
         """
-        new_dock = self._create_editor()
-        if title is not None:
-            new_dock.setWindowTitle(title)
+        widget = self._create_editor_widget()
+        existing_count = len(self.dock_manager.dockWidgets())
+        default_title = title or f"Untitled_{existing_count + 1}"
+
+        tab_target: CDockWidget | None = None
+        if isinstance(area, CDockAreaWidget):
+            tab_target = area.currentDockWidget()
+            if tab_target is None:
+                docks = area.dockWidgets()
+                tab_target = docks[0] if docks else None
+
+        dock = self.new(
+            widget,
+            closable=True,
+            floatable=False,
+            movable=True,
+            tab_with=tab_target,
+            return_dock=True,
+            on_close=self._on_editor_close_requested,
+            title_buttons={"float": False},
+            where="right",
+        )
+        dock.setWindowTitle(default_title)
         if tooltip is not None:
-            new_dock.setTabToolTip(tooltip)
-        if area is None:
-            area_obj = self.dock_manager.addDockWidgetTab(
-                QtAds.DockWidgetArea.TopDockWidgetArea, new_dock
-            )
-            self._ensure_area_plus(area_obj)
-        else:
-            # If an area is provided, add the dock to that area
-            self.dock_manager.addDockWidgetTabToArea(new_dock, area)
-            self._ensure_area_plus(area)
+            dock.setTabToolTip(tooltip)
+
+        widget.save_enabled.connect(
+            lambda modified, target=dock: self._update_tab_title_for_modification(target, modified)
+        )
+
+        area_widget = dock.dockAreaWidget()
+        if area_widget is not None:
+            self._ensure_area_plus(area_widget)
 
         QTimer.singleShot(0, self._scan_and_fix_areas)
-        return new_dock
+        self.last_focused_editor = dock
+        return dock
 
     def open_file(self, file_name: str, scope: str | None = None) -> None:
         """
@@ -252,6 +258,7 @@ class MonacoDock(BECWidget, QWidget):
             dock = self._get_editor_dock(file_name)
             if dock is not None:
                 dock.setAsCurrentTab()
+                self.last_focused_editor = dock
             return
 
         file = os.path.basename(file_name)
@@ -276,6 +283,7 @@ class MonacoDock(BECWidget, QWidget):
                 editor_widget.open_file(file_name)
                 if scope is not None:
                     editor_widget.metadata["scope"] = scope
+                self.last_focused_editor = editor_dock
                 return
 
         # File is not open, create a new editor
@@ -285,6 +293,7 @@ class MonacoDock(BECWidget, QWidget):
         if scope is not None:
             widget.metadata["scope"] = scope
         editor_dock.setAsCurrentTab()
+        self.last_focused_editor = editor_dock
 
     def save_file(
         self, widget: MonacoWidget | None = None, force_save_as: bool = False, format_on_save=True
@@ -415,7 +424,7 @@ class MonacoDock(BECWidget, QWidget):
                 open_files.append(editor_widget.current_file)
         return open_files
 
-    def _get_editor_dock(self, file_name: str) -> QtAds.CDockWidget | None:
+    def _get_editor_dock(self, file_name: str) -> CDockWidget | None:
         for widget in self.dock_manager.dockWidgets():
             editor_widget = cast(MonacoWidget, widget.widget())
             if editor_widget.current_file == file_name:
