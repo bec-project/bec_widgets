@@ -21,9 +21,6 @@ class DeveloperView(ViewBase):
         self.developer_widget = DeveloperWidget(parent=self)
         self.set_content(self.developer_widget)
 
-        # Apply stretch after the layout is done
-        self.set_default_view([2, 5, 3], [7, 3])
-
 
 if __name__ == "__main__":
     import sys
