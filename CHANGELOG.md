@@ -1,6 +1,29 @@
 # CHANGELOG
 
 
+## v2.44.0 (2025-11-05)
+
+### Chores
+
+- Update stale issue and PR settings to 120 days
+  ([`e9d381a`](https://github.com/bec-project/bec_widgets/commit/e9d381a18a425727216f035ecccdad25f3189608))
+
+### Documentation
+
+- Readme rewritten
+  ([`44b1dbf`](https://github.com/bec-project/bec_widgets/commit/44b1dbf911f43dbde4286e2ea541c480f7b834be))
+
+### Features
+
+- **plot_base**: Invert x/y axis
+  ([`b10efc0`](https://github.com/bec-project/bec_widgets/commit/b10efc0f400fe36f7cb0d5998214d50943934d7b))
+
+### Refactoring
+
+- **plot_base**: Consolidated user access for the PlotBase
+  ([`d5e6f09`](https://github.com/bec-project/bec_widgets/commit/d5e6f095fe60223972235acd3ea68389aa7a1a14))
+
+
 ## v2.43.0 (2025-10-30)
 
 ### Features
