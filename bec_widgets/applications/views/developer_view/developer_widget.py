@@ -5,17 +5,14 @@ from bec_lib.endpoints import MessageEndpoints
 from bec_lib.script_executor import upload_script
 from bec_qthemes import material_icon
 from qtpy.QtGui import QKeySequence, QShortcut
-from qtpy.QtWidgets import QTextEdit, QVBoxLayout, QWidget
-from shiboken6 import isValid
+from qtpy.QtWidgets import QTextEdit
 
-import bec_widgets.widgets.containers.ads as QtAds
-from bec_widgets import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
 from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
-from bec_widgets.widgets.containers.ads import CDockManager, CDockWidget
 from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
+from bec_widgets.widgets.containers.advanced_dock_area.basic_dock_area import DockAreaWidget
 from bec_widgets.widgets.editors.monaco.monaco_dock import MonacoDock
 from bec_widgets.widgets.editors.web_console.web_console import WebConsole
 from bec_widgets.widgets.utility.ide_explorer.ide_explorer import IDEExplorer
@@ -77,31 +74,38 @@ def markdown_to_html(md_text: str) -> str:
     return css + html
 
 
-class DeveloperWidget(BECWidget, QWidget):
+class DeveloperWidget(DockAreaWidget):
 
     def __init__(self, parent=None, **kwargs):
-        super().__init__(parent=parent, **kwargs)
+        super().__init__(parent=parent, variant="compact", **kwargs)
 
-        # Top-level layout hosting a toolbar and the dock manager
-        self._root_layout = QVBoxLayout(self)
-        self._root_layout.setContentsMargins(0, 0, 0, 0)
-        self._root_layout.setSpacing(0)
+        # Promote toolbar above the dock manager provided by the base class
         self.toolbar = ModularToolBar(self)
         self.init_developer_toolbar()
-        self._root_layout.addWidget(self.toolbar)
-
-        self.dock_manager = CDockManager(self)
-        self.dock_manager.setStyleSheet("")
-        self._root_layout.addWidget(self.dock_manager)
+        self._root_layout.insertWidget(0, self.toolbar)
 
         # Initialize the widgets
         self.explorer = IDEExplorer(self)
+        self.explorer.setObjectName("Explorer")
         self.console = WebConsole(self)
+        self.console.setObjectName("Console")
         self.terminal = WebConsole(self, startup_cmd="")
+        self.terminal.setObjectName("Terminal")
         self.monaco = MonacoDock(self)
+        self.monaco.setObjectName("Monaco Editor")
         self.monaco.save_enabled.connect(self._on_save_enabled_update)
-        self.plotting_ads = AdvancedDockArea(self, mode="plot", default_add_direction="bottom")
+        self.plotting_ads = AdvancedDockArea(
+            self,
+            mode="plot",
+            default_add_direction="bottom",
+            profile_namespace="developer_plotting",
+            auto_profile_namespace=False,
+            enable_profile_management=False,
+            variant="compact",
+        )
+        self.plotting_ads.setObjectName("Plotting Area")
         self.signature_help = QTextEdit(self)
+        self.signature_help.setObjectName("Signature Help")
         self.signature_help.setAcceptRichText(True)
         self.signature_help.setReadOnly(True)
         self.signature_help.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
@@ -113,56 +117,83 @@ class DeveloperWidget(BECWidget, QWidget):
         )
         self._current_script_id: str | None = None
 
-        # Create the dock widgets
-        self.explorer_dock = QtAds.CDockWidget("Explorer", self)
-        self.explorer_dock.setWidget(self.explorer)
-
-        self.console_dock = QtAds.CDockWidget("Console", self)
-        self.console_dock.setWidget(self.console)
-
-        self.monaco_dock = QtAds.CDockWidget("Monaco Editor", self)
-        self.monaco_dock.setWidget(self.monaco)
-
-        self.terminal_dock = QtAds.CDockWidget("Terminal", self)
-        self.terminal_dock.setWidget(self.terminal)
-
-        # Monaco will be central widget
-        self.dock_manager.setCentralWidget(self.monaco_dock)
-
-        # Add the dock widgets to the dock manager
-        area_bottom = self.dock_manager.addDockWidget(
-            QtAds.DockWidgetArea.BottomDockWidgetArea, self.console_dock
-        )
-        self.dock_manager.addDockWidgetTabToArea(self.terminal_dock, area_bottom)
-
-        area_left = self.dock_manager.addDockWidget(
-            QtAds.DockWidgetArea.LeftDockWidgetArea, self.explorer_dock
-        )
-        area_left.titleBar().setVisible(False)
-
-        for dock in self.dock_manager.dockWidgets():
-            # dock.setFeature(CDockWidget.DockWidgetDeleteOnClose, True)#TODO implement according to MonacoDock or AdvancedDockArea
-            # dock.setFeature(CDockWidget.CustomCloseHandling, True) #TODO same
-            dock.setFeature(CDockWidget.DockWidgetFeature.DockWidgetClosable, False)
-            dock.setFeature(CDockWidget.DockWidgetFeature.DockWidgetFloatable, False)
-            dock.setFeature(CDockWidget.DockWidgetFeature.DockWidgetMovable, False)
-
-        self.plotting_ads_dock = QtAds.CDockWidget("Plotting Area", self)
-        self.plotting_ads_dock.setWidget(self.plotting_ads)
-
-        self.signature_dock = QtAds.CDockWidget("Signature Help", self)
-        self.signature_dock.setWidget(self.signature_help)
-
-        area_right = self.dock_manager.addDockWidget(
-            QtAds.DockWidgetArea.RightDockWidgetArea, self.plotting_ads_dock
-        )
-        self.dock_manager.addDockWidgetTabToArea(self.signature_dock, area_right)
+        self._initialize_layout()
 
         # Connect editor signals
         self.explorer.file_open_requested.connect(self._open_new_file)
         self.monaco.macro_file_updated.connect(self.explorer.refresh_macro_file)
 
         self.toolbar.show_bundles(["save", "execution", "settings"])
+
+    def _initialize_layout(self) -> None:
+        """Create the default dock arrangement for the developer workspace."""
+
+        # Monaco editor as the central dock
+        self.monaco_dock = self.new(
+            self.monaco,
+            closable=False,
+            floatable=False,
+            movable=False,
+            return_dock=True,
+            show_title_bar=False,
+            show_settings_action=False,
+            title_buttons={"float": False, "close": False, "menu": False},
+            # promote_central=True,
+        )
+
+        # Explorer on the left without a title bar
+        self.explorer_dock = self.new(
+            self.explorer,
+            where="left",
+            closable=False,
+            floatable=False,
+            movable=False,
+            return_dock=True,
+            show_title_bar=False,
+        )
+
+        # Console and terminal tabbed along the bottom
+        self.console_dock = self.new(
+            self.console,
+            relative_to=self.monaco_dock,
+            where="bottom",
+            closable=False,
+            floatable=False,
+            movable=False,
+            return_dock=True,
+            title_buttons={"float": True, "close": False},
+        )
+        self.terminal_dock = self.new(
+            self.terminal,
+            closable=False,
+            floatable=False,
+            movable=False,
+            tab_with=self.console_dock,
+            return_dock=True,
+            title_buttons={"float": False, "close": False},
+        )
+
+        # Plotting area on the right with signature help tabbed alongside
+        self.plotting_ads_dock = self.new(
+            self.plotting_ads,
+            where="right",
+            closable=False,
+            floatable=False,
+            movable=False,
+            return_dock=True,
+            title_buttons={"float": True},
+        )
+        self.signature_dock = self.new(
+            self.signature_help,
+            closable=False,
+            floatable=False,
+            movable=False,
+            tab_with=self.plotting_ads_dock,
+            return_dock=True,
+            title_buttons={"float": False, "close": False},
+        )
+
+        self.set_layout_ratios(horizontal=[2, 5, 3], vertical=[7, 3])
 
     def init_developer_toolbar(self):
         """Initialize the developer toolbar with necessary actions and widgets."""
@@ -313,18 +344,8 @@ class DeveloperWidget(BECWidget, QWidget):
         self.script_editor_tab.widget().set_highlighted_lines(line_number, line_number)
 
     def cleanup(self):
-        for dock in self.dock_manager.dockWidgets():
-            self._delete_dock(dock)
+        self.delete_all()
         return super().cleanup()
-
-    def _delete_dock(self, dock: CDockWidget) -> None:
-        w = dock.widget()
-        if w and isValid(w):
-            w.close()
-            w.deleteLater()
-        if isValid(dock):
-            dock.closeDockWidget()
-            dock.deleteDockWidget()
 
 
 if __name__ == "__main__":
