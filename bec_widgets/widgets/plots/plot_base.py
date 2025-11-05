@@ -831,6 +831,40 @@ class PlotBase(BECWidget, QWidget):
         self._apply_y_label()
         self.property_changed.emit("inner_axes", value)
 
+    @SafeProperty(bool, doc="Invert X axis.")
+    def invert_x(self) -> bool:
+        """
+        Invert X axis.
+        """
+        return self.plot_item.vb.state.get("xInverted", False)
+
+    @invert_x.setter
+    def invert_x(self, value: bool):
+        """
+        Invert X axis.
+
+        Args:
+            value(bool): The value to set.
+        """
+        self.plot_item.vb.invertX(value)
+
+    @SafeProperty(bool, doc="Invert Y axis.")
+    def invert_y(self) -> bool:
+        """
+        Invert Y axis.
+        """
+        return self.plot_item.vb.state.get("yInverted", False)
+
+    @invert_y.setter
+    def invert_y(self, value: bool):
+        """
+        Invert Y axis.
+
+        Args:
+            value(bool): The value to set.
+        """
+        self.plot_item.vb.invertY(value)
+
     @SafeProperty(bool, doc="Lock aspect ratio of the plot widget.")
     def lock_aspect_ratio(self) -> bool:
         """
