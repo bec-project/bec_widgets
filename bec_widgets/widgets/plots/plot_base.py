@@ -63,6 +63,50 @@ class UIMode(Enum):
 class PlotBase(BECWidget, QWidget):
     PLUGIN = False
     RPC = False
+    BASE_USER_ACCESS = [
+        "enable_toolbar",
+        "enable_toolbar.setter",
+        "enable_side_panel",
+        "enable_side_panel.setter",
+        "enable_fps_monitor",
+        "enable_fps_monitor.setter",
+        "set",
+        "title",
+        "title.setter",
+        "x_label",
+        "x_label.setter",
+        "y_label",
+        "y_label.setter",
+        "x_limits",
+        "x_limits.setter",
+        "y_limits",
+        "y_limits.setter",
+        "x_grid",
+        "x_grid.setter",
+        "y_grid",
+        "y_grid.setter",
+        "inner_axes",
+        "inner_axes.setter",
+        "outer_axes",
+        "outer_axes.setter",
+        "lock_aspect_ratio",
+        "lock_aspect_ratio.setter",
+        "auto_range",
+        "auto_range_x",
+        "auto_range_x.setter",
+        "auto_range_y",
+        "auto_range_y.setter",
+        "x_log",
+        "x_log.setter",
+        "y_log",
+        "y_log.setter",
+        "legend_label_size",
+        "legend_label_size.setter",
+        "minimal_crosshair_precision",
+        "minimal_crosshair_precision.setter",
+        "screenshot",
+    ]
+    USER_ACCESS = [*BECWidget.USER_ACCESS, *BASE_USER_ACCESS]
 
     # Custom Signals
     property_changed = Signal(str, object)

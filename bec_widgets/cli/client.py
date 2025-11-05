@@ -1205,6 +1205,12 @@ class EllipticalROI(RPCBase):
 class Heatmap(RPCBase):
     """Heatmap widget for visualizing 2d grid data with color mapping for the z-axis."""
 
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
     @property
     @rpc_call
     def enable_toolbar(self) -> "bool":
@@ -1394,6 +1400,29 @@ class Heatmap(RPCBase):
 
     @property
     @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Whether the aspect ratio is locked.
+        """
+
+    @lock_aspect_ratio.setter
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Whether the aspect ratio is locked.
+        """
+
+    @rpc_call
+    def auto_range(self, value: "bool" = True):
+        """
+        On demand apply autorange to the plot item based on the visible curves.
+
+        Args:
+            value(bool): If True, apply autorange to the visible curves.
+        """
+
+    @property
+    @rpc_call
     def auto_range_x(self) -> "bool":
         """
         Set auto range for the x-axis.
@@ -1418,6 +1447,48 @@ class Heatmap(RPCBase):
     def auto_range_y(self) -> "bool":
         """
         Set auto range for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @x_log.setter
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @y_log.setter
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @legend_label_size.setter
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
         """
 
     @property
@@ -1495,20 +1566,6 @@ class Heatmap(RPCBase):
     def v_max(self) -> "float":
         """
         Get the maximum value of the v_range.
-        """
-
-    @property
-    @rpc_call
-    def lock_aspect_ratio(self) -> "bool":
-        """
-        Whether the aspect ratio is locked.
-        """
-
-    @lock_aspect_ratio.setter
-    @rpc_call
-    def lock_aspect_ratio(self) -> "bool":
-        """
-        Whether the aspect ratio is locked.
         """
 
     @property
@@ -1750,6 +1807,12 @@ class Heatmap(RPCBase):
 class Image(RPCBase):
     """Image widget for displaying 2D data."""
 
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
     @property
     @rpc_call
     def enable_toolbar(self) -> "bool":
@@ -1939,6 +2002,29 @@ class Image(RPCBase):
 
     @property
     @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Whether the aspect ratio is locked.
+        """
+
+    @lock_aspect_ratio.setter
+    @rpc_call
+    def lock_aspect_ratio(self) -> "bool":
+        """
+        Whether the aspect ratio is locked.
+        """
+
+    @rpc_call
+    def auto_range(self, value: "bool" = True):
+        """
+        On demand apply autorange to the plot item based on the visible curves.
+
+        Args:
+            value(bool): If True, apply autorange to the visible curves.
+        """
+
+    @property
+    @rpc_call
     def auto_range_x(self) -> "bool":
         """
         Set auto range for the x-axis.
@@ -1963,6 +2049,48 @@ class Image(RPCBase):
     def auto_range_y(self) -> "bool":
         """
         Set auto range for the y-axis.
+        """
+
+    @property
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @x_log.setter
+    @rpc_call
+    def x_log(self) -> "bool":
+        """
+        Set X-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @y_log.setter
+    @rpc_call
+    def y_log(self) -> "bool":
+        """
+        Set Y-axis to log scale if True, linear if False.
+        """
+
+    @property
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
+        """
+
+    @legend_label_size.setter
+    @rpc_call
+    def legend_label_size(self) -> "int":
+        """
+        The font size of the legend font.
         """
 
     @property
@@ -2040,20 +2168,6 @@ class Image(RPCBase):
     def v_max(self) -> "float":
         """
         Get the maximum value of the v_range.
-        """
-
-    @property
-    @rpc_call
-    def lock_aspect_ratio(self) -> "bool":
-        """
-        Whether the aspect ratio is locked.
-        """
-
-    @lock_aspect_ratio.setter
-    @rpc_call
-    def lock_aspect_ratio(self) -> "bool":
-        """
-        Whether the aspect ratio is locked.
         """
 
     @property
@@ -2595,6 +2709,12 @@ class MonacoWidget(RPCBase):
 class MotorMap(RPCBase):
     """Motor map widget for plotting motor positions in 2D including a trace of the last points."""
 
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
     @property
     @rpc_call
     def enable_toolbar(self) -> "bool":
@@ -2796,6 +2916,15 @@ class MotorMap(RPCBase):
         Lock aspect ratio of the plot widget.
         """
 
+    @rpc_call
+    def auto_range(self, value: "bool" = True):
+        """
+        On demand apply autorange to the plot item based on the visible curves.
+
+        Args:
+            value(bool): If True, apply autorange to the visible curves.
+        """
+
     @property
     @rpc_call
     def auto_range_x(self) -> "bool":
@@ -2864,6 +2993,20 @@ class MotorMap(RPCBase):
     def legend_label_size(self) -> "int":
         """
         The font size of the legend font.
+        """
+
+    @property
+    @rpc_call
+    def minimal_crosshair_precision(self) -> "int":
+        """
+        Minimum decimal places for crosshair when dynamic precision is enabled.
+        """
+
+    @minimal_crosshair_precision.setter
+    @rpc_call
+    def minimal_crosshair_precision(self) -> "int":
+        """
+        Minimum decimal places for crosshair when dynamic precision is enabled.
         """
 
     @rpc_timeout(None)
@@ -2993,6 +3136,12 @@ class MotorMap(RPCBase):
 class MultiWaveform(RPCBase):
     """MultiWaveform widget for displaying multiple waveforms emitted by a single signal."""
 
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
     @property
     @rpc_call
     def enable_toolbar(self) -> "bool":
@@ -3192,6 +3341,15 @@ class MultiWaveform(RPCBase):
     def lock_aspect_ratio(self) -> "bool":
         """
         Lock aspect ratio of the plot widget.
+        """
+
+    @rpc_call
+    def auto_range(self, value: "bool" = True):
+        """
+        On demand apply autorange to the plot item based on the visible curves.
+
+        Args:
+            value(bool): If True, apply autorange to the visible curves.
         """
 
     @property
@@ -4202,6 +4360,12 @@ class ScatterCurve(RPCBase):
 
 
 class ScatterWaveform(RPCBase):
+    @rpc_call
+    def remove(self):
+        """
+        Cleanup the BECConnector
+        """
+
     @property
     @rpc_call
     def enable_toolbar(self) -> "bool":
@@ -4401,6 +4565,15 @@ class ScatterWaveform(RPCBase):
     def lock_aspect_ratio(self) -> "bool":
         """
         Lock aspect ratio of the plot widget.
+        """
+
+    @rpc_call
+    def auto_range(self, value: "bool" = True):
+        """
+        On demand apply autorange to the plot item based on the visible curves.
+
+        Args:
+            value(bool): If True, apply autorange to the visible curves.
         """
 
     @property
@@ -4821,14 +4994,10 @@ class VSCodeEditor(RPCBase):
 class Waveform(RPCBase):
     """Widget for plotting waveforms."""
 
-    @property
     @rpc_call
-    def _config_dict(self) -> "dict":
+    def remove(self):
         """
-        Get the configuration of the widget.
-
-        Returns:
-            dict: The configuration of the widget.
+        Cleanup the BECConnector
         """
 
     @property
@@ -5032,6 +5201,15 @@ class Waveform(RPCBase):
         Lock aspect ratio of the plot widget.
         """
 
+    @rpc_call
+    def auto_range(self, value: "bool" = True):
+        """
+        On demand apply autorange to the plot item based on the visible curves.
+
+        Args:
+            value(bool): If True, apply autorange to the visible curves.
+        """
+
     @property
     @rpc_call
     def auto_range_x(self) -> "bool":
@@ -5058,15 +5236,6 @@ class Waveform(RPCBase):
     def auto_range_y(self) -> "bool":
         """
         Set auto range for the y-axis.
-        """
-
-    @rpc_call
-    def auto_range(self, value: "bool" = True):
-        """
-        On demand apply autorange to the plot item based on the visible curves.
-
-        Args:
-            value(bool): If True, apply autorange to the visible curves.
         """
 
     @property
@@ -5130,6 +5299,16 @@ class Waveform(RPCBase):
     def screenshot(self, file_name: "str | None" = None):
         """
         Take a screenshot of the dock area and save it to a file.
+        """
+
+    @property
+    @rpc_call
+    def _config_dict(self) -> "dict":
+        """
+        Get the configuration of the widget.
+
+        Returns:
+            dict: The configuration of the widget.
         """
 
     @property

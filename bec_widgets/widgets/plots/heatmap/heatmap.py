@@ -26,6 +26,7 @@ from bec_widgets.utils.toolbars.actions import MaterialIconAction
 from bec_widgets.widgets.plots.heatmap.settings.heatmap_setting import HeatmapSettings
 from bec_widgets.widgets.plots.image.image_base import ImageBase
 from bec_widgets.widgets.plots.image.image_item import ImageItem
+from bec_widgets.widgets.plots.plot_base import PlotBase
 
 logger = bec_logger.logger
 
@@ -83,39 +84,7 @@ class Heatmap(ImageBase):
     """
 
     USER_ACCESS = [
-        # General PlotBase Settings
-        "enable_toolbar",
-        "enable_toolbar.setter",
-        "enable_side_panel",
-        "enable_side_panel.setter",
-        "enable_fps_monitor",
-        "enable_fps_monitor.setter",
-        "set",
-        "title",
-        "title.setter",
-        "x_label",
-        "x_label.setter",
-        "y_label",
-        "y_label.setter",
-        "x_limits",
-        "x_limits.setter",
-        "y_limits",
-        "y_limits.setter",
-        "x_grid",
-        "x_grid.setter",
-        "y_grid",
-        "y_grid.setter",
-        "inner_axes",
-        "inner_axes.setter",
-        "outer_axes",
-        "outer_axes.setter",
-        "auto_range_x",
-        "auto_range_x.setter",
-        "auto_range_y",
-        "auto_range_y.setter",
-        "minimal_crosshair_precision",
-        "minimal_crosshair_precision.setter",
-        "screenshot",
+        *PlotBase.USER_ACCESS,
         # ImageView Specific Settings
         "color_map",
         "color_map.setter",
@@ -125,8 +94,6 @@ class Heatmap(ImageBase):
         "v_min.setter",
         "v_max",
         "v_max.setter",
-        "lock_aspect_ratio",
-        "lock_aspect_ratio.setter",
         "autorange",
         "autorange.setter",
         "autorange_mode",
