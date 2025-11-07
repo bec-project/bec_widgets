@@ -458,21 +458,6 @@ class BECMainWindow(BECWidget, QMainWindow):
         return super().event(event)
 
     def cleanup(self):
-        central_widget = self.centralWidget()
-        if central_widget is not None:
-            central_widget.close()
-            central_widget.deleteLater()
-        if not isinstance(central_widget, BECWidget):
-            # if the central widget is not a BECWidget, we need to call the cleanup method
-            # of all widgets whose parent is the current BECMainWindow
-            children = self.findChildren(BECWidget)
-            for child in children:
-                ancestor = WidgetHierarchy._get_becwidget_ancestor(child)
-                if ancestor is self:
-                    if shiboken6.isValid(child):
-                        child.close()
-                        child.deleteLater()
-
         # Timer cleanup
         if hasattr(self, "_client_info_expire_timer") and self._client_info_expire_timer.isActive():
             self._client_info_expire_timer.stop()
