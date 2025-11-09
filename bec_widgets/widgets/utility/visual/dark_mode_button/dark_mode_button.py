@@ -23,6 +23,7 @@ class DarkModeButton(BECWidget, QWidget):
         **kwargs,
     ) -> None:
         super().__init__(parent=parent, client=client, gui_id=gui_id, theme_update=True, **kwargs)
+        self.setProperty("skip_settings", True)
 
         self._dark_mode_enabled = False
         self.layout = QHBoxLayout(self)
