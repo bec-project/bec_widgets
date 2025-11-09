@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shiboken6
 from bec_lib import bec_logger
 from qtpy.QtCore import QSettings
 from qtpy.QtWidgets import (
@@ -84,6 +85,9 @@ class WidgetStateManager:
             settings(QSettings): The QSettings object to save the state to.
             recursive(bool): Whether to recursively save the state of child widgets.
         """
+        if widget is None or not shiboken6.isValid(widget):
+            return
+
         if widget.property("skip_settings") is True:
             return
 
@@ -115,11 +119,14 @@ class WidgetStateManager:
         )  # to avoid duplicates
         for child in all_children:
             if (
-                child.objectName()
+                child
+                and shiboken6.isValid(child)
+                and child.objectName()
                 and child.property("skip_settings") is not True
                 and not isinstance(child, QLabel)
             ):
                 self._save_widget_state_qsettings(child, settings, False)
+        logger.info(f"Saved state for widget '{widget_name}'")
 
     def _load_widget_state_qsettings(
         self, widget: QWidget, settings: QSettings, recursive: bool = True
@@ -132,6 +139,9 @@ class WidgetStateManager:
             settings(QSettings): The QSettings object to load the state from.
             recursive(bool): Whether to recursively load the state of child widgets.
         """
+        if widget is None or not shiboken6.isValid(widget):
+            return
+
         if widget.property("skip_settings") is True:
             return
 
@@ -156,7 +166,9 @@ class WidgetStateManager:
         )  # to avoid duplicates
         for child in all_children:
             if (
-                child.objectName()
+                child
+                and shiboken6.isValid(child)
+                and child.objectName()
                 and child.property("skip_settings") is not True
                 and not isinstance(child, QLabel)
             ):
