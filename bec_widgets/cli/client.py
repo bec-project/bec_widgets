@@ -98,46 +98,51 @@ class AdvancedDockArea(RPCBase):
     @rpc_call
     def new(
         self,
-        widget: "BECWidget | str",
+        widget: "QWidget | str",
+        *,
         closable: "bool" = True,
         floatable: "bool" = True,
         movable: "bool" = True,
         start_floating: "bool" = False,
         where: "Literal['left', 'right', 'top', 'bottom'] | None" = None,
-        **kwargs,
-    ) -> "BECWidget":
+        on_close: "Callable[[CDockWidget, QWidget], None] | None" = None,
+        tab_with: "CDockWidget | QWidget | str | None" = None,
+        relative_to: "CDockWidget | QWidget | str | None" = None,
+        return_dock: "bool" = False,
+        show_title_bar: "bool | None" = None,
+        title_buttons: "Mapping[str, bool] | Sequence[str] | str | None" = None,
+        show_settings_action: "bool | None" = None,
+        promote_central: "bool" = False,
+        **widget_kwargs,
+    ) -> "QWidget | CDockWidget | BECWidget":
         """
-        Create a new widget (or reuse an instance) and add it as a dock.
+        Override the base helper so dock settings are available by default.
 
-        Args:
-            widget: Widget instance or a string widget type (factory-created).
-            closable: Whether the dock is closable.
-            floatable: Whether the dock is floatable.
-            movable: Whether the dock is movable.
-            start_floating: Start the dock in a floating state.
-            where: Preferred area to add the dock: "left" | "right" | "top" | "bottom".
-                   If None, uses the instance default passed at construction time.
-            **kwargs: The keyword arguments for the widget.
-        Returns:
-            The widget instance.
+        The flag remains user-configurable (pass ``False`` to hide the action).
+        """
+
+    @rpc_call
+    def dock_map(self) -> "dict[str, CDockWidget]":
+        """
+        Return the dock widgets map as dictionary with names as keys.
+        """
+
+    @rpc_call
+    def dock_list(self) -> "list[CDockWidget]":
+        """
+        Return the list of dock widgets.
         """
 
     @rpc_call
     def widget_map(self) -> "dict[str, QWidget]":
         """
-        Return a dictionary mapping widget names to their corresponding BECWidget instances.
-
-        Returns:
-            dict: A dictionary mapping widget names to BECWidget instances.
+        Return a dictionary mapping widget names to their corresponding widgets.
         """
 
     @rpc_call
     def widget_list(self) -> "list[QWidget]":
         """
-        Return a list of all BECWidget instances in the dock area.
-
-        Returns:
-            list: A list of all BECWidget instances in the dock area.
+        Return a list of all widgets contained in the dock area.
         """
 
     @property
@@ -153,13 +158,58 @@ class AdvancedDockArea(RPCBase):
     @rpc_call
     def attach_all(self):
         """
-        Return all floating docks to the dock area, preserving tab groups within each floating container.
+        Re-attach floating docks back into the dock manager.
         """
 
     @rpc_call
     def delete_all(self):
         """
-        Delete all docks and widgets.
+        Delete all docks and their associated widgets.
+        """
+
+    @rpc_call
+    def set_layout_ratios(
+        self,
+        *,
+        horizontal: "Sequence[float] | Mapping[int | str, float] | None" = None,
+        vertical: "Sequence[float] | Mapping[int | str, float] | None" = None,
+        splitter_overrides: "Mapping[int | str | Sequence[int], Sequence[float] | Mapping[int | str, float]] | None" = None,
+    ) -> "None":
+        """
+        Adjust splitter ratios in the dock layout.
+
+        Args:
+            horizontal: Weights applied to every horizontal splitter encountered.
+            vertical: Weights applied to every vertical splitter encountered.
+            splitter_overrides: Optional overrides targeting specific splitters identified
+                by their index path (e.g. ``{0: [1, 2], (1, 0): [3, 5]}``). Paths are zero-based
+                indices following the splitter hierarchy, starting from the root splitter.
+
+        Example:
+            To build three columns with custom per-column ratios::
+
+                area.set_layout_ratios(
+                    horizontal=[1, 2, 1],             # column widths
+                    splitter_overrides={
+                        0: [1, 2],                    # column 0 (two rows)
+                        1: [3, 2, 1],                 # column 1 (three rows)
+                        2: [1],                       # column 2 (single row)
+                    },
+                )
+        """
+
+    @rpc_call
+    def describe_layout(self) -> "list[dict[str, Any]]":
+        """
+        Return metadata describing splitter paths, orientations, and contained docks.
+
+        Useful for determining the keys to use in `set_layout_ratios(splitter_overrides=...)`.
+        """
+
+    @rpc_call
+    def print_layout_structure(self) -> "None":
+        """
+        Pretty-print the current splitter paths to stdout.
         """
 
     @property
@@ -1287,6 +1337,159 @@ class DeviceLineEdit(RPCBase):
 
         Returns:
             bool: True if the current value is a valid device name, False otherwise.
+        """
+
+
+class DockAreaWidget(RPCBase):
+    """Lightweight dock area that exposes the core Qt ADS docking helpers without any"""
+
+    @rpc_call
+    def new(
+        self,
+        widget: "QWidget | str",
+        *,
+        closable: "bool" = True,
+        floatable: "bool" = True,
+        movable: "bool" = True,
+        start_floating: "bool" = False,
+        where: "Literal['left', 'right', 'top', 'bottom'] | None" = None,
+        on_close: "Callable[[CDockWidget, QWidget], None] | None" = None,
+        tab_with: "CDockWidget | QWidget | str | None" = None,
+        relative_to: "CDockWidget | QWidget | str | None" = None,
+        return_dock: "bool" = False,
+        show_title_bar: "bool | None" = None,
+        title_buttons: "Mapping[str, bool] | Sequence[str] | str | None" = None,
+        show_settings_action: "bool | None" = False,
+        promote_central: "bool" = False,
+        dock_icon: "QIcon | None" = None,
+        apply_widget_icon: "bool" = True,
+        **widget_kwargs,
+    ) -> "QWidget | CDockWidget | BECWidget":
+        """
+        Create a new widget (or reuse an instance) and add it as a dock.
+
+        Args:
+            widget(QWidget | str): Instance or registered widget type string.
+            closable(bool): Whether the dock is closable.
+            floatable(bool): Whether the dock is floatable.
+            movable(bool): Whether the dock is movable.
+            start_floating(bool): Whether to start the dock floating.
+            where(Literal["left", "right", "top", "bottom"] | None): Dock placement hint relative to the dock area (ignored when
+                ``relative_to`` is provided without an explicit value).
+            on_close(Callable[[CDockWidget, QWidget], None] | None): Optional custom close handler accepting (dock, widget).
+            tab_with(CDockWidget | QWidget | str | None): Existing dock (or widget/name) to tab the new dock alongside.
+            relative_to(CDockWidget | QWidget | str | None): Existing dock (or widget/name) used as the positional anchor.
+                When supplied and ``where`` is ``None``, the new dock inherits the
+                anchor's current dock area.
+            return_dock(bool): When True, return the created dock instead of the widget.
+            show_title_bar(bool | None): Explicitly show or hide the dock area's title bar.
+            title_buttons(Mapping[str, bool] | Sequence[str] | str | None): Mapping or iterable describing which title bar buttons should
+                remain visible. Provide a mapping of button names (``"float"``,
+                ``"close"``, ``"menu"``, ``"auto_hide"``, ``"minimize"``) to booleans,
+                or a sequence of button names to hide.
+            show_settings_action(bool | None): Control whether a dock settings/property action should
+                be installed. Defaults to ``False`` for the basic dock area; subclasses
+                such as `AdvancedDockArea` override the default to ``True``.
+            promote_central(bool): When True, promote the created dock to be the dock manager's
+                central widget (useful for editor stacks or other root content).
+            dock_icon(QIcon | None): Optional icon applied to the dock via ``CDockWidget.setIcon``.
+                Provide a `QIcon` (e.g. from ``material_icon``). When ``None`` (default),
+                the widget's ``ICON_NAME`` attribute is used when available.
+            apply_widget_icon(bool): When False, skip automatically resolving the icon from
+                the widget's ``ICON_NAME`` (useful for callers who want no icon and do not pass one explicitly).
+
+        Returns:
+            The widget instance by default, or the created `CDockWidget` when `return_dock` is True.
+        """
+
+    @rpc_call
+    def dock_map(self) -> "dict[str, CDockWidget]":
+        """
+        Return the dock widgets map as dictionary with names as keys.
+        """
+
+    @rpc_call
+    def dock_list(self) -> "list[CDockWidget]":
+        """
+        Return the list of dock widgets.
+        """
+
+    @rpc_call
+    def widget_map(self) -> "dict[str, QWidget]":
+        """
+        Return a dictionary mapping widget names to their corresponding widgets.
+        """
+
+    @rpc_call
+    def widget_list(self) -> "list[QWidget]":
+        """
+        Return a list of all widgets contained in the dock area.
+        """
+
+    @rpc_call
+    def attach_all(self):
+        """
+        Re-attach floating docks back into the dock manager.
+        """
+
+    @rpc_call
+    def delete_all(self):
+        """
+        Delete all docks and their associated widgets.
+        """
+
+    @rpc_call
+    def set_layout_ratios(
+        self,
+        *,
+        horizontal: "Sequence[float] | Mapping[int | str, float] | None" = None,
+        vertical: "Sequence[float] | Mapping[int | str, float] | None" = None,
+        splitter_overrides: "Mapping[int | str | Sequence[int], Sequence[float] | Mapping[int | str, float]] | None" = None,
+    ) -> "None":
+        """
+        Adjust splitter ratios in the dock layout.
+
+        Args:
+            horizontal: Weights applied to every horizontal splitter encountered.
+            vertical: Weights applied to every vertical splitter encountered.
+            splitter_overrides: Optional overrides targeting specific splitters identified
+                by their index path (e.g. ``{0: [1, 2], (1, 0): [3, 5]}``). Paths are zero-based
+                indices following the splitter hierarchy, starting from the root splitter.
+
+        Example:
+            To build three columns with custom per-column ratios::
+
+                area.set_layout_ratios(
+                    horizontal=[1, 2, 1],             # column widths
+                    splitter_overrides={
+                        0: [1, 2],                    # column 0 (two rows)
+                        1: [3, 2, 1],                 # column 1 (three rows)
+                        2: [1],                       # column 2 (single row)
+                    },
+                )
+        """
+
+    @rpc_call
+    def describe_layout(self) -> "list[dict[str, Any]]":
+        """
+        Return metadata describing splitter paths, orientations, and contained docks.
+
+        Useful for determining the keys to use in `set_layout_ratios(splitter_overrides=...)`.
+        """
+
+    @rpc_call
+    def print_layout_structure(self) -> "None":
+        """
+        Pretty-print the current splitter paths to stdout.
+        """
+
+    @rpc_call
+    def set_central_dock(self, dock: "CDockWidget | QWidget | str") -> "None":
+        """
+        Promote an existing dock to be the dock manager's central widget.
+
+        Args:
+            dock(CDockWidget | QWidget | str): Dock reference to promote.
         """
 
 
@@ -2690,21 +2893,152 @@ class MonacoDock(RPCBase):
     """MonacoDock is a dock widget that contains Monaco editor instances."""
 
     @rpc_call
-    def remove(self):
+    def new(
+        self,
+        widget: "QWidget | str",
+        *,
+        closable: "bool" = True,
+        floatable: "bool" = True,
+        movable: "bool" = True,
+        start_floating: "bool" = False,
+        where: "Literal['left', 'right', 'top', 'bottom'] | None" = None,
+        on_close: "Callable[[CDockWidget, QWidget], None] | None" = None,
+        tab_with: "CDockWidget | QWidget | str | None" = None,
+        relative_to: "CDockWidget | QWidget | str | None" = None,
+        return_dock: "bool" = False,
+        show_title_bar: "bool | None" = None,
+        title_buttons: "Mapping[str, bool] | Sequence[str] | str | None" = None,
+        show_settings_action: "bool | None" = False,
+        promote_central: "bool" = False,
+        dock_icon: "QIcon | None" = None,
+        apply_widget_icon: "bool" = True,
+        **widget_kwargs,
+    ) -> "QWidget | CDockWidget | BECWidget":
         """
-        Cleanup the BECConnector
+        Create a new widget (or reuse an instance) and add it as a dock.
+
+        Args:
+            widget(QWidget | str): Instance or registered widget type string.
+            closable(bool): Whether the dock is closable.
+            floatable(bool): Whether the dock is floatable.
+            movable(bool): Whether the dock is movable.
+            start_floating(bool): Whether to start the dock floating.
+            where(Literal["left", "right", "top", "bottom"] | None): Dock placement hint relative to the dock area (ignored when
+                ``relative_to`` is provided without an explicit value).
+            on_close(Callable[[CDockWidget, QWidget], None] | None): Optional custom close handler accepting (dock, widget).
+            tab_with(CDockWidget | QWidget | str | None): Existing dock (or widget/name) to tab the new dock alongside.
+            relative_to(CDockWidget | QWidget | str | None): Existing dock (or widget/name) used as the positional anchor.
+                When supplied and ``where`` is ``None``, the new dock inherits the
+                anchor's current dock area.
+            return_dock(bool): When True, return the created dock instead of the widget.
+            show_title_bar(bool | None): Explicitly show or hide the dock area's title bar.
+            title_buttons(Mapping[str, bool] | Sequence[str] | str | None): Mapping or iterable describing which title bar buttons should
+                remain visible. Provide a mapping of button names (``"float"``,
+                ``"close"``, ``"menu"``, ``"auto_hide"``, ``"minimize"``) to booleans,
+                or a sequence of button names to hide.
+            show_settings_action(bool | None): Control whether a dock settings/property action should
+                be installed. Defaults to ``False`` for the basic dock area; subclasses
+                such as `AdvancedDockArea` override the default to ``True``.
+            promote_central(bool): When True, promote the created dock to be the dock manager's
+                central widget (useful for editor stacks or other root content).
+            dock_icon(QIcon | None): Optional icon applied to the dock via ``CDockWidget.setIcon``.
+                Provide a `QIcon` (e.g. from ``material_icon``). When ``None`` (default),
+                the widget's ``ICON_NAME`` attribute is used when available.
+            apply_widget_icon(bool): When False, skip automatically resolving the icon from
+                the widget's ``ICON_NAME`` (useful for callers who want no icon and do not pass one explicitly).
+
+        Returns:
+            The widget instance by default, or the created `CDockWidget` when `return_dock` is True.
         """
 
     @rpc_call
-    def attach(self):
+    def dock_map(self) -> "dict[str, CDockWidget]":
         """
-        None
+        Return the dock widgets map as dictionary with names as keys.
         """
 
     @rpc_call
-    def detach(self):
+    def dock_list(self) -> "list[CDockWidget]":
         """
-        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
+        Return the list of dock widgets.
+        """
+
+    @rpc_call
+    def widget_map(self) -> "dict[str, QWidget]":
+        """
+        Return a dictionary mapping widget names to their corresponding widgets.
+        """
+
+    @rpc_call
+    def widget_list(self) -> "list[QWidget]":
+        """
+        Return a list of all widgets contained in the dock area.
+        """
+
+    @rpc_call
+    def attach_all(self):
+        """
+        Re-attach floating docks back into the dock manager.
+        """
+
+    @rpc_call
+    def delete_all(self):
+        """
+        Delete all docks and their associated widgets.
+        """
+
+    @rpc_call
+    def set_layout_ratios(
+        self,
+        *,
+        horizontal: "Sequence[float] | Mapping[int | str, float] | None" = None,
+        vertical: "Sequence[float] | Mapping[int | str, float] | None" = None,
+        splitter_overrides: "Mapping[int | str | Sequence[int], Sequence[float] | Mapping[int | str, float]] | None" = None,
+    ) -> "None":
+        """
+        Adjust splitter ratios in the dock layout.
+
+        Args:
+            horizontal: Weights applied to every horizontal splitter encountered.
+            vertical: Weights applied to every vertical splitter encountered.
+            splitter_overrides: Optional overrides targeting specific splitters identified
+                by their index path (e.g. ``{0: [1, 2], (1, 0): [3, 5]}``). Paths are zero-based
+                indices following the splitter hierarchy, starting from the root splitter.
+
+        Example:
+            To build three columns with custom per-column ratios::
+
+                area.set_layout_ratios(
+                    horizontal=[1, 2, 1],             # column widths
+                    splitter_overrides={
+                        0: [1, 2],                    # column 0 (two rows)
+                        1: [3, 2, 1],                 # column 1 (three rows)
+                        2: [1],                       # column 2 (single row)
+                    },
+                )
+        """
+
+    @rpc_call
+    def describe_layout(self) -> "list[dict[str, Any]]":
+        """
+        Return metadata describing splitter paths, orientations, and contained docks.
+
+        Useful for determining the keys to use in `set_layout_ratios(splitter_overrides=...)`.
+        """
+
+    @rpc_call
+    def print_layout_structure(self) -> "None":
+        """
+        Pretty-print the current splitter paths to stdout.
+        """
+
+    @rpc_call
+    def set_central_dock(self, dock: "CDockWidget | QWidget | str") -> "None":
+        """
+        Promote an existing dock to be the dock manager's central widget.
+
+        Args:
+            dock(CDockWidget | QWidget | str): Dock reference to promote.
         """
 
 
