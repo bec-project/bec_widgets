@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v2.45.0 (2025-11-10)
+
+### Chores
+
+- Add third-party license notice
+  ([`617f2df`](https://github.com/bec-project/bec_widgets/commit/617f2df2af41db7692c42d0e10bce4968f36fb94))
+
+### Features
+
+- **waveform**: Dap curve can be attached to custom and history curves
+  ([`198684c`](https://github.com/bec-project/bec_widgets/commit/198684c65d9565e8985156b426b8ef98dcc687cc))
+
+
 ## v2.44.0 (2025-11-05)
 
 ### Chores
