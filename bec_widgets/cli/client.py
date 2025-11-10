@@ -5439,9 +5439,9 @@ class Waveform(RPCBase):
             y_entry(str): The name of the entry for the y-axis.
             color(str): The color of the curve.
             label(str): The label of the curve.
-            dap(str): The dap model to use for the curve, only available for sync devices.
-            If not specified, none will be added.
-            Use the same string as is the name of the LMFit model.
+            dap(str): The dap model to use for the curve. When provided, a DAP curve is
+                attached automatically for device, history, or custom data sources. Use
+                the same string as the LMFit model name.
             scan_id(str):  Optional scan ID. When provided, the curve is treated as a **history** curve and
                 the y‑data (and optional x‑data) are fetched from that historical scan. Such curves are
                 never cleared by live‑scan resets.
@@ -5461,11 +5461,12 @@ class Waveform(RPCBase):
         **kwargs,
     ) -> "Curve":
         """
-        Create a new DAP curve referencing the existing device curve `device_label`,
-        with the data processing model `dap_name`.
+        Create a new DAP curve referencing the existing curve `device_label`, with the
+        data processing model `dap_name`. DAP curves can be attached to curves that
+        originate from live devices, history, or fully custom data sources.
 
         Args:
-            device_label(str): The label of the device curve to add DAP to.
+            device_label(str): The label of the source curve to add DAP to.
             dap_name(str): The name of the DAP model to use.
             color(str): The color of the curve.
             dap_oversample(int): The oversampling factor for the DAP curve.

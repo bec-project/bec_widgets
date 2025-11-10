@@ -718,9 +718,9 @@ class Waveform(PlotBase):
             y_entry(str): The name of the entry for the y-axis.
             color(str): The color of the curve.
             label(str): The label of the curve.
-            dap(str): The dap model to use for the curve, only available for sync devices.
-            If not specified, none will be added.
-            Use the same string as is the name of the LMFit model.
+            dap(str): The dap model to use for the curve. When provided, a DAP curve is
+                attached automatically for device, history, or custom data sources. Use
+                the same string as the LMFit model name.
             scan_id(str):  Optional scan ID. When provided, the curve is treated as a **history** curve and
                 the y‑data (and optional x‑data) are fetched from that historical scan. Such curves are
                 never cleared by live‑scan resets.
@@ -809,7 +809,7 @@ class Waveform(PlotBase):
         # CREATE THE CURVE
         curve = self._add_curve(config=config, x_data=x_data, y_data=y_data)
 
-        if dap is not None and source == "device":
+        if dap is not None and curve.config.source in ("device", "history", "custom"):
             self.add_dap_curve(device_label=curve.name(), dap_name=dap, **kwargs)
 
         return curve
@@ -826,11 +826,12 @@ class Waveform(PlotBase):
         **kwargs,
     ) -> Curve:
         """
-        Create a new DAP curve referencing the existing device curve `device_label`,
-        with the data processing model `dap_name`.
+        Create a new DAP curve referencing the existing curve `device_label`, with the
+        data processing model `dap_name`. DAP curves can be attached to curves that
+        originate from live devices, history, or fully custom data sources.
 
         Args:
-            device_label(str): The label of the device curve to add DAP to.
+            device_label(str): The label of the source curve to add DAP to.
             dap_name(str): The name of the DAP model to use.
             color(str): The color of the curve.
             dap_oversample(int): The oversampling factor for the DAP curve.
@@ -840,17 +841,22 @@ class Waveform(PlotBase):
             Curve: The new DAP curve.
         """
 
-        # 1) Find the existing device curve by label
+        # 1) Find the existing curve by label
         device_curve = self._find_curve_by_label(device_label)
         if not device_curve:
             raise ValueError(f"No existing curve found with label '{device_label}'.")
-        if device_curve.config.source not in ("device", "history"):
+        if device_curve.config.source not in ("device", "history", "custom"):
             raise ValueError(
-                f"Curve '{device_label}' is not a device curve. Only device curves can have DAP."
+                f"Curve '{device_label}' is not compatible with DAP. "
+                f"Only device, history, or custom curves support fitting."
             )
 
-        dev_name = device_curve.config.signal.name
-        dev_entry = device_curve.config.signal.entry
+        dev_name = getattr(getattr(device_curve.config, "signal", None), "name", None)
+        dev_entry = getattr(getattr(device_curve.config, "signal", None), "entry", None)
+        if dev_name is None:
+            dev_name = device_label
+        if dev_entry is None:
+            dev_entry = "custom"
 
         # 2) Build a label for the new DAP curve
         dap_label = f"{device_label}-{dap_name}"
@@ -2329,7 +2335,7 @@ class DemoApp(QMainWindow):  # pragma: no cover
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Waveform Demo")
-        self.resize(800, 600)
+        self.resize(1200, 600)
         self.main_widget = QWidget(self)
         self.layout = QHBoxLayout(self.main_widget)
         self.setCentralWidget(self.main_widget)
@@ -2341,8 +2347,31 @@ class DemoApp(QMainWindow):  # pragma: no cover
         self.waveform_side.plot(y_name="bpm4i", y_entry="bpm4i", dap="GaussianModel")
         self.waveform_side.plot(y_name="bpm3a", y_entry="bpm3a")
 
+        self.custom_waveform = Waveform(popups=True)
+        self._populate_custom_curve_demo()
+
         self.layout.addWidget(self.waveform_side)
         self.layout.addWidget(self.waveform_popup)
+        self.layout.addWidget(self.custom_waveform)
+
+    def _populate_custom_curve_demo(self):
+        """
+        Showcase how to attach a DAP fit to a fully custom curve.
+
+        The example generates a noisy Gaussian trace, plots it as custom data, and
+        immediately adds a Gaussian model fit. When the widget is plugged into a
+        running BEC instance, the fit curve will be requested like any other device
+        signal. This keeps the example minimal while demonstrating the new workflow.
+        """
+        x = np.linspace(-4, 4, 600)
+        rng = np.random.default_rng(42)
+        noise = rng.normal(loc=0, scale=0.05, size=x.size)
+        amplitude = 3.5
+        center = 0.5
+        sigma = 0.8
+        y = amplitude * np.exp(-((x - center) ** 2) / (2 * sigma**2)) + noise
+
+        self.custom_waveform.plot(x=x, y=y, label="custom-gaussian", dap="GaussianModel")
 
 
 if __name__ == "__main__":  # pragma: no cover

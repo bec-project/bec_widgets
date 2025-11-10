@@ -479,6 +479,36 @@ def test_add_dap_curve(qtbot, mocked_client_with_dap, monkeypatch):
     assert dap_curve.config.signal.dap == "GaussianModel"
 
 
+def test_add_dap_curve_custom_source(qtbot, mocked_client_with_dap):
+    """
+    Ensure that custom curves can also serve as parents for DAP fits.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    x = np.linspace(-1, 1, 50)
+    y = np.sin(x)
+    custom_curve = wf.plot(x=x, y=y, label="custom-curve")
+
+    dap_curve = wf.add_dap_curve(device_label=custom_curve.name(), dap_name="GaussianModel")
+    assert dap_curve.config.source == "dap"
+    assert dap_curve.config.parent_label == custom_curve.name()
+    assert dap_curve.config.signal.name == custom_curve.name()
+    assert dap_curve.config.signal.entry == "custom"
+    assert dap_curve.config.signal.dap == "GaussianModel"
+
+
+def test_plot_custom_curve_with_inline_dap(qtbot, mocked_client_with_dap):
+    """
+    Supplying the `dap` kwarg when plotting custom data should auto-create the fit curve.
+    """
+    wf = create_widget(qtbot, Waveform, client=mocked_client_with_dap)
+    curve = wf.plot(x=[0, 1, 2], y=[1, 2, 3], label="custom-inline", dap="GaussianModel")
+
+    dap_curve = wf.get_curve(f"{curve.name()}-GaussianModel")
+    assert dap_curve is not None
+    assert dap_curve.config.parent_label == curve.name()
+    assert dap_curve.config.signal.dap == "GaussianModel"
+
+
 def test_fetch_scan_data_and_access(qtbot, mocked_client, monkeypatch):
     """
     Test the _fetch_scan_data_and_access method returns live_data/val if in a live scan,
