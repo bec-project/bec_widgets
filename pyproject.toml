@@ -13,7 +13,7 @@ classifiers = [
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
-    "bec_ipython_client~=3.70",  # needed for jupyter console
+    "bec_ipython_client~=3.70", # needed for jupyter console
     "bec_lib~=3.70",
     "bec_qthemes~=0.7, >=0.7",
     "black~=25.0",              # needed for bw-generate-cli
@@ -32,7 +32,6 @@ dependencies = [
 dev = [
     "coverage~=7.0",
     "fakeredis~=2.23, >=2.23.2",
-    "isort~=5.13, >=5.13.2",
     "pytest-bec-e2e>=2.21.4, <=4.0",
     "pytest-qt~=4.4",
     "pytest-random-order~=1.1",
