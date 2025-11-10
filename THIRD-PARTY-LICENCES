@@ -1,0 +1,28 @@
+While BEC Widgets is shipped with BSD-3-Clause license, it includes third-party components with different licenses. Below is a list of these components along with their respective licenses.
+
+Core Dependencies:
+- BEC: BSD-3-Clause License, see [here](https://github.com/bec-project/bec/blob/main/LICENSE)
+- black: MIT License, see [here](https://github.com/psf/black/blob/main/LICENSE)
+- isort: MIT License, see [here](https://github.com/PyCQA/isort/blob/main/LICENSE)
+- pydantic: MIT License, see [here](https://github.com/pydantic/pydantic/blob/main/LICENSE)
+- pyqtgraph: MIT License, see [here](https://github.com/pyqtgraph/pyqtgraph/blob/master/LICENSE.txt)
+- PySide6: LGPLv3 License, see [here](https://doc.qt.io/qtforpython/licenses.html)
+- qtconsole: BSD-3-Clause License, see [here](https://github.com/spyder-ide/qtconsole/blob/main/LICENSE)
+- qtpy: MIT License, see [here](https://github.com/spyder-ide/qtpy/blob/master/LICENSE.txt)
+- qtmonaco: BSD-3-Clause License, see [here](https://github.com/bec-project/qtmonaco/blob/main/LICENSE)
+- thefuzz: MIT License, see [here](https://github.com/seatgeek/thefuzz/blob/master/LICENSE.txt)
+
+
+Additional Dependencies (Testing/Development):
+- coverage: Apache License 2.0, see [here](https://github.com/coveragepy/coveragepy/blob/main/LICENSE.txt)
+- fakeredis: BSD-3-Clause License, see [here](https://github.com/cunla/fakeredis-py/blob/master/LICENSE)
+- pytest-bec-e2e: BSD-3-Clause License, see [here](https://github.com/bec-project/bec/blob/main/LICENSE)
+- pytest-qt: MIT License, see [here](https://github.com/pytest-dev/pytest-qt/blob/master/LICENSE)
+- pytest-random-order: MIT License, see [here](https://github.com/pytest-dev/pytest-random-order/blob/main/LICENSE)
+- pytest-timeout: MIT License, see [here](https://github.com/pytest-dev/pytest-timeout/blob/main/LICENSE)
+- pytest-xvfb: MIT License, see [here](https://github.com/The-Compiler/pytest-xvfb/blob/master/LICENSE)
+- pytest: MIT License, see [here](https://github.com/pytest-dev/pytest/blob/main/LICENSE)
+- pytest-cov: MIT License, see [here](https://github.com/pytest-dev/pytest-cov/blob/main/LICENSE)
+- watchdog: Apache License 2.0, see [here](https://github.com/gorakhargosh/watchdog/blob/master/LICENSE)
+- pre_commit: MIT License, see [here](https://github.com/pre-commit/pre-commit/blob/main/LICENSE)
+
