@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.45.1 (2025-11-14)
+
+### Bug Fixes
+
+- **waveform**: Async_readback can accept 0D data
+  ([`bb3cea7`](https://github.com/bec-project/bec_widgets/commit/bb3cea7fe800cd5375de5351a72e0944dc86861f))
+
+
 ## v2.45.0 (2025-11-10)
 
 ### Chores
