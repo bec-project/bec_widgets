@@ -1628,6 +1628,9 @@ class Waveform(PlotBase):
                 continue
             # Ensure we have numpy array for data_plot_y
             data_plot_y = np.asarray(data_plot_y)
+            if data_plot_y.ndim == 0:
+                # Convert scalars/0d arrays to 1d so len() and stacking work
+                data_plot_y = data_plot_y.reshape(1)
             # Add
             if instruction == "add":
                 if len(max_shape) > 1:
