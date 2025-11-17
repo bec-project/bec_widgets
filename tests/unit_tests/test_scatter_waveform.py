@@ -2,12 +2,12 @@ import json
 
 import numpy as np
 
+from bec_widgets.tests.client_mocks import create_dummy_scan_item, mocked_client
 from bec_widgets.widgets.plots.scatter_waveform.scatter_curve import (
     ScatterCurveConfig,
     ScatterDeviceSignal,
 )
 from bec_widgets.widgets.plots.scatter_waveform.scatter_waveform import ScatterWaveform
-from tests.unit_tests.client_mocks import create_dummy_scan_item, mocked_client
 
 from .conftest import create_widget
 

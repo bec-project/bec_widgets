@@ -8,17 +8,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from bec_lib.messages import LogMessage
-from bec_lib.redis_connector import StreamMessage
 from qtpy.QtCore import QDateTime
 
-from bec_widgets.widgets.utility.logpanel._util import (
-    log_time,
-    replace_escapes,
-    simple_color_format,
-)
+from bec_widgets.tests.client_mocks import mocked_client
+from bec_widgets.widgets.utility.logpanel._util import replace_escapes, simple_color_format
 from bec_widgets.widgets.utility.logpanel.logpanel import DEFAULT_LOG_COLORS, LogPanel
-
-from .client_mocks import mocked_client
 
 TEST_TABLE_STRING = "2025-01-15 15:57:18 | bec_server.scan_server.scan_queue | [INFO] | \n \x1b[3m              primary queue / ScanQueueStatus.RUNNING              \x1b[0m\n┏━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━┳━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━┓\n┃\x1b[1m \x1b[0m\x1b[1m queue_id  \x1b[0m\x1b[1m \x1b[0m┃\x1b[1m \x1b[0m\x1b[1mscan_id\x1b[0m\x1b[1m \x1b[0m┃\x1b[1m \x1b[0m\x1b[1mis_scan\x1b[0m\x1b[1m \x1b[0m┃\x1b[1m \x1b[0m\x1b[1mtype\x1b[0m\x1b[1m \x1b[0m┃\x1b[1m \x1b[0m\x1b[1mscan_numb…\x1b[0m\x1b[1m \x1b[0m┃\x1b[1m \x1b[0m\x1b[1mIQ status\x1b[0m\x1b[1m \x1b[0m┃\n┡━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━╇━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━┩\n│ bbe50c82-6… │  None   │  False  │  mv  │    None    │  PENDING  │\n└─────────────┴─────────┴─────────┴──────┴────────────┴───────────┘\n\n"
 

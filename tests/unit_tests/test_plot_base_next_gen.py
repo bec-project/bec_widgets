@@ -1,8 +1,8 @@
 import numpy as np
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.plots.plot_base import PlotBase, UIMode
 
-from .client_mocks import mocked_client
 from .conftest import create_widget
 
 # pylint: disable=unused-import

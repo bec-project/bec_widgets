@@ -3,9 +3,9 @@ from unittest import mock
 import numpy as np
 import pytest
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.dap.lmfit_dialog.lmfit_dialog import LMFitDialog
 
-from .client_mocks import mocked_client
 from .conftest import create_widget
 
 

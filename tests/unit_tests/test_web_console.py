@@ -3,9 +3,8 @@ from unittest import mock
 import pytest
 from qtpy.QtNetwork import QAuthenticator
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.editors.web_console.web_console import WebConsole, _web_console_registry
-
-from .client_mocks import mocked_client
 
 
 @pytest.fixture

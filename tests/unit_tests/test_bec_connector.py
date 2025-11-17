@@ -5,10 +5,9 @@ import pytest
 from qtpy.QtCore import QObject
 from qtpy.QtWidgets import QApplication
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.utils import BECConnector
 from bec_widgets.utils.error_popups import SafeSlot as Slot
-
-from .client_mocks import mocked_client
 
 
 class BECConnectorQObject(BECConnector, QObject): ...

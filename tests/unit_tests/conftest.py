@@ -6,12 +6,9 @@ import numpy as np
 import pytest
 from bec_lib import messages
 from bec_lib.messages import _StoredDataInfo
-from pytestqt.exceptions import TimeoutError as QtBotTimeoutError
-from qtpy.QtWidgets import QApplication, QMessageBox
+from qtpy.QtWidgets import QMessageBox
 
-from bec_widgets.cli.rpc.rpc_register import RPCRegister
-from bec_widgets.utils import bec_dispatcher as bec_dispatcher_module
-from bec_widgets.utils import error_popups
+from bec_widgets.tests import utils as test_utils
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
@@ -25,49 +22,22 @@ def pytest_runtest_makereport(item, call):
 
 @pytest.fixture(autouse=True)
 def qapplication(qtbot, request, testable_qtimer_class):  # pylint: disable=unused-argument
-    yield
-
-    # if the test failed, we don't want to check for open widgets as
-    # it simply pollutes the output
-    if request.node.stash._storage.get("failed"):
-        print("Test failed, skipping cleanup checks")
-        return
-    bec_dispatcher = bec_dispatcher_module.BECDispatcher()
-    bec_dispatcher.stop_cli_server()
-
-    testable_qtimer_class.check_all_stopped(qtbot)
-    qapp = QApplication.instance()
-    qapp.processEvents()
-    if hasattr(qapp, "os_listener") and qapp.os_listener:
-        qapp.removeEventFilter(qapp.os_listener)
-    try:
-        qtbot.waitUntil(lambda: qapp.topLevelWidgets() == [])
-    except QtBotTimeoutError as exc:
-        raise TimeoutError(f"Failed to close all widgets: {qapp.topLevelWidgets()}") from exc
+    yield from test_utils.qapplication_fixture(qtbot, request, testable_qtimer_class)
 
 
 @pytest.fixture(autouse=True)
 def rpc_register():
-    yield RPCRegister()
-    RPCRegister.reset_singleton()
+    yield from test_utils.rpc_register_fixture()
 
 
 @pytest.fixture(autouse=True)
 def bec_dispatcher(threads_check):  # pylint: disable=unused-argument
-    bec_dispatcher = bec_dispatcher_module.BECDispatcher()
-    yield bec_dispatcher
-    bec_dispatcher.disconnect_all()
-    # clean BEC client
-    bec_dispatcher.client.shutdown()
-    # stop the cli server
-    bec_dispatcher.stop_cli_server()
-    # reinitialize singleton for next test
-    bec_dispatcher_module.BECDispatcher.reset_singleton()
+    yield from test_utils.bec_dispatcher_fixture(threads_check)
 
 
 @pytest.fixture(autouse=True)
 def clean_singleton():
-    error_popups._popup_utility_instance = None
+    yield from test_utils.clean_singleton_fixture()
 
 
 @pytest.fixture(autouse=True)

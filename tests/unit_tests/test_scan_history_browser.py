@@ -2,10 +2,9 @@ from unittest import mock
 
 import pytest
 from bec_lib.messages import ScanHistoryMessage, _StoredDataInfo
-from pytestqt import qtbot
 from qtpy import QtCore
 
-from bec_widgets.utils.colors import get_accent_colors
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.services.scan_history_browser.components import (
     ScanHistoryDeviceViewer,
     ScanHistoryMetadataViewer,
@@ -14,8 +13,6 @@ from bec_widgets.widgets.services.scan_history_browser.components import (
 from bec_widgets.widgets.services.scan_history_browser.scan_history_browser import (
     ScanHistoryBrowser,
 )
-
-from .client_mocks import mocked_client
 
 
 @pytest.fixture

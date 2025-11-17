@@ -8,10 +8,9 @@ from qtpy.QtGui import QFontMetrics
 
 import bec_widgets
 from bec_widgets.applications.launch_window import LaunchWindow
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.containers.auto_update.auto_updates import AutoUpdates
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindow
-
-from .client_mocks import mocked_client
 
 base_path = os.path.dirname(bec_widgets.__file__)
 

@@ -7,7 +7,8 @@ from qtpy.QtCore import Qt, QTimer
 from qtpy.QtGui import QValidator
 from qtpy.QtWidgets import QPushButton
 
-from bec_widgets.tests.utils import Positioner
+from bec_widgets.tests.client_mocks import mocked_client
+from bec_widgets.tests.fake_devices import Positioner
 from bec_widgets.widgets.control.device_control.positioner_box import (
     PositionerBox,
     PositionerControlLine,
@@ -16,7 +17,6 @@ from bec_widgets.widgets.control.device_input.device_line_edit.device_line_edit 
     DeviceLineEdit,
 )
 
-from .client_mocks import mocked_client
 from .conftest import create_widget
 
 

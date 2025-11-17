@@ -5,9 +5,9 @@ from unittest import mock
 import pytest
 from bec_lib.endpoints import MessageEndpoints
 
+from bec_widgets.tests.client_mocks import mocked_client
 from bec_widgets.widgets.containers.dock import BECDockArea
 
-from .client_mocks import mocked_client
 from .test_bec_queue import bec_queue_msg_full
 
 

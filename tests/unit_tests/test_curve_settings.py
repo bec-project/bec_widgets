@@ -6,13 +6,13 @@ from bec_lib.scan_history import ScanHistory
 from qtpy.QtGui import QValidator
 from qtpy.QtWidgets import QComboBox, QVBoxLayout
 
+from bec_widgets.tests.client_mocks import dap_plugin_message, mocked_client, mocked_client_with_dap
 from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_setting import CurveSetting
 from bec_widgets.widgets.plots.waveform.settings.curve_settings.curve_tree import (
     CurveTree,
     ScanIndexValidator,
 )
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
-from tests.unit_tests.client_mocks import dap_plugin_message, mocked_client, mocked_client_with_dap
 from tests.unit_tests.conftest import create_widget
 
 ##################################################

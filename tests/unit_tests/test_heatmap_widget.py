@@ -5,12 +5,9 @@ import pytest
 from bec_lib import messages
 from bec_lib.scan_history import ScanHistory
 
-from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap, HeatmapConfig, HeatmapDeviceSignal
-
 # pytest: disable=unused-import
-from tests.unit_tests.client_mocks import mocked_client
-
-from .client_mocks import create_dummy_scan_item
+from bec_widgets.tests.client_mocks import create_dummy_scan_item, mocked_client
+from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap, HeatmapConfig, HeatmapDeviceSignal
 
 
 @pytest.fixture
