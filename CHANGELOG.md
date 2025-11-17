@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v2.45.2 (2025-11-17)
+
+### Bug Fixes
+
+- **test**: Removed duplicate test in crosshair
+  ([`d00d786`](https://github.com/bec-project/bec_widgets/commit/d00d786399bca516b8030b9de881b674140bf439))
+
+### Build System
+
+- Pyqtgraph pin to 0.13.7
+  ([`a4c465d`](https://github.com/bec-project/bec_widgets/commit/a4c465dcaf8cb03962dec1e360b7b832a9a5c780))
+
+
 ## v2.45.1 (2025-11-14)
 
 ### Bug Fixes
