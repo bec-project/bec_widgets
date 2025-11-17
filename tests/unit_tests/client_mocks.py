@@ -12,7 +12,7 @@ from bec_lib.scan_history import ScanHistory
 from bec_widgets.tests.utils import DEVICES, DMMock, FakePositioner, Positioner
 
 
-def fake_redis_server(host, port):
+def fake_redis_server(host, port, **kwargs):
     redis = fakeredis.FakeRedis()
     return redis
 
