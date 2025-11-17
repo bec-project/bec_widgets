@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.45.3 (2025-11-17)
+
+### Bug Fixes
+
+- **fakeredis**: Add support for additional args
+  ([`c945567`](https://github.com/bec-project/bec_widgets/commit/c9455672b58b9df101ccd0d80a169bdf6c707f34))
+
+
 ## v2.45.2 (2025-11-17)
 
 ### Bug Fixes
