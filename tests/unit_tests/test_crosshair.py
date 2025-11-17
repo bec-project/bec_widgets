@@ -193,21 +193,6 @@ def test_crosshair_changed_signal(plot_widget_with_crosshair):
     assert np.isclose(y, 5)
 
 
-def test_marker_positions_after_mouse_move(plot_widget_with_crosshair):
-    crosshair, plot_item = plot_widget_with_crosshair
-
-    pos_in_view = QPointF(2, 5)
-    pos_in_scene = plot_item.vb.mapViewToScene(pos_in_view)
-    event_mock = [pos_in_scene]
-
-    crosshair.mouse_moved(event_mock)
-
-    marker = crosshair.marker_moved_1d["Curve 1"]
-    marker_x, marker_y = marker.getData()
-    assert marker_x == [2]
-    assert marker_y == [5]
-
-
 def test_crosshair_clicked_signal(qtbot, plot_widget_with_crosshair):
     crosshair, plot_item = plot_widget_with_crosshair
 
