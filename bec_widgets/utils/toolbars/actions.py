@@ -11,7 +11,7 @@ from bec_lib.device import ReadoutPriority
 from bec_lib.logger import bec_logger
 from bec_qthemes._icon.material_icons import material_icon
 from qtpy.QtCore import QSize, Qt, QTimer
-from qtpy.QtGui import QAction, QColor, QIcon
+from qtpy.QtGui import QAction, QColor, QIcon  # type: ignore
 from qtpy.QtWidgets import (
     QApplication,
     QComboBox,
@@ -53,9 +53,9 @@ def create_action_with_text(toolbar_action, toolbar: QToolBar):
     btn.setDefaultAction(toolbar_action.action)
     btn.setAutoRaise(True)
     if toolbar_action.text_position == "beside":
-        btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
     else:
-        btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
     btn.setText(toolbar_action.label_text)
     toolbar.addWidget(btn)
 
@@ -66,7 +66,7 @@ class NoCheckDelegate(QStyledItemDelegate):
     def initStyleOption(self, option, index):
         super().initStyleOption(option, index)
         # Remove any check indicator
-        option.checkState = Qt.Unchecked
+        option.checkState = Qt.CheckState.Unchecked
 
 
 class LongPressToolButton(QToolButton):
@@ -111,13 +111,15 @@ class ToolBarAction(ABC):
         checkable (bool, optional): Whether the action is checkable. Defaults to False.
     """
 
-    def __init__(self, icon_path: str = None, tooltip: str = None, checkable: bool = False):
+    def __init__(
+        self, icon_path: str | None = None, tooltip: str | None = None, checkable: bool = False
+    ):
         self.icon_path = (
             os.path.join(MODULE_PATH, "assets", "toolbar_icons", icon_path) if icon_path else None
         )
-        self.tooltip = tooltip
-        self.checkable = checkable
-        self.action = None
+        self.tooltip: str = tooltip or ""
+        self.checkable: bool = checkable
+        self.action: QAction
 
     @abstractmethod
     def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
@@ -133,6 +135,11 @@ class ToolBarAction(ABC):
         pass
 
 
+class IconAction(ToolBarAction):
+    @abstractmethod
+    def get_icon(self) -> QIcon: ...
+
+
 class SeparatorAction(ToolBarAction):
     """Separator action for the toolbar."""
 
@@ -140,7 +147,7 @@ class SeparatorAction(ToolBarAction):
         toolbar.addSeparator()
 
 
-class QtIconAction(ToolBarAction):
+class QtIconAction(IconAction):
     def __init__(
         self,
         standard_icon,
@@ -179,13 +186,13 @@ class QtIconAction(ToolBarAction):
         return self.icon
 
 
-class MaterialIconAction(ToolBarAction):
+class MaterialIconAction(IconAction):
     """
     Action with a Material icon for the toolbar.
 
     Args:
-        icon_name (str, optional): The name of the Material icon. Defaults to None.
-        tooltip (str, optional): The tooltip for the action. Defaults to None.
+        icon_name (str): The name of the Material icon.
+        tooltip (str): The tooltip for the action.
         checkable (bool, optional): Whether the action is checkable. Defaults to False.
         filled (bool, optional): Whether the icon is filled. Defaults to False.
         color (str | tuple | QColor | dict[Literal["dark", "light"], str] | None, optional): The color of the icon.
@@ -197,8 +204,9 @@ class MaterialIconAction(ToolBarAction):
 
     def __init__(
         self,
-        icon_name: str = None,
-        tooltip: str = None,
+        icon_name: str,
+        tooltip: str,
+        *,
         checkable: bool = False,
         filled: bool = False,
         color: str | tuple | QColor | dict[Literal["dark", "light"], str] | None = None,
@@ -217,13 +225,13 @@ class MaterialIconAction(ToolBarAction):
         self.label_text = label_text
         self.text_position = text_position
         # Generate the icon using the material_icon helper
-        self.icon = material_icon(
+        self.icon: QIcon = material_icon(
             self.icon_name,
             size=(20, 20),
             convert_to_pixmap=False,
             filled=self.filled,
             color=self.color,
-        )
+        )  # type: ignore
         if parent is None:
             logger.warning(
                 "MaterialIconAction was created without a parent. Please consider adding one. Using None as parent may cause issues."
@@ -259,11 +267,11 @@ class DeviceSelectionAction(ToolBarAction):
     Action for selecting a device in a combobox.
 
     Args:
-        label (str): The label for the combobox.
         device_combobox (DeviceComboBox): The combobox for selecting the device.
+        label (str): The label for the combobox.
     """
 
-    def __init__(self, label: str | None = None, device_combobox=None):
+    def __init__(self, /, device_combobox: DeviceComboBox, label: str | None = None):
         super().__init__()
         self.label = label
         self.device_combobox = device_combobox
@@ -285,7 +293,7 @@ class DeviceSelectionAction(ToolBarAction):
         self.device_combobox.setStyleSheet(f"QComboBox {{ background-color: {color}; }}")
 
 
-class SwitchableToolBarAction(ToolBarAction):
+class SwitchableToolBarAction(IconAction):
     """
     A split toolbar action that combines a main action and a drop-down menu for additional actions.
 
@@ -305,9 +313,9 @@ class SwitchableToolBarAction(ToolBarAction):
 
     def __init__(
         self,
-        actions: Dict[str, ToolBarAction],
-        initial_action: str = None,
-        tooltip: str = None,
+        actions: Dict[str, IconAction],
+        initial_action: str | None = None,
+        tooltip: str | None = None,
         checkable: bool = True,
         default_state_checked: bool = False,
         parent=None,
@@ -330,11 +338,11 @@ class SwitchableToolBarAction(ToolBarAction):
             target (QWidget): The target widget for the action.
         """
         self.main_button = LongPressToolButton(toolbar)
-        self.main_button.setPopupMode(QToolButton.MenuButtonPopup)
+        self.main_button.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
         self.main_button.setCheckable(self.checkable)
         default_action = self.actions[self.current_key]
         self.main_button.setIcon(default_action.get_icon())
-        self.main_button.setToolTip(default_action.tooltip)
+        self.main_button.setToolTip(default_action.tooltip or "")
         self.main_button.clicked.connect(self._trigger_current_action)
         menu = QMenu(self.main_button)
         for key, action_obj in self.actions.items():
@@ -432,11 +440,7 @@ class WidgetAction(ToolBarAction):
     """
 
     def __init__(
-        self,
-        label: str | None = None,
-        widget: QWidget = None,
-        adjust_size: bool = True,
-        parent=None,
+        self, *, widget: QWidget, label: str | None = None, adjust_size: bool = True, parent=None
     ):
         super().__init__(icon_path=None, tooltip=label, checkable=False)
         self.label = label
@@ -459,14 +463,14 @@ class WidgetAction(ToolBarAction):
 
         if self.label is not None:
             label_widget = QLabel(text=f"{self.label}", parent=target)
-            label_widget.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
-            label_widget.setAlignment(Qt.AlignVCenter | Qt.AlignRight)
+            label_widget.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+            label_widget.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight)
             layout.addWidget(label_widget)
 
         if isinstance(self.widget, QComboBox) and self.adjust_size:
-            self.widget.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+            self.widget.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
 
-            size_policy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            size_policy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
             self.widget.setSizePolicy(size_policy)
 
             self.widget.setMinimumWidth(self.calculate_minimum_width(self.widget))
@@ -475,7 +479,7 @@ class WidgetAction(ToolBarAction):
 
         toolbar.addWidget(self.container)
         # Store the container as the action to allow toggling visibility.
-        self.action = self.container
+        self.action = self.container  # type: ignore
 
     def cleanup(self):
         """
@@ -490,7 +494,7 @@ class WidgetAction(ToolBarAction):
     @staticmethod
     def calculate_minimum_width(combo_box: QComboBox) -> int:
         font_metrics = combo_box.fontMetrics()
-        max_width = max(font_metrics.width(combo_box.itemText(i)) for i in range(combo_box.count()))
+        max_width = max(font_metrics.width(combo_box.itemText(i)) for i in range(combo_box.count()))  # type: ignore
         return max_width + 60
 
 
@@ -504,7 +508,7 @@ class ExpandableMenuAction(ToolBarAction):
         icon_path (str, optional): The path to the icon file. Defaults to None.
     """
 
-    def __init__(self, label: str, actions: dict, icon_path: str = None):
+    def __init__(self, label: str, actions: dict[str, IconAction], icon_path: str | None = None):
         super().__init__(icon_path, label)
         self.actions = actions
         self._button_ref: weakref.ReferenceType[QToolButton] | None = None
@@ -517,7 +521,7 @@ class ExpandableMenuAction(ToolBarAction):
         if self.icon_path:
             button.setIcon(QIcon(self.icon_path))
         button.setText(self.tooltip)
-        button.setPopupMode(QToolButton.InstantPopup)
+        button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         button.setStyleSheet(
             """
                    QToolButton {
@@ -643,7 +647,7 @@ class TutorialAction(MaterialIconAction):
         Returns:
             str: Unique ID for the registered widget.
         """
-        return self.guided_help.register_widget(widget, text, widget_name)
+        return self.guided_help.register_widget(widget=widget, text=text, title=widget_name)
 
     def start_tour(self):
         """Start the guided tour with all registered widgets."""
