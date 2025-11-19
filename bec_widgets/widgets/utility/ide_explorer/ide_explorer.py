@@ -117,7 +117,9 @@ class IDEExplorer(BECWidget, QWidget):
             show_add_button=True,
             tooltip="Macros are reusable functions that can be called from scripts or the console.",
         )
-        section.header_add_button.setIcon(material_icon("refresh", size=(20, 20)))
+        section.header_add_button.setIcon(
+            material_icon("refresh", size=(20, 20), convert_to_pixmap=False)
+        )
         section.header_add_button.setToolTip("Reload all macros")
         section.header_add_button.clicked.connect(self._reload_macros)
 

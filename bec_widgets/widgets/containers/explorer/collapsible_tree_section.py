@@ -75,7 +75,7 @@ class CollapsibleSection(QWidget):
         self.header_add_button.setToolButtonStyle(Qt.ToolButtonIconOnly)
         self.header_add_button.setAutoRaise(True)
 
-        self.header_add_button.setIcon(material_icon("add", size=(28, 28)))
+        self.header_add_button.setIcon(material_icon("add", size=(28, 28), convert_to_pixmap=False))
         header_layout.addWidget(self.header_add_button)
 
         self.main_layout.addLayout(header_layout)
@@ -118,7 +118,6 @@ class CollapsibleSection(QWidget):
                 padding: 0px;
                 border: none;
                 background: transparent;
-                color: {text_color};
                 icon-size: 20px 20px;
             }}
         """
