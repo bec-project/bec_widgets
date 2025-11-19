@@ -5,18 +5,17 @@ from dataclasses import dataclass
 from typing import Any, Callable, Literal, Mapping, Sequence, cast
 
 from bec_qthemes import material_icon
-from PySide6QtAds import ads
 from qtpy.QtCore import QByteArray, QSettings, Qt, QTimer
 from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QDialog, QVBoxLayout, QWidget
 from shiboken6 import isValid
 
-import bec_widgets.widgets.containers.ads as QtAds
+import bec_widgets.widgets.containers.qt_ads as QtAds
 from bec_widgets import BECWidget, SafeSlot
 from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 from bec_widgets.utils.property_editor import PropertyEditor
 from bec_widgets.utils.toolbars.actions import MaterialIconAction
-from bec_widgets.widgets.containers.ads import (
+from bec_widgets.widgets.containers.qt_ads import (
     CDockAreaWidget,
     CDockManager,
     CDockSplitter,
@@ -70,7 +69,7 @@ class DockAreaWidget(BECWidget, QWidget):
         tab_with: CDockWidget | None = None
         relative_to: CDockWidget | None = None
         title_visible: bool | None = None
-        title_buttons: Mapping[ads.TitleBarButton, bool] | None = None
+        title_buttons: Mapping[QtAds.ads.TitleBarButton, bool] | None = None
         show_settings_action: bool | None = False
         dock_preferences: Mapping[str, Any] | None = None
         promote_central: bool = False
@@ -979,38 +978,38 @@ class DockAreaWidget(BECWidget, QWidget):
             self._apply_splitter_tree(splitter, (), horizontal, vertical, overrides)
 
     @staticmethod
-    def _title_bar_button_enum(name: str) -> ads.TitleBarButton | None:
+    def _title_bar_button_enum(name: str) -> QtAds.ads.TitleBarButton | None:
         """Translate a user-friendly button name into an ADS TitleBarButton enum."""
         normalized = (name or "").lower().replace("-", "_").replace(" ", "_")
-        mapping: dict[str, ads.TitleBarButton] = {
-            "menu": ads.TitleBarButton.TitleBarButtonTabsMenu,
-            "tabs_menu": ads.TitleBarButton.TitleBarButtonTabsMenu,
-            "tabs": ads.TitleBarButton.TitleBarButtonTabsMenu,
-            "undock": ads.TitleBarButton.TitleBarButtonUndock,
-            "float": ads.TitleBarButton.TitleBarButtonUndock,
-            "detach": ads.TitleBarButton.TitleBarButtonUndock,
-            "close": ads.TitleBarButton.TitleBarButtonClose,
-            "auto_hide": ads.TitleBarButton.TitleBarButtonAutoHide,
-            "autohide": ads.TitleBarButton.TitleBarButtonAutoHide,
-            "minimize": ads.TitleBarButton.TitleBarButtonMinimize,
+        mapping: dict[str, QtAds.ads.TitleBarButton] = {
+            "menu": QtAds.ads.TitleBarButton.TitleBarButtonTabsMenu,
+            "tabs_menu": QtAds.ads.TitleBarButton.TitleBarButtonTabsMenu,
+            "tabs": QtAds.ads.TitleBarButton.TitleBarButtonTabsMenu,
+            "undock": QtAds.ads.TitleBarButton.TitleBarButtonUndock,
+            "float": QtAds.ads.TitleBarButton.TitleBarButtonUndock,
+            "detach": QtAds.ads.TitleBarButton.TitleBarButtonUndock,
+            "close": QtAds.ads.TitleBarButton.TitleBarButtonClose,
+            "auto_hide": QtAds.ads.TitleBarButton.TitleBarButtonAutoHide,
+            "autohide": QtAds.ads.TitleBarButton.TitleBarButtonAutoHide,
+            "minimize": QtAds.ads.TitleBarButton.TitleBarButtonMinimize,
         }
         return mapping.get(normalized)
 
     def _normalize_title_buttons(
         self,
         spec: (
-            Mapping[str | ads.TitleBarButton, bool]
-            | Sequence[str | ads.TitleBarButton]
+            Mapping[str | QtAds.ads.TitleBarButton, bool]
+            | Sequence[str | QtAds.ads.TitleBarButton]
             | str
-            | ads.TitleBarButton
+            | QtAds.ads.TitleBarButton
             | None
         ),
-    ) -> dict[ads.TitleBarButton, bool]:
+    ) -> dict[QtAds.ads.TitleBarButton, bool]:
         """Normalize button visibility specifications into an enum mapping."""
         if spec is None:
             return {}
 
-        result: dict[ads.TitleBarButton, bool] = {}
+        result: dict[QtAds.ads.TitleBarButton, bool] = {}
         if isinstance(spec, Mapping):
             iterator = spec.items()
         else:
@@ -1019,7 +1018,7 @@ class DockAreaWidget(BECWidget, QWidget):
             iterator = ((name, False) for name in spec)
 
         for name, visible in iterator:
-            if isinstance(name, ads.TitleBarButton):
+            if isinstance(name, QtAds.ads.TitleBarButton):
                 enum = name
             else:
                 enum = self._title_bar_button_enum(str(name))

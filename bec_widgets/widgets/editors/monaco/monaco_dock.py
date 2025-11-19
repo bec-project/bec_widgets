@@ -9,8 +9,8 @@ from bec_lib.macro_update_handler import has_executable_code
 from qtpy.QtCore import QEvent, QTimer, Signal
 from qtpy.QtWidgets import QFileDialog, QMessageBox, QToolButton, QWidget
 
-from bec_widgets.widgets.containers.ads import CDockAreaWidget, CDockWidget
 from bec_widgets.widgets.containers.advanced_dock_area.basic_dock_area import DockAreaWidget
+from bec_widgets.widgets.containers.qt_ads import CDockAreaWidget, CDockWidget
 from bec_widgets.widgets.editors.monaco.monaco_widget import MonacoWidget
 
 logger = bec_logger.logger

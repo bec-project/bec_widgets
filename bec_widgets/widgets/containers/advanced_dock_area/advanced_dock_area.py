@@ -3,9 +3,7 @@ from __future__ import annotations
 import os
 from typing import Callable, Literal, Mapping, Sequence
 
-import PySide6QtAds as QtAds
 from bec_lib import bec_logger
-from PySide6QtAds import CDockWidget
 from qtpy.QtCore import QTimer, Signal
 from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import (
@@ -18,6 +16,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+import bec_widgets.widgets.containers.qt_ads as QtAds
 from bec_widgets import BECWidget, SafeProperty, SafeSlot
 from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 from bec_widgets.utils import BECDispatcher
@@ -66,6 +65,7 @@ from bec_widgets.widgets.containers.advanced_dock_area.toolbar_components.worksp
     workspace_bundle,
 )
 from bec_widgets.widgets.containers.main_window.main_window import BECMainWindowNoRPC
+from bec_widgets.widgets.containers.qt_ads import CDockWidget
 from bec_widgets.widgets.control.device_control.positioner_box import PositionerBox, PositionerBox2D
 from bec_widgets.widgets.control.scan_control import ScanControl
 from bec_widgets.widgets.editors.web_console.web_console import WebConsole

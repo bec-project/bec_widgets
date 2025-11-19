@@ -4,7 +4,6 @@ import os
 from functools import partial
 from typing import List, Literal
 
-import PySide6QtAds as QtAds
 import yaml
 from bec_lib import config_helper
 from bec_lib.bec_yaml_loader import yaml_load
@@ -12,7 +11,6 @@ from bec_lib.file_utils import DeviceConfigWriter
 from bec_lib.logger import bec_logger
 from bec_lib.plugin_helper import plugin_package_name, plugin_repo_path
 from bec_qthemes import apply_theme
-from PySide6QtAds import CDockManager, CDockWidget
 from qtpy.QtCore import Qt, QThreadPool, QTimer
 from qtpy.QtWidgets import (
     QDialog,
@@ -28,6 +26,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+import bec_widgets.widgets.containers.qt_ads as QtAds
 from bec_widgets import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
 from bec_widgets.utils.help_inspector.help_inspector import HelpInspector
@@ -158,7 +157,7 @@ class DeviceManagerView(BECWidget, QWidget):
         self._root_layout = QVBoxLayout(self)
         self._root_layout.setContentsMargins(0, 0, 0, 0)
         self._root_layout.setSpacing(0)
-        self.dock_manager = CDockManager(self)
+        self.dock_manager = QtAds.CDockManager(self)
         self.dock_manager.setStyleSheet("")
         self._root_layout.addWidget(self.dock_manager)
 
@@ -237,9 +236,9 @@ class DeviceManagerView(BECWidget, QWidget):
         self.dock_manager.addDockWidgetTabToArea(self.error_logs_dock, area)
 
         for dock in self.dock_manager.dockWidgets():
-            dock.setFeature(CDockWidget.DockWidgetClosable, False)
-            dock.setFeature(CDockWidget.DockWidgetFloatable, False)
-            dock.setFeature(CDockWidget.DockWidgetMovable, False)
+            dock.setFeature(QtAds.CDockWidget.DockWidgetClosable, False)
+            dock.setFeature(QtAds.CDockWidget.DockWidgetFloatable, False)
+            dock.setFeature(QtAds.CDockWidget.DockWidgetMovable, False)
 
         # Apply stretch after the layout is done
         self.set_default_view([2, 8, 2], [7, 3])
