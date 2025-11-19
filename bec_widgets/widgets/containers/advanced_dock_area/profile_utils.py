@@ -20,9 +20,10 @@ from bec_lib import bec_logger
 from bec_lib.client import BECClient
 from bec_lib.plugin_helper import plugin_package_name, plugin_repo_path
 from pydantic import BaseModel, Field
-from PySide6QtAds import CDockWidget
 from qtpy.QtCore import QByteArray, QDateTime, QSettings, Qt
 from qtpy.QtGui import QPixmap
+
+from bec_widgets.widgets.containers.qt_ads import CDockWidget
 
 logger = bec_logger.logger
 
