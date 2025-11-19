@@ -1,8 +1,7 @@
 import os
 import sys
 
-import PySide6QtAds as QtAds
-
+import bec_widgets.widgets.containers.qt_ads as QtAds
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeProperty, SafeSlot
 
