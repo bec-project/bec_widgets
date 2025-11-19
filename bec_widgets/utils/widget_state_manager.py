@@ -3,6 +3,7 @@ from __future__ import annotations
 import shiboken6
 from bec_lib import bec_logger
 from qtpy.QtCore import QSettings
+from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -20,17 +21,28 @@ from bec_widgets.utils.widget_io import WidgetHierarchy
 
 logger = bec_logger.logger
 
+PROPERTY_TO_SKIP = ["palette", "font", "windowIcon", "windowIconText", "locale", "styleSheet"]
+
 
 class WidgetStateManager:
     """
-    A class to manage the state of a widget by saving and loading the state to and from a INI file.
+    Manage saving and loading widget state to/from an INI file.
 
     Args:
-        widget(QWidget): The widget to manage the state for.
+        widget (QWidget): Root widget whose subtree will be serialized.
+        serialize_from_root (bool): When True, build group names relative to
+            this root and ignore parents above it. This keeps profiles portable
+            between different host window hierarchies.
+        root_id (str | None): Optional stable label to use for the root in
+            the settings key path. When omitted and `serialize_from_root` is
+            True, the class name of `widget` is used, falling back to its
+            objectName and finally to "root".
     """
 
-    def __init__(self, widget):
+    def __init__(self, widget, *, serialize_from_root: bool = False, root_id: str | None = None):
         self.widget = widget
+        self._serialize_from_root = bool(serialize_from_root)
+        self._root_id = root_id
 
     def save_state(self, filename: str | None = None, settings: QSettings | None = None):
         """
@@ -97,15 +109,28 @@ class WidgetStateManager:
         for i in range(meta.propertyCount()):
             prop = meta.property(i)
             name = prop.name()
+
+            # Skip persisting QWidget visibility because container widgets (e.g. tab
+            # stacks, dock managers) manage that state themselves. Restoring a saved
+            # False can permanently hide a widget, while forcing True makes hidden
+            # tabs show on top. Leave the property to the parent widget instead.
+            if name == "visible":
+                continue
+
             if (
                 name == "objectName"
+                or name in PROPERTY_TO_SKIP
                 or not prop.isReadable()
                 or not prop.isWritable()
                 or not prop.isStored()  # can be extended to fine filter
             ):
                 continue
+
             value = widget.property(name)
+            if isinstance(value, QIcon):
+                continue
             settings.setValue(name, value)
+
         settings.endGroup()
 
         # Recursively process children (only if they aren't skipped)
@@ -151,6 +176,8 @@ class WidgetStateManager:
         for i in range(meta.propertyCount()):
             prop = meta.property(i)
             name = prop.name()
+            if name == "visible":
+                continue
             if settings.contains(name):
                 value = settings.value(name)
                 widget.setProperty(name, value)
@@ -174,23 +201,51 @@ class WidgetStateManager:
             ):
                 self._load_widget_state_qsettings(child, settings, False)
 
-    def _get_full_widget_name(self, widget: QWidget):
+    def _get_full_widget_name(self, widget: QWidget) -> str:
         """
-        Get the full name of the widget including its parent names.
+        Build a group key for *widget*.
+
+        When `serialize_from_root` is False (default), this preserves the original
+        behavior and walks all parents up to the top-level widget.
+
+        When `serialize_from_root` is True, the key is built relative to
+        `self.widget` and parents above the managed root are ignored. The first
+        path segment is either `root_id` (when provided) or a stable label derived
+        from the root widget (class name, then objectName, then "root").
 
         Args:
-            widget(QWidget): The widget to get the full name for.
-
-        Returns:
-            str: The full name of the widget.
+            widget (QWidget): The widget to build the key for.
         """
-        name = widget.objectName()
-        parent = widget.parent()
-        while parent:
-            obj_name = parent.objectName() or parent.metaObject().className()
-            name = obj_name + "." + name
-            parent = parent.parent()
-        return name
+        # Backwards-compatible behavior: include the entire parent chain.
+        if not getattr(self, "_serialize_from_root", False):
+            name = widget.objectName()
+            parent = widget.parent()
+            while parent:
+                obj_name = parent.objectName() or parent.metaObject().className()
+                name = obj_name + "." + name
+                parent = parent.parent()
+            return name
+
+        parts: list[str] = []
+        current: QWidget | None = widget
+
+        while current is not None:
+            if current is self.widget:
+                # Reached the serialization root.
+                root_label = self._root_id
+                if not root_label:
+                    meta = current.metaObject() if hasattr(current, "metaObject") else None
+                    class_name = meta.className() if meta is not None else ""
+                    root_label = class_name or current.objectName() or "root"
+                parts.append(str(root_label))
+                break
+
+            obj_name = current.objectName() or current.metaObject().className()
+            parts.append(obj_name)
+            current = current.parent()
+
+        parts.reverse()
+        return ".".join(parts)
 
 
 class ExampleApp(QWidget):  # pragma: no cover:
