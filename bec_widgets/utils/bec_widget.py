@@ -3,13 +3,13 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-import PySide6QtAds as QtAds
 import shiboken6
 from bec_lib.logger import bec_logger
 from qtpy.QtCore import QBuffer, QByteArray, QIODevice, QObject, Qt
 from qtpy.QtGui import QPixmap
 from qtpy.QtWidgets import QApplication, QFileDialog, QWidget
 
+import bec_widgets.widgets.containers.qt_ads as QtAds
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils.bec_connector import BECConnector, ConnectionConfig
 from bec_widgets.utils.error_popups import SafeConnect, SafeSlot
@@ -242,16 +242,22 @@ class BECWidget(BECConnector):
         """
         if not isinstance(self, QWidget):
             return QByteArray()
+
+        if not hasattr(self, "grab"):
+            raise RuntimeError(f"Cannot take screenshot of non-QWidget instance: {repr(self)}")
+
         pixmap: QPixmap = self.grab()
         if pixmap.isNull():
             return QByteArray()
         if max_width is not None or max_height is not None:
             w = max_width if max_width is not None else pixmap.width()
             h = max_height if max_height is not None else pixmap.height()
-            pixmap = pixmap.scaled(w, h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            pixmap = pixmap.scaled(
+                w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.QSmoothTransformation
+            )
         ba = QByteArray()
         buf = QBuffer(ba)
-        buf.open(QIODevice.WriteOnly)
+        buf.open(QIODevice.OpenModeFlag.WriteOnly)
         pixmap.save(buf, fmt, quality)
         buf.close()
         return ba
