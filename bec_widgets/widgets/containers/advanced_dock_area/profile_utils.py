@@ -559,9 +559,10 @@ def _app_settings() -> QSettings:
     return QSettings(os.path.join(_settings_profiles_root(), "_meta.ini"), QSettings.IniFormat)
 
 
-def _last_profile_key(namespace: str | None) -> str:
+def _last_profile_key(namespace: str | None, instance: str | None = None) -> str:
     """
-    Build the QSettings key used to store the last profile per namespace.
+    Build the QSettings key used to store the last profile per namespace and
+    optional instance id.
 
     Args:
         namespace (str | None): Namespace label.
@@ -571,37 +572,69 @@ def _last_profile_key(namespace: str | None) -> str:
     """
     ns = sanitize_namespace(namespace)
     key = SETTINGS_KEYS["last_profile"]
-    return f"{key}/{ns}" if ns else key
+    if ns:
+        key = f"{key}/{ns}"
+    inst = sanitize_namespace(instance) if instance else ""
+    if inst:
+        key = f"{key}@{inst}"
+    return key
 
 
-def get_last_profile(namespace: str | None = None) -> str | None:
+def get_last_profile(
+    namespace: str | None = None,
+    instance: str | None = None,
+    *,
+    allow_namespace_fallback: bool = True,
+) -> str | None:
     """
     Retrieve the last-used profile name persisted in app settings.
 
+    When *instance* is provided, the lookup is scoped to that particular dock
+    area instance. If the instance-specific entry is missing and
+    ``allow_namespace_fallback`` is True, the namespace-wide entry is
+    consulted next.
+
     Args:
         namespace (str | None, optional): Namespace label. Defaults to ``None``.
+        instance (str | None, optional): Optional instance ID. Defaults to ``None``.
+        allow_namespace_fallback (bool): Whether to fall back to the namespace
+            entry when an instance-specific value is not found. Defaults to ``True``.
 
     Returns:
         str | None: Profile name or ``None`` if none has been stored.
     """
     s = _app_settings()
-    name = s.value(_last_profile_key(namespace), "", type=str)
+    inst = instance or None
+    if inst:
+        name = s.value(_last_profile_key(namespace, inst), "", type=str)
+        if name:
+            return name
+        if not allow_namespace_fallback:
+            return None
+    name = s.value(_last_profile_key(namespace, None), "", type=str)
     return name or None
 
 
-def set_last_profile(name: str | None, namespace: str | None = None) -> None:
+def set_last_profile(
+    name: str | None, namespace: str | None = None, instance: str | None = None
+) -> None:
     """
     Persist the last-used profile name (or clear the value when ``None``).
+
+    When *instance* is provided, the value is stored under a key specific to
+    that dock area instance; otherwise it is stored under the namespace-wide key.
 
     Args:
         name (str | None): Profile name to store.
         namespace (str | None, optional): Namespace label. Defaults to ``None``.
+        instance (str | None, optional): Optional instance ID. Defaults to ``None``.
     """
     s = _app_settings()
+    key = _last_profile_key(namespace, instance)
     if name:
-        s.setValue(_last_profile_key(namespace), name)
+        s.setValue(key, name)
     else:
-        s.remove(_last_profile_key(namespace))
+        s.remove(key)
 
 
 def now_iso_utc() -> str:
