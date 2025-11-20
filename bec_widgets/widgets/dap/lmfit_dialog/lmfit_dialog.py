@@ -65,6 +65,9 @@ class LMFitDialog(BECWidget, QWidget):
         self._move_buttons = []
         self._accent_colors = get_accent_colors()
         self.action_buttons = {}
+        self._hide_curve_selection = False
+        self._hide_summary = False
+        self._hide_parameters = False
 
     @property
     def enable_actions(self) -> bool:
@@ -108,7 +111,7 @@ class LMFitDialog(BECWidget, QWidget):
     @SafeProperty(bool)
     def hide_curve_selection(self):
         """SafeProperty for showing the curve selection."""
-        return not self.ui.group_curve_selection.isVisible()
+        return self._hide_curve_selection
 
     @hide_curve_selection.setter
     def hide_curve_selection(self, show: bool):
@@ -117,12 +120,13 @@ class LMFitDialog(BECWidget, QWidget):
         Args:
             show (bool): Whether to show the curve selection.
         """
+        self._hide_curve_selection = show
         self.ui.group_curve_selection.setVisible(not show)
 
     @SafeProperty(bool)
     def hide_summary(self) -> bool:
         """SafeProperty for showing the summary."""
-        return not self.ui.group_summary.isVisible()
+        return self._hide_summary
 
     @hide_summary.setter
     def hide_summary(self, show: bool):
@@ -131,12 +135,13 @@ class LMFitDialog(BECWidget, QWidget):
         Args:
             show (bool): Whether to show the summary.
         """
+        self._hide_summary = show
         self.ui.group_summary.setVisible(not show)
 
     @SafeProperty(bool)
     def hide_parameters(self) -> bool:
         """SafeProperty for showing the parameters."""
-        return not self.ui.group_parameters.isVisible()
+        return self._hide_parameters
 
     @hide_parameters.setter
     def hide_parameters(self, show: bool):
@@ -145,6 +150,7 @@ class LMFitDialog(BECWidget, QWidget):
         Args:
             show (bool): Whether to show the parameters.
         """
+        self._hide_parameters = show
         self.ui.group_parameters.setVisible(not show)
 
     @property

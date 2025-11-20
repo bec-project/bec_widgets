@@ -129,6 +129,12 @@ class PlotBase(BECWidget, QWidget):
         self.tick_item = BECTickItem(parent=self, plot_item=self.plot_item)
         self.arrow_item = BECArrowItem(parent=self, plot_item=self.plot_item)
 
+        # Visibility States
+        self._toolbar_visible = True
+        self._enable_fps_monitor = False
+        self._outer_axes_visible = self.plot_item.getAxis("top").isVisible()
+        self._inner_axes_visible = self.plot_item.getAxis("bottom").isVisible()
+
         self.toolbar = ModularToolBar(parent=self, orientation="horizontal")
         self._init_toolbar()
 
@@ -294,7 +300,7 @@ class PlotBase(BECWidget, QWidget):
         """
         Show Toolbar.
         """
-        return self.toolbar.isVisible()
+        return self._toolbar_visible
 
     @enable_toolbar.setter
     def enable_toolbar(self, value: bool):
@@ -304,6 +310,7 @@ class PlotBase(BECWidget, QWidget):
         Args:
             value(bool): The value to set.
         """
+        self._toolbar_visible = value
         self.toolbar.setVisible(value)
 
     @SafeProperty(bool, doc="Enable the FPS monitor.")
@@ -311,7 +318,7 @@ class PlotBase(BECWidget, QWidget):
         """
         Enable the FPS monitor.
         """
-        return self.fps_label.isVisible()
+        return self._enable_fps_monitor
 
     @enable_fps_monitor.setter
     def enable_fps_monitor(self, value: bool):
@@ -321,9 +328,11 @@ class PlotBase(BECWidget, QWidget):
         Args:
             value(bool): The value to set.
         """
-        if value and self.fps_monitor is None:
+        if value == self._enable_fps_monitor:
+            return
+        if value:
             self.hook_fps_monitor()
-        elif not value and self.fps_monitor is not None:
+        else:
             self.unhook_fps_monitor()
 
     ################################################################################
@@ -796,7 +805,7 @@ class PlotBase(BECWidget, QWidget):
         """
         Show the outer axes of the plot widget.
         """
-        return self.plot_item.getAxis("top").isVisible()
+        return self._outer_axes_visible
 
     @outer_axes.setter
     def outer_axes(self, value: bool):
@@ -809,6 +818,7 @@ class PlotBase(BECWidget, QWidget):
         self.plot_item.showAxis("top", value)
         self.plot_item.showAxis("right", value)
 
+        self._outer_axes_visible = value
         self.property_changed.emit("outer_axes", value)
 
     @SafeProperty(bool, doc="Show inner axes of the plot widget.")
@@ -816,7 +826,7 @@ class PlotBase(BECWidget, QWidget):
         """
         Show inner axes of the plot widget.
         """
-        return self.plot_item.getAxis("bottom").isVisible()
+        return self._inner_axes_visible
 
     @inner_axes.setter
     def inner_axes(self, value: bool):
@@ -829,6 +839,7 @@ class PlotBase(BECWidget, QWidget):
         self.plot_item.showAxis("bottom", value)
         self.plot_item.showAxis("left", value)
 
+        self._inner_axes_visible = value
         self._apply_x_label()
         self._apply_y_label()
         self.property_changed.emit("inner_axes", value)
@@ -969,6 +980,7 @@ class PlotBase(BECWidget, QWidget):
 
             self.fps_monitor.sigFpsUpdate.connect(self.update_fps_label)
             self.update_fps_label(0)
+        self._enable_fps_monitor = True
 
     def unhook_fps_monitor(self, delete_label=True):
         """Unhook the FPS monitor from the plot."""
@@ -980,6 +992,7 @@ class PlotBase(BECWidget, QWidget):
         if self.fps_label is not None:
             # Hide Label
             self.fps_label.hide()
+        self._enable_fps_monitor = False
 
     ################################################################################
     # Crosshair

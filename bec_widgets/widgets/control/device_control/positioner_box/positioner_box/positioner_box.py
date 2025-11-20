@@ -49,6 +49,7 @@ class PositionerBox(PositionerBoxBase):
 
         self._device = ""
         self._limits = None
+        self._hide_device_selection = False
         if self.current_path == "":
             self.current_path = os.path.dirname(__file__)
 
@@ -114,11 +115,12 @@ class PositionerBox(PositionerBoxBase):
     @SafeProperty(bool)
     def hide_device_selection(self):
         """Hide the device selection"""
-        return not self.ui.tool_button.isVisible()
+        return self._hide_device_selection
 
     @hide_device_selection.setter
     def hide_device_selection(self, value: bool):
         """Set the device selection visibility"""
+        self._hide_device_selection = value
         self.ui.tool_button.setVisible(not value)
 
     @SafeSlot(bool)

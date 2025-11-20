@@ -49,6 +49,7 @@ class ScanMetadata(PydanticModelForm):
         self._scan_name = scan_name or ""
         self._md_schema = get_metadata_schema_for_scan(self._scan_name)
         self._additional_metadata.data_changed.connect(self.validate_form)
+        self._hide_optional_metadata = False
 
         super().__init__(parent=parent, data_model=self._md_schema, client=client, **kwargs)
 
@@ -63,7 +64,7 @@ class ScanMetadata(PydanticModelForm):
     @SafeProperty(bool)
     def hide_optional_metadata(self):  # type: ignore
         """Property to hide the optional metadata table."""
-        return not self._additional_md_box.isVisible()
+        return self._hide_optional_metadata
 
     @hide_optional_metadata.setter
     def hide_optional_metadata(self, hide: bool):
@@ -72,6 +73,7 @@ class ScanMetadata(PydanticModelForm):
         Args:
             hide(bool): Hide or show the optional metadata table.
         """
+        self._hide_optional_metadata = hide
         self._additional_md_box.setVisible(not hide)
 
     def get_form_data(self):

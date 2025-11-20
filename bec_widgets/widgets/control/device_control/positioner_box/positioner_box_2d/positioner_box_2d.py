@@ -63,6 +63,8 @@ class PositionerBox2D(PositionerBoxBase):
         self._limits_hor = None
         self._limits_ver = None
         self._dialog = None
+        self._hide_device_selection = False
+        self._hide_device_boxes = False
         if self.current_path == "":
             self.current_path = os.path.dirname(__file__)
         self.init_ui()
@@ -213,22 +215,24 @@ class PositionerBox2D(PositionerBoxBase):
     @SafeProperty(bool)
     def hide_device_selection(self):
         """Hide the device selection"""
-        return not self.ui.tool_button_hor.isVisible()
+        return self._hide_device_selection
 
     @hide_device_selection.setter
     def hide_device_selection(self, value: bool):
         """Set the device selection visibility"""
+        self._hide_device_selection = value
         self.ui.tool_button_hor.setVisible(not value)
         self.ui.tool_button_ver.setVisible(not value)
 
     @SafeProperty(bool)
     def hide_device_boxes(self):
         """Hide the device selection"""
-        return not self.ui.device_box_hor.isVisible()
+        return self._hide_device_boxes
 
     @hide_device_boxes.setter
     def hide_device_boxes(self, value: bool):
         """Set the device selection visibility"""
+        self._hide_device_boxes = value
         self.ui.device_box_hor.setVisible(not value)
         self.ui.device_box_ver.setVisible(not value)
 
