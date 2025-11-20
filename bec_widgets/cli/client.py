@@ -1147,48 +1147,6 @@ class Curve(RPCBase):
         """
 
 
-class DMConfigView(RPCBase):
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-    @rpc_call
-    def attach(self):
-        """
-        None
-        """
-
-    @rpc_call
-    def detach(self):
-        """
-        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
-        """
-
-
-class DMOphydTest(RPCBase):
-    """Widget to test device configurations using ophyd devices."""
-
-    @rpc_call
-    def remove(self):
-        """
-        Cleanup the BECConnector
-        """
-
-    @rpc_call
-    def attach(self):
-        """
-        None
-        """
-
-    @rpc_call
-    def detach(self):
-        """
-        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
-        """
-
-
 class DapComboBox(RPCBase):
     """The DAPComboBox widget is an extension to the QComboBox with all avaialble DAP model from BEC."""
 

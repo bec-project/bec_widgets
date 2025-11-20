@@ -9,7 +9,9 @@ from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from qtpy import QtCore, QtWidgets
 
-from bec_widgets.applications.views.device_manager_view.device_manager_view import DeviceManagerView
+from bec_widgets.applications.views.device_manager_view.device_manager_display_widget import (
+    DeviceManagerDisplayWidget,
+)
 from bec_widgets.utils.bec_widget import BECWidget
 from bec_widgets.utils.error_popups import SafeSlot
 
@@ -18,8 +20,10 @@ logger = bec_logger.logger
 
 class DeviceManagerWidget(BECWidget, QtWidgets.QWidget):
 
+    RPC = False
+
     def __init__(self, parent=None, client=None):
-        super().__init__(client=client, parent=parent)
+        super().__init__(parent=parent, client=client)
         self.stacked_layout = QtWidgets.QStackedLayout()
         self.stacked_layout.setContentsMargins(0, 0, 0, 0)
         self.stacked_layout.setSpacing(0)
@@ -27,14 +31,19 @@ class DeviceManagerWidget(BECWidget, QtWidgets.QWidget):
         self.setLayout(self.stacked_layout)
 
         # Add device manager view
-        self.device_manager_view = DeviceManagerView()
-        self.stacked_layout.addWidget(self.device_manager_view)
+        self.device_manager_display = DeviceManagerDisplayWidget(parent=self, client=self.client)
+        self.stacked_layout.addWidget(self.device_manager_display)
 
         # Add overlay widget
         self._overlay_widget = QtWidgets.QWidget(self)
         self._customize_overlay()
         self.stacked_layout.addWidget(self._overlay_widget)
-        self.stacked_layout.setCurrentWidget(self._overlay_widget)
+        self._initialized = False
+
+    def on_enter(self) -> None:
+        """Called after the widget becomes visible."""
+        if self._initialized is False:
+            self.stacked_layout.setCurrentWidget(self._overlay_widget)
 
     def _customize_overlay(self):
         self._overlay_widget.setAutoFillBackground(True)
@@ -60,33 +69,17 @@ class DeviceManagerWidget(BECWidget, QtWidgets.QWidget):
 
     def _load_config_from_file_clicked(self):
         """Handle click on 'Load Config From File' button."""
-        start_dir = os.path.expanduser("~")
-        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self, caption="Select Config File", dir=start_dir
-        )
-        if file_path:
-            self._load_config_from_file(file_path)
-
-    def _load_config_from_file(self, file_path: str):
-        try:
-            config = yaml_load(file_path)
-        except Exception as e:
-            logger.error(f"Failed to load config from file {file_path}. Error: {e}")
-            return
-        config_list = []
-        for name, cfg in config.items():
-            config_list.append(cfg)
-            config_list[-1]["name"] = name
-        self.device_manager_view.device_table_view.set_device_config(config_list)
-        # self.device_manager_view.ophyd_test.on_device_config_update(config)
-        self.stacked_layout.setCurrentWidget(self.device_manager_view)
+        self.device_manager_display._load_file_action()
+        self._initialized = True  # Set initialized to True after first load
+        self.stacked_layout.setCurrentWidget(self.device_manager_display)
 
     @SafeSlot()
     def _load_config_clicked(self):
         """Handle click on 'Load Current Config' button."""
         config = self.client.device_manager._get_redis_device_config()
-        self.device_manager_view.device_table_view.set_device_config(config)
-        self.stacked_layout.setCurrentWidget(self.device_manager_view)
+        self.device_manager_display.device_table_view.set_device_config(config)
+        self._initialized = True  # Set initialized to True after first load
+        self.stacked_layout.setCurrentWidget(self.device_manager_display)
 
 
 if __name__ == "__main__":  # pragma: no cover
