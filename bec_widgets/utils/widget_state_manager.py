@@ -20,6 +20,8 @@ from bec_widgets.utils.widget_io import WidgetHierarchy
 
 logger = bec_logger.logger
 
+PROPERTY_TO_SKIP = ["palette", "font", "windowIcon", "windowIconText"]
+
 
 class WidgetStateManager:
     """
@@ -114,6 +116,7 @@ class WidgetStateManager:
 
             if (
                 name == "objectName"
+                or name in PROPERTY_TO_SKIP
                 or not prop.isReadable()
                 or not prop.isWritable()
                 or not prop.isStored()  # can be extended to fine filter
