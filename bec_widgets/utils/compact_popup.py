@@ -144,6 +144,7 @@ class CompactPopupWidget(QWidget):
         self.container.setVisible(True)
         layout(self.container)
         self.layout = self.container.layout()
+        self._compact_view = False
 
         self.compact_show_popup.clicked.connect(self.show_popup)
 
@@ -210,7 +211,7 @@ class CompactPopupWidget(QWidget):
 
     @Property(bool)
     def compact_view(self):
-        return self.compact_label.isVisible()
+        return self._compact_view
 
     @compact_view.setter
     def compact_view(self, set_compact: bool):
@@ -220,6 +221,7 @@ class CompactPopupWidget(QWidget):
         the full view is displayed. This is handled by toggling visibility of
         the container widget or the compact view widget.
         """
+        self._compact_view = set_compact
         if set_compact:
             self.compact_view_widget.setVisible(True)
             self.container.setVisible(False)
