@@ -5,11 +5,9 @@ from __future__ import annotations
 import inspect
 import re
 import textwrap
-import traceback
 
 from bec_lib.logger import bec_logger
-from bec_lib.plugin_helper import get_plugin_class, plugin_package_name
-from bec_lib.utils.rpc_utils import rgetattr
+from bec_lib.plugin_helper import get_plugin_class
 from qtpy import QtCore, QtWidgets
 
 from bec_widgets.utils.error_popups import SafeSlot
@@ -86,7 +84,8 @@ class DocstringView(QtWidgets.QTextEdit):
         if len(device) != 1:
             self._set_text("")
             return
-        device_class = device[0].get("deviceClass", "")
+        device_name = list(device[0].keys())[0]
+        device_class = device[0][device_name].get("deviceClass", "")
         self.set_device_class(device_class)
 
     @SafeSlot(str)
@@ -102,7 +101,7 @@ class DocstringView(QtWidgets.QTextEdit):
             self._set_text(f"*Error retrieving docstring for `{device_class_str}`*")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     import sys
 
     from qtpy.QtWidgets import QApplication

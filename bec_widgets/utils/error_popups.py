@@ -10,6 +10,8 @@ from qtpy.QtWidgets import QApplication, QMessageBox, QPushButton, QVBoxLayout, 
 
 logger = bec_logger.logger
 
+RAISE_ERROR_DEFAULT = False
+
 
 def SafeProperty(prop_type, *prop_args, popup_error: bool = False, default=None, **prop_kwargs):
     """
@@ -159,7 +161,7 @@ def SafeSlot(*slot_args, **slot_kwargs):  # pylint: disable=invalid-name
     _slot_params = {
         "popup_error": bool(slot_kwargs.pop("popup_error", False)),
         "verify_sender": bool(slot_kwargs.pop("verify_sender", False)),
-        "raise_error": bool(slot_kwargs.pop("raise_error", False)),
+        "raise_error": bool(slot_kwargs.pop("raise_error", RAISE_ERROR_DEFAULT)),
     }
 
     def error_managed(method):
