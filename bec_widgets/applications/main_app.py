@@ -4,9 +4,7 @@ from bec_widgets.applications.navigation_centre.reveal_animator import ANIMATION
 from bec_widgets.applications.navigation_centre.side_bar import SideBar
 from bec_widgets.applications.navigation_centre.side_bar_components import NavigationItem
 from bec_widgets.applications.views.developer_view.developer_view import DeveloperView
-from bec_widgets.applications.views.device_manager_view.device_manager_widget import (
-    DeviceManagerWidget,
-)
+from bec_widgets.applications.views.device_manager_view.device_manager_view import DeviceManagerView
 from bec_widgets.applications.views.view import ViewBase, WaveformViewInline, WaveformViewPopup
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
@@ -51,7 +49,7 @@ class BECMainApp(BECMainWindow):
             self, profile_namespace="main_workspace", auto_profile_namespace=False
         )
         self.ads.setObjectName("MainWorkspace")
-        self.device_manager = DeviceManagerWidget(self)
+        self.device_manager = DeviceManagerView(self)
         self.developer_view = DeveloperView(self)
 
         self.add_view(
