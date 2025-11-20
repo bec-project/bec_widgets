@@ -146,6 +146,9 @@ class ScanProgressBar(BECWidget, QWidget):
         self.layout.addWidget(self.ui)
         self.setLayout(self.layout)
         self.progressbar = self.ui.progressbar
+        self._show_elapsed_time = self.ui.elapsed_time_label.isVisible()
+        self._show_remaining_time = self.ui.remaining_time_label.isVisible()
+        self._show_source_label = self.ui.source_label.isVisible()
 
         self.connect_to_queue()
         self._progress_source = None
@@ -222,30 +225,33 @@ class ScanProgressBar(BECWidget, QWidget):
 
     @SafeProperty(bool)
     def show_elapsed_time(self):
-        return self.ui.elapsed_time_label.isVisible()
+        return self._show_elapsed_time
 
     @show_elapsed_time.setter
     def show_elapsed_time(self, value):
+        self._show_elapsed_time = value
         self.ui.elapsed_time_label.setVisible(value)
         if hasattr(self.ui, "dash"):
             self.ui.dash.setVisible(value)
 
     @SafeProperty(bool)
     def show_remaining_time(self):
-        return self.ui.remaining_time_label.isVisible()
+        return self._show_remaining_time
 
     @show_remaining_time.setter
     def show_remaining_time(self, value):
+        self._show_remaining_time = value
         self.ui.remaining_time_label.setVisible(value)
         if hasattr(self.ui, "dash"):
             self.ui.dash.setVisible(value)
 
     @SafeProperty(bool)
     def show_source_label(self):
-        return self.ui.source_label.isVisible()
+        return self._show_source_label
 
     @show_source_label.setter
     def show_source_label(self, value):
+        self._show_source_label = value
         self.ui.source_label.setVisible(value)
 
     def update_labels(self):

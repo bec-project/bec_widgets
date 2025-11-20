@@ -52,6 +52,7 @@ class BECQueue(BECWidget, CompactPopupWidget):
         )
         self.layout.setSpacing(0)
         self.layout.setContentsMargins(0, 0, 0, 0)
+        self._toolbar_hidden = False
 
         # Set up the toolbar
         self.set_toolbar()
@@ -105,7 +106,7 @@ class BECQueue(BECWidget, CompactPopupWidget):
     @Property(bool)
     def hide_toolbar(self):
         """Property to hide the BEC Queue toolbar."""
-        return not self.toolbar.isVisible()
+        return self._toolbar_hidden
 
     @hide_toolbar.setter
     def hide_toolbar(self, hide: bool):
@@ -124,6 +125,7 @@ class BECQueue(BECWidget, CompactPopupWidget):
         Args:
             hide(bool): Whether to hide the toolbar.
         """
+        self._toolbar_hidden = hide
         self.toolbar.setVisible(not hide)
 
     def refresh_queue(self):
