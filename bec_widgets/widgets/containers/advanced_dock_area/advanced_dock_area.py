@@ -159,7 +159,9 @@ class AdvancedDockArea(DockAreaWidget):
         self._exit_snapshot_written = False
 
         # State manager
-        self.state_manager = WidgetStateManager(self)
+        self.state_manager = WidgetStateManager(
+            self, serialize_from_root=True, root_id="AdvancedDockArea"
+        )
 
         # Developer mode state
         self._editable = None
