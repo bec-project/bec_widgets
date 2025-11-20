@@ -5,220 +5,657 @@
 from unittest import mock
 
 import pytest
-from qtpy import QtCore
-from qtpy.QtWidgets import QFileDialog, QMessageBox
+from bec_lib.atlas_models import Device as DeviceModel
+from ophyd_devices.interfaces.device_config_templates.ophyd_templates import OPHYD_DEVICE_TEMPLATES
+from qtpy import QtCore, QtWidgets
 
-from bec_widgets.applications.views.device_manager_view.device_manager_view import (
+from bec_widgets.applications.views.device_manager_view.device_manager_dialogs.config_choice_dialog import (
     ConfigChoiceDialog,
+)
+from bec_widgets.applications.views.device_manager_view.device_manager_dialogs.device_form_dialog import (
+    DeviceFormDialog,
+    DeviceManagerOphydValidationDialog,
+)
+from bec_widgets.applications.views.device_manager_view.device_manager_dialogs.upload_redis_dialog import (
+    DeviceStatusItem,
+    UploadRedisDialog,
+    ValidationSection,
+)
+from bec_widgets.applications.views.device_manager_view.device_manager_display_widget import (
+    DeviceManagerDisplayWidget,
+)
+from bec_widgets.applications.views.device_manager_view.device_manager_view import (
     DeviceManagerView,
+    DeviceManagerWidget,
 )
-from bec_widgets.utils.help_inspector.help_inspector import HelpInspector
 from bec_widgets.widgets.control.device_manager.components import (
-    DeviceTableView,
+    DeviceTable,
     DMConfigView,
-    DMOphydTest,
     DocstringView,
+    OphydValidation,
+)
+from bec_widgets.widgets.control.device_manager.components.ophyd_validation.ophyd_validation import (
+    ConfigStatus,
+    ConnectionStatus,
+    OphydValidation,
 )
 
 
 @pytest.fixture
-def dm_view(qtbot):
-    """Fixture for DeviceManagerView."""
-    widget = DeviceManagerView()
-    qtbot.addWidget(widget)
-    qtbot.waitExposed(widget)
-    yield widget
+def device_config() -> dict:
+    """Fixture for a sample device configuration."""
+    return DeviceModel(
+        name="TestDevice", enabled=True, deviceClass="TestClass", readoutPriority="baseline"
+    ).model_dump()
 
 
-@pytest.fixture
-def config_choice_dialog(qtbot, dm_view):
-    """Fixture for ConfigChoiceDialog."""
-    dialog = ConfigChoiceDialog(dm_view)
-    qtbot.addWidget(dialog)
-    qtbot.waitExposed(dialog)
-    yield dialog
+class TestDeviceManagerViewDialogs:
+    """Test class for DeviceManagerView dialog interactions."""
 
+    @pytest.fixture
+    def mock_dm_view(self, qtbot):
+        """Fixture for DeviceManagerView."""
+        widget = DeviceManagerDisplayWidget()
+        qtbot.addWidget(widget)
+        qtbot.waitExposed(widget)
+        yield widget
 
-def test_device_manager_view_config_choice_dialog(qtbot, dm_view, config_choice_dialog):
-    """Test the configuration choice dialog."""
-    assert config_choice_dialog is not None
-    assert config_choice_dialog.parent() == dm_view
+    @pytest.fixture
+    def config_choice_dialog(self, qtbot, mock_dm_view):
+        """Fixture for ConfigChoiceDialog."""
+        try:
+            dialog = ConfigChoiceDialog(mock_dm_view)
+            qtbot.addWidget(dialog)
+            qtbot.waitExposed(dialog)
+            yield dialog
+        finally:
+            dialog.close()
 
-    # Test dialog components
-    with (
-        mock.patch.object(config_choice_dialog, "accept") as mock_accept,
-        mock.patch.object(config_choice_dialog, "reject") as mock_reject,
+    def test_config_choice_dialog(self, mock_dm_view, config_choice_dialog, qtbot):
+        """Test the configuration choice dialog."""
+        assert config_choice_dialog is not None
+        assert config_choice_dialog.parent() == mock_dm_view
+
+        # Test dialog components
+        with (mock.patch.object(config_choice_dialog, "done") as mock_done,):
+
+            # Replace
+            qtbot.mouseClick(config_choice_dialog.replace_btn, QtCore.Qt.LeftButton)
+            mock_done.assert_called_once_with(config_choice_dialog.Result.REPLACE)
+            mock_done.reset_mock()
+            # Add
+            qtbot.mouseClick(config_choice_dialog.add_btn, QtCore.Qt.LeftButton)
+            mock_done.assert_called_once_with(config_choice_dialog.Result.ADD)
+            mock_done.reset_mock()
+            # Cancel
+            qtbot.mouseClick(config_choice_dialog.cancel_btn, QtCore.Qt.LeftButton)
+            mock_done.assert_called_once_with(config_choice_dialog.Result.CANCEL)
+
+    @pytest.fixture
+    def device_manager_ophyd_test_dialog(self, qtbot):
+        """Fixture for DeviceManagerOphydValidationDialog."""
+        dialog = DeviceManagerOphydValidationDialog()
+        try:
+            qtbot.addWidget(dialog)
+            qtbot.waitExposed(dialog)
+            yield dialog
+        finally:
+            dialog.close()
+
+    def test_device_manager_ophyd_test_dialog(
+        self, device_manager_ophyd_test_dialog: DeviceManagerOphydValidationDialog, qtbot
     ):
+        """Test the DeviceManagerOphydValidationDialog."""
+        dialog = device_manager_ophyd_test_dialog
+        assert dialog.text_box.toPlainText() == ""
 
-        # Replace
-        qtbot.mouseClick(config_choice_dialog.replace_btn, QtCore.Qt.LeftButton)
-        mock_accept.assert_called_once()
-        mock_reject.assert_not_called()
-        mock_accept.reset_mock()
-        assert config_choice_dialog.result() == config_choice_dialog.REPLACE
-        # Add
-        qtbot.mouseClick(config_choice_dialog.add_btn, QtCore.Qt.LeftButton)
-        mock_accept.assert_called_once()
-        mock_reject.assert_not_called()
-        mock_accept.reset_mock()
-        assert config_choice_dialog.result() == config_choice_dialog.ADD
-        # Cancel
-        qtbot.mouseClick(config_choice_dialog.cancel_btn, QtCore.Qt.LeftButton)
-        mock_accept.assert_not_called()
-        mock_reject.assert_called_once()
-        assert config_choice_dialog.result() == config_choice_dialog.CANCEL
+        dialog._on_device_validated(
+            {"name": "TestDevice", "enabled": True},
+            config_status=0,
+            connection_status=0,
+            validation_msg="All good",
+        )
+        assert dialog.validation_result == (
+            {"name": "TestDevice", "enabled": True},
+            0,
+            0,
+            "All good",
+        )
+        assert dialog.text_box.toPlainText() != ""
+
+    @pytest.fixture
+    def device_form_dialog(self, qtbot):
+        """Fixture for DeviceFormDialog."""
+        dialog = DeviceFormDialog()
+        try:
+            qtbot.addWidget(dialog)
+            qtbot.waitExposed(dialog)
+            yield dialog
+        finally:
+            dialog.close()
+
+    def test_device_form_dialog(self, device_form_dialog: DeviceFormDialog, qtbot):
+        """Test the DeviceFormDialog."""
+        # Initial state
+        dialog = device_form_dialog
+        group_combo: QtWidgets.QComboBox = dialog._control_widgets["group_combo"]
+        assert group_combo.count() == len(OPHYD_DEVICE_TEMPLATES)
+
+        # Test select a group from available templates
+        variant_combo = dialog._control_widgets["variant_combo"]
+        assert variant_combo.isEnabled() is False
+
+        with qtbot.waitSignal(group_combo.currentTextChanged):
+            epics_signal_index = group_combo.findText("EpicsSignal")
+            group_combo.setCurrentIndex(epics_signal_index)  # Select "EpicsSignal" group
+
+        assert variant_combo.count() == len(OPHYD_DEVICE_TEMPLATES["EpicsSignal"])
+        assert variant_combo.isEnabled() is True
+
+        # Check that numb of widgets in connection settings box is correct
+        fields_in_config = len(
+            OPHYD_DEVICE_TEMPLATES["EpicsSignal"].get(variant_combo.currentText(), {})
+        )  # At this point this should be read_pv & write_pv
+        connection_settings_layout: QtWidgets.QGridLayout = (
+            dialog._device_config_template.connection_settings_box.layout()
+        )
+        assert (
+            connection_settings_layout.count() == fields_in_config * 2
+        )  # Each field has a label and a widget
+
+    def test_set_device_config(self, device_form_dialog: DeviceFormDialog, qtbot):
+        """Test setting device configuration in DeviceFormDialog."""
+        dialog = device_form_dialog
+        sample_config = {
+            "name": "TestDevice",
+            "enabled": True,
+            "deviceClass": "ophyd.EpicsSignal",
+            "readoutPriority": "baseline",
+            "deviceConfig": {"read_pv": "X25DA-ES1-MOT:GET"},
+        }
+        DeviceModel.model_validate(sample_config)
+        dialog.set_device_config(sample_config)
+
+        group_combo: QtWidgets.QComboBox = dialog._control_widgets["group_combo"]
+        assert group_combo.currentText() == "EpicsSignal"
+        variant_combo: QtWidgets.QComboBox = dialog._control_widgets["variant_combo"]
+        assert variant_combo.currentText() == "EpicsSignal"
+        config = dialog._device_config_template.get_config_fields()
+        assert config["name"] == "TestDevice"
+        assert config["deviceClass"] == "ophyd.EpicsSignal"
+        assert config["deviceConfig"]["read_pv"] == "X25DA-ES1-MOT:GET"
+        # Set the validation results, assume that test was running
+        dialog.config_validation_result = (
+            dialog._device_config_template.get_config_fields(),
+            ConfigStatus.VALID.value,
+            0,
+            "",
+        )
+        with mock.patch.object(dialog, "_create_warning_message_box") as mock_warning_box:
+            with qtbot.waitSignal(dialog.accepted_data) as sig_blocker:
+                qtbot.mouseClick(dialog.add_btn, QtCore.Qt.LeftButton)
+                config, _, _, _, _ = sig_blocker.args
+            mock_warning_box.assert_not_called()
+
+        # Called with config_status invalid should show warning
+        dialog.config_validation_result = (
+            dialog._device_config_template.get_config_fields(),
+            ConfigStatus.INVALID.value,
+            0,
+            "",
+        )
+        with mock.patch.object(dialog, "_create_warning_message_box") as mock_warning_box:
+            qtbot.mouseClick(dialog.add_btn, QtCore.Qt.LeftButton)
+            mock_warning_box.assert_called_once()
+
+        # Set to random config without name
+
+        random_config = {"deviceClass": "Unknown"}
+        dialog.set_device_config(random_config)
+        dialog.config_validation_result = (
+            dialog._device_config_template.get_config_fields(),
+            0,
+            0,
+            "",
+        )
+        assert group_combo.currentText() == "CustomDevice"
+        assert variant_combo.currentText() == "CustomDevice"
+        with mock.patch.object(dialog, "_create_warning_message_box") as mock_warning_box:
+            qtbot.mouseClick(dialog.add_btn, QtCore.Qt.LeftButton)
+            mock_warning_box.assert_called_once_with(
+                "Invalid Device Name",
+                f"Device is invalid, can not be empty with spaces. Please provide a valid name. {dialog._device_config_template.get_config_fields().get('name', '')!r} ",
+            )
+
+    def test_device_status_item(self, device_config: dict, qtbot):
+        """Test the DeviceStatusItem widget."""
+        item = DeviceStatusItem(device_config=device_config, config_status=0, connection_status=0)
+        qtbot.addWidget(item)
+        qtbot.waitExposed(item)
+        assert item.device_config == device_config
+        assert item.device_name == device_config.get("name", "")
+        assert item.config_status == 0
+        assert item.connection_status == 0
+        assert "config_status" in item.icons
+        assert "connection_status" in item.icons
+
+        # Update status
+        item.update_status(config_status=1, connection_status=2)
+        assert item.config_status == 1
+        assert item.connection_status == 2
+
+    def test_validation_section(self, device_config: dict, qtbot):
+        """Test the validation section."""
+        device_config_2 = device_config.copy()
+        device_config_2["name"] = "device_2"
+
+        # Create section
+        section = ValidationSection(title="Validation Results")
+        qtbot.addWidget(section)
+        qtbot.waitExposed(section)
+        assert section.title() == "Validation Results"
+        initial_widget_in_container = section.table.rowCount()
+
+        # Add widgets
+        section.add_device(device_config=device_config, config_status=0, connection_status=0)
+        assert initial_widget_in_container + 1 == section.table.rowCount()
+        # Should be the first index, so rowCount - 1
+        assert section._find_row_by_name(device_config["name"]) == section.table.rowCount() - 1
+
+        # Add another device
+        section.add_device(device_config=device_config_2, config_status=1, connection_status=1)
+        assert initial_widget_in_container + 2 == section.table.rowCount()
+        # Should be the first index, so rowCount - 1
+        assert section._find_row_by_name(device_config_2["name"]) == section.table.rowCount() - 1
+
+        # Clear devices
+        section.clear_devices()
+        assert section.table.rowCount() == 0
+
+        # Update test summary label
+        section.update_summary("2 devices validated, 1 failed.")
+        assert section.summary_label.text() == "2 devices validated, 1 failed."
+
+    @pytest.fixture
+    def device_configs_valid(self, device_config: dict):
+        """Fixture for multiple device configurations."""
+        return_dict = {}
+        for i in range(4):
+            name = f"Device_{i}"
+            dev_config_copy = device_config.copy()
+            dev_config_copy["name"] = name
+            return_dict[name] = (dev_config_copy, ConfigStatus.VALID.value, i)
+        return return_dict
+
+    @pytest.fixture
+    def device_configs_invalid(self, device_config: dict):
+        return_dict = {}
+        for i in range(4):
+            name = f"Device_{i}"
+            dev_config_copy = device_config.copy()
+            dev_config_copy["name"] = name
+            return_dict[name] = (dev_config_copy, ConfigStatus.INVALID.value, i)
+        return return_dict
+
+    @pytest.fixture
+    def device_configs_unknown(self, device_config: dict):
+        return_dict = {}
+        for i in range(4):
+            name = f"Device_{i}"
+            dev_config_copy = device_config.copy()
+            dev_config_copy["name"] = name
+            return_dict[name] = (dev_config_copy, ConfigStatus.UNKNOWN.value, i)
+        return return_dict
+
+    @pytest.fixture
+    def upload_redis_dialog(self, qtbot):
+        """Fixture for UploadRedisDialog."""
+        dialog = UploadRedisDialog(
+            parent=None, ophyd_test_widget=mock.MagicMock(spec=OphydValidation), device_configs={}
+        )
+        try:
+            qtbot.addWidget(dialog)
+            qtbot.waitExposed(dialog)
+            yield dialog
+        finally:
+            dialog.close()
+
+    def test_upload_redis_valid_config(
+        self, upload_redis_dialog: UploadRedisDialog, device_configs_valid, qtbot
+    ):
+        """
+        Test the UploadRedisDialog with a valid device configuration.
+        """
+        dialog = upload_redis_dialog
+        configs = device_configs_valid
+        dialog.set_device_config(configs)
+
+        n_invalid = len([True for _, cs, _ in configs.values() if cs == ConfigStatus.INVALID.value])
+        n_untested = len(
+            [True for _, cs, conn in configs.values() if conn == ConnectionStatus.UNKNOWN.value]
+        )
+        n_has_cannot_connect = len(
+            [
+                True
+                for _, cs, conn in configs.values()
+                if conn == ConnectionStatus.CANNOT_CONNECT.value
+            ]
+        )
+
+        # Check the initial states
+        assert dialog.has_invalid_configs == n_invalid
+        assert dialog.has_untested_connections == n_untested
+        assert dialog.has_cannot_connect == n_has_cannot_connect
+
+        num_devices = len(configs)
+        expected_text = ""
+        if n_invalid > 0:
+            expected_text = f"{n_invalid} of {num_devices} device configurations are invalid."
+        else:
+            expected_text = f"All {num_devices} device configurations are valid."
+        if n_untested > 0:
+            expected_text += f"{n_untested} device connections are not tested."
+        if n_has_cannot_connect > 0:
+            expected_text += f"{n_has_cannot_connect} device connections cannot be established."
+
+        assert dialog.config_section.summary_label.text() == expected_text
+
+    def test_upload_redis_unknown_config(
+        self, upload_redis_dialog: UploadRedisDialog, device_configs_unknown, qtbot
+    ):
+        """
+        Test the UploadRedisDialog with a valid device configuration.
+        """
+        dialog = upload_redis_dialog
+        configs = device_configs_unknown
+        dialog.set_device_config(configs)
+
+        n_invalid = len([True for _, cs, _ in configs.values() if cs == ConfigStatus.INVALID.value])
+        n_untested = len(
+            [True for _, cs, conn in configs.values() if conn == ConnectionStatus.UNKNOWN.value]
+        )
+        n_has_cannot_connect = len(
+            [
+                True
+                for _, cs, conn in configs.values()
+                if conn == ConnectionStatus.CANNOT_CONNECT.value
+            ]
+        )
+
+        # Check the initial states
+        assert dialog.has_invalid_configs == n_invalid
+        assert dialog.has_untested_connections == n_untested
+        assert dialog.has_cannot_connect == n_has_cannot_connect
+
+        num_devices = len(configs)
+        expected_text = ""
+        if n_invalid > 0:
+            expected_text = f"{n_invalid} of {num_devices} device configurations are invalid."
+        else:
+            expected_text = f"All {num_devices} device configurations are valid."
+        if n_untested > 0:
+            expected_text += f"{n_untested} device connections are not tested."
+        if n_has_cannot_connect > 0:
+            expected_text += f"{n_has_cannot_connect} device connections cannot be established."
+
+        assert dialog.config_section.summary_label.text() == expected_text
+
+    def test_upload_redis_invalid_config(
+        self, upload_redis_dialog: UploadRedisDialog, device_configs_invalid, qtbot
+    ):
+        """
+        Test the UploadRedisDialog with a valid device configuration.
+        """
+        dialog = upload_redis_dialog
+        configs = device_configs_invalid
+        dialog.set_device_config(configs)
+
+        n_invalid = len([True for _, cs, _ in configs.values() if cs == ConfigStatus.INVALID.value])
+        n_untested = len(
+            [True for _, cs, conn in configs.values() if conn == ConnectionStatus.UNKNOWN.value]
+        )
+        n_has_cannot_connect = len(
+            [
+                True
+                for _, cs, conn in configs.values()
+                if conn == ConnectionStatus.CANNOT_CONNECT.value
+            ]
+        )
+
+        # Check the initial states
+        assert dialog.has_invalid_configs == n_invalid
+        assert dialog.has_untested_connections == n_untested
+        assert dialog.has_cannot_connect == n_has_cannot_connect
+
+        num_devices = len(configs)
+        expected_text = ""
+        if n_invalid > 0:
+            expected_text = f"{n_invalid} of {num_devices} device configurations are invalid."
+        else:
+            expected_text = f"All {num_devices} device configurations are valid."
+        if n_untested > 0:
+            expected_text += f"{n_untested} device connections are not tested."
+        if n_has_cannot_connect > 0:
+            expected_text += f"{n_has_cannot_connect} device connections cannot be established."
+
+        assert dialog.config_section.summary_label.text() == expected_text
+
+    def test_upload_redis_validate_connections(self, device_configs_invalid, qtbot):
+        """Test the validate connections method in UploadRedisDialog."""
+        configs = device_configs_invalid
+        ophyd_test_mock = mock.MagicMock(spec=OphydValidation)
+        try:
+            dialog = UploadRedisDialog(
+                parent=None, ophyd_test_widget=ophyd_test_mock, device_configs=configs
+            )
+            qtbot.addWidget(dialog)
+            qtbot.waitExposed(dialog)
+
+            with mock.patch.object(
+                dialog.ophyd_test_widget, "change_device_configs"
+            ) as mock_change:
+                dialog._validate_connections()
+                mock_change.assert_called_once_with(
+                    [cfg for k, (cfg, _, _) in configs.items() if k in ["Device_0", "Device_3"]],
+                    added=True,
+                    connect=True,
+                )
+        finally:
+            dialog.close()
 
 
-class TestDeviceManagerViewInitialization:
-    """Test class for DeviceManagerView initialization and basic components."""
+class TestDeviceManagerView:
+    """Test class for DeviceManagerView functionality."""
 
-    def test_dock_manager_initialization(self, dm_view):
-        """Test that the QtAds DockManager is properly initialized."""
-        assert dm_view.dock_manager is not None
-        assert dm_view.dock_manager.centralWidget() is not None
+    @pytest.fixture
+    def dm_view(self, qtbot):
+        """Fixture for DeviceManagerView."""
+        widget = DeviceManagerView()
+        qtbot.addWidget(widget)
+        qtbot.waitExposed(widget)
+        yield widget
 
-    def test_central_widget_is_device_table_view(self, dm_view):
-        """Test that the central widget is DeviceTableView."""
-        central_widget = dm_view.dock_manager.centralWidget().widget()
-        assert isinstance(central_widget, DeviceTableView)
-        assert central_widget is dm_view.device_table_view
+    def test_dm_view_initialization(self, dm_view, qtbot):
+        """Test DeviceManagerView initialization."""
+        assert isinstance(dm_view.device_manager_widget, DeviceManagerWidget)
+        # If on_enter is called, overlay should be shown initially
+        dm_widget = dm_view.device_manager_widget
+        dm_view.on_enter()
+        assert dm_widget.stacked_layout.currentWidget() == dm_widget._overlay_widget
 
-    def test_dock_widgets_exist(self, dm_view):
+        with mock.patch.object(dm_widget.device_manager_display, "_load_file_action") as mock_load:
+            # Simulate clicking "Load Config From File" button
+            with qtbot.waitSignal(dm_widget.button_load_config_from_file.clicked):
+                qtbot.mouseClick(dm_widget.button_load_config_from_file, QtCore.Qt.LeftButton)
+                assert dm_widget._initialized is True
+                assert dm_widget.stacked_layout.currentWidget() == dm_widget.device_manager_display
+
+        # Reset for test loading current config
+        dm_widget._initialized = False
+        dm_widget.stacked_layout.setCurrentWidget(dm_widget._overlay_widget)
+        dm_widget.client.device_manager = mock.MagicMock()
+
+        with mock.patch.object(
+            dm_widget.client.device_manager, "_get_redis_device_config"
+        ) as mock_get:
+            mock_get.return_value = []
+            # Simulate clicking "Load Current Config" button
+            with mock.patch.object(
+                dm_widget.device_manager_display.device_table_view, "set_device_config"
+            ) as mock_set:
+                with qtbot.waitSignal(dm_widget.button_load_current_config.clicked):
+                    qtbot.mouseClick(dm_widget.button_load_current_config, QtCore.Qt.LeftButton)
+                    assert dm_widget._initialized is True
+                    assert (
+                        dm_widget.stacked_layout.currentWidget() == dm_widget.device_manager_display
+                    )
+                    mock_set.assert_called_once_with([])
+
+    @pytest.fixture
+    def device_manager_display_widget(self, qtbot):
+        """Fixture for DeviceManagerDisplayWidget within DeviceManagerView."""
+        widget = DeviceManagerDisplayWidget()
+        qtbot.addWidget(widget)
+        qtbot.waitExposed(widget)
+        yield widget
+
+    @pytest.fixture
+    def device_configs(self, device_config: dict):
+        """Fixture for multiple device configurations."""
+        cfg_iter = []
+        for i in range(4):
+            name = f"Device_{i}"
+            dev_config_copy = device_config.copy()
+            dev_config_copy["name"] = name
+            cfg_iter.append(dev_config_copy)
+        return cfg_iter
+
+    def test_device_manager_view_add_remove_device(
+        self, device_manager_display_widget: DeviceManagerDisplayWidget, device_config
+    ):
+        """Test adding a device via the DeviceManagerView."""
+        dm_view = device_manager_display_widget
+        dm_view._add_to_table_from_dialog(
+            device_config, config_status=0, connection_status=0, msg=""
+        )
+        table_config_list = dm_view.device_table_view.get_device_config()
+        assert table_config_list == [device_config]
+
+        # Remove the device
+        dm_view.device_table_view.table.selectRow(0)
+        dm_view.toolbar.components._components["remove_device"].action.action.triggered.emit()
+        table_config_list = dm_view.device_table_view.get_device_config()
+        assert table_config_list == []
+
+    def test_dock_widgets_exist(self, device_manager_display_widget: DeviceManagerDisplayWidget):
         """Test that all required dock widgets are created."""
+        dm_view = device_manager_display_widget
         dock_widgets = dm_view.dock_manager.dockWidgets()
 
         # Check that we have the expected number of dock widgets
-        assert len(dock_widgets) >= 4
+        assert len(dock_widgets) == 4
 
         # Check for specific widget types
         widget_types = [dock.widget().__class__ for dock in dock_widgets]
 
+        # OphydValidation is used in a layout with a QWidget
         assert DMConfigView in widget_types
-        assert DMOphydTest in widget_types
         assert DocstringView in widget_types
+        assert DeviceTable in widget_types
 
-    def test_toolbar_initialization(self, dm_view):
+    def test_toolbar_initialization(
+        self, device_manager_display_widget: DeviceManagerDisplayWidget
+    ):
         """Test that the toolbar is properly initialized with expected bundles."""
+        dm_view = device_manager_display_widget
         assert dm_view.toolbar is not None
         assert "IO" in dm_view.toolbar.bundles
         assert "Table" in dm_view.toolbar.bundles
 
-    def test_toolbar_components_exist(self, dm_view):
-        """Test that all expected toolbar components exist."""
-        expected_components = [
-            "load",
-            "save_to_disk",
-            "load_redis",
-            "update_config_redis",
-            "reset_composed",
-            "add_device",
-            "remove_device",
-            "rerun_validation",
-        ]
-
-        for component in expected_components:
-            assert dm_view.toolbar.components.exists(component)
-
-    def test_signal_connections(self, dm_view):
-        """Test that signals are properly connected between components."""
-        # Test that device_table_view signals are connected
-        assert dm_view.device_table_view.selected_devices is not None
-        assert dm_view.device_table_view.device_configs_changed is not None
-
-        # Test that ophyd_test_view signals are connected
-        assert dm_view.ophyd_test_view.device_validated is not None
-
-
-class TestDeviceManagerViewIOBundle:
-    """Test class for DeviceManagerView IO bundle actions."""
-
-    def test_io_bundle_exists(self, dm_view):
+    def test_io_bundle_exists(self, device_manager_display_widget: DeviceManagerDisplayWidget):
         """Test that IO bundle exists and contains expected actions."""
+        dm_view = device_manager_display_widget
         assert "IO" in dm_view.toolbar.bundles
-        io_actions = ["load", "save_to_disk", "load_redis", "update_config_redis"]
+        io_actions = ["load", "save_to_disk", "flush_redis", "load_redis", "update_config_redis"]
         for action in io_actions:
             assert dm_view.toolbar.components.exists(action)
 
-    def test_load_file_action_triggered(self, tmp_path, dm_view):
+    def test_load_file_action_triggered(
+        self, tmp_path, device_manager_display_widget: DeviceManagerDisplayWidget
+    ):
         """Test load file action trigger mechanism."""
-
+        dm_view = device_manager_display_widget
         with (
-            mock.patch.object(dm_view, "_get_file_path", return_value=tmp_path),
-            mock.patch(
-                "bec_widgets.applications.views.device_manager_view.device_manager_view.yaml_load"
-            ) as mock_yaml_load,
-            mock.patch.object(dm_view, "_open_config_choice_dialog") as mock_open_dialog,
+            mock.patch.object(dm_view, "_get_config_base_path", return_value=tmp_path),
+            mock.patch.object(
+                dm_view, "_get_file_path", return_value=str(tmp_path)
+            ) as mock_get_file,
+            mock.patch.object(dm_view, "_load_config_from_file") as mock_load_config,
         ):
-            mock_yaml_data = {"device1": {"param1": "value1"}}
-            mock_yaml_load.return_value = mock_yaml_data
-
             # Setup dialog mock
             dm_view.toolbar.components._components["load"].action.action.triggered.emit()
-            mock_yaml_load.assert_called_once_with(tmp_path)
-            mock_open_dialog.assert_called_once_with([{"name": "device1", "param1": "value1"}])
+            mock_get_file.assert_called_once_with(str(tmp_path), "open_file")
+            mock_load_config.assert_called_once_with(str(tmp_path))
 
-    def test_save_config_to_file(self, tmp_path, dm_view):
-        """Test saving config to file."""
-        yaml_path = tmp_path / "test_save.yaml"
-        mock_config = [{"name": "device1", "param1": "value1"}]
-        with (
-            mock.patch.object(dm_view, "_get_file_path", return_value=tmp_path),
-            mock.patch.object(dm_view, "_get_recovery_config_path", return_value=tmp_path),
-            mock.patch.object(dm_view, "_get_file_path", return_value=yaml_path),
-            mock.patch.object(
-                dm_view.device_table_view, "get_device_config", return_value=mock_config
-            ),
-        ):
-            dm_view.toolbar.components._components["save_to_disk"].action.action.triggered.emit()
-            assert yaml_path.exists()
-
-
-class TestDeviceManagerViewTableBundle:
-    """Test class for DeviceManagerView Table bundle actions."""
-
-    def test_table_bundle_exists(self, dm_view):
+    def test_table_bundle_exists(self, device_manager_display_widget: DeviceManagerDisplayWidget):
         """Test that Table bundle exists and contains expected actions."""
+        dm_view = device_manager_display_widget
         assert "Table" in dm_view.toolbar.bundles
         table_actions = ["reset_composed", "add_device", "remove_device", "rerun_validation"]
         for action in table_actions:
             assert dm_view.toolbar.components.exists(action)
 
     @mock.patch(
-        "bec_widgets.applications.views.device_manager_view.device_manager_view._yes_no_question"
+        "bec_widgets.applications.views.device_manager_view.device_manager_display_widget._yes_no_question"
     )
-    def test_reset_composed_view(self, mock_question, dm_view):
+    def test_reset_composed_view(
+        self, mock_question, device_manager_display_widget: DeviceManagerDisplayWidget
+    ):
         """Test reset composed view when user confirms."""
+        dm_view = device_manager_display_widget
         with mock.patch.object(dm_view.device_table_view, "clear_device_configs") as mock_clear:
-            mock_question.return_value = QMessageBox.StandardButton.Yes
+            mock_question.return_value = QtWidgets.QMessageBox.StandardButton.Yes
             dm_view.toolbar.components._components["reset_composed"].action.action.triggered.emit()
             mock_clear.assert_called_once()
             mock_clear.reset_mock()
-            mock_question.return_value = QMessageBox.StandardButton.No
+            mock_question.return_value = QtWidgets.QMessageBox.StandardButton.No
             dm_view.toolbar.components._components["reset_composed"].action.action.triggered.emit()
             mock_clear.assert_not_called()
 
-    def test_add_device_action_connected(self, dm_view):
+    def test_add_device_action_connected(
+        self, device_manager_display_widget: DeviceManagerDisplayWidget
+    ):
         """Test add device action opens dialog correctly."""
+        dm_view = device_manager_display_widget
         with mock.patch.object(dm_view, "_add_device_action") as mock_add:
             dm_view.toolbar.components._components["add_device"].action.action.triggered.emit()
             mock_add.assert_called_once()
 
-    def test_remove_device_action(self, dm_view):
-        """Test remove device action."""
-        with mock.patch.object(dm_view.device_table_view, "remove_selected_rows") as mock_remove:
-            dm_view.toolbar.components._components["remove_device"].action.action.triggered.emit()
-            mock_remove.assert_called_once()
+    def test_run_validate_connection_action_connected(
+        self, device_manager_display_widget: DeviceManagerDisplayWidget, device_configs: dict
+    ):
+        """Test run validate connection action is connected."""
+        dm_view = device_manager_display_widget
 
-    def test_rerun_device_validation(self, dm_view):
-        """Test rerun device validation action."""
-        cfgs = [{"name": "device1", "param1": "value1"}]
-        with (
-            mock.patch.object(dm_view.ophyd_test_view, "change_device_configs") as mock_change,
-            mock.patch.object(
-                dm_view.device_table_view.table, "selected_configs", return_value=cfgs
-            ),
-        ):
+        with mock.patch.object(
+            dm_view.ophyd_test_view, "change_device_configs"
+        ) as mock_change_configs:
+            # First, add device configs to the table
+            dm_view.device_table_view.add_device_configs(device_configs)
+            assert mock_change_configs.call_args[0][1] is True  # Configs were added
+            mock_change_configs.reset_mock()
+
+            # Trigger the validate connection action without selection, should validate all
             dm_view.toolbar.components._components[
                 "rerun_validation"
             ].action.action.triggered.emit()
-            mock_change.assert_called_once_with(cfgs, True, True)
+            assert len(mock_change_configs.call_args[0][0]) == len(device_configs)
+            assert mock_change_configs.call_args[0][1:] == (True, True)  # Configs were not added
+            mock_change_configs.reset_mock()
+
+            # Select a single row and trigger again, should only validate that one
+            dm_view.device_table_view.table.selectRow(0)
+            dm_view.toolbar.components._components[
+                "rerun_validation"
+            ].action.action.triggered.emit()
+            assert len(mock_change_configs.call_args[0][0]) == 1
