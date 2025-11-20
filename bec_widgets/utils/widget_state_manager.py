@@ -97,12 +97,12 @@ class WidgetStateManager:
         for i in range(meta.propertyCount()):
             prop = meta.property(i)
             name = prop.name()
-            skip_visible = (
-                name == "visible"
-            )  # TODO long term wise should be figured it out on the level of ADS, hotfix for now to avoid saving visibility when ads is not on main page
+            if name == "visible":
+                settings.setValue(
+                    name, True
+                )  # always save visible as True to avoid invisible widgets on load
             if (
                 name == "objectName"
-                or skip_visible
                 or not prop.isReadable()
                 or not prop.isWritable()
                 or not prop.isStored()  # can be extended to fine filter
