@@ -91,6 +91,11 @@ class ScanControl(BECWidget, QWidget):
 
         self._scan_metadata: dict | None = None
         self._metadata_form = ScanMetadata(parent=self)
+        self._hide_arg_box = False
+        self._hide_kwarg_boxes = False
+        self._hide_scan_control_buttons = False
+        self._hide_metadata = False
+        self._hide_scan_selection_combobox = False
 
         # Create and set main layout
         self._init_UI()
@@ -262,9 +267,7 @@ class ScanControl(BECWidget, QWidget):
     @SafeProperty(bool)
     def hide_arg_box(self):
         """Property to hide the argument box."""
-        if self.arg_box is None:
-            return True
-        return not self.arg_box.isVisible()
+        return self._hide_arg_box
 
     @hide_arg_box.setter
     def hide_arg_box(self, hide: bool):
@@ -273,18 +276,14 @@ class ScanControl(BECWidget, QWidget):
         Args:
             hide(bool): Hide or show the argument box.
         """
+        self._hide_arg_box = hide
         if self.arg_box is not None:
             self.arg_box.setVisible(not hide)
 
     @SafeProperty(bool)
     def hide_kwarg_boxes(self):
         """Property to hide the keyword argument boxes."""
-        if len(self.kwarg_boxes) == 0:
-            return True
-
-        for box in self.kwarg_boxes:
-            if box is not None:
-                return not box.isVisible()
+        return self._hide_kwarg_boxes
 
     @hide_kwarg_boxes.setter
     def hide_kwarg_boxes(self, hide: bool):
@@ -293,6 +292,7 @@ class ScanControl(BECWidget, QWidget):
         Args:
             hide(bool): Hide or show the keyword argument boxes.
         """
+        self._hide_kwarg_boxes = hide
         if len(self.kwarg_boxes) > 0:
             for box in self.kwarg_boxes:
                 box.setVisible(not hide)
@@ -300,7 +300,7 @@ class ScanControl(BECWidget, QWidget):
     @SafeProperty(bool)
     def hide_scan_control_buttons(self):
         """Property to hide the scan control buttons."""
-        return not self.button_run_scan.isVisible()
+        return self._hide_scan_control_buttons
 
     @hide_scan_control_buttons.setter
     def hide_scan_control_buttons(self, hide: bool):
@@ -309,12 +309,13 @@ class ScanControl(BECWidget, QWidget):
         Args:
             hide(bool): Hide or show the scan control buttons.
         """
+        self._hide_scan_control_buttons = hide
         self.show_scan_control_buttons(not hide)
 
     @SafeProperty(bool)
     def hide_metadata(self):
         """Property to hide the metadata form."""
-        return not self._metadata_form.isVisible()
+        return self._hide_metadata
 
     @hide_metadata.setter
     def hide_metadata(self, hide: bool):
@@ -323,6 +324,7 @@ class ScanControl(BECWidget, QWidget):
         Args:
             hide(bool): Hide or show the metadata form.
         """
+        self._hide_metadata = hide
         self._metadata_form.setVisible(not hide)
 
     @SafeProperty(bool)
@@ -342,12 +344,13 @@ class ScanControl(BECWidget, QWidget):
     @SafeSlot(bool)
     def show_scan_control_buttons(self, show: bool):
         """Shows or hides the scan control buttons."""
+        self._hide_scan_control_buttons = not show
         self.scan_control_group.setVisible(show)
 
     @SafeProperty(bool)
     def hide_scan_selection_combobox(self):
         """Property to hide the scan selection combobox."""
-        return not self.comboBox_scan_selection.isVisible()
+        return self._hide_scan_selection_combobox
 
     @hide_scan_selection_combobox.setter
     def hide_scan_selection_combobox(self, hide: bool):
@@ -356,11 +359,13 @@ class ScanControl(BECWidget, QWidget):
         Args:
             hide(bool): Hide or show the scan selection combobox.
         """
+        self._hide_scan_selection_combobox = hide
         self.show_scan_selection_combobox(not hide)
 
     @SafeSlot(bool)
     def show_scan_selection_combobox(self, show: bool):
         """Shows or hides the scan selection combobox."""
+        self._hide_scan_selection_combobox = not show
         self.scan_selection_group.setVisible(show)
 
     @SafeSlot(str)
@@ -415,6 +420,7 @@ class ScanControl(BECWidget, QWidget):
             box.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
             self.layout.insertWidget(position + len(self.kwarg_boxes), box)
             self.kwarg_boxes.append(box)
+            box.setVisible(not self._hide_kwarg_boxes)
 
     def add_arg_group(self, group: dict):
         """
@@ -427,6 +433,7 @@ class ScanControl(BECWidget, QWidget):
         self.arg_box.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.arg_box.hide_add_remove_buttons = self._hide_add_remove_buttons
         self.layout.insertWidget(self.ARG_BOX_POSITION, self.arg_box)
+        self.arg_box.setVisible(not self._hide_arg_box)
 
     @SafeSlot(str)
     def emit_device_selected(self, dev_names):
