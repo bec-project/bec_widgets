@@ -109,9 +109,11 @@ class WidgetStateManager:
             prop = meta.property(i)
             name = prop.name()
 
-            # Always save `visible` as True to avoid restoring hidden widgets from profiles.
+            # Skip persisting QWidget visibility because container widgets (e.g. tab
+            # stacks, dock managers) manage that state themselves. Restoring a saved
+            # False can permanently hide a widget, while forcing True makes hidden
+            # tabs show on top. Leave the property to the parent widget instead.
             if name == "visible":
-                settings.setValue(name, True)
                 continue
 
             if (
@@ -170,6 +172,8 @@ class WidgetStateManager:
         for i in range(meta.propertyCount()):
             prop = meta.property(i)
             name = prop.name()
+            if name == "visible":
+                continue
             if settings.contains(name):
                 value = settings.value(name)
                 widget.setProperty(name, value)
