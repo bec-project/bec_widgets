@@ -118,6 +118,7 @@ class AdvancedDockArea(DockAreaWidget):
         default_add_direction: Literal["left", "right", "top", "bottom"] = "right",
         profile_namespace: str | None = None,
         auto_profile_namespace: bool = True,
+        instance_id: str | None = None,
         auto_save_upon_exit: bool = True,
         enable_profile_management: bool = True,
         restore_initial_profile: bool = True,
@@ -126,6 +127,7 @@ class AdvancedDockArea(DockAreaWidget):
         self._profile_namespace_hint = profile_namespace
         self._profile_namespace_auto = auto_profile_namespace
         self._profile_namespace_resolved: str | None | object = _PROFILE_NAMESPACE_UNSET
+        self._instance_id = sanitize_namespace(instance_id) if instance_id else None
         self._auto_save_upon_exit = auto_save_upon_exit
         self._profile_management_enabled = enable_profile_management
         self._restore_initial_profile = restore_initial_profile
@@ -181,24 +183,23 @@ class AdvancedDockArea(DockAreaWidget):
         # Restore last-used profile if available; otherwise fall back to combo selection
         combo = self.toolbar.components.get_action("workspace_combo").widget
         namespace = self.profile_namespace
-        last = get_last_profile(namespace)
-        if last:
-            user_exists = any(
-                os.path.exists(path) for path in user_profile_candidates(last, namespace)
+        init_profile = None
+        instance_id = self._last_profile_instance_id()
+        if instance_id:
+            inst_profile = get_last_profile(
+                namespace=namespace, instance=instance_id, allow_namespace_fallback=False
             )
-            default_exists = any(
-                os.path.exists(path) for path in default_profile_candidates(last, namespace)
-            )
-            init_profile = last if (user_exists or default_exists) else None
-        else:
-            init_profile = combo.currentText()
+            if inst_profile and self._profile_exists(inst_profile, namespace):
+                init_profile = inst_profile
         if not init_profile:
-            general_exists = any(
-                os.path.exists(path) for path in user_profile_candidates("general", namespace)
-            ) or any(
-                os.path.exists(path) for path in default_profile_candidates("general", namespace)
-            )
-            if general_exists:
+            last = get_last_profile(namespace=namespace)
+            if last and self._profile_exists(last, namespace):
+                init_profile = last
+            else:
+                text = combo.currentText()
+                init_profile = text if text else None
+        if not init_profile:
+            if self._profile_exists("general", namespace):
                 init_profile = "general"
         if init_profile:
             # Defer initial load to the event loop so child widgets exist before state restore.
@@ -500,6 +501,14 @@ class AdvancedDockArea(DockAreaWidget):
         for dock in self.dock_list():
             dock.setting_action.setVisible(not value)
 
+    def _last_profile_instance_id(self) -> str | None:
+        """
+        Identifier used to scope the last-profile entry for this dock area.
+
+        When unset, profiles are scoped only by namespace.
+        """
+        return self._instance_id
+
     def _resolve_profile_namespace(self) -> str | None:
         if self._profile_namespace_resolved is not _PROFILE_NAMESPACE_UNSET:
             return self._profile_namespace_resolved  # type: ignore[return-value]
@@ -535,6 +544,11 @@ class AdvancedDockArea(DockAreaWidget):
             name = "general"
             self._current_profile_name = name
         return name
+
+    def _profile_exists(self, name: str, namespace: str | None) -> bool:
+        return any(
+            os.path.exists(path) for path in user_profile_candidates(name, namespace)
+        ) or any(os.path.exists(path) for path in default_profile_candidates(name, namespace))
 
     def _write_snapshot_to_settings(self, settings, save_preview: bool = True) -> None:
         self.save_to_settings(settings, keys=PROFILE_STATE_KEYS)
@@ -630,7 +644,7 @@ class AdvancedDockArea(DockAreaWidget):
         workspace_combo.setCurrentText(name)
         self._current_profile_name = name
         self.profile_changed.emit(name)
-        set_last_profile(name, namespace=namespace)
+        set_last_profile(name, namespace=namespace, instance=self._last_profile_instance_id())
         combo = self.toolbar.components.get_action("workspace_combo").widget
         combo.refresh_profiles(active_profile=name)
 
@@ -688,7 +702,7 @@ class AdvancedDockArea(DockAreaWidget):
 
         self._current_profile_name = name
         self.profile_changed.emit(name)
-        set_last_profile(name, namespace=namespace)
+        set_last_profile(name, namespace=namespace, instance=self._last_profile_instance_id())
         combo = self.toolbar.components.get_action("workspace_combo").widget
         combo.refresh_profiles(active_profile=name)
 
@@ -889,7 +903,7 @@ class AdvancedDockArea(DockAreaWidget):
         namespace = self.profile_namespace
         settings = open_user_settings(name, namespace=namespace)
         self._write_snapshot_to_settings(settings)
-        set_last_profile(name, namespace=namespace)
+        set_last_profile(name, namespace=namespace, instance=self._last_profile_instance_id())
         self._exit_snapshot_written = True
 
     def cleanup(self):
@@ -910,13 +924,31 @@ class AdvancedDockArea(DockAreaWidget):
 if __name__ == "__main__":  # pragma: no cover
     import sys
 
+    from qtpy.QtWidgets import QTabWidget
+
     app = QApplication(sys.argv)
     apply_theme("dark")
     dispatcher = BECDispatcher(gui_id="ads")
     window = BECMainWindowNoRPC()
-    ads = AdvancedDockArea(mode="creator", root_widget=True, enable_profile_management=True)
-    window.setCentralWidget(ads)
+    central = QWidget()
+    layout = QVBoxLayout(central)
+    window.setCentralWidget(central)
+
+    # two dock areas stacked vertically no instance ids
+    ads = AdvancedDockArea(mode="creator", enable_profile_management=True)
+    ads2 = AdvancedDockArea(mode="creator", enable_profile_management=True)
+    layout.addWidget(ads, 1)
+    layout.addWidget(ads2, 1)
+
+    # two dock areas inside a tab widget
+    tabs = QTabWidget(parent=central)
+    ads3 = AdvancedDockArea(mode="creator", enable_profile_management=True, instance_id="AdsTab3")
+    ads4 = AdvancedDockArea(mode="creator", enable_profile_management=True, instance_id="AdsTab4")
+    tabs.addTab(ads3, "Workspace 3")
+    tabs.addTab(ads4, "Workspace 4")
+    layout.addWidget(tabs, 1)
+
     window.show()
-    window.resize(800, 600)
+    window.resize(800, 1000)
 
     sys.exit(app.exec())
