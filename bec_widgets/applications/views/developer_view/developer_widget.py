@@ -93,7 +93,7 @@ class DeveloperWidget(DockAreaWidget):
         self.terminal = WebConsole(self, startup_cmd="")
         self.terminal.setObjectName("Terminal")
         self.monaco = MonacoDock(self)
-        self.monaco.setObjectName("Monaco Editor")
+        self.monaco.setObjectName("MonacoEditor")
         self.monaco.save_enabled.connect(self._on_save_enabled_update)
         self.plotting_ads = AdvancedDockArea(
             self,
@@ -104,7 +104,7 @@ class DeveloperWidget(DockAreaWidget):
             enable_profile_management=False,
             variant="compact",
         )
-        self.plotting_ads.setObjectName("Plotting Area")
+        self.plotting_ads.setObjectName("PlottingArea")
         self.signature_help = QTextEdit(self)
         self.signature_help.setObjectName("Signature Help")
         self.signature_help.setAcceptRichText(True)
