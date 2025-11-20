@@ -18,6 +18,7 @@ dependencies = [
     "bec_qthemes~=1.0, >=1.1.2",
     "black~=25.0",               # needed for bw-generate-cli
     "isort~=5.13, >=5.13.2",     # needed for bw-generate-cli
+    "ophyd_devices~=1.29, >=1.29.1",
     "pydantic~=2.0",
     "pyqtgraph==0.13.7",
     "PySide6==6.9.0",

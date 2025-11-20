@@ -15,6 +15,10 @@ from bec_widgets.cli.rpc.rpc_register import RPCRegister
 from bec_widgets.utils import bec_dispatcher as bec_dispatcher_module
 from bec_widgets.utils import error_popups
 
+# Patch to set default RAISE_ERROR_DEFAULT to True for tests
+# This means that by default, error popups will raise exceptions during tests
+# error_popups.RAISE_ERROR_DEFAULT = True
+
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):
