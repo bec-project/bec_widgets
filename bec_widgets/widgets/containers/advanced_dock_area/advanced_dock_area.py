@@ -551,6 +551,13 @@ class AdvancedDockArea(DockAreaWidget):
         ) or any(os.path.exists(path) for path in default_profile_candidates(name, namespace))
 
     def _write_snapshot_to_settings(self, settings, save_preview: bool = True) -> None:
+        """
+        Write the current workspace snapshot to the provided settings object.
+
+        Args:
+            settings(QSettings): The settings object to write to.
+            save_preview(bool): Whether to save a screenshot preview.
+        """
         self.save_to_settings(settings, keys=PROFILE_STATE_KEYS)
         self.state_manager.save_state(settings=settings)
         write_manifest(settings, self.dock_list())
@@ -688,11 +695,20 @@ class AdvancedDockArea(DockAreaWidget):
             if obj_name not in self.widget_map():
                 w = widget_handler.create_widget(widget_type=widget_class, parent=self)
                 w.setObjectName(obj_name)
+                floating_state = None
+                if item.get("floating"):
+                    floating_state = {
+                        "relative": item.get("floating_relative"),
+                        "absolute": item.get("floating_absolute"),
+                        "screen_name": item.get("floating_screen"),
+                    }
                 self._make_dock(
                     w,
                     closable=item["closable"],
                     floatable=item["floatable"],
                     movable=item["movable"],
+                    start_floating=item.get("floating", False),
+                    floating_state=floating_state,
                     area=QtAds.DockWidgetArea.RightDockWidgetArea,
                 )
 
@@ -925,30 +941,14 @@ class AdvancedDockArea(DockAreaWidget):
 if __name__ == "__main__":  # pragma: no cover
     import sys
 
-    from qtpy.QtWidgets import QTabWidget
-
     app = QApplication(sys.argv)
     apply_theme("dark")
     dispatcher = BECDispatcher(gui_id="ads")
     window = BECMainWindowNoRPC()
-    central = QWidget()
-    layout = QVBoxLayout(central)
-    window.setCentralWidget(central)
 
-    # two dock areas stacked vertically no instance ids
-    ads = AdvancedDockArea(mode="creator", enable_profile_management=True)
-    ads2 = AdvancedDockArea(mode="creator", enable_profile_management=True)
-    layout.addWidget(ads, 1)
-    layout.addWidget(ads2, 1)
+    ads = AdvancedDockArea(mode="creator", enable_profile_management=True, root_widget=True)
 
-    # two dock areas inside a tab widget
-    tabs = QTabWidget(parent=central)
-    ads3 = AdvancedDockArea(mode="creator", enable_profile_management=True, instance_id="AdsTab3")
-    ads4 = AdvancedDockArea(mode="creator", enable_profile_management=True, instance_id="AdsTab4")
-    tabs.addTab(ads3, "Workspace 3")
-    tabs.addTab(ads4, "Workspace 4")
-    layout.addWidget(tabs, 1)
-
+    window.setCentralWidget(ads)
     window.show()
     window.resize(800, 1000)
 
