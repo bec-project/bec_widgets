@@ -22,6 +22,7 @@ from bec_lib.plugin_helper import plugin_package_name, plugin_repo_path
 from pydantic import BaseModel, Field
 from qtpy.QtCore import QByteArray, QDateTime, QSettings, Qt
 from qtpy.QtGui import QPixmap
+from qtpy.QtWidgets import QApplication
 
 from bec_widgets.widgets.containers.qt_ads import CDockWidget
 
@@ -655,8 +656,44 @@ def write_manifest(settings: QSettings, docks: list[CDockWidget]) -> None:
         settings(QSettings): Settings object to write to.
         docks(list[CDockWidget]): List of dock widgets to serialize.
     """
-    settings.beginWriteArray(SETTINGS_KEYS["manifest"], len(docks))
-    for i, dock in enumerate(docks):
+
+    def _floating_snapshot(dock: CDockWidget) -> dict | None:
+        if not hasattr(dock, "isFloating") or not dock.isFloating():
+            return None
+        container = dock.floatingDockContainer() if hasattr(dock, "floatingDockContainer") else None
+        if container is None:
+            return None
+        geom = container.frameGeometry()
+        if geom.isNull():
+            return None
+        absolute = {"x": geom.x(), "y": geom.y(), "w": geom.width(), "h": geom.height()}
+        screen = container.screen() if hasattr(container, "screen") else None
+        if screen is None:
+            screen = QApplication.screenAt(geom.center()) if QApplication.instance() else None
+        screen_name = ""
+        relative = None
+        if screen is not None:
+            if hasattr(screen, "name"):
+                try:
+                    screen_name = screen.name()
+                except Exception:
+                    screen_name = ""
+            avail = screen.availableGeometry()
+            width = max(1, avail.width())
+            height = max(1, avail.height())
+            relative = {
+                "x": (geom.left() - avail.left()) / float(width),
+                "y": (geom.top() - avail.top()) / float(height),
+                "w": geom.width() / float(width),
+                "h": geom.height() / float(height),
+            }
+        return {"screen_name": screen_name, "relative": relative, "absolute": absolute}
+
+    ordered_docks = [dock for dock in docks if dock.isFloating()] + [
+        dock for dock in docks if not dock.isFloating()
+    ]
+    settings.beginWriteArray(SETTINGS_KEYS["manifest"], len(ordered_docks))
+    for i, dock in enumerate(ordered_docks):
         settings.setArrayIndex(i)
         w = dock.widget()
         settings.setValue("object_name", w.objectName())
@@ -664,6 +701,32 @@ def write_manifest(settings: QSettings, docks: list[CDockWidget]) -> None:
         settings.setValue("closable", getattr(dock, "_default_closable", True))
         settings.setValue("floatable", getattr(dock, "_default_floatable", True))
         settings.setValue("movable", getattr(dock, "_default_movable", True))
+        is_floating = bool(dock.isFloating())
+        settings.setValue("floating", is_floating)
+        if is_floating:
+            snapshot = _floating_snapshot(dock)
+            if snapshot:
+                relative = snapshot.get("relative") or {}
+                absolute = snapshot.get("absolute") or {}
+                settings.setValue("floating_screen", snapshot.get("screen_name", ""))
+                settings.setValue("floating_rel_x", relative.get("x", 0.0))
+                settings.setValue("floating_rel_y", relative.get("y", 0.0))
+                settings.setValue("floating_rel_w", relative.get("w", 0.0))
+                settings.setValue("floating_rel_h", relative.get("h", 0.0))
+                settings.setValue("floating_abs_x", absolute.get("x", 0))
+                settings.setValue("floating_abs_y", absolute.get("y", 0))
+                settings.setValue("floating_abs_w", absolute.get("w", 0))
+                settings.setValue("floating_abs_h", absolute.get("h", 0))
+        else:
+            settings.setValue("floating_screen", "")
+            settings.setValue("floating_rel_x", 0.0)
+            settings.setValue("floating_rel_y", 0.0)
+            settings.setValue("floating_rel_w", 0.0)
+            settings.setValue("floating_rel_h", 0.0)
+            settings.setValue("floating_abs_x", 0)
+            settings.setValue("floating_abs_y", 0)
+            settings.setValue("floating_abs_w", 0)
+            settings.setValue("floating_abs_h", 0)
     settings.endArray()
 
 
@@ -681,6 +744,22 @@ def read_manifest(settings: QSettings) -> list[dict]:
     count = settings.beginReadArray(SETTINGS_KEYS["manifest"])
     for i in range(count):
         settings.setArrayIndex(i)
+        floating = settings.value("floating", False, type=bool)
+        rel = {
+            "x": float(settings.value("floating_rel_x", 0.0)),
+            "y": float(settings.value("floating_rel_y", 0.0)),
+            "w": float(settings.value("floating_rel_w", 0.0)),
+            "h": float(settings.value("floating_rel_h", 0.0)),
+        }
+        abs_geom = {
+            "x": int(settings.value("floating_abs_x", 0)),
+            "y": int(settings.value("floating_abs_y", 0)),
+            "w": int(settings.value("floating_abs_w", 0)),
+            "h": int(settings.value("floating_abs_h", 0)),
+        }
+        if not floating:
+            rel = None
+            abs_geom = None
         items.append(
             {
                 "object_name": settings.value("object_name"),
@@ -688,6 +767,10 @@ def read_manifest(settings: QSettings) -> list[dict]:
                 "closable": settings.value("closable", type=bool),
                 "floatable": settings.value("floatable", type=bool),
                 "movable": settings.value("movable", type=bool),
+                "floating": floating,
+                "floating_screen": settings.value("floating_screen", ""),
+                "floating_relative": rel,
+                "floating_absolute": abs_geom,
             }
         )
     settings.endArray()

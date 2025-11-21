@@ -21,6 +21,7 @@ from bec_widgets.widgets.containers.advanced_dock_area.basic_dock_area import (
     DockSettingsDialog,
 )
 from bec_widgets.widgets.containers.advanced_dock_area.profile_utils import (
+    SETTINGS_KEYS,
     default_profile_path,
     get_profile_info,
     is_profile_read_only,
@@ -248,6 +249,31 @@ class TestBasicDockArea:
 
         basic_dock_area.delete_all()
         assert basic_dock_area.dock_list() == []
+
+    def test_manifest_serialization_includes_floating_geometry(
+        self, basic_dock_area, qtbot, tmp_path
+    ):
+        anchored = QWidget(parent=basic_dock_area)
+        anchored.setObjectName("anchored_widget")
+        floating = QWidget(parent=basic_dock_area)
+        floating.setObjectName("floating_widget")
+
+        basic_dock_area.new(anchored, return_dock=True)
+        dock_floating = basic_dock_area.new(floating, return_dock=True, start_floating=True)
+        qtbot.waitUntil(lambda: dock_floating.isFloating(), timeout=2000)
+
+        settings_path = tmp_path / "manifest.ini"
+        settings = QSettings(str(settings_path), QSettings.IniFormat)
+        write_manifest(settings, basic_dock_area.dock_list())
+        settings.sync()
+
+        manifest_entries = read_manifest(settings)
+        assert len(manifest_entries) == 2
+        assert manifest_entries[0]["object_name"] == "floating_widget"
+        assert manifest_entries[0]["floating"] is True
+        assert manifest_entries[0]["floating_relative"] is not None
+        assert manifest_entries[1]["object_name"] == "anchored_widget"
+        assert manifest_entries[1]["floating"] is False
 
     def test_splitter_weight_coercion_supports_aliases(self, basic_dock_area):
         weights = {"default": 0.5, "left": 2, "center": 3, "right": 4}
@@ -836,6 +862,59 @@ class TestToolbarFunctionality:
         # Should have fewer or same floating widgets
         final_floating = len(advanced_dock_area.dock_manager.floatingWidgets())
         assert final_floating <= initial_floating
+
+    def test_load_profile_restores_floating_dock(self, advanced_dock_area, qtbot):
+        helper = profile_helper(advanced_dock_area)
+        settings = helper.open_user("floating_profile")
+        settings.clear()
+
+        settings.setValue("profile/created_at", "2025-11-23T00:00:00Z")
+        settings.beginWriteArray(SETTINGS_KEYS["manifest"], 2)
+
+        # Floating entry
+        settings.setArrayIndex(0)
+        settings.setValue("object_name", "FloatingWaveform")
+        settings.setValue("widget_class", "DarkModeButton")
+        settings.setValue("closable", True)
+        settings.setValue("floatable", True)
+        settings.setValue("movable", True)
+        settings.setValue("floating", True)
+        settings.setValue("floating_screen", "")
+        settings.setValue("floating_rel_x", 0.1)
+        settings.setValue("floating_rel_y", 0.1)
+        settings.setValue("floating_rel_w", 0.2)
+        settings.setValue("floating_rel_h", 0.2)
+        settings.setValue("floating_abs_x", 50)
+        settings.setValue("floating_abs_y", 50)
+        settings.setValue("floating_abs_w", 200)
+        settings.setValue("floating_abs_h", 150)
+
+        # Anchored entry
+        settings.setArrayIndex(1)
+        settings.setValue("object_name", "EmbeddedWaveform")
+        settings.setValue("widget_class", "DarkModeButton")
+        settings.setValue("closable", True)
+        settings.setValue("floatable", True)
+        settings.setValue("movable", True)
+        settings.setValue("floating", False)
+        settings.setValue("floating_screen", "")
+        settings.setValue("floating_rel_x", 0.0)
+        settings.setValue("floating_rel_y", 0.0)
+        settings.setValue("floating_rel_w", 0.0)
+        settings.setValue("floating_rel_h", 0.0)
+        settings.setValue("floating_abs_x", 0)
+        settings.setValue("floating_abs_y", 0)
+        settings.setValue("floating_abs_w", 0)
+        settings.setValue("floating_abs_h", 0)
+        settings.endArray()
+        settings.sync()
+
+        advanced_dock_area.delete_all()
+        advanced_dock_area.load_profile("floating_profile")
+
+        qtbot.waitUntil(lambda: "FloatingWaveform" in advanced_dock_area.dock_map(), timeout=3000)
+        floating_dock = advanced_dock_area.dock_map()["FloatingWaveform"]
+        assert floating_dock.isFloating()
 
     def test_screenshot_action(self, advanced_dock_area, tmpdir):
         """Test screenshot toolbar action."""
