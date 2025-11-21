@@ -3,6 +3,7 @@ from __future__ import annotations
 import shiboken6
 from bec_lib import bec_logger
 from qtpy.QtCore import QSettings
+from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -20,7 +21,7 @@ from bec_widgets.utils.widget_io import WidgetHierarchy
 
 logger = bec_logger.logger
 
-PROPERTY_TO_SKIP = ["palette", "font", "windowIcon", "windowIconText"]
+PROPERTY_TO_SKIP = ["palette", "font", "windowIcon", "windowIconText", "locale", "styleSheet"]
 
 
 class WidgetStateManager:
@@ -126,7 +127,10 @@ class WidgetStateManager:
                 continue
 
             value = widget.property(name)
+            if isinstance(value, QIcon):
+                continue
             settings.setValue(name, value)
+
         settings.endGroup()
 
         # Recursively process children (only if they aren't skipped)
