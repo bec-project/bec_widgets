@@ -1352,6 +1352,7 @@ class DockAreaWidget(RPCBase):
         floatable: "bool" = True,
         movable: "bool" = True,
         start_floating: "bool" = False,
+        floating_state: "Mapping[str, object] | None" = None,
         where: "Literal['left', 'right', 'top', 'bottom'] | None" = None,
         on_close: "Callable[[CDockWidget, QWidget], None] | None" = None,
         tab_with: "CDockWidget | QWidget | str | None" = None,
@@ -1374,6 +1375,7 @@ class DockAreaWidget(RPCBase):
             floatable(bool): Whether the dock is floatable.
             movable(bool): Whether the dock is movable.
             start_floating(bool): Whether to start the dock floating.
+            floating_state(Mapping | None): Optional floating geometry metadata to apply when floating.
             where(Literal["left", "right", "top", "bottom"] | None): Dock placement hint relative to the dock area (ignored when
                 ``relative_to`` is provided without an explicit value).
             on_close(Callable[[CDockWidget, QWidget], None] | None): Optional custom close handler accepting (dock, widget).
@@ -2901,6 +2903,7 @@ class MonacoDock(RPCBase):
         floatable: "bool" = True,
         movable: "bool" = True,
         start_floating: "bool" = False,
+        floating_state: "Mapping[str, object] | None" = None,
         where: "Literal['left', 'right', 'top', 'bottom'] | None" = None,
         on_close: "Callable[[CDockWidget, QWidget], None] | None" = None,
         tab_with: "CDockWidget | QWidget | str | None" = None,
@@ -2923,6 +2926,7 @@ class MonacoDock(RPCBase):
             floatable(bool): Whether the dock is floatable.
             movable(bool): Whether the dock is movable.
             start_floating(bool): Whether to start the dock floating.
+            floating_state(Mapping | None): Optional floating geometry metadata to apply when floating.
             where(Literal["left", "right", "top", "bottom"] | None): Dock placement hint relative to the dock area (ignored when
                 ``relative_to`` is provided without an explicit value).
             on_close(Callable[[CDockWidget, QWidget], None] | None): Optional custom close handler accepting (dock, widget).
