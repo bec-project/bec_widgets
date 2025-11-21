@@ -4,10 +4,11 @@ import inspect
 from dataclasses import dataclass
 from typing import Any, Callable, Literal, Mapping, Sequence, cast
 
+from bec_lib import bec_logger
 from bec_qthemes import material_icon
 from qtpy.QtCore import QByteArray, QSettings, Qt, QTimer
 from qtpy.QtGui import QIcon
-from qtpy.QtWidgets import QDialog, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QApplication, QDialog, QVBoxLayout, QWidget
 from shiboken6 import isValid
 
 import bec_widgets.widgets.containers.qt_ads as QtAds
@@ -21,6 +22,8 @@ from bec_widgets.widgets.containers.qt_ads import (
     CDockSplitter,
     CDockWidget,
 )
+
+logger = bec_logger.logger
 
 
 class DockSettingsDialog(QDialog):
@@ -64,6 +67,7 @@ class DockAreaWidget(BECWidget, QWidget):
         floatable: bool = True
         movable: bool = True
         start_floating: bool = False
+        floating_state: Mapping[str, Any] | None = None
         area: QtAds.DockWidgetArea = QtAds.DockWidgetArea.RightDockWidgetArea
         on_close: Callable[[CDockWidget, QWidget], None] | None = None
         tab_with: CDockWidget | None = None
@@ -258,6 +262,7 @@ class DockAreaWidget(BECWidget, QWidget):
         movable: bool = True,
         area: QtAds.DockWidgetArea = QtAds.DockWidgetArea.RightDockWidgetArea,
         start_floating: bool = False,
+        floating_state: Mapping[str, object] | None = None,
         on_close: Callable[[CDockWidget, QWidget], None] | None = None,
         tab_with: CDockWidget | None = None,
         relative_to: CDockWidget | None = None,
@@ -276,6 +281,7 @@ class DockAreaWidget(BECWidget, QWidget):
             movable(bool): Whether the dock can be moved.
             area(QtAds.DockWidgetArea): Target dock area.
             start_floating(bool): Whether the dock should start floating.
+            floating_state(Mapping | None): Optional geometry metadata to apply when floating.
             on_close(Callable[[CDockWidget, QWidget], None] | None): Custom close handler.
             tab_with(CDockWidget | None): Optional dock to tab with.
             relative_to(CDockWidget | None): Optional dock to position relative to.
@@ -336,6 +342,8 @@ class DockAreaWidget(BECWidget, QWidget):
 
         if start_floating and tab_with is None and not promote_central:
             dock.setFloating()
+            if floating_state:
+                self._apply_floating_state_to_dock(dock, floating_state)
         if resolved_icon is not None:
             dock.setIcon(resolved_icon)
         return dock
@@ -424,6 +432,7 @@ class DockAreaWidget(BECWidget, QWidget):
         floatable: bool,
         movable: bool,
         start_floating: bool,
+        floating_state: Mapping[str, object] | None,
         where: Literal["left", "right", "top", "bottom"] | None,
         on_close: Callable[[CDockWidget, QWidget], None] | None,
         tab_with: CDockWidget | QWidget | str | None,
@@ -444,6 +453,7 @@ class DockAreaWidget(BECWidget, QWidget):
             floatable(bool): Whether the dock can be floated.
             movable(bool): Whether the dock can be moved.
             start_floating(bool): Whether the dock should start floating.
+            floating_state(Mapping | None): Optional floating geometry metadata.
             where(Literal["left", "right", "top", "bottom"] | None): Target dock area.
             on_close(Callable[[CDockWidget, QWidget], None] | None): Custom close handler.
             tab_with(CDockWidget | QWidget | str | None): Optional dock to tab with.
@@ -489,6 +499,7 @@ class DockAreaWidget(BECWidget, QWidget):
             floatable=floatable,
             movable=movable,
             start_floating=start_floating,
+            floating_state=floating_state,
             area=target_area,
             on_close=on_close,
             tab_with=resolved_tab,
@@ -517,6 +528,7 @@ class DockAreaWidget(BECWidget, QWidget):
             closable=spec.closable,
             floatable=spec.floatable,
             movable=spec.movable,
+            floating_state=spec.floating_state,
             area=spec.area,
             start_floating=spec.start_floating,
             on_close=spec.on_close,
@@ -824,6 +836,126 @@ class DockAreaWidget(BECWidget, QWidget):
                     defaults[key] = value
         return defaults
 
+    def _select_screen_for_entry(
+        self, entry: Mapping[str, object], container: QtAds.CFloatingDockContainer | None
+    ):
+        """
+        Pick the best target screen for a saved floating container.
+
+        Args:
+            entry(Mapping[str, object]): Floating window entry.
+            container(QtAds.CFloatingDockContainer | None): Optional container instance.
+        """
+        screens = QApplication.screens() or []
+        try:
+            name = entry.get("screen_name") or ""
+        except Exception as exc:
+            logger.warning(f"Invalid screen_name in floating window entry: {exc}")
+            name = ""
+        if name:
+            for screen in screens:
+                try:
+                    if screen.name() == name:
+                        return screen
+                except Exception as exc:
+                    logger.warning(f"Error checking screen name '{name}': {exc}")
+                    continue
+        if container is not None and hasattr(container, "screen"):
+            screen = container.screen()
+            if screen is not None:
+                return screen
+        return screens[0] if screens else None
+
+    def _apply_saved_floating_geometry(
+        self, container: QtAds.CFloatingDockContainer, entry: Mapping[str, object]
+    ) -> None:
+        """
+        Resize/move a floating container using saved geometry information.
+
+        Args:
+            container(QtAds.CFloatingDockContainer): Target floating container.
+            entry(Mapping[str, object]): Floating window entry.
+        """
+        abs_geom = entry.get("absolute") if isinstance(entry, Mapping) else None
+        if isinstance(abs_geom, Mapping):
+            try:
+                x = int(abs_geom.get("x"))
+                y = int(abs_geom.get("y"))
+                width = int(abs_geom.get("w"))
+                height = int(abs_geom.get("h"))
+            except Exception as exc:
+                logger.warning(f"Invalid absolute geometry in floating window entry: {exc}")
+            else:
+                if width > 0 and height > 0:
+                    container.setGeometry(x, y, max(width, 50), max(height, 50))
+                    return
+
+        rel = entry.get("relative") if isinstance(entry, Mapping) else None
+        if not isinstance(rel, Mapping):
+            return
+        try:
+            x_ratio = float(rel.get("x"))
+            y_ratio = float(rel.get("y"))
+            w_ratio = float(rel.get("w"))
+            h_ratio = float(rel.get("h"))
+        except Exception as exc:
+            logger.warning(f"Invalid relative geometry in floating window entry: {exc}")
+            return
+
+        screen = self._select_screen_for_entry(entry, container)
+        if screen is None:
+            return
+        geom = screen.availableGeometry()
+        screen_w = geom.width()
+        screen_h = geom.height()
+        if screen_w <= 0 or screen_h <= 0:
+            return
+
+        min_w = 120
+        min_h = 80
+        width = max(min_w, int(round(screen_w * max(w_ratio, 0.05))))
+        height = max(min_h, int(round(screen_h * max(h_ratio, 0.05))))
+        width = min(width, screen_w)
+        height = min(height, screen_h)
+
+        x = geom.left() + int(round(screen_w * x_ratio))
+        y = geom.top() + int(round(screen_h * y_ratio))
+        x = max(geom.left(), min(x, geom.left() + screen_w - width))
+        y = max(geom.top(), min(y, geom.top() + screen_h - height))
+
+        container.setGeometry(x, y, width, height)
+
+    def _apply_floating_state_to_dock(
+        self, dock: CDockWidget, state: Mapping[str, object], *, attempt: int = 0
+    ) -> None:
+        """
+        Apply saved floating geometry to a dock once its container exists.
+
+        Args:
+            dock(CDockWidget): Target dock widget.
+            state(Mapping[str, object]): Saved floating state.
+            attempt(int): Current attempt count for retries.
+        """
+        if state is None:
+            return
+
+        def schedule(next_attempt: int):
+            QTimer.singleShot(
+                50, lambda: self._apply_floating_state_to_dock(dock, state, attempt=next_attempt)
+            )
+
+        container = dock.floatingDockContainer()
+        if container is None:
+            if attempt < 10:
+                schedule(attempt + 1)
+            return
+        entry = {
+            "relative": state.get("relative") if isinstance(state, Mapping) else None,
+            "absolute": state.get("absolute") if isinstance(state, Mapping) else None,
+            "screen_name": state.get("screen_name") if isinstance(state, Mapping) else None,
+        }
+        self._apply_saved_floating_geometry(container, entry)
+
     def save_to_settings(
         self,
         settings: QSettings,
@@ -1083,6 +1215,7 @@ class DockAreaWidget(BECWidget, QWidget):
         floatable: bool = True,
         movable: bool = True,
         start_floating: bool = False,
+        floating_state: Mapping[str, object] | None = None,
         where: Literal["left", "right", "top", "bottom"] | None = None,
         on_close: Callable[[CDockWidget, QWidget], None] | None = None,
         tab_with: CDockWidget | QWidget | str | None = None,
@@ -1105,6 +1238,7 @@ class DockAreaWidget(BECWidget, QWidget):
             floatable(bool): Whether the dock is floatable.
             movable(bool): Whether the dock is movable.
             start_floating(bool): Whether to start the dock floating.
+            floating_state(Mapping | None): Optional floating geometry metadata to apply when floating.
             where(Literal["left", "right", "top", "bottom"] | None): Dock placement hint relative to the dock area (ignored when
                 ``relative_to`` is provided without an explicit value).
             on_close(Callable[[CDockWidget, QWidget], None] | None): Optional custom close handler accepting (dock, widget).
@@ -1148,6 +1282,7 @@ class DockAreaWidget(BECWidget, QWidget):
                 floatable=floatable,
                 movable=movable,
                 start_floating=start_floating,
+                floating_state=floating_state,
                 where=where,
                 on_close=on_close,
                 tab_with=tab_with,
@@ -1173,6 +1308,7 @@ class DockAreaWidget(BECWidget, QWidget):
             floatable=floatable,
             movable=movable,
             start_floating=start_floating,
+            floating_state=floating_state,
             where=where,
             on_close=on_close,
             tab_with=tab_with,
@@ -1187,13 +1323,29 @@ class DockAreaWidget(BECWidget, QWidget):
         dock = self._create_dock_from_spec(spec)
         return dock if return_dock else widget
 
+    def _iter_all_docks(self) -> list[CDockWidget]:
+        """Return all docks, including those hosted in floating containers."""
+        docks = list(self.dock_manager.dockWidgets())
+        seen = {id(d) for d in docks}
+        for container in self.dock_manager.floatingWidgets():
+            if container is None:
+                continue
+            for dock in container.dockWidgets():
+                if dock is None:
+                    continue
+                if id(dock) in seen:
+                    continue
+                docks.append(dock)
+                seen.add(id(dock))
+        return docks
+
     def dock_map(self) -> dict[str, CDockWidget]:
         """Return the dock widgets map as dictionary with names as keys."""
-        return self.dock_manager.dockWidgetsMap()
+        return {dock.objectName(): dock for dock in self._iter_all_docks() if dock.objectName()}
 
     def dock_list(self) -> list[CDockWidget]:
         """Return the list of dock widgets."""
-        return self.dock_manager.dockWidgets()
+        return self._iter_all_docks()
 
     def widget_map(self) -> dict[str, QWidget]:
         """Return a dictionary mapping widget names to their corresponding widgets."""
