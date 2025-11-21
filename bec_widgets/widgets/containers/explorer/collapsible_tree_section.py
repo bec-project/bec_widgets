@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from bec_qthemes import material_icon
 from qtpy.QtCore import QMimeData, Qt, Signal
-from qtpy.QtGui import QDrag
+from qtpy.QtGui import QDrag, QIcon
 from qtpy.QtWidgets import QHBoxLayout, QPushButton, QSizePolicy, QToolButton, QVBoxLayout, QWidget
 
 from bec_widgets.utils.colors import get_theme_palette
@@ -100,7 +100,7 @@ class CollapsibleSection(QWidget):
         """Update the header button appearance based on expanded state"""
         # Use material icons with consistent sizing to match tree items
         icon_name = "keyboard_arrow_down" if self.expanded else "keyboard_arrow_right"
-        icon = material_icon(icon_name=icon_name, size=(20, 20), convert_to_pixmap=False)
+        icon = material_icon(icon_name=icon_name, size=(20, 20), icon_type=QIcon)
 
         self.header_button.setIcon(icon)
         self.header_button.setText(self.title)

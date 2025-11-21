@@ -26,7 +26,7 @@ from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 from qtpy import QtCore
 from qtpy.QtCore import QSize, Qt, Signal  # type: ignore
-from qtpy.QtGui import QFontMetrics
+from qtpy.QtGui import QFontMetrics, QIcon
 from qtpy.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -203,9 +203,7 @@ class DynamicFormItem(QWidget):
 
     def _add_clear_button(self):
         self._clear_button = QToolButton()
-        self._clear_button.setIcon(
-            material_icon(icon_name="close", size=(10, 10), convert_to_pixmap=False)
-        )
+        self._clear_button.setIcon(material_icon(icon_name="close", size=(10, 10), icon_type=QIcon))
         self._layout.addWidget(self._clear_button)
         # the widget added in _add_main_widget must implement .clear() if value is not required
         self._clear_button.setToolTip("Clear value or reset to default.")

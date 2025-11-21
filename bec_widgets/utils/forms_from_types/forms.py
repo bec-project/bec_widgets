@@ -7,6 +7,7 @@ from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from pydantic import BaseModel, ValidationError
 from qtpy.QtCore import Signal  # type: ignore
+from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QApplication, QGridLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
@@ -207,7 +208,7 @@ class PydanticModelForm(TypedForm):
         self._validity.compact_view = True  # type: ignore
         self._validity.label = "Validity"  # type: ignore
         self._validity.compact_show_popup.setIcon(
-            material_icon(icon_name="info", size=(10, 10), convert_to_pixmap=False)
+            material_icon(icon_name="info", size=(10, 10), icon_type=QIcon)
         )
         self._validity_message = QLabel("Not yet validated")
         self._validity.addWidget(self._validity_message)

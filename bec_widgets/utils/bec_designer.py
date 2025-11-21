@@ -8,7 +8,7 @@ from pathlib import Path
 
 from bec_qthemes import material_icon
 from qtpy import PYSIDE6
-from qtpy.QtGui import QIcon
+from qtpy.QtGui import QIcon, QPixmap
 
 from bec_widgets.utils.bec_plugin_helper import user_widget_plugin
 
@@ -35,7 +35,7 @@ def designer_material_icon(icon_name: str) -> QIcon:
     Returns:
         QIcon: The QIcon for the material icon.
     """
-    return QIcon(material_icon(icon_name, filled=True, convert_to_pixmap=True))
+    return QIcon(material_icon(icon_name, filled=True, icon_type=QPixmap))
 
 
 def list_editable_packages() -> set[str]:

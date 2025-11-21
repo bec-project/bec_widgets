@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from bec_qthemes import material_icon
 from qtpy.QtCore import Qt
+from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QComboBox, QSizePolicy, QWidget
 
 from bec_widgets import SafeSlot
@@ -28,7 +29,7 @@ class ProfileComboBox(QComboBox):
         self.blockSignals(True)
         self.clear()
 
-        lock_icon = material_icon("edit_off", size=(16, 16), convert_to_pixmap=False)
+        lock_icon = material_icon("edit_off", size=(16, 16), icon_type=QIcon)
 
         for profile in list_profiles():
             if is_profile_readonly(profile):
@@ -168,9 +169,7 @@ class WorkspaceConnection(BundleConnection):
         """
         setattr(self.target_widget, "lock_workspace", value)
         self.components.get_action("lock").action.setChecked(value)
-        icon = material_icon(
-            "lock" if value else "lock_open_right", size=(20, 20), convert_to_pixmap=False
-        )
+        icon = material_icon("lock" if value else "lock_open_right", size=(20, 20), icon_type=QIcon)
         self.components.get_action("lock").action.setIcon(icon)
 
     @SafeSlot()

@@ -10,6 +10,7 @@ from bec_lib.messages import ConfigAction, ScanStatusMessage
 from bec_qthemes import material_icon
 from pyqtgraph import SignalProxy
 from qtpy.QtCore import QThreadPool, Signal
+from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QFileDialog, QListWidget, QToolButton, QVBoxLayout, QWidget
 
 from bec_widgets.cli.rpc.rpc_register import RPCRegister
@@ -97,7 +98,7 @@ class DeviceBrowser(BECWidget, QWidget):
     def init_tool_buttons(self):
         def _setup_button(button: QToolButton, icon: str, slot: Callable, tooltip: str = ""):
             button.clicked.connect(slot)
-            button.setIcon(material_icon(icon, size=(20, 20), convert_to_pixmap=False))
+            button.setIcon(material_icon(icon, size=(20, 20), icon_type=QIcon))
             button.setToolTip(tooltip)
 
         _setup_button(self.ui.add_button, "add", self._create_add_dialog, "add new device")

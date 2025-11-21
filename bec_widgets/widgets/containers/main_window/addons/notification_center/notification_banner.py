@@ -119,7 +119,7 @@ class NotificationToast(QFrame):
                 color=SEVERITY[self._kind.value]["color"],
                 filled=True,
                 size=(24, 24),
-                convert_to_pixmap=False,
+                icon_type=QtGui.QIcon,
             )
         )
         icon_btn.setIconSize(QtCore.QSize(24, 24))
@@ -901,7 +901,7 @@ class NotificationIndicator(QWidget):
                 color=SEVERITY[sev.value]["color"],
                 filled=True,
                 size=(20, 20),
-                convert_to_pixmap=False,
+                icon_type=QIcon,
             )
             b.setIcon(icon)
             b.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)

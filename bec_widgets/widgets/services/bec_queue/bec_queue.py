@@ -3,7 +3,7 @@ from __future__ import annotations
 from bec_lib.endpoints import MessageEndpoints
 from bec_qthemes import material_icon
 from qtpy.QtCore import Property, Qt, Signal, Slot
-from qtpy.QtGui import QColor
+from qtpy.QtGui import QColor, QIcon
 from qtpy.QtWidgets import QHeaderView, QLabel, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
@@ -240,7 +240,7 @@ class BECQueue(BECWidget, CompactPopupWidget):
 
         abort_button.button.setText("")
         abort_button.button.setIcon(
-            material_icon("cancel", color="#cc181e", filled=True, convert_to_pixmap=False)
+            material_icon("cancel", color="#cc181e", filled=True, icon_type=QIcon)
         )
         abort_button.setStyleSheet(
             """

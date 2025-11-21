@@ -3,6 +3,7 @@ from __future__ import annotations
 from bec_qthemes import material_icon
 from qtpy import QtWidgets
 from qtpy.QtCore import QEasingCurve, QParallelAnimationGroup, QPropertyAnimation, Qt, Signal
+from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import (
     QGraphicsOpacityEffect,
     QHBoxLayout,
@@ -79,7 +80,7 @@ class SideBar(QScrollArea):
 
         self.toggle = QToolButton(self)
         self.toggle.setCheckable(False)
-        self.toggle.setIcon(material_icon("keyboard_arrow_right", convert_to_pixmap=False))
+        self.toggle.setIcon(material_icon("keyboard_arrow_right", icon_type=QIcon))
         self.toggle.clicked.connect(self.on_expand)
 
         self.toggle_row_layout.addWidget(self.title_label, 1, Qt.AlignLeft | Qt.AlignVCenter)
@@ -152,7 +153,7 @@ class SideBar(QScrollArea):
         self.toggle.setIcon(
             material_icon(
                 "keyboard_arrow_left" if self._is_expanded else "keyboard_arrow_right",
-                convert_to_pixmap=False,
+                icon_type=QIcon,
             )
         )
 
@@ -198,7 +199,7 @@ class SideBar(QScrollArea):
         self.toggle.setIcon(
             material_icon(
                 "keyboard_arrow_left" if self._is_expanded else "keyboard_arrow_right",
-                convert_to_pixmap=False,
+                icon_type=QIcon,
             )
         )
         # Refresh each component that supports it

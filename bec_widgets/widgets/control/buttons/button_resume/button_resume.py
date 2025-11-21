@@ -1,5 +1,6 @@
 from bec_qthemes import material_icon
 from qtpy.QtCore import Qt
+from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QHBoxLayout, QPushButton, QToolButton, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
@@ -24,7 +25,7 @@ class ResumeButton(BECWidget, QWidget):
         self.layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         if toolbar:
-            icon = material_icon("resume", color="#2793e8", filled=True, convert_to_pixmap=False)
+            icon = material_icon("resume", color="#2793e8", filled=True, icon_type=QIcon)
             self.button = QToolButton(icon=icon)
             self.button.setToolTip("Resume the scan queue")
         else:

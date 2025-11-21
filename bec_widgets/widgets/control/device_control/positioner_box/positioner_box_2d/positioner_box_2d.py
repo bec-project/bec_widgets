@@ -9,7 +9,7 @@ from bec_lib.device import Positioner
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from qtpy.QtCore import Signal
-from qtpy.QtGui import QDoubleValidator
+from qtpy.QtGui import QDoubleValidator, QIcon
 from qtpy.QtWidgets import QDoubleSpinBox
 
 from bec_widgets.utils import UILoader
@@ -121,7 +121,7 @@ class PositionerBox2D(PositionerBoxBase):
         self.ui.tool_button_ver.clicked.connect(
             self._open_dialog_selection(self.set_positioner_ver)
         )
-        icon = material_icon(icon_name="edit_note", size=(16, 16), convert_to_pixmap=False)
+        icon = material_icon(icon_name="edit_note", size=(16, 16), icon_type=QIcon)
         self.ui.tool_button_hor.setIcon(icon)
         self.ui.tool_button_ver.setIcon(icon)
 

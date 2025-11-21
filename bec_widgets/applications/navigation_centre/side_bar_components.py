@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from qtpy.QtGui import QIcon
+
 from bec_qthemes import material_icon
 from qtpy import QtCore
 from qtpy.QtCore import QEasingCurve, QPropertyAnimation, Qt
@@ -121,7 +123,7 @@ class NavigationItem(QWidget):
 
         # Main Icon
         self.icon_btn = QToolButton(self)
-        self.icon_btn.setIcon(material_icon(self._icon_name, filled=False, convert_to_pixmap=False))
+        self.icon_btn.setIcon(material_icon(self._icon_name, filled=False, icon_type=QIcon))
         self.icon_btn.setAutoRaise(True)
         self._icon_size_collapsed = QtCore.QSize(20, 20)
         self._icon_size_expanded = QtCore.QSize(26, 26)
@@ -278,12 +280,10 @@ class NavigationItem(QWidget):
         self._toggled = value
         if value:
             new_icon = material_icon(
-                self._icon_name, filled=True, color=get_on_primary(), convert_to_pixmap=False
+                self._icon_name, filled=True, color=get_on_primary(), icon_type=QIcon
             )
         else:
-            new_icon = material_icon(
-                self._icon_name, filled=False, color=get_fg(), convert_to_pixmap=False
-            )
+            new_icon = material_icon(self._icon_name, filled=False, color=get_fg(), icon_type=QIcon)
         self.icon_btn.setIcon(new_icon)
         # Re-polish so QSS applies correct colors to icon/labels
         for w in (self, self.icon_btn, self.title_lbl, self.mini_lbl):
@@ -352,7 +352,7 @@ class DarkModeNavItem(NavigationItem):
         self.mini_lbl.setText("Light" if is_dark else "Dark")
         # Update icon
         self.icon_btn.setIcon(
-            material_icon("light_mode" if is_dark else "dark_mode", convert_to_pixmap=False)
+            material_icon("light_mode" if is_dark else "dark_mode", icon_type=QIcon)
         )
 
     def refresh_theme(self):

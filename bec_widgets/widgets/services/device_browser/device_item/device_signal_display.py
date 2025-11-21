@@ -1,6 +1,7 @@
 from bec_lib.device import Device
 from bec_qthemes import material_icon
 from qtpy.QtCore import Qt
+from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QHBoxLayout, QLabel, QToolButton, QVBoxLayout, QWidget
 
 from bec_widgets.utils.bec_connector import ConnectionConfig
@@ -47,9 +48,7 @@ class SignalDisplay(BECWidget, QWidget):
         button_holder.layout().setAlignment(Qt.AlignmentFlag.AlignRight)
         button_holder.layout().setContentsMargins(0, 0, 0, 0)
         refresh_button = QToolButton()
-        refresh_button.setIcon(
-            material_icon(icon_name="refresh", size=(20, 20), convert_to_pixmap=False)
-        )
+        refresh_button.setIcon(material_icon(icon_name="refresh", size=(20, 20), icon_type=QIcon))
         refresh_button.clicked.connect(self._refresh)
         button_holder.layout().addWidget(refresh_button)
         self._content_layout.addWidget(button_holder)

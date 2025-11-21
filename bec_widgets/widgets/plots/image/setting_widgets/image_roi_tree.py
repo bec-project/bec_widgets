@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Literal
 from bec_lib import bec_logger
 from bec_qthemes import material_icon
 from qtpy.QtCore import QEvent, Qt
-from qtpy.QtGui import QColor
+from qtpy.QtGui import QColor, QIcon
 from qtpy.QtWidgets import (
     QColorDialog,
     QHBoxLayout,
@@ -62,7 +62,7 @@ class ROILockButton(QToolButton):
         movable = self._roi.movable
         self.setChecked(not movable)
         icon = "lock_open_right" if movable else "lock"
-        self.setIcon(material_icon(icon, size=(20, 20), convert_to_pixmap=False))
+        self.setIcon(material_icon(icon, size=(20, 20), icon_type=QIcon))
 
 
 class ROIPropertyTree(BECWidget, QWidget):
@@ -209,11 +209,11 @@ class ROIPropertyTree(BECWidget, QWidget):
             if on:
                 # switched to expanded state
                 self.tree.expandAll()
-                new_icon = material_icon("unfold_less", size=(20, 20), convert_to_pixmap=False)
+                new_icon = material_icon("unfold_less", size=(20, 20), icon_type=QIcon)
             else:
                 # collapsed state
                 self.tree.collapseAll()
-                new_icon = material_icon("unfold_more", size=(20, 20), convert_to_pixmap=False)
+                new_icon = material_icon("unfold_more", size=(20, 20), icon_type=QIcon)
             self.expand_toggle.action.setIcon(new_icon)
 
         self.expand_toggle.action.toggled.connect(_exp_toggled)
@@ -231,7 +231,7 @@ class ROIPropertyTree(BECWidget, QWidget):
             for r in self.controller.rois:
                 r.movable = not checked
             new_icon = material_icon(
-                "lock" if checked else "lock_open_right", size=(20, 20), convert_to_pixmap=False
+                "lock" if checked else "lock_open_right", size=(20, 20), icon_type=QIcon
             )
             self.lock_all_action.action.setIcon(new_icon)
 
@@ -402,11 +402,7 @@ class ROIPropertyTree(BECWidget, QWidget):
         # delete button
         del_btn = QToolButton()
         delete_icon = material_icon(
-            "delete",
-            size=(20, 20),
-            convert_to_pixmap=False,
-            filled=False,
-            color=self.DELETE_BUTTON_COLOR,
+            "delete", size=(20, 20), icon_type=QIcon, filled=False, color=self.DELETE_BUTTON_COLOR
         )
         del_btn.setIcon(delete_icon)
         del_btn.clicked.connect(lambda _=None, r=roi: self._delete_roi(r))

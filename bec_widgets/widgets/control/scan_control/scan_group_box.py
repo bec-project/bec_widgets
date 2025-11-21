@@ -3,6 +3,7 @@ from typing import Literal, Sequence
 from bec_lib.logger import bec_logger
 from bec_qthemes import material_icon
 from qtpy.QtCore import Property, Qt, Signal, Slot
+from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -197,12 +198,12 @@ class ScanGroupBox(QGroupBox):
         # Add bundle button
         self.button_add_bundle = QPushButton(self)
         self.button_add_bundle.setIcon(
-            material_icon(icon_name="add", size=(15, 15), convert_to_pixmap=False)
+            material_icon(icon_name="add", size=(15, 15), icon_type=QIcon)
         )
         # Remove bundle button
         self.button_remove_bundle = QPushButton(self)
         self.button_remove_bundle.setIcon(
-            material_icon(icon_name="remove", size=(15, 15), convert_to_pixmap=False)
+            material_icon(icon_name="remove", size=(15, 15), icon_type=QIcon)
         )
         hbox_layout.addWidget(self.button_add_bundle)
         hbox_layout.addWidget(self.button_remove_bundle)

@@ -4,7 +4,7 @@ import time
 
 from bec_qthemes import material_icon
 from qtpy.QtCore import QSize, Qt, QTimer, Signal, Slot
-from qtpy.QtGui import QBrush, QColor, QPainter, QPen
+from qtpy.QtGui import QBrush, QColor, QPainter, QPen, QPixmap
 from qtpy.QtWidgets import (
     QApplication,
     QComboBox,
@@ -87,7 +87,7 @@ class Pos(QWidget):
 
         if self.is_revealed:
             if self.is_mine:
-                p.drawPixmap(r, material_icon("experiment", convert_to_pixmap=True, filled=True))
+                p.drawPixmap(r, material_icon("experiment", icon_type=QPixmap, filled=True))
 
             elif self.adjacent_n > 0:
                 pen = QPen(NUM_COLORS[self.adjacent_n])
@@ -103,7 +103,7 @@ class Pos(QWidget):
                 material_icon(
                     "flag",
                     size=(50, 50),
-                    convert_to_pixmap=True,
+                    icon_type=QPixmap,
                     filled=True,
                     color=self.palette().base().color(),
                 ),
@@ -376,13 +376,13 @@ class Minesweeper(BECWidget, QWidget):
         self.status = status
         match status:
             case GameStatus.READY:
-                icon = material_icon(icon_name="add", convert_to_pixmap=False)
+                icon = material_icon(icon_name="add", icon_type=QIcon)
             case GameStatus.PLAYING:
-                icon = material_icon(icon_name="smart_toy", convert_to_pixmap=False)
+                icon = material_icon(icon_name="smart_toy", icon_type=QIcon)
             case GameStatus.FAILED:
-                icon = material_icon(icon_name="error", convert_to_pixmap=False)
+                icon = material_icon(icon_name="error", icon_type=QIcon)
             case GameStatus.SUCCESS:
-                icon = material_icon(icon_name="celebration", convert_to_pixmap=False)
+                icon = material_icon(icon_name="celebration", icon_type=QIcon)
         self.reset_button.setIcon(icon)
 
     def update_timer(self):

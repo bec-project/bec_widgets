@@ -1,5 +1,6 @@
 from bec_qthemes import material_icon
 from qtpy.QtCore import Qt
+from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QHBoxLayout, QPushButton, QSizePolicy, QToolButton, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
@@ -24,7 +25,7 @@ class StopButton(BECWidget, QWidget):
         self.layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         if toolbar:
-            icon = material_icon("stop", color="#cc181e", filled=True, convert_to_pixmap=False)
+            icon = material_icon("stop", color="#cc181e", filled=True, icon_type=QIcon)
             self.button = QToolButton(icon=icon)
             self.button.setToolTip("Stop the scan queue")
         else:

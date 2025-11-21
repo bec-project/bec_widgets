@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from bec_qthemes import material_icon
 from qtpy.QtCore import QSize, Signal
+from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import (
     QApplication,
     QFrame,
@@ -95,11 +96,9 @@ class ExpandableGroupFrame(QFrame):
 
     def _update_expansion_icon(self):
         self._expansion_button.setIcon(
-            material_icon(icon_name=self.EXPANDED_ICON_NAME, size=(10, 10), convert_to_pixmap=False)
+            material_icon(icon_name=self.EXPANDED_ICON_NAME, size=(10, 10), icon_type=QIcon)
             if self.expanded
-            else material_icon(
-                icon_name=self.COLLAPSED_ICON_NAME, size=(10, 10), convert_to_pixmap=False
-            )
+            else material_icon(icon_name=self.COLLAPSED_ICON_NAME, size=(10, 10), icon_type=QIcon)
         )
 
     @SafeProperty(str)
@@ -115,7 +114,7 @@ class ExpandableGroupFrame(QFrame):
         if icon_name:
             self._title_icon.setVisible(True)
             self._title_icon.setPixmap(
-                material_icon(icon_name=icon_name, size=(20, 20), convert_to_pixmap=True)
+                material_icon(icon_name=icon_name, size=(20, 20), icon_type=QPixmap)
             )
         else:
             self._title_icon.setVisible(False)

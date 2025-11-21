@@ -218,11 +218,7 @@ class MaterialIconAction(ToolBarAction):
         self.text_position = text_position
         # Generate the icon using the material_icon helper
         self.icon = material_icon(
-            self.icon_name,
-            size=(20, 20),
-            convert_to_pixmap=False,
-            filled=self.filled,
-            color=self.color,
+            self.icon_name, size=(20, 20), icon_type=QIcon, filled=self.filled, color=self.color
         )
         if parent is None:
             logger.warning(

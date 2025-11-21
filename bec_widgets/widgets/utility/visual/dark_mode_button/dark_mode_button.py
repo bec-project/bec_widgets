@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from bec_qthemes import material_icon
 from qtpy.QtCore import Property, Qt, Slot
+from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QApplication, QHBoxLayout, QPushButton, QToolButton, QWidget
 
 from bec_widgets.utils.bec_widget import BECWidget
@@ -89,9 +90,7 @@ class DarkModeButton(BECWidget, QWidget):
 
     def update_mode_button(self):
         icon = material_icon(
-            "light_mode" if self.dark_mode_enabled else "dark_mode",
-            size=(20, 20),
-            convert_to_pixmap=False,
+            "light_mode" if self.dark_mode_enabled else "dark_mode", size=(20, 20), icon_type=QIcon
         )
         self.mode_button.setIcon(icon)
         self.mode_button.setToolTip("Set Light Mode" if self.dark_mode_enabled else "Set Dark Mode")

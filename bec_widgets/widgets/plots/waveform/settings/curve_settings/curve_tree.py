@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from bec_lib.logger import bec_logger
 from bec_qthemes._icon.material_icons import material_icon
-from qtpy.QtGui import QValidator
+from qtpy.QtGui import QIcon, QValidator
 
 
 class ScanIndexValidator(QValidator):
@@ -184,11 +184,7 @@ class CurveRow(QTreeWidgetItem):
         # Delete button
         self.delete_button = QToolButton()
         delete_icon = material_icon(
-            "delete",
-            size=(20, 20),
-            convert_to_pixmap=False,
-            filled=False,
-            color=self.DELETE_BUTTON_COLOR,
+            "delete", size=(20, 20), icon_type=QIcon, filled=False, color=self.DELETE_BUTTON_COLOR
         )
         self.delete_button.setIcon(delete_icon)
         self.delete_button.clicked.connect(lambda: self.remove_self())
@@ -200,7 +196,7 @@ class CurveRow(QTreeWidgetItem):
             analysis_icon = material_icon(
                 "monitoring",
                 size=(20, 20),
-                convert_to_pixmap=False,
+                icon_type=QIcon,
                 filled=False,
                 color=self.app.theme.colors["FG"].toTuple(),
             )
