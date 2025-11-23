@@ -209,7 +209,7 @@ class BECQueue(BECWidget, CompactPopupWidget):
         if not content or not isinstance(content, str):
             content = ""
         item = QTableWidgetItem(content)
-        item.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        item.setTextAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
         # item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
 
         if status:
