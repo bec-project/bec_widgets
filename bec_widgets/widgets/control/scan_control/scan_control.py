@@ -125,7 +125,7 @@ class ScanControl(BECWidget, QWidget):
         # Label to reload the last scan parameters within scan selection group box
         self.toggle_layout = QHBoxLayout()
         self.toggle_layout.addSpacerItem(
-            QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Fixed)
+            QSpacerItem(0, 0, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         )
         self.last_scan_label = QLabel("Restore last scan parameters", self.scan_selection_group)
         self.toggle = ToggleSwitch(parent=self.scan_selection_group, checked=False)
@@ -133,12 +133,16 @@ class ScanControl(BECWidget, QWidget):
         self.toggle_layout.addWidget(self.last_scan_label)
         self.toggle_layout.addWidget(self.toggle)
         self.scan_selection_group.layout().addLayout(self.toggle_layout)
-        self.scan_selection_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.scan_selection_group.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed
+        )
         self.layout.addWidget(self.scan_selection_group)
 
         # Scan control (Run/Stop) buttons
         self.scan_control_group = QWidget(self)
-        self.scan_control_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.scan_control_group.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed
+        )
         self.button_layout = QHBoxLayout(self.scan_control_group)
         self.button_run_scan = QPushButton("Start", self.scan_control_group)
         self.button_run_scan.setProperty("variant", "success")
@@ -417,7 +421,7 @@ class ScanControl(BECWidget, QWidget):
         position = self.ARG_BOX_POSITION + (1 if self.arg_box is not None else 0)
         for group in groups:
             box = ScanGroupBox(box_type="kwargs", config=group)
-            box.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+            box.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
             self.layout.insertWidget(position + len(self.kwarg_boxes), box)
             self.kwarg_boxes.append(box)
             box.setVisible(not self._hide_kwarg_boxes)
@@ -430,7 +434,7 @@ class ScanControl(BECWidget, QWidget):
         """
         self.arg_box = ScanGroupBox(box_type="args", config=group)
         self.arg_box.device_selected.connect(self.emit_device_selected)
-        self.arg_box.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.arg_box.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.arg_box.hide_add_remove_buttons = self._hide_add_remove_buttons
         self.layout.insertWidget(self.ARG_BOX_POSITION, self.arg_box)
         self.arg_box.setVisible(not self._hide_arg_box)
