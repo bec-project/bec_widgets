@@ -14,6 +14,7 @@ from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
 from bec_widgets.widgets.containers.advanced_dock_area.basic_dock_area import DockAreaWidget
 from bec_widgets.widgets.editors.monaco.monaco_dock import MonacoDock
+from bec_widgets.widgets.editors.monaco.monaco_widget import MonacoWidget
 from bec_widgets.widgets.editors.web_console.web_console import WebConsole
 from bec_widgets.widgets.utility.ide_explorer.ide_explorer import IDEExplorer
 
@@ -116,6 +117,7 @@ class DeveloperWidget(DockAreaWidget):
             lambda text: self.signature_help.setHtml(markdown_to_html(text))
         )
         self._current_script_id: str | None = None
+        self.script_editor_tab = None
 
         self._initialize_layout()
 
@@ -295,12 +297,14 @@ class DeveloperWidget(DockAreaWidget):
 
     @SafeSlot()
     def on_execute(self):
+        """Upload and run the currently focused script in the Monaco editor."""
         self.script_editor_tab = self.monaco.last_focused_editor
         if not self.script_editor_tab:
             return
-        self.current_script_id = upload_script(
-            self.client.connector, self.script_editor_tab.widget().get_text()
-        )
+        widget = self.script_editor_tab.widget()
+        if not isinstance(widget, MonacoWidget):
+            return
+        self.current_script_id = upload_script(self.client.connector, widget.get_text())
         self.console.write(f'bec._run_script("{self.current_script_id}")')
         print(f"Uploaded script with ID: {self.current_script_id}")
 
@@ -334,14 +338,25 @@ class DeveloperWidget(DockAreaWidget):
 
     @SafeSlot(dict, dict)
     def on_script_execution_info(self, content: dict, metadata: dict):
+        """
+        Handle script execution info messages to update the editor highlights.
+        Args:
+            content (dict): The content of the message containing execution info.
+            metadata (dict): Additional metadata for the message.
+        """
         print(f"Script execution info: {content}")
         current_lines = content.get("current_lines")
+        if self.script_editor_tab is None:
+            return
+        widget = self.script_editor_tab.widget()
+        if not isinstance(widget, MonacoWidget):
+            return
         if not current_lines:
-            self.script_editor_tab.widget().clear_highlighted_lines()
+            widget.clear_highlighted_lines()
             return
         line_number = current_lines[0]
-        self.script_editor_tab.widget().clear_highlighted_lines()
-        self.script_editor_tab.widget().set_highlighted_lines(line_number, line_number)
+        widget.clear_highlighted_lines()
+        widget.set_highlighted_lines(line_number, line_number)
 
     def cleanup(self):
         self.delete_all()
