@@ -319,7 +319,7 @@ class PositionerBox2D(PositionerBoxBase):
                 "tweak_decrease": self.ui.tweak_decrease_hor,
                 "units": self.ui.units_hor,
             }
-        elif device == "vertical":
+        if device == "vertical":
             return {
                 "spinner": self.ui.spinner_widget_ver,
                 "position_indicator": self.ui.position_indicator_ver,
@@ -332,8 +332,7 @@ class PositionerBox2D(PositionerBoxBase):
                 "tweak_decrease": self.ui.tweak_decrease_ver,
                 "units": self.ui.units_ver,
             }
-        else:
-            raise ValueError(f"Device {device} is not represented by this UI")
+        raise ValueError(f"Device {device} is not represented by this UI")
 
     def _device_ui_components(self, device: str):
         if device == self.device_hor:

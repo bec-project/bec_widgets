@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from typing import TYPE_CHECKING
 
 from bec_lib.endpoints import MessageEndpoints
 from qtpy.QtCore import QEasingCurve, QEvent, QPropertyAnimation, QSize, Qt, QTimer
@@ -34,7 +35,7 @@ from bec_widgets.widgets.progress.scan_progressbar.scan_progressbar import ScanP
 MODULE_PATH = os.path.dirname(bec_widgets.__file__)
 
 # Ensure the application does not use the native menu bar on macOS to be consistent with linux development.
-QApplication.setAttribute(Qt.AA_DontUseNativeMenuBar, True)
+QApplication.setAttribute(Qt.ApplicationAttribute.AA_DontUseNativeMenuBar, True)
 
 
 class BECMainWindow(BECWidget, QMainWindow):
@@ -43,16 +44,8 @@ class BECMainWindow(BECWidget, QMainWindow):
     SCAN_PROGRESS_WIDTH = 100  # px
     STATUS_BAR_WIDGETS_EXPIRE_TIME = 60_000  # milliseconds
 
-    def __init__(
-        self,
-        parent=None,
-        gui_id: str = None,
-        client=None,
-        window_title: str = "BEC",
-        *args,
-        **kwargs,
-    ):
-        super().__init__(parent=parent, gui_id=gui_id, **kwargs)
+    def __init__(self, parent=None, window_title: str = "BEC", **kwargs):
+        super().__init__(parent=parent, **kwargs)
 
         self.app = QApplication.instance()
         self.status_bar = self.statusBar()
@@ -384,8 +377,8 @@ class BECMainWindow(BECWidget, QMainWindow):
         # Help menu
         help_menu = menu_bar.addMenu("Help")
 
-        help_icon = QApplication.style().standardIcon(QStyle.SP_MessageBoxQuestion)
-        bug_icon = QApplication.style().standardIcon(QStyle.SP_MessageBoxInformation)
+        help_icon = QApplication.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxQuestion)
+        bug_icon = QApplication.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation)
 
         bec_docs = QAction("BEC Docs", self)
         bec_docs.setIcon(help_icon)
