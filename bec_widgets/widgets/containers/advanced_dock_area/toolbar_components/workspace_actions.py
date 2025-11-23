@@ -18,7 +18,7 @@ class ProfileComboBox(QComboBox):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._quick_provider: Callable[[], list[str]] = list_quick_profiles
 
     def set_quick_profile_provider(self, provider: Callable[[], list[str]]) -> None:
@@ -48,9 +48,9 @@ class ProfileComboBox(QComboBox):
             idx = self.count() - 1
 
             # Reset any custom styling
-            self.setItemData(idx, None, Qt.FontRole)
-            self.setItemData(idx, None, Qt.ToolTipRole)
-            self.setItemData(idx, None, Qt.ForegroundRole)
+            self.setItemData(idx, None, Qt.ItemDataRole.FontRole)
+            self.setItemData(idx, None, Qt.ItemDataRole.ToolTipRole)
+            self.setItemData(idx, None, Qt.ItemDataRole.ForegroundRole)
 
             if active_profile and profile == active_profile:
                 tooltip = "Active workspace profile"
@@ -58,13 +58,15 @@ class ProfileComboBox(QComboBox):
                     font = QFont(self.font())
                     font.setItalic(True)
                     font.setBold(True)
-                    self.setItemData(idx, font, Qt.FontRole)
-                    self.setItemData(idx, self.palette().highlight().color(), Qt.ForegroundRole)
+                    self.setItemData(idx, font, Qt.ItemDataRole.FontRole)
+                    self.setItemData(
+                        idx, self.palette().highlight().color(), Qt.ItemDataRole.ForegroundRole
+                    )
                     tooltip = "Active profile (not in quick select)"
-                self.setItemData(idx, tooltip, Qt.ToolTipRole)
+                self.setItemData(idx, tooltip, Qt.ItemDataRole.ToolTipRole)
                 self.setCurrentIndex(idx)
             elif profile not in quick_set:
-                self.setItemData(idx, "Not in quick select", Qt.ToolTipRole)
+                self.setItemData(idx, "Not in quick select", Qt.ItemDataRole.ToolTipRole)
 
         # Restore selection if possible
         index = self.findText(current_text)
