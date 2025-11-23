@@ -596,7 +596,7 @@ class AdvancedDockArea(DockAreaWidget):
             origin_label=lambda n: profile_origin_display(n, namespace=namespace),
             quick_select_checked=quickselect_default,
         )
-        if dialog.exec() != QDialog.Accepted:
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return
 
         name = dialog.get_profile_name()
@@ -760,10 +760,10 @@ class AdvancedDockArea(DockAreaWidget):
             "Delete Profile",
             f"Are you sure you want to delete the profile '{name}'?\n\n"
             f"This action cannot be undone.",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
         )
-        if reply != QMessageBox.Yes:
+        if reply != QMessageBox.StandardButton.Yes:
             return
 
         namespace = self.profile_namespace
@@ -833,8 +833,9 @@ class AdvancedDockArea(DockAreaWidget):
     def _manage_dialog_closed(self):
         self.manage_widget.close()
         self.manage_widget.deleteLater()
-        self.manage_dialog.deleteLater()
-        self.manage_dialog = None
+        if self.manage_dialog is not None:
+            self.manage_dialog.deleteLater()
+            self.manage_dialog = None
         self.toolbar.components.get_action("manage_workspaces").action.setChecked(False)
 
     ################################################################################

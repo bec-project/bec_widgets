@@ -72,7 +72,7 @@ class CollapsibleSection(QWidget):
         self.header_add_button.setFixedSize(28, 28)
         self.header_add_button.setToolTip("Add item")
         self.header_add_button.setVisible(show_add_button)
-        self.header_add_button.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self.header_add_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
         self.header_add_button.setAutoRaise(True)
 
         self.header_add_button.setIcon(material_icon("add", size=(28, 28), convert_to_pixmap=False))
@@ -107,10 +107,9 @@ class CollapsibleSection(QWidget):
 
         # Get theme colors
         palette = get_theme_palette()
-        text_color = palette.text().color().name()
 
         self.header_button.setStyleSheet(
-            f"""
+            """
             QPushButton {{
                 font-weight: bold;
                 text-align: left;
