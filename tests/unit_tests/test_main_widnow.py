@@ -191,7 +191,7 @@ def test_bec_weblinks(monkeypatch):
     assert opened_urls == [
         "https://beamline-experiment-control.readthedocs.io/en/latest/",
         "https://bec.readthedocs.io/projects/bec-widgets/en/latest/",
-        "https://gitlab.psi.ch/groups/bec/-/issues/",
+        "https://github.com/bec-project/bec_widgets/issues",
     ]
 
 

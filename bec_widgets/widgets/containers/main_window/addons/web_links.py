@@ -12,4 +12,4 @@ class BECWebLinksMixin:
 
     @staticmethod
     def open_bec_bug_report():
-        webbrowser.open("https://gitlab.psi.ch/groups/bec/-/issues/")
+        webbrowser.open("https://github.com/bec-project/bec_widgets/issues")
