@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 
 from bec_lib.endpoints import MessageEndpoints
-from qtpy.QtCore import QEasingCurve, QEvent, QPropertyAnimation, QSize, Qt, QTimer
+from qtpy.QtCore import QEvent, QSize, Qt, QTimer
 from qtpy.QtGui import QAction, QActionGroup, QIcon
 from qtpy.QtWidgets import (
     QApplication,
@@ -42,7 +42,7 @@ class BECMainWindow(BECWidget, QMainWindow):
     RPC = True
     PLUGIN = True
     SCAN_PROGRESS_WIDTH = 100  # px
-    STATUS_BAR_WIDGETS_EXPIRE_TIME = 60_000  # milliseconds
+    SCAN_PROGRESS_HEIGHT = 12  # px
 
     def __init__(
         self,
@@ -201,8 +201,8 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._scan_progress_bar_simple.show_remaining_time = False
         self._scan_progress_bar_simple.show_source_label = False
         self._scan_progress_bar_simple.progressbar.label_template = ""
-        self._scan_progress_bar_simple.progressbar.setFixedHeight(8)
-        self._scan_progress_bar_simple.progressbar.setFixedWidth(80)
+        self._scan_progress_bar_simple.progressbar.setFixedHeight(self.SCAN_PROGRESS_HEIGHT)
+        self._scan_progress_bar_simple.progressbar.setFixedWidth(self.SCAN_PROGRESS_WIDTH)
         self._scan_progress_bar_full = ScanProgressBar(self)
         self._scan_progress_hover = HoverWidget(
             self, simple=self._scan_progress_bar_simple, full=self._scan_progress_bar_full
@@ -219,61 +219,7 @@ class BECMainWindow(BECWidget, QMainWindow):
         self._scan_progress_bar_with_separator.layout.addWidget(separator)
         self._scan_progress_bar_with_separator.layout.addWidget(self._scan_progress_hover)
 
-        # Set Size
-        self._scan_progress_bar_target_width = self.SCAN_PROGRESS_WIDTH
-        self._scan_progress_bar_with_separator.setMaximumWidth(self._scan_progress_bar_target_width)
-
         self.status_bar.addWidget(self._scan_progress_bar_with_separator)
-
-        # Visibility logic
-        self._scan_progress_bar_with_separator.hide()
-        self._scan_progress_bar_with_separator.setMaximumWidth(0)
-
-        # Timer for hiding logic
-        self._scan_progress_hide_timer = QTimer(self)
-        self._scan_progress_hide_timer.setSingleShot(True)
-        self._scan_progress_hide_timer.setInterval(self.STATUS_BAR_WIDGETS_EXPIRE_TIME)
-        self._scan_progress_hide_timer.timeout.connect(self._animate_hide_scan_progress_bar)
-
-        # Show / hide behaviour
-        self._scan_progress_bar_simple.progress_started.connect(self._show_scan_progress_bar)
-        self._scan_progress_bar_simple.progress_finished.connect(self._delay_hide_scan_progress_bar)
-
-    def _show_scan_progress_bar(self):
-        if self._scan_progress_hide_timer.isActive():
-            self._scan_progress_hide_timer.stop()
-        if self._scan_progress_bar_with_separator.isVisible():
-            return
-
-        # Make visible and reset width
-        self._scan_progress_bar_with_separator.show()
-        self._scan_progress_bar_with_separator.setMaximumWidth(0)
-
-        self._show_container_anim = QPropertyAnimation(
-            self._scan_progress_bar_with_separator, b"maximumWidth", self
-        )
-        self._show_container_anim.setDuration(300)
-        self._show_container_anim.setStartValue(0)
-        self._show_container_anim.setEndValue(self._scan_progress_bar_target_width)
-        self._show_container_anim.setEasingCurve(QEasingCurve.OutCubic)
-        self._show_container_anim.start()
-
-    def _delay_hide_scan_progress_bar(self):
-        """Start the countdown to hide the scan progress bar."""
-        if hasattr(self, "_scan_progress_hide_timer"):
-            self._scan_progress_hide_timer.start()
-
-    def _animate_hide_scan_progress_bar(self):
-        """Shrink container to the right, then hide."""
-        self._hide_container_anim = QPropertyAnimation(
-            self._scan_progress_bar_with_separator, b"maximumWidth", self
-        )
-        self._hide_container_anim.setDuration(300)
-        self._hide_container_anim.setStartValue(self._scan_progress_bar_with_separator.width())
-        self._hide_container_anim.setEndValue(0)
-        self._hide_container_anim.setEasingCurve(QEasingCurve.InCubic)
-        self._hide_container_anim.finished.connect(self._scan_progress_bar_with_separator.hide)
-        self._hide_container_anim.start()
 
     def _add_separator(self, separate_object: bool = False) -> QWidget | None:
         """
@@ -474,8 +420,6 @@ class BECMainWindow(BECWidget, QMainWindow):
         # Timer cleanup
         if hasattr(self, "_client_info_expire_timer") and self._client_info_expire_timer.isActive():
             self._client_info_expire_timer.stop()
-        if hasattr(self, "_scan_progress_hide_timer") and self._scan_progress_hide_timer.isActive():
-            self._scan_progress_hide_timer.stop()
 
         ########################################
         # Status bar widgets cleanup

@@ -196,47 +196,6 @@ def test_bec_weblinks(monkeypatch):
 
 
 #################################################################
-# Tests for scan‑progress bar animations
-
-
-def test_scan_progress_bar_show_animation(qtbot, bec_main_window):
-    """
-    _show_scan_progress_bar should animate the container's maximumWidth
-    from 0 to the configured target width.
-    """
-    container = bec_main_window._scan_progress_bar_with_separator
-
-    # Pre‑condition: collapsed
-    assert container.maximumWidth() == 0
-
-    bec_main_window._show_scan_progress_bar()
-
-    target = bec_main_window._scan_progress_bar_target_width
-    qtbot.waitUntil(lambda: container.maximumWidth() == target, timeout=2000)
-
-    assert container.maximumWidth() == target
-
-
-def test_scan_progress_bar_hide_animation(qtbot, bec_main_window):
-    """
-    _animate_hide_scan_progress_bar should collapse the container back to 0 width.
-    """
-    container = bec_main_window._scan_progress_bar_with_separator
-
-    # First expand it
-    bec_main_window._show_scan_progress_bar()
-    target = bec_main_window._scan_progress_bar_target_width
-    qtbot.waitUntil(lambda: container.maximumWidth() == target, timeout=2000)
-
-    # Trigger hide animation
-    bec_main_window._animate_hide_scan_progress_bar()
-
-    qtbot.waitUntil(lambda: container.maximumWidth() == 0, timeout=2000)
-
-    assert container.maximumWidth() == 0
-
-
-#################################################################
 # Tests for hover widget and tooltip behaviour
 
 
