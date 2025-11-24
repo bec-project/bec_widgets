@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v2.45.4 (2025-11-24)
+
+### Bug Fixes
+
+- **main_window**: Removed hiding scan progressbar animation
+  ([`40cbf7f`](https://github.com/bec-project/bec_widgets/commit/40cbf7fe4f834a1a65306e54b3882d2c0495f90a))
+
+- **web_links**: Fixed link to bec widget issues from gitlab to github
+  ([`7d5e702`](https://github.com/bec-project/bec_widgets/commit/7d5e702a11043ed96a8cb97fce6b2162681e8fab))
+
+
 ## v2.45.3 (2025-11-17)
 
 ### Bug Fixes
