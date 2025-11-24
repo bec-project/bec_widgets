@@ -110,7 +110,7 @@ class CollapsibleSection(QWidget):
 
         self.header_button.setStyleSheet(
             """
-            QPushButton {{
+            QPushButton {
                 font-weight: bold;
                 text-align: left;
                 margin: 0;
@@ -118,7 +118,7 @@ class CollapsibleSection(QWidget):
                 border: none;
                 background: transparent;
                 icon-size: 20px 20px;
-            }}
+            }
         """
         )
 
