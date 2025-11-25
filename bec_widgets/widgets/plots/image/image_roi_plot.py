@@ -1,16 +1,24 @@
 import pyqtgraph as pg
+from qtpy.QtCore import Qt
+from qtpy.QtWidgets import QFrame, QVBoxLayout
 
-from bec_widgets.utils.round_frame import RoundedFrame
 from bec_widgets.widgets.plots.plot_base import BECViewBox
 
 
-class ImageROIPlot(RoundedFrame):
+class ImageROIPlot(QFrame):
     """
     A widget for displaying an image with a region of interest (ROI) overlay.
     """
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setProperty("variant", "plot_background")
+        self.setProperty("frameless", True)
+
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(5, 5, 5, 5)
+        self.layout.setSpacing(0)
 
         self.content_widget = pg.GraphicsLayoutWidget(self)
         self.layout.addWidget(self.content_widget)
@@ -27,7 +35,15 @@ class ImageROIPlot(RoundedFrame):
             self.curve_color = "k"
         for curve in self.plot_item.curves:
             curve.setPen(pg.mkPen(self.curve_color, width=3))
-        super().apply_theme(theme)
+
+        self.apply_plot_widget_style()
+
+    def apply_plot_widget_style(self, border: str = "none"):
+        """Keep pyqtgraph widgets styled by QSS/themes."""
+        if border != "none":
+            self.content_widget.setStyleSheet(f"border: {border};")
+        else:
+            self.content_widget.setStyleSheet("")
 
     def cleanup_pyqtgraph(self):
         """Cleanup pyqtgraph items."""
