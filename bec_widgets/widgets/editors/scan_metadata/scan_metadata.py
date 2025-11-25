@@ -85,7 +85,6 @@ class ScanMetadata(PydanticModelForm):
     def set_schema_from_scan(self, scan_name: str | None):
         self._scan_name = scan_name or ""
         self.set_schema(get_metadata_schema_for_scan(self._scan_name))
-        self.populate()
 
 
 if __name__ == "__main__":  # pragma: no cover

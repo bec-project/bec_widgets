@@ -209,6 +209,12 @@ class DynamicFormItem(QWidget):
     def _value_changed(self, *_, **__):
         self.valueChanged.emit()
 
+    def teardown(self):
+        self._layout.deleteLater()
+        self._layout.removeWidget(self._main_widget)
+        self._main_widget.deleteLater()
+        self._main_widget = None
+
 
 class StrFormItem(DynamicFormItem):
     def __init__(self, parent: QWidget | None = None, *, spec: FormItemSpec) -> None:
