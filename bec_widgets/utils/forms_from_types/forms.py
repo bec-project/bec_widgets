@@ -81,10 +81,11 @@ class TypedForm(BECWidget, QWidget):
 
         self._form_grid_container = QWidget(parent=self)
         self._form_grid_container.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
+        self._form_grid_container.setLayout(QVBoxLayout())
+        self._layout.addWidget(self._form_grid_container)
+
         self._form_grid = QWidget(parent=self._form_grid_container)
         self._form_grid.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
-        self._layout.addWidget(self._form_grid_container)
-        self._form_grid_container.setLayout(QVBoxLayout())
         self._form_grid.setLayout(self._new_grid_layout())
 
         self._widget_types: dict | None = None
@@ -105,11 +106,11 @@ class TypedForm(BECWidget, QWidget):
 
     def _add_griditem(self, item: FormItemSpec, row: int):
         grid = self._form_grid.layout()
-        label = QLabel(item.name)
+        label = QLabel(parent=self._form_grid, text=item.name)
         label.setProperty("_model_field_name", item.name)
         label.setToolTip(item.info.description or item.name)
         grid.addWidget(label, row, 0)
-        widget = self._widget_from_type(item, self._widget_types)(parent=self, spec=item)
+        widget = self._widget_from_type(item, self._widget_types)(parent=self._form_grid, spec=item)
         widget.valueChanged.connect(self.value_changed)
         widget.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
         grid.addWidget(widget, row, 1)
@@ -128,19 +129,17 @@ class TypedForm(BECWidget, QWidget):
         }
 
     def _clear_grid(self):
-        if (old_layout := self._form_grid.layout()) is not None:
-            while old_layout.count():
-                item = old_layout.takeAt(0)
-                widget = item.widget()
-                if widget is not None:
-                    widget.deleteLater()
-            old_layout.deleteLater()
-            self._form_grid.deleteLater()
+        gl = self._form_grid.layout()
+        while w := gl.takeAt(0):
+            w = w.widget()
+            if hasattr(w, "teardown"):
+                w.teardown()
+            w.deleteLater()
+        self._form_grid_container.layout().removeWidget(self._form_grid)
+        self._form_grid.deleteLater()
         self._form_grid = QWidget()
-        self._form_grid.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
         self._form_grid.setLayout(self._new_grid_layout())
         self._form_grid_container.layout().addWidget(self._form_grid)
-
         self.update_size()
 
     def update_size(self):
@@ -149,7 +148,7 @@ class TypedForm(BECWidget, QWidget):
         self.adjustSize()
 
     def _new_grid_layout(self):
-        new_grid = QGridLayout()
+        new_grid = QGridLayout(self)
         new_grid.setContentsMargins(0, 0, 0, 0)
         return new_grid
 
