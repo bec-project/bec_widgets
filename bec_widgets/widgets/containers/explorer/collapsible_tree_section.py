@@ -5,7 +5,6 @@ from qtpy.QtCore import QMimeData, Qt, Signal
 from qtpy.QtGui import QDrag
 from qtpy.QtWidgets import QHBoxLayout, QPushButton, QSizePolicy, QToolButton, QVBoxLayout, QWidget
 
-from bec_widgets.utils.colors import get_theme_palette
 from bec_widgets.utils.error_popups import SafeProperty
 
 
@@ -49,6 +48,8 @@ class CollapsibleSection(QWidget):
 
         # Create header button
         self.header_button = QPushButton()
+        # Apply theme variant for title styling
+        self.header_button.setProperty("variant", "title")
         self.header_button.clicked.connect(self.toggle_expanded)
 
         # Enable drag and drop for reordering
@@ -104,23 +105,6 @@ class CollapsibleSection(QWidget):
 
         self.header_button.setIcon(icon)
         self.header_button.setText(self.title)
-
-        # Get theme colors
-        palette = get_theme_palette()
-
-        self.header_button.setStyleSheet(
-            """
-            QPushButton {
-                font-weight: bold;
-                text-align: left;
-                margin: 0;
-                padding: 0px;
-                border: none;
-                background: transparent;
-                icon-size: 20px 20px;
-            }
-        """
-        )
 
     def toggle_expanded(self):
         """Toggle the expanded state and update size policy"""
