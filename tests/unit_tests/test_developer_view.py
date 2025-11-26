@@ -322,6 +322,52 @@ class TestToolbarIntegration:
             # Check that state changed
             assert vim_action.action.isChecked() != initial_state
 
+    def test_run_stop_buttons_disabled_for_macros(self, developer_view, temp_python_file, qtbot):
+        """Test that run and stop buttons are disabled when a macro file is focused."""
+        # Open a file with macro scope
+        developer_view._open_new_file(temp_python_file, "macros/local")
+
+        qtbot.waitUntil(
+            lambda: temp_python_file in developer_view.monaco._get_open_files(), timeout=2000
+        )
+
+        # Get the editor dock for the macro file
+        dock = developer_view.monaco._get_editor_dock(temp_python_file)
+        assert dock is not None
+
+        # Simulate focusing on the macro file
+        developer_view._on_focused_editor_changed(dock)
+
+        # Check that run and stop buttons are disabled
+        run_action = developer_view.toolbar.components.get_action("run")
+        stop_action = developer_view.toolbar.components.get_action("stop")
+
+        assert not run_action.action.isEnabled()
+        assert not stop_action.action.isEnabled()
+
+    def test_run_stop_buttons_enabled_for_scripts(self, developer_view, temp_python_file, qtbot):
+        """Test that run and stop buttons are enabled when a script file is focused."""
+        # Open a file with script scope
+        developer_view._open_new_file(temp_python_file, "scripts/local")
+
+        qtbot.waitUntil(
+            lambda: temp_python_file in developer_view.monaco._get_open_files(), timeout=2000
+        )
+
+        # Get the editor dock for the script file
+        dock = developer_view.monaco._get_editor_dock(temp_python_file)
+        assert dock is not None
+
+        # Simulate focusing on the script file
+        developer_view._on_focused_editor_changed(dock)
+
+        # Check that run and stop buttons are enabled
+        run_action = developer_view.toolbar.components.get_action("run")
+        stop_action = developer_view.toolbar.components.get_action("stop")
+
+        assert run_action.action.isEnabled()
+        assert stop_action.action.isEnabled()
+
 
 class TestErrorHandling:
     """Test error handling in various scenarios."""
