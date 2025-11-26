@@ -206,6 +206,7 @@ class Curve(BECConnector, pg.PlotDataItem):
         """
         if self.config.source in ["custom", "history"]:
             self.setData(x, y)
+            self.parent_item.request_dap_update.emit()
         else:
             raise ValueError(f"Source {self.config.source} do not allow custom data setting.")
 
