@@ -21,7 +21,17 @@ from bec_widgets.utils.widget_io import WidgetHierarchy
 
 logger = bec_logger.logger
 
-PROPERTY_TO_SKIP = ["palette", "font", "windowIcon", "windowIconText", "locale", "styleSheet"]
+PROPERTY_TO_SKIP = [
+    "palette",
+    "font",
+    "windowIcon",
+    "windowIconText",
+    "locale",
+    "styleSheet",
+    "updatesEnabled",
+    "objectName",
+    "visible",
+]
 
 
 class WidgetStateManager:
@@ -110,16 +120,8 @@ class WidgetStateManager:
             prop = meta.property(i)
             name = prop.name()
 
-            # Skip persisting QWidget visibility because container widgets (e.g. tab
-            # stacks, dock managers) manage that state themselves. Restoring a saved
-            # False can permanently hide a widget, while forcing True makes hidden
-            # tabs show on top. Leave the property to the parent widget instead.
-            if name == "visible":
-                continue
-
             if (
-                name == "objectName"
-                or name in PROPERTY_TO_SKIP
+                name in PROPERTY_TO_SKIP
                 or not prop.isReadable()
                 or not prop.isWritable()
                 or not prop.isStored()  # can be extended to fine filter
@@ -176,7 +178,7 @@ class WidgetStateManager:
         for i in range(meta.propertyCount()):
             prop = meta.property(i)
             name = prop.name()
-            if name == "visible":
+            if name in PROPERTY_TO_SKIP:
                 continue
             if settings.contains(name):
                 value = settings.value(name)
