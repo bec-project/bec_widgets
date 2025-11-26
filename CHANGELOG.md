@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.45.5 (2025-11-26)
+
+### Bug Fixes
+
+- Remove ghost widgets in scan metadata
+  ([`0a80bd0`](https://github.com/bec-project/bec_widgets/commit/0a80bd0a9279cef1136a04c252c97e624ef2e779))
+
+
 ## v2.45.4 (2025-11-24)
 
 ### Bug Fixes
