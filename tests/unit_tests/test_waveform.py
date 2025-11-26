@@ -496,6 +496,13 @@ def test_add_dap_curve_custom_source(qtbot, mocked_client_with_dap):
     assert dap_curve.config.signal.dap == "GaussianModel"
 
 
+def test_curve_set_data_emits_dap_update(qtbot, mocked_client):
+    wf = create_widget(qtbot, Waveform, client=mocked_client)
+    c = wf.plot(x=[1, 2, 3], y=[4, 5, 6], label="test_curve")
+    with qtbot.waitSignal(wf.request_dap_update):
+        c.set_data([7, 8, 9], [10, 11, 12])
+
+
 def test_plot_custom_curve_with_inline_dap(qtbot, mocked_client_with_dap):
     """
     Supplying the `dap` kwarg when plotting custom data should auto-create the fit curve.
