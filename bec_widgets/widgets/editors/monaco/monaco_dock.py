@@ -142,9 +142,12 @@ class MonacoDock(DockAreaWidget):
             # Temporarily disable read-only mode if the editor is read-only
             # so we can clear the content for reuse
             monaco_widget.set_readonly(False)
-            monaco_widget.set_text("")
+            monaco_widget.set_text("", reset=True)
             dock.setWindowTitle("Untitled")
             dock.setTabToolTip("Untitled")
+            monaco_widget.metadata["scope"] = ""
+            icon = self._resolve_dock_icon(monaco_widget, dock_icon=None, apply_widget_icon=True)
+            dock.setIcon(icon)
             return
 
         # Otherwise, proceed to close and delete the dock
@@ -249,10 +252,15 @@ class MonacoDock(DockAreaWidget):
         self.last_focused_editor = dock
         return dock
 
-    def open_file(self, file_name: str, scope: str | None = None) -> None:
+    def open_file(self, file_name: str, scope: str = "") -> None:
         """
         Open a file in the specified area. If the file is already open, activate it.
+
+        Args:
+            file_name (str): The path to the file to open.
+            scope (str): The scope to set for the editor metadata.
         """
+
         open_files = self._get_open_files()
         if file_name in open_files:
             dock = self._get_editor_dock(file_name)
@@ -281,8 +289,7 @@ class MonacoDock(DockAreaWidget):
                 editor_dock.setWindowTitle(file)
                 editor_dock.setTabToolTip(file_name)
                 editor_widget.open_file(file_name)
-                if scope is not None:
-                    editor_widget.metadata["scope"] = scope
+                editor_widget.metadata["scope"] = scope
                 self.last_focused_editor = editor_dock
                 return
 
@@ -290,8 +297,7 @@ class MonacoDock(DockAreaWidget):
         editor_dock = self.add_editor(title=file, tooltip=file_name)
         widget = cast(MonacoWidget, editor_dock.widget())
         widget.open_file(file_name)
-        if scope is not None:
-            widget.metadata["scope"] = scope
+        widget.metadata["scope"] = scope
         editor_dock.setAsCurrentTab()
         self.last_focused_editor = editor_dock
 
