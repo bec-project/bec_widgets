@@ -4,9 +4,15 @@ import numpy as np
 import pytest
 from bec_lib import messages
 from bec_lib.scan_history import ScanHistory
+from qtpy.QtGui import QTransform
 from qtpy.QtCore import QPointF
 
-from bec_widgets.widgets.plots.heatmap.heatmap import Heatmap, HeatmapConfig, HeatmapDeviceSignal
+from bec_widgets.widgets.plots.heatmap.heatmap import (
+    Heatmap,
+    HeatmapConfig,
+    HeatmapDeviceSignal,
+    _StepInterpolationWorker,
+)
 
 # pytest: disable=unused-import
 from tests.unit_tests.client_mocks import mocked_client
@@ -448,12 +454,16 @@ def test_heatmap_widget_reset(heatmap_widget):
     """
     Test that the reset method clears the plot.
     """
+    heatmap_widget._pending_interpolation_request = object()
+    heatmap_widget._interpolation_generation = 5
     heatmap_widget.scan_item = create_dummy_scan_item()
     heatmap_widget.plot(x_name="samx", y_name="samy", z_name="bpm4i")
 
     heatmap_widget.reset()
     assert heatmap_widget._grid_index is None
     assert heatmap_widget.main_image.raw_data is None
+    assert heatmap_widget._pending_interpolation_request is None
+    assert heatmap_widget._interpolation_generation == 5
 
 
 def test_heatmap_widget_update_plot_with_scan_history(heatmap_widget, grid_scan_history_msg, qtbot):
@@ -478,3 +488,108 @@ def test_heatmap_widget_update_plot_with_scan_history(heatmap_widget, grid_scan_
     heatmap_widget.enforce_interpolation = True
     heatmap_widget.oversampling_factor = 2.0
     qtbot.waitUntil(lambda: heatmap_widget.main_image.raw_data.shape == (20, 20))
+
+
+def test_step_interpolation_worker_emits_finished(qtbot):
+    worker = _StepInterpolationWorker(
+        x_data=[0.0, 1.0, 0.5, 0.2],
+        y_data=[0.0, 0.0, 1.0, 1.0],
+        z_data=[1.0, 2.0, 3.0, 4.0],
+        interpolation="linear",
+        oversampling_factor=1.0,
+        generation=1,
+        scan_id="scan-1",
+    )
+    with qtbot.waitSignal(worker.finished, timeout=1000) as blocker:
+        worker.run()
+    img, transform, generation, scan_id = blocker.args
+    assert img.shape[0] > 0
+    assert isinstance(transform, QTransform)
+    assert generation == 1
+    assert scan_id == "scan-1"
+
+
+def test_step_interpolation_worker_emits_failed(qtbot, monkeypatch):
+    def _scan_goes_boom(**kwargs):
+        raise RuntimeError("crash")
+
+    monkeypatch.setattr(
+        "bec_widgets.widgets.plots.heatmap.heatmap.Heatmap.compute_step_scan_image", _scan_goes_boom
+    )
+    worker = _StepInterpolationWorker(
+        x_data=[0.0, 1.0, 0.5, 0.2],
+        y_data=[0.0, 0.0, 1.0, 1.0],
+        z_data=[1.0, 2.0, 3.0, 4.0],
+        interpolation="linear",
+        oversampling_factor=1.0,
+        generation=99,
+        scan_id="scan-err",
+    )
+    with qtbot.waitSignal(worker.failed, timeout=1000) as blocker:
+        worker.run()
+    error, generation, scan_id = blocker.args
+    assert "crash" in error
+    assert generation == 99
+    assert scan_id == "scan-err"
+
+
+def test_interpolation_generation_invalidation(heatmap_widget):
+    heatmap_widget.scan_id = "scan-1"
+    heatmap_widget._interpolation_generation = 2
+    with (
+        mock.patch.object(heatmap_widget, "_apply_image_update") as apply_mock,
+        mock.patch.object(heatmap_widget, "_finish_interpolation_thread") as finish_mock,
+        mock.patch.object(heatmap_widget, "_maybe_start_pending_interpolation") as maybe_mock,
+    ):
+        heatmap_widget._on_interpolation_finished(
+            np.zeros((2, 2)), QTransform(), generation=1, scan_id="scan-1"
+        )
+    apply_mock.assert_not_called()
+    finish_mock.assert_called_once()
+    maybe_mock.assert_called_once()
+
+
+def test_pending_request_queueing_and_start(heatmap_widget):
+    heatmap_widget.scan_id = "scan-queue"
+    heatmap_widget.status_message = messages.ScanStatusMessage(
+        scan_id="scan-queue",
+        status="open",
+        scan_name="step_scan",
+        scan_type="step",
+        metadata={},
+        info={"positions": [[0, 0], [1, 1], [2, 2], [3, 3]]},
+    )
+    heatmap_widget._interpolation_thread = object()  # simulate running thread
+
+    with mock.patch.object(heatmap_widget, "_start_step_scan_interpolation") as start_mock:
+        heatmap_widget._request_step_scan_interpolation(
+            x_data=[0, 1, 2, 3],
+            y_data=[0, 1, 2, 3],
+            z_data=[0, 1, 2, 3],
+            msg=heatmap_widget.status_message,
+        )
+        assert heatmap_widget._pending_interpolation_request is not None
+
+        # Now simulate worker finished and thread cleaned up
+        heatmap_widget._interpolation_thread = None
+        pending = heatmap_widget._pending_interpolation_request
+        heatmap_widget._pending_interpolation_request = pending
+        heatmap_widget._maybe_start_pending_interpolation()
+
+        start_mock.assert_called_once()
+
+
+def test_finish_interpolation_thread_cleans_references(heatmap_widget):
+    worker_mock = mock.Mock()
+    thread_mock = mock.Mock()
+    heatmap_widget._interpolation_worker = worker_mock
+    heatmap_widget._interpolation_thread = thread_mock
+
+    heatmap_widget._finish_interpolation_thread()
+
+    worker_mock.deleteLater.assert_called_once()
+    thread_mock.quit.assert_called_once()
+    thread_mock.wait.assert_called_once()
+    thread_mock.deleteLater.assert_called_once()
+    assert heatmap_widget._interpolation_worker is None
+    assert heatmap_widget._interpolation_thread is None
