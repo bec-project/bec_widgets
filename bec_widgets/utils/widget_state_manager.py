@@ -21,7 +21,15 @@ from bec_widgets.utils.widget_io import WidgetHierarchy
 
 logger = bec_logger.logger
 
-PROPERTY_TO_SKIP = ["palette", "font", "windowIcon", "windowIconText", "locale", "styleSheet"]
+PROPERTY_TO_SKIP = [
+    "palette",
+    "font",
+    "windowIcon",
+    "windowIconText",
+    "locale",
+    "styleSheet",
+    "updatesEnabled",
+]
 
 
 class WidgetStateManager:
