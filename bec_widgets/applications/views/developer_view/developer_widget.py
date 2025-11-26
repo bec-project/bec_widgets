@@ -124,6 +124,7 @@ class DeveloperWidget(DockAreaWidget):
         # Connect editor signals
         self.explorer.file_open_requested.connect(self._open_new_file)
         self.monaco.macro_file_updated.connect(self.explorer.refresh_macro_file)
+        self.monaco.focused_editor.connect(self._on_focused_editor_changed)
 
         self.toolbar.show_bundles(["save", "execution", "settings"])
 
@@ -335,6 +336,28 @@ class DeveloperWidget(DockAreaWidget):
             self.bec_dispatcher.connect_slot(
                 self.on_script_execution_info, MessageEndpoints.script_execution_info(new_script_id)
             )
+
+    @SafeSlot(CDockWidget)
+    def _on_focused_editor_changed(self, tab_widget: CDockWidget):
+        """
+        Disable the run / stop buttons if the focused editor is a macro file.
+        Args:
+            tab_widget: The currently focused tab widget in the Monaco editor.
+        """
+        if not isinstance(tab_widget, CDockWidget):
+            return
+        widget = tab_widget.widget()
+        if not isinstance(widget, MonacoWidget):
+            return
+        file_scope = widget.metadata.get("scope", "")
+        run_action = self.toolbar.components.get_action("run")
+        stop_action = self.toolbar.components.get_action("stop")
+        if "macro" in file_scope:
+            run_action.action.setEnabled(False)
+            stop_action.action.setEnabled(False)
+        else:
+            run_action.action.setEnabled(True)
+            stop_action.action.setEnabled(True)
 
     @SafeSlot(dict, dict)
     def on_script_execution_info(self, content: dict, metadata: dict):
