@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 
 import markdown
@@ -13,6 +15,7 @@ from bec_widgets.utils.toolbars.bundles import ToolbarBundle
 from bec_widgets.utils.toolbars.toolbar import ModularToolBar
 from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
 from bec_widgets.widgets.containers.advanced_dock_area.basic_dock_area import DockAreaWidget
+from bec_widgets.widgets.containers.qt_ads import CDockWidget
 from bec_widgets.widgets.editors.monaco.monaco_dock import MonacoDock
 from bec_widgets.widgets.editors.monaco.monaco_widget import MonacoWidget
 from bec_widgets.widgets.editors.web_console.web_console import WebConsole
@@ -281,14 +284,17 @@ class DeveloperWidget(DockAreaWidget):
 
     @SafeSlot()
     def on_save(self):
+        """Save the currently focused file in the Monaco editor."""
         self.monaco.save_file()
 
     @SafeSlot()
     def on_save_as(self):
+        """Save the currently focused file in the Monaco editor with a 'Save As' dialog."""
         self.monaco.save_file(force_save_as=True)
 
     @SafeSlot()
     def on_vim_triggered(self):
+        """Toggle Vim mode in the Monaco editor."""
         self.monaco.set_vim_mode(self.toolbar.components.get_action("vim").action.isChecked())
 
     @SafeSlot(bool)
@@ -311,16 +317,26 @@ class DeveloperWidget(DockAreaWidget):
 
     @SafeSlot()
     def on_stop(self):
+        """Stop the execution of the currently running script"""
         if not self.current_script_id:
             return
         self.console.send_ctrl_c()
 
     @property
     def current_script_id(self):
+        """Get the ID of the currently running script."""
         return self._current_script_id
 
     @current_script_id.setter
     def current_script_id(self, value: str | None):
+        """
+        Set the ID of the currently running script.
+
+        Args:
+            value (str | None): The script ID to set.
+        Raises:
+            ValueError: If the provided value is not a string or None.
+        """
         if value is not None and not isinstance(value, str):
             raise ValueError("Script ID must be a string.")
         old_script_id = self._current_script_id
@@ -382,6 +398,7 @@ class DeveloperWidget(DockAreaWidget):
         widget.set_highlighted_lines(line_number, line_number)
 
     def cleanup(self):
+        """Clean up resources used by the developer widget."""
         self.delete_all()
         return super().cleanup()
 
