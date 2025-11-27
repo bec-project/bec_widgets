@@ -3482,6 +3482,34 @@ class MotorMap(RPCBase):
 
     @property
     @rpc_call
+    def x_motor(self) -> "str":
+        """
+        Name of the motor shown on the X axis.
+        """
+
+    @x_motor.setter
+    @rpc_call
+    def x_motor(self) -> "str":
+        """
+        Name of the motor shown on the X axis.
+        """
+
+    @property
+    @rpc_call
+    def y_motor(self) -> "str":
+        """
+        Name of the motor shown on the Y axis.
+        """
+
+    @y_motor.setter
+    @rpc_call
+    def y_motor(self) -> "str":
+        """
+        Name of the motor shown on the Y axis.
+        """
+
+    @property
+    @rpc_call
     def legend_label_size(self) -> "int":
         """
         The font size of the legend font.
@@ -3604,7 +3632,9 @@ class MotorMap(RPCBase):
         """
 
     @rpc_call
-    def map(self, x_name: "str", y_name: "str", validate_bec: "bool" = True) -> "None":
+    def map(
+        self, x_name: "str", y_name: "str", validate_bec: "bool" = True, suppress_errors=False
+    ) -> "None":
         """
         Set the x and y motor names.
 
@@ -3612,6 +3642,7 @@ class MotorMap(RPCBase):
             x_name(str): The name of the x motor.
             y_name(str): The name of the y motor.
             validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
+            suppress_errors(bool, optional): If True, suppress errors during validation. Defaults to False. Used for properties setting.
         """
 
     @rpc_call

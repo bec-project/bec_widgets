@@ -1,5 +1,4 @@
-import numpy as np
-import pyqtgraph as pg
+from qtpy.QtTest import QSignalSpy
 
 from bec_widgets.widgets.plots.motor_map.motor_map import MotorMap
 from tests.unit_tests.client_mocks import mocked_client
@@ -274,16 +273,72 @@ def test_motor_map_toolbar_selection(qtbot, mocked_client):
     # Verify toolbar bundle was created during initialization
     motor_selection = mm.toolbar.components.get_action("motor_selection")
 
-    motor_selection.motor_x.setCurrentText("samx")
-    motor_selection.motor_y.setCurrentText("samy")
+    motor_selection.widget.motor_x.setCurrentText("samx")
+    motor_selection.widget.motor_y.setCurrentText("samy")
 
     assert mm.config.x_motor.name == "samx"
     assert mm.config.y_motor.name == "samy"
 
-    motor_selection.motor_y.setCurrentText("samz")
+    motor_selection.widget.motor_y.setCurrentText("samz")
 
     assert mm.config.x_motor.name == "samx"
     assert mm.config.y_motor.name == "samz"
+
+
+def test_motor_selection_set_motors_blocks_signals(qtbot, mocked_client):
+    """Ensure set_motors updates both comboboxes without emitting change signals."""
+    mm = create_widget(qtbot, MotorMap, client=mocked_client)
+    motor_selection = mm.toolbar.components.get_action("motor_selection").widget
+
+    spy_x = QSignalSpy(motor_selection.motor_x.currentTextChanged)
+    spy_y = QSignalSpy(motor_selection.motor_y.currentTextChanged)
+
+    motor_selection.set_motors("samx", "samy")
+
+    assert motor_selection.motor_x.currentText() == "samx"
+    assert motor_selection.motor_y.currentText() == "samy"
+    assert spy_x.count() == 0
+    assert spy_y.count() == 0
+
+
+def test_motor_properties_partial_then_complete_map(qtbot, mocked_client):
+    """Setting x then y via properties should map once both are valid."""
+    mm = create_widget(qtbot, MotorMap, client=mocked_client)
+
+    spy = QSignalSpy(mm.property_changed)
+    mm.x_motor = "samx"
+
+    assert mm.config.x_motor.name == "samx"
+    assert mm.config.y_motor.name is None
+    assert mm._trace is None  # map not triggered yet
+    assert spy.at(0) == ["x_motor", "samx"]
+
+    mm.y_motor = "samy"
+
+    assert mm.config.x_motor.name == "samx"
+    assert mm.config.y_motor.name == "samy"
+    assert mm._trace is not None  # map called once both valid
+    assert spy.at(1) == ["y_motor", "samy"]
+    assert len(mm._buffer["x"]) == 1
+    assert len(mm._buffer["y"]) == 1
+
+
+def test_set_motor_name_emits_and_syncs_toolbar(qtbot, mocked_client):
+    """_set_motor_name should emit property changes and sync toolbar widgets."""
+    mm = create_widget(qtbot, MotorMap, client=mocked_client)
+    motor_selection = mm.toolbar.components.get_action("motor_selection").widget
+
+    spy = QSignalSpy(mm.property_changed)
+    mm._set_motor_name("x", "samx")
+
+    assert mm.config.x_motor.name == "samx"
+    assert motor_selection.motor_x.currentText() == "samx"
+    assert spy.at(0) == ["x_motor", "samx"]
+
+    # Calling with same name should be a no-op
+    initial_count = spy.count()
+    mm._set_motor_name("x", "samx")
+    assert spy.count() == initial_count
 
 
 def test_motor_map_settings_dialog(qtbot, mocked_client):
