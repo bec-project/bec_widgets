@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v2.45.6 (2025-11-27)
+
+### Bug Fixes
+
+- **curve**: Update dap curves if data are set manually
+  ([`b72f0dc`](https://github.com/bec-project/bec_widgets/commit/b72f0dc6e8474a65c83f7e2c938fc6356b7b5f3a))
+
+
 ## v2.45.5 (2025-11-26)
 
 ### Bug Fixes
