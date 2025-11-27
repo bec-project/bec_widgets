@@ -941,30 +941,14 @@ class AdvancedDockArea(DockAreaWidget):
 if __name__ == "__main__":  # pragma: no cover
     import sys
 
-    from qtpy.QtWidgets import QTabWidget
-
     app = QApplication(sys.argv)
     apply_theme("dark")
     dispatcher = BECDispatcher(gui_id="ads")
     window = BECMainWindowNoRPC()
-    central = QWidget()
-    layout = QVBoxLayout(central)
-    window.setCentralWidget(central)
 
-    # two dock areas stacked vertically no instance ids
-    ads = AdvancedDockArea(mode="creator", enable_profile_management=True)
-    ads2 = AdvancedDockArea(mode="creator", enable_profile_management=True)
-    layout.addWidget(ads, 1)
-    layout.addWidget(ads2, 1)
+    ads = AdvancedDockArea(mode="creator", enable_profile_management=True, root_widget=True)
 
-    # two dock areas inside a tab widget
-    tabs = QTabWidget(parent=central)
-    ads3 = AdvancedDockArea(mode="creator", enable_profile_management=True, instance_id="AdsTab3")
-    ads4 = AdvancedDockArea(mode="creator", enable_profile_management=True, instance_id="AdsTab4")
-    tabs.addTab(ads3, "Workspace 3")
-    tabs.addTab(ads4, "Workspace 4")
-    layout.addWidget(tabs, 1)
-
+    window.setCentralWidget(ads)
     window.show()
     window.resize(800, 1000)
 
