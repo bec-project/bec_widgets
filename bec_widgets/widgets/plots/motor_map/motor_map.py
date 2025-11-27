@@ -17,7 +17,9 @@ from bec_widgets.utils.settings_dialog import SettingsDialog
 from bec_widgets.utils.toolbars.toolbar import MaterialIconAction
 from bec_widgets.widgets.plots.motor_map.settings.motor_map_settings import MotorMapSettings
 from bec_widgets.widgets.plots.motor_map.toolbar_components.motor_selection import (
-    MotorSelectionAction,
+    MotorSelection,
+    MotorSelectionConnection,
+    motor_selection_bundle,
 )
 from bec_widgets.widgets.plots.plot_base import PlotBase, UIMode
 
@@ -107,6 +109,10 @@ class MotorMap(PlotBase):
         "map",
         "reset_history",
         "get_data",
+        "x_motor",
+        "x_motor.setter",
+        "y_motor",
+        "y_motor.setter",
     ]
 
     update_signal = Signal()
@@ -155,11 +161,10 @@ class MotorMap(PlotBase):
         """
         Initialize the toolbar for the motor map widget.
         """
-        motor_selection = MotorSelectionAction(parent=self)
-        self.toolbar.add_action("motor_selection", motor_selection)
-
-        motor_selection.motor_x.currentTextChanged.connect(self.on_motor_selection_changed)
-        motor_selection.motor_y.currentTextChanged.connect(self.on_motor_selection_changed)
+        self.toolbar.add_bundle(motor_selection_bundle(self.toolbar.components))
+        self.toolbar.connect_bundle(
+            "motor_selection", MotorSelectionConnection(self.toolbar.components, target_widget=self)
+        )
 
         self.toolbar.components.get_action("reset_legend").action.setVisible(False)
 
@@ -188,12 +193,19 @@ class MotorMap(PlotBase):
         if self.ui_mode == UIMode.POPUP:
             bundles.append("axis_popup")
         self.toolbar.show_bundles(bundles)
+        self._sync_motor_map_selection_toolbar()
 
     @SafeSlot()
     def on_motor_selection_changed(self, _):
-        action: MotorSelectionAction = self.toolbar.components.get_action("motor_selection")
-        motor_x = action.motor_x.currentText()
-        motor_y = action.motor_y.currentText()
+        action = self.toolbar.components.get_action("motor_selection")
+        motor_selection: MotorSelection = action.widget
+        motor_x = motor_selection.motor_x.currentText()
+        motor_y = motor_selection.motor_y.currentText()
+
+        if motor_x and not self._validate_motor_name(motor_x):
+            return
+        if motor_y and not self._validate_motor_name(motor_y):
+            return
 
         if motor_x != "" and motor_y != "":
             if motor_x != self.config.x_motor.name or motor_y != self.config.y_motor.name:
@@ -245,6 +257,36 @@ class MotorMap(PlotBase):
     ################################################################################
     # Widget Specific Properties
     ################################################################################
+
+    @SafeProperty(str)
+    def x_motor(self) -> str:
+        """Name of the motor shown on the X axis."""
+        return self.config.x_motor.name or ""
+
+    @x_motor.setter
+    def x_motor(self, motor_name: str) -> None:
+        motor_name = motor_name or ""
+        if motor_name == (self.config.x_motor.name or ""):
+            return
+        if motor_name and self.y_motor:
+            self.map(motor_name, self.y_motor, suppress_errors=True)
+            return
+        self._set_motor_name(axis="x", motor_name=motor_name)
+
+    @SafeProperty(str)
+    def y_motor(self) -> str:
+        """Name of the motor shown on the Y axis."""
+        return self.config.y_motor.name or ""
+
+    @y_motor.setter
+    def y_motor(self, motor_name: str) -> None:
+        motor_name = motor_name or ""
+        if motor_name == (self.config.y_motor.name or ""):
+            return
+        if motor_name and self.x_motor:
+            self.map(self.x_motor, motor_name, suppress_errors=True)
+            return
+        self._set_motor_name(axis="y", motor_name=motor_name)
 
     # color_scatter for designer, color for CLI to not bother users with QColor
     @SafeProperty("QColor")
@@ -387,11 +429,47 @@ class MotorMap(PlotBase):
         self.update_signal.emit()
         self.property_changed.emit("scatter_size", scatter_size)
 
+    def _validate_motor_name(self, motor_name: str) -> bool:
+        """
+        Check motor validity against BEC without raising.
+
+        Args:
+            motor_name(str): Name of the motor to validate.
+
+        Returns:
+            bool: True if motor is valid, False otherwise.
+        """
+        if not motor_name:
+            return False
+        try:
+            self.entry_validator.validate_signal(motor_name, None)
+            return True
+        except Exception:  # noqa: BLE001 - validator can raise multiple error types
+            return False
+
+    def _set_motor_name(self, axis: str, motor_name: str, *, sync_toolbar: bool = True) -> None:
+        """
+        Update stored motor name for given axis and optionally refresh the toolbar selection.
+        """
+        motor_name = motor_name or ""
+        motor_config = self.config.x_motor if axis == "x" else self.config.y_motor
+
+        if motor_config.name == motor_name:
+            return
+
+        motor_config.name = motor_name
+        self.property_changed.emit(f"{axis}_motor", motor_name)
+
+        if sync_toolbar:
+            self._sync_motor_map_selection_toolbar()
+
     ################################################################################
     # High Level methods for API
     ################################################################################
     @SafeSlot()
-    def map(self, x_name: str, y_name: str, validate_bec: bool = True) -> None:
+    def map(
+        self, x_name: str, y_name: str, validate_bec: bool = True, suppress_errors=False
+    ) -> None:
         """
         Set the x and y motor names.
 
@@ -399,15 +477,23 @@ class MotorMap(PlotBase):
             x_name(str): The name of the x motor.
             y_name(str): The name of the y motor.
             validate_bec(bool, optional): If True, validate the signal with BEC. Defaults to True.
+            suppress_errors(bool, optional): If True, suppress errors during validation. Defaults to False. Used for properties setting. If the validation fails, the changes are not applied.
         """
         self.plot_item.clear()
 
         if validate_bec:
-            self.entry_validator.validate_signal(x_name, None)
-            self.entry_validator.validate_signal(y_name, None)
+            if suppress_errors:
+                try:
+                    self.entry_validator.validate_signal(x_name, None)
+                    self.entry_validator.validate_signal(y_name, None)
+                except Exception:
+                    return
+            else:
+                self.entry_validator.validate_signal(x_name, None)
+                self.entry_validator.validate_signal(y_name, None)
 
-        self.config.x_motor.name = x_name
-        self.config.y_motor.name = y_name
+        self._set_motor_name(axis="x", motor_name=x_name, sync_toolbar=False)
+        self._set_motor_name(axis="y", motor_name=y_name, sync_toolbar=False)
 
         motor_x_limit = self._get_motor_limit(self.config.x_motor.name)
         motor_y_limit = self._get_motor_limit(self.config.y_motor.name)
@@ -734,21 +820,24 @@ class MotorMap(PlotBase):
         """
         Sync the motor map selection toolbar with the current motor map.
         """
-        motor_selection = self.toolbar.components.get_action("motor_selection")
+        try:
+            motor_selection_action = self.toolbar.components.get_action("motor_selection")
+        except Exception:  # noqa: BLE001 - toolbar might not be ready during early init
+            logger.warning(f"MotorMap ({self.object_name}) toolbar was not ready during init.")
+            return
+        if motor_selection_action is None:
+            return
+        motor_selection: MotorSelection = motor_selection_action.widget
+        target_x = self.config.x_motor.name or ""
+        target_y = self.config.y_motor.name or ""
 
-        motor_x = motor_selection.motor_x.currentText()
-        motor_y = motor_selection.motor_y.currentText()
+        if (
+            motor_selection.motor_x.currentText() == target_x
+            and motor_selection.motor_y.currentText() == target_y
+        ):
+            return
 
-        if motor_x != self.config.x_motor.name:
-            motor_selection.motor_x.blockSignals(True)
-            motor_selection.motor_x.set_device(self.config.x_motor.name)
-            motor_selection.motor_x.check_validity(self.config.x_motor.name)
-            motor_selection.motor_x.blockSignals(False)
-        if motor_y != self.config.y_motor.name:
-            motor_selection.motor_y.blockSignals(True)
-            motor_selection.motor_y.set_device(self.config.y_motor.name)
-            motor_selection.motor_y.check_validity(self.config.y_motor.name)
-            motor_selection.motor_y.blockSignals(False)
+        motor_selection.set_motors(target_x, target_y)
 
     ################################################################################
     # Export Methods
