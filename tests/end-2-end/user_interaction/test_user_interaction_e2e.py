@@ -363,23 +363,6 @@ def test_widgets_e2e_image(qtbot, connected_client_gui_obj, random_generator_fro
     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
 
 
-# TODO re-enable when issue is resolved #560
-# @pytest.mark.timeout(PYTEST_TIMEOUT)
-# def test_widgets_e2e_log_panel(qtbot, connected_client_gui_obj, random_generator_from_seed):
-#     """Test the LogPanel widget."""
-#     gui = connected_client_gui_obj
-#     bec = gui._client
-#     # Create dock_area, dock, widget
-#     dock, widget = create_widget(qtbot, gui, gui.available_widgets.LogPanel)
-#     dock: client.BECDock
-#     widget: client.LogPanel
-
-#     # No rpc calls to check so far
-
-#     # Test removing the widget, or leaving it open for the next test
-#     maybe_remove_dock_area(qtbot, gui=gui, random_int_gen=random_generator_from_seed)
-
-
 @pytest.mark.timeout(PYTEST_TIMEOUT)
 def test_widgets_e2e_minesweeper(qtbot, connected_client_gui_obj, random_generator_from_seed):
     """Test the MineSweeper widget."""

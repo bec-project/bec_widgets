@@ -37,7 +37,6 @@ from bec_widgets.widgets.plots.waveform.waveform import Waveform
 from bec_widgets.widgets.progress.ring_progress_bar.ring_progress_bar import RingProgressBar
 from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
 from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECStatusBox
-from bec_widgets.widgets.utility.logpanel.logpanel import LogPanel
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
 logger = bec_logger.logger
@@ -222,13 +221,6 @@ class BECDockArea(BECWidget, QWidget):
                         filled=True,
                         parent=self,
                     ),
-                    # FIXME temporarily disabled -> issue #644
-                    "log_panel": MaterialIconAction(
-                        icon_name=LogPanel.ICON_NAME,
-                        tooltip="Add LogPanel - Disabled",
-                        filled=True,
-                        parent=self,
-                    ),
                     "sbb_monitor": MaterialIconAction(
                         icon_name="train", tooltip="Add SBB Monitor", filled=True, parent=self
                     ),
@@ -326,8 +318,6 @@ class BECDockArea(BECWidget, QWidget):
         menu_utils.actions["progress_bar"].action.triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="RingProgressBar")
         )
-        # FIXME temporarily disabled -> issue #644
-        menu_utils.actions["log_panel"].action.setEnabled(False)
 
         menu_utils.actions["sbb_monitor"].action.triggered.connect(
             lambda: self._create_widget_from_toolbar(widget_name="SBBMonitor")

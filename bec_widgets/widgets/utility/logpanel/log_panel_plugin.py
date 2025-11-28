@@ -30,7 +30,7 @@ class LogPanelPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return DOM_XML
 
     def group(self):
-        return "BEC Services"
+        return ""
 
     def icon(self):
         return designer_material_icon(LogPanel.ICON_NAME)
@@ -51,7 +51,7 @@ class LogPanelPlugin(QDesignerCustomWidgetInterface):  # pragma: no cover
         return "LogPanel"
 
     def toolTip(self):
-        return "Displays a log panel"
+        return "LogPanel"
 
     def whatsThis(self):
         return self.toolTip()

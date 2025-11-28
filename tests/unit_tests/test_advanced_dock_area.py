@@ -2095,7 +2095,6 @@ class TestFlatToolbarActions:
             "flat_progress_bar",
             "flat_terminal",
             "flat_bec_shell",
-            "flat_log_panel",
             "flat_sbb_monitor",
         ]
 
@@ -2154,11 +2153,6 @@ class TestFlatToolbarActions:
 
                 action.trigger()
                 mock_new.assert_called_once_with(widget_type)
-
-    def test_flat_log_panel_action_disabled(self, advanced_dock_area):
-        """Test that flat log panel action is disabled."""
-        action = advanced_dock_area.toolbar.components.get_action("flat_log_panel").action
-        assert not action.isEnabled()
 
 
 class TestModeTransitions:

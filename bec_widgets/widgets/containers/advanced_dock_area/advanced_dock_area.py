@@ -78,7 +78,6 @@ from bec_widgets.widgets.plots.waveform.waveform import Waveform
 from bec_widgets.widgets.progress.ring_progress_bar import RingProgressBar
 from bec_widgets.widgets.services.bec_queue.bec_queue import BECQueue
 from bec_widgets.widgets.services.bec_status_box.bec_status_box import BECStatusBox
-from bec_widgets.widgets.utility.logpanel import LogPanel
 from bec_widgets.widgets.utility.visual.dark_mode_button.dark_mode_button import DarkModeButton
 
 logger = bec_logger.logger
@@ -310,7 +309,6 @@ class AdvancedDockArea(DockAreaWidget):
             ),
             "terminal": (WebConsole.ICON_NAME, "Add Terminal", "WebConsole"),
             "bec_shell": (WebConsole.ICON_NAME, "Add BEC Shell", "WebConsole"),
-            "log_panel": (LogPanel.ICON_NAME, "Add LogPanel - Disabled", "LogPanel"),
             "sbb_monitor": ("train", "Add SBB Monitor", "SBBMonitor"),
         }
 
@@ -424,9 +422,7 @@ class AdvancedDockArea(DockAreaWidget):
             # first two items not needed for this part
             for key, (_, _, widget_type) in mapping.items():
                 act = menu.actions[key].action
-                if widget_type == "LogPanel":
-                    act.setEnabled(False)  # keep disabled per issue #644
-                elif key == "terminal":
+                if key == "terminal":
                     act.triggered.connect(
                         lambda _, t=widget_type: self.new(widget=t, closable=True, startup_cmd=None)
                     )
@@ -450,10 +446,7 @@ class AdvancedDockArea(DockAreaWidget):
             for action_id, (_, _, widget_type) in mapping.items():
                 flat_action_id = f"flat_{action_id}"
                 flat_action = self.toolbar.components.get_action(flat_action_id).action
-                if widget_type == "LogPanel":
-                    flat_action.setEnabled(False)  # keep disabled per issue #644
-                else:
-                    flat_action.triggered.connect(lambda _, t=widget_type: self.new(t))
+                flat_action.triggered.connect(lambda _, t=widget_type: self.new(t))
 
         _connect_flat_actions(self._ACTION_MAPPINGS["menu_plots"])
         _connect_flat_actions(self._ACTION_MAPPINGS["menu_devices"])

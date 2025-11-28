@@ -2867,24 +2867,24 @@ class ImageItem(RPCBase):
 
 
 class LogPanel(RPCBase):
-    """Displays a log panel"""
+    """Live display of the BEC logs in a table view."""
 
     @rpc_call
-    def set_plain_text(self, text: str) -> None:
+    def remove(self):
         """
-        Set the plain text of the widget.
-
-        Args:
-            text (str): The text to set.
+        Cleanup the BECConnector
         """
 
     @rpc_call
-    def set_html_text(self, text: str) -> None:
+    def attach(self):
         """
-        Set the HTML text of the widget.
+        None
+        """
 
-        Args:
-            text (str): The text to set.
+    @rpc_call
+    def detach(self):
+        """
+        Detach the widget from its parent dock widget (if widget is in the dock), making it a floating widget.
         """
 
 
