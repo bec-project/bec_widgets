@@ -349,6 +349,7 @@ class LogPanel(BECWidget, QWidget):
     """Live display of the BEC logs in a table view."""
 
     PLUGIN = True
+    ICON_NAME = "browse_activity"
 
     def __init__(
         self,
