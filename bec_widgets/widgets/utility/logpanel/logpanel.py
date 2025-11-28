@@ -335,8 +335,7 @@ class BecLogTableView(QTableView):
     def __init__(self, *args, max_message_width: int = 1000, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         header = QHeaderView(Qt.Orientation.Horizontal, parent=self)
-        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         header.setStretchLastSection(True)
         header.setMaximumSectionSize(max_message_width)
         self.setHorizontalHeader(header)
