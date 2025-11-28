@@ -392,7 +392,8 @@ class BECGuiClient(RPCBase):
         timeout = 60
         # Wait for 'bec' gui to be registered, this may take some time
         # After 60s timeout. Should this raise an exception on timeout?
-        while time.time() < time.time() + timeout:
+        start = time.monotonic()
+        while time.monotonic() < start + timeout:
             if len(list(self._server_registry.keys())) < 2 or not hasattr(
                 self, self._anchor_widget
             ):
