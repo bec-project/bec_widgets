@@ -7,6 +7,7 @@ from bec_widgets.applications.views.developer_view.developer_view import Develop
 from bec_widgets.applications.views.device_manager_view.device_manager_widget import (
     DeviceManagerWidget,
 )
+from bec_widgets.applications.views.diagnostic_view.diagnostic_view import DiagnosticView
 from bec_widgets.applications.views.view import ViewBase, WaveformViewInline, WaveformViewPopup
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.widgets.containers.advanced_dock_area.advanced_dock_area import AdvancedDockArea
@@ -53,6 +54,7 @@ class BECMainApp(BECMainWindow):
         self.ads.setObjectName("MainWorkspace")
         self.device_manager = DeviceManagerWidget(self)
         self.developer_view = DeveloperView(self)
+        self.diagnostics = DiagnosticView(self)
 
         self.add_view(
             icon="widgets", title="Dock Area", id="dock_area", widget=self.ads, mini_text="Docks"
@@ -69,6 +71,13 @@ class BECMainApp(BECMainWindow):
             title="IDE",
             widget=self.developer_view,
             id="developer_view",
+            exclusive=True,
+        )
+        self.add_view(
+            icon="code_blocks",
+            title="Diagnostics",
+            widget=self.diagnostics,
+            id="diagnostic_view",
             exclusive=True,
         )
 
