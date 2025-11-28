@@ -376,6 +376,7 @@ class BECDockArea(DockAreaWidget):
             "bec_shell": (BECShell.ICON_NAME, "Add BEC Shell", "BECShell"),
             "log_panel": (LogPanel.ICON_NAME, "Add LogPanel - Disabled", "LogPanel"),
             "sbb_monitor": ("train", "Add SBB Monitor", "SBBMonitor"),
+            "log_panel": (LogPanel.ICON_NAME, "Add LogPanel", "LogPanel"),
         }
 
         # Create expandable menu actions (original behavior)
