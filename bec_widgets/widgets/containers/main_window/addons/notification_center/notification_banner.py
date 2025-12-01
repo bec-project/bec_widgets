@@ -690,7 +690,6 @@ class NotificationCentre(QScrollArea):
         toast.notification_id = notification_id
         broker = BECNotificationBroker()
         toast.closed.connect(lambda nid=notification_id: broker.notification_closed.emit(nid))
-        toast.expired.connect(lambda nid=notification_id: broker.notification_closed.emit(nid))
         toast.closed.connect(lambda: self._hide_notification(toast))
         toast.expired.connect(lambda t=toast: self._handle_expire(t))
         toast.expanded.connect(self._adjust_height)
@@ -1059,9 +1058,8 @@ class BECNotificationBroker(BECConnector, QObject):
                 lifetime_ms=lifetime,
                 notification_id=notification_id,
             )
-            # broadcast any close or expire
+            # broadcast close events (expiry is handled locally to keep history)
             toast.closed.connect(lambda nid=notification_id: self.notification_closed.emit(nid))
-            toast.expired.connect(lambda nid=notification_id: self.notification_closed.emit(nid))
 
     @SafeSlot(dict, dict)
     def on_scan_status(self, msg: dict, meta: dict) -> None:
