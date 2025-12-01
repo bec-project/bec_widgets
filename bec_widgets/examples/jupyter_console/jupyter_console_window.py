@@ -25,7 +25,6 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from bec_widgets import BECWidget
 from bec_widgets.cli.rpc.rpc_widget_handler import widget_handler
 from bec_widgets.utils.colors import apply_theme
 from bec_widgets.utils.widget_io import WidgetHierarchy as wh
@@ -48,6 +47,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
 
         self._widgets_by_name: Dict[str, QWidget] = {}
         self._init_ui()
+        self.app = QApplication.instance()
 
         # expose helper API and basics in the inprocess console
         if self.console.inprocess is True:
@@ -94,7 +94,7 @@ class JupyterConsoleWindow(QWidget):  # pragma: no cover:
                     return list(widget_handler.widget_classes.keys())
 
             self.jc = _ConsoleAPI(self)
-            self._push_to_console({"jc": self.jc, "np": np, "pg": pg, "wh": wh})
+            self._push_to_console({"jc": self.jc, "np": np, "pg": pg, "wh": wh, "app": self.app})
 
     def _init_ui(self):
         self.layout = QHBoxLayout(self)
