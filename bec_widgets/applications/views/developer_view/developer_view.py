@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from qtpy.QtWidgets import QWidget
 
 from bec_widgets.applications.views.developer_view.developer_widget import DeveloperWidget

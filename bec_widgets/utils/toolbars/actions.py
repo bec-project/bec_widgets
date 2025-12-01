@@ -5,7 +5,8 @@ import os
 import weakref
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
-from typing import Dict, Literal
+from enum import Enum
+from typing import Dict, Literal, Union
 
 from bec_lib.device import ReadoutPriority
 from bec_lib.logger import bec_logger
@@ -15,6 +16,7 @@ from qtpy.QtGui import QAction, QColor, QIcon  # type: ignore
 from qtpy.QtWidgets import (
     QApplication,
     QComboBox,
+    QGraphicsDropShadowEffect,
     QHBoxLayout,
     QLabel,
     QMenu,
@@ -26,6 +28,7 @@ from qtpy.QtWidgets import (
 )
 
 import bec_widgets
+from bec_widgets.utils.colors import AccentColors, get_accent_colors
 from bec_widgets.utils.toolbars.splitter import ResizableSpacer
 from bec_widgets.widgets.control.device_input.base_classes.device_input_base import BECDeviceFilter
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
@@ -102,6 +105,205 @@ class LongPressToolButton(QToolButton):
             self.showMenu()
 
 
+class StatusState(str, Enum):
+    DEFAULT = "default"
+    HIGHLIGHT = "highlight"
+    WARNING = "warning"
+    EMERGENCY = "emergency"
+    SUCCESS = "success"
+
+
+class StatusIndicatorWidget(QWidget):
+    """Pill-shaped status indicator with icon + label using accent colors."""
+
+    def __init__(
+        self, parent=None, text: str = "Ready", state: StatusState | str = StatusState.DEFAULT
+    ):
+        super().__init__(parent)
+        self.setObjectName("StatusIndicatorWidget")
+        self._text = text
+        self._state = self._normalize_state(state)
+        self._theme_connected = False
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(6, 2, 8, 2)
+        layout.setSpacing(6)
+
+        self._icon_label = QLabel(self)
+        self._icon_label.setFixedSize(18, 18)
+
+        self._text_label = QLabel(self)
+        self._text_label.setText(self._text)
+
+        layout.addWidget(self._icon_label)
+        layout.addWidget(self._text_label)
+
+        # Give it a consistent pill height
+        self.setMinimumHeight(24)
+        self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+
+        # Soft shadow similar to notification banners
+        self._shadow = QGraphicsDropShadowEffect(self)
+        self._shadow.setBlurRadius(18)
+        self._shadow.setOffset(0, 2)
+        self.setGraphicsEffect(self._shadow)
+
+        self._apply_state(self._state)
+        self._connect_theme_change()
+
+    def set_state(self, state: Union[StatusState, str]):
+        """Update state and refresh visuals."""
+        self._state = self._normalize_state(state)
+        self._apply_state(self._state)
+
+    def set_text(self, text: str):
+        """Update the displayed text."""
+        self._text = text
+        self._text_label.setText(text)
+
+    def _apply_state(self, state: StatusState):
+        palette = self._resolve_accent_colors()
+        color_attr = {
+            StatusState.DEFAULT: "default",
+            StatusState.HIGHLIGHT: "highlight",
+            StatusState.WARNING: "warning",
+            StatusState.EMERGENCY: "emergency",
+            StatusState.SUCCESS: "success",
+        }.get(state, "default")
+        base_color = getattr(palette, color_attr, None) or getattr(
+            palette, "default", QColor("gray")
+        )
+
+        # Apply style first (returns text color for label)
+        text_color = self._update_style(base_color, self._theme_fg_color())
+        theme_name = self._theme_name()
+
+        # Choose icon per state
+        icon_name_map = {
+            StatusState.DEFAULT: "check_circle",
+            StatusState.HIGHLIGHT: "check_circle",
+            StatusState.SUCCESS: "check_circle",
+            StatusState.WARNING: "warning",
+            StatusState.EMERGENCY: "dangerous",
+        }
+        icon_name = icon_name_map.get(state, "check_circle")
+
+        # Icon color:
+        # - Dark mode: follow text color (usually white) for high contrast.
+        # - Light mode: use a stronger version of the accent color for a colored glyph
+        #   that stands out on the pastel pill background.
+        if theme_name == "light":
+            icon_q = QColor(base_color)
+            icon_color = icon_q.name(QColor.HexRgb)
+        else:
+            icon_color = text_color
+
+        icon = material_icon(
+            icon_name, size=(18, 18), convert_to_pixmap=False, filled=True, color=icon_color
+        )
+        if not icon.isNull():
+            self._icon_label.setPixmap(icon.pixmap(18, 18))
+
+    def _update_style(self, color: QColor, fg_color: QColor) -> str:
+        # Ensure the widget actually paints its own background
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+
+        fg = QColor(fg_color)
+        text_color = fg.name(QColor.HexRgb)
+
+        theme_name = self._theme_name()
+
+        base = QColor(color)
+
+        start = QColor(base)
+        end = QColor(base)
+        border = QColor(base)
+
+        if theme_name == "light":
+            start.setAlphaF(0.20)
+            end.setAlphaF(0.06)
+        else:
+            start.setAlphaF(0.35)
+            end.setAlphaF(0.12)
+            border = border.darker(120)
+
+        # shadow color tuned per theme to match notification banners
+        if hasattr(self, "_shadow"):
+            if theme_name == "light":
+                shadow_color = QColor(15, 23, 42, 60)  # softer shadow on light bg
+            else:
+                shadow_color = QColor(0, 0, 0, 160)
+            self._shadow.setColor(shadow_color)
+
+        # Use a fixed radius for a stable pill look inside toolbars
+        radius = 10
+
+        self.setStyleSheet(
+            f"""
+            #StatusIndicatorWidget {{
+                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1,
+                    stop:0 {start.name(QColor.HexArgb)}, stop:1 {end.name(QColor.HexArgb)});
+                border: 1px solid {border.name(QColor.HexRgb)};
+                border-radius: {radius}px;
+                padding: 2px 8px;
+            }}
+            #StatusIndicatorWidget QLabel {{
+                color: {text_color};
+                background: transparent;
+            }}
+            """
+        )
+        return text_color
+
+    def _theme_fg_color(self) -> QColor:
+        app = QApplication.instance()
+        theme = getattr(app, "theme", None)
+        if theme is not None and hasattr(theme, "color"):
+            try:
+                fg = theme.color("FG")
+                if isinstance(fg, QColor):
+                    return fg
+            except Exception:
+                pass
+        palette = self._resolve_accent_colors()
+        base = getattr(palette, "default", QColor("white"))
+        luminance = (0.299 * base.red() + 0.587 * base.green() + 0.114 * base.blue()) / 255
+        return QColor("#000000") if luminance > 0.65 else QColor("#ffffff")
+
+    def _theme_name(self) -> str:
+        app = QApplication.instance()
+        theme = getattr(app, "theme", None)
+        name = getattr(theme, "theme", None)
+        if isinstance(name, str):
+            return name.lower()
+        return "dark"
+
+    def _connect_theme_change(self):
+        if self._theme_connected:
+            return
+        app = QApplication.instance()
+        theme = getattr(app, "theme", None)
+        if theme is not None and hasattr(theme, "theme_changed"):
+            try:
+                theme.theme_changed.connect(lambda _: self._apply_state(self._state))
+                self._theme_connected = True
+            except Exception:
+                pass
+
+    @staticmethod
+    def _normalize_state(state: Union[StatusState, str]) -> StatusState:
+        if isinstance(state, StatusState):
+            return state
+        try:
+            return StatusState(state)
+        except ValueError:
+            return StatusState.DEFAULT
+
+    @staticmethod
+    def _resolve_accent_colors() -> AccentColors:
+        return get_accent_colors()
+
+
 class ToolBarAction(ABC):
     """
     Abstract base class for toolbar actions.
@@ -146,6 +348,54 @@ class SeparatorAction(ToolBarAction):
 
     def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
         toolbar.addSeparator()
+
+
+class StatusIndicatorAction(ToolBarAction):
+    """Toolbar action hosting a LED indicator and status text."""
+
+    def __init__(
+        self,
+        *,
+        text: str = "Ready",
+        state: Union[StatusState, str] = StatusState.DEFAULT,
+        tooltip: str | None = None,
+    ):
+        super().__init__(icon_path=None, tooltip=tooltip or "View status", checkable=False)
+        self._text = text
+        self._state: StatusState = StatusIndicatorWidget._normalize_state(state)
+        self.widget: StatusIndicatorWidget | None = None
+        self.tooltip = tooltip or ""
+
+    def add_to_toolbar(self, toolbar: QToolBar, target: QWidget):
+        if (
+            self.widget is None
+            or self.widget.parent() is None
+            or self.widget.parent() is not toolbar
+        ):
+            self.widget = StatusIndicatorWidget(parent=toolbar, text=self._text, state=self._state)
+        self.action = toolbar.addWidget(self.widget)
+        self.action.setText(self._text)
+        self.set_tooltip(self.tooltip)
+
+    def set_state(self, state: Union[StatusState, str]):
+        self._state = StatusIndicatorWidget._normalize_state(state)
+        if self.widget is not None:
+            self.widget.set_state(self._state)
+
+    def set_text(self, text: str):
+        self._text = text
+        if self.widget is not None:
+            self.widget.set_text(text)
+        if hasattr(self, "action") and self.action is not None:
+            self.action.setText(text)
+
+    def set_tooltip(self, tooltip: str | None):
+        """Set tooltip on both the underlying widget and the QWidgetAction."""
+        self.tooltip = tooltip or ""
+        if self.widget is not None:
+            self.widget.setToolTip(self.tooltip)
+        if hasattr(self, "action") and self.action is not None:
+            self.action.setToolTip(self.tooltip)
 
 
 class QtIconAction(IconAction):

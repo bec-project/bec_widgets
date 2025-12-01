@@ -15,6 +15,7 @@ from qtpy.QtWidgets import (
 )
 
 from bec_widgets.utils.error_popups import SafeSlot
+from bec_widgets.utils.toolbars.status_bar import StatusToolBar
 from bec_widgets.widgets.control.device_input.device_combobox.device_combobox import DeviceComboBox
 from bec_widgets.widgets.control.device_input.signal_combobox.signal_combobox import SignalComboBox
 from bec_widgets.widgets.plots.waveform.waveform import Waveform
@@ -30,6 +31,7 @@ class ViewBase(QWidget):
         parent (QWidget | None): Parent widget.
         id (str | None): Optional view id, useful for debugging or introspection.
         title (str | None): Optional human-readable title.
+        show_status (bool): Whether to show a status toolbar at the top of the view.
     """
 
     def __init__(
@@ -39,6 +41,8 @@ class ViewBase(QWidget):
         *,
         id: str | None = None,
         title: str | None = None,
+        show_status: bool = False,
+        status_names: list[str] | None = None,
     ):
         super().__init__(parent=parent)
         self.content: QWidget | None = None
@@ -49,15 +53,48 @@ class ViewBase(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
 
+        self.status_bar: StatusToolBar | None = None
+        if show_status:
+            # If explicit status names are provided, default to showing only those.
+            show_all = status_names is None
+            self.setup_status_bar(show_all_status=show_all, status_names=status_names)
+
         if content is not None:
             self.set_content(content)
 
     def set_content(self, content: QWidget) -> None:
         """Replace the current content widget with a new one."""
         if self.content is not None:
+            self.layout().removeWidget(self.content)
             self.content.setParent(None)
+            self.content.close()
+            self.content.deleteLater()
         self.content = content
-        self.layout().addWidget(content)
+        if self.status_bar is not None:
+            insert_at = self.layout().indexOf(self.status_bar) + 1
+            self.layout().insertWidget(insert_at, content)
+        else:
+            self.layout().addWidget(content)
+
+    def setup_status_bar(
+        self, *, show_all_status: bool = True, status_names: list[str] | None = None
+    ) -> None:
+        """Create and attach a status toolbar managed by the status broker."""
+        if self.status_bar is not None:
+            return
+        names_arg = None if show_all_status else status_names
+        self.status_bar = StatusToolBar(parent=self, names=names_arg)
+        self.layout().addWidget(self.status_bar)
+
+    def set_status(
+        self, name: str = "main", *, state=None, text: str | None = None, tooltip: str | None = None
+    ) -> None:
+        """Manually set a status item on the status bar."""
+        if self.status_bar is None:
+            self.setup_status_bar(show_all_status=True)
+        if self.status_bar is None:
+            return
+        self.status_bar.set_status(name=name, state=state, text=text, tooltip=tooltip)
 
     @SafeSlot()
     def on_enter(self) -> None:
