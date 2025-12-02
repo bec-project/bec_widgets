@@ -15,7 +15,7 @@ def test_rpc_reference_objects(connected_client_gui_obj):
     plt.plot(x_name="samx", y_name="bpm4i")
 
     im = dock_area.new("Image")
-    im.image("eiger")
+    im.image(device_name="eiger", device_entry="preview")
     motor_map = dock_area.new("MotorMap")
     motor_map.map("samx", "samy")
     plt_z = dock_area.new("Waveform")
@@ -23,7 +23,8 @@ def test_rpc_reference_objects(connected_client_gui_obj):
 
     assert len(plt_z.curves) == 1
     assert len(plt.curves) == 1
-    assert im.monitor == "eiger"
+    assert im.device_name == "eiger"
+    assert im.device_entry == "preview"
 
     assert isinstance(im.main_image, RPCReference)
     image_item = gui._ipython_registry.get(im.main_image._gui_id, None)

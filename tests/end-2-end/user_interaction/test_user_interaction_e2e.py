@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
+from bec_lib.endpoints import MessageEndpoints
 
 from bec_widgets.cli.rpc.rpc_base import RPCBase, RPCReference
 
@@ -233,7 +234,7 @@ def test_widgets_e2e_image(qtbot, connected_client_gui_obj, random_generator_fro
     scans = bec.scans
     dev = bec.device_manager.devices
     # Test rpc calls
-    img = widget.image(dev.eiger)
+    img = widget.image(device_name=dev.eiger.name, device_entry="preview")
     assert img.get_data() is None
     # Run a scan and plot the image
     s = scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False)
@@ -247,13 +248,13 @@ def test_widgets_e2e_image(qtbot, connected_client_gui_obj, random_generator_fro
     qtbot.waitUntil(_wait_for_scan_in_history, timeout=7000)
 
     # Check that last image is equivalent to data in Redis
-    last_img = bec.device_monitor.get_data(
-        dev.eiger, count=1
-    )  # Get last image from Redis monitor 2D endpoint
+    last_img = bec.connector.get_last(MessageEndpoints.device_preview("eiger", "preview"))[
+        "data"
+    ].data
     assert np.allclose(img.get_data(), last_img)
 
     # Now add a device with a preview signal
-    img = widget.image(["eiger", "preview"])
+    img = widget.image(device_name="eiger", device_entry="preview")
     s = scans.line_scan(dev.samx, -3, 3, steps=50, exp_time=0.01, relative=False)
     s.wait()
 

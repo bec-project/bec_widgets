@@ -42,7 +42,7 @@ def test_rpc_plotting_shortcuts_init_configs(qtbot, connected_client_gui_obj):
     c3 = wf.plot(y=[1, 2, 3], x=[1, 2, 3])
     assert c3.object_name == "Curve_0"
 
-    im.image(monitor="eiger")
+    im.image(device_name="eiger", device_entry="preview")
     mm.map(x_name="samx", y_name="samy")
     sw.plot(x_name="samx", y_name="samy", z_name="bpm4a")
     mw.plot(monitor="waveform")
@@ -166,14 +166,14 @@ def test_rpc_image(qtbot, bec_client_lib, connected_client_gui_obj):
     scans = client.scans
 
     im = dock_area.new("Image")
-    im.image(monitor="eiger")
+    im.image(device_name="eiger", device_entry="preview")
 
     status = scans.line_scan(dev.samx, -5, 5, steps=10, exp_time=0.05, relative=False)
     status.wait()
 
-    last_image_device = client.connector.get_last(MessageEndpoints.device_monitor_2d("eiger"))[
-        "data"
-    ].data
+    last_image_device = client.connector.get_last(
+        MessageEndpoints.device_preview("eiger", "preview")
+    )["data"].data
     last_image_plot = im.main_image.get_data()
 
     # check plotted data
